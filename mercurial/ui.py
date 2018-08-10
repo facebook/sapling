@@ -43,38 +43,12 @@ urlreq = util.urlreq
 # for use with str.translate(None, _keepalnum), to keep just alphanumerics
 _keepalnum = "".join(c for c in map(pycompat.bytechr, range(256)) if not c.isalnum())
 
-# The config knobs that will be altered (if unset) by ui.tweakdefaults.
-tweakrc = """
-[ui]
-# The rollback command is dangerous. As a rule, don't use it.
-rollback = False
-# Make `hg status` report copy information
-statuscopies = yes
-# Prefer curses UIs when available. Revert to plain-text with `text`.
-interface = curses
-
-[commands]
-# Make `hg status` emit cwd-relative paths by default.
-status.relative = yes
-# Refuse to perform an `hg update` that would cause a file content merge
-update.check = noconflict
-
-[diff]
-git = 1
-showfunc = 1
-"""
-
 samplehgrcs = {
     "user": b"""# example user config (see 'hg help config' for more info)
 [ui]
 # name and email, e.g.
 # username = Jane Doe <jdoe@example.com>
 username =
-
-# We recommend enabling tweakdefaults to get slight improvements to
-# the UI over time. Make sure to set HGPLAIN in the environment when
-# writing scripts!
-# tweakdefaults = True
 
 # uncomment to disable color in command output
 # (see 'hg help color' for details)
@@ -286,28 +260,7 @@ class ui(object):
                     u.fixconfig(section=section)
             else:
                 raise error.ProgrammingError("unknown rctype: %s" % t)
-        u._maybetweakdefaults()
         return u
-
-    def _maybetweakdefaults(self):
-        if not self.configbool("ui", "tweakdefaults"):
-            return
-        if self._tweaked or self.plain("tweakdefaults"):
-            return
-
-        # Note: it is SUPER IMPORTANT that you set self._tweaked to
-        # True *before* any calls to setconfig(), otherwise you'll get
-        # infinite recursion between setconfig and this method.
-        #
-        # TODO: We should extract an inner method in setconfig() to
-        # avoid this weirdness.
-        self._tweaked = True
-        tmpcfg = config.config()
-        tmpcfg.parse("<tweakdefaults>", tweakrc)
-        for section in tmpcfg:
-            for name, value in tmpcfg.items(section):
-                if not self.hasconfig(section, name):
-                    self.setconfig(section, name, value, "<tweakdefaults>")
 
     def copy(self):
         return self.__class__(self)
@@ -437,7 +390,6 @@ class ui(object):
         for cfg in (self._ocfg, self._ucfg):
             cfg.set(section, name, value, source)
         self.fixconfig(section=section)
-        self._maybetweakdefaults()
 
     def _data(self, untrusted):
         return self._ucfg
