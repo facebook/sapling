@@ -381,3 +381,23 @@ Add and expect uncommit to fail on both merge working dir and merge changeset
   |/
   o  0:ea4e33293d4d274a2ba73150733c2612231f398c a 1
   
+Recover added / deleted files
+
+  $ newrepo
+  $ drawdag <<'EOS'
+  > B
+  > |
+  > A
+  > EOS
+  $ hg up -q $B
+  $ hg rm B
+  $ touch C
+  $ hg add C
+  $ hg commit -m C -q
+BUG: B is not recovered.
+  $ hg uncommit
+  $ hg status
+  A C
+  $ ls * | sort
+  A
+  C
