@@ -21,7 +21,7 @@
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", None, None, None)
-  ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
+  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> cfg.parse("[c]\nx=1", "parse")
   []
   >>> cfg.set("d", "y", "2", "set1")
@@ -37,11 +37,11 @@
   ...     print("%s = %r" % (item, cfg.get(section, name)))
   ...     print("  sources: %r" % (cfg.sources(section, name)))
   a.x = '1'
-    sources: [('1', ('$TESTTMP/a.rc', 6, 7, 2), 'readpath')]
+    sources: [('1', ('*a.rc', 6, 7, 2), 'readpath')] (glob)
   a.y = None
-    sources: [('2', ('$TESTTMP/a.rc', 10, 11, 3), 'readpath'), (None, ('$TESTTMP/b.rc', 29, 36, 5), 'readpath')]
+    sources: [('2', ('*a.rc', 10, 11, 3), 'readpath'), (None, ('*b.rc', 29, 36, 5), 'readpath')] (glob)
   b.z = '3'
-    sources: [('3', ('$TESTTMP/b.rc', 22, 23, 3), 'readpath')]
+    sources: [('3', ('*b.rc', 22, 23, 3), 'readpath')] (glob)
   c.x = '1'
     sources: [('1', ('', 6, 7, 2), 'parse')]
   d.x = None
@@ -56,7 +56,7 @@ Section whitelist
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", ["a"], None, None)
-  ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
+  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.sections())
   ['a']
 
@@ -65,7 +65,7 @@ Section remap
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", None, {'a': 'x'}.items(), None)
-  ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
+  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.sections())
   ['x', 'b']
 
@@ -74,7 +74,7 @@ Config whitelist
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", None, None, [('a', 'y')])
-  ['"$TESTTMP/broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset']
+  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.get('a', 'y'))
   None
   >>> print(cfg.get('a', 'x'))
