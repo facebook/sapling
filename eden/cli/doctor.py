@@ -238,8 +238,8 @@ def run_normal_checks(
     fs_util: filesystem.FsUtil,
 ) -> None:
     with config.get_thrift_client() as client:
-        active_mount_points = [
-            mount.mountPoint
+        active_mount_points: List[str] = [
+            os.fsdecode(mount.mountPoint)
             for mount in client.listMounts()
             if mount.mountPoint is not None
         ]

@@ -168,7 +168,7 @@ class ListCmd(Subcmd):
         try:
             with config.get_thrift_client() as client:
                 active_mount_points: Set[Optional[str]] = {
-                    mount.mountPoint for mount in client.listMounts()
+                    os.fsdecode(mount.mountPoint) for mount in client.listMounts()
                 }
         except EdenNotRunningError:
             active_mount_points = set()
@@ -441,7 +441,7 @@ class FsckCmd(Subcmd):
         mount, rel_path = debug_mod.get_mount_path(args.path or os.getcwd())
 
         # Get the path to the overlay directory for this mount point
-        client_dir = config._get_client_dir_for_mount_point(mount)
+        client_dir = config._get_client_dir_for_mount_point(os.fsdecode(mount))
         self._overlay_dir = os.path.join(client_dir, "local")
         self._overlay = overlay_mod.Overlay(self._overlay_dir)
 
@@ -649,7 +649,7 @@ class PrefetchCmd(Subcmd):
         with config.get_thrift_client() as client:
             result = client.globFiles(
                 GlobParams(
-                    mountPoint=repo_root,
+                    mountPoint=os.fsencode(repo_root),
                     globs=args.PATTERN,
                     includeDotfiles=False,
                     prefetchFiles=not args.no_prefetch,
@@ -779,7 +779,7 @@ def stop_aux_processes(client: eden.thrift.EdenClient) -> None:
     for all mounts"""
 
     active_mount_points: Set[Optional[str]] = {
-        mount.mountPoint for mount in client.listMounts()
+        os.fsdecode(mount.mountPoint) for mount in client.listMounts()
     }
 
     for repo in active_mount_points:

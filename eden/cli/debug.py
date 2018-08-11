@@ -43,7 +43,7 @@ from .subcmd import Subcmd
 debug_cmd = subcmd_mod.Decorator()
 
 
-def get_mount_path(path: str) -> Tuple[str, str]:
+def get_mount_path(path: str) -> Tuple[bytes, bytes]:
     """
     Given a path inside an eden mount, find the path to the eden root.
 
@@ -52,26 +52,16 @@ def get_mount_path(path: str) -> Tuple[str, str]:
     os.path.join(eden_mount_path, relative_path) refers to the same file as the
     original input path.
     """
-    # TODO: This will probably be easier to do using the special .eden
-    # directory, once the diff adding .eden lands.
-    current_path = os.path.realpath(path)
-    rel_path = ""
-    while True:
-        # For now we simply assume that the first mount point we come across is
-        # the eden mount point.  This doesn't handle bind mounts inside the
-        # eden mount, but that's fine for now.
-        if os.path.ismount(current_path):
-            rel_path = os.path.normpath(rel_path)
-            if rel_path == ".":
-                rel_path = ""
-            return (current_path, rel_path)
 
-        parent, basename = os.path.split(current_path)
-        if parent == current_path:
-            raise Exception("eden mount point not found")
-
-        current_path = parent
-        rel_path = os.path.join(basename, rel_path)
+    path = os.path.realpath(path)
+    current_path = path
+    if not os.path.isdir(current_path):
+        current_path = os.path.dirname(current_path)
+    mount_path = os.readlink(os.path.join(current_path, ".eden", "root"))
+    rel_path = os.path.relpath(path, mount_path)
+    if rel_path == ".":
+        rel_path = ""
+    return (os.fsencode(mount_path), os.fsencode(rel_path))
 
 
 def escape_path(value: bytes) -> str:
@@ -310,7 +300,7 @@ class HgDirstateCmd(Subcmd):
         out.writeln(f"Non-normal Files ({len(entries)}):", attr=out.BOLD)
         entries.sort(key=lambda entry: entry[0])  # Sort by key.
         for path, dirstate_tuple in entries:
-            _print_hg_nonnormal_file(path, dirstate_tuple, out)
+            _print_hg_nonnormal_file(os.fsencode(path), dirstate_tuple, out)
 
         out.writeln(f"Copymap ({len(copymap)}):", attr=out.BOLD)
         _print_copymap(copymap)
@@ -327,7 +317,7 @@ class HgGetDirstateTupleCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         mount, rel_path = get_mount_path(args.path)
         _parents, dirstate_tuples, _copymap = _get_dirstate_data(mount)
-        dirstate_tuple = dirstate_tuples.get(rel_path)
+        dirstate_tuple = dirstate_tuples.get(os.fsdecode(rel_path))
         out = ui_mod.get_output()
         if dirstate_tuple:
             _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
@@ -339,19 +329,19 @@ class HgGetDirstateTupleCmd(Subcmd):
                     dirstate_tuple = ("n", entry.mode, 0)
                     _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
                 except NoValueForKeyError:
-                    print("No tuple for " + rel_path, file=sys.stderr)
+                    print("No tuple for " + os.fsdecode(rel_path), file=sys.stderr)
                     return 1
 
         return 0
 
 
 def _print_hg_nonnormal_file(
-    rel_path: str, dirstate_tuple: Tuple[str, Any, int], out: ui_mod.Output
+    rel_path: bytes, dirstate_tuple: Tuple[str, Any, int], out: ui_mod.Output
 ) -> None:
     status = _dirstate_char_to_name(dirstate_tuple[0])
     merge_state = _dirstate_merge_state_to_name(dirstate_tuple[2])
 
-    out.writeln(f"{rel_path}", fg=out.GREEN)
+    out.writeln(f"{os.fsdecode(rel_path)}", fg=out.GREEN)
     out.writeln(f"    status = {status}")
     out.writeln(f"    mode = {oct(dirstate_tuple[1])}")
     out.writeln(f"    mergeState = {merge_state}")
@@ -384,12 +374,12 @@ def _dirstate_merge_state_to_name(merge_state: int) -> str:
 
 
 def _get_dirstate_data(
-    mount: str
+    mount: bytes
 ) -> Tuple[Tuple[bytes, bytes], Dict[str, Tuple[str, Any, int]], Dict[str, str]]:
     """Returns a tuple of (parents, dirstate_tuples, copymap).
     On error, returns None.
     """
-    filename = os.path.join(mount, ".hg", "dirstate")
+    filename = os.path.join(os.fsdecode(mount), ".hg", "dirstate")
     with open(filename, "rb") as f:
         return eden.dirstate.read(f, filename)
 
@@ -497,18 +487,18 @@ class OverlayCmd(Subcmd):
         mount, rel_path = get_mount_path(args.path or os.getcwd())
 
         # Get the path to the overlay directory for this mount point
-        client_dir = config._get_client_dir_for_mount_point(mount)
+        client_dir = config._get_client_dir_for_mount_point(os.fsdecode(mount))
         self.overlay = overlay_mod.Overlay(os.path.join(client_dir, "local"))
 
         if args.number is not None:
             self._display_overlay(args.number, "")
         elif rel_path:
             rel_path = os.path.normpath(rel_path)
-            inode_number = self.overlay.lookup_path(rel_path)
+            inode_number = self.overlay.lookup_path(os.fsdecode(rel_path))
             if inode_number is None:
                 print(f"{rel_path} is not materialized", file=sys.stderr)
                 return 1
-            self._display_overlay(inode_number, rel_path)
+            self._display_overlay(inode_number, os.fsdecode(rel_path))
         else:
             self._display_overlay(1, "/")
 
@@ -598,7 +588,7 @@ class GetPathCmd(Subcmd):
             "%s %s"
             % (
                 "loaded" if inodePathInfo.loaded else "unloaded",
-                os.path.normpath(os.path.join(mount, inodePathInfo.path))
+                os.fsdecode(os.path.normpath(os.path.join(mount, inodePathInfo.path)))
                 if inodePathInfo.linked
                 else "unlinked",
             )
@@ -844,7 +834,9 @@ class DebugJournalCmd(Subcmd):
             )
 
             params = DebugGetRawJournalParams(
-                mountPoint=mount, fromPosition=from_position, toPosition=to_position
+                mountPoint=os.fsencode(mount),
+                fromPosition=from_position,
+                toPosition=to_position,
             )
             raw_journal = client.debugGetRawJournal(params)
             if args.pattern:
@@ -863,7 +855,7 @@ class DebugJournalCmd(Subcmd):
 def print_raw_journal_deltas(
     deltas: Iterator[FileDelta], pattern: Optional[Pattern]
 ) -> None:
-    matcher: Callable[[str], bool] = (lambda x: True) if pattern is None else cast(
+    matcher: Callable[[bytes], bool] = (lambda x: True) if pattern is None else cast(
         Any, pattern.match
     )
     for delta in deltas:

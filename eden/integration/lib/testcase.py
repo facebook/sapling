@@ -237,6 +237,10 @@ class EdenTestCase(TestParent):
     def mount_path(self) -> pathlib.Path:
         return pathlib.Path(self.mount)
 
+    @property
+    def mount_path_bytes(self) -> bytes:
+        return bytes(self.mount_path)
+
     def get_thrift_client(self) -> eden.thrift.EdenClient:
         """
         Get a thrift client to the edenfs daemon.

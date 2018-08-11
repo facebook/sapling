@@ -43,12 +43,12 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         self.addCleanup(self.client.close)
 
     def test_noEntries(self) -> None:
-        pos = self.client.getCurrentJournalPosition(self.mount)
+        pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         # setting up the .eden dir bumps the sequence number
         self.assertEqual(INITIAL_SEQ, pos.sequenceNumber)
         self.assertNotEqual(0, pos.mountGeneration)
 
-        changed = self.client.getFilesChangedSince(self.mount, pos)
+        changed = self.client.getFilesChangedSince(self.mount_path_bytes, pos)
         self.assertEqual(set(), set(changed.changedPaths))
         self.assertEqual(set(), set(changed.createdPaths))
         self.assertEqual(set(), set(changed.removedPaths))
@@ -58,21 +58,33 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
     def test_getFileInformation(self) -> None:
         """ verify that getFileInformation is consistent with the VFS """
 
-        paths = ["", "not-exist", "hello", "adir", "adir/file", "bdir/test.sh", "slink"]
-        info_list = self.client.getFileInformation(self.mount, paths)
+        paths = [
+            b"",
+            b"not-exist",
+            b"hello",
+            b"adir",
+            b"adir/file",
+            b"bdir/test.sh",
+            b"slink",
+        ]
+        info_list = self.client.getFileInformation(self.mount_path_bytes, paths)
         self.assertEqual(len(paths), len(info_list))
 
         for idx, path in enumerate(paths):
             try:
-                st = os.lstat(os.path.join(self.mount, path))
+                st = os.lstat(os.path.join(self.mount, os.fsdecode(path)))
                 self.assertEqual(
                     FileInformationOrError.INFO,
                     info_list[idx].getType(),
-                    msg="have non-error result for " + path,
+                    msg="have non-error result for " + repr(path),
                 )
                 info = info_list[idx].get_info()
-                self.assertEqual(st.st_mode, info.mode, msg="mode matches for " + path)
-                self.assertEqual(st.st_size, info.size, msg="size matches for " + path)
+                self.assertEqual(
+                    st.st_mode, info.mode, msg="mode matches for " + repr(path)
+                )
+                self.assertEqual(
+                    st.st_size, info.size, msg="size matches for " + repr(path)
+                )
                 self.assertEqual(int(st.st_mtime), info.mtime.seconds)
                 if not stat.S_ISDIR(st.st_mode):
                     self.assertNotEqual(0, st.st_mtime)
@@ -82,61 +94,63 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
                 self.assertEqual(
                     FileInformationOrError.ERROR,
                     info_list[idx].getType(),
-                    msg="have error result for " + path,
+                    msg="have error result for " + repr(path),
                 )
                 err = info_list[idx].get_error()
                 self.assertEqual(
-                    e.errno, err.errorCode, msg="error code matches for " + path
+                    e.errno, err.errorCode, msg="error code matches for " + repr(path)
                 )
 
     def test_invalidProcessGeneration(self) -> None:
         # Get a candidate position
-        pos = self.client.getCurrentJournalPosition(self.mount)
+        pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
 
         # poke the generation to a value that will never manifest in practice
         pos.mountGeneration = 0
 
         with self.assertRaises(EdenService.EdenError) as context:
-            self.client.getFilesChangedSince(self.mount, pos)
+            self.client.getFilesChangedSince(self.mount_path_bytes, pos)
         self.assertEqual(
             errno.ERANGE, context.exception.errorCode, msg="Must return ERANGE"
         )
 
     def test_removeFile(self) -> None:
-        initial_pos = self.client.getCurrentJournalPosition(self.mount)
+        initial_pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
 
         os.unlink(os.path.join(self.mount, "adir", "file"))
-        changed = self.client.getFilesChangedSince(self.mount, initial_pos)
+        changed = self.client.getFilesChangedSince(self.mount_path_bytes, initial_pos)
         self.assertEqual(set(), set(changed.createdPaths))
         self.assertEqual(set(), set(changed.changedPaths))
-        self.assertEqual({"adir/file"}, set(changed.removedPaths))
+        self.assertEqual({b"adir/file"}, set(changed.removedPaths))
 
     def test_renameFile(self) -> None:
-        initial_pos = self.client.getCurrentJournalPosition(self.mount)
+        initial_pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
 
         os.rename(os.path.join(self.mount, "hello"), os.path.join(self.mount, "bye"))
-        changed = self.client.getFilesChangedSince(self.mount, initial_pos)
-        self.assertEqual({"bye"}, set(changed.createdPaths))
+        changed = self.client.getFilesChangedSince(self.mount_path_bytes, initial_pos)
+        self.assertEqual({b"bye"}, set(changed.createdPaths))
         self.assertEqual(set(), set(changed.changedPaths))
-        self.assertEqual({"hello"}, set(changed.removedPaths))
+        self.assertEqual({b"hello"}, set(changed.removedPaths))
 
     def test_addFile(self) -> None:
-        initial_pos = self.client.getCurrentJournalPosition(self.mount)
+        initial_pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
 
         name = os.path.join(self.mount, "overlaid")
         with open(name, "w+") as f:
-            pos = self.client.getCurrentJournalPosition(self.mount)
+            pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
             self.assertEqual(
                 INITIAL_SEQ + 1,
                 pos.sequenceNumber,
                 msg="creating a file bumps the journal",
             )
 
-            changed = self.client.getFilesChangedSince(self.mount, initial_pos)
-            self.assertEqual({"overlaid"}, set(changed.createdPaths))
+            changed = self.client.getFilesChangedSince(
+                self.mount_path_bytes, initial_pos
+            )
+            self.assertEqual({b"overlaid"}, set(changed.createdPaths))
             self.assertEqual(set(), set(changed.changedPaths))
             self.assertEqual(set(), set(changed.removedPaths))
             self.assertEqual(
@@ -147,14 +161,16 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
 
             f.write("NAME!\n")
 
-        pos_after_overlaid = self.client.getCurrentJournalPosition(self.mount)
+        pos_after_overlaid = self.client.getCurrentJournalPosition(
+            self.mount_path_bytes
+        )
         self.assertEqual(
             INITIAL_SEQ + 2,
             pos_after_overlaid.sequenceNumber,
             msg="writing bumps the journal",
         )
-        changed = self.client.getFilesChangedSince(self.mount, initial_pos)
-        self.assertEqual({"overlaid"}, set(changed.createdPaths))
+        changed = self.client.getFilesChangedSince(self.mount_path_bytes, initial_pos)
+        self.assertEqual({b"overlaid"}, set(changed.createdPaths))
         self.assertEqual(set(), set(changed.changedPaths))
         self.assertEqual(set(), set(changed.removedPaths))
         self.assertEqual(
@@ -165,7 +181,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
 
         name = os.path.join(self.mount, "adir", "file")
         with open(name, "a") as f:
-            pos = self.client.getCurrentJournalPosition(self.mount)
+            pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
             self.assertEqual(
                 INITIAL_SEQ + 2,
                 pos.sequenceNumber,
@@ -173,13 +189,15 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
             )
             f.write("more stuff on the end\n")
 
-        pos = self.client.getCurrentJournalPosition(self.mount)
+        pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.assertEqual(
             INITIAL_SEQ + 3, pos.sequenceNumber, msg="appending bumps the journal"
         )
 
-        changed = self.client.getFilesChangedSince(self.mount, pos_after_overlaid)
-        self.assertEqual({"adir/file"}, set(changed.changedPaths))
+        changed = self.client.getFilesChangedSince(
+            self.mount_path_bytes, pos_after_overlaid
+        )
+        self.assertEqual({b"adir/file"}, set(changed.changedPaths))
         self.assertEqual(set(), set(changed.createdPaths))
         self.assertEqual(set(), set(changed.removedPaths))
         self.assertEqual(

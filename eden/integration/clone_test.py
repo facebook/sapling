@@ -61,7 +61,7 @@ class CloneTest(testcase.EdenRepoTest):
 
         with self.get_thrift_client() as client:
             active_mount_points: Set[Optional[str]] = {
-                mount.mountPoint for mount in client.listMounts()
+                os.fsdecode(mount.mountPoint) for mount in client.listMounts()
             }
             self.assertIn(
                 empty_dir, active_mount_points, msg="mounted using the realpath"

@@ -25,6 +25,16 @@ typedef i64 /* (cpp.type = "std::uint64_t") */ unsigned64
  */
 typedef binary BinaryHash
 
+/**
+ * So, you thought that a path was a string?
+ * Paths in posix are arbitrary byte strings with some pre-defined special
+ * characters.  On modern systems they tend to be represented as UTF-8 but
+ * there is no guarantee.  We use the `PathString` type as symbolic way
+ * to indicate that you may need to perform special processing to safely
+ * interpret the path data on your system.
+ */
+typedef binary PathString
+
 exception EdenError {
   1: required string message
   2: optional i32 errorCode
@@ -35,8 +45,8 @@ exception NoValueForKeyError {
 }
 
 struct MountInfo {
-  1: string mountPoint
-  2: string edenClientPath
+  1: PathString mountPoint
+  2: PathString edenClientPath
 }
 
 union SHA1Result {
@@ -97,9 +107,9 @@ struct FileDelta {
   2: JournalPosition toPosition
   /** The complete list of paths from both the snapshot and the overlay that
    * changed between fromPosition and toPosition */
-  3: list<string> changedPaths
-  4: list<string> createdPaths
-  5: list<string> removedPaths
+  3: list<PathString> changedPaths
+  4: list<PathString> createdPaths
+  5: list<PathString> removedPaths
   /** When fromPosition.snapshotHash != toPosition.snapshotHash this holds
    * the union of the set of files whose ScmFileStatus differed from the
    * committed fromPosition hash before the hash changed, and the set of
@@ -108,11 +118,11 @@ struct FileDelta {
    * whose state may have changed as part of an update operation, but
    * in ways that may not be able to be extracted solely by performing
    * source control diff operations on the from/to hashes. */
-  6: list<string> uncleanPaths
+  6: list<PathString> uncleanPaths
 }
 
 struct DebugGetRawJournalParams {
-  1: string mountPoint
+  1: PathString mountPoint
   2: JournalPosition fromPosition
   3: JournalPosition toPosition
 }
@@ -151,7 +161,7 @@ enum ScmFileStatus {
 }
 
 struct ScmStatus {
-  1: map<string, ScmFileStatus> entries
+  1: map<PathString, ScmFileStatus> entries
 
   /**
    * A map of { path -> error message }
@@ -162,7 +172,7 @@ struct ScmStatus {
    *
    * This map will be empty if no errors occurred.
    */
-  2: map<string, string> errors
+  2: map<PathString, string> errors
 }
 
 /** Option for use with checkOutRevision(). */
@@ -226,7 +236,7 @@ enum ConflictType {
  * Details about conflicts or errors that occurred during a checkout operation
  */
 struct CheckoutConflict {
-  1: string path
+  1: PathString path
   2: ConflictType type
   3: string message
 }
@@ -286,7 +296,7 @@ struct TreeInodeDebugInfo {
 }
 
 struct InodePathDebugInfo {
-  1: string path
+  1: PathString path
   2: bool loaded
   3: bool linked
 }
@@ -322,7 +332,7 @@ struct InternalStats {
    * is the details like number of loaded inodes,unloaded inodes in that mount
    * and number of materialized inodes in that mountpoint.
    */
-  3: map<string, MountInodeInfo> mountPointInfo
+  3: map<PathString, MountInodeInfo> mountPointInfo
   /**
    * Linux-only: the contents of /proc/self/smaps, to be parsed by the caller.
    */
@@ -356,7 +366,7 @@ struct FuseCall {
 
 /** Params for globFiles(). */
 struct GlobParams {
-  1: string mountPoint,
+  1: PathString mountPoint,
   2: list<string> globs,
   3: bool includeDotfiles,
   // if true, prefetch matching blobs
@@ -371,13 +381,13 @@ struct Glob {
    * This list cannot contain duplicate values and is not guaranteed to be
    * sorted.
    */
-  1: list<string> matchingFiles,
+  1: list<PathString> matchingFiles,
 }
 
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
-  void unmount(1: string mountPoint) throws (1: EdenError ex)
+  void unmount(1: PathString mountPoint) throws (1: EdenError ex)
 
   /**
    * Potentially check out the specified snapshot, reporting conflicts (and
@@ -402,7 +412,7 @@ service EdenService extends fb303.FacebookService {
    * these paths as desired after checkOutRevision() returns.
    */
   list<CheckoutConflict> checkOutRevision(
-    1: string mountPoint,
+    1: PathString mountPoint,
     2: BinaryHash snapshotHash,
     3: CheckoutMode checkoutMode)
       throws (1: EdenError ex)
@@ -414,7 +424,7 @@ service EdenService extends fb303.FacebookService {
    * This operation is equivalent to `git reset --soft` or `hg reset --keep`
    */
   void resetParentCommits(
-    1: string mountPoint,
+    1: PathString mountPoint,
     2: WorkingDirectoryParents parents)
       throws (1: EdenError ex)
 
@@ -426,19 +436,19 @@ service EdenService extends fb303.FacebookService {
    * - path identifies something that is not an ordinary file (e.g., symlink
    *   or directory).
    */
-  list<SHA1Result> getSHA1(1: string mountPoint, 2: list<string> paths)
+  list<SHA1Result> getSHA1(1: PathString mountPoint, 2: list<PathString> paths)
     throws (1: EdenError ex)
 
   /**
    * Returns a list of paths relative to the mountPoint.
    */
-  list<string> getBindMounts(1: string mountPoint)
+  list<PathString> getBindMounts(1: PathString mountPoint)
     throws (1: EdenError ex)
 
   /** Returns the sequence position at the time the method is called.
    * Returns the instantaneous value of the journal sequence number.
    */
-  JournalPosition getCurrentJournalPosition(1: string mountPoint)
+  JournalPosition getCurrentJournalPosition(1: PathString mountPoint)
     throws (1: EdenError ex)
 
   /** Returns the set of files (and dirs) that changed since a prior point.
@@ -449,7 +459,7 @@ service EdenService extends fb303.FacebookService {
    * other available functions in EdenService.
    */
   FileDelta getFilesChangedSince(
-    1: string mountPoint,
+    1: PathString mountPoint,
     2: JournalPosition fromPosition)
       throws (1: EdenError ex)
 
@@ -471,8 +481,8 @@ service EdenService extends fb303.FacebookService {
    * files in the overlay.
    */
   list<FileInformationOrError> getFileInformation(
-    1: string mountPoint,
-    2: list<string> paths)
+    1: PathString mountPoint,
+    2: list<PathString> paths)
       throws (1: EdenError ex)
 
   /**
@@ -480,8 +490,8 @@ service EdenService extends fb303.FacebookService {
    * Returns a list of files that match the input globs.
    * There are no duplicate values in the result.
    */
-  list<string> glob(
-    1: string mountPoint,
+  list<PathString> glob(
+    1: PathString mountPoint,
     2: list<string> globs)
       throws (1: EdenError ex)
 
@@ -501,7 +511,7 @@ service EdenService extends fb303.FacebookService {
    * SCM system, such as the .git folder in Git and the .hg folder in Mercurial.
    */
   ScmStatus getScmStatus(
-    1: string mountPoint,
+    1: PathString mountPoint,
     2: bool listIgnored,
     3: BinaryHash commit,
   ) throws (1: EdenError ex)
@@ -511,7 +521,7 @@ service EdenService extends fb303.FacebookService {
    * This does not care about the state of the working copy.
    */
   ScmStatus getScmStatusBetweenRevisions(
-    1: string mountPoint,
+    1: PathString mountPoint,
     2: BinaryHash oldHash,
     3: BinaryHash newHash,
   ) throws (1: EdenError ex)
@@ -529,8 +539,8 @@ service EdenService extends fb303.FacebookService {
    * parameter rather than assuming the current commit.
    */
   ManifestEntry getManifestEntry(
-    1: string mountPoint
-    2: string relativePath
+    1: PathString mountPoint
+    2: PathString relativePath
   ) throws (
     1: EdenError ex
     2: NoValueForKeyError noValueForKeyError
@@ -550,7 +560,7 @@ service EdenService extends fb303.FacebookService {
    * from the BackingStore if it is not already present in the LocalStore.
    */
   list<ScmTreeEntry> debugGetScmTree(
-    1: string mountPoint,
+    1: PathString mountPoint,
     2: BinaryHash id,
     3: bool localStoreOnly,
   ) throws (1: EdenError ex)
@@ -562,7 +572,7 @@ service EdenService extends fb303.FacebookService {
    * for the blob, and that the information is correct.
    */
   binary debugGetScmBlob(
-    1: string mountPoint,
+    1: PathString mountPoint,
     2: BinaryHash id,
     3: bool localStoreOnly,
   ) throws (1: EdenError ex)
@@ -576,7 +586,7 @@ service EdenService extends fb303.FacebookService {
    * debugGetScmBlob() when getting data about extremely large blobs.
    */
   ScmBlobMetadata debugGetScmBlobMetadata(
-    1: string mountPoint,
+    1: PathString mountPoint,
     2: BinaryHash id,
     3: bool localStoreOnly,
   ) throws (1: EdenError ex)
@@ -603,8 +613,8 @@ service EdenService extends fb303.FacebookService {
    * have outstanding references.
    */
   list<TreeInodeDebugInfo> debugInodeStatus(
-    1: string mountPoint,
-    2: string path,
+    1: PathString mountPoint,
+    2: PathString path,
   ) throws (1: EdenError ex)
 
   /**
@@ -614,7 +624,7 @@ service EdenService extends fb303.FacebookService {
    * fuse_in_header.
    */
   list<FuseCall> debugOutstandingFuseCalls(
-    1: string mountPoint,
+    1: PathString mountPoint,
   )
 
   /**
@@ -624,7 +634,7 @@ service EdenService extends fb303.FacebookService {
    * mountPoint be specified.
    */
   InodePathDebugInfo debugGetInodePath(
-    1: string mountPoint,
+    1: PathString mountPoint,
     2: i64 inodeNumber,
   ) throws (1: EdenError ex)
 
@@ -667,8 +677,8 @@ service EdenService extends fb303.FacebookService {
   * (wall clock) time.
   */
   i64 unloadInodeForPath(
-    1: string mountPoint,
-    2: string path,
+    1: PathString mountPoint,
+    2: PathString path,
     3: TimeSpec age,
   ) throws (1: EdenError ex)
 
@@ -689,8 +699,8 @@ service EdenService extends fb303.FacebookService {
   * Invalidate kernel cache for inode.
   */
   void invalidateKernelInodeCache(
-    1: string mountPoint,
-    2: string path
+    1: PathString mountPoint,
+    2: PathString path
     )
   throws (1: EdenError ex)
 

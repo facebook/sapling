@@ -10,6 +10,7 @@
 import argparse
 import io
 import logging
+import os
 import sys
 import textwrap
 from typing import Dict, List, Optional, Union, cast
@@ -73,10 +74,11 @@ def do_stats_general(
         inode_info = diag_info.mountPointInfo
         for key in inode_info:
             info = inode_info[key]
+            mount_path = os.fsdecode(key)
             out.write(
                 textwrap.dedent(
                     f"""\
-                Mount information for {key}
+                Mount information for {mount_path}
                     Loaded inodes in memory: {info.loadedInodeCount}
                         Files: {info.loadedFileCount}
                         Trees: {info.loadedTreeCount}

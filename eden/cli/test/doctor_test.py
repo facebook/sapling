@@ -1829,7 +1829,7 @@ class FakeConfig:
 
             # Tell the thrift client to report the mount as active
             self._fake_client._mounts.append(
-                eden_ttypes.MountInfo(mountPoint=full_path)
+                eden_ttypes.MountInfo(mountPoint=os.fsencode(full_path))
             )
 
             # Set up directories on disk that look like the mounted checkout
