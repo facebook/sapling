@@ -300,7 +300,25 @@ class CheckoutNotMounted(FixableProblem):
         return f"Remounting {self._mount_path}"
 
     def perform_fix(self) -> None:
-        self._config.mount(self._mount_path)
+        try:
+            self._config.mount(self._mount_path)
+        except Exception as ex:
+            if "is too short for header" in str(ex):
+                raise Exception(
+                    f"""\
+{ex}
+
+{self._mount_path} appears to have been corrupted.
+This can happen if your devserver was hard-rebooted.
+To recover, you will need to remove and reclone the repo.
+You will lose uncommitted work or shelves, but all your local
+commits are safe.
+If you have non-trivial uncommitted work that you need to recover
+you may be able to restore it from your system backup.
+
+To remove the corrupted repo, run: `eden rm {self._mount_path}`"""
+                )
+            raise
 
 
 def check_active_mounts(
