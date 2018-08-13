@@ -274,6 +274,7 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     ))
 }
 
+// TODO: (jsgf) T32777804 make the dependency between cachelib and blobrepo more visible
 pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
     let cache_size = matches
         .value_of("cache-size-gb")

@@ -296,6 +296,9 @@ fn main() {
         }
         (BONSAI_FETCH, Some(sub_m)) => {
             let rev = sub_m.value_of("HG_CHANGESET_OR_BOOKMARK").unwrap();
+
+            args::init_cachelib(&matches);
+
             let repo = args::open_blobrepo(&logger, &matches);
             fetch_bonsai_changeset(rev, Arc::new(repo))
                 .map(|bcs| {
