@@ -23,6 +23,7 @@ extern crate manifold;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
+extern crate panichandler;
 extern crate repo_client;
 extern crate revset;
 #[macro_use]
@@ -61,6 +62,8 @@ use tailer::Tailer;
 use tokio_timer::sleep;
 
 fn main() -> Result<()> {
+    panichandler::set_panichandler(panichandler::Fate::Abort);
+
     let matches = setup_app().get_matches();
     let repo_name = matches.value_of("repo_name").unwrap();
     let logger = setup_logger(&matches, repo_name.to_string());
