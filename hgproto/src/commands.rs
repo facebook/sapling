@@ -61,7 +61,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
     where
         S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
     {
-        debug!(self.logger, "Got request: {:?}", req);
         let hgcmds = &self.commands;
 
         match req {

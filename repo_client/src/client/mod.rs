@@ -281,7 +281,7 @@ impl RepoClient {
     }
 
     fn gettreepack_untimed(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
-        info!(self.logger, "gettreepack {:?}", params);
+        debug!(self.logger, "gettreepack");
 
         if !params.directories.is_empty() {
             // This param is not used by core hg, don't worry about implementing it now
@@ -438,7 +438,6 @@ impl HgCommands for RepoClient {
     fn heads(&self) -> HgCommandRes<HashSet<HgNodeHash>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
-        let logger = self.logger.clone();
         let mut scuba_logger = self.scuba_logger(ops::HEADS, None);
 
         self.repo
@@ -447,7 +446,6 @@ impl HgCommands for RepoClient {
             .collect()
             .map(|v| v.into_iter().collect())
             .from_err()
-            .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
             .traced(&self.trace, ops::HEADS, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger

@@ -47,11 +47,9 @@ pub fn resolve(
     repo: Arc<BlobRepo>,
     logger: Logger,
     scuba_logger: ScubaSampleBuilder,
-    heads: Vec<String>,
+    _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<Bytes, Error> {
-    info!(logger, "unbundle heads {:?}", heads);
-
     let resolver = Bundle2Resolver::new(repo, logger, scuba_logger);
 
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
