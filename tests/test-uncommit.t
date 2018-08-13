@@ -394,10 +394,10 @@ Recover added / deleted files
   $ touch C
   $ hg add C
   $ hg commit -m C -q
-BUG: B is not recovered.
   $ hg uncommit
   $ hg status
   A C
+  R B
   $ ls * | sort
   A
   C

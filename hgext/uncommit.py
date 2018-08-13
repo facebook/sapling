@@ -31,6 +31,7 @@ from mercurial import (
     registrar,
     rewriteutil,
     scmutil,
+    treestate,
 )
 from mercurial.i18n import _
 
@@ -125,12 +126,28 @@ def _fixdirstate(repo, oldctx, newctx, status):
         elif ds[f] != "a":
             ds.add(f)
 
+    p1 = list(repo.set("p1()"))
+    p2 = list(repo.set("p2()"))
     for f in s.removed:
         if ds[f] == "a":
             # removed + added -> normal
             ds.normallookup(f)
         elif ds[f] != "r":
-            ds.remove(f)
+            # For treestate, ds.remove is a no-op if f is not tracked.
+            # In that case, we need to manually "correct" the state by
+            # using low-level treestate API.
+            if ds._istreestate and f not in ds:
+                state = 0
+                if any(f in ctx for ctx in p1):
+                    state |= treestate.treestate.EXIST_P1
+                if any(f in ctx for ctx in p2):
+                    state |= treestate.treestate.EXIST_P2
+                mode = 0
+                mtime = -1
+                size = 0
+                ds._map._tree.insert(f, state, mode, size, mtime, None)
+            else:
+                ds.remove(f)
 
     # Merge old parent and old working dir copies
     oldcopies = {}
