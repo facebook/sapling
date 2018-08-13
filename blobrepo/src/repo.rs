@@ -72,6 +72,7 @@ define_stats! {
     get_changeset_parents: timeseries(RATE, SUM),
     get_changeset_by_changesetid: timeseries(RATE, SUM),
     get_hg_file_copy_from_blobstore: timeseries(RATE, SUM),
+    get_hg_from_bonsai_changeset: timeseries(RATE, SUM),
     get_manifest_by_nodeid: timeseries(RATE, SUM),
     get_root_entry: timeseries(RATE, SUM),
     get_bookmark: timeseries(RATE, SUM),
@@ -860,6 +861,7 @@ impl BlobRepo {
         &self,
         bcs_id: ChangesetId,
     ) -> impl Future<Item = HgChangesetId, Error = Error> + Send {
+        STATS::get_hg_from_bonsai_changeset.add_value(1);
         fn create_hg_from_bonsai_changeset(
             repo: &BlobRepo,
             bcs_id: ChangesetId,
