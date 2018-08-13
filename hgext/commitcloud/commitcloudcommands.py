@@ -378,15 +378,15 @@ def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
             srcrepo = shareutil.getsrcrepo(repo)
             lock = lockmod.lock(srcrepo.vfs, _backuplockname, 0)
         except error.LockHeld as e:
-            if e.errno == errno.ETIMEDOUT and e.locker.isrunning():
+            if e.errno == errno.ETIMEDOUT and e.lockinfo.isrunning():
                 etimemsg = ""
-                etime = commitcloudutil.getprocessetime(e.locker)
+                etime = commitcloudutil.getprocessetime(e.lockinfo)
                 if etime:
                     etimemsg = _(", running for %d min %d sec") % divmod(etime, 60)
                 highlightstatus(
                     ui,
                     _("background cloud sync is already in progress (pid %s on %s%s)\n")
-                    % (e.locker.uniqueid, e.locker.namespace, etimemsg),
+                    % (e.lockinfo.uniqueid, e.lockinfo.namespace, etimemsg),
                 )
                 ui.flush()
 
@@ -817,14 +817,14 @@ def backuplockcheck(ui, repo):
     try:
         lockmod.trylock(ui, repo.vfs, _backuplockname, 0, 0)
     except error.LockHeld as e:
-        if e.locker.isrunning():
-            locker = e.locker
-            etime = commitcloudutil.getprocessetime(locker)
+        if e.lockinfo.isrunning():
+            lockinfo = e.lockinfo
+            etime = commitcloudutil.getprocessetime(lockinfo)
             if etime:
                 minutes, seconds = divmod(etime, 60)
                 etimemsg = _(" (pid %s on %s, running for %d min %d sec)") % (
-                    locker.uniqueid,
-                    locker.namespace,
+                    lockinfo.uniqueid,
+                    lockinfo.namespace,
                     minutes,
                     seconds,
                 )

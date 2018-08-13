@@ -319,7 +319,9 @@ class journalstorage(object):
         try:
             l = lock.lock(vfs, "namejournal.lock", 0, desc=desc)
         except error.LockHeld as inst:
-            self.ui.warn(_("waiting for lock on %s held by %r\n") % (desc, inst.locker))
+            self.ui.warn(
+                _("waiting for lock on %s held by %r\n") % (desc, inst.lockinfo)
+            )
             # default to 600 seconds timeout
             l = lock.lock(
                 vfs, "namejournal.lock", self.ui.configint("ui", "timeout"), desc=desc

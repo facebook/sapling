@@ -165,11 +165,11 @@ def callcatch(ui, func):
     # Mercurial-specific first, followed by built-in and library exceptions
     except error.LockHeld as inst:
         if inst.errno == errno.ETIMEDOUT:
-            reason = _("timed out waiting for lock held by %r") % inst.locker
+            reason = _("timed out waiting for lock held by %r") % inst.lockinfo
         else:
-            reason = _("lock held by %r") % inst.locker
+            reason = _("lock held by %r") % inst.lockinfo
         ui.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
-        if not inst.locker:
+        if not inst.lockinfo:
             ui.warn(_("(lock might be very busy)\n"))
     except error.LockUnavailable as inst:
         ui.warn(
@@ -1213,8 +1213,8 @@ def _locksub(repo, lock, envvar, cmd, environ=None, *args, **kwargs):
         )
     if environ is None:
         environ = {}
-    with lock.inherit() as locker:
-        environ[envvar] = locker
+    with lock.inherit() as lockname:
+        environ[envvar] = lockname
         return repo.ui.system(cmd, environ=environ, *args, **kwargs)
 
 
