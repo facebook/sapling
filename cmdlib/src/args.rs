@@ -23,13 +23,22 @@ use blobrepo::{BlobRepo, ManifoldArgs};
 use mercurial_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
-    ("blob-cache-size", "size of the blob cache"),
-    ("presence-cache-size", "size of the blob presence cache"),
-    ("changesets-cache-size", "size of the changesets cache"),
-    ("filenodes-cache-size", "size of the filenodes cache"),
+    ("blob-cache-size", "override size of the blob cache"),
+    (
+        "presence-cache-size",
+        "override size of the blob presence cache",
+    ),
+    (
+        "changesets-cache-size",
+        "override size of the changesets cache",
+    ),
+    (
+        "filenodes-cache-size",
+        "override size of the filenodes cache",
+    ),
     (
         "idmapping-cache-size",
-        "size of the bonsai/hg mapping cache",
+        "override size of the bonsai/hg mapping cache",
     ),
 ];
 
@@ -267,6 +276,9 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             "--cache-size-gb [SIZE] 'size of the cachelib cache, in GiB'",
     ))
     .arg(Arg::from_usage(
+            "--use-tupperware-shrinker 'Use the Tupperware-aware cache shrinker to avoid OOM'"
+    ))
+    .arg(Arg::from_usage(
             "--max-process-size [SIZE] 'process size at which cachelib will shrink, in GiB'"
     ))
     .arg(Arg::from_usage(
@@ -276,59 +288,63 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 // TODO: (jsgf) T32777804 make the dependency between cachelib and blobrepo more visible
 pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
-    let cache_size = matches
+    let cache_size_gb = matches
         .value_of("cache-size-gb")
         .unwrap_or("20")
         .parse::<usize>()
-        .unwrap() * 1024 * 1024 * 1024;
-    let max_process_size_gib = matches
-        .value_of("max-process-size")
-        .map(str::parse::<usize>)
-        // This is a fixed-point calculation. The process can grow to 1.2 times the size of the
-        // cache before the cache shrinks, but cachelib is inconsistent and wants cache size in
-        // bytes but process sizes in GiB
-        .unwrap_or(Ok(cache_size * 12 / (10 * 1024 * 1024 * 1024)))
-        .unwrap() as u32;
-    let min_process_size_gib = matches
-        .value_of("min-process-size")
-        .map(str::parse::<usize>)
-        // This is a fixed-point calculation. The process can fall to 0.8 times the size of the
-        // cache before the cache will regrow to target size, but cachelib is inconsistent
-        // and wants cache size in bytes but process sizes in GiB
-        .unwrap_or(Ok(cache_size * 8 / (10 * 1024 * 1024 * 1024)))
-        .unwrap() as u32;
+        .unwrap();
 
-    cachelib::init_cache_once(
-        cachelib::LruCacheConfig::new(cache_size)
-            .set_shrinker(cachelib::ShrinkMonitor {
-                shrinker_type: cachelib::ShrinkMonitorType::ResidentSize {
-                    max_process_size_gib: max_process_size_gib,
-                    min_process_size_gib: min_process_size_gib,
-                },
-                interval: Duration::new(10, 0),
-                max_resize_per_iteration_percent: 25,
-                max_removed_percent: 50,
-                strategy: cachelib::RebalanceStrategy::HitsPerSlab {
-                    // A small increase in hit ratio is desired
-                    diff_ratio: 0.05,
-                    min_retained_slabs: 1,
-                    // Objects newer than 30 seconds old might be about to become interesting
-                    min_tail_age: Duration::new(30, 0),
-                    ignore_untouched_slabs: false,
-                },
-            })
-            .set_pool_rebalance(cachelib::PoolRebalanceConfig {
-                interval: Duration::new(10, 0),
-                strategy: cachelib::RebalanceStrategy::HitsPerSlab {
-                    // A small increase in hit ratio is desired
-                    diff_ratio: 0.05,
-                    min_retained_slabs: 1,
-                    // Objects newer than 30 seconds old might be about to become interesting
-                    min_tail_age: Duration::new(30, 0),
-                    ignore_untouched_slabs: false,
-                },
-            }),
-    ).unwrap();
+    let mut cache_config = cachelib::LruCacheConfig::new(cache_size_gb * 1024 * 1024 * 1024)
+        .set_pool_rebalance(cachelib::PoolRebalanceConfig {
+            interval: Duration::new(10, 0),
+            strategy: cachelib::RebalanceStrategy::HitsPerSlab {
+                // A small increase in hit ratio is desired
+                diff_ratio: 0.05,
+                min_retained_slabs: 1,
+                // Objects newer than 30 seconds old might be about to become interesting
+                min_tail_age: Duration::new(30, 0),
+                ignore_untouched_slabs: false,
+            },
+        });
+
+    if matches.is_present("use-tupperware-shrinker") {
+        if matches.is_present("max-process-size") || matches.is_present("min-process-size") {
+            panic!("Can't use both Tupperware shrinker and manually configured shrinker");
+        }
+
+        cache_config = cache_config.set_tupperware_shrinker();
+    } else {
+        let opt_max_process_size_gib = matches.value_of("max-process-size").map(str::parse::<u32>);
+        let opt_min_process_size_gib = matches.value_of("min-process-size").map(str::parse::<u32>);
+
+        match (opt_max_process_size_gib, opt_min_process_size_gib) {
+            (None, None) => (),
+            (Some(_), None) | (None, Some(_)) => {
+                panic!("If setting process size limits, must set both max and min")
+            }
+            (Some(max), Some(min)) => {
+                cache_config = cache_config.set_shrinker(cachelib::ShrinkMonitor {
+                    shrinker_type: cachelib::ShrinkMonitorType::ResidentSize {
+                        max_process_size_gib: max.unwrap(),
+                        min_process_size_gib: min.unwrap(),
+                    },
+                    interval: Duration::new(10, 0),
+                    max_resize_per_iteration_percent: 25,
+                    max_removed_percent: 50,
+                    strategy: cachelib::RebalanceStrategy::HitsPerSlab {
+                        // A small increase in hit ratio is desired
+                        diff_ratio: 0.05,
+                        min_retained_slabs: 1,
+                        // Objects newer than 30 seconds old might be about to become interesting
+                        min_tail_age: Duration::new(30, 0),
+                        ignore_untouched_slabs: false,
+                    },
+                });
+            }
+        };
+    }
+
+    cachelib::init_cache_once(cache_config).unwrap();
 
     cachelib::init_cacheadmin("mononoke").unwrap();
 
