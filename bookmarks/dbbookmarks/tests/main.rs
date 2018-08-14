@@ -18,14 +18,12 @@ extern crate futures;
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
-extern crate mononoke_types;
-extern crate mononoke_types_mocks;
 extern crate tokio;
 
 use bookmarks::{Bookmark, BookmarkPrefix};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
+use mercurial_types_mocks::nodehash::{ONES_CSID, TWOS_CSID};
 use mercurial_types_mocks::repo::{REPO_ONE, REPO_ZERO};
-use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
 
 fn create_bookmark(book: &str) -> Bookmark {
     Bookmark::new(book.to_string()).unwrap()

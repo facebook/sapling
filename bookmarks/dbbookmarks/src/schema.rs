@@ -11,11 +11,11 @@
 table! {
     use diesel::sql_types::{Integer, Text};
 
-    use mononoke_types::sql_types::ChangesetIdSql;
+    use mercurial_types::sql_types::HgChangesetIdSql;
 
     bookmarks (repo_id, name) {
         repo_id -> Integer,
         name -> Text,
-        changeset_id -> ChangesetIdSql,
+        changeset_id -> HgChangesetIdSql,
     }
 }

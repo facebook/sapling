@@ -53,10 +53,14 @@ pub fn upload_bookmarks(
             let stale_bookmarks = stale_bookmarks.clone();
             move |bookmarks| {
                 stream::futures_unordered(bookmarks.into_iter().map(|(key, cs_id)| {
+                    let logger = logger.clone();
+                    let blobrepo = blobrepo.clone();
+                    let stale_bookmarks = stale_bookmarks.clone();
                     blobrepo
                         .changeset_exists(&cs_id)
                         .and_then({
-                            cloned!(logger, key, blobrepo, stale_bookmarks);
+                            let logger = logger.clone();
+                            let key = key.clone();
                             move |exists| {
                                 match (exists, stale_bookmarks.get(&key).cloned()) {
                                     (false, Some(stale_cs_id)) => {
@@ -77,14 +81,7 @@ pub fn upload_bookmarks(
                                     }
                                     _ => Ok((key, cs_id, exists)).into_future().boxify(),
                                 }
-                            }})
-                        .and_then({
-                            cloned!(blobrepo);
-                            move |(key, cs_id, exists)| {
-                                blobrepo.get_bonsai_from_hg(&cs_id)
-                                    .map(move |cs_id| (key, cs_id, exists))
-                            }
-                        })
+                        }})
                 }))
             }
         })
@@ -92,18 +89,17 @@ pub fn upload_bookmarks(
         .filter_map({
             let logger = logger.clone();
             move |(key, cs_id, exists)| {
-                match cs_id {
-                    Some(cs_id) if exists => Some((key, cs_id)),
-                    _ => {
-                        info!(
-                            logger,
-                            "did not update bookmark {:?}, because cs {:?} was not imported yet",
-                            key,
-                            cs_id,
-                        );
-                        None
-                    }
-                }
+                if exists {
+                    Some((key, cs_id))
+                } else {
+                    info!(
+                        logger,
+                        "did not update bookmark {:?}, because cs {:?} was not imported yet",
+                        key,
+                        cs_id,
+                    );
+                    None
+               }
             }
         })
         .chunks(100) // send 100 bookmarks in a single transaction

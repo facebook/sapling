@@ -24,7 +24,6 @@ use mercurial::manifest::{Details, ManifestContent};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
                       NULL_HASH};
-use mononoke_types::ChangesetId;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use stats::*;
@@ -201,8 +200,8 @@ enum Pushkey {
 struct BookmarkPush {
     part_id: PartId,
     name: bookmarks::Bookmark,
-    old: Option<ChangesetId>,
-    new: Option<ChangesetId>,
+    old: Option<HgChangesetId>,
+    new: Option<HgChangesetId>,
 }
 
 /// Holds repo and logger for convienience access from it's methods
@@ -323,7 +322,6 @@ impl Bundle2Resolver {
         &self,
         bundle2: BoxStream<Bundle2Item, Error>,
     ) -> BoxFuture<(Option<Pushkey>, BoxStream<Bundle2Item, Error>), Error> {
-        let repo = self.repo.clone();
         next_item(bundle2)
             .and_then(move |(newpart, bundle2)| match newpart {
                 Some(Bundle2Item::Pushkey(header, emptypart)) => {
@@ -335,26 +333,21 @@ impl Bundle2Resolver {
                     );
 
                     let pushkey = match &namespace[..] {
-                        b"phases" => future::ok(Pushkey::Phases).left_future(),
+                        b"phases" => Pushkey::Phases,
                         b"bookmarks" => {
                             let part_id = header.part_id();
                             let mparams = header.mparams();
                             let name = try_boxfuture!(get_ascii_param(mparams, "key"));
                             let name = bookmarks::Bookmark::new_ascii(name);
-                            let old = get_optional_changeset_param(&repo, mparams, "old");
-                            let new = get_optional_changeset_param(&repo, mparams, "new");
+                            let old = try_boxfuture!(get_optional_changeset_param(mparams, "old"));
+                            let new = try_boxfuture!(get_optional_changeset_param(mparams, "new"));
 
-                            (old, new)
-                                .into_future()
-                                .map(move |(old, new)| {
-                                    Pushkey::BookmarkPush(BookmarkPush {
-                                        part_id,
-                                        name,
-                                        old,
-                                        new,
-                                    })
-                                })
-                                .right_future()
+                            Pushkey::BookmarkPush(BookmarkPush {
+                                part_id,
+                                name,
+                                old,
+                                new,
+                            })
                         }
                         _ => {
                             return err(format_err!(
@@ -364,10 +357,7 @@ impl Bundle2Resolver {
                         }
                     };
 
-                    emptypart
-                        .and_then(move |_| pushkey)
-                        .map(move |pushkey| (Some(pushkey), bundle2))
-                        .boxify()
+                    emptypart.map(move |_| (Some(pushkey), bundle2)).boxify()
                 }
                 Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
                 None => ok((None, bundle2)).boxify(),
@@ -872,15 +862,14 @@ fn get_ascii_param(params: &HashMap<String, Bytes>, param: &str) -> Result<Ascii
 }
 
 fn get_optional_changeset_param(
-    repo: &Arc<BlobRepo>,
     params: &HashMap<String, Bytes>,
     param: &str,
-) -> BoxFuture<Option<ChangesetId>, Error> {
-    let val = try_boxfuture!(get_ascii_param(params, param));
+) -> Result<Option<HgChangesetId>> {
+    let val = get_ascii_param(params, param)?;
+
     if val.is_empty() {
-        future::ok(None).boxify()
+        Ok(None)
     } else {
-        let cs_id = try_boxfuture!(HgChangesetId::from_ascii_str(&val));
-        repo.get_bonsai_from_hg(&cs_id)
+        Ok(Some(HgChangesetId::from_ascii_str(&val)?))
     }
 }

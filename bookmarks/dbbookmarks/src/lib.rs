@@ -21,7 +21,6 @@ extern crate futures_ext;
 extern crate mercurial_types;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
-extern crate mononoke_types;
 extern crate storage_types;
 
 mod schema;
@@ -37,8 +36,7 @@ use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use db::ConnectionParams;
-use mercurial_types::RepositoryId;
-use mononoke_types::ChangesetId;
+use mercurial_types::{HgChangesetId, RepositoryId};
 use std::collections::{HashMap, HashSet};
 use std::result;
 use std::sync::MutexGuard;
@@ -116,7 +114,7 @@ macro_rules! impl_bookmarks {
                 &self,
                 name: &Bookmark,
                 repo_id: &RepositoryId,
-            ) -> BoxFuture<Option<ChangesetId>, Error> {
+            ) -> BoxFuture<Option<HgChangesetId>, Error> {
                 #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
                 let connection = try_boxfuture!(self.get_conn());
 
@@ -124,7 +122,7 @@ macro_rules! impl_bookmarks {
                     .filter(schema::bookmarks::repo_id.eq(repo_id))
                     .filter(schema::bookmarks::name.eq(name.to_string()))
                     .select(schema::bookmarks::changeset_id)
-                    .first::<ChangesetId>(&*connection)
+                    .first::<HgChangesetId>(&*connection)
                     .optional()
                     .into_future()
                     .from_err()
@@ -135,7 +133,7 @@ macro_rules! impl_bookmarks {
                 &self,
                 prefix: &BookmarkPrefix,
                 repo_id: &RepositoryId,
-            ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+            ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
                 #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
                 let connection = match self.get_conn() {
                     Ok(conn) => conn,
@@ -173,11 +171,11 @@ macro_rules! impl_bookmarks {
 
         struct $transaction_struct {
             db: $struct,
-            force_sets: HashMap<Bookmark, ChangesetId>,
-            creates: HashMap<Bookmark, ChangesetId>,
+            force_sets: HashMap<Bookmark, HgChangesetId>,
+            creates: HashMap<Bookmark, HgChangesetId>,
             sets: HashMap<Bookmark, BookmarkSetData>,
             force_deletes: HashSet<Bookmark>,
-            deletes: HashMap<Bookmark, ChangesetId>,
+            deletes: HashMap<Bookmark, HgChangesetId>,
             repo_id: RepositoryId,
         }
 
@@ -209,8 +207,8 @@ macro_rules! impl_bookmarks {
             fn update(
                 &mut self,
                 key: &Bookmark,
-                new_cs: &ChangesetId,
-                old_cs: &ChangesetId,
+                new_cs: &HgChangesetId,
+                old_cs: &HgChangesetId,
             ) -> Result<()> {
                 self.check_if_bookmark_already_used(key)?;
                 self.sets.insert(
@@ -223,19 +221,19 @@ macro_rules! impl_bookmarks {
                 Ok(())
             }
 
-            fn create(&mut self, key: &Bookmark, new_cs: &ChangesetId) -> Result<()> {
+            fn create(&mut self, key: &Bookmark, new_cs: &HgChangesetId) -> Result<()> {
                 self.check_if_bookmark_already_used(key)?;
                 self.creates.insert(key.clone(), *new_cs);
                 Ok(())
             }
 
-            fn force_set(&mut self, key: &Bookmark, new_cs: &ChangesetId) -> Result<()> {
+            fn force_set(&mut self, key: &Bookmark, new_cs: &HgChangesetId) -> Result<()> {
                 self.check_if_bookmark_already_used(key)?;
                 self.force_sets.insert(key.clone(), *new_cs);
                 Ok(())
             }
 
-            fn delete(&mut self, key: &Bookmark, old_cs: &ChangesetId) -> Result<()> {
+            fn delete(&mut self, key: &Bookmark, old_cs: &HgChangesetId) -> Result<()> {
                 self.check_if_bookmark_already_used(key)?;
                 self.deletes.insert(key.clone(), *old_cs);
                 Ok(())
@@ -307,13 +305,13 @@ impl_bookmarks!(SqliteDbBookmarks, SqliteBookmarksTransaction);
 impl_bookmarks!(MysqlDbBookmarks, MysqlBookmarksTransaction);
 
 struct BookmarkSetData {
-    new_cs: ChangesetId,
-    old_cs: ChangesetId,
+    new_cs: HgChangesetId,
+    old_cs: HgChangesetId,
 }
 
 fn create_bookmarks_rows(
     repo_id: RepositoryId,
-    map: &HashMap<Bookmark, ChangesetId>,
+    map: &HashMap<Bookmark, HgChangesetId>,
 ) -> Vec<models::BookmarkRow> {
     map.iter()
         .map(|(name, changeset_id)| models::BookmarkRow {

@@ -107,7 +107,7 @@ fn create_bonsai_changeset_from_test_data(
     let mut txn = blobrepo.update_bookmark_transaction();
     txn.force_set(
         &Bookmark::new(format!("bookmark-{}", hg_cs)).unwrap(),
-        &bcs_id,
+        &hg_cs,
     ).unwrap();
     txn.commit().wait().unwrap();
 
