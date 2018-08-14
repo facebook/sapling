@@ -112,13 +112,14 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         RepositoryId::new(0),
     )?;
 
+    let mut tokio_runtime = tokio::runtime::Runtime::new()?;
+
     let changesetid = match matches.value_of("crbook") {
         Some(book) => {
             let book = bookmarks::Bookmark::new(book).expect("book must be ascii");
             println!("Looking for bookmark {:?}", book);
-            config_repo
-                .get_bookmark(&book)
-                .wait()?
+            tokio_runtime
+                .block_on(config_repo.get_bookmark(&book))?
                 .expect("bookmark not found")
         }
         None => mercurial_types::nodehash::HgChangesetId::from_str(
@@ -133,9 +134,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         "Config repository will be read from commit: {}", changesetid
     );
 
-    RepoConfigs::read_config_repo(config_repo, changesetid)
-        .from_err()
-        .wait()
+    tokio_runtime.block_on(RepoConfigs::read_config_repo(config_repo, changesetid).from_err())
 }
 
 fn main() {
