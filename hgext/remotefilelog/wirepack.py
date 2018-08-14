@@ -12,7 +12,7 @@ from StringIO import StringIO
 
 from mercurial import progress
 from mercurial.i18n import _
-from mercurial.node import nullid
+from mercurial.node import hex, nullid
 
 from . import constants, shallowutil
 from .shallowutil import readexactly, readpath, readunpack
