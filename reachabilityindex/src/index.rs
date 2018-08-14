@@ -14,12 +14,11 @@ use blobrepo::BlobRepo;
 use mercurial_types::HgNodeHash;
 use mononoke_types::Generation;
 
-#[allow(dead_code)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct NodeFrontier {
     pub gen_map: HashMap<Generation, HashSet<HgNodeHash>>,
 }
 
-#[allow(dead_code)]
 impl NodeFrontier {
     pub fn new(gen_map: HashMap<Generation, HashSet<HgNodeHash>>) -> Self {
         NodeFrontier { gen_map }
