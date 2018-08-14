@@ -386,14 +386,25 @@ impl HookFile {
     }
 
     pub fn contains_string(&self, data: &str) -> BoxFuture<bool, Error> {
-        let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
         let data = data.to_string();
-        self.content_store
-            .get_file_content_for_changeset(self.changeset_id, path)
+        self.get_file()
             .and_then(move |bytes| {
                 let str_content = str::from_utf8(&bytes)?.to_string();
                 Ok(str_content.contains(&data))
             })
+            .boxify()
+    }
+
+    pub fn len(&self) -> BoxFuture<u64, Error> {
+        self.get_file()
+            .and_then(|bytes| Ok(bytes.len() as u64))
+            .boxify()
+    }
+
+    fn get_file(&self) -> BoxFuture<Bytes, Error> {
+        let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
+        self.content_store
+            .get_file_content_for_changeset(self.changeset_id, path)
             .boxify()
     }
 }
@@ -822,6 +833,32 @@ mod test {
         Box::new(ContentMatchingFileHook { content })
     }
 
+    #[derive(Clone, Debug)]
+    struct LengthMatchingFileHook {
+        length: u64,
+    }
+
+    impl Hook<HookFile> for LengthMatchingFileHook {
+        fn run(&self, context: HookContext<HookFile>) -> BoxFuture<HookExecution, Error> {
+            let exp_length = self.length;
+            context
+                .data
+                .len()
+                .map(move |length| {
+                    if length == exp_length {
+                        HookExecution::Accepted
+                    } else {
+                        default_rejection()
+                    }
+                })
+                .boxify()
+        }
+    }
+
+    fn length_matching_file_hook(length: u64) -> Box<Hook<HookFile>> {
+        Box::new(LengthMatchingFileHook { length })
+    }
+
     #[test]
     fn test_changeset_hook_accepted() {
         async_unit::tokio_unit_test(|| {
@@ -1034,13 +1071,14 @@ mod test {
     fn test_file_hook_content() {
         async_unit::tokio_unit_test(|| {
             let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
-                "hook1".to_string() => content_matching_file_hook("content_d1_f1".to_string()),
-                "hook2".to_string() => content_matching_file_hook("content_d2_f1".to_string()),
-                "hook3".to_string() => content_matching_file_hook("content_d2_f2".to_string())
+                "hook1".to_string() => content_matching_file_hook("elephants".to_string()),
+                "hook2".to_string() => content_matching_file_hook("hippopatami".to_string()),
+                "hook3".to_string() => content_matching_file_hook("eels".to_string())
             };
             let bookmarks = hashmap! {
                 "bm1".to_string() => vec!["hook1".to_string(),
-                "hook2".to_string(), "hook3".to_string()]
+                "hook2".to_string(), "hook3".to_string()
+            ]
             };
             let expected = hashmap! {
                 "hook1".to_string() => hashmap! {
@@ -1057,6 +1095,46 @@ mod test {
                     "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
                     "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
                     "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
+                },
+            };
+            run_file_hooks("bm1", hooks, bookmarks, expected);
+        });
+    }
+
+    #[test]
+    fn test_file_hook_length() {
+        async_unit::tokio_unit_test(|| {
+            let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+                "hook1".to_string() => length_matching_file_hook("elephants".len() as u64),
+                "hook2".to_string() => length_matching_file_hook("hippopatami".len() as u64),
+                "hook3".to_string() => length_matching_file_hook("eels".len() as u64),
+                "hook4".to_string() => length_matching_file_hook(999)
+            };
+            let bookmarks = hashmap! {
+                "bm1".to_string() => vec!["hook1".to_string(),
+                "hook2".to_string(), "hook3".to_string(), "hook4".to_string()
+                ]
+            };
+            let expected = hashmap! {
+                "hook1".to_string() => hashmap! {
+                    "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
+                    "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
+                    "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
+                },
+                "hook2".to_string() => hashmap! {
+                    "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
+                    "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
+                    "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
+                },
+                "hook3".to_string() => hashmap! {
+                    "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
+                    "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
+                    "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
+                },
+                "hook4".to_string() => hashmap! {
+                    "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
+                    "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
+                    "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
                 },
             };
             run_file_hooks("bm1", hooks, bookmarks, expected);
@@ -1209,15 +1287,15 @@ mod test {
         let mut content_store = InMemoryFileContentStore::new();
         content_store.insert(
             (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir1/file_1")),
-            "content_d1_f1".into(),
+            "elephants".into(),
         );
         content_store.insert(
             (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir2/file_1")),
-            "content_d2_f1".into(),
+            "hippopatami".into(),
         );
         content_store.insert(
             (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir2/file_2")),
-            "content_d2_f2".into(),
+            "eels".into(),
         );
         let logger = Logger::root(Discard {}.ignore_res(), o!());
         HookManager::new(

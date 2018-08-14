@@ -15,7 +15,7 @@ use failure::Error;
 use futures::{failed, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use hlua::{AnyLuaValue, Lua, LuaError, LuaFunctionCallError, LuaTable, PushGuard, TuplePushError,
-           Void, function1};
+           Void, function0, function1};
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
 
 const HOOK_START_CODE_BASE: &str = include_str!("hook_start_base.lua");
@@ -34,6 +34,7 @@ __hook_start = function(info, arg)
         local file = {}
         file.path = arg
         file.contains_string = function(s) return coroutine.yield(__contains_string(s)) end
+        file.len = function() return coroutine.yield(__file_len()) end
         ctx.file = file
     end)
 end
@@ -116,9 +117,24 @@ impl Hook<HookFile> for LuaHook {
             }
         };
         let contains_string = function1(contains_string);
+        let file_len = {
+            cloned!(context);
+            move || -> Result<AnyFuture, Error> {
+                let future = context
+                    .data
+                    .len()
+                    .map_err(|err| {
+                        LuaError::ExecutionError(format!("failed to get file content: {}", err))
+                    })
+                    .map(|len| AnyLuaValue::LuaNumber(len as f64));
+                Ok(AnyFuture::new(future))
+            }
+        };
+        let file_len = function0(file_len);
         let mut lua = Lua::new();
         lua.openlibs();
         lua.set("__contains_string", contains_string);
+        lua.set("__file_len", file_len);
         let res: Result<(), Error> = lua.execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
@@ -502,12 +518,42 @@ mod test {
     }
 
     #[test]
-    fn test_file_hook_content_no_matche() {
+    fn test_file_hook_content_no_matches() {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.contains_string(\"gerbils\")\n\
+                 end",
+            );
+            assert_matches!(
+                run_file_hook(code, hook_file),
+                Ok(HookExecution::Rejected(_))
+            );
+        });
+    }
+
+    #[test]
+    fn test_file_hook_len_matches() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                print(\"length is \", ctx.file.len())\n
+                 return ctx.file.len() == 8\n\
+                 end",
+            );
+            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_file_hook_len_no_matches() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.len() == 123\n\
                  end",
             );
             assert_matches!(
