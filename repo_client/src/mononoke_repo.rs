@@ -25,20 +25,34 @@ struct LogNormalGenerator {
 }
 
 pub struct MononokeRepo {
-    path: String,
+    log_name: String,
     blobrepo: Arc<BlobRepo>,
 }
 
 impl MononokeRepo {
+    #[inline]
     pub fn new(logger: Logger, repo: &RepoType, repoid: RepositoryId) -> Result<Self> {
+        // Just use the path as the name.
+        let log_name = format!("{}", repo.path().to_owned().display());
+        Self::new_with_name(logger, repo, repoid, log_name)
+    }
+
+    pub fn new_with_name(
+        logger: Logger,
+        repo: &RepoType,
+        repoid: RepositoryId,
+        log_name: impl Into<String>,
+    ) -> Result<Self> {
+        let log_name = log_name.into();
         Ok(MononokeRepo {
-            path: format!("{}", repo.path().to_owned().display()),
+            log_name,
             blobrepo: Arc::new(repo.open(logger, repoid)?),
         })
     }
 
-    pub fn path(&self) -> &String {
-        &self.path
+    #[inline]
+    pub fn log_name(&self) -> &str {
+        self.log_name.as_ref()
     }
 
     pub fn blobrepo(&self) -> Arc<BlobRepo> {
@@ -48,7 +62,7 @@ impl MononokeRepo {
 
 impl Debug for MononokeRepo {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Repo({})", self.path)
+        write!(fmt, "Repo({})", self.log_name)
     }
 }
 

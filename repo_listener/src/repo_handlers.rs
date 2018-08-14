@@ -48,7 +48,7 @@ where
                 RepositoryId::new(config.repoid),
             ).expect(&format!("failed to initialize repo {}", reponame));
 
-            let listen_log = root_log.new(o!("repo" => repo.path().clone()));
+            let listen_log = root_log.new(o!("repo" => repo.log_name().to_string()));
 
             let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
             scuba_logger.add_common_server_data();
