@@ -4,10 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use failure::Error;
 use futures::future::{err, join_all, ok, Future};
+use futures::stream::{iter_ok, Stream};
+use futures_ext::FutureExt;
 
 use blobrepo::{self, BlobRepo};
 use mercurial_types::HgNodeHash;
@@ -66,9 +69,21 @@ pub fn changeset_to_nodehashes_with_generation_numbers(
     repo: Arc<BlobRepo>,
     nodes: Vec<HgChangesetId>,
 ) -> impl Future<Item = Vec<(HgNodeHash, Generation)>, Error = Error> {
+    let node_hashes: Vec<_> = nodes
+        .into_iter()
+        .map(|node_cs| *node_cs.as_nodehash())
+        .collect();
+    nodehashes_with_generation_numbers(repo, node_hashes)
+}
+
+/// Convert a collection of HgNodeHash to a collection of (HgNodeHash, Generation)
+pub fn nodehashes_with_generation_numbers(
+    repo: Arc<BlobRepo>,
+    nodes: Vec<HgNodeHash>,
+) -> impl Future<Item = Vec<(HgNodeHash, Generation)>, Error = Error> {
     join_all(nodes.into_iter().map({
         cloned!(repo);
-        move |node_cs| fetch_generation_and_join(repo.clone(), *node_cs.as_nodehash())
+        move |hash| fetch_generation_and_join(repo.clone(), hash)
     }))
 }
 
@@ -84,6 +99,55 @@ pub fn get_parents_from_nodehash(
                 err.downcast::<blobrepo::ErrorKind>().ok(),
             )).into()
         })
+}
+
+// Take ownership of two sets, the current 'layer' of the bfs, and all nodes seen until then.
+// Produce a future which does the following computation:
+// - add all nodes in the current layer to the seen set
+// - get the set of parents of nodes in the current layer
+// - filter out previously seen nodes from the parents
+// - return the parents as the next bfs layer, and the updated seen as the new seen set
+pub fn advance_bfs_layer(
+    repo: Arc<BlobRepo>,
+    curr_layer: HashSet<(HgNodeHash, Generation)>,
+    mut curr_seen: HashSet<(HgNodeHash, Generation)>,
+) -> impl Future<
+    Item = (
+        HashSet<(HgNodeHash, Generation)>,
+        HashSet<(HgNodeHash, Generation)>,
+    ),
+    Error = Error,
+> {
+    let new_repo_changesets = repo.clone();
+    for next_node in curr_layer.iter() {
+        curr_seen.insert(next_node.clone());
+    }
+
+    iter_ok::<_, Error>(curr_layer)
+        .map(move |(hash, _gen)| {
+            new_repo_changesets
+                .get_changeset_parents(&HgChangesetId::new(hash))
+                .map_err(|err| {
+                    ErrorKind::ParentsFetchFailed(BlobRepoErrorCause::new(
+                        err.downcast::<blobrepo::ErrorKind>().ok(),
+                    )).into()
+                })
+        })
+        .buffered(100)
+        .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
+        .flatten()
+        .collect()
+        .and_then(|all_parents| changeset_to_nodehashes_with_generation_numbers(repo, all_parents))
+        .map(move |flattened_node_generation_pairs| {
+            let mut next_layer = HashSet::new();
+            for hash_gen_pair in flattened_node_generation_pairs.into_iter() {
+                if !curr_seen.contains(&hash_gen_pair) {
+                    next_layer.insert(hash_gen_pair);
+                }
+            }
+            (next_layer, curr_seen)
+        })
+        .boxify()
 }
 
 #[cfg(test)]

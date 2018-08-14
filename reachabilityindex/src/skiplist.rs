@@ -12,6 +12,7 @@ use chashmap::CHashMap;
 use failure::Error;
 use futures::Stream;
 use futures::future::{join_all, ok, Future};
+use futures::future::{loop_fn, Loop};
 use futures::stream::iter_ok;
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -19,8 +20,8 @@ use blobrepo::BlobRepo;
 use mercurial_types::HgNodeHash;
 use mononoke_types::Generation;
 
-use helpers::{changeset_to_nodehashes_with_generation_numbers, fetch_generation_and_join,
-              get_parents_from_nodehash};
+use helpers::{advance_bfs_layer, changeset_to_nodehashes_with_generation_numbers,
+              check_if_node_exists, fetch_generation_and_join, get_parents_from_nodehash};
 use index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
 
 const DEFAULT_EDGE_COUNT: u32 = 10;
@@ -108,6 +109,50 @@ pub struct SkiplistIndex {
     skip_list_edges: Arc<SkiplistEdgeMapping>,
 }
 
+// Find nodes to index during lazy indexing
+// This method searches backwards from a start node until a specified depth,
+// collecting all nodes which are not currently present in the index.
+// Then it orders them topologically using their generation numbers and returns them.
+fn find_nodes_to_index(
+    repo: Arc<BlobRepo>,
+    skip_list_edges: Arc<SkiplistEdgeMapping>,
+    (start_node, start_gen): (HgNodeHash, Generation),
+    depth: u64,
+) -> BoxFuture<Vec<(HgNodeHash, Generation)>, Error> {
+    let start_bfs_layer: HashSet<_> = vec![(start_node, start_gen)].into_iter().collect();
+    let start_seen: HashSet<_> = HashSet::new();
+    let ancestors_to_depth =
+        check_if_node_exists(repo.clone(), start_node.clone()).and_then(move |_| {
+            loop_fn(
+                (start_bfs_layer, start_seen, depth),
+                move |(curr_layer_unfiltered, curr_seen, curr_depth)| {
+                    let curr_layer: HashSet<_> = curr_layer_unfiltered
+                        .into_iter()
+                        .filter(|(hash, _gen)| !skip_list_edges.mapping.contains_key(&hash))
+                        .collect();
+
+                    if curr_depth == 0 || curr_layer.is_empty() {
+                        ok(Loop::Break(curr_seen)).boxify()
+                    } else {
+                        advance_bfs_layer(repo.clone(), curr_layer, curr_seen)
+                            .map(move |(next_layer, next_seen)| {
+                                Loop::Continue((next_layer, next_seen, curr_depth - 1))
+                            })
+                            .boxify()
+                    }
+                },
+            )
+        });
+    ancestors_to_depth
+        .map(|hash_gen_pairs| {
+            let mut top_order = hash_gen_pairs.into_iter().collect::<Vec<_>>();
+            top_order.sort_by(|a, b| (a.1).cmp(&b.1));
+            top_order
+        })
+        .from_err()
+        .boxify()
+}
+
 /// From a starting node, index all nodes that are reachable within a given distance.
 /// If a previously indexed node is reached, indexing will stop there.
 fn lazy_index_node(
@@ -120,54 +165,55 @@ fn lazy_index_node(
     if max_depth == 0 || skip_edge_mapping.mapping.contains_key(&node) {
         ok(()).boxify()
     } else {
-        get_parents_from_nodehash(repo.clone(), node)
-            // for each parent of this node:
-            .and_then({cloned!(skip_edge_mapping, repo); move |parents| {
-                join_all(parents.clone().into_iter()
-                    // call the lazy index on the parents in parallel
-                    .map({cloned!(repo, skip_edge_mapping); move |parent| {
-                        lazy_index_node(
-                            repo.clone(),
-                            skip_edge_mapping.clone(),
-                            *parent.as_nodehash(),
-                            max_depth - 1,
-                        )
-                    }})
-                )
-                    .map(move |_| parents)
-                    .and_then(move |all_parents| {
-                        changeset_to_nodehashes_with_generation_numbers(
-                            repo.clone(),
-                            all_parents,
-                        )
-                    })
-            }})
-            .and_then(move |parent_gen_pairs| {
+        fetch_generation_and_join(repo.clone(), node)
+            .and_then({
+                cloned!(repo, skip_edge_mapping);
+                move |node_gen_pair| {
+                    find_nodes_to_index(repo, skip_edge_mapping, node_gen_pair, max_depth)
+                }
+            })
+            .and_then({
+                move |node_gen_pairs| {
+                    join_all(node_gen_pairs.into_iter().map({
+                        cloned!(repo);
+                        move |(hash, _gen)| {
+                            get_parents_from_nodehash(repo.clone(), hash.clone())
+                                .and_then({
+                                    cloned!(repo);
+                                    |parents| {
+                                        changeset_to_nodehashes_with_generation_numbers(
+                                            repo,
+                                            parents,
+                                        )
+                                    }
+                                })
+                                .map(move |parent_gen_pairs| (hash, parent_gen_pairs))
+                        }
+                    }))
+                }
+            })
+            .map(move |hash_parentgens_gen_vec| {
                 // determine what kind of skip edges to add for this node
-                if parent_gen_pairs.len() != 1 {
-                    // Merge node or parentless node
-                    // Reflect this in the index
-                        ok(skip_edge_mapping.clone()
+                for (curr_hash, parent_gen_pairs) in hash_parentgens_gen_vec.into_iter() {
+                    if parent_gen_pairs.len() != 1 {
+                        // Merge node or parentless node
+                        // Reflect this in the index
+                        skip_edge_mapping
                             .mapping
-                            .insert(node, SkiplistNodeType::ParentEdges(parent_gen_pairs)))
-                        .and_then(|_| ok(()))
-                        .left_future()
-                } else {
-                    // Single parent node
-                    // Compute skip edges assuming a reasonable number of parents are indexed.
-                    // Even if this reaches a non indexed node during,
-                    // indexing correctness isn't affected.
-                    let unique_parent_gen_pair = parent_gen_pairs.get(0).unwrap().clone();
-                            ok(compute_skip_edges(
-                                unique_parent_gen_pair,
-                                skip_edge_mapping.clone(),
-                                ))
-                            .map(move |new_edges| skip_edge_mapping.clone()
-                                .mapping
-                                .insert(node, SkiplistNodeType::SkipEdges(new_edges)))
-                            .and_then(|_| ok(()))
-                            .right_future()
+                            .insert(curr_hash, SkiplistNodeType::ParentEdges(parent_gen_pairs));
+                    } else {
+                        // Single parent node
+                        // Compute skip edges assuming a reasonable number of parents are indexed.
+                        // Even if this reaches a non indexed node during,
+                        // indexing correctness isn't affected.
+                        let unique_parent_gen_pair = parent_gen_pairs.get(0).unwrap().clone();
+                        let new_edges =
+                            compute_skip_edges(unique_parent_gen_pair, skip_edge_mapping.clone());
+                        skip_edge_mapping
+                            .mapping
+                            .insert(curr_hash, SkiplistNodeType::SkipEdges(new_edges));
                     }
+                }
             })
             .boxify()
     }
@@ -223,7 +269,7 @@ fn query_reachability_with_generation_hints(
                                 }
                             })
                             .and_then(move |parent_edges| {
-                                join_all(parent_edges.clone().into_iter().map({
+                                join_all(parent_edges.into_iter().map({
                                     move |parent_gen_pair| {
                                         query_reachability_with_generation_hints(
                                             repo.clone(),
