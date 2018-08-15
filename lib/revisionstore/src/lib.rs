@@ -18,6 +18,7 @@ extern crate rand;
 
 mod ancestors;
 mod dataindex;
+mod historyindex;
 mod fanouttable;
 mod unionstore;
 
