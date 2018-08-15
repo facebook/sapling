@@ -1,6 +1,7 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use memmap::{Mmap, MmapOptions};
 use std::fs::File;
+use std::fs::remove_file;
 use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -11,6 +12,7 @@ use historyindex::HistoryIndex;
 use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
 use node::Node;
+use repack::{IterableStore, RepackOutputType, Repackable};
 
 #[derive(Debug, Fail)]
 #[fail(display = "Historypack Error: {:?}", _0)]
@@ -202,8 +204,16 @@ impl HistoryPack {
         &self.index_path
     }
 
+    fn read_file_section_header(&self, offset: u64) -> Result<FileSectionHeader> {
+        FileSectionHeader::read(&self.mmap.as_ref()[offset as usize..])
+    }
+
+    fn read_history_entry(&self, offset: u64) -> Result<HistoryEntry> {
+        HistoryEntry::read(&self.mmap.as_ref()[offset as usize..])
+    }
+
     fn read_node_info(&self, key: &Key, offset: u64) -> Result<NodeInfo> {
-        let entry = HistoryEntry::read(&self.mmap.as_ref()[offset as usize..])?;
+        let entry = self.read_history_entry(offset)?;
         assert_eq!(&entry.node, key.node());
         let p1 = Key::new(
             Box::from(match entry.copy_from {
@@ -240,6 +250,92 @@ impl HistoryStore for HistoryPack {
     fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {
         let node_location = self.index.get_node_entry(key)?;
         self.read_node_info(key, node_location.offset)
+    }
+}
+
+impl IterableStore for HistoryPack {
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Result<Key>> + 'a> {
+        Box::new(HistoryPackIterator::new(self))
+    }
+}
+
+impl Repackable for HistoryPack {
+    fn delete(&self) -> Result<()> {
+        let result1 = remove_file(&self.pack_path);
+        let result2 = remove_file(&self.index_path);
+        // Only check for errors after both have run. That way if pack_path doesn't exist,
+        // index_path is still deleted.
+        result1?;
+        result2?;
+        Ok(())
+    }
+
+    fn id(&self) -> &Arc<PathBuf> {
+        &self.base_path
+    }
+
+    fn kind(&self) -> RepackOutputType {
+        RepackOutputType::History
+    }
+}
+
+struct HistoryPackIterator<'a> {
+    pack: &'a HistoryPack,
+    offset: u64,
+    current_name: Vec<u8>,
+    current_remaining: u32,
+}
+
+impl<'a> HistoryPackIterator<'a> {
+    pub fn new(pack: &'a HistoryPack) -> Self {
+        HistoryPackIterator {
+            pack: pack,
+            offset: 1, // Start after the header byte
+            current_name: vec![],
+            current_remaining: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for HistoryPackIterator<'a> {
+    type Item = Result<Key>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.current_remaining == 0 && (self.offset as usize) < self.pack.len() {
+            let file_header = self.pack.read_file_section_header(self.offset);
+            match file_header {
+                Ok(header) => {
+                    self.current_name.clear();
+                    self.current_name.extend_from_slice(header.file_name);
+                    self.current_remaining = header.count;
+                    self.offset += 4 + 2 + header.file_name.len() as u64;
+                }
+                Err(e) => {
+                    return Some(Err(e));
+                }
+            };
+        }
+
+        if self.offset as usize >= self.pack.len() {
+            return None;
+        }
+
+        let entry = self.pack.read_history_entry(self.offset);
+        self.current_remaining -= 1;
+        Some(match entry {
+            Ok(ref e) => {
+                self.offset += 80;
+                self.offset += match e.copy_from {
+                    Some(v) => 2 + v.len() as u64,
+                    None => 2,
+                };
+                Ok(Key::new(
+                    self.current_name.clone().into_boxed_slice(),
+                    e.node,
+                ))
+            }
+            Err(e) => Err(e),
+        })
     }
 }
 
@@ -368,6 +464,22 @@ mod tests {
 
         let missing = pack.get_missing(&test_keys[..]).unwrap();
         assert_eq!(vec![missing_key], missing);
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let (nodes, _) = get_nodes(&mut rng);
+
+        let pack = make_pack(&tempdir, &nodes);
+
+        let mut keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
+        keys.sort_unstable();
+        let mut iter_keys = pack.iter().collect::<Result<Vec<Key>>>().unwrap();
+        iter_keys.sort_unstable();
+        assert_eq!(iter_keys, keys,);
     }
 
     quickcheck! {
