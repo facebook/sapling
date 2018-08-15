@@ -364,10 +364,10 @@ def wraprepo(repo):
                 return
 
             if self.svfs.treemanifestserver:
-                # The server has no where to fetch from, so this is an error and
-                # we should throw. This can legitametly happen during the tree
-                # transition if the server has trees for all its commits but it
-                # has to server an infinitepush bundle does not have trees.
+                # The server has nowhere to fetch from, so this is an error and
+                # we should throw. This can legitimately happen during the tree
+                # transition if the server has trees for all of its commits but
+                # it has to serve an infinitepush bundle that doesn't have trees.
                 raise shallowutil.MissingNodesError(
                     (("", n) for n in mfnodes), "tree nodes missing on server"
                 )
