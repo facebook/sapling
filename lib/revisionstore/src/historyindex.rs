@@ -1,12 +1,54 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::io::{Cursor, Write};
+use std::io::{Cursor, Read, Write};
 
 use error::Result;
+use historypack::HistoryPackVersion;
 use node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "HistoryIndex Error: {:?}", _0)]
 struct HistoryIndexError(String);
+
+#[derive(Debug, PartialEq)]
+struct HistoryIndexOptions {
+    version: HistoryPackVersion,
+    // Indicates whether to use the large fanout (2 bytes) or the small (1 byte)
+    large: bool,
+}
+
+impl HistoryIndexOptions {
+    pub fn read<T: Read>(reader: &mut T) -> Result<HistoryIndexOptions> {
+        let version = reader.read_u8()?;
+        let version = match version {
+            0 => HistoryPackVersion::Zero,
+            1 => HistoryPackVersion::One,
+            _ => {
+                return Err(HistoryIndexError(format!("unsupported version '{:?}'", version)).into())
+            }
+        };
+
+        let raw_config = reader.read_u8()?;
+        let large = match raw_config {
+            0b10000000 => true,
+            0 => false,
+            _ => {
+                return Err(
+                    HistoryIndexError(format!("invalid history index '{:?}'", raw_config)).into(),
+                )
+            }
+        };
+        Ok(HistoryIndexOptions { version, large })
+    }
+
+    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+        writer.write_u8(match self.version {
+            HistoryPackVersion::Zero => 0,
+            HistoryPackVersion::One => 1,
+        })?;
+        writer.write_u8(if self.large { 0b10000000 } else { 0 })?;
+        Ok(())
+    }
+}
 
 #[derive(PartialEq, Debug)]
 struct FileIndexEntry {
@@ -102,6 +144,15 @@ mod tests {
             let mut buf: Vec<u8> = vec![];
             entry.write(&mut buf).unwrap();
             entry == NodeIndexEntry::read(buf.as_ref()).unwrap()
+        }
+
+        fn test_options_serialization(version: u8, large: bool) -> bool {
+            let version = if version % 2 == 0 { HistoryPackVersion::Zero } else { HistoryPackVersion::One };
+            let options = HistoryIndexOptions { version, large };
+            let mut buf: Vec<u8> = vec![];
+            options.write(&mut buf).expect("write");
+            let parsed_options = HistoryIndexOptions::read(&mut Cursor::new(buf)).expect("read");
+            options == parsed_options
         }
     }
 }

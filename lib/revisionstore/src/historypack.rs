@@ -4,7 +4,7 @@ use error::Result;
 #[fail(display = "Historypack Error: {:?}", _0)]
 struct HistoryPackError(String);
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum HistoryPackVersion {
     Zero,
     One,
