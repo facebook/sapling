@@ -200,6 +200,24 @@ impl HistoryPack {
     pub fn index_path(&self) -> &Path {
         &self.index_path
     }
+
+    fn read_node_info(&self, key: &Key, offset: u64) -> Result<NodeInfo> {
+        let entry = HistoryEntry::read(&self.mmap.as_ref()[offset as usize..])?;
+        assert_eq!(&entry.node, key.node());
+        let p1 = Key::new(
+            Box::from(match entry.copy_from {
+                Some(value) => value,
+                None => key.name(),
+            }),
+            entry.p1.clone(),
+        );
+        let p2 = Key::new(Box::from(key.name()), entry.p2.clone());
+
+        Ok(NodeInfo {
+            parents: [p1, p2],
+            linknode: entry.link_node.clone(),
+        })
+    }
 }
 
 impl HistoryStore for HistoryPack {
@@ -212,13 +230,104 @@ impl HistoryStore for HistoryPack {
     }
 
     fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {
-        unimplemented!();
+        let node_location = self.index.get_node_entry(key)?;
+        self.read_node_info(key, node_location.offset)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
+    use rand::chacha::ChaChaRng;
+    use std::collections::HashMap;
+    use tempfile::TempDir;
+
+    use mutablehistorypack::MutableHistoryPack;
+
+    fn make_pack(tempdir: &TempDir, nodes: &HashMap<Key, NodeInfo>) -> HistoryPack {
+        let mut mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+        for (ref key, ref info) in nodes.iter() {
+            mutpack.add(key.clone(), info.clone()).unwrap();
+        }
+
+        let path = mutpack.close().unwrap();
+
+        HistoryPack::new(&path).unwrap()
+    }
+
+    fn get_nodes(mut rng: &mut ChaChaRng) -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
+        let file1 = Box::new([1, 2, 3]);
+        let file2 = Box::new([1, 2, 3, 4, 5]);
+        let null = Node::null_id();
+        let node1 = Node::random(&mut rng);
+        let node2 = Node::random(&mut rng);
+        let node3 = Node::random(&mut rng);
+        let node4 = Node::random(&mut rng);
+        let node5 = Node::random(&mut rng);
+        let node6 = Node::random(&mut rng);
+
+        let mut nodes = HashMap::new();
+        let mut ancestor_map = HashMap::new();
+
+        // Insert key 1
+        let key1 = Key::new(file1.clone(), node2.clone());
+        let info = NodeInfo {
+            parents: [
+                Key::new(file1.clone(), node1.clone()),
+                Key::new(file1.clone(), null.clone()),
+            ],
+            linknode: Node::random(&mut rng),
+        };
+        nodes.insert(key1.clone(), info.clone());
+        let mut ancestors = HashMap::new();
+        ancestors.insert(key1.clone(), info.clone());
+        ancestor_map.insert(key1.clone(), ancestors);
+
+        // Insert key 2
+        let key2 = Key::new(file2.clone(), node3.clone());
+        let info = NodeInfo {
+            parents: [
+                Key::new(file2.clone(), node5.clone()),
+                Key::new(file2.clone(), node6.clone()),
+            ],
+            linknode: Node::random(&mut rng),
+        };
+        nodes.insert(key2.clone(), info.clone());
+        let mut ancestors = HashMap::new();
+        ancestors.insert(key2.clone(), info.clone());
+        ancestor_map.insert(key2.clone(), ancestors);
+
+        // Insert key 3
+        let key3 = Key::new(file1.clone(), node4.clone());
+        let info = NodeInfo {
+            parents: [key2.clone(), key1.clone()],
+            linknode: Node::random(&mut rng),
+        };
+        nodes.insert(key3.clone(), info.clone());
+        let mut ancestors = HashMap::new();
+        ancestors.insert(key3.clone(), info.clone());
+        ancestors.extend(ancestor_map.get(&key2).unwrap().clone());
+        ancestors.extend(ancestor_map.get(&key1).unwrap().clone());
+        ancestor_map.insert(key3.clone(), ancestors);
+
+        (nodes, ancestor_map)
+    }
+
+    #[test]
+    fn test_get_node_info() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let (nodes, _) = get_nodes(&mut rng);
+
+        let pack = make_pack(&tempdir, &nodes);
+
+        for (ref key, ref info) in nodes.iter() {
+            let response: NodeInfo = pack.get_node_info(key).unwrap();
+            assert_eq!(response, **info);
+        }
+    }
 
     quickcheck! {
         fn test_file_section_header_serialization(name: Vec<u8>, count: u32) -> bool {
