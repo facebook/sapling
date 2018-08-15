@@ -24,6 +24,7 @@ use mercurial::manifest::{Details, ManifestContent};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
                       NULL_HASH};
+use mononoke_types::ChangesetId;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use stats::*;
@@ -136,6 +137,17 @@ fn resolve_push(
         })
         .and_then({
             let resolver = resolver.clone();
+            move |(changegroup_id, bookmarks_push)| {
+                let bookmarks_push_fut = bookmarks_push
+                    .into_iter()
+                    .map(|bp| BonsaiBookmarkPush::new(&resolver.repo, bp))
+                    .collect::<Vec<_>>();
+                future::join_all(bookmarks_push_fut)
+                    .map(move |bookmakrs_push| (changegroup_id, bookmakrs_push))
+            }
+        })
+        .and_then({
+            let resolver = resolver.clone();
             move |(changegroup_id, bookmark_push)| {
                 (move || {
                     let bookmark_ids: Vec<_> = bookmark_push.iter().map(|bp| bp.part_id).collect();
@@ -202,6 +214,46 @@ struct BookmarkPush {
     name: bookmarks::Bookmark,
     old: Option<HgChangesetId>,
     new: Option<HgChangesetId>,
+}
+
+struct BonsaiBookmarkPush {
+    part_id: PartId,
+    name: bookmarks::Bookmark,
+    old: Option<ChangesetId>,
+    new: Option<ChangesetId>,
+}
+
+impl BonsaiBookmarkPush {
+    fn new(
+        repo: &Arc<BlobRepo>,
+        bookmark_push: BookmarkPush,
+    ) -> impl Future<Item = BonsaiBookmarkPush, Error = Error> + Send {
+        fn bonsai_from_hg_opt(
+            repo: &Arc<BlobRepo>,
+            cs_id: Option<HgChangesetId>,
+        ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
+            match cs_id {
+                None => future::ok(None).left_future(),
+                Some(cs_id) => repo.get_bonsai_from_hg(&cs_id).right_future(),
+            }
+        }
+
+        let BookmarkPush {
+            part_id,
+            name,
+            old,
+            new,
+        } = bookmark_push;
+
+        (bonsai_from_hg_opt(repo, old), bonsai_from_hg_opt(repo, new))
+            .into_future()
+            .map(move |(old, new)| BonsaiBookmarkPush {
+                part_id,
+                name,
+                old,
+                new,
+            })
+    }
 }
 
 /// Holds repo and logger for convienience access from it's methods
@@ -613,7 +665,7 @@ impl Bundle2Resolver {
 
 fn add_bookmark_to_transaction(
     txn: &mut Box<bookmarks::Transaction>,
-    bookmark_push: BookmarkPush,
+    bookmark_push: BonsaiBookmarkPush,
 ) -> Result<()> {
     match (bookmark_push.new, bookmark_push.old) {
         (Some(new), Some(old)) => txn.update(&bookmark_push.name, &new, &old),

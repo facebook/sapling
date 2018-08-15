@@ -424,7 +424,13 @@ impl BlobRepo {
         STATS::get_heads.add_value(1);
         self.bookmarks
             .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
-            .map(|(_, cs)| cs.into_nodehash())
+            .and_then({
+                let repo = self.clone();
+                move |(_, cs)| {
+                    repo.get_hg_from_bonsai_changeset(cs)
+                        .map(|cs| cs.into_nodehash())
+                }
+            })
     }
 
     // TODO(stash): make it accept ChangesetId
@@ -520,7 +526,18 @@ impl BlobRepo {
 
     pub fn get_bookmark(&self, name: &Bookmark) -> BoxFuture<Option<HgChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
-        self.bookmarks.get(name, &self.repoid)
+        self.bookmarks
+            .get(name, &self.repoid)
+            .and_then({
+                let repo = self.clone();
+                move |cs_opt| match cs_opt {
+                    None => future::ok(None).left_future(),
+                    Some(cs) => repo.get_hg_from_bonsai_changeset(cs)
+                        .map(|cs| Some(cs))
+                        .right_future(),
+                }
+            })
+            .boxify()
     }
 
     // TODO(stash): rename to get_all_bookmarks()?
@@ -528,6 +545,14 @@ impl BlobRepo {
         STATS::get_bookmarks.add_value(1);
         self.bookmarks
             .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
+            .and_then({
+                let repo = self.clone();
+                move |(bm, cs)| {
+                    repo.get_hg_from_bonsai_changeset(cs)
+                        .map(move |cs| (bm, cs))
+                }
+            })
+            .boxify()
     }
 
     pub fn update_bookmark_transaction(&self) -> Box<bookmarks::Transaction> {

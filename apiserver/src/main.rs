@@ -190,6 +190,7 @@ fn setup_logger(debug: bool) -> Logger {
 }
 
 fn create_config<P: AsRef<Path>>(
+    runtime: &mut tokio::runtime::Runtime,
     logger: &Logger,
     path: P,
     bookmark: Option<&str>,
@@ -204,7 +205,8 @@ fn create_config<P: AsRef<Path>>(
     let changeset: HgChangesetId = bookmark
         .ok_or_else(|| err_msg(""))
         .and_then(|bookmark| {
-            Bookmark::new(bookmark).and_then(|bookmark| config_repo.get_bookmark(&bookmark).wait())
+            let bookmark = Bookmark::new(bookmark)?;
+            runtime.block_on(config_repo.get_bookmark(&bookmark))
         })
         .and_then(|bookmark| bookmark.ok_or_else(|| err_msg("bookmark not found")))
         .or_else(|_| {
@@ -326,7 +328,9 @@ fn main() -> Result<()> {
         (None, None)
     };
 
+    let mut runtime = Runtime::new().expect("tokio runtime for blocking jobs");
     let repo_configs = create_config(
+        &mut runtime,
         &root_logger,
         config_path,
         matches.value_of("config-bookmark"),
@@ -354,12 +358,8 @@ fn main() -> Result<()> {
         None
     };
     let use_ssl = ssl_acceptor.is_some();
-
-    let runtime = Runtime::new().expect("tokio runtime for blocking jobs");
-    let executor = runtime.executor();
-
     let sys = actix::System::new("mononoke-apiserver");
-
+    let executor = runtime.executor();
     let addr = MononokeActor::create(move |_| {
         MononokeActor::new(mononoke_logger.clone(), repo_configs, executor)
     });

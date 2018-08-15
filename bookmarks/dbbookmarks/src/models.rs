@@ -4,7 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::{HgChangesetId, RepositoryId};
+use mercurial_types::RepositoryId;
+use mononoke_types::ChangesetId;
 
 use schema::bookmarks;
 
@@ -15,5 +16,5 @@ pub(crate) struct BookmarkRow {
     pub repo_id: RepositoryId,
     // TODO(stash): make AsciiString Insertable
     pub name: String,
-    pub changeset_id: HgChangesetId,
+    pub changeset_id: ChangesetId,
 }

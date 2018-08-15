@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use ascii::AsciiString;
+use failure::err_msg;
 use failure::prelude::*;
 use futures::{stream, prelude::*};
 use futures_ext::{BoxFuture, FutureExt};
@@ -48,19 +49,13 @@ pub fn upload_bookmarks(
 
     read_bookmarks(revlogrepo)
         .map({
-            let logger = logger.clone();
-            let blobrepo = blobrepo.clone();
-            let stale_bookmarks = stale_bookmarks.clone();
+            cloned!(logger, blobrepo, stale_bookmarks);
             move |bookmarks| {
                 stream::futures_unordered(bookmarks.into_iter().map(|(key, cs_id)| {
-                    let logger = logger.clone();
-                    let blobrepo = blobrepo.clone();
-                    let stale_bookmarks = stale_bookmarks.clone();
                     blobrepo
                         .changeset_exists(&cs_id)
                         .and_then({
-                            let logger = logger.clone();
-                            let key = key.clone();
+                            cloned!(logger, key, blobrepo, stale_bookmarks);
                             move |exists| {
                                 match (exists, stale_bookmarks.get(&key).cloned()) {
                                     (false, Some(stale_cs_id)) => {
@@ -81,7 +76,17 @@ pub fn upload_bookmarks(
                                     }
                                     _ => Ok((key, cs_id, exists)).into_future().boxify(),
                                 }
-                        }})
+                            }})
+                        .and_then({
+                            cloned!(blobrepo);
+                            move |(key, cs_id, exists)| {
+                                blobrepo.get_bonsai_from_hg(&cs_id)
+                                    .and_then(move |bcs_id| bcs_id.ok_or(err_msg(
+                                        format!("failed to resolve hg to bonasi: {}", cs_id),
+                                    )))
+                                    .map(move |bcs_id| (key, bcs_id, exists))
+                            }
+                        })
                 }))
             }
         })
@@ -99,7 +104,7 @@ pub fn upload_bookmarks(
                         cs_id,
                     );
                     None
-               }
+                }
             }
         })
         .chunks(100) // send 100 bookmarks in a single transaction
