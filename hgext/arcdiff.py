@@ -13,11 +13,12 @@ from mercurial import (
     error,
     extensions,
     hintutil,
-    match,
     mdiff,
     patch,
     registrar,
+    revset,
     scmutil,
+    smartset,
 )
 from mercurial.i18n import _
 from mercurial.node import hex
@@ -26,6 +27,7 @@ from .extlib.phabricator import arcconfig, diffprops, graphql
 
 
 hint = registrar.hint()
+revsetpredicate = registrar.revsetpredicate()
 
 
 @hint("since-last-arc-diff")
@@ -178,3 +180,27 @@ def _diff(orig, ui, repo, *pats, **opts):
         return _diff2o(ui, repo, rev, ".", **opts)
     else:
         return orig(ui, repo, *pats, **opts)
+
+
+@revsetpredicate("lastsubmitted(set)")
+def lastsubmitted(repo, subset, x):
+    revs = revset.getset(repo, revset.fullreposet(repo), x)
+    phabrevs = set()
+    for rev in revs:
+        phabrev = diffprops.parserevfromcommitmsg(repo[rev].description())
+        if phabrev is None:
+            mess = _("local changeset is not associated with a differential revision")
+            raise error.Abort(mess)
+        phabrevs.add(phabrev)
+
+    resultrevs = set()
+    for phabrev in phabrevs:
+        diffrev = _differentialhash(repo.ui, repo, phabrev)
+        if diffrev is None or not isinstance(diffrev, dict) or "hash" not in diffrev:
+            mess = _("unable to determine previous changeset hash")
+            raise error.Abort(mess)
+
+        lasthash = str(diffrev["hash"])
+        resultrevs.add(repo.unfiltered()[lasthash])
+
+    return subset & smartset.baseset(sorted(resultrevs))
