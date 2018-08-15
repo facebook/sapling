@@ -9,9 +9,11 @@ extern crate failure_derive;
 extern crate pathencoding;
 extern crate revisionstore;
 
+mod datastorepyext;
 mod pyerror;
 mod pythondatastore;
 mod pythonutil;
+mod repackablepyext;
 
 #[allow(non_camel_case_types)]
 pub mod pyext;
