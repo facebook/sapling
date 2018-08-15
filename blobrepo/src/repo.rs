@@ -57,7 +57,8 @@ use rocksdb;
 use BlobManifest;
 use HgBlobChangeset;
 use errors::*;
-use file::{fetch_file_content_and_renames_from_blobstore, fetch_raw_filenode_bytes, HgBlobEntry};
+use file::{fetch_file_content_from_blobstore, fetch_raw_filenode_bytes,
+           fetch_rename_from_blobstore, HgBlobEntry};
 use memory_manifest::MemoryRootManifest;
 use repo_commit::*;
 
@@ -382,9 +383,7 @@ impl BlobRepo {
 
     pub fn get_file_content(&self, key: &HgNodeHash) -> BoxFuture<FileContents, Error> {
         STATS::get_file_content.add_value(1);
-        fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
-            .map(|contentrename| contentrename.0)
-            .boxify()
+        fetch_file_content_from_blobstore(&self.blobstore, *key).boxify()
     }
 
     // TODO: (rain1) T30456231 It should be possible in principle to make the return type a wrapper
@@ -404,8 +403,7 @@ impl BlobRepo {
         key: &HgNodeHash,
     ) -> BoxFuture<Option<(RepoPath, HgNodeHash)>, Error> {
         STATS::get_hg_file_copy_from_blobstore.add_value(1);
-        fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
-            .map(|contentrename| contentrename.1)
+        fetch_rename_from_blobstore(&self.blobstore, *key)
             .map(|rename| rename.map(|(path, hash)| (RepoPath::FilePath(path), hash)))
             .boxify()
     }

@@ -73,34 +73,34 @@ pub fn fetch_raw_filenode_bytes(
         .boxify()
 }
 
-pub fn fetch_file_content_and_renames_from_blobstore(
+pub fn fetch_file_content_from_blobstore(
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
-) -> BoxFuture<(FileContents, Option<(MPath, HgNodeHash)>), Error> {
-    fetch_file_envelope(blobstore, node_id)
-        .and_then({
-            let blobstore = blobstore.clone();
-            move |envelope| {
-                let envelope = envelope.into_mut();
-                let file_contents_fut = fetch_file_contents(&blobstore, envelope.content_id);
+) -> impl Future<Item = FileContents, Error = Error> {
+    fetch_file_envelope(blobstore, node_id).and_then({
+        let blobstore = blobstore.clone();
+        move |envelope| {
+            let content_id = envelope.content_id();
+            fetch_file_contents(&blobstore, content_id.clone())
+        }
+    })
+}
 
-                // This is a bit of a hack because metadata is not the complete file. However, it's
-                // equivalent to a zero-length file.
-                let f = file::File::new(
-                    envelope.metadata,
-                    envelope.p1.as_ref(),
-                    envelope.p2.as_ref(),
-                );
-                let copy_from = match f.copied_from() {
-                    Ok(copy_from) => copy_from,
-                    // XXX error out if copy-from information couldn't be read?
-                    Err(_err) => None,
-                };
+pub fn fetch_rename_from_blobstore(
+    blobstore: &RepoBlobstore,
+    node_id: HgNodeHash,
+) -> impl Future<Item = Option<(MPath, HgNodeHash)>, Error = Error> {
+    fetch_file_envelope(blobstore, node_id).and_then(|envelope| {
+        let envelope = envelope.into_mut();
 
-                file_contents_fut.map(move |contents| (contents, copy_from))
-            }
-        })
-        .boxify()
+        // This is a bit of a hack because metadata is not the complete file. However, it's
+        // equivalent to a zero-length file.
+        file::File::new(
+            envelope.metadata,
+            envelope.p1.as_ref(),
+            envelope.p2.as_ref(),
+        ).copied_from()
+    })
 }
 
 pub fn fetch_file_envelope(
