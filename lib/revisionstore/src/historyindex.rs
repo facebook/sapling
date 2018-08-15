@@ -1,6 +1,8 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use crypto::digest::Digest;
+use crypto::sha1::Sha1;
 use memmap::{Mmap, MmapOptions};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
@@ -177,7 +179,7 @@ impl HistoryIndex {
     pub fn write<T: Write>(
         writer: &mut T,
         file_sections: &[(Box<[u8]>, FileSectionLocation)],
-        nodes: &HashMap<Key, NodeLocation>,
+        nodes: &HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
     ) -> Result<()> {
         // Write header
         let options = HistoryIndexOptions {
@@ -186,10 +188,118 @@ impl HistoryIndex {
         };
         options.write(writer)?;
 
-        // Add index writing here
+        let mut file_sections: Vec<(&Box<[u8]>, Node, FileSectionLocation)> = file_sections
+            .iter()
+            .map(|e| Ok((&e.0, sha1(&e.0), e.1.clone())))
+            .collect::<Result<Vec<(&Box<[u8]>, Node, FileSectionLocation)>>>()?;
+        // They must be written in sorted order so they can be bisected.
+        file_sections.sort_by_key(|x| x.1);
+
+        // Write the fanout table
+        // `locations` is unused by history pack, but we must provide it
+        let mut locations: Vec<u32> = Vec::with_capacity(file_sections.len());
+        unsafe { locations.set_len(file_sections.len()) };
+        FanoutTable::write(
+            writer,
+            if options.large { 2 } else { 1 },
+            &mut file_sections.iter().map(|x| &x.1),
+            FILE_ENTRY_LEN,
+            &mut locations,
+        )?;
+
+        // Write out the number of files in the file portion.
+        writer.write_u64::<BigEndian>(file_sections.len() as u64)?;
+
+        <HistoryIndex>::write_file_index(writer, &options, &file_sections, nodes)?;
+
+        // For each file, write a node index
+        for &(file_name, ..) in file_sections.iter() {
+            <HistoryIndex>::write_node_section(writer, nodes, file_name.as_ref())?;
+        }
 
         Ok(())
     }
+
+    fn write_file_index<T: Write>(
+        writer: &mut T,
+        options: &HistoryIndexOptions,
+        file_sections: &Vec<(&Box<[u8]>, Node, FileSectionLocation)>,
+        nodes: &HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
+    ) -> Result<()> {
+        // For each file, keep track of where its node index will start.
+        // The first ones starts after the header, fanout, file count, file section, and node count.
+        let mut node_offset: usize = 2 + FanoutTable::get_size(options.large) + 8
+            + (file_sections.len() * FILE_ENTRY_LEN) + 8;
+        let mut node_count = 0;
+
+        // Write out the file section entries
+        let mut seen_files = HashSet::<&Box<[u8]>>::with_capacity(file_sections.len());
+        for &(file_name, file_hash, ref section_location) in file_sections.iter() {
+            if seen_files.contains(file_name) {
+                return Err(HistoryIndexError(format!(
+                    "file '{:?}' was specified twice",
+                    file_name
+                )).into());
+            }
+            seen_files.insert(&file_name);
+
+            let file_nodes: &HashMap<Key, NodeLocation> = nodes.get(file_name).ok_or_else(|| {
+                HistoryIndexError(format!("unable to find nodes for {:?}", file_name))
+            })?;
+            let node_section_size = file_nodes.len() * NODE_ENTRY_LEN;
+            FileIndexEntry {
+                node: file_hash.clone(),
+                file_section_offset: section_location.offset,
+                file_section_size: section_location.size,
+                node_index_offset: node_offset as u32,
+                node_index_size: node_section_size as u32,
+            }.write(writer)?;
+
+            // Keep track of the current node index offset
+            node_offset += 2 + file_name.len() + node_section_size;
+            node_count += file_nodes.len();
+        }
+
+        // Write the total number of nodes
+        writer.write_u64::<BigEndian>(node_count as u64)?;
+
+        Ok(())
+    }
+
+    fn write_node_section<T: Write>(
+        writer: &mut T,
+        nodes: &HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
+        file_name: &[u8],
+    ) -> Result<()> {
+        // Write the filename
+        writer.write_u16::<BigEndian>(file_name.len() as u16)?;
+        writer.write_all(file_name)?;
+
+        // Write each node, in sorted order so the can be bisected
+        let file_nodes = nodes.get(file_name).ok_or_else(|| {
+            HistoryIndexError(format!("unabled to find nodes for {:?}", file_name))
+        })?;
+        let mut file_nodes: Vec<(&Key, &NodeLocation)> =
+            file_nodes.iter().collect::<Vec<(&Key, &NodeLocation)>>();
+        file_nodes.sort_by_key(|x| x.0.node());
+
+        for &(key, location) in file_nodes.iter() {
+            NodeIndexEntry {
+                node: key.node().clone(),
+                offset: location.offset,
+            }.write(writer)?;
+        }
+
+        Ok(())
+    }
+}
+
+fn sha1(value: &Box<[u8]>) -> Node {
+    let mut hasher = Sha1::new();
+    hasher.input(value.as_ref());
+    let mut buf: [u8; 20] = Default::default();
+    hasher.result(&mut buf);
+    (&buf).into()
 }
 
 #[cfg(test)]
