@@ -225,8 +225,11 @@ impl HistoryStore for HistoryPack {
         unimplemented!();
     }
 
-    fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
-        unimplemented!();
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+        Ok(keys.iter()
+            .filter(|k| self.index.get_node_entry(k).is_err())
+            .map(|k| k.clone())
+            .collect())
     }
 
     fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {
@@ -327,6 +330,23 @@ mod tests {
             let response: NodeInfo = pack.get_node_info(key).unwrap();
             assert_eq!(response, **info);
         }
+    }
+
+    #[test]
+    fn test_get_missing() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let (nodes, _) = get_nodes(&mut rng);
+
+        let pack = make_pack(&tempdir, &nodes);
+
+        let mut test_keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
+        let missing_key = Key::new(Box::new([9]), Node::random(&mut rng));
+        test_keys.push(missing_key.clone());
+
+        let missing = pack.get_missing(&test_keys[..]).unwrap();
+        assert_eq!(vec![missing_key], missing);
     }
 
     quickcheck! {
