@@ -371,19 +371,10 @@ class lock(object):
             m %= (info.uniqueid,)
             self._debugprintonce(m)
             return info
-        # POSIX util.makelock removes stale lock based on flock information.
-        # So it's unnecessary to remove stale lock here. It's also less
-        # reliable to remove stale lock based on pid due to pid namespaces.
-        if not pycompat.iswindows:
-            m = _("some process that claims itself as %r is holding the lock\n")
-            m %= (info.uniqueid,)
-            self._debugprintonce(m)
-            return info
         # if lockinfo dead, break lock.  must do this with another lock
         # held, or can race and break valid lock.
         try:
             # The "remove dead lock" logic is done by posix.makelock, not here.
-            assert pycompat.iswindows
             msg = _(
                 "trying to removed the stale lock file " "(will acquire %s for that)\n"
             )
