@@ -37,7 +37,7 @@ impl From<HistoryPackVersion> for u8 {
 }
 
 #[derive(Debug, PartialEq)]
-struct FileSectionHeader<'a> {
+pub(crate) struct FileSectionHeader<'a> {
     pub file_name: &'a [u8],
     pub count: u32,
 }

@@ -1,9 +1,15 @@
+use byteorder::WriteBytesExt;
+use crypto::digest::Digest;
+use crypto::sha1::Sha1;
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use tempfile::NamedTempFile;
 
 use ancestors::AncestorIterator;
 use error::Result;
-use historypack::HistoryPackVersion;
+use historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
+use historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
 use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
 
@@ -42,6 +48,112 @@ impl MutableHistoryPack {
             .entry(key.name().to_vec().into_boxed_slice())
             .or_insert_with(|| HashMap::new());
         entries.insert(key.clone(), info.clone());
+        Ok(())
+    }
+
+    /// Closes the mutable historypack, returning the path of the final immutable historypack on disk.
+    /// The mutable historypack is no longer usable after being closed.
+    pub fn close(self) -> Result<PathBuf> {
+        let mut data_file = NamedTempFile::new_in(&self.dir)?;
+        let mut hasher = Sha1::new();
+
+        // Write the header
+        let version_u8: u8 = self.version.clone().into();
+        data_file.write_u8(version_u8)?;
+        hasher.input(&[version_u8]);
+
+        // Store data for the index
+        let mut file_sections: Vec<(Box<[u8]>, FileSectionLocation)> = Default::default();
+        let mut nodes: HashMap<Box<[u8]>, HashMap<Key, NodeLocation>> = Default::default();
+
+        // Write the historypack
+        let mut section_buf = Vec::new();
+        let mut section_offset = data_file.as_ref().metadata()?.len();
+        // - In sorted order for deterministic hashes.
+        let mut keys = self.mem_index.keys().collect::<Vec<&Box<[u8]>>>();
+        keys.sort_unstable();
+        for file_name in keys {
+            let node_map = self.mem_index.get(file_name).unwrap();
+            self.write_section(
+                &mut section_buf,
+                file_name,
+                node_map,
+                section_offset as usize,
+                &mut nodes,
+            )?;
+            hasher.input(&section_buf);
+            data_file.write_all(&mut section_buf)?;
+
+            let section_location = FileSectionLocation {
+                offset: section_offset,
+                size: section_buf.len() as u64,
+            };
+            file_sections.push((file_name.clone(), section_location));
+
+            section_offset += section_buf.len() as u64;
+            section_buf.clear();
+        }
+
+        // Compute the index
+        let mut index_file = NamedTempFile::new_in(&self.dir)?;
+        HistoryIndex::write(&mut index_file, &file_sections, &nodes)?;
+
+        // Persist the temp files
+        let base_filepath = self.dir.join(&hasher.result_str());
+        let data_filepath = base_filepath.with_extension("histpack");
+        let index_filepath = base_filepath.with_extension("histidx");
+
+        data_file.persist(&data_filepath)?;
+        index_file.persist(&index_filepath)?;
+        Ok(base_filepath)
+    }
+
+    fn write_section(
+        &self,
+        writer: &mut Vec<u8>,
+        file_name: &[u8],
+        node_map: &HashMap<Key, NodeInfo>,
+        section_offset: usize,
+        nodes: &mut HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
+    ) -> Result<()> {
+        let mut node_locations = HashMap::<Key, NodeLocation>::with_capacity(node_map.len());
+
+        // Write section header
+        FileSectionHeader {
+            file_name: &file_name,
+            count: node_map.len() as u32,
+        }.write(writer)?;
+
+        // TODO: Topo-sort nodes
+
+        // Write nodes
+        for (key, node_info) in node_map.iter() {
+            let p1 = &node_info.parents[0];
+            let copyfrom = if !p1.node().is_null() && p1.name() != key.name() {
+                Some(p1.name())
+            } else {
+                None
+            };
+
+            let node_offset = section_offset + writer.len() as usize;
+            HistoryEntry::write(
+                writer,
+                key.node(),
+                node_info.parents[0].node(),
+                node_info.parents[1].node(),
+                &node_info.linknode,
+                &copyfrom,
+            )?;
+
+            node_locations.insert(
+                key.clone(),
+                NodeLocation {
+                    offset: node_offset as u64,
+                },
+            );
+        }
+
+        nodes.insert(Box::from(file_name), node_locations);
         Ok(())
     }
 }
