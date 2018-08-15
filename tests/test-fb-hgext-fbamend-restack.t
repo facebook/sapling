@@ -10,9 +10,6 @@ Set up test environment.
   >   hg add "$1"
   >   hg ci -m "add $1"
   > }
-  $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
-  > }
   $ hg init restack && cd restack
 
 Note: Repositories populated by `hg debugbuilddag` don't seem to

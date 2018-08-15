@@ -9,9 +9,6 @@
   >   hg add "$1"
   >   hg ci -m "add $1"
   > }
-  $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
-  > }
 
 Test invalid value for amend.autorestack
   $ newrepo

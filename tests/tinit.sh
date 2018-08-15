@@ -47,3 +47,7 @@ drawdag() {
 setconfig() {
   python "$RUNTESTDIR/setconfig.py" "$@"
 }
+
+showgraph() {
+  hg log --graph -T "{rev} {desc|firstline}" | sed \$d
+}

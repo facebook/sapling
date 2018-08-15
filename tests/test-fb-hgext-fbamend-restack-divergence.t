@@ -8,9 +8,6 @@
   >   hg add "$1"
   >   hg ci -m "add $1"
   > }
-  $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
-  > }
 
 Test situation with divergence. Restack should rebase unstable children
 onto the newest successor of their parent.

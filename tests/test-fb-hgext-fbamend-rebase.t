@@ -6,9 +6,6 @@ Set up test environment.
   > [experimental]
   > evolution = createmarkers, allowunstable
   > EOF
-  $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
-  > }
 
 Test that rebased commits that would cause instability are inhibited.
   $ hg init repo && cd repo

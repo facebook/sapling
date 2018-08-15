@@ -8,9 +8,6 @@
   >   hg add "$1"
   >   hg ci -m "add $1"
   > }
-  $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
-  > }
 
 Restack does topological sort and only rebases "D" once:
 

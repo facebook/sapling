@@ -7,9 +7,6 @@ Set up test environment.
   > [experimental]
   > evolution = createmarkers, allowunstable
   > EOF
-  $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
-  > }
   $ reset() {
   >   cd ..
   >   rm -rf repo

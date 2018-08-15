@@ -24,9 +24,6 @@ Set up test environment.
   >   hg init repo
   >   cd repo
   > }
-  $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
-  > }
 
 Initialize repo.
   $ hg init repo && cd repo

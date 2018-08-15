@@ -9,9 +9,6 @@ This test confirms cacheinvalidation in hg fold.
   > [experimental]
   > evolution = createmarkers, allowunstable
   > EOF
-  $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
-  > }
   $ reset() {
   >   cd ..
   >   rm -rf repo
