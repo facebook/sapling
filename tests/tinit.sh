@@ -49,5 +49,5 @@ setconfig() {
 }
 
 showgraph() {
-  hg log --graph -T "{rev} {desc|firstline}" | sed \$d
+  hg log --graph -T "{rev} {node|short} {desc|firstline}" | sed \$d
 }

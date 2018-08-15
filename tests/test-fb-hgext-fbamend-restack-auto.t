@@ -149,15 +149,15 @@ amend.autorestack=no-conflict, and mergeable changes (expect restack)
   rebasing 2:ca039b450ae0 "C" (C)
   merging file
   $ showgraph
-  o  4 C
+  o  4 7ed7d67ad7bf C
   |
-  @  3 B
+  @  3 767372f778c5 B
   |
-  | x  2 C
+  | x  2 ca039b450ae0 C
   | |
-  | x  1 B
+  | x  1 fe14e2b67b65 B
   |/
-  o  0 A
+  o  0 426bada5c675 A
   $ cat file
   0
   1
@@ -226,15 +226,15 @@ amend.autorestack=no-conflict, and conflicting changes (expect cancelled restack
   restacking would create conflicts (hit merge conflicts in file), so you must run it manually
   (run `hg restack` manually to restack this commit's children)
   $ showgraph
-  @  4 B
+  @  4 3000de962fa1 B
   |
-  | o  3 D
+  | o  3 02cc3cc1d010 D
   | |
-  | o  2 C
+  | o  2 b6c0d35dc9e9 C
   | |
-  | x  1 B
+  | x  1 fe14e2b67b65 B
   |/
-  o  0 A
+  o  0 426bada5c675 A
   $ cat file
   unmergeable!
 
@@ -268,15 +268,15 @@ amend.autorestack=always, and conflicting changes (expect restack)
   $ cat file
   unmergeable!
   $ showgraph
-  @  4 B
+  @  4 3000de962fa1 B
   |
-  | o  3 D
+  | o  3 02cc3cc1d010 D
   | |
-  | o  2 C
+  | o  2 b6c0d35dc9e9 C
   | |
-  | x  1 B
+  | x  1 fe14e2b67b65 B
   |/
-  o  0 A
+  o  0 426bada5c675 A
 
 Test rebasing children with obsolete children themselves needing a restack.
   $ newrepo
@@ -303,22 +303,22 @@ Test rebasing children with obsolete children themselves needing a restack.
 NOTE(phillco): This currently gives the wrong result; D should either be atop C
 (obsolete) or C2. `amend --rebase` yields the same bug.
   $ showgraph
-  o  9 D
+  o  9 07e186ae8e17 D
   |
-  | o  8 C2
+  | o  8 84f362759e03 C2
   |/
-  o  7 B
+  o  7 23018262b14e B
   |
-  @  6 A
+  @  6 21006be03678 A
   |
-  | x  5 D
+  | x  5 01f26f1a10b2 D
   | |
-  | | x  4 C2
+  | | x  4 ff9eba5e2480 C2
   | | |
-  | x |  3 C
+  | x |  3 b45c90359798 C
   | |/
-  | x  2 B
+  | x  2 917a077edb8d B
   | |
-  | x  1 A
+  | x  1 ac2f7407182b A
   |/
-  o  0 Z
+  o  0 48b9aae0607f Z

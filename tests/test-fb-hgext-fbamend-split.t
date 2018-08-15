@@ -32,13 +32,13 @@ Initialize repo.
   $ mkcommit c
   $ mkcommit d
   $ showgraph
-  @  3 add d1 and d2
+  @  3 d86136f6dbff add d1 and d2
   |
-  o  2 add c1 and c2
+  o  2 e5cbbeb3434b add c1 and c2
   |
-  o  1 add b1 and b2
+  o  1 b7fb8fde59b2 add b1 and b2
   |
-  o  0 add a1 and a2
+  o  0 c20cc4d302fc add a1 and a2
 
 Test that split behaves correctly on error.
   $ hg split -r 0 1 2
@@ -71,15 +71,15 @@ Test basic case of splitting a head.
   Done splitting? [yN] y
 
   $ showgraph
-  @  5 add d1 and d2
+  @  5 43b9beefca2e add d1 and d2
   |
-  o  4 add d1 and d2
+  o  4 3c66f08f0fd3 add d1 and d2
   |
-  o  2 add c1 and c2
+  o  2 e5cbbeb3434b add c1 and c2
   |
-  o  1 add b1 and b2
+  o  1 b7fb8fde59b2 add b1 and b2
   |
-  o  0 add a1 and a2
+  o  0 c20cc4d302fc add a1 and a2
 
 Split in the middle of a stack.
   $ hg up 2
@@ -110,17 +110,17 @@ Split in the middle of a stack.
   rebasing 5:* "add d1 and d2"* (glob)
 
   $ showgraph
-  o  9 add d1 and d2
+  o  9 bdb846f063c6 add d1 and d2
   |
-  o  8 add d1 and d2
+  o  8 acbc5d06143b add d1 and d2
   |
-  @  7 add c1 and c2
+  @  7 bff303a2c228 add c1 and c2
   |
-  o  6 add c1 and c2
+  o  6 6227053e403e add c1 and c2
   |
-  o  1 add b1 and b2
+  o  1 b7fb8fde59b2 add b1 and b2
   |
-  o  0 add a1 and a2
+  o  0 c20cc4d302fc add a1 and a2
 
 Split with multiple children and using hash.
   $ hg up c20c
@@ -156,21 +156,21 @@ Split with multiple children and using hash.
   rebasing 10:* "add d1 and d2"* (glob)
 
   $ showgraph
-  o  18 add d1 and d2
+  o  18 5ad76779e999 add d1 and d2
   |
-  | o  17 add d1 and d2
+  | o  17 c2fa6cc56f60 add d1 and d2
   | |
-  | o  16 add d1 and d2
+  | o  16 7c766f705803 add d1 and d2
   | |
-  | o  15 add c1 and c2
+  | o  15 7300aee81508 add c1 and c2
   | |
-  | o  14 add c1 and c2
+  | o  14 7c57722f849b add c1 and c2
   | |
-  | o  13 add b1 and b2
+  | o  13 cf2484b29d75 add b1 and b2
   |/
-  @  12 add a1 and a2
+  @  12 a265b3c6c419 add a1 and a2
   |
-  o  11 add a1 and a2
+  o  11 5a5595e342b1 add a1 and a2
 
 Split using revset.
   $ hg strip 18
@@ -203,25 +203,25 @@ Split using revset.
   rebasing 17:* "add d1 and d2"* (glob)
 
   $ showgraph
-  o  23 add d1 and d2
+  o  23 065a5bb834a6 add d1 and d2
   |
-  o  22 add d1 and d2
+  o  22 e3e63b66173e add d1 and d2
   |
-  o  21 add c1 and c2
+  o  21 6b6c4cdbcb5c add c1 and c2
   |
-  o  20 add c1 and c2
+  o  20 216c1cfd66ba add c1 and c2
   |
-  @  19 add b1 and b2
+  @  19 ef9770b15bd8 add b1 and b2
   |
-  o  18 add b1 and b2
+  o  18 172212eeb9e4 add b1 and b2
   |
-  o  12 add a1 and a2
+  o  12 a265b3c6c419 add a1 and a2
   |
-  o  11 add a1 and a2
+  o  11 5a5595e342b1 add a1 and a2
   
-  o  10 add d1 and d2
+  o  10 bd98a3c83a29 add d1 and d2
   |
-  x  0 add a1 and a2
+  x  0 c20cc4d302fc add a1 and a2
 
 Test that command aborts when given multiple commits.
   $ hg split 11 12
@@ -237,27 +237,27 @@ Test --no-rebase flag.
   rebasing 22:* "add d1 and d2" (glob)
   rebasing 23:* "add d1 and d2" (glob)
   $ showgraph
-  o  28 add d1 and d2
+  o  28 5f8ed24aed8c add d1 and d2
   |
-  o  27 add d1 and d2
+  o  27 b5591417a3eb add d1 and d2
   |
-  o  26 add c1 and c2
+  o  26 484cd1d66520 add c1 and c2
   |
-  o  25 add c1 and c2
+  o  25 e051398780c8 add c1 and c2
   |
-  @  24 add e1 and e2
+  @  24 c1d00dbe112a add e1 and e2
   |
-  o  19 add b1 and b2
+  o  19 ef9770b15bd8 add b1 and b2
   |
-  o  18 add b1 and b2
+  o  18 172212eeb9e4 add b1 and b2
   |
-  o  12 add a1 and a2
+  o  12 a265b3c6c419 add a1 and a2
   |
-  o  11 add a1 and a2
+  o  11 5a5595e342b1 add a1 and a2
   
-  o  10 add d1 and d2
+  o  10 bd98a3c83a29 add d1 and d2
   |
-  x  0 add a1 and a2
+  x  0 c20cc4d302fc add a1 and a2
   $ hg split --no-rebase << EOF
   > y
   > y
@@ -282,31 +282,31 @@ Test --no-rebase flag.
   Done splitting? [yN] y
 
   $ showgraph
-  @  30 add e1 and e2
+  @  30 f98ad9103c3d add e1 and e2
   |
-  o  29 add e1 and e2
+  o  29 cc95492dd94d add e1 and e2
   |
-  | o  28 add d1 and d2
+  | o  28 5f8ed24aed8c add d1 and d2
   | |
-  | o  27 add d1 and d2
+  | o  27 b5591417a3eb add d1 and d2
   | |
-  | o  26 add c1 and c2
+  | o  26 484cd1d66520 add c1 and c2
   | |
-  | o  25 add c1 and c2
+  | o  25 e051398780c8 add c1 and c2
   | |
-  | x  24 add e1 and e2
+  | x  24 c1d00dbe112a add e1 and e2
   |/
-  o  19 add b1 and b2
+  o  19 ef9770b15bd8 add b1 and b2
   |
-  o  18 add b1 and b2
+  o  18 172212eeb9e4 add b1 and b2
   |
-  o  12 add a1 and a2
+  o  12 a265b3c6c419 add a1 and a2
   |
-  o  11 add a1 and a2
+  o  11 5a5595e342b1 add a1 and a2
   
-  o  10 add d1 and d2
+  o  10 bd98a3c83a29 add d1 and d2
   |
-  x  0 add a1 and a2
+  x  0 c20cc4d302fc add a1 and a2
 
 Test that bookmarks are correctly moved.
   $ reset
@@ -341,9 +341,9 @@ Test that bookmarks are correctly moved.
   Done splitting? [yN] y
 
   $ showgraph
-  @  2 add a1 and a2
+  @  2 a265b3c6c419 add a1 and a2
   |
-  o  1 add a1 and a2
+  o  1 5a5595e342b1 add a1 and a2
   $ hg bookmarks
      test1                     2:* (glob)
    * test2                     2:* (glob)

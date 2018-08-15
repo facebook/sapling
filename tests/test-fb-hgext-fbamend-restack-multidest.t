@@ -28,38 +28,38 @@ Restack does topological sort and only rebases "D" once:
   $ hg commit --amend -m B3 -q --no-rebase 2>/dev/null
   $ hg tag --local B3
   $ showgraph
-  @  6 B3
+  @  6 da1d4fe88e84 B3
   |
-  | o  5 C
+  | o  5 ca53c8ceb284 C
   | |
-  | x  4 B2
+  | x  4 fdcbd16a7d51 B2
   |/
-  | o  3 D
+  | o  3 f585351a92f8 D
   | |
-  | x  2 C
+  | x  2 26805aba1e60 C
   | |
-  | x  1 B
+  | x  1 112478962961 B
   |/
-  o  0 A
+  o  0 426bada5c675 A
   $ hg rebase --restack
   rebasing 5:ca53c8ceb284 "C"
   rebasing 3:f585351a92f8 "D" (D)
   $ showgraph
-  o  8 D
+  o  8 981f3734c126 D
   |
-  o  7 C
+  o  7 bab9c1b0a249 C
   |
-  @  6 B3
+  @  6 da1d4fe88e84 B3
   |
-  | x  4 B2
+  | x  4 fdcbd16a7d51 B2
   |/
-  | x  3 D
+  | x  3 f585351a92f8 D
   | |
-  | x  2 C
+  | x  2 26805aba1e60 C
   | |
-  | x  1 B
+  | x  1 112478962961 B
   |/
-  o  0 A
+  o  0 426bada5c675 A
 
 Restack will only restack the "current" stack and leave other stacks untouched.
 
@@ -93,25 +93,25 @@ Restack will only restack the "current" stack and leave other stacks untouched.
 
   $ rm .hg/localtags
   $ showgraph
-  o  15 K
+  o  15 c97827ce80f6 K
   |
-  | o  14 H
+  | o  14 47528c67632b H
   | |
-  | | o  13 D
+  | | o  13 5cb8c357af9e D
   | | |
-  o | |  9 L
+  o | |  9 a975bfef72d2 L
   | | |
-  | o |  7 G
+  | o |  7 889f49cd29f6 G
   | | |
-  | | o  5 C
+  | | o  5 dc0947a82db8 C
   | | |
-  | | | o  3 Z
+  | | | o  3 48b9aae0607f Z
   | | |
-  @ | |  2 I
+  @ | |  2 02a9ac6a13a6 I
    / /
-  o /  1 E
+  o /  1 e8e0a81d950f E
    /
-  o  0 A
+  o  0 426bada5c675 A
 
 The "prune" cases.
 
@@ -139,15 +139,15 @@ The "prune" cases.
 
   $ rm .hg/localtags
   $ showgraph
-  @  13 H
+  @  13 3e1fefc3c8db H
   
-  o  12 G
+  o  12 0706cfb95b41 G
   
-  o  11 E
+  o  11 8c0ccd1582b3 E
   |
-  | o  10 D
+  | o  10 f88ac1d7b477 D
   |/
-  o  9 B
+  o  9 653ee58caf75 B
 
 
 
@@ -195,13 +195,13 @@ Restack could resume after resolving merge conflicts.
   rebasing 6:4d1ef7d890c5 "G"
 
   $ showgraph
-  o  8 G
+  o  8 3b00517bf275 G
   |
-  | @  7 F
+  | @  7 2282fe522d5c F
   | |
-  o |  4 E
+  o |  4 7fb047a69f22 E
   | |
-  | o  2 C
+  | o  2 dc0947a82db8 C
   |/
-  o  0 A
+  o  0 426bada5c675 A
 
