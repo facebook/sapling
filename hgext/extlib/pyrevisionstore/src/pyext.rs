@@ -1,14 +1,16 @@
 // Copyright Facebook, Inc. 2018
 //! Python bindings for a Rust hg store
-use cpython::{ObjectProtocol, PyBytes, PyClone, PyDict, PyList, PyObject, PyResult, Python,
-              PythonObject};
+use cpython::{ObjectProtocol, PyBytes, PyClone, PyDict, PyList, PyObject, PyResult, PyTuple,
+              Python, PythonObject};
 use pathencoding;
 
 use datastorepyext::DataStorePyExt;
+use historystorepyext::HistoryStorePyExt;
 use pythondatastore::PythonDataStore;
 use pythonutil::to_pyerr;
 use repackablepyext::RepackablePyExt;
 use revisionstore::datapack::DataPack;
+use revisionstore::historypack::HistoryPack;
 
 py_module_initializer!(
     pyrevisionstore,        // module name
@@ -18,6 +20,7 @@ py_module_initializer!(
         // init function
         m.add_class::<datastore>(py)?;
         m.add_class::<datapack>(py)?;
+        m.add_class::<historypack>(py)?;
         Ok(())
     }
 );
@@ -106,6 +109,62 @@ py_class!(class datapack |py| {
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         <DataStorePyExt>::get_missing(self.store(py).as_ref(), py, &mut keys.iter(py)?)
+    }
+
+    def markledger(&self, ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
+        <RepackablePyExt>::mark_ledger(self.store(py).as_ref(), py, self.as_object(), ledger)?;
+        Ok(Python::None(py))
+    }
+
+    def cleanup(&self, ledger: &PyObject) -> PyResult<PyObject> {
+        <RepackablePyExt>::cleanup(self.store(py).as_ref(), py, ledger)?;
+        Ok(Python::None(py))
+    }
+});
+
+py_class!(class historypack |py| {
+    data store: Box<HistoryPack>;
+
+    def __new__(
+        _cls,
+        path: &PyBytes
+    ) -> PyResult<historypack> {
+        let path = pathencoding::local_bytes_to_path(path.data(py))
+                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+        historypack::create_instance(
+            py,
+            Box::new(HistoryPack::new(&path).map_err(|e| to_pyerr(py, &e))?),
+        )
+    }
+
+    def path(&self) -> PyResult<PyBytes> {
+        let path = pathencoding::path_to_local_bytes(self.store(py).base_path())
+                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+        Ok(PyBytes::new(py, &path))
+    }
+
+    def packpath(&self) -> PyResult<PyBytes> {
+        let path = pathencoding::path_to_local_bytes(self.store(py).pack_path())
+                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+        Ok(PyBytes::new(py, &path))
+    }
+
+    def indexpath(&self) -> PyResult<PyBytes> {
+        let path = pathencoding::path_to_local_bytes(self.store(py).index_path())
+                                 .map_err(|e| to_pyerr(py, &e.into()))?;
+        Ok(PyBytes::new(py, &path))
+    }
+
+    def getancestors(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+        <HistoryStorePyExt>::get_ancestors(self.store(py).as_ref(), py, name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        <HistoryStorePyExt>::get_missing(self.store(py).as_ref(), py, &mut keys.iter(py)?)
+    }
+
+    def getnodeinfo(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
+        <HistoryStorePyExt>::get_node_info(self.store(py).as_ref(), py, name, node)
     }
 
     def markledger(&self, ledger: &PyObject, _options: &PyObject) -> PyResult<PyObject> {
