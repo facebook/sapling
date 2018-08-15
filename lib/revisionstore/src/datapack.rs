@@ -461,7 +461,7 @@ mod tests {
             ),
         ];
         let pack = make_pack(&tempdir, &revisions);
-        for &(ref delta, ref metadata) in revisions.iter() {
+        for &(ref delta, ref _metadata) in revisions.iter() {
             let missing = pack.get_missing(&[delta.key.clone()]).unwrap();
             assert_eq!(missing.len(), 0);
         }
@@ -534,7 +534,7 @@ mod tests {
         ];
 
         let pack = make_pack(&tempdir, &revisions);
-        for &(ref delta, ref metadata) in revisions.iter() {
+        for &(ref delta, ref _metadata) in revisions.iter() {
             let chain = pack.get_delta_chain(&delta.key).unwrap();
             assert_eq!(chain[0], *delta);
         }

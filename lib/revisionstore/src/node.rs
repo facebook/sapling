@@ -46,13 +46,12 @@ impl Node {
     pub fn random(rng: &mut RngCore) -> Self {
         let mut bytes = [0; 20];
         rng.fill_bytes(&mut bytes);
-        while true {
+        loop {
             let node = Node::from(&bytes);
             if !node.is_null() {
                 return node;
             }
         }
-        panic!("should never get here")
     }
 }
 
