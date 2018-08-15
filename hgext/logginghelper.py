@@ -54,6 +54,15 @@ def _localrepoinit(orig, self, baseui, path=None, create=False):
 
     kwargs["obsstore_size"] = obsstore_size
 
+    if "treestate" in self.requirements:
+        dirstateformat = "treestate"
+    elif "treedirstate" in self.requirements:
+        dirstateformat = "treedirstate"
+    else:
+        dirstateformat = "flatdirstate"
+
+    kwargs["dirstate_format"] = dirstateformat
+
     self.ui.log(
         "logginghelper", "", **kwargs  # ui.log requires a format string as args[0].
     )
