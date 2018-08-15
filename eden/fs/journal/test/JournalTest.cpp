@@ -14,12 +14,12 @@
 using namespace facebook::eden;
 using ::testing::UnorderedElementsAre;
 
-TEST(Journal, chain) {
+TEST(Journal, merges_chained_deltas) {
   Journal journal;
 
   // Make an initial entry.
-  auto delta = std::make_unique<JournalDelta>();
-  delta->changedFilesInOverlay.insert(RelativePath("foo/bar"));
+  auto delta =
+      std::make_unique<JournalDelta>("foo/bar"_relpath, JournalDelta::CHANGED);
   journal.addDelta(std::move(delta));
 
   // Sanity check that the latest information matches.
@@ -29,8 +29,7 @@ TEST(Journal, chain) {
   EXPECT_EQ(nullptr, latest->previous);
 
   // Add a second entry.
-  delta = std::make_unique<JournalDelta>();
-  delta->changedFilesInOverlay.insert(RelativePath("baz"));
+  delta = std::make_unique<JournalDelta>("baz"_relpath, JournalDelta::CHANGED);
   journal.addDelta(std::move(delta));
 
   // Sanity check that the latest information matches.
@@ -85,16 +84,16 @@ TEST(Journal, mergeRemoveCreateUpdate) {
   Journal journal;
 
   // Remove test.txt
-  auto delta = std::make_unique<JournalDelta>();
-  delta->removedFilesInOverlay.insert(RelativePath("test.txt"));
+  auto delta =
+      std::make_unique<JournalDelta>("test.txt"_relpath, JournalDelta::REMOVED);
   journal.addDelta(std::move(delta));
   // Create test.txt
-  delta = std::make_unique<JournalDelta>();
-  delta->createdFilesInOverlay.insert(RelativePath("test.txt"));
+  delta =
+      std::make_unique<JournalDelta>("test.txt"_relpath, JournalDelta::CREATED);
   journal.addDelta(std::move(delta));
   // Modify test.txt
-  delta = std::make_unique<JournalDelta>();
-  delta->changedFilesInOverlay.insert(RelativePath("test.txt"));
+  delta =
+      std::make_unique<JournalDelta>("test.txt"_relpath, JournalDelta::CHANGED);
   journal.addDelta(std::move(delta));
 
   // Sanity check that the latest information matches.
@@ -107,40 +106,52 @@ TEST(Journal, mergeRemoveCreateUpdate) {
   ASSERT_NE(nullptr, merged);
   EXPECT_EQ(1, merged->fromSequence);
   EXPECT_EQ(3, merged->toSequence);
-  EXPECT_THAT(merged->createdFilesInOverlay, UnorderedElementsAre());
-  EXPECT_THAT(merged->removedFilesInOverlay, UnorderedElementsAre());
-  EXPECT_THAT(
-      merged->changedFilesInOverlay,
-      UnorderedElementsAre(RelativePath{"test.txt"}));
+  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
+  ASSERT_EQ(1, merged->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  EXPECT_EQ(
+      true,
+      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
+  EXPECT_EQ(
+      true,
+      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 
   // Test merging only partway back
   merged = latest->merge(3);
   ASSERT_NE(nullptr, merged);
   EXPECT_EQ(3, merged->fromSequence);
   EXPECT_EQ(3, merged->toSequence);
-  EXPECT_THAT(merged->createdFilesInOverlay, UnorderedElementsAre());
-  EXPECT_THAT(merged->removedFilesInOverlay, UnorderedElementsAre());
-  EXPECT_THAT(
-      merged->changedFilesInOverlay,
-      UnorderedElementsAre(RelativePath{"test.txt"}));
+  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
+  ASSERT_EQ(1, merged->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  EXPECT_EQ(
+      true,
+      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
+  EXPECT_EQ(
+      true,
+      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 
   merged = latest->merge(2);
   ASSERT_NE(nullptr, merged);
   EXPECT_EQ(2, merged->fromSequence);
   EXPECT_EQ(3, merged->toSequence);
-  EXPECT_THAT(
-      merged->createdFilesInOverlay,
-      UnorderedElementsAre(RelativePath{"test.txt"}));
-  EXPECT_THAT(merged->removedFilesInOverlay, UnorderedElementsAre());
-  EXPECT_THAT(merged->changedFilesInOverlay, UnorderedElementsAre());
+  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
+  ASSERT_EQ(1, merged->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  EXPECT_EQ(
+      false,
+      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
+  EXPECT_EQ(
+      true,
+      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 
   merged = latest->merge(1);
   ASSERT_NE(nullptr, merged);
   EXPECT_EQ(1, merged->fromSequence);
   EXPECT_EQ(3, merged->toSequence);
-  EXPECT_THAT(merged->createdFilesInOverlay, UnorderedElementsAre());
-  EXPECT_THAT(merged->removedFilesInOverlay, UnorderedElementsAre());
-  EXPECT_THAT(
-      merged->changedFilesInOverlay,
-      UnorderedElementsAre(RelativePath{"test.txt"}));
+  EXPECT_EQ(1, merged->changedFilesInOverlay.size());
+  ASSERT_EQ(1, merged->changedFilesInOverlay.count(RelativePath{"test.txt"}));
+  EXPECT_EQ(
+      true,
+      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedBefore);
+  EXPECT_EQ(
+      true,
+      merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 }

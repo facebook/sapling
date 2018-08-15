@@ -99,16 +99,26 @@ struct JournalPosition {
 /** Holds information about a set of paths that changed between two points.
  * fromPosition, toPosition define the time window.
  * paths holds the list of paths that changed in that window.
+ *
+ * This type is quasi-deprecated. It has multiple API problems and should be
+ * rethought when we have a chance to make a breaking change.
  */
 struct FileDelta {
   /** The fromPosition passed to getFilesChangedSince */
   1: JournalPosition fromPosition
   /** The current position at the time that getFilesChangedSince was called */
   2: JournalPosition toPosition
-  /** The complete list of paths from both the snapshot and the overlay that
-   * changed between fromPosition and toPosition */
+  /** The union of changedPaths and createdPaths contains the total set of paths
+   * changed in the overlay between fromPosition and toPosition.
+   * Disjoint with createdPaths.
+   */
   3: list<PathString> changedPaths
+  /** The set of paths created between fromPosition and toPosition.
+   * Used by Watchman to search for cookies and to populate its 'new' field.
+   * Disjoint with changedPaths.
+   */
   4: list<PathString> createdPaths
+  /** Deprecated - always empty. */
   5: list<PathString> removedPaths
   /** When fromPosition.snapshotHash != toPosition.snapshotHash this holds
    * the union of the set of files whose ScmFileStatus differed from the
@@ -127,8 +137,23 @@ struct DebugGetRawJournalParams {
   3: JournalPosition toPosition
 }
 
+struct DebugPathChangeInfo {
+  1: bool existedBefore
+  2: bool existedAfter
+}
+
+/**
+ * A fairly direct modeling of the underlying JournalDelta data structure.
+ */
+struct DebugJournalDelta {
+  1: JournalPosition fromPosition
+  2: JournalPosition toPosition
+  3: map<PathString, DebugPathChangeInfo> changedPaths
+  4: set<PathString> uncleanPaths
+}
+
 struct DebugGetRawJournalResponse {
-  1: list<FileDelta> deltas
+  2: list<DebugJournalDelta> allDeltas
 }
 
 /**

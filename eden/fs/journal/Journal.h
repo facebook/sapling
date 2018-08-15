@@ -37,6 +37,12 @@ class JournalDelta;
  */
 class Journal {
  public:
+  Journal() = default;
+
+  /// It is almost always a mistake to copy a Journal.
+  Journal(const Journal&) = delete;
+  Journal& operator=(const Journal&) = delete;
+
   using SequenceNumber = uint64_t;
   using SubscriberId = uint64_t;
   using SubscriberCallback = std::function<void()>;

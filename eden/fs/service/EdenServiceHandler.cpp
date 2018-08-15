@@ -384,16 +384,14 @@ void EdenServiceHandler::getFilesChangedSince(
     out.fromPosition.snapshotHash = thriftHash(merged->fromHash);
     out.fromPosition.mountGeneration = out.toPosition.mountGeneration;
 
-    for (auto& path : merged->changedFilesInOverlay) {
-      out.changedPaths.emplace_back(path.stringPiece().str());
-    }
-
-    for (auto& path : merged->createdFilesInOverlay) {
-      out.createdPaths.emplace_back(path.stringPiece().str());
-    }
-
-    for (auto& path : merged->removedFilesInOverlay) {
-      out.removedPaths.emplace_back(path.stringPiece().str());
+    for (const auto& entry : merged->changedFilesInOverlay) {
+      auto& path = entry.first;
+      auto& changeInfo = entry.second;
+      if (changeInfo.isNew()) {
+        out.createdPaths.emplace_back(path.stringPiece().str());
+      } else {
+        out.changedPaths.emplace_back(path.stringPiece().str());
+      }
     }
 
     for (auto& path : merged->uncleanPaths) {
@@ -441,8 +439,7 @@ void EdenServiceHandler::debugGetRawJournal(
         "You need to compute a new basis for delta queries.");
   }
 
-  auto journal = edenMount->getJournal();
-  auto latest = journal.getLatest();
+  auto latest = edenMount->getJournal().getLatest();
 
   // Walk the journal until we find toPosition.
   auto toPos =
@@ -462,7 +459,7 @@ void EdenServiceHandler::debugGetRawJournal(
       break;
     }
 
-    FileDelta delta;
+    DebugJournalDelta delta;
     JournalPosition fromPosition;
     fromPosition.set_mountGeneration(mountGeneration);
     fromPosition.set_sequenceNumber(current->fromSequence);
@@ -475,23 +472,21 @@ void EdenServiceHandler::debugGetRawJournal(
     toPosition.set_snapshotHash(thriftHash(current->toHash));
     delta.set_toPosition(toPosition);
 
-    for (auto& path : current->changedFilesInOverlay) {
-      delta.changedPaths.emplace_back(path.stringPiece().str());
-    }
+    for (const auto& entry : current->changedFilesInOverlay) {
+      auto& path = entry.first;
+      auto& changeInfo = entry.second;
 
-    for (auto& path : current->createdFilesInOverlay) {
-      delta.createdPaths.emplace_back(path.stringPiece().str());
-    }
-
-    for (auto& path : current->removedFilesInOverlay) {
-      delta.removedPaths.emplace_back(path.stringPiece().str());
+      DebugPathChangeInfo debugChangeInfo;
+      debugChangeInfo.existedBefore = changeInfo.existedBefore;
+      debugChangeInfo.existedAfter = changeInfo.existedAfter;
+      delta.changedPaths.emplace(path.stringPiece().str(), debugChangeInfo);
     }
 
     for (auto& path : current->uncleanPaths) {
-      delta.uncleanPaths.emplace_back(path.stringPiece().str());
+      delta.uncleanPaths.emplace(path.stringPiece().str());
     }
 
-    out.deltas.push_back(delta);
+    out.allDeltas.push_back(delta);
     current = current->previous.get();
   }
 }

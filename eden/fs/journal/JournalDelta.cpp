@@ -13,28 +13,42 @@
 namespace facebook {
 namespace eden {
 
-JournalDelta::JournalDelta(std::initializer_list<RelativePath> overlayFileNames)
-    : changedFilesInOverlay(overlayFileNames) {}
+namespace {
+folly::StringPiece eventCharacterizationFor(const PathChangeInfo& ci) {
+  if (ci.existedBefore && !ci.existedAfter) {
+    return "Removed";
+  } else if (!ci.existedBefore && ci.existedAfter) {
+    return "Created";
+  } else if (ci.existedBefore && ci.existedAfter) {
+    return "Changed";
+  } else {
+    return "Ghost";
+  }
+}
+} // namespace
 
 JournalDelta::JournalDelta(RelativePathPiece fileName, JournalDelta::Created)
-    : createdFilesInOverlay({fileName.copy()}) {}
+    : changedFilesInOverlay{{fileName.copy(), PathChangeInfo{false, true}}} {}
 
 JournalDelta::JournalDelta(RelativePathPiece fileName, JournalDelta::Removed)
-    : removedFilesInOverlay({fileName.copy()}) {}
+    : changedFilesInOverlay{{fileName.copy(), PathChangeInfo{true, false}}} {}
+
+JournalDelta::JournalDelta(RelativePathPiece fileName, JournalDelta::Changed)
+    : changedFilesInOverlay{{fileName.copy(), PathChangeInfo{true, true}}} {}
 
 JournalDelta::JournalDelta(
     RelativePathPiece oldName,
     RelativePathPiece newName,
     JournalDelta::Renamed)
-    : createdFilesInOverlay({newName.copy()}),
-      removedFilesInOverlay({oldName.copy()}) {}
+    : changedFilesInOverlay{{oldName.copy(), PathChangeInfo{true, false}},
+                            {newName.copy(), PathChangeInfo{false, true}}} {}
 
 JournalDelta::JournalDelta(
     RelativePathPiece oldName,
     RelativePathPiece newName,
     JournalDelta::Replaced)
-    : changedFilesInOverlay({newName.copy()}),
-      removedFilesInOverlay({oldName.copy()}) {}
+    : changedFilesInOverlay{{oldName.copy(), PathChangeInfo{true, false}},
+                            {newName.copy(), PathChangeInfo{true, true}}} {}
 
 std::unique_ptr<JournalDelta> JournalDelta::merge(
     Journal::SequenceNumber limitSequence,
@@ -45,19 +59,6 @@ std::unique_ptr<JournalDelta> JournalDelta::merge(
 
   const JournalDelta* current = this;
 
-  // To help satisfy ourselves that we don't ever emit a merged
-  // JournalDelta that has a given file name in more than one of
-  // the createdFilesInOverlay, removedFilesInOverlay or changedFilesInOverlay
-  // sets, we first build up a map of name -> state and then apply
-  // the state transitions to it.  Keep in mind that we are processing
-  // from the most recent event first, so the transitions are backwards.
-  // The comments in the loop below show the forwards ordering.
-  enum Disposition {
-    Created,
-    Changed,
-    Removed,
-  };
-  std::unordered_map<RelativePath, Disposition> overlayState;
   auto result = std::make_unique<JournalDelta>();
 
   result->toSequence = current->toSequence;
@@ -79,74 +80,21 @@ std::unique_ptr<JournalDelta> JournalDelta::merge(
     result->uncleanPaths.insert(
         current->uncleanPaths.begin(), current->uncleanPaths.end());
 
-    // process created files.
-    for (auto& created : current->createdFilesInOverlay) {
-      auto it = overlayState.find(created);
-      if (it == overlayState.end()) {
-        overlayState[created] = Created;
+    for (auto& entry : current->changedFilesInOverlay) {
+      auto& name = entry.first;
+      auto& currentInfo = entry.second;
+      auto* resultInfo = folly::get_ptr(result->changedFilesInOverlay, name);
+      if (!resultInfo) {
+        result->changedFilesInOverlay.emplace(name, currentInfo);
       } else {
-        switch (it->second) {
-          case Changed:
-            // Created, Changed -> Created
-            overlayState[created] = Created;
-            break;
-          case Removed:
-            // Created, Removed -> cancel out (don't report)
-            overlayState.erase(it);
-            break;
-          case Created:
-            // Created, Created -> Created
-            XLOG(ERR) << "Journal for " << created
-                      << " holds invalid Created, Created sequence";
-            break;
+        if (resultInfo->existedBefore != currentInfo.existedAfter) {
+          auto event1 = eventCharacterizationFor(currentInfo);
+          auto event2 = eventCharacterizationFor(*resultInfo);
+          XLOG(ERR) << "Journal for " << name << " holds invalid " << event1
+                    << ", " << event2 << " sequence";
         }
-      }
-    }
 
-    // process removed files.
-    for (auto& removed : current->removedFilesInOverlay) {
-      const auto& it = overlayState.find(removed);
-      if (it == overlayState.end()) {
-        overlayState[removed] = Removed;
-      } else {
-        switch (it->second) {
-          case Created:
-            // Removed, Created -> cancel out to Changed
-            overlayState[removed] = Changed;
-            break;
-          case Changed:
-            // Removed, Changed -> invalid
-            XLOG(ERR) << "Journal for " << removed
-                      << " holds invalid Removed, Changed sequence";
-            break;
-          case Removed:
-            // Removed, Removed -> Removed
-            XLOG(ERR) << "Journal for " << removed
-                      << " holds invalid Removed, Removed sequence";
-            break;
-        }
-      }
-    }
-
-    // process changed files.
-    for (auto& changed : current->changedFilesInOverlay) {
-      const auto& it = overlayState.find(changed);
-      if (it == overlayState.end()) {
-        overlayState[changed] = Changed;
-      } else {
-        switch (it->second) {
-          case Created:
-            // Changed, Created -> invalid
-            XLOG(ERR) << "Journal for " << changed
-                      << " holds invalid Changed, Created sequence";
-            break;
-          case Changed:
-            // Changed, Changed -> Changed
-            break;
-          case Removed:
-            // Changed, Removed -> Removed
-            break;
-        }
+        resultInfo->existedBefore = currentInfo.existedBefore;
       }
     }
 
@@ -157,23 +105,6 @@ std::unique_ptr<JournalDelta> JournalDelta::merge(
     }
 
     current = current->previous.get();
-  }
-
-  // Now translate the keys of the state into entries in one
-  // of the three sets for the result.
-  for (const auto& it : overlayState) {
-    const auto& fileName = it.first;
-    switch (it.second) {
-      case Created:
-        result->createdFilesInOverlay.insert(fileName);
-        break;
-      case Changed:
-        result->changedFilesInOverlay.insert(fileName);
-        break;
-      case Removed:
-        result->removedFilesInOverlay.insert(fileName);
-        break;
-    }
   }
 
   return result;

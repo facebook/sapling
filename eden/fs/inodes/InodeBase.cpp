@@ -414,8 +414,8 @@ const Clock& InodeBase::getClock() const {
 void InodeBase::updateJournal() {
   auto path = getPath();
   if (path.hasValue()) {
-    getMount()->getJournal().addDelta(
-        std::make_unique<JournalDelta>(JournalDelta{path.value()}));
+    getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
+        std::move(path.value()), JournalDelta::CHANGED));
   }
 }
 } // namespace eden

@@ -16,12 +16,24 @@ import re
 import shlex
 import stat
 import sys
-from typing import IO, Any, Callable, Dict, Iterator, Optional, Pattern, Tuple, cast
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Pattern,
+    Tuple,
+    cast,
+)
 
 import eden.dirstate
 from facebook.eden.overlay.ttypes import OverlayDir
 from facebook.eden.ttypes import (
     DebugGetRawJournalParams,
+    DebugJournalDelta,
     FileDelta,
     JournalPosition,
     NoValueForKeyError,
@@ -850,35 +862,37 @@ class DebugJournalCmd(Subcmd):
             # debugGetRawJournal() returns the most recent entries first, but
             # we want to display the oldest entries first, so we pass a reversed
             # iterator along.
-            print_raw_journal_deltas(reversed(raw_journal.deltas), pattern)
+            print_raw_journal_deltas(reversed(raw_journal.allDeltas), pattern)
 
         return 0
 
 
 def print_raw_journal_deltas(
-    deltas: Iterator[FileDelta], pattern: Optional[Pattern]
+    deltas: Iterator[DebugJournalDelta], pattern: Optional[Pattern]
 ) -> None:
     matcher: Callable[[bytes], bool] = (lambda x: True) if pattern is None else cast(
         Any, pattern.match
     )
-    for delta in deltas:
-        # Note that filter() returns an Iterator not a List.
-        changed_paths = filter(matcher, delta.changedPaths)
-        created_paths = filter(matcher, delta.createdPaths)
-        removed_paths = filter(matcher, delta.removedPaths)
-        unclean_paths = filter(matcher, delta.uncleanPaths)
 
-        # Because we have Iterators, iterate everything and see whether entries
-        # is non-empty before writing to stdout.
-        entries = ""
-        for label, paths in [
-            ("M", changed_paths),
-            ("A", created_paths),
-            ("R", removed_paths),
-            ("X", unclean_paths),
-        ]:
-            for path in paths:
-                entries += f"{label} {path}\n"
+    labels = {
+        (False, False): "_",
+        (False, True): "A",
+        (True, False): "R",
+        (True, True): "M",
+    }
+
+    for delta in deltas:
+        entries: List[str] = []
+
+        for path, info in delta.changedPaths.items():
+            if not matcher(path):
+                continue
+
+            label = labels[(info.existedBefore, info.existedAfter)]
+            entries.append(f"{label} {path}")
+
+        for path in delta.uncleanPaths:
+            entries.append(f"X {path}")
 
         if not entries:
             continue
@@ -890,7 +904,9 @@ def print_raw_journal_deltas(
             )
         else:
             print(f"DELTA {delta.fromPosition.sequenceNumber}")
-        print(entries, end="")  # entries already contains a trailing newline.
+
+        entries.sort()
+        print("\n".join(entries))
 
 
 @subcmd_mod.subcmd("debug", "Internal commands for examining eden state")

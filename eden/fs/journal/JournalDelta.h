@@ -18,10 +18,36 @@
 namespace facebook {
 namespace eden {
 
+struct PathChangeInfo {
+  PathChangeInfo() : existedBefore{false}, existedAfter{false} {}
+
+  PathChangeInfo(bool before, bool after)
+      : existedBefore{before}, existedAfter{after} {}
+
+  bool isNew() const {
+    return !existedBefore && existedAfter;
+  }
+
+  /// Whether this path existed at the start of this delta.
+  bool existedBefore : 1;
+
+  /**
+   * Whether this path existed at the end of this delta.
+   * If existedAfter && !existedBefore, then the file can be considered new in
+   * this delta.
+   */
+  bool existedAfter : 1;
+
+  // TODO: It may make sense to maintain an existenceChanged bit to distinguish
+  // between a file being changed and it being removed and added in the same
+  // delta.
+};
+
 class JournalDelta {
  public:
   enum Created { CREATED };
   enum Removed { REMOVED };
+  enum Changed { CHANGED };
   enum Renamed { RENAME };
   enum Replaced { REPLACE };
   JournalDelta() = default;
@@ -29,9 +55,9 @@ class JournalDelta {
   JournalDelta& operator=(JournalDelta&&) = default;
   JournalDelta(const JournalDelta&) = delete;
   JournalDelta& operator=(const JournalDelta&) = delete;
-  JournalDelta(std::initializer_list<RelativePath> overlayFileNames);
   JournalDelta(RelativePathPiece fileName, Created);
   JournalDelta(RelativePathPiece fileName, Removed);
+  JournalDelta(RelativePathPiece fileName, Changed);
   /**
    * "Renamed" means that that newName was created as a result of the mv(1).
    */
@@ -60,12 +86,12 @@ class JournalDelta {
   Hash fromHash;
   Hash toHash;
 
-  /** The set of files that changed in the overlay in this update */
-  std::unordered_set<RelativePath> changedFilesInOverlay;
-  /** The set of files that were created in the overlay in this update */
-  std::unordered_set<RelativePath> createdFilesInOverlay;
-  /** The set of files that were removed in the overlay in this update */
-  std::unordered_set<RelativePath> removedFilesInOverlay;
+  /**
+   * The set of files that changed in the overlay in this update, including
+   * some information about the changes.
+   */
+  std::unordered_map<RelativePath, PathChangeInfo> changedFilesInOverlay;
+
   /** The set of files that had differing status across a checkout or
    * some other operation that changes the snapshot hash */
   std::unordered_set<RelativePath> uncleanPaths;

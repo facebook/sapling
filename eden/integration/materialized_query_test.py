@@ -121,8 +121,8 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         os.unlink(os.path.join(self.mount, "adir", "file"))
         changed = self.client.getFilesChangedSince(self.mount_path_bytes, initial_pos)
         self.assertEqual(set(), set(changed.createdPaths))
-        self.assertEqual(set(), set(changed.changedPaths))
-        self.assertEqual({b"adir/file"}, set(changed.removedPaths))
+        self.assertEqual({b"adir/file"}, set(changed.changedPaths))
+        self.assertEqual(set(), set(changed.removedPaths))
 
     def test_renameFile(self) -> None:
         initial_pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
@@ -131,8 +131,8 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         os.rename(os.path.join(self.mount, "hello"), os.path.join(self.mount, "bye"))
         changed = self.client.getFilesChangedSince(self.mount_path_bytes, initial_pos)
         self.assertEqual({b"bye"}, set(changed.createdPaths))
-        self.assertEqual(set(), set(changed.changedPaths))
-        self.assertEqual({b"hello"}, set(changed.removedPaths))
+        self.assertEqual({b"hello"}, set(changed.changedPaths))
+        self.assertEqual(set(), set(changed.removedPaths))
 
     def test_addFile(self) -> None:
         initial_pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
