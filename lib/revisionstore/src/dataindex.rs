@@ -8,6 +8,7 @@ use std::path::Path;
 use error::{KeyError, Result};
 use fanouttable::FanoutTable;
 use node::Node;
+use sliceext::SliceExt;
 
 const ENTRY_LEN: usize = 40;
 const SMALL_FANOUT_CUTOFF: usize = 8192; // 2^16 / 8
@@ -113,8 +114,7 @@ impl IndexEntry {
     pub fn read(buf: &[u8]) -> Result<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
-        let node_slice: &[u8] = buf.get(0..20)
-            .ok_or_else(|| DataIndexError(format!("buffer too short ({:?} < 20)", buf.len())))?;
+        let node_slice: &[u8] = buf.get_err(0..20)?;
         let node = Node::from_slice(node_slice)?;
         let delta_base_offset = cur.read_i32::<BigEndian>()?;
         let delta_base_offset = DeltaBaseOffset::new(delta_base_offset)?;
@@ -261,13 +261,7 @@ impl DataIndex {
 
     pub fn read_entry(&self, offset: usize) -> Result<IndexEntry> {
         let offset = offset + self.index_start;
-        let raw_entry = &self.mmap.get(offset..offset + ENTRY_LEN).ok_or_else(|| {
-            DataIndexError(format!(
-                "attempted to read offset outside the file (offset {:?} from file len {:?}",
-                offset,
-                self.mmap.len()
-            ))
-        })?;
+        let raw_entry = self.mmap.get_err(offset..offset + ENTRY_LEN)?;
         IndexEntry::read(raw_entry)
     }
 

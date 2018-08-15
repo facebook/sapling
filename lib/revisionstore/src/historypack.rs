@@ -13,6 +13,7 @@ use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
 use node::Node;
 use repack::{IterableStore, RepackOutputType, Repackable};
+use sliceext::SliceExt;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Historypack Error: {:?}", _0)]
@@ -64,13 +65,7 @@ pub struct HistoryEntry<'a> {
 fn read_slice<'a, 'b>(cur: &'a mut Cursor<&[u8]>, buf: &'b [u8], size: usize) -> Result<&'b [u8]> {
     let start = cur.position() as usize;
     let end = start + size;
-    let file_name = &buf.get(start..end).ok_or_else(|| {
-        HistoryPackError(format!(
-            "buffer (length {:?}) not long enough to read {:?} bytes",
-            buf.len(),
-            size
-        ))
-    })?;
+    let file_name = buf.get_err(start..end)?;
     cur.set_position(end as u64);
     Ok(file_name)
 }

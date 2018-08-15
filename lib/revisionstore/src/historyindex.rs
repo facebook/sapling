@@ -2,6 +2,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use memmap::{Mmap, MmapOptions};
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
@@ -12,6 +13,7 @@ use fanouttable::FanoutTable;
 use historypack::HistoryPackVersion;
 use key::Key;
 use node::Node;
+use sliceext::SliceExt;
 
 #[derive(Debug, Fail)]
 #[fail(display = "HistoryIndex Error: {:?}", _0)]
@@ -85,8 +87,7 @@ impl FileIndexEntry {
     pub fn read(buf: &[u8]) -> Result<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
-        let node_slice: &[u8] = &buf.get(0..20)
-            .ok_or_else(|| HistoryIndexError(format!("buffer too short ({:?} < 20)", buf.len())))?;
+        let node_slice: &[u8] = buf.get_err(0..20)?;
         Ok(FileIndexEntry {
             node: Node::from_slice(node_slice)?,
             file_section_offset: cur.read_u64::<BigEndian>()?,
@@ -117,8 +118,7 @@ impl NodeIndexEntry {
     pub fn read(buf: &[u8]) -> Result<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
-        let node_slice: &[u8] = &buf.get(0..20)
-            .ok_or_else(|| HistoryIndexError(format!("buffer too short ({:?} < 20)", buf.len())))?;
+        let node_slice: &[u8] = buf.get_err(0..20)?;
         Ok(NodeIndexEntry {
             node: Node::from_slice(node_slice)?,
             offset: cur.read_u64::<BigEndian>()?,
@@ -300,7 +300,8 @@ impl HistoryIndex {
         let end = end.map(|pos| pos + self.index_start)
             .unwrap_or(self.index_end);
 
-        let entry_offset = self.binary_search_files(&filename_node, &self.mmap[start..end])?;
+        let buf = self.mmap.get_err(start..end)?;
+        let entry_offset = self.binary_search_files(&filename_node, buf)?;
         self.read_file_entry((start + entry_offset) - self.index_start)
     }
 
@@ -309,7 +310,9 @@ impl HistoryIndex {
 
         let start = file_entry.node_index_offset as usize + 2 + key.name().len();
         let end = start + file_entry.node_index_size as usize;
-        let entry_offset = self.binary_search_nodes(key.node(), &self.mmap[start..end])?;
+
+        let buf = self.mmap.get_err(start..end)?;
+        let entry_offset = self.binary_search_nodes(key.node(), &buf)?;
 
         self.read_node_entry((start + entry_offset) - self.index_start)
     }
@@ -324,13 +327,7 @@ impl HistoryIndex {
 
     fn read_data(&self, offset: usize, size: usize) -> Result<&[u8]> {
         let offset = offset + self.index_start;
-        Ok(&self.mmap.get(offset..offset + size).ok_or_else(|| {
-            HistoryIndexError(format!(
-                "attempted to read offset outside the file (offset {:?} from file len {:?})",
-                offset,
-                self.mmap.len()
-            ))
-        })?)
+        Ok(self.mmap.get_err(offset..offset + size)?)
     }
 
     // These two binary_search_* functions are very similar, but I couldn't find a way to unify
@@ -341,7 +338,11 @@ impl HistoryIndex {
         let slice: &[[u8; FILE_ENTRY_LEN]] = unsafe {
             ::std::slice::from_raw_parts(slice.as_ptr() as *const [u8; FILE_ENTRY_LEN], size)
         };
-        match slice.binary_search_by(|entry| entry[0..20].cmp(key.as_ref())) {
+        let search_result = slice.binary_search_by(|entry| match entry.get(0..20) {
+            Some(buf) => buf.cmp(key.as_ref()),
+            None => Ordering::Greater,
+        });
+        match search_result {
             Ok(offset) => Ok(offset * FILE_ENTRY_LEN),
             Err(_offset) => Err(KeyError::new(
                 HistoryIndexError(format!("no node {:?} in slice", key)).into(),
@@ -355,7 +356,11 @@ impl HistoryIndex {
         let slice: &[[u8; NODE_ENTRY_LEN]] = unsafe {
             ::std::slice::from_raw_parts(slice.as_ptr() as *const [u8; NODE_ENTRY_LEN], size)
         };
-        match slice.binary_search_by(|entry| entry[0..20].cmp(key.as_ref())) {
+        let search_result = slice.binary_search_by(|entry| match entry.get(0..20) {
+            Some(buf) => buf.cmp(key.as_ref()),
+            None => Ordering::Greater,
+        });
+        match search_result {
             Ok(offset) => Ok(offset * NODE_ENTRY_LEN),
             Err(_offset) => Err(KeyError::new(
                 HistoryIndexError(format!("no node {:?} in slice", key)).into(),

@@ -20,6 +20,7 @@ mod ancestors;
 mod dataindex;
 mod historyindex;
 mod fanouttable;
+mod sliceext;
 mod unionstore;
 
 pub mod datapack;

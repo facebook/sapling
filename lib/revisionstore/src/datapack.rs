@@ -89,6 +89,7 @@ use error::Result;
 use key::Key;
 use node::Node;
 use repack::{IterableStore, RepackOutputType, Repackable};
+use sliceext::SliceExt;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Datapack Error: {:?}", _0)]
@@ -148,14 +149,8 @@ impl<'a> DataEntry<'a> {
 
         // Filename
         let filename_len = cur.read_u16::<BigEndian>()? as u64;
-        let filename = &buf.get(cur.position() as usize..(cur.position() + filename_len) as usize)
-            .ok_or_else(|| {
-                DataPackError(format!(
-                    "buffer (length {:?}) not long enough to read filename (length {:?})",
-                    buf.len(),
-                    filename_len
-                ))
-            })?;
+        let filename =
+            buf.get_err(cur.position() as usize..(cur.position() + filename_len) as usize)?;
         let cur_pos = cur.position();
         cur.set_position(cur_pos + filename_len);
 
@@ -174,13 +169,8 @@ impl<'a> DataEntry<'a> {
         };
 
         let delta_len = cur.read_u64::<BigEndian>()?;
-        let compressed_data = &buf.get(
-            cur.position() as usize..(cur.position() + delta_len) as usize,
-        ).ok_or(DataPackError(format!(
-            "buffer (length {:?}) not long enough to read data (length {:?})",
-            buf.len(),
-            delta_len
-        )))?;
+        let compressed_data =
+            buf.get_err(cur.position() as usize..(cur.position() + delta_len) as usize)?;
         let data = RefCell::new(None);
         let cur_pos = cur.position();
         cur.set_position(cur_pos + delta_len);
