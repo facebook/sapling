@@ -363,25 +363,32 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
 
     cachelib::init_cacheadmin("mononoke").unwrap();
 
-    cachelib::get_or_create_pool(
-        "blobstore-blobs",
-        get_usize(matches, "blob-cache-size", 100_000_000),
-    ).unwrap();
+    // Give each cache 5% of the available space, bar the blob cache which gets everything left
+    // over. We can adjust this with data.
+    let available_space = cachelib::get_available_space().unwrap();
     cachelib::get_or_create_pool(
         "blobstore-presence",
-        get_usize(matches, "presence-cache-size", 100_000_000),
+        get_usize(matches, "presence-cache-size", available_space / 20),
     ).unwrap();
     cachelib::get_or_create_pool(
         "changesets",
-        get_usize(matches, "changesets-cache-size", 100_000_000),
+        get_usize(matches, "changesets-cache-size", available_space / 20),
     ).unwrap();
     cachelib::get_or_create_pool(
         "filenodes",
-        get_usize(matches, "filenodes-cache-size", 100_000_000),
+        get_usize(matches, "filenodes-cache-size", available_space / 20),
     ).unwrap();
     cachelib::get_or_create_pool(
         "bonsai_hg_mapping",
-        get_usize(matches, "idmapping-cache-size", 100_000_000),
+        get_usize(matches, "idmapping-cache-size", available_space / 20),
+    ).unwrap();
+    cachelib::get_or_create_pool(
+        "blobstore-blobs",
+        get_usize(
+            matches,
+            "blob-cache-size",
+            cachelib::get_available_space().unwrap(),
+        ),
     ).unwrap();
 }
 
