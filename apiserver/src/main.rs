@@ -26,6 +26,7 @@ extern crate metaconfig;
 extern crate mononoke_api as api;
 extern crate mononoke_types;
 extern crate panichandler;
+extern crate percent_encoding;
 extern crate reachabilityindex;
 extern crate scuba_ext;
 extern crate secure_utils;
@@ -60,6 +61,7 @@ use clap::Arg;
 use failure::{err_msg, Result};
 use futures::Future;
 use panichandler::Fate;
+use percent_encoding::percent_decode;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
@@ -117,11 +119,17 @@ fn get_raw_file(
 fn is_ancestor(
     (state, info): (State<HttpServerState>, actix_web::Path<IsAncestorQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let proposed_ancestor_parsed = percent_decode(info.proposed_ancestor.as_bytes())
+        .decode_utf8_lossy()
+        .to_string();
+    let proposed_descendent_parsed = percent_decode(info.proposed_descendent.as_bytes())
+        .decode_utf8_lossy()
+        .to_string();
     unwrap_request(state.mononoke.send(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::IsAncestor {
-            proposed_ancestor: info.proposed_ancestor.clone(),
-            proposed_descendent: info.proposed_descendent.clone(),
+            proposed_ancestor: proposed_ancestor_parsed,
+            proposed_descendent: proposed_descendent_parsed,
         },
     }))
 }

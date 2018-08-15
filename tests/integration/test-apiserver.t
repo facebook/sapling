@@ -30,8 +30,17 @@ setup testing repo for mononoke
   $ hg add branch2
   $ hg commit -ma
   $ COMMITB2=$(hg --debug id -i)
+  $ touch forward_slash_bm
+  $ hg add forward_slash_bm
+  $ hg commit -ma
+  $ FORWARD_SLASH_BM_HASH=$(hg --debug id -i)
   $ COMMITB2_BOOKMARK=B2
+  $ hg co $COMMITB2 > /dev/null
   $ hg bookmark $COMMITB2_BOOKMARK
+  $ hg co $FORWARD_SLASH_BM_HASH > /dev/null
+  $ FORWARD_SLASH_BM=forward/slash/bookmark
+  $ ENCODED_FORWARD_SLASH_BM=forward%2Fslash%2Fbookmark
+  $ hg bookmark $FORWARD_SLASH_BM
 
 import testing repo to mononoke
   $ cd ..
@@ -160,6 +169,20 @@ test reachability on bookmarks
   true (no-eol)
 
   $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$COMMIT2
+  false (no-eol)
+
+test reachability on url encoded bookmarks
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT2/$ENCODED_FORWARD_SLASH_BM
+  true (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$ENCODED_FORWARD_SLASH_BM/$COMMIT2
+  false (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$COMMITB2_BOOKMARK/$ENCODED_FORWARD_SLASH_BM
+  true (no-eol)
+
+  $ sslcurl $APISERVER/repo/is_ancestor/$ENCODED_FORWARD_SLASH_BM/$COMMITB2_BOOKMARK
   false (no-eol)
 
 test folder list
