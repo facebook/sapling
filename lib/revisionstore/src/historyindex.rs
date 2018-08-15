@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
 
-use error::Result;
+use error::{KeyError, Result};
 use fanouttable::FanoutTable;
 use historypack::HistoryPackVersion;
 use key::Key;
@@ -66,7 +66,7 @@ pub struct FileSectionLocation {
     pub size: u64,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NodeLocation {
     pub offset: u64,
 }
@@ -292,19 +292,96 @@ impl HistoryIndex {
 
         Ok(())
     }
+
+    pub fn get_file_entry(&self, key: &Key) -> Result<FileIndexEntry> {
+        let filename_node = sha1(key.name());
+        let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), &filename_node)?;
+        let start = start + self.index_start;
+        let end = end.map(|pos| pos + self.index_start)
+            .unwrap_or(self.index_end);
+
+        let entry_offset = self.binary_search_files(&filename_node, &self.mmap[start..end])?;
+        self.read_file_entry((start + entry_offset) - self.index_start)
+    }
+
+    fn read_file_entry(&self, offset: usize) -> Result<FileIndexEntry> {
+        let offset = offset + self.index_start;
+        let raw_entry = &self.mmap
+            .get(offset..offset + FILE_ENTRY_LEN)
+            .ok_or_else(|| {
+                HistoryIndexError(format!(
+                    "attempted to read offset outside the file (offset {:?} from file len {:?})",
+                    offset,
+                    self.mmap.len()
+                ))
+            })?;
+        FileIndexEntry::read(raw_entry)
+    }
+
+    fn binary_search_files(&self, key: &Node, slice: &[u8]) -> Result<usize> {
+        let size = slice.len() / FILE_ENTRY_LEN;
+        // Cast the slice into an array of entry buffers so we can bisect across them
+        let slice: &[[u8; FILE_ENTRY_LEN]] = unsafe {
+            ::std::slice::from_raw_parts(slice.as_ptr() as *const [u8; FILE_ENTRY_LEN], size)
+        };
+        match slice.binary_search_by(|entry| entry[0..20].cmp(key.as_ref())) {
+            Ok(offset) => Ok(offset * FILE_ENTRY_LEN),
+            Err(_offset) => Err(KeyError::new(
+                HistoryIndexError(format!("no node {:?} in slice", key)).into(),
+            ).into()),
+        }
+    }
+
+    fn get_fanout_slice(&self) -> &[u8] {
+        self.mmap[2..2 + self.fanout_size].as_ref()
+    }
 }
 
-fn sha1(value: &Box<[u8]>) -> Node {
+fn sha1(value: &[u8]) -> Node {
     let mut hasher = Sha1::new();
-    hasher.input(value.as_ref());
+    hasher.input(value);
     let mut buf: [u8; 20] = Default::default();
     hasher.result(&mut buf);
     (&buf).into()
 }
 
 #[cfg(test)]
+use quickcheck;
+
+#[cfg(test)]
+impl quickcheck::Arbitrary for FileSectionLocation {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        FileSectionLocation {
+            offset: g.next_u64(),
+            size: g.next_u64(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl quickcheck::Arbitrary for NodeLocation {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        NodeLocation {
+            offset: g.next_u64(),
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::NamedTempFile;
+
+    fn make_index(
+        file_sections: &[(Box<[u8]>, FileSectionLocation)],
+        nodes: &HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
+    ) -> HistoryIndex {
+        let mut file = NamedTempFile::new().unwrap();
+        HistoryIndex::write(&mut file, file_sections, nodes).unwrap();
+        let path = file.into_temp_path();
+
+        HistoryIndex::new(&path).unwrap()
+    }
 
     quickcheck! {
         fn test_file_index_entry_roundtrip(
@@ -345,5 +422,42 @@ mod tests {
             let parsed_options = HistoryIndexOptions::read(&mut Cursor::new(buf)).expect("read");
             options == parsed_options
         }
+
+        fn test_roundtrip_index(data: Vec<(Vec<u8>, (FileSectionLocation, HashMap<Key, NodeLocation>))>) -> bool {
+            let mut file_sections: Vec<(Box<[u8]>, FileSectionLocation)> = vec![];
+            let mut file_nodes: HashMap<Box<[u8]>, HashMap<Key, NodeLocation>> = HashMap::new();
+
+            let mut seen_files: HashSet<Box<[u8]>> = HashSet::new();
+            for &(ref name_vec, (ref location, ref nodes)) in data.iter() {
+                let name_slice = name_vec.clone().into_boxed_slice();
+
+                // Don't allow a filename to be used twice
+                if seen_files.contains(&name_slice) {
+                    continue;
+                }
+                seen_files.insert(name_slice.clone());
+
+                file_sections.push((name_slice.clone(), location.clone()));
+                let mut node_map: HashMap<Key, NodeLocation> = HashMap::new();
+                for (key, node_location) in nodes.iter() {
+                    let key = Key::new(name_slice.clone(), key.node().clone());
+                    node_map.insert(key, node_location.clone());
+                }
+                file_nodes.insert(name_slice.clone(), node_map);
+            }
+
+            let index = make_index(&file_sections, &file_nodes);
+
+            // Lookup each file section
+            for &(ref name, ref location) in file_sections.iter() {
+                let entry = index.get_file_entry(&Key::new(name.clone(), Node::null_id().clone())).unwrap();
+                assert_eq!(location.offset, entry.file_section_offset);
+                assert_eq!(location.size, entry.file_section_size);
+            }
+
+            true
+        }
     }
+
+    // TODO: test write() when duplicate files and duplicate nodes passed
 }
