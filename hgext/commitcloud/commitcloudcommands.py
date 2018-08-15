@@ -471,8 +471,13 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             # Push commits that the server doesn't have.
             newheads = list(set(localheads) - set(lastsyncstate.heads))
 
+            # if we are pushing too much it makes sense to check with the server first
+            nocheckbackepdulimit = ui.configint(
+                "commitcloud", "nocheckbackepdulimit", 4
+            )
+
             # Fast server-side check of what hasn't been pushed yet
-            if checkbackedup:
+            if checkbackedup or len(newheads) > nocheckbackepdulimit:
                 newheads = serv.filterpushedheads(reponame, newheads)
 
             newheads, failedheads = infinitepush.pushbackupbundlestacks(
