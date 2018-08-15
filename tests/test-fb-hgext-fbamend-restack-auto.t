@@ -62,6 +62,8 @@ amend.autorestack=only-trivial, and simple changes (expect restack)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [426bad] A
   $ hg amend -m 'Unchanged manifest for A'
+  rebasing 1:112478962961 "B" (B)
+  rebasing 2:26805aba1e60 "C" (C)
   rebasing 3:5357953e3ea3 "Unchanged manifest for B"
   rebasing 4:b635bd2cf20b "C"
   hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
@@ -298,12 +300,12 @@ Test rebasing children with obsolete children themselves needing a restack.
   restacking children automatically (unless they conflict)
   rebasing 2:917a077edb8d "B" (B)
   rebasing 4:ff9eba5e2480 "C2" (C2)
+  rebasing 3:b45c90359798 "C" (C)
   rebasing 5:01f26f1a10b2 "D" (D)
-
-NOTE(phillco): This currently gives the wrong result; D should either be atop C
-(obsolete) or C2. `amend --rebase` yields the same bug.
   $ showgraph
-  o  9 07e186ae8e17 D
+  o  10 c83f7cf4e4f0 D
+  |
+  x  9 68f241c592e0 C
   |
   | o  8 84f362759e03 C2
   |/

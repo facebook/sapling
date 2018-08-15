@@ -40,11 +40,12 @@ Test invalid value for amend.autorestack
   $ hg amend -m "B'"
   restacking children automatically (unless they conflict)
   rebasing 3:26805aba1e60 "C" (C)
+  rebasing 4:07863d11c289 "C_old" (C_old)
   rebasing 5:3c36beb5705f "D" (D)
-
-BUG: D is rebased onto B':
   $ showgraph
-  o  8 4664373842d7 D
+  o  9 391104b74ed1 D
+  |
+  x  8 d815d244f06c C_old
   |
   | o  7 5676eb48a524 C
   |/
@@ -62,12 +63,12 @@ BUG: D is rebased onto B':
   |/
   o  0 426bada5c675 A
   $ hg rebase --restack
-  nothing to rebase - empty destination
+  rebasing 9:391104b74ed1 "D" (tip)
   $ showgraph
-  o  8 4664373842d7 D
+  o  10 11d241457f44 D
   |
-  | o  7 5676eb48a524 C
-  |/
+  o  7 5676eb48a524 C
+  |
   @  6 180681c3ccd0 B'
   |
   | x  5 3c36beb5705f D

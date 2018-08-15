@@ -43,13 +43,13 @@ def restackonce(
        Takes in an optional dict of options for the rebase command.
        If childrenonly is True, only rebases direct children of precursors
        of rev rather than all descendants of those precursors.
+
+       NOTE(phillco): This function shouldn't be used; prefer restack.restack
+       or a custom rebase using `-d _destrestack(SRC)`.
     """
     # Get visible descendants of precusors of rev.
-    # Excluding obsoleted changesets avoids divergence issues.
     allpredecessors = repo.revs("allpredecessors(%d)", rev)
-    fmt = "%s(%%ld) - %%ld - obsolete()" % (
-        "children" if childrenonly else "descendants"
-    )
+    fmt = "%s(%%ld) - %%ld" % ("children" if childrenonly else "descendants")
     descendants = repo.revs(fmt, allpredecessors, allpredecessors)
 
     # Nothing to do if there are no descendants.
