@@ -10,6 +10,7 @@ extern crate pathencoding;
 extern crate revisionstore;
 
 mod datastorepyext;
+mod historystorepyext;
 mod pyerror;
 mod pythondatastore;
 mod pythonutil;
