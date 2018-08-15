@@ -61,15 +61,12 @@ use connection_acceptor::connection_acceptor;
 use errors::*;
 use repo_handlers::repo_handlers;
 
-pub fn create_repo_listeners<I>(
-    repos: I,
+pub fn create_repo_listeners(
+    repos: impl IntoIterator<Item = (String, RepoConfig)>,
     root_log: &Logger,
     sockname: &str,
     tls_acceptor: SslAcceptor,
-) -> (BoxFuture<(), Error>, ready_state::ReadyState)
-where
-    I: IntoIterator<Item = (String, RepoConfig)>,
-{
+) -> (BoxFuture<(), Error>, ready_state::ReadyState) {
     let sockname = String::from(sockname);
     let root_log = root_log.clone();
     let mut ready = ready_state::ReadyStateBuilder::new();

@@ -21,14 +21,11 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 
 pub type RepoHandler = (Logger, ScubaSampleBuilder, Arc<MononokeRepo>);
 
-pub fn repo_handlers<I>(
-    repos: I,
+pub fn repo_handlers(
+    repos: impl IntoIterator<Item = (String, RepoConfig)>,
     root_log: &Logger,
     ready: &mut ReadyStateBuilder,
-) -> BoxFuture<HashMap<String, RepoHandler>, Error>
-where
-    I: IntoIterator<Item = (String, RepoConfig)>,
-{
+) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
     // compute eagerly to avoid lifetime issues
     let repos: Vec<_> = repos
         .into_iter()
