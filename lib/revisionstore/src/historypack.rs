@@ -1,7 +1,14 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use memmap::{Mmap, MmapOptions};
+use std::fs::File;
 use std::io::{Cursor, Read, Write};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use error::Result;
+use historyindex::HistoryIndex;
+use historystore::{Ancestors, HistoryStore, NodeInfo};
+use key::Key;
 use node::Node;
 
 #[derive(Debug, Fail)]
@@ -140,6 +147,72 @@ impl<'a> HistoryEntry<'a> {
         };
 
         Ok(())
+    }
+}
+
+pub struct HistoryPack {
+    mmap: Mmap,
+    version: HistoryPackVersion,
+    index: HistoryIndex,
+    base_path: Arc<PathBuf>,
+    pack_path: PathBuf,
+    index_path: PathBuf,
+}
+
+impl HistoryPack {
+    pub fn new(path: &Path) -> Result<Self> {
+        let base_path = PathBuf::from(path);
+        let pack_path = path.with_extension("histpack");
+        let file = File::open(&pack_path)?;
+        let len = file.metadata()?.len();
+        if len < 1 {
+            return Err(format_err!(
+                "empty histpack '{:?}' is invalid",
+                path.to_str().unwrap_or("<unknown>")
+            ));
+        }
+
+        let mmap = unsafe { MmapOptions::new().len(len as usize).map(&file)? };
+        let version = HistoryPackVersion::new(mmap[0])?;
+        let index_path = path.with_extension("histidx");
+        Ok(HistoryPack {
+            mmap: mmap,
+            version: version,
+            index: HistoryIndex::new(&index_path)?,
+            base_path: Arc::new(base_path),
+            pack_path: pack_path,
+            index_path: index_path,
+        })
+    }
+
+    pub fn len(&self) -> usize {
+        self.mmap.len()
+    }
+
+    pub fn base_path(&self) -> &Path {
+        &self.base_path
+    }
+
+    pub fn pack_path(&self) -> &Path {
+        &self.pack_path
+    }
+
+    pub fn index_path(&self) -> &Path {
+        &self.index_path
+    }
+}
+
+impl HistoryStore for HistoryPack {
+    fn get_ancestors(&self, _key: &Key) -> Result<Ancestors> {
+        unimplemented!();
+    }
+
+    fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
+        unimplemented!();
+    }
+
+    fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {
+        unimplemented!();
     }
 }
 
