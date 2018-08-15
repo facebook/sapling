@@ -99,7 +99,7 @@ pub enum ErrorKind {
     #[fail(display = "Bonsai changeset not found for hg changeset {}", _0)]
     BonsaiMappingNotFound(HgChangesetId),
     #[fail(display = "Root path wasn't expected at this context")] UnexpectedRootPath,
-    #[fail(display = "Incorrect copy info: not found a commit the file {} {} was copied from",
-           _0, _1)]
-    IncorrectCopyInfo(MPath, HgNodeHash),
+    #[fail(display = "Incorrect copy info: not found a file version {} {} the file {} {} was copied from",
+           from_path, from_node, to_path, to_node)]
+    IncorrectCopyInfo{from_path: MPath, from_node: HgNodeHash, to_path: MPath, to_node: HgNodeHash},
 }

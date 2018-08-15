@@ -106,6 +106,7 @@ fn find_file_changes(
                         get_copy_info(
                             repo,
                             bonsai_parents,
+                            path.clone(),
                             file_node_id,
                             parent_manifests,
                         ).context("While fetching copy information")
@@ -151,6 +152,7 @@ fn find_file_changes(
 fn get_copy_info(
     repo: BlobRepo,
     bonsai_parents: Vec<ChangesetId>,
+    copy_from_path: MPath,
     nodehash: HgNodeHash,
     parent_manifests: Vec<HgManifestId>,
 ) -> impl Future<Item = Option<(MPath, ChangesetId)>, Error = Error> {
@@ -192,10 +194,12 @@ fn get_copy_info(
                             Some(bonsai_cs_copied_from) => {
                                 Ok(Some((repopath, bonsai_cs_copied_from.clone())))
                             }
-                            None => {
-                                Err(ErrorKind::IncorrectCopyInfo(repopath.clone(), copyfromnode)
-                                    .into())
-                            }
+                            None => Err(ErrorKind::IncorrectCopyInfo {
+                                from_path: copy_from_path,
+                                from_node: nodehash,
+                                to_path: repopath.clone(),
+                                to_node: copyfromnode,
+                            }.into()),
                         }
                     })
                     .boxify()
