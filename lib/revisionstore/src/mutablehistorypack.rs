@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use error::Result;
 use historypack::HistoryPackVersion;
-use historystore::NodeInfo;
+use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
 
 #[derive(Debug, Fail)]
@@ -42,5 +42,50 @@ impl MutableHistoryPack {
             .or_insert_with(|| HashMap::new());
         entries.insert(key.clone(), info.clone());
         Ok(())
+    }
+}
+
+impl HistoryStore for MutableHistoryPack {
+    fn get_ancestors(&self, key: &Key) -> Result<Ancestors> {
+        unimplemented!();
+    }
+
+    fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {
+        unimplemented!();
+    }
+
+    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+        Ok(keys.iter()
+            .filter(|k| match self.mem_index.get(k.name()) {
+                Some(e) => e.get(k).is_none(),
+                None => true,
+            })
+            .map(|k| k.clone())
+            .collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use tempfile::tempdir;
+
+    quickcheck! {
+        fn test_get_missing(insert: HashMap<Key, NodeInfo>, notinsert: Vec<Key>) -> bool {
+            let tempdir = tempdir().unwrap();
+            let mut muthistorypack =
+                MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+
+            for (key, info) in insert.iter() {
+                muthistorypack.add(&key, &info).unwrap();
+            }
+
+            let mut lookup = notinsert.clone();
+            lookup.extend(insert.keys().map(|k| k.clone()));
+
+            let missing = muthistorypack.get_missing(&lookup).unwrap();
+            missing == notinsert
+        }
     }
 }

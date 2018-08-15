@@ -17,3 +17,16 @@ pub trait HistoryStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>>;
     fn get_node_info(&self, key: &Key) -> Result<NodeInfo>;
 }
+
+#[cfg(test)]
+use quickcheck;
+
+#[cfg(test)]
+impl quickcheck::Arbitrary for NodeInfo {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        NodeInfo {
+            parents: [Key::arbitrary(g), Key::arbitrary(g)],
+            linknode: Node::arbitrary(g),
+        }
+    }
+}
