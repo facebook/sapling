@@ -1,19 +1,27 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use memmap::{Mmap, MmapOptions};
+use std::collections::HashMap;
+use std::fs::File;
 use std::io::{Cursor, Read, Write};
+use std::path::Path;
 
 use error::Result;
+use fanouttable::FanoutTable;
 use historypack::HistoryPackVersion;
+use key::Key;
 use node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "HistoryIndex Error: {:?}", _0)]
 struct HistoryIndexError(String);
 
+const SMALL_FANOUT_CUTOFF: usize = 8192; // 2^16 / 8
+
 #[derive(Debug, PartialEq)]
 struct HistoryIndexOptions {
-    version: HistoryPackVersion,
+    pub version: HistoryPackVersion,
     // Indicates whether to use the large fanout (2 bytes) or the small (1 byte)
-    large: bool,
+    pub large: bool,
 }
 
 impl HistoryIndexOptions {
@@ -48,6 +56,17 @@ impl HistoryIndexOptions {
         writer.write_u8(if self.large { 0b10000000 } else { 0 })?;
         Ok(())
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct FileSectionLocation {
+    pub offset: u64,
+    pub size: u64,
+}
+
+#[derive(Debug)]
+pub struct NodeLocation {
+    pub offset: u64,
 }
 
 #[derive(PartialEq, Debug)]
@@ -107,6 +126,68 @@ impl NodeIndexEntry {
     pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
         writer.write_all(self.node.as_ref())?;
         writer.write_u64::<BigEndian>(self.offset)?;
+        Ok(())
+    }
+}
+
+pub struct HistoryIndex {
+    mmap: Mmap,
+    version: HistoryPackVersion,
+    fanout_size: usize,
+    index_start: usize,
+    index_end: usize,
+}
+
+impl HistoryIndex {
+    pub fn new(path: &Path) -> Result<Self> {
+        let file = File::open(path)?;
+        let len = file.metadata()?.len();
+        if len < 1 {
+            return Err(HistoryIndexError(format!(
+                "empty histidx '{:?}' is invalid",
+                path.to_str().unwrap_or("<unknown>")
+            )).into());
+        }
+
+        let mmap = unsafe { MmapOptions::new().len(len as usize).map(&file)? };
+        let options = HistoryIndexOptions::read(&mut Cursor::new(&mmap))?;
+        let version = options.version;
+        let fanout_size = FanoutTable::get_size(options.large);
+        let mut index_start = 2 + fanout_size;
+
+        let mut index_end = mmap.len();
+        // Version one records the number of entries in the index
+        if version == HistoryPackVersion::One {
+            let mut cursor = Cursor::new(&mmap);
+            cursor.set_position(index_start as u64);
+            let file_count = cursor.read_u64::<BigEndian>()? as usize;
+            index_start += 8;
+            index_end = index_start + (file_count * FILE_ENTRY_LEN);
+        }
+
+        Ok(HistoryIndex {
+            mmap,
+            version,
+            fanout_size,
+            index_start,
+            index_end,
+        })
+    }
+
+    pub fn write<T: Write>(
+        writer: &mut T,
+        file_sections: &[(Box<[u8]>, FileSectionLocation)],
+        nodes: &HashMap<Key, NodeLocation>,
+    ) -> Result<()> {
+        // Write header
+        let options = HistoryIndexOptions {
+            version: HistoryPackVersion::One,
+            large: file_sections.len() > SMALL_FANOUT_CUTOFF,
+        };
+        options.write(writer)?;
+
+        // Add index writing here
+
         Ok(())
     }
 }
