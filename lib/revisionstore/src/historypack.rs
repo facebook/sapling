@@ -5,6 +5,7 @@ use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use ancestors::{AncestorIterator, AncestorTraversal};
 use error::Result;
 use historyindex::HistoryIndex;
 use historystore::{Ancestors, HistoryStore, NodeInfo};
@@ -221,8 +222,12 @@ impl HistoryPack {
 }
 
 impl HistoryStore for HistoryPack {
-    fn get_ancestors(&self, _key: &Key) -> Result<Ancestors> {
-        unimplemented!();
+    fn get_ancestors(&self, key: &Key) -> Result<Ancestors> {
+        AncestorIterator::new(
+            key,
+            |k, _seen| self.get_node_info(k),
+            AncestorTraversal::Partial,
+        ).collect()
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
@@ -315,6 +320,22 @@ mod tests {
         ancestor_map.insert(key3.clone(), ancestors);
 
         (nodes, ancestor_map)
+    }
+
+    #[test]
+    fn test_get_ancestors() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let (nodes, ancestors) = get_nodes(&mut rng);
+
+        let pack = make_pack(&tempdir, &nodes);
+
+        for (ref key, ref info) in nodes.iter() {
+            pack.get_node_info(key).unwrap();
+            let response: Ancestors = pack.get_ancestors(key).unwrap();
+            assert_eq!(&response, ancestors.get(key).unwrap());
+        }
     }
 
     #[test]
