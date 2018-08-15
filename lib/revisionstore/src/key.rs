@@ -1,6 +1,6 @@
 use node::Node;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Key {
     // Name is usually a file or directory path
     name: Box<[u8]>,

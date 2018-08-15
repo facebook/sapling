@@ -30,6 +30,9 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> AncestorIterator<T> {
             queue: VecDeque::new(),
         };
         iter.queue.push_back(key.clone());
+
+        // Insert the null id so we stop iterating there
+        iter.seen.insert(Key::default());
         iter
     }
 }
@@ -43,6 +46,9 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> BatchedAncestorIterator<T>
             pending_infos: HashMap::new(),
         };
         iter.queue.push_back(key.clone());
+
+        // Insert the null id so we stop iterating there
+        iter.seen.insert(Key::default());
         iter
     }
 }
