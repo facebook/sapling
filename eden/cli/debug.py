@@ -608,6 +608,8 @@ class UnloadInodesCmd(Subcmd):
         parser.add_argument(
             "age",
             type=float,
+            nargs="?",
+            default=0,
             help="Minimum age of the inodes to be unloaded in seconds",
         )
 
@@ -622,7 +624,8 @@ class UnloadInodesCmd(Subcmd):
             age.nanoSeconds = int((args.age - age.seconds) * 10 ** 9)
             count = client.unloadInodeForPath(mount, rel_path, age)
 
-            print(f"Unloaded {count} inodes under {mount}/{rel_path}")
+            unload_path = os.fsdecode(os.path.join(mount, rel_path))
+            print(f"Unloaded {count} inodes under {unload_path}")
 
         return 0
 
