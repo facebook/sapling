@@ -304,20 +304,37 @@ impl HistoryIndex {
         self.read_file_entry((start + entry_offset) - self.index_start)
     }
 
-    fn read_file_entry(&self, offset: usize) -> Result<FileIndexEntry> {
-        let offset = offset + self.index_start;
-        let raw_entry = &self.mmap
-            .get(offset..offset + FILE_ENTRY_LEN)
-            .ok_or_else(|| {
-                HistoryIndexError(format!(
-                    "attempted to read offset outside the file (offset {:?} from file len {:?})",
-                    offset,
-                    self.mmap.len()
-                ))
-            })?;
-        FileIndexEntry::read(raw_entry)
+    pub fn get_node_entry(&self, key: &Key) -> Result<NodeIndexEntry> {
+        let file_entry = self.get_file_entry(&key)?;
+
+        let start = file_entry.node_index_offset as usize + 2 + key.name().len();
+        let end = start + file_entry.node_index_size as usize;
+        let entry_offset = self.binary_search_nodes(key.node(), &self.mmap[start..end])?;
+
+        self.read_node_entry((start + entry_offset) - self.index_start)
     }
 
+    fn read_file_entry(&self, offset: usize) -> Result<FileIndexEntry> {
+        FileIndexEntry::read(self.read_data(offset, FILE_ENTRY_LEN)?)
+    }
+
+    fn read_node_entry(&self, offset: usize) -> Result<NodeIndexEntry> {
+        NodeIndexEntry::read(self.read_data(offset, NODE_ENTRY_LEN)?)
+    }
+
+    fn read_data(&self, offset: usize, size: usize) -> Result<&[u8]> {
+        let offset = offset + self.index_start;
+        Ok(&self.mmap.get(offset..offset + size).ok_or_else(|| {
+            HistoryIndexError(format!(
+                "attempted to read offset outside the file (offset {:?} from file len {:?})",
+                offset,
+                self.mmap.len()
+            ))
+        })?)
+    }
+
+    // These two binary_search_* functions are very similar, but I couldn't find a way to unify
+    // them without using macros.
     fn binary_search_files(&self, key: &Node, slice: &[u8]) -> Result<usize> {
         let size = slice.len() / FILE_ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
@@ -326,6 +343,20 @@ impl HistoryIndex {
         };
         match slice.binary_search_by(|entry| entry[0..20].cmp(key.as_ref())) {
             Ok(offset) => Ok(offset * FILE_ENTRY_LEN),
+            Err(_offset) => Err(KeyError::new(
+                HistoryIndexError(format!("no node {:?} in slice", key)).into(),
+            ).into()),
+        }
+    }
+
+    fn binary_search_nodes(&self, key: &Node, slice: &[u8]) -> Result<usize> {
+        let size = slice.len() / NODE_ENTRY_LEN;
+        // Cast the slice into an array of entry buffers so we can bisect across them
+        let slice: &[[u8; NODE_ENTRY_LEN]] = unsafe {
+            ::std::slice::from_raw_parts(slice.as_ptr() as *const [u8; NODE_ENTRY_LEN], size)
+        };
+        match slice.binary_search_by(|entry| entry[0..20].cmp(key.as_ref())) {
+            Ok(offset) => Ok(offset * NODE_ENTRY_LEN),
             Err(_offset) => Err(KeyError::new(
                 HistoryIndexError(format!("no node {:?} in slice", key)).into(),
             ).into()),
@@ -453,6 +484,16 @@ mod tests {
                 let entry = index.get_file_entry(&Key::new(name.clone(), Node::null_id().clone())).unwrap();
                 assert_eq!(location.offset, entry.file_section_offset);
                 assert_eq!(location.size, entry.file_section_size);
+            }
+
+            // Lookup each node
+            for (ref name, ref node_map) in file_nodes.iter() {
+                for (ref key, ref location) in node_map.iter() {
+                    assert_eq!(name.as_ref(), key.name());
+                    let entry = index.get_node_entry(key).unwrap();
+                    assert_eq!(key.node(), &entry.node);
+                    assert_eq!(location.offset, entry.offset);
+                }
             }
 
             true
