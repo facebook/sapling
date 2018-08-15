@@ -40,7 +40,7 @@ import testing repo to mononoke
 starts api server
   $ apiserver -p 0
 
-  $ for i in $(seq 1 40); do
+  $ for i in $(seq 1 100); do
   > PORT=$(cat $TESTTMP/apiserver.out | grep "Listening to" | grep -Pzo "(\\d+)\$") && break
   > sleep 0.1
   > done
