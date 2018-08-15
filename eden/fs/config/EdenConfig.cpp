@@ -134,6 +134,8 @@ EdenConfig::EdenConfig(
       userHomePath + kDefaultIgnoreFile, facebook::eden::DEFAULT, true);
   systemIgnoreFile_.setValue(
       systemConfigDir_ + kDefaultIgnoreFile, facebook::eden::DEFAULT, true);
+  clientCertificate_.setValue(
+      kUnspecifiedDefault, facebook::eden::DEFAULT, true);
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
@@ -186,6 +188,14 @@ const AbsolutePath& EdenConfig::getUserIgnoreFile() const {
   return userIgnoreFile_.getValue();
 }
 
+const AbsolutePath& EdenConfig::getClientCertificate() const {
+  return clientCertificate_.getValue();
+}
+
+bool EdenConfig::getUseMononoke() const {
+  return useMononoke_.getValue();
+}
+
 void EdenConfig::setUserConfigPath(AbsolutePath userConfigPath) {
   userConfigPath_ = userConfigPath;
 }
@@ -210,6 +220,16 @@ void EdenConfig::setUserIgnoreFile(
     AbsolutePath userIgnoreFile,
     ConfigSource configSource) {
   return userIgnoreFile_.setValue(userIgnoreFile, configSource);
+}
+
+void EdenConfig::setClientCertificate(
+    AbsolutePath clientCertificate,
+    ConfigSource configSource) {
+  return clientCertificate_.setValue(clientCertificate, configSource);
+}
+
+void EdenConfig::setUseMononoke(bool useMononoke, ConfigSource configSource) {
+  return useMononoke_.setValue(useMononoke, configSource);
 }
 
 bool hasConfigFileChanged(
@@ -422,6 +442,19 @@ operator()(
         "' to an absolute path, error : ",
         ex.what()));
   }
+}
+
+folly::Expected<bool, std::string> FieldConverter<bool>::operator()(
+    folly::StringPiece value,
+    const std::map<std::string, std::string>& /* unused */) const {
+  auto aString = value.str();
+  if (aString == "true") {
+    return true;
+  } else if (aString == "false") {
+    return false;
+  }
+  return folly::makeUnexpected<string>(folly::to<std::string>(
+      "Unexpected value: '", value, "'. Expected \"true\" or \"false\""));
 }
 
 } // namespace eden

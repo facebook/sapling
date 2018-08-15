@@ -42,6 +42,8 @@ class EdenConfigTest : public ::testing::Test {
   AbsolutePath defaultUserIgnoreFilePath_{"/home/bob/ignore"};
   AbsolutePath defaultSystemIgnoreFilePath_{"/etc/eden/ignore"};
   AbsolutePath defaultEdenDirPath_{"/home/bob/.eden"};
+  AbsolutePath defaultClientCertificatePath_{"/"};
+  bool defaultUseMononoke_ = false;
 
   // Map of test names to system, user path
   std::map<std::string, std::pair<AbsolutePath, AbsolutePath>> testPathMap_;
@@ -67,7 +69,9 @@ class EdenConfigTest : public ::testing::Test {
     auto userConfigPath = userConfigDir / ".edenrc";
     auto userConfigFileData = folly::StringPiece{
         "[core]\n"
-        "ignoreFile=\"${HOME}/${USER}/userCustomIgnore\"\n"};
+        "ignoreFile=\"${HOME}/${USER}/userCustomIgnore\"\n"
+        "[mononoke]\n"
+        "use-mononoke=\"false\""};
     folly::writeFile(userConfigFileData, userConfigPath.c_str());
 
     auto systemConfigDir = testCaseDir / "etc-eden";
@@ -77,7 +81,11 @@ class EdenConfigTest : public ::testing::Test {
     auto systemConfigFileData = folly::StringPiece{
         "[core]\n"
         "ignoreFile=\"/should_be_over_ridden\"\n"
-        "systemIgnoreFile=\"/etc/eden/systemCustomIgnore\"\n"};
+        "systemIgnoreFile=\"/etc/eden/systemCustomIgnore\"\n"
+        "[mononoke]\n"
+        "use-mononoke=\"true\"\n"
+        "[ssl]\n"
+        "client-certificate=\"/system_config_cert\"\n"};
     folly::writeFile(systemConfigFileData, systemConfigPath.c_str());
 
     testPathMap_[simpleOverRideTest_] = std::pair<AbsolutePath, AbsolutePath>(
@@ -108,6 +116,8 @@ TEST_F(EdenConfigTest, defaultTest) {
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
+  EXPECT_EQ(edenConfig->getClientCertificate(), defaultClientCertificatePath_);
+  EXPECT_EQ(edenConfig->getUseMononoke(), defaultUseMononoke_);
 }
 
 TEST_F(EdenConfigTest, simpleSetGetTest) {
@@ -125,6 +135,8 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   AbsolutePath ignoreFile{"/home/bob/alternativeIgnore"};
   AbsolutePath systemIgnoreFile{"/etc/eden/fix/systemIgnore"};
   AbsolutePath edenDir{"/home/bob/alt/.eden"};
+  AbsolutePath clientCertificate{"/home/bob/client.pem"};
+  bool useMononoke = true;
 
   AbsolutePath updatedUserConfigPath{
       "/home/bob/differentConfigPath/.edenrcUPDATED"};
@@ -141,6 +153,9 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   edenConfig->setSystemIgnoreFile(
       systemIgnoreFile, facebook::eden::COMMAND_LINE);
   edenConfig->setEdenDir(edenDir, facebook::eden::COMMAND_LINE);
+  edenConfig->setClientCertificate(
+      clientCertificate, facebook::eden::COMMAND_LINE);
+  edenConfig->setUseMononoke(useMononoke, facebook::eden::COMMAND_LINE);
 
   // Config path
   EXPECT_EQ(edenConfig->getUserConfigPath(), updatedUserConfigPath);
@@ -151,6 +166,8 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), ignoreFile);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), systemIgnoreFile);
   EXPECT_EQ(edenConfig->getEdenDir(), edenDir);
+  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate);
+  EXPECT_EQ(edenConfig->getUseMononoke(), useMononoke);
 }
 
 TEST_F(EdenConfigTest, cloneTest) {
@@ -161,6 +178,8 @@ TEST_F(EdenConfigTest, cloneTest) {
   AbsolutePath ignoreFile{"/NON_DEFAULT_IGNORE_FILE"};
   AbsolutePath systemIgnoreFile{"/NON_DEFAULT_SYSTEM_IGNORE_FILE"};
   AbsolutePath edenDir{"/NON_DEFAULT_EDEN_DIR"};
+  AbsolutePath clientCertificate{"/NON_DEFAULT_CLIENT_CERTIFICATE"};
+  bool useMononoke = true;
 
   std::shared_ptr<EdenConfig> configCopy;
   {
@@ -176,6 +195,9 @@ TEST_F(EdenConfigTest, cloneTest) {
     edenConfig->setSystemIgnoreFile(
         systemIgnoreFile, facebook::eden::SYSTEM_CONFIG_FILE);
     edenConfig->setEdenDir(edenDir, facebook::eden::USER_CONFIG_FILE);
+    edenConfig->setClientCertificate(
+        clientCertificate, facebook::eden::USER_CONFIG_FILE);
+    edenConfig->setUseMononoke(useMononoke, facebook::eden::USER_CONFIG_FILE);
 
     EXPECT_EQ(edenConfig->getUserConfigPath(), userConfigPath);
     EXPECT_EQ(edenConfig->getSystemConfigPath(), systemConfigPath);
@@ -184,6 +206,8 @@ TEST_F(EdenConfigTest, cloneTest) {
     EXPECT_EQ(edenConfig->getUserIgnoreFile(), ignoreFile);
     EXPECT_EQ(edenConfig->getSystemIgnoreFile(), systemIgnoreFile);
     EXPECT_EQ(edenConfig->getEdenDir(), edenDir);
+    EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate);
+    EXPECT_EQ(edenConfig->getUseMononoke(), useMononoke);
 
     configCopy = std::make_shared<EdenConfig>(*edenConfig);
   }
@@ -195,6 +219,8 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(configCopy->getUserIgnoreFile(), ignoreFile);
   EXPECT_EQ(configCopy->getSystemIgnoreFile(), systemIgnoreFile);
   EXPECT_EQ(configCopy->getEdenDir(), edenDir);
+  EXPECT_EQ(configCopy->getClientCertificate(), clientCertificate);
+  EXPECT_EQ(configCopy->getUseMononoke(), useMononoke);
 
   configCopy->clearAll(facebook::eden::USER_CONFIG_FILE);
   configCopy->clearAll(facebook::eden::SYSTEM_CONFIG_FILE);
@@ -203,6 +229,8 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(configCopy->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(configCopy->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(configCopy->getEdenDir(), defaultEdenDirPath_);
+  EXPECT_EQ(configCopy->getClientCertificate(), defaultClientCertificatePath_);
+  EXPECT_EQ(configCopy->getUseMononoke(), defaultUseMononoke_);
 }
 
 TEST_F(EdenConfigTest, clearAllTest) {
@@ -301,12 +329,16 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/should_be_over_ridden");
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), "/etc/eden/systemCustomIgnore");
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
+  EXPECT_EQ(edenConfig->getClientCertificate(), "/system_config_cert");
+  EXPECT_EQ(edenConfig->getUseMononoke(), true);
 
   edenConfig->loadUserConfig();
 
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/home/bob/bob/userCustomIgnore");
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), "/etc/eden/systemCustomIgnore");
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
+  EXPECT_EQ(edenConfig->getClientCertificate(), "/system_config_cert");
+  EXPECT_EQ(edenConfig->getUseMononoke(), false);
 }
 
 TEST_F(EdenConfigTest, nonExistingConfigFiles) {
@@ -328,4 +360,6 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
+  EXPECT_EQ(edenConfig->getClientCertificate(), defaultClientCertificatePath_);
+  EXPECT_EQ(edenConfig->getUseMononoke(), defaultUseMononoke_);
 }

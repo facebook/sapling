@@ -150,6 +150,20 @@ class FieldConverter<AbsolutePath> {
       const std::map<std::string, std::string>& convData) const;
 };
 
+template <>
+class FieldConverter<bool> {
+ public:
+  /**
+   * Convert the passed string piece to a boolean.
+   * @param convData is a map of conversion data that can be used by conversions
+   * method (for example $HOME value.)
+   * @return the converted boolean or an error message.
+   */
+  folly::Expected<bool, std::string> operator()(
+      folly::StringPiece value,
+      const std::map<std::string, std::string>& convData) const;
+};
+
 /**
  * A Configuration setting is a piece of application configuration that can be
  * constructed by parsing a string. It retains values for various ConfigSources:
@@ -217,7 +231,7 @@ class ConfigSetting : public ConfigSettingBase {
           "Convert ignored for default value");
     }
     Converter c;
-    return c(stringValue, attrMap).then([&](AbsolutePath&& convertResult) {
+    return c(stringValue, attrMap).then([&](T&& convertResult) {
       configValueArray_[newSource].emplace(std::move(convertResult));
     });
   }
@@ -343,6 +357,12 @@ class EdenConfig : public ConfigSettingManager {
   /** Get the user ignore file. Default "userHomePath/ignore" */
   const AbsolutePath& getUserIgnoreFile() const;
 
+  /** Get the path to client certificate. Default "/" */
+  const AbsolutePath& getClientCertificate() const;
+
+  /** Get the use mononoke flag. Default false */
+  bool getUseMononoke() const;
+
   void setUserConfigPath(AbsolutePath userConfigPath);
 
   void setSystemConfigDir(AbsolutePath systemConfigDir);
@@ -369,6 +389,16 @@ class EdenConfig : public ConfigSettingManager {
   void setUserIgnoreFile(
       AbsolutePath userIgnoreFile,
       ConfigSource configSource);
+
+  /** Set the client certificate file for the provided source.
+   */
+  void setClientCertificate(
+      AbsolutePath clientCertificate,
+      ConfigSource configSource);
+
+  /** Set the use mononoke flag for the provided source.
+   */
+  void setUseMononoke(bool useMononoke, ConfigSource configSource);
 
   /**
    *  Register the configuration setting. The fullKey is used to parse values
@@ -420,6 +450,11 @@ class EdenConfig : public ConfigSettingManager {
   ConfigSetting<AbsolutePath> userIgnoreFile_{"core:ignoreFile",
                                               kUnspecifiedDefault,
                                               this};
+
+  ConfigSetting<AbsolutePath> clientCertificate_{"ssl:client-certificate",
+                                                 kUnspecifiedDefault,
+                                                 this};
+  ConfigSetting<bool> useMononoke_{"mononoke:use-mononoke", false, this};
 
   struct stat systemConfigFileStat_ = {};
   struct stat userConfigFileStat_ = {};
