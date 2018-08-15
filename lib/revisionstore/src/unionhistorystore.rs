@@ -2,7 +2,7 @@
 // Union history store
 use std::rc::Rc;
 
-use ancestors::BatchedAncestorIterator;
+use ancestors::{AncestorTraversal, BatchedAncestorIterator};
 use error::{KeyError, Result};
 use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
@@ -41,7 +41,11 @@ impl UnionHistoryStore {
 
 impl HistoryStore for UnionHistoryStore {
     fn get_ancestors(&self, key: &Key) -> Result<Ancestors> {
-        BatchedAncestorIterator::new(key, |k, _seen| self.get_partial_ancestors(k)).collect()
+        BatchedAncestorIterator::new(
+            key,
+            |k, _seen| self.get_partial_ancestors(k),
+            AncestorTraversal::Complete,
+        ).collect()
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {

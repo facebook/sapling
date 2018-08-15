@@ -6,7 +6,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
-use ancestors::AncestorIterator;
+use ancestors::{AncestorIterator, AncestorTraversal};
 use error::Result;
 use historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
@@ -160,7 +160,11 @@ impl MutableHistoryPack {
 
 impl HistoryStore for MutableHistoryPack {
     fn get_ancestors(&self, key: &Key) -> Result<Ancestors> {
-        AncestorIterator::new(key, |k, _seen| self.get_node_info(k)).collect()
+        AncestorIterator::new(
+            key,
+            |k, _seen| self.get_node_info(k),
+            AncestorTraversal::Partial,
+        ).collect()
     }
 
     fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {

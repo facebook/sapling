@@ -9,13 +9,20 @@ use key::Key;
 #[fail(display = "Ancestor Iterator Error: {:?}", _0)]
 struct AncestorIteratorError(String);
 
+pub enum AncestorTraversal {
+    Partial,
+    Complete,
+}
+
 pub struct AncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> {
+    traversal: AncestorTraversal,
     get_more: T,
     seen: HashSet<Key>,
     queue: VecDeque<Key>,
 }
 
 pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> {
+    traversal: AncestorTraversal,
     get_more: T,
     seen: HashSet<Key>,
     queue: VecDeque<Key>,
@@ -23,8 +30,9 @@ pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestor
 }
 
 impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> AncestorIterator<T> {
-    pub fn new(key: &Key, get_more: T) -> Self {
+    pub fn new(key: &Key, get_more: T, traversal: AncestorTraversal) -> Self {
         let mut iter = AncestorIterator {
+            traversal: traversal,
             get_more: get_more,
             seen: HashSet::new(),
             queue: VecDeque::new(),
@@ -38,8 +46,9 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> AncestorIterator<T> {
 }
 
 impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> BatchedAncestorIterator<T> {
-    pub fn new(key: &Key, get_more: T) -> Self {
+    pub fn new(key: &Key, get_more: T, traversal: AncestorTraversal) -> Self {
         let mut iter = BatchedAncestorIterator {
+            traversal: traversal,
             get_more: get_more,
             seen: HashSet::new(),
             queue: VecDeque::new(),
@@ -57,9 +66,12 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> Iterator for AncestorIterat
     type Item = Result<(Key, NodeInfo)>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(current) = self.queue.pop_front() {
-            match (self.get_more)(&current, &self.seen) {
-                Err(e) => Some(Err(e)),
+        while let Some(current) = self.queue.pop_front() {
+            return match (self.get_more)(&current, &self.seen) {
+                Err(e) => match self.traversal {
+                    AncestorTraversal::Partial => continue,
+                    AncestorTraversal::Complete => Some(Err(e)),
+                },
                 Ok(node_info) => {
                     self.seen.insert(current.clone());
                     for parent in node_info.parents.iter() {
@@ -69,10 +81,10 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> Iterator for AncestorIterat
                     }
                     Some(Ok((current, node_info.clone())))
                 }
-            }
-        } else {
-            None
+            };
         }
+
+        None
     }
 }
 
