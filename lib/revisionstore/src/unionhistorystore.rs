@@ -1,8 +1,8 @@
 // Copyright Facebook, Inc. 2018
 // Union history store
-use std::collections::VecDeque;
 use std::rc::Rc;
 
+use ancestors::BatchedAncestorIterator;
 use error::{KeyError, Result};
 use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
@@ -41,29 +41,7 @@ impl UnionHistoryStore {
 
 impl HistoryStore for UnionHistoryStore {
     fn get_ancestors(&self, key: &Key) -> Result<Ancestors> {
-        let mut missing_ancestors = VecDeque::new();
-        let mut ancestors = Ancestors::new();
-
-        missing_ancestors.push_back(key.clone());
-        while let Some(current) = missing_ancestors.pop_front() {
-            if ancestors.contains_key(&current) {
-                continue;
-            }
-
-            let partial_ancestors = self.get_partial_ancestors(&current)?;
-
-            for ancestor in partial_ancestors.values() {
-                for parent in &ancestor.parents {
-                    if !partial_ancestors.contains_key(parent) {
-                        missing_ancestors.push_back(parent.clone());
-                    }
-                }
-            }
-
-            ancestors.extend(partial_ancestors);
-        }
-
-        Ok(ancestors)
+        BatchedAncestorIterator::new(key, |k, _seen| self.get_partial_ancestors(k)).collect()
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {

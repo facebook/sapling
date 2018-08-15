@@ -16,6 +16,7 @@ extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
 
+mod ancestors;
 mod dataindex;
 mod fanouttable;
 mod unionstore;
