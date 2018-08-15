@@ -43,6 +43,32 @@ impl FileIndexEntry {
     }
 }
 
+#[derive(Debug, PartialEq)]
+struct NodeIndexEntry {
+    pub node: Node,
+    pub offset: u64,
+}
+const NODE_ENTRY_LEN: usize = 28;
+
+impl NodeIndexEntry {
+    pub fn read(buf: &[u8]) -> Result<Self> {
+        let mut cur = Cursor::new(buf);
+        cur.set_position(20);
+        let node_slice: &[u8] = &buf.get(0..20)
+            .ok_or_else(|| HistoryIndexError(format!("buffer too short ({:?} < 20)", buf.len())))?;
+        Ok(NodeIndexEntry {
+            node: Node::from_slice(node_slice)?,
+            offset: cur.read_u64::<BigEndian>()?,
+        })
+    }
+
+    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+        writer.write_all(self.node.as_ref())?;
+        writer.write_u64::<BigEndian>(self.offset)?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,6 +92,16 @@ mod tests {
             let mut buf: Vec<u8> = vec![];
             entry.write(&mut buf).unwrap();
             entry == FileIndexEntry::read(buf.as_ref()).unwrap()
+        }
+
+        fn test_node_index_entry_roundtrip(node: Node, offset: u64) -> bool {
+            let entry = NodeIndexEntry {
+                node, offset
+            };
+
+            let mut buf: Vec<u8> = vec![];
+            entry.write(&mut buf).unwrap();
+            entry == NodeIndexEntry::read(buf.as_ref()).unwrap()
         }
     }
 }
