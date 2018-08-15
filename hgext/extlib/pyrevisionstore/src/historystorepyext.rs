@@ -29,7 +29,19 @@ impl<T: HistoryStore> HistoryStorePyExt for T {
     }
 
     fn get_missing(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
-        unimplemented!()
+        // Copy the PyObjects into a vector so we can get a reference iterator.
+        // This lets us get a Vector of Keys without copying the strings.
+        let keys = keys.map(|k| k.and_then(|k| from_tuple_to_key(py, &k)))
+            .collect::<Result<Vec<Key>, PyErr>>()?;
+        let missing = self.get_missing(&keys[..]).map_err(|e| to_pyerr(py, &e))?;
+
+        let results = PyList::new(py, &[]);
+        for key in missing {
+            let key_tuple = from_key_to_tuple(py, &key);
+            results.insert_item(py, results.len(py), key_tuple.into_object());
+        }
+
+        Ok(results)
     }
 
     fn get_node_info(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyTuple> {
