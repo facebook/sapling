@@ -2960,7 +2960,7 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
     results.emplace_back(
         recurse == Recurse::DEEP
             ? std::move(future).then(recursivelyLoadMaterializedChildren)
-            : future.unit());
+            : std::move(future).unit());
   }
 
   return folly::collectAll(results).unit();
