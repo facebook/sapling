@@ -11,6 +11,7 @@ import tempfile
 import unittest
 
 import silenttestrunner
+from hgext.extlib.pyrevisionstore import historypack as rusthistpack
 from hgext.remotefilelog.basepack import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF
 from hgext.remotefilelog.historypack import historypack, mutablehistorypack
 from mercurial import error, ui as uimod
@@ -23,7 +24,10 @@ except NameError:
     xrange = range
 
 
-class histpacktests(unittest.TestCase):
+class histpacktestsbase(object):
+    def __init__(self, historypackreader):
+        self.historypackreader = historypackreader
+
     def setUp(self):
         self.tempdirs = []
 
@@ -67,7 +71,7 @@ class histpacktests(unittest.TestCase):
             packer.add(filename, node, p1, p2, linknode, copyfrom)
 
         path = packer.close()
-        return historypack(path)
+        return self.historypackreader(path)
 
     def testAddSingle(self):
         """Test putting a single entry into a pack and reading it out.
@@ -224,15 +228,6 @@ class histpacktests(unittest.TestCase):
         missing = pack.getmissing([("bar", fakenode)])
         self.assertEquals(missing, [("bar", fakenode)])
 
-    def testAddThrows(self):
-        pack = self.createPack()
-
-        try:
-            pack.add("filename", nullid, nullid, nullid, nullid, None)
-            self.assertTrue(False, "historypack.add should throw")
-        except RuntimeError:
-            pass
-
     def testBadVersionThrows(self):
         pack = self.createPack()
         path = pack.path() + ".histpack"
@@ -263,7 +258,8 @@ class histpacktests(unittest.TestCase):
             revisions.append((filename, node, p1, p2, linknode, None))
 
         pack = self.createPack(revisions)
-        self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
+        if hasattr(pack, "params"):
+            self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             actual = pack.getancestors(filename, node)[node]
@@ -393,6 +389,27 @@ class histpacktests(unittest.TestCase):
             entry = pack.getnodeinfo(filename, node)
             copyfrom = None if not copyfrom else copyfrom
             self.assertEquals(entry, (p1, p2, linknode, copyfrom))
+
+
+class histpacktests(histpacktestsbase, unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        histpacktestsbase.__init__(self, historypack)
+        unittest.TestCase.__init__(self, *args, **kwargs)
+
+    def testAddThrows(self):
+        pack = self.createPack()
+
+        try:
+            pack.add("filename", nullid, nullid, nullid, nullid, None)
+            self.assertTrue(False, "historypack.add should throw")
+        except RuntimeError:
+            pass
+
+
+class rusthistpacktests(histpacktestsbase, unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        histpacktestsbase.__init__(self, rusthistpack)
+        unittest.TestCase.__init__(self, *args, **kwargs)
 
 
 # TODO:
