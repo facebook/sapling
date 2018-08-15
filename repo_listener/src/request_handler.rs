@@ -72,14 +72,17 @@ pub fn request_handler(
         };
         let client_drain = slog_term::PlainSyncDecorator::new(stderr_write);
         let client_drain = slog_term::FullFormat::new(client_drain).build();
-        let client_drain =
-            KVFilter::new(client_drain, Level::Critical).only_pass_any_on_all_keys(hashmap! {
+        let client_drain = KVFilter::new(client_drain, Level::Critical).only_pass_any_on_all_keys(
+            (hashmap! {
                 "remote".into() => hashset!["true".into(), "remote_only".into()],
-            });
+            }).into(),
+        );
 
-        let server_drain = KVFilter::new(logger, Level::Critical).always_suppress_any(hashmap! {
-            "remote".into() => hashset!["remote_only".into()],
-        });
+        let server_drain = KVFilter::new(logger, Level::Critical).always_suppress_any(
+            (hashmap! {
+                "remote".into() => hashset!["remote_only".into()],
+            }).into(),
+        );
 
         let drain = slog::Duplicate::new(client_drain, server_drain).ignore_res();
         Logger::root(drain, o!("session_uuid" => format!("{}", session_uuid)))
