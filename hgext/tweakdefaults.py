@@ -855,7 +855,21 @@ def grep(ui, repo, pattern, *pats, **opts):
         includelineno = opts.get("line_number")
 
         for line in lines:
-            filename, lineno, colno, context = line.split(":", 3)
+            try:
+                filename, lineno, colno, context = line.split(":", 3)
+            except Exception:
+                binaryfile = re.match("Binary file (.*) matches", line)
+                if binaryfile:
+                    filename = binaryfile.group(1)
+                    lineno = 0
+                    colno = 0
+                    context = None
+                else:
+                    # If we couldn't parse the line, just pass it thru
+                    ui.write(line)
+                    ui.write("\n")
+                    continue
+
             unescapedfilename = stripansiescapes(filename)
 
             # filter to just the files that match the list supplied
@@ -868,8 +882,13 @@ def grep(ui, repo, pattern, *pats, **opts):
                 if unescapedfilename not in resultsbyfile:
                     resultsbyfile[unescapedfilename] = []
 
-                # re-assemble the output, but omit the column number
-                if includelineno:
+                # re-assemble the output, but omit the column number.
+                # Take care with binary file matches!
+                if lineno == 0 and colno == 0 and context is None:
+                    resultsbyfile[unescapedfilename].append(
+                        "Binary file %s matches\n" % filename
+                    )
+                elif includelineno:
                     resultsbyfile[unescapedfilename].append(
                         "%s:%s:%s\n" % (filename, lineno, context)
                     )
