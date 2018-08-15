@@ -80,7 +80,10 @@ def remotelookup(orig, repo, proto, key):
         ret = _dolookup(repo, k)
         if ret is not None:
             success = 1
-            return "%s %s\n" % (success, ret)
+        else:
+            success = 0
+            ret = "gitlookup failed"
+        return "%s %s\n" % (success, ret)
     return orig(repo, proto, key)
 
 

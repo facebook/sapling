@@ -31,10 +31,10 @@ templatekeyword = registrar.templatekeyword()
 @templatekeyword("gitnode")
 def showgitnode(repo, ctx, templ, **args):
     """Return the git revision corresponding to a given hg rev"""
-    hexgitnode = _lookup_node(repo, ctx.hex(), from_scm_type="hg")
+    binnode = _lookup_node(repo, ctx.hex(), from_scm_type="hg")
     # templates are expected to return an empty string when no
     # data exists
-    return hexgitnode.encode("hex") if hexgitnode else ""
+    return binnode.encode("hex") if binnode else ""
 
 
 @revsetpredicate("gitnode(id)")
@@ -59,7 +59,7 @@ def _lookup_node(repo, hexnode, from_scm_type):
     # path. This can be the case when command is ran on the server.
     # In that case let's run lookup() command locally.
     try:
-        return repo.lookup(gitlookupnode)
+        result = repo.lookup(gitlookupnode)
     except error.RepoLookupError:
         # Note: RepoLookupError is caught here because repo.lookup()
         # can throw only this exception.
@@ -71,7 +71,7 @@ def _lookup_node(repo, hexnode, from_scm_type):
         try:
             repo.baseui.fout = repo.ui.ferr
             remoterepo = hg.peer(repo, {}, peerpath)
-            return remoterepo.lookup(gitlookupnode)
+            result = remoterepo.lookup(gitlookupnode)
         except error.RepoError:
             # Note: RepoError can be thrown by hg.peer(), RepoLookupError
             # can be thrown by remoterepo.lookup(). RepoLookupError is a
@@ -79,6 +79,12 @@ def _lookup_node(repo, hexnode, from_scm_type):
             return None
         finally:
             repo.baseui.fout = oldfout
+
+    # Sanity check - result must be 20 chars
+    if len(result) != 20:
+        return None
+    else:
+        return result
 
 
 def overridestringset(orig, repo, subset, x, *args, **kwargs):
