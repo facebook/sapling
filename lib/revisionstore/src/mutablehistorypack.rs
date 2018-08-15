@@ -51,7 +51,18 @@ impl HistoryStore for MutableHistoryPack {
     }
 
     fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {
-        unimplemented!();
+        Ok(self.mem_index
+            .get(key.name())
+            .ok_or(MutableHistoryPackError(format!(
+                "key '{:?}' not present in mutable history pack",
+                key
+            )))?
+            .get(key)
+            .ok_or(MutableHistoryPackError(format!(
+                "key '{:?}' not present in mutable history pack",
+                key
+            )))?
+            .clone())
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
@@ -72,6 +83,30 @@ mod tests {
     use tempfile::tempdir;
 
     quickcheck! {
+        fn test_get_node_info(insert: HashMap<Key, NodeInfo>, notinsert: Vec<Key>) -> bool {
+            let tempdir = tempdir().unwrap();
+            let mut muthistorypack =
+                MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+
+            for (key, info) in insert.iter() {
+                muthistorypack.add(&key, &info).unwrap();
+            }
+
+            for (key, info) in insert.iter() {
+                if *info != muthistorypack.get_node_info(key).unwrap() {
+                    return false;
+                }
+            }
+
+            for key in notinsert.iter() {
+                if muthistorypack.get_node_info(key).is_ok() {
+                    return false;
+                }
+            }
+
+            true
+        }
+
         fn test_get_missing(insert: HashMap<Key, NodeInfo>, notinsert: Vec<Key>) -> bool {
             let tempdir = tempdir().unwrap();
             let mut muthistorypack =
