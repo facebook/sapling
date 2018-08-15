@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::cmp::min;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
@@ -294,7 +295,20 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
         .parse::<usize>()
         .unwrap();
 
-    let mut cache_config = cachelib::LruCacheConfig::new(cache_size_gb * 1024 * 1024 * 1024)
+    // Millions of lookups per second
+    let lock_power = 10;
+    // Assume 200 bytes average cache item size and compute bucketsPower
+    let expected_item_size_bytes = 200;
+    let cache_size_bytes = cache_size_gb * 1024 * 1024 * 1024;
+    let item_count = cache_size_bytes / expected_item_size_bytes;
+
+    // Because `bucket_count` is a power of 2, bucket_count.trailing_zeros() is log2(bucket_count)
+    let bucket_count = item_count
+        .checked_next_power_of_two()
+        .expect("Cache has too many objects to fit a `usize`?!?");
+    let buckets_power = min(bucket_count.trailing_zeros() + 1 as u32, 32);
+
+    let mut cache_config = cachelib::LruCacheConfig::new(cache_size_bytes)
         .set_pool_rebalance(cachelib::PoolRebalanceConfig {
             interval: Duration::new(10, 0),
             strategy: cachelib::RebalanceStrategy::HitsPerSlab {
@@ -305,7 +319,8 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
                 min_tail_age: Duration::new(30, 0),
                 ignore_untouched_slabs: false,
             },
-        });
+        })
+        .set_access_config(buckets_power, lock_power);
 
     if matches.is_present("use-tupperware-shrinker") {
         if matches.is_present("max-process-size") || matches.is_present("min-process-size") {
