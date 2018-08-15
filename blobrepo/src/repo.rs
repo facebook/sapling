@@ -42,7 +42,7 @@ use delayblob::DelayBlob;
 use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
 use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
-use manifoldblob::ManifoldBlob;
+use manifoldblob::ThriftManifoldBlob;
 use mercurial::file::File;
 use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileEnvelopeMut,
                       HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
@@ -252,11 +252,8 @@ impl BlobRepo {
         let bookmarks = MysqlDbBookmarks::open(&connection_params)
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
-        let blobstore = ManifoldBlob::new_with_prefix(
-            args.bucket.clone(),
-            &args.prefix,
-            args.max_concurrent_requests_per_io_thread,
-        );
+        let blobstore = ThriftManifoldBlob::new(args.bucket.clone())?;
+        let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", args.prefix));
         let blobstore = new_memcache_blobstore(blobstore, "manifold", args.bucket.as_ref())?;
         let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
             ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
