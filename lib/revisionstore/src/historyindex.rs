@@ -72,7 +72,7 @@ pub struct NodeLocation {
 }
 
 #[derive(PartialEq, Debug)]
-struct FileIndexEntry {
+pub(crate) struct FileIndexEntry {
     pub node: Node,
     pub file_section_offset: u64,
     pub file_section_size: u64,
@@ -107,7 +107,7 @@ impl FileIndexEntry {
 }
 
 #[derive(Debug, PartialEq)]
-struct NodeIndexEntry {
+pub(crate) struct NodeIndexEntry {
     pub node: Node,
     pub offset: u64,
 }
@@ -132,7 +132,7 @@ impl NodeIndexEntry {
     }
 }
 
-pub struct HistoryIndex {
+pub(crate) struct HistoryIndex {
     mmap: Mmap,
     version: HistoryPackVersion,
     fanout_size: usize,
