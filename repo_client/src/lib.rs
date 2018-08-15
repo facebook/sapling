@@ -30,9 +30,11 @@ extern crate stats;
 extern crate time_ext;
 #[macro_use]
 extern crate tracing;
+extern crate uuid;
 
 extern crate blobrepo;
 extern crate bundle2_resolver;
+extern crate context;
 extern crate filenodes;
 extern crate hgproto;
 extern crate mercurial;

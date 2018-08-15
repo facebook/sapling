@@ -10,6 +10,7 @@
 
 #[macro_use]
 extern crate cloned;
+extern crate context;
 extern crate dns_lookup;
 #[macro_use]
 extern crate failure_ext as failure;

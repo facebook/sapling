@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use failure::prelude::*;
 use futures::{future, Future};
@@ -19,7 +18,12 @@ use ready_state::ReadyStateBuilder;
 use repo_client::MononokeRepo;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 
-pub type RepoHandler = (Logger, ScubaSampleBuilder, Arc<MononokeRepo>);
+#[derive(Clone, Debug)]
+pub struct RepoHandler {
+    pub logger: Logger,
+    pub scuba: ScubaSampleBuilder,
+    pub repo: MononokeRepo,
+}
 
 pub fn repo_handlers(
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
@@ -50,15 +54,20 @@ pub fn repo_handlers(
             let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
             scuba_logger.add_common_server_data();
 
-            let repo = Arc::new(repo);
-
             let initial_warmup =
                 cache_warmup(repo.blobrepo(), config.cache_warmup, listen_log.clone())
                     .context(format!("while warming up cache for repo: {}", reponame))
                     .from_err();
-            ready_handle
-                .wait_for(initial_warmup)
-                .map(move |()| (reponame, (listen_log, scuba_logger, repo)))
+            ready_handle.wait_for(initial_warmup).map(move |()| {
+                (
+                    reponame,
+                    RepoHandler {
+                        logger: listen_log,
+                        scuba: scuba_logger,
+                        repo: repo,
+                    },
+                )
+            })
         })
         .collect();
 

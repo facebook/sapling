@@ -24,6 +24,7 @@ struct LogNormalGenerator {
     distribution: LogNormal,
 }
 
+#[derive(Clone)]
 pub struct MononokeRepo {
     log_name: String,
     blobrepo: Arc<BlobRepo>,

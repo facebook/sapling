@@ -30,6 +30,8 @@ use sshrelay::{SenderBytesWrite, Stdio};
 
 use repo_handlers::RepoHandler;
 
+use context::CoreContext;
+
 define_stats! {
     prefix = "mononoke.request_handler";
     wireproto_ms:
@@ -37,10 +39,15 @@ define_stats! {
 }
 
 pub fn request_handler(
-    (logger, mut scuba_logger, repo): RepoHandler,
+    RepoHandler {
+        logger,
+        scuba,
+        repo,
+    }: RepoHandler,
     stdio: Stdio,
     addr: SocketAddr,
 ) -> impl Future<Item = (), Error = ()> {
+    let mut scuba_logger = scuba;
     let Stdio {
         stdin,
         stdout,
@@ -107,15 +114,17 @@ pub fn request_handler(
 
     scuba_logger.log_with_msg("Connection established", None);
 
+    let ctxt = CoreContext {
+        session: session_uuid,
+        logger: conn_log.clone(),
+        scuba: scuba_logger.clone(),
+        trace: trace.clone(),
+    };
+
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         stdin,
-        RepoClient::new(
-            repo.clone(),
-            conn_log.clone(),
-            scuba_logger.clone(),
-            trace.clone(),
-        ),
+        RepoClient::new(repo.clone(), ctxt),
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
         &conn_log,
