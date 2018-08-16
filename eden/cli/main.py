@@ -481,6 +481,8 @@ class GcCmd(Subcmd):
             print()
             # TODO: clear kernel caches
 
+        return 0
+
 
 @subcmd(
     "mount",

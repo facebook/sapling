@@ -535,7 +535,7 @@ class OverlayCmd(Subcmd):
     def _print_overlay_tree(
         self, inode_number: int, path: str, tree_data: OverlayDir
     ) -> None:
-        def hex(binhash) -> str:
+        def hex(binhash: Optional[bytes]) -> str:
             if binhash is None:
                 return "None"
             else:

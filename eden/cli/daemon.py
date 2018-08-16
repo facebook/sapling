@@ -133,6 +133,9 @@ def exec_daemon(
 
     cmd, env = result
     os.execve(cmd[0], cmd, env)
+    # Throw an exception just to let mypy know that we should never reach here
+    # and will never return normally.
+    raise Exception("execve should never return")
 
 
 def start_daemon(
