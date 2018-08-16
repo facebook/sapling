@@ -217,7 +217,7 @@ impl DataIndex {
             if options.large { 2 } else { 1 },
             &mut values.iter().map(|x| x.0),
             ENTRY_LEN,
-            &mut locations,
+            Some(&mut locations),
         )?;
 
         // Map from node to location

@@ -196,15 +196,12 @@ impl HistoryIndex {
         file_sections.sort_by_key(|x| x.1);
 
         // Write the fanout table
-        // `locations` is unused by history pack, but we must provide it
-        let mut locations: Vec<u32> = Vec::with_capacity(file_sections.len());
-        unsafe { locations.set_len(file_sections.len()) };
         FanoutTable::write(
             writer,
             if options.large { 2 } else { 1 },
             &mut file_sections.iter().map(|x| &x.1),
             FILE_ENTRY_LEN,
-            &mut locations,
+            None,
         )?;
 
         // Write out the number of files in the file portion.

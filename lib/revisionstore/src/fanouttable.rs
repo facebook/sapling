@@ -80,7 +80,7 @@ impl FanoutTable {
         fanout_factor: u8,
         node_iter: &mut I,
         entry_size: usize,
-        locations: &mut Vec<u32>,
+        mut locations: Option<&mut Vec<u32>>,
     ) -> Result<()> {
         let fanout_raw_size = match fanout_factor {
             SMALL_FANOUT_FACTOR => SMALL_RAW_SIZE,
@@ -110,7 +110,9 @@ impl FanoutTable {
             if fanout_table[fanout_key as usize].is_none() {
                 fanout_table[fanout_key as usize] = Some(offset);
             }
-            locations[i] = offset;
+            if let Some(locations) = locations.as_mut() {
+                locations[i] = offset;
+            }
             offset += entry_size as u32;
         }
 
@@ -171,7 +173,7 @@ mod tests {
             SMALL_FANOUT_FACTOR,
             &mut nodes.iter(),
             size_of::<u32>() as usize,
-            &mut locations,
+            Some(&mut locations),
         ).expect("fanout write");
         assert_eq!(SMALL_RAW_SIZE, buf.len());
 
@@ -217,7 +219,7 @@ mod tests {
             LARGE_FANOUT_FACTOR,
             &mut nodes.iter(),
             size_of::<u32>() as usize,
-            &mut locations,
+            Some(&mut locations),
         ).expect("fanout write");
         assert_eq!(LARGE_RAW_SIZE, buf.len());
 
@@ -254,7 +256,7 @@ mod tests {
             SMALL_FANOUT_FACTOR,
             &mut nodes.iter(),
             size_of::<u32>() as usize,
-            &mut locations,
+            Some(&mut locations),
         ).expect("fanout write");
         assert_eq!(SMALL_RAW_SIZE, buf.len());
 
@@ -286,7 +288,7 @@ mod tests {
             SMALL_FANOUT_FACTOR,
             &mut nodes.iter(),
             size_of::<u32>() as usize,
-            &mut locations,
+            Some(&mut locations),
         ).expect("fanout write");
         assert_eq!(SMALL_RAW_SIZE, buf.len());
 
@@ -329,7 +331,7 @@ mod tests {
                 fanout_factor,
                 &mut nodes.iter(),
                 node_size,
-                &mut locations,
+                Some(&mut locations),
             ).expect("fanout write");
 
             // Simulate a data file that includes just the nodes
