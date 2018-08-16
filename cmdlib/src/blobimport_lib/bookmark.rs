@@ -78,35 +78,31 @@ pub fn upload_bookmarks(
                                 }
                             }})
                         .and_then({
-                            cloned!(blobrepo);
+                            cloned!(blobrepo, logger);
                             move |(key, cs_id, exists)| {
-                                blobrepo.get_bonsai_from_hg(&cs_id)
-                                    .and_then(move |bcs_id| bcs_id.ok_or(err_msg(
-                                        format!("failed to resolve hg to bonasi: {}", cs_id),
-                                    )))
-                                    .map(move |bcs_id| (key, bcs_id, exists))
+                                if exists {
+                                    blobrepo.get_bonsai_from_hg(&cs_id)
+                                        .and_then(move |bcs_id| bcs_id.ok_or(err_msg(
+                                            format!("failed to resolve hg to bonsai: {}", cs_id),
+                                        )))
+                                        .map(move |bcs_id| Some((key, bcs_id)))
+                                        .left_future()
+                                } else {
+                                    info!(
+                                        logger,
+                                        "did not update bookmark {:?}, because cs {:?} was not imported yet",
+                                        key,
+                                        cs_id,
+                                    );
+                                    Ok(None).into_future().right_future()
+                                }
                             }
                         })
                 }))
             }
         })
         .flatten_stream()
-        .filter_map({
-            let logger = logger.clone();
-            move |(key, cs_id, exists)| {
-                if exists {
-                    Some((key, cs_id))
-                } else {
-                    info!(
-                        logger,
-                        "did not update bookmark {:?}, because cs {:?} was not imported yet",
-                        key,
-                        cs_id,
-                    );
-                    None
-                }
-            }
-        })
+        .filter_map(|key_cs_id| key_cs_id)
         .chunks(100) // send 100 bookmarks in a single transaction
         .and_then({
             let blobrepo = blobrepo.clone();
