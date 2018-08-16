@@ -11,5 +11,5 @@ use mercurial_types::RepoPath;
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "internal error: file {} copied from directory {}", _0, _1)]
-    InconsistenCopyInfo(RepoPath, RepoPath),
+    InconsistentCopyInfo(RepoPath, RepoPath),
 }

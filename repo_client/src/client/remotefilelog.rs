@@ -175,7 +175,7 @@ fn get_file_history(
                 let copy = match copy {
                     Some((RepoPath::FilePath(copyto), rev)) => Some((copyto, rev)),
                     Some((copyto, _)) => {
-                        return Err(ErrorKind::InconsistenCopyInfo(filenode.path, copyto).into())
+                        return Err(ErrorKind::InconsistentCopyInfo(filenode.path, copyto).into())
                     }
                     None => None,
                 };
