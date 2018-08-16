@@ -6,7 +6,6 @@
 
 use std::mem;
 use std::net::SocketAddr;
-use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -70,9 +69,11 @@ pub fn request_handler(
         }
     };
 
+    // Info per wireproto command within this session
     let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
     let trace = TraceContext::new(session_uuid, Instant::now());
 
+    // Per-connection logging drain that forks output to normal log and back to client stderr
     let conn_log = {
         let stderr_write = SenderBytesWrite {
             chan: stderr.wait(),
@@ -91,6 +92,7 @@ pub fn request_handler(
             }).into(),
         );
 
+        // Don't fail logging if the client goes away
         let drain = slog::Duplicate::new(client_drain, server_drain).ignore_res();
         Logger::root(drain, o!("session_uuid" => format!("{}", session_uuid)))
     };
@@ -148,7 +150,7 @@ pub fn request_handler(
         )
         .timed(move |stats, result| {
             let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
-            let wireproto_calls = mem::replace(wireproto_calls.deref_mut(), Vec::new());
+            let wireproto_calls = mem::replace(&mut *wireproto_calls, Vec::new());
 
             STATS::wireproto_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
             scuba_logger

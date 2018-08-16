@@ -41,7 +41,10 @@ pub fn repo_handlers(
             config.enabled
         })
         .map(|(reponame, config)| {
-            info!(root_log, "Start listening for repo {:?}", config.repotype);
+            info!(
+                root_log,
+                "Start warming for repo {}, type {:?}", reponame, config.repotype
+            );
             let ready_handle = ready.create_handle(reponame.as_ref());
 
             let repo = MononokeRepo::new(
@@ -63,15 +66,19 @@ pub fn repo_handlers(
                     listen_log.clone(),
                 ).context(format!("while warming up cache for repo: {}", reponame))
                     .from_err();
-            ready_handle.wait_for(initial_warmup).map(move |()| {
-                (
-                    reponame,
-                    RepoHandler {
-                        logger: listen_log,
-                        scuba: scuba_logger,
-                        repo: repo,
-                    },
-                )
+            ready_handle.wait_for(initial_warmup).map({
+                cloned!(root_log);
+                move |()| {
+                    info!(root_log, "Repo warmup for {} complete", reponame);
+                    (
+                        reponame,
+                        RepoHandler {
+                            logger: listen_log,
+                            scuba: scuba_logger,
+                            repo: repo,
+                        },
+                    )
+                }
             })
         })
         .collect();
