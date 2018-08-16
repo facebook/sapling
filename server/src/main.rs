@@ -92,7 +92,9 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
             // TODO: switch to TermDecorator, which supports color
             let decorator = slog_term::PlainSyncDecorator::new(io::stdout());
             let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
-            let logview_drain = LogViewDrain::new("errorlog_mononoke");
+            // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
+            // since logview is sampled anyway.
+            let logview_drain = LogViewDrain::new("errorlog_mononoke").ignore_res();
             slog::Duplicate::new(stderr_drain, logview_drain)
         };
         let drain = slog_stats::StatsDrain::new(drain);
