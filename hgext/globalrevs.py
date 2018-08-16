@@ -21,6 +21,11 @@ template.
     [globalrevs]
     # Allow new commits through only pushrebase.
     onlypushrebase = True
+
+    # Repository name to be used as key for storing global revisions data in the
+    # database. If not specified, name specified through the configuration
+    # `hqsql.reponame` will be used.
+    reponame = customname
 """
 
 from hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
@@ -33,6 +38,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("format", "useglobalrevs", default=False)
 configitem("globalrevs", "onlypushrebase", default=True)
+configitem("globalrevs", "reponame", default=None)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -117,7 +123,7 @@ def _sqllocalrepowrapper(orig, repo):
     # This class will effectively extend the `sqllocalrepo` class.
     class globalrevsrepo(repo.__class__):
         def revisionnumberfromdb(self):
-            reponame = self.sqlreponame
+            reponame = self._globalrevsreponame
             cursor = self.sqlcursor
 
             cursor.execute(
@@ -178,7 +184,7 @@ def _sqllocalrepowrapper(orig, repo):
             # Only write to database if the global revision number actually
             # changed.
             if newcount is not None:
-                reponame = self.sqlreponame
+                reponame = self._globalrevsreponame
                 cursor = self.sqlcursor
 
                 cursor.execute(
@@ -188,6 +194,9 @@ def _sqllocalrepowrapper(orig, repo):
                     (newcount, reponame),
                 )
 
+    repo._globalrevsreponame = (
+        repo.ui.config("globalrevs", "reponame") or repo.sqlreponame
+    )
     repo._nextrevisionnumber = None
     repo.__class__ = globalrevsrepo
 
@@ -268,7 +277,7 @@ def initglobalrev(ui, repo, start, *args, **opts):
 
     def _initglobalrev():
         cursor = repo.sqlcursor
-        reponame = repo.sqlreponame
+        reponame = repo._globalrevsreponame
 
         # Our schemas are setup such that this query will fail if we try to
         # update an existing row which is exactly what we desire here.
