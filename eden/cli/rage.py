@@ -14,7 +14,6 @@ import subprocess
 from typing import IO
 
 from . import (
-    config as config_mod,
     debug as debug_mod,
     doctor as doctor_mod,
     filesystem,
@@ -22,39 +21,40 @@ from . import (
     stats as stats_mod,
     ui as ui_mod,
 )
+from .config import EdenInstance
 
 
-def print_diagnostic_info(config: config_mod.Config, out: IO[bytes]) -> None:
+def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
     out.write(b"User                    : %s\n" % getpass.getuser().encode())
     out.write(b"Hostname                : %s\n" % socket.gethostname().encode())
     print_rpm_version(out)
 
-    health_status = config.check_health()
+    health_status = instance.check_health()
     if health_status.is_healthy():
         out.write(b"\n")
-        debug_mod.do_buildinfo(config, out)
+        debug_mod.do_buildinfo(instance, out)
         out.write(b"uptime: ")
-        debug_mod.do_uptime(config, out)
-        print_eden_doctor_report(config, out)
+        debug_mod.do_uptime(instance, out)
+        print_eden_doctor_report(instance, out)
     else:
         out.write(b"Eden is not running. Some debug info will be omitted.\n")
 
-    print_tail_of_log_file(config.get_log_path(), out)
+    print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
 
     out.write(b"\nList of mount points:\n")
     mountpoint_paths = []
-    for key in sorted(config.get_mount_paths()):
+    for key in sorted(instance.get_mount_paths()):
         key_bytes = key.encode()
         out.write(key_bytes)
         mountpoint_paths.append(key_bytes)
-    for key, val in config.get_all_client_config_info().items():
+    for key, val in instance.get_all_client_config_info().items():
         out.write(b"\nMount point info for path %s:\n" % key.encode())
         for k, v in val.items():
             out.write("{:>10} : {}\n".format(k, v).encode())
     if health_status.is_healthy():
         with io.StringIO() as stats_stream:
-            stats_mod.do_stats_general(config, out=stats_stream)
+            stats_mod.do_stats_general(instance, out=stats_stream)
             out.write(stats_stream.getvalue().encode())
 
 
@@ -67,11 +67,11 @@ def print_rpm_version(out: IO[bytes]) -> None:
         out.write(b"Error getting the Rpm version : %s\n" % str(e).encode())
 
 
-def print_eden_doctor_report(config: config_mod.Config, out: IO[bytes]) -> None:
+def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
     dry_run = True
     doctor_output = io.StringIO()
     doctor_rc = doctor_mod.cure_what_ails_you(
-        config=config,
+        instance=instance,
         dry_run=dry_run,
         mount_table=mtab.LinuxMountTable(),
         fs_util=filesystem.LinuxFsUtil(),

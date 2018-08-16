@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional, Set, TextIO
 import eden.dirstate
 
 from . import config as config_mod, filesystem, mtab, ui, version
+from .config import EdenInstance
 
 
 log = logging.getLogger("eden.cli.doctor")
@@ -140,7 +141,7 @@ class DryRunFixer(ProblemFixer):
 
 
 def cure_what_ails_you(
-    config: config_mod.Config,
+    instance: EdenInstance,
     dry_run: bool,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
@@ -157,14 +158,16 @@ def cure_what_ails_you(
     if working_directory_was_stale:
         fixer.add_problem(StaleWorkingDirectory())
 
-    status = config.check_health()
+    status = instance.check_health()
     if not status.is_healthy():
-        run_edenfs_not_healthy_checks(fixer, config, out, status, mount_table, fs_util)
+        run_edenfs_not_healthy_checks(
+            fixer, instance, out, status, mount_table, fs_util
+        )
         if fixer.num_problems == 0:
             out.writeln("Eden is not in use.")
             return 0
     else:
-        run_normal_checks(fixer, config, out, mount_table, fs_util)
+        run_normal_checks(fixer, instance, out, mount_table, fs_util)
 
     if fixer.num_problems == 0:
         out.writeln("No issues detected.", fg=out.GREEN)
@@ -210,7 +213,7 @@ def cure_what_ails_you(
 
 def run_edenfs_not_healthy_checks(
     tracker: ProblemTracker,
-    config: config_mod.Config,
+    instance: EdenInstance,
     out: ui.Output,
     status: config_mod.HealthStatus,
     mount_table: mtab.MountTable,
@@ -218,7 +221,7 @@ def run_edenfs_not_healthy_checks(
 ) -> None:
     check_for_stale_mounts(tracker, mount_table)
 
-    configured_mounts = config.get_mount_paths()
+    configured_mounts = instance.get_mount_paths()
     if configured_mounts:
         tracker.add_problem(EdenfsNotHealthy())
 
@@ -232,12 +235,12 @@ class EdenfsNotHealthy(Problem):
 
 def run_normal_checks(
     tracker: ProblemTracker,
-    config: config_mod.Config,
+    instance: EdenInstance,
     out: ui.Output,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
 ) -> None:
-    with config.get_thrift_client() as client:
+    with instance.get_thrift_client() as client:
         active_mount_points: List[str] = [
             os.fsdecode(mount.mountPoint)
             for mount in client.listMounts()
@@ -246,15 +249,15 @@ def run_normal_checks(
 
     check_active_mounts(tracker, active_mount_points, mount_table)
     check_for_stale_mounts(tracker, mount_table)
-    check_edenfs_version(tracker, config)
+    check_edenfs_version(tracker, instance)
 
     watchman_roots = _get_watch_roots_for_watchman()
     nuclide_roots = _get_roots_for_nuclide()
 
-    configured_mounts = config.get_mount_paths()
+    configured_mounts = instance.get_mount_paths()
     for mount_path in sorted(configured_mounts):
         if mount_path not in active_mount_points:
-            tracker.add_problem(CheckoutNotMounted(config, mount_path))
+            tracker.add_problem(CheckoutNotMounted(instance, mount_path))
 
     for mount_path in sorted(active_mount_points):
         if mount_path not in configured_mounts:
@@ -265,10 +268,10 @@ def run_normal_checks(
             continue
 
         out.writeln(f"Checking {mount_path}")
-        client_info = config.get_client_info(mount_path)
+        client_info = instance.get_client_info(mount_path)
         check_watchman_subscriptions(tracker, mount_path, watchman_roots)
         check_bind_mounts(
-            tracker, mount_path, config, client_info, mount_table, fs_util
+            tracker, mount_path, instance, client_info, mount_table, fs_util
         )
 
         if nuclide_roots is not None:
@@ -286,8 +289,8 @@ def printable_bytes(b: bytes) -> str:
 
 
 class CheckoutNotMounted(FixableProblem):
-    def __init__(self, config: config_mod.Config, mount_path: str) -> None:
-        self._config = config
+    def __init__(self, instance: EdenInstance, mount_path: str) -> None:
+        self._instance = instance
         self._mount_path = mount_path
 
     def description(self) -> str:
@@ -301,7 +304,7 @@ class CheckoutNotMounted(FixableProblem):
 
     def perform_fix(self) -> None:
         try:
-            self._config.mount(self._mount_path)
+            self._instance.mount(self._mount_path)
         except Exception as ex:
             if "is too short for header" in str(ex):
                 raise Exception(
@@ -425,7 +428,7 @@ def get_all_eden_mount_points(mount_table: mtab.MountTable) -> Set[bytes]:
 def check_bind_mounts(
     tracker: ProblemTracker,
     mount_path: str,
-    config: config_mod.Config,
+    instance: EdenInstance,
     client_info: collections.OrderedDict,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
@@ -800,8 +803,8 @@ Run "cd / && cd -" to update your shell's working directory."""
         )
 
 
-def check_edenfs_version(tracker: ProblemTracker, config: config_mod.Config) -> None:
-    rver, release = version.get_running_eden_version_parts(config)
+def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> None:
+    rver, release = version.get_running_eden_version_parts(instance)
     if not rver or not release:
         # This could be a dev build that returns the empty
         # string for both of these values.

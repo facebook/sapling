@@ -41,14 +41,8 @@ from facebook.eden.ttypes import (
     TreeInodeDebugInfo,
 )
 
-from . import (
-    cmd_util,
-    config as config_mod,
-    overlay as overlay_mod,
-    subcmd as subcmd_mod,
-    ui as ui_mod,
-    util,
-)
+from . import cmd_util, overlay as overlay_mod, subcmd as subcmd_mod, ui as ui_mod
+from .config import EdenInstance
 from .subcmd import Subcmd
 
 
@@ -128,12 +122,12 @@ class TreeCmd(Subcmd):
         parser.add_argument("id", help="The tree ID")
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, rel_path = get_mount_path(args.mount)
         tree_id = parse_object_id(args.id)
 
         local_only = not args.load
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             entries = client.debugGetScmTree(mount, tree_id, localStoreOnly=local_only)
 
         for entry in entries:
@@ -161,12 +155,12 @@ class BlobCmd(Subcmd):
         parser.add_argument("id", help="The blob ID")
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, rel_path = get_mount_path(args.mount)
         blob_id = parse_object_id(args.id)
 
         local_only = not args.load
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             data = client.debugGetScmBlob(mount, blob_id, localStoreOnly=local_only)
 
         sys.stdout.buffer.write(data)
@@ -187,12 +181,12 @@ class BlobMetaCmd(Subcmd):
         parser.add_argument("id", help="The blob ID")
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, rel_path = get_mount_path(args.mount)
         blob_id = parse_object_id(args.id)
 
         local_only = not args.load
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             info = client.debugGetScmBlobMetadata(
                 mount, blob_id, localStoreOnly=local_only
             )
@@ -220,15 +214,15 @@ def _parse_mode(mode: int) -> Tuple[str, int]:
 @debug_cmd("buildinfo", "Show the build info for the Eden server")
 class BuildInfoCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
-        do_buildinfo(config)
+        instance = cmd_util.get_eden_instance(args)
+        do_buildinfo(instance)
         return 0
 
 
-def do_buildinfo(config: config_mod.Config, out: Optional[IO[bytes]] = None) -> None:
+def do_buildinfo(instance: EdenInstance, out: Optional[IO[bytes]] = None) -> None:
     if out is None:
         out = sys.stdout.buffer
-    build_info = config.get_server_build_info()
+    build_info = instance.get_server_build_info()
     sorted_build_info = collections.OrderedDict(sorted(build_info.items()))
     for key, value in sorted_build_info.items():
         out.write(b"%s: %s\n" % (key.encode(), value.encode()))
@@ -237,8 +231,8 @@ def do_buildinfo(config: config_mod.Config, out: Optional[IO[bytes]] = None) -> 
 @debug_cmd("clear_local_caches", "Clears local caches of objects stored in RocksDB")
 class ClearLocalCachesCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
-        with config.get_thrift_client() as client:
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
             client.debugClearLocalStoreCaches()
         return 0
 
@@ -246,8 +240,8 @@ class ClearLocalCachesCmd(Subcmd):
 @debug_cmd("compact_local_storage", "Asks RocksDB to compact its storage")
 class CompactLocalStorageCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
-        with config.get_thrift_client() as client:
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
             client.debugCompactLocalStorage()
         return 0
 
@@ -255,15 +249,15 @@ class CompactLocalStorageCmd(Subcmd):
 @debug_cmd("uptime", "Check how long edenfs has been running")
 class UptimeCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
-        do_uptime(config)
+        instance = cmd_util.get_eden_instance(args)
+        do_uptime(instance)
         return 0
 
 
-def do_uptime(config: config_mod.Config, out: Optional[IO[bytes]] = None) -> None:
+def do_uptime(instance: EdenInstance, out: Optional[IO[bytes]] = None) -> None:
     if out is None:
         out = sys.stdout.buffer
-    uptime = config.get_uptime()  # Check if uptime is negative?
+    uptime = instance.get_uptime()  # Check if uptime is negative?
     days = uptime.days
     hours, remainder = divmod(uptime.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
@@ -334,8 +328,8 @@ class HgGetDirstateTupleCmd(Subcmd):
         if dirstate_tuple:
             _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
         else:
-            config = cmd_util.create_config(args)
-            with config.get_thrift_client() as client:
+            instance = cmd_util.get_eden_instance(args)
+            with instance.get_thrift_client() as client:
                 try:
                     entry = client.getManifestEntry(mount, rel_path)
                     dirstate_tuple = ("n", entry.mode, 0)
@@ -408,9 +402,9 @@ class InodeCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, rel_path = get_mount_path(args.path)
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             results = client.debugInodeStatus(mount, rel_path)
 
         out.write(b"%d loaded TreeInodes\n" % len(results))
@@ -426,9 +420,9 @@ class FuseCallsCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, rel_path = get_mount_path(args.path)
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             outstanding_call = client.debugOutstandingFuseCalls(mount)
 
         out.write(b"Number of outstanding Calls: %d\n" % len(outstanding_call))
@@ -495,11 +489,11 @@ class OverlayCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         self.args = args
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, rel_path = get_mount_path(args.path or os.getcwd())
 
         # Get the path to the overlay directory for this mount point
-        client_dir = config._get_client_dir_for_mount_point(os.fsdecode(mount))
+        client_dir = instance._get_client_dir_for_mount_point(os.fsdecode(mount))
         self.overlay = overlay_mod.Overlay(os.path.join(client_dir, "local"))
 
         if args.number is not None:
@@ -591,10 +585,10 @@ class GetPathCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, _ = get_mount_path(args.path or os.getcwd())
 
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             inodePathInfo = client.debugGetInodePath(mount, args.number)
         print(
             "%s %s"
@@ -626,10 +620,10 @@ class UnloadInodesCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, rel_path = get_mount_path(args.path)
 
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             # set the age in nanoSeconds
             age = TimeSpec()
             age.seconds = int(args.age)
@@ -650,10 +644,10 @@ class FlushCacheCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, rel_path = get_mount_path(args.path)
 
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             client.invalidateKernelInodeCache(mount, rel_path)
 
         return 0
@@ -664,9 +658,9 @@ class LogCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         # Display eden's log with the system pager if possible.  We could
         # add a --tail option.
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
 
-        eden_log_path = config.get_log_path()
+        eden_log_path = instance.get_log_path()
         if not os.path.exists(eden_log_path):
             print("No log file found at " + eden_log_path, file=sys.stderr)
             return 1
@@ -710,7 +704,7 @@ class LoggingCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
 
         if args.reset and args.config is None:
             # The configuration to use if the caller specifies --reset with no
@@ -719,7 +713,7 @@ class LoggingCmd(Subcmd):
                 "WARN:default,eden=DBG2; default=stream:stream=stderr,async=true"
             )
 
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             if args.config is not None:
                 if args.reset:
                     print(f"Resetting logging configuration to {args.config!r}")
@@ -836,10 +830,10 @@ class DebugJournalCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
         mount, _ = get_mount_path(args.path or os.getcwd())
 
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             to_position = client.getCurrentJournalPosition(mount)
             from_sequence = max(to_position.sequenceNumber - args.limit, 0)
             from_position = JournalPosition(

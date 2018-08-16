@@ -10,7 +10,7 @@
 import subprocess
 from typing import Optional, Tuple, cast
 
-from . import config as config_mod
+from .config import EdenInstance
 
 
 def get_installed_eden_rpm_version() -> str:
@@ -26,9 +26,9 @@ def get_installed_eden_rpm_version() -> str:
 
 # returns (runing_version, release) tuple
 def get_running_eden_version_parts(
-    config: config_mod.Config
+    instance: EdenInstance
 ) -> Tuple[Optional[str], Optional[str]]:
-    bi = config.get_server_build_info()
+    bi = instance.get_server_build_info()
     return (bi.get("build_package_version"), bi.get("build_package_release"))
 
 
@@ -41,5 +41,5 @@ def format_running_eden_version(parts: Tuple[Optional[str], Optional[str]]) -> s
     return f"{running_version}-{release}"
 
 
-def get_running_eden_version(config: config_mod.Config) -> str:
-    return format_running_eden_version(get_running_eden_version_parts(config))
+def get_running_eden_version(instance: EdenInstance) -> str:
+    return format_running_eden_version(get_running_eden_version_parts(instance))

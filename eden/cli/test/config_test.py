@@ -17,7 +17,8 @@ from typing import Dict, List, Optional
 
 import toml
 
-from .. import config, configutil, util
+from .. import config as config_mod, configutil, util
+from ..config import EdenInstance
 
 
 def get_cfg_test_file_defaults():
@@ -151,7 +152,7 @@ def get_config_as_string(config: configparser.ConfigParser) -> str:
     return s
 
 
-class ForceFileMockConfig(config.Config):
+class ForceFileMockConfig(EdenInstance):
     def __init__(
         self,
         config_dir: str,
@@ -180,13 +181,13 @@ class TopConfigTestBase(object):
             self.addCleanup(shutil.rmtree, self._test_dir)
 
             self._user = "bob"
-            self._config_dir = os.path.join(self._test_dir, ".eden")
+            self._state_dir = os.path.join(self._test_dir, ".eden")
             self._etc_eden_dir = os.path.join(self._test_dir, "etc/eden")
             self._config_d = os.path.join(self._test_dir, "etc/eden/config.d")
             self._home_dir = os.path.join(self._test_dir, "home", self._user)
             self._interpolate_dict = {"USER": self._user, "HOME": self._home_dir}
 
-            os.mkdir(self._config_dir)
+            os.mkdir(self._state_dir)
             util.mkdir_p(self._config_d)
             util.mkdir_p(self._home_dir)
 
@@ -268,8 +269,8 @@ class TopConfigTestBase(object):
 
         def test_load_config(self):
             self.copy_config_files()
-            cfg = config.Config(
-                self._config_dir,
+            cfg = EdenInstance(
+                self._state_dir,
                 self._etc_eden_dir,
                 self._home_dir,
                 self._interpolate_dict,
@@ -300,8 +301,8 @@ class TopConfigTestBase(object):
             self.copy_config_files()
 
             os.remove(os.path.join(self._home_dir, ".edenrc"))
-            cfg = config.Config(
-                self._config_dir,
+            cfg = EdenInstance(
+                self._state_dir,
                 self._etc_eden_dir,
                 self._home_dir,
                 self._interpolate_dict,
@@ -334,14 +335,14 @@ class TopConfigTestBase(object):
         def test_add_existing_repo(self):
             self.copy_config_files()
 
-            cfg = config.Config(
-                self._config_dir,
+            cfg = EdenInstance(
+                self._state_dir,
                 self._etc_eden_dir,
                 self._home_dir,
                 self._interpolate_dict,
             )
             with self.assertRaisesRegex(
-                config.UsageError,
+                config_mod.UsageError,
                 "repository fbsource already exists. You will need to edit "
                 "the ~/.edenrc config file by hand to make changes to the "
                 "repository or remove it.",
@@ -353,8 +354,8 @@ class TopConfigTestBase(object):
         def test_add_repo(self):
             self.copy_config_files()
 
-            cfg = config.Config(
-                self._config_dir,
+            cfg = EdenInstance(
+                self._state_dir,
                 self._etc_eden_dir,
                 self._home_dir,
                 self._interpolate_dict,
@@ -362,8 +363,8 @@ class TopConfigTestBase(object):
             cfg.add_repository("fbandroid", "hg", f"/data/users/{self._user}/fbandroid")
 
             # Lets reload our config
-            cfg = config.Config(
-                self._config_dir,
+            cfg = EdenInstance(
+                self._state_dir,
                 self._etc_eden_dir,
                 self._home_dir,
                 self._interpolate_dict,
@@ -398,14 +399,14 @@ class TomlConfigTest(TopConfigTestBase.ConfigTestBase):
         # Stringification is used for displaying the results. Let's test we get
         # the same results with both
         self.copy_cfg_config_files()
-        cfg = config.Config(
-            self._config_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
+        cfg = EdenInstance(
+            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
         )
         cfg_str = get_config_as_string(cfg._loadConfig())
 
         self.copy_toml_config_files()
-        toml_cfg = config.Config(
-            self._config_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
+        toml_cfg = EdenInstance(
+            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
         )
         toml_cfg_str = get_config_as_string(toml_cfg._loadConfig())
         self.assertEqual(toml_cfg_str, cfg_str)
@@ -424,7 +425,7 @@ class TomlConfigTest(TopConfigTestBase.ConfigTestBase):
         for path in paths:
             # Load config files configuration
             cfg = ForceFileMockConfig(
-                self._config_dir,
+                self._state_dir,
                 self._etc_eden_dir,
                 self._home_dir,
                 [path],
@@ -442,7 +443,7 @@ class TomlConfigTest(TopConfigTestBase.ConfigTestBase):
 
             # Load the newly created toml files configuration
             toml_cfg = ForceFileMockConfig(
-                self._config_dir,
+                self._state_dir,
                 self._etc_eden_dir,
                 self._home_dir,
                 [toml_path],
@@ -455,8 +456,8 @@ class TomlConfigTest(TopConfigTestBase.ConfigTestBase):
             self.assertEqual(cfg_str, toml_cfg_str)
 
     def test_toml_enable(self):
-        cfg = config.Config(
-            self._config_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
+        cfg = EdenInstance(
+            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
         )
         self.assertFalse(cfg._toml_config_exists())
 
@@ -473,8 +474,8 @@ class TomlConfigTest(TopConfigTestBase.ConfigTestBase):
         with open(path, "w") as text_file:
             text_file.write(get_toml_test_file_invalid())
 
-        cfg = config.Config(
-            self._config_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
+        cfg = EdenInstance(
+            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
         )
         self.assertEqual(cfg._use_toml_cfg, True)
         with self.assertRaises(toml.decoder.TomlDecodeError):

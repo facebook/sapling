@@ -10,7 +10,8 @@
 import argparse
 import os
 
-from . import config as config_mod, util
+from . import util
+from .config import EdenInstance
 
 
 # Relative to the user's $HOME/%USERPROFILE% directory.
@@ -36,7 +37,7 @@ def find_default_config_dir(home_dir: str) -> str:
     return os.path.join(home_dir, DEFAULT_CONFIG_DIR)
 
 
-def create_config(args: argparse.Namespace) -> config_mod.Config:
+def get_eden_instance(args: argparse.Namespace) -> EdenInstance:
     home_dir = args.home_dir or util.get_home_dir()
-    config = args.config_dir or find_default_config_dir(home_dir)
-    return config_mod.Config(config, args.etc_eden_dir, home_dir)
+    state_dir = args.config_dir or find_default_config_dir(home_dir)
+    return EdenInstance(state_dir, args.etc_eden_dir, home_dir)

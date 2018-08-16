@@ -118,7 +118,13 @@ class ClientConfig:
         self.default_revision = default_revision
 
 
-class Config:
+class EdenInstance:
+    """This class contains information about a particular edenfs instance.
+
+    It provides APIs for communicating with edenfs over thrift and for examining and
+    modifying the list of checkouts managed by this edenfs instance.
+    """
+
     def __init__(
         self,
         config_dir: str,
@@ -278,7 +284,7 @@ class Config:
 
     def create_no_such_repository_exception(self, name: str) -> Exception:
         """Creates an exception that says no repository is configured with the
-        specified name and suggests other repos that are defined in this Config.
+        specified name and suggests other repos that are defined in this Eden instance.
         """
         repos = []
         prefix = "repository "

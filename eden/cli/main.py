@@ -41,7 +41,8 @@ from . import (
     util,
     version as version_mod,
 )
-from .cmd_util import create_config
+from .cmd_util import get_eden_instance
+from .config import EdenInstance
 from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr
 
@@ -49,11 +50,11 @@ from .util import ShutdownError, print_stderr
 subcmd = subcmd_mod.Decorator()
 
 
-def infer_client_from_cwd(config: config_mod.Config, clientname: str) -> str:
+def infer_client_from_cwd(instance: EdenInstance, clientname: str) -> str:
     if clientname:
         return clientname
 
-    all_clients = config.get_all_client_config_info()
+    all_clients = instance.get_all_client_config_info()
     path = normalize_path_arg(os.getcwd())
 
     # Keep going while we're not in the root, as dirname(/) is /
@@ -69,12 +70,12 @@ def infer_client_from_cwd(config: config_mod.Config, clientname: str) -> str:
 
 
 def do_version(args: argparse.Namespace) -> int:
-    config = create_config(args)
+    instance = get_eden_instance(args)
     print("Installed: %s" % version_mod.get_installed_eden_rpm_version())
     import eden
 
     try:
-        rv = version_mod.get_running_eden_version(config)
+        rv = version_mod.get_running_eden_version(instance)
         print("Running:   %s" % rv)
         if rv.startswith("-") or rv.endswith("-"):
             print("(Dev version of eden seems to be running)")
@@ -97,8 +98,8 @@ class InfoCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
-        info = config.get_client_info(infer_client_from_cwd(config, args.client))
+        instance = get_eden_instance(args)
+        info = instance.get_client_info(infer_client_from_cwd(instance, args.client))
         json.dump(info, sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
@@ -107,8 +108,8 @@ class InfoCmd(Subcmd):
 @subcmd("status", "Check the health of the Eden service", aliases=["health"])
 class StatusCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
-        health_info = config.check_health()
+        instance = get_eden_instance(args)
+        health_info = instance.check_health()
         if health_info.is_healthy():
             print("eden running normally (pid {})".format(health_info.pid))
             return 0
@@ -134,14 +135,14 @@ class RepositoryCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
         if args.name and args.path:
             repo = util.get_repo(args.path)
             if repo is None:
                 print_stderr("%s does not look like a git or hg repository" % args.path)
                 return 1
             try:
-                config.add_repository(
+                instance.add_repository(
                     args.name,
                     repo_type=repo.type,
                     source=repo.source,
@@ -154,7 +155,7 @@ class RepositoryCmd(Subcmd):
             print_stderr("repository command called with incorrect arguments")
             return 1
         else:
-            repo_list = config.get_repository_list()
+            repo_list = instance.get_repository_list()
             for repo_name in sorted(repo_list):
                 print(repo_name)
         return 0
@@ -163,17 +164,17 @@ class RepositoryCmd(Subcmd):
 @subcmd("list", "List available checkouts")
 class ListCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
 
         try:
-            with config.get_thrift_client() as client:
+            with instance.get_thrift_client() as client:
                 active_mount_points: Set[Optional[str]] = {
                     os.fsdecode(mount.mountPoint) for mount in client.listMounts()
                 }
         except EdenNotRunningError:
             active_mount_points = set()
 
-        config_mount_points = set(config.get_mount_paths())
+        config_mount_points = set(instance.get_mount_paths())
 
         for path in sorted(active_mount_points | config_mount_points):
             assert path is not None
@@ -220,7 +221,7 @@ class CloneCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
 
         # Make sure the destination directory does not exist or is an empty
         # directory.  (We'll check this again later when actually creating the
@@ -246,7 +247,7 @@ class CloneCmd(Subcmd):
         # Find the repository information
         try:
             repo, repo_type, repo_config = self._get_repo_info(
-                config, args.repo, args.rev
+                instance, args.repo, args.rev
             )
         except RepoError as ex:
             print_stderr("error: {}", ex)
@@ -285,13 +286,13 @@ re-run `eden clone` with --allow-empty-repo"""
                 return 1
 
         # Attempt to start the daemon if it is not already running.
-        health_info = config.check_health()
+        health_info = instance.check_health()
         if not health_info.is_healthy():
             print("edenfs daemon is not currently running.  Starting edenfs...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
             exit_code = daemon.start_daemon(
-                config, args.daemon_binary, args.edenfs_args
+                instance, args.daemon_binary, args.edenfs_args
             )
             if exit_code != 0:
                 return exit_code
@@ -302,7 +303,7 @@ re-run `eden clone` with --allow-empty-repo"""
             print(f"Cloning new repository at {args.path}...")
 
         try:
-            config.clone(repo_config, args.path, commit)
+            instance.clone(repo_config, args.path, commit)
             print(f"Success.  Checked out commit {commit:.8}")
             # In the future it would probably be nice to fork a background
             # process here to prefetch files that we think the user is likely
@@ -313,10 +314,10 @@ re-run `eden clone` with --allow-empty-repo"""
             return 1
 
     def _get_repo_info(
-        self, config: config_mod.Config, repo_arg: str, rev: Optional[str]
+        self, instance: EdenInstance, repo_arg: str, rev: Optional[str]
     ) -> Tuple[util.Repo, Optional[str], config_mod.ClientConfig]:
         # Check to see if repo_arg points to an existing Eden mount
-        eden_config = config.get_client_config_for_path(repo_arg)
+        eden_config = instance.get_client_config_for_path(repo_arg)
         if eden_config is not None:
             repo = util.get_repo(eden_config.path)
             if repo is None:
@@ -332,7 +333,7 @@ re-run `eden clone` with --allow-empty-repo"""
         if repo is None:
             # This is not a valid repository path.
             # Check to see if this is a repository config name instead.
-            repo_config = config.find_config_for_alias(repo_arg)
+            repo_config = instance.find_config_for_alias(repo_arg)
             if repo_config is None:
                 raise RepoError(
                     f"{repo_arg!r} does not look like a valid "
@@ -357,13 +358,13 @@ re-run `eden clone` with --allow-empty-repo"""
 
         project_config = None
         if project_id is not None:
-            project_config = config.find_config_for_alias(project_id)
+            project_config = instance.find_config_for_alias(project_id)
         repo_type = project_id
         if project_config is None:
             repo_config = config_mod.ClientConfig(
                 path=repo.source,
                 scm_type=repo.type,
-                hooks_path=config.get_default_hooks_path(),
+                hooks_path=instance.get_default_hooks_path(),
                 bind_mounts={},
                 default_revision=config_mod.DEFAULT_REVISION[repo.type],
             )
@@ -388,15 +389,15 @@ class ConfigCmd(Subcmd):
         parser.add_argument("--get", help="Name of value to get")
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
         if args.get:
             try:
-                print(config.get_config_value(args.get))
+                print(instance.get_config_value(args.get))
             except (KeyError, ValueError):
                 # mirrors `git config --get invalid`; just exit with code 1
                 return 1
         else:
-            config.print_full_config()
+            instance.print_full_config()
         return 0
 
 
@@ -411,9 +412,9 @@ class DoctorCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
         return doctor_mod.cure_what_ails_you(
-            config,
+            instance,
             args.dry_run,
             mount_table=mtab.LinuxMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
@@ -437,11 +438,11 @@ class FsckCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
         mount, rel_path = debug_mod.get_mount_path(args.path or os.getcwd())
 
         # Get the path to the overlay directory for this mount point
-        client_dir = config._get_client_dir_for_mount_point(os.fsdecode(mount))
+        client_dir = instance._get_client_dir_for_mount_point(os.fsdecode(mount))
         self._overlay_dir = os.path.join(client_dir, "local")
         self._overlay = overlay_mod.Overlay(self._overlay_dir)
 
@@ -471,9 +472,9 @@ class FsckCmd(Subcmd):
 @subcmd("gc", "Minimize disk and memory usage by freeing caches")
 class GcCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
 
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             # TODO: unload
             print("Clearing and compacting local caches...", end="", flush=True)
             client.clearAndCompactLocalStore()
@@ -492,10 +493,10 @@ class MountCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
         for path in args.paths:
             try:
-                exitcode = config.mount(path)
+                exitcode = instance.mount(path)
                 if exitcode:
                     return exitcode
             except EdenNotRunningError as ex:
@@ -521,8 +522,8 @@ class RemoveCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
-        configured_mounts = config.get_mount_paths()
+        instance = get_eden_instance(args)
+        configured_mounts = instance.get_mount_paths()
 
         # First translate the list of paths into canonical checkout paths
         # We also track a bool indicating if this checkout is currently mounted
@@ -568,7 +569,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
             if active:
                 try:
                     stop_aux_processes_for_path(mount)
-                    config.unmount(mount)
+                    instance.unmount(mount)
                 except Exception as ex:
                     print_stderr(f"error unmounting {mount}: {ex}")
                     exit_code = 1
@@ -578,7 +579,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     # ahead delete the mount from the config in this case.
 
             try:
-                config.destroy_mount(mount)
+                instance.destroy_mount(mount)
             except Exception as ex:
                 print_stderr(f"error deleting configuration for {mount}: {ex}")
                 exit_code = 1
@@ -626,7 +627,7 @@ class PrefetchCmd(Subcmd):
             return None
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
 
         if args.repo:
             repo_root = self._repo_root(args.repo)
@@ -646,7 +647,7 @@ class PrefetchCmd(Subcmd):
             with open(args.pattern_file) as f:
                 args.PATTERN += [pat.strip() for pat in f.readlines()]
 
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             result = client.globFiles(
                 GlobParams(
                     mountPoint=os.fsencode(repo_root),
@@ -692,13 +693,13 @@ class UnmountCmd(Subcmd):
                 'prefer using "eden rm" instead'
             )
 
-        config = create_config(args)
+        instance = get_eden_instance(args)
         for path in args.paths:
             path = normalize_path_arg(path)
             try:
-                config.unmount(path)
+                instance.unmount(path)
                 if args.destroy:
-                    config.destroy_mount(path)
+                    instance.destroy_mount(path)
             except (EdenService.EdenError, EdenNotRunningError) as ex:
                 print_stderr(f"error: {ex}")
                 return 1
@@ -750,14 +751,14 @@ class StartCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
 
-        if args.if_necessary and not config.get_mount_paths():
+        if args.if_necessary and not instance.get_mount_paths():
             print("No Eden mount points configured.")
             return 0
 
         daemon.exec_daemon(
-            config,
+            instance,
             args.daemon_binary,
             args.edenfs_args,
             takeover=args.takeover,
@@ -845,18 +846,18 @@ class RestartCmd(Subcmd):
             # Default to a full restart for now
             args.restart_type = RESTART_MODE_FULL
 
-        config = create_config(self.args)
+        instance = get_eden_instance(self.args)
 
-        health = config.check_health()
+        health = instance.check_health()
         if health.is_healthy():
             assert health.pid is not None
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
-                return self._graceful_restart(config)
+                return self._graceful_restart(instance)
             else:
-                return self._full_restart(config, health.pid)
+                return self._full_restart(instance, health.pid)
         elif health.pid is None:
             # The daemon is not running
-            return self._start(config)
+            return self._start(instance)
         else:
             if health.status == fb_status.STARTING:
                 print(
@@ -889,19 +890,21 @@ class RestartCmd(Subcmd):
             if self.args.restart_type != RESTART_MODE_FORCE:
                 print(f"Use --force if you want to forcibly restart the current daemon")
                 return 1
-            return self._force_restart(config, health.pid, stop_timeout)
+            return self._force_restart(instance, health.pid, stop_timeout)
 
-    def _graceful_restart(self, config: config_mod.Config) -> int:
+    def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
-        daemon.exec_daemon(config, daemon_binary=self.args.daemon_binary, takeover=True)
+        daemon.exec_daemon(
+            instance, daemon_binary=self.args.daemon_binary, takeover=True
+        )
         return 1  # never reached
 
-    def _start(self, config: config_mod.Config) -> int:
+    def _start(self, instance: EdenInstance) -> int:
         print("Eden is not currently running.  Starting it...")
-        daemon.exec_daemon(config, daemon_binary=self.args.daemon_binary)
+        daemon.exec_daemon(instance, daemon_binary=self.args.daemon_binary)
         return 1  # never reached
 
-    def _full_restart(self, config: config_mod.Config, old_pid: int) -> int:
+    def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
         print(
             """\
 About to perform a full restart of Eden.
@@ -915,31 +918,31 @@ re-open these files after Eden is restarted.
                 print("Not confirmed.")
                 return 1
 
-        self._do_stop(config, old_pid, timeout=15)
-        return self._finish_restart(config)
+        self._do_stop(instance, old_pid, timeout=15)
+        return self._finish_restart(instance)
 
     def _force_restart(
-        self, config: config_mod.Config, old_pid: int, stop_timeout: int
+        self, instance: EdenInstance, old_pid: int, stop_timeout: int
     ) -> int:
         print("Forcing a full restart...")
         if stop_timeout <= 0:
             print("Sending SIGTERM...")
             os.kill(old_pid, signal.SIGTERM)
-            self._wait_for_stop(config, old_pid, timeout=5)
+            self._wait_for_stop(instance, old_pid, timeout=5)
         else:
-            self._do_stop(config, old_pid, stop_timeout)
+            self._do_stop(instance, old_pid, stop_timeout)
 
-        return self._finish_restart(config)
+        return self._finish_restart(instance)
 
-    def _wait_for_stop(self, config: config_mod.Config, pid: int, timeout: int) -> None:
+    def _wait_for_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:
         # If --shutdown-timeout was specified on the command line that always takes
         # precedence over the default timeout passed in by our caller.
         if self.args.shutdown_timeout is not None:
             timeout = self.args.shutdown_timeout
-        daemon.wait_for_shutdown(config, pid, timeout=timeout)
+        daemon.wait_for_shutdown(instance, pid, timeout=timeout)
 
-    def _do_stop(self, config: config_mod.Config, pid: int, timeout: int) -> None:
-        with config.get_thrift_client() as client:
+    def _do_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:
+        with instance.get_thrift_client() as client:
             try:
                 stop_aux_processes(client)
             except Exception as ex:
@@ -952,10 +955,10 @@ re-open these files after Eden is restarted.
             except Exception as ex:
                 print("Sending SIGTERM...")
                 os.kill(pid, signal.SIGTERM)
-        self._wait_for_stop(config, pid, timeout)
+        self._wait_for_stop(instance, pid, timeout)
 
-    def _finish_restart(self, config: config_mod.Config) -> int:
-        exit_code = daemon.start_daemon(config, daemon_binary=self.args.daemon_binary)
+    def _finish_restart(self, instance: EdenInstance) -> int:
+        exit_code = daemon.start_daemon(instance, daemon_binary=self.args.daemon_binary)
         if exit_code != 0:
             print("Failed to start edenfs!", file=sys.stderr)
             return exit_code
@@ -984,9 +987,9 @@ class RageCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         rage_processor = None
-        config = create_config(args)
+        instance = get_eden_instance(args)
         try:
-            rage_processor = config.get_config_value("rage.reporter")
+            rage_processor = instance.get_config_value("rage.reporter")
         except KeyError:
             pass
 
@@ -998,7 +1001,7 @@ class RageCmd(Subcmd):
             proc = None
             sink = sys.stdout.buffer
 
-        rage_mod.print_diagnostic_info(config, sink)
+        rage_mod.print_diagnostic_info(instance, sink)
         if proc:
             sink.close()
             proc.wait()
@@ -1027,9 +1030,9 @@ class StopCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        config = create_config(args)
+        instance = get_eden_instance(args)
         try:
-            with config.get_thrift_client() as client:
+            with instance.get_thrift_client() as client:
                 pid = client.getPid()
                 stop_aux_processes(client)
                 # Ask the client to shutdown
@@ -1046,7 +1049,7 @@ class StopCmd(Subcmd):
             return SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
 
         try:
-            if daemon.wait_for_shutdown(config, pid, timeout=args.timeout):
+            if daemon.wait_for_shutdown(instance, pid, timeout=args.timeout):
                 print_stderr("edenfs exited cleanly.")
                 return SHUTDOWN_EXIT_CODE_NORMAL
             else:
@@ -1060,8 +1063,12 @@ class StopCmd(Subcmd):
 def create_parser() -> argparse.ArgumentParser:
     """Returns a parser"""
     parser = argparse.ArgumentParser(description="Manage Eden checkouts.")
+    # TODO: We should probably rename this argument to --state-dir.
+    # This directory contains materialized file state and the list of managed checkouts,
+    # but doesn't really contain configuration.
     parser.add_argument(
-        "--config-dir", help="Path to directory where internal data is stored."
+        "--config-dir",
+        help="The path to the directory where edenfs stores its internal state.",
     )
     parser.add_argument(
         "--etc-eden-dir",

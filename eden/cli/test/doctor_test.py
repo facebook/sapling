@@ -22,12 +22,12 @@ from textwrap import dedent
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 from unittest.mock import call, patch
 
-import eden.cli.config as config_mod
 import eden.cli.doctor as doctor
 import eden.cli.ui
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import filesystem, mtab
+from eden.cli.config import EdenInstance, HealthStatus
 from fb303.ttypes import fb_status
 
 
@@ -95,12 +95,12 @@ class DoctorTest(DoctorTestBase):
     ):
         side_effects: List[Dict[str, Any]] = []
         calls = []
-        config = FakeConfig(self._create_tmp_dir())
+        instance = FakeEdenInstance(self._create_tmp_dir())
 
         # In edenfs_path1, we will break the snapshot check.
         edenfs_path1_snapshot = "abcd" * 10
         edenfs_path1_dirstate_parent = "12345678" * 5
-        edenfs_path1 = config.create_test_mount(
+        edenfs_path1 = instance.create_test_mount(
             "path1",
             snapshot=edenfs_path1_snapshot,
             dirstate_parent=edenfs_path1_dirstate_parent,
@@ -108,12 +108,12 @@ class DoctorTest(DoctorTestBase):
 
         # In edenfs_path2, we will break the inotify check and the Nuclide
         # subscriptions check.
-        edenfs_path2 = config.create_test_mount(
+        edenfs_path2 = instance.create_test_mount(
             "path2", scm_type="git", setup_path=False
         )
 
         # In edenfs_path3, we do not create the .hg directory
-        edenfs_path3 = config.create_test_mount("path3", setup_path=False)
+        edenfs_path3 = instance.create_test_mount("path3", setup_path=False)
         os.makedirs(edenfs_path3)
 
         # Assume all paths are used as root folders in a connected Nuclide.
@@ -161,9 +161,9 @@ class DoctorTest(DoctorTestBase):
         dry_run = False
 
         exit_code = doctor.cure_what_ails_you(
-            config,
+            instance,
             dry_run,
-            config.mount_table,
+            instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
             out=out,
         )
@@ -221,9 +221,9 @@ https://fb.facebook.com/groups/eden.users/
     def test_not_all_mounts_have_watchman_watcher(
         self, mock_get_roots_for_nuclide, mock_watchman
     ):
-        config = FakeConfig(self._create_tmp_dir())
-        edenfs_path = config.create_test_mount("eden-mount", scm_type="git")
-        edenfs_path_not_watched = config.create_test_mount(
+        instance = FakeEdenInstance(self._create_tmp_dir())
+        edenfs_path = instance.create_test_mount("eden-mount", scm_type="git")
+        edenfs_path_not_watched = instance.create_test_mount(
             "eden-mount-not-watched", scm_type="git"
         )
         side_effects: List[Dict[str, Any]] = []
@@ -238,9 +238,9 @@ https://fb.facebook.com/groups/eden.users/
         out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
-            config,
+            instance,
             dry_run,
-            mount_table=config.mount_table,
+            mount_table=instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
             out=out,
         )
@@ -257,12 +257,16 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor._call_watchman")
     @patch("eden.cli.doctor._get_roots_for_nuclide")
     def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman):
-        config = FakeConfig(self._create_tmp_dir(), is_healthy=False)
+        instance = FakeEdenInstance(self._create_tmp_dir(), is_healthy=False)
 
         out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
-            config, dry_run, FakeMountTable(), fs_util=filesystem.LinuxFsUtil(), out=out
+            instance,
+            dry_run,
+            FakeMountTable(),
+            fs_util=filesystem.LinuxFsUtil(),
+            out=out,
         )
 
         self.assertEqual("Eden is not in use.\n", out.getvalue())
@@ -271,13 +275,17 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor._call_watchman")
     @patch("eden.cli.doctor._get_roots_for_nuclide")
     def test_edenfs_not_running(self, mock_get_roots_for_nuclide, mock_watchman):
-        config = FakeConfig(self._create_tmp_dir(), is_healthy=False)
-        config.create_test_mount("eden-mount")
+        instance = FakeEdenInstance(self._create_tmp_dir(), is_healthy=False)
+        instance.create_test_mount("eden-mount")
 
         out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
-            config, dry_run, FakeMountTable(), fs_util=filesystem.LinuxFsUtil(), out=out
+            instance,
+            dry_run,
+            FakeMountTable(),
+            fs_util=filesystem.LinuxFsUtil(),
+            out=out,
         )
 
         self.assertEqual(
@@ -636,7 +644,7 @@ to bring the mercurial state back in sync.
         side_effects.append(rpm_value)
         mock_rpm_q.side_effect = side_effects
 
-        config = FakeConfig(
+        instance = FakeEdenInstance(
             self._create_tmp_dir(),
             build_info={
                 "build_package_version": "20171213",
@@ -644,7 +652,7 @@ to bring the mercurial state back in sync.
             },
         )
         fixer, out = self.create_fixer(dry_run=False)
-        doctor.check_edenfs_version(fixer, typing.cast(config_mod.Config, config))
+        doctor.check_edenfs_version(fixer, typing.cast(EdenInstance, instance))
         mock_rpm_q.assert_has_calls(calls)
         return fixer, out.getvalue()
 
@@ -652,18 +660,18 @@ to bring the mercurial state back in sync.
     def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide):
         # If Eden advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
-        config = FakeConfig(self._create_tmp_dir())
-        edenfs_path1 = config.create_test_mount("path1")
-        edenfs_path2 = config.create_test_mount("path2")
-        # Remove path2 from the list of mounts in the config
-        del config._mount_paths[edenfs_path2]
+        instance = FakeEdenInstance(self._create_tmp_dir())
+        edenfs_path1 = instance.create_test_mount("path1")
+        edenfs_path2 = instance.create_test_mount("path2")
+        # Remove path2 from the list of mounts in the instance
+        del instance._mount_paths[edenfs_path2]
 
         dry_run = False
         out = TestOutput()
         exit_code = doctor.cure_what_ails_you(
-            config,
+            instance,
             dry_run,
-            config.mount_table,
+            instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
             out=out,
         )
@@ -716,17 +724,17 @@ Checking {mounts[0]}
         currently mounted.
         """
         self._tmp_dir = self._create_tmp_dir()
-        config = FakeConfig(self._tmp_dir)
+        instance = FakeEdenInstance(self._tmp_dir)
 
         mounts = []
-        mounts.append(config.create_test_mount("path1"))
-        mounts.append(config.create_test_mount("path2", active=False))
+        mounts.append(instance.create_test_mount("path1"))
+        mounts.append(instance.create_test_mount("path2", active=False))
 
         out = TestOutput()
         exit_code = doctor.cure_what_ails_you(
-            typing.cast(config_mod.Config, config),
+            typing.cast(EdenInstance, instance),
             dry_run,
-            config.mount_table,
+            instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
             out=out,
         )
@@ -739,14 +747,14 @@ class BindMountsCheckTest(DoctorTestBase):
     def setUp(self):
         tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
         self.addCleanup(shutil.rmtree, tmp_dir)
-        self.config = FakeConfig(tmp_dir, is_healthy=True)
+        self.instance = FakeEdenInstance(tmp_dir, is_healthy=True)
 
         self.dot_eden_path = os.path.join(tmp_dir, ".eden")
         self.clients_path = os.path.join(self.dot_eden_path, "clients")
 
         self.fbsource_client = os.path.join(self.clients_path, "fbsource")
         self.fbsource_bind_mounts = os.path.join(self.fbsource_client, "bind-mounts")
-        self.edenfs_path1 = self.config.create_test_mount(
+        self.edenfs_path1 = self.instance.create_test_mount(
             "path1",
             bind_mounts={
                 "fbcode-buck-out": "fbcode/buck-out",
@@ -779,8 +787,8 @@ class BindMountsCheckTest(DoctorTestBase):
         doctor.check_bind_mounts(
             fixer,
             self.edenfs_path1,
-            self.config,
-            self.config.get_client_info(self.edenfs_path1),
+            self.instance,
+            self.instance.get_client_info(self.edenfs_path1),
             mount_table=mount_table,
             fs_util=fs_util,
         )
@@ -1760,7 +1768,7 @@ class FakeClient:
         return self._mounts
 
 
-class FakeConfig:
+class FakeEdenInstance:
     def __init__(
         self,
         tmp_dir: str,
@@ -1876,9 +1884,9 @@ class FakeConfig:
         assert path in self._mount_paths
         return 0
 
-    def check_health(self) -> config_mod.HealthStatus:
+    def check_health(self) -> HealthStatus:
         status = fb_status.ALIVE if self._is_healthy else fb_status.STOPPED
-        return config_mod.HealthStatus(status, pid=None, detail="")
+        return HealthStatus(status, pid=None, detail="")
 
     def get_client_info(self, mount_path: str) -> Dict[str, str]:
         return self._mount_paths[mount_path]

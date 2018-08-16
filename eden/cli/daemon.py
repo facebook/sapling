@@ -14,12 +14,12 @@ import subprocess
 import sys
 from typing import Dict, List, NoReturn, Optional, Tuple, Union
 
-from . import config as config_mod
+from .config import EdenInstance
 from .util import ShutdownError, poll_until, print_stderr
 
 
 def wait_for_shutdown(
-    config: config_mod.Config, pid: int, timeout: float, kill_timeout: float = 5.0
+    instance: EdenInstance, pid: int, timeout: float, kill_timeout: float = 5.0
 ) -> bool:
     """
     Wait for a process to exit.
@@ -104,7 +104,7 @@ def _find_default_daemon_binary() -> Optional[str]:
 
 
 def exec_daemon(
-    config: config_mod.Config,
+    instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
     takeover: bool = False,
@@ -119,7 +119,7 @@ def exec_daemon(
     It does not return on success.  It may throw an exception on error.
     """
     result = _get_daemon_args(
-        config=config,
+        instance=instance,
         daemon_binary=daemon_binary,
         edenfs_args=edenfs_args,
         takeover=takeover,
@@ -136,13 +136,13 @@ def exec_daemon(
 
 
 def start_daemon(
-    config: config_mod.Config,
+    instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
 ) -> int:
     """Start the edenfs daemon."""
     result = _get_daemon_args(
-        config=config, daemon_binary=daemon_binary, edenfs_args=edenfs_args
+        instance=instance, daemon_binary=daemon_binary, edenfs_args=edenfs_args
     )
     if isinstance(result, int):
         return result
@@ -152,7 +152,7 @@ def start_daemon(
 
 
 def _get_daemon_args(
-    config: config_mod.Config,
+    instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
     takeover: bool = False,
@@ -175,7 +175,7 @@ def _get_daemon_args(
     if edenfs_args and edenfs_args[0] == "--":
         edenfs_args = edenfs_args[1:]
 
-    return config.get_edenfs_start_cmd(
+    return instance.get_edenfs_start_cmd(
         valid_daemon_binary,
         edenfs_args,
         takeover=takeover,

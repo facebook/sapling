@@ -15,7 +15,8 @@ import sys
 import textwrap
 from typing import Dict, List, Optional, Union, cast
 
-from . import cmd_util, config as config_mod, stats_print, subcmd as subcmd_mod
+from . import cmd_util, stats_print, subcmd as subcmd_mod
+from .config import EdenInstance
 from .subcmd import Subcmd
 
 
@@ -35,11 +36,11 @@ stdoutWrapper = cast(io.TextIOWrapper, sys.stdout)
 # Shows information like memory usage, list of mount points and number of inodes
 # loaded, unloaded, and materialized in the mount points, etc.
 def do_stats_general(
-    config: config_mod.Config, out: io.TextIOWrapper = stdoutWrapper
+    instance: EdenInstance, out: io.TextIOWrapper = stdoutWrapper
 ) -> None:
     stats_print.write_heading("General EdenFS Statistics", out)
 
-    with config.get_thrift_client() as client:
+    with instance.get_thrift_client() as client:
         diag_info = client.getStatInfo()
 
         private_dirty_bytes = diag_info.privateBytes
@@ -94,9 +95,9 @@ class MemoryCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout
         stats_print.write_heading("Memory Stats for EdenFS", out)
-        config = cmd_util.create_config(args)
+        instance = cmd_util.get_eden_instance(args)
 
-        with config.get_thrift_client() as client:
+        with instance.get_thrift_client() as client:
             diag_info = client.getStatInfo()
             stats_print.write_mem_status_table(diag_info.counters, out)
 
@@ -141,8 +142,8 @@ class IoCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout
         stats_print.write_heading("Counts of I/O operations performed in EdenFs", out)
-        config = cmd_util.create_config(args)
-        with config.get_thrift_client() as client:
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
             diag_info = client.getStatInfo()
 
         # If the arguments has --all flag, we will have args.all set to
@@ -207,8 +208,8 @@ class LatencyCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout
-        config = cmd_util.create_config(args)
-        with config.get_thrift_client() as client:
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
             diag_info = client.getStatInfo()
 
         table = get_fuse_latency(diag_info.counters, args.all)
@@ -268,8 +269,8 @@ class ThriftCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout
         stats_print.write_heading("Counts of Thrift calls performed in EdenFs", out)
-        config = cmd_util.create_config(args)
-        with config.get_thrift_client() as client:
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
             diag_info = client.getStatInfo()
 
         thrift_counters = get_thrift_counters(diag_info.counters)
@@ -306,6 +307,6 @@ class StatsCmd(Subcmd):
         self.add_subcommands(parser, stats_cmd.commands)
 
     def run(self, args: argparse.Namespace) -> int:
-        config = cmd_util.create_config(args)
-        do_stats_general(config)
+        instance = cmd_util.get_eden_instance(args)
+        do_stats_general(instance)
         return 0
