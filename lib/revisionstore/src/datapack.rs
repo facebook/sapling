@@ -402,7 +402,7 @@ impl<'a> Iterator for DataPackIterator<'a> {
         Some(match entry {
             Ok(ref e) => {
                 self.offset = e.next_offset;
-                Ok(Key::new(e.filename.to_vec().into_boxed_slice(), e.node))
+                Ok(Key::new(Box::from(e.filename), e.node))
             }
             Err(e) => Err(e),
         })

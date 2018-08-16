@@ -45,7 +45,7 @@ impl MutableHistoryPack {
         // To get the inner map, then insert our new NodeInfo. Unfortunately it requires
         // key.name().clone() though. So we have to do it the long way to avoid the allocation.
         let entries = self.mem_index
-            .entry(key.name().to_vec().into_boxed_slice())
+            .entry(Box::from(key.name()))
             .or_insert_with(|| HashMap::new());
         entries.insert(key.clone(), info.clone());
         Ok(())
