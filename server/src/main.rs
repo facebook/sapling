@@ -33,7 +33,6 @@ extern crate panichandler;
 extern crate ready_state;
 extern crate repo_listener;
 
-mod errors;
 mod monitoring;
 
 use std::io;
@@ -51,6 +50,9 @@ use blobrepo::BlobRepo;
 use mercurial_types::RepositoryId;
 use metaconfig::RepoConfigs;
 
+mod errors {
+    pub use failure::{Error, Result};
+}
 use errors::*;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
