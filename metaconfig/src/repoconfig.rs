@@ -91,6 +91,11 @@ pub enum RepoType {
     /// Revlog repository with path pointing to on-disk checkout of repository
     Revlog(PathBuf),
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
+    ///
+    ///
+    /// NOTE: this is read-only and for development/testing only. Production uses will break things.
+    BlobFiles(PathBuf),
+    /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database
     BlobRocks(PathBuf),
     /// Blob repository with path pointing to the directory where a server socket is going to be.

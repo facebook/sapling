@@ -21,7 +21,7 @@ use tempdir::TempDir;
 use tokio_process::CommandExt;
 
 use blobrepo::BlobRepo;
-use cmdlib::{args::setup_blobrepo_dir, blobimport_lib::Blobimport};
+use cmdlib::{args::setup_repo_dir, blobimport_lib::Blobimport};
 use mercurial_types::RepositoryId;
 
 const CLONE_CMD: &'static str = "clone";
@@ -319,7 +319,7 @@ fn clone(dest: PathBuf) -> BoxFuture<(), Error> {
 }
 
 fn import(logger: Logger, src: PathBuf, dest: PathBuf) -> BoxFuture<(), Error> {
-    try_boxfuture!(setup_blobrepo_dir(&dest, true));
+    try_boxfuture!(setup_repo_dir(&dest, true));
     let blobrepo = Arc::new(try_boxfuture!(BlobRepo::new_rocksdb(
         logger.new(o!["BlobRepo:Rocksdb" => dest.to_string_lossy().into_owned()]),
         &dest,

@@ -33,7 +33,6 @@ mod config_repo;
 
 use std::fmt;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use clap::{App, Arg, SubCommand};
 use failure::{err_msg, Error, Result};
@@ -137,10 +136,7 @@ fn fetch_content_from_manifest(
     }
 }
 
-fn resolve_hg_rev(
-    repo: &Arc<BlobRepo>,
-    rev: &str,
-) -> impl Future<Item = HgChangesetId, Error = Error> {
+fn resolve_hg_rev(repo: &BlobRepo, rev: &str) -> impl Future<Item = HgChangesetId, Error = Error> {
     let book = Bookmark::new(&rev).unwrap();
     let hash = HgChangesetId::from_str(rev);
 
@@ -154,12 +150,12 @@ fn resolve_hg_rev(
 
 fn fetch_content(
     logger: Logger,
-    repo: Arc<BlobRepo>,
+    repo: &BlobRepo,
     rev: &str,
     path: &str,
 ) -> BoxFuture<Content, Error> {
     let path = try_boxfuture!(MPath::new(path));
-    let resolved_cs_id = resolve_hg_rev(&repo, rev);
+    let resolved_cs_id = resolve_hg_rev(repo, rev);
 
     let mf = resolved_cs_id
         .and_then({
@@ -196,9 +192,9 @@ fn fetch_content(
 
 fn fetch_bonsai_changeset(
     rev: &str,
-    repo: Arc<BlobRepo>,
+    repo: &BlobRepo,
 ) -> impl Future<Item = BonsaiChangeset, Error = Error> {
-    let hg_changeset_id = resolve_hg_rev(&repo, rev);
+    let hg_changeset_id = resolve_hg_rev(repo, rev);
 
     hg_changeset_id
         .and_then({
@@ -209,7 +205,10 @@ fn fetch_bonsai_changeset(
             let rev = rev.to_string();
             move |maybe_bonsai| maybe_bonsai.ok_or(err_msg(format!("bonsai not found for {}", rev)))
         })
-        .and_then(move |bonsai| repo.get_bonsai_changeset(bonsai))
+        .and_then({
+            cloned!(repo);
+            move |bonsai| repo.get_bonsai_changeset(bonsai)
+        })
 }
 
 fn get_cache<B: CacheBlobstoreExt>(
@@ -299,8 +298,8 @@ fn main() {
 
             args::init_cachelib(&matches);
 
-            let repo = args::open_blobrepo(&logger, &matches);
-            fetch_bonsai_changeset(rev, Arc::new(repo))
+            let repo = args::open_repo(&logger, &matches);
+            fetch_bonsai_changeset(rev, repo.blobrepo())
                 .map(|bcs| {
                     println!("{:?}", bcs);
                 })
@@ -312,8 +311,8 @@ fn main() {
 
             args::init_cachelib(&matches);
 
-            let repo = args::open_blobrepo(&logger, &matches);
-            fetch_content(logger.clone(), Arc::new(repo), rev, path)
+            let repo = args::open_repo(&logger, &matches);
+            fetch_content(logger.clone(), repo.blobrepo(), rev, path)
                 .and_then(|content| {
                     match content {
                         Content::Executable(_) => {

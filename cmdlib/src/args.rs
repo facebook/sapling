@@ -6,7 +6,7 @@
 
 use std::cmp::min;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use clap::{App, Arg, ArgMatches};
@@ -20,8 +20,10 @@ use sloggers::types::{Format, Severity, SourceLocation};
 use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
-use blobrepo::{BlobRepo, ManifoldArgs};
+use blobrepo::ManifoldArgs;
 use mercurial_types::RepositoryId;
+use metaconfig::RepoType;
+use repo_client::MononokeRepo;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -227,19 +229,19 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {
     RepositoryId::new(repo_id as i32)
 }
 
-/// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
+/// Create a new `MononokeRepo` -- for local instances, expect its contents to be empty.
 #[inline]
-pub fn create_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
-    open_blobrepo_internal(logger, matches, true)
+pub fn create_repo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> MononokeRepo {
+    open_repo_internal(logger, matches, true)
 }
 
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
 #[inline]
-pub fn open_blobrepo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> BlobRepo {
-    open_blobrepo_internal(logger, matches, false)
+pub fn open_repo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> MononokeRepo {
+    open_repo_internal(logger, matches, false)
 }
 
-pub fn setup_blobrepo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
+pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
     let data_dir = data_dir.as_ref();
 
     if !data_dir.is_dir() {
@@ -392,10 +394,10 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
     ).unwrap();
 }
 
-fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: bool) -> BlobRepo {
+fn open_repo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: bool) -> MononokeRepo {
     let repo_id = get_repo_id(matches);
 
-    match matches.value_of("blobstore") {
+    let (logger, repo_type) = match matches.value_of("blobstore") {
         Some("files") => {
             let data_dir = matches
                 .value_of("data-dir")
@@ -403,13 +405,12 @@ fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create:
             let data_dir = Path::new(data_dir)
                 .canonicalize()
                 .expect("Failed to read local directory path");
-            setup_blobrepo_dir(&data_dir, create).expect("Setting up file blobrepo failed");
+            setup_repo_dir(&data_dir, create).expect("Setting up file blobrepo failed");
 
-            BlobRepo::new_files(
-                logger.new(o!["BlobRepo:Files" => data_dir.to_string_lossy().into_owned()]),
-                &data_dir,
-                repo_id,
-            ).expect("failed to create file blobrepo")
+            let logger =
+                logger.new(o!["BlobRepo:Files" => data_dir.to_string_lossy().into_owned()]);
+            let repo_type = RepoType::BlobFiles(data_dir);
+            (logger, repo_type)
         }
         Some("rocksdb") => {
             let data_dir = matches
@@ -418,25 +419,29 @@ fn open_blobrepo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create:
             let data_dir = Path::new(data_dir)
                 .canonicalize()
                 .expect("Failed to read local directory path");
-            setup_blobrepo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
+            setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
 
-            BlobRepo::new_rocksdb(
-                logger.new(o!["BlobRepo:Rocksdb" => data_dir.to_string_lossy().into_owned()]),
-                &data_dir,
-                repo_id,
-            ).expect("failed to create rocksdb blobrepo")
+            let logger =
+                logger.new(o!["BlobRepo:Rocksdb" => data_dir.to_string_lossy().into_owned()]);
+            let repo_type = RepoType::BlobRocks(data_dir);
+            (logger, repo_type)
         }
         None | Some("manifold") => {
             let manifold_args = parse_manifold_args(&matches);
 
-            BlobRepo::new_manifold(
-                logger.new(o!["BlobRepo:TestManifold" => manifold_args.bucket.clone()]),
-                &manifold_args,
-                repo_id,
-            ).expect("failed to create manifold blobrepo")
+            let logger = logger.new(o!["BlobRepo:TestManifold" => manifold_args.bucket.clone()]);
+            let repo_type = RepoType::BlobManifold {
+                args: manifold_args,
+                // The path isn't actually used at all.
+                path: PathBuf::default(),
+            };
+            (logger, repo_type)
         }
         Some(bad) => panic!("unexpected blobstore type: {}", bad),
-    }
+    };
+
+    // TODO fixup imports
+    MononokeRepo::new_with_name(logger, &repo_type, repo_id, "repo").expect("failed to setup repo")
 }
 
 pub fn parse_manifold_args<'a>(matches: &ArgMatches<'a>) -> ManifoldArgs {

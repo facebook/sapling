@@ -81,7 +81,7 @@ fn main() {
     let matches = setup_app().get_matches();
     let logger = args::get_logger(&matches);
     args::init_cachelib(&matches);
-    let repo = args::open_blobrepo(&logger, &matches);
+    let repo = args::open_repo(&logger, &matches);
 
     let config = config::get_config(&matches).expect("getting configuration failed");
     let start_points = get_start_points(&matches);
@@ -108,7 +108,7 @@ fn main() {
         move || {
             let bonsai_verify = BonsaiMFVerify {
                 logger: logger.clone(),
-                repo,
+                repo: repo.blobrepo().clone(),
                 follow_limit,
                 ignores: config.ignores.into_iter().collect(),
                 broken_merges_before: config.broken_merges_before,
