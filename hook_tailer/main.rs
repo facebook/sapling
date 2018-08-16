@@ -57,6 +57,7 @@ use slog_scuba::ScubaDrain;
 use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 use tailer::Tailer;
 use tokio_timer::sleep;
@@ -92,7 +93,8 @@ fn main() -> Result<()> {
 
     let tailer = Tailer::new(
         repo_name.to_string(),
-        mononoke_repo.blobrepo(),
+        // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
+        Arc::new(mononoke_repo.blobrepo().clone()),
         config.clone(),
         bookmark,
         manifold_client.clone(),

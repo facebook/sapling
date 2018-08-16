@@ -6,7 +6,6 @@
 
 use std::fmt::{self, Debug};
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Duration;
 
 use rand::Isaac64Rng;
@@ -27,7 +26,7 @@ struct LogNormalGenerator {
 #[derive(Clone)]
 pub struct MononokeRepo {
     log_name: String,
-    blobrepo: Arc<BlobRepo>,
+    blobrepo: BlobRepo,
 }
 
 impl MononokeRepo {
@@ -47,7 +46,7 @@ impl MononokeRepo {
         let log_name = log_name.into();
         Ok(MononokeRepo {
             log_name,
-            blobrepo: Arc::new(repo.open(logger, repoid)?),
+            blobrepo: repo.open(logger, repoid)?,
         })
     }
 
@@ -56,8 +55,9 @@ impl MononokeRepo {
         self.log_name.as_ref()
     }
 
-    pub fn blobrepo(&self) -> Arc<BlobRepo> {
-        self.blobrepo.clone()
+    #[inline]
+    pub fn blobrepo(&self) -> &BlobRepo {
+        &self.blobrepo
     }
 }
 

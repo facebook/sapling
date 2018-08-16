@@ -189,7 +189,7 @@ impl RepoClient {
         // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(None);
 
-        let blobrepo = self.repo.blobrepo();
+        let blobrepo = Arc::new(self.repo.blobrepo().clone());
 
         let common_heads: HashSet<_> = HashSet::from_iter(args.common.iter());
 
@@ -327,10 +327,10 @@ impl RepoClient {
                 move |entry| used_hashes.insert(*entry.0.get_hash())
             })
             .map({
-                let blobrepo = self.repo.blobrepo();
+                let blobrepo = self.repo.blobrepo().clone();
                 let trace = self.trace().clone();
                 move |(entry, basepath)| {
-                    fetch_treepack_part_input(blobrepo.clone(), entry, basepath, trace.clone())
+                    fetch_treepack_part_input(&blobrepo, entry, basepath, trace.clone())
                 }
             });
 
@@ -453,7 +453,7 @@ impl HgCommands for RepoClient {
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
         info!(self.logger(), "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
-        let repo = self.repo.blobrepo();
+        let repo = self.repo.blobrepo().clone();
         let mut scuba_logger = self.scuba_logger(ops::LOOKUP, None);
 
         HgNodeHash::from_str(&key)
@@ -498,7 +498,7 @@ impl HgCommands for RepoClient {
         } else {
             info!(self.logger(), "known: {:?}", nodes);
         }
-        let blobrepo = self.repo.blobrepo();
+        let blobrepo = self.repo.blobrepo().clone();
 
         let mut scuba_logger = self.scuba_logger(ops::KNOWN, None);
 
@@ -604,7 +604,7 @@ impl HgCommands for RepoClient {
         let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
 
         let res = bundle2_resolver::resolve(
-            self.repo.blobrepo(),
+            Arc::new(self.repo.blobrepo().clone()),
             self.logger().new(o!("command" => "unbundle")),
             scuba_logger.clone(),
             heads,
@@ -659,12 +659,16 @@ impl HgCommands for RepoClient {
                 let mut scuba_logger = this.scuba_logger(ops::GETFILES, Some(args));
 
                 let repo = this.repo.clone();
-                create_remotefilelog_blob(repo.blobrepo(), node, path.clone(), trace.clone())
-                    .traced(
-                        this.trace(),
-                        ops::GETFILES,
-                        trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
-                    )
+                create_remotefilelog_blob(
+                    Arc::new(repo.blobrepo().clone()),
+                    node,
+                    path.clone(),
+                    trace.clone(),
+                ).traced(
+                    this.trace(),
+                    ops::GETFILES,
+                    trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
+                )
                     .timed(move |stats, _| {
                         STATS::getfiles_ms
                             .add_value(stats.completion_time.as_millis_unchecked() as i64);
@@ -680,7 +684,7 @@ impl HgCommands for RepoClient {
 }
 
 fn get_changed_entry_stream(
-    repo: Arc<BlobRepo>,
+    repo: &BlobRepo,
     mfid: &HgNodeHash,
     basemfid: &HgNodeHash,
     rootpath: Option<MPath>,
@@ -735,7 +739,7 @@ fn get_changed_entry_stream(
 }
 
 fn fetch_treepack_part_input(
-    repo: Arc<BlobRepo>,
+    repo: &BlobRepo,
     entry: Box<Entry + Sync>,
     basepath: Option<MPath>,
     trace: TraceContext,

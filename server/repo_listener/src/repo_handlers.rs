@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use failure::prelude::*;
 use futures::{future, Future};
@@ -54,9 +55,13 @@ pub fn repo_handlers(
             let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
             scuba_logger.add_common_server_data();
 
+            // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
             let initial_warmup =
-                cache_warmup(repo.blobrepo(), config.cache_warmup, listen_log.clone())
-                    .context(format!("while warming up cache for repo: {}", reponame))
+                cache_warmup(
+                    Arc::new(repo.blobrepo().clone()),
+                    config.cache_warmup,
+                    listen_log.clone(),
+                ).context(format!("while warming up cache for repo: {}", reponame))
                     .from_err();
             ready_handle.wait_for(initial_warmup).map(move |()| {
                 (
