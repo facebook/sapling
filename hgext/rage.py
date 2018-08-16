@@ -290,6 +290,7 @@ def _makerage(ui, repo, **opts):
         ("hg config (local)", lambda: "\n".join(localconfig(ui))),
         ("hg sparse", lambda: hgcmd("sparse")),
         ("usechg", (usechginfo)),
+        ("uptime", lambda: shcmd("uptime")),
         ("rpm info", (partial(rpminfo, ui))),
         ("klist", lambda: shcmd("klist", check=False)),
         ("ifconfig", lambda: shcmd("ifconfig")),
