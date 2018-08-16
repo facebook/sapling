@@ -24,6 +24,7 @@ from .third_party import hg_run_tests
 TESTDIR_PATH = 'scm/mononoke/tests/integration'
 
 MONONOKE_BLOBIMPORT_TARGET = '//scm/mononoke:blobimport'
+MONONOKE_BONSAI_VERIFY_TARGET = '//scm/mononoke:bonsai_verify'
 MONONOKE_APISERVER_TARGET = '//scm/mononoke/apiserver:apiserver'
 DUMMYSSH_TARGET = '//scm/mononoke/tests/integration:dummyssh'
 BINARY_HG_TARGET = '//scm/hg:hg'
@@ -112,6 +113,7 @@ def run(
     _fp, xunit_output = tempfile.mkstemp(dir=output)
 
     add_to_environ('MONONOKE_BLOBIMPORT', MONONOKE_BLOBIMPORT_TARGET)
+    add_to_environ('MONONOKE_BONSAI_VERIFY', MONONOKE_BONSAI_VERIFY_TARGET)
     add_to_environ(
         'DUMMYSSH', DUMMYSSH_TARGET, pathutils.BuildRuleTypes.PYTHON_BINARY
     )

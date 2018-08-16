@@ -137,6 +137,12 @@ function blobimport {
   $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb "$input" --data-dir "$output" "$@" >> "$TESTTMP/blobimport.out" 2>&1
 }
 
+function bonsai_verify {
+  repo="$1"
+  shift 1
+  $MONONOKE_BONSAI_VERIFY --repo_id 0 --blobstore rocksdb --data-dir "$repo" "$@"
+}
+
 function apiserver {
   $MONONOKE_APISERVER "$@" --config-path "$TESTTMP/mononoke-config-rocks" \
     --config-bookmark "local_master" \

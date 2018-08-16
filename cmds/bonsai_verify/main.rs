@@ -80,6 +80,7 @@ fn get_start_points<'a>(matches: &ArgMatches<'a>) -> Vec<HgChangesetId> {
 fn main() {
     let matches = setup_app().get_matches();
     let logger = args::get_logger(&matches);
+    args::init_cachelib(&matches);
     let repo = args::open_blobrepo(&logger, &matches);
 
     let config = config::get_config(&matches).expect("getting configuration failed");
