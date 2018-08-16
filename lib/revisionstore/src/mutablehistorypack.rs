@@ -63,8 +63,8 @@ impl MutableHistoryPack {
         hasher.input(&[version_u8]);
 
         // Store data for the index
-        let mut file_sections: Vec<(Box<[u8]>, FileSectionLocation)> = Default::default();
-        let mut nodes: HashMap<Box<[u8]>, HashMap<Key, NodeLocation>> = Default::default();
+        let mut file_sections: Vec<(&Box<[u8]>, FileSectionLocation)> = Default::default();
+        let mut nodes: HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>> = Default::default();
 
         // Write the historypack
         let mut section_buf = Vec::new();
@@ -88,7 +88,7 @@ impl MutableHistoryPack {
                 offset: section_offset,
                 size: section_buf.len() as u64,
             };
-            file_sections.push((file_name.clone(), section_location));
+            file_sections.push((file_name, section_location));
 
             section_offset += section_buf.len() as u64;
             section_buf.clear();
@@ -108,13 +108,13 @@ impl MutableHistoryPack {
         Ok(base_filepath)
     }
 
-    fn write_section(
+    fn write_section<'a>(
         &self,
         writer: &mut Vec<u8>,
-        file_name: &[u8],
+        file_name: &'a Box<[u8]>,
         node_map: &HashMap<Key, NodeInfo>,
         section_offset: usize,
-        nodes: &mut HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
+        nodes: &mut HashMap<&'a Box<[u8]>, HashMap<Key, NodeLocation>>,
     ) -> Result<()> {
         let mut node_locations = HashMap::<Key, NodeLocation>::with_capacity(node_map.len());
 
@@ -153,7 +153,7 @@ impl MutableHistoryPack {
             );
         }
 
-        nodes.insert(Box::from(file_name), node_locations);
+        nodes.insert(file_name, node_locations);
         Ok(())
     }
 }

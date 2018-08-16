@@ -178,8 +178,8 @@ impl HistoryIndex {
 
     pub fn write<T: Write>(
         writer: &mut T,
-        file_sections: &[(Box<[u8]>, FileSectionLocation)],
-        nodes: &HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
+        file_sections: &[(&Box<[u8]>, FileSectionLocation)],
+        nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
     ) -> Result<()> {
         // Write header
         let options = HistoryIndexOptions {
@@ -190,7 +190,7 @@ impl HistoryIndex {
 
         let mut file_sections: Vec<(&Box<[u8]>, Node, FileSectionLocation)> = file_sections
             .iter()
-            .map(|e| Ok((&e.0, sha1(&e.0), e.1.clone())))
+            .map(|e| Ok((e.0, sha1(&e.0), e.1.clone())))
             .collect::<Result<Vec<(&Box<[u8]>, Node, FileSectionLocation)>>>()?;
         // They must be written in sorted order so they can be bisected.
         file_sections.sort_by_key(|x| x.1);
@@ -211,7 +211,7 @@ impl HistoryIndex {
 
         // For each file, write a node index
         for &(file_name, ..) in file_sections.iter() {
-            <HistoryIndex>::write_node_section(writer, nodes, file_name.as_ref())?;
+            <HistoryIndex>::write_node_section(writer, nodes, file_name)?;
         }
 
         Ok(())
@@ -221,7 +221,7 @@ impl HistoryIndex {
         writer: &mut T,
         options: &HistoryIndexOptions,
         file_sections: &Vec<(&Box<[u8]>, Node, FileSectionLocation)>,
-        nodes: &HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
+        nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
     ) -> Result<()> {
         // For each file, keep track of where its node index will start.
         // The first ones starts after the header, fanout, file count, file section, and node count.
@@ -265,8 +265,8 @@ impl HistoryIndex {
 
     fn write_node_section<T: Write>(
         writer: &mut T,
-        nodes: &HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
-        file_name: &[u8],
+        nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
+        file_name: &Box<[u8]>,
     ) -> Result<()> {
         // Write the filename
         writer.write_u16::<BigEndian>(file_name.len() as u16)?;
@@ -406,8 +406,8 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn make_index(
-        file_sections: &[(Box<[u8]>, FileSectionLocation)],
-        nodes: &HashMap<Box<[u8]>, HashMap<Key, NodeLocation>>,
+        file_sections: &[(&Box<[u8]>, FileSectionLocation)],
+        nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
     ) -> HistoryIndex {
         let mut file = NamedTempFile::new().unwrap();
         HistoryIndex::write(&mut file, file_sections, nodes).unwrap();
@@ -457,33 +457,32 @@ mod tests {
         }
 
         fn test_roundtrip_index(data: Vec<(Vec<u8>, (FileSectionLocation, HashMap<Key, NodeLocation>))>) -> bool {
-            let mut file_sections: Vec<(Box<[u8]>, FileSectionLocation)> = vec![];
-            let mut file_nodes: HashMap<Box<[u8]>, HashMap<Key, NodeLocation>> = HashMap::new();
+            let data = data.iter().map(|(name, tuple)| (name.clone().into_boxed_slice(), tuple)).collect::<Vec<_>>();
+            let mut file_sections: Vec<(&Box<[u8]>, FileSectionLocation)> = vec![];
+            let mut file_nodes: HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>> = HashMap::new();
 
             let mut seen_files: HashSet<Box<[u8]>> = HashSet::new();
-            for &(ref name_vec, (ref location, ref nodes)) in data.iter() {
-                let name_slice = name_vec.clone().into_boxed_slice();
-
+            for &(ref name_slice, (ref location, ref nodes)) in data.iter() {
                 // Don't allow a filename to be used twice
-                if seen_files.contains(&name_slice) {
+                if seen_files.contains(name_slice) {
                     continue;
                 }
                 seen_files.insert(name_slice.clone());
 
-                file_sections.push((name_slice.clone(), location.clone()));
+                file_sections.push((name_slice, location.clone()));
                 let mut node_map: HashMap<Key, NodeLocation> = HashMap::new();
                 for (key, node_location) in nodes.iter() {
                     let key = Key::new(name_slice.clone(), key.node().clone());
                     node_map.insert(key, node_location.clone());
                 }
-                file_nodes.insert(name_slice.clone(), node_map);
+                file_nodes.insert(name_slice, node_map);
             }
 
             let index = make_index(&file_sections, &file_nodes);
 
             // Lookup each file section
             for &(ref name, ref location) in file_sections.iter() {
-                let entry = index.get_file_entry(&Key::new(name.clone(), Node::null_id().clone())).unwrap();
+                let entry = index.get_file_entry(&Key::new((*name).clone(), Node::null_id().clone())).unwrap();
                 assert_eq!(location.offset, entry.file_section_offset);
                 assert_eq!(location.size, entry.file_section_size);
             }
