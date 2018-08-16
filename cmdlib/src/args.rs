@@ -312,7 +312,7 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
 
     let mut cache_config = cachelib::LruCacheConfig::new(cache_size_bytes)
         .set_pool_rebalance(cachelib::PoolRebalanceConfig {
-            interval: Duration::new(10, 0),
+            interval: Duration::new(300, 0),
             strategy: cachelib::RebalanceStrategy::HitsPerSlab {
                 // A small increase in hit ratio is desired
                 diff_ratio: 0.05,
