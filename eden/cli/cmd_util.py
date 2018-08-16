@@ -18,22 +18,12 @@ from .config import EdenInstance
 # TODO: This value should be .eden outside of Facebook devservers.
 DEFAULT_CONFIG_DIR = "local/.eden"
 
-# Environment variable that can be used instead of specifying --config-dir.
-CONFIG_DIR_ENVIRONMENT_VARIABLE = "EDEN_CONFIG_DIR"
-
 
 def find_default_config_dir(home_dir: str) -> str:
     """Returns the path to default Eden config directory.
 
-    If the environment variable $EDEN_CONFIG_DIR is set, it takes precedence
-    over the default, which is "$HOME/.eden".
-
     Note that the path is not guaranteed to correspond to an existing directory.
     """
-    config_dir = os.getenv(CONFIG_DIR_ENVIRONMENT_VARIABLE)
-    if config_dir:
-        return config_dir
-
     return os.path.join(home_dir, DEFAULT_CONFIG_DIR)
 
 
