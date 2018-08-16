@@ -6,10 +6,6 @@
   > 
   > [phases]
   > publish=False
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
-  > tglogp = log -G --template "{rev}: {node|short} {phase} '{desc}' {branches}\n"
   > EOF
 
 Create repo a:
@@ -26,7 +22,7 @@ Create repo a:
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg tglog
+  $ tglog
   @  7: 02de42196ebe 'H'
   |
   | o  6: eea13746799a 'G'
@@ -82,7 +78,7 @@ Rebasing B onto H and collapsing changesets with different phases:
   ====
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg
 
-  $ hg tglogp
+  $ tglogp
   @  5: 30882080ba93 secret 'Collapsed revision
   |  * B
   |  * C
@@ -122,7 +118,7 @@ Rebasing E onto H:
   rebasing 6:eea13746799a "G"
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/9520eea781bc-fcd8edd4-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  6: 7dd333a2d1e4 'Collapsed revision
   |  * E
   |  * G'
@@ -165,7 +161,7 @@ Rebasing G onto H with custom message:
   HGEDITFORM=rebase.collapse
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/9520eea781bc-fcd8edd4-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  6: 38ed6a6b026b 'custom message'
   |
   @  5: 02de42196ebe 'H'
@@ -235,7 +231,7 @@ Create repo b:
   $ hg ci -Am H
   adding H
 
-  $ hg tglog
+  $ tglog
   @  7: c65502d41787 'H'
   |
   | o    6: c772a8b2dc17 'G'
@@ -272,7 +268,7 @@ Rebase and collapse - E onto H:
   rebasing 6:c772a8b2dc17 "G"
   saved backup bundle to $TESTTMP/b1/.hg/strip-backup/8a5212ebc852-75046b61-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o    5: f97c4725bd99 'Collapsed revision
   |\   * E
   | |  * F
@@ -387,7 +383,7 @@ Create repo c:
   $ hg ci -Am I
   adding I
 
-  $ hg tglog
+  $ tglog
   @  8: 46d6f0e29c20 'I'
   |
   | o    7: 417d3b648079 'H'
@@ -422,7 +418,7 @@ Rebase and collapse - E onto I:
   rebasing 7:417d3b648079 "H"
   saved backup bundle to $TESTTMP/c1/.hg/strip-backup/8a5212ebc852-f95d0879-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o    5: 340b34a63b39 'Collapsed revision
   |\   * E
   | |  * F
@@ -485,7 +481,7 @@ Create repo d:
   $ hg ci -Am F
   adding F
 
-  $ hg tglog
+  $ tglog
   @  5: c137c2b8081f 'F'
   |
   | o    4: 0a42590ed746 'E'
@@ -513,7 +509,7 @@ Rebase and collapse - B onto F:
   rebasing 4:0a42590ed746 "E"
   saved backup bundle to $TESTTMP/d1/.hg/strip-backup/27547f69f254-9a3f7d92-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  2: b72eaccb283f 'Collapsed revision
   |  * B
   |  * C
@@ -556,12 +552,12 @@ Interactions between collapse and keepbranches
   $ hg ci -Am 'D'
   adding d
 
-  $ hg tglog
+  $ tglog
   @  3: 41acb9dca9eb 'D'
   |
-  | o  2: 8ac4a08debf1 'C' two
+  | o  2: 8ac4a08debf1 'C'  two
   | |
-  | o  1: 1ba175478953 'B' one
+  | o  1: 1ba175478953 'B'  one
   |/
   o  0: 1994f17a630e 'A'
   
@@ -579,16 +575,16 @@ Interactions between collapse and keepbranches
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ repeatchange 3 "E" "user2"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg tglog
+  $ tglog
   @  5: fbfb97b1089a 'E'
   |
   | o  4: f338eb3c2c7c 'E'
   |/
   o  3: 41acb9dca9eb 'D'
   |
-  | o  2: 8ac4a08debf1 'C' two
+  | o  2: 8ac4a08debf1 'C'  two
   | |
-  | o  1: 1ba175478953 'B' one
+  | o  1: 1ba175478953 'B'  one
   |/
   o  0: 1994f17a630e 'A'
   
@@ -596,14 +592,14 @@ Interactions between collapse and keepbranches
   rebasing 5:fbfb97b1089a "E" (tip)
   note: rebase of 5:fbfb97b1089a created no changes to commit
   saved backup bundle to $TESTTMP/e/.hg/strip-backup/fbfb97b1089a-553e1d85-rebase.hg
-  $ hg tglog
+  $ tglog
   @  4: f338eb3c2c7c 'E'
   |
   o  3: 41acb9dca9eb 'D'
   |
-  | o  2: 8ac4a08debf1 'C' two
+  | o  2: 8ac4a08debf1 'C'  two
   | |
-  | o  1: 1ba175478953 'B' one
+  | o  1: 1ba175478953 'B'  one
   |/
   o  0: 1994f17a630e 'A'
   
@@ -637,7 +633,7 @@ Rebase, collapse and copies
   new changesets f447d5abf5ea:338e84e2e558
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up -q tip
-  $ hg tglog
+  $ tglog
   @  3: 338e84e2e558 'move2'
   |
   o  2: 6e7340ee38c0 'move1'
@@ -677,7 +673,7 @@ Rebase, collapse and copies
 
 Test collapsing a middle revision in-place
 
-  $ hg tglog
+  $ tglog
   @  2: 64b456429f67 'Collapsed revision
   |  * move1
   |  * move2'
@@ -738,7 +734,7 @@ Test stripping a revision with another child
   $ hg ci -Am C
   adding C
 
-  $ hg tglog
+  $ tglog
   @  2: c5cefa58fd55 'C'
   |
   | o  1: 27547f69f254 'B'
@@ -755,7 +751,7 @@ Test stripping a revision with another child
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/f/.hg/strip-backup/c5cefa58fd55-629429f4-backup.hg
 
-  $ hg tglog
+  $ tglog
   o  1: 27547f69f254 'B'
   |
   @  0: 4a2df7238c3b 'A'

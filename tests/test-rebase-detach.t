@@ -2,9 +2,6 @@
   > [extensions]
   > rebase=
   > 
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}'\n"
-  > 
   > [extensions]
   > EOF
 
@@ -63,7 +60,7 @@ Rebasing D onto B detaching from C (two commits):
   rebasing 4:69a34c08022a "E" (E tip)
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/e7b3f00ed42e-a2ec7cea-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  4: ee79e0744528 'E'
   |
   o  3: 10530e1d72d9 'D'
@@ -100,7 +97,7 @@ Rebasing C onto B using detach (same as not using it):
   rebasing 3:e7b3f00ed42e "D" (D tip)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/dc0947a82db8-b8481714-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  3: 7375f3dbfb0f 'D'
   |
   o  2: bbfdd6cb49aa 'C'
@@ -177,7 +174,7 @@ Rebasing across null as ancestor
   rebasing 4:69a34c08022a "E" (E tip)
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/dc0947a82db8-3eefec98-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  4: e3d0c70d606d 'E'
   |
   o  3: e9153d36a1af 'D'
@@ -192,7 +189,7 @@ Rebasing across null as ancestor
   rebasing 3:e9153d36a1af "D"
   rebasing 4:e3d0c70d606d "E" (tip)
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/e9153d36a1af-db7388ed-rebase.hg
-  $ hg tglog
+  $ tglog
   o  4: 2c24e540eccd 'E'
   |
   o  3: 73f786ed52ff 'D'
@@ -229,7 +226,7 @@ Verify that target is not selected as external rev (issue3085)
   $ hg ci -m "Merge"
   $ echo "J" >> F
   $ hg ci -m "J"
-  $ hg tglog
+  $ tglog
   @  7: c6aaf0d259c0 'J'
   |
   o    6: 0cfbc7e8faaf 'Merge'
@@ -252,7 +249,7 @@ Verify that target is not selected as external rev (issue3085)
   rebasing 7:c6aaf0d259c0 "J" (tip)
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/b92d164ad3cb-88fd7ab7-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  5: 65079693dac4 'Collapsed revision
   |  * I
   |  * Merge

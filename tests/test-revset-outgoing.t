@@ -1,7 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [alias]
   > tlog = log --template "{rev}:{node|short}: '{desc}' {branches}\n"
-  > tglog = tlog -G
   > tout = out --template "{rev}:{node|short}: '{desc}' {branches}\n"
   > EOF
 
@@ -22,12 +21,12 @@
   $ echo bar >> a
   $ hg ci -qm2
 
-  $ hg tglog
-  @  2:7bee6c3bea3a: '2' stable
+  $ tglog
+  @  2: 7bee6c3bea3a '2'  stable
   |
-  | o  1:3560197d8331: '1'
+  | o  1: 3560197d8331 '1'
   |/
-  o  0:f7b1eb17ad24: '0'
+  o  0: f7b1eb17ad24 '0'
   
 
   $ cd ..
@@ -59,14 +58,14 @@
   $ echo blue >> a
   $ hg ci -qm4
 
-  $ hg tglog
-  @  3:f0461977a3db: '4'
+  $ tglog
+  @  3: f0461977a3db '4'
   |
-  | o  2:1d4099801a4e: '3' stable
+  | o  2: 1d4099801a4e '3'  stable
   | |
-  | o  1:7bee6c3bea3a: '2' stable
+  | o  1: 7bee6c3bea3a '2'  stable
   |/
-  o  0:f7b1eb17ad24: '0'
+  o  0: f7b1eb17ad24 '0'
   
 
   $ hg tout

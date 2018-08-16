@@ -51,3 +51,11 @@ setconfig() {
 showgraph() {
   hg log --graph -T "{rev} {node|short} {desc|firstline}" | sed \$d
 }
+
+tglog() {
+  hg log -G -T "{rev}: {node|short} '{desc}' {bookmarks} {branches}" "$@"
+}
+
+tglogp() {
+  hg log -G -T "{rev}: {node|short} {phase} '{desc}' {bookmarks} {branches}" "$@"
+}

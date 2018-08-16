@@ -4,9 +4,6 @@
   > 
   > [phases]
   > publish=False
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF
 
 
@@ -32,7 +29,7 @@ can abort or warn for colliding untracked files)
   $ hg clone -q -u . a a1
   $ cd a1
 
-  $ hg tglog
+  $ tglog
   @  7: 02de42196ebe 'H'
   |
   | o  6: eea13746799a 'G'
@@ -70,7 +67,7 @@ can abort or warn for colliding untracked files)
   collide
   $ rm D.orig
 
-  $ hg tglog
+  $ tglog
   o  7: 1619f02ff7dd 'D'
   |
   @  6: 02de42196ebe 'H'
@@ -105,7 +102,7 @@ that we can ignore for colliding untracked files)
   collide
   $ rm D.orig
 
-  $ hg tglog
+  $ tglog
   o  7: 2107530e74ab 'D'
   |
   | @  6: 02de42196ebe 'H'
@@ -142,7 +139,7 @@ if they have the same contents)
   $ f E.orig
   E.orig: file not found
 
-  $ hg tglog
+  $ tglog
   o  6: 9f8b8ec77260 'E'
   |
   @  5: 02de42196ebe 'H'
@@ -172,7 +169,7 @@ F onto E - rebase of a branching point (skip G):
   rebasing 7:02de42196ebe "H" (tip)
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/24b6387c8c8c-c3fe765d-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  6: e9240aeaa6ad 'H'
   |
   o  5: 5d0ccadb6e3e 'F'
@@ -199,7 +196,7 @@ G onto H - merged revision having a parent in ancestors of target:
   rebasing 6:eea13746799a "G"
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/eea13746799a-883828ed-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o    7: 397834907a90 'G'
   |\
   | @  6: 02de42196ebe 'H'
@@ -230,7 +227,7 @@ F onto B - G maintains E as parent:
   rebasing 7:02de42196ebe "H" (tip)
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/24b6387c8c8c-c3fe765d-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  7: c87be72f9641 'H'
   |
   | o  6: 17badd73d4f1 'G'
@@ -302,7 +299,7 @@ C onto A - rebase onto an ancestor:
   rebasing 2:5fddd98957c8 "C"
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/5fddd98957c8-f9244fa1-rebase.hg
-  $ hg tglog
+  $ tglog
   o  7: c9659aac0000 'D'
   |
   o  6: e1c4361dd923 'C'
@@ -422,7 +419,7 @@ All destination are B
   added 9 changesets with 9 changes to 9 files (+2 heads)
   new changesets 9ae2ed22e576:479ddb54a924
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  $ hg tglog
+  $ tglog
   o  8: 479ddb54a924 'I'
   |
   o  7: 72434a4e60b0 'H'
@@ -460,7 +457,7 @@ Source on have two descendant heads but ask for one
   rebasing 6:3d8a618087a7 "G"
   rebasing 7:72434a4e60b0 "H"
   rebasing 8:479ddb54a924 "I" (tip)
-  $ hg tglog
+  $ tglog
   o  13: 9bf1d9358a90 'I'
   |
   o  12: 274623a778d4 'H'
@@ -505,7 +502,7 @@ Base on have one descendant heads we ask for but common ancestor have two
   rebasing 6:3d8a618087a7 "G"
   rebasing 7:72434a4e60b0 "H"
   rebasing 8:479ddb54a924 "I" (tip)
-  $ hg tglog
+  $ tglog
   o  12: 9d7da0053b1c 'I'
   |
   o  11: 8fbd00952cbc 'H'
@@ -547,7 +544,7 @@ rebase subset
   rebasing 3:ffd453c31098 "D"
   rebasing 6:3d8a618087a7 "G"
   rebasing 7:72434a4e60b0 "H"
-  $ hg tglog
+  $ tglog
   o  11: 8fbd00952cbc 'H'
   |
   o  10: 51d434a615ee 'G'
@@ -589,7 +586,7 @@ rebase subset with multiple head
   rebasing 5:41bfcc75ed73 "F"
   rebasing 6:3d8a618087a7 "G"
   rebasing 7:72434a4e60b0 "H"
-  $ hg tglog
+  $ tglog
   o  13: 8fbd00952cbc 'H'
   |
   o  12: 51d434a615ee 'G'
@@ -632,7 +629,7 @@ rebase on ancestor with revset
   rebasing 7:72434a4e60b0 "H"
   rebasing 8:479ddb54a924 "I" (tip)
   saved backup bundle to $TESTTMP/ah5/.hg/strip-backup/3d8a618087a7-b4f73f31-rebase.hg
-  $ hg tglog
+  $ tglog
   o  8: fcb52e68a694 'I'
   |
   o  7: 77bd65cd7600 'H'
@@ -667,7 +664,7 @@ We would expect heads are I, F if it was supported
   rebasing 7:72434a4e60b0 "H"
   rebasing 8:479ddb54a924 "I" (tip)
   saved backup bundle to $TESTTMP/ah6/.hg/strip-backup/3d8a618087a7-aae93a24-rebase.hg
-  $ hg tglog
+  $ tglog
   o  8: 9136df9a87cf 'I'
   |
   o  7: 23e8f30da832 'H'
@@ -706,7 +703,7 @@ each root have a different common ancestor with the destination and this is a de
   $ echo I > K
   $ hg add K
   $ hg commit -m K
-  $ hg tglog
+  $ tglog
   @  10: 23a4ace37988 'K'
   |
   o  9: 1301922eeb0c 'J'
@@ -749,7 +746,7 @@ each root have a different common ancestor with the destination and this is a de
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     K
   
-  $ hg tglog
+  $ tglog
   @  10: 882431a34a0e 'K'
   |
   | o  9: adb617877056 'I'
@@ -827,7 +824,7 @@ Test that rebase is done in topo order (issue5370)
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ touch g && hg add g && hg ci -m G
 
-  $ hg tglog
+  $ tglog
   @  6: 124bb27b6f28 'G'
   |
   | o  5: 412b391de760 'F'
@@ -851,7 +848,7 @@ Test that rebase is done in topo order (issue5370)
   rebasing 5:412b391de760 "F"
   saved backup bundle to $TESTTMP/order/.hg/strip-backup/76035bbd54bd-e341bc99-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  6: 31884cfb735e 'F'
   |
   o  5: 6d89fa5b0909 'D'

@@ -2,9 +2,6 @@
   > [extensions]
   > rebase=
   > histedit=
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF
 
 
@@ -58,7 +55,7 @@ Now b has one revision to be pulled from a:
   rebasing 2:ff8d69a621f9 "L1"
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  3: d80cc2da061e 'L1'
   |
   o  2: 77ae9631bcca 'R1'
@@ -102,7 +99,7 @@ Abort pull early with pending uncommitted merge:
   $ cd ..
   $ hg clone --noupdate c d
   $ cd d
-  $ hg tglog
+  $ tglog
   o  1: 783333faa078 'C2'
   |
   o  0: 05d58a0c15dd 'C1'
@@ -149,8 +146,8 @@ Invoke pull --rebase and nothing to rebase:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark norebase
 
-  $ hg tglog -l 1
-  @  2: 77ae9631bcca 'R1'
+  $ tglog -l 1
+  @  2: 77ae9631bcca 'R1' norebase
   |
   ~
 
@@ -170,8 +167,8 @@ pull --rebase doesn't update if nothing has been pulled:
   searching for changes
   no changes found
 
-  $ hg tglog -l 1
-  o  2: 77ae9631bcca 'R1'
+  $ tglog -l 1
+  o  2: 77ae9631bcca 'R1' norebase
   |
   ~
 
@@ -180,7 +177,7 @@ pull --rebase doesn't update if nothing has been pulled:
 pull --rebase works when a specific revision is pulled (issue3619)
 
   $ cd a
-  $ hg tglog
+  $ tglog
   @  2: 77ae9631bcca 'R1'
   |
   o  1: 783333faa078 'C2'
@@ -194,8 +191,8 @@ pull --rebase works when a specific revision is pulled (issue3619)
   $ hg ci -Am R3
   adding R3
   $ cd ../c
-  $ hg tglog
-  o  2: 77ae9631bcca 'R1'
+  $ tglog
+  o  2: 77ae9631bcca 'R1' norebase
   |
   @  1: 783333faa078 'C2'
   |
@@ -214,14 +211,14 @@ pull --rebase works when a specific revision is pulled (issue3619)
   new changesets 31cd3a05214e:770a61882ace
   rebasing 3:ff8d69a621f9 "L1"
   saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg
-  $ hg tglog
+  $ tglog
   @  5: 518d153c0ba3 'L1'
   |
   o  4: 770a61882ace 'R3'
   |
   o  3: 31cd3a05214e 'R2'
   |
-  o  2: 77ae9631bcca 'R1'
+  o  2: 77ae9631bcca 'R1' norebase
   |
   o  1: 783333faa078 'C2'
   |
@@ -233,7 +230,7 @@ pull --rebase works with bundle2 turned on
   $ echo R4 > R4
   $ hg ci -Am R4
   adding R4
-  $ hg tglog
+  $ tglog
   @  5: 00e3b7781125 'R4'
   |
   o  4: 770a61882ace 'R3'
@@ -257,7 +254,7 @@ pull --rebase works with bundle2 turned on
   new changesets 00e3b7781125
   rebasing 5:518d153c0ba3 "L1"
   saved backup bundle to $TESTTMP/c/.hg/strip-backup/518d153c0ba3-73407f14-rebase.hg
-  $ hg tglog
+  $ tglog
   @  6: 0d0727eb7ce0 'L1'
   |
   o  5: 00e3b7781125 'R4'
@@ -266,7 +263,7 @@ pull --rebase works with bundle2 turned on
   |
   o  3: 31cd3a05214e 'R2'
   |
-  o  2: 77ae9631bcca 'R1'
+  o  2: 77ae9631bcca 'R1' norebase
   |
   o  1: 783333faa078 'C2'
   |
@@ -279,7 +276,7 @@ pull --rebase only update if there is nothing to rebase
   $ echo R5 > R5
   $ hg ci -Am R5
   adding R5
-  $ hg tglog
+  $ tglog
   @  6: 88dd24261747 'R5'
   |
   o  5: 00e3b7781125 'R4'
@@ -311,7 +308,7 @@ pull --rebase only update if there is nothing to rebase
   rebasing 6:0d0727eb7ce0 "L1"
   rebasing 7:c1f58876e3bf "L2"
   saved backup bundle to $TESTTMP/c/.hg/strip-backup/0d0727eb7ce0-ef61ccb2-rebase.hg
-  $ hg tglog
+  $ tglog
   o  8: 6dc0ea5dcf55 'L2'
   |
   @  7: 864e0a2d2614 'L1'
@@ -324,7 +321,7 @@ pull --rebase only update if there is nothing to rebase
   |
   o  3: 31cd3a05214e 'R2'
   |
-  o  2: 77ae9631bcca 'R1'
+  o  2: 77ae9631bcca 'R1' norebase
   |
   o  1: 783333faa078 'C2'
   |
@@ -354,7 +351,7 @@ pull --rebase update (no rebase) use proper update:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated to "65bc164c1d9b: R6"
   1 other heads for branch "default"
-  $ hg tglog
+  $ tglog
   @  9: 65bc164c1d9b 'R6'
   |
   | o  8: 6dc0ea5dcf55 'L2'
@@ -369,7 +366,7 @@ pull --rebase update (no rebase) use proper update:
   |
   o  3: 31cd3a05214e 'R2'
   |
-  o  2: 77ae9631bcca 'R1'
+  o  2: 77ae9631bcca 'R1' norebase
   |
   o  1: 783333faa078 'C2'
   |
@@ -430,7 +427,7 @@ The second local head should not confuse the `hg pull rebase`.
   rebasing 7:864e0a2d2614 "L1"
   rebasing 8:6dc0ea5dcf55 "L2"
   saved backup bundle to $TESTTMP/c/.hg/strip-backup/864e0a2d2614-2f72c89c-rebase.hg
-  $ hg tglog
+  $ tglog
   @  12: 3603a865eea0 'L2'
   |
   o  11: bcc8a9cd04bf 'L1'
@@ -439,7 +436,7 @@ The second local head should not confuse the `hg pull rebase`.
   |
   | o  9: 41fab4eef82f 'M1'
   |/
-  | o  8: 39c381359968 'B1' unrelatedbranch
+  | o  8: 39c381359968 'B1'  unrelatedbranch
   |/
   o  7: 65bc164c1d9b 'R6'
   |
@@ -451,7 +448,7 @@ The second local head should not confuse the `hg pull rebase`.
   |
   o  3: 31cd3a05214e 'R2'
   |
-  o  2: 77ae9631bcca 'R1'
+  o  2: 77ae9631bcca 'R1' norebase
   |
   o  1: 783333faa078 'C2'
   |

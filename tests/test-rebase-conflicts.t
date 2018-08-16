@@ -6,9 +6,6 @@
   > 
   > [phases]
   > publish=False
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}:{phase} '{desc}' {branches} {bookmarks}\n"
   > EOF
 
   $ hg init a
@@ -40,18 +37,18 @@
 
   $ hg phase --force --secret 4
 
-  $ hg tglog
-  @  5:secret 'L3'  mybook
+  $ tglogp
+  @  5: 8029388f38dc secret 'L3' mybook
   |
-  o  4:secret 'L2'
+  o  4: 46f0b057b5c0 secret 'L2'
   |
-  o  3:draft 'L1'
+  o  3: 3163e20567cc draft 'L1'
   |
-  | o  2:draft 'C3'
+  | o  2: a9ce13b75fb5 draft 'C3'
   |/
-  o  1:draft 'C2'
+  o  1: 11eb9c356adf draft 'C2'
   |
-  o  0:draft 'C1'
+  o  0: 178f1774564f draft 'C1'
   
 Try to call --continue:
 
@@ -102,18 +99,18 @@ Conclude rebase:
   rebasing 5:8029388f38dc "L3" (mybook)
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/3163e20567cc-5ca4656e-rebase.hg
 
-  $ hg tglog
-  @  5:secret 'L3'  mybook
+  $ tglogp
+  @  5: d67b21408fc0 secret 'L3' mybook
   |
-  o  4:secret 'L2'
+  o  4: 5e5bd08c7e60 secret 'L2'
   |
-  o  3:draft 'L1'
+  o  3: 3e046f2ecedb draft 'L1'
   |
-  o  2:draft 'C3'
+  o  2: a9ce13b75fb5 draft 'C3'
   |
-  o  1:draft 'C2'
+  o  1: 11eb9c356adf draft 'C2'
   |
-  o  0:draft 'C1'
+  o  0: 178f1774564f draft 'C1'
   
 Check correctness:
 
@@ -416,16 +413,16 @@ Test rebase with obsstore turned on and off (issue5606)
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/f585351a92f8-e536a9e4-rebase.hg
 
   $ rm .hg/localtags
-  $ hg tglog
-  o  5:draft 'D'
+  $ tglogp
+  o  5: c5f6f5f52dbd draft 'D'
   |
-  o  4:draft 'B'
+  o  4: a8990ee99807 draft 'B'
   |
-  @  3:draft 'E'
+  @  3: b2867df0c236 draft 'E'
   |
-  | o  2:draft 'C'
+  | o  2: 26805aba1e60 draft 'C'
   | |
-  | o  1:draft 'B'
+  | o  1: 112478962961 draft 'B'
   |/
-  o  0:draft 'A'
+  o  0: 426bada5c675 draft 'A'
   

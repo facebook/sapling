@@ -4,9 +4,6 @@
   > 
   > [phases]
   > publish=False
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}' bookmarks: {bookmarks}\n"
   > EOF
 
 Create a repo with several bookmarks
@@ -36,14 +33,14 @@ Create a repo with several bookmarks
 
   $ hg book W
 
-  $ hg tglog
-  @  3: 41acb9dca9eb 'D' bookmarks: W
+  $ tglog
+  @  3: 41acb9dca9eb 'D' W
   |
-  | o  2: 49cb3485fa0c 'C' bookmarks: Y Z
+  | o  2: 49cb3485fa0c 'C' Y Z
   | |
-  | o  1: 6c81ed0049f8 'B' bookmarks: X
+  | o  1: 6c81ed0049f8 'B' X
   |/
-  o  0: 1994f17a630e 'A' bookmarks:
+  o  0: 1994f17a630e 'A'
   
 
 Move only rebased bookmarks
@@ -63,27 +60,27 @@ Test deleting divergent bookmarks from dest (issue3685)
   $ hg book -r 3 X@diverge
   $ hg book -r 0 Y@diverge
 
-  $ hg tglog
-  o  3: 41acb9dca9eb 'D' bookmarks: W X@diverge Z@diverge
+  $ tglog
+  o  3: 41acb9dca9eb 'D' W X@diverge Z@diverge
   |
-  | @  2: 49cb3485fa0c 'C' bookmarks: Y Z
+  | @  2: 49cb3485fa0c 'C' Y Z
   | |
-  | o  1: 6c81ed0049f8 'B' bookmarks: X
+  | o  1: 6c81ed0049f8 'B' X
   |/
-  o  0: 1994f17a630e 'A' bookmarks: Y@diverge
+  o  0: 1994f17a630e 'A' Y@diverge
   
   $ hg rebase -s Y -d 3
   rebasing 2:49cb3485fa0c "C" (Y Z)
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/49cb3485fa0c-126f3e97-rebase.hg
 
-  $ hg tglog
-  @  3: 17fb3faba63c 'C' bookmarks: Y Z
+  $ tglog
+  @  3: 17fb3faba63c 'C' Y Z
   |
-  o  2: 41acb9dca9eb 'D' bookmarks: W X@diverge
+  o  2: 41acb9dca9eb 'D' W X@diverge
   |
-  | o  1: 6c81ed0049f8 'B' bookmarks: X
+  | o  1: 6c81ed0049f8 'B' X
   |/
-  o  0: 1994f17a630e 'A' bookmarks: Y@diverge
+  o  0: 1994f17a630e 'A' Y@diverge
   
 Do not try to keep active but deleted divergent bookmark
 
@@ -117,14 +114,14 @@ Keep bookmarks to the correct rebased changeset
   rebasing 2:49cb3485fa0c "C" (Y Z)
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/6c81ed0049f8-a687065f-rebase.hg
 
-  $ hg tglog
-  @  3: 3d5fa227f4b5 'C' bookmarks: Y Z
+  $ tglog
+  @  3: 3d5fa227f4b5 'C' Y Z
   |
-  o  2: e926fccfa8ec 'B' bookmarks: X
+  o  2: e926fccfa8ec 'B' X
   |
-  o  1: 41acb9dca9eb 'D' bookmarks: W
+  o  1: 41acb9dca9eb 'D' W
   |
-  o  0: 1994f17a630e 'A' bookmarks:
+  o  0: 1994f17a630e 'A'
   
 
 Keep active bookmark on the correct changeset
@@ -140,14 +137,14 @@ Keep active bookmark on the correct changeset
   rebasing 2:49cb3485fa0c "C" (Y Z)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/6c81ed0049f8-a687065f-rebase.hg
 
-  $ hg tglog
-  o  3: 3d5fa227f4b5 'C' bookmarks: Y Z
+  $ tglog
+  o  3: 3d5fa227f4b5 'C' Y Z
   |
-  @  2: e926fccfa8ec 'B' bookmarks: X
+  @  2: e926fccfa8ec 'B' X
   |
-  o  1: 41acb9dca9eb 'D' bookmarks: W
+  o  1: 41acb9dca9eb 'D' W
   |
-  o  0: 1994f17a630e 'A' bookmarks:
+  o  0: 1994f17a630e 'A'
   
   $ hg bookmarks
      W                         1:41acb9dca9eb
@@ -178,16 +175,16 @@ rebase --continue with bookmarks present (issue3802)
   $ hg rebase --continue
   rebasing 3:3d5fa227f4b5 "C" (Y Z)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/3d5fa227f4b5-c6ea2371-rebase.hg
-  $ hg tglog
-  @  4: 45c0f0ec1203 'C' bookmarks: Y Z
+  $ tglog
+  @  4: 45c0f0ec1203 'C' Y Z
   |
-  o  3: b0e10b7175fd 'other C' bookmarks:
+  o  3: b0e10b7175fd 'other C'
   |
-  o  2: e926fccfa8ec 'B' bookmarks: X
+  o  2: e926fccfa8ec 'B' X
   |
-  o  1: 41acb9dca9eb 'D' bookmarks: W
+  o  1: 41acb9dca9eb 'D' W
   |
-  o  0: 1994f17a630e 'A' bookmarks:
+  o  0: 1994f17a630e 'A'
   
 
 ensure that bookmarks given the names of revset functions can be used
@@ -221,22 +218,22 @@ Bookmark and working parent get moved even if --keep is set (issue5682)
   $ eval `hg tags -T 'hg bookmark -ir {node} {tag};\n' | grep -v tip`
   $ rm .hg/localtags
   $ hg up -q B
-  $ hg tglog
-  o  2: dc0947a82db8 'C' bookmarks: C
+  $ tglog
+  o  2: dc0947a82db8 'C' C
   |
-  | @  1: 112478962961 'B' bookmarks: B
+  | @  1: 112478962961 'B' B
   |/
-  o  0: 426bada5c675 'A' bookmarks: A
+  o  0: 426bada5c675 'A' A
   
   $ hg rebase -r B -d C --keep
   rebasing 1:112478962961 "B" (B)
-  $ hg tglog
-  @  3: 9769fc65c4c5 'B' bookmarks: B
+  $ tglog
+  @  3: 9769fc65c4c5 'B' B
   |
-  o  2: dc0947a82db8 'C' bookmarks: C
+  o  2: dc0947a82db8 'C' C
   |
-  | o  1: 112478962961 'B' bookmarks:
+  | o  1: 112478962961 'B'
   |/
-  o  0: 426bada5c675 'A' bookmarks: A
+  o  0: 426bada5c675 'A' A
   
 

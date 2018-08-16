@@ -3,8 +3,6 @@
   > usegeneraldelta=yes
   > [extensions]
   > rebase=
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF
 
   $ hg init repo
@@ -28,7 +26,7 @@
   $ echo D >> a
   $ hg ci -Am AD
 
-  $ hg tglog
+  $ tglog
   @  3: 3878212183bd 'AD'
   |
   | o  2: 30ae917c0e4f 'C'
@@ -44,7 +42,7 @@
   merging a
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0f4f7cb4f549-82b3b163-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  3: 25773bc4b4b0 'C'
   |
   o  2: c09015405f75 'B'
@@ -105,20 +103,20 @@ wrong.
   $ echo stuff > f-other
   $ hg ci -Aqm 'default: f-other stuff'
 
-  $ hg tglog
+  $ tglog
   @  7: e08089805d82 'default: f-other stuff'
   |
-  | o  6: 9455ee510502 'dev: merge default' dev
+  | o  6: 9455ee510502 'dev: merge default'  dev
   |/|
   o |  5: 462860db70a1 'default: remove f-default'
   | |
-  | o  4: 4b019212aaf6 'dev: merge default' dev
+  | o  4: 4b019212aaf6 'dev: merge default'  dev
   |/|
   o |  3: f157ecfd2b6b 'default: f-default stuff'
   | |
-  | o  2: ec2c14fb2984 'dev: f-dev stuff' dev
+  | o  2: ec2c14fb2984 'dev: f-dev stuff'  dev
   | |
-  | o  1: 1d1a643d390e 'dev: create branch' dev
+  | o  1: 1d1a643d390e 'dev: create branch'  dev
   |/
   o  0: e90e8eb90b6f 'default: create f-default'
   
@@ -137,7 +135,7 @@ Full rebase all the way back from branching point:
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
   rebasing 6:9455ee510502 "dev: merge default"
   saved backup bundle to $TESTTMP/ancestor-merge/.hg/strip-backup/1d1a643d390e-43e9e04b-rebase.hg
-  $ hg tglog
+  $ tglog
   o  6: fbc098e72227 'dev: merge default'
   |
   o  5: eda7b7f46f5d 'dev: merge default'
@@ -166,7 +164,7 @@ Grafty cherry picking rebasing:
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
   rebasing 6:9455ee510502 "dev: merge default"
   saved backup bundle to $TESTTMP/ancestor-merge-2/.hg/strip-backup/ec2c14fb2984-62d0b222-rebase.hg
-  $ hg tglog
+  $ tglog
   o  7: fbc098e72227 'dev: merge default'
   |
   o  6: eda7b7f46f5d 'dev: merge default'
@@ -179,7 +177,7 @@ Grafty cherry picking rebasing:
   |
   o  2: f157ecfd2b6b 'default: f-default stuff'
   |
-  | o  1: 1d1a643d390e 'dev: create branch' dev
+  | o  1: 1d1a643d390e 'dev: create branch'  dev
   |/
   o  0: e90e8eb90b6f 'default: create f-default'
   
@@ -222,7 +220,7 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge p1 1=ancestor p2 3=outside
   
-  $ hg tglog
+  $ tglog
   @    5: a57575f79074 'merge p1 1=ancestor p2 3=outside'
   |\
   +---o  4: 6990226659be 'merge p1 3=outside p2 1=ancestor'
@@ -259,7 +257,7 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge p1 1=ancestor p2 3=outside
   
-  $ hg tglog
+  $ tglog
   @    5: f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
   |\
   +---o  4: cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
@@ -317,7 +315,7 @@ rebase of merge of ancestors
   adding file changes
   added 1 changesets with 1 changes to 1 files
   rebase completed
-  $ hg tglog
+  $ tglog
   @  6: 113755df812b 'merge rebase ancestors'
   |
   o    5: f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'

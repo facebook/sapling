@@ -4,9 +4,6 @@
   > 
   > [phases]
   > publish=False
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF
 
 
@@ -35,7 +32,7 @@
   $ hg ci -Am r2
   adding r2
 
-  $ hg tglog
+  $ tglog
   @  4: 225af64d03e6 'r2'
   |
   o  3: 8d0a8c99b309 'r1'
@@ -54,7 +51,7 @@ Rebase with no arguments - single revision in source branch:
   rebasing 2:87c180a611f2 "l1"
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/87c180a611f2-a5be192d-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  4: b1152cc99655 'l1'
   |
   o  3: 225af64d03e6 'r2'
@@ -93,7 +90,7 @@ Rebase with no arguments - single revision in source branch:
   $ hg ci -Am r1
   adding r1
 
-  $ hg tglog
+  $ tglog
   @  4: 8d0a8c99b309 'r1'
   |
   | o  3: 1ac923b736ef 'l2'
@@ -113,7 +110,7 @@ Rebase with no arguments - single revision in target branch:
   rebasing 3:1ac923b736ef "l2"
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/87c180a611f2-b980535c-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  4: 023181307ed0 'l2'
   |
   o  3: 913ab52b43b4 'l1'

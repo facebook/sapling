@@ -4,9 +4,6 @@
   > 
   > [phases]
   > publish=False
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF
 
 
@@ -26,7 +23,7 @@
   $ hg ci -AmI
   adding I
 
-  $ hg tglog
+  $ tglog
   @  8: e7ec4e813ba6 'I'
   |
   o  7: 02de42196ebe 'H'
@@ -137,7 +134,7 @@ Rebase with no arguments (from 3 onto 8):
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  6: ed65089c18f8 'D'
   |
   o  5: 7621bf1a2f17 'C'
@@ -171,7 +168,7 @@ Rebase with base == '.' => same as no arguments (from 3 onto 8):
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  6: ed65089c18f8 'D'
   |
   o  5: 7621bf1a2f17 'C'
@@ -200,7 +197,7 @@ Rebase with dest == branch(.) => same as no arguments (from 3 onto 8):
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  8: ed65089c18f8 'D'
   |
   o  7: 7621bf1a2f17 'C'
@@ -232,7 +229,7 @@ Specify only source (from 2 onto 8):
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/5fddd98957c8-f9244fa1-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  6: 7726e9fd58f7 'D'
   |
   o  5: 72c8333623d0 'C'
@@ -261,7 +258,7 @@ Specify only dest (from 3 onto 6):
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  8: 8eeb3c33ad33 'D'
   |
   o  7: 2327fea05063 'C'
@@ -294,7 +291,7 @@ Specify only base (from 1 onto 8):
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  6: ed65089c18f8 'D'
   |
   o  5: 7621bf1a2f17 'C'
@@ -322,7 +319,7 @@ Specify source and dest (from 2 onto 7):
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/5fddd98957c8-f9244fa1-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  8: 668acadedd30 'D'
   |
   o  7: 09eb682ba906 'C'
@@ -355,7 +352,7 @@ Specify base and dest (from 1 onto 7):
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a8/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  8: 287cc92ba5a4 'D'
   |
   o  7: 6824f610a250 'C'
@@ -387,7 +384,7 @@ Specify only revs (from 2 onto 8)
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a9/.hg/strip-backup/5fddd98957c8-f9244fa1-rebase.hg
 
-  $ hg tglog
+  $ tglog
   o  6: 7726e9fd58f7 'D'
   |
   o  5: 72c8333623d0 'C'

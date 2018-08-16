@@ -6,10 +6,6 @@
   $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True
 
-  $ cat <<EOF >> $HGRCPATH
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}'\n"
-  > EOF
 Rebase a simple DAG:
   $ hg init repo1
   $ cd repo1
@@ -22,7 +18,7 @@ Rebase a simple DAG:
   > EOS
   $ hg up -C a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg tglog
+  $ tglog
   o  3: 814f6bd05178 'c'
   |
   | o  2: db0e82a16a62 'b'
@@ -38,7 +34,7 @@ Rebase a simple DAG:
   $ hg rebase --debug -r b -d c | grep rebasing
   rebasing in-memory
   rebasing 2:db0e82a16a62 "b" (b)
-  $ hg tglog
+  $ tglog
   o  3: ca58782ad1e4 'b'
   |
   o  2: 814f6bd05178 'c'
@@ -79,7 +75,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   $ echo "ghi" > c
   $ echo "jkl" > d
   $ echo "mno" > e
-  $ hg tglog
+  $ tglog
   o  3: f56b71190a8f 'c'
   |
   | o  2: db0e82a16a62 'b'
@@ -97,7 +93,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   $ hg rebase --debug -s b -d a | grep rebasing
   rebasing in-memory
   rebasing 2:db0e82a16a62 "b" (b)
-  $ hg tglog
+  $ tglog
   o  3: fc055c3b4d33 'b'
   |
   | o  2: f56b71190a8f 'c'
@@ -114,7 +110,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   rebasing in-memory
   rebasing 1:02952614a83d "d" (d)
   rebasing 2:f56b71190a8f "c"
-  $ hg tglog
+  $ tglog
   o  3: 753feb6fd12a 'c'
   |
   o  2: 09c044d2cb43 'd'
@@ -145,7 +141,7 @@ cleanly.
   updating to branch default
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo3
-  $ hg tglog
+  $ tglog
   @  3: 753feb6fd12a 'c'
   |
   o  2: 09c044d2cb43 'd'
@@ -173,7 +169,7 @@ Rebase the working copy parent:
   $ hg rebase -r 3 -d 0 --debug | egrep 'rebasing|disabling'
   rebasing in-memory
   rebasing 3:753feb6fd12a "c" (tip)
-  $ hg tglog
+  $ tglog
   @  3: 844a7de3e617 'c'
   |
   | o  2: 09c044d2cb43 'd'
@@ -191,7 +187,7 @@ Rerun with merge conflicts, demonstrating switching to on-disk merge:
   $ hg com -m 'e -> c'
   $ hg up 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg tglog
+  $ tglog
   o  4: 6af061510c70 'e -> c'
   |
   | o  3: 844a7de3e617 'c'
@@ -221,7 +217,7 @@ Allow the working copy parent to be rebased with IMM:
   rebasing in-memory!
   rebasing 3:844a7de3e617 "c"
   saved backup bundle to $TESTTMP/repo1/repo2/.hg/strip-backup/844a7de3e617-108d0332-rebase.hg
-  $ hg tglog
+  $ tglog
   @  4: 6f55b7035492 'c'
   |
   | o  3: 6af061510c70 'e -> c'

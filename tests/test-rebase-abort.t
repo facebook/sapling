@@ -4,11 +4,7 @@
   > 
   > [phases]
   > publish=False
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   > EOF
-
 
   $ hg init a
   $ cd a
@@ -45,16 +41,16 @@
 
   $ hg phase --force --secret 2
 
-  $ hg tglog
-  @  4:draft 'L2'
+  $ tglogp
+  @  4: 46f0b057b5c0 draft 'L2'
   |
-  o  3:draft 'L1'
+  o  3: 3163e20567cc draft 'L1'
   |
-  | o  2:secret 'C3'
+  | o  2: a9ce13b75fb5 secret 'C3'
   |/
-  o  1:draft 'C2'
+  o  1: 11eb9c356adf draft 'C2'
   |
-  o  0:draft 'C1'
+  o  0: 178f1774564f draft 'C1'
   
 
 Conflicting rebase:
@@ -119,16 +115,16 @@ Abort (should clear out unsupported merge state):
   $ hg debugmergestate
   no merge state found
 
-  $ hg tglog
-  @  4:draft 'L2'
+  $ tglogp
+  @  4: 46f0b057b5c0 draft 'L2'
   |
-  o  3:draft 'L1'
+  o  3: 3163e20567cc draft 'L1'
   |
-  | o  2:secret 'C3'
+  | o  2: a9ce13b75fb5 secret 'C3'
   |/
-  o  1:draft 'C2'
+  o  1: 11eb9c356adf draft 'C2'
   |
-  o  0:draft 'C1'
+  o  0: 178f1774564f draft 'C1'
   
 Test safety for inconsistent rebase state, which may be created (and
 forgotten) by Mercurial earlier than 2.7. This emulates Mercurial
@@ -191,16 +187,16 @@ Construct new repo:
 
 Rebase and abort without generating new changesets:
 
-  $ hg tglog
-  @  4:draft 'C1'
+  $ tglogp
+  @  4: 145842775fec draft 'C1'
   |
-  o  3:draft 'B bis'
+  o  3: a6484957d6b9 draft 'B bis'
   |
-  | o  2:secret 'C'
+  | o  2: 49cb3485fa0c secret 'C'
   | |
-  | o  1:public 'B'
+  | o  1: 6c81ed0049f8 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 1994f17a630e public 'A'
   
   $ hg rebase -b 4 -d 2
   rebasing 3:a6484957d6b9 "B bis"
@@ -211,30 +207,30 @@ Rebase and abort without generating new changesets:
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
-  $ hg tglog
-  @  4:draft 'C1'
+  $ tglogp
+  @  4: 145842775fec draft 'C1'
   |
-  o  3:draft 'B bis'
+  o  3: a6484957d6b9 draft 'B bis'
   |
-  | @  2:secret 'C'
+  | @  2: 49cb3485fa0c secret 'C'
   | |
-  | o  1:public 'B'
+  | o  1: 6c81ed0049f8 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 1994f17a630e public 'A'
   
   $ hg rebase -a
   rebase aborted
 
-  $ hg tglog
-  @  4:draft 'C1'
+  $ tglogp
+  @  4: 145842775fec draft 'C1'
   |
-  o  3:draft 'B bis'
+  o  3: a6484957d6b9 draft 'B bis'
   |
-  | o  2:secret 'C'
+  | o  2: 49cb3485fa0c secret 'C'
   | |
-  | o  1:public 'B'
+  | o  1: 6c81ed0049f8 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 1994f17a630e public 'A'
   
 
   $ cd ..

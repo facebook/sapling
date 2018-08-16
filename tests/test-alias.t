@@ -35,7 +35,6 @@
   > count = !hg log -r "\$@" --template=. | wc -c | sed -e 's/ //g'
   > mcount = !hg log \$@ --template=. | wc -c | sed -e 's/ //g'
   > rt = root
-  > tglog = log -G --template "{rev}:{node|short}: '{desc}' {branches}\n"
   > idalias = id
   > idaliaslong = id
   > idaliasshell = !echo test
@@ -310,10 +309,10 @@ simple shell aliases
   $ hg mcount -r '"branch(default)"'
   2
 
-  $ hg tglog
-  @  1:042423737847: 'bar'
+  $ tglog
+  @  1: 042423737847 'bar'
   |
-  o  0:e63c23eaa88a: 'foo'
+  o  0: e63c23eaa88a 'foo'
   
 
 

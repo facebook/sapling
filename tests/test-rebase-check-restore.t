@@ -4,9 +4,6 @@
   > 
   > [phases]
   > publish=False
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   > EOF
 
 
@@ -50,18 +47,18 @@ Rebasing B onto E - check keep: and phases
   $ cd a1
   $ hg phase --force --secret 2
 
-  $ hg tglog
-  @  5:draft 'F' notdefault
+  $ tglogp
+  @  5: 01e6ebbd8272 draft 'F'  notdefault
   |
-  | o  4:draft 'E'
+  | o  4: ae36e8e3dfd7 draft 'E'
   | |
-  | o  3:draft 'D'
+  | o  3: 46b37eabc604 draft 'D'
   |/
-  | o  2:secret 'C'
+  | o  2: 965c486023db secret 'C'
   | |
-  | o  1:draft 'B'
+  | o  1: 27547f69f254 draft 'B'
   |/
-  o  0:draft 'A'
+  o  0: 4a2df7238c3b draft 'A'
   
   $ hg rebase -s 1 -d 4 --keep
   rebasing 1:27547f69f254 "B"
@@ -82,22 +79,22 @@ Solve the conflict and go on:
   already rebased 1:27547f69f254 "B" as 45396c49d53b
   rebasing 2:965c486023db "C"
 
-  $ hg tglog
-  o  7:secret 'C'
+  $ tglogp
+  o  7: d2d25e26288e secret 'C'
   |
-  o  6:draft 'B'
+  o  6: 45396c49d53b draft 'B'
   |
-  | @  5:draft 'F' notdefault
+  | @  5: 01e6ebbd8272 draft 'F'  notdefault
   | |
-  o |  4:draft 'E'
+  o |  4: ae36e8e3dfd7 draft 'E'
   | |
-  o |  3:draft 'D'
+  o |  3: 46b37eabc604 draft 'D'
   |/
-  | o  2:secret 'C'
+  | o  2: 965c486023db secret 'C'
   | |
-  | o  1:draft 'B'
+  | o  1: 27547f69f254 draft 'B'
   |/
-  o  0:draft 'A'
+  o  0: 4a2df7238c3b draft 'A'
   
   $ cd ..
 
@@ -108,18 +105,18 @@ Rebase F onto E - check keepbranches:
   $ cd a2
   $ hg phase --force --secret 2
 
-  $ hg tglog
-  @  5:draft 'F' notdefault
+  $ tglogp
+  @  5: 01e6ebbd8272 draft 'F'  notdefault
   |
-  | o  4:draft 'E'
+  | o  4: ae36e8e3dfd7 draft 'E'
   | |
-  | o  3:draft 'D'
+  | o  3: 46b37eabc604 draft 'D'
   |/
-  | o  2:secret 'C'
+  | o  2: 965c486023db secret 'C'
   | |
-  | o  1:draft 'B'
+  | o  1: 27547f69f254 draft 'B'
   |/
-  o  0:draft 'A'
+  o  0: 4a2df7238c3b draft 'A'
   
   $ hg rebase -s 5 -d 4 --keepbranches
   rebasing 5:01e6ebbd8272 "F" (tip)
@@ -139,18 +136,18 @@ Solve the conflict and go on:
   rebasing 5:01e6ebbd8272 "F" (tip)
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/01e6ebbd8272-6fd3a015-rebase.hg
 
-  $ hg tglog
-  @  5:draft 'F' notdefault
+  $ tglogp
+  @  5: 071d07019675 draft 'F'  notdefault
   |
-  o  4:draft 'E'
+  o  4: ae36e8e3dfd7 draft 'E'
   |
-  o  3:draft 'D'
+  o  3: 46b37eabc604 draft 'D'
   |
-  | o  2:secret 'C'
+  | o  2: 965c486023db secret 'C'
   | |
-  | o  1:draft 'B'
+  | o  1: 27547f69f254 draft 'B'
   |/
-  o  0:draft 'A'
+  o  0: 4a2df7238c3b draft 'A'
   
 
   $ cd ..

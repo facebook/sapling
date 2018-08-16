@@ -4,7 +4,6 @@
   > 
   > [alias]
   > tlog  = log --template "{rev}: {node|short} '{desc}' {branches}\n"
-  > tglog = tlog --graph
   > EOF
 
 
@@ -32,7 +31,7 @@
 
   $ hg ci -m 'rename A'
 
-  $ hg tglog
+  $ tglog
   @  3: 73a3ee40125d 'rename A'
   |
   | o  2: 220d0626d185 'rename B'
@@ -62,7 +61,7 @@ Rebase the revision containing the rename:
   rebasing 3:73a3ee40125d "rename A" (tip)
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/73a3ee40125d-1d78ebcf-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  3: 032a9b75e83b 'rename A'
   |
   o  2: 220d0626d185 'rename B'
@@ -129,7 +128,7 @@ Rebased revision does not contain information about b (issue3739)
   $ hg cp a a-copied
   $ hg ci -m 'copy A'
 
-  $ hg tglog
+  $ tglog
   @  3: 0a8162ff18a8 'copy A'
   |
   | o  2: 39e588434882 'copy B'
@@ -152,7 +151,7 @@ Rebase the revision containing the copy:
   rebasing 3:0a8162ff18a8 "copy A" (tip)
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/0a8162ff18a8-dd06302a-rebase.hg
 
-  $ hg tglog
+  $ tglog
   @  3: 98f6e6dbf45a 'copy A'
   |
   o  2: 39e588434882 'copy B'
@@ -219,7 +218,7 @@ Test rebase across repeating renames:
   $ echo Another unrelated change >> unrelated.txt
   $ hg ci -m "Another unrelated change"
 
-  $ hg tglog
+  $ tglog
   @  4: b918d683b091 'Another unrelated change'
   |
   | o  3: 1ac17e43d8aa 'Rename file2 back to file1'
@@ -259,7 +258,7 @@ Verify that copies get preserved (issue4192).
   $ hg commit --message "File d created as copy of c and modified"
 
 Note that there are four entries in the log for d
-  $ hg tglog --follow d
+  $ tglog --follow d
   @  3: 421b7e82bb85 'File d created as copy of c and modified'
   |
   o  2: 327f772bc074 'File c created as copy of b and modified'
@@ -288,7 +287,7 @@ Rebase the copies on top of the unrelated change.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 There should still be four entries in the log for d
-  $ hg tglog --follow d
+  $ tglog --follow d
   @  4: dbb9ba033561 'File d created as copy of c and modified'
   |
   o  3: af74b229bc02 'File c created as copy of b and modified'
@@ -316,7 +315,7 @@ copy records collapse correctly.
 This should show both revision 3 and 0 since 'd' was transitively a
 copy of 'a'.
 
-  $ hg tglog --follow d
+  $ tglog --follow d
   @  3: 5a46b94210e5 'Collapsed revision
   :  * File b created as copy of a and modified
   :  * File c created as copy of b and modified

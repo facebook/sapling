@@ -28,9 +28,6 @@
   > [ui]
   > ssh = $PYTHON "$TESTDIR/dummyssh"
   > username = nobody <no.reply@example.com>
-  > 
-  > [alias]
-  > tglog = log -G -T "{desc} [{phase}:{node|short}]"
   > EOF
 
 Set up server repository
@@ -71,10 +68,10 @@ Without config
   no bookmarks set
 
   $ cd ../server
-  $ hg tglog
-  o  1 [public:2b9c7234e035]
+  $ tglogp
+  o  1: 2b9c7234e035 public '1'
   |
-  @  0 [public:6cee5c8f3e5b]
+  @  0: 6cee5c8f3e5b public '0'
   
 
 
@@ -98,12 +95,12 @@ With config
      new-server-mark           2:0a76dfb2e179
 
   $ cd ../server
-  $ hg tglog
-  o  2 [public:0a76dfb2e179]
+  $ tglogp
+  o  2: 0a76dfb2e179 public '2'
   |
-  o  1 [public:2b9c7234e035]
+  o  1: 2b9c7234e035 public '1'
   |
-  @  0 [public:6cee5c8f3e5b]
+  @  0: 6cee5c8f3e5b public '0'
   
 
 

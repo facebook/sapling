@@ -4,12 +4,7 @@
   > 
   > [phases]
   > publish=False
-  > 
-  > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
-  > tglogp = log -G --template "{rev}: {node|short} {phase} '{desc}' {branches}\n"
   > EOF
-
 
   $ hg init a
   $ cd a
@@ -42,7 +37,7 @@ Changes during an interruption - continue:
   $ hg clone -q -u . a a1
   $ cd a1
 
-  $ hg tglog
+  $ tglog
   @  4: ae36e8e3dfd7 'E'
   |
   o  3: 46b37eabc604 'D'
@@ -75,7 +70,7 @@ Force this commit onto secret phase
 
   $ hg phase --force --secret 6
 
-  $ hg tglogp
+  $ tglogp
   @  6: deb5d2f93d8b secret 'Extra'
   |
   | o  5: 45396c49d53b draft 'B'
@@ -113,7 +108,7 @@ Solve the conflict and go on:
   rebasing 2:965c486023db "C"
   warning: orphaned descendants detected, not stripping 27547f69f254, 965c486023db
 
-  $ hg tglogp
+  $ tglogp
   o  7: d2d25e26288e draft 'C'
   |
   | o  6: deb5d2f93d8b secret 'Extra'
@@ -138,7 +133,7 @@ Changes during an interruption - abort:
   $ hg clone -q -u . a a2
   $ cd a2
 
-  $ hg tglog
+  $ tglog
   @  4: ae36e8e3dfd7 'E'
   |
   o  3: 46b37eabc604 'D'
@@ -167,7 +162,7 @@ Force a commit on B' during the interruption:
   $ hg add Extra
   $ hg ci -m 'Extra' --config 'extensions.rebase=!'
 
-  $ hg tglog
+  $ tglog
   @  6: 402ee3642b59 'Extra'
   |
   o  5: 45396c49d53b 'B'
@@ -188,7 +183,7 @@ Abort the rebasing:
   warning: new changesets detected on destination branch, can't strip
   rebase aborted
 
-  $ hg tglog
+  $ tglog
   @  6: 402ee3642b59 'Extra'
   |
   o  5: 45396c49d53b 'B'
@@ -210,7 +205,7 @@ Changes during an interruption - abort (again):
   $ hg clone -q -u . a a3
   $ cd a3
 
-  $ hg tglogp
+  $ tglogp
   @  4: ae36e8e3dfd7 draft 'E'
   |
   o  3: 46b37eabc604 draft 'D'
@@ -238,7 +233,7 @@ Change phase on B and B'
   $ hg phase --public 5
   $ hg phase --secret -f 2
 
-  $ hg tglogp
+  $ tglogp
   @  5: 45396c49d53b public 'B'
   |
   o  4: ae36e8e3dfd7 public 'E'
@@ -257,7 +252,7 @@ Abort the rebasing:
   warning: can't clean up public changesets 45396c49d53b
   rebase aborted
 
-  $ hg tglogp
+  $ tglogp
   @  5: 45396c49d53b public 'B'
   |
   o  4: ae36e8e3dfd7 public 'E'
@@ -290,7 +285,7 @@ Test rebase interrupted by hooks
   rebasing 6:a0b2430ebfb8 "F" (tip)
   abort: precommit hook exited with status 1
   [255]
-  $ hg tglogp
+  $ tglogp
   @  7: 401ccec5e39f secret 'C'
   |
   | @  6: a0b2430ebfb8 secret 'F'
@@ -311,7 +306,7 @@ Test rebase interrupted by hooks
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
   saved backup bundle to $TESTTMP/hook-precommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg
-  $ hg tglogp
+  $ tglogp
   @  6: 6e92a149ac6b secret 'F'
   |
   o  5: 401ccec5e39f secret 'C'
@@ -345,7 +340,7 @@ Test rebase interrupted by hooks
   rollback completed
   abort: pretxncommit hook exited with status 1
   [255]
-  $ hg tglogp
+  $ tglogp
   @  7: 401ccec5e39f secret 'C'
   |
   | @  6: a0b2430ebfb8 secret 'F'
@@ -366,7 +361,7 @@ Test rebase interrupted by hooks
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
   saved backup bundle to $TESTTMP/hook-pretxncommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg
-  $ hg tglogp
+  $ tglogp
   @  6: 6e92a149ac6b secret 'F'
   |
   o  5: 401ccec5e39f secret 'C'
@@ -395,7 +390,7 @@ Test rebase interrupted by hooks
   rollback completed
   abort: pretxnclose hook exited with status 1
   [255]
-  $ hg tglogp
+  $ tglogp
   @  7: 401ccec5e39f secret 'C'
   |
   | @  6: a0b2430ebfb8 secret 'F'
@@ -416,7 +411,7 @@ Test rebase interrupted by hooks
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
   saved backup bundle to $TESTTMP/hook-pretxnclose/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg
-  $ hg tglogp
+  $ tglogp
   @  6: 6e92a149ac6b secret 'F'
   |
   o  5: 401ccec5e39f secret 'C'
