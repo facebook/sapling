@@ -16,7 +16,7 @@ use std::sync::Arc;
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, stream::empty};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Timed, TimedStreamTrait};
 use itertools::Itertools;
 use slog::Logger;
@@ -293,20 +293,16 @@ impl RepoClient {
 
         let changed_entries = if params.mfnodes.len() > 1 {
             let visited_pruner = visited_pruner();
-            params
-                .mfnodes
-                .iter()
-                .fold(stream::empty().boxify(), move |cur_stream, manifest_id| {
-                    let new_stream = get_changed_entry_stream(
-                        self.repo.blobrepo(),
-                        &manifest_id,
-                        &basemfnode,
-                        rootpath.clone(),
-                        Some(and_pruner_combinator(&file_pruner, visited_pruner.clone())),
-                        self.trace().clone(),
-                    );
-                    cur_stream.select(new_stream).boxify()
-                })
+            select_all(params.mfnodes.iter().map(|manifest_id| {
+                get_changed_entry_stream(
+                    self.repo.blobrepo(),
+                    &manifest_id,
+                    &basemfnode,
+                    rootpath.clone(),
+                    Some(and_pruner_combinator(&file_pruner, visited_pruner.clone())),
+                    self.trace().clone(),
+                )
+            })).boxify()
         } else {
             match params.mfnodes.get(0) {
                 Some(mfnode) => get_changed_entry_stream(
