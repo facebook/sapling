@@ -876,42 +876,6 @@ void Overlay::parseHeader(
   timestamps.mtime = mtime;
 }
 
-// Helper function to update timestamps into overlay file
-void Overlay::updateTimestampToHeader(
-    int fd,
-    const InodeTimestamps& timestamps) {
-  // Create a string piece with timestamps
-  std::array<uint64_t, 6> buf;
-  IOBuf iobuf(IOBuf::WRAP_BUFFER, buf.data(), sizeof(buf));
-  iobuf.clear();
-
-  folly::io::Appender appender(&iobuf, 0);
-  auto atime = timestamps.atime.toTimespec();
-  auto ctime = timestamps.ctime.toTimespec();
-  auto mtime = timestamps.mtime.toTimespec();
-  appender.writeBE<uint64_t>(atime.tv_sec);
-  appender.writeBE<uint64_t>(atime.tv_nsec);
-  appender.writeBE<uint64_t>(ctime.tv_sec);
-  appender.writeBE<uint64_t>(ctime.tv_nsec);
-  appender.writeBE<uint64_t>(mtime.tv_sec);
-  appender.writeBE<uint64_t>(mtime.tv_nsec);
-
-  // replace the timestamps of current header with the new timestamps
-  auto newHeader = iobuf.coalesce();
-  auto wrote = folly::pwriteNoInt(
-      fd,
-      newHeader.data(),
-      newHeader.size(),
-      kHeaderIdentifierDir.size() + sizeof(kHeaderVersion));
-  if (wrote == -1) {
-    folly::throwSystemError("pwriteNoInt failed");
-  }
-  if (wrote != static_cast<ssize_t>(newHeader.size())) {
-    folly::throwSystemError(
-        "writeNoInt wrote only ", wrote, " of ", newHeader.size(), " bytes");
-  }
-}
-
 void Overlay::gcThread() noexcept {
   for (;;) {
     std::vector<GCRequest> requests;

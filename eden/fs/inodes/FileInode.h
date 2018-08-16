@@ -190,11 +190,6 @@ class FileInode : public InodeBaseMetadata<FileInodeState> {
 
   folly::Future<folly::Unit> prefetch() override;
 
-  /**
-   * Updates in-memory timestamps in FileInode and TreeInode to the overlay
-   * file.
-   */
-  void updateOverlayHeaderIfNeeded() override;
   folly::Future<Hash> getSha1();
 
   /**

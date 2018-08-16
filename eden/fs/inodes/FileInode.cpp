@@ -1190,14 +1190,5 @@ folly::Future<folly::Unit> FileInode::prefetch() {
   });
 }
 
-void FileInode::updateOverlayHeaderIfNeeded() {
-  auto state = LockedState{this};
-  if (state->isMaterialized()) {
-    state.ensureFileOpen(this);
-    auto timestamps = getMetadataLocked(*state).timestamps;
-    Overlay::updateTimestampToHeader(state->file.fd(), timestamps);
-  }
-}
-
 } // namespace eden
 } // namespace facebook

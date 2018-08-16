@@ -772,27 +772,23 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     bool isUnlinked,
     const folly::Synchronized<Members>::LockedPtr& data) {
   auto fuseCount = inode->getFuseRefcount();
-  try {
-    if (isUnlinked && (data->isUnmounted_ || fuseCount == 0)) {
+  if (isUnlinked && (data->isUnmounted_ || fuseCount == 0)) {
+    try {
       mount_->getOverlay()->removeOverlayData(inode->getNodeId());
-    } else {
-      // This updates the timestamps in the overlay file if the inode is
-      // materialized.  This is a no-op for non-materialized inodes.
-      inode->updateOverlayHeaderIfNeeded();
+    } catch (const std::exception& ex) {
+      // If we fail to update the overlay log an error but do not propagate the
+      // exception to our caller.  There is nothing else we can do to handle
+      // this error.
+      //
+      // We still want to proceed unloading the inode normally in this case.
+      //
+      // The most common case where this can occur if the overlay file was
+      // already corrupt (say, because of a hard reboot that did not sync
+      // filesystem state).
+      XLOG(ERR) << "error saving overlay state while unloading inode "
+                << inode->getNodeId() << " (" << inode->getLogPath()
+                << "): " << folly::exceptionStr(ex);
     }
-  } catch (const std::exception& ex) {
-    // If we fail to update the overlay log an error but do not propagate the
-    // exception to our caller.  There is nothing else we can do to handle this
-    // error.
-    //
-    // We still want to proceed unloading the inode normally in this case.
-    //
-    // The most common case where this can occur if the overlay file was
-    // already corrupt (say, because of a hard reboot that did not sync
-    // filesystem state).
-    XLOG(ERR) << "error saving overlay state while unloading inode "
-              << inode->getNodeId() << " (" << inode->getLogPath()
-              << "): " << folly::exceptionStr(ex);
   }
 
   // If the mount point has been unmounted, ignore any outstanding FUSE

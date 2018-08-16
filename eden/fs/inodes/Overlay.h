@@ -183,14 +183,6 @@ class Overlay {
       const folly::IOBuf& contents);
 
   /**
-   * Updates the timestamps of an overlay file appropriately
-   * while unloading an inode.
-   */
-  static void updateTimestampToHeader(
-      int fd,
-      const InodeTimestamps& timeStamps);
-
-  /**
    * Constants for an header in overlay file.
    */
   static constexpr folly::StringPiece kHeaderIdentifierDir{"OVDR"};

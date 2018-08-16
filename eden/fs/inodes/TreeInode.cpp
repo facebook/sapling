@@ -3216,16 +3216,6 @@ folly::Future<folly::Unit> TreeInode::prefetch() {
   });
 }
 
-void TreeInode::updateOverlayHeaderIfNeeded() {
-  auto contents = contents_.wlock();
-  if (contents->isMaterialized()) {
-    InodeTimestamps timeStamps;
-    auto file = getOverlay()->openFile(
-        getNodeId(), Overlay::kHeaderIdentifierDir, timeStamps);
-    Overlay::updateTimestampToHeader(
-        file.fd(), getMetadataLocked(contents->entries).timestamps);
-  }
-}
 folly::Future<Dispatcher::Attr> TreeInode::setattr(
     const fuse_setattr_in& attr) {
   materialize();
