@@ -21,7 +21,6 @@ extern crate futures;
 extern crate quickcheck;
 extern crate tokio;
 extern crate tokio_io;
-extern crate tokio_threadpool;
 
 use bytes::Bytes;
 use futures::{future, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
@@ -29,7 +28,6 @@ use futures::sync::{mpsc, oneshot};
 use tokio::timer::{Deadline, DeadlineError};
 use tokio_io::AsyncWrite;
 use tokio_io::codec::{Decoder, Encoder};
-use tokio_threadpool::{blocking, BlockingError};
 
 use std::{io as std_io, fmt::Debug, time::{Duration, Instant}};
 
@@ -551,15 +549,25 @@ macro_rules! ensure_boxstream {
 ///   Ok(())
 /// })
 /// ```
-pub fn asynchronize<Func, T, E>(func: Func) -> impl Future<Item = T, Error = E>
+pub fn asynchronize<Func, T, E, R>(f: Func) -> BoxFuture<T, E>
 where
-    Func: FnMut() -> Result<T, E> + Clone,
-    E: From<BlockingError>,
+    Func: FnOnce() -> R + Send + 'static,
+    E: From<futures::Canceled> + Send + 'static,
+    R: IntoFuture<Item = T, Error = E> + 'static,
+    T: Send + 'static,
+    <R as IntoFuture>::Future: Send,
 {
-    let mut func = func;
-    future::poll_fn(move || blocking(&mut func))
-        .map_err(E::from)
-        .and_then(|res| res) // flatten Ok(res) => res
+    let (tx, rx) = oneshot::channel();
+
+    let fut = future::lazy(f).then(|res| {
+        let _ = tx.send(res);
+        Ok(())
+    });
+
+    future::lazy(move || {
+        let _ = tokio::spawn(fut);
+        rx.from_err().and_then(|v| v)
+    }).boxify()
 }
 
 /// Simple adapter from `Sink` interface to `AsyncWrite` interface.

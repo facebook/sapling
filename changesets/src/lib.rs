@@ -45,7 +45,7 @@ use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::sql_types::HasSqlType;
 use failure::ResultExt;
 
-use futures_ext::{asynchronize, BoxFuture, FutureExt};
+use futures_ext::{asynchronize, BoxFuture};
 use mercurial_types::RepositoryId;
 use mononoke_types::ChangesetId;
 use mononoke_types::sql_types::ChangesetIdSql;
@@ -226,7 +226,7 @@ macro_rules! impl_changesets {
                     } else {
                         Ok(changeset)
                     }
-                }).boxify()
+                })
             }
 
             /// Insert a new changeset into this table. Checks that all parents are already in
@@ -346,7 +346,7 @@ macro_rules! impl_changesets {
                             Ok(true)
                         })
                     })
-                }).boxify()
+                })
             }
         }
 
