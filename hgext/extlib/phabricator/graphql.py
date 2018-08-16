@@ -39,7 +39,9 @@ class Client(object):
         self._cert = None
         self._oauth = None
         self.ca_bundle = ca_bundle or True
-        self._applyarcconfig(arcconfig.loadforpath(repodir))
+        self._applyarcconfig(
+            arcconfig.loadforpath(repodir), repo.ui.config("phabricator", "arcrc_host")
+        )
         if not self._mock:
             app_id = repo.ui.config("phabricator", "graphql_app_id")
             app_token = repo.ui.config("phabricator", "graphql_app_token")
@@ -55,30 +57,41 @@ class Client(object):
                 app_token,
             )
 
-    def _applyarcconfig(self, config):
-        self._host = config.get("graphql_uri", self._host)
+    def _applyarcconfig(self, config, defaultarcrchost):
+        arcrchost = config.get("graphql_uri", None)
         if "OVERRIDE_GRAPHQL_URI" in encoding.environ:
-            self._host = encoding.environ["OVERRIDE_GRAPHQL_URI"]
-        try:
-            hostconfig = config["hosts"][self._host]
-            self._user = hostconfig["user"]
-            self._cert = hostconfig.get("cert", None)
-            self._oauth = hostconfig.get("oauth", None)
-        except KeyError:
-            try:
-                hostconfig = config["hosts"][config["hosts"].keys()[0]]
-                self._user = hostconfig["user"]
-                self._cert = hostconfig.get("cert", None)
-                self._oauth = hostconfig.get("oauth", None)
-            except KeyError:
-                pass
+            arcrchost = encoding.environ["OVERRIDE_GRAPHQL_URI"]
 
-        if self._cert is None and self._oauth is None:
-            raise arcconfig.ArcConfigError(
-                "arcrc is missing user "
-                "credentials for host %s.  use "
-                '"arc install-certificate" to fix.' % self._host
-            )
+        if "hosts" not in config:
+            self._raisearcrcerror()
+
+        allhosts = config["hosts"]
+
+        if arcrchost not in allhosts:
+            if defaultarcrchost in allhosts:
+                arcrchost = defaultarcrchost
+            else:
+                # pick the first credential blob in hosts
+                hostkeys = allhosts.keys()
+                if len(hostkeys) > 0:
+                    arcrchost = hostkeys[0]
+                else:
+                    self._raisearcrcerror()
+
+        hostconfig = allhosts[arcrchost]
+
+        self._user = hostconfig.get("user", None)
+        self._cert = hostconfig.get("cert", None)
+        self._oauth = hostconfig.get("oauth", None)
+
+        if not self._user or (self._cert is None and self._oauth is None):
+            self._raisearcrcerror()
+
+    @classmethod
+    def _raisearcrcerror(cls):
+        raise arcconfig.ArcConfigError(
+            "arcrc is missing user " "credentials. use " '"jf authenticate" to fix.'
+        )
 
     def _normalizerevisionnumbers(self, *revision_numbers):
         rev_numbers = []
