@@ -137,11 +137,11 @@ impl<'a> HistoryEntry<'a> {
         writer.write_all(p2.as_ref())?;
         writer.write_all(linknode.as_ref())?;
         match copy_from {
-            Some(file_name) => {
+            &Some(file_name) => {
                 writer.write_u16::<BigEndian>(file_name.len() as u16)?;
                 writer.write_all(file_name)?;
             }
-            None => writer.write_u16::<BigEndian>(0)?,
+            &None => writer.write_u16::<BigEndian>(0)?,
         };
 
         Ok(())
