@@ -14,7 +14,7 @@ import silenttestrunner
 from hgext.extlib.pyrevisionstore import historypack as rusthistpack
 from hgext.remotefilelog.basepack import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF
 from hgext.remotefilelog.historypack import historypack, mutablehistorypack
-from mercurial import error, ui as uimod
+from mercurial import error, ui as uimod, util
 from mercurial.node import nullid
 
 
@@ -258,7 +258,7 @@ class histpacktestsbase(object):
             revisions.append((filename, node, p1, p2, linknode, None))
 
         pack = self.createPack(revisions)
-        if hasattr(pack, "params"):
+        if util.safehasattr(pack, "params"):
             self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
