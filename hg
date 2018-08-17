@@ -7,41 +7,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
-
 import os
 import sys
 
-if os.environ.get('HGUNICODEPEDANTRY', False):
-    try:
-        reload(sys)
-        sys.setdefaultencoding("undefined")
-    except NameError:
-        pass
-
-libdir = '@LIBDIR@'
-
-if libdir != '@' 'LIBDIR' '@':
+libdir = "@LIBDIR@"
+if libdir != "@" "LIBDIR" "@":
     if not os.path.isabs(libdir):
-        libdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                              libdir)
+        libdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), libdir)
         libdir = os.path.abspath(libdir)
     sys.path.insert(0, libdir)
 
-if (sys.argv[1:5] == ['serve', '--cmdserver', 'chgunix', '--address']
-    and sys.argv[6:8] == ['--daemon-postexec', 'chdir:/']
-    and 'CHGINTERNALMARK' in os.environ):
-    # Shortcut path for chg server
-    from mercurial import dispatch
-    dispatch.runchgserver()
-else:
-    # Non-chg path
-    try:
-        if sys.version_info[0] < 3 or sys.version_info >= (3, 6):
-            import hgdemandimport; hgdemandimport.enable()
-    except ImportError:
-        sys.stderr.write("abort: couldn't find mercurial libraries in [%s]\n" %
-                         ' '.join(sys.path))
-        sys.stderr.write("(check your install and PYTHONPATH)\n")
-        sys.exit(-1)
-    from mercurial import dispatch
-    dispatch.run()
+from mercurial import entrypoint
+
+entrypoint.run()
