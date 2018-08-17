@@ -43,6 +43,13 @@ drawdag() {
   rm -f .hg/localtags
 }
 
+# Simplify error reporting so crash does not show a traceback.
+# This is useful to match error messages without the traceback.
+shorttraceback() {
+  enable errorredirect
+  setconfig errorredirect.script='printf "%s" "$TRACE" | tail -1'
+}
+
 # Set config items like --config way, instead of using cat >> $HGRCPATH
 setconfig() {
   python "$RUNTESTDIR/setconfig.py" "$@"
