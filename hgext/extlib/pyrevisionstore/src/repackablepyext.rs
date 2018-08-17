@@ -35,7 +35,11 @@ impl<T: Repackable> RepackablePyExt for T {
 
         for &(ref key, ref entry) in packed_entries.items(py).iter() {
             let key = from_tuple_to_key(py, &key)?;
-            if entry.getattr(py, "datarepacked")?.is_true(py)?
+            let leader_string = match self.kind() {
+                RepackOutputType::Data => "datarepacked",
+                RepackOutputType::History => "historyrepacked",
+            };
+            if entry.getattr(py, leader_string)?.is_true(py)?
                 || entry.getattr(py, "gced")?.is_true(py)?
             {
                 repacked.insert(key);
