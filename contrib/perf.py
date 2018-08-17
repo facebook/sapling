@@ -953,7 +953,7 @@ def perfindex(ui, repo, **opts):
 @command("perfstartup", formatteropts)
 def perfstartup(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
-    cmd = sys.argv[0]
+    cmd = ' '.join(util.gethgcmd())
 
     def d():
         if os.name != "nt":
