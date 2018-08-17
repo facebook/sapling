@@ -155,7 +155,7 @@ py_class!(class historypack |py| {
         Ok(PyBytes::new(py, &path))
     }
 
-    def getancestors(&self, name: &PyBytes, node: &PyBytes) -> PyResult<PyDict> {
+    def getancestors(&self, name: &PyBytes, node: &PyBytes, known: Option<&PyObject>) -> PyResult<PyDict> {
         <HistoryStorePyExt>::get_ancestors(self.store(py).as_ref(), py, name, node)
     }
 

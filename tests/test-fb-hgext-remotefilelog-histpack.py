@@ -85,7 +85,7 @@ class histpacktestsbase(object):
         revisions = [(filename, node, p1, p2, linknode, None)]
         pack = self.createPack(revisions)
 
-        actual = pack.getancestors(filename, node)[node]
+        actual = pack.getancestors(filename, node, known=None)[node]
         self.assertEquals(p1, actual[0])
         self.assertEquals(p2, actual[1])
         self.assertEquals(linknode, actual[2])
@@ -106,7 +106,7 @@ class histpacktestsbase(object):
         pack = self.createPack(revisions)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
-            actual = pack.getancestors(filename, node)[node]
+            actual = pack.getancestors(filename, node, known=None)[node]
             self.assertEquals(p1, actual[0])
             self.assertEquals(p2, actual[1])
             self.assertEquals(linknode, actual[2])
@@ -129,7 +129,7 @@ class histpacktestsbase(object):
         pack = self.createPack(revisions)
 
         # Test that the chain has all the entries
-        ancestors = pack.getancestors(revisions[0][0], revisions[0][1])
+        ancestors = pack.getancestors(revisions[0][0], revisions[0][1], known=None)
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             ap1, ap2, alinknode, acopyfrom = ancestors[node]
             self.assertEquals(ap1, p1)
@@ -170,7 +170,7 @@ class histpacktestsbase(object):
 
         # Verify the pack contents
         for (filename, node), (p1, p2, lastnode) in allentries.iteritems():
-            ancestors = pack.getancestors(filename, node)
+            ancestors = pack.getancestors(filename, node, known=None)
             self.assertEquals(ancestorcounts[(filename, node)], len(ancestors))
             for anode, (ap1, ap2, alinknode, copyfrom) in ancestors.iteritems():
                 ep1, ep2, elinknode = allentries[(filename, anode)]
@@ -262,7 +262,7 @@ class histpacktestsbase(object):
             self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
-            actual = pack.getancestors(filename, node)[node]
+            actual = pack.getancestors(filename, node, known=None)[node]
             self.assertEquals(p1, actual[0])
             self.assertEquals(p2, actual[1])
             self.assertEquals(linknode, actual[2])
@@ -295,7 +295,7 @@ class histpacktestsbase(object):
 
         # Test getancestors()
         for filename, node, p1, p2, linknode, copyfrom in revisions:
-            entry = packer.getancestors(filename, node)
+            entry = packer.getancestors(filename, node, known=None)
             self.assertEquals(entry, {node: (p1, p2, linknode, copyfrom)})
 
         # Test getmissing()
@@ -368,7 +368,7 @@ class histpacktestsbase(object):
         # Test getancestors before finalizing
         try:
             filename, node = revisions[0][:2]
-            packer.getancestors(filename, node)
+            packer.getancestors(filename, node, known=None)
             self.assertFalse(True, "Reading data before finalizing should've " "thrown")
         except error.ProgrammingError:
             pass
