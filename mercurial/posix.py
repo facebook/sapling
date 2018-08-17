@@ -803,7 +803,19 @@ def spawndetached(args):
     return os.spawnvp(os.P_NOWAIT | getattr(os, "P_DETACH", 0), args[0], args)
 
 
+executedfrombinary = False
+
+
+def setbinaryexecution(isbinary=False):
+    global executedfrombinary
+    executedfrombinary = isbinary
+
+
 def gethgcmd():
+    # in case this is called from a Rust binary, the fist element of sys.argv
+    # is entrypoint.py, which is not executable
+    if executedfrombinary:
+        return [sys.executable]
     return sys.argv[:1]
 
 

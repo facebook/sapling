@@ -10,7 +10,7 @@ import os
 import sys
 
 
-def run():
+def run(binaryexecution=False):
     # entrypoint is in mercurial/ dir, while we want 'from mercurial import ...',
     # 'from hgext import ...' and 'from hgdemandimport import ...' to work
     # so we are adding their parent directory to be the first item of sys.path
@@ -33,6 +33,10 @@ def run():
             sys.setdefaultencoding("undefined")
         except NameError:
             pass
+
+    from mercurial import util
+
+    util.platform.setbinaryexecution(binaryexecution)
 
     if (
         sys.argv[1:5] == ["serve", "--cmdserver", "chgunix", "--address"]
@@ -63,4 +67,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    run(binaryexecution=True)
