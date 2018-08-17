@@ -2190,7 +2190,7 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
         # because parts other than the first 20 bytes are broken, while
         # the first 20 bytes are still valid.
         try:
-            rev = repo.vfs.open("dirstate").read(20)
+            rev = hex(repo.vfs.open("dirstate").read(20))
         except Exception:
             pass
 
