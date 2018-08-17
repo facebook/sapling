@@ -320,7 +320,8 @@ Future<InodePtr> TreeInode::getChildRecursive(RelativePathPiece path) {
   auto future = processor->next(inodePtrFromThis());
   // This ensure() callback serves to hold onto the unique_ptr,
   // and makes sure it only gets destroyed when the future is finally resolved.
-  return future.ensure([p = std::move(processor)]() mutable { p.reset(); });
+  return std::move(future).ensure(
+      [p = std::move(processor)]() mutable { p.reset(); });
 }
 
 InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {

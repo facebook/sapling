@@ -216,7 +216,7 @@ TEST(FutureUnixSocket, receiveQueue) {
                       });
     // Terminate the event loop after the final receive
     if (n == sendMessages.size() - 1) {
-      future.ensure([&evb]() { evb.terminateLoopSoon(); });
+      std::move(future).ensure([&evb]() { evb.terminateLoopSoon(); });
     }
   }
 

@@ -432,7 +432,7 @@ void PrivHelper::setLogFileBlocking(folly::File logFile) {
     return;
   }
 
-  future.ensure([&evb] { evb.terminateLoopSoon(); });
+  future = std::move(future).ensure([&evb] { evb.terminateLoopSoon(); });
   evb.loopForever();
   std::move(future).get();
 }
