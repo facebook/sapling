@@ -154,7 +154,7 @@ pub fn request_handler(
 
             STATS::wireproto_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
             scuba_logger
-                .add_stats(&stats)
+                .add_future_stats(&stats)
                 .add("wireproto_commands", wireproto_calls);
 
             match result {

@@ -313,7 +313,7 @@ impl UploadEntries {
                 move |stats, result| {
                     if result.is_ok() {
                         scuba_logger
-                            .add_stats(&stats)
+                            .add_future_stats(&stats)
                             .log_with_msg("Required checks", None);
                     }
                     Ok(())
@@ -348,7 +348,7 @@ impl UploadEntries {
                 move |stats, result| {
                     if result.is_ok() {
                         scuba_logger
-                            .add_stats(&stats)
+                            .add_future_stats(&stats)
                             .log_with_msg("Parent checks", None);
                     }
                     Ok(())
@@ -402,7 +402,7 @@ impl UploadEntries {
                     move |stats, result| {
                         if result.is_ok() {
                             scuba_logger
-                                .add_stats(&stats)
+                                .add_future_stats(&stats)
                                 .log_with_msg("Upload filenodes", None);
                         }
                         Ok(())
@@ -576,7 +576,7 @@ pub fn process_entries(
         .timed(move |stats, result| {
             if result.is_ok() {
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_future_stats(&stats)
                     .log_with_msg("Upload entries", None);
             }
             Ok(())
@@ -647,7 +647,7 @@ pub fn handle_parents(
         .timed(move |stats, result| {
             if result.is_ok() {
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_future_stats(&stats)
                     .log_with_msg("Wait for parents ready", None);
             }
             Ok(())

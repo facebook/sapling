@@ -19,7 +19,7 @@ use futures::future::{self, Either, Future};
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_stats::{Stats, Timed};
+use futures_stats::{FutureStats, Timed};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{Discard, Drain, Logger};
 use stats::Timeseries;
@@ -654,7 +654,12 @@ impl BlobRepo {
         let id = blob.id().clone();
         let blobstore_key = id.blobstore_key();
 
-        fn log_upload_stats(logger: Logger, blobstore_key: String, phase: &str, stats: Stats) {
+        fn log_upload_stats(
+            logger: Logger,
+            blobstore_key: String,
+            phase: &str,
+            stats: FutureStats,
+        ) {
             trace!(logger, "Upload blob stats";
                 "phase" => String::from(phase),
                 "blobstore_key" => blobstore_key,
@@ -1102,7 +1107,7 @@ impl UploadHgTreeEntry {
             path: RepoPath,
             node_id: HgNodeHash,
             computed_node_id: HgNodeHash,
-            stats: Stats,
+            stats: FutureStats,
         ) {
             trace!(logger, "Upload HgManifestEnvelope stats";
                 "phase" => "manifest_envelope_uploaded".to_string(),
@@ -1347,7 +1352,7 @@ impl UploadHgFileEntry {
         Ok((cbinfo, fut.boxify()))
     }
 
-    fn log_stats(logger: Logger, path: MPath, nodeid: HgNodeHash, phase: &str, stats: Stats) {
+    fn log_stats(logger: Logger, path: MPath, nodeid: HgNodeHash, phase: &str, stats: FutureStats) {
         let path = format!("{}", path);
         let nodeid = format!("{}", nodeid);
         trace!(logger, "Upload blob stats";
@@ -1560,7 +1565,7 @@ impl CreateChangeset {
                 .timed(move |stats, result| {
                     if result.is_ok() {
                         scuba_logger
-                            .add_stats(&stats)
+                            .add_future_stats(&stats)
                             .log_with_msg("Changeset created", None);
                     }
                     Ok(())
@@ -1574,7 +1579,7 @@ impl CreateChangeset {
                 move |stats, result| {
                     if result.is_ok() {
                         scuba_logger
-                            .add_stats(&stats)
+                            .add_future_stats(&stats)
                             .log_with_msg("Parents completed", None);
                     }
                     Ok(())
@@ -1625,7 +1630,7 @@ impl CreateChangeset {
                     move |stats, result| {
                         if result.is_ok() {
                             scuba_logger
-                                .add_stats(&stats)
+                                .add_future_stats(&stats)
                                 .log_with_msg("CreateChangeset Finished", None);
                         }
                         Ok(())

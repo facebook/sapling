@@ -425,7 +425,7 @@ impl HgCommands for RepoClient {
             .traced(self.trace(), ops::BETWEEN, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
             })
@@ -447,7 +447,7 @@ impl HgCommands for RepoClient {
             .traced(self.trace(), ops::HEADS, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
             })
@@ -489,7 +489,7 @@ impl HgCommands for RepoClient {
             .traced(self.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
             })
@@ -514,7 +514,7 @@ impl HgCommands for RepoClient {
         ).traced(self.trace(), ops::KNOWN, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
             })
@@ -534,7 +534,7 @@ impl HgCommands for RepoClient {
             .timed(move |stats, _| {
                 STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
             })
@@ -556,7 +556,7 @@ impl HgCommands for RepoClient {
             .traced(self.trace(), ops::HELLO, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
             })
@@ -585,7 +585,7 @@ impl HgCommands for RepoClient {
                 .traced(self.trace(), ops::LISTKEYS, trace_args!())
                 .timed(move |stats, _| {
                     scuba_logger
-                        .add_stats(&stats)
+                        .add_future_stats(&stats)
                         .log_with_msg("Command processed", None);
                     Ok(())
                 })
@@ -619,7 +619,7 @@ impl HgCommands for RepoClient {
         res.traced(self.trace(), ops::UNBUNDLE, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
             })
@@ -643,7 +643,7 @@ impl HgCommands for RepoClient {
             .timed(move |stats, _| {
                 STATS::gettreepack_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
                 scuba_logger
-                    .add_stats(&stats)
+                    .add_stream_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
             })
@@ -678,7 +678,7 @@ impl HgCommands for RepoClient {
                         STATS::getfiles_ms
                             .add_value(stats.completion_time.as_millis_unchecked() as i64);
                         scuba_logger
-                            .add_stats(&stats)
+                            .add_future_stats(&stats)
                             .log_with_msg("Command processed", None);
                         Ok(())
                     })

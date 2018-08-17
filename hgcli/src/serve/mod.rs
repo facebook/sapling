@@ -137,7 +137,7 @@ impl<'a> StdioRelay<'a> {
 
         self.internal_run(stdio)
             .timed(move |stats, result| {
-                scuba_logger.add_stats(&stats);
+                scuba_logger.add_future_stats(&stats);
 
                 match result {
                     Ok(_) => scuba_logger.log_with_msg("Hgcli proxy - Success", None),
