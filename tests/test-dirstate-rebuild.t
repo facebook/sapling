@@ -21,10 +21,8 @@ Broken by having an incomplete p2
   $ enable blackbox
   >>> open('.hg/dirstate', 'a').truncate(25)
   $ hg debugrebuilddirstate
-  ValueError: 20-byte hash required
-  [255]
-
-  $ recover
+  $ hg log -r . -T '{desc}\n'
+  B
 
 Broken by deleting the tree
 

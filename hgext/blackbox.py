@@ -187,7 +187,7 @@ def wrapui(ui):
                     ctx = repo[None]
                     parents = ctx.parents()
                     rev = "+".join([hex(p.node()) for p in parents])
-                except error.Abort:
+                except Exception:
                     # This can happen if the dirstate file is sufficiently
                     # corrupt that we can't extract the parents. In that case,
                     # just don't set the rev.
