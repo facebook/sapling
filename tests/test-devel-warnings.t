@@ -138,8 +138,9 @@ Stripping from a transaction
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
   (compatibility will be dropped after Mercurial-42.1337, update your code.) at:
-   */hg:* in <module> (glob)
-   */mercurial/entrypoint.py:* in run (glob)
+   */hg:* in <module> (glob) (?)
+   */mercurial/entrypoint.py:* in * (glob) (?)
+   */mercurial/entrypoint.py:* in * (glob) (?)
    */mercurial/dispatch.py:* in run (glob)
    */mercurial/dispatch.py:* in dispatch (glob)
    */mercurial/dispatch.py:* in _runcatch (glob)
