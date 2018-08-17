@@ -4,8 +4,10 @@ use bytes::Bytes;
 use config::{ConfigSet, Options};
 use dirs;
 use error::Error;
-use std::collections::HashSet;
+use std::cmp::Eq;
+use std::collections::{HashMap, HashSet};
 use std::env;
+use std::hash::Hash;
 use std::path::Path;
 
 const HGPLAIN: &str = "HGPLAIN";
@@ -14,6 +16,23 @@ const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
 pub trait OptionsHgExt {
     /// Drop configs according to HGPLAIN and HGPLAINEXCEPT.
     fn process_hgplain(self) -> Self;
+
+    /// Set read-only config items. `items` contains a list of tuple `(section, name)`.
+    /// Setting those items to new value will be ignored.
+    fn readonly_items<S: Into<Bytes>, N: Into<Bytes>>(self, items: Vec<(S, N)>) -> Self;
+
+    /// Set section remap. If a section name matches an entry key, it will be treated as if the
+    /// name is the entry value. The remap wouldn't happen recursively. For example, with a
+    /// `{"A": "B", "B": "C"}` map, section name "A" will be treated as "B", not "C".
+    /// This is implemented via `append_filter`.
+    fn remap_sections<K: Eq + Hash + Into<Bytes>, V: Into<Bytes>>(
+        self,
+        remap: HashMap<K, V>,
+    ) -> Self;
+
+    /// Set section whitelist. Sections outside the whitelist won't be loaded.
+    /// This is implemented via `append_filter`.
+    fn whitelist_sections<B: Clone + Into<Bytes>>(self, sections: Vec<B>) -> Self;
 }
 
 pub trait ConfigSetHgExt {
@@ -87,6 +106,65 @@ impl OptionsHgExt for Options {
         } else {
             self
         }
+    }
+
+    /// Set section whitelist. Sections outside the whitelist won't be loaded.
+    /// This is implemented via `append_filter`.
+    fn whitelist_sections<B: Clone + Into<Bytes>>(self, sections: Vec<B>) -> Self {
+        let whitelist: HashSet<Bytes> = sections
+            .iter()
+            .cloned()
+            .map(|section| section.into())
+            .collect();
+
+        let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+            if whitelist.contains(&section) {
+                Some((section, name, value))
+            } else {
+                None
+            }
+        };
+
+        self.append_filter(Box::new(filter))
+    }
+
+    /// Set section remap. If a section name matches an entry key, it will be treated as if the
+    /// name is the entry value. The remap wouldn't happen recursively. For example, with a
+    /// `{"A": "B", "B": "C"}` map, section name "A" will be treated as "B", not "C".
+    /// This is implemented via `append_filter`.
+    fn remap_sections<K, V>(self, remap: HashMap<K, V>) -> Self
+    where
+        K: Eq + Hash + Into<Bytes>,
+        V: Into<Bytes>,
+    {
+        let remap: HashMap<Bytes, Bytes> = remap
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect();
+
+        let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+            let section = remap.get(&section).cloned().unwrap_or(section);
+            Some((section, name, value))
+        };
+
+        self.append_filter(Box::new(filter))
+    }
+
+    fn readonly_items<S: Into<Bytes>, N: Into<Bytes>>(self, items: Vec<(S, N)>) -> Self {
+        let readonly_items: HashSet<(Bytes, Bytes)> = items
+            .into_iter()
+            .map(|(section, name)| (section.into(), name.into()))
+            .collect();
+
+        let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+            if readonly_items.contains(&(section.clone(), name.clone())) {
+                None
+            } else {
+                Some((section, name, value))
+            }
+        };
+
+        self.append_filter(Box::new(filter))
     }
 }
 
@@ -226,5 +304,65 @@ mod tests {
         assert_eq!(cfg.get("alias", "l"), Some("log".into()));
         assert_eq!(cfg.get("revsetalias", "@"), Some("master".into()));
         assert_eq!(cfg.get("templatealias", "u"), None);
+    }
+
+    #[test]
+    fn test_section_whitelist() {
+        let opts = Options::new().whitelist_sections(vec!["x", "y"]);
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[x]\n\
+             a=1\n\
+             [y]\n\
+             b=2\n\
+             [z]\n\
+             c=3",
+            &opts,
+        );
+
+        assert_eq!(cfg.sections(), vec![Bytes::from("x"), Bytes::from("y")]);
+        assert_eq!(cfg.get("z", "c"), None);
+    }
+
+    #[test]
+    fn test_section_remap() {
+        let mut remap = HashMap::new();
+        remap.insert("x", "y");
+        remap.insert("y", "z");
+
+        let opts = Options::new().remap_sections(remap);
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[x]\n\
+             a=1\n\
+             [y]\n\
+             b=2\n\
+             [z]\n\
+             c=3",
+            &opts,
+        );
+
+        assert_eq!(cfg.get("y", "a"), Some("1".into()));
+        assert_eq!(cfg.get("z", "b"), Some("2".into()));
+        assert_eq!(cfg.get("z", "c"), Some("3".into()));
+    }
+
+    #[test]
+    fn test_readonly_items() {
+        let opts = Options::new().readonly_items(vec![("x", "a"), ("y", "b")]);
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[x]\n\
+             a=1\n\
+             [y]\n\
+             b=2\n\
+             [z]\n\
+             c=3",
+            &opts,
+        );
+
+        assert_eq!(cfg.get("x", "a"), None);
+        assert_eq!(cfg.get("y", "b"), None);
+        assert_eq!(cfg.get("z", "c"), Some("3".into()));
     }
 }
