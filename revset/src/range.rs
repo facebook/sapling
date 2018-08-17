@@ -78,6 +78,8 @@ fn make_pending(
 }
 
 impl RangeNodeStream {
+    // `start_node` should have a lower generation number than end_node,
+    // otherwise stream will be empty
     pub fn new(repo: &Arc<BlobRepo>, start_node: ChangesetId, end_node: ChangesetId) -> Self {
         let start_generation = Box::new(
             repo.clone()

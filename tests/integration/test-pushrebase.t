@@ -89,6 +89,8 @@ TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
   
 
 
+
+
 TODO(stash, aslpavel) This push should fail because of the conflicts
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
@@ -96,3 +98,71 @@ TODO(stash, aslpavel) This push should fail because of the conflicts
   pushing to ssh://user@dummy/repo
   remote: * Session with Mononoke started with uuid: * (glob)
   searching for changes
+
+Push stack
+  $ hg up -q 0
+  $ echo 2 > 2 && hg add 2 && hg ci -m 2
+  $ echo 3 > 3 && hg add 3 && hg ci -m 3
+  $ hgmn push -r . --to master_bookmark
+  pushing to ssh://user@dummy/repo
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  searching for changes
+  $ hgmn pull -q
+  $ hgmn up -q master_bookmark
+  $ hg sl -r ":"
+  @  changeset:   9:87a1ed50f395
+  |  bookmark:    master_bookmark
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     3
+  |
+  o  changeset:   8:9a63b5318212
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     2
+  |
+  o  changeset:   7:f45edac0a57f
+  |  parent:      4:c2e526aacb51
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     1
+  |
+  o  changeset:   4:c2e526aacb51
+  |  parent:      2:26805aba1e60
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     1
+  |
+  o  changeset:   2:26805aba1e60
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C
+  |
+  o  changeset:   1:112478962961
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     B
+  |
+  | o  changeset:   6:3953a5b36168
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     3
+  | |
+  | o  changeset:   5:c9b2673d3218
+  |/   parent:      0:426bada5c675
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     2
+  |
+  | o  changeset:   3:a0c9c5791058
+  |/   parent:      0:426bada5c675
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     1
+  |
+  o  changeset:   0:426bada5c675
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  

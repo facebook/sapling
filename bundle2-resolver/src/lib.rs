@@ -33,6 +33,7 @@ extern crate quickcheck;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
+extern crate revset;
 extern crate scuba_ext;
 #[macro_use]
 extern crate slog;
