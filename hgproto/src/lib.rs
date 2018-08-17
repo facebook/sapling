@@ -172,9 +172,11 @@ pub struct GettreepackArgs {
     pub mfnodes: Vec<HgNodeHash>,
     /// The manifest nodes of the rootdir that are already on the client.
     pub basemfnodes: Vec<HgNodeHash>,
-    ///  The fullpath (not relative path) of directories underneath
+    /// The fullpath (not relative path) of directories underneath
     /// the rootdir that should be sent.
     pub directories: Vec<Bytes>,
+    /// The depth from the root that should be sent.
+    pub depth: Option<usize>,
 }
 
 #[derive(Debug)]

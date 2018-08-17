@@ -197,12 +197,14 @@ fn find_changed_entry_status_stream(
     manifest: Box<Manifest>,
     basemanifest: Box<Manifest>,
     pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+    max_depth: Option<usize>,
 ) -> Vec<ChangedEntry> {
     let mut stream = spawn(changed_entry_stream_with_pruner(
         &manifest,
         &basemanifest,
         None,
         pruner,
+        max_depth,
     ));
     let mut res = vec![];
     loop {
@@ -290,6 +292,7 @@ fn do_check_with_pruner<P>(
     expected_deleted: Vec<&str>,
     expected_modified: Vec<&str>,
     pruner: P,
+    max_depth: Option<usize>,
 ) where
     P: FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
 {
@@ -297,7 +300,8 @@ fn do_check_with_pruner<P>(
         let manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash));
         let base_manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
 
-        let res = find_changed_entry_status_stream(manifest, base_manifest, pruner.clone());
+        let res =
+            find_changed_entry_status_stream(manifest, base_manifest, pruner.clone(), max_depth);
 
         check_changed_paths(
             res,
@@ -313,7 +317,7 @@ fn do_check_with_pruner<P>(
         let manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
         let base_manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash));
 
-        let res = find_changed_entry_status_stream(manifest, base_manifest, pruner);
+        let res = find_changed_entry_status_stream(manifest, base_manifest, pruner, max_depth);
 
         check_changed_paths(
             res,
@@ -340,6 +344,7 @@ fn do_check(
         expected_deleted,
         expected_modified,
         |_| true,
+        None,
     )
 }
 
@@ -523,6 +528,91 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
 }
 
 #[test]
+fn test_depth_parameter() {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let main_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
+        let base_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
+        // main_hash is a child of base_hash
+        // hg st --change .
+        // A dir1/subdir1/subsubdir1/file_1
+        // A dir1/subdir1/subsubdir2/file_1
+        // A dir1/subdir1/subsubdir2/file_2
+        let expected_added = vec![
+            "dir1/subdir1/subsubdir1",
+            "dir1/subdir1/subsubdir1/file_1",
+            "dir1/subdir1/subsubdir2",
+            "dir1/subdir1/subsubdir2/file_1",
+            "dir1/subdir1/subsubdir2/file_2",
+        ];
+        let expected_modified = vec!["dir1", "dir1/subdir1"];
+        do_check_with_pruner(
+            repo.clone(),
+            main_hash,
+            base_hash,
+            expected_added,
+            vec![],
+            expected_modified,
+            |_| true,
+            Some(4),
+        );
+
+        let expected_added = vec!["dir1/subdir1/subsubdir1", "dir1/subdir1/subsubdir2"];
+        let expected_modified = vec!["dir1", "dir1/subdir1"];
+        do_check_with_pruner(
+            repo.clone(),
+            main_hash,
+            base_hash,
+            expected_added,
+            vec![],
+            expected_modified,
+            |_| true,
+            Some(3),
+        );
+
+        let expected_added = vec![];
+        let expected_modified = vec!["dir1", "dir1/subdir1"];
+        do_check_with_pruner(
+            repo.clone(),
+            main_hash,
+            base_hash,
+            expected_added,
+            vec![],
+            expected_modified,
+            |_| true,
+            Some(2),
+        );
+
+        let expected_added = vec![];
+        let expected_modified = vec!["dir1"];
+        do_check_with_pruner(
+            repo.clone(),
+            main_hash,
+            base_hash,
+            expected_added,
+            vec![],
+            expected_modified,
+            |_| true,
+            Some(1),
+        );
+
+        let expected_added = vec![];
+        let expected_modified = vec![];
+        do_check_with_pruner(
+            repo.clone(),
+            main_hash,
+            base_hash,
+            expected_added,
+            vec![],
+            expected_modified,
+            |_| true,
+            Some(0),
+        );
+        Ok(())
+    }).expect("test failed")
+}
+
+#[test]
 fn test_recursive_changed_entry_prune() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
@@ -556,6 +646,7 @@ fn test_recursive_changed_entry_prune() {
                     None => true,
                 }
             },
+            None,
         );
 
         let expected_added = vec!["dir1"];
@@ -586,6 +677,7 @@ fn test_recursive_changed_entry_prune() {
                     None => true,
                 }
             },
+            None,
         );
 
         Ok(())
@@ -626,10 +718,15 @@ fn test_recursive_changed_entry_prune_visited() {
 
         let pruner = visited_pruner();
 
-        let first_stream =
-            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, pruner.clone());
+        let first_stream = changed_entry_stream_with_pruner(
+            &manifest_1,
+            &basemanifest,
+            None,
+            pruner.clone(),
+            None,
+        );
         let second_stream =
-            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, pruner);
+            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, pruner, None);
         let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
         let res = res.wait_future().unwrap();
         let unique_len = res.len();
@@ -680,19 +777,24 @@ fn test_recursive_changed_entry_prune_visited_no_files() {
         let basemanifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
 
         let pruner = and_pruner_combinator(&file_pruner, visited_pruner());
-        let first_stream =
-            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, pruner.clone());
+        let first_stream = changed_entry_stream_with_pruner(
+            &manifest_1,
+            &basemanifest,
+            None,
+            pruner.clone(),
+            None,
+        );
         let second_stream =
-            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, pruner);
+            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, pruner, None);
         let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
         let res = res.wait_future().unwrap();
         let unique_len = res.len();
         assert_eq!(unique_len, 7);
 
         let first_stream =
-            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, &file_pruner);
+            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, &file_pruner, None);
         let second_stream =
-            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, &file_pruner);
+            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, &file_pruner, None);
         let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
         let res = res.wait_future().unwrap();
         // Make sure that more entries are produced without VisitedPruner i.e. some entries are
@@ -715,7 +817,7 @@ fn test_visited_pruner_different_files_same_hash() {
 
         let pruner = visited_pruner();
         let stream =
-            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner);
+            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner, None);
         let mut res = spawn(stream.collect());
         let res = res.wait_future().unwrap();
 
@@ -736,7 +838,7 @@ fn test_file_pruner() {
 
         let pruner = file_pruner;
         let stream =
-            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner);
+            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner, None);
         let mut res = spawn(stream.collect());
         let res = res.wait_future().unwrap();
 

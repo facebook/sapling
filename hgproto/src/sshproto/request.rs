@@ -285,6 +285,32 @@ where
     }
 }
 
+/// Given a hash of parameters, look up a parameter by name, and if it exists,
+/// apply a parser to its value. If it doesn't, return None.
+fn parseval_option<'a, F, T>(
+    params: &'a HashMap<Vec<u8>, Vec<u8>>,
+    key: &str,
+    parser: F,
+) -> Result<Option<T>>
+where
+    F: Fn(&'a [u8]) -> IResult<&'a [u8], T>,
+{
+    match params.get(key.as_bytes()) {
+        None => Ok(None),
+        Some(v) => match parser(v.as_ref()) {
+            IResult::Done(unparsed, v) => match match_eof(unparsed) {
+                IResult::Done(..) => Ok(Some(v)),
+                _ => bail_msg!(
+                    "Unconsumed characters remain after parsing param: {:?}",
+                    unparsed
+                ),
+            },
+            IResult::Incomplete(err) => bail_msg!("param parse incomplete: {:?}", err),
+            IResult::Error(err) => bail_msg!("param parse failed: {:?}", err),
+        },
+    }
+}
+
 /// Parse a command, given some input, a command name (used as a tag), a param parser
 /// function (which generalizes over batched and non-batched parameter syntaxes),
 /// number of args (since each command has a fixed number of expected parameters,
@@ -493,6 +519,12 @@ fn parse_with_params(
                 mfnodes: parseval(&kv, "mfnodes", hashlist)?,
                 basemfnodes: parseval(&kv, "basemfnodes", hashlist)?,
                 directories: parseval(&kv, "directories", gettreepack_directories)?,
+                depth: parseval_option(&kv, "depth", closure!(
+                    map_res!(
+                        map_res!(take_while1!(is_digit), str::from_utf8),
+                        usize::from_str
+                    )
+                ))?,
             })))
         | command!("getfiles", Getfiles, parse_params, {})
     )
@@ -1257,12 +1289,15 @@ mod test_parse {
                 mfnodes: vec![hash_ones()],
                 basemfnodes: vec![hash_ones()],
                 directories: vec![],
+                depth: None,
             })),
         );
 
         let inp =
             "gettreepack\n\
-             * 4\n\
+             * 5\n\
+             depth 1\n\
+             1\
              rootdir 5\n\
              ololo\
              mfnodes 81\n\
@@ -1279,6 +1314,7 @@ mod test_parse {
                 mfnodes: vec![hash_ones(), hash_twos()],
                 basemfnodes: vec![hash_twos(), hash_ones()],
                 directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],
+                depth: Some(1),
             })),
         );
     }

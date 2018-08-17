@@ -310,7 +310,7 @@ where
     TM: Manifest,
     FM: Manifest,
 {
-    changed_entry_stream_with_pruner(to, from, path, |_| true).boxify()
+    changed_entry_stream_with_pruner(to, from, path, |_| true, None).boxify()
 }
 
 pub fn changed_entry_stream_with_pruner<TM, FM>(
@@ -318,23 +318,26 @@ pub fn changed_entry_stream_with_pruner<TM, FM>(
     from: &FM,
     path: Option<MPath>,
     pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+    max_depth: Option<usize>,
 ) -> impl Stream<Item = ChangedEntry, Error = Error>
 where
     TM: Manifest,
     FM: Manifest,
 {
+    if max_depth == Some(0) {
+        return empty().boxify();
+    }
+
     diff_manifests(path, to, from)
         .map(move |diff| {
             select_all(
-                diff.into_iter()
-                    .filter({
-                        let pruner = pruner.clone();
-                        pruner
-                    })
-                    .map(|entry| recursive_changed_entry_stream(entry, pruner.clone())),
+                diff.into_iter().filter(pruner.clone()).map(|entry| {
+                    recursive_changed_entry_stream(entry, 1, pruner.clone(), max_depth)
+                }),
             )
         })
         .flatten_stream()
+        .boxify()
 }
 
 /// Given a ChangedEntry, return a stream that consists of this entry, and all subentries
@@ -342,9 +345,11 @@ where
 /// subtrees are recursively compared.
 fn recursive_changed_entry_stream(
     changed_entry: ChangedEntry,
+    depth: usize,
     pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+    max_depth: Option<usize>,
 ) -> BoxStream<ChangedEntry, Error> {
-    if !changed_entry.status.is_tree() {
+    if !changed_entry.status.is_tree() || (max_depth.is_some() && max_depth <= Some(depth)) {
         return once(Ok(changed_entry)).boxify();
     }
 
@@ -394,11 +399,9 @@ fn recursive_changed_entry_stream(
         .map(move |(to_mf, from_mf)| {
             diff_manifests(path, &to_mf, &from_mf)
                 .map(move |diff| {
-                    select_all(
-                        diff.into_iter()
-                            .filter(pruner.clone())
-                            .map(|entry| recursive_changed_entry_stream(entry, pruner.clone())),
-                    )
+                    select_all(diff.into_iter().filter(pruner.clone()).map(|entry| {
+                        recursive_changed_entry_stream(entry, depth + 1, pruner.clone(), max_depth)
+                    }))
                 })
                 .flatten_stream()
         })
