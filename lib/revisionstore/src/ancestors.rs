@@ -129,3 +129,94 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> Iterator for BatchedAncest
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use node::Node;
+    use rand::SeedableRng;
+    use rand::chacha::ChaChaRng;
+
+    fn build_diamond_graph() -> (Key, Ancestors) {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+
+        let mut ancestors = Ancestors::new();
+        let keys = vec![
+            Key::new(Box::from([]), Node::random(&mut rng)),
+            Key::new(Box::from([]), Node::random(&mut rng)),
+            Key::new(Box::from([]), Node::random(&mut rng)),
+            Key::new(Box::from([]), Node::random(&mut rng)),
+        ];
+
+        let null_key = Key::new(Box::from([]), Node::null_id().clone());
+
+        // Build a simple diamond graph
+        ancestors.insert(
+            keys[0].clone(),
+            NodeInfo {
+                parents: [keys[1].clone(), keys[2].clone()],
+                linknode: Node::random(&mut rng),
+            },
+        );
+        ancestors.insert(
+            keys[1].clone(),
+            NodeInfo {
+                parents: [keys[3].clone(), null_key.clone()],
+                linknode: Node::random(&mut rng),
+            },
+        );
+        ancestors.insert(
+            keys[2].clone(),
+            NodeInfo {
+                parents: [keys[3].clone(), null_key.clone()],
+                linknode: Node::random(&mut rng),
+            },
+        );
+        ancestors.insert(
+            keys[3].clone(),
+            NodeInfo {
+                parents: [null_key.clone(), null_key.clone()],
+                linknode: Node::random(&mut rng),
+            },
+        );
+
+        return (keys[0].clone(), ancestors);
+    }
+
+    #[test]
+    fn test_single_ancestor_iterator() {
+        let (tip, ancestors) = build_diamond_graph();
+
+        let found_ancestors = AncestorIterator::new(
+            &tip,
+            |k, _seen| Ok(ancestors.get(&k).unwrap().clone()),
+            AncestorTraversal::Complete,
+        ).collect::<Result<Ancestors>>()
+            .unwrap();
+        assert_eq!(ancestors, found_ancestors);
+    }
+
+    #[test]
+    fn test_batched_ancestor_iterator() {
+        let (tip, ancestors) = build_diamond_graph();
+
+        let found_ancestors = BatchedAncestorIterator::new(
+            &tip,
+            |k, _seen| {
+                let mut k_ancestors = Ancestors::new();
+                let k_info = ancestors.get(k).unwrap();
+                k_ancestors.insert(k.clone(), k_info.clone());
+
+                // For the tip commit, return two entries to simulate a batch
+                if k == &tip {
+                    let k_p1_info = ancestors.get(&k_info.parents[0]).unwrap();
+                    k_ancestors.insert(k_info.parents[0].clone(), k_p1_info.clone());
+                }
+                Ok(k_ancestors)
+            },
+            AncestorTraversal::Complete,
+        ).collect::<Result<Ancestors>>()
+            .unwrap();
+        assert_eq!(ancestors, found_ancestors);
+    }
+}

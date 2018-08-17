@@ -427,7 +427,7 @@ mod tests {
 
         let pack = make_pack(&tempdir, &nodes);
 
-        for (ref key, ref info) in nodes.iter() {
+        for (ref key, _) in nodes.iter() {
             pack.get_node_info(key).unwrap();
             let response: Ancestors = pack.get_ancestors(key).unwrap();
             assert_eq!(&response, ancestors.get(key).unwrap());
@@ -487,7 +487,7 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let (nodes, ancestors) = get_nodes(&mut rng);
+        let (nodes, _) = get_nodes(&mut rng);
 
         let mut mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
         for (ref key, ref info) in nodes.iter() {
