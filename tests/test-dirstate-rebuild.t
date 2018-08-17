@@ -31,6 +31,5 @@ Dirstate rebuild should work with sparse
   $ hg sparse -I A
   $ rm .hg/dirstate
   $ hg debugrebuilddirstate -r $B
-  abort: cannot add 'B' - it is outside the sparse checkout
-  (include file with `hg sparse include <pattern>` or use `hg add -s <file>` to include file directory while adding)
-  [255]
+  $ hg log -r . -T '{desc}\n'
+  B

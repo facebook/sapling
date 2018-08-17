@@ -2208,7 +2208,12 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
         ctx = scmutil.revsingle(repo, rev)
 
     with repo.wlock():
+        # Set parent early. Extensions like sparse would need to know the
+        # parent before "rebuild" runs.
         dirstate = repo.dirstate
+        with dirstate.parentchange():
+            dirstate.setparents(ctx.node())
+
         changedfiles = None
         # See command doc for what minimal does.
         if opts.get(r"minimal"):
