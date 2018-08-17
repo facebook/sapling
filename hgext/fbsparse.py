@@ -500,18 +500,19 @@ def _setupdirstate(ui):
             # skips O(working copy) scans, and affect absorb perf.
             return orig(self, parent, allfiles, changedfiles, exact=exact)
 
-        if util.safehasattr(self.repo, "sparsematch"):
-            matcher = self.repo.sparsematch()
-            allfiles = allfiles.matches(matcher)
-            if changedfiles:
-                changedfiles = [f for f in changedfiles if matcher(f)]
+        with progress.spinner(ui, "applying sparse profile"):
+            if util.safehasattr(self.repo, "sparsematch"):
+                matcher = self.repo.sparsematch()
+                allfiles = allfiles.matches(matcher)
+                if changedfiles:
+                    changedfiles = [f for f in changedfiles if matcher(f)]
 
-            if changedfiles is not None:
-                # In _rebuild, these files will be deleted from the dirstate
-                # when they are not found to be in allfiles
-                # This is O(working copy) and is expensive.
-                dirstatefilestoremove = set(f for f in self if not matcher(f))
-                changedfiles = dirstatefilestoremove.union(changedfiles)
+                if changedfiles is not None:
+                    # In _rebuild, these files will be deleted from the dirstate
+                    # when they are not found to be in allfiles
+                    # This is O(working copy) and is expensive.
+                    dirstatefilestoremove = set(f for f in self if not matcher(f))
+                    changedfiles = dirstatefilestoremove.union(changedfiles)
 
         return orig(self, parent, allfiles, changedfiles)
 
