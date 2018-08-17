@@ -83,6 +83,7 @@ define_stats! {
     get_linknode: timeseries(RATE, SUM),
     get_all_filenodes: timeseries(RATE, SUM),
     get_generation_number: timeseries(RATE, SUM),
+    get_generation_number_by_bonsai: timeseries(RATE, SUM),
     upload_blob: timeseries(RATE, SUM),
     upload_hg_file_entry: timeseries(RATE, SUM),
     upload_hg_tree_entry: timeseries(RATE, SUM),
@@ -630,6 +631,19 @@ impl BlobRepo {
                     .left_future(),
                 None => Ok(None).into_future().right_future(),
             })
+    }
+
+    // TODO(stash): rename to get_generation_number
+    pub fn get_generation_number_by_bonsai(
+        &self,
+        cs: &ChangesetId,
+    ) -> impl Future<Item = Option<Generation>, Error = Error> {
+        STATS::get_generation_number_by_bonsai.add_value(1);
+        let repo = self.clone();
+        let repoid = self.repoid.clone();
+        repo.changesets
+            .get(repoid, *cs)
+            .map(|res| res.map(|res| Generation::new(res.gen)))
     }
 
     pub fn upload_blob<Id>(&self, blob: Blob<Id>) -> impl Future<Item = Id, Error = Error> + Send
