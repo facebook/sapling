@@ -2184,15 +2184,26 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
     One use of this command is to make the next :hg:`status` invocation
     check the actual file content.
     """
+    if not rev:
+        # Assuming the first 20 bytes of dirstate is still working.
+        # This is useful when the dirstate code cannot load the dirstate
+        # because parts other than the first 20 bytes are broken, while
+        # the first 20 bytes are still valid.
+        try:
+            rev = repo.vfs.open("dirstate").read(20)
+        except Exception:
+            pass
+
     try:
         ctx = scmutil.revsingle(repo, rev)
 
         # Force the dirstate to read so that we can catch the case where they
         # dirstate is so corrupt that it can't be read.
         repo.dirstate["_"]
-    except (error.Abort, struct.error, ValueError):
+    except (error.Abort, struct.error, ValueError, IOError):
         # This can happen if the dirstate file is so corrupt that creating a
         # context fails. Remove it entirely and retry.
+        # IOError can be raised by the Rust bridge.
         os.remove(os.path.join(repo.path, "dirstate"))
         ctx = scmutil.revsingle(repo, rev)
 

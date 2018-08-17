@@ -6,12 +6,6 @@
   > A
   > EOS
 
-  $ recover() {
-  >   rm .hg/dirstate
-  >   hg debugrebuilddirstate -r null
-  >   hg up -q $B
-  > }
-
   $ hg up -q $B
 
 Dirstate rebuild should work with a broken dirstate
@@ -28,10 +22,8 @@ Broken by deleting the tree
 
   $ rm -rf .hg/treestate
   $ hg debugrebuilddirstate
-  abort: entity not found
-  [255]
-
-  $ recover
+  $ hg log -r . -T '{desc}\n'
+  B
 
 Dirstate rebuild should work with sparse
 
