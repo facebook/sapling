@@ -69,7 +69,14 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> Iterator for AncestorIterat
         while let Some(current) = self.queue.pop_front() {
             return match (self.get_more)(&current, &self.seen) {
                 Err(e) => match self.traversal {
-                    AncestorTraversal::Partial => continue,
+                    AncestorTraversal::Partial => {
+                        // If the only entry is the null entry, then we were
+                        // unable to find the desired key, which is an error.
+                        if self.seen.len() == 1 {
+                            return Some(Err(e));
+                        }
+                        continue;
+                    }
                     AncestorTraversal::Complete => Some(Err(e)),
                 },
                 Ok(node_info) => {
