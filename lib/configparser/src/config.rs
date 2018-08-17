@@ -584,8 +584,29 @@ fn extract<'a>(buf: &Bytes, span: Span<'a>) -> Bytes {
 
 /// Expand `~` to home directory and expand environment variables.
 fn expand_path(path: &str) -> PathBuf {
+    // The shellexpand crate does not expand Windows environment variables
+    // like `%PROGRAMDATA%`. We'd like to expand them too. So let's do some
+    // pre-processing.
+    let new_path = {
+        let mut new_path = String::new();
+        let mut is_starting = true;
+        for ch in path.chars() {
+            if ch == '%' {
+                if is_starting {
+                    new_path.push_str("${");
+                } else {
+                    new_path.push('}');
+                }
+                is_starting = !is_starting;
+            } else {
+                new_path.push(ch);
+            }
+        }
+        new_path
+    };
+
     Path::new(
-        shellexpand::full(&path)
+        shellexpand::full(&new_path)
             .unwrap_or(Cow::Borrowed(path))
             .as_ref(),
     ).to_path_buf()
@@ -933,5 +954,31 @@ mod tests {
         assert_eq!(cfg.get("x", "e"), Some(Bytes::from("e")));
         assert_eq!(cfg.get("x", "f"), None);
         assert_eq!(cfg.get("y", "b"), Some(Bytes::from("1")));
+    }
+
+    #[test]
+    fn test_parse_include_expand() {
+        use std::env;
+        env::set_var("FOO", "f");
+
+        let dir = TempDir::new("test_parse_include_expand").unwrap();
+        write_file(
+            dir.path().join("rootrc"),
+            "%include ./${FOO}1/$FOO/3.rc\n\
+             %include ./%FOO%2/%FOO%/4.rc\n\
+             %include ./%/%/%.rc\n",
+        );
+
+        write_file(dir.path().join("f1/f/3.rc"), "[x]\na=1\n");
+        write_file(dir.path().join("f2/f/4.rc"), "[y]\nb=2\n");
+        write_file(dir.path().join("%/%/%.rc"), "[z]\nc=3\n");
+
+        let mut cfg = ConfigSet::new();
+        let errors = cfg.load_path(dir.path().join("rootrc"), &"include_expand".into());
+        assert!(errors.is_empty());
+
+        assert_eq!(cfg.get("x", "a"), Some(Bytes::from("1")));
+        assert_eq!(cfg.get("y", "b"), Some(Bytes::from("2")));
+        assert_eq!(cfg.get("z", "c"), Some(Bytes::from("3")));
     }
 }
