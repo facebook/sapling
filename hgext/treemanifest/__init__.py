@@ -460,7 +460,11 @@ def setuptreestores(repo, mfl):
         )
 
         # History store
-        historystore = historypackstore(ui, packpath)
+        historystore = historypackstore(
+            ui,
+            packpath,
+            userusthistorypack=ui.configbool("format", "userusthistorypack"),
+        )
         mfl.historystore = unionmetadatastore(
             historystore, revlogstore, mutablelocalstore, ondemandstore
         )
@@ -523,8 +527,17 @@ def setuptreestores(repo, mfl):
     mfl.localdatastores = [localdatastore]
 
     # History store
-    sharedhistorystore = historypackstore(ui, packpath, deletecorruptpacks=True)
-    localhistorystore = historypackstore(ui, localpackpath)
+    sharedhistorystore = historypackstore(
+        ui,
+        packpath,
+        deletecorruptpacks=True,
+        userusthistorypack=ui.configbool("format", "userusthistorypack"),
+    )
+    localhistorystore = historypackstore(
+        ui,
+        localpackpath,
+        userusthistorypack=ui.configbool("format", "userusthistorypack"),
+    )
     mfl.sharedhistorystores = [sharedhistorystore]
     mfl.localhistorystores = [localhistorystore]
 
@@ -2378,7 +2391,13 @@ def serverrepack(repo, incremental=False, options=None):
             packpath, _computeincrementalhistorypack(repo.ui, files), historypack
         )
     else:
-        historystores = [historypackstore(repo.ui, packpath)]
+        historystores = [
+            historypackstore(
+                repo.ui,
+                packpath,
+                userusthistorypack=repo.ui.configbool("format", "userusthistorypack"),
+            )
+        ]
     historystores.append(revlogstore)
     histstore = unionmetadatastore(*historystores)
 

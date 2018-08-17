@@ -78,7 +78,12 @@ def makepackstores(repo):
         deletecorruptpacks=True,
         userustdatapack=repo.ui.configbool("format", "userustdatapack"),
     )
-    packmetadatastore = historypackstore(repo.ui, packpath, deletecorruptpacks=True)
+    packmetadatastore = historypackstore(
+        repo.ui,
+        packpath,
+        deletecorruptpacks=True,
+        userusthistorypack=repo.ui.configbool("format", "userusthistorypack"),
+    )
 
     repo.shareddatastores.append(packcontentstore)
     repo.sharedhistorystores.append(packmetadatastore)

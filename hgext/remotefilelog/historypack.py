@@ -7,6 +7,7 @@ from mercurial import error, util
 from mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
+from ..extlib.pyrevisionstore import historypack as rusthistorypack
 
 
 # (filename hash, offset, size)
@@ -44,13 +45,17 @@ class historypackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
-    def __init__(self, ui, path, deletecorruptpacks=False):
+    def __init__(self, ui, path, deletecorruptpacks=False, userusthistorypack=False):
+        self.userusthistorypack = userusthistorypack
         super(historypackstore, self).__init__(
             ui, path, deletecorruptpacks=deletecorruptpacks
         )
 
     def getpack(self, path):
-        return historypack(path)
+        if self.userusthistorypack:
+            return rusthistorypack(path)
+        else:
+            return historypack(path)
 
     def getancestors(self, name, node, known=None):
         def func(pack):
