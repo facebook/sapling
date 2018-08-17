@@ -10,6 +10,9 @@ export PREFIX=/usr/local
 # makefile way of checking if a file exists.
 ifneq ("$(wildcard /opt/homebrew/opt/python27/bin/python2.7)","")
 	PYTHON := /opt/homebrew/opt/python27/bin/python2.7
+	# the preference is linking against homebrew python framework
+	HG_LINKER_FRAMEWORK ?= /opt/homebrew/Frameworks
+	export HG_LINKER_FRAMEWORK
 else
 	PYTHON := python
 endif
@@ -71,6 +74,7 @@ local: build/re2-2018-04-01/README
 	  build_rust_ext -i \
 	  build_hgexe $(COMPILERFLAG) -i \
 	  build_mo
+	cp build/scripts-2.7/hg.rust .
 	env HGRCPATH= $(PYTHON) hg version
 
 build:
@@ -92,6 +96,7 @@ cleanbutpackages:
 	rm -rf build mercurial/locale
 	$(MAKE) -C doc clean
 	$(MAKE) -C contrib/chg distclean
+	rm -f hg.rust
 
 clean: cleanbutpackages
 	rm -rf packages

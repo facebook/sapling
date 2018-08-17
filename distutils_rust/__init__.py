@@ -77,10 +77,11 @@ class RustBinary(object):
     'manifest' is the path to the Cargo.toml file for the Rust project.
     """
 
-    def __init__(self, name, package=None, manifest=None):
+    def __init__(self, name, package=None, manifest=None, rename=None):
         self.name = name
         self.manifest = manifest or "Cargo.toml"
         self.type = "binary"
+        self.final_name = rename or name
 
     @property
     def dstnametmp(self):
@@ -94,9 +95,9 @@ class RustBinary(object):
     def dstname(self):
         platform = distutils.util.get_platform()
         if platform.startswith("win-"):
-            return self.name + ".exe"
+            return self.final_name + ".exe"
         else:
-            return self.name
+            return self.final_name
 
 
 class RustVendoredCrates(object):

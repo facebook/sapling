@@ -80,3 +80,7 @@ wheelhouse/
 # hackable windows distribution additions
 hg-python
 hg.py
+
+# rust binary
+hg.rust
+hg.rust.exe
