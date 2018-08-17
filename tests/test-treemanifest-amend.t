@@ -23,12 +23,12 @@ Make sure no invalid manifests were written:
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
+  41b34f08c135  000000000000  000000000000  426bada5c675  
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
   eb7988638387  41b34f08c135  000000000000  220f69710758  
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
   eb7988638387  41b34f08c135  000000000000  112478962961  
-  
-  
-  Node          P1 Node       P2 Node       Link Node     Copy From
-  41b34f08c135  000000000000  000000000000  426bada5c675  

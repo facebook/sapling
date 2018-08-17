@@ -424,7 +424,7 @@ class mutablehistorypack(basepack.mutablebasepack):
 
     SUPPORTED_VERSIONS = [0, 1]
 
-    def __init__(self, ui, packpath, version=0, repo=None):
+    def __init__(self, ui, packpath, version=1, repo=None):
         """Creates a mutable history pack for writing.
 
         If `repo` is provided, then pack.add() can be called with
@@ -432,9 +432,8 @@ class mutablehistorypack(basepack.mutablebasepack):
         serialization time.  This allows callers to add entries without knowing
         what the linknode is just yet.
         """
-        # internal config: remotefilelog.historypackv1
-        if version == 0 and ui.configbool("remotefilelog", "historypackv1", False):
-            version = 1
+        if version != 1:
+            raise ValueError("cannot create historypack version %s" % version)
 
         super(mutablehistorypack, self).__init__(ui, packpath, version=version)
         self.files = {}
