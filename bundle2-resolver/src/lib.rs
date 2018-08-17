@@ -7,9 +7,15 @@
 #![deny(warnings)]
 
 extern crate ascii;
+#[cfg(test)]
+extern crate async_unit;
 extern crate bytes;
 #[macro_use]
+extern crate cloned;
+#[macro_use]
 extern crate failure_ext as failure;
+#[cfg(test)]
+extern crate fixtures;
 #[macro_use]
 extern crate futures;
 #[macro_use]

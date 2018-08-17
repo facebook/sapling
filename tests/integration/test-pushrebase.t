@@ -43,16 +43,56 @@ Clone the repo
   > pushrebase =
   > EOF
 
-  $ hg up -q tip
+  $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
   pushing to ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
-  remote: * ERRO Command failed, remote: true, error: not implementd, root_cause: ErrorMessage { (glob)
-  remote:     msg: "not implementd"
-  remote: }, backtrace: , session_uuid: * (glob)
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
 
 TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
+
+  $ hgmn pull -q
+  $ hgmn up master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master_bookmark)
+  $ hg sl -r ":"
+  @  changeset:   4:c2e526aacb51
+  |  bookmark:    master_bookmark
+  |  tag:         tip
+  |  parent:      2:26805aba1e60
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     1
+  |
+  o  changeset:   2:26805aba1e60
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C
+  |
+  o  changeset:   1:112478962961
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     B
+  |
+  | o  changeset:   3:a0c9c5791058
+  |/   parent:      0:426bada5c675
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     1
+  |
+  o  changeset:   0:426bada5c675
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+
+
+TODO(stash, aslpavel) This push should fail because of the conflicts
+  $ hg up -q 0
+  $ echo 1 > 1 && hg add 1 && hg ci -m 1
+  $ hgmn push -r . --to master_bookmark
+  pushing to ssh://user@dummy/repo
+  remote: * Session with Mononoke started with uuid: * (glob)
+  searching for changes

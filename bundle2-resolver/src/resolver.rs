@@ -188,17 +188,40 @@ fn resolve_pushrebase(
     resolver
         .resolve_b2xtreegroup2(bundle2)
         .and_then({
-            let resolver = resolver.clone();
-            move |(_, bundle2)| resolver.maybe_resolve_changegroup(bundle2)
+            cloned!(resolver);
+            move |(manifests, bundle2)| {
+                resolver
+                    .maybe_resolve_changegroup(bundle2)
+                    .map(move |(cg_push, bundle2)| (cg_push, manifests, bundle2))
+            }
+        })
+        .and_then(|(cg_push, manifests, bundle2)| {
+            cg_push
+                .ok_or(err_msg("Empty pushrebase"))
+                .into_future()
+                .map(|cg_push| (cg_push, manifests, bundle2))
         })
         .and_then({
-            let resolver = resolver.clone();
-            move |(cg_push, bundle2)| resolver.ensure_stream_finished(bundle2).map(|_| cg_push)
+            cloned!(resolver);
+            move |(cg_push, manifests, bundle2)| {
+                let changesets = cg_push.changesets.clone();
+                let mparams = cg_push.mparams.clone();
+                resolver
+                    .upload_changesets(cg_push, manifests)
+                    .map(move |()| (changesets, mparams, bundle2))
+            }
         })
-        .and_then(|cg_push| cg_push.ok_or(err_msg("Empty pushrebase")))
         .and_then({
-            let resolver = resolver.clone();
-            move |cg_push| resolver.pushrebase(cg_push)
+            cloned!(resolver);
+            move |(changesets, mparams, bundle2)| {
+                resolver
+                    .ensure_stream_finished(bundle2)
+                    .map(|_| (changesets, mparams))
+            }
+        })
+        .and_then({
+            cloned!(resolver);
+            move |(changesets, mparams)| resolver.pushrebase(changesets, mparams)
         })
         .and_then(|_| {
             let writer = Cursor::new(Vec::new());
@@ -698,19 +721,25 @@ impl Bundle2Resolver {
         }).boxify()
     }
 
-    fn pushrebase(&self, cg_push: ChangegroupPush) -> impl Future<Item = (), Error = Error> {
-        let changesets: Vec<_> = cg_push
-            .changesets
+    fn pushrebase(
+        &self,
+        changesets: Changesets,
+        mparams: HashMap<String, Bytes>,
+    ) -> impl Future<Item = (), Error = Error> {
+        let changesets: Vec<_> = changesets
             .into_iter()
             .map(|(node, _)| HgChangesetId::new(node))
             .collect();
 
-        match cg_push.mparams.get("onto").cloned() {
+        match mparams.get("onto").cloned() {
             Some(onto_bookmark) => {
                 let v = Vec::from(onto_bookmark.as_ref());
                 let onto_bookmark = try_boxfuture!(String::from_utf8(v));
                 let onto_bookmark = try_boxfuture!(Bookmark::new(onto_bookmark));
-                pushrebase::do_pushrebase(self.repo.clone(), onto_bookmark, changesets).boxify()
+                pushrebase::do_pushrebase(self.repo.clone(), onto_bookmark, changesets)
+                    .map(|_| ())
+                    .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
+                    .boxify()
             }
             None => Err(err_msg("onto is not specified")).into_future().boxify(),
         }
