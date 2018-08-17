@@ -45,6 +45,7 @@ extern crate mononoke_types;
 
 mod changegroup;
 pub mod errors;
+mod pushrebase;
 mod resolver;
 mod stats;
 mod wirepackparser;

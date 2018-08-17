@@ -49,5 +49,10 @@ Clone the repo
   pushing to ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
+  remote: * ERRO Command failed, remote: true, error: not implementd, root_cause: ErrorMessage { (glob)
+  remote:     msg: "not implementd"
+  remote: }, backtrace: , session_uuid: * (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
 
 TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit

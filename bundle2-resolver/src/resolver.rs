@@ -12,9 +12,9 @@ use std::sync::Arc;
 use ascii::AsciiString;
 use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset,
                HgBlobEntry};
-use bookmarks;
+use bookmarks::{Bookmark, Transaction};
 use bytes::Bytes;
-use failure::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
+use failure::{err_msg, Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{Future, IntoFuture, Stream};
 use futures::future::{self, err, ok, Shared};
 use futures::stream;
@@ -25,6 +25,7 @@ use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
                       NULL_HASH};
 use mononoke_types::ChangesetId;
+use pushrebase;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use stats::*;
@@ -192,7 +193,12 @@ fn resolve_pushrebase(
         })
         .and_then({
             let resolver = resolver.clone();
-            move |(_, bundle2)| resolver.ensure_stream_finished(bundle2)
+            move |(cg_push, bundle2)| resolver.ensure_stream_finished(bundle2).map(|_| cg_push)
+        })
+        .and_then(|cg_push| cg_push.ok_or(err_msg("Empty pushrebase")))
+        .and_then({
+            let resolver = resolver.clone();
+            move |cg_push| resolver.pushrebase(cg_push)
         })
         .and_then(|_| {
             let writer = Cursor::new(Vec::new());
@@ -222,6 +228,7 @@ struct ChangegroupPush {
     changesets: Changesets,
     filelogs: Filelogs,
     content_blobs: ContentBlobs,
+    mparams: HashMap<String, Bytes>,
 }
 
 struct CommonHeads {
@@ -235,14 +242,14 @@ enum Pushkey {
 
 struct BookmarkPush {
     part_id: PartId,
-    name: bookmarks::Bookmark,
+    name: Bookmark,
     old: Option<HgChangesetId>,
     new: Option<HgChangesetId>,
 }
 
 struct BonsaiBookmarkPush {
     part_id: PartId,
-    name: bookmarks::Bookmark,
+    name: Bookmark,
     old: Option<ChangesetId>,
     new: Option<ChangesetId>,
 }
@@ -382,6 +389,7 @@ impl Bundle2Resolver {
                                 changesets,
                                 filelogs,
                                 content_blobs,
+                                mparams: header.mparams().clone(),
                             };
                             (Some(cg_push), bundle2)
                         })
@@ -417,7 +425,7 @@ impl Bundle2Resolver {
                             let part_id = header.part_id();
                             let mparams = header.mparams();
                             let name = try_boxfuture!(get_ascii_param(mparams, "key"));
-                            let name = bookmarks::Bookmark::new_ascii(name);
+                            let name = Bookmark::new_ascii(name);
                             let old = try_boxfuture!(get_optional_changeset_param(mparams, "old"));
                             let new = try_boxfuture!(get_optional_changeset_param(mparams, "new"));
 
@@ -689,10 +697,28 @@ impl Bundle2Resolver {
             })
         }).boxify()
     }
+
+    fn pushrebase(&self, cg_push: ChangegroupPush) -> impl Future<Item = (), Error = Error> {
+        let changesets: Vec<_> = cg_push
+            .changesets
+            .into_iter()
+            .map(|(node, _)| HgChangesetId::new(node))
+            .collect();
+
+        match cg_push.mparams.get("onto").cloned() {
+            Some(onto_bookmark) => {
+                let v = Vec::from(onto_bookmark.as_ref());
+                let onto_bookmark = try_boxfuture!(String::from_utf8(v));
+                let onto_bookmark = try_boxfuture!(Bookmark::new(onto_bookmark));
+                pushrebase::do_pushrebase(self.repo.clone(), onto_bookmark, changesets).boxify()
+            }
+            None => Err(err_msg("onto is not specified")).into_future().boxify(),
+        }
+    }
 }
 
 fn add_bookmark_to_transaction(
-    txn: &mut Box<bookmarks::Transaction>,
+    txn: &mut Box<Transaction>,
     bookmark_push: BonsaiBookmarkPush,
 ) -> Result<()> {
     match (bookmark_push.new, bookmark_push.old) {
