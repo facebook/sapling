@@ -1042,7 +1042,7 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
             pats=cmdpats,
             opts=cmdoptions,
         )
-    except Exception:
+    except Exception as e:
         # run failure hook and re-raise
         hook.hook(
             lui,
@@ -1053,6 +1053,10 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
             pats=cmdpats,
             opts=cmdoptions,
         )
+        try:
+            lui.log("exceptions", exception_type=type(e).__name__, exception_msg=str(e))
+        except Exception:
+            pass
         raise
     return ret
 

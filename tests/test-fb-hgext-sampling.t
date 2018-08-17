@@ -114,3 +114,29 @@ Test env-var logging:
   env_test_var1: abc
   env_test_var2: def
   metrics_type: env_vars
+
+Test exception logging:
+  $ setconfig sampling.key.exceptions=exceptions
+  $ enable rebase histedit
+  $ hg rebase
+  abort: nothing to rebase
+  atexit handler executed
+  [255]
+
+Note: Errors raised by the dispatch logic aren't logged here:
+  $ hg st --nonexistant > /dev/null
+  hg status: option --nonexistant not recognized
+  atexit handler executed
+  [255]
+  >>> import json, pprint
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read().strip("\0").split("\0")
+  >>> alldata = {}
+  >>> for jsonstr in data:
+  ...     entry = json.loads(jsonstr)
+  ...     if entry["category"] == "exceptions":
+  ...         for k in sorted(entry["data"].keys()):
+  ...             print("%s: %s" % (k, entry["data"][k]))
+  exception_msg: nothing to rebase
+  exception_type: NoMergeDestAbort
+  metrics_type: exceptions
