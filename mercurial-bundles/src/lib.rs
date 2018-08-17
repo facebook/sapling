@@ -96,6 +96,8 @@ pub enum Bundle2Item {
     B2xTreegroup2(PartHeader, BoxStream<wirepack::Part, Error>),
     // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
     B2xInfinitepushBookmarks(PartHeader, BoxStream<bytes::Bytes, Error>),
+    B2xRebasePack(PartHeader, BoxStream<wirepack::Part, Error>),
+    B2xRebase(PartHeader, BoxStream<changegroup::Part, Error>),
     Replycaps(PartHeader, BoxFuture<capabilities::Capabilities, Error>),
     Pushkey(PartHeader, BoxFuture<(), Error>),
 }
@@ -136,6 +138,12 @@ impl fmt::Debug for Bundle2Item {
             ),
             &B2xTreegroup2(ref header, _) => {
                 write!(f, "Bundle2Item::B2xTreegroup2({:?}, ...)", header)
+            }
+            &B2xRebasePack(ref header, _) => {
+                write!(f, "Bundle2Item::B2xRebasePack({:?}, ...)", header)
+            }
+            &B2xRebase(ref header, _) => {
+                write!(f, "Bundle2Item::B2xRebase({:?}, ...)", header)
             }
             &Replycaps(ref header, _) => write!(f, "Bundle2Item::Replycaps({:?}, ...)", header),
             &Pushkey(ref header, _) => write!(f, "Bundle2Item::Pushkey({:?}, ...)", header),

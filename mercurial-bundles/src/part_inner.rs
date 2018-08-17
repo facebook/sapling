@@ -43,6 +43,9 @@ lazy_static! {
         m.insert(PartHeaderType::B2xInfinitepush, hashset!{
             "pushbackbookmarks", "cgversion", "bookmark", "bookprevnode", "create", "force"});
         m.insert(PartHeaderType::B2xInfinitepushBookmarks, hashset!{});
+        m.insert(PartHeaderType::B2xCommonHeads, hashset!{});
+        m.insert(PartHeaderType::B2xRebase, hashset!{"onto", "newhead", "cgversion", "obsmarkerversions"});
+        m.insert(PartHeaderType::B2xRebasePack, hashset!{"version", "cache", "category"});
         m.insert(PartHeaderType::B2xTreegroup2, hashset!{"version", "cache", "category"});
         m.insert(PartHeaderType::Replycaps, hashset!{});
         m.insert(PartHeaderType::Pushkey, hashset!{ "namespace", "key", "old", "new" });
@@ -128,6 +131,21 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
                     Ok(caps.into_iter().next().unwrap())
                 });
             Bundle2Item::Replycaps(header, Box::new(caps))
+        }
+        &PartHeaderType::B2xRebasePack => {
+            let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(
+                logger.new(o!("stream" => "wirepack")),
+                // Mercurial only knows how to send trees at the moment.
+                // TODO: add support for file wirepacks once that's a thing
+                wirepack::Kind::Tree,
+            ));
+            Bundle2Item::B2xRebasePack(header, Box::new(wirepack_stream))
+        }
+        &PartHeaderType::B2xRebase => {
+            let cg2_stream = wrapped_stream.decode(changegroup::unpacker::Cg2Unpacker::new(
+                logger.new(o!("stream" => "cg2")),
+            ));
+            Bundle2Item::B2xRebase(header, Box::new(cg2_stream))
         }
         &PartHeaderType::Pushkey => {
             // Pushkey part has an empty part payload, but we still need to "parse" it

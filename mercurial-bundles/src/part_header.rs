@@ -42,6 +42,10 @@ pub enum PartHeaderType {
     /// Contains bookmarks for infinitepush backups (won't be used in Mononoke,
     /// but they needs to be parsed).
     B2xInfinitepushBookmarks,
+    /// Pushrebase part with changegroup
+    B2xRebase,
+    /// Pushrebase part that contains packs
+    B2xRebasePack,
     /// Pushkey part is used to update different namespaces: phases, bookmarks, etc.
     /// In Mononoke it's used to update bookmarks.
     Pushkey,
@@ -79,6 +83,8 @@ impl PartHeaderType {
             "b2x:infinitepush" => Ok(B2xInfinitepush),
             "b2x:infinitepushscratchbookmarks" => Ok(B2xInfinitepushBookmarks),
             "b2x:commonheads" => Ok(B2xCommonHeads),
+            "b2x:rebase" => Ok(B2xRebase),
+            "b2x:rebasepackpart" => Ok(B2xRebasePack),
             "check:heads" => Ok(CheckHeads),
             "pushkey" => Ok(Pushkey),
             "reply:pushkey" => Ok(ReplyPushkey),
@@ -97,6 +103,8 @@ impl PartHeaderType {
             B2xCommonHeads => "b2x:commonheads",
             B2xInfinitepush => "b2x:infinitepush",
             B2xInfinitepushBookmarks => "b2x:infinitepushscratchbookmarks",
+            B2xRebase => "b2x:rebase",
+            B2xRebasePack => "b2x:rebasepackpart",
             CheckHeads => "check:heads",
             Pushkey => "pushkey",
             ReplyPushkey => "reply:pushkey",

@@ -132,6 +132,8 @@ fn bundle2caps() -> String {
         ("b2x:infinitepushscratchbookmarks", vec![]),
         ("pushkey", vec![]),
         ("treemanifestserver", vec!["True"]),
+        ("b2x:rebase", vec![]),
+        ("b2x:rebasepackpart", vec![]),
     ];
 
     let mut encodedcaps = vec![];

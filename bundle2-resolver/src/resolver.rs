@@ -181,10 +181,34 @@ fn resolve_push(
 
 fn resolve_pushrebase(
     _commonheads: CommonHeads,
-    _resolver: Bundle2Resolver,
-    _bundle2: BoxStream<Bundle2Item, Error>,
+    resolver: Bundle2Resolver,
+    bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<Bytes, Error> {
-    unimplemented!()
+    resolver
+        .resolve_b2xtreegroup2(bundle2)
+        .and_then({
+            let resolver = resolver.clone();
+            move |(_, bundle2)| resolver.maybe_resolve_changegroup(bundle2)
+        })
+        .and_then({
+            let resolver = resolver.clone();
+            move |(_, bundle2)| resolver.ensure_stream_finished(bundle2)
+        })
+        .and_then(|_| {
+            let writer = Cursor::new(Vec::new());
+            let mut bundle = Bundle2EncodeBuilder::new(writer);
+            // Mercurial currently hangs while trying to read compressed bundles over the wire:
+            // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
+            // TODO: possibly enable compression support once this is fixed.
+            bundle.set_compressor_type(None);
+            bundle
+                .build()
+                .map(|cursor| Bytes::from(cursor.into_inner()))
+                .context("While preparing response")
+                .from_err()
+                .boxify()
+        })
+        .boxify()
 }
 
 fn next_item(
@@ -326,8 +350,11 @@ impl Bundle2Resolver {
 
         next_item(bundle2)
             .and_then(move |(changegroup, bundle2)| match changegroup {
+                // XXX: we may be interested in checking that this is a correct changegroup part
+                // type
                 Some(Bundle2Item::Changegroup(header, parts))
-                | Some(Bundle2Item::B2xInfinitepush(header, parts)) => {
+                | Some(Bundle2Item::B2xInfinitepush(header, parts))
+                | Some(Bundle2Item::B2xRebase(header, parts)) => {
                     let part_id = header.part_id();
                     let (c, f) = split_changegroup(parts);
                     convert_to_revlog_changesets(c)
@@ -430,7 +457,8 @@ impl Bundle2Resolver {
 
         next_item(bundle2)
             .and_then(move |(b2xtreegroup2, bundle2)| match b2xtreegroup2 {
-                Some(Bundle2Item::B2xTreegroup2(_, parts)) => {
+                Some(Bundle2Item::B2xTreegroup2(_, parts))
+                | Some(Bundle2Item::B2xRebasePack(_, parts)) => {
                     upload_hg_blobs(
                         repo,
                         TreemanifestBundle2Parser::new(parts),

@@ -49,7 +49,5 @@ Clone the repo
   pushing to ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
-  abort: no server support for 'b2x:rebase'
-  [255]
 
 TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
