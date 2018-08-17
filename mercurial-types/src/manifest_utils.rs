@@ -15,7 +15,7 @@ use futures::future::{self, Future};
 use futures::stream::{empty, once, Stream};
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use super::{Entry, MPath, MPathElement, Manifest};
+use super::{Entry, HgNodeHash, MPath, MPathElement, Manifest};
 use super::manifest::{Content, EmptyManifest, Type};
 
 use errors::*;
@@ -255,14 +255,56 @@ where
     }
 }
 
-pub fn file_pruner(entry: &ChangedEntry) -> bool {
-    entry.status.is_tree()
+pub trait Pruner {
+    fn keep(&mut self, entry: &ChangedEntry) -> bool;
 }
 
-pub fn visited_pruner() -> impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static {
-    let visited = Arc::new(Mutex::new(HashSet::new()));
-    move |entry: &ChangedEntry| {
-        let dirname = entry.dirname.clone();
+#[derive(Clone)]
+pub struct NoopPruner;
+
+impl Pruner for NoopPruner {
+    fn keep(&mut self, _: &ChangedEntry) -> bool {
+        true
+    }
+}
+
+#[derive(Clone)]
+pub struct FilePruner;
+
+impl Pruner for FilePruner {
+    fn keep(&mut self, entry: &ChangedEntry) -> bool {
+        entry.status.is_tree()
+    }
+}
+
+#[derive(Clone)]
+pub struct DeletedPruner;
+
+impl Pruner for DeletedPruner {
+    fn keep(&mut self, entry: &ChangedEntry) -> bool {
+        match entry.status {
+            EntryStatus::Deleted(..) => false,
+            _ => true,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct VisitedPruner {
+    visited: Arc<Mutex<HashSet<(Option<MPath>, HgNodeHash)>>>,
+}
+
+impl VisitedPruner {
+    pub fn new() -> Self {
+        Self {
+            visited: Default::default(),
+        }
+    }
+}
+
+impl Pruner for VisitedPruner {
+    fn keep(&mut self, entry: &ChangedEntry) -> bool {
+        let dirname = &entry.dirname;
 
         let (path, hash) = match entry.status {
             EntryStatus::Added(ref entry) => {
@@ -279,20 +321,27 @@ pub fn visited_pruner() -> impl FnMut(&ChangedEntry) -> bool + Send + Clone + 's
             }
         };
 
-        let mut visited = visited.lock().unwrap();
+        let mut visited = self.visited.lock().unwrap();
         visited.insert((path, hash))
     }
 }
 
-pub fn and_pruner_combinator<P1, P2>(
-    mut p1: P1,
-    mut p2: P2,
-) -> impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static
-where
-    P1: FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
-    P2: FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
-{
-    move |entry: &ChangedEntry| p1(entry) && p2(entry)
+#[derive(Clone)]
+pub struct CombinatorPruner<A, B> {
+    a: A,
+    b: B,
+}
+
+impl<A: Pruner, B: Pruner> CombinatorPruner<A, B> {
+    pub fn new(a: A, b: B) -> Self {
+        Self { a, b }
+    }
+}
+
+impl<A: Pruner, B: Pruner> Pruner for CombinatorPruner<A, B> {
+    fn keep(&mut self, entry: &ChangedEntry) -> bool {
+        self.a.keep(entry) && self.b.keep(entry)
+    }
 }
 
 /// Given two manifests, returns a difference between them. Difference is a stream of
@@ -310,14 +359,14 @@ where
     TM: Manifest,
     FM: Manifest,
 {
-    changed_entry_stream_with_pruner(to, from, path, |_| true, None).boxify()
+    changed_entry_stream_with_pruner(to, from, path, NoopPruner, None).boxify()
 }
 
 pub fn changed_entry_stream_with_pruner<TM, FM>(
     to: &TM,
     from: &FM,
     path: Option<MPath>,
-    pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+    pruner: impl Pruner + Send + Clone + 'static,
     max_depth: Option<usize>,
 ) -> impl Stream<Item = ChangedEntry, Error = Error>
 where
@@ -331,9 +380,14 @@ where
     diff_manifests(path, to, from)
         .map(move |diff| {
             select_all(
-                diff.into_iter().filter(pruner.clone()).map(|entry| {
-                    recursive_changed_entry_stream(entry, 1, pruner.clone(), max_depth)
-                }),
+                diff.into_iter()
+                    .filter({
+                        let mut pruner = pruner.clone();
+                        move |entry| pruner.keep(entry)
+                    })
+                    .map(|entry| {
+                        recursive_changed_entry_stream(entry, 1, pruner.clone(), max_depth)
+                    }),
             )
         })
         .flatten_stream()
@@ -346,7 +400,7 @@ where
 fn recursive_changed_entry_stream(
     changed_entry: ChangedEntry,
     depth: usize,
-    pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+    pruner: impl Pruner + Send + Clone + 'static,
     max_depth: Option<usize>,
 ) -> BoxStream<ChangedEntry, Error> {
     if !changed_entry.status.is_tree() || (max_depth.is_some() && max_depth <= Some(depth)) {
@@ -399,9 +453,21 @@ fn recursive_changed_entry_stream(
         .map(move |(to_mf, from_mf)| {
             diff_manifests(path, &to_mf, &from_mf)
                 .map(move |diff| {
-                    select_all(diff.into_iter().filter(pruner.clone()).map(|entry| {
-                        recursive_changed_entry_stream(entry, depth + 1, pruner.clone(), max_depth)
-                    }))
+                    select_all(
+                        diff.into_iter()
+                            .filter({
+                                let mut pruner = pruner.clone();
+                                move |entry| pruner.keep(entry)
+                            })
+                            .map(|entry| {
+                                recursive_changed_entry_stream(
+                                    entry,
+                                    depth + 1,
+                                    pruner.clone(),
+                                    max_depth,
+                                )
+                            }),
+                    )
                 })
                 .flatten_stream()
         })

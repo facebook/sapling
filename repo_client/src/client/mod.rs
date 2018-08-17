@@ -20,7 +20,7 @@ use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Timed, TimedStreamTrait};
 use itertools::Itertools;
 use slog::Logger;
-use stats::{Histogram, Timeseries};
+use stats::Histogram;
 use time_ext::DurationExt;
 use uuid::Uuid;
 
@@ -31,8 +31,9 @@ use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, Changeset, Entry, HgBlobNode, HgChangesetId, HgManifestId,
                       HgNodeHash, MPath, RepoPath, Type, NULL_HASH};
-use mercurial_types::manifest_utils::{and_pruner_combinator, changed_entry_stream_with_pruner,
-                                      file_pruner, visited_pruner, ChangedEntry, EntryStatus};
+use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, CombinatorPruner,
+                                      DeletedPruner, EntryStatus, FilePruner, Pruner,
+                                      VisitedPruner};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use tracing::{TraceContext, Traced};
 
@@ -54,8 +55,6 @@ define_stats! {
         histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getfiles_ms:
         histogram(500, 0, 20_000, AVG, SUM, COUNT; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    gettreepack_passed: timeseries(RATE, SUM),
-    gettreepack_rejected: timeseries(RATE, SUM),
 }
 
 mod ops {
@@ -297,27 +296,29 @@ impl RepoClient {
             Some(try_boxstream!(MPath::new(params.rootdir)))
         };
 
+        let default_pruner = CombinatorPruner::new(FilePruner, DeletedPruner);
+
         let changed_entries = if params.mfnodes.len() > 1 {
-            let visited_pruner = visited_pruner();
+            let visited_pruner = VisitedPruner::new();
             select_all(params.mfnodes.iter().map(|manifest_id| {
-                get_changed_entry_stream(
+                get_changed_manifests_stream(
                     self.repo.blobrepo(),
                     &manifest_id,
                     &basemfnode,
                     rootpath.clone(),
-                    and_pruner_combinator(&file_pruner, visited_pruner.clone()),
+                    CombinatorPruner::new(default_pruner.clone(), visited_pruner.clone()),
                     fetchdepth,
                     self.trace().clone(),
                 )
             })).boxify()
         } else {
             match params.mfnodes.get(0) {
-                Some(mfnode) => get_changed_entry_stream(
+                Some(mfnode) => get_changed_manifests_stream(
                     self.repo.blobrepo(),
                     &mfnode,
                     &basemfnode,
                     rootpath.clone(),
-                    &file_pruner,
+                    default_pruner,
                     fetchdepth,
                     self.trace().clone(),
                 ),
@@ -687,12 +688,12 @@ impl HgCommands for RepoClient {
     }
 }
 
-fn get_changed_entry_stream(
+fn get_changed_manifests_stream(
     repo: &BlobRepo,
     mfid: &HgNodeHash,
     basemfid: &HgNodeHash,
     rootpath: Option<MPath>,
-    pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+    pruner: impl Pruner + Send + Clone + 'static,
     max_depth: usize,
     trace: TraceContext,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
@@ -712,31 +713,18 @@ fn get_changed_entry_stream(
         })
         .flatten_stream();
 
-    let changed_entries =
-        changed_entries.filter_map(move |entry_status| match entry_status.status {
-            EntryStatus::Added(entry) => {
-                if entry.get_type() == Type::Tree {
-                    STATS::gettreepack_passed.add_value(1);
-                    Some((entry, entry_status.dirname))
-                } else {
-                    STATS::gettreepack_rejected.add_value(1);
-                    None
-                }
-            }
-            EntryStatus::Modified { to_entry, .. } => {
-                if to_entry.get_type() == Type::Tree {
-                    STATS::gettreepack_passed.add_value(1);
-                    Some((to_entry, entry_status.dirname))
-                } else {
-                    STATS::gettreepack_rejected.add_value(1);
-                    None
-                }
-            }
-            EntryStatus::Deleted(..) => {
-                STATS::gettreepack_rejected.add_value(1);
-                None
-            }
-        });
+    let changed_entries = changed_entries.map(move |entry_status| match entry_status.status {
+        EntryStatus::Added(to_entry) | EntryStatus::Modified { to_entry, .. } => {
+            assert!(
+                to_entry.get_type() == Type::Tree,
+                "FilePruner should have removed file entries"
+            );
+            (to_entry, entry_status.dirname)
+        }
+        EntryStatus::Deleted(..) => {
+            panic!("DeletedPruner should have removed deleted entries");
+        }
+    });
 
     // Append root manifest
     let root_entry_stream = stream::once(Ok((

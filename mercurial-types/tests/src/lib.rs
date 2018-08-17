@@ -31,10 +31,10 @@ use futures_ext::select_all;
 use mercurial_types::{Changeset, Entry, FileType, MPath, MPathElement, Manifest, RepoPath, Type,
                       NULL_HASH};
 use mercurial_types::manifest::{Content, EmptyManifest};
-use mercurial_types::manifest_utils::{and_pruner_combinator, changed_entry_stream,
-                                      changed_entry_stream_with_pruner, diff_sorted_vecs,
-                                      file_pruner, recursive_entry_stream, visited_pruner,
-                                      ChangedEntry, EntryStatus};
+use mercurial_types::manifest_utils::{changed_entry_stream, changed_entry_stream_with_pruner,
+                                      diff_sorted_vecs, recursive_entry_stream, ChangedEntry,
+                                      CombinatorPruner, DeletedPruner, EntryStatus, FilePruner,
+                                      NoopPruner, Pruner, VisitedPruner};
 use mercurial_types::nodehash::{HgChangesetId, HgEntryId, HgNodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash;
@@ -196,7 +196,7 @@ fn test_diff_sorted_vecs_one_empty() {
 fn find_changed_entry_status_stream(
     manifest: Box<Manifest>,
     basemanifest: Box<Manifest>,
-    pruner: impl FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
+    pruner: impl Pruner + Send + Clone + 'static,
     max_depth: Option<usize>,
 ) -> Vec<ChangedEntry> {
     let mut stream = spawn(changed_entry_stream_with_pruner(
@@ -284,18 +284,16 @@ fn check_changed_paths(
     compare("modified", paths_modified, expected_modified);
 }
 
-fn do_check_with_pruner<P>(
+fn do_check_with_pruner(
     repo: Arc<BlobRepo>,
     main_hash: HgNodeHash,
     base_hash: HgNodeHash,
     expected_added: Vec<&str>,
     expected_deleted: Vec<&str>,
     expected_modified: Vec<&str>,
-    pruner: P,
+    pruner: impl Pruner + Send + Clone + 'static,
     max_depth: Option<usize>,
-) where
-    P: FnMut(&ChangedEntry) -> bool + Send + Clone + 'static,
-{
+) {
     {
         let manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash));
         let base_manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
@@ -343,7 +341,7 @@ fn do_check(
         expected_added,
         expected_deleted,
         expected_modified,
-        |_| true,
+        NoopPruner,
         None,
     )
 }
@@ -553,7 +551,7 @@ fn test_depth_parameter() {
             expected_added,
             vec![],
             expected_modified,
-            |_| true,
+            NoopPruner,
             Some(4),
         );
 
@@ -566,7 +564,7 @@ fn test_depth_parameter() {
             expected_added,
             vec![],
             expected_modified,
-            |_| true,
+            NoopPruner,
             Some(3),
         );
 
@@ -579,7 +577,7 @@ fn test_depth_parameter() {
             expected_added,
             vec![],
             expected_modified,
-            |_| true,
+            NoopPruner,
             Some(2),
         );
 
@@ -592,7 +590,7 @@ fn test_depth_parameter() {
             expected_added,
             vec![],
             expected_modified,
-            |_| true,
+            NoopPruner,
             Some(1),
         );
 
@@ -605,11 +603,25 @@ fn test_depth_parameter() {
             expected_added,
             vec![],
             expected_modified,
-            |_| true,
+            NoopPruner,
             Some(0),
         );
         Ok(())
     }).expect("test failed")
+}
+
+#[derive(Clone)]
+struct TestFuncPruner<F> {
+    func: F,
+}
+
+impl<F> Pruner for TestFuncPruner<F>
+where
+    F: FnMut(&ChangedEntry) -> bool,
+{
+    fn keep(&mut self, entry: &ChangedEntry) -> bool {
+        (self.func)(entry)
+    }
 }
 
 #[test]
@@ -637,14 +649,16 @@ fn test_recursive_changed_entry_prune() {
             expected_added,
             expected_deleted,
             vec![],
-            |entry| {
-                let path = entry.get_full_path().clone();
-                match path {
-                    Some(path) => path.into_iter()
-                        .find(|elem| elem.to_bytes() == "subdir1".as_bytes())
-                        .is_none(),
-                    None => true,
-                }
+            TestFuncPruner {
+                func: |entry: &ChangedEntry| {
+                    let path = entry.get_full_path().clone();
+                    match path {
+                        Some(path) => path.into_iter()
+                            .find(|elem| elem.to_bytes() == "subdir1".as_bytes())
+                            .is_none(),
+                        None => true,
+                    }
+                },
             },
             None,
         );
@@ -668,14 +682,16 @@ fn test_recursive_changed_entry_prune() {
             expected_added,
             expected_deleted,
             vec![],
-            |entry| {
-                let path = entry.get_full_path().clone();
-                match path {
-                    Some(path) => path.into_iter()
-                        .find(|elem| elem.to_bytes() == "file_2".as_bytes())
-                        .is_none(),
-                    None => true,
-                }
+            TestFuncPruner {
+                func: |entry: &ChangedEntry| {
+                    let path = entry.get_full_path().clone();
+                    match path {
+                        Some(path) => path.into_iter()
+                            .find(|elem| elem.to_bytes() == "file_2".as_bytes())
+                            .is_none(),
+                        None => true,
+                    }
+                },
             },
             None,
         );
@@ -716,7 +732,7 @@ fn test_recursive_changed_entry_prune_visited() {
         let manifest_2 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_2));
         let basemanifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
 
-        let pruner = visited_pruner();
+        let pruner = VisitedPruner::new();
 
         let first_stream = changed_entry_stream_with_pruner(
             &manifest_1,
@@ -776,7 +792,7 @@ fn test_recursive_changed_entry_prune_visited_no_files() {
         let manifest_2 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_2));
         let basemanifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
 
-        let pruner = and_pruner_combinator(&file_pruner, visited_pruner());
+        let pruner = CombinatorPruner::new(FilePruner, VisitedPruner::new());
         let first_stream = changed_entry_stream_with_pruner(
             &manifest_1,
             &basemanifest,
@@ -792,9 +808,9 @@ fn test_recursive_changed_entry_prune_visited_no_files() {
         assert_eq!(unique_len, 7);
 
         let first_stream =
-            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, &file_pruner, None);
+            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, FilePruner, None);
         let second_stream =
-            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, &file_pruner, None);
+            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, FilePruner, None);
         let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
         let res = res.wait_future().unwrap();
         // Make sure that more entries are produced without VisitedPruner i.e. some entries are
@@ -815,7 +831,7 @@ fn test_visited_pruner_different_files_same_hash() {
         let root_manifest =
             MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
 
-        let pruner = visited_pruner();
+        let pruner = VisitedPruner::new();
         let stream =
             changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner, None);
         let mut res = spawn(stream.collect());
@@ -836,13 +852,46 @@ fn test_file_pruner() {
         let root_manifest =
             MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
 
-        let pruner = file_pruner;
+        let pruner = FilePruner;
         let stream =
             changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner, None);
         let mut res = spawn(stream.collect());
         let res = res.wait_future().unwrap();
 
         assert_eq!(res.len(), 0);
+        Ok(())
+    }).expect("test failed")
+}
+
+#[test]
+fn test_deleted_pruner() {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let paths = btreemap! {
+            "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
+            "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
+        };
+        let root_manifest =
+            MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
+
+        let pruner = DeletedPruner;
+        let stream =
+            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner, None);
+        let mut res = spawn(stream.collect());
+        let res = res.wait_future().unwrap();
+
+        assert_eq!(
+            res.len(),
+            2,
+            "deleted pruner shouldn't remove added entries"
+        );
+
+        let pruner = DeletedPruner;
+        let stream =
+            changed_entry_stream_with_pruner(&EmptyManifest {}, &root_manifest, None, pruner, None);
+        let mut res = spawn(stream.collect());
+        let res = res.wait_future().unwrap();
+
+        assert_eq!(res.len(), 0, "deleted pruner should remove deleted entries");
         Ok(())
     }).expect("test failed")
 }
