@@ -172,6 +172,10 @@ impl HistoryPack {
 
         let mmap = unsafe { MmapOptions::new().len(len as usize).map(&file)? };
         let version = HistoryPackVersion::new(mmap[0])?;
+        if version != HistoryPackVersion::One {
+            return Err(HistoryPackError(format!("version {:?} not supported", version)).into());
+        }
+
         let index_path = path.with_extension("histidx");
         Ok(HistoryPack {
             mmap: mmap,
@@ -340,6 +344,7 @@ mod tests {
     use rand::SeedableRng;
     use rand::chacha::ChaChaRng;
     use std::collections::HashMap;
+    use std::fs::{File, OpenOptions};
     use tempfile::TempDir;
 
     use mutablehistorypack::MutableHistoryPack;
@@ -475,6 +480,37 @@ mod tests {
         let mut iter_keys = pack.iter().collect::<Result<Vec<Key>>>().unwrap();
         iter_keys.sort_unstable();
         assert_eq!(iter_keys, keys,);
+    }
+
+    #[test]
+    fn test_open_v0() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let (nodes, ancestors) = get_nodes(&mut rng);
+
+        let mut mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+        for (ref key, ref info) in nodes.iter() {
+            mutpack.add(key.clone(), info.clone()).unwrap();
+        }
+
+        let path = mutpack.close().unwrap();
+        let pack_path = path.with_extension("histpack");
+
+        let mut buf = Vec::new();
+        {
+            let mut file = File::open(&pack_path).unwrap();
+            file.read_to_end(&mut buf).unwrap();
+        }
+        buf[0] = 0;
+        OpenOptions::new()
+            .write(true)
+            .open(&pack_path)
+            .unwrap()
+            .write_all(&buf)
+            .unwrap();
+
+        assert!(HistoryPack::new(&pack_path).is_err());
     }
 
     quickcheck! {
