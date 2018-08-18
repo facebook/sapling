@@ -208,7 +208,6 @@ Test failure to rebase deletion after rename
   abort: a@ba0395f0e180: not found in manifest!
   [255]
   $ hg rebase --abort
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/3fd0353a7967-a25c7d46-backup.hg (glob)
   rebase aborted
   $ cd ..
   $ rm -rf repo

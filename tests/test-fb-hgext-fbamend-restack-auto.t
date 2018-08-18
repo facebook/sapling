@@ -265,7 +265,6 @@ amend.autorestack=always, and conflicting changes (expect restack)
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort
-  saved backup bundle to $TESTTMP/repo11/.hg/strip-backup/7655d36150ed-96938de3-backup.hg
   rebase aborted
   $ cat file
   unmergeable!

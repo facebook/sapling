@@ -1865,8 +1865,6 @@ def abort(repo, originalwd, destmap, state, activebookmark=None):
 
         if cleanup:
             shouldupdate = False
-            if rebased:
-                strippoints = [c.node() for c in repo.set("roots(%ld)", rebased)]
 
             updateifonnodes = set(rebased)
             updateifonnodes.update(destmap.values())
@@ -1880,7 +1878,8 @@ def abort(repo, originalwd, destmap, state, activebookmark=None):
             # Strip from the first rebased revision
             if rebased:
                 # no backup of rebased cset versions needed
-                repair.strip(repo.ui, repo, strippoints)
+                nodes = map(repo.changelog.node, rebased)
+                scmutil.cleanupnodes(repo, nodes, "rebase")
 
         if activebookmark and activebookmark in repo._bookmarks:
             bookmarks.activate(repo, activebookmark)
