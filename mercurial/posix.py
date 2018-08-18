@@ -341,12 +341,21 @@ def copymode(src, dst, mode=None):
     os.chmod(dst, st_mode)
 
 
+def _iseden(dirpath):
+    """Returns True if the specified directory is the root directory of,
+    or is a sub-directory of an Eden mount."""
+    return os.path.islink(os.path.join(dirpath, ".eden", "root"))
+
+
 def _checkexec(path):
     """
     Check whether the given path is on a filesystem with UNIX-like exec flags
 
     Requires a directory (like /foo/.hg)
     """
+
+    if _iseden(path):
+        return True
 
     # VFAT on some Linux versions can flip mode but it doesn't persist
     # a FS remount. Frequently we can detect it if files are created
@@ -411,6 +420,8 @@ def _checkexec(path):
 
 def _checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
+    if _iseden(path):
+        return True
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
     while True:
