@@ -72,6 +72,8 @@ class JournalDelta {
    */
   JournalDelta(RelativePathPiece oldName, RelativePathPiece newName, Replaced);
 
+  ~JournalDelta();
+
   /** the prior delta and its chain */
   JournalDeltaPtr previous;
   /** The current sequence range.

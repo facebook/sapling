@@ -155,3 +155,19 @@ TEST(Journal, mergeRemoveCreateUpdate) {
       true,
       merged->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 }
+
+TEST(Journal, destruction_does_not_overflow_stack_on_long_chain) {
+  Journal journal;
+  size_t N =
+#ifdef NDEBUG
+      200000 // Passes in under 200ms.
+#else
+      40000 // Passes in under 400ms.
+#endif
+      ;
+  for (size_t i = 0; i < N; ++i) {
+    auto delta = std::make_unique<JournalDelta>(
+        "foo/bar"_relpath, JournalDelta::CHANGED);
+    journal.addDelta(std::move(delta));
+  }
+}

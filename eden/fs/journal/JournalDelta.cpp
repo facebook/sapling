@@ -50,6 +50,17 @@ JournalDelta::JournalDelta(
     : changedFilesInOverlay{{oldName.copy(), PathChangeInfo{true, false}},
                             {newName.copy(), PathChangeInfo{true, true}}} {}
 
+JournalDelta::~JournalDelta() {
+  // O(1) stack space destruction of the delta chain.
+  JournalDeltaPtr p{std::move(previous)};
+  while (p && p.unique()) {
+    // We know we have the only reference to p, so cast away constness because
+    // we need to unset p->previous.
+    JournalDelta* q = const_cast<JournalDelta*>(p.get());
+    p = std::move(q->previous);
+  }
+}
+
 std::unique_ptr<JournalDelta> JournalDelta::merge(
     SequenceNumber limitSequence,
     bool pruneAfterLimit) const {
