@@ -84,9 +84,9 @@ With some node gone missing during the edit.
   1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
   114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
   76f72745eac0643d16530e56e2f86e36e40631f1 2ca853e48edbd6453a0674dc0fe28a0974c51b9c 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
-  2ca853e48edbd6453a0674dc0fe28a0974c51b9c aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
-  49d44ab2be1b67a79127568a67c9c99430633b48 273c1f3b86267ed3ec684bb13af1fa4d6ba56e02 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
-  46abc7c4d8738e8563e577f7889e1b6db3da4199 aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  2ca853e48edbd6453a0674dc0fe28a0974c51b9c aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  49d44ab2be1b67a79127568a67c9c99430633b48 273c1f3b86267ed3ec684bb13af1fa4d6ba56e02 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  46abc7c4d8738e8563e577f7889e1b6db3da4199 aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'histedit', 'user': 'test'}
   $ cd ..
 
 Base setup for the rest of the testing

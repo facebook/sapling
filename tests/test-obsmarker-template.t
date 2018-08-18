@@ -97,7 +97,7 @@ Predecessors template should show current revision as it is the working copy
   o  d004c8f274b9
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test, test2 (between 2009-02-13 23:31 +0000 and 2009-02-13 23:31 +0000);
   o  ea207398892e
   
 
@@ -168,7 +168,7 @@ Predecessors template should show current revision as it is the working copy
   o  d004c8f274b9
   |
   | @  a468dc9b3633
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2009-02-13 23:31 +0000);
   o  ea207398892e
   
 Predecessors template should show all the predecessors as we force their display
@@ -197,7 +197,7 @@ with --hidden
   o  d004c8f274b9
   |
   | @  a468dc9b3633
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2009-02-13 23:31 +0000);
   | x  471f378eab4c
   |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000);
   o  ea207398892e
@@ -242,7 +242,7 @@ visible.
   @  d004c8f274b9
   |
   | x  a468dc9b3633
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2009-02-13 23:31 +0000);
   | x  471f378eab4c
   |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000);
   o  ea207398892e
@@ -251,7 +251,7 @@ visible.
   @  d004c8f274b9
   |
   | x  a468dc9b3633
-  |/     Obsfate: [{"markers": [["a468dc9b36338b14fdb7825f55ce3df4e71517ad", ["d004c8f274b9ec480a47a93c10dac5eee63adb78"], 0, [["operation", "amend"], ["user", "test2"]], [987654321.0, 0], null]], "successors": ["d004c8f274b9ec480a47a93c10dac5eee63adb78"]}]
+  |/     Obsfate: [{"markers": [["a468dc9b36338b14fdb7825f55ce3df4e71517ad", ["d004c8f274b9ec480a47a93c10dac5eee63adb78"], 0, [["operation", "amend"], ["user", "test2"]], [1234567891.0, 0], null]], "successors": ["d004c8f274b9ec480a47a93c10dac5eee63adb78"]}]
   | x  471f378eab4c
   |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"], 0, [["operation", "amend"], ["user", "test"]], [1234567890.0, 0], null]], "successors": ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]}]
   o  ea207398892e
@@ -282,7 +282,7 @@ Check other fatelog implementations
   @  d004c8f274b9
   |
   | x  a468dc9b3633
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000)
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2009-02-13 23:31 +0000)
   | x  471f378eab4c
   |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000)
   o  ea207398892e
@@ -329,7 +329,7 @@ Check other fatelog implementations
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsolete:    rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000)
+  |    obsolete:    rewritten using amend as 3:d004c8f274b9 by test2 (at 2009-02-13 23:31 +0000)
   |    files:       A0
   |    description:
   |    A1
@@ -908,7 +908,7 @@ Predecessors template should show current revision as it is the working copy
   | o  fdf9bde5129a
   |/
   | @  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000); rewritten using amend as 4:019fadeab383 by test (at 1970-01-01 00:00 +0000);
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000); rewritten using amend as 4:019fadeab383 by test (between 1970-01-01 00:00 +0000 and 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up 'desc(A1)'
@@ -976,7 +976,7 @@ Predecessors template should the predecessors as we force their display with
   o  019fadeab383
   |
   | x  65b757b745b9
-  |/     Obsfate: [{"markers": [["65b757b745b935093c87a2bccd877521cccffcbd", ["019fadeab383f6699fa83ad7bdb4d82ed2c0e5ab"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["019fadeab383f6699fa83ad7bdb4d82ed2c0e5ab"]}]
+  |/     Obsfate: [{"markers": [["65b757b745b935093c87a2bccd877521cccffcbd", ["019fadeab383f6699fa83ad7bdb4d82ed2c0e5ab"], 0, [["operation", "amend"], ["user", "test"]], [1.0, 0], null]], "successors": ["019fadeab383f6699fa83ad7bdb4d82ed2c0e5ab"]}]
   | @  fdf9bde5129a
   |/
   | x  471f378eab4c
@@ -1192,7 +1192,7 @@ Predecessors template should both predecessors as they are visible
   o  eb5a0daa2192
   |
   | @  0dec01379d3b
-  | |    Obsfate: rewritten using amend as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
+  | |    Obsfate: rewritten using amend as 4:eb5a0daa2192 by test (between 1970-01-01 00:00 +0000 and 1970-01-01 00:00 +0000);
   | x  471f378eab4c
   |/     Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
@@ -1285,7 +1285,7 @@ with --hidden
   @  eb5a0daa2192
   |
   | x  b7ea6d14e664
-  | |    Obsfate: [{"markers": [["b7ea6d14e664bdc8922221f7992631b50da3fb07", ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"]}]
+  | |    Obsfate: [{"markers": [["b7ea6d14e664bdc8922221f7992631b50da3fb07", ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"], 0, [["user", "test"]], [1.0, 0], null]], "successors": ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"]}]
   | | x  0dec01379d3b
   | |/     Obsfate: [{"markers": [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", ["b7ea6d14e664bdc8922221f7992631b50da3fb07"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["b7ea6d14e664bdc8922221f7992631b50da3fb07"]}]
   | x  471f378eab4c
@@ -1451,7 +1451,7 @@ Test setup
 
   $ hg debugobsolete
   471f378eab4c5e25f6c77f785b27c936efb22874 fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
-  fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e 7a230b46bf61e50b30308c6cfd7bd1269ef54702 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e 7a230b46bf61e50b30308c6cfd7bd1269ef54702 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'amend', 'user': 'test'}
 
 Check templates
 ---------------
@@ -1474,7 +1474,7 @@ Predecessors template should show current revision as it is the working copy
   o  7a230b46bf61
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (at 1970-01-01 00:00 +0000);
+  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (between 1970-01-01 00:00 +0000 and 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up 'desc(A2)'
@@ -1511,7 +1511,7 @@ with --hidden
   @  7a230b46bf61
   |
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (at 1970-01-01 00:00 +0000);
+  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (between 1970-01-01 00:00 +0000 and 1970-01-01 00:00 +0000);
   o  ea207398892e
   
 
@@ -1536,7 +1536,7 @@ Check other fatelog implementations
   @  7a230b46bf61
   |
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (between 1970-01-01 00:00 +0000 and 1970-01-01 00:00 +0000)
   o  ea207398892e
   
   $ hg log -G -T "default" --hidden
@@ -1587,13 +1587,20 @@ Check templates
 
   $ hg tlog
   @  f897c6137566
-  |
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
+  |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
 
   $ hg fatelog
   @  f897c6137566
   |
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
 
@@ -1614,14 +1621,11 @@ Check templates
   | |    multi-line: 3:f897c6137566
   | |    multi-line: 1:471f378eab4c
   | |    json: [["f897c6137566320b081514b4c7227ecc3d384b39"], ["471f378eab4c5e25f6c77f785b27c936efb22874"]]
-  | x  471f378eab4c
+  | o  471f378eab4c
   |/     Predecessors: 2:0dec01379d3b
   |      semi-colon: 2:0dec01379d3b
   |      json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
   |      map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
-  |      Successors: 2:0dec01379d3b
-  |      multi-line: 2:0dec01379d3b
-  |      json: [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]]
   o  ea207398892e
   
 
@@ -1630,8 +1634,8 @@ Check templates
   |
   | @  0dec01379d3b
   | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000); rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000);
-  | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000);
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
 
@@ -1652,7 +1656,7 @@ Check templates
   o  f897c6137566
   |
   | @  471f378eab4c
-  |/     Obsfate: pruned;
+  |/
   o  ea207398892e
   
 
@@ -1660,13 +1664,20 @@ Check templates
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg tlog
   o  f897c6137566
-  |
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
+  |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
+  | o  471f378eab4c
+  |/
   @  ea207398892e
   
 
   $ hg fatelog
   o  f897c6137566
   |
+  | o  471f378eab4c
+  |/
   @  ea207398892e
   
 
@@ -1685,14 +1696,11 @@ Check templates
   | |    multi-line: 3:f897c6137566
   | |    multi-line: 1:471f378eab4c
   | |    json: [["f897c6137566320b081514b4c7227ecc3d384b39"], ["471f378eab4c5e25f6c77f785b27c936efb22874"]]
-  | x  471f378eab4c
+  | o  471f378eab4c
   |/     Predecessors: 2:0dec01379d3b
   |      semi-colon: 2:0dec01379d3b
   |      json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
   |      map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
-  |      Successors: 2:0dec01379d3b
-  |      multi-line: 2:0dec01379d3b
-  |      json: [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]]
   @  ea207398892e
   
 
@@ -1705,8 +1713,8 @@ Check other fatelog implementations
   | x  0dec01379d3b
   | |    Obsfate: rewritten as 3:f897c6137566
   | |    Obsfate: rewritten as 1:471f378eab4c
-  | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b
+  | o  471f378eab4c
+  |/
   @  ea207398892e
   
   $ hg fatelogkw --hidden
@@ -1715,8 +1723,8 @@ Check other fatelog implementations
   | x  0dec01379d3b
   | |    Obsfate: rewritten as 3:f897c6137566
   | |    Obsfate: rewritten as 1:471f378eab4c
-  | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b
+  | o  471f378eab4c
+  |/
   @  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -1725,8 +1733,8 @@ Check other fatelog implementations
   | x  0dec01379d3b
   | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000)
   | |    Obsfate: rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000)
-  | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
+  | o  471f378eab4c
+  |/
   @  ea207398892e
   
   $ hg log -G -T "default" --hidden
@@ -1744,10 +1752,9 @@ Check other fatelog implementations
   | |  obsolete:    rewritten as 1:471f378eab4c
   | |  summary:     B0
   | |
-  | x  changeset:   1:471f378eab4c
+  | o  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsolete:    rewritten as 2:0dec01379d3b
   |    summary:     A0
   |
   @  changeset:   0:ea207398892e
@@ -1767,6 +1774,11 @@ Test template with split + divergence with cycles
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     C0
   |
+  | o  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     A0
+  |
   @  changeset:   0:ea207398892e
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1774,6 +1786,8 @@ Test template with split + divergence with cycles
   
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "f897c6137566: C0"
+  1 other heads for branch "default"
 
 Create a commit with three files
   $ touch A B C
@@ -1820,6 +1834,11 @@ Split it
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     C0
   |
+  | o  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     A0
+  |
   o  changeset:   0:ea207398892e
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1850,6 +1869,11 @@ Split it
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     C0
+  |
+  | o  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     A0
   |
   o  changeset:   0:ea207398892e
      user:        test
@@ -1908,6 +1932,11 @@ Diverge one of the splitted commit
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     C0
   |
+  | o  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     A0
+  |
   o  changeset:   0:ea207398892e
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1938,7 +1967,12 @@ Check templates
   o  dd800401bd8c
   |
   o  f897c6137566
-  |
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
+  |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
   $ hg fatelog
@@ -1954,6 +1988,8 @@ Check templates
   |
   o  f897c6137566
   |
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
   $ hg tlog --hidden
@@ -2004,14 +2040,11 @@ Check templates
   | |    multi-line: 3:f897c6137566
   | |    multi-line: 1:471f378eab4c
   | |    json: [["f897c6137566320b081514b4c7227ecc3d384b39"], ["471f378eab4c5e25f6c77f785b27c936efb22874"]]
-  | x  471f378eab4c
+  | o  471f378eab4c
   |/     Predecessors: 2:0dec01379d3b
   |      semi-colon: 2:0dec01379d3b
   |      json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
   |      map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
-  |      Successors: 2:0dec01379d3b
-  |      multi-line: 2:0dec01379d3b
-  |      json: [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]]
   o  ea207398892e
   
   $ hg fatelog --hidden
@@ -2031,8 +2064,8 @@ Check templates
   |
   | x  0dec01379d3b
   | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000); rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000);
-  | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000);
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
   $ hg fatelogjson --hidden
@@ -2043,7 +2076,7 @@ Check templates
   | o  ba2ed02b0c9a
   | |
   | x  4a004186e638
-  |/     Obsfate: [{"markers": [["4a004186e63889f20cb16434fcbd72220bd1eace", ["b18bc8331526a22cbb1801022bd1555bf291c48b"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["b18bc8331526a22cbb1801022bd1555bf291c48b"]}, {"markers": [["4a004186e63889f20cb16434fcbd72220bd1eace", ["0b997eb7ceeee06200a02f8aab185979092d514e"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["0b997eb7ceeee06200a02f8aab185979092d514e"]}]
+  |/     Obsfate: [{"markers": [["4a004186e63889f20cb16434fcbd72220bd1eace", ["b18bc8331526a22cbb1801022bd1555bf291c48b"], 0, [["operation", "amend"], ["user", "test"]], [1.0, 0], null]], "successors": ["b18bc8331526a22cbb1801022bd1555bf291c48b"]}, {"markers": [["4a004186e63889f20cb16434fcbd72220bd1eace", ["0b997eb7ceeee06200a02f8aab185979092d514e"], 0, [["operation", "amend"], ["user", "test"]], [1.0, 0], null]], "successors": ["0b997eb7ceeee06200a02f8aab185979092d514e"]}]
   o  dd800401bd8c
   |
   | x  9bd10a0775e4
@@ -2051,9 +2084,9 @@ Check templates
   o  f897c6137566
   |
   | x  0dec01379d3b
-  | |    Obsfate: [{"markers": [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", ["f897c6137566320b081514b4c7227ecc3d384b39"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["f897c6137566320b081514b4c7227ecc3d384b39"]}, {"markers": [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", ["471f378eab4c5e25f6c77f785b27c936efb22874"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["471f378eab4c5e25f6c77f785b27c936efb22874"]}]
-  | x  471f378eab4c
-  |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]}]
+  | |    Obsfate: [{"markers": [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", ["f897c6137566320b081514b4c7227ecc3d384b39"], 0, [["user", "test"]], [1.0, 0], null]], "successors": ["f897c6137566320b081514b4c7227ecc3d384b39"]}, {"markers": [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", ["471f378eab4c5e25f6c77f785b27c936efb22874"], 0, [["user", "test"]], [1.0, 0], null]], "successors": ["471f378eab4c5e25f6c77f785b27c936efb22874"]}]
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
   $ hg up --hidden 4
@@ -2087,7 +2120,12 @@ Check templates
   |      multi-line: 5:dd800401bd8c 8:b18bc8331526 10:eceed8f98ffc
   |      json: [["dd800401bd8c79d815329277739e433e883f784e", "0b997eb7ceeee06200a02f8aab185979092d514e", "eceed8f98ffc4186032e29a6542ab98888ebf68d"], ["dd800401bd8c79d815329277739e433e883f784e", "b18bc8331526a22cbb1801022bd1555bf291c48b", "eceed8f98ffc4186032e29a6542ab98888ebf68d"]]
   o  f897c6137566
-  |
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
+  |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
 
@@ -2101,9 +2139,11 @@ Check templates
   o  dd800401bd8c
   |
   | @  9bd10a0775e4
-  |/     Obsfate: split using amend, rebase as 5:dd800401bd8c, 9:0b997eb7ceee, 10:eceed8f98ffc by test (at 1970-01-01 00:00 +0000); split using amend, rebase as 5:dd800401bd8c, 8:b18bc8331526, 10:eceed8f98ffc by test (at 1970-01-01 00:00 +0000);
+  |/     Obsfate: split using amend, rebase as 5:dd800401bd8c, 9:0b997eb7ceee, 10:eceed8f98ffc by test (between 1970-01-01 00:00 +0000 and 1970-01-01 00:00 +0000); split using amend, rebase as 5:dd800401bd8c, 8:b18bc8331526, 10:eceed8f98ffc by test (between 1970-01-01 00:00 +0000 and 1970-01-01 00:00 +0000);
   o  f897c6137566
   |
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
 Check other fatelog implementations
@@ -2130,8 +2170,8 @@ Check other fatelog implementations
   | x  0dec01379d3b
   | |    Obsfate: rewritten as 3:f897c6137566
   | |    Obsfate: rewritten as 1:471f378eab4c
-  | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
   $ hg fatelogkw --hidden
@@ -2155,8 +2195,8 @@ Check other fatelog implementations
   | x  0dec01379d3b
   | |    Obsfate: rewritten as 3:f897c6137566
   | |    Obsfate: rewritten as 1:471f378eab4c
-  | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -2180,8 +2220,8 @@ Check other fatelog implementations
   | x  0dec01379d3b
   | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000)
   | |    Obsfate: rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000)
-  | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
+  | o  471f378eab4c
+  |/
   o  ea207398892e
   
   $ hg log -G -T "default" --hidden
@@ -2246,10 +2286,9 @@ Check other fatelog implementations
   | |  obsolete:    rewritten as 1:471f378eab4c
   | |  summary:     B0
   | |
-  | x  changeset:   1:471f378eab4c
+  | o  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsolete:    rewritten as 2:0dec01379d3b
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e

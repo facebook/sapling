@@ -1828,7 +1828,7 @@ Check the result of the push
 
   $ hg -R server debugobsolete
   b0ee3d6f51bc4c0ca6d4f2907708027a6c376233 720c5163ecf64dcc6216bee2d62bf3edb1882499 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  720c5163ecf64dcc6216bee2d62bf3edb1882499 39bc0598afe90ab18da460bafecc0fa953b77596 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  720c5163ecf64dcc6216bee2d62bf3edb1882499 39bc0598afe90ab18da460bafecc0fa953b77596 0 (Thu Jan 01 00:00:01 1970 +0000) {'user': 'test'}
   $ hg -R server graph --hidden
   o  39bc0598afe9 C-W (default)
   |

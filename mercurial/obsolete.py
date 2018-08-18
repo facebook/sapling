@@ -659,6 +659,17 @@ class obsstore(object):
                     date = util.makedate()
             else:
                 date = util.makedate()
+
+        # If prec is a successor of an existing marker, make default date
+        # bigger so the old marker won't revive the predecessor accidentally.
+        # This helps tests where date are always (0, 0)
+        markers = self.predecessors.get(prec)
+        if markers:
+            maxdate = max(m[4] for m in markers)
+            maxdate = (maxdate[0] + 1, maxdate[1])
+            if maxdate > date:
+                date = maxdate
+
         if len(prec) != 20:
             raise ValueError(prec)
         for succ in succs:
@@ -999,12 +1010,30 @@ def _mutablerevs(repo):
 
 @cachefor("obsolete")
 def _computeobsoleteset(repo):
-    """the set of obsolete revisions"""
+    """The "obsolete()" revset. Commit X is obsoleted if X is a predecessor in
+    marker M1, *and* is not a successor in marker M2 where M2.date >= M1.date.
+
+    This allows undo to return to old hashes, and is correct as long as
+    obsmarker is not exchanged.
+    """
     getnode = repo.changelog.node
-    notpublic = _mutablerevs(repo)
-    isobs = repo.obsstore.successors.__contains__
-    obs = set(r for r in notpublic if isobs(getnode(r)))
-    return obs
+    markersbysuccessor = repo.obsstore.predecessors.get
+    markersbypredecessor = repo.obsstore.successors.get
+    result = set()
+    for r in _mutablerevs(repo):
+        n = getnode(r)
+        m1s = markersbypredecessor(n)
+        m2s = markersbysuccessor(n)
+        if m1s:
+            if m2s:
+                # marker: (prec, [succ], flag, meta, (date, timezone), parent)
+                d1 = max(m[4][0] for m in m1s)
+                d2 = max(m[4][0] for m in m2s)
+                if d2 < d1:
+                    result.add(r)
+            else:
+                result.add(r)
+    return result
 
 
 @cachefor("unstable")
@@ -1131,6 +1160,23 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None, operation=N
     This function operates within a transaction of its own, but does
     not take any lock on the repo.
     """
+    unfi = repo.unfiltered()
+
+    # Change predecessors to unfiltered contexts. An X -> X marker can be used
+    # to revive X. Ideally it's () -> X. But predecessor must be a single node
+    # due to the current design.
+    #
+    # This is needed because ctx.parents() can be called to fill the "parent"
+    # field of an obsmarker, and that could raise filtered error if ctx is not
+    # unfiltered.
+    relations = [list(r) for r in relations]  # make mutable
+    for r in relations:
+        try:
+            r[0] = unfi[r[0].node()]
+        except error.RepoLookupError:
+            # node could be unknown in current repo - that's fine
+            pass
+
     # If P -> Q, X -> Y are being added, and there is an
     # existing marker P -> ... -> X, add a Q -> Y marker automatically.
     # Note: P must not equal to X or Y.
@@ -1144,7 +1190,6 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None, operation=N
 
     # Calculate the "automatic" relations.
     autorels = []
-    unfi = repo.unfiltered()
     for p, q in relmap.items():
         # Find "X"s, as in P -> ... -> X, and X -> Y.
         xs = [
@@ -1231,3 +1276,14 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None, operation=N
         tr.close()
     finally:
         tr.release()
+
+
+def revive(ctxlist, operation="revive"):
+    """un-obsolete revisions (public API used by other extensions)"""
+    rels = [(ctx, (ctx,)) for ctx in ctxlist if ctx.obsolete()]
+    if not rels:
+        return
+    # revive it by creating a self cycle marker
+    repo = rels[0][0].repo()
+    with repo.lock():
+        createmarkers(repo, rels, operation=operation)
