@@ -8,16 +8,16 @@
  *
  */
 #pragma once
+
 #include <folly/Function.h>
 #include <folly/Synchronized.h>
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
+#include "eden/fs/journal/JournalDelta.h"
 
 namespace facebook {
 namespace eden {
-
-class JournalDelta;
 
 /** The Journal exists to answer questions about how files are changing
  * over time.
@@ -43,7 +43,7 @@ class Journal {
   Journal(const Journal&) = delete;
   Journal& operator=(const Journal&) = delete;
 
-  using SequenceNumber = uint64_t;
+  using SequenceNumber = JournalDelta::SequenceNumber;
   using SubscriberId = uint64_t;
   using SubscriberCallback = std::function<void()>;
 
@@ -54,7 +54,7 @@ class Journal {
 
   /** Get a shared, immutable reference to the tip of the journal.
    * May return nullptr if there have been no changes */
-  std::shared_ptr<const JournalDelta> getLatest() const;
+  JournalDeltaPtr getLatest() const;
 
   /** Replace the journal with a new delta.
    * The new delta will typically be the result of JournalDelta::merge().
@@ -85,7 +85,7 @@ class Journal {
      * that we link into the chain */
     SequenceNumber nextSequence{1};
     /** The most recently recorded entry */
-    std::shared_ptr<const JournalDelta> latest;
+    JournalDeltaPtr latest;
   };
   folly::Synchronized<DeltaState> deltaState_;
 

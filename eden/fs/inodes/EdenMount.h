@@ -24,7 +24,7 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
-#include "eden/fs/journal/JournalDelta.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/takeover/TakeoverData.h"
@@ -50,7 +50,6 @@ class EdenDispatcher;
 class FuseChannel;
 class InodeDiffCallback;
 class InodeMap;
-class Journal;
 class MountPoint;
 struct InodeMetadata;
 template <typename T>

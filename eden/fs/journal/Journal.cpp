@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "JournalDelta.h"
+#include "Journal.h"
 
 namespace facebook {
 namespace eden {
@@ -32,7 +32,7 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
       delta->toHash = delta->fromHash;
     }
 
-    deltaState->latest = std::shared_ptr<const JournalDelta>(std::move(delta));
+    deltaState->latest = JournalDeltaPtr{std::move(delta)};
   }
 
   // Careful to call the subscribers with no locks held.
@@ -42,13 +42,13 @@ void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
   }
 }
 
-std::shared_ptr<const JournalDelta> Journal::getLatest() const {
+JournalDeltaPtr Journal::getLatest() const {
   return deltaState_.rlock()->latest;
 }
 
 void Journal::replaceJournal(std::unique_ptr<JournalDelta>&& delta) {
   auto deltaState = deltaState_.wlock();
-  deltaState->latest = std::shared_ptr<const JournalDelta>(std::move(delta));
+  deltaState->latest = JournalDeltaPtr{std::move(delta)};
 }
 
 uint64_t Journal::registerSubscriber(SubscriberCallback&& callback) {

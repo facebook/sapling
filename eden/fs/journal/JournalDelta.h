@@ -8,10 +8,10 @@
  *
  */
 #pragma once
-#include "Journal.h"
 
 #include <chrono>
 #include <unordered_set>
+#include "eden/fs/journal/JournalDeltaPtr.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -45,6 +45,8 @@ struct PathChangeInfo {
 
 class JournalDelta {
  public:
+  using SequenceNumber = uint64_t;
+
   enum Created { CREATED };
   enum Removed { REMOVED };
   enum Changed { CHANGED };
@@ -58,6 +60,7 @@ class JournalDelta {
   JournalDelta(RelativePathPiece fileName, Created);
   JournalDelta(RelativePathPiece fileName, Removed);
   JournalDelta(RelativePathPiece fileName, Changed);
+
   /**
    * "Renamed" means that that newName was created as a result of the mv(1).
    */
@@ -70,11 +73,11 @@ class JournalDelta {
   JournalDelta(RelativePathPiece oldName, RelativePathPiece newName, Replaced);
 
   /** the prior delta and its chain */
-  std::shared_ptr<const JournalDelta> previous;
+  JournalDeltaPtr previous;
   /** The current sequence range.
    * This is a range to accommodate merging a range into a single entry. */
-  Journal::SequenceNumber fromSequence;
-  Journal::SequenceNumber toSequence;
+  SequenceNumber fromSequence;
+  SequenceNumber toSequence;
   /** The time at which the change was recorded.
    * This is a range to accommodate merging a range into a single entry. */
   std::chrono::steady_clock::time_point fromTime;
@@ -91,7 +94,6 @@ class JournalDelta {
    * some information about the changes.
    */
   std::unordered_map<RelativePath, PathChangeInfo> changedFilesInOverlay;
-
   /** The set of files that had differing status across a checkout or
    * some other operation that changes the snapshot hash */
   std::unordered_set<RelativePath> uncleanPaths;
@@ -106,8 +108,19 @@ class JournalDelta {
    * If the limitSequence means that no deltas will match, returns nullptr.
    * */
   std::unique_ptr<JournalDelta> merge(
-      Journal::SequenceNumber limitSequence = 0,
+      SequenceNumber limitSequence = 0,
       bool pruneAfterLimit = false) const;
+
+ private:
+  void incRef() const noexcept;
+  void decRef() const noexcept;
+  bool isUnique() const noexcept;
+
+  mutable std::atomic<size_t> refCount_{0};
+
+  // For reference counting.
+  friend class JournalDeltaPtr;
 };
+
 } // namespace eden
 } // namespace facebook

@@ -51,7 +51,7 @@ JournalDelta::JournalDelta(
                             {newName.copy(), PathChangeInfo{true, true}}} {}
 
 std::unique_ptr<JournalDelta> JournalDelta::merge(
-    Journal::SequenceNumber limitSequence,
+    SequenceNumber limitSequence,
     bool pruneAfterLimit) const {
   if (toSequence < limitSequence) {
     return nullptr;
@@ -109,5 +109,20 @@ std::unique_ptr<JournalDelta> JournalDelta::merge(
 
   return result;
 }
+
+void JournalDelta::incRef() const noexcept {
+  refCount_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void JournalDelta::decRef() const noexcept {
+  if (1 == refCount_.fetch_sub(1, std::memory_order_acq_rel)) {
+    delete this;
+  }
+}
+
+bool JournalDelta::isUnique() const noexcept {
+  return 1 == refCount_.load(std::memory_order_acquire);
+}
+
 } // namespace eden
 } // namespace facebook
