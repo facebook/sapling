@@ -29,13 +29,6 @@ def unamend(ui, repo, **opts):
     leaving working directory in state in which it was before running
     `hg amend` (e.g. files modified as part of an amend will be
     marked as modified `hg status`)"""
-    try:
-        extensions.find("inhibit")
-    except KeyError:
-        hint = _("please add inhibit to the list of enabled extensions")
-        e = _("unamend requires inhibit extension to be enabled")
-        raise error.Abort(e, hint=hint)
-
     unfi = repo.unfiltered()
 
     # identify the commit from which to unamend

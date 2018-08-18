@@ -127,10 +127,4 @@ def unhide(ui, repo, *revs, **opts):
     revs = list(revs) + opts.pop("rev", [])
     revs = set(scmutil.revrange(unfi, revs))
     ctxs = unfi.set("::(%ld) & obsolete()", revs)
-
-    with repo.wlock(), repo.lock(), repo.transaction("unhide"):
-        try:
-            inhibit = extensions.find("inhibit")
-            inhibit.revive(ctxs, operation="unhide")
-        except KeyError:
-            raise error.Abort(_("cannot unhide - inhibit extension " "is not enabled"))
+    obsolete.revive(ctxs, operation="unhide")

@@ -944,7 +944,6 @@ def redo(ui, repo, *args, **opts):
 
 def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     # undo to specific reverseindex
-    # requires inhibit extension
     # branch is a changectx hash (potentially short form)
     # which identifies its branch via localbranch revset
     if repo != repo.unfiltered():
@@ -1232,13 +1231,7 @@ def hidecommits(repo, curctx, predctxs):
 
 
 def revealcommits(repo, rev):
-    try:
-        inhibit = extensions.find("inhibit")
-    except KeyError:
-        raise error.Abort(_("undo requires inhibit to work properly"))
-    else:
-        ctxts = repo.set(rev)
-        inhibit.revive(ctxts)
+    obsolete.revive(repo.set(rev))
 
 
 def _preview(ui, repo, reverseindex):

@@ -129,6 +129,7 @@ from mercurial import (
     i18n,
     localrepo,
     node as nodemod,
+    obsolete,
     peer,
     phases,
     pushkey,
@@ -965,23 +966,19 @@ def _dopull(orig, ui, repo, source="default", **opts):
         opts["bookmark"] = bookmarks
         opts["rev"] = revs
 
-    try:
-        inhibitmod = extensions.find("inhibit")
-    except KeyError:
-        # Ignore if inhibit is not enabled
-        pass
-    else:
-        # Pulling revisions that were filtered results in a error.
-        # Let's inhibit them
-        unfi = repo.unfiltered()
-        for rev in opts.get("rev", []):
-            try:
-                repo[rev]
-            except error.FilteredRepoLookupError:
-                node = unfi[rev].node()
-                inhibitmod.revive([repo.unfiltered()[node]])
-            except error.RepoLookupError:
-                pass
+    # Pulling revisions that were filtered results in a error.
+    # Let's revive them.
+    unfi = repo.unfiltered()
+    torevive = []
+    for rev in opts.get("rev", []):
+        try:
+            repo[rev]
+        except error.FilteredRepoLookupError:
+            node = unfi[rev].node()
+            torevive.append(unfi[node])
+        except error.RepoLookupError:
+            pass
+    obsolete.revive(torevive)
 
     if scratchbookmarks or unknownnodes:
         # Set anyincoming to True

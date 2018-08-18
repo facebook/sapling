@@ -179,28 +179,6 @@ Reset prunes commits
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  b292c1e3311f foo
   
-Reset touches commits to revive, when inhibit is not enabled it creates
-a new hash for them (not working for now - blocked by hash-preserving obsstore)
-
-  $ hg reset -C 7f3a02b3e388
-  abort: cannot revive 7f3a02b3e388 - inhibit extension is not enabled
-  [255]
-  $ hg log -r 7f3a02b3e388
-  abort: hidden revision '7f3a02b3e388'!
-  (use --hidden to access hidden revisions)
-  [255]
-  $ hg log -G -T '{rev} {bookmarks}\n'
-  @  0 foo
-  
-Reset + Inhibit tests, with inhibit reset revives the same commit
-
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > fbamend=
-  > inhibit=
-  > rebase=
-  > EOF
-
   $ hg reset -C 7f3a02b3e388
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  7f3a02b3e388 foo

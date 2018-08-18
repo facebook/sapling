@@ -101,15 +101,8 @@ def _revive(repo, rev):
         pass
     else:
         if ctx.obsolete():
-            try:
-                inhibit = extensions.find("inhibit")
-            except KeyError:
-                raise error.Abort(
-                    _("cannot revive %s - inhibit extension " "is not enabled") % ctx
-                )
-            else:
-                torevive = unfi.set("::%d & obsolete()", ctx.rev())
-                inhibit.revive(torevive, operation="reset")
+            torevive = unfi.set("::%d & obsolete()", ctx.rev())
+            obsolete.revive(torevive, operation="reset")
 
     try:
         revs = scmutil.revrange(repo, [rev])
