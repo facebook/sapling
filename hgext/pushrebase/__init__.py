@@ -840,8 +840,6 @@ def _buildobsolete(replacements, oldrepo, newrepo, date):
         for oldrev, newrev in replacements.items()
         if newrev != oldrev
     ]
-    if obsolete.isenabled(newrepo, obsolete.createmarkersopt):
-        obsolete.createmarkers(newrepo, markers, date=date)
     return markers
 
 
