@@ -1623,7 +1623,15 @@ def adjustreplacementsfrommarkers(repo, oldreplacements):
     while succstocheck:
         n = succstocheck.pop()
         missing = nm.get(n) is None
+        # successors.get does not handle cycles correctly. As a workaround,
+        # pretend there are no successor markers if "n" is not obsoleted.
         markers = obsstore.successors.get(n, ())
+        try:
+            if not unfi[n].obsolete():
+                markers = []
+        except error.RepoLookupError:
+            # Node n no longer exists (ex. stripped).
+            pass
         if missing and not markers:
             # dead end, mark it as such
             newreplacements.append((n, ()))
