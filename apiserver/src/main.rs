@@ -9,16 +9,19 @@
 
 extern crate actix;
 extern crate actix_web;
+extern crate apiserver_thrift;
 extern crate blobrepo;
 extern crate bookmarks;
 extern crate bytes;
 extern crate cachelib;
 extern crate chrono;
+#[macro_use]
 extern crate clap;
 #[macro_use]
 extern crate cloned;
 extern crate cmdlib;
 extern crate failure_ext as failure;
+extern crate fb303;
 extern crate futures;
 extern crate futures_ext;
 extern crate mercurial_types;
@@ -28,6 +31,7 @@ extern crate mononoke_types;
 extern crate panichandler;
 extern crate percent_encoding;
 extern crate reachabilityindex;
+extern crate rust_thrift;
 extern crate scuba_ext;
 extern crate secure_utils;
 extern crate serde;
@@ -42,13 +46,16 @@ extern crate slog_scope;
 extern crate slog_stats;
 extern crate slog_stdlog;
 extern crate slog_term;
+extern crate srserver;
 extern crate time_ext;
 extern crate tokio;
+extern crate tokio_threadpool;
 
 mod actor;
 mod errors;
 mod from_string;
 mod middleware;
+mod thrift;
 
 use std::path::Path;
 use std::str::FromStr;
@@ -258,6 +265,12 @@ fn main() -> Result<()> {
                     .default_value("8000")
                     .help("HTTP port to listen to"),
             )
+            .arg(
+                Arg::with_name("thrift-port")
+                    .long("thrift-port")
+                    .value_name("PORT")
+                    .help("Thrift port"),
+            )
             .arg(Arg::with_name("with-scuba").long("with-scuba"))
             .arg(Arg::with_name("debug").short("p").long("debug"))
             .arg(
@@ -306,11 +319,11 @@ fn main() -> Result<()> {
                     .help("path to the ssl ca file"),
             ),
     ).get_matches();
-
     cmdlib::args::init_cachelib(&matches);
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");
+    let thrift_port = value_t!(matches.value_of("thrift-port"), i32);
     let debug = matches.is_present("debug");
     let stdlog = matches.is_present("stdlog");
     let config_path = matches
@@ -323,6 +336,7 @@ fn main() -> Result<()> {
     let root_logger = setup_logger(debug);
     let actix_logger = root_logger.clone();
     let mononoke_logger = root_logger.clone();
+    let thrift_logger = root_logger.clone();
 
     // These guards have to be placed in main or they would be destoried once the function ends
     let global_logger = root_logger.clone();
@@ -368,6 +382,11 @@ fn main() -> Result<()> {
     let use_ssl = ssl_acceptor.is_some();
     let sys = actix::System::new("mononoke-apiserver");
     let executor = runtime.executor();
+
+    if let Ok(port) = thrift_port {
+        thrift::make_thrift(thrift_logger, host.to_string(), port)?;
+    }
+
     let addr = MononokeActor::create(move |_| {
         MononokeActor::new(mononoke_logger.clone(), repo_configs, executor)
     });

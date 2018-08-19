@@ -1,0 +1,25 @@
+// Copyright (c) 2018-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
+use futures::IntoFuture;
+use futures_ext::{BoxFuture, FutureExt};
+
+use fb303::fb_status;
+use fb303::server::FacebookService;
+use fb303::services::facebook_service::{GetNameExn, GetStatusExn};
+
+#[derive(Clone)]
+pub struct FacebookServiceImpl {}
+
+impl FacebookService for FacebookServiceImpl {
+    fn getName(&self) -> BoxFuture<String, GetNameExn> {
+        Ok("Mononoke API Server".to_string()).into_future().boxify()
+    }
+
+    fn getStatus(&self) -> BoxFuture<fb_status, GetStatusExn> {
+        Ok(fb_status::ALIVE).into_future().boxify()
+    }
+}
