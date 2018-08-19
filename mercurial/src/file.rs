@@ -97,14 +97,10 @@ impl File {
         if !self.node.maybe_copied() {
             return Ok(None);
         }
-        match self.node
-            .as_blob()
-            .as_slice()
-            .map(|buf| Self::get_copied_from(Self::parse_meta(buf)))
-        {
-            Some(result) => result,
-            None => Ok(None),
-        }
+
+        let buf = self.node.as_blob().as_slice();
+
+        Self::get_copied_from(Self::parse_meta(buf))
     }
 
     pub(crate) fn get_copied_from(
@@ -153,28 +149,19 @@ impl File {
     }
 
     pub fn content(&self) -> &[u8] {
-        let data = self.node
-            .as_blob()
-            .as_slice()
-            .expect("BlobNode should always have data");
+        let data = self.node.as_blob().as_slice();
         let (_, off) = Self::extract_meta(data);
         &data[off..]
     }
 
     pub fn metadata(&self) -> Bytes {
-        let data = self.node
-            .as_blob()
-            .as_inner()
-            .expect("BlobNode should always have data");
+        let data = self.node.as_blob().as_inner();
         let (_, off) = Self::extract_meta(data);
         data.slice_to(off)
     }
 
     pub fn file_contents(&self) -> FileContents {
-        let data = self.node
-            .as_blob()
-            .as_inner()
-            .expect("BlobNode should always have data");
+        let data = self.node.as_blob().as_inner();
         let (_, off) = Self::extract_meta(data);
         FileContents::Bytes(data.slice_from(off))
     }
@@ -185,7 +172,7 @@ impl File {
         if self.node.maybe_copied() {
             self.content().len()
         } else {
-            self.node.size().expect("BlobNode should always have data")
+            self.node.size()
         }
     }
 }

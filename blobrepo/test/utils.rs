@@ -154,9 +154,7 @@ fn upload_hg_file_entry(
 ) -> (HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>) {
     // Ideally the node id returned from upload.upload would be used, but that isn't immediately
     // available -- so compute it ourselves.
-    let node_id = HgBlobNode::new(contents.clone(), p1.as_ref(), p2.as_ref())
-        .nodeid()
-        .expect("contents must have data available");
+    let node_id = HgBlobNode::new(contents.clone(), p1.as_ref(), p2.as_ref()).nodeid();
 
     let upload = UploadHgFileEntry {
         upload_node_id: UploadHgNodeHash::Checked(node_id),

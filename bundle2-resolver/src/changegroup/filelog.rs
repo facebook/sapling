@@ -170,8 +170,7 @@ impl DeltaCache {
                             None => self.repo
                                 .get_raw_hg_content(&base)
                                 .and_then(move |blob| {
-                                    let bytes = blob.into_inner()
-                                        .expect("contents should always be present");
+                                    let bytes = blob.into_inner();
                                     delta::apply(bytes.as_ref(), &delta)
                                         .with_context(|_| {
                                             format!("File content: {:?} delta: {:?}", bytes, delta)

@@ -56,44 +56,32 @@ fn run() -> Result<()> {
 
     println!("Revlog[{:?}] = {:?}", revidx, entry);
     match revlog.get_rev(revidx) {
-        Ok(ref rev) if rev.nodeid().is_some() => {
-            if entry.nodeid() != &rev.nodeid().unwrap() {
+        Ok(ref rev) => {
+            if entry.nodeid() != &rev.nodeid() {
                 println!(
                     "NOTE: hash mismatch: expected {}, got {}",
                     entry.nodeid(),
-                    rev.nodeid().unwrap()
+                    rev.nodeid()
                 )
             }
-            if let Some(revdata) = rev.as_blob().as_slice() {
-                if let Some(dumpfile) = dumpfile {
-                    let mut file = match File::create(dumpfile) {
-                        Ok(file) => file,
-                        Err(err) => bail_msg!("Failed to create file {}: {:?}", dumpfile, err),
-                    };
-                    println!(
-                        "Writing rev {:?} to {}",
-                        rev.nodeid().expect("no id"),
-                        dumpfile
-                    );
-                    if let Err(err) = file.write_all(revdata) {
-                        bail_msg!("Failed to write {}: {:?}", dumpfile, err);
-                    }
-                } else {
-                    println!(
-                        "rev {:?}:\n{}",
-                        rev.nodeid().expect("no id"),
-                        String::from_utf8_lossy(revdata)
-                    );
+            let revdata = rev.as_blob().as_slice();
+            if let Some(dumpfile) = dumpfile {
+                let mut file = match File::create(dumpfile) {
+                    Ok(file) => file,
+                    Err(err) => bail_msg!("Failed to create file {}: {:?}", dumpfile, err),
+                };
+                println!("Writing rev {:?} to {}", rev.nodeid(), dumpfile);
+                if let Err(err) = file.write_all(revdata) {
+                    bail_msg!("Failed to write {}: {:?}", dumpfile, err);
                 }
             } else {
-                println!("Dataless rev {:?}", rev.nodeid().expect("no id"));
+                println!(
+                    "rev {:?}:\n{}",
+                    rev.nodeid(),
+                    String::from_utf8_lossy(revdata)
+                );
             }
         }
-        Ok(rev) => bail_msg!(
-            "Nodeid missing: got {:?} expected {:?}",
-            rev.nodeid(),
-            entry.nodeid()
-        ),
         Err(err) => bail_msg!("failed to get chunk {:?}: {}", revidx, err),
     };
 

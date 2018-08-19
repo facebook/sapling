@@ -777,7 +777,7 @@ fn fetch_treepack_part_input(
 
     let content_fut = entry
         .get_raw_content()
-        .and_then(|blob| blob.into_inner().ok_or(err_msg("bad blob content")))
+        .map(|blob| blob.into_inner())
         .traced(
             &trace,
             "fetching raw content",

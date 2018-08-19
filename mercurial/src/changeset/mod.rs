@@ -10,7 +10,6 @@ use std::str::{self, FromStr};
 
 use bytes::Bytes;
 use errors::*;
-use failure;
 use mercurial_types::{HgBlob, HgBlobNode, HgChangesetEnvelope, HgManifestId, HgNodeHash,
                       HgParents, MPath, NULL_HASH};
 use mononoke_types::DateTime;
@@ -251,7 +250,7 @@ impl RevlogChangeset {
         };
 
         {
-            let data = blob.as_slice().ok_or(failure::err_msg("node has no data"))?;
+            let data = blob.as_slice();
             let mut lines = data.split(|b| *b == b'\n');
 
             let nodehash = parseline(&mut lines, |l| HgNodeHash::from_str(str::from_utf8(l)?))

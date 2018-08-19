@@ -1062,9 +1062,7 @@ impl UploadHgTreeEntry {
             path,
         } = self;
 
-        let computed_node_id = HgBlobNode::new(contents.clone(), p1.as_ref(), p2.as_ref())
-            .nodeid()
-            .expect("impossible state -- contents has data");
+        let computed_node_id = HgBlobNode::new(contents.clone(), p1.as_ref(), p2.as_ref()).nodeid();
         let node_id: HgNodeHash = match upload_node_id {
             UploadHgNodeHash::Generate => computed_node_id,
             UploadHgNodeHash::Supplied(node_id) => node_id,
@@ -1250,9 +1248,7 @@ impl UploadHgFileContents {
         p2: Option<&HgNodeHash>,
     ) -> HgNodeHash {
         let raw_content = raw_content.into();
-        HgBlobNode::new(raw_content, p1, p2)
-            .nodeid()
-            .expect("contents must have data available")
+        HgBlobNode::new(raw_content, p1, p2).nodeid()
     }
 }
 

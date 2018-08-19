@@ -172,9 +172,7 @@ fn upload_entry(
                 Type::Tree => {
                     let upload = UploadHgTreeEntry {
                         upload_node_id,
-                        contents: content
-                            .into_inner()
-                            .expect("contents should always be available"),
+                        contents: content.into_inner(),
                         p1: p1.cloned(),
                         p2: p2.cloned(),
                         path: RepoPath::DirectoryPath(path),
@@ -185,11 +183,7 @@ fn upload_entry(
                 Type::File(ft) => {
                     let upload = UploadHgFileEntry {
                         upload_node_id,
-                        contents: UploadHgFileContents::RawBytes(
-                            content
-                                .into_inner()
-                                .expect("contents should always be available"),
-                        ),
+                        contents: UploadHgFileContents::RawBytes(content.into_inner()),
                         file_type: ft,
                         p1: p1.cloned(),
                         p2: p2.cloned(),
@@ -265,8 +259,7 @@ impl UploadChangesets {
                                         upload_node_id: UploadHgNodeHash::Supplied(
                                             manifest_id.into_nodehash(),
                                         ),
-                                        contents: blob.into_inner()
-                                            .expect("contents should always be available"),
+                                        contents: blob.into_inner(),
                                         p1,
                                         p2,
                                         path: RepoPath::root(),

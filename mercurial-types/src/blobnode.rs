@@ -92,7 +92,7 @@ impl HgBlobNode {
         }
     }
 
-    pub fn size(&self) -> Option<usize> {
+    pub fn size(&self) -> usize {
         self.blob.size()
     }
 
@@ -111,7 +111,7 @@ impl HgBlobNode {
     // Annoyingly, filenode is defined as sha1(p1 || p2 || content), not
     // sha1(p1 || p2 || sha1(content)), so we can't compute a filenode for
     // a blob we don't have
-    pub fn nodeid(&self) -> Option<HgNodeHash> {
+    pub fn nodeid(&self) -> HgNodeHash {
         let null = hash::NULL;
 
         let (h1, h2) = match &self.parents {
@@ -121,15 +121,15 @@ impl HgBlobNode {
             &HgParents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
         };
 
-        self.as_blob().as_slice().map(|data| {
-            let mut ctxt = Context::new();
+        let data = self.as_blob().as_slice();
 
-            ctxt.update(h1);
-            ctxt.update(h2);
-            ctxt.update(data);
+        let mut ctxt = Context::new();
 
-            HgNodeHash(ctxt.finish())
-        })
+        ctxt.update(h1);
+        ctxt.update(h2);
+        ctxt.update(data);
+
+        HgNodeHash(ctxt.finish())
     }
 }
 
@@ -152,19 +152,19 @@ mod test {
         let p = &HgBlobNode::new(blob.clone(), None, None);
         assert!(p.maybe_copied);
         {
-            let pid: Option<HgNodeHash> = p.nodeid();
+            let pid: Option<HgNodeHash> = Some(p.nodeid());
             let n = HgBlobNode::new(blob.clone(), pid.as_ref(), None);
             assert_eq!(n.parents, HgParents::One(pid.unwrap()));
             assert!(!n.maybe_copied);
         }
         {
-            let pid: Option<HgNodeHash> = p.nodeid();
+            let pid: Option<HgNodeHash> = Some(p.nodeid());
             let n = HgBlobNode::new(blob.clone(), None, pid.as_ref());
             assert_eq!(n.parents, HgParents::One(pid.unwrap()));
             assert!(n.maybe_copied);
         }
         {
-            let pid: Option<HgNodeHash> = p.nodeid();
+            let pid: Option<HgNodeHash> = Some(p.nodeid());
             let n = HgBlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
             assert_eq!(n.parents, HgParents::Two(pid.unwrap(), pid.unwrap()));
             assert!(!n.maybe_copied);
@@ -183,8 +183,8 @@ mod test {
             mem::swap(&mut p1, &mut p2);
         }
 
-        let pid1: Option<HgNodeHash> = (&p1).nodeid();
-        let pid2: Option<HgNodeHash> = (&p2).nodeid();
+        let pid1: Option<HgNodeHash> = Some((&p1).nodeid());
+        let pid2: Option<HgNodeHash> = Some((&p2).nodeid());
 
         let node1 = {
             let n = HgBlobNode::new(
@@ -194,7 +194,7 @@ mod test {
             );
             assert_eq!(n.parents, HgParents::Two(pid1.unwrap(), pid2.unwrap()));
             assert!(!n.maybe_copied);
-            n.nodeid().expect("no nodeid 1")
+            n.nodeid()
         };
         let node2 = {
             let n = HgBlobNode::new(
@@ -204,7 +204,7 @@ mod test {
             );
             assert_eq!(n.parents, HgParents::Two(pid2.unwrap(), pid1.unwrap()));
             assert!(!n.maybe_copied);
-            n.nodeid().expect("no nodeid 2")
+            n.nodeid()
         };
         assert_eq!(node1, node2);
     }

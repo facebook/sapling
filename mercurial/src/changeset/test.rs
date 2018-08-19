@@ -22,11 +22,11 @@ const CHANGESET_NOEXTRA: &[u8] = include_bytes!("cset_noextra.bin");
 fn test_parse() {
     let csid: HgNodeHash = "0849d280663e46b3e247857f4a68fabd2ba503c3".parse().unwrap();
     let p1: HgNodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
-    let cset = RevlogChangeset::parse(HgBlob::Dirty(Bytes::from(CHANGESET)), Some(p1), None)
+    let cset = RevlogChangeset::parse(HgBlob::new(Bytes::from(CHANGESET)), Some(p1), None)
         .expect("parsed");
 
-    let node = HgBlobNode::new(HgBlob::Dirty(Bytes::from(CHANGESET)), Some(&p1), None);
-    assert_eq!(node.nodeid().expect("no nodeid"), csid);
+    let node = HgBlobNode::new(HgBlob::new(Bytes::from(CHANGESET)), Some(&p1), None);
+    assert_eq!(node.nodeid(), csid);
 
     assert_eq!(
         cset,
@@ -54,14 +54,11 @@ the user expected."#.into(),
 
     let csid: HgNodeHash = "526722d24ee5b3b860d4060e008219e083488356".parse().unwrap();
     let p1: HgNodeHash = "db5eb6a86179ce819db03da9ef2090b32f8e3fc4".parse().unwrap();
-    let cset = RevlogChangeset::parse(
-        HgBlob::Dirty(Bytes::from(CHANGESET_NOEXTRA)),
-        Some(p1),
-        None,
-    ).expect("parsed");
+    let cset = RevlogChangeset::parse(HgBlob::new(Bytes::from(CHANGESET_NOEXTRA)), Some(p1), None)
+        .expect("parsed");
 
     let node = HgBlobNode::new(Bytes::from(CHANGESET_NOEXTRA), Some(&p1), None);
-    assert_eq!(node.nodeid().expect("no nodeid"), csid);
+    assert_eq!(node.nodeid(), csid);
 
     assert_eq!(
         cset,
@@ -88,7 +85,7 @@ fn test_generate() {
         let cset = RevlogChangeset::parse(blob.clone(), p1.cloned(), None).expect("parsed");
 
         let node = HgBlobNode::new(blob, p1, None);
-        assert_eq!(node.nodeid().expect("no nodeid"), csid);
+        assert_eq!(node.nodeid(), csid);
 
         let mut new = Vec::new();
 
@@ -102,7 +99,7 @@ fn test_generate() {
     test(
         csid,
         Some(&p1),
-        HgBlob::Dirty(Bytes::from(CHANGESET)),
+        HgBlob::new(Bytes::from(CHANGESET)),
         CHANGESET,
     );
 
@@ -111,7 +108,7 @@ fn test_generate() {
     test(
         csid,
         Some(&p1),
-        HgBlob::Dirty(Bytes::from(CHANGESET_NOEXTRA)),
+        HgBlob::new(Bytes::from(CHANGESET_NOEXTRA)),
         CHANGESET_NOEXTRA,
     );
 }

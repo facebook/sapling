@@ -15,5 +15,5 @@ fn emptyrev() {
         .get_rev(RevIdx::from(0u32))
         .expect("failed to get rev");
 
-    assert_eq!(node.size(), Some(0));
+    assert_eq!(node.size(), 0);
 }

@@ -15,7 +15,6 @@ use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use errors::*;
-use failure;
 use file;
 use mercurial_types::{FileType, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents, MPath,
                       MPathElement, RepoPath};
@@ -121,10 +120,7 @@ impl ManifestContent {
 
 impl RevlogManifest {
     pub fn new(repo: RevlogRepo, node: HgBlobNode) -> Result<RevlogManifest> {
-        node.as_blob()
-            .as_slice()
-            .ok_or(failure::err_msg("node missing data"))
-            .and_then(|blob| Self::parse(Some(repo), node.parents(), blob))
+        Self::parse(Some(repo), node.parents(), node.as_blob().as_slice())
     }
 
     pub(crate) fn empty() -> Self {
@@ -375,8 +371,7 @@ impl RevlogEntry {
                         Ok(content)
                     }
                     Type::Tree => {
-                        let data = data.as_slice()
-                            .ok_or(failure::err_msg("missing tree blob data"))?;
+                        let data = data.as_slice();
                         let revlog_manifest = RevlogManifest::parse_with_prefix(
                             self.repo.clone(),
                             node.parents(),

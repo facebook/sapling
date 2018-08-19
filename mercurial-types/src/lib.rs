@@ -101,7 +101,7 @@ pub mod sql_types;
 mod node;
 mod envelope;
 
-pub use blob::{HgBlob, HgBlobHash};
+pub use blob::HgBlob;
 pub use blobnode::{HgBlobNode, HgParents};
 pub use changeset::Changeset;
 pub use delta::Delta;

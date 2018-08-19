@@ -76,9 +76,7 @@ impl HgChangesetContent {
         self.generate(&mut v)?;
         let blobnode = HgBlobNode::new(Bytes::from(v), self.p1(), self.p2());
 
-        let nodeid = blobnode
-            .nodeid()
-            .ok_or(Error::from(ErrorKind::NodeGenerationFailed))?;
+        let nodeid = blobnode.nodeid();
         Ok(HgChangesetId::new(nodeid))
     }
 

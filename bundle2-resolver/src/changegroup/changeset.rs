@@ -84,7 +84,7 @@ mod tests {
             p2.into_option().as_ref(),
         );
 
-        let delta = delta::Delta::new_fulltext(blobnode.as_blob().as_slice().unwrap());
+        let delta = delta::Delta::new_fulltext(blobnode.as_blob().as_slice());
         let cs = RevlogChangeset::new(blobnode).unwrap();
 
         let chunk = CgDeltaChunk {

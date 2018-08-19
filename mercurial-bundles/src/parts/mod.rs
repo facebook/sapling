@@ -61,11 +61,7 @@ where
         let base = NULL_HASH;
         // Linknode is the same as node
         let linknode = node;
-        let text = blobnode
-            .as_blob()
-            .as_inner()
-            .unwrap_or(&Bytes::new())
-            .clone();
+        let text = blobnode.as_blob().as_inner().clone();
         let delta = Delta::new_fulltext(text.to_vec());
 
         let deltachunk = CgDeltaChunk {
