@@ -12,6 +12,8 @@ use actix_web::error::ResponseError;
 use actix_web::http::StatusCode;
 use failure::{Context, Error, Fail};
 
+use apiserver_thrift::types::{MononokeAPIException, MononokeAPIExceptionKind};
+
 use api::errors::ErrorKind as ApiError;
 use blobrepo::ErrorKind as BlobRepoError;
 use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
@@ -152,6 +154,27 @@ impl From<ReachabilityIndexError> for ErrorKind {
             e @ GenerationFetchFailed(_) | e @ ParentsFetchFailed(_) => {
                 ErrorKind::InternalError(e.into())
             }
+        }
+    }
+}
+
+impl From<ErrorKind> for MononokeAPIException {
+    fn from(e: ErrorKind) -> MononokeAPIException {
+        use errors::ErrorKind::*;
+
+        match e {
+            e @ NotFound(..) => MononokeAPIException {
+                kind: MononokeAPIExceptionKind::NotFound,
+                reason: e.to_string(),
+            },
+            e @ InvalidInput(..) => MononokeAPIException {
+                kind: MononokeAPIExceptionKind::InvalidInput,
+                reason: e.to_string(),
+            },
+            e @ InternalError(_) => MononokeAPIException {
+                kind: MononokeAPIExceptionKind::InternalError,
+                reason: e.to_string(),
+            },
         }
     }
 }

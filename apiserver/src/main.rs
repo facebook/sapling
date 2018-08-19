@@ -383,13 +383,14 @@ fn main() -> Result<()> {
     let sys = actix::System::new("mononoke-apiserver");
     let executor = runtime.executor();
 
-    if let Ok(port) = thrift_port {
-        thrift::make_thrift(thrift_logger, host.to_string(), port)?;
-    }
-
     let addr = MononokeActor::create(move |_| {
         MononokeActor::new(mononoke_logger.clone(), repo_configs, executor)
     });
+
+    if let Ok(port) = thrift_port {
+        thrift::make_thrift(thrift_logger, host.to_string(), port, addr.clone());
+    }
+
     let state = HttpServerState {
         mononoke: addr,
         logger: actix_logger.clone(),
