@@ -210,10 +210,10 @@
   added 1 changesets with 0 changes to 0 files
   new changesets 515a4dfd2e0c
   (run 'hg update' to get a working copy)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
   $ hg update tip
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  1 files fetched over * (glob)
 
   $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
   5:515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
@@ -333,7 +333,10 @@
 
 # LFS fast path about binary diff works
 
-  $ cd $TESTTMP/master
+  $ cd ../shallow
+  $ hg pull -q
+
+  $ cd ../shallow2
   $ hg up -C tip -q
   $ $PYTHON << EOF
   > with open('a.bin', 'wb') as f:
@@ -354,8 +357,17 @@
   >    hg commit -m $i a.bin
   > done
 
-  $ cd $TESTTMP/shallow
+  $ hg push ../master
+  pushing to ../master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 5 changes to 1 files
+
+  $ cd ../shallow
   $ hg pull -q
+  5 files fetched over 5 fetches - (5 misses, 0.00% hit ratio) over *s (glob)
   $ hg log --removed a.bin --config diff.nobinary=1 --git -p -T '{desc}\n' -r '::tip' --config lfs.url=null://
   binary
   diff --git a/a.bin b/a.bin
@@ -383,5 +395,4 @@
   diff --git a/a.bin b/a.bin
   Binary file a.bin has changed
   
-  5 files fetched over 5 fetches - (5 misses, 0.00% hit ratio) over * (glob)
 

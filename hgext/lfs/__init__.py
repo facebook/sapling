@@ -174,6 +174,9 @@ def extsetup(ui):
     # when "hg push" uses bundle2, upload related LFS blobs
     wrapfunction(exchange, "_pushbundle2", wrapper._pushbundle2)
 
+    # verify LFS objects were uploaded when receiving pushes
+    wrapfunction(changegroup, "checkrevs", wrapper.checkrevs)
+
 
 @templatekeyword("lfs_files")
 def lfsfiles(repo, ctx, **args):

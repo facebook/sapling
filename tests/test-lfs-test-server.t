@@ -13,7 +13,7 @@
   > import os
   > import subprocess
   > import sys
-  > 
+  >
   > for path in os.environ["PATH"].split(os.pathsep):
   >     exe = os.path.join(path, 'lfs-test-server.exe')
   >     if os.path.exists(exe):
@@ -85,6 +85,28 @@ When the server has some blobs already
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+
+Fail to push if LFS blob is not uploaded to the server
+  $ echo "[extensions]" >> .hg/hgrc
+  $ echo "lfs=" >> .hg/hgrc
+  $ echo "[lfs]" >> .hg/hgrc
+  $ echo "url=file://$TESTTMP/unused-dummystore" >> .hg/hgrc
+
+  $ echo ANOTHER-LFS > f
+  $ hg commit -m f -A f
+  $ hg push ../repo1
+  pushing to ../repo1
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  transaction abort!
+  rollback completed
+  abort: LFS server error. Remote object for file unknown not found: *u'oid': u'384d99297e974dab7d66361be0276032f5045185d6ce42601f43973e721f1dd9'* (glob)
+  [255]
+
+  $ rm .hg/hgrc
 
 Clear the cache to force a download
   $ rm -rf `hg config lfs.usercache`

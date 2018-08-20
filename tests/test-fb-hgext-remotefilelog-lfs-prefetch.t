@@ -92,7 +92,7 @@
   new changesets 730e2b7b175c
   (run 'hg update' to get a working copy)
   prefetching file contents
-  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
+  4 files fetched over * fetches - (4 misses, 0.00% hit ratio) over *s (glob)
 
   $ hg up tip
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved

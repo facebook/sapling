@@ -97,6 +97,12 @@ def writechunks(ui, chunks, filename, vfs=None):
                 os.unlink(cleanup)
 
 
+def checkrevs(repo, revs):
+    # to be replaced by extensions
+    # free from extension logic
+    pass
+
+
 class cg1unpacker(object):
     """Unpacker for cg1 changegroup streams.
 
@@ -428,6 +434,8 @@ class cg1unpacker(object):
                     "changegroup-runhooks-%020i" % clstart,
                     lambda tr: repo._afterlock(runhooks),
                 )
+
+                checkrevs(repo, range(clstart, clend))
         finally:
             repo.ui.flush()
         # never return 0 here:

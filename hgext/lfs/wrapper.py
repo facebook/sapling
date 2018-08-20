@@ -303,6 +303,15 @@ def _pushbundle2(orig, pushop):
     return orig(pushop)
 
 
+def checkrevs(orig, repo, revs):
+    """verify LFS objects were uploaded when receiving pushes"""
+    pointers = extractpointers(repo, revs)
+    if len(pointers) > 0:
+        store = repo.svfs.lfsremoteblobstore
+        store.checkblobs(pointers)
+    return orig(repo, revs)
+
+
 def extractpointers(repo, revs):
     """return a list of lfs pointers added by given revs"""
     ui = repo.ui

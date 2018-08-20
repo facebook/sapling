@@ -1111,6 +1111,9 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
     else:
         op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
 
+    revs = list(bundle.revs("bundle()"))
+    changegroup.checkrevs(bundle, revs)
+
 
 def prefetchcaches(op, params, bundle):
     bundlerepocache = {}

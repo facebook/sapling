@@ -345,6 +345,10 @@ class _gitlfsremote(object):
                 if self.ui.verbose:
                     self.ui.write(_("lfs: processed: %s\n") % oid)
 
+    def checkblobs(self, pointers):
+        response = self._batchrequest(pointers, "download")
+        self._extractobjects(response, pointers, "download")
+
     def __del__(self):
         # copied from mercurial/httppeer.py
         urlopener = getattr(self, "urlopener", None)
@@ -370,6 +374,13 @@ class _dummyremote(object):
         for p in pointers:
             content = self.vfs.read(p.oid())
             tostore.write(p.oid(), content)
+
+    def checkblobs(self, pointers):
+        for p in pointers:
+            if not self.vfs.exists(p.oid()):
+                raise LfsRemoteError(
+                    _("LFS object %s is not uploaded to remote server") % p.oid()
+                )
 
 
 class _nullremote(object):
