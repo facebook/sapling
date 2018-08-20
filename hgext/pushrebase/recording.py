@@ -98,6 +98,7 @@ def _recordpushrebaserecordtodb(ui, params):
         return
 
     repoid = ui.configint("pushrebase", "recordingrepoid")
+    params["repo_id"] = repoid
     errmsg = "pushrebase was not recorded"
     if repoid is None:
         ui.warn(_("%s: %s") % (errmsg, "recordingrepoid was not set"))

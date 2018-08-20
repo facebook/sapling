@@ -1,7 +1,7 @@
 CREATE TABLE `pushrebaserecording` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `repo_id` int(10) unsigned NOT NULL,
-  `ontorev` binary(20) NOT NULL,
+  `ontorev` binary(40) NOT NULL,
   `onto` varchar(512) NOT NULL,
   `conflicts` LONGTEXT DEFAULT NULL,
   `pushrebase_errmsg` varchar(1024) DEFAULT NULL,

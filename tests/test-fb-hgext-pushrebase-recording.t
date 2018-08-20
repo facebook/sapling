@@ -71,7 +71,7 @@ Non-conflicting commit should be accepted
   > bundlepartuploadbinary=$TESTTMP/uploader.sh {filename}
   > enablerecording=True
   > recordingsqlargs=$DBHOST:$DBPORT:$DBNAME:$DBUSER:$DBPASS
-  > recordingrepoid=0
+  > recordingrepoid=42
   > EOF
 
   $ log
@@ -92,7 +92,7 @@ Non-conflicting commit should be accepted
 Check that new entry was added to the db
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
   repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
-  0	add0c792bfce89610d27	default	handle	NULL	NULL
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
 
 Check that bundle was created, then try to send it from client2 to server2 using
 unbundle method to make sure that bundle is valid
@@ -149,8 +149,8 @@ Push conflicting changes
   [255]
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
   repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
-  0	add0c792bfce89610d27	default	handle	NULL	NULL
-  0	6a6d9484552c82e5f21b	default	handle	a\nb	NULL
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select timestamps from pushrebaserecording'
   timestamps
   {"46a2df24e27273bb06dbf28b085fcc2e911bf986": [0.0, 0]}
