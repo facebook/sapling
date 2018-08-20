@@ -41,6 +41,10 @@ def makelocalstores(repo):
     # Instantiate local data stores
     localcontent = remotefilelogcontentstore(repo, localpath, repo.name, shared=False)
     localmetadata = remotefilelogmetadatastore(repo, localpath, repo.name, shared=False)
+
+    repo.localdatastores.append(localcontent)
+    repo.localhistorystores.append(localmetadata)
+
     return localcontent, localmetadata
 
 
@@ -69,51 +73,70 @@ def makeremotestores(repo, cachecontent, cachemetadata):
 
 def makepackstores(repo):
     """Packs are more efficient (to read from) cache stores."""
+
+    def makepackstore(datastores, historystores, packpath, deletecorrupt=False):
+        packcontentstore = datapackstore(
+            repo.ui,
+            packpath,
+            usecdatapack=repo.ui.configbool("remotefilelog", "fastdatapack"),
+            userustdatapack=repo.ui.configbool("format", "userustdatapack"),
+            deletecorruptpacks=deletecorrupt,
+        )
+        packmetadatastore = historypackstore(
+            repo.ui,
+            packpath,
+            userusthistorypack=repo.ui.configbool("format", "userusthistorypack"),
+            deletecorruptpacks=deletecorrupt,
+        )
+        datastores.append(packcontentstore)
+        historystores.append(packmetadatastore)
+
+        return packcontentstore, packmetadatastore
+
     # Instantiate pack stores
-    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-    packcontentstore = datapackstore(
-        repo.ui,
-        packpath,
-        usecdatapack=repo.ui.configbool("remotefilelog", "fastdatapack"),
-        deletecorruptpacks=True,
-        userustdatapack=repo.ui.configbool("format", "userustdatapack"),
-    )
-    packmetadatastore = historypackstore(
-        repo.ui,
-        packpath,
-        deletecorruptpacks=True,
-        userusthistorypack=repo.ui.configbool("format", "userusthistorypack"),
+    spackpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
+    spackcontent, spackmetadata = makepackstore(
+        repo.shareddatastores, repo.sharedhistorystores, spackpath, deletecorrupt=True
     )
 
-    repo.shareddatastores.append(packcontentstore)
-    repo.sharedhistorystores.append(packmetadatastore)
-    shallowutil.reportpackmetrics(
-        repo.ui, "filestore", packcontentstore, packmetadatastore
+    lpackpath = shallowutil.getlocalpackpath(
+        repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
     )
-    return packcontentstore, packmetadatastore
+    lpackcontent, lpackmetadata = makepackstore(
+        repo.localdatastores, repo.localhistorystores, lpackpath
+    )
+
+    shallowutil.reportpackmetrics(
+        repo.ui, "filestore", spackcontent, spackmetadata, lpackcontent, lpackmetadata
+    )
+    return (spackcontent, spackmetadata, lpackcontent, lpackmetadata)
 
 
 def makeunionstores(repo):
     """Union stores iterate the other stores and return the first result."""
     repo.shareddatastores = []
     repo.sharedhistorystores = []
+    repo.localdatastores = []
+    repo.localhistorystores = []
 
-    packcontentstore, packmetadatastore = makepackstores(repo)
+    spackcontent, spackmetadata, lpackcontent, lpackmetadata = makepackstores(repo)
     cachecontent, cachemetadata = makecachestores(repo)
     localcontent, localmetadata = makelocalstores(repo)
     remotecontent, remotemetadata = makeremotestores(repo, cachecontent, cachemetadata)
 
     # Instantiate union stores
     repo.contentstore = unioncontentstore(
-        packcontentstore,
+        spackcontent,
         cachecontent,
+        lpackcontent,
         localcontent,
         remotecontent,
         writestore=localcontent,
     )
     repo.metadatastore = unionmetadatastore(
-        packmetadatastore,
+        spackmetadata,
         cachemetadata,
+        lpackmetadata,
         localmetadata,
         remotemetadata,
         writestore=localmetadata,
@@ -122,8 +145,8 @@ def makeunionstores(repo):
     fileservicedatawrite = cachecontent
     fileservicehistorywrite = cachemetadata
     if repo.ui.configbool("remotefilelog", "fetchpacks"):
-        fileservicedatawrite = packcontentstore
-        fileservicehistorywrite = packmetadatastore
+        fileservicedatawrite = spackcontent
+        fileservicehistorywrite = spackmetadata
     repo.fileservice.setstore(
         repo.contentstore,
         repo.metadatastore,
@@ -131,7 +154,7 @@ def makeunionstores(repo):
         fileservicehistorywrite,
     )
     shallowutil.reportpackmetrics(
-        repo.ui, "filestore", packcontentstore, packmetadatastore
+        repo.ui, "filestore", spackcontent, spackmetadata, lpackcontent, lpackmetadata
     )
 
 

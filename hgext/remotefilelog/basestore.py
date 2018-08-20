@@ -81,11 +81,11 @@ class basestore(object):
     def markledger(self, ledger, options=None):
         if options and options.get(constants.OPTION_PACKSONLY):
             return
-        if self._shared:
-            for filename, nodes in self._getfiles():
-                for node in nodes:
-                    ledger.markdataentry(self, filename, node)
-                    ledger.markhistoryentry(self, filename, node)
+
+        for filename, nodes in self._getfiles():
+            for node in nodes:
+                ledger.markdataentry(self, filename, node)
+                ledger.markhistoryentry(self, filename, node)
 
     def cleanup(self, ledger):
         entries = ledger.sources.get(self, [])

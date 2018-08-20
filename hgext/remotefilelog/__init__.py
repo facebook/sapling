@@ -21,6 +21,7 @@ Configs:
     ``remotefilelog.gcrepack`` does garbage collection during repack when True
     ``remotefilelog.nodettl`` specifies maximum TTL of a node in seconds before
     it is garbage collected
+    ``remotefilelog.localdatarepack`` runs repack on local data loose files
     ``remotefilelog.repackonhggc`` runs repack on hg gc when True
     ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
     days after which it is no longer prefetched.
@@ -141,6 +142,7 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem("remotefilelog", "localdatarepack", default=False)
 configitem("remotefilelog", "updatesharedcache", default=True)
 configitem("remotefilelog", "servercachepath", default=None)
 configitem("remotefilelog", "server", default=None)

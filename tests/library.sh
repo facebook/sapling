@@ -83,6 +83,10 @@ ls_l() {
   $PYTHON $TESTDIR/ls-l.py "$@"
 }
 
+findfilessorted() {
+  find $1 -type f | sort
+}
+
 getmysqldb() {
   source "$TESTDIR/hgsql/library.sh"
 }

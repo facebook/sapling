@@ -22,6 +22,7 @@
   $ cd shallow
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
+  > localdatarepack=True
   > prefetchdays=0
   > EOF
   $ cd ..
@@ -498,3 +499,45 @@ Do a repack where the new pack reuses a delta from the old pack
   1406e7411862  aee31534993a  12            2
   
   Total:                      44            20        (120.0% bigger)
+
+# Test repacking loose files
+  $ findfilessorted .hg/store/data
+  $ findfilessorted .hg/store/packs
+  .hg/store/packs/b413f8e53f19d7eeb5206410e5778311aadce298.dataidx
+  .hg/store/packs/b413f8e53f19d7eeb5206410e5778311aadce298.datapack
+  .hg/store/packs/d4b0a8fa1a4fbe67d5a8f845bebd7cc7ce4c77c3.histidx
+  .hg/store/packs/d4b0a8fa1a4fbe67d5a8f845bebd7cc7ce4c77c3.histpack
+
+# new loose file is created
+  $ echo "new commit" > new_file
+  $ hg commit -qAm "one more node"
+  $ findfilessorted .hg/store/data
+  .hg/store/data/1855388b65e74b6d30c8c6d1b5f6297dbb5f3e61/2411bd0c33e671502fd32d81e746ba49d0e38c74
+
+# repacking only loose files
+  $ hg repack --looseonly
+  $ findfilessorted .hg/store/packs
+  .hg/store/packs/28506376fd5561b473db1476444f36431fb7de5e.histidx
+  .hg/store/packs/28506376fd5561b473db1476444f36431fb7de5e.histpack
+  .hg/store/packs/b413f8e53f19d7eeb5206410e5778311aadce298.dataidx
+  .hg/store/packs/b413f8e53f19d7eeb5206410e5778311aadce298.datapack
+  .hg/store/packs/d4b0a8fa1a4fbe67d5a8f845bebd7cc7ce4c77c3.histidx
+  .hg/store/packs/d4b0a8fa1a4fbe67d5a8f845bebd7cc7ce4c77c3.histpack
+  .hg/store/packs/e7d50ec8e593b8c55928fefdee5760348989f7b0.dataidx
+  .hg/store/packs/e7d50ec8e593b8c55928fefdee5760348989f7b0.datapack
+
+# check that loose files have been removed
+  $ findfilessorted .hg/store/data
+
+# repacking all
+  $ hg repack
+  $ findfilessorted .hg/store/packs
+  .hg/store/packs/bba049dead702c55ccb286c2113b39207686d2ab.histidx
+  .hg/store/packs/bba049dead702c55ccb286c2113b39207686d2ab.histpack
+  .hg/store/packs/fc124484524f1f3e064fc599060671ebe1da1f2d.dataidx
+  .hg/store/packs/fc124484524f1f3e064fc599060671ebe1da1f2d.datapack
+
+# check the commit data
+  $ hg cat -r . new_file
+  new commit
+

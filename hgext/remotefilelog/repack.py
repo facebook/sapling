@@ -73,6 +73,25 @@ def fullrepack(repo, options=None):
             options=options,
         )
 
+    if repo.ui.configbool("remotefilelog", "localdatarepack") and util.safehasattr(
+        repo, "localdatastores"
+    ):
+        packpath = shallowutil.getlocalpackpath(
+            repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+        )
+        datasource = contentstore.unioncontentstore(*repo.localdatastores)
+        historysource = metadatastore.unionmetadatastore(
+            *repo.localhistorystores, allowincomplete=True
+        )
+        _runrepack(
+            repo,
+            datasource,
+            historysource,
+            packpath,
+            constants.FILEPACK_CATEGORY,
+            options=options,
+        )
+
     if repo.ui.configbool("treemanifest", "server"):
         treemfmod = extensions.find("treemanifest")
         treemfmod.serverrepack(repo, options=options)
