@@ -138,7 +138,7 @@ Test that patterns from ui.ignore options are read:
   ? .hgignore
   ? a.c
   ? syntax
-  hint[hgignore-deprecate]: hgignore format is being deprecated. Consider updating $TESTTMP/ignorerepo/.hg/testhgignore to gitignore format.
+  hint[hgignore-deprecate]: hgignore format is being deprecated. Consider updating $TESTTMP/ignorerepo/.hg/testhgignore to gitignore format. Check fburl.com/gitignore to learn more.
   hint[hint-ack]: use 'hg hint --ack hgignore-deprecate' to silence these hints
 
 empty out testhgignore
@@ -157,7 +157,7 @@ Test relative ignore path (issue4473):
   ? .hgignore
   ? a.c
   ? syntax
-  hint[hgignore-deprecate]: hgignore format is being deprecated. Consider updating $TESTTMP/ignorerepo/.hg/testhgignorerel to gitignore format.
+  hint[hgignore-deprecate]: hgignore format is being deprecated. Consider updating $TESTTMP/ignorerepo/.hg/testhgignorerel to gitignore format. Check fburl.com/gitignore to learn more.
   hint[hint-ack]: use 'hg hint --ack hgignore-deprecate' to silence these hints
 
   $ cd ..

@@ -17,7 +17,8 @@ hinttable = {
     "hgignore-deprecate": lambda path: (
         (
             "hgignore format is being deprecated. "
-            "Consider updating %s to gitignore format."
+            "Consider updating %s to gitignore format. "
+            "Check fburl.com/gitignore to learn more."
         )
         % path
     )
