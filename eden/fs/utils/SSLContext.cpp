@@ -15,21 +15,18 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-DEFINE_string(
-    client_certificate,
-    "",
-    "Path to the client certificate that is used when establishing "
-    "SSL connection");
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
-std::shared_ptr<folly::SSLContext> buildSSLContext() {
+std::shared_ptr<folly::SSLContext> buildSSLContext(
+    folly::Optional<AbsolutePath> clientCertificate) {
   auto sslContext = std::make_shared<folly::SSLContext>();
-  if (!FLAGS_client_certificate.empty()) {
-    XLOG(DBG2) << "build SSLContext with client certificate: "
-               << FLAGS_client_certificate;
-    sslContext->loadCertificate(FLAGS_client_certificate.c_str(), "PEM");
-    sslContext->loadPrivateKey(FLAGS_client_certificate.c_str(), "PEM");
+  if (clientCertificate) {
+    auto path = folly::to<std::string>(clientCertificate.value());
+    XLOG(DBG2) << "build SSLContext with client certificate: " << path;
+    sslContext->loadCertificate(path.c_str(), "PEM");
+    sslContext->loadPrivateKey(path.c_str(), "PEM");
   }
   folly::ssl::SSLCommonOptions::setClientOptions(*sslContext);
 

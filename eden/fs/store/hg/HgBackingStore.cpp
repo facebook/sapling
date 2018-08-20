@@ -66,14 +66,21 @@ Importer& getThreadLocalImporter() {
  */
 class HgImporterThreadFactory : public folly::ThreadFactory {
  public:
-  HgImporterThreadFactory(AbsolutePathPiece repository, LocalStore* localStore)
+  HgImporterThreadFactory(
+      AbsolutePathPiece repository,
+      LocalStore* localStore,
+      folly::Optional<AbsolutePath> clientCertificate,
+      bool useMononoke)
       : delegate_("HgImporter"),
         repository_(repository),
-        localStore_(localStore) {}
+        localStore_(localStore),
+        clientCertificate_(clientCertificate),
+        useMononoke_(useMononoke) {}
 
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
-      threadLocalImporter.reset(new HgImporter(repository_, localStore_));
+      threadLocalImporter.reset(new HgImporter(
+          repository_, localStore_, clientCertificate_, useMononoke_));
       func();
     });
   }
@@ -82,6 +89,8 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
   folly::NamedThreadFactory delegate_;
   AbsolutePath repository_;
   LocalStore* localStore_;
+  folly::Optional<AbsolutePath> clientCertificate_;
+  bool useMononoke_;
 };
 
 /**
@@ -103,7 +112,9 @@ class HgImporterTestExecutor : public folly::InlineExecutor {
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     LocalStore* localStore,
-    UnboundedQueueExecutor* serverThreadPool)
+    UnboundedQueueExecutor* serverThreadPool,
+    folly::Optional<AbsolutePath> clientCertificate,
+    bool useMononoke)
     : localStore_(localStore),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
@@ -116,7 +127,11 @@ HgBackingStore::HgBackingStore(
               // blocking here.
               folly::QueueBehaviorIfFull::BLOCK>>(
               /* max_capacity */ FLAGS_num_hg_import_threads * 128),
-          std::make_shared<HgImporterThreadFactory>(repository, localStore))),
+          std::make_shared<HgImporterThreadFactory>(
+              repository,
+              localStore,
+              clientCertificate,
+              useMononoke))),
       serverThreadPool_(serverThreadPool) {}
 
 /**

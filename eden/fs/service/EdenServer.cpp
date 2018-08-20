@@ -173,6 +173,8 @@ EdenServer::EdenServer(
           edenConfig)} {
   edenDir_ = edenConfig->getEdenDir();
   configPath_ = edenConfig->getUserConfigPath();
+  clientCertificate_ = edenConfig->getClientCertificate();
+  useMononoke_ = edenConfig->getUseMononoke();
 }
 
 EdenServer::~EdenServer() {}
@@ -899,7 +901,11 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
   } else if (type == "hg") {
     const auto repoPath = realpath(name);
     return make_shared<HgBackingStore>(
-        repoPath, localStore_.get(), serverState_->getThreadPool().get());
+        repoPath,
+        localStore_.get(),
+        serverState_->getThreadPool().get(),
+        clientCertificate_,
+        useMononoke_);
   } else if (type == "git") {
     const auto repoPath = realpath(name);
     return make_shared<GitBackingStore>(repoPath, localStore_.get());

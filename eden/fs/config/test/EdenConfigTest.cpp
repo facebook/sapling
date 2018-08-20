@@ -42,7 +42,7 @@ class EdenConfigTest : public ::testing::Test {
   AbsolutePath defaultUserIgnoreFilePath_{"/home/bob/ignore"};
   AbsolutePath defaultSystemIgnoreFilePath_{"/etc/eden/ignore"};
   AbsolutePath defaultEdenDirPath_{"/home/bob/.eden"};
-  AbsolutePath defaultClientCertificatePath_{"/"};
+  Optional<AbsolutePath> defaultClientCertificatePath_;
   bool defaultUseMononoke_ = false;
 
   // Map of test names to system, user path

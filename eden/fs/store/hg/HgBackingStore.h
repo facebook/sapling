@@ -38,7 +38,20 @@ class HgBackingStore : public BackingStore {
   HgBackingStore(
       AbsolutePathPiece repository,
       LocalStore* localStore,
-      UnboundedQueueExecutor* serverThreadPool);
+      UnboundedQueueExecutor* serverThreadPool,
+      folly::Optional<AbsolutePath> clientCertificate,
+      bool useMononoke);
+
+  HgBackingStore(
+      AbsolutePathPiece repository,
+      LocalStore* localStore,
+      UnboundedQueueExecutor* serverThreadPool)
+      : HgBackingStore(
+            repository,
+            localStore,
+            serverThreadPool,
+            folly::none,
+            false) {}
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline

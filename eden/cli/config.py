@@ -686,24 +686,6 @@ Do you want to run `eden mount %s` instead?"""
         if foreground:
             cmd.append("--foreground")
 
-        try:
-            use_mononoke = (
-                self.get_config_value("mononoke.use-mononoke").lower() == "true"
-            )
-        except KeyError:
-            use_mononoke = False
-
-        try:
-            certificate: Optional[str] = self.get_config_value("ssl.client-certificate")
-        except KeyError:
-            # probably need to log this case
-            certificate = None
-
-        if use_mononoke and certificate:
-            cmd.append("--use_mononoke")
-            cmd.append("--client_certificate")
-            cmd.append(certificate)
-
         eden_env = self._build_eden_environment()
 
         # Run edenfs using sudo, unless we already have root privileges,

@@ -188,8 +188,13 @@ const AbsolutePath& EdenConfig::getUserIgnoreFile() const {
   return userIgnoreFile_.getValue();
 }
 
-const AbsolutePath& EdenConfig::getClientCertificate() const {
-  return clientCertificate_.getValue();
+const Optional<AbsolutePath> EdenConfig::getClientCertificate() const {
+  auto value = clientCertificate_.getValue();
+
+  if (value == kUnspecifiedDefault) {
+    return folly::none;
+  }
+  return value;
 }
 
 bool EdenConfig::getUseMononoke() const {

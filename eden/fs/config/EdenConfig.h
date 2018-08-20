@@ -357,8 +357,8 @@ class EdenConfig : public ConfigSettingManager {
   /** Get the user ignore file. Default "userHomePath/ignore" */
   const AbsolutePath& getUserIgnoreFile() const;
 
-  /** Get the path to client certificate. Default "/" */
-  const AbsolutePath& getClientCertificate() const;
+  /** Get the path to client certificate. */
+  const folly::Optional<AbsolutePath> getClientCertificate() const;
 
   /** Get the use mononoke flag. Default false */
   bool getUseMononoke() const;

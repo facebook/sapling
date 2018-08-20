@@ -96,7 +96,15 @@ class HgImporter : public Importer {
    * The caller is responsible for ensuring that the LocalStore object remains
    * valid for the lifetime of the HgImporter object.
    */
-  HgImporter(AbsolutePathPiece repoPath, LocalStore* store);
+  HgImporter(
+      AbsolutePathPiece repoPath,
+      LocalStore* store,
+      folly::Optional<AbsolutePath> clientCertificate,
+      bool useMononoke);
+
+  HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
+      : HgImporter(repoPath, store, folly::none, false) {}
+
   virtual ~HgImporter();
 
   Hash importManifest(folly::StringPiece revName);
@@ -315,6 +323,8 @@ class HgImporter : public Importer {
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};
   uint32_t nextRequestID_{0};
+  folly::Optional<AbsolutePath> clientCertificate_;
+  bool useMononoke_;
   /**
    * The input and output file descriptors to the helper subprocess.
    * We don't own these FDs, and don't need to close them--they will be closed

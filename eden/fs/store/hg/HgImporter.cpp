@@ -91,7 +91,6 @@ DEFINE_int32(
     256 * 1024 * 1024, // 256MB
     "Buffer size for batching LocalStore writes during hg manifest imports");
 
-DEFINE_bool(use_mononoke, false, "Try to fetch trees from Mononoke");
 DEFINE_int32(
     mononoke_timeout,
     2000, // msec
@@ -190,8 +189,15 @@ AbsolutePath getImportHelperPath() {
 namespace facebook {
 namespace eden {
 
-HgImporter::HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
-    : repoPath_{repoPath}, store_{store} {
+HgImporter::HgImporter(
+    AbsolutePathPiece repoPath,
+    LocalStore* store,
+    folly::Optional<AbsolutePath> clientCertificate,
+    bool useMononoke)
+    : repoPath_{repoPath},
+      store_{store},
+      clientCertificate_(clientCertificate),
+      useMononoke_(useMononoke) {
   auto importHelper = getImportHelperPath();
   std::vector<string> cmd = {
       importHelper.value(),
@@ -319,8 +325,8 @@ void HgImporter::initializeMononoke(const Options& options) {
     return;
   }
 
-  if (!FLAGS_use_mononoke) {
-    XLOG(DBG2) << "mononoke is disabled by command line flags.";
+  if (!useMononoke_) {
+    XLOG(DBG2) << "mononoke is disabled by config.";
     return;
   }
 
@@ -328,7 +334,7 @@ void HgImporter::initializeMononoke(const Options& options) {
 
   std::shared_ptr<folly::SSLContext> sslContext;
   try {
-    sslContext = buildSSLContext();
+    sslContext = buildSSLContext(clientCertificate_);
   } catch (std::runtime_error& ex) {
     XLOG(WARN) << "mononoke is disabled because of build failure when "
                   "creating SSLContext: "
