@@ -883,10 +883,10 @@ def print_raw_journal_deltas(
                 continue
 
             label = labels[(info.existedBefore, info.existedAfter)]
-            entries.append(f"{label} {path}")
+            entries.append(f"{label} {os.fsdecode(path)}")
 
         for path in delta.uncleanPaths:
-            entries.append(f"X {path}")
+            entries.append(f"X {os.fsdecode(path)}")
 
         if not entries:
             continue
