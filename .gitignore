@@ -18,6 +18,7 @@
 .shim/
 tests/.coverage*
 tests/.testtimes*
+tests/comprehensive/.testtimes*
 fb/tests/.testtimes*
 tests/.hypothesis
 tests/hypothesis-generated
