@@ -725,9 +725,8 @@ class cmdalias(object):
                 if e is entry:
                     self.cmd = alias
                     break
-            self.shadows = True
         except error.UnknownCommand:
-            self.shadows = False
+            pass
 
         if not self.definition:
             self.badalias = _("no definition for alias '%s'") % self.name
@@ -843,8 +842,6 @@ class cmdalias(object):
                 except error.UnknownCommand:
                     pass
             raise error.Abort(self.badalias, hint=hint)
-        if self.shadows:
-            ui.debug("alias '%s' shadows command '%s'\n" % (self.name, self.cmdname))
 
         ui.log(
             "commandalias", "alias '%s' expands to '%s'\n", self.name, self.definition
@@ -863,15 +860,42 @@ class cmdalias(object):
 class lazyaliasentry(object):
     """like a typical command entry (func, opts, help), but is lazy"""
 
+    # Keep track of aliases being resolved to detect cycles.
+    _resolving = []
+
     def __init__(self, name, definition, cmdtable, source):
         self.name = name
         self.definition = definition
-        self.cmdtable = cmdtable.copy()
+        self.cmdtable = cmdtable
         self.source = source
+
+        # If an alias and its definition have a same command name (ex.
+        # "log = log -v"). Copy the command table right now so the old
+        # command definition becomes accessible. This is the only special
+        # case. Commands referred by other aliases will be resolved as
+        # aliases if possible, regardless of the config order.
+        # Copying cmdtable is cheaper than resolving a command, which
+        # could be O(len(cmdtable)) in Python.
+        if not definition.startswith("!"):
+            try:
+                cmdname = pycompat.shlexsplit(definition)[:1]
+            except ValueError:
+                cmdname = []
+            if [name] == cmdname:
+                self.cmdtable = cmdtable.copy()
 
     @util.propertycache
     def _aliasdef(self):
-        return cmdalias(self.name, self.definition, self.cmdtable, self.source)
+        if self.name in self._resolving:
+            raise error.Abort(
+                _("circular aliases: %s") % " ".join(sorted(self._resolving))
+            )
+        self._resolving.append(self.name)
+        try:
+            return cmdalias(self.name, self.definition, self.cmdtable, self.source)
+        finally:
+            popped = self._resolving.pop()
+            assert popped == self.name
 
     def __getitem__(self, n):
         aliasdef = self._aliasdef
