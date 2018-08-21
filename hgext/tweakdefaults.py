@@ -1071,16 +1071,21 @@ def cleanupnodeswrapper(orig, repo, mapping, operation, *args, **kwargs):
         and operation not in formattercommands
     ):
         maxoutput = 10
-        oldnodes = sorted(mapping.keys())
-        for i in range(0, min(len(oldnodes), maxoutput)):
-            oldnode = oldnodes[i]
-            newnodes = mapping[oldnode]
-            _printupdatednode(repo, oldnode, newnodes)
-        if len(oldnodes) > maxoutput + 1:
-            repo.ui.status(_("...\n"))
-            lastoldnode = oldnodes[-1]
-            lastnewnodes = mapping[lastoldnode]
-            _printupdatednode(repo, lastoldnode, lastnewnodes)
+        try:
+            oldnodes = sorted(mapping.keys())
+        except AttributeError:
+            # "mapping" is not always a dictionary.
+            pass
+        else:
+            for i in range(0, min(len(oldnodes), maxoutput)):
+                oldnode = oldnodes[i]
+                newnodes = mapping[oldnode]
+                _printupdatednode(repo, oldnode, newnodes)
+            if len(oldnodes) > maxoutput + 1:
+                repo.ui.status(_("...\n"))
+                lastoldnode = oldnodes[-1]
+                lastnewnodes = mapping[lastoldnode]
+                _printupdatednode(repo, lastoldnode, lastnewnodes)
     return orig(repo, mapping, operation, *args, **kwargs)
 
 

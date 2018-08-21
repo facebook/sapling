@@ -1317,12 +1317,13 @@ def _aborthistedit(ui, repo, state):
             os.remove(backupfile)
 
         # check whether we should update away
-        if repo.unfiltered().revs(
-            "parents() and (%n  or %ln::)", state.parentctxnode, leafs | tmpnodes
-        ):
+        unfi = repo.unfiltered()
+        revs = list(unfi.revs("%ln::", leafs | tmpnodes))
+        if unfi.revs("parents() and (%n  or %ld)", state.parentctxnode, revs):
             hg.clean(repo, state.topmost, show_stats=True, quietempty=True)
-        cleanupnode(ui, repo, tmpnodes)
-        cleanupnode(ui, repo, leafs)
+
+        nodes = map(unfi.changelog.node, revs)
+        scmutil.cleanupnodes(repo, nodes, "histedit")
     except Exception:
         if state.inprogress():
             ui.warn(
@@ -1724,24 +1725,6 @@ def movetopmostbookmarks(repo, oldtopmost, newtopmost):
             for name in oldbmarks:
                 changes.append((name, newtopmost))
             marks.applychanges(repo, tr, changes)
-
-
-def cleanupnode(ui, repo, nodes):
-    """strip a group of nodes from the repository
-
-    The set of node to strip may contains unknown nodes."""
-    with repo.lock():
-        # do not let filtering get in the way of the cleanse
-        # we should probably get rid of obsolescence marker created during the
-        # histedit, but we currently do not have such information.
-        repo = repo.unfiltered()
-        # Find all nodes that need to be stripped
-        # (we use %lr instead of %ln to silently ignore unknown items)
-        nm = repo.changelog.nodemap
-        nodes = sorted(n for n in nodes if n in nm)
-        roots = [c.node() for c in repo.set("roots(%ln)", nodes)]
-        if roots:
-            repair.strip(ui, repo, roots)
 
 
 def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):

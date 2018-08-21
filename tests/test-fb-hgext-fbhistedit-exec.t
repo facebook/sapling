@@ -457,16 +457,21 @@ Test abort a stopped histedit with obsmarkers
   $ hg commit --amend -m e
   $ hg histedit --abort --traceback
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/abce911bf7cf-fc24e0a4-backup.hg (glob)
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
-  @  0d9a4961b100 f
+  x  2b451ea9fdb0 e
   |
-  o  8800a5180f91 d
-  |
-  | x  883a5225844a d
+  | x  1d7ed205640e e
   |/
-  o  d8249471110a e
+  x  abce911bf7cf d
   |
+  | @  0d9a4961b100 f
+  | |
+  | o  8800a5180f91 d
+  | |
+  | | x  883a5225844a d
+  | |/
+  | o  d8249471110a e
+  |/
   | x  652413bf663e f
   | |
   | x  e860deea161a e

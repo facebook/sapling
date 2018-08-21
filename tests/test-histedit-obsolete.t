@@ -525,7 +525,6 @@ attempted later.
 
   $ hg histedit --abort
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/abort/.hg/strip-backup/4dc06258baa6-dff4ef05-backup.hg
 
   $ hg log -G
   @  18:ee118ab9fa44 (secret) k
@@ -557,15 +556,15 @@ attempted later.
   [1]
   $ hg histedit --continue --config experimental.evolution.track-operation=1
   $ hg log -G
-  @  23:175d6b286a22 (secret) k
+  @  25:175d6b286a22 (secret) k
   |
-  o  22:44ca09d59ae4 (secret) j
+  o  24:44ca09d59ae4 (secret) j
   |
-  o  21:31747692a644 (secret) i
+  x  21:31747692a644 (secret) i
   |
-  o  20:9985cd4f21fa (draft) g
+  x  20:9985cd4f21fa (draft) g
   |
-  o  19:4dc06258baa6 (draft) h
+  x  19:4dc06258baa6 (draft) h
   |
   o  13:b449568bf7fc (draft) f
   |
