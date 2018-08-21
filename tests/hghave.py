@@ -469,13 +469,13 @@ def has_hardlink():
 
 @check("hardlink-whitelisted", "hardlinks on whitelisted filesystems")
 def has_hardlink_whitelisted():
-    from mercurial import util
+    from mercurial import fscap, util
 
     try:
         fstype = util.getfstype(".")
     except OSError:
         return False
-    return fstype in util._hardlinkfswhitelist
+    return bool(fscap.getfscap(fstype, fscap.HARDLINK))
 
 
 @check("rmcwd", "can remove current working directory")

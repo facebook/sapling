@@ -22,7 +22,7 @@ import sys
 import tempfile
 import unicodedata
 
-from . import encoding, error, pycompat
+from . import encoding, error, fscap, pycompat
 from .cext import osutil
 from .i18n import _
 
@@ -345,11 +345,15 @@ def copymode(src, dst, mode=None):
 def getfstype(dirpath):
     """Get the filesystem type name from a directory (best-effort)
 
-    Returns None if we are unsure. Raises OSError on ENOENT, EPERM, etc.
+    Returns None if we are unsure, or hit errors like ENOENT, EPERM, etc.
     """
-    if _iseden(dirpath):
-        return "eden"
-    return osutil.getfstype(dirpath)
+    try:
+        if _iseden(dirpath):
+            return "eden"
+        return osutil.getfstype(dirpath)
+    except (IOError, OSError):
+        # Not fatal
+        return None
 
 
 def _iseden(dirpath):
@@ -365,8 +369,9 @@ def _checkexec(path):
     Requires a directory (like /foo/.hg)
     """
 
-    if _iseden(path):
-        return True
+    cap = fscap.getfscap(getfstype(path), fscap.EXECBIT)
+    if cap is not None:
+        return cap
 
     # VFAT on some Linux versions can flip mode but it doesn't persist
     # a FS remount. Frequently we can detect it if files are created
@@ -431,8 +436,10 @@ def _checkexec(path):
 
 def _checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
-    if _iseden(path):
-        return True
+    cap = fscap.getfscap(getfstype(path), fscap.SYMLINK)
+    if cap is not None:
+        return cap
+
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
     while True:

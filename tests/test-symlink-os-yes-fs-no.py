@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-from mercurial import commands, hg, ui as uimod, util
+from mercurial import commands, fscap, hg, ui as uimod, util
 
 
 TESTDIR = os.environ["TESTDIR"]
@@ -34,6 +34,7 @@ def symlink_failure(src, dst):
 
 
 os.symlink = symlink_failure
+fscap.getfscap = lambda *args: None
 
 
 def islink_failure(path):

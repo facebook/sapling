@@ -1233,7 +1233,7 @@ Check that share works with subrepo
   sharing subrepo subrepo-1 from $TESTTMP/subrepo-status/subrepo-1
   sharing subrepo subrepo-2 from $TESTTMP/subrepo-status/subrepo-2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ find ../shared/* | sort
+  $ find ../shared/* | sort | grep -v check
   ../shared/subrepo-1
   ../shared/subrepo-1/.hg
   ../shared/subrepo-1/.hg/cache
@@ -1248,9 +1248,6 @@ Check that share works with subrepo
   ../shared/subrepo-2/.hg
   ../shared/subrepo-2/.hg/branch
   ../shared/subrepo-2/.hg/cache
-  ../shared/subrepo-2/.hg/cache/checkisexec (execbit !)
-  ../shared/subrepo-2/.hg/cache/checklink (symlink !)
-  ../shared/subrepo-2/.hg/cache/checklink-target (symlink !)
   ../shared/subrepo-2/.hg/cache/storehash
   ../shared/subrepo-2/.hg/cache/storehash/* (glob)
   ../shared/subrepo-2/.hg/dirstate

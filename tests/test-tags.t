@@ -673,11 +673,8 @@ Cloning should pull down hgtags fnodes mappings and write the cache file
 
 Missing tags2* files means the cache wasn't written through the normal mechanism.
 
-  $ ls tagsclient/.hg/cache
+  $ ls tagsclient/.hg/cache | grep -v check
   branch2-base
-  checkisexec (execbit !)
-  checklink (symlink !)
-  checklink-target (symlink !)
   hgtagsfnodes1
   rbc-names-v1
   rbc-revs-v1
@@ -700,11 +697,8 @@ Running hg tags should produce tags2* file and not change cache
   0.2                                2:f63cc8fe54e4
   0.1                                0:96ee1d7354c4
 
-  $ ls tagsclient/.hg/cache
+  $ ls tagsclient/.hg/cache | grep -v check
   branch2-base
-  checkisexec (execbit !)
-  checklink (symlink !)
-  checklink-target (symlink !)
   hgtagsfnodes1
   rbc-names-v1
   rbc-revs-v1

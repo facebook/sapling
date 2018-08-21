@@ -29,7 +29,6 @@ except ImportError:
 osutil = policy.importmod(r"osutil")
 
 executablepath = win32.executablepath
-getfstype = win32.getfstype
 getmaxrss = win32.getmaxmemoryusage
 getuser = win32.getuser
 hidewindow = win32.hidewindow
@@ -448,6 +447,13 @@ def rename(src, dst):
             raise
         unlink(dst)
         os.rename(src, dst)
+
+
+def getfstype(dirpath):
+    try:
+        return win32.getfstype(dirpath)
+    except (IOError, OSError):
+        return None
 
 
 def gethgcmd():

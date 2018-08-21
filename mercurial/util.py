@@ -45,7 +45,7 @@ import traceback
 import warnings
 import zlib
 
-from . import encoding, error, i18n, policy, pycompat, urllibcompat
+from . import encoding, error, fscap, i18n, policy, pycompat, urllibcompat
 
 
 base85 = policy.importmod(r"base85")
@@ -1321,23 +1321,6 @@ def checksignature(func):
     return check
 
 
-# a whilelist of known filesystems where hardlink works reliably
-_hardlinkfswhitelist = {
-    "apfs",
-    "btrfs",
-    "ext2",
-    "ext3",
-    "ext4",
-    "hfs",
-    "jfs",
-    "reiserfs",
-    "tmpfs",
-    "ufs",
-    "xfs",
-    "zfs",
-}
-
-
 def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     """copy a file, preserving mode and optionally other stat info like
     atime/mtime
@@ -1357,11 +1340,8 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     if hardlink:
         # Hardlinks are problematic on CIFS (issue4546), do not allow hardlinks
         # unless we are confident that dest is on a whitelisted filesystem.
-        try:
-            fstype = getfstype(os.path.dirname(dest))
-        except OSError:
-            fstype = None
-        if fstype not in _hardlinkfswhitelist:
+        fstype = getfstype(os.path.dirname(dest))
+        if not fscap.getfscap(fstype, fscap.HARDLINK):
             hardlink = False
     if hardlink:
         try:

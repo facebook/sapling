@@ -31,12 +31,8 @@ Trigger branchcache creation:
 
   $ hg branches
   default                       10:a7949464abda
-  $ ls .hg/cache
+  $ ls .hg/cache | grep -v check
   branch2-served
-  checkisexec (execbit !)
-  checklink (symlink !)
-  checklink-target (symlink !)
-  checknoexec (execbit !)
   rbc-names-v1
   rbc-revs-v1
 
@@ -49,11 +45,8 @@ Default operation:
 
 Ensure branchcache got copied over:
 
-  $ ls .hg/cache
+  $ ls .hg/cache | grep -v check
   branch2-served
-  checkisexec (execbit !)
-  checklink (symlink !)
-  checklink-target (symlink !)
   rbc-names-v1
   rbc-revs-v1
 
