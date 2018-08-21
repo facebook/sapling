@@ -3204,7 +3204,7 @@ class TestRunner(object):
                 vlog("# HGPYENTRYPOINT=%s" % entrypointpath)
                 os.environ["HGPYENTRYPOINT"] = entrypointpath
             else:
-                raise SystemExit("entry point %s does not exist" % entrypointpath)
+                log("warning: entry point %s does not exist" % entrypointpath)
 
             try:
                 os.symlink(self._hgcommand, tmphgpath)
