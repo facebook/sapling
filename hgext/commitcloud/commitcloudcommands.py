@@ -480,9 +480,14 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             if checkbackedup or len(newheads) > nocheckbackepdulimit:
                 newheads = serv.filterpushedheads(reponame, newheads)
 
-            newheads, failedheads = infinitepush.pushbackupbundlestacks(
-                ui, repo, getconnection, newheads
-            )
+            # all pushed to the server except maybe obsmarkers
+            allspushed = (not newheads) and (localbookmarks == lastsyncstate.bookmarks)
+
+            failedheads = []
+            if not allspushed:
+                newheads, failedheads = infinitepush.pushbackupbundlestacks(
+                    ui, repo, getconnection, newheads
+                )
 
             if failedheads:
                 pushfailures |= set(failedheads)
@@ -515,9 +520,10 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             # Update the infinitepush backup bookmarks to point to the new
             # local heads and bookmarks.  This must be done after all
             # referenced commits have been pushed to the server.
-            pushbackupbookmarks(
-                ui, repo, getconnection, localheads, localbookmarks, **opts
-            )
+            if not allspushed:
+                pushbackupbookmarks(
+                    ui, repo, getconnection, localheads, localbookmarks, **opts
+                )
 
             # Update the cloud heads, bookmarks and obsmarkers.
             synced, cloudrefs = serv.updatereferences(
