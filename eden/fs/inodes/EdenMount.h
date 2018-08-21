@@ -567,12 +567,26 @@ class EdenMount {
 
   static constexpr int kMaxSymlinkChainDepth = 40; // max depth of symlink chain
 
+  const std::unique_ptr<const ClientConfig> config_;
+
+  /**
+   * A promise associated with the future returned from
+   * EdenMount::getFuseCompletionFuture() that completes when the
+   * fuseChannel has no work remaining and can be torn down.
+   * The future yields the underlying fuseDevice descriptor; it can
+   * be passed on during graceful restart or simply closed if we're
+   * unmounting and shutting down completely.  In the unmount scenario
+   * the device should be closed prior to calling EdenMount::shutdown()
+   * so that the subsequent privilegedFuseUnmount() call won't block
+   * waiting on us for a response.
+   */
+  folly::Promise<TakeoverData::MountInfo> fuseCompletionPromise_;
+
   /**
    * Eden server state shared across multiple mount points.
    */
   std::shared_ptr<ServerState> serverState_;
 
-  const std::unique_ptr<const ClientConfig> config_;
   std::unique_ptr<InodeMap> inodeMap_;
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::unique_ptr<ObjectStore> objectStore_;
@@ -644,19 +658,6 @@ class EdenMount {
    * The current state of the mount point.
    */
   std::atomic<State> state_{State::UNINITIALIZED};
-
-  /**
-   * A promise associated with the future returned from
-   * EdenMount::getFuseCompletionFuture() that completes when the
-   * fuseChannel has no work remaining and can be torn down.
-   * The future yields the underlying fuseDevice descriptor; it can
-   * be passed on during graceful restart or simply closed if we're
-   * unmounting and shutting down completely.  In the unmount scenario
-   * the device should be closed prior to calling EdenMount::shutdown()
-   * so that the subsequent privilegedFuseUnmount() call won't block
-   * waiting on us for a response.
-   */
-  folly::Promise<TakeoverData::MountInfo> fuseCompletionPromise_;
 
   /**
    * uid and gid that we'll set as the owners in the stat information

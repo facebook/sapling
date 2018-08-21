@@ -27,7 +27,7 @@ UnboundedQueueExecutor::UnboundedQueueExecutor(
           std::make_unique<folly::NamedThreadFactory>(threadNamePrefix))} {}
 
 UnboundedQueueExecutor::UnboundedQueueExecutor(
-    std::unique_ptr<folly::ManualExecutor> executor)
+    std::shared_ptr<folly::ManualExecutor> executor)
     : executor_{std::move(executor)} {}
 
 } // namespace eden

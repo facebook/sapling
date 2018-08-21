@@ -26,6 +26,7 @@ namespace folly {
 template <typename T>
 class Future;
 struct Unit;
+class ManualExecutor;
 } // namespace folly
 
 namespace facebook {
@@ -275,6 +276,15 @@ class TestMount {
    */
   bool hasMetadata(InodeNumber inodeNumber) const;
 
+  /**
+   * Returns number of functions executed.
+   */
+  size_t drainServerExecutor();
+
+  std::shared_ptr<folly::ManualExecutor> getServerExecutor() const {
+    return serverExecutor_;
+  }
+
  private:
   void initTestDirectory();
   void setInitialCommit(Hash commitHash);
@@ -312,6 +322,11 @@ class TestMount {
 
   std::shared_ptr<FakeClock> clock_ = std::make_shared<FakeClock>();
   std::shared_ptr<FakePrivHelper> privHelper_;
+
+  // The ManualExecutor must be destroyed prior to the EdenMount. Otherwise,
+  // when clearing its queue, it will deallocate functions with captured values
+  // that still reference the EdenMount (or its owned objects).
+  std::shared_ptr<folly::ManualExecutor> serverExecutor_;
 
   std::shared_ptr<ServerState> serverState_;
 };

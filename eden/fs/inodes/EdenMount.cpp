@@ -167,8 +167,8 @@ EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     std::shared_ptr<ServerState> serverState)
-    : serverState_(std::move(serverState)),
-      config_(std::move(config)),
+    : config_(std::move(config)),
+      serverState_(std::move(serverState)),
       inodeMap_{new InodeMap(this)},
       dispatcher_{new EdenDispatcher(this)},
       objectStore_(std::move(objectStore)),
@@ -747,7 +747,7 @@ void EdenMount::fuseInitSuccessful(
             ));
       })
       .onError([this](folly::exception_wrapper&& ew) {
-        XLOG(ERR) << "session complete with err" << ew;
+        XLOG(ERR) << "session complete with err: " << ew.what();
         fuseCompletionPromise_.setException(std::move(ew));
       });
 }

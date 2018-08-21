@@ -42,7 +42,7 @@ class UnboundedQueueExecutor : public folly::Executor {
    * Used primarily for tests.
    */
   explicit UnboundedQueueExecutor(
-      std::unique_ptr<folly::ManualExecutor> executor);
+      std::shared_ptr<folly::ManualExecutor> executor);
 
   UnboundedQueueExecutor(const UnboundedQueueExecutor&) = delete;
   UnboundedQueueExecutor& operator=(const UnboundedQueueExecutor&) = delete;
@@ -54,7 +54,7 @@ class UnboundedQueueExecutor : public folly::Executor {
   }
 
  private:
-  std::unique_ptr<folly::Executor> executor_;
+  std::shared_ptr<folly::Executor> executor_;
 };
 
 } // namespace eden

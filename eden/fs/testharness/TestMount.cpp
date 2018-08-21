@@ -10,6 +10,7 @@
 #include "TestMount.h"
 
 #include <folly/FileUtil.h>
+#include <folly/executors/ManualExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
@@ -70,7 +71,9 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
       type == other.type;
 }
 
-TestMount::TestMount() : privHelper_{make_shared<FakePrivHelper>()} {
+TestMount::TestMount()
+    : privHelper_{make_shared<FakePrivHelper>()},
+      serverExecutor_{make_shared<folly::ManualExecutor>()} {
   // Initialize the temporary directory.
   // This sets both testDir_, config_, localStore_, and backingStore_
   initTestDirectory();
@@ -78,8 +81,7 @@ TestMount::TestMount() : privHelper_{make_shared<FakePrivHelper>()} {
   serverState_ = {make_shared<ServerState>(
       UserInfo::lookup(),
       privHelper_,
-      make_shared<UnboundedQueueExecutor>(
-          FLAGS_num_eden_test_threads, "EdenCPUThread"),
+      make_shared<UnboundedQueueExecutor>(serverExecutor_),
       clock_,
       make_shared<EdenConfig>(
           /*userName=*/folly::StringPiece{"bob"},
@@ -110,6 +112,11 @@ TestMount::~TestMount() {
   // keeps the EdenMount alive, causing the test to leak.
   // Manually release the futures in FakeBackingStore.
   backingStore_->discardOutstandingRequests();
+
+  // Make sure the server executor has nothing left to run.
+  serverExecutor_->drain();
+
+  CHECK_EQ(0, serverExecutor_->clear());
 }
 
 void TestMount::initialize(
@@ -285,6 +292,10 @@ bool TestMount::hasOverlayData(InodeNumber ino) const {
 
 bool TestMount::hasMetadata(InodeNumber ino) const {
   return edenMount_->getInodeMetadataTable()->getOptional(ino).has_value();
+}
+
+size_t TestMount::drainServerExecutor() {
+  return serverExecutor_->drain();
 }
 
 void TestMount::setInitialCommit(Hash commitHash) {

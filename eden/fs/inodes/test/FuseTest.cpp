@@ -8,11 +8,13 @@
  *
  */
 #include <gtest/gtest.h>
+#include <chrono>
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
+#include <folly/executors/ManualExecutor.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/logging/xlog.h>
@@ -24,6 +26,17 @@ using folly::Future;
 using folly::ScopedEventBaseThread;
 using folly::Unit;
 using std::make_shared;
+
+namespace {
+
+/**
+ * The FUSE tests wait for work to finish on a thread pool. 250ms is too short
+ * for the test to reliably test under heavy system load (such as when stress
+ * testing), so wait for 10 seconds.
+ */
+constexpr std::chrono::seconds kWaitTimeout = 10s;
+
+} // namespace
 
 TEST(FuseTest, initMount) {
   auto builder1 = FakeTreeBuilder();
@@ -55,13 +68,30 @@ TEST(FuseTest, initMount) {
       sizeof(fuse_out_header) + sizeof(fuse_init_out), response.header.len);
 
   // Wait for the mount to complete
-  std::move(initFuture).get(250ms);
+  testMount.drainServerExecutor();
+  std::move(initFuture).get(kWaitTimeout);
 
   // Close the FakeFuse device, and ensure that the mount's FUSE completion
   // future is then signalled.
   fuse->close();
-  auto mountInfo =
-      testMount.getEdenMount()->getFuseCompletionFuture().get(100ms);
+
+  auto fuseCompletionFuture =
+      testMount.getEdenMount()->getFuseCompletionFuture();
+
+  // TestMount has a manual executor, but the fuse channel thread enqueues
+  // the work. Wait for the future to complete, driving the ManualExecutor
+  // all the while.
+  // TODO: It might be worth moving this logic into a TestMount::waitFuture
+  // method.
+  auto deadline = std::chrono::steady_clock::now() + kWaitTimeout;
+  do {
+    if (std::chrono::steady_clock::now() > deadline) {
+      FAIL() << "fuse completion future not ready within timeout";
+    }
+    testMount.drainServerExecutor();
+  } while (!fuseCompletionFuture.isReady());
+
+  auto mountInfo = std::move(fuseCompletionFuture.value());
 
   // Since we closed the FUSE device from the "kernel" side the returned
   // MountInfo should not contain a valid FUSE device any more.
@@ -107,7 +137,7 @@ TEST(FuseTest, destroyWithInitRace) {
   auto initFuture = Future<Unit>::makeEmpty();
   auto completionFuture = Future<TakeoverData::MountInfo>::makeEmpty();
   {
-    // Create the TestMountj
+    // Create the TestMount.
     TestMount testMount{builder1};
     testMount.registerFakeFuse(fuse);
 
