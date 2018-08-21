@@ -222,17 +222,35 @@ Move the bookmark also on the first client, it should be forked in the sync
   $ cd ..
 
 Amend a commit
+Try to push selectively
   $ cd client1
   $ echo more >> commit1
   $ hg amend --rebase -m "`hg descr | head -n1` amended"
   rebasing 2:02f6fc2b7154 "commit2" (bookmark1)
-  $ hg cloud sync
+
+  $ hg cloud sync --push-revs a7bb357e7298
   #commitcloud synchronizing 'server' with 'user/test/default'
+  abort: unknown revision 'a7bb357e7298'!
+  [255]
+
+  $ hg cloud sync --push-revs '.'
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud all unsynced stacks are skipped except with heads '48610b' 
   backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     48610b1a7ec0  commit2
   #commitcloud commits synchronized
+
+  $ hg cloud sync --push-revs 48610b1a7ec0
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud all unsynced stacks are skipped except with heads '48610b' 
+  #commitcloud commits synchronized
+
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized
+
   $ tglog
   o  4: 48610b1a7ec0 'commit2' bookmark1
   |
@@ -240,6 +258,7 @@ Amend a commit
   |
   o  0: d20a80d4def3 'base'
   
+
   $ cd ..
 
 Sync the amended commit to the other client

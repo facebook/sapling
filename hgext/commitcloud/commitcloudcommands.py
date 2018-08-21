@@ -26,6 +26,8 @@ from mercurial import (
     obsutil,
     progress,
     registrar,
+    revsetlang,
+    scmutil,
     util,
 )
 
@@ -337,9 +339,8 @@ def getdefaultrepoworkspace(ui, repo):
             "workspace-version",
             "",
             _(
-                "(EXPERIMENTAL) latest version "
-                "(some external services can receive notifications and "
-                "know the latest version)"
+                "target workspace version to sync to "
+                "(skip `cloud sync` if the current version is greater or equal than the given one) (EXPERIMENTAL)"
             ),
         ),
         (
@@ -347,9 +348,8 @@ def getdefaultrepoworkspace(ui, repo):
             "check-autosync-enabled",
             None,
             _(
-                "(EXPERIMENTAL) check that "
-                "automatic synchronization is enabled "
-                "(some external services can run `cloud sync` on behalf of the user)"
+                "check automatic synchronization settings "
+                "(skip `cloud sync` if automatic synchronization is disabled) (EXPERIMENTAL)"
             ),
         ),
         (
@@ -357,14 +357,25 @@ def getdefaultrepoworkspace(ui, repo):
             "use-bgssh",
             None,
             _(
-                "(EXPERIMENTAL) fail ssh if the password-less login is not enabled "
-                "(some external services can run `cloud sync` on behalf of the user)"
+                "try to use the password-less login for ssh if defined in the cconfig "
+                "(option requires infinitepush.bgssh config) (EXPERIMENTAL)"
             ),
+        ),
+        (
+            "",
+            "push-revs",
+            [],
+            _(
+                "revs to push "
+                "(while syncing take into account only the heads built from the given revset) (ADVANCED)"
+            ),
+            _("REV"),
         ),
     ],
 )
 def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
-    """synchronize commits with the commit cloud service"""
+    """synchronize commits with the commit cloud service
+    """
     repo.ignoreautobackup = True
     if opts.get("use_bgssh"):
         bgssh = ui.config("infinitepush", "bgssh")
@@ -451,6 +462,17 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
         localheads = _getheads(repo)
         localbookmarks = _getbookmarks(repo)
         obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
+
+        revspec = opts.get("push_revs")
+        if revspec:
+            revs = scmutil.revrange(repo, revspec)
+            pushheads = [ctx.hex() for ctx in repo.set("heads(%ld::)", revs)]
+            if not pushheads:
+                highlightstatus(ui, _("revset doesn't match anything\n"))
+                return 1
+            localheads = _filterpushside(
+                ui, repo, pushheads, localheads, lastsyncstate.heads
+            )
 
         if (
             set(localheads) == set(lastsyncstate.heads)
@@ -666,6 +688,18 @@ def _update(ui, repo, destination):
     ui.status(_("updating to %s\n") % nodemod.short(destination))
     updatecheck = "noconflict"
     return hg.updatetotally(ui, repo, destination, destination, updatecheck=updatecheck)
+
+
+def _filterpushside(ui, repo, pushheads, localheads, lastsyncstateheads):
+    """filter push side to include only the specified push heads to the delta"""
+
+    if pushheads:
+        listmsg = _("except with heads '%s' ") % ", ".join([ph[:6] for ph in pushheads])
+    else:
+        listmsg = ""
+
+    highlightstatus(ui, _("all unsynced stacks are skipped %s\n") % listmsg)
+    return list(set(localheads) & (set(lastsyncstateheads) | set(pushheads)))
 
 
 def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncbookmarks):
