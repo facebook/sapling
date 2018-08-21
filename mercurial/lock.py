@@ -384,7 +384,7 @@ class lock(object):
             self.vfs.unlink(self.f)
             l.release()
             self._debugprintonce(_("removed the stale lock file\n"))
-        except error.lockinforor:
+        except error.LockError:
             self._debugprintonce(_("failed to remove the stale lock file\n"))
             return info
 
