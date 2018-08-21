@@ -153,4 +153,9 @@ class state_filemerge(object):
         client = getattr(self.repo, "_watchmanclient", None)
         if client:
             metadata = {"path": self.path}
-            client.command(name, {"name": "hg.filemerge", "metadata": metadata})
+            try:
+                client.command(name, {"name": "hg.filemerge", "metadata": metadata})
+            except Exception:
+                # State notifications are advisory only, and so errors
+                # don't block us from performing a checkout
+                pass
