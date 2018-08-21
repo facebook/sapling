@@ -235,7 +235,18 @@ class HgServer(object):
         # Close the current repo and make a new one.
         # We use this to deal with invalidation related errors that are
         # more likely to bubble to the surface with our long lived use case.
-        self.repo.close()
+
+        # Reset self.repo to None before we try to close and re-open it,
+        # so that if anything goes wrong it will be None rather than still pointing to a
+        # partially closed repository.
+        repo = self.repo
+        self.repo = None
+
+        try:
+            repo.close()
+        except Exception as ex:
+            logging.warning("error closing repository: %s" % (ex,))
+
         self.repo = self._open_repo()
 
     def serve(self):
@@ -328,6 +339,12 @@ class HgServer(object):
             return True
 
         try:
+            # Ensure that the repository is open.  It may be None here if something
+            # went wrong previously trying to re-open the repository during a previous
+            # command.
+            if self.repo is None:
+                self.repo = self._open_repo()
+
             cmd_function(req)
         except Exception as ex:
             logging.exception("error processing command %r", command)
