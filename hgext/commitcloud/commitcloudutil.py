@@ -81,17 +81,43 @@ class TokenLocator(object):
 
     def _gettokenfromfile(self):
         """On platforms except macOS tokens are stored in a file"""
+        usesecretstool = self.ui.config("commitcloud", "use_secrets_tool")
         if not self.vfs.exists(self.filename):
-            return None
+            if usesecretstool:
+                # check if token has been backed up and recover it if possible
+                try:
+                    token = self._gettokenfromsecretstool()
+                    if token:
+                        self._settokentofile(token, isbackedup=True)
+                except Exception:
+                    pass
+            else:
+                return None
+
         with self.vfs.open(self.filename, r"rb") as f:
             tokenconfig = config.config()
             tokenconfig.read(self.filename, f)
-            return tokenconfig.get("commitcloud", "user_token")
+            token = tokenconfig.get("commitcloud", "user_token")
+            if usesecretstool:
+                isbackedup = tokenconfig.get("commitcloud", "isbackedup")
+                if not isbackedup:
+                    self._settokentofile(token)
+            return token
 
-    def _settokentofile(self, token):
+    def _settokentofile(self, token, isbackedup=False):
         """On platforms except macOS tokens are stored in a file"""
+        # backup token if optional backup is enabled
+        usesecretstool = self.ui.config("commitcloud", "use_secrets_tool")
+        if usesecretstool and not isbackedup:
+            try:
+                self._settokeninsecretstool(token)
+                isbackedup = True
+            except Exception:
+                pass
         with self.vfs.open(self.filename, "w") as configfile:
-            configfile.write(("[commitcloud]\nuser_token=%s\n") % token)
+            configfile.write(
+                "[commitcloud]\nuser_token=%s\nisbackedup=%s\n" % (token, isbackedup)
+            )
 
     def _gettokenfromsecretstool(self):
         """Token stored in keychain as individual secret"""
@@ -146,8 +172,9 @@ class TokenLocator(object):
                     self._settokeninsecretstool(token, update=True)
                 else:
                     raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
-            text = stdoutdata.strip()
-            return text or None
+
+            else:
+                self.ui.debug("access token is backup up in secrets tool\n")
 
         except OSError as e:
             raise commitcloudcommon.UnexpectedError(self.ui, e)
@@ -253,10 +280,6 @@ class TokenLocator(object):
             token = self._gettokenfromfile()
         elif pycompat.isdarwin:
             token = self._gettokenosx()
-        elif self.ui.config("commitcloud", "use_secrets_tool"):
-            token = self._gettokenfromsecretstool()
-            if self.vfs.exists(self.filename):
-                self.vfs.tryunlink(self.filename)
         else:
             token = self._gettokenfromfile()
 
@@ -278,8 +301,6 @@ class TokenLocator(object):
             self._settokentofile(token)
         elif pycompat.isdarwin:
             self._settokenosx(token)
-        elif self.ui.config("commitcloud", "use_secrets_tool"):
-            self._settokeninsecretstool(token)
         else:
             self._settokentofile(token)
 
