@@ -2228,6 +2228,8 @@ class localrepository(object):
                 #
                 # if minimal phase was 0 we don't need to retract anything
                 phases.registernew(self, tr, targetphase, [n])
+            # Newly committed commits shouldn't be obsoleted.
+            obsolete.revive([self[n]], "commit")
             tr.close()
             return n
         finally:

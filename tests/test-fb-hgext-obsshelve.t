@@ -355,7 +355,7 @@ Ensure the repo is as we hope
   $ hg parents | grep changeset
   changeset:   10:ceefc37abe1e
   $ hg heads -q
-  10:ceefc37abe1e
+  11:83ed350dc2d6
   $ hg status -C
   A b.rename/b
     b/b

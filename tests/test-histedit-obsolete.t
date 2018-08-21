@@ -560,11 +560,11 @@ attempted later.
   |
   o  24:44ca09d59ae4 (secret) j
   |
-  x  21:31747692a644 (secret) i
+  o  21:31747692a644 (secret) i
   |
-  x  20:9985cd4f21fa (draft) g
+  o  20:9985cd4f21fa (draft) g
   |
-  x  19:4dc06258baa6 (draft) h
+  o  19:4dc06258baa6 (draft) h
   |
   o  13:b449568bf7fc (draft) f
   |
