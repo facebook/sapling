@@ -23,6 +23,7 @@ import tempfile
 import unicodedata
 
 from . import encoding, error, pycompat
+from .cext import osutil
 from .i18n import _
 
 
@@ -339,6 +340,16 @@ def copymode(src, dst, mode=None):
             st_mode = ~umask
         st_mode &= 0o666
     os.chmod(dst, st_mode)
+
+
+def getfstype(dirpath):
+    """Get the filesystem type name from a directory (best-effort)
+
+    Returns None if we are unsure. Raises OSError on ENOENT, EPERM, etc.
+    """
+    if _iseden(dirpath):
+        return "eden"
+    return osutil.getfstype(dirpath)
 
 
 def _iseden(dirpath):

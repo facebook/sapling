@@ -111,10 +111,11 @@ executablepath = platform.executablepath
 expandglobs = platform.expandglobs
 explainexit = platform.explainexit
 findexe = platform.findexe
+getfstype = platform.getfstype
 gethgcmd = platform.gethgcmd
 getmaxrss = platform.getmaxrss
-getuser = platform.getuser
 getpid = os.getpid
+getuser = platform.getuser
 groupmembers = platform.groupmembers
 groupname = platform.groupname
 hidewindow = platform.hidewindow
@@ -1654,14 +1655,6 @@ def fspath(name, root):
         dir = os.path.join(dir, part)
 
     return "".join(result)
-
-
-def getfstype(dirpath):
-    """Get the filesystem type name from a directory (best-effort)
-
-    Returns None if we are unsure. Raises OSError on ENOENT, EPERM, etc.
-    """
-    return getattr(osutil, "getfstype", lambda x: None)(dirpath)
 
 
 def checknlink(testfile):

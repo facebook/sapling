@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import ctypes
+import ctypes.wintypes as wintypes
 import errno
 import msvcrt
 import os
@@ -31,6 +32,7 @@ _LPCSTR = _LPSTR = ctypes.c_char_p
 _HANDLE = ctypes.c_void_p
 _HWND = _HANDLE
 _PCCERT_CONTEXT = ctypes.c_void_p
+_MAX_PATH = wintypes.MAX_PATH
 
 _INVALID_HANDLE_VALUE = _HANDLE(-1).value
 
@@ -253,6 +255,33 @@ except AttributeError:
 
 _kernel32.SetFileAttributesA.argtypes = [_LPCSTR, _DWORD]
 _kernel32.SetFileAttributesA.restype = _BOOL
+
+_DRIVE_UNKNOWN = 0
+_DRIVE_NO_ROOT_DIR = 1
+_DRIVE_REMOVABLE = 2
+_DRIVE_FIXED = 3
+_DRIVE_REMOTE = 4
+_DRIVE_CDROM = 5
+_DRIVE_RAMDISK = 6
+
+_kernel32.GetDriveTypeA.argtypes = [_LPCSTR]
+_kernel32.GetDriveTypeA.restype = _UINT
+
+_kernel32.GetVolumeInformationA.argtypes = [
+    _LPCSTR,
+    ctypes.c_void_p,
+    _DWORD,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    _DWORD,
+]
+_kernel32.GetVolumeInformationA.restype = _BOOL
+
+_kernel32.GetVolumePathNameA.argtypes = [_LPCSTR, ctypes.c_void_p, _DWORD]
+_kernel32.GetVolumePathNameA.restype = _BOOL
+
 
 _kernel32.OpenProcess.argtypes = [_DWORD, _BOOL, _DWORD]
 _kernel32.OpenProcess.restype = _HANDLE
@@ -511,6 +540,51 @@ def executablepath():
     elif len == size:
         raise ctypes.WinError(_ERROR_INSUFFICIENT_BUFFER)
     return buf.value
+
+
+def getvolumename(path):
+    """Get the mount point of the filesystem from a directory or file
+    (best-effort)
+
+    Returns None if we are unsure. Raises OSError on ENOENT, EPERM, etc.
+    """
+    # realpath() calls GetFullPathName()
+    realpath = os.path.realpath(path)
+
+    # allocate at least MAX_PATH long since GetVolumePathName('c:\\', buf, 4)
+    # somehow fails on Windows XP
+    size = max(len(realpath), _MAX_PATH) + 1
+    buf = ctypes.create_string_buffer(size)
+
+    if not _kernel32.GetVolumePathNameA(realpath, ctypes.byref(buf), size):
+        raise ctypes.WinError()  # Note: WinError is a function
+
+    return buf.value
+
+
+def getfstype(path):
+    """Get the filesystem type name from a directory or file (best-effort)
+
+    Returns None if we are unsure. Raises OSError on ENOENT, EPERM, etc.
+    """
+    volume = getvolumename(path)
+
+    t = _kernel32.GetDriveTypeA(volume)
+
+    if t == _DRIVE_REMOTE:
+        return "cifs"
+    elif t not in (_DRIVE_REMOVABLE, _DRIVE_FIXED, _DRIVE_CDROM, _DRIVE_RAMDISK):
+        return None
+
+    size = _MAX_PATH + 1
+    name = ctypes.create_string_buffer(size)
+
+    if not _kernel32.GetVolumeInformationA(
+        volume, None, 0, None, None, None, ctypes.byref(name), size
+    ):
+        raise ctypes.WinError()  # Note: WinError is a function
+
+    return name.value
 
 
 def getuser():
