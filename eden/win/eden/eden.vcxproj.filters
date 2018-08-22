@@ -1,0 +1,260 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Extern">
+      <UniqueIdentifier>{e1e8e374-4a0b-48ca-a76e-7fa4b0a58621}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Win">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Win\Lib">
+      <UniqueIdentifier>{bd877be5-c4dd-463b-ac99-b070fbb8f7bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen-cpp2">
+      <UniqueIdentifier>{979c1658-1add-4f1b-8687-621f4cd2a737}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs">
+      <UniqueIdentifier>{0235e41e-2349-4fc1-8da8-70b517abd7ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Model">
+      <UniqueIdentifier>{ff80c128-6158-430a-a56a-79f7f4dd1ffd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Store">
+      <UniqueIdentifier>{597acbd4-a36f-4d4b-916a-3d9370e72e6b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Store\hg">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="fs\Util">
+      <UniqueIdentifier>{b784f067-e8b9-42ba-9226-5bf9ea3cd828}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Model\Git">
+      <UniqueIdentifier>{f0165dbe-c908-44b9-9b11-8ec0ffec7d22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Sqlite">
+      <UniqueIdentifier>{a26f9bf1-b27f-40aa-9827-5401f085b570}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Service">
+      <UniqueIdentifier>{98739a4d-6b9d-4010-bba6-1c6de520c7af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Store\Mononoke">
+      <UniqueIdentifier>{a35f52c6-bc5e-41b4-9b1d-cfcebc220f1a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\External\prjlayer\DirList.cpp">
+      <Filter>Extern</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\External\prjlayer\MountPoint.cpp">
+      <Filter>Extern</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\External\prjlayer\Provider.cpp">
+      <Filter>Extern</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\hg\HgBackingStore.cpp">
+      <Filter>fs\Store\hg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\hg\HgImporter.cpp">
+      <Filter>fs\Store\hg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\hg\HgImportPyError.cpp">
+      <Filter>fs\Store\hg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\hg\HgManifestImporter.cpp">
+      <Filter>fs\Store\hg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\hg\HgProxyHash.cpp">
+      <Filter>fs\Store\hg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\Hash.cpp">
+      <Filter>fs\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\ParentCommits.cpp">
+      <Filter>fs\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\Tree.cpp">
+      <Filter>fs\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\TreeEntry.cpp">
+      <Filter>fs\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="Pipe.cpp">
+      <Filter>Win\Lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\EmptyBackingStore.cpp">
+      <Filter>fs\Store</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\LocalStore.cpp">
+      <Filter>fs\Store</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\MemoryLocalStore.cpp">
+      <Filter>fs\Store</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\ObjectStore.cpp">
+      <Filter>fs\Store</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\SqliteLocalStore.cpp">
+      <Filter>fs\Store</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\StoreResult.cpp">
+      <Filter>fs\Store</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\utils\PathFuncs.cpp">
+      <Filter>fs\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\git\GitTree.cpp">
+      <Filter>fs\Model\Git</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\sqlite\Sqlite.cpp">
+      <Filter>fs\Sqlite</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\utils\TimeUtil.cpp">
+      <Filter>fs\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\git\GitBlob.cpp">
+      <Filter>fs\Model\Git</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\utils\Clock.cpp">
+      <Filter>fs\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\service\EdenCPUThreadPool.cpp">
+      <Filter>fs\Service</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\utils\UnboundedQueueExecutor.cpp">
+      <Filter>fs\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Subprocess.cpp">
+      <Filter>Win\Lib</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="StringConv.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\External\prjlayer\DirList.h">
+      <Filter>Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\External\prjlayer\MountPoint.h">
+      <Filter>Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\External\prjlayer\Prjlayer.h">
+      <Filter>Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\External\prjlayer\Provider.h">
+      <Filter>Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\External\prjlayer\pathUtils.h">
+      <Filter>Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\External\prjlayer\Backfol.h">
+      <Filter>Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h">
+      <Filter>fs\Store\hg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\hg\HgImporter.h">
+      <Filter>fs\Store\hg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\hg\HgImportPyError.h">
+      <Filter>fs\Store\hg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\hg\HgManifestImporter.h">
+      <Filter>fs\Store\hg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\hg\HgProxyHash.h">
+      <Filter>fs\Store\hg</Filter>
+    </ClInclude>
+    <ClInclude Include="Edenwin.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\Blob.h">
+      <Filter>fs\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\Hash.h">
+      <Filter>fs\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\ParentCommits.h">
+      <Filter>fs\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\Tree.h">
+      <Filter>fs\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\TreeEntry.h">
+      <Filter>fs\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="Pipe.h">
+      <Filter>Win\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\BackingStore.h">
+      <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\BlobMetadata.h">
+      <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\EmptyBackingStore.h">
+      <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\IObjectStore.h">
+      <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\LocalStore.h">
+      <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\MemoryLocalStore.h">
+      <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\ObjectStore.h">
+      <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\SqliteLocalStore.h">
+      <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\StoreResult.h">
+      <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_constants.h">
+      <Filter>gen-cpp2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_data.h">
+      <Filter>gen-cpp2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_types.h">
+      <Filter>gen-cpp2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\utils\PathFuncs.h">
+      <Filter>fs\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\git\GitTree.h">
+      <Filter>fs\Model\Git</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\sqlite\Sqlite.h">
+      <Filter>fs\Sqlite</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\utils\TimeUtil.h">
+      <Filter>fs\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\git\GitBlob.h">
+      <Filter>fs\Model\Git</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\External\prjlayer\EdenProvider.h">
+      <Filter>Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\utils\Clock.h">
+      <Filter>fs\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\service\EdenCPUThreadPool.h">
+      <Filter>fs\Service</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\utils\UnboundedQueueExecutor.h">
+      <Filter>fs\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Subprocess.h">
+      <Filter>Win\Lib</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

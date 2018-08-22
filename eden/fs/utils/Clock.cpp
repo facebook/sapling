@@ -7,9 +7,13 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "Clock.h"
+
+#ifdef EDEN_WIN
+#include "folly/portability/Time.h"
+#endif
 
 #include <system_error>
+#include "Clock.h"
 
 namespace facebook {
 namespace eden {

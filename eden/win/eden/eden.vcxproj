@@ -1,0 +1,232 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{0DCEA1BA-99EA-415C-B6E1-831BE96EA2FB}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>eden</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);EDEN_WIN;EDEN_WIN;-D_SCL_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;EDEN_WIN_NOMONONOKE;GLOG_NO_ABBREVIATED_SEVERITIES</PreprocessorDefinitions>
+      <ConformanceMode>false</ConformanceMode>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\pkaush\code\github\folly\folly;C:\pkaush\code\exp\Edenwin\External;..\..\..\;C:\open\fbsource2\fbcode\scm\hg;..\..\..\External\prjlayer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>-DEDEN_WIN</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>C:\pkaush\code\github\folly\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration);C:\pkaush\code\exp\Edenwin\External\prjlayer\prjsdk;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>datapack.lib;ProjectedFSLib.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions);EDEN_WIN;-D_SCL_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;EDEN_WIN_NOMONONOKE</PreprocessorDefinitions>
+      <ConformanceMode>false</ConformanceMode>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\pkaush\code\github\folly\folly;C:\pkaush\code\exp\Edenwin\External;..\..\..\;C:\open\fbsource2\fbcode\scm\hg;..\..\..\External\prjlayer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>-DEDEN_WIN</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>C:\pkaush\code\github\folly\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration);C:\pkaush\code\exp\Edenwin\External\prjlayer\prjsdk;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>datapack.lib;ProjectedFSLib.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\External\prjlayer\DirList.cpp" />
+    <ClCompile Include="..\..\..\External\prjlayer\MountPoint.cpp" />
+    <ClCompile Include="..\..\..\External\prjlayer\Provider.cpp" />
+    <ClCompile Include="..\..\fs\model\git\GitBlob.cpp" />
+    <ClCompile Include="..\..\fs\model\git\GitTree.cpp" />
+    <ClCompile Include="..\..\fs\model\Hash.cpp" />
+    <ClCompile Include="..\..\fs\model\ParentCommits.cpp" />
+    <ClCompile Include="..\..\fs\model\Tree.cpp" />
+    <ClCompile Include="..\..\fs\model\TreeEntry.cpp" />
+    <ClCompile Include="..\..\fs\service\EdenCPUThreadPool.cpp" />
+    <ClCompile Include="..\..\fs\sqlite\Sqlite.cpp" />
+    <ClCompile Include="..\..\fs\store\EmptyBackingStore.cpp" />
+    <ClCompile Include="..\..\fs\store\hg\HgBackingStore.cpp" />
+    <ClCompile Include="..\..\fs\store\hg\HgImporter.cpp" />
+    <ClCompile Include="..\..\fs\store\hg\HgImportPyError.cpp" />
+    <ClCompile Include="..\..\fs\store\hg\HgManifestImporter.cpp" />
+    <ClCompile Include="..\..\fs\store\hg\HgProxyHash.cpp" />
+    <ClCompile Include="..\..\fs\store\LocalStore.cpp" />
+    <ClCompile Include="..\..\fs\store\MemoryLocalStore.cpp" />
+    <ClCompile Include="..\..\fs\store\ObjectStore.cpp" />
+    <ClCompile Include="..\..\fs\store\SqliteLocalStore.cpp" />
+    <ClCompile Include="..\..\fs\store\StoreResult.cpp" />
+    <ClCompile Include="..\..\fs\utils\Clock.cpp" />
+    <ClCompile Include="..\..\fs\utils\PathFuncs.cpp" />
+    <ClCompile Include="..\..\fs\utils\TimeUtil.cpp" />
+    <ClCompile Include="..\..\fs\utils\UnboundedQueueExecutor.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Pipe.cpp" />
+    <ClCompile Include="Subprocess.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_constants.h" />
+    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_data.h" />
+    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_types.h" />
+    <ClInclude Include="..\..\..\External\prjlayer\Backfol.h" />
+    <ClInclude Include="..\..\..\External\prjlayer\DirList.h" />
+    <ClInclude Include="..\..\..\External\prjlayer\EdenProvider.h" />
+    <ClInclude Include="..\..\..\External\prjlayer\MountPoint.h" />
+    <ClInclude Include="..\..\..\External\prjlayer\pathUtils.h" />
+    <ClInclude Include="..\..\..\External\prjlayer\Prjlayer.h" />
+    <ClInclude Include="..\..\..\External\prjlayer\Provider.h" />
+    <ClInclude Include="..\..\fs\model\Blob.h" />
+    <ClInclude Include="..\..\fs\model\git\GitBlob.h" />
+    <ClInclude Include="..\..\fs\model\git\GitTree.h" />
+    <ClInclude Include="..\..\fs\model\Hash.h" />
+    <ClInclude Include="..\..\fs\model\ParentCommits.h" />
+    <ClInclude Include="..\..\fs\model\Tree.h" />
+    <ClInclude Include="..\..\fs\model\TreeEntry.h" />
+    <ClInclude Include="..\..\fs\service\EdenCPUThreadPool.h" />
+    <ClInclude Include="..\..\fs\sqlite\Sqlite.h" />
+    <ClInclude Include="..\..\fs\store\BackingStore.h" />
+    <ClInclude Include="..\..\fs\store\BlobMetadata.h" />
+    <ClInclude Include="..\..\fs\store\EmptyBackingStore.h" />
+    <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h" />
+    <ClInclude Include="..\..\fs\store\hg\HgImporter.h" />
+    <ClInclude Include="..\..\fs\store\hg\HgImportPyError.h" />
+    <ClInclude Include="..\..\fs\store\hg\HgManifestImporter.h" />
+    <ClInclude Include="..\..\fs\store\hg\HgProxyHash.h" />
+    <ClInclude Include="..\..\fs\store\IObjectStore.h" />
+    <ClInclude Include="..\..\fs\store\LocalStore.h" />
+    <ClInclude Include="..\..\fs\store\MemoryLocalStore.h" />
+    <ClInclude Include="..\..\fs\store\ObjectStore.h" />
+    <ClInclude Include="..\..\fs\store\SqliteLocalStore.h" />
+    <ClInclude Include="..\..\fs\store\StoreResult.h" />
+    <ClInclude Include="..\..\fs\utils\Clock.h" />
+    <ClInclude Include="..\..\fs\utils\PathFuncs.h" />
+    <ClInclude Include="..\..\fs\utils\TimeUtil.h" />
+    <ClInclude Include="..\..\fs\utils\UnboundedQueueExecutor.h" />
+    <ClInclude Include="Edenwin.h" />
+    <ClInclude Include="Pipe.h" />
+    <ClInclude Include="StringConv.h" />
+    <ClInclude Include="Subprocess.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

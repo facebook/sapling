@@ -12,7 +12,9 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBString.h>
 #include <folly/File.h>
+#ifndef EDEN_WIN
 #include <folly/Subprocess.h>
+#endif
 #include <folly/chrono/Conv.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>

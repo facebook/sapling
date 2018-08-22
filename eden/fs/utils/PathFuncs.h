@@ -33,9 +33,14 @@ folly::StringPiece dirname(folly::StringPiece path);
  * (This is defined as an enum value since we just want a symbolic constant,
  * and don't want an actual symbol emitted by the compiler.)
  */
+
+#ifdef EDEN_WIN
+enum : char { kDirSeparator = '\\' };
+constexpr folly::StringPiece kDirSeparatorStr{"\\"};
+#else
 enum : char { kDirSeparator = '/' };
 constexpr folly::StringPiece kDirSeparatorStr{"/"};
-
+#endif
 /**
  * FUSE supports components up to 1024 (FUSE_NAME_MAX) by default. For
  * compatibility with other filesystems, Eden will limit to 255.
@@ -1051,12 +1056,16 @@ class RelativePathBase : public ComposedPathBase<
 /// Asserts that val is well formed absolute path
 struct AbsolutePathSanityCheck {
   void operator()(folly::StringPiece val) const {
+#ifndef EDEN_WIN
+    // This won't work on Windows. The usermode Windows path can start with
+    // a drive letter in front: c:\folder\file.txt
     if (!val.startsWith(kDirSeparator)) {
       throw std::domain_error(folly::to<std::string>(
           "attempt to construct an AbsolutePath from a non-absolute string: \"",
           val,
           "\""));
     }
+#endif
     if (val.size() > 1 && val.endsWith(kDirSeparator)) {
       // We do allow "/" though
       throw std::domain_error(folly::to<std::string>(

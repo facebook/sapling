@@ -14,7 +14,11 @@
 #include <folly/Exception.h>
 #include <folly/Optional.h>
 #include <folly/portability/Stdlib.h>
+#ifdef EDEN_WIN
+#include <folly/portability/Unistd.h>
+#else
 #include <unistd.h>
+#endif
 
 using folly::Expected;
 using folly::StringPiece;

@@ -10,7 +10,11 @@
 #pragma once
 
 #include <folly/Range.h>
+#ifndef EDEN_WIN
 #include <folly/Subprocess.h>
+#else
+#include "eden/win/eden/Subprocess.h" // @manual
+#endif
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/LocalStore.h"
@@ -37,6 +41,14 @@ class Hash;
 class HgManifestImporter;
 class StoreResult;
 class Tree;
+
+#ifdef EDEN_WIN
+typedef HANDLE edenfd_t;
+const edenfd_t kInvalidFd = INVALID_HANDLE_VALUE;
+#else
+typedef int edenfd_t;
+constexpr edenfd_t kInvalidFd = -1;
+#endif
 
 class Importer {
  public:
@@ -140,7 +152,7 @@ class HgImporter : public Importer {
    * benchmarking the importFlatManifest() function above should generally be
    * used instead.
    */
-  static Hash importFlatManifest(int manifestDataFd, LocalStore* store);
+  static Hash importFlatManifest(edenfd_t manifestDataFd, LocalStore* store);
 
   std::unique_ptr<Tree> importTree(const Hash& id) override;
   folly::IOBuf importFileContents(Hash blobHash) override;
@@ -254,12 +266,14 @@ class HgImporter : public Importer {
   ChunkHeader readChunkHeader() {
     return readChunkHeader(helperOut_);
   }
-  static ChunkHeader readChunkHeader(int fd);
+  static ChunkHeader readChunkHeader(edenfd_t fd);
 
   /**
    * Read the body of an error message, and throw it as an exception.
    */
-  [[noreturn]] static void readErrorAndThrow(int fd, const ChunkHeader& header);
+  [[noreturn]] static void readErrorAndThrow(
+      edenfd_t fd,
+      const ChunkHeader& header);
 
   /**
    * Wait for the helper process to send a CMD_STARTED response to indicate
@@ -276,13 +290,14 @@ class HgImporter : public Importer {
    */
   void initializeTreeManifestImport(const Options& options);
 
+#ifndef EDEN_WIN_NOMONONOKE
   /**
    * Initialize the mononoke_ needed for Mononoke API Server support.
    *
    * This leaves mononoke_ null if mononoke does not support the repository.
    */
   void initializeMononoke(const Options& options);
-
+#endif
   /**
    * Send a request to the helper process, asking it to send us the manifest
    * for the specified revision.
@@ -318,8 +333,11 @@ class HgImporter : public Importer {
       RelativePathPiece path,
       LocalStore::WriteBatch* writeBatch);
 #endif
-
+#ifndef EDEN_WIN
   folly::Subprocess helper_;
+#else
+  facebook::edenwin::Subprocess helper_;
+#endif
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};
   uint32_t nextRequestID_{0};
@@ -333,8 +351,9 @@ class HgImporter : public Importer {
    * We simply cache them as member variables to avoid having to look them up
    * via helper_.parentFd() each time we need to use them.
    */
-  int helperIn_{-1};
-  int helperOut_{-1};
+
+  edenfd_t helperIn_{kInvalidFd};
+  edenfd_t helperOut_{kInvalidFd};
 
 #if EDEN_HAVE_HG_TREEMANIFEST
   std::vector<std::unique_ptr<DatapackStore>> dataPackStores_;

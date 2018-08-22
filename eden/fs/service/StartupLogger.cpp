@@ -14,9 +14,14 @@
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include <sys/types.h>
+
+#ifdef EDEN_WIN
+#include <folly/portability/Unistd.h>
+#else
 #include <sys/wait.h>
 #include <sysexits.h>
 #include <unistd.h>
+#endif
 
 using folly::checkUnixError;
 using folly::File;

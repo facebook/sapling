@@ -25,7 +25,13 @@
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#ifndef EDEN_WIN
 #include <unistd.h>
+#else
+#include "eden/win/eden/Pipe.h" // @manual
+#include "eden/win/eden/Subprocess.h" // @manual
+#endif
+
 #include <mutex>
 
 #include "eden/fs/model/Tree.h"
@@ -47,7 +53,12 @@ using folly::ByteRange;
 using folly::Endian;
 using folly::IOBuf;
 using folly::StringPiece;
+#ifndef EDEN_WIN
 using folly::Subprocess;
+#else
+using facebook::edenwin::Pipe;
+using facebook::edenwin::Subprocess;
+#endif
 using folly::io::Appender;
 using folly::io::Cursor;
 using std::string;
@@ -113,6 +124,7 @@ using namespace facebook::eden;
  * printing data to stdout.  We don't want arbitrary log message data from
  * mercurial interfering with our normal communication protocol.
  */
+
 constexpr int HELPER_PIPE_FD = 5;
 
 /**
@@ -146,6 +158,14 @@ AbsolutePath findImportHelperPath() {
   // Check in the same directory as the edenfs binary.
   // This is where we expect to find the helper script in normal
   // deployments.
+#ifdef EDEN_WIN
+
+  // TODO EDENWIN: Remove the hardcoded path and use isHelper to find
+  PathComponentPiece helperName{"hg_import_helper.exe"};
+  AbsolutePath dir{"C:\\eden\\hg_import_helper\\hg_import_helper.exe"};
+
+  return dir;
+#else
   PathComponentPiece helperName{"hg_import_helper.py"};
   auto path = programDir + helperName;
   if (isHelper(path)) {
@@ -168,6 +188,7 @@ AbsolutePath findImportHelperPath() {
     }
     dir = parent;
   }
+#endif
 }
 
 /**
@@ -199,6 +220,8 @@ HgImporter::HgImporter(
       clientCertificate_(clientCertificate),
       useMononoke_(useMononoke) {
   auto importHelper = getImportHelperPath();
+
+#ifndef EDEN_WIN
   std::vector<string> cmd = {
       importHelper.value(),
       repoPath.value().str(),
@@ -226,10 +249,38 @@ HgImporter::HgImporter(
   };
   helperIn_ = helper_.stdinFd();
   helperOut_ = helper_.parentFd(HELPER_PIPE_FD);
+#else
 
+  auto childInPipe = std::make_unique<Pipe>(nullptr, true);
+  auto childOutPipe = std::make_unique<Pipe>(nullptr, true);
+
+  if (!SetHandleInformation(childInPipe->writeHandle, HANDLE_FLAG_INHERIT, 0)) {
+    throw std::runtime_error("Failed to set the handle attributes");
+  }
+  if (!SetHandleInformation(childOutPipe->readHandle, HANDLE_FLAG_INHERIT, 0)) {
+    throw std::runtime_error("Failed to set the handle attributes");
+  }
+
+  std::vector<string> cmd = {
+      importHelper.value(),
+      repoPath.value().str(),
+      "--out-fd",
+      folly::to<string>((int)childOutPipe->writeHandle),
+      "--in-fd",
+      folly::to<string>((int)childInPipe->readHandle),
+  };
+
+  helper_.createSubprocess(
+      cmd, std::move(childInPipe), std::move(childOutPipe));
+  helperIn_ = helper_.childInPipe_->writeHandle;
+  helperOut_ = helper_.childOutPipe_->readHandle;
+
+#endif
   auto options = waitForHelperStart();
   initializeTreeManifestImport(options);
+#ifndef EDEN_WIN_NOMONONOKE
   initializeMononoke(options);
+#endif
   XLOG(DBG1) << "hg_import_helper started for repository " << repoPath_;
 }
 
@@ -252,7 +303,14 @@ HgImporter::Options HgImporter::waitForHelperStart() {
   }
 
   IOBuf buf(IOBuf::CREATE, header.dataLength);
+
+#ifdef EDEN_WIN
+  facebook::edenwin::Pipe::read(
+      helperOut_, buf.writableTail(), header.dataLength);
+#else
   folly::readFull(helperOut_, buf.writableTail(), header.dataLength);
+#endif
+
   buf.append(header.dataLength);
 
   Cursor cursor(&buf);
@@ -318,6 +376,7 @@ void HgImporter::initializeTreeManifestImport(const Options& options) {
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
+#ifndef EDEN_WIN_NOMONONOKE
 void HgImporter::initializeMononoke(const Options& options) {
 #if EDEN_HAVE_HG_TREEMANIFEST
   if (options.repoName.empty()) {
@@ -350,10 +409,13 @@ void HgImporter::initializeMononoke(const Options& options) {
   XLOG(DBG2) << "mononoke enabled for repository " << options.repoName;
 #endif
 }
+#endif
 
 HgImporter::~HgImporter() {
+#ifndef EDEN_WIN
   helper_.closeParentFd(STDIN_FILENO);
   helper_.wait();
+#endif
 }
 
 std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
@@ -634,7 +696,7 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
   return importFlatManifest(helperOut_, store_);
 }
 
-Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
+Hash HgImporter::importFlatManifest(edenfd_t fd, LocalStore* store) {
   auto writeBatch = store->beginWrite(FLAGS_hgManifestImportBufferSize);
   HgManifestImporter importer(store, writeBatch.get());
   size_t numPaths = 0;
@@ -652,7 +714,13 @@ Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
     } else {
       chunkData.clear();
     }
+
+#ifdef EDEN_WIN
+    facebook::edenwin::Pipe::read(
+        fd, chunkData.writableTail(), header.dataLength);
+#else
     folly::readFull(fd, chunkData.writableTail(), header.dataLength);
+#endif
     chunkData.append(header.dataLength);
 
     // Now process the entries in the chunk
@@ -698,7 +766,13 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
   // the body data in fixed-size chunks, particularly for very large files.
   auto header = readChunkHeader();
   auto buf = IOBuf(IOBuf::CREATE, header.dataLength);
+
+#ifdef EDEN_WIN
+  facebook::edenwin::Pipe::read(
+      helperOut_, buf.writableTail(), header.dataLength);
+#else
   folly::readFull(helperOut_, buf.writableTail(), header.dataLength);
+#endif
   buf.append(header.dataLength);
 
   return buf;
@@ -726,8 +800,12 @@ Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
   }
 
   Hash::Storage buffer;
-  folly::readFull(helperOut_, &buffer[0], buffer.size());
 
+#ifdef EDEN_WIN
+  facebook::edenwin::Pipe::read(helperOut_, &buffer[0], buffer.size());
+#else
+  folly::readFull(helperOut_, &buffer[0], buffer.size());
+#endif
   return Hash(buffer);
 }
 
@@ -778,9 +856,14 @@ void HgImporter::readManifestEntry(
   importer.processEntry(path.dirname(), std::move(entry));
 }
 
-HgImporter::ChunkHeader HgImporter::readChunkHeader(int fd) {
+HgImporter::ChunkHeader HgImporter::readChunkHeader(edenfd_t fd) {
   ChunkHeader header;
+#ifdef EDEN_WIN
+  DWORD bytesRead;
+  facebook::edenwin::Pipe::read(fd, &header, sizeof(header), &bytesRead);
+#else
   folly::readFull(fd, &header, sizeof(header));
+#endif
   header.requestID = Endian::big(header.requestID);
   header.command = Endian::big(header.command);
   header.flags = Endian::big(header.flags);
@@ -796,10 +879,14 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(int fd) {
 }
 
 [[noreturn]] void HgImporter::readErrorAndThrow(
-    int fd,
+    edenfd_t fd,
     const ChunkHeader& header) {
   auto buf = IOBuf{IOBuf::CREATE, header.dataLength};
+#ifdef EDEN_WIN
+  facebook::edenwin::Pipe::read(fd, buf.writableTail(), header.dataLength);
+#else
   folly::readFull(fd, buf.writableTail(), header.dataLength);
+#endif
   buf.append(header.dataLength);
 
   Cursor cursor(&buf);
@@ -827,7 +914,11 @@ void HgImporter::sendManifestRequest(folly::StringPiece revName) {
   iov[0].iov_len = sizeof(header);
   iov[1].iov_base = const_cast<char*>(revName.data());
   iov[1].iov_len = revName.size();
+#ifdef EDEN_WIN
+  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
+#else
   folly::writevFull(helperIn_, iov.data(), iov.size());
+#endif
 }
 
 void HgImporter::sendManifestNodeRequest(folly::StringPiece revName) {
@@ -842,7 +933,11 @@ void HgImporter::sendManifestNodeRequest(folly::StringPiece revName) {
   iov[0].iov_len = sizeof(header);
   iov[1].iov_base = const_cast<char*>(revName.data());
   iov[1].iov_len = revName.size();
+#ifdef EDEN_WIN
+  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
+#else
   folly::writevFull(helperIn_, iov.data(), iov.size());
+#endif
 }
 
 void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
@@ -860,7 +955,11 @@ void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
   iov[1].iov_len = Hash::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
+#ifdef EDEN_WIN
+  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
+#else
   folly::writevFull(helperIn_, iov.data(), iov.size());
+#endif
 }
 
 void HgImporter::sendPrefetchFilesRequest(
@@ -911,8 +1010,11 @@ void HgImporter::sendPrefetchFilesRequest(
   iov[0].iov_len = sizeof(header);
   iov[1].iov_base = const_cast<uint8_t*>(buf.data());
   iov[1].iov_len = buf.length();
-
+#ifdef EDEN_WIN
+  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
+#else
   folly::writevFull(helperIn_, iov.data(), iov.size());
+#endif
 }
 
 void HgImporter::sendFetchTreeRequest(
@@ -932,7 +1034,11 @@ void HgImporter::sendFetchTreeRequest(
   iov[1].iov_len = Hash::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
+#ifdef EDEN_WIN
+  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
+#else
   folly::writevFull(helperIn_, iov.data(), iov.size());
+#endif
 }
 } // namespace eden
 } // namespace facebook

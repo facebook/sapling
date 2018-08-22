@@ -18,6 +18,7 @@
 namespace facebook {
 namespace eden {
 
+#ifndef EDEN_WIN
 mode_t modeFromTreeEntryType(TreeEntryType ft) {
   switch (ft) {
     case TreeEntryType::TREE:
@@ -44,6 +45,7 @@ folly::Optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {
     return folly::none;
   }
 }
+#endif
 
 std::string TreeEntry::toLogString() const {
   char fileTypeChar = '?';
