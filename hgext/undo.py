@@ -18,6 +18,7 @@ from mercurial import (
     extensions,
     fancyopts,
     hg,
+    hintutil,
     localrepo,
     lock as lockmod,
     merge,
@@ -36,7 +37,7 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid
+from mercurial.node import bin, hex, nullid, short
 
 
 if not pycompat.iswindows:
@@ -59,6 +60,15 @@ hint = registrar.hint()
 @hint("undo")
 def hintundo():
     return _("you can undo this using the `hg undo` command")
+
+
+@hint("undo-uncommit-unamend")
+def hintuncommit(command, oldhash):
+    return _(
+        "undoing %ss discards their changes.\n"
+        "to restore the changes to the working copy, run 'hg revert -r %s --all'\n"
+        "in the future, you can use 'hg un%s' instead of 'hg undo' to keep changes"
+    ) % (command, oldhash, command)
 
 
 # Setup
@@ -1034,6 +1044,13 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     commandlist = commandstr.split("\0")[1:]
     commandstr = " ".join(commandlist)
     uimessage = _("undone to %s, before %s\n") % (time, commandstr)
+    if reverseindex == 1 and commandlist[0] in ("commit", "amend"):
+        command = commandlist[0]
+        if command == "commit" and "--amend" in commandlist:
+            command = "amend"
+        oldcommithash = _readnode(repo, "workingparent.i", nodedict["workingparent"])
+        shorthash = short(bin(oldcommithash))
+        hintutil.trigger("undo-uncommit-unamend", command, shorthash)
     repo.ui.status((uimessage))
 
 

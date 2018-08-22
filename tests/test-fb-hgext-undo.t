@@ -259,6 +259,10 @@ hg undo command tests
   ~
   $ hg undo
   undone to *, before commit --amend (glob)
+  hint[undo-uncommit-unamend]: undoing amends discards their changes.
+  to restore the changes to the working copy, run 'hg revert -r 2dca609174c2 --all'
+  in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
+  hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
   $ hg log -G -T compact -l4
   @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
@@ -365,6 +369,10 @@ hg undo --keep tests
   $ hg st
   $ hg undo --keep
   undone to *, before commit --amend (glob)
+  hint[undo-uncommit-unamend]: undoing amends discards their changes.
+  to restore the changes to the working copy, run 'hg revert -r c9476255bc2a --all'
+  in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
+  hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
   $ hg st
   A kfl1
   $ hg commit --amend
@@ -383,6 +391,10 @@ checking split/divergence.
   > EOF
   $ hg undo
   undone to *, before commit --amend (glob)
+  hint[undo-uncommit-unamend]: undoing amends discards their changes.
+  to restore the changes to the working copy, run 'hg revert -r c9476255bc2a --all'
+  in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
+  hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
   $ hg sl --all --hidden -T "{node|short} {if(undosuccessors, label('sl.undo', '(Undone as {join(undosuccessors% \'{shortest(undosuccessor, 6)}\', ', ')})'))}"
   x  f007a7cf4c3d
   |
@@ -1288,6 +1300,10 @@ Obsmarkers for instack amend
   
   $ hg undo && hg update 00617a
   undone to *, before amend c5 (glob)
+  hint[undo-uncommit-unamend]: undoing amends discards their changes.
+  to restore the changes to the working copy, run 'hg revert -r e1c5a2a441f5 --all'
+  in the future, you can use 'hg unamend' instead of 'hg undo' to keep changes
+  hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T compact -l7
   @  28[tip]:26   00617a57f780   1970-01-01 00:00 +0000   test
@@ -1315,3 +1331,18 @@ Obsmarkers for instack amend
   > [extensions]
   > famend =!
   > EOF
+
+test hint for undoing commits and its suggested remediation
+  $ touch hint1 && hg add hint1
+  $ hg commit -qm "hint1"
+  $ hg undo
+  undone to * before commit -qm hint1 (glob)
+  hint[undo-uncommit-unamend]: undoing commits discards their changes.
+  to restore the changes to the working copy, run 'hg revert -r 1ce7a4a09a37 --all'
+  in the future, you can use 'hg uncommit' instead of 'hg undo' to keep changes
+  hint[hint-ack]: use 'hg hint --ack undo-uncommit-unamend' to silence these hints
+need to use --hidden because we don't have directaccess in the tests
+  $ hg revert -r 1ce7a4a09a37 --all --hidden
+  adding hint1
+  $ hg st --added
+  A hint1
