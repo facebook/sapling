@@ -41,7 +41,7 @@ from . import (
     util,
     version as version_mod,
 )
-from .cmd_util import get_eden_instance
+from .cmd_util import find_checkout, get_eden_instance
 from .config import EdenInstance
 from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr
@@ -433,18 +433,19 @@ class FsckCmd(Subcmd):
         )
         parser.add_argument(
             "path",
-            nargs="?",
-            help="The path to an Eden mount point. Uses `pwd` by default.",
+            metavar="CHECKOUT_PATH",
+            help="The path to an Eden checkout to verify.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        mount, rel_path = debug_mod.get_mount_path(args.path or os.getcwd())
+        instance, checkout, rel_path = find_checkout(args, args.path)
+        if checkout is None:
+            print(f"error: no Eden checkout found at {args.path}", file=sys.stderr)
+            return 1
 
         # Get the path to the overlay directory for this mount point
-        client_dir = instance._get_client_dir_for_mount_point(os.fsdecode(mount))
-        self._overlay_dir = os.path.join(client_dir, "local")
-        self._overlay = overlay_mod.Overlay(self._overlay_dir)
+        self._overlay_dir = checkout.state_dir.joinpath("local")
+        self._overlay = overlay_mod.Overlay(str(self._overlay_dir))
 
         with fsck_mod.FilesystemChecker(self._overlay, verbose=args.verbose) as checker:
             checker.scan_for_errors()

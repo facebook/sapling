@@ -9,25 +9,27 @@
 
 import argparse
 import os
+from pathlib import Path
+from typing import Optional, Tuple, Union
 
-from . import util
-from .config import EdenInstance
-
-
-# Relative to the user's $HOME/%USERPROFILE% directory.
-# TODO: This value should be .eden outside of Facebook devservers.
-DEFAULT_CONFIG_DIR = "local/.eden"
-
-
-def find_default_config_dir(home_dir: str) -> str:
-    """Returns the path to default Eden config directory.
-
-    Note that the path is not guaranteed to correspond to an existing directory.
-    """
-    return os.path.join(home_dir, DEFAULT_CONFIG_DIR)
+from . import config as config_mod
+from .config import EdenCheckout, EdenInstance
 
 
 def get_eden_instance(args: argparse.Namespace) -> EdenInstance:
-    home_dir = args.home_dir or util.get_home_dir()
-    state_dir = args.config_dir or find_default_config_dir(home_dir)
-    return EdenInstance(state_dir, args.etc_eden_dir, home_dir)
+    return EdenInstance(
+        args.config_dir, etc_eden_dir=args.etc_eden_dir, home_dir=args.home_dir
+    )
+
+
+def find_checkout(
+    args: argparse.Namespace, path: Union[Path, str]
+) -> Tuple[EdenInstance, Optional[EdenCheckout], Optional[Path]]:
+    if path is None:
+        path = os.getcwd()
+    return config_mod.find_eden(
+        path,
+        etc_eden_dir=args.etc_eden_dir,
+        home_dir=args.home_dir,
+        state_dir=args.config_dir,
+    )

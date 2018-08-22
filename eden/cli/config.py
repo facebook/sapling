@@ -23,6 +23,7 @@ import tempfile
 import time
 import types
 import typing
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
 
 import eden.thrift
@@ -127,22 +128,30 @@ class EdenInstance:
 
     def __init__(
         self,
-        config_dir: str,
-        etc_eden_dir: str,
-        home_dir: str,
+        config_dir: Optional[str],
+        etc_eden_dir: Optional[str],
+        home_dir: Optional[str],
         interpolate_dict: Optional[Dict[str, str]] = None,
         use_toml_cfg: Optional[bool] = None,
     ) -> None:
-        self._config_dir = config_dir
-        self._etc_eden_dir = etc_eden_dir
-        if not self._etc_eden_dir:
-            self._etc_eden_dir = DEFAULT_ETC_EDEN_DIR
-        self._user_config_path = os.path.join(home_dir, USER_CONFIG)
-        self._home_dir = home_dir
+        self._etc_eden_dir = etc_eden_dir or DEFAULT_ETC_EDEN_DIR
+        self._home_dir = home_dir or util.get_home_dir()
+        self._user_config_path = os.path.join(self._home_dir, USER_CONFIG)
         self._interpolate_dict = interpolate_dict
         self._use_toml_cfg = (
             use_toml_cfg if use_toml_cfg is not None else self._toml_config_exists()
         )
+
+        # TODO: We should eventually read the default config_dir path from the config
+        # files rather than always using ~/local/.eden
+        self._config_dir = config_dir or os.path.join(self._home_dir, "local", ".eden")
+
+    def __repr__(self) -> str:
+        return f"EdenInstance({self._config_dir!r})"
+
+    @property
+    def state_dir(self) -> Path:
+        return Path(self._config_dir)
 
     def _loadConfig(self) -> configparser.ConfigParser:
         """ to facilitate templatizing a centrally deployed config, we
@@ -1002,6 +1011,166 @@ class ConfigUpdater(object):
             except Exception:
                 pass
             raise
+
+
+class EdenCheckout:
+    """Information about a particular Eden checkout."""
+
+    def __init__(self, instance: EdenInstance, path: Path, state_dir: Path) -> None:
+        self.instance = instance
+        self.path = path
+        self.state_dir = state_dir
+
+    def __repr__(self) -> str:
+        return f"EdenCheckout({self.instance!r}, {self.path!r}, {self.state_dir!r})"
+
+    def get_relative_path(self, path: Path, already_resolved: bool = False) -> Path:
+        """Compute the relative path to a given location inside an eden checkout.
+
+        If the checkout is currently mounted this function is able to correctly resolve
+        paths that refer into the checkout via alternative bind mount locations.
+        e.g.  if the checkout is located at "/home/user/foo/eden_checkout" but
+        "/home/user" is also bind-mounted to "/data/user" this will still be able to
+        correctly resolve an input path of "/data/user/foo/eden_checkout/test"
+        """
+        if not already_resolved:
+            path = path.resolve(strict=False)
+
+        # First try using path.relative_to()
+        # This should work in the common case
+        try:
+            return path.relative_to(self.path)
+        except ValueError:
+            pass
+
+        # path.relative_to() may fail if the checkout is bind-mounted to an alternate
+        # location, and the input path points into it using the bind mount location.
+        # In this case search upwards from the input path looking for the checkout root.
+        try:
+            path_stat = path.lstat()
+        except OSError as ex:
+            raise Exception(
+                f"unable to stat {path} to find relative location inside "
+                f"checkout {self.path}: {ex}"
+            )
+
+        try:
+            root_stat = self.path.lstat()
+        except OSError as ex:
+            raise Exception(f"unable to stat checkout at {self.path}: {ex}")
+
+        if (path_stat.st_dev, path_stat.st_ino) == (root_stat.st_dev, root_stat.st_ino):
+            # This is the checkout root
+            return Path()
+
+        curdir = path.parent
+        path_parts = [path.name]
+        while True:
+            stat = curdir.lstat()
+            if (stat.st_dev, stat.st_ino) == (root_stat.st_dev, root_stat.st_ino):
+                return Path(*reversed(path_parts))
+
+            if curdir.parent == curdir:
+                raise Exception(
+                    f"unable to determine relative location of {path} "
+                    f"inside {self.path}"
+                )
+
+            path_parts.append(curdir.name)
+            curdir = curdir.parent
+
+
+def find_eden(
+    path: Union[str, Path],
+    etc_eden_dir: Optional[str] = None,
+    home_dir: Optional[str] = None,
+    state_dir: Optional[str] = None,
+) -> Tuple[EdenInstance, Optional[EdenCheckout], Optional[Path]]:
+    """Look up the EdenInstance and EdenCheckout for a path.
+
+    If the input path points into an Eden checkout, this returns a tuple of
+    (EdenInstance, EdenCheckout, rel_path), where EdenInstance contains information for
+    the edenfs instance serving this checkout, EdenCheckout contains information about
+    the checkout, and rel_path contains the relative location of the input path inside
+    the checkout.  The checkout does not need to be currently mounted for this to work.
+
+    If the input path does not point inside a known Eden checkout, this returns
+    (EdenInstance, None, None)
+    """
+    if isinstance(path, str):
+        path = Path(path)
+
+    path = path.resolve(strict=False)
+
+    # First check to see if this looks like a mounted checkout
+    eden_state_dir = None
+    checkout_root = None
+    checkout_state_dir = None
+    try:
+        eden_socket_path = os.readlink(path.joinpath(path, ".eden", "socket"))
+        eden_state_dir = os.path.dirname(eden_socket_path)
+
+        checkout_root = Path(os.readlink(path.joinpath(".eden", "root")))
+        checkout_state_dir = Path(os.readlink(path.joinpath(".eden", "client")))
+    except OSError:
+        # We will get an OSError if any of these symlinks do not exist
+        # Fall through and we will handle this below.
+        pass
+
+    if eden_state_dir is None:
+        # Use the state directory argument supplied by the caller.
+        # If this is None the EdenInstance constructor will pick the correct location.
+        eden_state_dir = state_dir
+    elif state_dir is not None:
+        # We found a state directory from the checkout and the user also specified an
+        # explicit state directory.  Make sure they match.
+        _check_same_eden_directory(Path(eden_state_dir), Path(state_dir))
+
+    instance = EdenInstance(
+        eden_state_dir, etc_eden_dir=etc_eden_dir, home_dir=home_dir
+    )
+    checkout: Optional[EdenCheckout] = None
+    rel_path: Optional[Path] = None
+    if checkout_root is None:
+        all_checkouts = instance._get_directory_map()
+        for checkout_path_str, checkout_name in all_checkouts.items():
+            checkout_path = Path(checkout_path_str)
+            try:
+                rel_path = path.relative_to(checkout_path)
+            except ValueError:
+                continue
+
+            checkout_state_dir = instance.state_dir.joinpath("clients", checkout_name)
+            checkout = EdenCheckout(instance, checkout_path, checkout_state_dir)
+            break
+        else:
+            # This path does not appear to be inside a known checkout
+            checkout = None
+            rel_path = None
+    elif checkout_state_dir is None:
+        all_checkouts = instance._get_directory_map()
+        checkout_name_value = all_checkouts.get(str(checkout_root))
+        if checkout_name_value is None:
+            raise Exception(f"unknown checkout {checkout_root}")
+        checkout_state_dir = instance.state_dir.joinpath("clients", checkout_name_value)
+        checkout = EdenCheckout(instance, checkout_root, checkout_state_dir)
+        rel_path = checkout.get_relative_path(path, already_resolved=True)
+    else:
+        checkout = EdenCheckout(instance, checkout_root, checkout_state_dir)
+        rel_path = checkout.get_relative_path(path, already_resolved=True)
+
+    return (instance, checkout, rel_path)
+
+
+def _check_same_eden_directory(found_path: Path, path_arg: Path) -> None:
+    s1 = found_path.lstat()
+    s2 = path_arg.lstat()
+    if (s1.st_dev, s1.st_ino) != (s2.st_dev, s2.st_ino):
+        raise Exception(
+            f"the specified directory is managed by the edenfs instance at "
+            f"{found_path}, which is different from the explicitly requested "
+            f"instance at {path_arg}"
+        )
 
 
 def _verify_mount_point(mount_point: str) -> None:
