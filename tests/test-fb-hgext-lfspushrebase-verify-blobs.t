@@ -212,9 +212,9 @@
 
   $ hg debugindex x
      rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0     126     -1       0 1ff4e6c9b276 000000000000 000000000000
-       1       126      70     -1       3 68b9378cf5a1 000000000000 000000000000
-       2       196     126     -1       4 d33b2f7888d4 68b9378cf5a1 000000000000
+       0         0     *     -1       0 1ff4e6c9b276 000000000000 000000000000 (glob)
+       1       *      *     -1       3 68b9378cf5a1 000000000000 000000000000 (glob)
+       2       *     *     -1       4 d33b2f7888d4 68b9378cf5a1 000000000000 (glob)
   $ hg debugdata x 0
   version https://git-lfs.github.com/spec/v1
   oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
