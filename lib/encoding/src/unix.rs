@@ -26,3 +26,8 @@ pub fn path_to_local_bytes(path: &Path) -> io::Result<&[u8]> {
 pub fn local_bytes_to_path(bytes: &[u8]) -> io::Result<&Path> {
     Ok(Path::new(local_bytes_to_osstring(bytes)?))
 }
+
+#[inline]
+pub fn osstring_to_local_bytes<S: AsRef<OsStr>>(s: &S) -> io::Result<&[u8]> {
+    Ok(s.as_ref().as_bytes())
+}

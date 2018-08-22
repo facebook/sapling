@@ -21,6 +21,7 @@ mod unix;
 pub use unix::{
     local_bytes_to_osstring,
     local_bytes_to_path,
+    osstring_to_local_bytes,
     path_to_local_bytes
 };
 
@@ -28,6 +29,7 @@ pub use unix::{
 pub use windows::{
     local_bytes_to_osstring,
     local_bytes_to_path,
+    osstring_to_local_bytes,
     path_to_local_bytes
 };
 
