@@ -398,12 +398,12 @@ InodeMap::PromiseVector InodeMap::extractPendingPromises(InodeNumber number) {
 }
 
 Future<TreeInodePtr> InodeMap::lookupTreeInode(InodeNumber number) {
-  return lookupInode(number).then(
+  return lookupInode(number).thenValue(
       [](const InodePtr& inode) { return inode.asTreePtr(); });
 }
 
 Future<FileInodePtr> InodeMap::lookupFileInode(InodeNumber number) {
-  return lookupInode(number).then(
+  return lookupInode(number).thenValue(
       [](const InodePtr& inode) { return inode.asFilePtr(); });
 }
 
@@ -594,7 +594,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
   // we know that all inodes have been destroyed and we can complete shutdown.
   root_.manualDecRef();
 
-  return std::move(future).then([this, doTakeover] {
+  return std::move(future).thenValue([this, doTakeover](auto&&) {
     // TODO: This check could occur after the loadedInodes_ assertion below to
     // maximize coverage of any invariants that are broken during shutdown.
     if (!doTakeover) {

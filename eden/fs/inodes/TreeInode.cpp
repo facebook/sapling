@@ -265,7 +265,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
 }
 
 Future<TreeInodePtr> TreeInode::getOrLoadChildTree(PathComponentPiece name) {
-  return getOrLoadChild(name).then([](InodePtr child) {
+  return getOrLoadChild(name).thenValue([](InodePtr child) {
     auto treeInode = child.asTreePtrOrNull();
     if (!treeInode) {
       return makeFuture<TreeInodePtr>(InodeError(ENOTDIR, child));
@@ -3212,9 +3212,10 @@ InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {
 }
 
 folly::Future<folly::Unit> TreeInode::prefetch() {
-  return folly::via(getMount()->getThreadPool().get()).then([this] {
-    return loadMaterializedChildren(Recurse::SHALLOW);
-  });
+  return folly::via(getMount()->getThreadPool().get())
+      .thenValue([this](auto&&) {
+        return loadMaterializedChildren(Recurse::SHALLOW);
+      });
 }
 
 folly::Future<Dispatcher::Attr> TreeInode::setattr(

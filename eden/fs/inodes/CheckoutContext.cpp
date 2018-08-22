@@ -57,7 +57,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
   auto* fuseChannel = mount_->getFuseChannel();
   if (!isDryRun() && fuseChannel) {
     XLOG(DBG4) << "waiting for inode invalidations to complete";
-    return fuseChannel->flushInvalidations().then([this] {
+    return fuseChannel->flushInvalidations().thenValue([this](auto&&) {
       XLOG(DBG4) << "finished processing inode invalidations";
       parentsLock_.unlock();
       return std::move(*conflicts_.wlock());

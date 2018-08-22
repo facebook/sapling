@@ -443,7 +443,7 @@ TEST(FileInode, readDuringLoad) {
 
   // Load the inode and start reading the contents
   auto inode = mount_.getFileInode("notready.txt");
-  auto dataFuture = inode->open(O_RDONLY).then(
+  auto dataFuture = inode->open(O_RDONLY).thenValue(
       [](std::shared_ptr<FileHandle> handle) { return handle->read(4096, 0); });
   EXPECT_FALSE(dataFuture.isReady());
 

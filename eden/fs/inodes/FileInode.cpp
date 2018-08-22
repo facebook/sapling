@@ -1183,11 +1183,12 @@ void FileInode::storeSha1(const LockedState& state, Hash sha1) {
 
 folly::Future<folly::Unit> FileInode::prefetch() {
   // Careful to only hold the lock while fetching a copy of the hash.
-  return folly::via(getMount()->getThreadPool().get()).then([this] {
-    if (auto hash = state_.rlock()->hash) {
-      getObjectStore()->getBlobMetadata(*hash);
-    }
-  });
+  return folly::via(getMount()->getThreadPool().get())
+      .thenValue([this](auto&&) {
+        if (auto hash = state_.rlock()->hash) {
+          getObjectStore()->getBlobMetadata(*hash);
+        }
+      });
 }
 
 } // namespace eden

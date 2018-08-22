@@ -299,7 +299,9 @@ void EdenMount::destroy() {
         delete this;
       } else {
         // Call shutdownImpl() to destroy all loaded inodes.
-        shutdownImpl(/*doTakeover=*/false).then([this] { delete this; });
+        shutdownImpl(/*doTakeover=*/false).thenValue([this](auto&&) {
+          delete this;
+        });
       }
       return;
     }
@@ -308,7 +310,9 @@ void EdenMount::destroy() {
     case State::FUSE_ERROR: {
       // Call shutdownImpl() to destroy all loaded inodes,
       // and delete ourselves when it completes.
-      shutdownImpl(/*doTakeover=*/false).then([this] { delete this; });
+      shutdownImpl(/*doTakeover=*/false).thenValue([this](auto&&) {
+        delete this;
+      });
       return;
     }
     case State::SHUTTING_DOWN:

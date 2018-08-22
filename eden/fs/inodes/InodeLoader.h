@@ -141,7 +141,7 @@ auto applyToInodes(
   std::vector<folly::SemiFuture<Result>> results;
   results.reserve(paths.size());
   for (const auto& path : paths) {
-    results.emplace_back(loader.load(path).then(
+    results.emplace_back(loader.load(path).thenValue(
         [func](InodePtr&& inode) { return func(inode); }));
   }
 

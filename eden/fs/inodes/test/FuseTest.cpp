@@ -47,13 +47,13 @@ TEST(FuseTest, initMount) {
   auto fuse = make_shared<FakeFuse>();
   testMount.registerFakeFuse(fuse);
 
-  auto initFuture = testMount.getEdenMount()
-                        ->startFuse()
-                        .then([] { XLOG(INFO) << "startFuse() succeeded"; })
-                        .onError([&](const folly::exception_wrapper& ew) {
-                          ADD_FAILURE() << "startFuse() failed: "
-                                        << folly::exceptionStr(ew);
-                        });
+  auto initFuture =
+      testMount.getEdenMount()
+          ->startFuse()
+          .thenValue([](auto&&) { XLOG(INFO) << "startFuse() succeeded"; })
+          .onError([&](const folly::exception_wrapper& ew) {
+            ADD_FAILURE() << "startFuse() failed: " << folly::exceptionStr(ew);
+          });
 
   struct fuse_init_in initArg;
   initArg.major = FUSE_KERNEL_VERSION;
