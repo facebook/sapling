@@ -1184,7 +1184,11 @@ def main() -> int:
     if getattr(args, "func", None) is None:
         parser.print_help()
         return os.EX_OK
-    return_code: int = args.func(args)
+    try:
+        return_code: int = args.func(args)
+    except subcmd_mod.CmdError as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return os.EX_SOFTWARE
     return return_code
 
 

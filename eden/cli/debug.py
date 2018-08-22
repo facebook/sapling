@@ -16,6 +16,7 @@ import re
 import shlex
 import stat
 import sys
+from pathlib import Path
 from typing import (
     IO,
     Any,
@@ -42,32 +43,11 @@ from facebook.eden.ttypes import (
 )
 
 from . import cmd_util, overlay as overlay_mod, subcmd as subcmd_mod, ui as ui_mod
-from .config import EdenInstance
+from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
 
 
 debug_cmd = subcmd_mod.Decorator()
-
-
-def get_mount_path(path: str) -> Tuple[bytes, bytes]:
-    """
-    Given a path inside an eden mount, find the path to the eden root.
-
-    Returns a tuple of (eden_mount_path, relative_path)
-    where relative_path is the path such that
-    os.path.join(eden_mount_path, relative_path) refers to the same file as the
-    original input path.
-    """
-
-    path = os.path.realpath(path)
-    current_path = path
-    if not os.path.isdir(current_path):
-        current_path = os.path.dirname(current_path)
-    mount_path = os.readlink(os.path.join(current_path, ".eden", "root"))
-    rel_path = os.path.relpath(path, mount_path)
-    if rel_path == ".":
-        rel_path = ""
-    return (os.fsencode(mount_path), os.fsencode(rel_path))
 
 
 def escape_path(value: bytes) -> str:
@@ -122,13 +102,14 @@ class TreeCmd(Subcmd):
         parser.add_argument("id", help="The tree ID")
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        mount, rel_path = get_mount_path(args.mount)
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         tree_id = parse_object_id(args.id)
 
         local_only = not args.load
         with instance.get_thrift_client() as client:
-            entries = client.debugGetScmTree(mount, tree_id, localStoreOnly=local_only)
+            entries = client.debugGetScmTree(
+                bytes(checkout.path), tree_id, localStoreOnly=local_only
+            )
 
         for entry in entries:
             file_type_flags, perms = _parse_mode(entry.mode)
@@ -155,13 +136,14 @@ class BlobCmd(Subcmd):
         parser.add_argument("id", help="The blob ID")
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        mount, rel_path = get_mount_path(args.mount)
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         blob_id = parse_object_id(args.id)
 
         local_only = not args.load
         with instance.get_thrift_client() as client:
-            data = client.debugGetScmBlob(mount, blob_id, localStoreOnly=local_only)
+            data = client.debugGetScmBlob(
+                bytes(checkout.path), blob_id, localStoreOnly=local_only
+            )
 
         sys.stdout.buffer.write(data)
         return 0
@@ -181,14 +163,13 @@ class BlobMetaCmd(Subcmd):
         parser.add_argument("id", help="The blob ID")
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        mount, rel_path = get_mount_path(args.mount)
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         blob_id = parse_object_id(args.id)
 
         local_only = not args.load
         with instance.get_thrift_client() as client:
             info = client.debugGetScmBlobMetadata(
-                mount, blob_id, localStoreOnly=local_only
+                bytes(checkout.path), blob_id, localStoreOnly=local_only
             )
 
         print("Blob ID: {}".format(args.id))
@@ -275,8 +256,8 @@ class HgCopyMapGetAllCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         path = args.path or os.getcwd()
-        mount, _ = get_mount_path(path)
-        _parents, _dirstate_tuples, copymap = _get_dirstate_data(mount)
+        _instance, checkout, _rel_path = cmd_util.require_checkout(args, path)
+        _parents, _dirstate_tuples, copymap = _get_dirstate_data(checkout)
         _print_copymap(copymap)
         return 0
 
@@ -299,14 +280,14 @@ class HgDirstateCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         path = args.path or os.getcwd()
-        mount, _ = get_mount_path(path)
-        _parents, dirstate_tuples, copymap = _get_dirstate_data(mount)
+        _instance, checkout, _rel_path = cmd_util.require_checkout(args, path)
+        _parents, dirstate_tuples, copymap = _get_dirstate_data(checkout)
         out = ui_mod.get_output()
         entries = list(dirstate_tuples.items())
         out.writeln(f"Non-normal Files ({len(entries)}):", attr=out.BOLD)
         entries.sort(key=lambda entry: entry[0])  # Sort by key.
         for path, dirstate_tuple in entries:
-            _print_hg_nonnormal_file(os.fsencode(path), dirstate_tuple, out)
+            _print_hg_nonnormal_file(Path(os.fsdecode(path)), dirstate_tuple, out)
 
         out.writeln(f"Copymap ({len(copymap)}):", attr=out.BOLD)
         _print_copymap(copymap)
@@ -321,9 +302,9 @@ class HgGetDirstateTupleCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        mount, rel_path = get_mount_path(args.path)
-        _parents, dirstate_tuples, _copymap = _get_dirstate_data(mount)
-        dirstate_tuple = dirstate_tuples.get(os.fsdecode(rel_path))
+        instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
+        _parents, dirstate_tuples, _copymap = _get_dirstate_data(checkout)
+        dirstate_tuple = dirstate_tuples.get(str(rel_path))
         out = ui_mod.get_output()
         if dirstate_tuple:
             _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
@@ -331,23 +312,25 @@ class HgGetDirstateTupleCmd(Subcmd):
             instance = cmd_util.get_eden_instance(args)
             with instance.get_thrift_client() as client:
                 try:
-                    entry = client.getManifestEntry(mount, rel_path)
+                    entry = client.getManifestEntry(
+                        bytes(checkout.path), bytes(rel_path)
+                    )
                     dirstate_tuple = ("n", entry.mode, 0)
                     _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
                 except NoValueForKeyError:
-                    print("No tuple for " + os.fsdecode(rel_path), file=sys.stderr)
+                    print(f"No tuple for {rel_path}", file=sys.stderr)
                     return 1
 
         return 0
 
 
 def _print_hg_nonnormal_file(
-    rel_path: bytes, dirstate_tuple: Tuple[str, Any, int], out: ui_mod.Output
+    rel_path: Path, dirstate_tuple: Tuple[str, Any, int], out: ui_mod.Output
 ) -> None:
     status = _dirstate_char_to_name(dirstate_tuple[0])
     merge_state = _dirstate_merge_state_to_name(dirstate_tuple[2])
 
-    out.writeln(f"{os.fsdecode(rel_path)}", fg=out.GREEN)
+    out.writeln(f"{rel_path}", fg=out.GREEN)
     out.writeln(f"    status = {status}")
     out.writeln(f"    mode = {oct(dirstate_tuple[1])}")
     out.writeln(f"    mergeState = {merge_state}")
@@ -380,14 +363,14 @@ def _dirstate_merge_state_to_name(merge_state: int) -> str:
 
 
 def _get_dirstate_data(
-    mount: bytes
+    checkout: EdenCheckout,
 ) -> Tuple[Tuple[bytes, bytes], Dict[str, Tuple[str, Any, int]], Dict[str, str]]:
     """Returns a tuple of (parents, dirstate_tuples, copymap).
     On error, returns None.
     """
-    filename = os.path.join(os.fsdecode(mount), ".hg", "dirstate")
-    with open(filename, "rb") as f:
-        return eden.dirstate.read(f, filename)
+    filename = checkout.path.joinpath(".hg", "dirstate")
+    with filename.open("rb") as f:
+        return eden.dirstate.read(f, str(filename))
 
 
 @debug_cmd("inode", "Show data about loaded inodes")
@@ -402,10 +385,9 @@ class InodeCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
-        instance = cmd_util.get_eden_instance(args)
-        mount, rel_path = get_mount_path(args.path)
+        instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
         with instance.get_thrift_client() as client:
-            results = client.debugInodeStatus(mount, rel_path)
+            results = client.debugInodeStatus(bytes(checkout.path), rel_path)
 
         out.write(b"%d loaded TreeInodes\n" % len(results))
         for inode_info in results:
@@ -420,10 +402,9 @@ class FuseCallsCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
-        instance = cmd_util.get_eden_instance(args)
-        mount, rel_path = get_mount_path(args.path)
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
         with instance.get_thrift_client() as client:
-            outstanding_call = client.debugOutstandingFuseCalls(mount)
+            outstanding_call = client.debugOutstandingFuseCalls(bytes(checkout.path))
 
         out.write(b"Number of outstanding Calls: %d\n" % len(outstanding_call))
         for count, call in enumerate(outstanding_call):
@@ -489,18 +470,17 @@ class OverlayCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         self.args = args
-        instance = cmd_util.get_eden_instance(args)
-        mount, rel_path = get_mount_path(args.path or os.getcwd())
+        path = args.path or os.getcwd()
+        instance, checkout, rel_path = cmd_util.require_checkout(args, path)
 
         # Get the path to the overlay directory for this mount point
-        client_dir = instance._get_client_dir_for_mount_point(os.fsdecode(mount))
-        self.overlay = overlay_mod.Overlay(os.path.join(client_dir, "local"))
+        overlay_dir = checkout.state_dir.joinpath("local")
+        self.overlay = overlay_mod.Overlay(str(overlay_dir))
 
         if args.number is not None:
             self._display_overlay(args.number, "")
-        elif rel_path:
-            rel_path = os.path.normpath(rel_path)
-            inode_number = self.overlay.lookup_path(os.fsdecode(rel_path))
+        elif rel_path != Path():
+            inode_number = self.overlay.lookup_path(rel_path)
             if inode_number is None:
                 print(f"{rel_path} is not materialized", file=sys.stderr)
                 return 1
@@ -585,20 +565,19 @@ class GetPathCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        mount, _ = get_mount_path(args.path or os.getcwd())
+        path = args.path or os.getcwd()
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, path)
 
         with instance.get_thrift_client() as client:
-            inodePathInfo = client.debugGetInodePath(mount, args.number)
-        print(
-            "%s %s"
-            % (
-                "loaded" if inodePathInfo.loaded else "unloaded",
-                os.fsdecode(os.path.normpath(os.path.join(mount, inodePathInfo.path)))
-                if inodePathInfo.linked
-                else "unlinked",
-            )
+            inodePathInfo = client.debugGetInodePath(bytes(checkout.path), args.number)
+
+        state = "loaded" if inodePathInfo.loaded else "unloaded"
+        resolved_path = (
+            checkout.path.joinpath(os.fsdecode(inodePathInfo.path))
+            if inodePathInfo.linked
+            else "[unlinked]"
         )
+        print(f"{state} {resolved_path}")
         return 0
 
 
@@ -620,17 +599,16 @@ class UnloadInodesCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        mount, rel_path = get_mount_path(args.path)
+        instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
 
         with instance.get_thrift_client() as client:
             # set the age in nanoSeconds
             age = TimeSpec()
             age.seconds = int(args.age)
             age.nanoSeconds = int((args.age - age.seconds) * 10 ** 9)
-            count = client.unloadInodeForPath(mount, rel_path, age)
+            count = client.unloadInodeForPath(bytes(checkout.path), str(rel_path), age)
 
-            unload_path = os.fsdecode(os.path.join(mount, rel_path))
+            unload_path = checkout.path.joinpath(rel_path)
             print(f"Unloaded {count} inodes under {unload_path}")
 
         return 0
@@ -644,11 +622,10 @@ class FlushCacheCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        mount, rel_path = get_mount_path(args.path)
+        instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
 
         with instance.get_thrift_client() as client:
-            client.invalidateKernelInodeCache(mount, rel_path)
+            client.invalidateKernelInodeCache(bytes(checkout.path), bytes(rel_path))
 
         return 0
 
@@ -830,11 +807,10 @@ class DebugJournalCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        mount, _ = get_mount_path(args.path or os.getcwd())
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
 
         with instance.get_thrift_client() as client:
-            to_position = client.getCurrentJournalPosition(mount)
+            to_position = client.getCurrentJournalPosition(bytes(checkout.path))
             from_sequence = max(to_position.sequenceNumber - args.limit, 0)
             from_position = JournalPosition(
                 mountGeneration=to_position.mountGeneration,
@@ -843,7 +819,7 @@ class DebugJournalCmd(Subcmd):
             )
 
             params = DebugGetRawJournalParams(
-                mountPoint=os.fsencode(mount),
+                mountPoint=bytes(checkout.path),
                 fromPosition=from_position,
                 toPosition=to_position,
             )

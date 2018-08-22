@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
-from . import config as config_mod
+from . import config as config_mod, subcmd as subcmd_mod
 from .config import EdenCheckout, EdenInstance
 
 
@@ -33,3 +33,13 @@ def find_checkout(
         home_dir=args.home_dir,
         state_dir=args.config_dir,
     )
+
+
+def require_checkout(
+    args: argparse.Namespace, path: Union[Path, str]
+) -> Tuple[EdenInstance, EdenCheckout, Path]:
+    instance, checkout, rel_path = find_checkout(args, path)
+    if checkout is None:
+        raise subcmd_mod.CmdError(f"no Eden checkout found at {path}")
+    assert rel_path is not None
+    return instance, checkout, rel_path

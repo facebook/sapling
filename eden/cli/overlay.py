@@ -13,6 +13,7 @@ import fcntl
 import os
 import stat
 import struct
+from pathlib import Path
 from typing import BinaryIO, Iterator, Optional, Tuple
 
 from facebook.eden.overlay.ttypes import OverlayDir
@@ -194,8 +195,8 @@ class Overlay:
         header = OverlayHeader.parse(data)
         if header.type != expected_type:
             raise InvalidOverlayFile(
-                "unexpected type for inode {inode_number} in overlay: "
-                "expected {expected_type!r} but found {header.type!r}"
+                f"unexpected type for inode {inode_number} in overlay: "
+                f"expected {expected_type!r} but found {header.type!r}"
             )
         return header
 
@@ -239,7 +240,7 @@ class Overlay:
             raise
         return (header, f)
 
-    def lookup_path(self, path: str) -> Optional[int]:
+    def lookup_path(self, path: Path) -> Optional[int]:
         """
         Lookup a path in the overlay.
 
@@ -254,16 +255,15 @@ class Overlay:
 
         May throw other exceptions on error.
         """
-        assert path
-        assert not os.path.isabs(path)
+        assert not path.is_absolute()
+        if not path.parts:
+            return self.ROOT_INODE_NUMBER
 
         parent_inode_number = self.ROOT_INODE_NUMBER
-        path_parts = path.split(os.sep)
-
         index = 0
         while True:
             parent_dir = self.read_dir_inode(parent_inode_number)
-            desired = path_parts[index]
+            desired = path.parts[index]
             index += 1
 
             entries = [] if parent_dir.entries is None else parent_dir.entries.items()
@@ -273,11 +273,11 @@ class Overlay:
             else:
                 raise InodeLookupError(f"{path} does not exist", errno.ENOENT)
 
-            if index >= len(path_parts):
+            if index >= len(path.parts):
                 return entry.inodeNumber
 
             if entry.mode is None or stat.S_IFMT(entry.mode) != stat.S_IFDIR:
-                non_dir_path = os.path.sep.join(path_parts[:index])
+                non_dir_path = os.path.sep.join(path.parts[:index])
                 raise InodeLookupError(
                     f"error looking up {path}: {non_dir_path} is not a directory",
                     errno.ENOTDIR,

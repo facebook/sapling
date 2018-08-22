@@ -131,4 +131,4 @@ class DebugGetPathTest(testcase.EdenRepoTest):
         # Close the file handle
         f.close()
 
-        self.assertEqual("loaded unlinked\n", output)
+        self.assertEqual("loaded [unlinked]\n", output)

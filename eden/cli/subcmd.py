@@ -14,6 +14,10 @@ from typing import Any, Callable, Dict, List, Optional, Type, cast
 from . import util
 
 
+class CmdError(Exception):
+    pass
+
+
 class Subcmd(abc.ABC):
     NAME: Optional[str] = None
     HELP: Optional[str] = None
