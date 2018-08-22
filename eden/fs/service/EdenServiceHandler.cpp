@@ -121,14 +121,15 @@ class ThriftLogHelper {
     if (wrapperExecuted_) {
       // Logging of future creation at folly::LogLevel::DBG3.
       TLOG(itcLogger_, folly::LogLevel::DBG3, itcFileName_, itcLineNumber_)
-          << itcFunctionName_ << "() created future "
-          << itcTimer_.elapsed().count() << "ms";
+          << folly::format(
+                 "{}() created future {:,}us",
+                 itcFunctionName_,
+                 itcTimer_.elapsed().count());
     } else {
       // If this object was not used for future creation
       // log the elaped time here.
-      TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_)
-          << itcFunctionName_ << "() took " << itcTimer_.elapsed().count()
-          << "ms";
+      TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << folly::format(
+          "{}() took {:,}us", itcFunctionName_, itcTimer_.elapsed().count());
     }
   }
 
@@ -143,8 +144,8 @@ class ThriftLogHelper {
                               linenumber = itcLineNumber_](ReturnType&& ret) {
       // Logging completion time for the request
       // The line number points to where the object was originally created
-      TLOG(logger, level, filename, linenumber)
-          << funcName << "() took " << timer.elapsed().count() << "ms";
+      TLOG(logger, level, filename, linenumber) << folly::format(
+          "{}() took {:,}us", funcName, timer.elapsed().count());
       return std::forward<ReturnType>(ret);
     });
   }
@@ -155,7 +156,7 @@ class ThriftLogHelper {
   uint32_t itcLineNumber_;
   folly::LogLevel level_;
   const folly::Logger& itcLogger_;
-  folly::stop_watch<std::chrono::milliseconds> itcTimer_ = {};
+  folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
   bool wrapperExecuted_ = false;
 };
 
