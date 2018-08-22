@@ -4,11 +4,7 @@ use std;
 use std::ffi::{OsStr, OsString};
 use std::io;
 use std::io::ErrorKind::InvalidInput;
-use winapi;
-use kernel32;
-use local_encoding::{Encoder, Encoding};
-use std::os::windows::ffi::{OsStringExt, OsStrExt};
-use std::ffi::{OsString, OsStr};
+use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
 use winapi;
 

@@ -18,26 +18,18 @@ mod windows;
 mod unix;
 
 #[cfg(unix)]
-pub use unix::{
-    local_bytes_to_osstring,
-    local_bytes_to_path,
-    osstring_to_local_bytes,
-    path_to_local_bytes
-};
+pub use unix::{local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes,
+               path_to_local_bytes};
 
 #[cfg(windows)]
-pub use windows::{
-    local_bytes_to_osstring,
-    local_bytes_to_path,
-    osstring_to_local_bytes,
-    path_to_local_bytes
-};
+pub use windows::{local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes,
+                  path_to_local_bytes};
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsString;
     use std::io::Result;
-    
 
     #[test]
     fn test_ascii7bit_roundtrip() {
@@ -65,5 +57,36 @@ mod tests {
         let bin_path_roundtrip = path_to_local_bytes(&path)?;
         assert_eq!(bin_path[..], bin_path_roundtrip[..]);
         Ok(())
+    }
+
+    #[cfg(windows)]
+    fn get_encoded_sample() -> (String, Vec<u8>) {
+        use kernel32;
+        match unsafe { kernel32::GetACP() } {
+            1250 => ("Ł".into(), vec![163]),
+            1251 => ("Ї".into(), vec![175]),
+            1252 => ("ü".into(), vec![252]),
+            _ => ("A".into(), vec![65]),
+        }
+    }
+
+    #[cfg(unix)]
+    fn get_encoded_sample() -> (String, Vec<u8>) {
+        ("Їü".into(), vec![208, 135, 195, 188])
+    }
+
+    #[test]
+    fn test_osstring_to_local_bytes() {
+        let (s, b) = get_encoded_sample();
+        let os = &OsString::from(s);
+        let r = osstring_to_local_bytes(os).unwrap();
+        assert_eq!(r[..], b[..]);
+    }
+
+    #[test]
+    fn test_local_bytes_to_osstring() {
+        let (s, b) = get_encoded_sample();
+        let r = local_bytes_to_osstring(&b).unwrap();
+        assert_eq!(OsString::from(s), r);
     }
 }
