@@ -3,10 +3,10 @@
 
 #[macro_use]
 extern crate cpython;
+extern crate encoding;
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
-extern crate pathencoding;
 extern crate revisionstore;
 
 mod datastorepyext;

@@ -10,7 +10,7 @@ lto = true
 
 [dependencies]
 configparser = { path = "../../../lib/configparser/" }
-pathencoding = { path = "../../../lib/pathencoding/" }
+encoding = { path = "../../../lib/encoding/" }
 
 [dependencies.cpython]
 version = "0.2"

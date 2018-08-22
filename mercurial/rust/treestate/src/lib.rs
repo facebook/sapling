@@ -14,7 +14,7 @@
 
 #[macro_use]
 extern crate cpython;
-extern crate pathencoding;
+extern crate encoding;
 extern crate treestate;
 
 #[cfg(not(test))]

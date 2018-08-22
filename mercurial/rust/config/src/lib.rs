@@ -3,13 +3,13 @@
 extern crate configparser;
 #[macro_use]
 extern crate cpython;
-extern crate pathencoding;
+extern crate encoding;
 
 use configparser::config::{ConfigSet, Options};
 use configparser::hg::{ConfigSetHgExt, OptionsHgExt};
 use cpython::{PyBytes, PyErr, PyObject, PyResult, Python};
 use cpython::exc::UnicodeDecodeError;
-use pathencoding::{local_bytes_to_path, path_to_local_bytes};
+use encoding::{local_bytes_to_path, path_to_local_bytes};
 use std::cell::RefCell;
 use std::collections::HashMap;
 

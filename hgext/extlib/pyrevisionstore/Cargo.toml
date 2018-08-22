@@ -11,9 +11,9 @@ name = "pyrevisionstore"
 crate-type = ["cdylib"]
 
 [dependencies]
+encoding = { path = "../../../lib/encoding" }
 failure = "*"
 failure_derive = "*"
-pathencoding = { path = "../../../lib/pathencoding" }
 revisionstore = { path = "../../../lib/revisionstore" }
 
 [dependencies.cpython]

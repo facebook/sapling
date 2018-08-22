@@ -11,7 +11,7 @@ name = "treestate"
 crate-type = ["cdylib"]
 
 [dependencies]
-pathencoding = { path = "../../../lib/pathencoding" }
+encoding = { path = "../../../lib/encoding" }
 treestate = { path = "../../../lib/treestate" }
 
 [dependencies.cpython]

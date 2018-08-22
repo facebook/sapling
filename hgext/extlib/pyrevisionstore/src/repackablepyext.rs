@@ -2,7 +2,7 @@ use cpython::{ObjectProtocol, PyBytes, PyDict, PyErr, PyObject, PyResult, Python
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use pathencoding;
+use encoding;
 use pythonutil::{from_key, from_tuple_to_key, to_pyerr};
 use revisionstore::key::Key;
 use revisionstore::repack::{RepackOutputType, RepackResult, Repackable};
@@ -51,7 +51,7 @@ impl<T: Repackable> RepackablePyExt for T {
             .iter(py)?
             .map(|py_name| {
                 let py_name = py_name?;
-                Ok(PathBuf::from(pathencoding::local_bytes_to_path(
+                Ok(PathBuf::from(encoding::local_bytes_to_path(
                     py_name.cast_as::<PyBytes>(py)?.data(py),
                 ).map_err(|e| {
                     to_pyerr(py, &e.into())

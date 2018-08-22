@@ -2,7 +2,7 @@
 //! Python bindings for a Rust hg store
 use cpython::{ObjectProtocol, PyBytes, PyClone, PyDict, PyList, PyObject, PyResult, PyTuple,
               Python, PythonObject};
-use pathencoding;
+use encoding;
 
 use datastorepyext::DataStorePyExt;
 use historystorepyext::HistoryStorePyExt;
@@ -62,7 +62,7 @@ py_class!(class datapack |py| {
         _cls,
         path: &PyBytes
     ) -> PyResult<datapack> {
-        let path = pathencoding::local_bytes_to_path(path.data(py))
+        let path = encoding::local_bytes_to_path(path.data(py))
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         datapack::create_instance(
             py,
@@ -74,19 +74,19 @@ py_class!(class datapack |py| {
     }
 
     def path(&self) -> PyResult<PyBytes> {
-        let path = pathencoding::path_to_local_bytes(self.store(py).base_path())
+        let path = encoding::path_to_local_bytes(self.store(py).base_path())
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def packpath(&self) -> PyResult<PyBytes> {
-        let path = pathencoding::path_to_local_bytes(self.store(py).pack_path())
+        let path = encoding::path_to_local_bytes(self.store(py).pack_path())
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def indexpath(&self) -> PyResult<PyBytes> {
-        let path = pathencoding::path_to_local_bytes(self.store(py).index_path())
+        let path = encoding::path_to_local_bytes(self.store(py).index_path())
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
@@ -129,7 +129,7 @@ py_class!(class historypack |py| {
         _cls,
         path: &PyBytes
     ) -> PyResult<historypack> {
-        let path = pathencoding::local_bytes_to_path(path.data(py))
+        let path = encoding::local_bytes_to_path(path.data(py))
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         historypack::create_instance(
             py,
@@ -138,19 +138,19 @@ py_class!(class historypack |py| {
     }
 
     def path(&self) -> PyResult<PyBytes> {
-        let path = pathencoding::path_to_local_bytes(self.store(py).base_path())
+        let path = encoding::path_to_local_bytes(self.store(py).base_path())
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def packpath(&self) -> PyResult<PyBytes> {
-        let path = pathencoding::path_to_local_bytes(self.store(py).pack_path())
+        let path = encoding::path_to_local_bytes(self.store(py).pack_path())
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }
 
     def indexpath(&self) -> PyResult<PyBytes> {
-        let path = pathencoding::path_to_local_bytes(self.store(py).index_path())
+        let path = encoding::path_to_local_bytes(self.store(py).index_path())
                                  .map_err(|e| to_pyerr(py, &e.into()))?;
         Ok(PyBytes::new(py, &path))
     }

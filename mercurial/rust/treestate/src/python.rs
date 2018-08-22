@@ -2,7 +2,7 @@
 //! Python bindings for treedirstate and treestate.
 
 use cpython::*;
-use pathencoding::local_bytes_to_path;
+use encoding::local_bytes_to_path;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use treestate::errors::{self, ErrorKind};

@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 lto = true
 
 [dependencies]
-pathencoding = { path = "../../../lib/pathencoding" }
+encoding = { path = "../../../lib/encoding" }
 pathmatcher = { path = "../../../lib/pathmatcher" }
 
 [dependencies.cpython]

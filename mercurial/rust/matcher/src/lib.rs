@@ -2,12 +2,12 @@
 
 #[macro_use]
 extern crate cpython;
-extern crate pathencoding;
+extern crate encoding;
 extern crate pathmatcher;
 
 use std::path::Path;
 use cpython::{PyBytes, PyErr, PyResult, Python};
-use pathencoding::local_bytes_to_path;
+use encoding::local_bytes_to_path;
 use pathmatcher::GitignoreMatcher;
 
 fn encoding_error(py: Python) -> PyErr {
