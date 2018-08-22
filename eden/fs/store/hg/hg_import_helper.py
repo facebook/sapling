@@ -27,6 +27,21 @@ import mercurial.ui
 import mercurial.util
 
 
+if os.name == "nt":
+    from msvcrt import open_osfhandle
+
+    def fdopen(handle, mode):
+        os_mode = os.O_WRONLY if mode == "wb" else os.O_RDONLY
+        fileno = open_osfhandle(handle, os_mode)
+        return os.fdopen(fileno, mode)
+
+
+else:
+
+    def fdopen(handle, mode):
+        return os.fdopen(handle, mode)
+
+
 hex = binascii.hexlify
 
 
@@ -179,11 +194,11 @@ class HgServer(object):
         if in_fd is None:
             self.in_file = sys.stdin
         else:
-            self.in_file = os.fdopen(in_fd, "rb")
+            self.in_file = fdopen(in_fd, "rb")
         if out_fd is None:
             self.out_file = sys.stdout
         else:
-            self.out_file = os.fdopen(out_fd, "wb")
+            self.out_file = fdopen(out_fd, "wb")
 
         # The repository will be set during initialized()
         self.repo = None
