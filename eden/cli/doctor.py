@@ -835,7 +835,7 @@ may have important bug fixes or performance improvements.
 
 def _get_watch_roots_for_watchman() -> Set[str]:
     js = _call_watchman(["watch-list"])
-    roots = set(js["roots"])
+    roots = set(js.get("roots", []))
     return roots
 
 

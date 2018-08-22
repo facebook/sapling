@@ -740,6 +740,42 @@ Checking {mounts[0]}
         )
         return exit_code, out.getvalue(), mounts
 
+    @patch("eden.cli.doctor._call_watchman")
+    def test_watchman_fails(self, mock_watchman):
+        self._tmp_dir = self._create_tmp_dir()
+        instance = FakeEdenInstance(self._tmp_dir)
+
+        mount = instance.create_test_mount("path1", active=False)
+
+        # Make calls to watchman fail rather than returning expected output
+        side_effects = [{"error": "watchman failed"}]
+        mock_watchman.side_effect = side_effects
+
+        out = TestOutput()
+        exit_code = doctor.cure_what_ails_you(
+            typing.cast(EdenInstance, instance),
+            dry_run=False,
+            mount_table=instance.mount_table,
+            fs_util=filesystem.LinuxFsUtil(),
+            out=out,
+        )
+
+        # "watchman watch-list" should have been called by the doctor code
+        calls = [call(["watch-list"])]
+        mock_watchman.assert_has_calls(calls)
+
+        self.assertEqual(
+            out.getvalue(),
+            f"""\
+<yellow>- Found problem:<reset>
+{mount} is not currently mounted
+Remounting {mount}...<green>fixed<reset>
+
+<yellow>Successfully fixed 1 problem.<reset>
+""",
+        )
+        self.assertEqual(exit_code, 0)
+
 
 class BindMountsCheckTest(DoctorTestBase):
     maxDiff = None
