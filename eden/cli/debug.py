@@ -466,15 +466,26 @@ class OverlayCmd(Subcmd):
             default=0,
             help="Recursively print child entries.",
         )
+        parser.add_argument(
+            "-O",
+            "--overlay",
+            help="Explicitly specify the path to the overlay directory.",
+        )
         parser.add_argument("path", nargs="?", help="The path to the eden mount point.")
 
     def run(self, args: argparse.Namespace) -> int:
         self.args = args
-        path = args.path or os.getcwd()
-        instance, checkout, rel_path = cmd_util.require_checkout(args, path)
+        if args.overlay is not None:
+            if args.path:
+                rel_path = Path(args.path)
+            else:
+                rel_path = Path()
+            overlay_dir = Path(args.overlay)
+        else:
+            path = args.path or os.getcwd()
+            _instance, checkout, rel_path = cmd_util.require_checkout(args, path)
+            overlay_dir = checkout.state_dir.joinpath("local")
 
-        # Get the path to the overlay directory for this mount point
-        overlay_dir = checkout.state_dir.joinpath("local")
         self.overlay = overlay_mod.Overlay(str(overlay_dir))
 
         if args.number is not None:
