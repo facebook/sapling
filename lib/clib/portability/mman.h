@@ -13,7 +13,11 @@
 /* A fb-specific define which ensures that we use the static flavor of
  * mman-win32 */
 #define MMAN_LIBRARY
+#ifdef EDEN_WIN
+#include "lib/third-party/mman-win32/mman.h"
+#else
 #include "sys/mman.h"
+#endif
 #else
 #include <sys/mman.h>
 #endif
