@@ -10,7 +10,9 @@
 import contextlib
 import errno
 import fcntl
+import logging
 import os
+import shutil
 import stat
 import struct
 from pathlib import Path
@@ -287,3 +289,50 @@ class Overlay:
                 return None
 
             parent_inode_number = entry.inodeNumber
+
+    def extract_file(self, inode_number: int, output_path: Path, mode: int) -> None:
+        """Copy the specified file inode out of the overlay.
+        """
+        with self.open_overlay_file(inode_number) as inf:
+            header = self.read_header(inf)
+            if header.type != OverlayHeader.TYPE_FILE:
+                raise Exception(
+                    f"expected inode {inode_number} to be a regular file; "
+                    f"found unexpected type {header.type!r}"
+                )
+
+            file_type = stat.S_IFMT(mode)
+            if file_type == stat.S_IFLNK:
+                contents = inf.read()
+                os.symlink(contents, bytes(output_path))
+            elif file_type == stat.S_IFREG:
+                with output_path.open("wb") as outf:
+                    shutil.copyfileobj(inf, outf)
+                    os.fchmod(outf.fileno(), mode & 0o7777)
+            else:
+                # We don't copy out sockets, fifos, or other unusual file types.
+                # These shouldn't have any actual file contents anyway.
+                logging.debug(
+                    f"skipping inode {inode_number} at {output_path} with "
+                    f"unsupported file type {file_type:#o}"
+                )
+
+    def extract_dir(self, inode_number: int, output_path: Path) -> None:
+        """Recursively copy the specified directory inode out of the overlay.
+
+        All of its materialized children will be copied out.  Children that still have
+        the same contents as a committed source control object will not be copied out.
+        """
+        data = self.read_dir_inode(inode_number)
+        output_path.mkdir()
+        for name, entry in data.entries.items():
+            if entry.hash:
+                # Skip non-materialized entries
+                continue
+
+            entry_output_path = output_path.joinpath(name)
+            file_type = stat.S_IFMT(entry.mode)
+            if file_type == stat.S_IFDIR:
+                self.extract_dir(entry.inodeNumber, entry_output_path)
+            else:
+                self.extract_file(entry.inodeNumber, entry_output_path, entry.mode)

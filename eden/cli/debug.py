@@ -14,12 +14,14 @@ import json
 import os
 import re
 import shlex
+import shutil
 import stat
 import sys
 from pathlib import Path
 from typing import (
     IO,
     Any,
+    BinaryIO,
     Callable,
     Dict,
     Iterator,
@@ -471,6 +473,12 @@ class OverlayCmd(Subcmd):
             "--overlay",
             help="Explicitly specify the path to the overlay directory.",
         )
+        parser.add_argument(
+            "-x",
+            "--extract-to",
+            dest="output_path",
+            help="Copy the specified inode data to the destination path.",
+        )
         parser.add_argument("path", nargs="?", help="The path to the eden mount point.")
 
     def run(self, args: argparse.Namespace) -> int:
@@ -489,19 +497,49 @@ class OverlayCmd(Subcmd):
         self.overlay = overlay_mod.Overlay(str(overlay_dir))
 
         if args.number is not None:
-            self._display_overlay(args.number, "")
+            self._process_root(args.number, Path())
         elif rel_path != Path():
             inode_number = self.overlay.lookup_path(rel_path)
             if inode_number is None:
                 print(f"{rel_path} is not materialized", file=sys.stderr)
                 return 1
-            self._display_overlay(inode_number, os.fsdecode(rel_path))
+            self._process_root(inode_number, rel_path)
         else:
-            self._display_overlay(1, "/")
+            self._process_root(1, Path())
 
         return 0
 
-    def _display_overlay(self, inode_number: int, path: str, level: int = 0) -> None:
+    def _process_root(self, inode_number: int, initial_path: Path):
+        output_path: Optional[Path] = None
+        if self.args.output_path is not None:
+            output_path = Path(self.args.output_path)
+
+        with self.overlay.open_overlay_file(inode_number) as f:
+            header = self.overlay.read_header(f)
+            if header.type == overlay_mod.OverlayHeader.TYPE_DIR:
+                if output_path:
+                    self.overlay.extract_dir(inode_number, output_path)
+                    print(f"Extracted materialized directory contents to {output_path}")
+                else:
+                    self._process_overlay(inode_number, initial_path)
+            elif header.type == overlay_mod.OverlayHeader.TYPE_FILE:
+                if output_path:
+                    self.overlay.extract_file(
+                        inode_number, output_path, stat.S_IFREG | 0o644
+                    )
+                    print(f"Extracted inode {inode_number} to {output_path}")
+                else:
+                    self._print_file(f)
+            else:
+                raise Exception(
+                    f"found invalid file type information in overlay "
+                    f"file header: {type!r}"
+                )
+
+    def _print_file(self, f: BinaryIO) -> None:
+        shutil.copyfileobj(f, sys.stdout.buffer)
+
+    def _process_overlay(self, inode_number: int, path: Path, level: int = 0) -> None:
         data = self.overlay.read_dir_inode(inode_number)
         self._print_overlay_tree(inode_number, path, data)
 
@@ -520,11 +558,11 @@ class OverlayCmd(Subcmd):
                 # Only display data for directories
                 continue
             print()
-            entry_path = os.path.join(path, name)
-            self._display_overlay(entry.inodeNumber, entry_path, level + 1)
+            entry_path = path.joinpath(name)
+            self._process_overlay(entry.inodeNumber, entry_path, level + 1)
 
     def _print_overlay_tree(
-        self, inode_number: int, path: str, tree_data: OverlayDir
+        self, inode_number: int, path: Path, tree_data: OverlayDir
     ) -> None:
         def hex(binhash: Optional[bytes]) -> str:
             if binhash is None:
