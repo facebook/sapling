@@ -23,7 +23,6 @@ error paths
 #if symlink
   $ ln -s `which true` hg
   $ run-tests.py --with-hg=./hg
-  warning: entry point */mercurial/entrypoint.py does not exist  (glob)
   
   # Ran 0 tests, 0 skipped, 0 failed.
   $ rm hg
