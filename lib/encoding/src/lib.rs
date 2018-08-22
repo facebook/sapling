@@ -52,7 +52,7 @@ use std::path::PathBuf;
 /// Newer APIs might want to normalize paths to UTF-8 before storing them.
 #[cfg(windows)]
 pub fn local_bytes_to_path(bytes: &[u8]) -> io::Result<PathBuf> {
-    Encoding::OEM.to_string(bytes).map(|s| PathBuf::from(s))
+    Encoding::ANSI.to_string(bytes).map(|s| PathBuf::from(s))
 }
 
 /// Convert `Path` to local-encoded `bytes`.
@@ -62,7 +62,7 @@ pub fn local_bytes_to_path(bytes: &[u8]) -> io::Result<PathBuf> {
 #[cfg(windows)]
 pub fn path_to_local_bytes(path: &Path) -> io::Result<Vec<u8>> {
     match path.as_os_str().to_str() {
-        Some(s) => Encoding::OEM.to_bytes(s),
+        Some(s) => Encoding::ANSI.to_bytes(s),
         None => Err(InvalidInput.into()),
     }
 }
