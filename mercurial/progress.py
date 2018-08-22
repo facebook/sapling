@@ -411,18 +411,7 @@ class engine(object):
         self._currentbarindex = None
 
     def lock(self):
-        class lockguard(object):
-            def __init__(self, engine):
-                self.engine = engine
-
-            def __enter__(self):
-                self.engine._cond.acquire()
-                return self
-
-            def __exit__(self, type, value, traceback):
-                self.engine._cond.release()
-
-        return lockguard(self)
+        return self._cond
 
     def resetstate(self):
         with self.lock():
