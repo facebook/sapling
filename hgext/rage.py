@@ -373,7 +373,8 @@ def _makerage(ui, repo, **opts):
     profile.append((time.time() - allstart, "basic info", None))
     for name, gen in detailed:
         start = time.time()
-        value = _failsafe(gen)
+        with progress.spinner(ui, "collecting %r" % name):
+            value = _failsafe(gen)
         finish = time.time()
         msg.append(
             "%s: (%.2f s)\n---------------------------\n%s\n\n"
@@ -415,14 +416,14 @@ def rage(ui, repo, *pats, **opts):
     advice = Please see our FAQ guide: https://...
 
     """
-    with progress.spinner(ui, "Generating paste"):
+    with progress.spinner(ui, "collecting information"):
         msg = _makerage(ui, repo, **opts)
 
     if opts.get("preview"):
         ui.write("%s\n" % msg)
         return
 
-    with progress.spinner(ui, "Saving paste"):
+    with progress.spinner(ui, "saving paste"):
         try:
             p = subprocess.Popen(
                 ["arc", "paste", "--lang", "hgrage", "--title", "hgrage"],
