@@ -122,6 +122,7 @@
   $ sleep 1
   $ hg log -l 1 --template '{rev} {desc}\n' --forcesync
   waiting for lock on working directory of $TESTTMP/master held by * (glob)
+  (hint: run 'hg debugprocesstree *' to see related processes) (glob)
   3 a
   got lock after ? seconds (glob)
   3 a

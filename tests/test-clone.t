@@ -1087,7 +1087,7 @@ don't care which is which, so we just make sure we always print the
 one containing "new pooled" first, then one one containing "existing
 pooled".
 
-  $ (grep 'new pooled' race1.log > /dev/null && cat race1.log || cat race2.log) | grep -v lock
+  $ (grep 'new pooled' race1.log > /dev/null && cat race1.log || cat race2.log) | egrep -v '(lock|debugprocess)'
   (sharing from new pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
   requesting all changes
   adding changesets
@@ -1101,7 +1101,7 @@ pooled".
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ (grep 'existing pooled' race1.log > /dev/null && cat race1.log || cat race2.log) | grep -v lock
+  $ (grep 'existing pooled' race1.log > /dev/null && cat race1.log || cat race2.log) | egrep -v '(lock|debugprocess)'
   (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
   searching for changes
   no changes found

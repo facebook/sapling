@@ -62,6 +62,7 @@ One process waiting for another
   $ cat preup-stdout
   $ cat preup-stderr
   waiting for lock on working directory of b held by process '*' on host '*' (glob)
+  (hint: run 'hg debugprocesstree *' to see related processes) (glob)
   got lock after * seconds (glob)
   $ cat stdout
   adding b
@@ -106,6 +107,7 @@ On processs waiting on another, warning after a long time (debug output on)
   calling hook pre-update: hghook_pre-update.sleephalf
   locker is still running (full unique id: '*') (glob)
   waiting for lock on working directory of b held by process '*' on host '*' (glob)
+  (hint: run 'hg debugprocesstree *' to see related processes) (glob)
   got lock after * seconds (glob)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat preup-stderr
@@ -124,6 +126,7 @@ On processs waiting on another, warning disabled, (debug output on)
   calling hook pre-update: hghook_pre-update.sleephalf
   locker is still running (full unique id: '*') (glob)
   waiting for lock on working directory of b held by process '*' on host '*' (glob)
+  (hint: run 'hg debugprocesstree *' to see related processes) (glob)
   got lock after * seconds (glob)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat preup-stderr

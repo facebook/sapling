@@ -128,7 +128,10 @@ class lockinfo(object):
         """Get a lockinfo's warning string while trying to acquire `l` lock"""
         msg = _("waiting for lock on %s held by process %r on host %r\n")
         msg %= (l.desc, self.pid, self.host)
-        return "".join(msg)
+        hintmsg = _(
+            "(hint: run 'hg debugprocesstree %s' to see related processes)\n"
+        ) % (self.pid,)
+        return msg + hintmsg
 
 
 def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
