@@ -13,9 +13,6 @@ events to Watchman for the following states:
 - hg.filemerge
 - hg.update
 
-(Note that fsmonitor publishes state-enter and state-leave events for
-hg.transaction.)
-
 This was originally part of the fsmonitor extension, but it was split into its
 own extension that can be used with Eden. (Note that fsmonitor is supposed to be
 disabled when 'eden' is in repo.requirements.)
@@ -27,11 +24,16 @@ https://facebook.github.io/watchman/docs/scm-query.html.
 
 from __future__ import absolute_import
 
-from mercurial import extensions, filemerge, merge
+from mercurial import extensions, filemerge, merge, registrar
 from mercurial.i18n import _
 
 from ..extlib import watchmanclient
 
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem("experimental", "fsmonitor.transaction_notify", default=False)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
@@ -66,6 +68,37 @@ def reposetup(ui, repo):
     except Exception as ex:
         ui.log("hgevents", "Watchman exception: %s\n", ex)
         return
+
+    class hgeventsrepo(repo.__class__):
+        def wlocknostateupdate(self, *args, **kwargs):
+            return super(hgeventsrepo, self).wlock(*args, **kwargs)
+
+        def wlock(self, *args, **kwargs):
+            l = super(hgeventsrepo, self).wlock(*args, **kwargs)
+            if not self.ui.configbool("experimental", "fsmonitor.transaction_notify"):
+                return l
+            if l.held != 1:
+                return l
+            origrelease = l.releasefn
+
+            def staterelease():
+                if origrelease:
+                    origrelease()
+                if l.stateupdate:
+                    l.stateupdate.exit()
+                    l.stateupdate = None
+
+            try:
+                l.stateupdate = None
+                l.stateupdate = watchmanclient.state_update(self, name="hg.transaction")
+                l.stateupdate.enter()
+                l.releasefn = staterelease
+            except Exception as e:
+                # Swallow any errors; fire and forget
+                self.ui.log("watchman", "Exception in state update %s\n", e)
+            return l
+
+    repo.__class__ = hgeventsrepo
 
 
 # Bracket working copy updates with calls to the watchman state-enter

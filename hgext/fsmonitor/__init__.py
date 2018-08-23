@@ -163,7 +163,6 @@ configitem("fsmonitor", "walk_on_invalidate", default=False)
 configitem("fsmonitor", "timeout", default="2")
 configitem("fsmonitor", "blacklistusers", default=list)
 configitem("fsmonitor", "detectrace", default=False)
-configitem("experimental", "fsmonitor.transaction_notify", default=False)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
@@ -905,37 +904,5 @@ def reposetup(ui, repo):
             def status(self, *args, **kwargs):
                 orig = super(fsmonitorrepo, self).status
                 return overridestatus(orig, self, *args, **kwargs)
-
-            def wlocknostateupdate(self, *args, **kwargs):
-                return super(fsmonitorrepo, self).wlock(*args, **kwargs)
-
-            def wlock(self, *args, **kwargs):
-                l = super(fsmonitorrepo, self).wlock(*args, **kwargs)
-                if not self.ui.configbool(
-                    "experimental", "fsmonitor.transaction_notify"
-                ):
-                    return l
-                if l.held != 1:
-                    return l
-                origrelease = l.releasefn
-
-                def staterelease():
-                    if origrelease:
-                        origrelease()
-                    if l.stateupdate:
-                        l.stateupdate.exit()
-                        l.stateupdate = None
-
-                try:
-                    l.stateupdate = None
-                    l.stateupdate = watchmanclient.state_update(
-                        self, name="hg.transaction"
-                    )
-                    l.stateupdate.enter()
-                    l.releasefn = staterelease
-                except Exception as e:
-                    # Swallow any errors; fire and forget
-                    self.ui.log("watchman", "Exception in state update %s\n", e)
-                return l
 
         repo.__class__ = fsmonitorrepo
