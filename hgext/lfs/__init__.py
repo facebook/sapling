@@ -19,15 +19,21 @@ Configs::
     # (default: unset)
     url = https://example.com/lfs
 
-    # size of a file to make it use LFS
+    # Size of a file to make it use LFS
     threshold = 10M
 
-    # how many times to retry before giving up on transferring an object
+    # How many times to retry before giving up on transferring an object
     retry = 5
 
-    # the local directory to store lfs files for sharing across local clones.
+    # The local directory to store lfs files for sharing across local clones.
     # If not set, the cache is disabled (default).
     usercache = /path/to/global/cache
+
+    # Verify incoming LFS objects. Could be "none" (not verified), "existance"
+    # (LFS object existence check). In the future we might also introduce
+    # "hash". This is mostly useful on server-side.
+    # (default: none)
+    verify = none
 """
 
 from __future__ import absolute_import
@@ -71,6 +77,7 @@ configitem("lfs", "url", default="")
 configitem("lfs", "usercache", default=None)
 configitem("lfs", "threshold", default=None)
 configitem("lfs", "retry", default=5)
+configitem("lfs", "verify", default="none")
 
 cmdtable = {}
 command = registrar.command(cmdtable)

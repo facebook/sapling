@@ -7,6 +7,7 @@
   > [lfs]
   > threshold=10B
   > url=file:$TESTTMP/dummy-remote/
+  > verify=existance
   > [diff]
   > git=1
   > EOF

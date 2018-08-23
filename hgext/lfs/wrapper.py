@@ -305,10 +305,16 @@ def _pushbundle2(orig, pushop):
 
 def checkrevs(orig, repo, revs):
     """verify LFS objects were uploaded when receiving pushes"""
-    pointers = extractpointers(repo, revs)
-    if len(pointers) > 0:
-        store = repo.svfs.lfsremoteblobstore
-        store.checkblobs(pointers)
+    verify = repo.ui.config("lfs", "verify") or "none"
+    if verify == "existance":
+        pointers = extractpointers(repo, revs)
+        if len(pointers) > 0:
+            store = repo.svfs.lfsremoteblobstore
+            store.checkblobs(pointers)
+    elif verify == "none":
+        pass
+    else:
+        raise error.Abort(_("invalid lfs.verify: %s") % verify)
     return orig(repo, revs)
 
 

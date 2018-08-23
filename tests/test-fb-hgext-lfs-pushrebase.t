@@ -1,4 +1,3 @@
-
   $ . "$TESTDIR/library.sh"
 
   $ cat >> $HGRCPATH << EOF
@@ -8,6 +7,7 @@
   > [lfs]
   > threshold=10B
   > url=file:$TESTTMP/dummy-remote/
+  > verify=existance
   > [pushrebase]
   > rewritedates = True
   > [diff]

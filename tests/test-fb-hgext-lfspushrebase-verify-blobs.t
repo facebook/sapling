@@ -8,6 +8,7 @@
   > [lfs]
   > threshold=10B
   > url=file:$TESTTMP/dummy-remote/
+  > verify=existance
   > [pushrebase]
   > rewritedates = True
   > [diff]
@@ -129,6 +130,27 @@
   abort: LFS server error. Remote object for file unknown not found: *u'oid': u'a2fcdb080e9838f6e1476a494c1d553e6ffefb68b0d146a06f34b535b5198442'* (glob)
   [255]
 
+# But push can succeed if the server is configured to skip verifying blobs.
+  $ cp -R $TESTTMP/master $TESTTMP/master-no-verify
+  $ cp -R $TESTTMP/client $TESTTMP/client-clone
+  $ cd $TESTTMP/client-clone
+  $ cat >> $TESTTMP/master-no-verify/.hg/hgrc <<EOF
+  > [lfs]
+  > verify=none
+  > EOF
+
+  $ hg push --to master $TESTTMP/master-no-verify
+  pushing to $TESTTMP/master-no-verify
+  searching for changes
+  pushing 1 changeset:
+      515a4dfd2e0c  shallow.lfs.commit
+  1 new changeset from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 1 files (+1 heads)
+
+  $ cd $TESTTMP/client
 
 # Reset lfs url
   $ cat >> $TESTTMP/master/.hg/hgrc << EOF

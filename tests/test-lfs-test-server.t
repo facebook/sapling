@@ -32,6 +32,7 @@
   > [lfs]
   > url=http://foo:bar@$LFS_HOST/
   > threshold=1
+  > verify=existance
   > EOF
 
   $ hg init repo1

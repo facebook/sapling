@@ -11,6 +11,7 @@
   > lfs=
   > [lfs]
   > url=file://$LFSPATH
+  > verify=existance
   > EOF
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
