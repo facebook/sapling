@@ -66,7 +66,7 @@ struct TreeInodeState {
 /**
  * Represents a directory in the file system.
  */
-class TreeInode : public InodeBaseMetadata<DirContents> {
+class TreeInode final : public InodeBaseMetadata<DirContents> {
  public:
   using Base = InodeBaseMetadata<DirContents>;
 
@@ -397,7 +397,7 @@ class TreeInode : public InodeBaseMetadata<DirContents> {
   /**
    * Returns a copy of this inode's metadata.
    */
-  InodeMetadata getMetadata() const;
+  InodeMetadata getMetadata() const override;
 
   /**
    * Updates the last-access timestamp.  Public so TreeInodeDirHandle can call

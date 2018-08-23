@@ -358,6 +358,11 @@ class InodeBase {
     return *loc;
   }
 
+  /**
+   * Acquire this inode's contents lock and return its metadata.
+   */
+  virtual InodeMetadata getMetadata() const = 0;
+
  protected:
   /**
    * Returns current time from EdenMount's clock.
@@ -375,8 +380,9 @@ class InodeBase {
   void updateJournal();
 
  private:
-  // Private so only InodeBaseMetadata can call them
-  InodeMetadata getMetadata() const;
+  // The caller (which is always InodeBaseMetadata) must be holding the inode
+  // state lock for this type of inode when calling getMetadataLocked().
+  InodeMetadata getMetadataLocked() const;
   void updateAtime();
   InodeTimestamps updateMtimeAndCtime(timespec now);
 
@@ -570,7 +576,7 @@ class InodeBaseMetadata : public InodeBase {
    * Get this inode's metadata. The inode's state lock must be held.
    */
   InodeMetadata getMetadataLocked(const InodeState&) const {
-    return InodeBase::getMetadata();
+    return InodeBase::getMetadataLocked();
   }
 
   /**

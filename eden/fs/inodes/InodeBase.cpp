@@ -379,7 +379,7 @@ ParentInodeInfo InodeBase::getParentInfo() const {
   }
 }
 
-InodeMetadata InodeBase::getMetadata() const {
+InodeMetadata InodeBase::getMetadataLocked() const {
   return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }
 

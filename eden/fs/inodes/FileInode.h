@@ -130,7 +130,7 @@ struct FileInodeState {
   size_t openCount{0};
 };
 
-class FileInode : public InodeBaseMetadata<FileInodeState> {
+class FileInode final : public InodeBaseMetadata<FileInodeState> {
  public:
   using Base = InodeBaseMetadata<FileInodeState>;
   using FileHandlePtr = std::shared_ptr<EdenFileHandle>;
@@ -222,7 +222,7 @@ class FileInode : public InodeBaseMetadata<FileInodeState> {
   /**
    * Returns a copy of this inode's metadata.
    */
-  InodeMetadata getMetadata() const;
+  InodeMetadata getMetadata() const override;
 
   /**
    * If this file is backed by a source control Blob, return the hash of the
