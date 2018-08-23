@@ -34,6 +34,11 @@ Configs::
     # "hash". This is mostly useful on server-side.
     # (default: none)
     verify = none
+
+    # Enable local on-disk store. This can be disabled to save disk space,
+    # at the cost every LFS request will hit the server.
+    # (default: true)
+    localstore = true
 """
 
 from __future__ import absolute_import
@@ -73,10 +78,11 @@ configitem = registrar.configitem(configtable)
 
 configitem("experimental", "lfs.user-agent", default=None)
 
+configitem("lfs", "localstore", default=True)
+configitem("lfs", "retry", default=5)
+configitem("lfs", "threshold", default=None)
 configitem("lfs", "url", default="")
 configitem("lfs", "usercache", default=None)
-configitem("lfs", "threshold", default=None)
-configitem("lfs", "retry", default=5)
 configitem("lfs", "verify", default="none")
 
 cmdtable = {}
@@ -102,7 +108,11 @@ def reposetup(ui, repo):
     threshold = repo.ui.configbytes("lfs", "threshold")
 
     repo.svfs.options["lfsthreshold"] = threshold
-    repo.svfs.lfslocalblobstore = blobstore.local(repo)
+    if repo.ui.configbool("lfs", "localstore"):
+        localstore = blobstore.local(repo)
+    else:
+        localstore = blobstore.memlocal()
+    repo.svfs.lfslocalblobstore = localstore
     repo.svfs.lfsremoteblobstore = blobstore.remote(repo.ui)
 
     # Push hook

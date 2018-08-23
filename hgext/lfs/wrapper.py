@@ -364,10 +364,11 @@ def upgradefinishdatamigration(orig, ui, srcrepo, dstrepo, requirements):
     srclfsvfs = srcrepo.svfs.lfslocalblobstore.vfs
     dstlfsvfs = dstrepo.svfs.lfslocalblobstore.vfs
 
-    for dirpath, dirs, files in srclfsvfs.walk():
-        for oid in files:
-            ui.write(_("copying lfs blob %s\n") % oid)
-            srclfsvfs.linktovfs(oid, dstlfsvfs)
+    if srclfsvfs and dstlfsvfs:
+        for dirpath, dirs, files in srclfsvfs.walk():
+            for oid in files:
+                ui.write(_("copying lfs blob %s\n") % oid)
+                srclfsvfs.linktovfs(oid, dstlfsvfs)
 
 
 def upgraderequirements(orig, repo):

@@ -140,6 +140,7 @@ class memlocal(object):
 
     def __init__(self):
         self._files = {}
+        self.vfs = None
 
     def write(self, oid, data):
         self._files[oid] = data
