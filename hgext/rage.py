@@ -430,6 +430,7 @@ def rage(ui, repo, *pats, **opts):
         msg = _makerage(ui, repo, **opts)
 
     if opts.get("preview"):
+        ui.pager("rage")
         ui.write("%s\n" % msg)
         return
 
