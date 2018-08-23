@@ -39,66 +39,83 @@ else:
 
     def runbgcommand(cmd, env, shell=False, stdout=None, stderr=None):
         """Spawn a command without waiting for it to finish."""
-        # double-fork to completely detach from the parent process
-        # based on http://code.activestate.com/recipes/278731
-        pid = os.fork()
-        if pid:
-            # Parent process
-            (_pid, status) = os.waitpid(pid, 0)
-            if os.WIFEXITED(status):
-                returncode = os.WEXITSTATUS(status)
-            else:
-                returncode = -os.WTERMSIG(status)
-            if returncode != 0:
-                # The child process's return code is 0 on success, an errno
-                # value on failure, or 255 if we don't have a valid errno
-                # value.
-                #
-                # (It would be slightly nicer to return the full exception info
-                # over a pipe as the subprocess module does.  For now it
-                # doesn't seem worth adding that complexity here, though.)
-                if returncode == 255:
-                    returncode = errno.EINVAL
-                raise OSError(
-                    returncode, "error running %r: %s" % (cmd, os.strerror(returncode))
-                )
-            return
-
+        parentpid = os.getpid()
         returncode = 255
+        # Make sure os._exit is executed for all cases for the child process,
+        # even if the user pressed Ctrl+C when Python is executing the "=",
+        # aka. "STORE_FAST" of "pid = os.fork()", which has the bytecode:
+        #
+        #      LOAD_GLOBAL              0 (os)
+        #      LOAD_ATTR                1 (fork)
+        #      CALL_FUNCTION            0
+        #      STORE_FAST               0 (pid)
+        #
+        # This means:
+        # 1. "try, finally: os._exit" needs to be set up before executing
+        #    "os.fork()".
+        # 2. The "pid" variable cannot be used in the "finally" block.
         try:
-            # Start a new session
-            os.setsid()
+            # double-fork to completely detach from the parent process
+            # based on http://code.activestate.com/recipes/278731
+            pid = os.fork()
+            if pid:
+                # Parent process
+                (_pid, status) = os.waitpid(pid, 0)
+                if os.WIFEXITED(status):
+                    returncode = os.WEXITSTATUS(status)
+                else:
+                    returncode = -os.WTERMSIG(status)
+                if returncode != 0:
+                    # The child process's return code is 0 on success, an errno
+                    # value on failure, or 255 if we don't have a valid errno
+                    # value.
+                    #
+                    # (It would be slightly nicer to return the full exception info
+                    # over a pipe as the subprocess module does.  For now it
+                    # doesn't seem worth adding that complexity here, though.)
+                    if returncode == 255:
+                        returncode = errno.EINVAL
+                    raise OSError(
+                        returncode,
+                        "error running %r: %s" % (cmd, os.strerror(returncode)),
+                    )
+                return
 
-            stdin = open(os.devnull, "r")
-            if stdout is None:
-                stdout = open(os.devnull, "w")
-            if stderr is None:
-                stderr = open(os.devnull, "w")
+            try:
+                # Start a new session
+                os.setsid()
 
-            # connect stdin to devnull to make sure the subprocess can't
-            # muck up that stream for mercurial.
-            subprocess.Popen(
-                cmd,
-                shell=shell,
-                env=env,
-                close_fds=True,
-                stdin=stdin,
-                stdout=stdout,
-                stderr=stderr,
-            )
-            returncode = 0
-        except EnvironmentError as ex:
-            returncode = ex.errno & 0xff
-            if returncode == 0:
-                # This shouldn't happen, but just in case make sure the
-                # return code is never 0 here.
+                stdin = open(os.devnull, "r")
+                if stdout is None:
+                    stdout = open(os.devnull, "w")
+                if stderr is None:
+                    stderr = open(os.devnull, "w")
+
+                # connect stdin to devnull to make sure the subprocess can't
+                # muck up that stream for mercurial.
+                subprocess.Popen(
+                    cmd,
+                    shell=shell,
+                    env=env,
+                    close_fds=True,
+                    stdin=stdin,
+                    stdout=stdout,
+                    stderr=stderr,
+                )
+                returncode = 0
+            except EnvironmentError as ex:
+                returncode = ex.errno & 0xff
+                if returncode == 0:
+                    # This shouldn't happen, but just in case make sure the
+                    # return code is never 0 here.
+                    returncode = 255
+            except Exception:
                 returncode = 255
-        except Exception:
-            returncode = 255
         finally:
-            # mission accomplished, this child needs to exit and not
-            # continue the hg process here.
-            os._exit(returncode)
+            if os.getpid() != parentpid:
+                # mission accomplished, this child needs to exit and not
+                # continue the hg process here.
+                os._exit(returncode)
 
 
 def runshellcommand(script, env):
