@@ -389,7 +389,7 @@ class InodeCmd(Subcmd):
         out = sys.stdout.buffer
         instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
         with instance.get_thrift_client() as client:
-            results = client.debugInodeStatus(bytes(checkout.path), rel_path)
+            results = client.debugInodeStatus(bytes(checkout.path), bytes(rel_path))
 
         out.write(b"%d loaded TreeInodes\n" % len(results))
         for inode_info in results:
@@ -655,7 +655,9 @@ class UnloadInodesCmd(Subcmd):
             age = TimeSpec()
             age.seconds = int(args.age)
             age.nanoSeconds = int((args.age - age.seconds) * 10 ** 9)
-            count = client.unloadInodeForPath(bytes(checkout.path), str(rel_path), age)
+            count = client.unloadInodeForPath(
+                bytes(checkout.path), bytes(rel_path), age
+            )
 
             unload_path = checkout.path.joinpath(rel_path)
             print(f"Unloaded {count} inodes under {unload_path}")
