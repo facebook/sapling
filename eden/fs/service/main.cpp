@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
     fprintf(
         stderr,
         "invalid flag value: %s: %s\n",
-        FLAGS_edenDir.c_str(),
+        FLAGS_etcEdenDir.c_str(),
         folly::exceptionStr(ex).c_str());
     return EX_SOFTWARE;
   }
