@@ -69,6 +69,8 @@ class HgBackingStore : public BackingStore {
   FOLLY_NODISCARD folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const override;
 
+  folly::Future<std::unique_ptr<Blob>> verifyEmptyBlob(const Hash& id) override;
+
  private:
   // Forbidden copy constructor and assignment operator
   HgBackingStore(HgBackingStore const&) = delete;

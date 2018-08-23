@@ -233,5 +233,22 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
   });
 }
 
+Future<std::unique_ptr<Blob>> HgBackingStore::verifyEmptyBlob(const Hash& id) {
+  // Re-import the blob and confirm that it is empty.
+  //
+  // TODO: It would be nice if we could avoid repeatedly re-importing blobs that
+  // are legitimately empty.  Once we track down and fix the underlying issue
+  // that is causing blobs to be imported as empty we should change the storage
+  // format in the LocalStore so that we can confirm if the blob contents need
+  // verification or not.
+  return getBlob(id).thenValue([id](unique_ptr<Blob>&& blob) {
+    if (blob->getContents().empty()) {
+      return unique_ptr<Blob>(nullptr);
+    }
+    XLOG(WARN) << "fixed previously incorrect empty import of blob " << id;
+    return std::move(blob);
+  });
+}
+
 } // namespace eden
 } // namespace facebook

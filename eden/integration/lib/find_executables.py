@@ -118,6 +118,16 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def ZERO_BLOB(self) -> str:
+        return self._find_exe(
+            "zero_blob",
+            env="EDENFS_ZERO_BLOB",
+            candidates=[
+                os.path.join(self.BUCK_OUT, "gen/eden/integration/helpers/zero_blob")
+            ],
+        )
+
+    @cached_property
     def GIT(self) -> str:
         git = distutils.spawn.find_executable(
             "git.real"
