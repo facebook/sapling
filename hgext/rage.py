@@ -246,7 +246,10 @@ def _makerage(ui, repo, **opts):
             del opts["_repo"]
         ui.pushbuffer(error=True)
         try:
-            cmd(ui, _repo, *args, **opts)
+            if cmd.norepo:
+                cmd(ui, *args, **opts)
+            else:
+                cmd(ui, _repo, *args, **opts)
         finally:
             return ui.popbuffer()
 
@@ -287,6 +290,7 @@ def _makerage(ui, repo, **opts):
         ),
         ("hg blackbox -l60", lambda: hgcmd("blackbox", limit=60)),
         ("hg summary", lambda: hgcmd("summary")),
+        ("hg debugprocesstree", lambda: hgcmd("debugprocesstree")),
         ("hg config (local)", lambda: "\n".join(localconfig(ui))),
         ("hg sparse", lambda: hgcmd("sparse")),
         ("usechg", (usechginfo)),
