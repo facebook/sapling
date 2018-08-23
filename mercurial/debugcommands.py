@@ -2113,9 +2113,12 @@ def debugprocesstree(ui, *pids, **opts):
     Requires osquery to be installed.
     """
     try:
-        processes = json.loads(
-            subprocess.check_output(["osqueryi", "--json", "-A", "processes"])
-        )
+        with open(os.devnull, "w") as null:
+            processes = json.loads(
+                subprocess.check_output(
+                    ["osqueryi", "--json", "-A", "processes"], stderr=null
+                )
+            )
     except Exception:
         raise error.Abort(
             _("cannot get process information from osquery"),
