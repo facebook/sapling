@@ -96,6 +96,12 @@ class AddTest(EdenHgTestCase):
         self.hg("forget", "somefile.bak")
         self.assert_status({".gitignore": "?"})
 
+        # Also try if somefile.bak is a symlink
+        os.symlink(b"symlink contents", os.path.join(self.mount, "somefile.bak"))
+        self.assert_status({".gitignore": "?", "somefile.bak": "I"})
+        self.hg("add", "somefile.bak")
+        self.assert_status({".gitignore": "?", "somefile.bak": "A"})
+
     def test_add_ignored_directory_has_no_effect(self):
         self.write_file(".gitignore", "ignored_directory\n")
         self.hg("add", ".gitignore")
