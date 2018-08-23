@@ -860,7 +860,8 @@ def autosyncenabled(ui, _repo):
 
 def backuplockcheck(ui, repo):
     try:
-        lockmod.trylock(ui, repo.vfs, _backuplockname, 0, 0)
+        srcrepo = shareutil.getsrcrepo(repo)
+        lockmod.trylock(ui, srcrepo.vfs, _backuplockname, 0, 0)
     except error.LockHeld as e:
         if e.lockinfo.isrunning():
             lockinfo = e.lockinfo
