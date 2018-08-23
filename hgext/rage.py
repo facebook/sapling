@@ -104,6 +104,15 @@ def localconfig(ui):
     return result
 
 
+def overriddenconfig(ui):
+    result = []
+    for section, name, value in ui.walkconfig():
+        source = ui.configsource(section, name)
+        if source.find("overrides") > -1:
+            result.append("%s.%s=%s  # %s" % (section, name, value, source))
+    return result
+
+
 def usechginfo():
     """FBONLY: Information about whether chg is enabled"""
     files = {"system": "/etc/mercurial/usechg", "user": os.path.expanduser("~/.usechg")}
@@ -318,7 +327,7 @@ def _makerage(ui, repo, **opts):
             lambda: infinitepushbackuplogs(ui, repo),
         ),
         ("scm daemon logs", lambda: scmdaemonlog(ui, repo)),
-        ("hg config (all)", lambda: hgcmd("config")),
+        ("hg config (overrides)", lambda: "\n".join(overriddenconfig(ui))),
         ("fsmonitor state", lambda: readfsmonitorstate(repo)),
     ]
 
