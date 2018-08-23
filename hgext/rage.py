@@ -273,6 +273,7 @@ def _makerage(ui, repo, **opts):
         ("unixname", lambda: encoding.environ.get("LOGNAME")),
         ("hostname", lambda: socket.gethostname()),
         ("repo location", lambda: repo.root),
+        ("fstype", lambda: util.getfstype(repo.root)),
         ("active bookmark", lambda: bookmarks._readactive(repo, repo._bookmarks)),
         ("hg version", lambda: __import__("mercurial.__version__").__version__.version),
         ("obsstore size", lambda: str(srcrepo.vfs.stat("store/obsstore").st_size)),
