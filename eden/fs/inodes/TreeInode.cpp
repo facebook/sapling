@@ -1523,19 +1523,19 @@ Future<Unit> TreeInode::rename(
   auto onLoadFinished = [self = inodePtrFromThis(),
                          nameCopy = name.copy(),
                          destParent,
-                         destNameCopy = destName.copy()]() {
+                         destNameCopy = destName.copy()](auto&&) {
     return self->rename(nameCopy, destParent, destNameCopy);
   };
 
   if (needSrc && needDest) {
     auto srcFuture = getOrLoadChild(name);
     auto destFuture = destParent->getOrLoadChild(destName);
-    return folly::collect(srcFuture, destFuture).then(onLoadFinished);
+    return folly::collect(srcFuture, destFuture).thenValue(onLoadFinished);
   } else if (needSrc) {
-    return getOrLoadChild(name).then(onLoadFinished);
+    return getOrLoadChild(name).thenValue(onLoadFinished);
   } else {
     CHECK(needDest);
-    return destParent->getOrLoadChild(destName).then(onLoadFinished);
+    return destParent->getOrLoadChild(destName).thenValue(onLoadFinished);
   }
 }
 
