@@ -45,7 +45,7 @@ class MemoryWriteBatch : public LocalStore::WriteBatch {
       for (const auto& it : storage_[keySpace]) {
         store_->put(
             static_cast<LocalStore::KeySpace>(keySpace),
-            it.first,
+            folly::StringPiece(it.first),
             StringPiece(it.second));
       }
       storage_[keySpace].clear();
