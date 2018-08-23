@@ -18,6 +18,7 @@ import socket
 import ssl
 import string
 import struct
+import subprocess
 import sys
 import tempfile
 import time
@@ -39,6 +40,7 @@ from . import (
     fileset,
     formatter,
     hg,
+    json,
     localrepo,
     lock as lockmod,
     merge as mergemod,
@@ -2100,6 +2102,88 @@ def debugpickmergetool(ui, repo, *pats, **opts):
                 if not ui.debugflag:
                     ui.popbuffer()
             ui.write(("%s = %s\n") % (path, tool))
+
+
+@command(b"debugprocesstree", [], _("[PID] [PID] ..."), norepo=True)
+def debugprocesstree(ui, *pids, **opts):
+    """show process tree related to hg
+
+    If pid is provided, only show hg processes related to given pid.
+
+    Requires osquery to be installed.
+    """
+    try:
+        processes = json.loads(
+            subprocess.check_output(["osqueryi", "--json", "-A", "processes"])
+        )
+    except Exception:
+        raise error.Abort(
+            _("cannot get process information from osquery"),
+            hint=_("is osquery installed properly?"),
+        )
+
+    # Build maps for easier lookups.
+    pidprocess = {p["pid"]: p for p in processes}
+    childparent = {}  # {pid: [pid]}
+    parentchild = {}  # {pid: [pid]}
+    for pid, process in pidprocess.items():
+        ppid = process["parent"]
+        childparent.setdefault(pid, []).append(ppid)
+        parentchild.setdefault(ppid, []).append(pid)
+
+    # Find out hg processes.
+    cmdre = util.re.compile("([\\/](hg|chg)[ \.])|^chg\[worker")
+    if not pids:
+        hgpids = {pid for pid, p in pidprocess.items() if cmdre.search(p["cmdline"])}
+    else:
+        hgpids = {pid for pid in pids if pid in pidprocess}
+        # Extend selection so if "chg[worker/x]" is selected, also select "x"
+        chgpidre = util.re.compile("chg\[worker/(\d+)\]")
+        for pid in list(hgpids):
+            match = chgpidre.match(pidprocess[pid]["cmdline"])
+            if match:
+                chgpid = match.group(1)
+                if chgpid in pidprocess:
+                    hgpids.add(chgpid)
+
+    # Select all ancestors, and descendants of hg processes.
+    # In revset language, that's "(::hgpids) + (hgpids::)"
+    # Assume the graph does not have cycles.
+    # Descendants are listed so they can be colored differently.
+    selected = set()
+    descendants = set()
+
+    def selectancestors(pid):
+        selected.add(pid)
+        for ppid in childparent.get(pid, []):
+            selectancestors(ppid)
+
+    def selectdescendants(pid):
+        descendants.add(pid)
+        selected.add(pid)
+        for cpid in parentchild.get(pid, []):
+            selectdescendants(cpid)
+
+    for pid in hgpids:
+        selectancestors(pid)
+        selectdescendants(pid)
+
+    # Print the tree!
+    def printtree(pid, level=0):
+        process = pidprocess.get(pid)
+        if process:
+            if pid in hgpids:
+                label = "processtree.selected"
+            elif pid in descendants:
+                label = "processtree.descendants"
+            else:
+                label = "processtree.ancestors"
+            msg = "%8s%s%s\n" % (pid, "  " * level, ui.label(process["cmdline"], label))
+            ui.write(msg)
+        for childpid in [p for p in parentchild.get(pid, []) if p in selected]:
+            printtree(childpid, level + 1)
+
+    printtree("0")
 
 
 @command("debugpushkey", [], _("REPO NAMESPACE [KEY OLD NEW]"), norepo=True)

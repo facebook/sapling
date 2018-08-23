@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import json as _sysjson
+
 from mercurial import encoding, error, pycompat, util
 
 
@@ -46,3 +48,25 @@ def dumps(obj, paranoid=True):
         return "[" + ", ".join(out) + "]"
     else:
         raise TypeError("cannot encode type %s" % obj.__class__.__name__)
+
+
+def _rapply(f, xs):
+    if xs is None:
+        # assume None means non-value of optional data
+        return xs
+    if isinstance(xs, (list, set, tuple)):
+        return type(xs)(_rapply(f, x) for x in xs)
+    if isinstance(xs, dict):
+        return type(xs)((_rapply(f, k), _rapply(f, v)) for k, v in xs.items())
+    return f(xs)
+
+
+def loads(string):
+    """Like stdlib json.loads, but results are bytes instead of unicode
+
+    Warning: this does not round-trip with "dumps". "dumps" supports non-utf8
+    binary content that is unsupported by this function.
+    """
+    # XXX: This should round-trip with "dumps". But it might be non-trivial to
+    # do so.
+    return _rapply(lambda s: bytes(s.encode("utf-8")), _sysjson.loads(string))
