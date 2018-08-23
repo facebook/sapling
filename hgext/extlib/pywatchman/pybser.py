@@ -26,6 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# no unicode literals
 from __future__ import absolute_import, division, print_function
 
 import binascii
@@ -35,9 +36,6 @@ import struct
 import sys
 
 from . import compat
-
-
-# no unicode literals
 
 
 BSER_ARRAY = b"\x00"
@@ -90,9 +88,8 @@ def _int_size(x):
 
 def _buf_pos(buf, pos):
     ret = buf[pos]
-    # In Python 2, buf is a str array so buf[pos] is a string. In Python 3, buf
-    # is a bytes array and buf[pos] is an integer.
-    if compat.PYTHON3:
+    # Normalize the return type to bytes
+    if compat.PYTHON3 and not isinstance(ret, bytes):
         ret = bytes((ret,))
     return ret
 
@@ -237,7 +234,7 @@ class _bser_buffer(object):
             if compat.PYTHON3:
                 iteritems = val.items()
             else:
-                iteritems = val.iteritems()
+                iteritems = val.iteritems()  # noqa: B301 Checked version above
             for k, v in iteritems:
                 self.append_string(k)
                 self.append_recursive(v)
@@ -348,8 +345,8 @@ class Bunser(object):
             fmt = b"=q"
         else:
             raise ValueError(
-                "Invalid bser int encoding 0x%s"
-                % binascii.hexlify(int_type).decode("ascii")
+                "Invalid bser int encoding 0x%s at position %s"
+                % (binascii.hexlify(int_type).decode("ascii"), pos)
             )
         int_val = struct.unpack_from(fmt, buf, pos + 1)[0]
         return (int_val, pos + needed)
@@ -370,7 +367,7 @@ class Bunser(object):
     def unser_array(self, buf, pos):
         arr_len, pos = self.unser_int(buf, pos + 1)
         arr = []
-        for i in range(arr_len):
+        for _ in range(arr_len):
             arr_item, pos = self.loads_recursive(buf, pos)
             arr.append(arr_item)
 
@@ -387,7 +384,7 @@ class Bunser(object):
             keys = []
             vals = []
 
-        for i in range(obj_len):
+        for _ in range(obj_len):
             key, pos = self.unser_utf8_string(buf, pos)
             val, pos = self.loads_recursive(buf, pos)
             if self.mutable:
@@ -410,7 +407,7 @@ class Bunser(object):
         keys, pos = keys_bunser.unser_array(buf, pos + 1)
         nitems, pos = self.unser_int(buf, pos)
         arr = []
-        for i in range(nitems):
+        for _ in range(nitems):
             if self.mutable:
                 obj = {}
             else:
@@ -522,7 +519,9 @@ def loads(buf, mutable=True, value_encoding=None, value_errors=None):
     pos = info[3]
 
     if len(buf) != expected_len + pos:
-        raise ValueError("bser data len != header len")
+        raise ValueError(
+            "bser data len %d != header len %d" % (expected_len + pos, len(buf))
+        )
 
     bunser = Bunser(
         mutable=mutable, value_encoding=value_encoding, value_errors=value_errors

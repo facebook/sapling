@@ -26,6 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# no unicode literals
 from __future__ import absolute_import, division, print_function
 
 import inspect
@@ -35,10 +36,7 @@ import socket
 import subprocess
 import time
 
-from . import capabilities, compat, encoding
-
-
-# no unicode literals
+from . import capabilities, compat, encoding, load
 
 
 # Sometimes it's really hard to get Python extensions to compile,
@@ -62,7 +60,7 @@ if os.name == "nt":
     GENERIC_WRITE = 0x40000000
     FILE_FLAG_OVERLAPPED = 0x40000000
     OPEN_EXISTING = 3
-    INVALID_HANDLE_VALUE = -1
+    INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
     FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
     FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100
     FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
@@ -246,6 +244,14 @@ class WatchmanError(Exception):
         return self.msg
 
 
+class BSERv1Unsupported(WatchmanError):
+    pass
+
+
+class UseAfterFork(WatchmanError):
+    pass
+
+
 class WatchmanEnvironmentError(WatchmanError):
     def __init__(self, msg, errno, errmsg, cmd=None):
         super(WatchmanEnvironmentError, self).__init__(
@@ -364,8 +370,9 @@ class UnixSocketTransport(Transport):
             raise SocketConnectError(self.sockpath, e)
 
     def close(self):
-        self.sock.close()
-        self.sock = None
+        if self.sock:
+            self.sock.close()
+            self.sock = None
 
     def setTimeout(self, value):
         self.timeout = value
@@ -435,6 +442,8 @@ class WindowsNamedPipeTransport(Transport):
         self.timeout = int(math.ceil(timeout * 1000))
         self._iobuf = None
 
+        if compat.PYTHON3:
+            sockpath = os.fsencode(sockpath)
         self.pipe = CreateFile(
             sockpath,
             GENERIC_READ | GENERIC_WRITE,
@@ -445,14 +454,16 @@ class WindowsNamedPipeTransport(Transport):
             None,
         )
 
-        if self.pipe == INVALID_HANDLE_VALUE:
+        err = GetLastError()
+        if self.pipe == INVALID_HANDLE_VALUE or self.pipe == 0:
             self.pipe = None
-            self._raise_win_err("failed to open pipe %s" % sockpath, GetLastError())
+            self._raise_win_err("failed to open pipe %s" % sockpath, err)
 
         # event for the overlapped I/O operations
         self._waitable = CreateEvent(None, True, False, None)
+        err = GetLastError()
         if self._waitable is None:
-            self._raise_win_err("CreateEvent failed", GetLastError())
+            self._raise_win_err("CreateEvent failed", err)
 
         self._get_overlapped_result_ex = GetOverlappedResultEx
         if (
@@ -509,7 +520,7 @@ class WindowsNamedPipeTransport(Transport):
         if not immediate:
             err = GetLastError()
             if err != ERROR_IO_PENDING:
-                self._raise_win_err("failed to read %d bytes" % size, GetLastError())
+                self._raise_win_err("failed to read %d bytes" % size, err)
 
         nread = wintypes.DWORD()
         if not self._get_overlapped_result_ex(
@@ -557,7 +568,8 @@ class WindowsNamedPipeTransport(Transport):
             err = GetLastError()
             if err != ERROR_IO_PENDING:
                 self._raise_win_err(
-                    "failed to write %d bytes" % len(data), GetLastError()
+                    "failed to write %d bytes to handle %r" % (len(data), self.pipe),
+                    err,
                 )
 
         # Obtain results, waiting if needed
@@ -604,9 +616,10 @@ class CLIProcessTransport(Transport):
     proc = None
     closed = True
 
-    def __init__(self, sockpath, timeout):
+    def __init__(self, sockpath, timeout, binpath="watchman"):
         self.sockpath = sockpath
         self.timeout = timeout
+        self.binpath = binpath
 
     def close(self):
         if self.proc:
@@ -614,13 +627,14 @@ class CLIProcessTransport(Transport):
                 self.proc.kill()
             self.proc.stdin.close()
             self.proc.stdout.close()
+            self.proc.wait()
             self.proc = None
 
     def _connect(self):
         if self.proc:
             return self.proc
         args = [
-            "watchman",
+            self.binpath,
             "--sockname={0}".format(self.sockpath),
             "--logfile=/BOGUS",
             "--statefile=/BOGUS",
@@ -637,7 +651,7 @@ class CLIProcessTransport(Transport):
     def readBytes(self, size):
         self._connect()
         res = self.proc.stdout.read(size)
-        if res == "":
+        if not res:
             raise WatchmanError("EOF on CLI process transport")
         return res
 
@@ -655,8 +669,17 @@ class CLIProcessTransport(Transport):
 class BserCodec(Codec):
     """ use the BSER encoding.  This is the default, preferred codec """
 
+    def __init__(self, transport, value_encoding, value_errors):
+        super(BserCodec, self).__init__(transport)
+        self._value_encoding = value_encoding
+        self._value_errors = value_errors
+
     def _loads(self, response):
-        return bser.loads(response)  # Defaults to BSER v1
+        return bser.loads(
+            response,
+            value_encoding=self._value_encoding,
+            value_errors=self._value_errors,
+        )
 
     def receive(self):
         buf = [self.transport.readBytes(sniff_len)]
@@ -687,22 +710,35 @@ class ImmutableBserCodec(BserCodec):
         immutable object support """
 
     def _loads(self, response):
-        return bser.loads(response, False)  # Defaults to BSER v1
+        return bser.loads(
+            response,
+            False,
+            value_encoding=self._value_encoding,
+            value_errors=self._value_errors,
+        )
 
 
 class Bser2WithFallbackCodec(BserCodec):
     """ use BSER v2 encoding """
 
-    def __init__(self, transport):
-        super(Bser2WithFallbackCodec, self).__init__(transport)
-        # Once the server advertises support for bser-v2 we should switch this
-        # to 'required' on Python 3.
-        self.send(["version", {"optional": ["bser-v2"]}])
+    def __init__(self, transport, value_encoding, value_errors):
+        super(Bser2WithFallbackCodec, self).__init__(
+            transport, value_encoding, value_errors
+        )
+        if compat.PYTHON3:
+            bserv2_key = "required"
+        else:
+            bserv2_key = "optional"
+
+        self.send(["version", {bserv2_key: ["bser-v2"]}])
 
         capabilities = self.receive()
 
         if "error" in capabilities:
-            raise Exception("Unsupported BSER version")
+            raise BSERv1Unsupported(
+                "The watchman server version does not support Python 3. Please "
+                "upgrade your watchman server."
+            )
 
         if capabilities["capabilities"]["bser-v2"]:
             self.bser_version = 2
@@ -710,9 +746,6 @@ class Bser2WithFallbackCodec(BserCodec):
         else:
             self.bser_version = 1
             self.bser_capabilities = 0
-
-    def _loads(self, response):
-        return bser.loads(response)
 
     def receive(self):
         buf = [self.transport.readBytes(sniff_len)]
@@ -746,6 +779,13 @@ class Bser2WithFallbackCodec(BserCodec):
         else:
             cmd = bser.dumps(*args)
         self.transport.write(cmd)
+
+
+class ImmutableBser2Codec(Bser2WithFallbackCodec, ImmutableBserCodec):
+    """ use the BSER encoding, decoding values using the newer
+        immutable object support """
+
+    pass
 
 
 class JsonCodec(Codec):
@@ -800,7 +840,7 @@ class client(object):
     unilateral = ["log", "subscription"]
     tport = None
     useImmutableBser = None
-    sockpathretry = False  # Retry if sockpath was provided
+    pid = None
 
     def __init__(
         self,
@@ -810,13 +850,16 @@ class client(object):
         sendEncoding=None,
         recvEncoding=None,
         useImmutableBser=False,
+        # use False for these two because None has a special
+        # meaning
+        valueEncoding=False,
+        valueErrors=False,
+        binpath="watchman",
     ):
         self.sockpath = sockpath
-        # Remember that sockpath was provided
-        if sockpath:
-            self.sockpathretry = True
         self.timeout = timeout
         self.useImmutableBser = useImmutableBser
+        self.binpath = binpath
 
         if inspect.isclass(transport) and issubclass(transport, Transport):
             self.transport = transport
@@ -841,13 +884,45 @@ class client(object):
         self.recvCodec = self._parseEncoding(recvEncoding)
         self.sendCodec = self._parseEncoding(sendEncoding)
 
+        # We want to act like the native OS methods as much as possible. This
+        # means returning bytestrings on Python 2 by default and Unicode
+        # strings on Python 3. However we take an optional argument that lets
+        # users override this.
+        if valueEncoding is False:
+            if compat.PYTHON3:
+                self.valueEncoding = encoding.get_local_encoding()
+                self.valueErrors = encoding.default_local_errors
+            else:
+                self.valueEncoding = None
+                self.valueErrors = None
+        else:
+            self.valueEncoding = valueEncoding
+            if valueErrors is False:
+                self.valueErrors = encoding.default_local_errors
+            else:
+                self.valueErrors = valueErrors
+
+    def _makeBSERCodec(self, codec):
+        def make_codec(transport):
+            return codec(transport, self.valueEncoding, self.valueErrors)
+
+        return make_codec
+
     def _parseEncoding(self, enc):
         if enc == "bser":
             if self.useImmutableBser:
-                return ImmutableBserCodec
-            return BserCodec
-        elif enc == "experimental-bser-v2":
-            return Bser2WithFallbackCodec
+                return self._makeBSERCodec(ImmutableBser2Codec)
+            return self._makeBSERCodec(Bser2WithFallbackCodec)
+        elif enc == "bser-v1":
+            if compat.PYTHON3:
+                raise BSERv1Unsupported(
+                    "Python 3 does not support the BSER v1 encoding: specify "
+                    '"bser" or omit the sendEncoding and recvEncoding '
+                    "arguments"
+                )
+            if self.useImmutableBser:
+                return self._makeBSERCodec(ImmutableBserCodec)
+            return self._makeBSERCodec(BserCodec)
         elif enc == "json":
             return JsonCodec
         else:
@@ -859,19 +934,15 @@ class client(object):
         return name in result
 
     def _resolvesockname(self):
-
         # if invoked via a trigger, watchman will set this env var; we
         # should use it unless explicitly set otherwise
         path = os.getenv("WATCHMAN_SOCK")
         if path:
             return path
 
-        # if sockpath was provided we should use it
-        if self.sockpath:
-            return self.sockpath
-
-        cmd = ["watchman", "--output-encoding=bser", "get-sockname"]
+        cmd = [self.binpath, "--output-encoding=bser", "get-sockname"]
         try:
+            # noqa: C408
             args = dict(
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -889,7 +960,7 @@ class client(object):
             p = subprocess.Popen(cmd, **args)
 
         except OSError as e:
-            raise WatchmanError('"watchman" executable not in PATH (%s)' % e)
+            raise WatchmanError('"watchman" executable not in PATH (%s)', e)
 
         stdout, stderr = p.communicate()
         exitcode = p.poll()
@@ -898,32 +969,41 @@ class client(object):
             raise WatchmanError("watchman exited with code %d" % exitcode)
 
         result = bser.loads(stdout)
-        if b"error" in result:
+        if "error" in result:
             raise WatchmanError("get-sockname error: %s" % result["error"])
 
-        return result[b"sockname"]
+        return result["sockname"]
 
     def _connect(self):
         """ establish transport connection """
 
         if self.recvConn:
+            if self.pid != os.getpid():
+                raise UseAfterFork(
+                    "do not re-use a connection after fork; open a new client instead"
+                )
             return
 
-        self.sockpath = self._resolvesockname()
-        self.tport = self.transport(self.sockpath, self.timeout)
+        if self.sockpath is None:
+            self.sockpath = self._resolvesockname()
 
-        try:
-            self.sendConn = self.sendCodec(self.tport)
-            self.recvConn = self.recvCodec(self.tport)
-        except Exception:
-            if self.sockpathretry:
-                self.sockpath = None
-                self.sockpathretry = False
-                self._connect()
-            else:
-                raise
+        kwargs = {}
+        if self.transport == CLIProcessTransport:
+            kwargs["binpath"] = self.binpath
+
+        self.tport = self.transport(self.sockpath, self.timeout, **kwargs)
+        self.sendConn = self.sendCodec(self.tport)
+        self.recvConn = self.recvCodec(self.tport)
+        self.pid = os.getpid()
 
     def __del__(self):
+        self.close()
+
+    def __enter__(self):
+        self._connect()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         self.close()
 
     def close(self):
@@ -951,16 +1031,10 @@ class client(object):
         self._connect()
         result = self.recvConn.receive()
         if self._hasprop(result, "error"):
-            error = result["error"]
-            if compat.PYTHON3 and isinstance(self.recvConn, BserCodec):
-                error = result["error"].decode("utf-8", "surrogateescape")
-            raise CommandError(error)
+            raise CommandError(result["error"])
 
         if self._hasprop(result, "log"):
-            log = result["log"]
-            if compat.PYTHON3 and isinstance(self.recvConn, BserCodec):
-                log = log.decode("utf-8", "surrogateescape")
-            self.logs.append(log)
+            self.logs.append(result["log"])
 
         if self._hasprop(result, "subscription"):
             sub = result["subscription"]
@@ -969,7 +1043,7 @@ class client(object):
             self.subs[sub].append(result)
 
             # also accumulate in {root,sub} keyed store
-            root = os.path.normcase(result["root"])
+            root = os.path.normpath(os.path.normcase(result["root"]))
             if not root in self.sub_by_root:
                 self.sub_by_root[root] = {}
             if not sub in self.sub_by_root[root]:
@@ -1012,18 +1086,11 @@ class client(object):
         remove processing impacts both the unscoped and scoped stores
         for the subscription data.
         """
-        if compat.PYTHON3 and issubclass(self.recvCodec, BserCodec):
-            # People may pass in Unicode strings here -- but currently BSER only
-            # returns bytestrings. Deal with that.
-            if isinstance(root, str):
-                root = encoding.encode_local(root)
-            if isinstance(name, str):
-                name = name.encode("utf-8")
-
         if root is not None:
-            if not root in self.sub_by_root:
+            root = os.path.normpath(os.path.normcase(root))
+            if root not in self.sub_by_root:
                 return None
-            if not name in self.sub_by_root[root]:
+            if name not in self.sub_by_root[root]:
                 return None
             sub = self.sub_by_root[root][name]
             if remove:
@@ -1033,7 +1100,7 @@ class client(object):
                     del self.subs[name]
             return sub
 
-        if not (name in self.subs):
+        if name not in self.subs:
             return None
         sub = self.subs[name]
         if remove:
@@ -1053,6 +1120,7 @@ class client(object):
         self._connect()
         try:
             self.sendConn.send(args)
+
             res = self.receive()
             while self.isUnilateralResponse(res):
                 res = self.receive()

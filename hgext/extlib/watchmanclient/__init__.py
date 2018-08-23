@@ -124,6 +124,8 @@ class client(object):
                 self._watchmanclient = pywatchman.client(
                     sockpath=self._sockpath,
                     timeout=self._timeout,
+                    recvEncoding="bser-v1",
+                    sendEncoding="bser-v1",
                     useImmutableBser=True,
                 )
             result = self._watchmanclient.query(*watchmanargs)

@@ -26,12 +26,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# no unicode literals
 from __future__ import absolute_import, division, print_function
 
 import re
-
-
-# no unicode literals
 
 
 def parse_version(vstr):
@@ -66,6 +64,7 @@ def synthesize(vers, opts):
     vers["capabilities"] = {}
     for name in opts["optional"]:
         vers["capabilities"][name] = check(parsed_version, name)
+    failed = False  # noqa: F841 T25377293 Grandfathered in
     for name in opts["required"]:
         have = check(parsed_version, name)
         vers["capabilities"][name] = have
