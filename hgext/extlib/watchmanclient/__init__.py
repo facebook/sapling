@@ -146,6 +146,15 @@ class client(object):
             try:
                 try:
                     return self._command(*args)
+                except pywatchman.UseAfterFork:
+                    # Ideally we wouldn't let this happen, but if it does happen,
+                    # record it in the log and retry the command.
+                    self._ui.log(
+                        "watchman-command",
+                        "UseAfterFork detected, re-establish a client connection",
+                    )
+                    self._watchmanclient = None
+                    return self._command(*args)
                 except WatchmanNoRoot:
                     # this 'watch' command can also raise a WatchmanNoRoot if
                     # watchman refuses to accept this root
