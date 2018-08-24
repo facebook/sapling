@@ -1369,6 +1369,9 @@ class Test(unittest.TestCase):
         # Claim that 256 colors is not supported.
         env["HGCOLORS"] = "16"
 
+        # Do not be affected by system legacy configs.
+        env["HGLEGACY"] = ""
+
         for k in (
             "HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy "
             + "HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER "

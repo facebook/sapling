@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import os
 import sys
 
 # Allow 'from mercurial import demandimport' to keep working.
@@ -303,3 +304,30 @@ if sys.version_info[0] >= 3:
     if not any(isinstance(x, hgpathentryfinder) for x in sys.meta_path):
         # meta_path is used before any implicit finders and before sys.path.
         sys.meta_path.insert(0, hgpathentryfinder())
+
+if getattr(sys, "platform") == "win32":
+    configdir = os.path.join(
+        getattr(os, "environ").get("PROGRAMDATA") or "\ProgramData",
+        "Facebook",
+        "Mercurial",
+    )
+else:
+    configdir = "/etc/mercurial"
+
+
+def shoulduselegacy(name):
+    legacy = getattr(os, "environ").get("HGLEGACY")
+    if legacy is not None:
+        return name in legacy.split()
+    else:
+        return os.path.lexists(os.path.join(configdir, "legacy.%s" % name))
+
+
+# Put a file under configdir/legacy.ui to use the legacy ui module.
+# This is an emergency way to switch to the old config parser if the new Rust
+# parser has issues.  The legacy ui module should be removed once the new Rust
+# config parser is verified to work stably in production.
+if shoulduselegacy("ui"):
+    import mercurial.legacyui as ui
+
+    sys.modules["mercurial.ui"] = ui

@@ -7,7 +7,13 @@ Invalid syntax: no value
   > novaluekey
   > EOF
   $ hg showconfig
-  hg: parse error at $TESTTMP/.hg/hgrc:1: novaluekey
+  hg: parse error: "$TESTTMP/.hg/hgrc":
+   --> 1:11
+    |
+  1 | novaluekey
+    |           ^---
+    |
+    = expected equal_sign
   [255]
 
 Invalid syntax: no key
@@ -16,7 +22,13 @@ Invalid syntax: no key
   > =nokeyvalue
   > EOF
   $ hg showconfig
-  hg: parse error at $TESTTMP/.hg/hgrc:1: =nokeyvalue
+  hg: parse error: "$TESTTMP/.hg/hgrc":
+   --> 1:1
+    |
+  1 | =nokeyvalue
+    | ^---
+    |
+    = expected new_line, name, left_bracket, comment_line, or directive
   [255]
 
 Test hint about invalid syntax from leading white space
@@ -25,8 +37,13 @@ Test hint about invalid syntax from leading white space
   >  key=value
   > EOF
   $ hg showconfig
-  hg: parse error at $TESTTMP/.hg/hgrc:1:  key=value
-  unexpected leading whitespace
+  hg: parse error: "$TESTTMP/.hg/hgrc":
+   --> 1:2
+    |
+  1 |  key=value
+    |  ^---
+    |
+    = expected new_line
   [255]
 
   $ cat > .hg/hgrc << EOF
@@ -34,8 +51,13 @@ Test hint about invalid syntax from leading white space
   > key=value
   > EOF
   $ hg showconfig
-  hg: parse error at $TESTTMP/.hg/hgrc:1:  [section]
-  unexpected leading whitespace
+  hg: parse error: "$TESTTMP/.hg/hgrc":
+   --> 1:2
+    |
+  1 |  [section]
+    |  ^---
+    |
+    = expected new_line
   [255]
 
 Reset hgrc
@@ -98,12 +120,12 @@ Test empty config source:
 
   $ hg config --debug empty.source
   read config from: * (glob)
-  none: value
+  ui.setconfig: value
   $ hg config empty.source -Tjson
   [
    {
     "name": "empty.source",
-    "source": "",
+    "source": "ui.setconfig",
     "value": "value"
    }
   ]
@@ -167,17 +189,11 @@ edit failure
 
 config affected by environment variables
 
-  $ EDITOR=e1 VISUAL=e2 hg config --debug | grep 'ui\.editor'
-  $VISUAL: ui.editor=e2
+  $ EDITOR=e1 hg config --debug | grep 'ui\.editor'
+  $EDITOR: ui.editor=e1
 
-  $ VISUAL=e2 hg config --debug --config ui.editor=e3 | grep 'ui\.editor'
+  $ EDITOR=e2 hg config --debug --config ui.editor=e3 | grep 'ui\.editor'
   --config: ui.editor=e3
-
-  $ PAGER=p1 hg config --debug | grep 'pager\.pager'
-  $PAGER: pager.pager=p1
-
-  $ PAGER=p1 hg config --debug --config pager.pager=p2 | grep 'pager\.pager'
-  --config: pager.pager=p2
 
 verify that aliases are evaluated as well
 

@@ -90,7 +90,13 @@ However, we can't prevent it from loading extensions and configs:
   $ mkdir -p badrepo/.hg
   $ echo 'invalid-syntax' > badrepo/.hg/hgrc
   $ hg log -b -Rbadrepo default
-  hg: parse error at badrepo/.hg/hgrc:1: invalid-syntax
+  hg: parse error: "$TESTTMP/a/badrepo/.hg/hgrc":
+   --> 1:15
+    |
+  1 | invalid-syntax
+    |               ^---
+    |
+    = expected equal_sign
   [255]
 
   $ hg log -b --cwd=inexistent default

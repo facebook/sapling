@@ -10,7 +10,7 @@ Tests discovery against servers without getbundle support:
   > EOF
   $ cp $HGRCPATH $HGRCPATH-withcap
 
-  $ CAP="getbundle known changegroupsubset bundle2"
+  $ CAP="getbundle,known,changegroupsubset,bundle2"
   $ . "$TESTDIR/notcapable"
   $ cp $HGRCPATH $HGRCPATH-nocap
   $ cp $HGRCPATH-withcap $HGRCPATH

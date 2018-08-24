@@ -16,7 +16,13 @@ Basic syntax error
 
   $ echo "invalid" > $HGRC
   $ hg version
-  hg: parse error at $TESTTMP/hgrc:1: invalid
+  hg: parse error: "$TESTTMP/hgrc":
+   --> 1:8
+    |
+  1 | invalid
+    |        ^---
+    |
+    = expected equal_sign
   [255]
   $ echo "" > $HGRC
 
@@ -54,8 +60,13 @@ issue1829: wrong indentation
   $ echo '[foo]' > $HGRC
   $ echo '  x = y' >> $HGRC
   $ hg version
-  hg: parse error at $TESTTMP/hgrc:2:   x = y
-  unexpected leading whitespace
+  hg: parse error: "$TESTTMP/hgrc":
+   --> 2:3
+    |
+  2 |   x = y
+    |   ^---
+    |
+    = expected new_line
   [255]
 
   $ $PYTHON -c "print '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n'" \
@@ -184,7 +195,6 @@ with environment variables
   set config by: $PAGER
   read config from: $TESTTMP/hgrc
   repo: bundle.mainreporoot=$TESTTMP
-  $PAGER: pager.pager=p1
   $VISUAL: ui.editor=e2
   --verbose: ui.verbose=False
   --debug: ui.debug=True

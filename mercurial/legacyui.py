@@ -36,7 +36,6 @@ from . import (
 )
 from .i18n import _
 from .node import hex
-from .rust import config as rustconfig
 
 
 urlreq = util.urlreq
@@ -186,6 +185,8 @@ class ui(object):
         self._bufferapplylabels = None
         self.quiet = self.verbose = self.debugflag = self.tracebackflag = False
         self._knownconfig = configitems.coreitems
+        self._ocfg = config.config()  # overlay
+        self._ucfg = config.config()  # config
         self.callhooks = True
         # Insecure server connections requested.
         self.insecureconnections = False
@@ -197,10 +198,6 @@ class ui(object):
         self._styles = {}
 
         if src:
-            self._rcfg = src._rcfg.clone()
-            self._unserializable = src._unserializable.copy()
-            self._pinnedconfigs = src._pinnedconfigs.copy()
-
             self.fout = src.fout
             self.ferr = src.ferr
             self.fin = src.fin
@@ -208,6 +205,8 @@ class ui(object):
             self._disablepager = src._disablepager
             self._tweaked = src._tweaked
 
+            self._ucfg = src._ucfg.copy()
+            self._ocfg = src._ocfg.copy()
             self.environ = src.environ
             self.callhooks = src.callhooks
             self.insecureconnections = src.insecureconnections
@@ -220,13 +219,6 @@ class ui(object):
             self.httppasswordmgrdb = src.httppasswordmgrdb
             self._measuredtimes = src._measuredtimes
         else:
-            self._rcfg = rustconfig.config()
-            # map from IDs to unserializable Python objects.
-            self._unserializable = {}
-            # config "pinned" that cannot be loaded from files.
-            # ex. --config flags
-            self._pinnedconfigs = set()
-
             self.fout = util.stdout
             self.ferr = util.stderr
             self.fin = util.stdin
@@ -253,11 +245,21 @@ class ui(object):
     def load(cls):
         """Create a ui and load global and user configs"""
         u = cls()
-        u._rcfg, errors = rustconfig.config.load(util.datapath)
-        if errors:
-            raise error.ParseError("\n\n".join(errors))
-        root = os.path.expanduser("~")
-        u.fixconfig(root=root)
+        # we always trust global config files and environment variables
+        for t, f in rcutil.rccomponents():
+            if t == "path":
+                u.readconfig(f, trust=True)
+            elif t == "items":
+                sections = set()
+                for section, name, value, source in f:
+                    # do not set u._ocfg
+                    # XXX clean this up once immutable config object is a thing
+                    u._ucfg.set(section, name, value, source)
+                    sections.add(section)
+                for section in sections:
+                    u.fixconfig(section=section)
+            else:
+                raise error.ProgrammingError("unknown rctype: %s" % t)
         return u
 
     def copy(self):
@@ -288,29 +290,60 @@ class ui(object):
     def formatter(self, topic, opts):
         return formatter.formatter(self, self, topic, opts)
 
-    def readconfig(
-        self,
-        filename,
-        root=None,
-        trust=False,
-        sections=None,
-        remap=None,
-        source="ui.readconfig",
-    ):
-        cfg = self._rcfg
-        errors = cfg.readpath(
-            filename,
-            source,
-            sections,
-            remap and remap.items(),
-            list(self._pinnedconfigs),
-        )
-        if errors:
-            raise error.ParseError("\n\n".join(errors))
+    def readconfig(self, filename, root=None, trust=False, sections=None, remap=None):
+        try:
+            fp = open(filename, u"rb")
+        except IOError:
+            if not sections:  # ignore unless we were looking for something
+                return
+            raise
+
+        cfg = config.config()
+
+        try:
+            cfg.read(filename, fp, sections=sections, remap=remap)
+            fp.close()
+        except error.ConfigError as inst:
+            self.warn(_("ignored: %s\n") % str(inst))
+
+        if self.plain():
+            for k in (
+                "debug",
+                "fallbackencoding",
+                "quiet",
+                "slash",
+                "logtemplate",
+                "statuscopies",
+                "style",
+                "traceback",
+                "verbose",
+            ):
+                if k in cfg["ui"]:
+                    del cfg["ui"][k]
+            for k, v in cfg.items("defaults"):
+                del cfg["defaults"][k]
+            for k, v in cfg.items("commands"):
+                del cfg["commands"][k]
+        # Don't remove aliases from the configuration if in the exceptionlist
+        if self.plain("alias"):
+            for k, v in cfg.items("alias"):
+                del cfg["alias"][k]
+        if self.plain("revsetalias"):
+            for k, v in cfg.items("revsetalias"):
+                del cfg["revsetalias"][k]
+        if self.plain("templatealias"):
+            for k, v in cfg.items("templatealias"):
+                del cfg["templatealias"][k]
+        # Remove ui.exitcodemask
+        if self.plain("exitcode"):
+            if "exitcodemask" in cfg["ui"]:
+                del cfg["ui"]["exitcodemask"]
+
+        self._ucfg.update(cfg)
+        self._ucfg.update(self._ocfg)
 
         if root is None:
             root = os.path.expanduser("~")
-
         self.fixconfig(root=root)
 
     def fixconfig(self, root=None, section=None):
@@ -318,24 +351,23 @@ class ui(object):
             # expand vars and ~
             # translate paths relative to root (or home) into absolute paths
             root = root or pycompat.getcwd()
-            c = self._rcfg
-            for n in c.names("paths"):
-                if ":" in n:
-                    continue
-                p = origp = c.get("paths", n)
-                if not p:
-                    continue
-                if "%%" in p:
-                    s = self.configsource("paths", n) or "none"
-                    self.warn(
-                        _("(deprecated '%%' in path %s=%s from %s)\n") % (n, p, s)
-                    )
-                    p = p.replace("%%", "%")
-                p = util.expandpath(p)
-                if not util.hasscheme(p) and not os.path.isabs(p):
-                    p = os.path.normpath(os.path.join(root, p))
-                if origp != p:
-                    c.set("paths", n, p, "ui.fixconfig")
+            for c in self._ucfg, self._ocfg:
+                for n, p in c.items("paths"):
+                    # Ignore sub-options.
+                    if ":" in n:
+                        continue
+                    if not p:
+                        continue
+                    if "%%" in p:
+                        s = self.configsource("paths", n) or "none"
+                        self.warn(
+                            _("(deprecated '%%' in path %s=%s from %s)\n") % (n, p, s)
+                        )
+                        p = p.replace("%%", "%")
+                    p = util.expandpath(p)
+                    if not util.hasscheme(p) and not os.path.isabs(p):
+                        p = os.path.normpath(os.path.join(root, p))
+                    c.set("paths", n, p)
 
         if section in (None, "ui"):
             # update ui options
@@ -347,45 +379,24 @@ class ui(object):
             self.tracebackflag = self.configbool("ui", "traceback")
             self.logmeasuredtimes = self.configbool("ui", "logmeasuredtimes")
 
+    def backupconfig(self, section, item):
+        return (self._ocfg.backup(section, item), self._ucfg.backup(section, item))
+
+    def restoreconfig(self, data):
+        self._ocfg.restore(data[0])
+        self._ucfg.restore(data[1])
+
     def setconfig(self, section, name, value, source=""):
-        if util.safehasattr(value, "__iter__"):
-
-            def escape(v):
-                if '"' in v:
-                    v = v.replace('"', '\\"')
-                return '"%s"' % v
-
-            value = ",".join(escape(v) for v in value)
-        elif isinstance(value, (str, int, float, bool)):
-            value = str(value)
-        elif value is None:
-            pass
-        else:
-            # XXX Sad - Some code depends on setconfig a Python object.
-            # That cannot be represented in the Rust config object. So
-            # we translate them here in a very hacky way.
-            # TODO remove those users and make this a ProgrammingError.
-            replacement = "@%x" % id(value)
-            self._unserializable[replacement] = value
-            value = replacement
-
-        self._pinnedconfigs.add((section, name))
-        self._rcfg.set(section, name, value, source or "ui.setconfig")
+        assert isinstance(name, str)
+        for cfg in (self._ocfg, self._ucfg):
+            cfg.set(section, name, value, source)
         self.fixconfig(section=section)
 
+    def _data(self, untrusted):
+        return self._ucfg
+
     def configsource(self, section, name, untrusted=False):
-        sources = self._rcfg.sources(section, name)
-        if sources:
-            # Skip "ui.fixconfig" sources
-            for value, filesource, strsource in reversed(sources):
-                if strsource == "ui.fixconfig":
-                    continue
-                if filesource:
-                    path, _start, _end, line = filesource
-                    return "%s:%s" % (path, line)
-                else:
-                    return strsource
-        return ""
+        return self._data(untrusted).source(section, name)
 
     def config(self, section, name, default=_unset, untrusted=False):
         """return the plain string version of a config"""
@@ -434,10 +445,9 @@ class ui(object):
             self.develwarn(msg, 2, "warn-config-default")
 
         for s, n in alternates:
-            candidate = self._rcfg.get(s, n)
+            candidate = self._data(untrusted).get(s, n, None)
             if candidate is not None:
                 value = candidate
-                value = self._unserializable.get(value, value)
                 section = s
                 name = n
                 break
@@ -455,13 +465,11 @@ class ui(object):
         is a dict of defined sub-options where keys and values are strings.
         """
         main = self.config(section, name, default, untrusted=untrusted)
-        cfg = self._rcfg
+        data = self._data(untrusted)
         sub = {}
         prefix = "%s:" % name
-        for k in cfg.names(section):
+        for k, v in data.items(section):
             if k.startswith(prefix):
-                v = cfg.get(section, k)
-                v = self._unserializable.get(v, v)
                 sub[k[len(prefix) :]] = v
         return main, sub
 
@@ -645,31 +653,27 @@ class ui(object):
         return default
 
     def hasconfig(self, section, name, untrusted=False):
-        return self._rcfg.get(section, name) is not None
+        return self._data(untrusted).hasitem(section, name)
 
     def has_section(self, section, untrusted=False):
         """tell whether section exists in config."""
-        return section in self._rcfg.sections()
+        return section in self._data(untrusted)
 
     def configitems(self, section, untrusted=False, ignoresub=False):
-        cfg = self._rcfg
-        items = []
-        for name in cfg.names(section):
-            value = cfg.get(section, name)
-            value = self._unserializable.get(value, value)
-            if value is not None:
-                if not ignoresub or ":" not in name:
-                    items.append((name, value))
+        items = self._data(untrusted).items(section)
+        if ignoresub:
+            newitems = {}
+            for k, v in items:
+                if ":" not in k:
+                    newitems[k] = v
+            items = newitems.items()
         return items
 
     def walkconfig(self, untrusted=False):
-        cfg = self._rcfg
-        for section in sorted(cfg.sections()):
-            for name in cfg.names(section):
-                value = cfg.get(section, name)
-                value = self._unserializable.get(value, value)
-                if value is not None:
-                    yield section, name, value
+        cfg = self._data(untrusted)
+        for section in cfg.sections():
+            for name, value in self.configitems(section, untrusted):
+                yield section, name, value
 
     def plain(self, feature=None):
         """is plain mode active?
@@ -1561,13 +1565,15 @@ class ui(object):
         """Context manager for temporary config overrides
         `overrides` must be a dict of the following structure:
         {(section, name) : value}"""
-        backup = self._rcfg.clone()
+        backups = {}
         try:
             for (section, name), value in overrides.items():
+                backups[(section, name)] = self.backupconfig(section, name)
                 self.setconfig(section, name, value, source)
             yield
         finally:
-            self._rcfg = backup
+            for __, backup in backups.items():
+                self.restoreconfig(backup)
             # just restoring ui.quiet config to the previous value is not enough
             # as it does not update ui.quiet class member
             if ("ui", "quiet") in overrides:

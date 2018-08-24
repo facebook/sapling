@@ -2,7 +2,7 @@
 
 Tests discovery against servers without getbundle support:
 
-  $ CAP="getbundle bundle2"
+  $ CAP="getbundle,bundle2"
   $ . "$TESTDIR/notcapable"
   $ cat >> $HGRCPATH <<EOF
   > [ui]

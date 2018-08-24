@@ -11,7 +11,7 @@ def extsetup():
     extensions.wrapfunction(repository.peer, 'capable', wrapcapable)
     extensions.wrapfunction(localrepo.localrepository, 'peer', wrappeer)
 def wrapcapable(orig, self, name, *args, **kwargs):
-    if name in '$CAP'.split(' '):
+    if name in '$CAP'.replace(',', ' ').split(' '):
         return False
     return orig(self, name, *args, **kwargs)
 def wrappeer(orig, self):

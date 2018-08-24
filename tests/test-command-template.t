@@ -4390,7 +4390,7 @@ Templater supports aliases of symbol and func() styles:
   > [templatealias]
   > r = rev
   > rn = "{r}:{node|short}"
-  > status(c, files) = files % "{c} {file}\n"
+  > status(c,files) = files % "{c} {file}\n"
   > utcdate(d) = localdate(d, "UTC")
   > EOF
 
