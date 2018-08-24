@@ -1951,6 +1951,11 @@ def getremoterevs(repo, namespacename, matchpattern=None):
 @revsetpredicate("remotenames()")
 def remotenamesrevset(repo, subset, x):
     """All remote bookmarks and branches."""
+    if not util.safehasattr(repo, "_remotenames"):
+        # If this repository does not have remotenames enabled just evaluate to the
+        # empty set.
+        return smartset.baseset([])
+
     revset.getargs(x, 0, 0, "remotenames takes no arguments")
     remoterevs = set()
     for rname in repo._remotenames.keys():
