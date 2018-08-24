@@ -209,10 +209,11 @@ class HgImporter : public Importer {
     CMD_STARTED = 0,
     CMD_RESPONSE = 1,
     CMD_MANIFEST = 2,
-    CMD_CAT_FILE = 3,
+    CMD_OLD_CAT_FILE = 3,
     CMD_MANIFEST_NODE_FOR_COMMIT = 4,
     CMD_FETCH_TREE = 5,
     CMD_PREFETCH_FILES = 6,
+    CMD_CAT_FILE = 7,
   };
   struct ChunkHeader {
     uint32_t requestID;

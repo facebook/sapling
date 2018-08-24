@@ -782,6 +782,20 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
   // In the future we might want to consider if it is more efficient to receive
   // the body data in fixed-size chunks, particularly for very large files.
   auto header = readChunkHeader();
+  if (header.dataLength < sizeof(uint64_t)) {
+    auto msg = folly::to<string>(
+        "CMD_CAT_FILE response for blob ",
+        blobHash,
+        " (",
+        hgInfo.path(),
+        ", ",
+        hgInfo.revHash(),
+        ") from hg_import_helper.py is too "
+        "short for body length field: length = ",
+        header.dataLength);
+    XLOG(ERR) << msg;
+    throw std::runtime_error(std::move(msg));
+  }
   auto buf = IOBuf(IOBuf::CREATE, header.dataLength);
 
 #ifdef EDEN_WIN
@@ -791,6 +805,42 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
   folly::readFull(helperOut_, buf.writableTail(), header.dataLength);
 #endif
   buf.append(header.dataLength);
+
+  // The last 8 bytes of the response are the body length.
+  // Ensure that this looks correct, and advance the buffer past this data to
+  // the start of the actual response body.
+  //
+  // This data doesn't really need to be present in the response.  It is only
+  // here so we can double-check that the response data appears valid.
+  buf.trimEnd(sizeof(uint64_t));
+  uint64_t bodyLength;
+  memcpy(&bodyLength, buf.tail(), sizeof(uint64_t));
+  bodyLength = Endian::big(bodyLength);
+  if (bodyLength != header.dataLength - sizeof(uint64_t)) {
+    auto msg = folly::to<string>(
+        "inconsistent body length received when importing blob ",
+        blobHash,
+        " (",
+        hgInfo.path(),
+        ", ",
+        hgInfo.revHash(),
+        "): bodyLength=",
+        bodyLength,
+        " responseLength=",
+        header.dataLength);
+    XLOG(ERR) << msg;
+    throw std::runtime_error(std::move(msg));
+  }
+
+  // Log empty files with a higher verbosity for now, while we are trying to
+  // debug issues where some files get incorrectly imported as being empty.
+  if (bodyLength == 0) {
+    XLOG(DBG2) << "imported blob " << blobHash << " (" << hgInfo.path() << ", "
+               << hgInfo.revHash() << ") as an empty file";
+  } else {
+    XLOG(DBG4) << "imported blob " << blobHash << " (" << hgInfo.path() << ", "
+               << hgInfo.revHash() << "); length=" << bodyLength;
+  }
 
   return buf;
 }

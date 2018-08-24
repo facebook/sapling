@@ -111,10 +111,11 @@ START_FLAGS_MONONOKE_SUPPORTED = 0x02
 CMD_STARTED = 0
 CMD_RESPONSE = 1
 CMD_MANIFEST = 2
-CMD_CAT_FILE = 3
+CMD_OLD_CAT_FILE = 3
 CMD_MANIFEST_NODE_FOR_COMMIT = 4
 CMD_FETCH_TREE = 5
 CMD_PREFETCH_FILES = 6
+CMD_CAT_FILE = 7
 
 #
 # Flag values.
@@ -276,7 +277,9 @@ class HgServer(object):
         # Send a CMD_STARTED response to indicate we have started,
         # and include some information about the repository configuration.
         options_chunk = self._gen_options()
-        self._send_chunk(txn_id=0, command=CMD_STARTED, flags=0, data=options_chunk)
+        self._send_chunk(
+            txn_id=0, command=CMD_STARTED, flags=0, data_blocks=(options_chunk,)
+        )
 
         while self.process_request():
             pass
@@ -404,12 +407,35 @@ class HgServer(object):
         self.debug("sending manifest for revision %r", rev_name)
         self.dump_manifest(rev_name, request)
 
-    @cmd(CMD_CAT_FILE)
-    def cmd_cat_file(self, request):
-        """
-        Handler for CMD_CAT_FILE requests.
+    @cmd(CMD_OLD_CAT_FILE)
+    def cmd_old_cat_file(self, request):
+        """Handler for CMD_OLD_CAT_FILE requests.
 
         This requests the contents for a given file.
+        New edenfs servers do not send this request, but we still need to support this
+        for old edenfs servers that have not been restarted.
+
+        This is similar to CMD_CAT_FILE, but the response body contains only the raw
+        file contents.
+        """
+        if len(request.body) < SHA1_NUM_BYTES + 1:
+            raise Exception("old_cat_file request data too short")
+
+        rev_hash = request.body[:SHA1_NUM_BYTES]
+        path = request.body[SHA1_NUM_BYTES:]
+        self.debug(
+            "(pid:%s) CMD_OLD_CAT_FILE request for contents of file %r revision %s",
+            os.getpid(),
+            path,
+            hex(rev_hash),
+        )
+
+        contents = self.get_file(path, rev_hash)
+        self.send_chunk(request, contents)
+
+    @cmd(CMD_CAT_FILE)
+    def cmd_cat_file(self, request):
+        """CMD_CAT_FILE: get the contents of a file.
 
         Request body format:
         - <rev_hash><path>
@@ -419,7 +445,7 @@ class HgServer(object):
 
         Response body format:
         - <file_contents>
-          The body consists solely of the raw file contents.
+        - <file_size>
         """
         if len(request.body) < SHA1_NUM_BYTES + 1:
             raise Exception("cat_file request data too short")
@@ -434,7 +460,8 @@ class HgServer(object):
         )
 
         contents = self.get_file(path, rev_hash)
-        self.send_chunk(request, contents)
+        length_data = struct.pack(b">Q", len(contents))
+        self.send_chunk(request, contents, length_data)
 
     @cmd(CMD_MANIFEST_NODE_FOR_COMMIT)
     def cmd_manifest_node_for_commit(self, request):
@@ -519,11 +546,18 @@ class HgServer(object):
             self.repo.prefetchtrees(mfnodes)
             self.repo.manifestlog.commitpending()
 
-    def send_chunk(self, request, data, is_last=True):
+    def send_chunk(self, request, *data, **kwargs):
+        is_last = kwargs.pop("is_last", True)
+        if kwargs:
+            raise TypeError("unexpected keyword arguments: %r" % (kwargs.keys(),))
+
         flags = 0
         if not is_last:
             flags |= FLAG_MORE_CHUNKS
-        self._send_chunk(request.txn_id, command=CMD_RESPONSE, flags=flags, data=data)
+
+        self._send_chunk(
+            request.txn_id, command=CMD_RESPONSE, flags=flags, data_blocks=data
+        )
 
     def send_exception(self, request, exc):
         self.send_error(request, type(exc).__name__, str(exc))
@@ -541,12 +575,16 @@ class HgServer(object):
                 message,
             ]
         )
-        self._send_chunk(txn_id, command=CMD_RESPONSE, flags=FLAG_ERROR, data=data)
+        self._send_chunk(
+            txn_id, command=CMD_RESPONSE, flags=FLAG_ERROR, data_blocks=(data,)
+        )
 
-    def _send_chunk(self, txn_id, command, flags, data):
-        header = struct.pack(HEADER_FORMAT, txn_id, command, flags, len(data))
+    def _send_chunk(self, txn_id, command, flags, data_blocks):
+        data_length = sum(len(block) for block in data_blocks)
+        header = struct.pack(HEADER_FORMAT, txn_id, command, flags, data_length)
         self.out_file.write(header)
-        self.out_file.write(data)
+        for block in data_blocks:
+            self.out_file.write(block)
         self.out_file.flush()
 
     def dump_manifest(self, rev, request):
