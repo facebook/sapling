@@ -359,8 +359,7 @@ Corrupt histedit state file
 Histedit state has been exited
   $ hg summary -q
   parent: 5:63379946892c 
-  commit: 1 added, 1 unknown (new branch head)
-  update: 4 new changesets (update)
+  commit: 1 added, 1 unknown
 
   $ cd ..
 

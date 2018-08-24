@@ -99,9 +99,7 @@ Changing original repo:
   $ hg summary --remote --config paths.default='../clone'
   parent: 3:4cd725637392 tip
    add bar
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 4 draft
   remote: 2 outgoing
   $ hg -q outgoing '../clone#foo'
@@ -109,9 +107,7 @@ Changing original repo:
   $ hg summary --remote --config paths.default='../clone#foo'
   parent: 3:4cd725637392 tip
    add bar
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 4 draft
   remote: 1 outgoing
 
@@ -120,9 +116,7 @@ Changing original repo:
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
   parent: 1:cd2a86ecc814 tip
    change a
-  branch: foo
   commit: (clean)
-  update: (current)
   remote: 1 or more incoming
 
   $ hg -q push '../clone#foo'
@@ -145,9 +139,7 @@ Changing original repo:
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
   parent: 1:cd2a86ecc814 
    change a
-  branch: foo
   commit: (clean)
-  update: 1 new changesets (update)
   remote: (synced)
 
   $ cd ..
@@ -282,27 +274,21 @@ Test handling common incoming revisions between "default" and
   $ hg summary --remote --config paths.default='../clone#default' --config paths.default-push='../clone#foo'
   parent: 4:d515801a8f3d tip
    new head to push current default head
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 1 draft
   remote: 1 outgoing
 
   $ hg summary --remote --config paths.default='../clone#foo' --config paths.default-push='../clone'
   parent: 4:d515801a8f3d tip
    new head to push current default head
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 1 draft
   remote: 2 outgoing
 
   $ hg summary --remote --config paths.default='../clone' --config paths.default-push='../clone#foo'
   parent: 4:d515801a8f3d tip
    new head to push current default head
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 1 draft
   remote: 1 outgoing
 
@@ -314,9 +300,7 @@ Test handling common incoming revisions between "default" and
   $ hg summary --remote --config paths.default='../another#default' --config paths.default-push='../clone#default'
   parent: 4:d515801a8f3d tip
    new head to push current default head
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 1 draft
   remote: 1 outgoing
 

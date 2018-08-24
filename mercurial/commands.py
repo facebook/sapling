@@ -5545,7 +5545,6 @@ def summary(ui, repo, **opts):
     ui.pager("summary")
     ctx = repo[None]
     parents = ctx.parents()
-    pnode = parents[0].node()
     marks = []
 
     ms = None
@@ -5585,15 +5584,6 @@ def summary(ui, repo, **opts):
                 " " + p.description().splitlines()[0].strip() + "\n",
                 label="log.summary",
             )
-
-    branch = ctx.branch()
-    bheads = repo.branchheads(branch)
-    # i18n: column positioning for "hg summary"
-    m = _("branch: %s\n") % branch
-    if branch != "default":
-        ui.write(m, label="log.branch")
-    else:
-        ui.status(m, label="log.branch")
 
     if marks:
         active = repo._activebookmark
@@ -5649,17 +5639,11 @@ def summary(ui, repo, **opts):
         t += _(" (interrupted update)")
     elif len(parents) > 1:
         t += _(" (merge)")
-    elif branch != parents[0].branch():
-        t += _(" (new branch)")
-    elif parents[0].closesbranch() and pnode in repo.branchheads(branch, closed=True):
-        t += _(" (head closed)")
     elif not (
         status.modified or status.added or status.removed or renamed or copied or subs
     ):
         t += _(" (clean)")
         cleanworkdir = True
-    elif pnode not in bheads:
-        t += _(" (new branch head)")
 
     if parents:
         pendingphase = max(p.phase() for p in parents)
@@ -5675,22 +5659,6 @@ def summary(ui, repo, **opts):
     else:
         # i18n: column positioning for "hg summary"
         ui.write(_("commit: %s\n") % t.strip())
-
-    # all ancestors of branch heads - all ancestors of parent = new csets
-    new = len(repo.changelog.findmissing([pctx.node() for pctx in parents], bheads))
-
-    if new == 0:
-        # i18n: column positioning for "hg summary"
-        ui.status(_("update: (current)\n"))
-    elif pnode not in bheads:
-        # i18n: column positioning for "hg summary"
-        ui.write(_("update: %d new changesets (update)\n") % new)
-    else:
-        # i18n: column positioning for "hg summary"
-        ui.write(
-            _("update: %d new changesets, %d branch heads (merge)\n")
-            % (new, len(bheads))
-        )
 
     t = []
     draft = len(repo.revs("draft()"))

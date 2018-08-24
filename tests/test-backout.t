@@ -44,9 +44,7 @@ specified explicitly)
   $ hg summary
   parent: 2:8540552e2ce9 tip
    Back out "b"
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 3 draft
 
 commit option
@@ -72,9 +70,7 @@ commit option
   $ hg summary
   parent: 3:6b2e5750efab tip
    Back out "chair"
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 4 draft
 
   $ echo ypples > a
@@ -87,9 +83,7 @@ commit option
   $ hg summary
   parent: 4:2cf19744f63f tip
    ypples
-  branch: default
   commit: 1 unresolved (clean)
-  update: (current)
   phases: 5 draft
 
 file that was removed is recreated
@@ -115,9 +109,7 @@ specified explicitly)
   $ hg summary
   parent: 2:0ab3c2be0b32 tip
    Backed out changeset 76862dcce372
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 3 draft
 
 backout of backout is as if nothing happened
@@ -130,9 +122,7 @@ backout of backout is as if nothing happened
   $ hg summary
   parent: 3:5b1b9b2a0f35 tip
    Back out "Backed out changeset 76862dcce372"
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 4 draft
 
 Test that 'hg rollback' restores dirstate just before opening
@@ -179,9 +169,7 @@ across branch
   $ hg summary
   parent: 0:f7b1eb17ad24 
    0
-  branch: default
   commit: (clean)
-  update: 1 new changesets (update)
   phases: 2 draft
 
 should fail
@@ -195,9 +183,7 @@ should fail
   $ hg summary
   parent: 2:db815d6d32e6 tip
    2
-  branch: default
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 3 draft
 
 should fail
@@ -208,9 +194,7 @@ should fail
   $ hg summary
   parent: 2:db815d6d32e6 tip
    2
-  branch: default
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 3 draft
 
 backout with merge
@@ -226,9 +210,7 @@ backout with merge
   $ hg summary
   parent: 0:59395513a13a tip
    a
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 1 draft
 
 remove line 1
@@ -250,9 +232,7 @@ remove line 1
   $ hg summary
   parent: 4:76e753f52d24 tip
    d
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 5 draft
 
 check line 1 is back
@@ -366,9 +346,7 @@ backout should not back out subsequent changesets
   $ hg summary
   parent: 2:882396649954 tip
    c
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 3 draft
 
 without --merge
@@ -384,9 +362,7 @@ without --merge
   $ hg summary
   parent: 2:882396649954 tip
    c
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 3 draft
 
 with --merge
@@ -427,9 +403,7 @@ with --merge
   $ hg summary
   parent: 4:b2f3bb92043e tip
    d
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 5 draft
 
 backout of merge should fail
@@ -458,9 +432,7 @@ backout with valid parent should be ok
   $ hg summary
   parent: 5:84e16af81ce4 tip
    Back out "d"
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 6 draft
 
   $ hg rollback
@@ -471,9 +443,7 @@ backout with valid parent should be ok
   $ hg summary
   parent: 4:b2f3bb92043e tip
    d
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 5 draft
 
   $ hg backout -d '6 0' --parent 3 4 --tool=true
@@ -482,9 +452,7 @@ backout with valid parent should be ok
   $ hg summary
   parent: 5:042ecc423244 tip
    Back out "d"
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 6 draft
 
   $ cd ..
@@ -522,9 +490,7 @@ without --merge
   $ hg summary
   parent: 2:45bbcd363bf0 tip
    file2
-  branch: branch2
   commit: 1 removed
-  update: (current)
   phases: 3 draft
 
 with --merge
@@ -554,9 +520,7 @@ explicitly regardless of '--message')
    file2
   parent: 3:8857f307d2b3 tip
    backout on branch1
-  branch: branch2
   commit: 1 removed (merge)
-  update: (current)
   phases: 4 draft
   $ hg update -q -C 2
 
@@ -571,9 +535,7 @@ on branch2 with branch1 not merged, so file1 should still exist:
   $ hg summary
   parent: 2:45bbcd363bf0 
    file2
-  branch: branch2
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 4 draft
 
 on branch2 with branch1 merged, so file1 should be gone:
@@ -590,9 +552,7 @@ on branch2 with branch1 merged, so file1 should be gone:
   $ hg summary
   parent: 4:6b63d6afbede tip
    merge backout of branch1
-  branch: branch2
   commit: (clean)
-  update: (current)
   phases: 5 draft
 
 on branch1, so no file1 and file2:
@@ -607,9 +567,7 @@ on branch1, so no file1 and file2:
   $ hg summary
   parent: 1:bf1602f437f3 
    file1
-  branch: branch1
   commit: (clean)
-  update: (current)
   phases: 5 draft
 
   $ cd ..
@@ -705,9 +663,7 @@ Test usage of `hg resolve` in case of conflict
   $ hg summary
   parent: 2:b71750c4b0fd tip
    capital ten
-  branch: default
   commit: 1 unresolved (clean)
-  update: (current)
   phases: 3 draft
   $ hg resolve --all --debug
   picked tool ':merge' for foo (binary False symlink False changedelete False)
@@ -724,9 +680,7 @@ Test usage of `hg resolve` in case of conflict
   $ hg summary
   parent: 2:b71750c4b0fd tip
    capital ten
-  branch: default
   commit: 1 modified, 1 unknown
-  update: (current)
   phases: 3 draft
   $ cat foo
   one

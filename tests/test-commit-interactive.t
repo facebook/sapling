@@ -93,9 +93,7 @@ Summary shows we updated to the new cset
   $ hg summary
   parent: 0:c0708cf4e46e tip
    empty
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 1 draft
 
 Rename empty file

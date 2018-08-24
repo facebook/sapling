@@ -195,9 +195,7 @@ bisect test
   $ hg summary
   parent: 31:58c80a7c8a40 tip
    msg 31
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 32 draft
   $ hg bisect -g 1
   Testing changeset 16:a2e6ea4973e9 (30 changesets remaining, ~4 tests)

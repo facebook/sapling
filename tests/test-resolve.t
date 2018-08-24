@@ -341,9 +341,7 @@ insert unsupported mandatory merge record
    append baz to files
   parent: 1:dc77451844e3 
    append bar to files
-  branch: default
   commit: 2 modified, 2 unknown (merge)
-  update: 2 new changesets (update)
   phases: 5 draft
 
 update --clean shouldn't abort on unsupported records

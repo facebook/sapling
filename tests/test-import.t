@@ -1225,9 +1225,7 @@ Issue2102: hg export and hg import speak different languages
   $ hg sum
   parent: 1:d59915696727 tip
    help management of empty pkg and lib directories in perforce
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 2 draft
 
   $ hg diff --git -c tip

@@ -492,10 +492,8 @@ test summary
   $ hg summary
   parent: 2:db815d6d32e6 tip
    2
-  branch: default
   bookmarks: *Z Y x  y
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 3 draft
 
 test id
@@ -661,11 +659,8 @@ working directory of current repository)
   $ hg summary
   parent: 2:db815d6d32e6 
    2
-  branch: default
   bookmarks: *Z Y x  y
-  commit: 1 added, 1 unknown (new branch head) (no-fsmonitor !)
-  commit: 1 added, * unknown (new branch head) (glob) (fsmonitor !)
-  update: 2 new changesets (update)
+  commit: 1 added, * unknown (glob) (fsmonitor !)
   phases: 5 draft
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -861,10 +856,8 @@ working directory of current repository)
   $ hg sum
   parent: 3:9ba5f110a0b3 tip
    y
-  branch: test
   bookmarks: *four
   commit: 2 unknown (clean)
-  update: (current)
   phases: 4 draft
 
 test clearing divergent bookmarks of linear ancestors

@@ -885,9 +885,7 @@ If a rebase is going to create divergence, it should abort
   $ hg summary
   parent: 14:73568ab6879d tip (orphan)
    bar foo
-  branch: default
   commit: (clean)
-  update: 2 new changesets, 3 branch heads (merge)
   phases: 8 draft
   orphan: 1 changesets
   $ hg rebase -s 10 -d 12
@@ -919,9 +917,7 @@ With experimental.evolution.allowdivergence=True, rebase can create divergence
   $ hg summary
   parent: 16:61bd55f69bc4 tip
    bar foo
-  branch: default
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 8 draft
   content-divergent: 2 changesets
 
@@ -1604,9 +1600,7 @@ rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
    D
   parent: 1:2ec65233581b  (obsolete)
    B
-  branch: default
   commit: 2 modified, 1 unknown, 1 unresolved (merge)
-  update: (current)
   phases: 3 draft
   rebase: 0 rebased, 2 remaining (rebase --continue)
 

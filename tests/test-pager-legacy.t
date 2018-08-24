@@ -54,9 +54,7 @@ By default diff and log are paged, but summary is not:
   $ hg summary
   parent: 10:46106edeeb38 tip
    modify a 10
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 11 draft
 
 We can enable the pager on summary:
@@ -64,9 +62,7 @@ We can enable the pager on summary:
   $ hg --config pager.attend-summary=yes summary
   paged! 'parent: 10:46106edeeb38 tip\n'
   paged! ' modify a 10\n'
-  paged! 'branch: default\n'
   paged! 'commit: (clean)\n'
-  paged! 'update: (current)\n'
   paged! 'phases: 11 draft\n'
 
   $ hg --config pager.attend-diff=no diff -c 2

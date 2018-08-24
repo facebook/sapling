@@ -407,9 +407,7 @@ merge it with the other head
    other adds
   parent: 1:f6180deb8fbe 
    rename
-  branch: default
   commit: 2 modified, 1 removed (merge)
-  update: (current)
   phases: 3 draft
 
 clarifies who added what

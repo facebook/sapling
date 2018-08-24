@@ -79,9 +79,7 @@ make sure we avoid empty commits (issue2445)
   $ hg sum
   parent: 1:* tip (glob)
    1
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 2 draft
   $ hg ci -moops
   nothing changed
@@ -104,9 +102,7 @@ change file in svn and hg, commit
   $ hg sum
   parent: 1:* tip (glob)
    1
-  branch: default
   commit: 1 modified, 1 subrepos
-  update: (current)
   phases: 2 draft
   $ hg commit --subrepos -m 'Message!' | filter_svn_output
   committing subrepository s
@@ -140,9 +136,7 @@ bringing any changes.
   $ hg sum
   parent: 2:* tip (glob)
    Message!
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 3 draft
 
   $ echo a > s/a

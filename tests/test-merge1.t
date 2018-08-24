@@ -39,9 +39,7 @@ of the files in a commit we're updating to
   $ hg sum
   parent: 1:b8bb4a988f25 tip
    commit #1
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 2 draft
 
 The following line is commented out because the file doesn't exist at the moment, and some OSes error out even with `rm -f`.
@@ -52,9 +50,7 @@ $ rm b/nonempty
   $ hg sum
   parent: 1:b8bb4a988f25 tip
    commit #1
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 2 draft
 
 Prepare a basic merge

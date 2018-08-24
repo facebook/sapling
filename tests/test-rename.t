@@ -17,9 +17,7 @@ rename a single file
   $ hg sum
   parent: 0:9b4b6e7b2c26 tip
    1
-  branch: default
   commit: 1 renamed
-  update: (current)
   phases: 1 draft
   $ hg status -C
   A d2/c

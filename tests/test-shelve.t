@@ -901,10 +901,8 @@ is a no-op), works (issue4398)
   $ hg summary
   parent: 2:c784213004b0 tip
    create conflict
-  branch: default
   bookmarks: *test
   commit: 2 unknown (clean)
-  update: (current)
   phases: 3 draft
 
   $ hg shelve --delete --stat

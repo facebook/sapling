@@ -446,9 +446,7 @@ The newly cloned subrepos contain no working copy:
 
   $ hg -R foo summary
   parent: -1:000000000000  (no revision checked out)
-  branch: default
   commit: (clean)
-  update: 4 new changesets (update)
 
 Disable progress extension and cleanup:
 

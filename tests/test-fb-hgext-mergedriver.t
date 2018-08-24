@@ -128,9 +128,7 @@ mark a file driver-resolved, and leave others unresolved
    c
   parent: 1:e0cfe070a2bb 
    b
-  branch: default
   commit: 2 modified, 2 unknown, 1 unresolved (merge)
-  update: 1 new changesets (update)
   phases: 4 draft
   $ hg resolve --list
   U bar.txt

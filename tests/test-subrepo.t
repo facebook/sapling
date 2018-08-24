@@ -41,9 +41,7 @@ Issue2232: committing a subrepo without .hgsub
   $ hg sum
   parent: 0:f7b1eb17ad24 tip
    0
-  branch: default
   commit: 1 added, 1 subrepos
-  update: (current)
   phases: 1 draft
   $ hg ci -m1
 
@@ -99,18 +97,14 @@ Issue2022: update -C
   $ hg sum
   parent: 1:7cf8cfea66e4 tip
    1
-  branch: default
   commit: 1 subrepos
-  update: (current)
   phases: 2 draft
   $ hg co -C 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum
   parent: 1:7cf8cfea66e4 tip
    1
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 2 draft
 
 commands that require a clean repo should respect subrepos
@@ -131,9 +125,7 @@ add sub sub
   $ hg sum
   parent: 1:7cf8cfea66e4 tip
    1
-  branch: default
   commit: 1 subrepos
-  update: (current)
   phases: 2 draft
   $ hg ci -m2
   committing subrepository s
@@ -141,9 +133,7 @@ add sub sub
   $ hg sum
   parent: 2:df30734270ae tip
    2
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 3 draft
 
 test handling .hgsubstate "modified" explicitly.
@@ -1264,9 +1254,7 @@ Check that share works with subrepo
   paths.default=$TESTTMP/subrepo-status/subrepo-2
   $ hg -R ../shared/subrepo-1 sum --remote
   parent: -1:000000000000 tip (empty repository)
-  branch: default
   commit: (clean)
-  update: (current)
   remote: (synced)
 
 Check hg update --clean

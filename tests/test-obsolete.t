@@ -165,18 +165,14 @@ check that summary does not report them
   $ hg summary --remote
   parent: 5:5601fb93a350 tip
    add new_3_c
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 3 draft
   remote: 3 outgoing
 
   $ hg summary --remote --hidden
   parent: 5:5601fb93a350 tip
    add new_3_c
-  branch: default
   commit: (clean)
-  update: 3 new changesets, 4 branch heads (merge)
   phases: 6 draft
   remote: 3 outgoing
 
@@ -241,9 +237,7 @@ We need to create a clone of 5 and add a special marker with a flag
   $ hg summary
   parent: 5:5601fb93a350 tip (phase-divergent)
    add new_3_c
-  branch: default
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 1 draft
   phase-divergent: 1 changesets
   $ hg up '5^'
@@ -516,9 +510,7 @@ detect outgoing obsolete and unstable
   $ hg summary
   parent: 5:cda648ca50f5 tip (orphan)
    add original_e
-  branch: default
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 3 draft
   orphan: 1 changesets
   $ hg log -G -r '::orphan()'
@@ -968,9 +960,7 @@ test summary output
   $ hg summary
   parent: 67:c19019fb77aa  (orphan, phase-divergent)
    babar_60
-  branch: default
   commit: (clean)
-  update: 61 new changesets, 62 branch heads (merge)
   phases: 64 draft
   orphan: 62 changesets
   phase-divergent: 61 changesets
@@ -979,9 +969,7 @@ test summary output
   $ hg summary
   parent: 6:3de5eca88c00  (obsolete)
    add obsolete_e
-  branch: default
   commit: (clean)
-  update: 63 new changesets (update)
   phases: 64 draft
   orphan: 62 changesets
   phase-divergent: 61 changesets

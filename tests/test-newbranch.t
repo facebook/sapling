@@ -384,9 +384,7 @@ We expect that bare update on new branch, updates to parent
   $ hg summary
   parent: 1:0e067c57feba 
    b
-  branch: dev
-  commit: (new branch)
-  update: (current)
+  commit: (clean)
   phases: 3 draft
 
   $ cd ..
@@ -525,7 +523,5 @@ and updates to the tipmost non-closed branch head
   $ hg summary
   parent: 2:991a3460af53 tip
    c
-  branch: default
   commit: (clean)
-  update: (current)
   phases: 3 draft

@@ -471,9 +471,7 @@ Test --tool parameter:
    c2
   parent: 2:e4e3f3546619 tip
    c2b
-  branch: default
   commit: 1 modified, 1 unresolved (merge)
-  update: (current)
   phases: 3 draft
   rebase: 0 rebased, 1 remaining (rebase --continue)
 

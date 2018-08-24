@@ -469,7 +469,7 @@ Don't crash if the .hgsubstate entry is missing
   $ hg status -S
   R .hgsubstate
   $ hg sum | grep commit
-  commit: 1 removed, 1 subrepos (new branch head)
+  commit: 1 removed, 1 subrepos
 
   $ hg commit -m 'restore substate'
   nothing changed
@@ -479,7 +479,7 @@ Don't crash if the .hgsubstate entry is missing
   .hgsubstate
   a
   $ hg sum | grep commit
-  commit: 1 removed, 1 subrepos (new branch head)
+  commit: 1 removed, 1 subrepos
 
   $ hg update -qC nosubstate
   $ ls s

@@ -22,9 +22,7 @@
   $ hg sum
   parent: 0:c19d34741b0a tip
    1
-  branch: default
   commit: 1 copied
-  update: (current)
   phases: 1 draft
   $ hg --debug commit -m "2"
   committing files:

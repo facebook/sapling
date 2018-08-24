@@ -84,9 +84,7 @@ the amend, there should be no rollback.
   $ hg summary
   parent: 1:43f1ba15f28a tip
    amend base1
-  branch: default
   commit: 1 modified, 1 added, 1 unknown
-  update: (current)
   phases: 2 draft
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend
   abort: empty commit message
@@ -94,9 +92,7 @@ the amend, there should be no rollback.
   $ hg summary
   parent: 1:43f1ba15f28a tip
    amend base1
-  branch: default
   commit: 1 modified, 1 added, 1 unknown
-  update: (current)
   phases: 2 draft
 
 Add new file along with modified existing file:

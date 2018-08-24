@@ -12,9 +12,7 @@
   $ touch .hg/rebasestate
   $ hg sum
   parent: -1:000000000000 tip (empty repository)
-  branch: default
   commit: (clean)
-  update: (current)
   abort: .hg/rebasestate is incomplete
   [255]
   $ rm .hg/rebasestate
@@ -389,9 +387,7 @@ test aborting an interrupted series (issue5084)
   $ hg summary
   parent: 0:df4f53cec30a 
    base
-  branch: default
   commit: (clean)
-  update: 6 new changesets (update)
   phases: 7 draft
 
   $ cd ..
@@ -423,9 +419,7 @@ during a rebase (issue4661)
   $ hg summary
   parent: 3:b16646383533 tip
    conflicting 2
-  branch: default
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 4 draft
   $ cd ..
 

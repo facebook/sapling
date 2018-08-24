@@ -177,9 +177,7 @@ abort editing session, after first forcibly updating away
   $ hg sum
   parent: 0:cb9a9f314b8b 
    a
-  branch: default
-  commit: 1 added, 1 unknown (new branch head)
-  update: 6 new changesets (update)
+  commit: 1 added, 1 unknown
   phases: 7 draft
   hist:   2 remaining (histedit --continue)
 

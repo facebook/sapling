@@ -40,9 +40,7 @@ noticed by `update --check` in the top level repo.
   $ hg sum
   parent: 4:9bfe45a197d7 tip
    change b
-  branch: default
   commit: 1 deleted (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 5 draft
 
   $ hg up --check -r '.^'
@@ -70,9 +68,7 @@ TODO: a deleted file should be listed as such, like the top level repo
   $ hg sum
   parent: 4:9bfe45a197d7 tip
    change b
-  branch: default
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 5 draft
 
 Modified subrepo files are noticed by `update --check` and `summary`
@@ -88,9 +84,7 @@ Modified subrepo files are noticed by `update --check` and `summary`
   $ hg sum
   parent: 4:9bfe45a197d7 tip
    change b
-  branch: default
   commit: 1 subrepos
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 5 draft
 
 TODO: why is -R needed here?  If it's because the subrepo is treated as a

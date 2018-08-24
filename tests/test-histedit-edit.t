@@ -209,9 +209,7 @@ check histedit_source
   $ hg summary
   parent: 5:a5e1ba2f7afb 
    foobaz
-  branch: default
-  commit: 1 added (new branch head)
-  update: 1 new changesets (update)
+  commit: 1 added
   phases: 7 draft
   hist:   1 remaining (histedit --continue)
 

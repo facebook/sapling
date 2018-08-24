@@ -65,10 +65,8 @@ Repo state is ok
   $ hg sum
   parent: 1:853701544ac3 
    file
-  branch: default
   bookmarks: *file
   commit: (clean)
-  update: 2 new changesets (update)
   phases: 4 draft
 
 Basic update - untracked file conflicts with remote directory
@@ -101,8 +99,6 @@ Repo state is ok
   $ hg sum
   parent: 2:f64e09fac717 
    file2
-  branch: default
   bookmarks: *file2
   commit: (clean)
-  update: 1 new changesets, 2 branch heads (merge)
   phases: 4 draft
