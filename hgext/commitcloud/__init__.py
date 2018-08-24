@@ -72,7 +72,16 @@
 
 from __future__ import absolute_import
 
-from mercurial import error, extensions, localrepo, registrar, util
+from mercurial import (
+    error,
+    extensions,
+    localrepo,
+    node as nodemod,
+    registrar,
+    revset,
+    smartset,
+    util,
+)
 from mercurial.i18n import _
 
 from . import commitcloudcommands, commitcloudcommon, commitcloudutil, state
@@ -83,6 +92,7 @@ cmdtable = commitcloudcommands.cmdtable
 colortable = {"commitcloud.tag": "yellow", "commitcloud.team": "bold"}
 
 hint = registrar.hint()
+revsetpredicate = registrar.revsetpredicate()
 
 
 def _smartlogbackupmessagemap(orig, ui, repo):
@@ -198,3 +208,25 @@ def hintcommitcloudeducation(ui):
             )
             % education
         )
+
+
+@revsetpredicate("cloudremote([set])")
+def cloudremote(repo, subset, x):
+    """pull missing known changesets from the remote store
+
+    Currently only for obsoleted commits, can be extended for any commit.
+    """
+
+    args = revset.getargs(x, 1, 50, _("cloudremote takes from 1 to up to 50 hex revs"))
+    args = [n[1] for n in args]
+
+    try:
+        hexnodespulled = commitcloudcommands.missingcloudrevspull(
+            repo, [nodemod.bin(nodehex) for nodehex in args]
+        )
+        return subset & repo.unfiltered().revs("%ls", hexnodespulled)
+    except Exception as e:
+        commitcloudcommon.highlightstatus(
+            repo.ui, _("unable to pull all changesets from the remote store\n%s\n") % e
+        )
+    return smartset.baseset([])

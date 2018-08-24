@@ -795,10 +795,19 @@ def getsuccessorsnodes(repo, node):
                 yield snode
 
 
-def finddestinationnode(repo, node):
+def finddestinationnode(repo, node, visited=set()):
+    visited.add(node)
     nodes = list(getsuccessorsnodes(repo, node))
     if len(nodes) == 1:
-        return finddestinationnode(repo, nodes[0])
+        node = nodes[0]
+        if node in visited:
+            repo.ui.status(
+                _(
+                    'obs-cycle detected (happens for "divergence" cases like A obsoletes B; B obsoletes A)\n'
+                )
+            )
+            return None
+        return finddestinationnode(repo, node)
     if len(nodes) == 0:
         return node
     return None
@@ -879,3 +888,22 @@ def backuplockcheck(ui, repo):
             highlightstatus(
                 ui, _("background cloud sync is in progress%s\n") % etimemsg
             )
+
+
+def missingcloudrevspull(repo, nodes):
+    """pull wrapper for changesets that are known to the obstore and unknown for the repo
+
+    This is, for example, the case for all hidden revs on new clone + cloud sync.
+    """
+    unfi = repo.unfiltered()
+
+    def obscontains(nodebin):
+        return bool(unfi.obsstore.successors.get(nodebin, None))
+
+    nodes = [node for node in nodes if node not in unfi and obscontains(node)]
+    if nodes:
+        pullcmd, pullopts = _getcommandandoptions("^pull")
+        pullopts["rev"] = [nodemod.hex(node) for node in nodes]
+        pullcmd(repo.ui, unfi, **pullopts)
+
+    return nodes

@@ -135,6 +135,11 @@ def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
         ui.write(_("Added/removed: %s\n") % f)
 
 
+def _maybepull(repo, hexrev):
+    if extensions.enabled().get("commitcloud", False):
+        repo.revs("cloudremote(%s)" % hexrev)
+
+
 def _diff(orig, ui, repo, *pats, **opts):
     if (
         not opts.get("since_last_submit")
@@ -167,6 +172,7 @@ def _diff(orig, ui, repo, *pats, **opts):
         raise error.Abort(mess)
 
     rev = str(rev["hash"])
+    _maybepull(repo, rev)
     opts["rev"] = [rev, targetrev]
 
     # if patterns aren't provided, restrict diff to files in both changesets
@@ -179,7 +185,7 @@ def _diff(orig, ui, repo, *pats, **opts):
     if opts.get("since_last_submit_2o"):
         return _diff2o(ui, repo, rev, ".", **opts)
     else:
-        return orig(ui, repo, *pats, **opts)
+        return orig(ui, repo.unfiltered(), *pats, **opts)
 
 
 @revsetpredicate("lastsubmitted(set)")
@@ -201,6 +207,7 @@ def lastsubmitted(repo, subset, x):
             raise error.Abort(mess)
 
         lasthash = str(diffrev["hash"])
+        _maybepull(repo, lasthash)
         resultrevs.add(repo.unfiltered()[lasthash])
 
     return subset & smartset.baseset(sorted(resultrevs))

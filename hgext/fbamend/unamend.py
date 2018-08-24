@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import error, extensions, obsolete, obsutil, registrar
+from mercurial import error, extensions, node as nodemod, obsolete, obsutil, registrar
 from mercurial.i18n import _
 
 
@@ -41,6 +41,10 @@ def unamend(ui, repo, **opts):
         raise error.Abort(e % len(markers))
 
     prednode = markers[0].prednode()
+
+    if extensions.enabled().get("commitcloud", False):
+        repo.revs("cloudremote(%s)" % nodemod.hex(prednode))
+
     predctx = unfi[prednode]
 
     if curctx.children():
