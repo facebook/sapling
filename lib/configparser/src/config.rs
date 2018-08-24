@@ -610,7 +610,7 @@ mod tests {
              \n\
              [x]\n\
              m = this\n \
-             value has\n \
+             value has\r\n \
              multi lines\n\
              ; comment again\n\
              n =\n",
@@ -637,7 +637,7 @@ mod tests {
         assert_eq!(sources[1].source(), "test_parse_basic");
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
         assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 38..40));
-        assert_eq!(sources[1].file_content().unwrap().len(), 99);
+        assert_eq!(sources[1].file_content().unwrap().len(), 100);
     }
 
     #[test]

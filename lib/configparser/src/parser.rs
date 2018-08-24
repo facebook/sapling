@@ -11,7 +11,7 @@
 // However, `#[grammar = "spec.pest"]` does not play well with Buck build,
 // because pest_derive cannot find "spec.pest" in buck build environment.
 // Therefore this file is @generated. @no-lint.
-// pest-checksum: 1fa4fbe929a8b3e6c073fcd1e46cae2bc30d23f7.
+// pest-checksum: d00ac1967ce2bd9ff78af9d3e1345058a648964c.
 
 
 #[allow(dead_code, non_camel_case_types)]
@@ -58,7 +58,7 @@ impl ::pest::Parser<Rule> for ConfigParser {
                                {
                                    pos.match_string("\n").or_else(|pos|
                                                                       {
-                                                                          pos.match_string("\r")
+                                                                          pos.match_string("\r\n")
                                                                       })
                                })
             }
@@ -764,12 +764,12 @@ impl ::pest::Parser<Rule> for ConfigParser {
                                    })
             }
             #[inline]
-            fn soi<'i>(pos: ::pest::Position<'i>,
+            fn any<'i>(pos: ::pest::Position<'i>,
                        _: &mut ::pest::ParserState<'i, Rule>)
              ->
                  ::std::result::Result<::pest::Position<'i>,
                                        ::pest::Position<'i>> {
-                pos.at_start()
+                pos.skip(1)
             }
             #[inline]
             fn eoi<'i>(pos: ::pest::Position<'i>,
@@ -780,12 +780,12 @@ impl ::pest::Parser<Rule> for ConfigParser {
                 pos.at_end()
             }
             #[inline]
-            fn any<'i>(pos: ::pest::Position<'i>,
+            fn soi<'i>(pos: ::pest::Position<'i>,
                        _: &mut ::pest::ParserState<'i, Rule>)
              ->
                  ::std::result::Result<::pest::Position<'i>,
                                        ::pest::Position<'i>> {
-                pos.skip(1)
+                pos.at_start()
             }
             #[inline]
             #[allow(dead_code)]

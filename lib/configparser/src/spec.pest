@@ -22,7 +22,7 @@
 // Same applies to "directive" and "bracket"s.
 
 
-new_line = { "\n" | "\r" }
+new_line = { "\n" | "\r\n" }
 space = { " " | "\t" }
 comment_start = { ("#" | ";") }
 
