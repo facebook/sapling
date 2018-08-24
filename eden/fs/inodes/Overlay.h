@@ -76,14 +76,14 @@ class Overlay {
    * Returns the next available InodeNumber to be passed to any process taking
    * over an Eden mount.
    */
-  uint64_t close();
+  void close();
 
   /**
-   * For now, this method exists to populate the next inode number from takeover
-   * data. Eventually, it will be unnecessary - the Overlay, upon a clean
-   * shutdown, will remember its next inode number in a file on disk.
+   * Returns true if the next inode number was initialized, either upon
+   * construction by loading the file left by a cleanly-closed Overlay, or by
+   * calling scanForNextInodeNumber().
    */
-  void setNextInodeNumber(InodeNumber nextInodeNumber);
+  bool hasInitializedNextInodeNumber() const;
 
   /**
    * Scans the Overlay for all inode numbers currently in use and sets the next

@@ -18,7 +18,6 @@ struct SerializedInodeMapEntry {
 }
 
 struct SerializedInodeMap {
-  1: i64 nextInodeNumber
   2: list<SerializedInodeMapEntry> unloadedInodes,
 }
 

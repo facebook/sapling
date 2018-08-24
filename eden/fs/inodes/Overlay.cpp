@@ -95,11 +95,11 @@ Overlay::~Overlay() {
   close();
 }
 
-uint64_t Overlay::close() {
+void Overlay::close() {
   CHECK_NE(std::this_thread::get_id(), gcThread_.get_id());
 
   if (!infoFile_) {
-    return nextInodeNumber_.load(std::memory_order_relaxed);
+    return;
   }
 
   // Make sure everything is shut down in reverse of construction order.
@@ -113,8 +113,12 @@ uint64_t Overlay::close() {
   inodeMetadataTable_.reset();
   dirFile_.close();
   infoFile_.close();
+}
 
-  return nextInodeNumber_.load(std::memory_order_relaxed);
+bool Overlay::hasInitializedNextInodeNumber() const {
+  // nextInodeNumber_ is either 0 (uninitialized) or nonzero (initialized).
+  // It's only initialized on one thread, so relaxed loads are okay.
+  return 0 != nextInodeNumber_.load(std::memory_order_relaxed);
 }
 
 void Overlay::initOverlay() {
@@ -207,6 +211,8 @@ void Overlay::tryLoadNextInodeNumber() {
 }
 
 void Overlay::saveNextInodeNumber() {
+  // nextInodeNumber_ is either 0 (uninitialized) or nonzero (initialized).
+  // It's only initialized on one thread, so relaxed loads are okay.
   auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
   if (!nextInodeNumber) {
     return;
@@ -292,7 +298,7 @@ void Overlay::initNewOverlay() {
       infoPath.stringPiece(), ByteRange(infoHeader.data(), infoHeader.size()));
 
   // kRootNodeId is reserved - start at the next one. No scan is necessary.
-  setNextInodeNumber(InodeNumber{kRootNodeId.get() + 1});
+  nextInodeNumber_.store(kRootNodeId.get() + 1, std::memory_order_relaxed);
 }
 
 void Overlay::ensureTmpDirectoryIsCreated() {
@@ -312,22 +318,6 @@ void Overlay::ensureTmpDirectoryIsCreated() {
       folly::throwSystemError("fstatat(\"tmp\") failed");
     }
   }
-}
-
-void Overlay::setNextInodeNumber(InodeNumber nextInodeNumber) {
-  if (auto ino = nextInodeNumber_.load(std::memory_order_relaxed)) {
-    // It's okay to allow setNextInodeNumber as long as the values are
-    // consistent. This code path will disappear when takeover transitions to
-    // relying on the Overlay efficiently remembering the next inode number
-    // itself.
-    DCHECK_EQ(ino, nextInodeNumber.get())
-        << "Overlay nextInodeNumber already initialized with " << ino
-        << " so it should not be initialized with " << nextInodeNumber;
-    return;
-  }
-
-  DCHECK_GT(nextInodeNumber, kRootNodeId);
-  nextInodeNumber_.store(nextInodeNumber.get(), std::memory_order_relaxed);
 }
 
 InodeNumber Overlay::allocateInodeNumber() {
@@ -558,7 +548,7 @@ InodeNumber Overlay::scanForNextInodeNumber() {
     }
   }
 
-  setNextInodeNumber(InodeNumber{maxInode.get() + 1});
+  nextInodeNumber_.store(maxInode.get() + 1, std::memory_order_relaxed);
 
   return maxInode;
 }

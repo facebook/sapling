@@ -614,7 +614,6 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
     }
 
     SerializedInodeMap result;
-    XLOG(DBG5) << "InodeMap::save nextInodeNumber: " << result.nextInodeNumber;
     result.unloadedInodes.reserve(data->unloadedInodes_.size());
     for (const auto& it : data->unloadedInodes_) {
       const auto& entry = it.second;

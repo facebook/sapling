@@ -196,9 +196,14 @@ folly::Future<folly::Unit> EdenMount::initialize(
                << "; max existing inode number is " << maxInodeNumber;
   } else {
     XLOG(DBG2) << "Initializing eden mount " << getPath() << " from takeover";
-    overlay_->setNextInodeNumber(
-        InodeNumber::fromThrift(takeover->nextInodeNumber));
+    if (!overlay_->hasInitializedNextInodeNumber()) {
+      XLOG(WARN) << "A clean shutdown before takeover did not leave an "
+                    "initialized inode number! Rescanning...";
+      overlay_->scanForNextInodeNumber();
+    }
   }
+
+  CHECK(overlay_->hasInitializedNextInodeNumber());
 
   return createRootInode(*parents).then(
       [this, parents, takeover](TreeInodePtr initTreeNode) {
@@ -367,10 +372,8 @@ EdenMount::shutdownImpl(bool doTakeover) {
         // Close the Overlay object to make sure we have released its lock.
         // This is important during graceful restart to ensure that we have
         // released the lock before the new edenfs process begins to take over
-        // the mount piont.
-        inodeMap.nextInodeNumber = overlay_->close();
-        CHECK(inodeMap.nextInodeNumber)
-            << "nextInodeNumber should always be nonzero";
+        // the mount point.
+        overlay_->close();
         state_.store(State::SHUT_DOWN);
         return std::make_tuple(fileHandleMap, inodeMap);
       });
