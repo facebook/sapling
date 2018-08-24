@@ -34,6 +34,7 @@
 
 #include <mutex>
 
+#include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/LocalStore.h"
@@ -752,6 +753,22 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(store_, blobHash, "importFileContents");
+
+  if (mononoke_) {
+    XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
+               << hgInfo.revHash().toString() << " from mononoke";
+    try {
+      auto blob = mononoke_->getBlob(hgInfo.revHash())
+                      .get(std::chrono::milliseconds(FLAGS_mononoke_timeout));
+
+      return blob->getContents();
+    } catch (const std::exception& ex) {
+      XLOG(WARN) << "Error while fetching file contents of '" << hgInfo.path()
+                 << "', " << hgInfo.revHash().toString()
+                 << " from mononoke: " << ex.what();
+    }
+  }
+
   XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
              << hgInfo.revHash().toString();
 
