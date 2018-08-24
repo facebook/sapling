@@ -89,6 +89,7 @@ class TokenLocator(object):
                     token = self._gettokenfromsecretstool()
                     if token:
                         self._settokentofile(token, isbackedup=True)
+                    return token
                 except Exception:
                     pass
             else:
@@ -131,13 +132,7 @@ class TokenLocator(object):
             (stdoutdata, stderrdata) = p.communicate()
             rc = p.returncode
             if rc != 0:
-                # May not have migrated token yet
-                token = self._gettokenfromfile()
-
-                if token is not None:
-                    self._settokeninsecretstool(token)
-                    return token
-
+                return None
             text = stdoutdata.strip()
             return text or None
 
