@@ -2125,17 +2125,22 @@ def debugprocesstree(ui, *pids, **opts):
             hint=_("is osquery installed properly?"),
         )
 
-    # Build maps for easier lookups.
-    pidprocess = {p["pid"]: p for p in processes}
+    # Build maps for easier lookups. Pid 0 is the "virtual root" of every
+    # process. So remove it from the list.
+    pidprocess = {p["pid"]: p for p in processes if p["pid"] != "0"}
     childparent = {}  # {pid: [pid]}
     parentchild = {}  # {pid: [pid]}
     for pid, process in pidprocess.items():
         ppid = process["parent"]
+        # Reparent non-existed ppid to "0".
+        # This makes processes reachable from pid 0.
+        if ppid not in pidprocess:
+            ppid = "0"
         childparent.setdefault(pid, []).append(ppid)
         parentchild.setdefault(ppid, []).append(pid)
 
     # Find out hg processes.
-    cmdre = util.re.compile("([\\/](hg|chg)[ \.])|^chg\[worker")
+    cmdre = util.re.compile("(^(.*[\\\\/])?(hg|chg)[ \.])|^chg\[worker")
     if not pids:
         hgpids = {pid for pid, p in pidprocess.items() if cmdre.search(p["cmdline"])}
     else:
