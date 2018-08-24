@@ -245,6 +245,9 @@ files (first 20 of %d):
 def _makerage(ui, repo, **opts):
     srcrepo = shareutil.getsrcrepo(repo)
 
+    # Make graphlog shorter.
+    configoverrides = {("experimental", "graphshorten"): "1"}
+
     def hgcmd(cmdname, *args, **additional_opts):
         cmd, opts = cmdutil.getcmdanddefaultopts(cmdname, commands.table)
         opts.update(additional_opts)
@@ -255,10 +258,11 @@ def _makerage(ui, repo, **opts):
             del opts["_repo"]
         ui.pushbuffer(error=True)
         try:
-            if cmd.norepo:
-                cmd(ui, *args, **opts)
-            else:
-                cmd(ui, _repo, *args, **opts)
+            with ui.configoverride(configoverrides, "rage"):
+                if cmd.norepo:
+                    cmd(ui, *args, **opts)
+                else:
+                    cmd(ui, _repo, *args, **opts)
         finally:
             return ui.popbuffer()
 
@@ -284,16 +288,18 @@ def _makerage(ui, repo, **opts):
 
     detailed = [
         ("df -h", lambda: shcmd("df -h", check=False)),
+        # smartlog as the user sees it
         ("hg sl (filtered)", lambda: hgcmd("smartlog", template="{sl_debug}")),
         # unfiltered smartlog for recent hidden changesets, including full
         # node identity
         (
             "hg sl (unfiltered)",
             lambda: hgcmd(
-                "smartlog", _repo=repo.unfiltered(), template="{node}\n{sl_debug}"
+                "smartlog",
+                _repo=repo.unfiltered(),
+                template='{sub("\\n", " ", "{node} {sl_debug}")}',
             ),
         ),
-        # smartlog as the user sees it
         (
             'first 20 lines of "hg status"',
             lambda: "\n".join(hgcmd("status").splitlines()[:20]),
