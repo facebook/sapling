@@ -92,8 +92,7 @@ class TokenLocator(object):
                     return token
                 except Exception:
                     pass
-            else:
-                return None
+            return None
 
         with self.vfs.open(self.filename, r"rb") as f:
             tokenconfig = config.config()
