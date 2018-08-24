@@ -83,7 +83,7 @@ build:
 wheel:
 	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
 
-doc:
+doc: local
 	$(MAKE) -C doc
 
 cleanbutpackages:
