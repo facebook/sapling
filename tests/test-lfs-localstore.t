@@ -21,9 +21,12 @@ Both commits create LFS files (flag=2000)
 Upload them to remote store
 
   $ hg debuglfsupload -r 'all()'
-  $ find $TESTTMP/remote | grep '/../' | sort
-  $TESTTMP/remote/96/85eb765661ea3b95f31e1bb3c3b5501d0c2acdf353feeaa4d8fe32f95f77fb
-  $TESTTMP/remote/ab/861dc170dc2e43224e45278d3d31a675b9ebc34c9b0f48c066ca1eeaed8ee6
+  $ cd $TESTTMP
+  $ find remote | grep '/../' | sort
+  remote/96/85eb765661ea3b95f31e1bb3c3b5501d0c2acdf353feeaa4d8fe32f95f77fb
+  remote/ab/861dc170dc2e43224e45278d3d31a675b9ebc34c9b0f48c066ca1eeaed8ee6
+
+  $ cd - &>/dev/null
 
 Remove the local store
 
