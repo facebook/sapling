@@ -62,7 +62,9 @@ using facebook::edenwin::Subprocess;
 #endif
 using folly::io::Appender;
 using folly::io::Cursor;
+using std::make_unique;
 using std::string;
+using std::unique_ptr;
 using KeySpace = facebook::eden::LocalStore::KeySpace;
 
 DEFINE_string(
@@ -419,7 +421,7 @@ HgImporter::~HgImporter() {
 #endif
 }
 
-std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
+unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
 #if EDEN_HAVE_HG_TREEMANIFEST
   // importTree() only works with treemanifest.
   // This can only be called if the root tree was imported with treemanifest,
@@ -454,7 +456,7 @@ std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
 }
 
 #if EDEN_HAVE_HG_TREEMANIFEST
-std::unique_ptr<Tree> HgImporter::importTreeImpl(
+unique_ptr<Tree> HgImporter::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
     RelativePathPiece path,
@@ -466,7 +468,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
   // This isn't actually present in the mercurial data store; it has to be
   // handled specially in the code.
   if (path.empty() && manifestNode == kZeroHash) {
-    auto tree = std::make_unique<Tree>(std::vector<TreeEntry>{}, edenTreeID);
+    auto tree = make_unique<Tree>(std::vector<TreeEntry>{}, edenTreeID);
     auto serialized = LocalStore::serializeTree(tree.get());
     writeBatch->put(
         KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
@@ -520,7 +522,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
             proxyHash, entryName.stringPiece(), entry.getType());
       }
 
-      auto tree = std::make_unique<Tree>(std::move(entries), edenTreeID);
+      auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
       auto serialized = LocalStore::serializeTree(tree.get());
       writeBatch->put(
           KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
@@ -644,7 +646,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     iter.next();
   }
 
-  auto tree = std::make_unique<Tree>(std::move(entries), edenTreeID);
+  auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
   auto serialized = LocalStore::serializeTree(tree.get());
   writeBatch->put(
       KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
@@ -749,7 +751,7 @@ Hash HgImporter::importFlatManifest(edenfd_t fd, LocalStore* store) {
   return rootHash;
 }
 
-IOBuf HgImporter::importFileContents(Hash blobHash) {
+unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(store_, blobHash, "importFileContents");
@@ -842,7 +844,7 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
                << hgInfo.revHash() << "); length=" << bodyLength;
   }
 
-  return buf;
+  return make_unique<Blob>(blobHash, std::move(buf));
 }
 
 void HgImporter::prefetchFiles(

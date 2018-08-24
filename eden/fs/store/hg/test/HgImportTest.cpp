@@ -72,6 +72,9 @@ class HgImportTest : public ::testing::TestWithParam<RepoType> {
 
 } // namespace
 
+#define EXPECT_BLOB_EQ(blob, data) \
+  EXPECT_EQ((blob)->getContents().clone()->moveToFbString(), (data))
+
 TEST_P(HgImportTest, importTest) {
   bool treemanifest = GetParam() == RepoType::TREE_MANIFEST;
   // Set up the initial commit
@@ -168,17 +171,17 @@ TEST_P(HgImportTest, importTest) {
   ASSERT_EQ(TreeEntryType::EXECUTABLE_FILE, mainEntry.getType());
 
   // Import and check the blobs
-  auto barBuf = importer.importFileContents(barEntry.getHash());
-  EXPECT_EQ(barData, StringPiece{barBuf.coalesce()});
+  auto barBlob = importer.importFileContents(barEntry.getHash());
+  EXPECT_BLOB_EQ(barBlob, barData);
 
-  auto testBuf = importer.importFileContents(testEntry.getHash());
-  EXPECT_EQ(testData, StringPiece{testBuf.coalesce()});
+  auto testBlob = importer.importFileContents(testEntry.getHash());
+  EXPECT_BLOB_EQ(testBlob, testData);
 
-  auto mainBuf = importer.importFileContents(mainEntry.getHash());
-  EXPECT_EQ(mainData, StringPiece{mainBuf.coalesce()});
+  auto mainBlob = importer.importFileContents(mainEntry.getHash());
+  EXPECT_BLOB_EQ(mainBlob, mainData);
 
-  auto somelinkBuf = importer.importFileContents(somelinkEntry.getHash());
-  EXPECT_EQ(somelinkData, StringPiece{somelinkBuf.coalesce()});
+  auto somelinkBlob = importer.importFileContents(somelinkEntry.getHash());
+  EXPECT_BLOB_EQ(somelinkBlob, somelinkData);
 
   // Test importing objects that do not exist
   Hash noSuchHash = makeTestHash("123");

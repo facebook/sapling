@@ -158,10 +158,7 @@ Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
 Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   return folly::via(
              importThreadPool_.get(),
-             [id] {
-               auto buf = getThreadLocalImporter().importFileContents(id);
-               return make_unique<Blob>(id, std::move(buf));
-             })
+             [id] { return getThreadLocalImporter().importFileContents(id); })
       // Ensure that the control moves back to the main thread pool
       // to process the caller-attached .then routine.
       .via(serverThreadPool_);
