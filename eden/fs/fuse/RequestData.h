@@ -102,7 +102,8 @@ class RequestData : public folly::RequestData {
    * kernel. */
   template <typename FUTURE>
   folly::Future<folly::Unit> catchErrors(FUTURE&& fut) {
-    return fut.onError(systemErrorHandler)
+    return std::move(fut)
+        .onError(systemErrorHandler)
         .onError(genericErrorHandler)
         .ensure([] { RequestData::get().finishRequest(); });
   }
