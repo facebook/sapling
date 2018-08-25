@@ -307,13 +307,8 @@ HgImporter::Options HgImporter::waitForHelperStart() {
 
   IOBuf buf(IOBuf::CREATE, header.dataLength);
 
-#ifdef EDEN_WIN
-  facebook::edenwin::Pipe::read(
-      helperOut_, buf.writableTail(), header.dataLength);
-#else
-  folly::readFull(helperOut_, buf.writableTail(), header.dataLength);
-#endif
-
+  readFromHelper(
+      buf.writableTail(), header.dataLength, "CMD_STARTED response body");
   buf.append(header.dataLength);
 
   Cursor cursor(&buf);
@@ -714,12 +709,10 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
       chunkData.clear();
     }
 
-#ifdef EDEN_WIN
-    facebook::edenwin::Pipe::read(
-        helperOut_, chunkData.writableTail(), header.dataLength);
-#else
-    folly::readFull(helperOut_, chunkData.writableTail(), header.dataLength);
-#endif
+    readFromHelper(
+        chunkData.writableTail(),
+        header.dataLength,
+        "CMD_MANIFEST response body");
     chunkData.append(header.dataLength);
 
     // Now process the entries in the chunk
@@ -794,12 +787,8 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
   }
   auto buf = IOBuf(IOBuf::CREATE, header.dataLength);
 
-#ifdef EDEN_WIN
-  facebook::edenwin::Pipe::read(
-      helperOut_, buf.writableTail(), header.dataLength);
-#else
-  folly::readFull(helperOut_, buf.writableTail(), header.dataLength);
-#endif
+  readFromHelper(
+      buf.writableTail(), header.dataLength, "CMD_CAT_FILE response body");
   buf.append(header.dataLength);
 
   // The last 8 bytes of the response are the body length.
@@ -863,12 +852,10 @@ Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
   }
 
   Hash::Storage buffer;
-
-#ifdef EDEN_WIN
-  facebook::edenwin::Pipe::read(helperOut_, &buffer[0], buffer.size());
-#else
-  folly::readFull(helperOut_, &buffer[0], buffer.size());
-#endif
+  readFromHelper(
+      buffer.data(),
+      buffer.size(),
+      "CMD_MANIFEST_NODE_FOR_COMMIT response body");
   return Hash(buffer);
 }
 
@@ -921,13 +908,8 @@ void HgImporter::readManifestEntry(
 
 HgImporter::ChunkHeader HgImporter::readChunkHeader() {
   ChunkHeader header;
-#ifdef EDEN_WIN
-  DWORD bytesRead;
-  facebook::edenwin::Pipe::read(
-      helperOut_, &header, sizeof(header), &bytesRead);
-#else
-  folly::readFull(helperOut_, &header, sizeof(header));
-#endif
+  readFromHelper(&header, sizeof(header), "response header");
+
   header.requestID = Endian::big(header.requestID);
   header.command = Endian::big(header.command);
   header.flags = Endian::big(header.flags);
@@ -944,12 +926,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader() {
 
 [[noreturn]] void HgImporter::readErrorAndThrow(const ChunkHeader& header) {
   auto buf = IOBuf{IOBuf::CREATE, header.dataLength};
-#ifdef EDEN_WIN
-  facebook::edenwin::Pipe::read(
-      helperOut_, buf.writableTail(), header.dataLength);
-#else
-  folly::readFull(helperOut_, buf.writableTail(), header.dataLength);
-#endif
+  readFromHelper(buf.writableTail(), header.dataLength, "error response body");
   buf.append(header.dataLength);
 
   Cursor cursor(&buf);
@@ -1102,6 +1079,50 @@ void HgImporter::sendFetchTreeRequest(
 #else
   folly::writevFull(helperIn_, iov.data(), iov.size());
 #endif
+}
+
+void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
+  size_t bytesRead;
+#ifdef EDEN_WIN
+  DWORD winBytesRead;
+  try {
+    facebook::edenwin::Pipe::read(helperOut_, buf, size, &winBytesRead);
+  } catch (const std::exception& ex) {
+    // The Pipe::read() code can throw std::system_error.  Translate this to
+    // HgImporterError so that the higher-level code will retry on this error.
+    HgImporterError importErr(
+        "error reading ",
+        context,
+        " from hg_import_helper.py: ",
+        folly::exceptionStr(ex));
+    XLOG(ERR) << importErr.what();
+    throw importErr;
+  }
+  bytesRead = winBytesRead;
+#else
+  auto result = folly::readFull(helperOut_, buf, size);
+  if (result < 0) {
+    HgImporterError err(
+        "error reading ",
+        context,
+        " from hg_import_helper.py: ",
+        folly::errnoStr(errno));
+    XLOG(ERR) << err.what();
+    throw err;
+  }
+  bytesRead = static_cast<size_t>(result);
+#endif
+  if (bytesRead != size) {
+    // The helper process closed the pipe early.
+    // This generally means that it exited.
+    HgImporterError err(
+        "received unexpected EOF from hg_import_helper.py after ",
+        result,
+        " bytes while reading ",
+        context);
+    XLOG(ERR) << err.what();
+    throw err;
+  }
 }
 
 HgImporterManager::HgImporterManager(
