@@ -760,10 +760,8 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
     XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
                << hgInfo.revHash().toString() << " from mononoke";
     try {
-      auto blob = mononoke_->getBlob(hgInfo.revHash())
-                      .get(std::chrono::milliseconds(FLAGS_mononoke_timeout));
-
-      return blob->getContents();
+      return mononoke_->getBlob(hgInfo.revHash())
+          .get(std::chrono::milliseconds(FLAGS_mononoke_timeout));
     } catch (const std::exception& ex) {
       XLOG(WARN) << "Error while fetching file contents of '" << hgInfo.path()
                  << "', " << hgInfo.revHash().toString()
