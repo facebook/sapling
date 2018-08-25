@@ -143,17 +143,6 @@ class HgImporter : public Importer {
    */
   Hash importFlatManifest(folly::StringPiece revName);
 
-  /**
-   * Import flat manifest data from the specified input File, and put the data
-   * into the specified LocalStore object.
-   *
-   * This API is primarily intended to allow benchmarking the flat manifest
-   * import process by importing data from a pre-generated file.  Outside of
-   * benchmarking the importFlatManifest() function above should generally be
-   * used instead.
-   */
-  static Hash importFlatManifest(edenfd_t manifestDataFd, LocalStore* store);
-
   std::unique_ptr<Tree> importTree(const Hash& id) override;
   std::unique_ptr<Blob> importFileContents(Hash blobHash) override;
   void prefetchFiles(
@@ -264,17 +253,12 @@ class HgImporter : public Importer {
    * If the header indicates an error, this will read the full error message
    * and throw a std::runtime_error.
    */
-  ChunkHeader readChunkHeader() {
-    return readChunkHeader(helperOut_);
-  }
-  static ChunkHeader readChunkHeader(edenfd_t fd);
+  ChunkHeader readChunkHeader();
 
   /**
    * Read the body of an error message, and throw it as an exception.
    */
-  [[noreturn]] static void readErrorAndThrow(
-      edenfd_t fd,
-      const ChunkHeader& header);
+  [[noreturn]] void readErrorAndThrow(const ChunkHeader& header);
 
   /**
    * Wait for the helper process to send a CMD_STARTED response to indicate

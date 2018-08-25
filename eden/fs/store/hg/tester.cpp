@@ -34,10 +34,6 @@ DEFINE_string(
     "flat",
     "The hg import mechanism to use: \"flat\" or \"tree\"");
 DEFINE_string(
-    flat_import_file,
-    "",
-    "Import flat manifest data from a manifest dump in the specified file.");
-DEFINE_string(
     subdir,
     "",
     "A subdirectory to import when using --import_type=tree.");
@@ -196,10 +192,7 @@ int main(int argc, char* argv[]) {
   RocksDbLocalStore store(rocksPath);
 
   int returnCode = EX_OK;
-  if (!FLAGS_flat_import_file.empty()) {
-    folly::File inputFile(FLAGS_flat_import_file);
-    HgImporter::importFlatManifest(inputFile.fd(), &store);
-  } else if (FLAGS_import_type == "flat") {
+  if (FLAGS_import_type == "flat") {
     HgImporter importer(repoPath, &store);
     printf("Importing revision \"%s\" using flat manifest\n", revName.c_str());
     auto rootHash = importer.importFlatManifest(revName);

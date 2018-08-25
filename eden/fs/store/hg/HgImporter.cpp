@@ -696,19 +696,15 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
   // Send the manifest request to the helper process
   sendManifestRequest(revName);
 
-  return importFlatManifest(helperOut_, store_);
-}
-
-Hash HgImporter::importFlatManifest(edenfd_t fd, LocalStore* store) {
-  auto writeBatch = store->beginWrite(FLAGS_hgManifestImportBufferSize);
-  HgManifestImporter importer(store, writeBatch.get());
+  auto writeBatch = store_->beginWrite(FLAGS_hgManifestImportBufferSize);
+  HgManifestImporter importer(store_, writeBatch.get());
   size_t numPaths = 0;
 
   auto start = std::chrono::steady_clock::now();
   IOBuf chunkData;
   while (true) {
     // Read the chunk header
-    auto header = readChunkHeader(fd);
+    auto header = readChunkHeader();
 
     // Allocate a larger chunk buffer if we need to,
     // but prefer to re-use the old buffer if we can.
@@ -720,9 +716,9 @@ Hash HgImporter::importFlatManifest(edenfd_t fd, LocalStore* store) {
 
 #ifdef EDEN_WIN
     facebook::edenwin::Pipe::read(
-        fd, chunkData.writableTail(), header.dataLength);
+        helperOut_, chunkData.writableTail(), header.dataLength);
 #else
-    folly::readFull(fd, chunkData.writableTail(), header.dataLength);
+    folly::readFull(helperOut_, chunkData.writableTail(), header.dataLength);
 #endif
     chunkData.append(header.dataLength);
 
@@ -923,13 +919,14 @@ void HgImporter::readManifestEntry(
   importer.processEntry(path.dirname(), std::move(entry));
 }
 
-HgImporter::ChunkHeader HgImporter::readChunkHeader(edenfd_t fd) {
+HgImporter::ChunkHeader HgImporter::readChunkHeader() {
   ChunkHeader header;
 #ifdef EDEN_WIN
   DWORD bytesRead;
-  facebook::edenwin::Pipe::read(fd, &header, sizeof(header), &bytesRead);
+  facebook::edenwin::Pipe::read(
+      helperOut_, &header, sizeof(header), &bytesRead);
 #else
-  folly::readFull(fd, &header, sizeof(header));
+  folly::readFull(helperOut_, &header, sizeof(header));
 #endif
   header.requestID = Endian::big(header.requestID);
   header.command = Endian::big(header.command);
@@ -939,20 +936,19 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(edenfd_t fd) {
   // If the header indicates an error, read the error message
   // and throw an exception.
   if ((header.flags & FLAG_ERROR) != 0) {
-    readErrorAndThrow(fd, header);
+    readErrorAndThrow(header);
   }
 
   return header;
 }
 
-[[noreturn]] void HgImporter::readErrorAndThrow(
-    edenfd_t fd,
-    const ChunkHeader& header) {
+[[noreturn]] void HgImporter::readErrorAndThrow(const ChunkHeader& header) {
   auto buf = IOBuf{IOBuf::CREATE, header.dataLength};
 #ifdef EDEN_WIN
-  facebook::edenwin::Pipe::read(fd, buf.writableTail(), header.dataLength);
+  facebook::edenwin::Pipe::read(
+      helperOut_, buf.writableTail(), header.dataLength);
 #else
-  folly::readFull(fd, buf.writableTail(), header.dataLength);
+  folly::readFull(helperOut_, buf.writableTail(), header.dataLength);
 #endif
   buf.append(header.dataLength);
 
