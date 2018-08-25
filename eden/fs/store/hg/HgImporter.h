@@ -261,6 +261,14 @@ class HgImporter : public Importer {
   [[noreturn]] void readErrorAndThrow(const ChunkHeader& header);
 
   void readFromHelper(void* buf, size_t size, folly::StringPiece context);
+  void
+  writeToHelper(struct iovec* iov, size_t numIov, folly::StringPiece context);
+  template <size_t N>
+  void writeToHelper(
+      std::array<struct iovec, N>& iov,
+      folly::StringPiece context) {
+    writeToHelper(iov.data(), iov.size(), context);
+  }
 
   /**
    * Wait for the helper process to send a CMD_STARTED response to indicate

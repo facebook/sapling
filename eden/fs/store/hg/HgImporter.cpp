@@ -954,11 +954,7 @@ void HgImporter::sendManifestRequest(folly::StringPiece revName) {
   iov[0].iov_len = sizeof(header);
   iov[1].iov_base = const_cast<char*>(revName.data());
   iov[1].iov_len = revName.size();
-#ifdef EDEN_WIN
-  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
-#else
-  folly::writevFull(helperIn_, iov.data(), iov.size());
-#endif
+  writeToHelper(iov, "CMD_MANIFEST");
 }
 
 void HgImporter::sendManifestNodeRequest(folly::StringPiece revName) {
@@ -973,11 +969,7 @@ void HgImporter::sendManifestNodeRequest(folly::StringPiece revName) {
   iov[0].iov_len = sizeof(header);
   iov[1].iov_base = const_cast<char*>(revName.data());
   iov[1].iov_len = revName.size();
-#ifdef EDEN_WIN
-  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
-#else
-  folly::writevFull(helperIn_, iov.data(), iov.size());
-#endif
+  writeToHelper(iov, "CMD_MANIFEST_NODE_FOR_COMMIT");
 }
 
 void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
@@ -995,11 +987,7 @@ void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
   iov[1].iov_len = Hash::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
-#ifdef EDEN_WIN
-  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
-#else
-  folly::writevFull(helperIn_, iov.data(), iov.size());
-#endif
+  writeToHelper(iov, "CMD_CAT_FILE");
 }
 
 void HgImporter::sendPrefetchFilesRequest(
@@ -1050,11 +1038,7 @@ void HgImporter::sendPrefetchFilesRequest(
   iov[0].iov_len = sizeof(header);
   iov[1].iov_base = const_cast<uint8_t*>(buf.data());
   iov[1].iov_len = buf.length();
-#ifdef EDEN_WIN
-  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
-#else
-  folly::writevFull(helperIn_, iov.data(), iov.size());
-#endif
+  writeToHelper(iov, "CMD_PREFETCH_FILES");
 }
 
 void HgImporter::sendFetchTreeRequest(
@@ -1074,11 +1058,7 @@ void HgImporter::sendFetchTreeRequest(
   iov[1].iov_len = Hash::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
-#ifdef EDEN_WIN
-  facebook::edenwin::Pipe::writeiov(helperIn_, iov.data(), iov.size());
-#else
-  folly::writevFull(helperIn_, iov.data(), iov.size());
-#endif
+  writeToHelper(iov, "CMD_FETCH_TREE");
 }
 
 void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
@@ -1123,6 +1103,40 @@ void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
     XLOG(ERR) << err.what();
     throw err;
   }
+}
+
+void HgImporter::writeToHelper(
+    struct iovec* iov,
+    size_t numIov,
+    StringPiece context) {
+#ifdef EDEN_WIN
+  try {
+    facebook::edenwin::Pipe::writeiov(helperIn_, iov, numIov);
+  } catch (const std::exception& ex) {
+    // The Pipe::read() code can throw std::system_error.  Translate this to
+    // HgImporterError so that the higher-level code will retry on this error.
+    HgImporterError importErr(
+        "error writing ",
+        context,
+        " to hg_import_helper.py: ",
+        folly::exceptionStr(ex));
+    XLOG(ERR) << importErr.what();
+    throw importErr;
+  }
+#else
+  auto result = folly::writevFull(helperIn_, iov, numIov);
+  if (result < 0) {
+    HgImporterError err(
+        "error writing ",
+        context,
+        " to hg_import_helper.py: ",
+        folly::errnoStr(errno));
+    XLOG(ERR) << err.what();
+    throw err;
+  }
+  // writevFull() will always write the full contents or fail, so we don't need
+  // to check that the length written matches our input.
+#endif
 }
 
 HgImporterManager::HgImporterManager(
