@@ -79,7 +79,7 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
 
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
-      threadLocalImporter.reset(new HgImporter(
+      threadLocalImporter.reset(new HgImporterManager(
           repository_, localStore_, clientCertificate_, useMononoke_));
       func();
     });

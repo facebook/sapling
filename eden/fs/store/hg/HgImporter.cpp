@@ -1107,5 +1107,51 @@ void HgImporter::sendFetchTreeRequest(
   folly::writevFull(helperIn_, iov.data(), iov.size());
 #endif
 }
+
+HgImporterManager::HgImporterManager(
+    AbsolutePathPiece repoPath,
+    LocalStore* store,
+    folly::Optional<AbsolutePath> clientCertificate,
+    bool useMononoke)
+    : repoPath_{repoPath},
+      store_{store},
+      clientCertificate_{clientCertificate},
+      useMononoke_{useMononoke} {}
+
+Hash HgImporterManager::importManifest(StringPiece revName) {
+  return retryOnError(
+      [&](HgImporter* importer) { return importer->importManifest(revName); });
+}
+
+unique_ptr<Tree> HgImporterManager::importTree(const Hash& id) {
+  return retryOnError(
+      [&](HgImporter* importer) { return importer->importTree(id); });
+}
+
+unique_ptr<Blob> HgImporterManager::importFileContents(Hash blobHash) {
+  return retryOnError([&](HgImporter* importer) {
+    return importer->importFileContents(blobHash);
+  });
+}
+
+void HgImporterManager::prefetchFiles(
+    const std::vector<std::pair<RelativePath, Hash>>& files) {
+  return retryOnError(
+      [&](HgImporter* importer) { return importer->prefetchFiles(files); });
+}
+
+HgImporter* HgImporterManager::getImporter() {
+  if (!importer_) {
+    importer_ = make_unique<HgImporter>(
+        repoPath_, store_, clientCertificate_, useMononoke_);
+  }
+  return importer_.get();
+}
+
+void HgImporterManager::resetHgImporter(const HgImporterError& ex) {
+  importer_.reset();
+  XLOG(WARN) << "error communicating with hg_import_helper.py: " << ex.what();
+}
+
 } // namespace eden
 } // namespace facebook

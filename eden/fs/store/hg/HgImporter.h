@@ -363,5 +363,69 @@ class HgImporter : public Importer {
   std::unique_ptr<MononokeBackingStore> mononoke_;
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 };
+
+class HgImporterError : public std::exception {
+ public:
+  template <typename... Args>
+  HgImporterError(Args&&... args)
+      : message_(folly::to<std::string>(std::forward<Args>(args)...)) {}
+
+  const char* what() const noexcept override {
+    return message_.c_str();
+  }
+
+ private:
+  std::string message_;
+};
+
+/**
+ * A helper class that manages an HgImporter and recreates it after any error
+ * communicating with the underlying python hg_import_helper.py script.
+ */
+class HgImporterManager : public Importer {
+ public:
+  HgImporterManager(
+      AbsolutePathPiece repoPath,
+      LocalStore* store,
+      folly::Optional<AbsolutePath> clientCertificate,
+      bool useMononoke);
+
+  Hash importManifest(folly::StringPiece revName) override;
+
+  std::unique_ptr<Tree> importTree(const Hash& id) override;
+
+  std::unique_ptr<Blob> importFileContents(Hash blobHash) override;
+  void prefetchFiles(
+      const std::vector<std::pair<RelativePath, Hash>>& files) override;
+
+ private:
+  template <typename Fn>
+  auto retryOnError(Fn&& fn) {
+    bool retried = false;
+    while (true) {
+      try {
+        return fn(getImporter());
+      } catch (const HgImporterError& ex) {
+        resetHgImporter(ex);
+        if (retried) {
+          throw;
+        } else {
+          retried = true;
+        }
+      }
+    }
+  }
+
+  HgImporter* getImporter();
+  void resetHgImporter(const HgImporterError& ex);
+
+  std::unique_ptr<HgImporter> importer_;
+
+  const AbsolutePath repoPath_;
+  LocalStore* const store_{nullptr};
+  const folly::Optional<AbsolutePath> clientCertificate_;
+  const bool useMononoke_{false};
+};
+
 } // namespace eden
 } // namespace facebook
