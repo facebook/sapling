@@ -290,7 +290,7 @@ HgImporter::HgImporter(
 HgImporter::Options HgImporter::waitForHelperStart() {
   // Wait for the import helper to send the CMD_STARTED message indicating
   // that it has started successfully.
-  auto header = readChunkHeader();
+  auto header = readChunkHeader(0, "CMD_STARTED");
   if (header.command != CMD_STARTED) {
     // This normally shouldn't happen.  If an error occurs, the
     // hg_import_helper script should send an error chunk causing
@@ -531,11 +531,11 @@ unique_ptr<Tree> HgImporter::importTreeImpl(
     // Ask the hg_import_helper script to fetch data for this tree
     XLOG(DBG1) << "fetching data for tree \"" << path << "\" at manifest node "
                << manifestNode;
-    sendFetchTreeRequest(path, manifestNode);
+    auto requestID = sendFetchTreeRequest(path, manifestNode);
 
     ChunkHeader header;
     try {
-      header = readChunkHeader();
+      header = readChunkHeader(requestID, "CMD_FETCH_TREE");
     } catch (const HgImportPyError& ex) {
       // For now translate any error thrown into a MissingKeyError,
       // so that our caller will retry this tree import using flatmanifest
@@ -689,7 +689,7 @@ Hash HgImporter::importManifest(StringPiece revName) {
 
 Hash HgImporter::importFlatManifest(StringPiece revName) {
   // Send the manifest request to the helper process
-  sendManifestRequest(revName);
+  auto requestID = sendManifestRequest(revName);
 
   auto writeBatch = store_->beginWrite(FLAGS_hgManifestImportBufferSize);
   HgManifestImporter importer(store_, writeBatch.get());
@@ -699,7 +699,7 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
   IOBuf chunkData;
   while (true) {
     // Read the chunk header
-    auto header = readChunkHeader();
+    auto header = readChunkHeader(requestID, "CMD_MANIFEST");
 
     // Allocate a larger chunk buffer if we need to,
     // but prefer to re-use the old buffer if we can.
@@ -762,7 +762,7 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
              << hgInfo.revHash().toString();
 
   // Ask the import helper process for the file contents
-  sendFileRequest(hgInfo.path(), hgInfo.revHash());
+  auto requestID = sendFileRequest(hgInfo.path(), hgInfo.revHash());
 
   // Read the response.  The response body contains the file contents,
   // which is exactly what we want to return.
@@ -770,7 +770,7 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
   // Note: For now we expect to receive the entire contents in a single chunk.
   // In the future we might want to consider if it is more efficient to receive
   // the body data in fixed-size chunks, particularly for very large files.
-  auto header = readChunkHeader();
+  auto header = readChunkHeader(requestID, "CMD_CAT_FILE");
   if (header.dataLength < sizeof(uint64_t)) {
     auto msg = folly::to<string>(
         "CMD_CAT_FILE response for blob ",
@@ -832,17 +832,17 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
 
 void HgImporter::prefetchFiles(
     const std::vector<std::pair<RelativePath, Hash>>& files) {
-  sendPrefetchFilesRequest(files);
+  auto requestID = sendPrefetchFilesRequest(files);
 
   // Read the response; throws if there was any error.
   // No payload is returned.
-  readChunkHeader();
+  readChunkHeader(requestID, "CMD_PREFETCH_FILES");
 }
 
 Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
-  sendManifestNodeRequest(revName);
+  auto requestID = sendManifestNodeRequest(revName);
 
-  auto header = readChunkHeader();
+  auto header = readChunkHeader(requestID, "CMD_MANIFEST_NODE_FOR_COMMIT");
   if (header.dataLength != 20) {
     throw std::runtime_error(folly::to<string>(
         "expected a 20-byte hash for the manifest node '",
@@ -906,7 +906,9 @@ void HgImporter::readManifestEntry(
   importer.processEntry(path.dirname(), std::move(entry));
 }
 
-HgImporter::ChunkHeader HgImporter::readChunkHeader() {
+HgImporter::ChunkHeader HgImporter::readChunkHeader(
+    TransactionID txnID,
+    StringPiece cmdName) {
   ChunkHeader header;
   readFromHelper(&header, sizeof(header), "response header");
 
@@ -919,6 +921,19 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader() {
   // and throw an exception.
   if ((header.flags & FLAG_ERROR) != 0) {
     readErrorAndThrow(header);
+  }
+
+  if (header.requestID != txnID) {
+    auto err = HgImporterError(
+        "received unexpected transaction ID (",
+        header.requestID,
+        " != ",
+        txnID,
+        ") when reading ",
+        cmdName,
+        " response");
+    XLOG(ERR) << err.what();
+    throw err;
   }
 
   return header;
@@ -942,10 +957,12 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader() {
   throw HgImportPyError(errorType, message);
 }
 
-void HgImporter::sendManifestRequest(folly::StringPiece revName) {
+HgImporter::TransactionID
+    HgImporter::sendManifestRequest(folly::StringPiece revName) {
+  auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_MANIFEST);
-  header.requestID = Endian::big<uint32_t>(nextRequestID_++);
+  header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
   header.dataLength = Endian::big<uint32_t>(revName.size());
 
@@ -955,12 +972,16 @@ void HgImporter::sendManifestRequest(folly::StringPiece revName) {
   iov[1].iov_base = const_cast<char*>(revName.data());
   iov[1].iov_len = revName.size();
   writeToHelper(iov, "CMD_MANIFEST");
+
+  return txnID;
 }
 
-void HgImporter::sendManifestNodeRequest(folly::StringPiece revName) {
+HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
+    folly::StringPiece revName) {
+  auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_MANIFEST_NODE_FOR_COMMIT);
-  header.requestID = Endian::big<uint32_t>(nextRequestID_++);
+  header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
   header.dataLength = Endian::big<uint32_t>(revName.size());
 
@@ -970,12 +991,17 @@ void HgImporter::sendManifestNodeRequest(folly::StringPiece revName) {
   iov[1].iov_base = const_cast<char*>(revName.data());
   iov[1].iov_len = revName.size();
   writeToHelper(iov, "CMD_MANIFEST_NODE_FOR_COMMIT");
+
+  return txnID;
 }
 
-void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
+HgImporter::TransactionID HgImporter::sendFileRequest(
+    RelativePathPiece path,
+    Hash revHash) {
+  auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_CAT_FILE);
-  header.requestID = Endian::big<uint32_t>(nextRequestID_++);
+  header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
   StringPiece pathStr = path.stringPiece();
   header.dataLength = Endian::big<uint32_t>(Hash::RAW_SIZE + pathStr.size());
@@ -988,13 +1014,16 @@ void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
   writeToHelper(iov, "CMD_CAT_FILE");
+
+  return txnID;
 }
 
-void HgImporter::sendPrefetchFilesRequest(
+HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
     const std::vector<std::pair<RelativePath, Hash>>& files) {
+  auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_PREFETCH_FILES);
-  header.requestID = Endian::big<uint32_t>(nextRequestID_++);
+  header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
 
   // Compute the length of the body
@@ -1039,14 +1068,17 @@ void HgImporter::sendPrefetchFilesRequest(
   iov[1].iov_base = const_cast<uint8_t*>(buf.data());
   iov[1].iov_len = buf.length();
   writeToHelper(iov, "CMD_PREFETCH_FILES");
+
+  return txnID;
 }
 
-void HgImporter::sendFetchTreeRequest(
+HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
     RelativePathPiece path,
     Hash pathManifestNode) {
+  auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_FETCH_TREE);
-  header.requestID = Endian::big<uint32_t>(nextRequestID_++);
+  header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
   StringPiece pathStr = path.stringPiece();
   header.dataLength = Endian::big<uint32_t>(Hash::RAW_SIZE + pathStr.size());
@@ -1059,6 +1091,8 @@ void HgImporter::sendFetchTreeRequest(
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
   writeToHelper(iov, "CMD_FETCH_TREE");
+
+  return txnID;
 }
 
 void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {

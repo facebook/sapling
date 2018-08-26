@@ -204,8 +204,9 @@ class HgImporter : public Importer {
     CMD_PREFETCH_FILES = 6,
     CMD_CAT_FILE = 7,
   };
+  using TransactionID = uint32_t;
   struct ChunkHeader {
-    uint32_t requestID;
+    TransactionID requestID;
     uint32_t command;
     uint32_t flags;
     uint32_t dataLength;
@@ -252,8 +253,12 @@ class HgImporter : public Importer {
    *
    * If the header indicates an error, this will read the full error message
    * and throw a std::runtime_error.
+   *
+   * This will throw an HgImporterError if there is an error communicating with
+   * the hg_import_helper.py subprocess (for instance, if the helper process has
+   * exited, or if the response does not contain the expected transaction ID).
    */
-  ChunkHeader readChunkHeader();
+  ChunkHeader readChunkHeader(TransactionID txnID, folly::StringPiece cmdName);
 
   /**
    * Read the body of an error message, and throw it as an exception.
@@ -297,28 +302,30 @@ class HgImporter : public Importer {
    * Send a request to the helper process, asking it to send us the manifest
    * for the specified revision.
    */
-  void sendManifestRequest(folly::StringPiece revName);
+  TransactionID sendManifestRequest(folly::StringPiece revName);
   /**
    * Send a request to the helper process, asking it to send us the contents
    * of the given file at the specified file revision.
    */
-  void sendFileRequest(RelativePathPiece path, Hash fileRevHash);
+  TransactionID sendFileRequest(RelativePathPiece path, Hash fileRevHash);
   /**
    * Send a request to the helper process, asking it to send us the
    * manifest node (NOT the full manifest!) for the specified revision.
    */
-  void sendManifestNodeRequest(folly::StringPiece revName);
+  TransactionID sendManifestNodeRequest(folly::StringPiece revName);
   /**
    * Send a request to the helper process asking it to prefetch data for trees
    * under the specified path, at the specified manifest node for the given
    * path.
    */
-  void sendFetchTreeRequest(RelativePathPiece path, Hash pathManifestNode);
+  TransactionID sendFetchTreeRequest(
+      RelativePathPiece path,
+      Hash pathManifestNode);
 
   // Note: intentional RelativePath rather than RelativePathPiece here because
   // HgProxyHash is not movable and it was less work to make a copy here than
   // to implement its move constructor :-p
-  void sendPrefetchFilesRequest(
+  TransactionID sendPrefetchFilesRequest(
       const std::vector<std::pair<RelativePath, Hash>>& files);
 
 #if EDEN_HAVE_HG_TREEMANIFEST
