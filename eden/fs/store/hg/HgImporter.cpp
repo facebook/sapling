@@ -537,22 +537,26 @@ unique_ptr<Tree> HgImporter::importTreeImpl(
     try {
       header = readChunkHeader(requestID, "CMD_FETCH_TREE");
     } catch (const HgImportPyError& ex) {
-      // For now translate any error thrown into a MissingKeyError,
-      // so that our caller will retry this tree import using flatmanifest
-      // import if possible.
-      //
-      // The mercurial code can throw a wide variety of errors here that all
-      // effectively mean mean it couldn't fetch the tree data.
-      //
-      // We most commonly expect to get a MissingNodesError if the remote
-      // server does not know about these trees (for instance if they are only
-      // available locally, but simply only have flatmanifest information
-      // rather than treemanifest info).
-      //
-      // However we can also get lots of other errors: no remote server
-      // configured, remote repository does not exist, remote repository does
-      // not support fetching tree info, etc.
-      throw MissingKeyError(ex.what());
+      if (FLAGS_allow_flatmanifest_fallback) {
+        // For now translate any error thrown into a MissingKeyError,
+        // so that our caller will retry this tree import using flatmanifest
+        // import if possible.
+        //
+        // The mercurial code can throw a wide variety of errors here that all
+        // effectively mean mean it couldn't fetch the tree data.
+        //
+        // We most commonly expect to get a MissingNodesError if the remote
+        // server does not know about these trees (for instance if they are only
+        // available locally, but simply only have flatmanifest information
+        // rather than treemanifest info).
+        //
+        // However we can also get lots of other errors: no remote server
+        // configured, remote repository does not exist, remote repository does
+        // not support fetching tree info, etc.
+        throw MissingKeyError(ex.what());
+      } else {
+        throw;
+      }
     }
 
     if (header.dataLength != 0) {
@@ -1183,6 +1187,37 @@ HgImporterManager::HgImporterManager(
       clientCertificate_{clientCertificate},
       useMononoke_{useMononoke} {}
 
+template <typename Fn>
+auto HgImporterManager::retryOnError(Fn&& fn) {
+  bool retried = false;
+
+  auto retryableError = [this, &retried](const std::exception& ex) {
+    resetHgImporter(ex);
+    if (retried) {
+      throw;
+    } else {
+      XLOG(INFO) << "restarting hg_import_helper and retrying operation";
+      retried = true;
+    }
+  };
+
+  while (true) {
+    try {
+      return fn(getImporter());
+    } catch (const HgImportPyError& ex) {
+      if (ex.errorType() == "ResetRepoError") {
+        // The python code thinks its repository state has gone bad, and
+        // is requesting to be restarted
+        retryableError(ex);
+      } else {
+        throw;
+      }
+    } catch (const HgImporterError& ex) {
+      retryableError(ex);
+    }
+  }
+}
+
 Hash HgImporterManager::importManifest(StringPiece revName) {
   return retryOnError(
       [&](HgImporter* importer) { return importer->importManifest(revName); });
@@ -1213,7 +1248,7 @@ HgImporter* HgImporterManager::getImporter() {
   return importer_.get();
 }
 
-void HgImporterManager::resetHgImporter(const HgImporterError& ex) {
+void HgImporterManager::resetHgImporter(const std::exception& ex) {
   importer_.reset();
   XLOG(WARN) << "error communicating with hg_import_helper.py: " << ex.what();
 }

@@ -401,24 +401,10 @@ class HgImporterManager : public Importer {
 
  private:
   template <typename Fn>
-  auto retryOnError(Fn&& fn) {
-    bool retried = false;
-    while (true) {
-      try {
-        return fn(getImporter());
-      } catch (const HgImporterError& ex) {
-        resetHgImporter(ex);
-        if (retried) {
-          throw;
-        } else {
-          retried = true;
-        }
-      }
-    }
-  }
+  auto retryOnError(Fn&& fn);
 
   HgImporter* getImporter();
-  void resetHgImporter(const HgImporterError& ex);
+  void resetHgImporter(const std::exception& ex);
 
   std::unique_ptr<HgImporter> importer_;
 

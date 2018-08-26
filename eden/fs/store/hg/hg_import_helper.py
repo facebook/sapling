@@ -143,6 +143,24 @@ class Request(object):
         self.body = body
 
 
+class ResetRepoError(Exception):
+    """This exception type indicates that the internal mercurial repo object state
+    is likely bad, and should be re-opened.  We throw this error up to the C++ code,
+    and it will restart us when this happens.
+
+    Completely restarting the python hg_import_helper.py script in this case appears to
+    be much better than trying to close and re-open the repository in the same python
+    process.  The python code tends to leak memory and other resources (e.g.,
+    remotefilelog.cacheprocess subprocesses) if we do not restart the process
+    completely.
+    """
+
+    def __init__(self, original_error):
+        super(ResetRepoError, self).__init__(
+            "hg repository needs to be re-opened: %s" % (original_error,)
+        )
+
+
 def cmd(command_id):
     """
     A helper function for identifying command functions
@@ -515,7 +533,7 @@ class HgServer(object):
 
         try:
             self._fetch_tree_impl(path, manifest_node)
-        except Exception:
+        except Exception as ex:
             # Ugh.  Mercurial sometimes throws spurious KeyErrors
             # if this tree was created since we first initialized our
             # connection to the server.
@@ -523,8 +541,7 @@ class HgServer(object):
             # These errors come from the server-side; there doesn't seem to be
             # a good way to force the server to re-read the data other than
             # recreating our repo object.
-            self._reopen_repo()
-            self._fetch_tree_impl(path, manifest_node)
+            raise ResetRepoError(ex)
 
     def _fetch_tree_impl(self, path, manifest_node):
         mfnodes = set([manifest_node])
@@ -674,7 +691,7 @@ class HgServer(object):
             #
             # For now, if we receive empty file contents perform some additional checks
             # to try and make sure this really seems like the right result.
-            contents = self._check_empty_file(path, rev_hash)
+            self._check_empty_file(path, rev_hash)
 
         return contents
 
@@ -687,7 +704,7 @@ class HgServer(object):
 
         try:
             return fctx.data()
-        except Exception:
+        except Exception as ex:
             # Ugh.  The server-side remotefilelog code can sometimes
             # incorrectly fail to return data here.  I believe this occurs if
             # the file data is new since we first opened our connection to the
@@ -696,9 +713,7 @@ class HgServer(object):
             # Completely re-initialize our repo object and try again, in hopes
             # that this will make the server return data correctly when we
             # retry.
-            self._reopen_repo()
-            fctx = self.repo.filectx(path, fileid=rev_hash)
-            return fctx.data()
+            raise ResetRepoError(ex)
 
     def _check_empty_file(self, path, rev_hash):
         # The rev_hash is computed from the file contents plus the file's parent history
@@ -716,7 +731,7 @@ class HgServer(object):
             b"\xb8\r\xe5\xd18u\x85A\xc5\xf0Re\xad\x14J\xb9\xfa\x86\xd1\xdb"
         )
         if rev_hash == no_history_rev_hash:
-            return b""
+            return
 
         # If the remotefilelog extension is in use we can check with it to get the
         # expected file length.
@@ -733,37 +748,9 @@ class HgServer(object):
                     rev_hash,
                     remotefilelog_file_size,
                 )
+                raise ResetRepoError("inconsistent file length")
 
-        # Re-opening the repository and get the file contents again, to really confirm
-        # that the file is empty.
-        self._reopen_repo()
-        contents = self._get_file_impl(path, rev_hash)
-        if contents:
-            # We received non-empty contents, so the original import attempt presumably
-            # got incorrect data.  Log an error message about this before we return the
-            # contents.
-            logging.error(
-                "hg_import_helper incorrectly obtained empty contents for for %s:%s, "
-                "but non-empty contents after re-opening the repository.  "
-                "remotefilelog size=%s",
-                path,
-                hex(rev_hash),
-                remotefilelog_file_size,
-            )
-        elif remotefilelog_file_size:
-            raise Exception(
-                (
-                    "mercurial repeatedly incorrectly returned empty contents for "
-                    "%s:%s; remotefilelog size=%s"
-                )
-                % (path, hex(rev_hash), remotefilelog_file_size)
-            )
-        else:
-            logging.info(
-                "confirmed import of %s:%s as an empty file", path, hex(rev_hash)
-            )
-
-        return contents
+        return
 
     def prefetch(self, rev):
         if not hasattr(self.repo, "prefetch"):
