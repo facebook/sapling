@@ -100,8 +100,8 @@ class RequestData : public folly::RequestData {
   /** Append error handling clauses to a future chain
    * These clauses result in reporting a fuse request error back to the
    * kernel. */
-  template <typename FUTURE>
-  folly::Future<folly::Unit> catchErrors(FUTURE&& fut) {
+  template <typename T>
+  folly::Future<folly::Unit> catchErrors(folly::Future<T>&& fut) {
     return std::move(fut)
         .onError(systemErrorHandler)
         .onError(genericErrorHandler)
