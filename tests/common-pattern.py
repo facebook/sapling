@@ -111,9 +111,14 @@ _winpathfixes = [
     # stuff/maybelarge.dat: largefile 76..38 not available from
     #     file:/*/$TESTTMP\largefiles-repo (glob)
     br".*: largefile \S+ not available from file:/\*/.+",
+    # hgrc parse error (double escaped)
+    br"(?m)^hg: parse error:.*",
 ]
 
 if os.name == "nt":
     substitutions.extend(
-        [(s, lambda match: match.group().replace(b"\\", b"/")) for s in _winpathfixes]
+        [
+            (s, lambda match: match.group().replace(b"\\", b"/").replace(b"//", b"/"))
+            for s in _winpathfixes
+        ]
     )

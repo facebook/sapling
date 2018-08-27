@@ -8,6 +8,7 @@
 *.so
 *.dll
 *.exe
+*.pdb
 *.pyd
 *.pyc
 *.pyo
@@ -61,9 +62,6 @@ hgext/patchrmdir.c
 hgext/traceprof.cpp
 hgext/extlib/litemmap.c
 
-# Packaging sources
-SOURCES/
-
 # Build output
 build/
 debbuild/
@@ -84,4 +82,3 @@ hg.py
 
 # rust binary
 hg.rust
-hg.rust.exe

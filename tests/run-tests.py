@@ -1280,11 +1280,11 @@ class Test(unittest.TestCase):
 
     def _escapepath(self, p):
         if os.name == "nt":
-            return b"".join(
+            return br"(?:[/\\]{2,4}\?[/\\]{1,2})?" + b"".join(
                 c.isalpha()
                 and b"[%s%s]" % (c.lower(), c.upper())
                 or c in b"/\\"
-                and br"[/\\]"
+                and br"[/\\]{1,2}"
                 or c.isdigit()
                 and c
                 or b"\\" + c
@@ -1691,7 +1691,7 @@ class TTest(Test):
         if self._debug:
             script.append(b"set -x\n")
         if os.getenv("MSYSTEM"):
-            script.append(b'alias pwd="pwd -W"\n')
+            script.append(b'pwd() { builtin pwd -W "$@"; }\n')
 
         # Source $RUNTESTDIR/tinit.sh for utility functions
         script.append(b'source "$RUNTESTDIR/tinit.sh"\n')
@@ -2679,7 +2679,16 @@ class TestRunner(object):
     """
 
     # Programs required to run tests.
-    REQUIREDTOOLS = [b"diff", b"grep", b"unzip", b"gunzip", b"bunzip2", b"sed"]
+    REQUIREDTOOLS = [
+        b"diff",
+        b"grep",
+        b"unzip",
+        b"gunzip",
+        b"bunzip2",
+        b"sed",
+        b"cmp",
+        b"dd",
+    ]
 
     # Maps file extensions to test class.
     TESTTYPES = [(b".py", PythonTest), (b".t", TTest)]
@@ -3473,7 +3482,32 @@ def aggregateexceptions(path):
     return exceptions
 
 
+def ensureenv():
+    """Load build/env's environment variables.
+
+    If build/env has specified a different set of environment variables,
+    restart the current command. Otherwise do nothing.
+    """
+    hgdir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    envpath = os.path.join(hgdir, "build", "env")
+    if not os.path.exists(envpath):
+        return
+    with open(envpath, "r") as f:
+        env = dict(l.split("=", 1) for l in f.read().splitlines() if "=" in l)
+    if all(os.environ.get(k) == v for k, v in env.items()):
+        # No restart needed
+        return
+    # Restart with new environment
+    newenv = os.environ.copy()
+    newenv.update(env)
+    # Pick the right Python interpreter
+    python = env.get("PYTHON_SYS_EXECUTABLE", sys.executable)
+    p = subprocess.Popen([python] + sys.argv, env=newenv)
+    sys.exit(p.wait())
+
+
 if __name__ == "__main__":
+    ensureenv()
     runner = TestRunner()
 
     try:
