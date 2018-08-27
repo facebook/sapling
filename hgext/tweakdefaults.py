@@ -853,6 +853,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
         resultsbyfile = {}
         includelineno = opts.get("line_number")
+        fileswithmatches = opts.get("files_with_matches")
 
         for line in lines:
             try:
@@ -864,6 +865,8 @@ def grep(ui, repo, pattern, *pats, **opts):
                     lineno = 0
                     colno = 0
                     context = None
+                elif fileswithmatches:
+                    filename = line
                 else:
                     # If we couldn't parse the line, just pass it thru
                     ui.write(line)
@@ -882,9 +885,11 @@ def grep(ui, repo, pattern, *pats, **opts):
                 if unescapedfilename not in resultsbyfile:
                     resultsbyfile[unescapedfilename] = []
 
-                # re-assemble the output, but omit the column number.
-                # Take care with binary file matches!
-                if lineno == 0 and colno == 0 and context is None:
+                # re-assemble the output
+                if fileswithmatches:
+                    resultsbyfile[unescapedfilename].append("%s\n" % filename)
+                elif lineno == 0 and colno == 0 and context is None:
+                    # Take care with binary file matches!
                     resultsbyfile[unescapedfilename].append(
                         "Binary file %s matches\n" % filename
                     )
