@@ -455,13 +455,14 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
   // Now start all the loads.
   std::vector<Future<Unit>> childFutures;
   for (const auto& name : childNames) {
-    auto childFuture = treeInode->getOrLoadChild(name).then([](InodePtr child) {
-      TreeInodePtr childTree = child.asTreePtrOrNull();
-      if (childTree) {
-        return loadAllInodesFuture(childTree);
-      }
-      return makeFuture();
-    });
+    auto childFuture =
+        treeInode->getOrLoadChild(name).thenValue([](InodePtr child) {
+          TreeInodePtr childTree = child.asTreePtrOrNull();
+          if (childTree) {
+            return loadAllInodesFuture(childTree);
+          }
+          return makeFuture();
+        });
     childFutures.emplace_back(std::move(childFuture));
   }
   return folly::collect(childFutures).unit();

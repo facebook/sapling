@@ -99,7 +99,7 @@ TEST_F(FakeBackingStoreTest, getBlob) {
   bool future4Failed = false;
   folly::exception_wrapper future4Error;
   std::move(future4)
-      .then([] { FAIL() << "future4 should not succeed\n"; })
+      .thenValue([](auto&&) { FAIL() << "future4 should not succeed\n"; })
       .onError([&](const folly::exception_wrapper& ew) {
         future4Failed = true;
         future4Error = ew;

@@ -1170,7 +1170,7 @@ void FuseChannel::processSession() {
           // handler.
           request.setRequestFuture(
               request.startRequest(dispatcher_->getStats(), entry.histogram)
-                  .then([=, &request] {
+                  .thenValue([=, &request](auto&&) {
                     return (this->*entry.handler)(&request.getReq(), arg);
                   }));
           break;
@@ -1424,9 +1424,8 @@ folly::Future<folly::Unit> FuseChannel::fuseUnlink(
 
   XLOG(DBG7) << "FUSE_UNLINK " << name;
 
-  return dispatcher_->unlink(InodeNumber{header->nodeid}, name).then([]() {
-    RequestData::get().replyError(0);
-  });
+  return dispatcher_->unlink(InodeNumber{header->nodeid}, name)
+      .thenValue([](auto&&) { RequestData::get().replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRmdir(
@@ -1437,9 +1436,8 @@ folly::Future<folly::Unit> FuseChannel::fuseRmdir(
 
   XLOG(DBG7) << "FUSE_RMDIR " << name;
 
-  return dispatcher_->rmdir(InodeNumber{header->nodeid}, name).then([]() {
-    RequestData::get().replyError(0);
-  });
+  return dispatcher_->rmdir(InodeNumber{header->nodeid}, name)
+      .thenValue([](auto&&) { RequestData::get().replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRename(
@@ -1458,7 +1456,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRename(
           oldName,
           InodeNumber{rename->newdir},
           newName)
-      .then([]() { RequestData::get().replyError(0); });
+      .thenValue([](auto&&) { RequestData::get().replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseLink(
@@ -1540,7 +1538,8 @@ folly::Future<folly::Unit> FuseChannel::fuseFsync(
   XLOG(DBG7) << "FUSE_FSYNC";
 
   auto fh = dispatcher_->getFileHandle(fsync->fh);
-  return fh->fsync(datasync).then([]() { RequestData::get().replyError(0); });
+  return fh->fsync(datasync).thenValue(
+      [](auto&&) { RequestData::get().replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
@@ -1556,7 +1555,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
 
   return dispatcher_
       ->setxattr(InodeNumber{header->nodeid}, attrName, value, setxattr->flags)
-      .then([]() { RequestData::get().replyError(0); });
+      .thenValue([](auto&&) { RequestData::get().replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
@@ -1623,7 +1622,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
   const StringPiece attrName{nameStr};
   XLOG(DBG7) << "FUSE_REMOVEXATTR";
   return dispatcher_->removexattr(InodeNumber{header->nodeid}, attrName)
-      .then([]() { RequestData::get().replyError(0); });
+      .thenValue([](auto&&) { RequestData::get().replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFlush(
@@ -1633,7 +1632,7 @@ folly::Future<folly::Unit> FuseChannel::fuseFlush(
   XLOG(DBG7) << "FUSE_FLUSH";
   const auto fh = dispatcher_->getFileHandle(flush->fh);
 
-  return fh->flush(flush->lock_owner).then([]() {
+  return fh->flush(flush->lock_owner).thenValue([](auto&&) {
     RequestData::get().replyError(0);
   });
 }
@@ -1694,8 +1693,8 @@ folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
   XLOG(DBG7) << "FUSE_FSYNCDIR";
 
   auto dh = dispatcher_->getDirHandle(fsync->fh);
-  return dh->fsyncdir(datasync).then(
-      []() { RequestData::get().replyError(0); });
+  return dh->fsyncdir(datasync).thenValue(
+      [](auto&&) { RequestData::get().replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseAccess(
@@ -1704,7 +1703,7 @@ folly::Future<folly::Unit> FuseChannel::fuseAccess(
   const auto access = reinterpret_cast<const fuse_access_in*>(arg);
   XLOG(DBG7) << "FUSE_ACCESS";
   return dispatcher_->access(InodeNumber{header->nodeid}, access->mask)
-      .then([]() { RequestData::get().replyError(0); });
+      .thenValue([](auto&&) { RequestData::get().replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseCreate(

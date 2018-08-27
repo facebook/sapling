@@ -78,10 +78,10 @@ Future<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
     storedTreeHash = commitIter->second.get();
   }
 
-  return storedTreeHash->getFuture().then(
+  return storedTreeHash->getFuture().thenValue(
       [this, commitID](const std::unique_ptr<Hash>& hash) {
         // Check in the LocalStore for the tree first.
-        return localStore_->getTree(*hash).then(
+        return localStore_->getTree(*hash).thenValue(
             [this, commitID, hash = *hash](std::unique_ptr<Tree> localValue) {
               if (localValue) {
                 return makeFuture(std::move(localValue));
