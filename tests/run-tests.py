@@ -236,6 +236,11 @@ def checkportisavailable(port):
 
 closefds = os.name == "posix"
 
+if os.name == "nt":
+    preexec = None
+else:
+    preexec = lambda: os.setpgid(0, 0)
+
 
 def Popen4(cmd, wd, timeout, env=None):
     processlock.acquire()
@@ -246,6 +251,7 @@ def Popen4(cmd, wd, timeout, env=None):
         cwd=wd,
         env=env,
         close_fds=closefds,
+        preexec_fn=preexec,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -258,6 +264,7 @@ def Popen4(cmd, wd, timeout, env=None):
 
     p.timeout = False
     if timeout:
+        track(p)
 
         def t():
             start = time.time()
@@ -835,19 +842,94 @@ def highlightmsg(msg, color):
     return pygments.highlight(msg, runnerlexer, runnerformatter)
 
 
+_pgroups = {}
+
+
+def track(proc):
+    """Register a process to a process group. So it can be killed later."""
+    pgroup = ProcessGroup()
+    pid = proc.pid
+    pgroup.add(pid)
+    _pgroups[pid] = pgroup
+
+
 def terminate(proc):
     """Terminate subprocess"""
-    vlog("# Terminating process %d" % proc.pid)
     try:
-        proc.terminate()
-    except OSError:
-        pass
+        pgroup = _pgroups.pop(proc.pid)
+        vlog("# Terminating process %d recursively" % proc.pid)
+        pgroup.terminate()
+    except KeyError:
+        vlog("# Terminating process %d" % proc.pid)
+        try:
+            proc.terminate()
+        except OSError:
+            pass
 
 
 def killdaemons(pidfile):
     import killdaemons as killmod
 
     return killmod.killdaemons(pidfile, tryhard=False, remove=True, logfn=vlog)
+
+
+if os.name == "nt":
+
+    class ProcessGroup(object):
+        """Process group backed by Windows JobObject.
+
+        It provides a clean way to kill processes recursively.
+        """
+
+        def __init__(self):
+            self._hjob = _kernel32.CreateJobObjectA(None, None)
+
+        def add(self, pid):
+            hprocess = _kernel32.OpenProcess(
+                PROCESS_SET_QUOTA | PROCESS_TERMINATE, 0, pid
+            )
+            if not hprocess or hprocess == _INVALID_HANDLE_VALUE:
+                raise ctypes.WinError(_kernel32.GetLastError())
+            try:
+                _kernel32.AssignProcessToJobObject(self._hjob, hprocess)
+            finally:
+                _kernel32.CloseHandle(hprocess)
+
+        def terminate(self):
+            if self._hjob:
+                _kernel32.TerminateJobObject(self._hjob, 0)
+                _kernel32.CloseHandle(self._hjob)
+                self._hjob = 0
+
+
+else:
+
+    class ProcessGroup(object):
+        """Fallback implementation on *nix. Kill process groups.
+
+        This is less reliable than Windows' JobObject, because child processes
+        can change their process groups. But it's better than nothing.
+
+        On Linux, the "most correct" solution would be cgroup. But that
+        requires root permission.
+        """
+
+        def __init__(self):
+            self._pids = []
+
+        def add(self, pid):
+            self._pids.append(pid)
+
+        def terminate(self):
+            for pid in self._pids:
+                try:
+                    os.killpg(pid, signal.SIGKILL)
+                except OSError:
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                    except OSError:
+                        pass
+            self._pids = []
 
 
 class Test(unittest.TestCase):
@@ -1454,6 +1536,7 @@ class Test(unittest.TestCase):
             return (ret, None)
 
         proc = Popen4(cmd, self._testtmp, self._timeout, env)
+        track(proc)
 
         def cleanup():
             terminate(proc)
@@ -2080,17 +2163,47 @@ class Progress(object):
 progress = Progress()
 showprogress = sys.stderr.isatty()
 
-if showprogress and os.name == "nt":
-    # From mercurial/color.py.
-    # Enable virtual terminal mode for the associated console.
+if os.name == "nt":
     import ctypes
 
-    _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     _HANDLE = ctypes.c_void_p
     _DWORD = ctypes.c_ulong
     _INVALID_HANDLE_VALUE = _HANDLE(-1).value
     _STD_ERROR_HANDLE = _DWORD(-12).value
+
+    _LPVOID = ctypes.c_void_p
+    _BOOL = ctypes.c_long
+    _UINT = ctypes.c_uint
+    _HANDLE = ctypes.c_void_p
+
+    _INVALID_HANDLE_VALUE = _HANDLE(-1).value
+
     ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4
+
+    PROCESS_SET_QUOTA = 0x0100
+    PROCESS_TERMINATE = 0x0001
+
+    _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+    _kernel32.CreateJobObjectA.argtypes = [_LPVOID, _LPVOID]
+    _kernel32.CreateJobObjectA.restype = _HANDLE
+
+    _kernel32.OpenProcess.argtypes = [_DWORD, _BOOL, _DWORD]
+    _kernel32.OpenProcess.restype = _HANDLE
+
+    _kernel32.AssignProcessToJobObject.argtypes = [_HANDLE, _HANDLE]
+    _kernel32.AssignProcessToJobObject.restype = _BOOL
+
+    _kernel32.TerminateJobObject.argtypes = [_HANDLE, _UINT]
+    _kernel32.TerminateJobObject.restype = _BOOL
+
+    _kernel32.CloseHandle.argtypes = [_HANDLE]
+    _kernel32.CloseHandle.restype = _BOOL
+
+
+if showprogress and os.name == "nt":
+    # From mercurial/color.py.
+    # Enable virtual terminal mode for the associated console.
 
     handle = _kernel32.GetStdHandle(_STD_ERROR_HANDLE)  # don't close the handle
     if handle == _INVALID_HANDLE_VALUE:
