@@ -13,6 +13,34 @@ import errno
 import glob
 import os
 import struct
+import subprocess
+import sys
+
+
+def ensureenv():
+    """Load build/env's as environment variables.
+
+    If build/env has specified a different set of environment variables,
+    restart the current command. Otherwise do nothing.
+    """
+    if not os.path.exists("build/env"):
+        return
+    with open("build/env", "r") as f:
+        env = dict(l.split("=", 1) for l in f.read().splitlines() if "=" in l)
+    if all(os.environ.get(k) == v for k, v in env.items()):
+        # No restart needed
+        return
+    # Restart with new environment
+    newenv = os.environ.copy()
+    newenv.update(env)
+    # Pick the right Python interpreter
+    python = env.get("PYTHON_SYS_EXECUTABLE", sys.executable)
+    p = subprocess.Popen([python] + sys.argv, env=newenv)
+    sys.exit(p.wait())
+
+
+ensureenv()
+
 
 supportedpy = "~= 2.7"
 if os.environ.get("HGALLOWPYTHON3", ""):
@@ -35,7 +63,7 @@ if os.environ.get("HGALLOWPYTHON3", ""):
         ]
     )
 
-import sys, platform
+import platform
 
 if sys.version_info[0] >= 3:
     printf = eval("print")
@@ -143,7 +171,7 @@ else:
 ispypy = "PyPy" in sys.version
 
 import ctypes
-import stat, subprocess
+import stat
 import re
 import shutil
 import tempfile
