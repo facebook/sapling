@@ -437,6 +437,9 @@ def getparser():
         "--showchannels", action="store_true", help="show scheduling channels"
     )
     harness.add_argument(
+        "--noprogress", action="store_true", help="do not show progress"
+    )
+    harness.add_argument(
         "--slowtimeout",
         type=int,
         help="kill errant slow tests after SLOWTIMEOUT seconds"
@@ -685,6 +688,7 @@ def parseargs(args, parser):
     if options.interactive and options.debug:
         parser.error("-i/--interactive and -d/--debug are incompatible")
     if options.debug:
+        options.noprogress = True
         if options.timeout != defaults["timeout"]:
             sys.stderr.write("warning: --timeout option ignored with --debug\n")
         if options.slowtimeout != defaults["slowtimeout"]:
@@ -726,6 +730,10 @@ def parseargs(args, parser):
 
     if options.showchannels:
         options.nodiff = True
+        options.noprogress = True
+    if options.noprogress:
+        global showprogress
+        showprogress = False
 
     return options
 
@@ -1434,7 +1442,7 @@ class Test(unittest.TestCase):
         # Failed is denoted by AssertionError (by default at least).
         raise AssertionError(msg)
 
-    def _runcommand(self, cmd, env, normalizenewlines=False):
+    def _runcommand(self, cmd, env, normalizenewlines=False, linecallback=None):
         """Run command in a sub-process, capturing the output (stdout and
         stderr).
 
@@ -1459,7 +1467,19 @@ class Test(unittest.TestCase):
         proc.tochild.close()
 
         try:
-            output = proc.fromchild.read()
+            f = proc.fromchild
+            while True:
+                line = f.readline()
+                # Make the test abort faster if other tests are Ctrl+C-ed.
+                # Code path: for test in runtests: test.abort()
+                if self._aborted:
+                    raise KeyboardInterrupt()
+                if linecallback:
+                    linecallback(line)
+                output += line
+                if not line:
+                    break
+
         except KeyboardInterrupt:
             vlog("# Handling keyboard interrupt")
             cleanup()
@@ -1589,7 +1609,8 @@ class TTest(Test):
         if self._refout is not None:
             self._refout = lines
 
-        salt, script, after, expected = self._parsetest(lines)
+        salt, saltcount, script, after, expected = self._parsetest(lines)
+        self.progress = (0, saltcount)
 
         # Write out the generated script.
         fname = b"%s.sh" % self._testtmp
@@ -1600,7 +1621,14 @@ class TTest(Test):
         cmd = b'%s "%s"' % (self._shell, fname)
         vlog("# Running", cmd)
 
-        exitcode, output = self._runcommand(cmd, env)
+        saltseen = [0]
+
+        def linecallback(line):
+            if salt in line:
+                saltseen[0] += 1
+                self.progress = (saltseen[0], saltcount)
+
+        exitcode, output = self._runcommand(cmd, env, linecallback=linecallback)
 
         if self._aborted:
             raise KeyboardInterrupt()
@@ -1669,8 +1697,10 @@ class TTest(Test):
         # up script results with our source. These markers include input
         # line number and the last return code.
         salt = b"SALT%d" % time.time()
+        saltcount = [0]
 
         def addsalt(line, inpython):
+            saltcount[0] += 1
             if inpython:
                 script.append(b"%s %d 0\n" % (salt, line))
             else:
@@ -1783,7 +1813,7 @@ class TTest(Test):
             after.setdefault(pos, []).append("  !!! missing #endif\n")
         addsalt(n + 1, False)
 
-        return salt, script, after, expected
+        return salt, saltcount[0], script, after, expected
 
     def _processoutput(self, exitcode, output, salt, after, expected):
         # Merge the script output back into a unified test.
@@ -2006,9 +2036,84 @@ class TTest(Test):
         return TTest.ESCAPESUB(TTest._escapef, s)
 
 
-iolock = threading.RLock()
 firstlock = threading.RLock()
 firsterror = False
+
+_iolock = threading.RLock()
+
+
+class Progress(object):
+    def __init__(self):
+        self.lines = []
+        self.out = sys.stderr
+
+    def clear(self):
+        self.update([])
+
+    def update(self, lines):
+        content = ""
+        toclear = len(self.lines) - len(lines)
+        moveup = len(self.lines) - 1
+        if toclear > 0:
+            content += "\r\033[K\033[1A" * toclear
+            moveup -= toclear
+        if moveup > 0:
+            content += "\033[%dA" % moveup
+        content += "\n".join("\r\033[K%s" % line.rstrip() for line in lines)
+        self._write(content)
+        self.lines = lines
+
+    def setup(self):
+        # Disable line wrapping
+        self._write("\x1b[?7l")
+
+    def finalize(self):
+        # Re-enable line wrapping
+        self._write("\x1b[?7h")
+
+    def _write(self, content):
+        with _iolock:
+            self.out.write(content)
+            self.out.flush()
+
+
+progress = Progress()
+showprogress = sys.stderr.isatty()
+
+if showprogress and os.name == "nt":
+    # From mercurial/color.py.
+    # Enable virtual terminal mode for the associated console.
+    import ctypes
+
+    _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    _HANDLE = ctypes.c_void_p
+    _DWORD = ctypes.c_ulong
+    _INVALID_HANDLE_VALUE = _HANDLE(-1).value
+    _STD_ERROR_HANDLE = _DWORD(-12).value
+    ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4
+
+    handle = _kernel32.GetStdHandle(_STD_ERROR_HANDLE)  # don't close the handle
+    if handle == _INVALID_HANDLE_VALUE:
+        showprogress = False
+    else:
+        mode = _DWORD(0)
+        if _kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            if (mode.value & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0:
+                mode.value |= ENABLE_VIRTUAL_TERMINAL_PROCESSING
+                if not _kernel32.SetConsoleMode(handle, mode):
+                    showprogress = False
+
+
+class IOLockWithProgress(object):
+    def __enter__(self):
+        _iolock.acquire()
+        progress.clear()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        _iolock.release()
+
+
+iolock = IOLockWithProgress()
 
 
 class TestResult(unittest._TextTestResult):
@@ -2049,50 +2154,65 @@ class TestResult(unittest._TextTestResult):
         if self._options.first:
             self.stop()
         else:
-            with iolock:
-                if reason == "timed out":
-                    self.stream.write("t")
-                else:
-                    if not self._options.nodiff:
+            if reason == "timed out":
+                if not showprogress:
+                    with iolock:
+                        self.stream.write("t")
+            else:
+                if not self._options.nodiff:
+                    with iolock:
                         self.stream.write("\n")
                         # Exclude the '\n' from highlighting to lex correctly
                         formatted = "ERROR: %s output changed\n" % test
                         self.stream.write(highlightmsg(formatted, self.color))
-                    self.stream.write("!")
+                if not showprogress:
+                    with iolock:
+                        self.stream.write("!")
 
-                self.stream.flush()
+            self.stream.flush()
 
     def addSuccess(self, test):
-        with iolock:
-            super(TestResult, self).addSuccess(test)
+        if showprogress and not self.showAll:
+            super(unittest._TextTestResult, self).addSuccess(test)
+        else:
+            with iolock:
+                super(TestResult, self).addSuccess(test)
         self.successes.append(test)
 
     def addError(self, test, err):
-        super(TestResult, self).addError(test, err)
+        if showprogress and not self.showAll:
+            super(unittest._TextTestResult, self).addError(test, err)
+        else:
+            with iolock:
+                super(TestResult, self).addError(test, err)
         if self._options.first:
             self.stop()
 
     # Polyfill.
     def addSkip(self, test, reason):
         self.skipped.append((test, reason))
-        with iolock:
-            if self.showAll:
+        if self.showAll:
+            with iolock:
                 self.stream.writeln("skipped %s" % reason)
-            else:
-                self.stream.write("s")
-                self.stream.flush()
+        else:
+            if not showprogress:
+                with iolock:
+                    self.stream.write("s")
+                    self.stream.flush()
 
     def addIgnore(self, test, reason):
         self.ignored.append((test, reason))
-        with iolock:
-            if self.showAll:
+        if self.showAll:
+            with iolock:
                 self.stream.writeln("ignored %s" % reason)
+        else:
+            if reason not in ("not retesting", "doesn't match keyword"):
+                if not showprogress:
+                    with iolock:
+                        self.stream.write("i")
             else:
-                if reason not in ("not retesting", "doesn't match keyword"):
-                    self.stream.write("i")
-                else:
-                    self.testsRun += 1
-                self.stream.flush()
+                self.testsRun += 1
+            self.stream.flush()
 
     def addOutputMismatch(self, test, ret, got, expected):
         """Record a mismatch in test output for a particular test."""
@@ -2299,6 +2419,7 @@ class TestSuite(unittest.TestSuite):
         running = 0
 
         channels = [""] * self._jobs
+        runningtests = collections.OrderedDict()  # {test name: (test, start time)}
 
         def job(test, result):
             for n, v in enumerate(channels):
@@ -2307,6 +2428,7 @@ class TestSuite(unittest.TestSuite):
                     break
             else:
                 raise ValueError("Could not find output channel")
+            runningtests[test.name] = (test, time.time())
             channels[channel] = "=" + test.name[5:].split(".")[0]
             try:
                 test(result)
@@ -2317,6 +2439,7 @@ class TestSuite(unittest.TestSuite):
                 done.put(("!", test, "run-test raised an error, see traceback"))
                 raise
             finally:
+                del runningtests[test.name]
                 try:
                     channels[channel] = ""
                 except IndexError:
@@ -2341,11 +2464,66 @@ class TestSuite(unittest.TestSuite):
                         time.sleep(.1)
                 count += 1
 
+        def singleprogressbar(value, total, char="="):
+            if total:
+                if value > total:
+                    value = total
+                progresschars = char * int(value * 20 / total)
+                if progresschars and len(progresschars) < 20:
+                    progresschars += ">"
+                return "[%-20s]" % progresschars
+            else:
+                return " " * 22
+
+        blacklisted = len(result.skipped)
+        initialtestsrun = result.testsRun
+
+        def progressrenderer():
+            lines = []
+            suitestart = time.time()
+            total = len(runtests)
+            while channels:
+                failed = len(result.failures) + len(result.errors)
+                skipped = len(result.skipped) - blacklisted
+                testsrun = result.testsRun - initialtestsrun
+                remaining = total - testsrun - skipped
+                passed = testsrun - failed - len(runningtests)
+                now = time.time()
+                timepassed = now - suitestart
+                lines = []
+                runningfrac = 0.0
+                for name, (test, teststart) in runningtests.iteritems():
+                    try:
+                        saltseen, saltcount = getattr(test, "progress")
+                        runningfrac += saltseen * 1.0 / saltcount
+                        testprogress = singleprogressbar(saltseen, saltcount, char="-")
+                    except Exception:
+                        testprogress = singleprogressbar(0, 0)
+                    lines.append(
+                        "%s %-52s %.1fs" % (testprogress, name[:52], now - teststart)
+                    )
+                lines[0:0] = [
+                    "%s %-52s %.1fs"
+                    % (
+                        singleprogressbar(
+                            runningfrac + failed + passed + skipped, total
+                        ),
+                        "%s Passed. %s Failed. %s Skipped. %s Remaining"
+                        % (passed, failed, skipped, remaining),
+                        timepassed,
+                    )
+                ]
+                progress.update(lines)
+                time.sleep(.1)
+
         stoppedearly = False
 
         if self._showchannels:
             statthread = threading.Thread(target=stat, name="stat")
             statthread.start()
+        elif showprogress:
+            progressthread = threading.Thread(target=progressrenderer, name="progress")
+            progressthread.start()
 
         try:
             while tests or running:
@@ -2728,6 +2906,8 @@ class TestRunner(object):
         """Run the test suite."""
         oldmask = os.umask(0o22)
         try:
+            if showprogress:
+                progress.setup()
             parser = parser or getparser()
             options = parseargs(args, parser)
             tests = [_bytespath(a) for a in options.tests]
@@ -2750,6 +2930,8 @@ class TestRunner(object):
             return result
 
         finally:
+            if showprogress:
+                progress.finalize()
             os.umask(oldmask)
 
     def _run(self, testdescs):
