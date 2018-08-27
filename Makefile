@@ -6,21 +6,12 @@
 
 export PREFIX=/usr/local
 
-# FB OSX development is against the homebrew python. The line below is a
-# makefile way of checking if a file exists.
-ifneq ("$(wildcard /opt/homebrew/opt/python27/bin/python2.7)","")
-	PYTHON := /opt/homebrew/opt/python27/bin/python2.7
-	# the preference is linking against homebrew python framework
-	HG_LINKER_FRAMEWORK ?= /opt/homebrew/Frameworks
-	export HG_LINKER_FRAMEWORK
-else
-	PYTHON := python
-endif
+PYTHON := python
 
 $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
-PYFILES:=$(shell find mercurial hgext doc -name '*.py')
+PYFILES:=$(shell find mercurial hgext doc -name '*.py' 2>/dev/null)
 DOCFILES=mercurial/help/*.txt
 export LANGUAGE=C
 export LC_ALL=C
