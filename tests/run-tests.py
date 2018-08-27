@@ -283,6 +283,7 @@ defaults = {
     "slowtimeout": ("HGTEST_SLOWTIMEOUT", 1000),
     "port": ("HGTEST_PORT", 20059),
     "shell": ("HGTEST_SHELL", "bash"),
+    "maxdifflines": ("HGTEST_MAXDIFFLINES", 30),
 }
 
 
@@ -566,8 +567,15 @@ def getparser():
         "-n", "--nodiff", action="store_true", help="skip showing test changes"
     )
     reporting.add_argument(
+        "--maxdifflines",
+        type=int,
+        help="maximum lines of diff output"
+        " (default: $%s or %d)" % defaults["maxdifflines"],
+    )
+    reporting.add_argument(
         "-S", "--noskips", action="store_true", help="don't report skip tests verbosely"
     )
+
     reporting.add_argument(
         "--time", action="store_true", help="time how long each test takes"
     )
@@ -2113,6 +2121,12 @@ class TestResult(unittest._TextTestResult):
                     )
                 else:
                     self.stream.write("\n")
+                    if len(lines) > self._options.maxdifflines:
+                        omitted = len(lines) - self._options.maxdifflines
+                        lines = lines[: self._options.maxdifflines] + [
+                            "... (%d lines omitted. set --maxdifflines to see more) ..."
+                            % omitted
+                        ]
                     for line in lines:
                         line = highlightdiff(line, self.color)
                         if PYTHON3:
