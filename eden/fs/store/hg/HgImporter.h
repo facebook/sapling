@@ -111,11 +111,9 @@ class HgImporter : public Importer {
   HgImporter(
       AbsolutePathPiece repoPath,
       LocalStore* store,
-      folly::Optional<AbsolutePath> clientCertificate,
-      bool useMononoke);
-
-  HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
-      : HgImporter(repoPath, store, folly::none, false) {}
+      folly::Optional<AbsolutePath> clientCertificate = folly::none,
+      bool useMononoke = false,
+      folly::Optional<AbsolutePath> importHelperScript = folly::none);
 
   virtual ~HgImporter();
 
@@ -389,7 +387,8 @@ class HgImporterManager : public Importer {
       AbsolutePathPiece repoPath,
       LocalStore* store,
       folly::Optional<AbsolutePath> clientCertificate,
-      bool useMononoke);
+      bool useMononoke,
+      folly::Optional<AbsolutePath> importHelperScript = folly::none);
 
   Hash importManifest(folly::StringPiece revName) override;
 
@@ -412,6 +411,7 @@ class HgImporterManager : public Importer {
   LocalStore* const store_{nullptr};
   const folly::Optional<AbsolutePath> clientCertificate_;
   const bool useMononoke_{false};
+  const folly::Optional<AbsolutePath> importHelperScript_;
 };
 
 } // namespace eden

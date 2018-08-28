@@ -217,12 +217,14 @@ HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
     LocalStore* store,
     folly::Optional<AbsolutePath> clientCertificate,
-    bool useMononoke)
+    bool useMononoke,
+    folly::Optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       store_{store},
       clientCertificate_(clientCertificate),
       useMononoke_(useMononoke) {
-  auto importHelper = getImportHelperPath();
+  auto importHelper = importHelperScript.hasValue() ? importHelperScript.value()
+                                                    : getImportHelperPath();
 
 #ifndef EDEN_WIN
   std::vector<string> cmd = {
@@ -1181,11 +1183,13 @@ HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
     LocalStore* store,
     folly::Optional<AbsolutePath> clientCertificate,
-    bool useMononoke)
+    bool useMononoke,
+    folly::Optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       store_{store},
       clientCertificate_{clientCertificate},
-      useMononoke_{useMononoke} {}
+      useMononoke_{useMononoke},
+      importHelperScript_{importHelperScript} {}
 
 template <typename Fn>
 auto HgImporterManager::retryOnError(Fn&& fn) {
@@ -1243,7 +1247,11 @@ void HgImporterManager::prefetchFiles(
 HgImporter* HgImporterManager::getImporter() {
   if (!importer_) {
     importer_ = make_unique<HgImporter>(
-        repoPath_, store_, clientCertificate_, useMononoke_);
+        repoPath_,
+        store_,
+        clientCertificate_,
+        useMononoke_,
+        importHelperScript_);
   }
   return importer_.get();
 }
