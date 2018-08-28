@@ -33,6 +33,7 @@ extern crate tracing;
 extern crate uuid;
 
 extern crate blobrepo;
+extern crate bookmarks;
 extern crate bundle2_resolver;
 extern crate context;
 extern crate filenodes;

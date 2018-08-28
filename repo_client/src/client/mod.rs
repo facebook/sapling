@@ -25,6 +25,7 @@ use time_ext::DurationExt;
 use uuid::Uuid;
 
 use blobrepo::HgBlobChangeset;
+use bookmarks::Bookmark;
 use bundle2_resolver;
 use context::CoreContext;
 use mercurial::{self, RevlogChangeset};
@@ -457,35 +458,58 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
         info!(self.logger(), "lookup: {:?}", key);
-        // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
+        // TODO(stash): T25928839 lookup should support prefixes
         let repo = self.repo.blobrepo().clone();
         let mut scuba_logger = self.scuba_logger(ops::LOOKUP, None);
 
-        HgNodeHash::from_str(&key)
-            .into_future()
-            .and_then(move |node| {
+        fn generate_resp_buf(success: bool, message: &[u8]) -> Bytes {
+            let mut buf = BytesMut::with_capacity(message.len() + 3);
+            if success {
+                buf.put(b'1');
+            } else {
+                buf.put(b'0');
+            }
+            buf.put(b' ');
+            buf.put(message);
+            buf.put(b'\n');
+            buf.freeze()
+        }
+
+        fn check_bookmark_exists(repo: BlobRepo, bookmark: Bookmark) -> HgCommandRes<Bytes> {
+            repo.get_bookmark(&bookmark)
+                .map(move |csid| match csid {
+                    Some(csid) => generate_resp_buf(true, csid.to_hex().as_bytes()),
+                    None => generate_resp_buf(false, format!("{} not found", bookmark).as_bytes()),
+                })
+                .boxify()
+        }
+
+        let node = HgNodeHash::from_str(&key).ok();
+        let bookmark = Bookmark::new(&key).ok();
+
+        let lookup_fut = match (node, bookmark) {
+            (Some(node), Some(bookmark)) => {
                 let csid = HgChangesetId::new(node);
                 repo.changeset_exists(&csid)
-                    .map(move |exists| (node, exists))
-            })
-            .and_then(|(node, exists)| {
-                if exists {
-                    let mut buf = BytesMut::with_capacity(node.to_hex().len() + 3);
-                    buf.put(b'1');
-                    buf.put(b' ');
-                    buf.extend_from_slice(node.to_hex().as_bytes());
-                    buf.put(b'\n');
-                    Ok(buf.freeze())
-                } else {
-                    let err_msg = format!("{} not found", node);
-                    let mut buf = BytesMut::with_capacity(err_msg.len() + 3);
-                    buf.put(b'0');
-                    buf.put(b' ');
-                    buf.extend_from_slice(err_msg.as_bytes());
-                    buf.put(b'\n');
-                    Ok(buf.freeze())
-                }
-            })
+                    .and_then(move |exists| {
+                        if exists {
+                            Ok(generate_resp_buf(true, node.to_hex().as_bytes()))
+                                .into_future()
+                                .boxify()
+                        } else {
+                            check_bookmark_exists(repo, bookmark)
+                        }
+                    })
+                    .boxify()
+            }
+            (None, Some(bookmark)) => check_bookmark_exists(repo, bookmark),
+            // Failed to parse as a hash or bookmark.
+            _ => Ok(generate_resp_buf(false, "invalid input".as_bytes()))
+                .into_future()
+                .boxify(),
+        };
+
+        lookup_fut
             .traced(self.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
