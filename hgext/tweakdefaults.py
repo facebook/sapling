@@ -848,7 +848,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         lines = out.rstrip().split("\n")
         # the first line has the revision for the corpus; parse it out
         # the format is "#HASH:timestamp"
-        corpusrev = lines[0][1:41]
+        corpusrev, timestamp = lines[0][1:].split(":", 1)
         lines = lines[1:]
 
         resultsbyfile = {}
@@ -905,7 +905,22 @@ def grep(ui, repo, pattern, *pats, **opts):
         # Now check to see what has changed since the corpusrev
         # we're going to need to grep those and stitch the results together
         try:
-            changes = repo.status(bin(corpusrev), None, m)
+            needbin = True
+            svnmeta = getattr(repo, "svnmeta", None)
+            if svnmeta:
+                meta = svnmeta(skiperrorcheck=True)
+                if meta.revmapexists:
+                    corpusbin = meta.revmap.get((int(corpusrev), None))
+                    # If None is returned, we don't have information about
+                    # that revision locally, so trigger the pull instructions.
+                    if corpusbin is None:
+                        raise error.RepoLookupError
+                    needbin = False
+
+            if needbin:
+                corpusbin = bin(corpusrev)
+
+            changes = repo.status(corpusbin, None, m)
         except error.RepoLookupError:
             # TODO: can we trigger a commit cloud fetch for this case?
 
