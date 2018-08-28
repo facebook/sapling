@@ -59,15 +59,11 @@ ifeq ($(RE2SRC), $(DEFAULT_RE2SRC))
   else \
 		curl -L https://github.com/google/re2/archive/2018-04-01.tar.gz -o $@; \
 	fi
-else
-	;
 endif
 
 build/re2-2018-04-01/README: build/re2-2018-04-01.tar.gz
 ifeq ($(RE2SRC), $(DEFAULT_RE2SRC))
 	tar -C build -x -f $< && touch $@
-else
-	;
 endif
 
 local: build/re2-2018-04-01/README
