@@ -177,7 +177,9 @@ TEST_F(StartupLoggerTest, closePipeWhileStillRunning) {
         // We do so by calling readFull(). It will return when the pipe has
         // closed.
         uint8_t byte;
-        folly::readFull(readPipe.fd(), &byte, sizeof(byte));
+        auto readResult = folly::readFull(readPipe.fd(), &byte, sizeof(byte));
+        checkUnixError(
+            readResult, "error reading close signal from parent process");
       });
 
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
