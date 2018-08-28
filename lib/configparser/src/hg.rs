@@ -184,9 +184,12 @@ impl ConfigSetHgExt for ConfigSet {
 
             #[cfg(windows)]
             {
+                let exe =
+                    env::current_exe().expect("abort: could not fetch the current executable");
+                let exe_dir = exe.parent().unwrap();
                 errors.append(&mut self.load_path(data_dir.join("default.d/"), &opts));
-                errors.append(&mut self.load_path(data_dir.join("mercurial.ini"), &opts));
-                errors.append(&mut self.load_path(data_dir.join("hgrc.d/"), &opts));
+                errors.append(&mut self.load_path(exe_dir.join("mercurial.ini"), &opts));
+                errors.append(&mut self.load_path(exe_dir.join("hgrc.d/"), &opts));
             }
         }
 
