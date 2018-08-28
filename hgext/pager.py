@@ -23,7 +23,7 @@ takes precedence over ignore options and defaults::
 """
 from __future__ import absolute_import
 
-from mercurial import cmdutil, commands, dispatch, extensions, registrar
+from mercurial import cmdutil, commands, dispatch, error, extensions, registrar
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -45,7 +45,12 @@ def uisetup(ui):
             usepager = False
             attend = ui.configlist("pager", "attend")
             ignore = ui.configlist("pager", "ignore")
-            cmds, _ = cmdutil.findcmd(cmd, commands.table)
+            try:
+                cmds, _ = cmdutil.findcmd(cmd, commands.table)
+            except error.UnknownCommand:
+                # pager extension doesn't work for subcommands
+                # subcommands do not present in the commands.table
+                cmds = []
 
             for cmd in cmds:
                 var = "attend-%s" % cmd
