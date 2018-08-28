@@ -136,12 +136,13 @@ class ThriftLogHelper {
   template <typename ReturnType>
   Future<ReturnType> wrapFuture(folly::Future<ReturnType>&& f) {
     wrapperExecuted_ = true;
-    return std::move(f).then([timer = itcTimer_,
-                              logger = this->itcLogger_,
-                              funcName = itcFunctionName_,
-                              level = level_,
-                              filename = itcFileName_,
-                              linenumber = itcLineNumber_](ReturnType&& ret) {
+    return std::move(f).thenValue([timer = itcTimer_,
+                                   logger = this->itcLogger_,
+                                   funcName = itcFunctionName_,
+                                   level = level_,
+                                   filename = itcFileName_,
+                                   linenumber =
+                                       itcLineNumber_](ReturnType&& ret) {
       // Logging completion time for the request
       // The line number points to where the object was originally created
       TLOG(logger, level, filename, linenumber) << folly::format(
@@ -304,7 +305,7 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
 
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
-  return edenMount->getInode(relativePath).then([](const InodePtr& inode) {
+  return edenMount->getInode(relativePath).thenValue([](const InodePtr& inode) {
     auto fileInode = inode.asFilePtr();
     if (!S_ISREG(fileInode->getMode())) {
       // We intentionally want to refuse to compute the SHA1 of symlinks
@@ -510,7 +511,7 @@ EdenServiceHandler::future_getFileInformation(
                  rootInode,
                  *paths,
                  [](InodePtr inode) {
-                   return inode->getattr().then([](Dispatcher::Attr attr) {
+                   return inode->getattr().thenValue([](Dispatcher::Attr attr) {
                      FileInformation info;
                      info.size = attr.st.st_size;
                      info.mtime.seconds = attr.st.st_mtim.tv_sec;
@@ -524,7 +525,7 @@ EdenServiceHandler::future_getFileInformation(
                    });
                  }))
       .via(threadMgr)
-      .then([](vector<Try<FileInformationOrError>>&& done) {
+      .thenValue([](vector<Try<FileInformationOrError>>&& done) {
         auto out = std::make_unique<vector<FileInformationOrError>>();
         out->reserve(done.size());
         for (auto& item : done) {
@@ -723,7 +724,7 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
   auto id2 = hashFromThrift(*newHash);
   auto mount = server_->getMount(*mountPoint);
   return helper.wrapFuture(diffCommits(mount->getObjectStore(), id1, id2)
-                               .then([](ScmStatus&& result) {
+                               .thenValue([](ScmStatus&& result) {
                                  return make_unique<ScmStatus>(
                                      std::move(result));
                                }));

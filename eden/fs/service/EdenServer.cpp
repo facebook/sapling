@@ -206,7 +206,7 @@ Future<Unit> EdenServer::unmountAll() {
   }
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
-  return folly::collectAllSemiFuture(futures).toUnsafeFuture().then(
+  return folly::collectAllSemiFuture(futures).toUnsafeFuture().thenValue(
       [](std::vector<folly::Try<Unit>> results) {
         for (const auto& result : results) {
           result.throwIfFailed();
@@ -249,7 +249,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
   }
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
-  return folly::collectAllSemiFuture(futures).toUnsafeFuture().then(
+  return folly::collectAllSemiFuture(futures).toUnsafeFuture().thenValue(
       [](std::vector<folly::Try<Optional<TakeoverData::MountInfo>>> results) {
         TakeoverData data;
         data.mountPoints.reserve(results.size());
@@ -677,8 +677,8 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
           // the correct flags here.
           dispatcher
               ->opendir(InodeNumber::fromThrift(handleEntry.inodeNumber), 0)
-              .then([dispatcher, number = handleEntry.handleId](
-                        std::shared_ptr<DirHandle> handle) {
+              .thenValue([dispatcher, number = handleEntry.handleId](
+                             std::shared_ptr<DirHandle> handle) {
                 dispatcher->getFileHandles().recordHandle(
                     std::static_pointer_cast<FileHandleBase>(handle), number);
               }));
@@ -689,8 +689,8 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
           // the correct flags here.
           dispatcher
               ->open(InodeNumber::fromThrift(handleEntry.inodeNumber), O_RDWR)
-              .then([dispatcher, number = handleEntry.handleId](
-                        std::shared_ptr<FileHandle> handle) {
+              .thenValue([dispatcher, number = handleEntry.handleId](
+                             std::shared_ptr<FileHandle> handle) {
                 dispatcher->getFileHandles().recordHandle(
                     std::static_pointer_cast<FileHandleBase>(handle), number);
               }));
