@@ -215,13 +215,30 @@ fn resolve_pushrebase(
             cloned!(resolver);
             move |(changesets, mparams, bundle2)| {
                 resolver
-                    .ensure_stream_finished(bundle2)
-                    .map(|_| (changesets, mparams))
+                    .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+                    .and_then({
+                        cloned!(resolver);
+                        move |(pushkeys, bundle2)| {
+                            let bookmark_pushes: Vec<_> = pushkeys
+                                .into_iter()
+                                .filter_map(|pushkey| match pushkey {
+                                    Pushkey::Phases => None,
+                                    Pushkey::BookmarkPush(bp) => Some(bp),
+                                })
+                                .collect();
+
+                            resolver
+                                .ensure_stream_finished(bundle2)
+                                .map(move |()| (changesets, bookmark_pushes, mparams))
+                        }
+                    })
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changesets, mparams)| resolver.pushrebase(changesets, mparams)
+            move |(changesets, bookmark_pushes, mparams)| {
+                resolver.pushrebase(changesets, bookmark_pushes, mparams)
+            }
         })
         .and_then(|_| {
             let writer = Cursor::new(Vec::new());
@@ -263,6 +280,7 @@ enum Pushkey {
     Phases,
 }
 
+#[derive(Debug)]
 struct BookmarkPush {
     part_id: PartId,
     name: Bookmark,
@@ -724,6 +742,7 @@ impl Bundle2Resolver {
     fn pushrebase(
         &self,
         changesets: Changesets,
+        bookmark_pushes: Vec<BookmarkPush>,
         mparams: HashMap<String, Bytes>,
     ) -> impl Future<Item = (), Error = Error> {
         let changesets: Vec<_> = changesets
@@ -736,6 +755,19 @@ impl Bundle2Resolver {
                 let v = Vec::from(onto_bookmark.as_ref());
                 let onto_bookmark = try_boxfuture!(String::from_utf8(v));
                 let onto_bookmark = try_boxfuture!(Bookmark::new(onto_bookmark));
+
+                let incorrect_bookmark_pushes: Vec<_> = bookmark_pushes
+                    .iter()
+                    .filter(|bp| bp.name != onto_bookmark)
+                    .collect();
+
+                if !incorrect_bookmark_pushes.is_empty() {
+                    try_boxfuture!(Err(err_msg(format!(
+                        "allowed only pushes of {} bookmark: {:?}",
+                        onto_bookmark, bookmark_pushes
+                    ))))
+                }
+
                 pushrebase::do_pushrebase(self.repo.clone(), onto_bookmark, changesets)
                     .map(|_| ())
                     .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
