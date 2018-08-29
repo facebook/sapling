@@ -7,6 +7,7 @@
 use std::io;
 use std::sync::{Arc, Mutex};
 
+use failure::FutureFailureErrorExt;
 use futures::{stream, Future, Poll, Stream};
 use futures::future::{err, ok, Either};
 use futures::sync::oneshot;
@@ -196,7 +197,11 @@ where
                 .into_stream();
             (
                 responses.boxify(),
-                recv.from_err().and_then(|input| input).boxify(),
+                recv.from_err()
+                    .with_context(|_| format!("While handling batch command"))
+                    .from_err()
+                    .and_then(|input| input)
+                    .boxify(),
             )
         }
         Request::Single(req) => {

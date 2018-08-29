@@ -16,7 +16,7 @@ use std::str::FromStr;
 use slog::Logger;
 
 use bytes::{Bytes, BytesMut};
-use failure::err_msg;
+use failure::{err_msg, FutureFailureErrorExt};
 use futures::IntoFuture;
 use futures::future::{self, err, ok, Either, Future};
 use futures::stream::{self, futures_ordered, once, Stream};
@@ -419,7 +419,13 @@ where
         .filter_map(|val| val)
         .boxify();
 
-    (bundle2items, recv.from_err().boxify())
+    (
+        bundle2items,
+        recv.from_err()
+            .with_context(|_| format!("While extracting bundle2 remainder"))
+            .from_err()
+            .boxify(),
+    )
 }
 
 #[inline]
