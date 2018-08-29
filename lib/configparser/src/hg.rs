@@ -1,7 +1,7 @@
 //! Mercurial-specific config postprocessing
 
 use bytes::Bytes;
-use config::{ConfigSet, Options};
+use config::{expand_path, ConfigSet, Options};
 use dirs;
 use error::Error;
 use std::cmp::Eq;
@@ -12,9 +12,10 @@ use std::path::Path;
 
 const HGPLAIN: &str = "HGPLAIN";
 const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
+const HGRCPATH: &str = "HGRCPATH";
 
 pub trait OptionsHgExt {
-    /// Drop configs according to HGPLAIN and HGPLAINEXCEPT.
+    /// Drop configs according to `$HGPLAIN` and `$HGPLAINEXCEPT`.
     fn process_hgplain(self) -> Self;
 
     /// Set read-only config items. `items` contains a list of tuple `(section, name)`.
@@ -36,12 +37,13 @@ pub trait OptionsHgExt {
 }
 
 pub trait ConfigSetHgExt {
-    /// Load system config files.
+    /// Load system config files if `$HGRCPATH` is not set.
     /// `data_dir` is `mercurial.util.datapath`.
     /// Return errors parsing files.
     fn load_system<P: AsRef<Path>>(&mut self, data_dir: P) -> Vec<Error>;
 
-    /// Load user config files (and environment variables).
+    /// Load user config files (and environment variables).  If `$HGRCPATH` is
+    /// set, load files listed in that environment variable instead.
     /// Return errors parsing files.
     fn load_user(&mut self) -> Vec<Error>;
 }
@@ -174,7 +176,7 @@ impl ConfigSetHgExt for ConfigSet {
         let data_dir = data_dir.as_ref();
         let mut errors = Vec::new();
 
-        if env::var("HGRCPATH").is_err() {
+        if env::var(HGRCPATH).is_err() {
             #[cfg(unix)]
             {
                 errors.append(&mut self.load_path(data_dir.join("default.d/"), &opts));
@@ -230,7 +232,7 @@ impl ConfigSetHgExt for ConfigSet {
             #[cfg(windows)]
             let paths = rcpath.split(';');
             for path in paths {
-                errors.append(&mut self.load_path(path, &opts));
+                errors.append(&mut self.load_path(expand_path(path), &opts));
             }
         } else {
             let option_home_dir = dirs::home_dir();
@@ -259,6 +261,8 @@ impl ConfigSetHgExt for ConfigSet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use config::tests::write_file;
+    use tempdir::TempDir;
 
     #[test]
     fn test_basic_hgplain() {
@@ -307,6 +311,31 @@ mod tests {
         assert_eq!(cfg.get("alias", "l"), Some("log".into()));
         assert_eq!(cfg.get("revsetalias", "@"), Some("master".into()));
         assert_eq!(cfg.get("templatealias", "u"), None);
+    }
+
+    #[test]
+    fn test_hgrcpath() {
+        let dir = TempDir::new("test_hgrcpath").unwrap();
+
+        write_file(dir.path().join("1.rc"), "[x]\na=1");
+        write_file(dir.path().join("2.rc"), "[y]\nb=2");
+
+        #[cfg(unix)]
+        let hgrcpath = "$T/1.rc:$T/2.rc";
+        #[cfg(windows)]
+        let hgrcpath = "$T/1.rc;%T%/2.rc";
+
+        env::set_var("T", dir.path());
+        env::set_var(HGRCPATH, hgrcpath);
+
+        let mut cfg = ConfigSet::new();
+
+        cfg.load_system("");
+        assert!(cfg.sections().is_empty());
+
+        cfg.load_user();
+        assert_eq!(cfg.get("x", "a"), Some("1".into()));
+        assert_eq!(cfg.get("y", "b"), Some("2".into()));
     }
 
     #[test]

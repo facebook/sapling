@@ -520,7 +520,7 @@ fn extract<'a>(buf: &Bytes, span: Span<'a>) -> Bytes {
 }
 
 /// Expand `~` to home directory and expand environment variables.
-fn expand_path(path: &str) -> PathBuf {
+pub(crate) fn expand_path(path: &str) -> PathBuf {
     // The shellexpand crate does not expand Windows environment variables
     // like `%PROGRAMDATA%`. We'd like to expand them too. So let's do some
     // pre-processing.
@@ -550,7 +550,7 @@ fn expand_path(path: &str) -> PathBuf {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::io::Write;
     use tempdir::TempDir;
@@ -771,7 +771,7 @@ mod tests {
         assert_eq!(cfg.get("z", "c"), Some(Bytes::from("b")));
     }
 
-    fn write_file(path: PathBuf, content: &str) {
+    pub(crate) fn write_file(path: PathBuf, content: &str) {
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         let mut f = fs::File::create(path).unwrap();
         f.write_all(content.as_bytes()).unwrap();
