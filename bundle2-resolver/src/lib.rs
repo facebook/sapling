@@ -25,7 +25,6 @@ extern crate heapsize;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
-#[cfg(test)]
 #[macro_use]
 extern crate maplit;
 #[cfg(not(test))]
@@ -42,6 +41,7 @@ extern crate stats as stats_crate;
 extern crate tokio_io;
 
 extern crate blobrepo;
+extern crate bonsai_utils;
 extern crate bookmarks;
 extern crate mercurial;
 extern crate mercurial_bundles;

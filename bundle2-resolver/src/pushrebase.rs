@@ -40,25 +40,38 @@
 ///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
 use blobrepo::{save_bonsai_changeset, BlobRepo};
+use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::Bookmark;
 use errors::*;
-use failure::err_msg;
-use futures::{Future, Stream};
-use futures::future::{join_all, loop_fn, ok, Loop};
+use futures::{Future, IntoFuture, Stream};
+use futures::future::{err, join_all, loop_fn, ok, Loop};
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{HgChangesetId, MPath};
+use mercurial_types::{Changeset, HgChangesetId, MPath};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange};
 
 use revset::RangeNodeStream;
-use std::collections::{HashMap, HashSet};
+use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum PushrebaseError {
-    Conflicts,
+    Conflicts(Vec<PushrebaseConflict>),
+    RebaseOverMerge,
     Error(Error),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct PushrebaseConflict {
+    left: MPath,
+    right: MPath,
+}
+
+impl PushrebaseConflict {
+    fn new(left: MPath, right: MPath) -> Self {
+        PushrebaseConflict { left, right }
+    }
 }
 
 impl From<Error> for PushrebaseError {
@@ -69,11 +82,12 @@ impl From<Error> for PushrebaseError {
 
 /// Does a pushrebase of a list of commits `pushed_set` onto `onto_bookmark`
 /// The commits from the pushed set should already be committed to the blobrepo
+/// Returns updated bookmark value.
 pub fn do_pushrebase(
     repo: Arc<BlobRepo>,
     onto_bookmark: Bookmark,
     pushed_set: Vec<HgChangesetId>,
-) -> impl Future<Item = (), Error = PushrebaseError> {
+) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
     fetch_bonsai_changesets(repo.clone(), pushed_set)
         .and_then(|pushed| {
             let head = find_only_head_or_fail(&pushed)?;
@@ -92,9 +106,9 @@ pub fn do_pushrebase(
             let repo = repo.clone();
             move |(head, root)| {
                 // Calculate client changed files only once, since they won't change
-                find_changed_files(&repo, root, head).and_then(move |client_cf| {
-                    rebase_in_loop(repo, onto_bookmark, head, root, client_cf)
-                })
+                find_changed_files(&repo, root, head, /* reject_merges */ false).and_then(
+                    move |client_cf| rebase_in_loop(repo, onto_bookmark, head, root, client_cf),
+                )
             }
         })
 }
@@ -105,21 +119,22 @@ fn rebase_in_loop(
     head: ChangesetId,
     root: ChangesetId,
     client_cf: Vec<MPath>,
-) -> BoxFuture<(), PushrebaseError> {
+) -> BoxFuture<ChangesetId, PushrebaseError> {
     loop_fn(root, move |root| {
         get_bookmark_value(&repo, &onto_bookmark).and_then({
             cloned!(client_cf, onto_bookmark, repo);
             move |bookmark_val| {
-                find_changed_files(&repo, root.clone(), bookmark_val)
-                    .and_then(|server_cf| intersect_changed_files(server_cf, client_cf))
+                find_changed_files(
+                    &repo,
+                    root.clone(),
+                    bookmark_val,
+                    /* reject_merges */ true,
+                ).and_then(|server_cf| intersect_changed_files(server_cf, client_cf))
                     .and_then(move |()| {
                         do_rebase(repo, root, head, bookmark_val, onto_bookmark).map(
-                            move |update_res| {
-                                if update_res {
-                                    Loop::Break(())
-                                } else {
-                                    Loop::Continue(bookmark_val)
-                                }
+                            move |update_res| match update_res {
+                                Some(result) => Loop::Break(result),
+                                None => Loop::Continue(bookmark_val),
                             },
                         )
                     })
@@ -134,7 +149,7 @@ fn do_rebase(
     head: ChangesetId,
     bookmark_val: ChangesetId,
     onto_bookmark: Bookmark,
-) -> impl Future<Item = bool, Error = PushrebaseError> {
+) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
     create_rebased_changesets(repo.clone(), root, head, bookmark_val).and_then({
         move |new_head| try_update_bookmark(&repo, &onto_bookmark, bookmark_val, new_head)
     })
@@ -198,34 +213,195 @@ fn find_roots(
 }
 
 fn find_closest_root(
-    _repo: &Arc<BlobRepo>,
-    _bookmark: Bookmark,
+    repo: &Arc<BlobRepo>,
+    bookmark: Bookmark,
     roots: Vec<ChangesetId>,
 ) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
-    // TODO(stash, aslpavel): actually find closest root
+    let roots: HashSet<_> = roots.into_iter().collect();
+    get_bookmark_value(repo, &bookmark).from_err().and_then({
+        cloned!(repo);
+        move |id| {
+            let mut queue = VecDeque::new();
+            queue.push_back(id);
 
-    if roots.len() == 1 {
-        ok(roots.get(0).unwrap().clone())
-    } else {
-        unimplemented!()
-    }
+            loop_fn(queue, move |mut queue| match queue.pop_front() {
+                None => err(PushrebaseError::Error(
+                    ErrorKind::PushrebaseNoCommonRoot(bookmark.clone(), roots.clone()).into(),
+                )).left_future(),
+                Some(id) => {
+                    if roots.contains(&id) {
+                        ok(Loop::Break(id)).left_future()
+                    } else {
+                        repo.get_bonsai_changeset(id)
+                            .map(move |bcs| {
+                                queue.extend(bcs.parents());
+                                Loop::Continue(queue)
+                            })
+                            .from_err()
+                            .right_future()
+                    }
+                }
+            })
+        }
+    })
+}
+
+/// find changed files by comparing manifests of `ancestor` and `descendant`
+fn find_changed_files_between_manfiests(
+    repo: &Arc<BlobRepo>,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
+    let id_to_manifest = {
+        cloned!(repo);
+        move |bcs_id| {
+            repo.get_hg_from_bonsai_changeset(bcs_id)
+                .and_then({
+                    cloned!(repo);
+                    move |cs_id| repo.get_changeset_by_changesetid(&cs_id)
+                })
+                .map({
+                    cloned!(repo);
+                    move |cs| repo.get_root_entry(cs.manifestid())
+                })
+        }
+    };
+
+    (id_to_manifest(descendant), id_to_manifest(ancestor))
+        .into_future()
+        .and_then(|(d_mf, a_mf)| {
+            bonsai_diff(d_mf, Some(a_mf), None)
+                .map(|diff| match diff {
+                    BonsaiDiffResult::Changed(path, ..)
+                    | BonsaiDiffResult::ChangedReusedId(path, ..)
+                    | BonsaiDiffResult::Deleted(path) => path,
+                })
+                .collect()
+        })
+        .from_err()
 }
 
 fn find_changed_files(
-    _repo: &Arc<BlobRepo>,
-    _ancestor: ChangesetId,
-    _descendant: ChangesetId,
+    repo: &Arc<BlobRepo>,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+    reject_merges: bool,
 ) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
-    // TODO(stash, aslpavel) actually find changed files
-    ok(vec![])
+    cloned!(repo);
+    RangeNodeStream::new(&repo, ancestor, descendant)
+        .map({
+            cloned!(repo);
+            move |bcs_id| {
+                repo.get_bonsai_changeset(bcs_id)
+                    .map(move |bcs| (bcs_id, bcs))
+            }
+        })
+        .buffered(100)
+        .collect()
+        .from_err()
+        .and_then(move |id_to_bcs| {
+            let ids: HashSet<_> = id_to_bcs.iter().map(|(id, _)| *id).collect();
+            let file_changes_fut: Vec<_> = id_to_bcs
+                .into_iter()
+                .filter(|(id, _)| *id != ancestor)
+                .map(move |(id, bcs)| {
+                    let parents: Vec<_> = bcs.parents().collect();
+                    match *parents {
+                        [] | [_] => ok(bcs.file_changes()
+                            .map(|(path, _)| path.clone())
+                            .collect::<Vec<MPath>>())
+                            .left_future(),
+                        [p0_id, p1_id] => {
+                            if reject_merges {
+                                return err(PushrebaseError::RebaseOverMerge).left_future();
+                            }
+                            match (ids.get(p0_id), ids.get(p1_id)) {
+                                (Some(_), Some(_)) => {
+                                    // both parents are in the rebase set, so we can just take
+                                    // filechanges from bonsai changeset
+                                    ok(bcs.file_changes()
+                                        .map(|(path, _)| path.clone())
+                                        .collect::<Vec<MPath>>())
+                                        .left_future()
+                                }
+                                (Some(p_id), None) | (None, Some(p_id)) => {
+                                    // one of the parents is not in the rebase set, to calculate
+                                    // changed files in this case we will compute manifest diff
+                                    // between elements that are in rebase set.
+                                    find_changed_files_between_manfiests(&repo, id, *p_id)
+                                        .right_future()
+                                }
+                                (None, None) => panic!(
+                                    "`RangeNodeStream` produced invalid result for: ({}, {})",
+                                    descendant, ancestor,
+                                ),
+                            }
+                        }
+                        _ => panic!("pushrebase supports only two parents"),
+                    }
+                })
+                .collect();
+            join_all(file_changes_fut).map(|file_changes| {
+                let mut file_changes_union = file_changes
+                    .into_iter()
+                    .flat_map(|v| v)
+                    .collect::<HashSet<_>>()  // compute union
+                    .into_iter()
+                    .collect::<Vec<_>>();
+                file_changes_union.sort_unstable();
+                file_changes_union
+            })
+        })
 }
 
+/// `left` and `right` are considerered to be conflit free, if none of the element from `left`
+/// is prefix of element from `right`, and vice versa.
 fn intersect_changed_files(
-    _left: Vec<MPath>,
-    _right: Vec<MPath>,
+    left: Vec<MPath>,
+    right: Vec<MPath>,
 ) -> ::std::result::Result<(), PushrebaseError> {
-    // TODO(stash, aslpavel) actually find intersection
-    Ok(())
+    let mut left = {
+        let mut left = left;
+        left.sort_unstable();
+        left.into_iter()
+    };
+    let mut right = {
+        let mut right = right;
+        right.sort_unstable();
+        right.into_iter()
+    };
+
+    let mut conflicts = Vec::new();
+    let mut state = (left.next(), right.next());
+    loop {
+        state = match state {
+            (Some(l), Some(r)) => match l.cmp(&r) {
+                Ordering::Equal => {
+                    conflicts.push(PushrebaseConflict::new(l.clone(), r.clone()));
+                    (left.next(), right.next())
+                }
+                Ordering::Less => {
+                    if l.is_prefix_of(&r) {
+                        conflicts.push(PushrebaseConflict::new(l.clone(), r.clone()));
+                    }
+                    (left.next(), Some(r))
+                }
+                Ordering::Greater => {
+                    if r.is_prefix_of(&l) {
+                        conflicts.push(PushrebaseConflict::new(l.clone(), r.clone()));
+                    }
+                    (Some(l), right.next())
+                }
+            },
+            _ => break,
+        };
+    }
+
+    if conflicts.is_empty() {
+        Ok(())
+    } else {
+        Err(PushrebaseError::Conflicts(conflicts))
+    }
 }
 
 fn get_bookmark_value(
@@ -263,93 +439,68 @@ fn create_rebased_changesets(
     head: ChangesetId,
     onto: ChangesetId,
 ) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
-    find_rebased_set(repo.clone(), root, head).and_then({
-        cloned!(repo);
-        move |rebased_set| {
-            let mut remapping: HashMap<ChangesetId, ChangesetId> = HashMap::new();
-            let mut new_changesets = vec![];
-            for bcs in rebased_set {
-                let parents: Vec<_> = bcs.parents().cloned().collect();
-                if parents.len() != 1 {
-                    unimplemented!()
-                }
-
-                let old_parent = parents.get(0).expect("no parents").clone();
-                let new_parent = if old_parent == root {
-                    onto
-                } else {
-                    try_boxfuture!(
-                        remapping
-                            .get(&old_parent)
-                            .ok_or(err_msg("can not find {} in rebased set"))
-                            .map(|old_parent| old_parent.clone())
-                    )
-                };
-
-                let prev_cs_id = bcs.get_changeset_id();
-                let bcs = try_boxfuture!(change_bonsai_parent(bcs, old_parent, new_parent));
-                let bcs_id = bcs.get_changeset_id();
-                new_changesets.push(bcs);
-                remapping.insert(prev_cs_id, bcs_id);
-            }
-
-            let head = try_boxfuture!(
-                new_changesets
-                    .last()
-                    .cloned()
-                    .ok_or(err_msg("empty rebased set"))
-            );
-
-            // XXX: This can potentially be slow for long stacks. To speed it up we can write
-            // all bonsai changests at once
-            loop_fn(
-                new_changesets.into_iter(),
-                move |mut changesets| match changesets.next() {
-                    Some(bcs) => {
-                        let repo: &BlobRepo = &repo;
-                        save_bonsai_changeset(bcs, repo.clone())
-                            .map(|()| Loop::Continue(changesets))
-                            .boxify()
-                    }
-                    None => ok(Loop::Break(())).boxify(),
-                },
-            ).map(move |()| head.get_changeset_id())
-                .from_err()
-                .boxify()
+    find_rebased_set(repo.clone(), root, head.clone()).and_then(move |rebased_set| {
+        // rebased_set already sorted in reverse topological order, which guarantees
+        // that all required nodes will be updated by the time they are needed
+        let mut remapping = hashmap!{ root => onto };
+        let mut rebased = Vec::new();
+        for bcs_old in rebased_set {
+            let id_old = bcs_old.get_changeset_id();
+            let bcs_new = match remap_bonsai_parents(bcs_old, &remapping) {
+                Ok(bcs_new) => bcs_new,
+                Err(e) => return err(e.into()).left_future(),
+            };
+            remapping.insert(id_old, bcs_new.get_changeset_id());
+            rebased.push(bcs_new);
         }
+
+        // XXX: This can potentially be slow for long stacks. To speed it up we can write
+        // all bonsai changests at once
+        loop_fn(
+            rebased.into_iter(),
+            move |mut changesets| match changesets.next() {
+                Some(bcs) => save_bonsai_changeset(bcs, (*repo).clone())
+                    .map(|()| Loop::Continue(changesets))
+                    .boxify(),
+                None => ok(Loop::Break(())).boxify(),
+            },
+        ).map(move |_| remapping.get(&head).cloned().unwrap_or(head))
+            .from_err()
+            .right_future()
     })
 }
 
-fn change_bonsai_parent(
+fn remap_bonsai_parents(
     bcs: BonsaiChangeset,
-    old_parent: ChangesetId,
-    new_parent: ChangesetId,
+    remapping: &HashMap<ChangesetId, ChangesetId>,
 ) -> Result<BonsaiChangeset> {
     let mut bcs = bcs.into_mut();
-    bcs.parents = vec![new_parent];
+    bcs.parents = bcs.parents
+        .into_iter()
+        .map(|p| remapping.get(&p).cloned().unwrap_or(p))
+        .collect();
 
     // Copy information in bonsai changeset contains a commit parent. So parent changes, then
     // copy information for all copied/moved files needs to be updated
-    for maybe_filechange in bcs.file_changes.values_mut() {
-        let mut new_filechange = None;
-        if let Some(filechange) = maybe_filechange {
-            if let Some(copy) = filechange.copy_from() {
-                if copy.1 == old_parent {
-                    let f = FileChange::new(
-                        filechange.content_id().clone(),
-                        filechange.file_type().clone(),
-                        filechange.size().clone(),
-                        Some((copy.0.clone(), new_parent.clone())),
-                    );
-                    new_filechange = Some(f);
-                }
-            }
-        }
+    bcs.file_changes = bcs.file_changes
+        .into_iter()
+        .map(|(path, file_change_opt)| {
+            (
+                path,
+                file_change_opt.map(|file_change| {
+                    FileChange::new(
+                        file_change.content_id().clone(),
+                        file_change.file_type(),
+                        file_change.size(),
+                        file_change.copy_from().map(|(path, cs)| {
+                            (path.clone(), remapping.get(cs).cloned().unwrap_or(*cs))
+                        }),
+                    )
+                }),
+            )
+        })
+        .collect();
 
-        if new_filechange.is_some() {
-            *maybe_filechange = new_filechange;
-        }
-    }
     bcs.freeze()
 }
 
@@ -367,13 +518,11 @@ fn find_rebased_set(
         .buffered(100)
         .collect()
         .map(move |nodes| {
-            let nodes = nodes;
-            let nodes: Vec<_> = nodes
+            nodes
                 .into_iter()
                 .filter(|node| node.get_changeset_id() != root)
                 .rev()
-                .collect();
-            nodes
+                .collect()
         })
         .from_err()
 }
@@ -383,10 +532,13 @@ fn try_update_bookmark(
     bookmark_name: &Bookmark,
     old_value: ChangesetId,
     new_value: ChangesetId,
-) -> BoxFuture<bool, PushrebaseError> {
+) -> BoxFuture<Option<ChangesetId>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction();
     try_boxfuture!(txn.update(bookmark_name, &new_value, &old_value));
-    txn.commit().from_err().boxify()
+    txn.commit()
+        .map(move |success| if success { Some(new_value) } else { None })
+        .from_err()
+        .boxify()
 }
 
 #[cfg(test)]
@@ -472,6 +624,11 @@ mod tests {
         txn.commit().wait().unwrap();
     }
 
+    fn make_paths(paths: &[&str]) -> Vec<MPath> {
+        let paths: ::std::result::Result<_, _> = paths.into_iter().map(MPath::new).collect();
+        paths.unwrap()
+    }
+
     #[test]
     fn pushrebase_one_commit() {
         async_unit::tokio_unit_test(|| {
@@ -519,6 +676,13 @@ mod tests {
                 store_files(btreemap!{"file2" => Some("content")}, repo.clone()),
             );
 
+            assert_eq!(
+                find_changed_files(&Arc::new(repo.clone()), p, bcs_id_2, false)
+                    .wait()
+                    .unwrap(),
+                make_paths(&["file", "file2"]),
+            );
+
             let book = Bookmark::new("master").unwrap();
             set_bookmark(
                 repo.clone(),
@@ -557,6 +721,13 @@ mod tests {
             let file_changes = btreemap!{rename.0 => rename.1};
             let bcs_id_2 = create_commit(repo.clone(), vec![bcs_id_1], file_changes);
 
+            assert_eq!(
+                find_changed_files(&Arc::new(repo.clone()), p, bcs_id_2, false)
+                    .wait()
+                    .unwrap(),
+                make_paths(&["file", "file_renamed"]),
+            );
+
             let book = Bookmark::new("master").unwrap();
             set_bookmark(
                 repo.clone(),
@@ -570,5 +741,197 @@ mod tests {
                 .wait()
                 .expect("pushrebase failed");
         });
+    }
+
+    #[test]
+    fn pushrebase_multi_root() {
+        //
+        // master -> o
+        //           |
+        //           :  o <- bcs3
+        //           :  |
+        //           :  o <- bcs2
+        //           : /|
+        //           |/ |
+        //  root1 -> o  |
+        //           |  o <- bcs1 (outside of rebase set)
+        //           o /
+        //           |/
+        //  root0 -> o
+        //
+        async_unit::tokio_unit_test(|| {
+            let repo = linear::getrepo(None);
+            let repo_arc = Arc::new(repo.clone());
+
+            let root0 = repo.get_bonsai_from_hg(&HgChangesetId::from_str(
+                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+            ).unwrap())
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            let root1 = repo.get_bonsai_from_hg(&HgChangesetId::from_str(
+                "607314ef579bd2407752361ba1b0c1729d08b281",
+            ).unwrap())
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            let bcs_id_1 = create_commit(
+                repo.clone(),
+                vec![root0],
+                store_files(btreemap!{"f0" => Some("f0"), "files" => None}, repo.clone()),
+            );
+            let bcs_id_2 = create_commit(
+                repo.clone(),
+                vec![bcs_id_1, root1],
+                store_files(btreemap!{"f1" => Some("f1")}, repo.clone()),
+            );
+            let bcs_id_3 = create_commit(
+                repo.clone(),
+                vec![bcs_id_2],
+                store_files(btreemap!{"f2" => Some("f2")}, repo.clone()),
+            );
+
+            let book = Bookmark::new("master").unwrap();
+            set_bookmark(
+                repo.clone(),
+                &book,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            );
+            let bcs_id_master = repo.get_bonsai_from_hg(&HgChangesetId::from_str(
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            ).unwrap())
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            let root = root1;
+            assert_eq!(
+                find_closest_root(&repo_arc, book.clone(), vec![root0, root1])
+                    .wait()
+                    .unwrap(),
+                root,
+            );
+
+            assert_eq!(
+                find_changed_files(&repo_arc, root, bcs_id_3, false)
+                    .wait()
+                    .unwrap(),
+                make_paths(&["f0", "f1", "f2"]),
+            );
+
+            let hg_cs_1 = repo.get_hg_from_bonsai_changeset(bcs_id_1).wait().unwrap();
+            let hg_cs_2 = repo.get_hg_from_bonsai_changeset(bcs_id_2).wait().unwrap();
+            let hg_cs_3 = repo.get_hg_from_bonsai_changeset(bcs_id_3).wait().unwrap();
+            let bcs_id_rebased =
+                do_pushrebase(repo_arc.clone(), book, vec![hg_cs_1, hg_cs_2, hg_cs_3])
+                    .wait()
+                    .expect("pushrebase failed");
+
+            // should only rebase {bcs2, bcs3}
+            let rebased = find_rebased_set(repo_arc.clone(), bcs_id_master, bcs_id_rebased)
+                .wait()
+                .unwrap();
+            assert_eq!(rebased.len(), 2);
+            let bcs2 = &rebased[0];
+            let bcs3 = &rebased[1];
+
+            // bcs3 parent correctly updated and contains only {bcs2}
+            assert_eq!(
+                bcs3.parents().cloned().collect::<Vec<_>>(),
+                vec![bcs2.get_changeset_id()]
+            );
+
+            // bcs2 parents cotains old bcs1 and old master bookmark
+            assert_eq!(
+                bcs2.parents().cloned().collect::<HashSet<_>>(),
+                hashset!{ bcs_id_1, bcs_id_master },
+            );
+        });
+    }
+
+    #[test]
+    fn pushrebase_conflict() {
+        async_unit::tokio_unit_test(|| {
+            let repo = linear::getrepo(None);
+
+            let root = repo.get_bonsai_from_hg(&HgChangesetId::from_str(
+                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+            ).unwrap())
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            let bcs_id_1 = create_commit(
+                repo.clone(),
+                vec![root],
+                store_files(btreemap!{"f0" => Some("f0")}, repo.clone()),
+            );
+            let bcs_id_2 = create_commit(
+                repo.clone(),
+                vec![bcs_id_1],
+                store_files(btreemap!{"9/file" => Some("file")}, repo.clone()),
+            );
+            let bcs_id_3 = create_commit(
+                repo.clone(),
+                vec![bcs_id_2],
+                store_files(btreemap!{"f1" => Some("f1")}, repo.clone()),
+            );
+
+            let book = Bookmark::new("master").unwrap();
+            set_bookmark(
+                repo.clone(),
+                &book,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            );
+
+            let hg_cs_1 = repo.get_hg_from_bonsai_changeset(bcs_id_1).wait().unwrap();
+            let hg_cs_2 = repo.get_hg_from_bonsai_changeset(bcs_id_2).wait().unwrap();
+            let hg_cs_3 = repo.get_hg_from_bonsai_changeset(bcs_id_3).wait().unwrap();
+            let result =
+                do_pushrebase(Arc::new(repo), book, vec![hg_cs_1, hg_cs_2, hg_cs_3]).wait();
+            match result {
+                Err(PushrebaseError::Conflicts(conflicts)) => {
+                    assert_eq!(
+                        conflicts,
+                        vec![
+                            PushrebaseConflict {
+                                left: MPath::new("9").unwrap(),
+                                right: MPath::new("9/file").unwrap(),
+                            },
+                        ],
+                    );
+                }
+                _ => panic!("push-rebase should have failed with conflict"),
+            }
+        });
+    }
+
+    #[test]
+    fn pushrebase_intersect_changed() {
+        match intersect_changed_files(
+            make_paths(&["a/b/c", "c", "a/b/d", "d/d", "b", "e/c"]),
+            make_paths(&["d/f", "a/b/d/f", "c", "e"]),
+        ) {
+            Err(PushrebaseError::Conflicts(conflicts)) => assert_eq!(
+                *conflicts,
+                [
+                    PushrebaseConflict {
+                        left: MPath::new("a/b/d").unwrap(),
+                        right: MPath::new("a/b/d/f").unwrap(),
+                    },
+                    PushrebaseConflict {
+                        left: MPath::new("c").unwrap(),
+                        right: MPath::new("c").unwrap(),
+                    },
+                    PushrebaseConflict {
+                        left: MPath::new("e/c").unwrap(),
+                        right: MPath::new("e").unwrap(),
+                    },
+                ]
+            ),
+            _ => panic!("should contain conflict"),
+        }
     }
 }

@@ -604,14 +604,7 @@ impl BlobRepo {
         bonsai_cs_id: ChangesetId,
     ) -> BoxFuture<BonsaiChangeset, Error> {
         STATS::get_bonsai_changeset.add_value(1);
-        self.blobstore
-            .get(bonsai_cs_id.blobstore_key())
-            .and_then(move |value| value.ok_or(ErrorKind::BonsaiNotFound(bonsai_cs_id).into()))
-            .and_then(|value| {
-                let blob: Blob<ChangesetId> = value.into();
-                BonsaiChangeset::from_blob(blob)
-            })
-            .boxify()
+        self.fetch(&bonsai_cs_id).boxify()
     }
 
     // TODO(stash): make it accept ChangesetId

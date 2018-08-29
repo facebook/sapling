@@ -4,10 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::collections::HashSet;
+
 pub use failure::prelude::*;
 
 use bookmarks::Bookmark;
 use mercurial_types::{HgChangesetId, HgNodeHash};
+use mononoke_types::ChangesetId;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -19,4 +22,6 @@ pub enum ErrorKind {
     #[fail(display = "Only one head is allowed in pushed set")] PushrebaseTooManyHeads,
     #[fail(display = "Error while uploading data for changesets, hashes: {:?}", _0)]
     WhileUploadingData(Vec<HgNodeHash>),
+    #[fail(display = "No common root found between: bookmark:{:?} roots:{:?}", _0, _1)]
+    PushrebaseNoCommonRoot(Bookmark, HashSet<ChangesetId>),
 }
