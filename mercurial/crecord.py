@@ -1116,7 +1116,7 @@ class curseschunkselector(object):
                 self.numstatuslines,
                 0,
                 self.yscreensize - self.numstatuslines,
-                self.xscreensize,
+                max([self.xscreensize - 1, 0]),
             )
         except curses.error:
             pass
