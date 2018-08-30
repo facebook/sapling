@@ -1,9 +1,7 @@
 use kernel32;
-use local_encoding::{Encoder, Encoding};
 use std;
 use std::ffi::{OsStr, OsString};
 use std::io;
-use std::io::ErrorKind::InvalidInput;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
 use winapi;
@@ -61,10 +59,7 @@ pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<OsString> {
 /// the path before storing it.
 #[inline]
 pub fn path_to_local_bytes(path: &Path) -> io::Result<Vec<u8>> {
-    match path.as_os_str().to_str() {
-        Some(s) => Encoding::ANSI.to_bytes(s),
-        None => Err(InvalidInput.into()),
-    }
+    osstring_to_local_bytes(&path.as_os_str())
 }
 
 /// Convert (usually UTF-8 encoded) `bytes` to `Path`.
