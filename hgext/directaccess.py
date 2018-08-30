@@ -178,7 +178,7 @@ def gethashsymbols(tree, maxrev):
         return []
 
     results = []
-    if len(tree) == 2 and tree[0] == "symbol":
+    if len(tree) == 2 and tree[0] in {"symbol", "string"}:
         results.append(tree[1])
     elif tree[0] == "func" and tree[1] == _listtuple:
         # the optimiser will group sequence of hash request
