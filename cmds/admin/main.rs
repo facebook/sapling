@@ -30,6 +30,7 @@ extern crate tempdir;
 extern crate tokio;
 
 mod config_repo;
+mod bookmarks_manager;
 
 use std::fmt;
 use std::str::FromStr;
@@ -56,6 +57,7 @@ const BLOBSTORE_FETCH: &'static str = "blobstore-fetch";
 const BONSAI_FETCH: &'static str = "bonsai-fetch";
 const CONTENT_FETCH: &'static str = "content-fetch";
 const CONFIG_REPO: &'static str = "config";
+const BOOKMARKS: &'static str = "bookmarks";
 const MAX_CONCURRENT_REQUESTS_PER_IO_THREAD: usize = 4;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -114,6 +116,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(content_fetch)
         .subcommand(config_repo::prepare_command(SubCommand::with_name(
             CONFIG_REPO,
+        )))
+        .subcommand(bookmarks_manager::prepare_command(SubCommand::with_name(
+            BOOKMARKS,
         )))
 }
 
@@ -190,7 +195,7 @@ fn fetch_content(
         .boxify()
 }
 
-fn fetch_bonsai_changeset(
+pub fn fetch_bonsai_changeset(
     rev: &str,
     repo: &BlobRepo,
 ) -> impl Future<Item = BonsaiChangeset, Error = Error> {
@@ -356,6 +361,12 @@ fn main() {
                 .boxify()
         }
         (CONFIG_REPO, Some(sub_m)) => config_repo::handle_command(sub_m, logger),
+        (BOOKMARKS, Some(sub_m)) => {
+            args::init_cachelib(&matches);
+            let repo = args::open_repo(&logger, &matches);
+
+            bookmarks_manager::handle_command(&repo.blobrepo(), sub_m, logger)
+        }
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
