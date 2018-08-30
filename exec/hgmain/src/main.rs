@@ -1,12 +1,10 @@
+extern crate encoding;
 extern crate libc;
-extern crate local_encoding;
 extern crate python27_sys;
 
 mod python;
-use local_encoding::{Encoder, Encoding};
 use python::{py_main, py_set_python_home};
 use std::env;
-use std::ffi::CString;
 use std::path::{Path, PathBuf};
 
 /// A default name of the python script that this Rust binary will try to
@@ -76,29 +74,17 @@ impl HgPython {
         panic!("could not find {} in {:?}", HGPYENTRYPOINT, candidates);
     }
 
-    #[cfg(target_family = "unix")]
-    fn args_to_cstrings() -> Vec<CString> {
-        use std::os::unix::ffi::OsStringExt;
+    fn args_to_local_bytes() -> Vec<Vec<u8>> {
         env::args_os()
-            .map(|x| CString::new(x.into_vec()).unwrap())
-            .collect()
-    }
-
-    #[cfg(target_family = "windows")]
-    fn args_to_cstrings() -> Vec<CString> {
-        env::args()
-            .map(|x| (Encoding::ANSI).to_bytes(&x).unwrap())
-            .map(|x| CString::new(x).unwrap())
+            .map(|x| encoding::osstring_to_local_bytes(&x).unwrap().to_vec())
             .collect()
     }
 
     pub fn run_main(&self) {
-        let hgpyentrypoint = self.find_hg_py_entry_point();
-        let hgpyentrypoint = (Encoding::ANSI)
-            .to_bytes(hgpyentrypoint.to_str().unwrap())
-            .unwrap();
-        let hgpyentrypoint = CString::new(hgpyentrypoint).unwrap();
-        let mut args: Vec<CString> = Self::args_to_cstrings();
+        let hgpyentrypoint = encoding::path_to_local_bytes(&self.find_hg_py_entry_point())
+            .unwrap()
+            .to_vec();
+        let mut args: Vec<Vec<u8>> = Self::args_to_local_bytes();
         args.insert(1, hgpyentrypoint);
         let code = py_main(args);
         std::process::exit(code);

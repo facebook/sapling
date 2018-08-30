@@ -4,5 +4,7 @@ version = "0.1.0"
 
 [dependencies]
 libc = "0.2"
-local-encoding = "0.2"
 python27-sys = "0.2"
+
+[dependencies.encoding]
+path = "../../lib/encoding"
