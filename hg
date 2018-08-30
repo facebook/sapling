@@ -38,4 +38,4 @@ else:
 
 from mercurial import entrypoint
 
-entrypoint.run()
+entrypoint.run(False)

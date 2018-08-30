@@ -10,7 +10,7 @@ import os
 import sys
 
 
-def run(binaryexecution=False):
+def run(binaryexecution):
     # entrypoint is in mercurial/ dir, while we want 'from mercurial import ...',
     # 'from hgext import ...' and 'from hgdemandimport import ...' to work
     # so we are adding their parent directory to be the first item of sys.path
@@ -67,4 +67,4 @@ def run(binaryexecution=False):
 
 
 if __name__ == "__main__":
-    run(binaryexecution=True)
+    run(True)
