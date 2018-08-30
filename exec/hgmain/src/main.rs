@@ -4,8 +4,10 @@ extern crate python27_sys;
 
 mod python;
 use python::{py_main, py_set_python_home};
+use encoding::{osstring_to_local_cstring, path_to_local_cstring};
 use std::env;
 use std::path::{Path, PathBuf};
+use std::ffi::CString;
 
 /// A default name of the python script that this Rust binary will try to
 /// load when it decides to pass control to Python
@@ -28,7 +30,7 @@ impl HgPython {
 
     fn setup(installation_root: &Path) {
         if cfg!(target_os = "windows") {
-            py_set_python_home(installation_root.join("hg-python"));
+            py_set_python_home(&installation_root.join("hg-python"));
         }
     }
 
@@ -74,17 +76,15 @@ impl HgPython {
         panic!("could not find {} in {:?}", HGPYENTRYPOINT, candidates);
     }
 
-    fn args_to_local_bytes() -> Vec<Vec<u8>> {
+    fn args_to_local_cstrings() -> Vec<CString> {
         env::args_os()
-            .map(|x| encoding::osstring_to_local_bytes(&x).unwrap().to_vec())
+            .map(|x| osstring_to_local_cstring(&x))
             .collect()
     }
 
     pub fn run_main(&self) {
-        let hgpyentrypoint = encoding::path_to_local_bytes(&self.find_hg_py_entry_point())
-            .unwrap()
-            .to_vec();
-        let mut args: Vec<Vec<u8>> = Self::args_to_local_bytes();
+        let hgpyentrypoint = path_to_local_cstring(&self.find_hg_py_entry_point());
+        let mut args: Vec<CString> = Self::args_to_local_cstrings();
         args.insert(1, hgpyentrypoint);
         let code = py_main(args);
         std::process::exit(code);

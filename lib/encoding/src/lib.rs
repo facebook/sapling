@@ -17,6 +17,9 @@ mod windows;
 #[cfg(unix)]
 mod unix;
 
+use std::ffi::{CString, OsStr};
+use std::path::Path;
+
 #[cfg(unix)]
 pub use unix::{local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes,
                path_to_local_bytes};
@@ -24,6 +27,30 @@ pub use unix::{local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_b
 #[cfg(windows)]
 pub use windows::{local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes,
                   path_to_local_bytes};
+
+/// Convert a `Path` to a `CString` of local bytes
+/// This function panics on failure.
+/// On Linux, local bytes are UTF8-encoding of the `Path`
+/// On Windows, the `Path` is encoded using current ANSI code page
+/// Note that this is *not* a zero-cost function, as `to_vec`
+/// copies data. This is needed to bridge the gap between
+/// `path_to_local_bytes` return values on different OSes
+pub fn path_to_local_cstring(path: &Path) -> CString {
+    let bytes: Vec<u8> = path_to_local_bytes(path).unwrap().to_vec();
+    unsafe { CString::from_vec_unchecked(bytes) }
+}
+
+/// Convert a `&OsStr` to a `CString` of local bytes
+/// This function panics on failure
+/// On Linux, local bytes are UTF8-encoding of the `&OsStr`
+/// On Windows, the encoding is done using the current ANSI code page
+/// Note that this is *not* a zero-cost function, as `to_vec`
+/// copies data. This is needed to bridge the gap between
+/// `osstring_to_local_bytes` return values on different OSes
+pub fn osstring_to_local_cstring(os: &OsStr) -> CString {
+    let bytes: Vec<u8> = osstring_to_local_bytes(&os).unwrap().to_vec();
+    unsafe { CString::from_vec_unchecked(bytes) }
+}
 
 #[cfg(test)]
 mod tests {
