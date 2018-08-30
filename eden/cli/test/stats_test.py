@@ -29,11 +29,12 @@ class StatsTest(unittest.TestCase):
         self.assertEqual(out.getvalue(), expected_output)
 
     def test_print_latency_record(self):
-        matrix = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
+        matrix = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         expected_output = """\
-              |      p50               1                2           3          4
-access        |      p90               5                6           7          8
-              |      p99               9               10          11         12
+              |      avg               1                2           3          4
+              |      p50               5                6           7          8
+access        |      p90               9               10          11         12
+              |      p99              13               14          15         16
 --------------------------------------------------------------------------------
 """
 

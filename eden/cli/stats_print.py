@@ -39,18 +39,18 @@ def write_mem_status_table(fuse_counters, out: TextIO) -> None:
 LATENCY_FORMAT_STR = "{:<12} {:^4} {:^10}  {:>10}  {:>15}  {:>10} {:>10}\n"
 
 
-# Prints a record of latencies with 50'th,90'th and 99'th percentile.
-def write_latency_record(syscall: str, matrix, out: TextIO) -> None:
+# Prints a record of latencies with avg, 50'th,90'th and 99'th percentile.
+def write_latency_record(operation: str, matrix, out: TextIO) -> None:
     border = "-" * 80
-    percentile = {0: "p50", 1: "p90", 2: "p99"}
+    percentile = {0: "avg", 1: "p50", 2: "p90", 3: "p99"}
 
     for i in range(len(percentile)):
-        syscall_name = ""
+        operation_name = ""
         if i == int(len(percentile) / 2):
-            syscall_name = syscall
+            operation_name = operation
         out.write(
             LATENCY_FORMAT_STR.format(
-                syscall_name,
+                operation_name,
                 "|",
                 percentile[i],
                 matrix[i][0],

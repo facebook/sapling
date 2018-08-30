@@ -13,7 +13,7 @@ import logging
 import os
 import sys
 import textwrap
-from typing import Dict, List, Optional, Union, cast
+from typing import Dict, List, Optional, cast
 
 from . import cmd_util, stats_print, subcmd as subcmd_mod
 from .config import EdenInstance
@@ -27,7 +27,7 @@ log = logging.getLogger("eden.cli.stats")
 
 DiagInfoCounters = Dict[str, int]
 Table = Dict[str, List[int]]
-Table2D = Dict[str, List[List[Union[int, str]]]]
+Table2D = Dict[str, List[List[Optional[str]]]]
 
 # TODO: https://github.com/python/typeshed/issues/1240
 stdoutWrapper = cast(io.TextIOWrapper, sys.stdout)
@@ -195,6 +195,33 @@ def get_fuse_counters(counters: DiagInfoCounters, all_flg: bool) -> Table:
     return table
 
 
+def insert_latency_record(
+    table: Table2D, value: int, operation: str, percentile: str, period: Optional[str]
+) -> None:
+    period_table = {"60": 0, "600": 1, "3600": 2}
+    percentile_table = {"avg": 0, "p50": 1, "p90": 2, "p99": 3}
+
+    def with_microsecond_units(i: int) -> str:
+        if i:
+            return str(i) + " \u03BCs"  # mu for micro
+        else:
+            return str(i) + "   "
+
+    if operation not in table.keys():
+        table[operation] = [
+            ["" for _ in range(len(percentile_table))]
+            for _ in range(len(period_table) + 1)
+        ]
+
+    pct_index = percentile_table[percentile]
+    if period:
+        period_index = period_table[period]
+    else:
+        period_index = len(period_table)
+
+    table[operation][pct_index][period_index] = with_microsecond_units(value)
+
+
 @stats_cmd("latency", "Show information about the latency of I/O calls")
 class LatencyCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -227,8 +254,6 @@ class LatencyCmd(Subcmd):
 # which is a list of frequently called io system calls.
 def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
     table: Table2D = {}
-    index = {"60": 0, "600": 1, "3600": 2}
-    percentile = {"p50": 0, "p90": 1, "p99": 2}
     syscalls = [
         "open",
         "read",
@@ -242,25 +267,18 @@ def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
         "rmdir",
     ]
 
-    def with_microsecond_units(i: int) -> str:
-        if i:
-            return str(i) + " \u03BCs"  # mu for micro
-        else:
-            return str(i) + "   "
-
     for key in counters:
         if key.startswith("fuse") and key.find(".count") == -1:
             tokens = key.split(".")
             syscall = tokens[1][:-3]
             if not all_flg and syscall not in syscalls:
                 continue
-            if syscall not in table.keys():
-                table[syscall] = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-            i = percentile[tokens[2]]
-            j = 3
+            percentile = tokens[2]
+            period = None
             if len(tokens) > 3:
-                j = index[tokens[3]]
-            table[syscall][i][j] = with_microsecond_units(counters[key])
+                period = tokens[3]
+            insert_latency_record(table, counters[key], syscall, percentile, period)
+
     return table
 
 
@@ -271,9 +289,9 @@ class ThriftCmd(Subcmd):
         stats_print.write_heading("Counts of Thrift calls performed in EdenFs", out)
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
-            diag_info = client.getStatInfo()
+            counters = client.getCounters()
 
-        thrift_counters = get_thrift_counters(diag_info.counters)
+        thrift_counters = get_thrift_counters(counters)
         stats_print.write_table(thrift_counters, "Thrift Call", out)
 
         return 0
@@ -296,6 +314,39 @@ def get_thrift_counters(counters: DiagInfoCounters) -> Table:
             all_time = counters[key]
             table[call_name] = [last_minute, last_10_minutes, last_hour, all_time]
 
+    return table
+
+
+@stats_cmd("thrift-latency", "Show the latency of received thrift calls")
+class ThriftLatencyCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        out = sys.stdout
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
+            diag_info = client.getStatInfo()
+
+        table = get_thrift_latency(diag_info.counters)
+        stats_print.write_heading(
+            "Latency of Thrift processing time performed in EdenFs", out
+        )
+        stats_print.write_latency_table(table, out)
+
+        return 0
+
+
+def get_thrift_latency(counters: DiagInfoCounters) -> Table2D:
+    table: Table2D = {}
+    for key in counters:
+        if key.startswith("thrift.EdenService.") and key.find("time_process_us") != -1:
+            tokens = key.split(".")
+            if len(tokens) < 5:
+                continue
+            method = tokens[2]
+            percentile = tokens[4]
+            period = None
+            if len(tokens) > 5:
+                period = tokens[5]
+            insert_latency_record(table, counters[key], method, percentile, period)
     return table
 
 
