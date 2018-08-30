@@ -939,7 +939,7 @@ Future<Unit> EdenServer::createThriftServer() {
 
 bool EdenServer::acquireEdenLock() {
   const auto lockPath = edenDir_ + PathComponentPiece{kLockFileName};
-  lockFile_ = folly::File(lockPath.value(), O_WRONLY | O_CREAT);
+  lockFile_ = folly::File(lockPath.value(), O_WRONLY | O_CREAT | O_CLOEXEC);
   if (!lockFile_.try_lock()) {
     lockFile_.close();
     return false;
