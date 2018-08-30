@@ -179,11 +179,11 @@ usecunionstore=True
   // Build a list of file blob IDs to prefetch.
   auto rootTree = store.getTreeForCommit(commit2).get(10s);
   auto srcTree =
-      store.getTree(rootTree->getEntryAt("src"_pc).getHash()).get(1s);
+      store.getTree(rootTree->getEntryAt("src"_pc).getHash()).get(10s);
   auto edenTree =
-      store.getTree(srcTree->getEntryAt("eden"_pc).getHash()).get(1s);
+      store.getTree(srcTree->getEntryAt("eden"_pc).getHash()).get(10s);
   auto fooTree =
-      store.getTree(rootTree->getEntryAt("foo"_pc).getHash()).get(1s);
+      store.getTree(rootTree->getEntryAt("foo"_pc).getHash()).get(10s);
 
   std::vector<Hash> blobHashes;
   blobHashes.push_back(edenTree->getEntryAt("main.py"_pc).getHash());
