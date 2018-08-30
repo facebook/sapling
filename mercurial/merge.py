@@ -2071,18 +2071,19 @@ def update(
             followcopies = False
 
         ### calculate phase
-        actionbyfile, diverge, renamedelete = calculateupdates(
-            repo,
-            wc,
-            p2,
-            pas,
-            branchmerge,
-            force,
-            mergeancestor,
-            followcopies,
-            matcher=matcher,
-            mergeforce=mergeforce,
-        )
+        with progress.spinner(repo.ui, "calculating"):
+            actionbyfile, diverge, renamedelete = calculateupdates(
+                repo,
+                wc,
+                p2,
+                pas,
+                branchmerge,
+                force,
+                mergeancestor,
+                followcopies,
+                matcher=matcher,
+                mergeforce=mergeforce,
+            )
 
         if updatecheck == "noconflict":
             for f, (m, args, msg) in actionbyfile.iteritems():
