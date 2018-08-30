@@ -185,7 +185,48 @@ namespace facebook {
 namespace eden {
 
 EdenServiceHandler::EdenServiceHandler(EdenServer* server)
-    : FacebookBase2("Eden"), server_(server) {}
+    : FacebookBase2("Eden"), server_(server) {
+  struct HistConfig {
+    int64_t bucketSize{250};
+    int64_t min{0};
+    int64_t max{25000};
+  };
+  auto methodConfigs = {
+      std::make_tuple("listMounts", HistConfig{20, 0, 1000}),
+      std::make_tuple("mount", HistConfig{}),
+      std::make_tuple("unmount", HistConfig{}),
+      std::make_tuple("checkOutRevision", HistConfig{}),
+      std::make_tuple("resetParentCommits", HistConfig{20, 0, 1000}),
+      std::make_tuple("getSHA1", HistConfig{}),
+      std::make_tuple("getBindMounts", HistConfig{20, 0, 1000}),
+      std::make_tuple("getCurrentJournalPosition", HistConfig{20, 0, 1000}),
+      std::make_tuple("getFilesChangedSince", HistConfig{}),
+      std::make_tuple("debugGetRawJournal", HistConfig{}),
+      std::make_tuple("getFileInformation", HistConfig{}),
+      std::make_tuple("glob", HistConfig{}),
+      std::make_tuple("globFiles", HistConfig{}),
+      std::make_tuple("getScmStatus", HistConfig{}),
+      std::make_tuple("getScmStatusBetweenRevisions", HistConfig{}),
+      std::make_tuple("getManifestEntry", HistConfig{}),
+      std::make_tuple("clearAndCompactLocalStore", HistConfig{}),
+      std::make_tuple("unloadInodeForPath", HistConfig{}),
+      std::make_tuple("flushStatsNow", HistConfig{20, 0, 1000}),
+      std::make_tuple("invalidateKernelInodeCache", HistConfig{}),
+      std::make_tuple("getStatInfo", HistConfig{}),
+      std::make_tuple("initiateShutdown", HistConfig{}),
+  };
+  for (const auto& methodConfig : methodConfigs) {
+    const auto& methodName = std::get<0>(methodConfig);
+    const auto& histConfig = std::get<1>(methodConfig);
+    exportThriftFuncHist(
+        std::string("EdenService.") + methodName,
+        facebook::fb303::PROCESS,
+        folly::small_vector<int>({50, 90, 99}), // percentiles to record
+        histConfig.bucketSize,
+        histConfig.min,
+        histConfig.max);
+  }
+}
 
 facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG4);
