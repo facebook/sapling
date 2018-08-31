@@ -71,9 +71,7 @@ impl Request {
     pub fn record_request(&self, record: &Mutex<Vec<String>>) {
         let mut record = record.lock().expect("lock poisoned");
         match self {
-            &Request::Batch(ref batch) => {
-                batch.iter().for_each(|req| record.push(req.name().into()))
-            }
+            &Request::Batch(ref batch) => record.extend(batch.iter().map(|s| s.name().into())),
             &Request::Single(ref req) => record.push(req.name().into()),
         }
     }
@@ -153,7 +151,9 @@ impl Debug for GetbundleArgs {
         let heads: Vec<_> = self.heads.iter().take(MAX_NODES_TO_LOG).collect();
         let common: Vec<_> = self.common.iter().take(MAX_NODES_TO_LOG).collect();
         fmt.debug_struct("GetbundleArgs")
+            .field("heads_len", &self.heads.len())
             .field("heads", &heads)
+            .field("common_len", &self.common.len())
             .field("common", &common)
             .field("bundlecaps", &bcaps)
             .field("listkeys", &listkeys)
@@ -209,10 +209,7 @@ impl SingleResponse {
         use SingleResponse::*;
 
         match self {
-            &Getbundle(_) => true,
-            &ReadyForStream => true,
-            &Unbundle(_) => true,
-            &Gettreepack(_) => true,
+            &Getbundle(_) | &ReadyForStream | &Unbundle(_) | &Gettreepack(_) => true,
             _ => false,
         }
     }
