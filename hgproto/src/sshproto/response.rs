@@ -38,9 +38,9 @@ where
 pub fn encode(response: Response) -> OutputStream {
     let mut out = BytesMut::new();
     match response {
-        Response::Batch(ref resps) => {
+        Response::Batch(resps) => {
             let escaped_results: Vec<_> = resps
-                .iter()
+                .into_iter()
                 .map(|resp| batch::escape(&encode_cmd(resp)))
                 .collect();
             let escaped_results = Bytes::from(escaped_results.join(&b';'));
@@ -48,15 +48,16 @@ pub fn encode(response: Response) -> OutputStream {
             out.put_slice(format!("{}\n", escaped_results.len()).as_bytes());
             out.put(escaped_results)
         }
-        Response::Single(ref resp) => encode_single(resp, &mut out),
+        Response::Single(resp) => encode_single(resp, &mut out),
     }
     stream::once(Ok(out.freeze())).boxify()
 }
 
-fn encode_single(response: &SingleResponse, out: &mut BytesMut) {
+fn encode_single(response: SingleResponse, out: &mut BytesMut) {
+    let is_stream = response.is_stream();
     let res = encode_cmd(response);
     out.reserve(10 + res.len());
-    if !response.is_stream() {
+    if !is_stream {
         out.put_slice(format!("{}\n", res.len()).as_bytes());
     }
     out.put(res);
@@ -64,21 +65,21 @@ fn encode_single(response: &SingleResponse, out: &mut BytesMut) {
 
 /// Encode the result of an individual command completion. This is used by both
 /// single and batch responses encoding
-fn encode_cmd(response: &SingleResponse) -> Bytes {
+fn encode_cmd(response: SingleResponse) -> Bytes {
     use SingleResponse::*;
 
     match response {
-        &Hello(ref map) => {
+        Hello(map) => {
             let mut out = Vec::new();
 
-            for (k, caps) in map.iter() {
+            for (k, caps) in map {
                 write!(out, "{}: {}\n", k, caps.join(" ")).expect("write to vec failed");
             }
 
             Bytes::from(out)
         }
 
-        &Between(ref vecs) => {
+        Between(vecs) => {
             let mut out = Vec::new();
 
             for v in vecs {
@@ -88,9 +89,9 @@ fn encode_cmd(response: &SingleResponse) -> Bytes {
             Bytes::from(out)
         }
 
-        &Debugwireargs(ref res) => res.clone(),
+        Debugwireargs(res) => res,
 
-        &Heads(ref set) => {
+        Heads(set) => {
             let mut out = Vec::new();
 
             separated(&mut out, set, " ").expect("write to vec failed");
@@ -98,40 +99,40 @@ fn encode_cmd(response: &SingleResponse) -> Bytes {
             Bytes::from(out)
         }
 
-        &Known(ref knowns) => {
+        Known(knowns) => {
             let out: Vec<_> = knowns
-                .iter()
-                .map(|known| if *known { b'1' } else { b'0' })
+                .into_iter()
+                .map(|known| if known { b'1' } else { b'0' })
                 .collect();
 
             Bytes::from(out)
         }
 
-        &ReadyForStream => Bytes::from(b"0\n".as_ref()),
+        ReadyForStream => Bytes::from(b"0\n".as_ref()),
 
         // TODO(luk, T25574469) The response for Unbundle should be chunked stream of bundle2
-        &Unbundle(ref res) => res.clone(),
+        Unbundle(res) => res,
 
-        &Getbundle(ref res) => res.clone(),
+        Getbundle(res) => res,
 
-        &Gettreepack(ref res) => res.clone(),
+        Gettreepack(res) => res,
 
-        &Getfiles(ref res) => res.clone(),
+        Getfiles(res) => res,
 
-        &Lookup(ref res) => res.clone(),
+        Lookup(res) => res,
 
-        &Listkeys(ref res) => {
+        Listkeys(res) => {
             let mut bytes = BytesMut::new();
-            for (name, key) in res.iter() {
+            for (name, key) in res {
                 bytes.extend_from_slice(&name);
                 bytes.extend_from_slice("\t".as_bytes());
-                bytes.extend_from_slice(key);
+                bytes.extend_from_slice(key.as_ref());
                 bytes.extend_from_slice(&"\n".as_bytes());
             }
             bytes.freeze()
         }
 
-        &Branchmap(ref _res) => {
+        Branchmap(_res) => {
             // We have no plans to support mercurial branches and hence no plans for branchmap,
             // so just return fake response.
             Bytes::new()
