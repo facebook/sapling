@@ -183,7 +183,7 @@ def gethashsymbols(tree, maxrev):
     elif tree[0] == "func" and tree[1] == _listtuple:
         # the optimiser will group sequence of hash request
         results += tree[2][1].split("\0")
-    elif len(tree) >= 3:
+    else:
         for subtree in tree[1:]:
             results += gethashsymbols(subtree, maxrev)
         # return directly, we don't need to filter symbols again
