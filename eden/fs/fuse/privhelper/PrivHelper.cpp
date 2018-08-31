@@ -156,14 +156,21 @@ class PrivHelperClientImpl : public PrivHelper,
     // Wait until the privhelper process exits.
     if (helperPid_ != 0) {
       int exitStatus;
+      int err;
       pid_t pid;
       do {
         pid = waitpid(helperPid_, &exitStatus, 0);
-      } while (pid == -1 && errno == EINTR);
+        err = errno;
+      } while (pid == -1 && err == EINTR);
       if (pid == -1) {
+        if (err == ECHILD) {
+          // Not our child, so we can't wait for it, but also, we
+          // don't need to wait for it.
+          return folly::makeExpected<int>(0);
+        }
         XLOG(ERR) << "error waiting on privhelper process: "
-                  << folly::errnoStr(errno);
-        return folly::makeUnexpected(errno);
+                  << folly::errnoStr(err);
+        return folly::makeUnexpected(err);
       }
       if (WIFSIGNALED(exitStatus)) {
         return folly::makeExpected<int>(-WTERMSIG(exitStatus));
