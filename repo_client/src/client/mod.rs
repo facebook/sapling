@@ -681,7 +681,7 @@ impl HgCommands for RepoClient {
         info!(logger, "getfiles");
 
         let this = self.clone();
-        let getfiles_buffer_size = 10000; // TODO(stash): make it configurable
+        let getfiles_buffer_size = 100; // TODO(stash): make it configurable
         params
             .map(move |(node, path)| {
                 let args = format!("node: {}, path: {}", node, path);
