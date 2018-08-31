@@ -352,6 +352,31 @@ void EdenConfig::loadConfig(
   };
 }
 
+namespace {
+// This is a bit gross.  We have enough type information in the toml
+// file to know when an option is a boolean, but at the moment our
+// intermediate layer stringly-types all the data.  When the upper
+// layers want to consume a bool, they expect to do so by consuming
+// the string representation of it.
+// This helper performs the reverse transformation so that we allow
+// users to specify their configuration as a true boolean type.
+cpptoml::option<std::string> itemAsString(
+    const std::shared_ptr<cpptoml::table>& currSection,
+    const std::string& entryKey) {
+  auto valueStr = currSection->get_as<std::string>(entryKey);
+  if (valueStr) {
+    return valueStr;
+  }
+
+  auto valueBool = currSection->get_as<bool>(entryKey);
+  if (valueBool) {
+    return cpptoml::option<std::string>(*valueBool ? "true" : "false");
+  }
+
+  return {};
+}
+} // namespace
+
 void EdenConfig::parseAndApplyConfigFile(
     int configFd,
     AbsolutePathPiece configPath,
@@ -397,7 +422,7 @@ void EdenConfig::parseAndApplyConfigFile(
                         << ", " << sectionName << ":" << entryKey;
           continue;
         }
-        auto valueStr = currSection->get_as<std::string>(entryKey);
+        auto valueStr = itemAsString(currSection, entryKey);
         if (valueStr) {
           auto rslt = configMapKeyEntry->second->setStringValue(
               *valueStr, attrMap, configSource);
@@ -409,7 +434,7 @@ void EdenConfig::parseAndApplyConfigFile(
         } else {
           XLOG(WARNING) << "Ignoring invalid config entry " << configPath << " "
                         << sectionName << ":" << entryKey
-                        << ", is not a string";
+                        << ", is not a string or boolean";
         }
       }
     }

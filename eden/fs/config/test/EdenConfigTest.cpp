@@ -83,7 +83,7 @@ class EdenConfigTest : public ::testing::Test {
         "ignoreFile=\"/should_be_over_ridden\"\n"
         "systemIgnoreFile=\"/etc/eden/systemCustomIgnore\"\n"
         "[mononoke]\n"
-        "use-mononoke=\"true\"\n"
+        "use-mononoke=true\n"
         "[ssl]\n"
         "client-certificate=\"/system_config_cert\"\n"};
     folly::writeFile(systemConfigFileData, systemConfigPath.c_str());
