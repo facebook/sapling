@@ -6,7 +6,7 @@
 
 use std::fmt::{self, Display};
 
-use chrono::{DateTime as ChronoDateTime, FixedOffset, LocalResult, TimeZone};
+use chrono::{DateTime as ChronoDateTime, FixedOffset, Local, LocalResult, TimeZone};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use errors::*;
@@ -19,6 +19,11 @@ impl DateTime {
     #[inline]
     pub fn new(dt: ChronoDateTime<FixedOffset>) -> Self {
         DateTime(dt)
+    }
+
+    pub fn now() -> Self {
+        let now = Local::now();
+        DateTime(now.with_timezone(now.offset()))
     }
 
     pub fn from_timestamp(secs: i64, tz_offset_secs: i32) -> Result<Self> {

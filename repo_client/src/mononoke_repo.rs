@@ -14,6 +14,7 @@ use slog::Logger;
 
 use blobrepo::BlobRepo;
 use mercurial_types::RepositoryId;
+use metaconfig::PushrebaseParams;
 use metaconfig::repoconfig::RepoType;
 
 use errors::*;
@@ -27,26 +28,34 @@ struct LogNormalGenerator {
 pub struct MononokeRepo {
     log_name: String,
     blobrepo: BlobRepo,
+    pushrebase_params: PushrebaseParams,
 }
 
 impl MononokeRepo {
     #[inline]
-    pub fn new(logger: Logger, repo: &RepoType, repoid: RepositoryId) -> Result<Self> {
+    pub fn new(
+        logger: Logger,
+        repo: &RepoType,
+        repoid: RepositoryId,
+        pushrebase_params: &PushrebaseParams,
+    ) -> Result<Self> {
         // Just use the path as the name.
         let log_name = format!("{}", repo.path().to_owned().display());
-        Self::new_with_name(logger, repo, repoid, log_name)
+        Self::new_with_name(logger, repo, repoid, pushrebase_params, log_name)
     }
 
     pub fn new_with_name(
         logger: Logger,
         repo: &RepoType,
         repoid: RepositoryId,
+        pushrebase_params: &PushrebaseParams,
         log_name: impl Into<String>,
     ) -> Result<Self> {
         let log_name = log_name.into();
         Ok(MononokeRepo {
             log_name,
             blobrepo: repo.open(logger, repoid)?,
+            pushrebase_params: pushrebase_params.clone(),
         })
     }
 
@@ -58,6 +67,10 @@ impl MononokeRepo {
     #[inline]
     pub fn blobrepo(&self) -> &BlobRepo {
         &self.blobrepo
+    }
+
+    pub fn pushrebase_params(&self) -> &PushrebaseParams {
+        &self.pushrebase_params
     }
 }
 

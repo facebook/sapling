@@ -636,6 +636,7 @@ impl HgCommands for RepoClient {
             Arc::new(self.repo.blobrepo().clone()),
             self.logger().new(o!("command" => "unbundle")),
             scuba_logger.clone(),
+            self.repo.pushrebase_params().clone(),
             heads,
             stream,
         );

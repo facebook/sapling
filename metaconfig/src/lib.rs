@@ -36,6 +36,6 @@ extern crate vfs;
 pub mod errors;
 pub mod repoconfig;
 
-pub use repoconfig::{CacheWarmupParams, RepoConfigs, RepoType};
+pub use repoconfig::{CacheWarmupParams, PushrebaseParams, RepoConfigs, RepoType};
 
 pub use errors::{Error, ErrorKind};

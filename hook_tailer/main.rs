@@ -79,6 +79,7 @@ fn main() -> Result<()> {
         logger.clone(),
         &config.repotype,
         RepositoryId::new(config.repoid),
+        &Default::default(),
     )?;
 
     let rc = RequestContext {

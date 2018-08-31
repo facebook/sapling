@@ -106,6 +106,7 @@ mod test {
                         hook_type: HookType::PerChangeset,
                     },
                 ]),
+                pushrebase: Default::default(),
             };
 
             let mut hm = hook_manager_blobrepo();
@@ -139,6 +140,7 @@ mod test {
                         hook_type: HookType::PerFile,
                     },
                 ]),
+                pushrebase: Default::default(),
             };
 
             let mut hm = hook_manager_blobrepo();

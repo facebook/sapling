@@ -441,7 +441,8 @@ fn open_repo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: boo
     };
 
     // TODO fixup imports
-    MononokeRepo::new_with_name(logger, &repo_type, repo_id, "repo").expect("failed to setup repo")
+    MononokeRepo::new_with_name(logger, &repo_type, repo_id, &Default::default(), "repo")
+        .expect("failed to setup repo")
 }
 
 pub fn parse_manifold_args<'a>(matches: &ArgMatches<'a>) -> ManifoldArgs {

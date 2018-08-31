@@ -24,6 +24,7 @@ use mercurial::manifest::{Details, ManifestContent};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
                       NULL_HASH};
+use metaconfig::PushrebaseParams;
 use mononoke_types::ChangesetId;
 use pushrebase;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -49,10 +50,11 @@ pub fn resolve(
     repo: Arc<BlobRepo>,
     logger: Logger,
     scuba_logger: ScubaSampleBuilder,
+    pushrebase: PushrebaseParams,
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<Bytes, Error> {
-    let resolver = Bundle2Resolver::new(repo, logger, scuba_logger);
+    let resolver = Bundle2Resolver::new(repo, logger, scuba_logger, pushrebase);
 
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
@@ -334,14 +336,21 @@ struct Bundle2Resolver {
     repo: Arc<BlobRepo>,
     logger: Logger,
     scuba_logger: ScubaSampleBuilder,
+    pushrebase: PushrebaseParams,
 }
 
 impl Bundle2Resolver {
-    fn new(repo: Arc<BlobRepo>, logger: Logger, scuba_logger: ScubaSampleBuilder) -> Self {
+    fn new(
+        repo: Arc<BlobRepo>,
+        logger: Logger,
+        scuba_logger: ScubaSampleBuilder,
+        pushrebase: PushrebaseParams,
+    ) -> Self {
         Self {
             repo,
             logger,
             scuba_logger,
+            pushrebase,
         }
     }
 
@@ -768,8 +777,12 @@ impl Bundle2Resolver {
                     ))))
                 }
 
-                pushrebase::do_pushrebase(self.repo.clone(), onto_bookmark, changesets)
-                    .map(|_| ())
+                pushrebase::do_pushrebase(
+                    self.repo.clone(),
+                    self.pushrebase.clone(),
+                    onto_bookmark,
+                    changesets,
+                ).map(|_| ())
                     .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
                     .boxify()
             }

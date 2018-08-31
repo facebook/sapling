@@ -99,6 +99,9 @@ path="$TESTTMP/repo"
 repotype="blob:rocks"
 repoid=0
 enabled=true
+
+[pushrebase]
+rewritedates=false
 CONFIG
 
 if [[ -v CACHE_WARMUP_BOOKMARK ]]; then

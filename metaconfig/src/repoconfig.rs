@@ -44,6 +44,8 @@ pub struct RepoConfig {
     pub bookmarks: Option<Vec<BookmarkParams>>,
     /// Configuration for hooks
     pub hooks: Option<Vec<HookParams>>,
+    /// Pushrebase configuration options
+    pub pushrebase: PushrebaseParams,
 }
 
 /// Configuration of warming up the Mononoke cache. This warmup happens on startup
@@ -83,6 +85,24 @@ pub struct HookParams {
     pub hook_type: HookType,
     /// The code of the hook
     pub code: String,
+}
+
+/// Pushrebase configuration options
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct PushrebaseParams {
+    /// Update dates of rebased commits
+    pub rewritedates: bool,
+    /// How far will we go from bookmark to find rebase root
+    pub recursion_limit: usize,
+}
+
+impl Default for PushrebaseParams {
+    fn default() -> Self {
+        PushrebaseParams {
+            rewritedates: true,
+            recursion_limit: 16384, // this number is fairly arbirary
+        }
+    }
 }
 
 /// Types of repositories supported
@@ -334,6 +354,16 @@ impl RepoConfigs {
             hooks_opt = None;
         }
 
+        let pushrebase = this.pushrebase
+            .map(|raw| {
+                let default = PushrebaseParams::default();
+                PushrebaseParams {
+                    rewritedates: raw.rewritedates.unwrap_or(default.rewritedates),
+                    recursion_limit: raw.recursion_limit.unwrap_or(default.recursion_limit),
+                }
+            })
+            .unwrap_or_default();
+
         Ok(RepoConfig {
             enabled,
             repotype,
@@ -343,6 +373,7 @@ impl RepoConfigs {
             cache_warmup,
             bookmarks,
             hooks: hooks_opt,
+            pushrebase,
         })
     }
 }
@@ -365,6 +396,7 @@ struct RawRepoConfig {
     max_concurrent_requests_per_io_thread: Option<usize>,
     bookmarks: Option<Vec<RawBookmarkConfig>>,
     hooks: Option<Vec<RawHookConfig>>,
+    pushrebase: Option<RawPushrebaseParams>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -398,6 +430,12 @@ enum RawRepoType {
     #[serde(rename = "blob:rocks")] BlobRocks,
     #[serde(rename = "blob:testmanifold")] TestBlobManifold,
     #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct RawPushrebaseParams {
+    rewritedates: Option<bool>,
+    recursion_limit: Option<usize>,
 }
 
 #[cfg(test)]
@@ -434,6 +472,9 @@ mod test {
             name="hook2"
             path="./hooks/hook2.lua"
             hook_type="PerChangeset"
+            [pushrebase]
+            rewritedates = false
+            recursion_limit = 1024
         "#;
         let www_content = r#"
             path="/tmp/www"
@@ -485,6 +526,10 @@ mod test {
                         hook_type: HookType::PerChangeset,
                     },
                 ]),
+                pushrebase: PushrebaseParams {
+                    rewritedates: false,
+                    recursion_limit: 1024,
+                },
             },
         );
         repos.insert(
@@ -498,6 +543,7 @@ mod test {
                 cache_warmup: None,
                 bookmarks: None,
                 hooks: None,
+                pushrebase: Default::default(),
             },
         );
         assert_eq!(

@@ -51,6 +51,7 @@ pub fn repo_handlers(
                 root_log.new(o!("repo" => reponame.clone())),
                 &config.repotype,
                 RepositoryId::new(config.repoid),
+                &config.pushrebase,
             ).expect(&format!("failed to initialize repo {}", reponame));
 
             let listen_log = root_log.new(o!("repo" => repo.log_name().to_string()));
