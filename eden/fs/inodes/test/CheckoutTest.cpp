@@ -1028,6 +1028,118 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
 
+TEST(Checkout, unloadAndCheckoutRemembersInodeNumbersForFuseReferencedInodes) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("root/a/b/c/file1.txt", "before1");
+  builder1.setFile("root/d/e/f/file2.txt", "before2");
+  builder1.setFile("root/g/h/i/file3.txt", "before3");
+  TestMount testMount{builder1};
+
+  // Prepare a second commit that modifies all of the files.
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile("root/a/b/c/file1.txt", "after1");
+  builder2.setFile("root/d/e/f/file2.txt", "after2");
+  builder2.setFile("root/g/h/i/file3.txt", "after3");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  auto edenMount = testMount.getEdenMount();
+
+  auto abcfile1 =
+      edenMount->getInode("root/a/b/c/file1.txt"_relpath).get(1ms).asFilePtr();
+  auto abcfile1InodeNumber = abcfile1->getNodeId();
+  auto abcInodeNumber = abcfile1->getParentRacy()->getNodeId();
+  abcfile1->incFuseRefcount();
+  abcfile1.reset();
+
+  auto deffile2 =
+      edenMount->getInode("root/d/e/f/file2.txt"_relpath).get(1ms).asFilePtr();
+  auto deffile2InodeNumber = deffile2->getNodeId();
+  auto defInodeNumber = deffile2->getParentRacy()->getNodeId();
+  deffile2->getParentRacy()->incFuseRefcount();
+  deffile2.reset();
+
+  auto ghifile3 =
+      edenMount->getInode("root/g/h/i/file3.txt"_relpath).get(1ms).asFilePtr();
+  auto ghifile3InodeNumber = ghifile3->getNodeId();
+  auto ghiInodeNumber = ghifile3->getParentRacy()->getNodeId();
+  ghifile3.reset();
+
+  timespec endOfTime;
+  endOfTime.tv_sec = std::numeric_limits<time_t>::max();
+  endOfTime.tv_nsec = 999999999;
+
+  auto unloaded = edenMount->getInode("root"_relpath)
+                      .get(1ms)
+                      .asTreePtr()
+                      ->unloadChildrenLastAccessedBefore(endOfTime);
+  // Everything was unloaded.
+  EXPECT_EQ(12, unloaded);
+
+  // But FUSE still has references to root/a/b/c/file1.txt and root/d/e/f.
+
+  // Check out to a commit that changes all of these files.
+  // Inode numbers for unreferenced files should be forgotten.
+  auto checkoutResult =
+      testMount.getEdenMount()->checkout(makeTestHash("2")).get(1ms);
+  EXPECT_EQ(0, checkoutResult.size());
+
+  // Verify inode numbers for referenced inodes are the same.
+
+  // Files always change inode numbers during a checkout.
+  EXPECT_NE(
+      abcfile1InodeNumber,
+      edenMount->getInode("root/a/b/c/file1.txt"_relpath)
+          .get(1ms)
+          ->getNodeId());
+
+  EXPECT_EQ(
+      abcInodeNumber,
+      edenMount->getInode("root/a/b/c"_relpath).get(1ms)->getNodeId());
+
+  // Files always change inode numbers during a checkout.
+  EXPECT_NE(
+      deffile2InodeNumber,
+      edenMount->getInode("root/d/e/f/file2.txt"_relpath)
+          .get(1ms)
+          ->getNodeId());
+
+  EXPECT_EQ(
+      defInodeNumber,
+      edenMount->getInode("root/d/e/f"_relpath).get(1ms)->getNodeId());
+
+  // Files always change inode numbers during a checkout.
+  EXPECT_NE(
+      ghifile3InodeNumber,
+      edenMount->getInode("root/g/h/i/file3.txt"_relpath)
+          .get(1ms)
+          ->getNodeId());
+
+  // This tree never had its FUSE refcount incremented, so its inode number has
+  // been forgotten.
+  EXPECT_NE(
+      ghiInodeNumber,
+      edenMount->getInode("root/g/h/i"_relpath).get(1ms)->getNodeId());
+
+  // Replaced files should be unlinked.
+
+  abcfile1 = edenMount->getInodeMap()
+                 ->lookupInode(abcfile1InodeNumber)
+                 .get(1ms)
+                 .asFilePtr();
+  EXPECT_TRUE(abcfile1->isUnlinked());
+
+  // Referenced but modified directories are not unlinked - they're updated in
+  // place.
+
+  auto def = edenMount->getInodeMap()
+                 ->lookupInode(defInodeNumber)
+                 .get(1ms)
+                 .asTreePtr();
+  EXPECT_FALSE(def->isUnlinked());
+}
+
 // TODO:
 // - remove subdirectory
 //   - with no untracked/ignored files, it should get removed entirely

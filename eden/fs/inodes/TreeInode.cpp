@@ -3000,8 +3000,6 @@ void TreeInode::unloadChildrenNow() {
   }
   for (auto& child : treeChildren) {
     child->unloadChildrenNow();
-    // TODO(T21096505): Currently unloadChildrenNow is now unloading TreeInodes,
-    // we have to make sure that even treeChildren also gets unloaded.
   }
 
   // Note: during mount point shutdown, returning from this function and
@@ -3009,21 +3007,27 @@ void TreeInode::unloadChildrenNow() {
   // all of our children trees, which may result in them being destroyed.
 }
 
-uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
-  // Unloading inodes from the InodeMap requires to lock contents_ of TreeInode.
-  // Getting atime of an inode requires a lock on the inode.
-
-  // we don't want to hold lock on the children while holding a lock on the
-  // parent i.e We don't want to grab a lock on the children inodes for atime
-  // while holding a lock on the contents_. In order to overcome this make a
-  // list of inodes while holding a lock on contents_ and walk through the list
-  // by releasing the contents lock to filter inodes based on the atime(requires
-  // lock on the inodes) from the list. Finally grab a lock on contents_ and
-  // unload any inodes which are present in the list that we made. In this way
-  // we can avoid holding lock on inodes for atime while holding contents lock
+size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
+  // Unloading children by criteria is a bit of an intricate operation. The
+  // InodeMap and tree's contents lock must be held simultaneously when
+  // checking if an inode's refcount is zero. But the child's lock cannot be
+  // acquired after the InodeMap's lock is.
+  //
+  // Yet the child's lock must be acquired to read the atime of an inode.
+  //
+  // So the strategy is to acquire a set of strong InodePtrs while the
+  // parent's contents lock is held. Then check atime with those strong
+  // pointers, remembering which InodeNumbers we intend to unload.
+  //
+  // Then reacquire the parent's contents lock and the inodemap lock and
+  // determine which inodes can be deleted.
 
   // Get the list of inodes in the directory by holding contents lock.
-  std::vector<FileInodePtr> potentialUnload;
+  // TODO: Better yet, this shouldn't use atime at all and instead keep an
+  // internal system_clock::time_point in InodeBase that updates upon any
+  // interesting access.
+  std::vector<FileInodePtr> fileChildren;
+  std::vector<TreeInodePtr> treeChildren;
   {
     auto contents = contents_.rlock();
     for (auto& entry : contents->entries) {
@@ -3031,86 +3035,102 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
         continue;
       }
 
+      // This has the side effect of incrementing the reference counts of all
+      // of the children. When that goes back to zero,
+      // InodeMap::onInodeUnreferenced will be called on the entry.
       if (auto asFile = entry.second.asFilePtrOrNull()) {
-        potentialUnload.push_back(std::move(asFile));
+        fileChildren.emplace_back(std::move(asFile));
+      } else if (auto asTree = entry.second.asTreePtrOrNull()) {
+        treeChildren.emplace_back(std::move(asTree));
+      } else {
+        EDEN_BUG() << "entry " << entry.first << " was neither a tree nor file";
       }
     }
-  }
-  // filter inodes based on the age (i.e atime) after releasing contents lock.
-  // We are intentionally making toUnload as a list of FileInode* rather than
-  // FileInodePtr to make raw pointer comparision to check if the pointer in
-  // toUnload exists in contents_->entries.
-  std::unordered_set<InodeBase*> toUnload;
-  {
-    for (const auto& inode : potentialUnload) {
-      // Is atime the right thing to check here?  If a read is served from
-      // the kernel's cache, the cached atime is updated, but FUSE does not
-      // tell us.  That said, if we update atime whenever FUSE forwards a
-      // read request on to Eden, then atime ought to be a suitable proxy
-      // for whether it's a good idea to unload the inode or not.
-      //
-      // https://sourceforge.net/p/fuse/mailman/message/34448996/
-      auto atime = inode->getMetadata().timestamps.atime;
-      if (atime < cutoff) {
-        toUnload.insert(inode.get());
-      }
-    }
-    // we want to release the reference counts of the inodes.
-    // Beware that this may invalidate objects referred to in the toUnload
-    // list.  Elements in toUnload are saved for pointer comparisons,
-    // but should not be dereferenced.
-    potentialUnload.clear();
   }
 
-  // Unload Inodes whose reference count is greater than zero and age is greater
-  // than the required age.
-  std::vector<TreeInodePtr> treeChildren;
-  std::vector<InodeBase*> toDelete;
+  // Now that the parent's lock is released, filter the inodes by age (i.e.
+  // atime). Hold InodeNumbers because all we need to check is the identity of
+  // the child's inode. This might need to be rethought when we support hard
+  // links.
+  std::unordered_set<InodeNumber> toUnload;
+
+  // Is atime the right thing to check here?  If a read is served from
+  // the kernel's cache, the cached atime is updated, but FUSE does not
+  // tell us.  That said, if we update atime whenever FUSE forwards a
+  // read request on to Eden, then atime ought to be a suitable proxy
+  // for whether it's a good idea to unload the inode or not.
+  //
+  // https://sourceforge.net/p/fuse/mailman/message/34448996/
+  auto shouldUnload = [&](const auto& inode) {
+    return inode->getMetadata().timestamps.atime < cutoff;
+  };
+
+  for (const auto& inode : fileChildren) {
+    if (shouldUnload(inode)) {
+      toUnload.insert(inode->getNodeId());
+    }
+  }
+  for (const auto& inode : treeChildren) {
+    if (shouldUnload(inode)) {
+      toUnload.insert(inode->getNodeId());
+    }
+  }
+
+  size_t unloadCount = 0;
+
+  // Recurse into children here. Children hold strong references to their parent
+  // trees, so unloading children can cause the parent to become unreferenced.
+  for (auto& child : treeChildren) {
+    unloadCount += child->unloadChildrenLastAccessedBefore(cutoff);
+  }
+
+  // We no longer need pointers to the child inodes - release them. Beware that
+  // this may deallocate inode instances for the children and clear them from
+  // InodeMap and contents table as a natural side effect of their refcounts
+  // going to zero.
+  fileChildren.clear();
+  treeChildren.clear();
+
+  // Unload qualified children whose reference count is zero.
+  // treeChildren contains subtrees to recurse into.
+  std::vector<std::unique_ptr<InodeBase>> toDelete;
   {
     auto* inodeMap = getInodeMap();
     auto contents = contents_.wlock();
     auto inodeMapLock = inodeMap->lockForUnload();
 
     for (auto& entry : contents->entries) {
-      if (!entry.second.getInode()) {
+      auto* entryInode = entry.second.getInode();
+      if (!entryInode) {
         continue;
       }
-      if (auto asTree = entry.second.asTreePtrOrNull()) {
-        treeChildren.push_back(std::move(asTree));
-      } else {
-        // Check if the entry is present in the toUnload list(atime greater than
-        // age)
-        auto entryInode = entry.second.getInode();
-        if (toUnload.count(entryInode) && entryInode->isPtrAcquireCountZero()) {
-          (void)entry.second.clearInode();
-          // Unload the inode
-          inodeMap->unloadInode(
-              entryInode, this, entry.first, false, inodeMapLock);
-          // Record that we should now delete this inode after releasing
-          // the locks.
-          toDelete.push_back(entryInode);
-        }
+
+      bool shouldBeUnloaded =
+          toUnload.count(entry.second.getInodeNumber()) != 0;
+      if (shouldBeUnloaded && entryInode->isPtrAcquireCountZero()) {
+        // If it's a tree and it has a loaded child, its refcount will never be
+        // zero because the child holds a reference to its parent.
+
+        // Allocate space in the vector. This can throw std::bad_alloc.
+        toDelete.emplace_back();
+
+        // Forget other references to this inode.
+        (void)entry.second.clearInode(); // clearInode will not throw.
+        inodeMap->unloadInode(
+            entryInode, this, entry.first, false, inodeMapLock);
+
+        // If unloadInode threw, we'll leak the entryInode, but it's no big
+        // deal. This assignment cannot throw.
+        toDelete.back() = std::unique_ptr<InodeBase>{entryInode};
       }
     }
   }
 
-  for (auto* child : toDelete) {
-    delete child;
-  }
-
-  // Note that unloadCount only includes released FileInodes at the moment.
-  // It should include TreeInodes too.
-  uint64_t unloadCount = toDelete.size();
-  for (auto& child : treeChildren) {
-    // TODO(T21096505): Currently unloadChildrenNow is now unloading TreeInodes,
-    // we have to make sure that even treeChildren also gets unloaded.
-    unloadCount += child->unloadChildrenLastAccessedBefore(cutoff);
-  }
+  unloadCount += toDelete.size();
+  // Outside of the locks, deallocate all of the inodes scheduled to be deleted.
+  toDelete.clear();
 
   return unloadCount;
-  // Note: during mount point shutdown, returning from this function and
-  // destroying the treeChildren map will decrement the reference count on
-  // all of our children trees, which may result in them being destroyed.
 }
 
 void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {

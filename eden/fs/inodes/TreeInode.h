@@ -336,7 +336,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *
    * Returns the number of inodes unloaded.
    */
-  uint64_t unloadChildrenLastAccessedBefore(const timespec& cutoff);
+  size_t unloadChildrenLastAccessedBefore(const timespec& cutoff);
 
   /**
    * Load all materialized children underneath this TreeInode.
