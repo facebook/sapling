@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![allow(deprecated)] // TODO(T33448938) use of deprecated item 'tokio::timer::Deadline': use Timeout instead
 #![feature(never_type)]
 #![feature(try_from)]
 
