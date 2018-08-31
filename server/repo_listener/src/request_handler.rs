@@ -142,7 +142,7 @@ pub fn request_handler(
     // If we got an error at this point, then catch it and print a message
     endres
         // Don't wait for more that 15 mins for a request
-        .deadline(Instant::now() + Duration::from_secs(15 * 60))
+        .timeout(Duration::from_secs(15 * 60))
         .traced(
             &trace,
             "wireproto request",
