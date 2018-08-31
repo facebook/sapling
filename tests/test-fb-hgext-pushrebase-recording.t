@@ -176,3 +176,20 @@ Create two commits and push them
   \s*1 (re)
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select timestamps from pushrebaserecording' | grep 36638495eb5c | wc -l
   \s*1 (re)
+
+Make sure that we don't record anything on non-pushrebase push
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select count(*) from pushrebaserecording'
+  count(*)
+  3
+  $ hg up -q 0
+  $ echo stack1 > stack1 && hg add stack1 && hg ci -m stack1
+  $ hg push --force
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 4 changesets with 1 changes to 3 files (+2 heads)
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select count(*) from pushrebaserecording'
+  count(*)
+  3

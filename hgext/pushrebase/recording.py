@@ -24,6 +24,11 @@ def recordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
     if not repo.ui.configbool("pushrebase", "enablerecording"):
         return
 
+    # pushrebaserecordingparams may not be set if pushrebase hooks failed
+    # or if it was non-pushrebase push (i.e. commit cloud push)
+    if not getattr(repo, "pushrebaserecordingparams", None):
+        return
+
     try:
         return _dorecordpushrebaserequest(
             repo, conflicts, pushrebase_errmsg, start_time
