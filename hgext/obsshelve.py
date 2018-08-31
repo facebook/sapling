@@ -670,7 +670,10 @@ def listshelvesfiles(repo):
 def patchcmds(ui, repo, pats, opts, subcommand):
     """subcommand that displays shelves"""
     if len(pats) == 0:
-        raise error.Abort(_("--%s expects at least one shelf") % subcommand)
+        shelved = listshelves(repo)
+        if len(shelved) < 1:
+            raise error.Abort(_("no shelves found"))
+        pats = [util.split(shelved[0][1])[1]]
 
     for shelfname in pats:
         if not shelvedfile(repo, shelfname, patchextension).exists():
