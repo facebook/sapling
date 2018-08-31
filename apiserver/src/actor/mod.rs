@@ -11,10 +11,8 @@ mod response;
 
 use std::collections::HashMap;
 
-use actix::{Actor, Addr, Context, Handler};
-use actix::dev::Request;
-use failure::Error;
-use futures::{Future, IntoFuture};
+use futures::IntoFuture;
+use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 use tokio::runtime::TaskExecutor;
 
@@ -23,64 +21,38 @@ use metaconfig::repoconfig::RepoConfigs;
 use errors::ErrorKind;
 
 pub use self::query::{MononokeQuery, MononokeRepoQuery};
-pub use self::repo::MononokeRepoActor;
+pub use self::repo::MononokeRepo;
 pub use self::response::MononokeRepoResponse;
 
-pub struct MononokeActor {
-    repos: HashMap<String, Addr<MononokeRepoActor>>,
+pub struct Mononoke {
+    repos: HashMap<String, MononokeRepo>,
 }
 
-impl MononokeActor {
+impl Mononoke {
     pub fn new(logger: Logger, config: RepoConfigs, executor: TaskExecutor) -> Self {
         let logger = logger.clone();
         let repos = config
             .repos
             .into_iter()
             .filter(move |&(_, ref config)| config.enabled)
-            .map(move |(reponame, config)| {
+            .map(move |(name, config)| {
                 cloned!(logger, executor);
-                (
-                    reponame,
-                    MononokeRepoActor::create(move |_| {
-                        MononokeRepoActor::new(logger, config, executor)
-                            .expect("Unable to initialize repo")
-                    }),
-                )
+                let repo =
+                    MononokeRepo::new(logger, config, executor).expect("Unable to initialize repo");
+                (name, repo)
             })
             .collect();
 
         Self { repos }
     }
-}
 
-impl Actor for MononokeActor {
-    type Context = Context<Self>;
-}
-
-impl Handler<MononokeQuery> for MononokeActor {
-    type Result = Result<Request<MononokeRepoActor, MononokeRepoQuery>, Error>;
-
-    fn handle(
-        &mut self,
+    pub fn send_query(
+        &self,
         MononokeQuery { repo, kind, .. }: MononokeQuery,
-        _ctx: &mut Context<Self>,
-    ) -> Self::Result {
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         match self.repos.get(&repo) {
-            Some(repo) => Ok(repo.send(kind)),
-            None => Err(ErrorKind::NotFound(repo, None).into()),
+            Some(repo) => repo.send_query(kind),
+            None => Err(ErrorKind::NotFound(repo, None)).into_future().boxify(),
         }
     }
-}
-
-pub fn unwrap_request(
-    request: Request<MononokeActor, MononokeQuery>,
-) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    request
-        .into_future()
-        .from_err()
-        .and_then(|result| result)  // use flatten here will blind the compiler.
-        .and_then(|result| result.map_err(From::from))
-        .flatten()
-        .flatten()
-        .from_err()
 }

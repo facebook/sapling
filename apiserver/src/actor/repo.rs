@@ -7,8 +7,7 @@
 use std::convert::TryInto;
 use std::sync::Arc;
 
-use actix::{Actor, Context, Handler};
-use failure::{err_msg, Error, Result};
+use failure::{err_msg, Error};
 use futures::{Future, IntoFuture};
 use futures::sync::oneshot;
 use futures_ext::BoxFuture;
@@ -31,14 +30,14 @@ use from_string as FS;
 use super::{MononokeRepoQuery, MononokeRepoResponse};
 use super::model::Entry;
 
-pub struct MononokeRepoActor {
+pub struct MononokeRepo {
     repo: Arc<BlobRepo>,
     logger: Logger,
     executor: TaskExecutor,
 }
 
-impl MononokeRepoActor {
-    pub fn new(logger: Logger, config: RepoConfig, executor: TaskExecutor) -> Result<Self> {
+impl MononokeRepo {
+    pub fn new(logger: Logger, config: RepoConfig, executor: TaskExecutor) -> Result<Self, Error> {
         let repoid = RepositoryId::new(config.repoid);
         let repo = match config.repotype {
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid),
@@ -57,17 +56,17 @@ impl MononokeRepoActor {
         &self,
         changeset: String,
         path: String,
-    ) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         debug!(
             self.logger,
             "Retrieving file content of {} at changeset {}.", path, changeset
         );
 
-        let mpath = FS::get_mpath(path.clone())?;
-        let changesetid = FS::get_changeset_id(changeset)?;
+        let mpath = try_boxfuture!(FS::get_mpath(path.clone()));
+        let changesetid = try_boxfuture!(FS::get_changeset_id(changeset));
         let repo = self.repo.clone();
 
-        Ok(api::get_content_by_path(repo, changesetid, Some(mpath))
+        api::get_content_by_path(repo, changesetid, Some(mpath))
             .and_then(move |content| match content {
                 Content::File(content)
                 | Content::Executable(content)
@@ -77,14 +76,14 @@ impl MononokeRepoActor {
                 _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into()),
             })
             .from_err()
-            .boxify())
+            .boxify()
     }
 
     fn is_ancestor(
         &self,
         proposed_ancestor: String,
         proposed_descendent: String,
-    ) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let genbfs = GenerationNumberBFS::new();
         let src_hash_maybe = FS::get_nodehash(&proposed_descendent);
         let dst_hash_maybe = FS::get_nodehash(&proposed_ancestor);
@@ -103,28 +102,27 @@ impl MononokeRepoActor {
             }
         });
 
-        let (tx, rx) = oneshot::channel::<Result<bool>>();
+        let (tx, rx) = oneshot::channel::<Result<bool, ErrorKind>>();
 
         self.executor.spawn(
             src_hash_future
                 .and_then(|src| dst_hash_future.map(move |dst| (src, dst)))
                 .and_then({
                     cloned!(self.repo);
-                    move |(src, dst)| genbfs.query_reachability(repo, src, dst)
+                    move |(src, dst)| genbfs.query_reachability(repo, src, dst).from_err()
                 })
                 .then(|r| tx.send(r).map_err(|_| ())),
         );
 
-        Ok(rx.flatten()
+        rx.flatten()
             .map(|answer| MononokeRepoResponse::IsAncestor { answer })
-            .from_err()
-            .boxify())
+            .boxify()
     }
 
-    fn get_blob_content(&self, hash: String) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
-        let blobhash = FS::get_nodehash(&hash)?;
+    fn get_blob_content(&self, hash: String) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let blobhash = try_boxfuture!(FS::get_nodehash(&hash));
 
-        Ok(self.repo
+        self.repo
             .get_file_content(&blobhash)
             .and_then(move |content| match content {
                 FileContents::Bytes(content) => {
@@ -132,23 +130,23 @@ impl MononokeRepoActor {
                 }
             })
             .from_err()
-            .boxify())
+            .boxify()
     }
 
     fn list_directory(
         &self,
         changeset: String,
         path: String,
-    ) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let mpath = if path.is_empty() {
             None
         } else {
-            Some(FS::get_mpath(path.clone())?)
+            Some(try_boxfuture!(FS::get_mpath(path.clone())))
         };
-        let changesetid = FS::get_changeset_id(changeset)?;
+        let changesetid = try_boxfuture!(FS::get_changeset_id(changeset));
         let repo = self.repo.clone();
 
-        Ok(api::get_content_by_path(repo, changesetid, mpath)
+        api::get_content_by_path(repo, changesetid, mpath)
             .and_then(move |content| match content {
                 Content::Tree(tree) => Ok(tree),
                 _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into()),
@@ -161,13 +159,13 @@ impl MononokeRepoActor {
                 files: Box::new(files),
             })
             .from_err()
-            .boxify())
+            .boxify()
     }
 
-    fn get_tree(&self, hash: String) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
-        let treehash = FS::get_nodehash(&hash)?;
+    fn get_tree(&self, hash: String) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let treehash = try_boxfuture!(FS::get_nodehash(&hash));
 
-        Ok(self.repo
+        self.repo
             .get_manifest_by_nodeid(&treehash)
             .map(|tree| {
                 tree.list()
@@ -177,29 +175,21 @@ impl MononokeRepoActor {
                 files: Box::new(files),
             })
             .from_err()
-            .boxify())
+            .boxify()
     }
 
-    fn get_changeset(&self, hash: String) -> Result<BoxFuture<MononokeRepoResponse, Error>> {
-        let changesetid = FS::get_changeset_id(hash)?;
+    fn get_changeset(&self, hash: String) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let changesetid = try_boxfuture!(FS::get_changeset_id(hash));
 
-        Ok(self.repo
+        self.repo
             .get_changeset_by_changesetid(&changesetid)
             .and_then(|changeset| changeset.try_into().map_err(From::from))
             .map(|changeset| MononokeRepoResponse::GetChangeset { changeset })
             .from_err()
-            .boxify())
+            .boxify()
     }
-}
 
-impl Actor for MononokeRepoActor {
-    type Context = Context<Self>;
-}
-
-impl Handler<MononokeRepoQuery> for MononokeRepoActor {
-    type Result = Result<BoxFuture<MononokeRepoResponse, Error>>;
-
-    fn handle(&mut self, msg: MononokeRepoQuery, _ctx: &mut Context<Self>) -> Self::Result {
+    pub fn send_query(&self, msg: MononokeRepoQuery) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         use MononokeRepoQuery::*;
 
         match msg {

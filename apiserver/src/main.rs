@@ -23,6 +23,7 @@ extern crate cmdlib;
 extern crate failure_ext as failure;
 extern crate fb303;
 extern crate futures;
+#[macro_use]
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate metaconfig;
@@ -59,8 +60,8 @@ mod thrift;
 
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::Arc;
 
-use actix::{Actor, Addr};
 use actix_web::{http, server, App, HttpRequest, HttpResponse, State};
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
@@ -79,7 +80,7 @@ use mercurial_types::nodehash::HgChangesetId;
 use metaconfig::RepoConfigs;
 use scuba_ext::ScubaSampleBuilder;
 
-use actor::{unwrap_request, MononokeActor, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
+use actor::{Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
 use errors::ErrorKind;
 
 mod config {
@@ -114,13 +115,13 @@ struct HashQueryInfo {
 fn get_raw_file(
     (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    unwrap_request(state.mononoke.send(MononokeQuery {
+    state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetRawFile {
             changeset: info.changeset.clone(),
             path: info.path.clone(),
         },
-    }))
+    })
 }
 
 fn is_ancestor(
@@ -132,58 +133,58 @@ fn is_ancestor(
     let proposed_descendent_parsed = percent_decode(info.proposed_descendent.as_bytes())
         .decode_utf8_lossy()
         .to_string();
-    unwrap_request(state.mononoke.send(MononokeQuery {
+    state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::IsAncestor {
             proposed_ancestor: proposed_ancestor_parsed,
             proposed_descendent: proposed_descendent_parsed,
         },
-    }))
+    })
 }
 
 fn list_directory(
     (state, info): (State<HttpServerState>, actix_web::Path<QueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    unwrap_request(state.mononoke.send(MononokeQuery {
+    state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::ListDirectory {
             changeset: info.changeset.clone(),
             path: info.path.clone(),
         },
-    }))
+    })
 }
 
 fn get_blob_content(
     (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    unwrap_request(state.mononoke.send(MononokeQuery {
+    state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetBlobContent {
             hash: info.hash.clone(),
         },
-    }))
+    })
 }
 
 fn get_tree(
     (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    unwrap_request(state.mononoke.send(MononokeQuery {
+    state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetTree {
             hash: info.hash.clone(),
         },
-    }))
+    })
 }
 
 fn get_changeset(
     (state, info): (State<HttpServerState>, actix_web::Path<HashQueryInfo>),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
-    unwrap_request(state.mononoke.send(MononokeQuery {
+    state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetChangeset {
             hash: info.hash.clone(),
         },
-    }))
+    })
 }
 
 fn setup_logger(debug: bool) -> Logger {
@@ -238,7 +239,7 @@ fn create_config<P: AsRef<Path>>(
 
 #[derive(Clone)]
 struct HttpServerState {
-    mononoke: Addr<MononokeActor>,
+    mononoke: Arc<Mononoke>,
     logger: Logger,
 }
 
@@ -382,17 +383,15 @@ fn main() -> Result<()> {
     let use_ssl = ssl_acceptor.is_some();
     let sys = actix::System::new("mononoke-apiserver");
     let executor = runtime.executor();
-
-    let addr = MononokeActor::create(move |_| {
-        MononokeActor::new(mononoke_logger.clone(), repo_configs, executor)
-    });
+    let mononoke = Mononoke::new(mononoke_logger.clone(), repo_configs, executor);
+    let mononoke = Arc::new(mononoke);
 
     if let Ok(port) = thrift_port {
-        thrift::make_thrift(thrift_logger, host.to_string(), port, addr.clone());
+        thrift::make_thrift(thrift_logger, host.to_string(), port, mononoke.clone());
     }
 
     let state = HttpServerState {
-        mononoke: addr,
+        mononoke,
         logger: actix_logger.clone(),
     };
 

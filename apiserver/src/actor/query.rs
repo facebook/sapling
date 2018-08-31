@@ -6,14 +6,9 @@
 
 use std::convert::TryFrom;
 
-use actix::Message;
-use actix::dev::Request;
 use failure::Error;
-use futures_ext::BoxFuture;
 
 use apiserver_thrift::types::MononokeGetRawParams;
-
-use super::{MononokeRepoActor, MononokeRepoResponse};
 
 #[derive(Debug)]
 pub enum MononokeRepoQuery {
@@ -40,17 +35,9 @@ pub enum MononokeRepoQuery {
     },
 }
 
-impl Message for MononokeRepoQuery {
-    type Result = Result<BoxFuture<MononokeRepoResponse, Error>, Error>;
-}
-
 pub struct MononokeQuery {
     pub kind: MononokeRepoQuery,
     pub repo: String,
-}
-
-impl Message for MononokeQuery {
-    type Result = Result<Request<MononokeRepoActor, MononokeRepoQuery>, Error>;
 }
 
 impl TryFrom<MononokeGetRawParams> for MononokeQuery {

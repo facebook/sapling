@@ -8,7 +8,9 @@ mod dispatcher;
 mod fb303;
 mod mononoke;
 
-use actix::{Addr, Arbiter};
+use std::sync::Arc;
+
+use actix::Arbiter;
 use slog::Logger;
 
 use apiserver_thrift::server::make_MononokeAPIService_server;
@@ -18,9 +20,9 @@ use srserver::ThriftServerBuilder;
 use self::dispatcher::ThriftDispatcher;
 use self::fb303::FacebookServiceImpl;
 use self::mononoke::MononokeAPIServiceImpl;
-use super::actor::MononokeActor;
+use super::actor::Mononoke;
 
-pub fn make_thrift(logger: Logger, host: String, port: i32, addr: Addr<MononokeActor>) {
+pub fn make_thrift(logger: Logger, host: String, port: i32, addr: Arc<Mononoke>) {
     let dispatcher = ThriftDispatcher(Arbiter::new("thrift-worker"));
 
     dispatcher.start({

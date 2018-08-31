@@ -11,10 +11,10 @@ use actix_web::HttpResponse;
 use actix_web::error::ResponseError;
 use actix_web::http::StatusCode;
 use failure::{Context, Error, Fail};
-
-use apiserver_thrift::types::{MononokeAPIException, MononokeAPIExceptionKind};
+use futures::Canceled;
 
 use api::errors::ErrorKind as ApiError;
+use apiserver_thrift::types::{MononokeAPIException, MononokeAPIExceptionKind};
 use blobrepo::ErrorKind as BlobRepoError;
 use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
 
@@ -102,6 +102,13 @@ impl From<Error> for ErrorKind {
             .or_else(|err| err.downcast::<ApiError>().map(|e| e.into()))
             .or_else(|err| err.downcast::<ReachabilityIndexError>().map(|e| e.into()))
             .unwrap_or_else(|e| ErrorKind::InternalError(e))
+    }
+}
+
+impl From<Canceled> for ErrorKind {
+    fn from(e: Canceled) -> ErrorKind {
+        let error = Error::from_boxed_compat(Box::new(e));
+        ErrorKind::InternalError(error)
     }
 }
 
