@@ -17,6 +17,7 @@ import signal
 import subprocess
 import sys
 import typing
+from pathlib import Path
 from typing import Any, List, Optional, Set, Tuple
 
 import eden.thrift
@@ -432,6 +433,11 @@ class FsckCmd(Subcmd):
             help="Print more verbose information about issues found.",
         )
         parser.add_argument(
+            "-O",
+            "--overlay",
+            help="Explicitly specify the path to the overlay directory.",
+        )
+        parser.add_argument(
             "path",
             metavar="CHECKOUT_PATH",
             help="The path to an Eden checkout to verify.",
@@ -444,7 +450,10 @@ class FsckCmd(Subcmd):
             return 1
 
         # Get the path to the overlay directory for this mount point
-        self._overlay_dir = checkout.state_dir.joinpath("local")
+        if args.overlay is not None:
+            self._overlay_dir = Path(args.overlay)
+        else:
+            self._overlay_dir = checkout.state_dir.joinpath("local")
         self._overlay = overlay_mod.Overlay(str(self._overlay_dir))
 
         with fsck_mod.FilesystemChecker(self._overlay, verbose=args.verbose) as checker:
