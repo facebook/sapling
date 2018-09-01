@@ -163,30 +163,44 @@ class InvalidMaterializedInode(Error):
         )
 
 
-class OrphanInode(Error):
-    def __init__(self, inode: InodeInfo) -> None:
+class OrphanInodes(Error):
+    def __init__(self, inodes: List[InodeInfo]) -> None:
         super().__init__(ErrorLevel.WARNING)
-        self.inode = inode
+
+        self.orphan_directories: List[InodeInfo] = []
+        self.orphan_files: List[InodeInfo] = []
+
+        for inode in inodes:
+            if inode.type == InodeType.DIR:
+                self.orphan_directories.append(inode)
+            else:
+                self.orphan_files.append(inode)
 
     def __str__(self) -> str:
-        if self.inode.type == InodeType.DIR:
-            type_str = "directory inode"
-        elif self.inode.type == InodeType.FILE:
-            type_str = "file inode"
+        if self.orphan_directories and self.orphan_files:
+            return (
+                f"found {len(self.orphan_directories)} orphan directory inodes and "
+                f"{len(self.orphan_files)} orphan file inodes"
+            )
+        elif self.orphan_directories:
+            return f"found {len(self.orphan_directories)} orphan directory inodes"
         else:
-            type_str = f"{self.inode.type} inode"
-        mtime_str = _get_mtime_str(self.inode.mtime)
-        return f"found orphan {type_str} {self.inode.inode_number}{mtime_str}"
+            return f"found {len(self.orphan_files)} orphan file inodes"
 
     def detailed_description(self) -> Optional[str]:
         entries = []
-        if self.inode.type == InodeType.DIR:
-            for child in self.inode.children:
-                mode_str = f"{child.mode:#o}"
-                hash_str = binascii.hexlify(child.hash) if child.hash else "-"
-                entries.append(
-                    f"{child.name:<30} {mode_str} {child.inode_number} {hash_str}"
-                )
+
+        for type, inode_list in (
+            ("directory", self.orphan_directories),
+            ("file", self.orphan_files),
+        ):
+            if not inode_list:
+                continue
+            entries.append(f"Orphan {type} inodes")
+            for inode in self.orphan_directories:
+                mtime_str = _get_mtime_str(inode.mtime)
+                entries.append(f"  {inode.inode_number}{mtime_str}")
+
         return "\n".join(entries)
 
 
@@ -203,6 +217,7 @@ class FilesystemChecker:
         self.verbose = verbose
         self._overlay_locked: Optional[bool] = None
         self._overlay_lock: Optional[ContextManager[bool]] = None
+        self._orphan_inodes: List[InodeInfo] = []
 
     def __enter__(self) -> "FilesystemChecker":
         self._overlay_lock = self.overlay.try_lock()
@@ -245,6 +260,9 @@ class FilesystemChecker:
 
         print(f"Scanning for inconsistencies...")
         self._scan_inodes_for_errors(inodes)
+
+        if self._orphan_inodes:
+            self._add_error(OrphanInodes(self._orphan_inodes))
 
         # TODO: Check that the stored max inode number is valid
 
@@ -318,7 +336,7 @@ class FilesystemChecker:
                 num_parents == 0
                 and inode.inode_number != overlay_mod.Overlay.ROOT_INODE_NUMBER
             ):
-                self._add_error(OrphanInode(inode))
+                self._orphan_inodes.append(inode)
             elif num_parents > 1:
                 self._add_error(HardLinkedInode(inode))
 
