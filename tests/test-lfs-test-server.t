@@ -8,6 +8,7 @@
 #if no-windows
   $ lfs-test-server &> lfs-server.log &
   $ echo $! >> $DAEMON_PIDS
+  $ disown %+
 #else
   $ cat >> $TESTTMP/spawn.py <<EOF
   > import os
@@ -164,6 +165,7 @@ Check error message when object does not exist:
 #if no-windows
   $ lfs-test-server &> lfs-server.log &
   $ echo $! >> $DAEMON_PIDS
+  $ disown %+
 #else
   $ $PYTHON $TESTTMP/spawn.py >> $DAEMON_PIDS
 #endif
