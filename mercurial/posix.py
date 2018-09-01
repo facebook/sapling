@@ -195,6 +195,7 @@ def makelock(info, pathname):
         # Create new lock
         fd, tmppath = tempfile.mkstemp(prefix="makelock", dir=dirname)
         try:
+            os.fchmod(fd, 0o664)
             fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
             os.write(fd, info)
             os.rename(tmppath, pathname)
