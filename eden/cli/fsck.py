@@ -115,10 +115,17 @@ class MissingMaterializedInode(Error):
         self.child = child
 
     def __str__(self) -> str:
+        if stat.S_ISDIR(self.child.mode):
+            file_type = "directory"
+        elif stat.S_ISLNK(self.child.mode):
+            file_type = "symlink"
+        else:
+            file_type = "file"
         return (
-            f"missing overlay file for materialized inode "
-            f"{self.inode.compute_path()}/{self.child.name} with "
-            f"file mode {self.child.mode:#o}"
+            f"missing overlay file for materialized {file_type} inode "
+            f"{self.child.inode_number} "
+            f"({self.inode.compute_path()}/{self.child.name}) "
+            f"with file mode {self.child.mode:#o}"
         )
 
 
@@ -133,11 +140,11 @@ class InvalidMaterializedInode(Error):
         if self.inode.parents:
             _parent_inode, child_entry = self.inode.parents[0]
             if stat.S_ISDIR(child_entry.mode):
-                self.expected_type = InodeType.DIR
+                return InodeType.DIR
             else:
-                self.expected_type = InodeType.FILE
+                return InodeType.FILE
         elif self.inode.type == InodeType.DIR_ERROR:
-            self.expected_type = InodeType.DIR
+            return InodeType.DIR
         return None
 
     def __str__(self) -> str:
@@ -151,7 +158,8 @@ class InvalidMaterializedInode(Error):
         mtime_str = _get_mtime_str(self.inode.mtime)
         return (
             f"invalid overlay file for materialized {type_str} "
-            f"{self.inode.compute_path()}{mtime_str}: {self.inode.error}"
+            f"{self.inode.inode_number} ({self.inode.compute_path()}){mtime_str}: "
+            f"{self.inode.error}"
         )
 
 
@@ -211,11 +219,10 @@ class FilesystemChecker:
         return self._overlay_lock.__exit__(exc_type, exc_value, exc_traceback)
 
     def _add_error(self, error: Error) -> None:
-        print(f"{ErrorLevel.get_label(error.level)}: {error}")
-        if self.verbose:
-            details = error.detailed_description()
-            if details:
-                print("  " + "\n  ".join(details.splitlines()))
+        # Note that _add_error() may be called before all inode relationships
+        # have been computed.  If we try printing errors here some inode paths may
+        # incorrectly be printed as "unlinked" if we haven't finished setting their
+        # parent yet.
         self.errors.append(error)
 
     def scan_for_errors(self) -> None:
@@ -240,6 +247,19 @@ class FilesystemChecker:
         self._scan_inodes_for_errors(inodes)
 
         # TODO: Check that the stored max inode number is valid
+
+        self._report_errors()
+
+    def _report_errors(self):
+        for error in self.errors:
+            self._report_error(error)
+
+    def _report_error(self, error: Error):
+        print(f"{ErrorLevel.get_label(error.level)}: {error}")
+        if self.verbose:
+            details = error.detailed_description()
+            if details:
+                print("  " + "\n  ".join(details.splitlines()))
 
     def _read_inodes(self) -> Dict[int, InodeInfo]:
         inodes: Dict[int, InodeInfo] = {}
