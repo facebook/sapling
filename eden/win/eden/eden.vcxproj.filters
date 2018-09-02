@@ -44,15 +44,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\External\prjlayer\DirList.cpp">
-      <Filter>Extern</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\External\prjlayer\MountPoint.cpp">
-      <Filter>Extern</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\External\prjlayer\Provider.cpp">
-      <Filter>Extern</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Win</Filter>
     </ClCompile>
@@ -131,28 +122,13 @@
     <ClCompile Include="Subprocess.cpp">
       <Filter>Win\Lib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\store\BackingStore.cpp">
+      <Filter>fs\Store</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StringConv.h">
       <Filter>Win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\External\prjlayer\DirList.h">
-      <Filter>Extern</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\External\prjlayer\MountPoint.h">
-      <Filter>Extern</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\External\prjlayer\Prjlayer.h">
-      <Filter>Extern</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\External\prjlayer\Provider.h">
-      <Filter>Extern</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\External\prjlayer\pathUtils.h">
-      <Filter>Extern</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\External\prjlayer\Backfol.h">
-      <Filter>Extern</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h">
       <Filter>fs\Store\hg</Filter>
@@ -217,15 +193,6 @@
     <ClInclude Include="..\..\fs\store\StoreResult.h">
       <Filter>fs\Store</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_constants.h">
-      <Filter>gen-cpp2</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_data.h">
-      <Filter>gen-cpp2</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_types.h">
-      <Filter>gen-cpp2</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\fs\utils\PathFuncs.h">
       <Filter>fs\Util</Filter>
     </ClInclude>
@@ -240,9 +207,6 @@
     </ClInclude>
     <ClInclude Include="..\..\fs\model\git\GitBlob.h">
       <Filter>fs\Model\Git</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\External\prjlayer\EdenProvider.h">
-      <Filter>Extern</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\Clock.h">
       <Filter>fs\Util</Filter>

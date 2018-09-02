@@ -23,7 +23,7 @@
     <ProjectGuid>{8114CF14-12EB-45FD-B6F7-FDBA930C1F1D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>datapack</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -93,7 +93,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions);/DEDEN_WIN;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\pkaush\code\github\folly\folly;c:\open\fbsource2\fbcode\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\edenwin64\folly;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/DEDEN_WIN /D_CRT_SECURE_NO_WARNING %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -127,7 +127,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions);/DEDEN_WIN;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\pkaush\code\github\folly\folly;c:\open\fbsource2\fbcode\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\edenwin64\folly;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/DEDEN_WIN /D_CRT_SECURE_NO_WARNING %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>

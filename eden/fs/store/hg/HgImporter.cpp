@@ -1105,6 +1105,7 @@ void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
   size_t bytesRead;
 #ifdef EDEN_WIN
   DWORD winBytesRead;
+  int result = 0;
   try {
     facebook::edenwin::Pipe::read(helperOut_, buf, size, &winBytesRead);
   } catch (const std::exception& ex) {

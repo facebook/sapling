@@ -23,7 +23,7 @@
     <ProjectGuid>{0DCEA1BA-99EA-415C-B6E1-831BE96EA2FB}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>eden</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -103,14 +103,14 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);EDEN_WIN;EDEN_WIN;-D_SCL_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;EDEN_WIN_NOMONONOKE;GLOG_NO_ABBREVIATED_SEVERITIES</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
       <LanguageStandard>stdcpp14</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\pkaush\code\github\folly\folly;C:\pkaush\code\exp\Edenwin\External;..\..\..\;C:\open\fbsource2\fbcode\scm\hg;..\..\..\External\prjlayer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\edenwin64\folly;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>-DEDEN_WIN</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>C:\pkaush\code\github\folly\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration);C:\pkaush\code\exp\Edenwin\External\prjlayer\prjsdk;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>datapack.lib;ProjectedFSLib.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\edenwin64\folly\Release;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -140,7 +140,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions);EDEN_WIN;-D_SCL_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;EDEN_WIN_NOMONONOKE</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
       <LanguageStandard>stdcpp14</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\pkaush\code\github\folly\folly;C:\pkaush\code\exp\Edenwin\External;..\..\..\;C:\open\fbsource2\fbcode\scm\hg;..\..\..\External\prjlayer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\edenwin64\folly;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>-DEDEN_WIN</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -148,14 +148,11 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>C:\pkaush\code\github\folly\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration);C:\pkaush\code\exp\Edenwin\External\prjlayer\prjsdk;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>datapack.lib;ProjectedFSLib.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\edenwin64\folly\Release;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\External\prjlayer\DirList.cpp" />
-    <ClCompile Include="..\..\..\External\prjlayer\MountPoint.cpp" />
-    <ClCompile Include="..\..\..\External\prjlayer\Provider.cpp" />
     <ClCompile Include="..\..\fs\model\git\GitBlob.cpp" />
     <ClCompile Include="..\..\fs\model\git\GitTree.cpp" />
     <ClCompile Include="..\..\fs\model\Hash.cpp" />
@@ -164,6 +161,7 @@
     <ClCompile Include="..\..\fs\model\TreeEntry.cpp" />
     <ClCompile Include="..\..\fs\service\EdenCPUThreadPool.cpp" />
     <ClCompile Include="..\..\fs\sqlite\Sqlite.cpp" />
+    <ClCompile Include="..\..\fs\store\BackingStore.cpp" />
     <ClCompile Include="..\..\fs\store\EmptyBackingStore.cpp" />
     <ClCompile Include="..\..\fs\store\hg\HgBackingStore.cpp" />
     <ClCompile Include="..\..\fs\store\hg\HgImporter.cpp" />
@@ -184,16 +182,6 @@
     <ClCompile Include="Subprocess.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_constants.h" />
-    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_data.h" />
-    <ClInclude Include="..\..\..\..\..\..\pkaush\code\exp\Edenwin\External\eden\fs\service\gen-cpp2\eden_types.h" />
-    <ClInclude Include="..\..\..\External\prjlayer\Backfol.h" />
-    <ClInclude Include="..\..\..\External\prjlayer\DirList.h" />
-    <ClInclude Include="..\..\..\External\prjlayer\EdenProvider.h" />
-    <ClInclude Include="..\..\..\External\prjlayer\MountPoint.h" />
-    <ClInclude Include="..\..\..\External\prjlayer\pathUtils.h" />
-    <ClInclude Include="..\..\..\External\prjlayer\Prjlayer.h" />
-    <ClInclude Include="..\..\..\External\prjlayer\Provider.h" />
     <ClInclude Include="..\..\fs\model\Blob.h" />
     <ClInclude Include="..\..\fs\model\git\GitBlob.h" />
     <ClInclude Include="..\..\fs\model\git\GitTree.h" />
@@ -228,5 +216,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="D:\edenwin64\vcpkg\scripts\buildsystems\msbuild\vcpkg.targets" Condition="Exists('D:\edenwin64\vcpkg\scripts\buildsystems\msbuild\vcpkg.targets')" />
   </ImportGroup>
 </Project>
