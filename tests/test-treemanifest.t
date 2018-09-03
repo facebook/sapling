@@ -884,3 +884,9 @@ Committing a empty commit does not duplicate root treemanifest
   1:678d3574b88c
   1:678d3574b88c
   $ hg --config extensions.strip= strip -r . -q
+
+Shelve works with treemanifest
+  $ echo ababagalamaga >> file
+  $ hg shelve --config extensions.obsshelve= --config experimental.evolution=createmarkers
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
