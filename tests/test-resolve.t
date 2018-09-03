@@ -63,16 +63,16 @@ tell users how they could have used resolve
   (try: hg resolve -m path:file1 path:filez)
   $ hg resolve -m path:file1 path:filez
   $ hg resolve -l
-  R file1
-  U file2
+  R ../file1
+  U ../file2
   $ hg resolve -m filez file2
   arguments do not match paths that need resolving
   (try: hg resolve -m path:filez path:file2)
   $ hg resolve -m path:filez path:file2
   (no more unresolved files)
   $ hg resolve -l
-  R file1
-  R file2
+  R ../file1
+  R ../file2
 
 cleanup
   $ hg resolve -u

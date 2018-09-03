@@ -4797,6 +4797,7 @@ def rename(ui, repo, *pats, **opts):
         ("m", "mark", None, _("mark files as resolved")),
         ("u", "unmark", None, _("mark files as unresolved")),
         ("n", "no-status", None, _("hide status prefix")),
+        ("", "root-relative", None, _("show paths relative to repo root")),
     ]
     + mergetoolopts
     + walkopts
@@ -4847,8 +4848,8 @@ def resolve(ui, repo, *pats, **opts):
     """
 
     opts = pycompat.byteskwargs(opts)
-    flaglist = "all mark unmark list no_status".split()
-    all, mark, unmark, show, nostatus = [opts.get(o) for o in flaglist]
+    flaglist = "all mark unmark list no_status root_relative".split()
+    all, mark, unmark, show, nostatus, rootrel = [opts.get(o) for o in flaglist]
 
     if (show and (mark or unmark)) or (mark and unmark):
         raise error.Abort(_("too many options specified"))
@@ -4877,6 +4878,8 @@ def resolve(ui, repo, *pats, **opts):
             "d": ("resolve.driverresolved", "D"),
         }
 
+        cwd = "" if rootrel else repo.getcwd()
+
         for f in ms:
             if not m(f):
                 continue
@@ -4884,6 +4887,8 @@ def resolve(ui, repo, *pats, **opts):
             label, key = mergestateinfo[ms[f]]
             fm.startitem()
             fm.condwrite(not nostatus, "status", "%s ", key, label=label)
+            # User-friendly paths
+            f = repo.pathto(f, cwd)
             fm.write("path", "%s\n", f, label=label)
         fm.end()
         return 0
