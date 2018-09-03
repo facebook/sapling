@@ -728,6 +728,15 @@ fn get_changed_manifests_stream(
         repo.get_manifest_by_nodeid(basemfid)
             .traced(&trace, "fetch baserootmf", trace_args!());
 
+    let root_entry_stream = stream::once(Ok((
+        repo.get_root_entry(&HgManifestId::new(*mfid)),
+        rootpath.clone(),
+    )));
+
+    if max_depth == 1 {
+        return root_entry_stream.boxify();
+    }
+
     let changed_entries = manifest
         .join(basemanifest)
         .map({
@@ -751,12 +760,7 @@ fn get_changed_manifests_stream(
         }
     });
 
-    // Append root manifest
-    let root_entry_stream = stream::once(Ok((
-        repo.get_root_entry(&HgManifestId::new(*mfid)),
-        rootpath,
-    )));
-
+    // Append root manifest as well
     changed_entries.chain(root_entry_stream).boxify()
 }
 
