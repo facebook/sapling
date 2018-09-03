@@ -307,9 +307,6 @@ impl RepoConfigs {
                         bucket: manifold_bucket,
                         prefix: this.manifold_prefix.unwrap_or("".into()),
                         db_address,
-                        io_threads: this.io_thread_num.unwrap_or(5),
-                        max_concurrent_requests_per_io_thread:
-                            this.max_concurrent_requests_per_io_thread.unwrap_or(4),
                     },
                     path: this.path,
                 }
@@ -393,7 +390,6 @@ struct RawRepoConfig {
     delay_stddev: Option<u64>,
     io_thread_num: Option<usize>,
     cache_warmup: Option<RawCacheWarmupConfig>,
-    max_concurrent_requests_per_io_thread: Option<usize>,
     bookmarks: Option<Vec<RawBookmarkConfig>>,
     hooks: Option<Vec<RawHookConfig>>,
     pushrebase: Option<RawPushrebaseParams>,

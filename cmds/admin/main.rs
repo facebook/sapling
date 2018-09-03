@@ -58,7 +58,6 @@ const BONSAI_FETCH: &'static str = "bonsai-fetch";
 const CONTENT_FETCH: &'static str = "content-fetch";
 const CONFIG_REPO: &'static str = "config";
 const BOOKMARKS: &'static str = "bookmarks";
-const MAX_CONCURRENT_REQUESTS_PER_IO_THREAD: usize = 4;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let blobstore_fetch = SubCommand::with_name(BLOBSTORE_FETCH)
@@ -245,11 +244,8 @@ fn main() {
             let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
             let no_prefix = sub_m.is_present("no-prefix");
 
-            let blobstore = ManifoldBlob::new_with_prefix(
-                &manifold_args.bucket,
-                &manifold_args.prefix,
-                MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
-            );
+            let blobstore =
+                ManifoldBlob::new_with_prefix(&manifold_args.bucket, &manifold_args.prefix);
 
             match (use_memcache, no_prefix) {
                 (None, false) => {

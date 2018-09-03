@@ -57,8 +57,6 @@ use std::io::prelude::*;
 use std::str::FromStr;
 use std::sync::Arc;
 
-const MAX_CONCURRENT_REQUESTS_PER_IO_THREAD: usize = 4;
-
 fn run_hook(
     args: Vec<String>,
     repo_creator: fn(&Logger, &ArgMatches) -> BlobRepo,
@@ -155,15 +153,12 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
     let xdb_tier = matches
         .value_of("xdb-tier")
         .unwrap_or("xdb.mononoke_test_2");
-    let io_threads = 5;
     BlobRepo::new_manifold(
         logger.clone(),
         &ManifoldArgs {
             bucket: bucket.to_string(),
             prefix: prefix.to_string(),
             db_address: xdb_tier.to_string(),
-            io_threads,
-            max_concurrent_requests_per_io_thread: MAX_CONCURRENT_REQUESTS_PER_IO_THREAD,
         },
         RepositoryId::new(0),
     ).expect("failed to create blobrepo instance")

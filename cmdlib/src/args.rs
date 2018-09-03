@@ -140,23 +140,7 @@ impl MononokeApp {
                     .default_value("xdb.mononoke_test_2")
                     .help("database address"),
             )
-            .args(&cache_args)
-            .arg(
-                Arg::with_name("io-threads")
-                    .long("io-threads")
-                    .value_name("NUM")
-                    .default_value("5")
-                    .hidden(hide_advanced_args)
-                    .help("number of IO threads to use for Manifold")
-            )
-            .arg(
-                Arg::with_name("max-concurrent-request-per-io-thread")
-                    .long("max-concurrent-request-per-io-thread")
-                    .value_name("NUM")
-                    .default_value("5")
-                    .hidden(hide_advanced_args)
-                    .help("maximum open requests per Manifold IO thread")
-            );
+            .args(&cache_args);
 
         app = add_cachelib_args(app);
 
@@ -452,12 +436,6 @@ pub fn parse_manifold_args<'a>(matches: &ArgMatches<'a>) -> ManifoldArgs {
         bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
         prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
         db_address: matches.value_of("db-address").unwrap().to_string(),
-        io_threads: get_usize(matches, "io-threads", 5),
-        max_concurrent_requests_per_io_thread: get_usize(
-            matches,
-            "max-concurrent-request-per-io-thread",
-            5,
-        ),
     }
 }
 

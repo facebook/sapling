@@ -108,12 +108,6 @@ pub struct ManifoldArgs {
     pub prefix: String,
     /// Identifies the SQL database to connect to.
     pub db_address: String,
-    /// Number of IO threads the blobstore uses.
-    pub io_threads: usize,
-    /// This is a (hopefully) short term hack to overcome the problem of overloading Manifold.
-    /// It limits the number of simultaneous requests that can be sent from a single io thread
-    /// If not set then default value is used.
-    pub max_concurrent_requests_per_io_thread: usize,
 }
 
 pub struct BlobRepo {
