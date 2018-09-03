@@ -865,10 +865,16 @@ def _haltmerge():
 def _onfilemergefailure(ui):
     action = ui.config("merge", "on-failure")
     if action == "prompt":
-        msg = _("continue merge operation (yn)?" "$$ &Yes $$ &No")
-        if ui.promptchoice(msg, 0) == 1:
+        msg = _(
+            "continue merge operation [(y)es/(n)o/(a)lways]?"
+            "$$ &Yes $$ &No $$ &Always"
+        )
+        choice = ui.promptchoice(msg, 0)
+        if choice == 1:  # "no"
             _haltmerge()
-    if action == "halt":
+        elif choice == 2:  # "always"
+            ui.setconfig("merge", "on-failure", "continue", "user-prompt")
+    elif action == "halt":
         _haltmerge()
     # default action is 'continue', in which case we neither prompt nor halt
 

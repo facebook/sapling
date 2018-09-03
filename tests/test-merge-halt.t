@@ -71,10 +71,29 @@ Testing on-failure=prompt
   merging a
   merging b
   merging a failed!
-  continue merge operation (yn)? y
+  continue merge operation [(y)es/(n)o/(a)lways]? y
   merging b failed!
-  continue merge operation (yn)? n
+  continue merge operation [(y)es/(n)o/(a)lways]? n
   merge halted after failed merge (see hg resolve)
+  [1]
+
+  $ hg resolve --list
+  U a
+  U b
+
+  $ hg rebase --abort
+  rebase aborted
+
+  $ cat <<EOS | hg rebase -s 1 -d 2 --tool false
+  > a
+  > EOS
+  rebasing 1:1f28a51c3c9b "c"
+  merging a
+  merging b
+  merging a failed!
+  continue merge operation [(y)es/(n)o/(a)lways]? a
+  merging b failed!
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
   $ hg resolve --list
@@ -102,7 +121,7 @@ Check that successful tool with failed post-check halts the merge
    output file b appears unchanged
   was merge successful (yn)? n
   merging b failed!
-  continue merge operation (yn)? n
+  continue merge operation [(y)es/(n)o/(a)lways]? n
   merge halted after failed merge (see hg resolve)
   [1]
 
