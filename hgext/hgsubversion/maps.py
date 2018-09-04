@@ -510,6 +510,13 @@ class RevMap(dict):
 RevMap._wrapitermethods()
 
 
+def safeint(s):
+    try:
+        return int(s)
+    except ValueError:
+        return 0
+
+
 class SqliteRevMap(collections.MutableMapping):
     """RevMap backed by sqlite3.
 
@@ -576,10 +583,10 @@ class SqliteRevMap(collections.MutableMapping):
                 yield bytes(row[0])
 
     lastpulled = util.fileproperty(
-        "_lastpulled", lambda x: x._lastpulledpath, default=0, deserializer=int
+        "_lastpulled", lambda x: x._lastpulledpath, default=0, deserializer=safeint
     )
     rowcount = util.fileproperty(
-        "_rowcount", lambda x: x._rowcountpath, default=0, deserializer=int
+        "_rowcount", lambda x: x._rowcountpath, default=0, deserializer=safeint
     )
 
     def __init__(self, revmap_path, lastpulled_path, sqlitepragmas=None):
