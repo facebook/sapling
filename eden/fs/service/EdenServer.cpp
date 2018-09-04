@@ -79,15 +79,18 @@ DEFINE_int32(
     "Maximum number of active thrift requests");
 DEFINE_bool(thrift_enable_codel, false, "Enable Codel queuing timeout");
 DEFINE_int32(thrift_min_compress_bytes, 0, "Minimum response compression size");
-DEFINE_int64(unload_interval_hours, 0, "Frequency of unloading inodes");
+DEFINE_int64(
+    unload_interval_minutes,
+    10,
+    "Frequency in minutes of background inode unloading");
 DEFINE_int64(
     start_delay_minutes,
     10,
-    "start delay for scheduling unloading inodes job");
+    "Initial delay before first background inode unload");
 DEFINE_int64(
     unload_age_minutes,
-    60,
-    "Minimum age of the inodes to be unloaded");
+    6 * 60,
+    "Minimum age of the inodes to be unloaded in background");
 
 using apache::thrift::ThriftServer;
 using facebook::eden::FuseChannelData;
@@ -312,7 +315,7 @@ void EdenServer::unloadInodes() {
     serviceData->setCounter(kPeriodicUnloadCounterKey, totalUnloaded);
   }
 
-  scheduleInodeUnload(std::chrono::hours(FLAGS_unload_interval_hours));
+  scheduleInodeUnload(std::chrono::minutes(FLAGS_unload_interval_minutes));
 }
 
 void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
@@ -367,7 +370,7 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   // so using unloadChildrenNow just to validate the behaviour. We will have to
   // modify current unloadChildrenNow function to unload inodes based on the
   // last access time.
-  if (FLAGS_unload_interval_hours > 0) {
+  if (FLAGS_unload_interval_minutes > 0) {
     scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 
