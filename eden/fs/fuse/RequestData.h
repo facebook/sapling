@@ -57,7 +57,7 @@ class RequestData : public folly::RequestData {
   // a FUSE request, false otherwise.
   static bool isFuseRequest();
 
-  folly::Future<folly::Unit> startRequest(
+  void startRequest(
       ThreadLocalEdenStats* stats,
       EdenStats::HistogramPtr histogram);
   void finishRequest();

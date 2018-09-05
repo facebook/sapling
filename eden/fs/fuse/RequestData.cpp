@@ -69,14 +69,13 @@ RequestData& RequestData::create(
   return get();
 }
 
-Future<folly::Unit> RequestData::startRequest(
+void RequestData::startRequest(
     ThreadLocalEdenStats* stats,
     EdenStats::HistogramPtr histogram) {
   startTime_ = steady_clock::now();
   DCHECK(latencyHistogram_ == nullptr);
   latencyHistogram_ = histogram;
   stats_ = stats;
-  return folly::unit;
 }
 
 void RequestData::finishRequest() {

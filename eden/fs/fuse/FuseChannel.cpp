@@ -1068,7 +1068,7 @@ void FuseChannel::processSession() {
     // filesystem call that need the same inode lock.  We will then not be able
     // to resolve this deadlock on kernel inode locks without rebooting the
     // system.
-    if (static_cast<pid_t>(header->pid) == myPid) {
+    if (UNLIKELY(static_cast<pid_t>(header->pid) == myPid)) {
       XLOG(DFATAL) << "Received FUSE request from our own pid: opcode="
                    << header->opcode << " nodeid=" << header->nodeid
                    << " pid=" << header->pid;
@@ -1168,11 +1168,10 @@ void FuseChannel::processSession() {
           // These methods are internally synchronised to make this safe
           // so we don't need to reacquire state_ lock after calling the
           // handler.
-          request.setRequestFuture(
-              request.startRequest(dispatcher_->getStats(), entry.histogram)
-                  .thenValue([=, &request](auto&&) {
-                    return (this->*entry.handler)(&request.getReq(), arg);
-                  }));
+          request.setRequestFuture(folly::makeFutureWith([&] {
+            request.startRequest(dispatcher_->getStats(), entry.histogram);
+            return (this->*entry.handler)(&request.getReq(), arg);
+          }));
           break;
         }
 
