@@ -587,6 +587,8 @@ where
 mod test {
     use super::*;
 
+    use std::time::{self, Duration};
+
     use futures::Stream;
     use futures::stream;
     use futures::sync::mpsc;
@@ -598,6 +600,48 @@ mod test {
         fn from(_: mpsc::SendError<T>) -> Self {
             MyErr
         }
+    }
+
+    #[test]
+    fn asynchronize_parallel() {
+        const SLEEP_TIME: Duration = time::Duration::from_millis(20);
+        const THREAD_COUNT: usize = 20;
+
+        assert!(
+            THREAD_COUNT > 10,
+            "Thread count too small to prove parallelism"
+        );
+
+        let mut threadpool_builder = tokio::executor::thread_pool::Builder::new();
+        threadpool_builder
+            .name_prefix("my-runtime-worker-")
+            .pool_size(THREAD_COUNT);
+
+        let mut runtime = tokio::runtime::Builder::new()
+            .threadpool_builder(threadpool_builder)
+            .build()
+            .unwrap();
+        fn sleep() -> Result<(), failure::Error> {
+            std::thread::sleep(SLEEP_TIME);
+            Ok(())
+        }
+
+        let futures: Vec<_> = std::iter::repeat_with(|| asynchronize(|| sleep()))
+        // This count needs to be much greater than 2, so that if we serialize operations, we see
+        // an issue
+            .take(THREAD_COUNT)
+            .collect();
+        let start = time::Instant::now();
+        let _ = runtime.block_on(future::join_all(futures));
+        let run_time = start.elapsed();
+        assert!(
+            run_time < SLEEP_TIME * 2,
+            "Parallel sleep time {:#?} much greater than {:#?} for {:#?} threads - each thread sleeps for {:#?}",
+            run_time,
+            SLEEP_TIME * 2,
+            THREAD_COUNT,
+            SLEEP_TIME
+        );
     }
 
     #[test]
