@@ -1831,7 +1831,16 @@ class localrepository(object):
             if self._currentlock(self._lockref) is not None:
                 self.ui.develwarn('"wlock" acquired after "lock"')
 
+        # if this is a shared repo and we must also lock the shared wlock
+        # or else we can deadlock due to lock ordering issues
+        srcwlock = None
+        srcrepo = self._getsrcrepo()
+        if srcrepo:
+            srcwlock = srcrepo.wlock()
+
         def unlock():
+            if srcwlock:
+                srcwlock.release()
             if self.dirstate.pendingparentchange():
                 self.dirstate.invalidate()
             else:
