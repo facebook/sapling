@@ -43,6 +43,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
@@ -203,65 +204,74 @@ folly::Future<InodePtr> TreeInode::getChildByName(
 }
 
 Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
-  auto inodeLoadFuture = Future<unique_ptr<InodeBase>>::makeEmpty();
-  auto returnFuture = Future<InodePtr>::makeEmpty();
-  InodePtr childInodePtr;
-  InodeMap::PromiseVector promises;
-  InodeNumber childNumber;
-  {
-    auto contents = contents_.wlock();
-    auto iter = contents->entries.find(name);
-    if (iter == contents->entries.end()) {
-      if (name == kDotEdenName && getNodeId() != kRootNodeId) {
-        return getInodeMap()->lookupInode(getMount()->getDotEdenInodeNumber());
-      }
+  return tryRlockCheckBeforeUpdate<Future<InodePtr>>(
+      contents_,
+      [&](const auto& contents) -> folly::Optional<Future<InodePtr>> {
+        // Check if the child is already loaded and return it if so
+        auto iter = contents.entries.find(name);
+        if (iter == contents.entries.end()) {
+          if (name == kDotEdenName && getNodeId() != kRootNodeId) {
+            return folly::make_optional(getInodeMap()->lookupInode(
+                getMount()->getDotEdenInodeNumber()));
+          }
 
-      XLOG(DBG7) << "attempted to load non-existent entry \"" << name
-                 << "\" in " << getLogPath();
-      return makeFuture<InodePtr>(InodeError(ENOENT, inodePtrFromThis(), name));
-    }
+          XLOG(DBG7) << "attempted to load non-existent entry \"" << name
+                     << "\" in " << getLogPath();
+          return folly::make_optional(makeFuture<InodePtr>(
+              InodeError(ENOENT, inodePtrFromThis(), name)));
+        }
 
-    // Check to see if the entry is already loaded
-    auto& entry = iter->second;
-    if (entry.getInode()) {
-      return makeFuture<InodePtr>(entry.getInodePtr());
-    }
+        // Check to see if the entry is already loaded
+        const auto& entry = iter->second;
+        if (entry.getInode()) {
+          return makeFuture<InodePtr>(entry.getInodePtr());
+        }
+        return folly::none;
+      },
+      [&](auto& contents) {
+        auto inodeLoadFuture = Future<unique_ptr<InodeBase>>::makeEmpty();
+        auto returnFuture = Future<InodePtr>::makeEmpty();
+        InodePtr childInodePtr;
+        InodeMap::PromiseVector promises;
+        InodeNumber childNumber;
 
-    // The entry is not loaded yet.  Ask the InodeMap about the entry.
-    // The InodeMap will tell us if this inode is already in the process of
-    // being loaded, or if we need to start loading it now.
-    folly::Promise<InodePtr> promise;
-    returnFuture = promise.getFuture();
-    childNumber = entry.getInodeNumber();
-    bool startLoad = getInodeMap()->shouldLoadChild(
-        this, name, childNumber, std::move(promise));
-    if (startLoad) {
-      // The inode is not already being loaded.  We have to start loading it
-      // now.
-      auto loadFuture = startLoadingInodeNoThrow(entry, name);
-      if (loadFuture.isReady() && loadFuture.hasValue()) {
-        // If we finished loading the inode immediately, just call
-        // InodeMap::inodeLoadComplete() now, since we still have the data_
-        // lock.
-        auto childInode = std::move(loadFuture).get();
-        entry.setInode(childInode.get());
-        promises = getInodeMap()->inodeLoadComplete(childInode.get());
-        childInodePtr = InodePtr::takeOwnership(std::move(childInode));
-      } else {
-        inodeLoadFuture = std::move(loadFuture);
-      }
-    }
-  }
+        // The entry is not loaded yet.  Ask the InodeMap about the entry.
+        // The InodeMap will tell us if this inode is already in the process of
+        // being loaded, or if we need to start loading it now.
+        auto iter = contents->entries.find(name);
+        auto& entry = iter->second;
+        folly::Promise<InodePtr> promise;
+        returnFuture = promise.getFuture();
+        childNumber = entry.getInodeNumber();
+        bool startLoad = getInodeMap()->shouldLoadChild(
+            this, name, childNumber, std::move(promise));
+        if (startLoad) {
+          // The inode is not already being loaded.  We have to start loading it
+          // now.
+          auto loadFuture = startLoadingInodeNoThrow(entry, name);
+          if (loadFuture.isReady() && loadFuture.hasValue()) {
+            // If we finished loading the inode immediately, just call
+            // InodeMap::inodeLoadComplete() now, since we still have the data_
+            // lock.
+            auto childInode = std::move(loadFuture).get();
+            entry.setInode(childInode.get());
+            promises = getInodeMap()->inodeLoadComplete(childInode.get());
+            childInodePtr = InodePtr::takeOwnership(std::move(childInode));
+          } else {
+            inodeLoadFuture = std::move(loadFuture);
+          }
+        }
+        contents.unlock();
+        if (inodeLoadFuture.valid()) {
+          registerInodeLoadComplete(inodeLoadFuture, name, childNumber);
+        } else {
+          for (auto& promise : promises) {
+            promise.setValue(childInodePtr);
+          }
+        }
 
-  if (inodeLoadFuture.valid()) {
-    registerInodeLoadComplete(inodeLoadFuture, name, childNumber);
-  } else {
-    for (auto& promise : promises) {
-      promise.setValue(childInodePtr);
-    }
-  }
-
-  return returnFuture;
+        return returnFuture;
+      });
 }
 
 Future<TreeInodePtr> TreeInode::getOrLoadChildTree(PathComponentPiece name) {
