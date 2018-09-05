@@ -34,7 +34,7 @@ Return tryRlockCheckBeforeUpdate(
     auto rlock = state.rlock();
     auto result = check(*rlock);
     if (LIKELY(bool(result))) {
-      return *result;
+      return *std::move(result);
     }
   }
 
@@ -42,7 +42,7 @@ Return tryRlockCheckBeforeUpdate(
   // Check again - something may have raced between the locks.
   auto result = check(*wlock);
   if (UNLIKELY(bool(result))) {
-    return *result;
+    return *std::move(result);
   }
 
   return update(wlock);
