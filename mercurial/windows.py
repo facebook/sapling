@@ -605,6 +605,10 @@ def readlock(pathname):
     return r
 
 
+def releaselock(_lockfd, pathname):
+    os.unlink(pathname)
+
+
 def islocked(pathname):
     return os.path.exists(pathname)
 

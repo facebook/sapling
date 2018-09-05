@@ -46,6 +46,8 @@ rename = os.rename
 removedirs = os.removedirs
 expandglobs = False
 
+O_CLOEXEC = osutil.O_CLOEXEC
+
 umask = os.umask(0)
 os.umask(umask)
 
@@ -80,7 +82,7 @@ def _locked(pathname):
 
     pathname must already exist.
     """
-    fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW)
+    fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW | O_CLOEXEC)
     fcntl.flock(fd, fcntl.LOCK_EX)
     try:
         yield
@@ -107,7 +109,7 @@ def makelock(info, pathname):
     # where the lock file does not get unlinked when releasing the lock is:
     #
     #     # Open the file. Create on demand. Fail if it's a symlink.
-    #     fd = os.open(pathname, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW)
+    #     fd = os.open(pathname, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | O_CLOEXEC)
     #     try:
     #         fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
     #         os.write(fd, info)
@@ -151,7 +153,7 @@ def makelock(info, pathname):
     with _locked(dirname or "."):
         # Check and remove stale lock
         try:
-            fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW)
+            fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW | O_CLOEXEC)
         except (OSError, IOError) as ex:
             # ELOOP: symlink, lock taken by legacy process - return directly
             if ex.errno != errno.ENOENT:
@@ -189,10 +191,14 @@ def makelock(info, pathname):
             # empty file.  Other legacy process might see a "malformed lock"
             # temporarily. New processes won't see this because both "readlock"
             # and "islocked" take the directory lock.
-            fd = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL)
+            fd = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL | O_CLOEXEC)
             os.close(fd)
 
-        # Create new lock
+        # Create new lock.
+        #
+        # mkstemp sets FD_CLOEXEC automatically. For thread-safety. Threads
+        # used here (progress, profiling, Winodws update worker) do not fork.
+        # So it's fine to not patch `os.open` here.
         fd, tmppath = tempfile.mkstemp(prefix="makelock", dir=dirname)
         try:
             os.fchmod(fd, 0o664)
@@ -221,10 +227,18 @@ def readlock(pathname):
         return r
 
 
+def releaselock(lockfd, pathname):
+    # Explicitly unlock. This avoids issues when a
+    # forked process inherits the flock.
+    fcntl.flock(lockfd, fcntl.LOCK_UN)
+    os.close(lockfd)
+    os.unlink(pathname)
+
+
 def islocked(pathname):
     with _locked(os.path.dirname(pathname) or "."):
         try:
-            fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW)
+            fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW | O_CLOEXEC)
         except OSError as ex:
             # ELOOP, ENOENT, EPERM, ...
             # Only treat ENOENT as "not locked".
@@ -975,7 +989,7 @@ def bindunixsocket(sock, path):
     dirname, basename = os.path.split(path)
     bakwdfd = None
     if dirname:
-        bakwdfd = os.open(".", os.O_DIRECTORY)
+        bakwdfd = os.open(".", os.O_DIRECTORY | O_CLOEXEC)
         os.chdir(dirname)
     sock.bind(basename)
     if bakwdfd:

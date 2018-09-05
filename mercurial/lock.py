@@ -455,10 +455,8 @@ class lock(object):
             finally:
                 if not self._parentheld:
                     try:
-                        self.vfs.unlink(self.f)
-                        if self._lockfd is not None:
-                            os.close(self._lockfd)
-                            self._lockfd = None
+                        util.releaselock(self._lockfd, self.vfs.join(self.f))
+                        self._lockfd = None
                     except OSError:
                         pass
             # The postrelease functions typically assume the lock is not held
