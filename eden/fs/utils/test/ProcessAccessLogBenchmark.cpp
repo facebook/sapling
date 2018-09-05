@@ -7,10 +7,12 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/utils/ProcessNameCache.h"
+#include "eden/fs/utils/ProcessAccessLog.h"
 
 #include <folly/Benchmark.h>
+#include <folly/init/Init.h>
 #include <folly/synchronization/Baton.h>
+#include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
 
@@ -19,10 +21,12 @@ using namespace facebook::eden;
  */
 constexpr size_t kThreadCount = 4;
 
-BENCHMARK(ProcessNameCache_repeatedly_add_self, iters) {
+BENCHMARK(ProcessAccessLog_repeatedly_add_self, iters) {
   folly::BenchmarkSuspender suspender;
 
-  ProcessNameCache processNameCache;
+  auto processNameCache = std::make_shared<ProcessNameCache>();
+  ProcessAccessLog processAccessLog{processNameCache};
+
   std::vector<std::thread> threads;
   std::array<folly::Baton<>, kThreadCount> batons;
 
@@ -33,13 +37,13 @@ BENCHMARK(ProcessNameCache_repeatedly_add_self, iters) {
     size_t assignedIterations = remainingIterations / remainingThreads;
     remainingIterations -= assignedIterations;
     totalIterations += assignedIterations;
-    threads.emplace_back([&processNameCache,
+    threads.emplace_back([&processAccessLog,
                           baton = &batons[i],
                           assignedIterations,
                           myPid = getpid()] {
       baton->wait();
       for (size_t j = 0; j < assignedIterations; ++j) {
-        processNameCache.add(myPid);
+        processAccessLog.recordAccess(myPid);
       }
     });
   }
