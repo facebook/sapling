@@ -1188,7 +1188,7 @@ void FuseChannel::processSession() {
             [&](auto& unhandledOpcodes) -> folly::Unit {
               XLOG(ERR) << "unhandled fuse opcode " << opcode << "("
                         << fuseOpcodeName(opcode) << ")";
-              unhandledOpcodes.insert(opcode);
+              unhandledOpcodes->insert(opcode);
               return folly::unit;
             });
 

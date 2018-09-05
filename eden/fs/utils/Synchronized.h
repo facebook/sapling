@@ -21,7 +21,7 @@ namespace eden {
  * and update is called.
  *
  * check should have type (const State&) -> folly::Optional<T>
- * update should have type (State&) -> T
+ * update should have type (LockedPtr&) -> T
  */
 template <typename Return, typename State, typename CheckFn, typename UpdateFn>
 Return tryRlockCheckBeforeUpdate(
@@ -45,7 +45,7 @@ Return tryRlockCheckBeforeUpdate(
     return *result;
   }
 
-  return update(*wlock);
+  return update(wlock);
 }
 
 } // namespace eden
