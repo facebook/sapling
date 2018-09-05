@@ -1852,6 +1852,26 @@ class localrepository(object):
         self._wlockref = weakref.ref(l)
         return l
 
+    def _getsrcrepo(self):
+        """
+        Returns the source repository object for a given shared repository.
+        If repo is not a shared repository, returns None.
+        """
+        if self.sharedpath == self.path:
+            return None
+
+        if util.safehasattr(self, "srcrepo") and self.srcrepo:
+            return self.srcrepo
+
+        # the sharedpath always ends in the .hg; we want the path to the repo
+        source = self.vfs.split(self.sharedpath)[0]
+        from . import hg
+
+        srcrepo = hg.repository(self.ui, source)
+        # cache for later use
+        self.srcrepo = srcrepo
+        return srcrepo
+
     def _currentlock(self, lockref):
         """Returns the lock if it's held, or None if it's not."""
         if lockref is None:
