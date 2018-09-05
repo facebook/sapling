@@ -260,6 +260,7 @@ macro_rules! impl_bonsai_hg_mapping {
                         Ok(result)
                     }
                 })
+                .boxify()
             }
 
             fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
@@ -292,7 +293,7 @@ macro_rules! impl_bonsai_hg_mapping {
                             match entry_by_bcs.or(entry_by_hgcs) {
                                 Some(ref stored_entry) if stored_entry == &entry => Ok(false),
                                 Some(stored_entry) => {
-                                    Err(ErrorKind::ConflictingEntries(stored_entry.clone(), entry)
+                                    Err(ErrorKind::ConflictingEntries(stored_entry.clone(), entry.clone())
                                         .into())
                                 }
                                 _ => Err(err.into()),
@@ -301,6 +302,7 @@ macro_rules! impl_bonsai_hg_mapping {
                         Err(err) => Err(err.into()),
                     }
                 })
+                .boxify()
             }
         }
 

@@ -35,7 +35,7 @@ use diesel::sql_types::HasSqlType;
 use failure::{Error, Result, ResultExt};
 use filenodes::{FilenodeInfo, Filenodes, blake2_path_hash};
 use futures::{Future, Stream};
-use futures_ext::{asynchronize, BoxFuture, BoxStream};
+use futures_ext::{asynchronize, BoxFuture, BoxStream, FutureExt};
 use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
 use mercurial_types::sql_types::HgFileNodeIdSql;
 use stats::Timeseries;
@@ -167,15 +167,20 @@ macro_rules! impl_filenodes {
                 let db = self.clone();
                 let insert_chunk_size = self.insert_chunk_size;
 
-                asynchronize(move || {
-                    filenodes.chunks(insert_chunk_size).and_then(move |filenodes| {
+                filenodes.chunks(insert_chunk_size)
+                    .and_then(move |filenodes| {
                         STATS::adds.add_value(filenodes.len() as i64);
-                        let connection = db.get_master_conn()?;
-                        Self::do_insert(&connection, &filenodes, &repo_id)
+                        asynchronize({
+                            let db = db.clone();
+                            move || {
+                                let connection = db.get_master_conn()?;
+                                Self::do_insert(&connection, &filenodes, &repo_id)
+                            }
+                        })
                     })
                     .for_each(|()| Ok(()))
                     .from_err()
-                })
+                    .boxify()
             }
 
             fn get_filenode(
@@ -202,7 +207,7 @@ macro_rules! impl_filenodes {
                     } else {
                         Ok(filenode_info)
                     }
-                })
+                }).boxify()
             }
 
             fn get_all_filenodes(
@@ -228,7 +233,7 @@ macro_rules! impl_filenodes {
                     }
 
                     Ok(res)
-                })
+                }).boxify()
             }
         }
 
