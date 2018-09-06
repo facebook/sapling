@@ -29,7 +29,7 @@ use NodeStream;
 use errors::*;
 
 pub struct AncestorsNodeStream {
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     next_generation: BTreeMap<Generation, HashSet<HgNodeHash>>,
     pending_changesets: Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send>,
     drain: IntoIter<HgNodeHash>,
@@ -39,7 +39,7 @@ pub struct AncestorsNodeStream {
 }
 
 fn make_pending(
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     hashes: IntoIter<HgNodeHash>,
 ) -> Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send> {
     let size = hashes.size_hint().0;
@@ -69,7 +69,7 @@ fn make_pending(
 }
 
 impl AncestorsNodeStream {
-    pub fn new(repo: &Arc<BlobRepo>, hash: HgNodeHash) -> Self {
+    pub fn new(repo: &BlobRepo, hash: HgNodeHash) -> Self {
         let node_set: HashSet<HgNodeHash> = hashset!{hash};
         AncestorsNodeStream {
             repo: repo.clone(),
@@ -132,17 +132,17 @@ impl Stream for AncestorsNodeStream {
     }
 }
 
-pub fn common_ancestors<I>(repo: &Arc<BlobRepo>, nodes: I) -> Box<NodeStream>
+pub fn common_ancestors<I>(repo: &BlobRepo, nodes: I) -> Box<NodeStream>
 where
     I: IntoIterator<Item = HgNodeHash>,
 {
     let nodes_iter = nodes
         .into_iter()
         .map({ move |node| AncestorsNodeStream::new(repo, node).boxed() });
-    IntersectNodeStream::new(repo, nodes_iter).boxed()
+    IntersectNodeStream::new(&Arc::new(repo.clone()), nodes_iter).boxed()
 }
 
-pub fn greatest_common_ancestor<I>(repo: &Arc<BlobRepo>, nodes: I) -> Box<NodeStream>
+pub fn greatest_common_ancestor<I>(repo: &BlobRepo, nodes: I) -> Box<NodeStream>
 where
     I: IntoIterator<Item = HgNodeHash>,
 {
