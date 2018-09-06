@@ -35,32 +35,38 @@ start mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
 Clone the repo
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate -q
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
   $ cd repo2
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
+  > remotenames =
   > EOF
 
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
-  pushing to ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev a0c9c5791058 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  server ignored bookmark master_bookmark update
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
 
 TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
 
-  $ hgmn pull -q
   $ hgmn up master_bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
   $ hg sl -r ":"
   @  changeset:   4:c2e526aacb51
-  |  bookmark:    master_bookmark
   |  tag:         tip
+  |  bookmark:    default/master_bookmark
+  |  hoistedname: master_bookmark
   |  parent:      2:26805aba1e60
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -87,12 +93,14 @@ TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     A
   
+
+
 Push rebase fails with conflict
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
-  pushing to ssh://user@dummy/repo
   remote: * Session with Mononoke started with uuid: * (glob)
+  pushing rev a0c9c5791058 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * pushrebase failed * (glob)
   remote:     msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath([49] \"1\"), right: MPath([49] \"1\") }])"
@@ -105,15 +113,20 @@ Push stack
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
   $ hgmn push -r . --to master_bookmark
-  pushing to ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 3953a5b36168 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
-  $ hgmn pull -q
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 0 files
+  server ignored bookmark master_bookmark update
   $ hgmn up -q master_bookmark
   $ hg sl -r ":"
   @  changeset:   8:6398085ceb9d
-  |  bookmark:    master_bookmark
   |  tag:         tip
+  |  bookmark:    default/master_bookmark
+  |  hoistedname: master_bookmark
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     3
@@ -162,3 +175,4 @@ Push stack
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     A
   
+

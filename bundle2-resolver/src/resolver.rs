@@ -19,6 +19,7 @@ use futures::{Future, IntoFuture, Stream};
 use futures::future::{self, err, ok, Shared};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use getbundle_response;
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::{Details, ManifestContent};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
@@ -175,7 +176,7 @@ fn resolve_push(
             }
         })
         .and_then(move |(changegroup_id, bookmark_ids)| {
-            resolver.prepare_response(changegroup_id, bookmark_ids)
+            resolver.prepare_push_response(changegroup_id, bookmark_ids)
         })
         .context("bundle2-resolver error")
         .from_err()
@@ -183,7 +184,7 @@ fn resolve_push(
 }
 
 fn resolve_pushrebase(
-    _commonheads: CommonHeads,
+    commonheads: CommonHeads,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<Bytes, Error> {
@@ -203,19 +204,30 @@ fn resolve_pushrebase(
                 .into_future()
                 .map(|cg_push| (cg_push, manifests, bundle2))
         })
+        .and_then(
+            |(cg_push, manifests, bundle2)| match cg_push.mparams.get("onto").cloned() {
+                Some(onto_bookmark) => {
+                    let v = Vec::from(onto_bookmark.as_ref());
+                    let onto_bookmark = String::from_utf8(v)?;
+                    let onto_bookmark = Bookmark::new(onto_bookmark)?;
+
+                    Ok((onto_bookmark, cg_push, manifests, bundle2))
+                }
+                None => Err(err_msg("onto is not specified")),
+            },
+        )
         .and_then({
             cloned!(resolver);
-            move |(cg_push, manifests, bundle2)| {
+            move |(onto, cg_push, manifests, bundle2)| {
                 let changesets = cg_push.changesets.clone();
-                let mparams = cg_push.mparams.clone();
                 resolver
                     .upload_changesets(cg_push, manifests)
-                    .map(move |()| (changesets, mparams, bundle2))
+                    .map(move |()| (changesets, onto, bundle2))
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changesets, mparams, bundle2)| {
+            move |(changesets, onto, bundle2)| {
                 resolver
                     .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
                     .and_then({
@@ -231,30 +243,24 @@ fn resolve_pushrebase(
 
                             resolver
                                 .ensure_stream_finished(bundle2)
-                                .map(move |()| (changesets, bookmark_pushes, mparams))
+                                .map(move |()| (changesets, bookmark_pushes, onto))
                         }
                     })
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changesets, bookmark_pushes, mparams)| {
-                resolver.pushrebase(changesets, bookmark_pushes, mparams)
+            move |(changesets, bookmark_pushes, onto)| {
+                resolver
+                    .pushrebase(changesets, bookmark_pushes, &onto)
+                    .map(|pushrebased_rev| (pushrebased_rev, onto))
             }
         })
-        .and_then(|_| {
-            let writer = Cursor::new(Vec::new());
-            let mut bundle = Bundle2EncodeBuilder::new(writer);
-            // Mercurial currently hangs while trying to read compressed bundles over the wire:
-            // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-            // TODO: possibly enable compression support once this is fixed.
-            bundle.set_compressor_type(None);
-            bundle
-                .build()
-                .map(|cursor| Bytes::from(cursor.into_inner()))
-                .context("While preparing response")
-                .from_err()
-                .boxify()
+        .and_then({
+            cloned!(resolver);
+            move |(pushrebased_rev, onto)| {
+                resolver.prepare_pushrebase_response(commonheads, pushrebased_rev, onto)
+            }
         })
         .boxify()
 }
@@ -274,7 +280,7 @@ struct ChangegroupPush {
 }
 
 struct CommonHeads {
-    _heads: Vec<HgChangesetId>,
+    heads: Vec<HgChangesetId>,
 }
 
 enum Pushkey {
@@ -384,7 +390,7 @@ impl Bundle2Resolver {
                 Some(Bundle2Item::B2xCommonHeads(_header, heads)) => heads
                     .collect()
                     .map(|heads| {
-                        let heads = CommonHeads { _heads: heads };
+                        let heads = CommonHeads { heads };
                         (Some(heads), bundle2)
                     })
                     .boxify(),
@@ -692,7 +698,7 @@ impl Bundle2Resolver {
 
     /// Takes a changegroup id and prepares a Bytes response containing Bundle2 with reply to
     /// changegroup part saying that the push was successful
-    fn prepare_response(
+    fn prepare_push_response(
         &self,
         changegroup_id: Option<PartId>,
         bookmark_ids: Vec<PartId>,
@@ -717,6 +723,42 @@ impl Bundle2Resolver {
             .map(|cursor| Bytes::from(cursor.into_inner()))
             .context("While preparing response")
             .from_err()
+            .boxify()
+    }
+
+    fn prepare_pushrebase_response(
+        &self,
+        commonheads: CommonHeads,
+        pushrebased_rev: ChangesetId,
+        onto: Bookmark,
+    ) -> BoxFuture<Bytes, Error> {
+        // Send to the client both pushrebased commit and current "onto" bookmark. Normally they
+        // should be the same, however they might be different if bookmark
+        // suddenly moved before current pushrebase finished.
+        let repo: BlobRepo = (*self.repo).clone();
+        let common = commonheads.heads;
+        let maybe_onto_head = repo.get_bookmark(&onto);
+
+        let pushrebased_rev = repo.get_hg_from_bonsai_changeset(pushrebased_rev);
+
+        maybe_onto_head
+            .join(pushrebased_rev)
+            .and_then(move |(maybe_onto_head, pushrebased_rev)| {
+                let mut heads = vec![];
+                if let Some(onto_head) = maybe_onto_head {
+                    heads.push(onto_head);
+                }
+                heads.push(pushrebased_rev);
+                getbundle_response::create_getbundle_response(repo, common, heads)
+            })
+            .and_then(|bundle2_builder| {
+                bundle2_builder
+                    .build()
+                    .map(|cursor| Bytes::from(cursor.into_inner()))
+                    .context("While preparing response")
+                    .from_err()
+                    .boxify()
+            })
             .boxify()
     }
 
@@ -752,42 +794,32 @@ impl Bundle2Resolver {
         &self,
         changesets: Changesets,
         bookmark_pushes: Vec<BookmarkPush>,
-        mparams: HashMap<String, Bytes>,
-    ) -> impl Future<Item = (), Error = Error> {
+        onto_bookmark: &Bookmark,
+    ) -> impl Future<Item = ChangesetId, Error = Error> {
         let changesets: Vec<_> = changesets
             .into_iter()
             .map(|(node, _)| HgChangesetId::new(node))
             .collect();
 
-        match mparams.get("onto").cloned() {
-            Some(onto_bookmark) => {
-                let v = Vec::from(onto_bookmark.as_ref());
-                let onto_bookmark = try_boxfuture!(String::from_utf8(v));
-                let onto_bookmark = try_boxfuture!(Bookmark::new(onto_bookmark));
+        let incorrect_bookmark_pushes: Vec<_> = bookmark_pushes
+            .iter()
+            .filter(|bp| &bp.name != onto_bookmark)
+            .collect();
 
-                let incorrect_bookmark_pushes: Vec<_> = bookmark_pushes
-                    .iter()
-                    .filter(|bp| bp.name != onto_bookmark)
-                    .collect();
-
-                if !incorrect_bookmark_pushes.is_empty() {
-                    try_boxfuture!(Err(err_msg(format!(
-                        "allowed only pushes of {} bookmark: {:?}",
-                        onto_bookmark, bookmark_pushes
-                    ))))
-                }
-
-                pushrebase::do_pushrebase(
-                    self.repo.clone(),
-                    self.pushrebase.clone(),
-                    onto_bookmark,
-                    changesets,
-                ).map(|_| ())
-                    .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
-                    .boxify()
-            }
-            None => Err(err_msg("onto is not specified")).into_future().boxify(),
+        if !incorrect_bookmark_pushes.is_empty() {
+            try_boxfuture!(Err(err_msg(format!(
+                "allowed only pushes of {} bookmark: {:?}",
+                onto_bookmark, bookmark_pushes
+            ))))
         }
+
+        pushrebase::do_pushrebase(
+            self.repo.clone(),
+            self.pushrebase.clone(),
+            onto_bookmark.clone(),
+            changesets,
+        ).map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
+            .boxify()
     }
 }
 
