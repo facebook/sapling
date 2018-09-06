@@ -65,7 +65,9 @@ void ProcessNameCache::add(pid_t pid) {
         }
         return folly::none;
       },
-      [&](auto& state) -> folly::Unit {
+      [&](auto& wlock) -> folly::Unit {
+        auto& state = *wlock;
+
         // TODO: Perhaps this readlink() should be put onto a background thread.
         // The upside of doing it here is that the process is guaranteed to
         // exist because it's waiting for a response from Eden. The downside is
