@@ -114,7 +114,6 @@ impl StockBookmarks {
 mod tests {
     use std::io::Cursor;
 
-    use failure::Context;
     use futures::Future;
 
     use mercurial_types_mocks::nodehash::*;
@@ -161,7 +160,7 @@ mod tests {
         let reader = Cursor::new(&b"111\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            bookmarks.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            err_downcast!(bookmarks.unwrap_err(), e: ErrorKind => e).unwrap(),
             ErrorKind::InvalidBookmarkLine(_)
         );
 
@@ -169,7 +168,7 @@ mod tests {
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            bookmarks.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            err_downcast!(bookmarks.unwrap_err(), e: ErrorKind => e).unwrap(),
             ErrorKind::InvalidBookmarkLine(_)
         );
 
@@ -177,7 +176,7 @@ mod tests {
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111 \n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            bookmarks.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            err_downcast!(bookmarks.unwrap_err(), e: ErrorKind => e).unwrap(),
             ErrorKind::InvalidBookmarkLine(_)
         );
 
@@ -185,7 +184,7 @@ mod tests {
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111ab\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            bookmarks.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            err_downcast!(bookmarks.unwrap_err(), e: ErrorKind => e).unwrap(),
             ErrorKind::InvalidBookmarkLine(_)
         );
 
@@ -193,34 +192,28 @@ mod tests {
         let reader = Cursor::new(&b"111111111111111111111111111111111111111  1ab\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         let err = bookmarks.unwrap_err();
-        match err.downcast::<Context<ErrorKind>>() {
-            Ok(ctxt) => match ctxt.get_context() {
-                ok @ &ErrorKind::InvalidHash(..) => println!("OK: {:?}", ok),
-                bad => panic!("unexpected error {}", bad),
-            },
-            Err(bad) => panic!("other error: {:?}", bad),
+        match err_downcast_ref!(err, err: ErrorKind => err) {
+            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {:?}", ok),
+            Some(bad) => panic!("other ErrorKind error: {:?}", bad),
+            None => panic!("other error: {:?}", err),
         };
 
         // non-ASCII
         let reader = Cursor::new(&b"111111111111111111111111111111111111111\xff test\n"[..]);
         let err = StockBookmarks::from_reader(reader).unwrap_err();
-        match err.downcast::<Context<ErrorKind>>() {
-            Ok(ctxt) => match ctxt.get_context() {
-                ok @ &ErrorKind::InvalidHash(..) => println!("OK: {:?}", ok),
-                bad => panic!("unexpected error {}", bad),
-            },
-            Err(bad) => panic!("other error: {:?}", bad),
+        match err_downcast_ref!(err, err: ErrorKind => err) {
+            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {:?}", ok),
+            Some(bad) => panic!("other ErrorKind error: {:?}", bad),
+            None => panic!("other error: {:?}", err),
         };
 
         // not a valid hex string
         let reader = Cursor::new(&b"abcdefgabcdefgabcdefgabcdefgabcdefgabcde test\n"[..]);
         let err = StockBookmarks::from_reader(reader).unwrap_err();
-        match err.downcast::<Context<ErrorKind>>() {
-            Ok(ctxt) => match ctxt.get_context() {
-                ok @ &ErrorKind::InvalidHash(..) => println!("OK: {:?}", ok),
-                bad => panic!("unexpected error {}", bad),
-            },
-            Err(bad) => panic!("other error: {:?}", bad),
+        match err_downcast_ref!(err, err: ErrorKind => err) {
+            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {:?}", ok),
+            Some(bad) => panic!("other ErrorKind error: {:?}", bad),
+            None => panic!("other error: {:?}", err),
         };
     }
 }

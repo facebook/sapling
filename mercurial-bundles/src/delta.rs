@@ -84,20 +84,19 @@ pub fn encode_delta<B: BufMut>(delta: &Delta, out: &mut B) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure;
 
     #[test]
     fn invalid_deltas() {
         let short_delta = BytesMut::from(&b"\0\0\0\0\0\0\0\0\0\0\0\x20"[..]);
         assert_matches!(
-            decode_delta(short_delta).unwrap_err().downcast::<ErrorKind>(),
+            err_downcast!(decode_delta(short_delta).unwrap_err(), err: ErrorKind => err),
             Ok(ErrorKind::InvalidDelta(ref msg))
             if msg == "expected 44 bytes, 12 remaining"
         );
 
         let short_header = BytesMut::from(&b"\0\0\0\0\0\0"[..]);
         assert_matches!(
-            decode_delta(short_header).unwrap_err().downcast::<ErrorKind>(),
+            err_downcast!(decode_delta(short_header).unwrap_err(), err: ErrorKind => err),
             Ok(ErrorKind::InvalidDelta(ref msg))
             if msg == "6 trailing bytes in encoded delta"
         );
@@ -106,12 +105,10 @@ mod test {
         let start_after_end = BytesMut::from(&b"\0\0\0\x02\0\0\0\0\0\0\0\0"[..]);
         match decode_delta(start_after_end) {
             Ok(bad) => panic!("unexpected success {:?}", bad),
-            Err(err) => match err.downcast::<failure::Context<ErrorKind>>() {
-                Ok(ctxt) => match ctxt.get_context() {
-                    &ErrorKind::InvalidDelta(..) => (),
-                    bad => panic!("Bad ErrorKind {:?}", bad),
-                },
-                Err(bad) => panic!("Unexpected error {:?}", bad),
+            Err(err) => match err_downcast_ref!(err, err: ErrorKind => err) {
+                Some(&ErrorKind::InvalidDelta(..)) => (),
+                Some(bad) => panic!("Bad ErrorKind {:?}", bad),
+                None => panic!("Unexpected error {:?}", err),
             },
         }
     }

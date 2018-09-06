@@ -214,7 +214,7 @@ mod test {
             );
 
             match nodestream.wait_stream() {
-                Some(Err(err)) => match err.downcast::<ErrorKind>() {
+                Some(Err(err)) => match err_downcast!(err, err: ErrorKind => err) {
                     Ok(ErrorKind::RepoError(hash)) => assert_eq!(hash, nodehash),
                     Ok(bad) => panic!("unexpected error {:?}", bad),
                     Err(bad) => panic!("unknown error {:?}", bad),

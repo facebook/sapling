@@ -367,7 +367,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref msg)) if msg.contains("no hook function")
              );
         });
@@ -379,7 +379,7 @@ mod test {
             let changeset = default_changeset();
             let code = String::from("invalid code");
             assert_matches!(
-                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookParseError(ref err_msg))
                     if err_msg.starts_with("Syntax error:")
              );
@@ -399,7 +399,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.starts_with("LuaError")
              );
@@ -416,7 +416,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook return type")
              );
@@ -433,7 +433,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure short description type")
             );
@@ -450,7 +450,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure long description type")
             );
@@ -467,7 +467,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("failure description must only be set if hook fails")
              );
@@ -484,7 +484,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("failure long description must only be set if hook fails")
              );
@@ -602,7 +602,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg)) if err_msg.contains("no hook function")
              );
         });
@@ -614,7 +614,7 @@ mod test {
             let hook_file = default_hook_file();
             let code = String::from("invalid code");
             assert_matches!(
-                run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookParseError(ref err_msg))
                     if err_msg.starts_with("Syntax error:")
              );
@@ -634,7 +634,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.starts_with("LuaError")
              );
@@ -651,7 +651,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook return type")
              );
@@ -668,7 +668,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure short description type")
             );
@@ -685,7 +685,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file).unwrap_err().downcast::<ErrorKind>(),
+                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure long description type")
             );

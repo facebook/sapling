@@ -268,8 +268,10 @@ mod tests {
         BoxFnOnce::from(move |result: Result<VfsNode<TDir, TFile>>| {
             let expected = MPath::new(expected).unwrap().into_iter();
             match result {
-                Err(error) => match error.downcast::<ErrorKind>() {
-                    Ok(ErrorKind::PathDoesNotExist(_, r)) => assert_equal(r, expected),
+                Err(error) => match err_downcast!(error, err: ErrorKind => err) {
+                    Ok(ErrorKind::PathDoesNotExist(_, r)) => {
+                        assert_equal(r, expected);
+                    }
                     Ok(error) => panic!("unexpected ErrorKind error: {:?}", error),
                     Err(error) => panic!("unexpected other error: {:?}", error),
                 },
@@ -342,7 +344,7 @@ mod tests {
             let last = walk_result.pop().unwrap().unwrap();
             let err = walk_result.pop().unwrap().unwrap_err();
 
-            match err.downcast::<ErrorKind>() {
+            match err_downcast!(err, err: ErrorKind => err) {
                 Ok(ErrorKind::MaximumStepReached(_, r)) => {
                     cmp_paths(&r, expected_remainder);
                     checker.call(VfsWalker::new(last, r).walk().wait());
@@ -358,7 +360,7 @@ mod tests {
         let node = make_node("a/b/c", Some(MockVfsFile));
 
         let check_not_implemented = BoxFnOnce::from(|result: Result<_>| match result {
-            Err(error) => match error.downcast::<ErrorKind>() {
+            Err(error) => match err_downcast!(error, err: ErrorKind => err) {
                 Ok(ErrorKind::NotImplemented(_)) => (),
                 Ok(error) => panic!("unexpected ErrorKind error: {:?}", error),
                 Err(error) => panic!("unexpected other error: {:?}", error),
