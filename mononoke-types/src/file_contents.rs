@@ -7,7 +7,7 @@
 use std::fmt::{self, Debug};
 
 use bytes::Bytes;
-use failure::SyncFailure;
+use failure::{SyncFailure, chain::*};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use rust_thrift::compact_protocol;
@@ -83,7 +83,7 @@ impl BlobstoreValue for FileContents {
         // TODO (T27336549) stop using SyncFailure once thrift is converted to failure
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
             .map_err(SyncFailure::new)
-            .context(ErrorKind::BlobDeserializeError("FileContents".into()))?;
+            .chain_err(ErrorKind::BlobDeserializeError("FileContents".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

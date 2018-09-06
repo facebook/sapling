@@ -678,7 +678,7 @@ impl Bundle2Resolver {
                 ).map_err(Error::from)
                     .for_each(|_| Ok(()))
             })
-            .context(ErrorKind::WhileUploadingData(changesets_hashes))
+            .chain_err(ErrorKind::WhileUploadingData(changesets_hashes))
             .from_err()
             .boxify()
     }

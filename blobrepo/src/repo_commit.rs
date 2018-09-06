@@ -8,7 +8,8 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use failure::{err_msg, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt};
+use failure::{err_msg, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
+              prelude::*};
 use futures::IntoFuture;
 use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};
@@ -260,7 +261,7 @@ impl UploadEntries {
             )
         };
 
-        fut.context(err_context).from_err().boxify()
+        fut.chain_err(err_context).from_err().boxify()
     }
 
     // Check the blobstore to see whether a particular node is present.

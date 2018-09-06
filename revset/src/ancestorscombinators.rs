@@ -27,7 +27,7 @@ use std::collections::hash_set::IntoIter;
 use std::iter;
 use std::sync::Arc;
 
-use failure::{err_msg, Error};
+use failure::{err_msg, prelude::*};
 use futures::{Async, IntoFuture, Poll};
 use futures::future::Future;
 use futures::stream::{self, empty, iter_ok, Peekable, Stream};
@@ -117,7 +117,7 @@ fn make_pending(
                 new_repo_changesets
                     .get_changeset_parents(&HgChangesetId::new(hash))
                     .map(|parents| parents.into_iter().map(|cs| cs.into_nodehash()))
-                    .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
+                    .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
             })
             .map(|parents| iter_ok::<_, Error>(parents))
             .flatten_stream()
@@ -128,7 +128,7 @@ fn make_pending(
                         genopt.ok_or_else(|| err_msg(format!("{} not found", node_hash)))
                     })
                     .map(move |gen_id| (node_hash, gen_id))
-                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
+                    .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
             }),
     )
 }
@@ -185,7 +185,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                     }.boxify()
                 }
             })
-            .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
+            .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed))
             .from_err()
             .flatten_stream()
             .boxify()

@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
+use failure::prelude::*;
 use futures::future::Future;
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;
@@ -28,7 +29,7 @@ pub fn add_generations(stream: Box<NodeStream>, repo: Arc<BlobRepo>) -> InputStr
                 genopt.ok_or_else(|| err_msg(format!("{} not found", node_hash)))
             })
             .map(move |gen_id| (node_hash, gen_id))
-            .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
+            .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
     });
     Box::new(stream)
 }

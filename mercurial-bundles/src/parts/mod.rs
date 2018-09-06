@@ -7,6 +7,7 @@
 use std::fmt;
 
 use bytes::Bytes;
+use failure::prelude::*;
 use futures::{Future, Stream};
 use futures::stream::{iter_ok, once};
 use futures_ext::BoxFuture;
@@ -40,7 +41,7 @@ where
             payload.push(b'\n');
             Ok::<_, Error>(payload)
         })
-        .map_err(|err| Error::from(err.context(ErrorKind::ListkeyGeneration)));
+        .map_err(|err| Error::from(err.chain_err(ErrorKind::ListkeyGeneration)));
 
     builder.set_data_future(fut);
 

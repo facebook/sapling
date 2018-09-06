@@ -43,7 +43,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::sql_types::HasSqlType;
-use failure::ResultExt;
+use failure::{ResultExt, chain::*};
 
 use futures_ext::{asynchronize, BoxFuture, FutureExt};
 use mercurial_types::RepositoryId;
@@ -371,7 +371,7 @@ macro_rules! impl_changesets {
                             // TODO: (rain1) T26215455 hide i64/u64 Diesel conversions behind an
                             // interface
                             let gen = u64::try_from(row.gen)
-                                .context(ErrorKind::InvalidStoredData)?;
+                                .chain_err(ErrorKind::InvalidStoredData)?;
 
                             let parent_query = csparents::table
                                 .filter(csparents::cs_id.eq(row.id))

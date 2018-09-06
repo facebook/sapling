@@ -13,7 +13,7 @@ use std::usize;
 
 use bytes::Bytes;
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
-use failure::{Error, FutureFailureErrorExt, FutureFailureExt, Result, ResultExt};
+use failure::{Error, FutureFailureErrorExt, FutureFailureExt, Result, prelude::*};
 use futures::{Async, IntoFuture, Poll};
 use futures::future::{self, Either, Future};
 use futures::stream::{self, Stream};
@@ -145,7 +145,7 @@ impl BlobRepo {
     /// fixtures.
     pub fn new_files(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
         let blobstore = Fileblob::create(path.join("blobs"))
-            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
 
         Self::new_local(logger, path, Arc::new(blobstore), repoid)
     }
@@ -153,7 +153,7 @@ impl BlobRepo {
     pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
         let options = rocksdb::Options::new().create_if_missing(true);
         let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
-            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
 
         Self::new_local(logger, path, Arc::new(blobstore), repoid)
     }
@@ -173,7 +173,7 @@ impl BlobRepo {
     {
         let options = rocksdb::Options::new().create_if_missing(true);
         let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
-            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
         let blobstore = DelayBlob::new(
             Box::new(blobstore),
             delay_gen,
@@ -194,17 +194,17 @@ impl BlobRepo {
         repoid: RepositoryId,
     ) -> Result<Self> {
         let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
-            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
         let filenodes = SqliteFilenodes::open_or_create(
             path.join("filenodes").to_string_lossy(),
             DEFAULT_INSERT_CHUNK_SIZE,
-        ).context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
+        ).chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let changesets = SqliteChangesets::open_or_create(
             path.join("changesets").to_string_lossy(),
-        ).context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+        ).chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
         let bonsai_hg_mapping =
             SqliteBonsaiHgMapping::open_or_create(path.join("bonsai_hg_mapping").to_string_lossy())
-                .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
+                .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
 
         Ok(Self::new(
             logger,
@@ -228,11 +228,11 @@ impl BlobRepo {
             Arc::new(SqliteDbBookmarks::in_memory()?),
             blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
             Arc::new(SqliteFilenodes::in_memory()
-                .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
+                .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
             Arc::new(SqliteChangesets::in_memory()
-                .context(ErrorKind::StateOpen(StateOpenError::Changesets))?),
+                .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?),
             Arc::new(SqliteBonsaiHgMapping::in_memory()
-                .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?),
+                .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?),
             RepositoryId::new(0),
         ))
     }
@@ -246,7 +246,7 @@ impl BlobRepo {
             Some(ProxyRequirement::Forbidden),
         )?;
         let bookmarks = MysqlDbBookmarks::open(&connection_params)
-            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
         let blobstore = ThriftManifoldBlob::new(args.bucket.clone())?;
         let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", args.prefix));
@@ -261,7 +261,7 @@ impl BlobRepo {
         let blobstore = new_cachelib_blobstore(blobstore, blob_pool, presence_pool);
 
         let filenodes = MysqlFilenodes::open(&args.db_address, DEFAULT_INSERT_CHUNK_SIZE)
-            .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let filenodes = CachingFilenodes::new(
             Arc::new(filenodes),
             cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
@@ -272,7 +272,7 @@ impl BlobRepo {
         );
 
         let changesets = MysqlChangesets::open(&args.db_address)
-            .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
         let changesets = CachingChangests::new(
             Arc::new(changesets),
             cachelib::get_pool("changesets").ok_or(Error::from(ErrorKind::MissingCachePool(
@@ -281,7 +281,7 @@ impl BlobRepo {
         );
 
         let bonsai_hg_mapping = MysqlBonsaiHgMapping::open(&args.db_address)
-            .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
+            .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
         let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
             Arc::new(bonsai_hg_mapping),
             cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(

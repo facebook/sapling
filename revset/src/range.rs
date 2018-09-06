@@ -10,7 +10,7 @@ use std::iter;
 use std::mem::replace;
 use std::sync::Arc;
 
-use failure::{err_msg, Error};
+use failure::{err_msg, prelude::*};
 
 use futures::{Async, Poll};
 use futures::future::Future;
@@ -57,7 +57,7 @@ fn make_pending(
                     let parents: Vec<_> = cs.parents().cloned().collect();
                     (child, parents)
                 })
-                .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
+                .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
         }.map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
             .flatten_stream()
             .and_then(move |(child, parent_hash)| {
@@ -72,7 +72,7 @@ fn make_pending(
                             generation: gen_id,
                         },
                     })
-                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
+                    .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
             }),
     )
 }
@@ -87,7 +87,7 @@ impl RangeNodeStream {
                 .and_then(move |genopt| {
                     genopt.ok_or_else(|| err_msg(format!("{} not found", start_node)))
                 })
-                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
+                .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
                 .map(stream::repeat)
                 .flatten_stream(),
         );
@@ -100,7 +100,7 @@ impl RangeNodeStream {
                     .and_then(move |genopt| {
                         genopt.ok_or_else(|| err_msg(format!("{} not found", end_node)))
                     })
-                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
+                    .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
                     .map(move |generation| {
                         make_pending(
                             repo,

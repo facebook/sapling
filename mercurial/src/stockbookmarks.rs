@@ -10,7 +10,7 @@ use std::io::{self, BufRead, BufReader, Read};
 use std::path::PathBuf;
 
 use ascii::AsciiStr;
-use failure::{Error, Result, ResultExt};
+use failure::{Error, Result, chain::*};
 use futures::future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
@@ -76,12 +76,12 @@ impl StockBookmarks {
             }
             let bmname = &line[41..];
             let hash_slice = &line[..40];
-            let hash = AsciiStr::from_ascii(&hash_slice).context(ErrorKind::InvalidHash(
+            let hash = AsciiStr::from_ascii(&hash_slice).chain_err(ErrorKind::InvalidHash(
                 String::from_utf8_lossy(hash_slice).into_owned(),
             ))?;
             bookmarks.insert(
                 bmname.into(),
-                HgChangesetId::from_ascii_str(hash).context(ErrorKind::InvalidHash(
+                HgChangesetId::from_ascii_str(hash).chain_err(ErrorKind::InvalidHash(
                     String::from_utf8_lossy(hash_slice).into_owned(),
                 ))?,
             );

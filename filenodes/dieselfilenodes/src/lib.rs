@@ -32,7 +32,7 @@ use diesel::backend::Backend;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::sql_types::HasSqlType;
-use failure::{Error, Result, ResultExt};
+use failure::{Error, Result, ResultExt, chain::*};
 use filenodes::{FilenodeInfo, Filenodes, blake2_path_hash};
 use futures::{Future, Stream};
 use futures_ext::{asynchronize, BoxFuture, BoxStream, FutureExt};
@@ -224,7 +224,7 @@ macro_rules! impl_filenodes {
                     let connection = db.get_conn()?;
                     let query = all_filenodes_query(&repo_id, &path);
                     let filenode_rows = query.load::<models::FilenodeRow>(&*connection)
-                        .context(ErrorKind::FailRangeFetch(path.clone()))?;
+                        .chain_err(ErrorKind::FailRangeFetch(path.clone()))?;
                     let mut res = vec![];
                     for row in filenode_rows {
                         res.push(
@@ -247,7 +247,7 @@ macro_rules! impl_filenodes {
                 let query = single_filenode_query(&repo_id, &filenode, &path);
                 let filenode_row = query.first::<models::FilenodeRow>(conn)
                     .optional()
-                    .context(ErrorKind::FailFetchFilenode(filenode.clone(), path.clone()))?;
+                    .chain_err(ErrorKind::FailFetchFilenode(filenode.clone(), path.clone()))?;
 
                 match filenode_row {
                     Some(filenode_row) => {

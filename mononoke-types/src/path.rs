@@ -14,7 +14,7 @@ use std::slice::Iter;
 
 use asyncmemo::Weight;
 use bincode;
-use failure::err_msg;
+use failure::{err_msg, chain::*};
 use heapsize::HeapSizeOf;
 
 use quickcheck::{Arbitrary, Gen};
@@ -204,7 +204,7 @@ impl MPathElement {
 
     #[inline]
     pub(crate) fn from_thrift(element: thrift::MPathElement) -> Result<MPathElement> {
-        Self::verify(&element.0).context(ErrorKind::InvalidThrift(
+        Self::verify(&element.0).chain_err(ErrorKind::InvalidThrift(
             "MPathElement".into(),
             "invalid path element".into(),
         ))?;

@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::collections::hash_set::IntoIter;
 use std::sync::Arc;
 
-use failure::{err_msg, Error};
+use failure::{err_msg, prelude::*};
 
 use futures::{Async, Poll};
 use futures::future::Future;
@@ -51,7 +51,7 @@ fn make_pending(
             .map(move |hash| {
                 new_repo_changesets
                     .get_changeset_parents(&HgChangesetId::new(hash))
-                    .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
+                    .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
             })
             .buffered(size)
             .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
@@ -63,7 +63,7 @@ fn make_pending(
                         genopt.ok_or_else(|| err_msg(format!("{} not found", node_cs)))
                     })
                     .map(move |gen_id| (*node_cs.as_nodehash(), gen_id))
-                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
+                    .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
             }),
     )
 }

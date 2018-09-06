@@ -11,6 +11,7 @@ use std::vec::IntoIter;
 
 use byteorder::ByteOrder;
 use bytes::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
+use failure::prelude::*;
 use futures::{Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
 use futures::stream::Forward;
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
@@ -342,7 +343,7 @@ where
             } else {
                 (
                     Err(Error::from(err)
-                        .context(ErrorKind::Bundle2Encode(
+                        .chain_err(ErrorKind::Bundle2Encode(
                             "error while completing write".into(),
                         ))
                         .into()),
