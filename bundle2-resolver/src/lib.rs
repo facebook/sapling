@@ -53,10 +53,12 @@ extern crate mononoke_types;
 
 mod changegroup;
 pub mod errors;
+mod getbundle_response;
 mod pushrebase;
 mod resolver;
 mod stats;
 mod wirepackparser;
 mod upload_blobs;
 
+pub use getbundle_response::create_getbundle_response;
 pub use resolver::resolve;

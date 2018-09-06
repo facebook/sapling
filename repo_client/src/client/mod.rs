@@ -7,7 +7,6 @@
 mod remotefilelog;
 
 use std::collections::{HashMap, HashSet};
-use std::io::Cursor;
 use std::iter::FromIterator;
 use std::mem;
 use std::str::FromStr;
@@ -28,10 +27,9 @@ use blobrepo::HgBlobChangeset;
 use bookmarks::Bookmark;
 use bundle2_resolver;
 use context::CoreContext;
-use mercurial::{self, RevlogChangeset};
-use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{percent_encode, Changeset, Entry, HgBlobNode, HgChangesetId, HgManifestId,
-                      HgNodeHash, MPath, RepoPath, Type, NULL_HASH};
+use mercurial_bundles::{create_bundle_stream, parts, Bundle2Item};
+use mercurial_types::{percent_encode, Entry, HgChangesetId, HgManifestId, HgNodeHash, MPath,
+                      RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, CombinatorPruner,
                                       DeletedPruner, EntryStatus, FilePruner, Pruner,
                                       VisitedPruner};
@@ -40,7 +38,6 @@ use tracing::{TraceContext, Traced};
 
 use blobrepo::BlobRepo;
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
-use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 
 use self::remotefilelog::create_remotefilelog_blob;
 use errors::*;
@@ -184,75 +181,19 @@ impl RepoClient {
         scuba_logger
     }
 
-    fn create_bundle(&self, args: GetbundleArgs) -> hgproto::Result<HgCommandRes<Bytes>> {
-        let writer = Cursor::new(Vec::new());
-        let mut bundle = Bundle2EncodeBuilder::new(writer);
-        // Mercurial currently hangs while trying to read compressed bundles over the wire:
-        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-        // TODO: possibly enable compression support once this is fixed.
-        bundle.set_compressor_type(None);
-
-        let blobrepo = Arc::new(self.repo.blobrepo().clone());
-
-        let common_heads: HashSet<_> = HashSet::from_iter(args.common.iter());
-
-        let heads: Vec<_> = args.heads
-            .iter()
-            .filter(|head| !common_heads.contains(head))
-            .cloned()
-            .collect();
-
-        info!(self.logger(), "{} heads requested", heads.len());
-        for head in heads.iter() {
-            debug!(self.logger(), "{}", head);
-        }
-
-        let excludes: Vec<_> = args.common
-            .iter()
-            .map(|node| node.clone().into_option())
-            .filter_map(|maybe_node| maybe_node)
-            .collect();
-        let nodestosend =
-            DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(&blobrepo, heads, excludes)
-                .boxify();
-
-        // TODO(stash): avoid collecting all the changelogs in the vector - T25767311
-        let nodestosend = nodestosend
-            .collect()
-            .map(|nodes| stream::iter_ok(nodes.into_iter().rev()))
-            .flatten_stream();
-
-        let buffer_size = 100; // TODO(stash): make it configurable
-        let changelogentries = nodestosend
-            .map({
-                let blobrepo = blobrepo.clone();
-                move |node| {
-                    blobrepo
-                        .get_changeset_by_changesetid(&HgChangesetId::new(node))
-                        .map(move |cs| (node, cs))
-                }
-            })
-            .buffered(buffer_size)
-            .and_then(|(node, cs)| {
-                let revlogcs = RevlogChangeset::new_from_parts(
-                    cs.parents().clone(),
-                    cs.manifestid().clone(),
-                    cs.user().into(),
-                    cs.time().clone(),
-                    cs.extra().clone(),
-                    cs.files().into(),
-                    cs.comments().into(),
-                );
-
-                let mut v = Vec::new();
-                mercurial::changeset::serialize_cs(&revlogcs, &mut v)?;
-                Ok((
-                    node,
-                    HgBlobNode::new(Bytes::from(v), revlogcs.p1(), revlogcs.p2()),
-                ))
-            });
-
-        bundle.add_part(parts::changegroup_part(changelogentries)?);
+    fn create_bundle(&self, args: GetbundleArgs) -> Result<HgCommandRes<Bytes>> {
+        let blobrepo = self.repo.blobrepo();
+        let mut bundle_builder = bundle2_resolver::create_getbundle_response(
+            blobrepo.clone(),
+            args.common
+                .into_iter()
+                .map(|head| HgChangesetId::new(head))
+                .collect(),
+            args.heads
+                .into_iter()
+                .map(|head| HgChangesetId::new(head))
+                .collect(),
+        )?;
 
         // XXX Note that listkeys is NOT returned as a bundle2 capability -- see comment in
         // bundle2caps() for why.
@@ -264,13 +205,12 @@ impl RepoClient {
                 let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                 (name.to_string(), hash)
             });
-            bundle.add_part(parts::listkey_part("bookmarks", items)?);
+            bundle_builder.add_part(parts::listkey_part("bookmarks", items)?);
         }
         // TODO(stash): handle includepattern= and excludepattern=
 
-        let encode_fut = bundle.build();
-
-        Ok(encode_fut
+        Ok(bundle_builder
+            .build()
             .map(|cursor| Bytes::from(cursor.into_inner()))
             .from_err()
             .boxify())
