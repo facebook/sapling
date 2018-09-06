@@ -5,7 +5,7 @@
 // Missing bits from failure git
 use std::fmt;
 
-extern crate failure;
+pub extern crate failure;
 #[macro_use]
 extern crate failure_derive;
 extern crate futures;
