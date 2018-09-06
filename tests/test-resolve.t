@@ -62,9 +62,28 @@ tell users how they could have used resolve
   arguments do not match paths that need resolving
   (try: hg resolve -m path:file1 path:filez)
   $ hg resolve -m path:file1 path:filez
+
+test --root-relative
   $ hg resolve -l
   R ../file1
   U ../file2
+  $ hg resolve -l --no-root-relative
+  R ../file1
+  U ../file2
+  $ hg resolve -l --root-relative
+  R file1
+  U file2
+  $ HGPLAIN=1 hg resolve -l
+  R file1
+  U file2
+  $ HGPLAIN=1 hg resolve -l --no-root-relative
+  R ../file1
+  U ../file2
+  $ HGPLAIN=1 hg resolve -l --root-relative
+  R file1
+  U file2
+
+continue resolving the conflict
   $ hg resolve -m filez file2
   arguments do not match paths that need resolving
   (try: hg resolve -m path:filez path:file2)

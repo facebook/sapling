@@ -4851,6 +4851,10 @@ def resolve(ui, repo, *pats, **opts):
     flaglist = "all mark unmark list no_status root_relative".split()
     all, mark, unmark, show, nostatus, rootrel = [opts.get(o) for o in flaglist]
 
+    # Enable --root-relative by default if HGPLAIN is set, for compatibility.
+    if rootrel is None and ui.plain():
+        rootrel = True
+
     if (show and (mark or unmark)) or (mark and unmark):
         raise error.Abort(_("too many options specified"))
     if pats and all:
