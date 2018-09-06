@@ -13,6 +13,8 @@ extern crate cloned;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate promptly;
+#[macro_use]
+extern crate serde_json;
 extern crate tokio_process;
 
 extern crate blobrepo;

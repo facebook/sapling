@@ -8,6 +8,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use failure::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use serde_json::to_string_pretty;
 use slog::Logger;
 
 use blobrepo::BlobRepo;
@@ -29,7 +30,12 @@ pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 
     let get = SubCommand::with_name(GET_CMD)
         .about("gets the changeset of a specific bookmark")
-        .args_from_usage("<BOOKMARK_NAME>        'bookmark to target'")
+        .args_from_usage(
+            r#"
+            <BOOKMARK_NAME>        'bookmark to target'
+            --json                 'if provided json will be returned'
+            "#,
+        )
         .arg(
             Arg::with_name("changeset-type")
                 .long("changeset-type")
@@ -60,15 +66,30 @@ pub fn handle_command<'a>(
     }
 }
 
+fn format_output(json_flag: bool, changeset_id: String, changeset_type: &str) -> String {
+    if json_flag {
+        let answer = json!({
+            "changeset_type": changeset_type,
+            "changeset_id": changeset_id
+        });
+        to_string_pretty(&answer).unwrap()
+    } else {
+        format!("({}) {}", changeset_type.to_uppercase(), changeset_id)
+    }
+}
+
 fn handle_get<'a>(args: &ArgMatches<'a>, _logger: Logger, repo: BlobRepo) -> BoxFuture<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = Bookmark::new(bookmark_name).unwrap();
     let changeset_type = args.value_of("changeset-type").unwrap_or("hg");
+    let json_flag: bool = args.is_present("json");
 
     match changeset_type {
         "hg" => repo.get_bookmark(&bookmark)
             .and_then(move |cs| {
-                println!("(HG) {}", cs.expect("bookmark could not be found"));
+                let changeset_id_str = cs.expect("bookmark could not be found").to_string();
+                let output = format_output(json_flag, changeset_id_str, "hg");
+                println!("{}", output);
                 future::ok(())
             })
             .boxify(),
@@ -77,7 +98,9 @@ fn handle_get<'a>(args: &ArgMatches<'a>, _logger: Logger, repo: BlobRepo) -> Box
             cloned!(bookmark);
             ::fetch_bonsai_changeset(bookmark.to_string().as_str(), &repo)
                 .and_then(move |bonsai_cs| {
-                    println!("(BONSAI) {}", bonsai_cs.get_changeset_id());
+                    let changeset_id_str = bonsai_cs.get_changeset_id().to_string();
+                    let output = format_output(json_flag, changeset_id_str, "bonsai");
+                    println!("{}", output);
                     future::ok(())
                 })
                 .boxify()
@@ -99,4 +122,26 @@ fn handle_set<'a>(args: &ArgMatches<'a>, _logger: Logger, repo: BlobRepo) -> Box
             transaction.commit().map(|_| ()).from_err().boxify()
         })
         .boxify()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn json_output_format() {
+        let expected_answer = json!({
+            "changeset_type": "hg",
+            "changeset_id": "123"
+        });
+        assert_eq!(
+            format_output(true, "123".to_string(), "hg"),
+            to_string_pretty(&expected_answer).unwrap()
+        );
+    }
+
+    #[test]
+    fn plain_output_format() {
+        assert_eq!(format_output(false, "123".to_string(), "hg"), "(HG) 123");
+    }
 }
