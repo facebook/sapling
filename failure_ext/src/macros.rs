@@ -88,7 +88,7 @@ macro_rules! format_err {
 ///
 /// Where `err` is a `&failure::Error`.
 /// When one of the type arms match, then it returns Some(value from expr), otherwise None.
-/// It matches against `type`, but also Context<Type>.
+/// It matches against `type`, but also `Chain<type>` and `Context<Type>`.
 #[macro_export]
 macro_rules! err_downcast_ref {
     // Base case - all patterns consumed
@@ -107,7 +107,10 @@ macro_rules! err_downcast_ref {
             Some($v) => Some($action),
             None => match $err.downcast_ref::<$crate::failure::Context<$ty>>() {
                 Some(c) => { let $v = c.get_context(); Some($action) },
-                None => err_downcast_ref!($err $(, $rv : $rty => $raction)*),
+                None => match $err.downcast_ref::<$crate::chain::Chain<$ty>>() {
+                    Some(c) => { let $v = c.as_err(); Some($action) },
+                    None => err_downcast_ref!($err $(, $rv : $rty => $raction)*),
+                }
             }
         }
     }};
@@ -125,6 +128,8 @@ macro_rules! err_downcast_ref {
 ///
 /// Where `err` is a `failure::Error`.
 /// When one of the type arms match, then it returns Ok(value from expr), otherwise Err(err).
+/// It matches against `type`, but also `Chain<type>`. (`Context` can't be supported as it
+/// doesn't have an `into_context()` method).
 #[macro_export]
 macro_rules! err_downcast {
     // Base case - all patterns consumed
@@ -141,7 +146,10 @@ macro_rules! err_downcast {
     ( $err:expr, $v:ident : $ty:ty => $action:expr $(, $rv:ident : $rty:ty => $raction:expr)* ) => {{
         match $err.downcast::<$ty>() {
             Ok($v) => Ok($action),
-            Err(other) => err_downcast!(other $(, $rv : $rty => $raction)*),
+            Err(other) => match other.downcast::<$crate::chain::Chain<$ty>>() {
+                Ok(c) => { let $v = c.into_err(); Ok($action) },
+                Err(other) => err_downcast!(other $(, $rv : $rty => $raction)*),
+            }
         }
     }};
 }
@@ -226,6 +234,22 @@ mod test {
     }
 
     #[test]
+    fn downcast_ref_chain() {
+        let foo = Error::from(Foo);
+        let outer = Error::from(foo.chain_err(Outer));
+
+        let msg = err_downcast_ref! {
+            outer,
+            v: Foo => { let _: &Foo = v; v.to_string() },
+            v: Bar => { let _: &Bar = v; v.to_string() },
+            v: Blat => { let _: &Blat = v; v.to_string() },
+            v: Outer => { let _: &Outer = v; v.to_string() },
+        };
+
+        assert_eq!(msg.unwrap(), "Outer badness".to_string());
+    }
+
+    #[test]
     fn downcast_ref_miss() {
         let blat = Error::from(Blat);
 
@@ -285,6 +309,22 @@ mod test {
         };
 
         assert_eq!(msg.unwrap(), "Blat badness".to_string());
+    }
+
+    #[test]
+    fn downcast_chain() {
+        let foo = Error::from(Foo);
+        let outer = Error::from(foo.chain_err(Outer));
+
+        let msg = err_downcast! {
+            outer,
+            v: Foo => { let _: Foo = v; v.to_string() },
+            v: Bar => { let _: Bar = v; v.to_string() },
+            v: Blat => { let _: Blat = v; v.to_string() },
+            v: Outer => { let _: Outer = v; v.to_string() },
+        };
+
+        assert_eq!(msg.unwrap(), "Outer badness".to_string());
     }
 
     #[test]

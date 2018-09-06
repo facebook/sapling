@@ -5,6 +5,7 @@
 // Missing bits from failure git
 use std::fmt;
 
+extern crate boxfnonce;
 pub extern crate failure;
 #[macro_use]
 extern crate failure_derive;
@@ -14,7 +15,10 @@ extern crate slog;
 mod slogkv;
 pub use slogkv::SlogKVError;
 
+pub mod chain;
+
 pub mod prelude {
+    pub use chain::{self, Chain, ChainExt};
     pub use failure::{Error, Fail, ResultExt};
 
     pub use super::{FutureFailureErrorExt, FutureFailureExt, Result, StreamFailureErrorExt,
