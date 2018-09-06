@@ -76,8 +76,8 @@ class TokenLocator(object):
         self.ui = ui
         self.vfs = _gethomevfs(self.ui, "user_token_path")
         self.vfs.createmode = 0o600
-        self.user = util.shortuser(self.ui.username())
-        self.secretname = (SERVICE + "_" + self.user).upper()
+        # using platform username
+        self.secretname = (SERVICE + "_" + util.getuser()).upper()
 
     def _gettokenfromfile(self):
         """On platforms except macOS tokens are stored in a file"""
@@ -99,7 +99,7 @@ class TokenLocator(object):
             tokenconfig.read(self.filename, f)
             token = tokenconfig.get("commitcloud", "user_token")
             if usesecretstool:
-                isbackedup = tokenconfig.get("commitcloud", "isbackedup")
+                isbackedup = tokenconfig.get("commitcloud", "backedup")
                 if not isbackedup:
                     self._settokentofile(token)
             return token
@@ -116,7 +116,7 @@ class TokenLocator(object):
                 pass
         with self.vfs.open(self.filename, "w") as configfile:
             configfile.write(
-                "[commitcloud]\nuser_token=%s\nisbackedup=%s\n" % (token, isbackedup)
+                "[commitcloud]\nuser_token=%s\nbackedup=%s\n" % (token, isbackedup)
             )
 
     def _gettokenfromsecretstool(self):
@@ -168,7 +168,10 @@ class TokenLocator(object):
                     raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
 
             else:
-                self.ui.debug("access token is backup up in secrets tool\n")
+                self.ui.debug(
+                    "access token is backup up in secrets tool in %s\n"
+                    % self.secretname
+                )
 
         except OSError as e:
             raise commitcloudcommon.UnexpectedError(self.ui, e)
