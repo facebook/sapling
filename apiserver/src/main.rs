@@ -20,6 +20,7 @@ extern crate clap;
 #[macro_use]
 extern crate cloned;
 extern crate cmdlib;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate fb303;
 extern crate futures;

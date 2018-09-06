@@ -10,7 +10,7 @@ use actix::MailboxError;
 use actix_web::HttpResponse;
 use actix_web::error::ResponseError;
 use actix_web::http::StatusCode;
-use failure::{Context, Error, Fail};
+use failure::{Error, Fail};
 use futures::Canceled;
 
 use api::errors::ErrorKind as ApiError;
@@ -84,9 +84,10 @@ impl ResponseError for ErrorKind {
     fn error_response(&self) -> HttpResponse {
         let err = {
             match self {
-                ErrorKind::InternalError(err) => err.downcast_ref::<Context<ErrorKind>>()
-                    .map(|e| e.get_context())
-                    .unwrap_or_else(|| self),
+                ErrorKind::InternalError(err) => err_downcast_ref! {
+                    err,
+                    err: ErrorKind => err,
+                }.unwrap_or(self),
                 _ => self,
             }
         };
@@ -96,12 +97,14 @@ impl ResponseError for ErrorKind {
 }
 
 impl From<Error> for ErrorKind {
-    fn from(e: Error) -> ErrorKind {
-        e.downcast::<ErrorKind>()
-            .or_else(|err| err.downcast::<BlobRepoError>().map(|e| e.into()))
-            .or_else(|err| err.downcast::<ApiError>().map(|e| e.into()))
-            .or_else(|err| err.downcast::<ReachabilityIndexError>().map(|e| e.into()))
-            .unwrap_or_else(|e| ErrorKind::InternalError(e))
+    fn from(err: Error) -> ErrorKind {
+        let ret = err_downcast! {
+            err,
+            e: BlobRepoError => ErrorKind::from(e),
+            e: ApiError => ErrorKind::from(e),
+            e: ReachabilityIndexError => ErrorKind::from(e),
+        };
+        ret.unwrap_or_else(|e| ErrorKind::InternalError(e))
     }
 }
 
