@@ -453,6 +453,26 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
     if cloudrefs is None:
         cloudrefs = serv.getreferences(reponame, workspace, lastsyncstate.version)
 
+    # apply config setting to filter heads client code will include
+    # in 'new heads' to send to the server,
+    # this allows `cloud sync` works with some extra
+    # local only unbacked up commits on any machine
+    if not opts.get("push_revs") and (
+        workspace == getdefaultrepoworkspace(ui, repo)[1]
+    ):
+        pushrevs = ""
+
+        if ui.configbool("commitcloud", "user_commits_only"):
+            pushrevs += " & author(%s)" % util.emailuser(ui.username())
+
+        if ui.config("commitcloud", "custom_push_revs"):
+            pushrevs += " & (%s)" % ui.config("commitcloud", "custom_push_revs")
+
+        if pushrevs:
+            opts["push_revs"] = ["draft() " + pushrevs]
+
+    revspec = opts.get("push_revs")
+
     synced = False
     pushfailures = set()
     while not synced:
@@ -463,7 +483,6 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
         localbookmarks = _getbookmarks(repo)
         obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
 
-        revspec = opts.get("push_revs")
         if revspec:
             revs = scmutil.revrange(repo, revspec)
             pushheads = [ctx.hex() for ctx in repo.set("heads(%ld::)", revs)]
@@ -693,12 +712,15 @@ def _update(ui, repo, destination):
 def _filterpushside(ui, repo, pushheads, localheads, lastsyncstateheads):
     """filter push side to include only the specified push heads to the delta"""
 
-    if pushheads:
-        listmsg = _("except with heads '%s' ") % ", ".join([ph[:6] for ph in pushheads])
-    else:
-        listmsg = ""
+    # local - allowed - synced
+    skipped = set(localheads) - set(pushheads) - set(lastsyncstateheads)
+    if skipped:
+        highlightstatus(
+            ui,
+            _("push filter: the stacks with heads '%s' are not included in the sync\n")
+            % ", ".join([ph[:6] for ph in skipped]),
+        )
 
-    highlightstatus(ui, _("all unsynced stacks are skipped %s\n") % listmsg)
     return list(set(localheads) & (set(lastsyncstateheads) | set(pushheads)))
 
 

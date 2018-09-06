@@ -66,8 +66,17 @@
     # %i is substituted with the user identity
     scm_daemon_log_path = /path/to/%i/logfile
 
-    # Use secrets_tool for token
+    # Use secrets_tool for token backup between machines
     use_secrets_tool = true
+
+    # Default workspace only! Take into account user's only commits
+    # This includes all the stacks where at least one commit is user's own
+    # Caution: using this option may leave some local commits unbacked up
+    user_commits_only = true
+
+    # Default workspace only! Take into account only custom set of commits
+    # Caution: using this option may leave some local commits unbacked up
+    custom_push_revs = draft()
 """
 
 from __future__ import absolute_import

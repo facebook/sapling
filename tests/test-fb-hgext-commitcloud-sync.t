@@ -235,7 +235,6 @@ Try to push selectively
 
   $ hg cloud sync --push-revs '.'
   #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud all unsynced stacks are skipped except with heads '48610b' 
   backing up stack rooted at a7bb357e7299
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
@@ -244,7 +243,6 @@ Try to push selectively
 
   $ hg cloud sync --push-revs 48610b1a7ec0
   #commitcloud synchronizing 'server' with 'user/test/default'
-  #commitcloud all unsynced stacks are skipped except with heads '48610b' 
   #commitcloud commits synchronized
 
   $ hg cloud sync
