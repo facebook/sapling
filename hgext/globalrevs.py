@@ -27,11 +27,12 @@ template.
     # `hqsql.reponame` will be used.
     reponame = customname
 """
+from __future__ import absolute_import
 
-from hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
+from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
+from .pushrebase import isnonpushrebaseblocked
 from mercurial import error, extensions, localrepo, registrar
 from mercurial.i18n import _
-from pushrebase import isnonpushrebaseblocked
 
 
 configtable = {}
