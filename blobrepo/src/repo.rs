@@ -15,7 +15,7 @@ use bytes::Bytes;
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
 use failure::{Error, FutureFailureErrorExt, FutureFailureExt, Result, prelude::*};
 use futures::{Async, IntoFuture, Poll};
-use futures::future::{self, Either, Future};
+use futures::future::{self, loop_fn, Either, Future, Loop};
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -752,6 +752,60 @@ impl BlobRepo {
                 upload_fut.right_future()
             }
         }
+    }
+
+    /// Check if adding path to manifest would cause case-conflict
+    ///
+    /// Implementation traverses manifest and checks if correspoinding path element is present,
+    /// if path element is not present, it lowercases current path element and checks if it
+    /// collides with any existing elements inside manifest, if so it is a case-conflict.
+    pub fn check_case_conflict_in_manifest(
+        &self,
+        mf_id: &HgManifestId,
+        path: MPath,
+    ) -> impl Future<Item = bool, Error = Error> {
+        self.get_manifest_by_nodeid(&mf_id.into_nodehash())
+            .and_then(|mf| {
+                loop_fn((mf, path.into_iter()), move |(mf, mut elements)| {
+                    match elements.next() {
+                        None => future::ok(Loop::Break(false)).left_future(),
+                        Some(element) => {
+                            match mf.lookup(&element) {
+                                Some(entry) => {
+                                    // avoid fetching file content
+                                    match entry.get_type() {
+                                        Type::File(_) => {
+                                            future::ok(Loop::Break(false)).left_future()
+                                        }
+                                        Type::Tree => entry
+                                            .get_content()
+                                            .map(move |content| match content {
+                                                Content::Tree(mf) => Loop::Continue((mf, elements)),
+                                                _ => Loop::Break(false),
+                                            })
+                                            .right_future(),
+                                    }
+                                }
+                                None => {
+                                    let element_utf8 = String::from_utf8(element.to_bytes());
+                                    let has_case_conflict = mf.list().any(|entry| {
+                                        let name = entry
+                                            .get_name()
+                                            .expect("Non-root entry has empty name");
+                                        match (&element_utf8, String::from_utf8(name.to_bytes())) {
+                                            (Ok(ref element), Ok(ref name)) => {
+                                                name.to_lowercase() == element.to_lowercase()
+                                            }
+                                            _ => false,
+                                        }
+                                    });
+                                    future::ok(Loop::Break(has_case_conflict)).left_future()
+                                }
+                            }
+                        }
+                    }
+                })
+            })
     }
 
     pub fn find_path_in_manifest(

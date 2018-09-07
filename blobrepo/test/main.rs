@@ -752,3 +752,34 @@ fn test_get_manifest_from_bonsai() {
         }
     });
 }
+
+#[test]
+fn test_case_conflict_in_manifest() {
+    async_unit::tokio_unit_test(|| {
+        let repo = many_files_dirs::getrepo(None);
+        let get_manifest_for_changeset = |cs_nodehash: &str| -> HgManifestId {
+            *run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(
+                string_to_nodehash(cs_nodehash),
+            ))).unwrap()
+                .manifestid()
+        };
+
+        let mf = get_manifest_for_changeset("2f866e7e549760934e31bf0420a873f65100ad63");
+
+        for (path, result) in &[
+            ("dir1/file_1_in_dir1", false),
+            ("dir1/file_1_IN_dir1", true),
+            ("DiR1/file_1_in_dir1", true),
+            ("dir1/other_dir/file", false),
+        ] {
+            assert_eq!(
+                run_future(repo.check_case_conflict_in_manifest(&mf, MPath::new(path).unwrap()))
+                    .unwrap(),
+                *result,
+                "{} expected to {} cause conflict",
+                path,
+                if *result { "" } else { "not" },
+            );
+        }
+    });
+}
