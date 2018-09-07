@@ -177,7 +177,7 @@ Future<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
   Hash treeID = oid2Hash(git_commit_tree_id(commit));
 
   // Now get the specified tree.
-  return localStore_->getTree(treeID).then(
+  return localStore_->getTree(treeID).thenValue(
       [this, treeID](unique_ptr<Tree> tree) {
         if (tree) {
           return tree;

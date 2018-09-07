@@ -113,9 +113,9 @@ Future<Unit> TreeDiffer::diffCommits(Hash hash1, Hash hash2) {
   auto future1 = store_->getTreeForCommit(hash1);
   auto future2 = store_->getTreeForCommit(hash2);
   return collect(future1, future2)
-      .then([this](std::tuple<
-                   std::shared_ptr<const Tree>,
-                   std::shared_ptr<const Tree>>&& tup) {
+      .thenValue([this](std::tuple<
+                        std::shared_ptr<const Tree>,
+                        std::shared_ptr<const Tree>>&& tup) {
         auto tree1 = std::get<0>(tup);
         auto tree2 = std::get<1>(tup);
         return diffTrees(RelativePathPiece{}, *tree1, *tree2);

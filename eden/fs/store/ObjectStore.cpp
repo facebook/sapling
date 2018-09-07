@@ -64,7 +64,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
         // this layer.
 
         // Load the tree from the BackingStore.
-        return backingStore->getTree(id).then(
+        return backingStore->getTree(id).thenValue(
             [id](unique_ptr<const Tree> loadedTree) {
               if (!loadedTree) {
                 // TODO: Perhaps we should do some short-term negative caching?
@@ -142,7 +142,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
     const Hash& commitID) const {
   XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
 
-  return backingStore_->getTreeForCommit(commitID).then(
+  return backingStore_->getTreeForCommit(commitID).thenValue(
       [commitID](std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(folly::to<string>(

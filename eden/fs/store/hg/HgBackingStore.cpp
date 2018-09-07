@@ -168,7 +168,7 @@ folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids) const {
   return HgProxyHash::getBatch(localStore_, ids)
       .via(importThreadPool_.get())
-      .then([](std::vector<std::pair<RelativePath, Hash>>&& hgPathHashes) {
+      .thenValue([](std::vector<std::pair<RelativePath, Hash>>&& hgPathHashes) {
         return getThreadLocalImporter().prefetchFiles(hgPathHashes);
       })
       .via(serverThreadPool_);
@@ -185,7 +185,7 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
     const Hash& commitID) {
   return localStore_
       ->getFuture(KeySpace::HgCommitToTreeFamily, commitID.getBytes())
-      .then(
+      .thenValue(
           [this,
            commitID](StoreResult result) -> folly::Future<unique_ptr<Tree>> {
             if (!result.isValid()) {
@@ -197,7 +197,7 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommitImpl(
                        << " for mercurial commit " << commitID.toString();
 
             return localStore_->getTree(rootTreeHash)
-                .then(
+                .thenValue(
                     [this, rootTreeHash, commitID](std::unique_ptr<Tree> tree)
                         -> folly::Future<unique_ptr<Tree>> {
                       if (tree) {
