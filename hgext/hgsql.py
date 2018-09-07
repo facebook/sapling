@@ -46,15 +46,10 @@ from mercurial.node import bin, hex, nullid, nullrev
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
 
-# mysql.connector does not import nicely with the demandimporter, so temporarily
-# disable it.
 try:
     xrange(0)
 except NameError:
     xrange = range
-
-with demandimport.deactivated():
-    import mysql.connector
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -83,6 +78,8 @@ configitem("hgsql", "rootpidnsonly", default=False)
 configitem("hgsql", "verifybatchsize", default=1000)
 configitem("hgsql", "waittimeout", default=300)
 configitem("format", "usehgsql", default=True)
+
+mysql = None
 
 writelock = "write_lock"
 
@@ -191,7 +188,21 @@ def uisetup(ui):
     wrapfunction(revlog.revlog, "addgroup", addgroup)
 
 
+def _importmysqlconnector():
+    # mysql.connector does not import nicely with the demandimporter, so
+    # temporarily disable it.
+    with demandimport.deactivated():
+        global mysql
+        mysql = __import__("mysql.connector")
+
+
 def extsetup(ui):
+    # Importing MySQL connector here allows other modules to import code from
+    # `hgsql` without requiring the MySQL connector. There are cases where this
+    # makes sense. For example, there is no need for MySQL connector on a
+    # repository which does not have `hgsql` enabled.
+    _importmysqlconnector()
+
     if ishgsqlbypassed(ui):
         return
 
@@ -1371,6 +1382,19 @@ def wraprepo(repo):
 
     repo.__class__ = sqllocalrepo
 
+    class CustomConverter(mysql.connector.conversion.MySQLConverter):
+        """Ensure that all values being returned are returned as python string
+        (versus the default byte arrays)."""
+
+        def _STRING_to_python(self, value, dsc=None):
+            return str(value)
+
+        def _VAR_STRING_to_python(self, value, dsc=None):
+            return str(value)
+
+        def _BLOB_to_python(self, value, dsc=None):
+            return str(value)
+
 
 class bufferedopener(object):
     """Opener implementation that buffers all writes in memory until
@@ -2191,20 +2215,6 @@ def sqlstrip(ui, rev, *args, **opts):
             lock.release()
         if wlock:
             wlock.release()
-
-
-class CustomConverter(mysql.connector.conversion.MySQLConverter):
-    """Ensure that all values being returned are returned as python string
-    (versus the default byte arrays)."""
-
-    def _STRING_to_python(self, value, dsc=None):
-        return str(value)
-
-    def _VAR_STRING_to_python(self, value, dsc=None):
-        return str(value)
-
-    def _BLOB_to_python(self, value, dsc=None):
-        return str(value)
 
 
 @command(
