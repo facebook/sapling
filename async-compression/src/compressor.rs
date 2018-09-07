@@ -33,7 +33,7 @@ impl CompressorType {
         match self {
             &CompressorType::Bzip2(_) => DecompressorType::Bzip2,
             &CompressorType::Gzip(_) => DecompressorType::Gzip,
-            &CompressorType::Zstd { .. } => DecompressorType::Zstd,
+            &CompressorType::Zstd { .. } => DecompressorType::OverreadingZstd,
         }
     }
 }

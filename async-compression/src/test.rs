@@ -30,6 +30,10 @@ quickcheck! {
         roundtrip(CompressorType::Gzip(cmprs.0), &input)
     }
 
+    fn test_zstd_roundtrip(input: Vec<u8>) -> TestResult {
+        roundtrip(CompressorType::Zstd { level: 0 }, &input)
+    }
+
     fn test_bzip_overreading(
         cmprs: BzipCompression,
         compressable_input: Vec<u8>,

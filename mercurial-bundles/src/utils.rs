@@ -131,7 +131,7 @@ pub fn get_decompressor_type(compression: Option<&str>) -> Result<Option<Decompr
     match compression {
         Some("BZ") => Ok(Some(DecompressorType::Bzip2)),
         Some("GZ") => Ok(Some(DecompressorType::Gzip)),
-        Some("ZS") => Ok(Some(DecompressorType::Zstd)),
+        Some("ZS") => Ok(Some(DecompressorType::OverreadingZstd)),
         Some("UN") => Ok(None),
         Some(s) => bail_err!(ErrorKind::Bundle2Decode(format!(
             "unknown compression '{}'",

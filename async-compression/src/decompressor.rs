@@ -12,6 +12,7 @@ use std::io::{self, BufRead, Read};
 use bzip2::bufread::BzDecoder;
 use flate2::bufread::GzDecoder;
 use tokio_io::AsyncRead;
+use zstd::Decoder as ZstdDecoder;
 
 use raw::RawDecoder;
 
@@ -27,7 +28,15 @@ where
 pub enum DecompressorType {
     Bzip2,
     Gzip,
-    Zstd,
+    /// The Zstd Decoder is overreading it's input. Consider this situation: you have a Reader that
+    /// returns parts of it's data compressed with Zstd and the remainder decompressed. Gzip and
+    /// Bzip2 will consume only the compressed bytes leaving the remainder untouched. The Zstd
+    /// though will consume some of the decomressed bytes, so that once you call `::into_inner()`
+    /// on it, the returned Reader will not contain the decomressed bytes.
+    ///
+    /// Advice: use only if the entire Reader content needs to be decompressed
+    /// You have been warned
+    OverreadingZstd,
 }
 
 impl<'a, R> Decompressor<'a, R>
@@ -40,9 +49,9 @@ where
             inner: match dt {
                 DecompressorType::Bzip2 => Box::new(BzDecoder::new(r)),
                 DecompressorType::Gzip => Box::new(GzDecoder::new(r)),
-                // TODO: The zstd crate is not safe for decompressing Read input, because it is
-                // overconsuming it
-                DecompressorType::Zstd => unimplemented!(),
+                DecompressorType::OverreadingZstd => Box::new(
+                    ZstdDecoder::new(r).expect("ZstdDecoder failed to create. Are we OOM?"),
+                ),
             },
         }
     }

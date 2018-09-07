@@ -16,6 +16,7 @@ use bzip2::bufread::BzDecoder;
 use bzip2::write::BzEncoder;
 use flate2::bufread::GzDecoder;
 use flate2::write::GzEncoder;
+use zstd::Decoder as ZstdDecoder;
 use zstd::Encoder as ZstdEncoder;
 
 pub trait RawDecoder<R: BufRead>: Read {
@@ -55,6 +56,23 @@ impl<R: BufRead> RawDecoder<R> for GzDecoder<R> {
     #[inline]
     fn into_inner(self: Box<Self>) -> R {
         GzDecoder::into_inner(*self)
+    }
+}
+
+impl<R: BufRead> RawDecoder<R> for ZstdDecoder<R> {
+    #[inline]
+    fn get_ref(&self) -> &R {
+        ZstdDecoder::get_ref(self)
+    }
+
+    #[inline]
+    fn get_mut(&mut self) -> &mut R {
+        ZstdDecoder::get_mut(self)
+    }
+
+    #[inline]
+    fn into_inner(self: Box<Self>) -> R {
+        ZstdDecoder::finish(*self)
     }
 }
 
