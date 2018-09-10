@@ -6,6 +6,8 @@
 # GNU General Public License version 2 or any later version.
 """ store draft commits in the cloud
 
+Configs::
+
     [infinitepush]
     # Server-side and client-side option. Pattern of the infinitepush bookmark
     branchpattern = PATTERN
