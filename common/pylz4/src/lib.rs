@@ -24,7 +24,7 @@ use failure::Error;
 use std::io::Cursor;
 use std::ptr;
 
-use lz4::liblz4::{LZ4F_compressBound, LZ4StreamDecode, LZ4StreamEncode, LZ4_compress_continue,
+use lz4::liblz4::{LZ4StreamDecode, LZ4StreamEncode, LZ4_compressBound, LZ4_compress_continue,
                   LZ4_createStream, LZ4_createStreamDecode, LZ4_decompress_safe_continue,
                   LZ4_freeStream, LZ4_freeStreamDecode};
 
@@ -128,7 +128,7 @@ pub fn compress(input_data: &[u8]) -> Result<Vec<u8>, Error> {
     // First 4 bytes is an original size stored as le32
     let prefix = 4;
     let mut compressed =
-        Vec::with_capacity(prefix + unsafe { LZ4F_compressBound(input_data.len(), ptr::null()) });
+        Vec::with_capacity(prefix + unsafe { LZ4_compressBound(input_data.len() as i32) as usize });
 
     compressed
         .write_u32::<LittleEndian>(input_data.len() as u32)
@@ -139,7 +139,14 @@ pub fn compress(input_data: &[u8]) -> Result<Vec<u8>, Error> {
         if res == 0 {
             bail_err!(ErrorKind::LZ4CompressFailed);
         }
-        compressed.set_len((res + 4) as usize);
+        let compressed_size = (res + 4) as usize;
+        assert!(
+            compressed_size <= compressed.capacity(),
+            "compressed results ({}) is bigger than the allocated buffer ({})",
+            compressed_size,
+            compressed.capacity()
+        );
+        compressed.set_len(compressed_size);
     }
     Ok(compressed)
 }
