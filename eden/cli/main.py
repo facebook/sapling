@@ -12,7 +12,6 @@ import errno
 import glob
 import json
 import os
-import readline  # noqa: F401 Importing readline improves the behavior of input()
 import signal
 import subprocess
 import sys
@@ -39,6 +38,7 @@ from . import (
     rage as rage_mod,
     stats as stats_mod,
     subcmd as subcmd_mod,
+    top as top_mod,
     util,
     version as version_mod,
 )
@@ -420,6 +420,12 @@ class DoctorCmd(Subcmd):
             mount_table=mtab.LinuxMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
         )
+
+
+@subcmd("top", "Monitor Eden accesses by process.")
+class TopCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        return top_mod.show(args)
 
 
 @subcmd("fsck", "Perform a filesystem check for Eden")
@@ -1102,6 +1108,10 @@ def create_parser() -> argparse.ArgumentParser:
 
 
 def prompt_confirmation(prompt: str) -> bool:
+    # Import readline lazily here because it conflicts with ncurses's resize support.
+    # https://bugs.python.org/issue2675
+    import readline  # noqa: F401 Importing readline improves the behavior of input()
+
     prompt_str = f"{prompt} [y/N] "
     while True:
         response = input(prompt_str)
