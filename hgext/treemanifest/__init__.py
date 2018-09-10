@@ -20,11 +20,15 @@ allows using and migrating to tree manifests
 When autocreatetrees is enabled, you can limit which bookmarks are initially
 converted to trees during pull by specifying `treemanifest.allowedtreeroots`.
 
+::
+
     [treemanifest]
     allowedtreeroots = master,stable
 
 Disabling `treemanifest.demanddownload` will prevent the extension from
 automatically downloading trees from the server when they don't exist locally.
+
+::
 
     [treemanifest]
     demanddownload = True
@@ -34,11 +38,15 @@ automatically generating tree manifest from corresponding flat manifest when
 it doesn't exist locally. Note that this setting is only relevant in treeonly
 mode.
 
+::
+
     [treemanifest]
     demandgenerate = True
 
 Setting `treemanifest.pullprefetchcount` to an integer N will cause the latest N
 commits' manifests to be downloaded (if they aren't already).
+
+::
 
     [treemanifest]
     pullprefetchcount = 0
@@ -46,48 +54,62 @@ commits' manifests to be downloaded (if they aren't already).
 `treemanifest.pullprefetchrevs` specifies a revset of commits who's trees should
 be prefetched after a pull. Defaults to None.
 
-   [treemanifest]
-   pullprefetchrevs = master + stable
+::
+
+    [treemanifest]
+    pullprefetchrevs = master + stable
 
 Setting `treemanifest.repackstartrev` and `treemanifest.repackendrev` causes `hg
 repack --incremental` to only repack the revlog entries in the given range. The
 default values are 0 and len(changelog) - 1, respectively.
 
-   [treemanifest]
-   repackstartrev = 0
-   repackendrev = 1000
+::
+
+    [treemanifest]
+    repackstartrev = 0
+    repackendrev = 1000
 
 Setting `treemanifest.treeonly` to True will force all manifest reads to use the
 tree format. This is useful in the final stages of a migration to treemanifest
 to prevent accesses of flat manifests.
 
-  [treemanifest]
-  treeonly = True
+::
+
+    [treemanifest]
+    treeonly = True
 
 `treemanifest.cacheserverstore` causes the treemanifest server to store a cache
 of treemanifest revisions in individual files. These improve lookup speed since
 we don't have to open a revlog.
 
-  [treemanifest]
-  cacheserverstore = True
+::
+
+    [treemanifest]
+    cacheserverstore = True
 
 `treemanifest.servermaxcachesize` the maximum number of entries in the server
 cache.
 
-  [treemanifest]
-  servermaxcachesize = 1000000
+::
+
+    [treemanifest]
+    servermaxcachesize = 1000000
 
 `treemanifest.servercacheevictionpercent` the percent of the cache to evict
 when the maximum size is hit.
 
-  [treemanifest]
-  servercacheevictionpercent = 50
+::
+
+    [treemanifest]
+    servercacheevictionpercent = 50
 
 `treemanifest.fetchdepth` sets the default depth to fetch trees when fetching
 trees from the server.
 
-  [treemanifest]
-  fetchdepth = 65536
+::
+
+    [treemanifest]
+    fetchdepth = 65536
 """
 from __future__ import absolute_import
 
