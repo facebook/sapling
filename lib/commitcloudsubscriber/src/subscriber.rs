@@ -294,7 +294,7 @@ impl WorkspaceSubscriberService {
         Ok(thread::spawn(move || {
             info!("{} Thread started...", sid);
 
-            let fire = |reason: &'static str, version: Option<u64>| {
+            let fire = |reason: &'static str, version: Option<u64>, try_direct_fetching: bool| {
                 if service_url.to_socket_addrs().is_err() {
                     warn!(
                         "{} Skip CloudSyncTrigger: failed to lookup address information {}",
@@ -310,14 +310,20 @@ impl WorkspaceSubscriberService {
                         reason,
                     );
                     // log outputs, results and continue even if unsuccessful
-                    let _res = CloudSyncTrigger::fire(&sid, repo_root, cloudsync_retries, version);
+                    let _res = CloudSyncTrigger::fire(
+                        &sid,
+                        repo_root,
+                        cloudsync_retries,
+                        version,
+                        try_direct_fetching,
+                    );
                     if interrupt.load(Ordering::Relaxed) {
                         break;
                     }
                 }
             };
 
-            fire("before starting subscription", None);
+            fire("before starting subscription", None, false);
             if interrupt.load(Ordering::Relaxed) {
                 return;
             }
@@ -351,7 +357,7 @@ impl WorkspaceSubscriberService {
                     );
                     throttler_error.reset();
                     if last_error {
-                        fire("after recover from error", None);
+                        fire("after recover from error", None, false);
                         if interrupt.load(Ordering::Relaxed) {
                             return;
                         }
@@ -388,7 +394,13 @@ impl WorkspaceSubscriberService {
                         info!("{} Removed heads:\n{}", sid, removed_heads.join("\n"));
                     }
                 }
-                fire("on new version notification", Some(notification.version));
+                let try_direct_fetching = notification.new_heads.map(|s| s.len())
+                    == notification.removed_heads.map(|s| s.len());
+                fire(
+                    "on new version notification",
+                    Some(notification.version),
+                    try_direct_fetching,
+                );
                 if interrupt.load(Ordering::Relaxed) {
                     return;
                 }

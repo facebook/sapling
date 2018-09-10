@@ -8,9 +8,13 @@ from __future__ import absolute_import
 # Standard Library
 import gzip
 import json
+import os
 import socket
 import ssl
+import tempfile
 import time
+from multiprocessing.pool import ThreadPool
+from subprocess import PIPE, Popen
 
 from mercurial import error, util
 from mercurial.i18n import _
@@ -295,9 +299,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         except Exception as e:
             raise commitcloudcommon.UnexpectedError(self.ui, e)
 
-    def filterpushedheads(self, reponame, heads):
-        """Filter heads that have already been pushed to Commit Cloud backend
-        """
+    def _getbundleshandles(self, reponame, heads):
         # do not send empty list
         if not heads:
             return heads
@@ -317,8 +319,15 @@ class HttpsCommitCloudService(baseservice.BaseService):
         if "error" in response:
             raise commitcloudcommon.ServiceError(self.ui, response["error"])
 
+        return response["data"]["handles"]
+
+    def filterpushedheads(self, reponame, heads):
+        """Filter heads that have already been pushed to Commit Cloud backend
+
+        Current way to filter that is to check bundles on the server side
+        """
         notbackeduphandles = set(
-            [i for i, s in enumerate(response["data"]["handles"]) if not s]
+            [i for i, s in enumerate(self._getbundleshandles(reponame, heads)) if not s]
         )
 
         highlightdebug(
@@ -326,3 +335,54 @@ class HttpsCommitCloudService(baseservice.BaseService):
         )
 
         return [h for i, h in enumerate(heads) if i in notbackeduphandles]
+
+    def getbundles(self, reponame, heads, unbundlefn):
+        """Downloading and applying mercurial bundles directly
+        """
+        command = self.ui.config("commitcloud", "get_command")
+        handles = self._getbundleshandles(reponame, heads)
+        if not all(handles):
+            raise error.Abort(_("some bundles are missing in the bundle store"))
+
+        def downloader(param):
+            head = param[0]
+            handle = param[1]
+            highlightstatus(
+                self.ui,
+                _("downloading mercurial bundle '%s' for changeset '%s'\n")
+                % (handle, head),
+            )
+            tempdir = tempfile.mkdtemp()
+            dstfile = os.path.join(tempdir, handle.lower())
+            util.tryunlink(dstfile)
+            fullcommand = command.format(filename=dstfile, handle=handle)
+            p = Popen(
+                fullcommand,
+                close_fds=util.closefds,
+                stdout=PIPE,
+                stderr=PIPE,
+                stdin=open(os.devnull, "r"),
+                shell=True,
+            )
+            stdout, stderr = p.communicate()
+            rc = p.returncode
+            if rc != 0:
+                if not stderr:
+                    stderr = stdout
+                raise commitcloudcommon.SubprocessError(self.ui, rc, stderr)
+            return dstfile
+
+        files = []
+        try:
+            pool = ThreadPool(8)
+            seen = set()
+            handles = [
+                seen.add(handle) or (heads[i], handle)
+                for i, handle in enumerate(handles)
+                if handle not in seen
+            ]
+            files = pool.map(downloader, handles)
+            unbundlefn(files)
+        finally:
+            for dstfile in files:
+                util.tryunlink(dstfile)

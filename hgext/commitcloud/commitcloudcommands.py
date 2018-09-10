@@ -54,7 +54,32 @@ workspaceopts = [
         "w",
         "workspace",
         "",
-        _("workspace to join (default: 'user/<username>/default') (EXPERIMENTAL)"),
+        _("workspace to join (default: 'user/<username>/default') (ADVANCED)"),
+    )
+]
+
+pullopts = [
+    (
+        "",
+        "direct-fetching",
+        None,
+        _(
+            "try to use directly fetch mercurial bundles instead of pulling through the server "
+            "(option requires commitcloud.get_command config) (ADVANCED)"
+        ),
+    )
+]
+
+pushopts = [
+    (
+        "",
+        "push-revs",
+        [],
+        _(
+            "revs to push "
+            "(while syncing take into account only the heads built from the given revset) (ADVANCED)"
+        ),
+        _("REV"),
     )
 ]
 
@@ -82,7 +107,7 @@ def cloud(ui, repo, **opts):
 subcmd = cloud.subcommand()
 
 
-@subcmd("join|connect", [] + workspaceopts)
+@subcmd("join|connect", [] + workspaceopts + pullopts + pushopts)
 def cloudjoin(ui, repo, **opts):
     """connect the local repository to commit cloud
 
@@ -109,7 +134,7 @@ def cloudjoin(ui, repo, **opts):
     cloudsync(ui, repo, checkbackedup=True, **opts)
 
 
-@subcmd("rejoin|reconnect", [] + workspaceopts)
+@subcmd("rejoin|reconnect", [] + workspaceopts + pullopts + pushopts)
 def cloudrejoin(ui, repo, **opts):
     """reconnect the local repository to commit cloud
 
@@ -361,17 +386,9 @@ def getdefaultrepoworkspace(ui, repo):
                 "(option requires infinitepush.bgssh config) (EXPERIMENTAL)"
             ),
         ),
-        (
-            "",
-            "push-revs",
-            [],
-            _(
-                "revs to push "
-                "(while syncing take into account only the heads built from the given revset) (ADVANCED)"
-            ),
-            _("REV"),
-        ),
-    ],
+    ]
+    + pullopts
+    + pushopts,
 )
 def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
     """synchronize commits with the commit cloud service
@@ -441,6 +458,27 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
     serv = service.get(ui, tokenlocator.token)
     highlightstatus(ui, _("synchronizing '%s' with '%s'\n") % (reponame, workspace))
 
+    def directfetching(heads):
+        def unbundleall(bundlefiles):
+            commands.unbundle(ui, repo, bundlefiles[0], *bundlefiles[1:], **opts)
+
+        serv.getbundles(reponame, heads, unbundleall)
+
+    # external services can know that fast pool is preferable to try
+    pullfn = None
+    if opts.get("direct_fetching"):
+        if ui.configbool("commitcloud", "use_direct_bundle_fetching") and ui.config(
+            "commitcloud", "get_command"
+        ):
+            pullfn = directfetching
+        else:
+            if not ui.config("commitcloud", "get_command"):
+                ui.warn(
+                    _(
+                        "can't use direct fetching because 'commitcloud.get_command' is not set\n"
+                    )
+                )
+
     lastsyncstate = state.SyncState(repo, workspace)
 
     # external services can run cloud sync and know the lasest version
@@ -477,7 +515,7 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
     pushfailures = set()
     while not synced:
         if cloudrefs.version != lastsyncstate.version:
-            _applycloudchanges(ui, repo, lastsyncstate, cloudrefs)
+            _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, pullfn)
 
         localheads = _getheads(repo)
         localbookmarks = _getbookmarks(repo)
@@ -626,7 +664,7 @@ def _maybeupdateworkingcopy(ui, repo, currentnode):
         return 0
 
 
-@subcmd("recover")
+@subcmd("recover", [] + pullopts + pushopts)
 def cloudrecover(ui, repo, **opts):
     """perform recovery for commit cloud
 
@@ -636,10 +674,10 @@ def cloudrecover(ui, repo, **opts):
     highlightstatus(ui, "clearing local commit cloud cache\n")
     _, workspace = getrepoworkspace(ui, repo)
     state.SyncState.erasestate(repo, workspace)
-    cloudsync(ui, repo, **opts)
+    cloudsync(ui, repo, checkbackedup=True, **opts)
 
 
-def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
+def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None):
     pullcmd, pullopts = _getcommandandoptions("^pull")
 
     try:
@@ -653,7 +691,7 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     unfi = repo.unfiltered()
     newheads = filter(lambda rev: rev not in unfi, cloudrefs.heads)
 
-    if newheads:
+    if newheads and not directfetchingfn:
         # Replace the exchange pullbookmarks function with one which updates the
         # user's synced bookmarks.  This also means we don't partially update a
         # subset of the remote bookmarks if they happen to be included in the
@@ -690,6 +728,8 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
         ) if remotenames else util.nullcontextmanager():
             pullcmd(ui, repo, **pullopts)
     else:
+        if newheads and directfetchingfn:
+            directfetchingfn(newheads)
         with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
             _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate.bookmarks)
             _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)

@@ -390,6 +390,11 @@ class BaseService(object):
         return nodes
 
     @abstractmethod
-    def filterpushedheads(self, reponame, workspace, heads):
+    def filterpushedheads(self, reponame, heads):
         """Filter heads that have already been pushed to Commit Cloud backend
+        """
+
+    @abstractmethod
+    def getbundles(self, reponame, heads):
+        """Fetch bundles directly
         """

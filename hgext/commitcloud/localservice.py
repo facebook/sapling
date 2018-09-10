@@ -121,3 +121,8 @@ class LocalService(baseservice.BaseService):
         """Filter heads that have already been pushed to Commit Cloud backend
         """
         return heads
+
+    def getbundles(self, reponame, heads):
+        """Fetch bundles directly
+        """
+        raise NotImplementedError

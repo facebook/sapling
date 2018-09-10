@@ -1,6 +1,7 @@
 use error::*;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::Instant;
 
 pub struct CloudSyncTrigger;
 
@@ -10,6 +11,7 @@ impl CloudSyncTrigger {
         path: P,
         retries: u32,
         version: Option<u64>,
+        try_direct_fetching: bool,
     ) -> Result<()> {
         let mut version_args = vec![];
         if let Some(version) = version {
@@ -19,6 +21,7 @@ impl CloudSyncTrigger {
             ]);
         }
         for i in 0..retries {
+            let now = Instant::now();
             let child = Command::new("hg")
                 .current_dir(&path)
                 .env("HGPLAIN", "hint")
@@ -26,6 +29,11 @@ impl CloudSyncTrigger {
                 .arg("--check-autosync-enabled")
                 .arg("--use-bgssh")
                 .args(&version_args)
+                .arg(if i == 0 && try_direct_fetching {
+                    "--direct-fetching"
+                } else {
+                    ""
+                })
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn()?; // do not retry if failed to start
@@ -48,6 +56,13 @@ impl CloudSyncTrigger {
                 "{} stderr: \n{}",
                 sid,
                 String::from_utf8_lossy(&output.stderr).trim()
+            );
+            let end = now.elapsed();
+            info!(
+                "{} Cloud Sync time: {} sec {} ms",
+                sid,
+                end.as_secs(),
+                end.subsec_nanos() as u64 / 1_000_000
             );
             if !output.status.success() {
                 error!("{} Process exited with: {}", sid, output.status);
