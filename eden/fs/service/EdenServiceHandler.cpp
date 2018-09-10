@@ -45,6 +45,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/ProcUtil.h"
+#include "eden/fs/utils/ProcessNameCache.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -932,6 +933,26 @@ void EdenServiceHandler::debugSetLogLevel(
   result.categoryCreated = !db.getCategoryOrNull(*category);
   folly::Logger(*category).getCategory()->setLevel(
       folly::stringToLogLevel(*level), inherit);
+}
+
+void EdenServiceHandler::getAccessCounts(
+    GetAccessCountsResult& result,
+    int64_t duration) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+
+  result.exeNamesByPid =
+      server_->getServerState()->getProcessNameCache()->getAllProcessNames();
+
+  auto mountList = server_->getMountPoints();
+  for (auto& mount : mountList) {
+    FuseMountAccesses& fma =
+        result.fuseAccessesByMount[mount->getPath().value()];
+    for (auto& [pid, count] :
+         mount->getFuseChannel()->getProcessAccessLog().getAllAccesses(
+             std::chrono::seconds{duration})) {
+      fma.fuseAccesses[pid].count = count;
+    }
+  }
 }
 
 void EdenServiceHandler::clearAndCompactLocalStore() {

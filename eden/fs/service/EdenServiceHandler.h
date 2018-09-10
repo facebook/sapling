@@ -147,6 +147,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> category,
       std::unique_ptr<std::string> level) override;
 
+  void getAccessCounts(GetAccessCountsResult& result, int64_t duration)
+      override;
+
   void clearAndCompactLocalStore() override;
 
   void debugClearLocalStoreCaches() override;

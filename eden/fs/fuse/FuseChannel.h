@@ -281,6 +281,10 @@ class FuseChannel {
    */
   std::vector<fuse_in_header> getOutstandingRequests();
 
+  ProcessAccessLog& getProcessAccessLog() {
+    return processAccessLog_;
+  }
+
  private:
   struct HandlerEntry;
   using HandlerMap = std::unordered_map<uint32_t, HandlerEntry>;

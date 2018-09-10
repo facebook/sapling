@@ -15,6 +15,8 @@ namespace py facebook.eden
  */
 typedef i64 /* (cpp.type = "std::uint64_t") */ unsigned64
 
+typedef i32 pid_t
+
 /**
  * A source control hash.
  *
@@ -386,7 +388,7 @@ struct FuseCall {
   4: i64 nodeid
   5: i32 uid
   6: i32 gid
-  7: i32 pid
+  7: pid_t pid
 }
 
 /** Params for globFiles(). */
@@ -407,6 +409,21 @@ struct Glob {
    * sorted.
    */
   1: list<PathString> matchingFiles,
+}
+
+struct AccessCount {
+  1: i64 count
+}
+
+struct FuseMountAccesses {
+  1: map<pid_t, AccessCount> fuseAccesses
+}
+
+struct GetAccessCountsResult {
+  1: map<pid_t, binary> exeNamesByPid
+  2: map<PathString, FuseMountAccesses> fuseAccessesByMount
+  // TODO: Count the number of thrift requests
+  // 3: map<pid_t, AccessCount> thriftAccesses
 }
 
 service EdenService extends fb303.FacebookService {
@@ -670,6 +687,15 @@ service EdenService extends fb303.FacebookService {
     1: string category,
     2: string level,
   ) throws (1: EdenError ex)
+
+  /**
+   * Queries all of the live Eden mounts for the processes that accessed FUSE
+   * over the last `duration` seconds.
+   *
+   * Note that eden only maintains a few seconds worth of accesses.
+   */
+  GetAccessCountsResult getAccessCounts(1: i64 duration)
+    throws (1: EdenError ex)
 
   /**
    * Column by column, clears and compacts the LocalStore. All columns are
