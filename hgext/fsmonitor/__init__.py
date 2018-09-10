@@ -86,6 +86,8 @@ created.
 Posix only: path of unix domain socket to communicate with watchman
 The path can contain %i that have to be replaced with user's unix username
 
+::
+
     [fsmonitor]
     detectrace = (boolean)
 
