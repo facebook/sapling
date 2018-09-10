@@ -424,12 +424,14 @@ FuseChannel::FuseChannel(
     folly::File&& fuseDevice,
     AbsolutePathPiece mountPath,
     size_t numThreads,
-    Dispatcher* const dispatcher)
+    Dispatcher* const dispatcher,
+    std::shared_ptr<ProcessNameCache> processNameCache)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(dispatcher),
       mountPath_(mountPath),
-      fuseDevice_(std::move(fuseDevice)) {
+      fuseDevice_(std::move(fuseDevice)),
+      processAccessLog_(std::move(processNameCache)) {
   CHECK_GE(numThreads_, 1);
   installSignalHandler();
 }
@@ -1075,6 +1077,8 @@ void FuseChannel::processSession() {
       replyError(*header, EIO);
       continue;
     }
+
+    processAccessLog_.recordAccess(header->pid);
 
     switch (header->opcode) {
       case FUSE_INIT:

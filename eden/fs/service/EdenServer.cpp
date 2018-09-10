@@ -49,6 +49,7 @@
 #include "eden/fs/takeover/TakeoverServer.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/ProcUtil.h"
+#include "eden/fs/utils/ProcessNameCache.h"
 
 DEFINE_bool(
     debug,
@@ -173,6 +174,7 @@ EdenServer::EdenServer(
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
           std::make_shared<UnixClock>(),
+          std::make_shared<ProcessNameCache>(),
           edenConfig)} {
   edenDir_ = edenConfig->getEdenDir();
   configPath_ = edenConfig->getUserConfigPath();

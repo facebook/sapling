@@ -25,6 +25,7 @@ namespace eden {
 class Clock;
 class EdenConfig;
 class PrivHelper;
+class ProcessNameCache;
 class TopLevelIgnores;
 class UnboundedQueueExecutor;
 
@@ -41,6 +42,7 @@ class ServerState {
       std::shared_ptr<PrivHelper> privHelper,
       std::shared_ptr<UnboundedQueueExecutor> threadPool,
       std::shared_ptr<Clock> clock,
+      std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<const EdenConfig> edenConfig);
   ~ServerState();
 
@@ -115,6 +117,10 @@ class ServerState {
     return clock_;
   }
 
+  const std::shared_ptr<ProcessNameCache>& getProcessNameCache() const {
+    return processNameCache_;
+  }
+
  private:
   struct ConfigState {
     explicit ConfigState(const std::shared_ptr<const EdenConfig>& config)
@@ -137,6 +143,8 @@ class ServerState {
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<Clock> clock_;
+  std::shared_ptr<ProcessNameCache> processNameCache_;
+
   folly::Synchronized<ConfigState> configState_;
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
       userIgnoreFileMonitor_;

@@ -22,6 +22,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -118,7 +119,11 @@ int main(int argc, char** argv) {
   TestDispatcher dispatcher(&stats, identity);
 
   std::unique_ptr<FuseChannel, FuseChannelDeleter> channel(new FuseChannel(
-      std::move(fuseDevice), mountPath, FLAGS_numFuseThreads, &dispatcher));
+      std::move(fuseDevice),
+      mountPath,
+      FLAGS_numFuseThreads,
+      &dispatcher,
+      std::make_shared<ProcessNameCache>()));
 
   XLOG(INFO) << "Starting FUSE...";
   auto completionFuture = channel->initialize().get();

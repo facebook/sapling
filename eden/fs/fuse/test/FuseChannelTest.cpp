@@ -19,6 +19,7 @@
 #include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/TestDispatcher.h"
+#include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -69,8 +70,12 @@ class FuseChannelTest : public ::testing::Test {
  protected:
   unique_ptr<FuseChannel, FuseChannelDeleter> createChannel(
       size_t numThreads = 2) {
-    return unique_ptr<FuseChannel, FuseChannelDeleter>(
-        new FuseChannel(fuse_.start(), mountPath_, numThreads, &dispatcher_));
+    return unique_ptr<FuseChannel, FuseChannelDeleter>(new FuseChannel(
+        fuse_.start(),
+        mountPath_,
+        numThreads,
+        &dispatcher_,
+        std::make_shared<ProcessNameCache>()));
   }
 
   FuseChannel::StopFuture performInit(

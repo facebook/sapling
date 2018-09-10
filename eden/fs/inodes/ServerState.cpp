@@ -34,11 +34,13 @@ ServerState::ServerState(
     std::shared_ptr<PrivHelper> privHelper,
     std::shared_ptr<UnboundedQueueExecutor> threadPool,
     std::shared_ptr<Clock> clock,
+    std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<const EdenConfig> edenConfig)
     : userInfo_{std::move(userInfo)},
       privHelper_{std::move(privHelper)},
       threadPool_{std::move(threadPool)},
       clock_{std::move(clock)},
+      processNameCache_{std::move(processNameCache)},
       configState_{ConfigState{edenConfig}},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           edenConfig->getUserIgnoreFile(),

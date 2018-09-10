@@ -724,7 +724,8 @@ void EdenMount::createFuseChannel(folly::File fuseDevice) {
       std::move(fuseDevice),
       getPath(),
       FLAGS_fuseNumThreads,
-      dispatcher_.get()));
+      dispatcher_.get(),
+      serverState_->getProcessNameCache()));
 }
 
 void EdenMount::fuseInitSuccessful(

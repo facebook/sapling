@@ -24,6 +24,7 @@
 
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/ProcessAccessLog.h"
 
 namespace folly {
 class RequestContext;
@@ -94,7 +95,8 @@ class FuseChannel {
       folly::File&& fuseDevice,
       AbsolutePathPiece mountPath,
       size_t numThreads,
-      Dispatcher* const dispatcher);
+      Dispatcher* const dispatcher,
+      std::shared_ptr<ProcessNameCache> processNameCache);
 
   /**
    * Destroy the FuseChannel.
@@ -555,6 +557,8 @@ class FuseChannel {
   folly::Synchronized<InvalidationQueue, std::mutex> invalidationQueue_;
   std::condition_variable invalidationCV_;
   std::thread invalidationThread_;
+
+  ProcessAccessLog processAccessLog_;
 
   static const HandlerMap handlerMap_;
 };

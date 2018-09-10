@@ -41,6 +41,7 @@
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using folly::ByteRange;
@@ -83,6 +84,7 @@ TestMount::TestMount()
       privHelper_,
       make_shared<UnboundedQueueExecutor>(serverExecutor_),
       clock_,
+      make_shared<ProcessNameCache>(),
       make_shared<EdenConfig>(
           /*userName=*/folly::StringPiece{"bob"},
           /*userHomePath=*/AbsolutePath{testDir_->path().string()},
