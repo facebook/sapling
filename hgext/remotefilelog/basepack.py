@@ -268,7 +268,6 @@ class basepackstore(object):
         # to have that happen twice in quick succession.
         newpacks = []
         if now > self.lastrefresh + REFRESHRATE:
-            self.lastrefresh = now
             previous = set(p.path() for p in self.packs)
             for filepath, __, __ in self._getavailablepackfilessorted():
                 if filepath not in previous:
@@ -288,6 +287,7 @@ class basepackstore(object):
                                 % filepath
                             )
 
+            self.lastrefresh = time.time()
         return newpacks
 
     def runonpacks(self, func):
