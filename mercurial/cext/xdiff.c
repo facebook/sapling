@@ -16,11 +16,9 @@ hunk_consumer(int64_t a1, int64_t a2, int64_t b1, int64_t b2, void* priv) {
   PyObject* m = Py_BuildValue("LLLL", a1, a2, b1, b2);
   if (!m)
     return -1;
-  if (PyList_Append(rl, m) != 0) {
-    Py_DECREF(m);
-    return -1;
-  }
-  return 0;
+  int r = PyList_Append(rl, m);
+  Py_DECREF(m);
+  return r;
 }
 
 static PyObject* blocks(PyObject* self, PyObject* args) {
