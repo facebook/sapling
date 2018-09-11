@@ -29,10 +29,11 @@ template.
 """
 from __future__ import absolute_import
 
+from mercurial import error, extensions, localrepo, registrar, revset, smartset
+from mercurial.i18n import _
+
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
 from .pushrebase import isnonpushrebaseblocked
-from mercurial import error, extensions, localrepo, registrar
-from mercurial.i18n import _
 
 
 configtable = {}
@@ -43,6 +44,7 @@ configitem("globalrevs", "reponame", default=None)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 
 
@@ -226,6 +228,36 @@ def _commitwrapper(orig, repo, parents, desc, files, filectx, user, date, extras
         extras["global_rev"] = repo.nextrevisionnumber()
 
     return orig(repo, parents, desc, files, filectx, user, date, extras)
+
+
+def _lookupglobalrev(repo, grev):
+    cl = repo.changelog
+    changelogrevision = cl.changelogrevision
+    tonode = cl.node
+
+    def matchglobalrev(rev):
+        commitglobalrev = changelogrevision(rev).extra.get("global_rev")
+        return commitglobalrev is not None and int(commitglobalrev) == grev
+
+    matchedrevs = []
+    for rev in repo.revs("reverse(all())"):
+        if matchglobalrev(rev):
+            matchedrevs.append(tonode(rev))
+            break
+
+    return matchedrevs
+
+
+@revsetpredicate("globalrev(number)", safe=True, weight=10)
+def _revsetglobalrev(repo, subset, x):
+    """Changesets with given global revision number.
+    """
+    args = revset.getargs(x, 1, 1, "globalrev takes one argument")
+    globalrev = revset.getinteger(
+        args[0], "the argument to globalrev() must be a number"
+    )
+
+    return subset & smartset.baseset(_lookupglobalrev(repo, globalrev))
 
 
 @command("^globalrev", [], _("hg globalrev"))

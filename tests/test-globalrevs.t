@@ -518,6 +518,50 @@ after a pull.
   $ checkglobalrevs
 
 
+Test resolving commits based on the strictly increasing global revision numbers.
+
+- Test that incorrect lookups result in errors.
+
+  $ cd ../client
+
+  $ hg log -r 'globalrev()'
+  hg: parse error: globalrev takes one argument
+  [255]
+
+  $ hg log -r 'globalrev(1, 2)'
+  hg: parse error: globalrev takes one argument
+  [255]
+
+  $ hg log -r 'globalrev(invalid_input_type)'
+  hg: parse error: the argument to globalrev() must be a number
+  [255]
+
+
+- Test that correct lookups work as expected.
+
+  $ testlookup()
+  > {
+  >   local grevs=$(hg log -r 'all()' -T '{globalrev}\n' | sed '/^$/d')
+  >   for grev in $grevs; do
+  >     if [ "${grev}" -ne `getglobalrev "globalrev(${grev})"` ]; then
+  >       return 1
+  >     fi
+  >   done
+  > }
+
+  $ testlookup
+
+
+- Test that non existent global revision numbers do not resolve to any commit in
+the repository. In particular, lets test fetching the commit corresponding to
+global revision number 4999 which should not exist as the counting starts from
+5000 in our test cases.
+
+  $ hg log -r 'globalrev(4999)'
+
+  $ hg log -r 'globalrev(-1)'
+
+
 Test errors for bad configuration of the hgsql extension on the first server
 
 - Configure the first server to bypass hgsql extension.
