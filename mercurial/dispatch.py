@@ -1077,12 +1077,16 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
             pats=cmdpats,
             opts=cmdoptions,
         )
-        try:
-            lui.log("exceptions", exception_type=type(e).__name__, exception_msg=str(e))
-        except Exception:
-            pass
+        _log_exception(lui, e)
         raise
     return ret
+
+
+def _log_exception(lui, e):
+    try:
+        lui.log("exceptions", exception_type=type(e).__name__, exception_msg=str(e))
+    except Exception:
+        pass
 
 
 def _getlocal(ui, rpath, wd=None):
