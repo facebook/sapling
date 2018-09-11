@@ -119,12 +119,7 @@ pub enum RepoType {
     /// RocksDb database
     BlobRocks(PathBuf),
     /// Blob repository with path pointing to the directory where a server socket is going to be.
-    BlobManifold {
-        /// The arguments used to connect to Manifold.
-        args: ManifoldArgs,
-        /// Path is used to connect Mononoke server to hgcli
-        path: PathBuf,
-    },
+    BlobManifold(ManifoldArgs),
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database, and a log-normal delay is applied to access to simulate a remote store
     /// like Manifold. Params are path, mean microseconds, stddev microseconds.
@@ -294,25 +289,31 @@ impl RepoConfigs {
     }
 
     fn convert_conf(this: RawRepoConfig, hooks: Vec<HookParams>) -> Result<RepoConfig> {
+        fn get_path(config: &RawRepoConfig) -> ::std::result::Result<PathBuf, ErrorKind> {
+            config.path.clone().ok_or_else(|| {
+                ErrorKind::InvalidConfig(format!(
+                    "No path provided for {:#?} type of repo",
+                    config.repotype
+                ))
+            })
+        }
+
         let repotype = match this.repotype {
-            RawRepoType::Revlog => RepoType::Revlog(this.path),
-            RawRepoType::BlobRocks => RepoType::BlobRocks(this.path),
+            RawRepoType::Revlog => RepoType::Revlog(get_path(&this)?),
+            RawRepoType::BlobRocks => RepoType::BlobRocks(get_path(&this)?),
             RawRepoType::TestBlobManifold => {
                 let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
                     "manifold bucket must be specified".into(),
                 ))?;
                 let db_address = this.db_address.expect("xdb tier was not specified");
-                RepoType::BlobManifold {
-                    args: ManifoldArgs {
-                        bucket: manifold_bucket,
-                        prefix: this.manifold_prefix.unwrap_or("".into()),
-                        db_address,
-                    },
-                    path: this.path,
-                }
+                RepoType::BlobManifold(ManifoldArgs {
+                    bucket: manifold_bucket,
+                    prefix: this.manifold_prefix.unwrap_or("".into()),
+                    db_address,
+                })
             }
             RawRepoType::TestBlobDelayRocks => RepoType::TestBlobDelayRocks(
-                this.path,
+                get_path(&this)?,
                 this.delay_mean.expect("mean delay must be specified"),
                 this.delay_stddev.expect("stddev delay must be specified"),
             ),
@@ -377,7 +378,7 @@ impl RepoConfigs {
 
 #[derive(Debug, Deserialize, Clone)]
 struct RawRepoConfig {
-    path: PathBuf,
+    path: Option<PathBuf>,
     repotype: RawRepoType,
     enabled: Option<bool>,
     generation_cache_size: Option<usize>,

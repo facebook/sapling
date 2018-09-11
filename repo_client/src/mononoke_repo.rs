@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use std::fmt::{self, Debug};
-use std::path::Path;
 use std::time::Duration;
 
 use rand::Isaac64Rng;
@@ -26,7 +25,6 @@ struct LogNormalGenerator {
 
 #[derive(Clone)]
 pub struct MononokeRepo {
-    log_name: String,
     blobrepo: BlobRepo,
     pushrebase_params: PushrebaseParams,
 }
@@ -39,29 +37,10 @@ impl MononokeRepo {
         repoid: RepositoryId,
         pushrebase_params: &PushrebaseParams,
     ) -> Result<Self> {
-        // Just use the path as the name.
-        let log_name = format!("{}", repo.path().to_owned().display());
-        Self::new_with_name(logger, repo, repoid, pushrebase_params, log_name)
-    }
-
-    pub fn new_with_name(
-        logger: Logger,
-        repo: &RepoType,
-        repoid: RepositoryId,
-        pushrebase_params: &PushrebaseParams,
-        log_name: impl Into<String>,
-    ) -> Result<Self> {
-        let log_name = log_name.into();
         Ok(MononokeRepo {
-            log_name,
             blobrepo: repo.open(logger, repoid)?,
             pushrebase_params: pushrebase_params.clone(),
         })
-    }
-
-    #[inline]
-    pub fn log_name(&self) -> &str {
-        self.log_name.as_ref()
     }
 
     #[inline]
@@ -76,13 +55,12 @@ impl MononokeRepo {
 
 impl Debug for MononokeRepo {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Repo({})", self.log_name)
+        write!(fmt, "MononokeRepo({:#?})", self.blobrepo.get_repoid())
     }
 }
 
 trait OpenableRepoType {
     fn open(&self, logger: Logger, repoid: RepositoryId) -> Result<BlobRepo>;
-    fn path(&self) -> &Path;
 }
 
 impl OpenableRepoType for RepoType {
@@ -94,7 +72,7 @@ impl OpenableRepoType for RepoType {
             Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
             BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
-            BlobManifold { ref args, .. } => BlobRepo::new_manifold(logger, args, repoid)?,
+            BlobManifold(ref args) => BlobRepo::new_manifold(logger, args, repoid)?,
             TestBlobDelayRocks(ref path, mean, stddev) => {
                 // We take in an arithmetic mean and stddev, and deduce a log normal
                 let mean = mean as f64 / 1_000_000.0;
@@ -138,15 +116,5 @@ impl OpenableRepoType for RepoType {
         };
 
         Ok(ret)
-    }
-
-    fn path(&self) -> &Path {
-        use metaconfig::repoconfig::RepoType::*;
-
-        match *self {
-            Revlog(ref path) | BlobFiles(ref path) | BlobRocks(ref path) => path.as_ref(),
-            BlobManifold { ref path, .. } => path.as_ref(),
-            TestBlobDelayRocks(ref path, ..) => path.as_ref(),
-        }
     }
 }

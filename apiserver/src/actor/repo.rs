@@ -41,7 +41,7 @@ impl MononokeRepo {
         let repoid = RepositoryId::new(config.repoid);
         let repo = match config.repotype {
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid),
-            BlobManifold { ref args, .. } => BlobRepo::new_manifold(logger.clone(), args, repoid),
+            BlobManifold(ref args) => BlobRepo::new_manifold(logger.clone(), args, repoid),
             _ => Err(err_msg("Unsupported repo type.")),
         };
 

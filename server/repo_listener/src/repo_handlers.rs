@@ -54,7 +54,7 @@ pub fn repo_handlers(
                 &config.pushrebase,
             ).expect(&format!("failed to initialize repo {}", reponame));
 
-            let listen_log = root_log.new(o!("repo" => repo.log_name().to_string()));
+            let listen_log = root_log.new(o!("repo" => reponame.clone()));
 
             let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
             scuba_logger.add_common_server_data();

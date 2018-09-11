@@ -6,7 +6,7 @@
 
 use std::cmp::min;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 
 use clap::{App, Arg, ArgMatches};
@@ -414,18 +414,14 @@ fn open_repo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: boo
             let manifold_args = parse_manifold_args(&matches);
 
             let logger = logger.new(o!["BlobRepo:TestManifold" => manifold_args.bucket.clone()]);
-            let repo_type = RepoType::BlobManifold {
-                args: manifold_args,
-                // The path isn't actually used at all.
-                path: PathBuf::default(),
-            };
+            let repo_type = RepoType::BlobManifold(manifold_args);
             (logger, repo_type)
         }
         Some(bad) => panic!("unexpected blobstore type: {}", bad),
     };
 
     // TODO fixup imports
-    MononokeRepo::new_with_name(logger, &repo_type, repo_id, &Default::default(), "repo")
+    MononokeRepo::new(logger, &repo_type, repo_id, &Default::default())
         .expect("failed to setup repo")
 }
 
