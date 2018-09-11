@@ -19,6 +19,7 @@ use futures::{Future, IntoFuture, Stream};
 use futures::future::{self, err, ok, Shared};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_stats::Timed;
 use getbundle_response;
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::{Details, ManifestContent};
@@ -731,7 +732,7 @@ impl Bundle2Resolver {
         commonheads: CommonHeads,
         pushrebased_rev: ChangesetId,
         onto: Bookmark,
-    ) -> BoxFuture<Bytes, Error> {
+    ) -> impl Future<Item = Bytes, Error = Error> {
         // Send to the client both pushrebased commit and current "onto" bookmark. Normally they
         // should be the same, however they might be different if bookmark
         // suddenly moved before current pushrebase finished.
@@ -741,6 +742,7 @@ impl Bundle2Resolver {
 
         let pushrebased_rev = repo.get_hg_from_bonsai_changeset(pushrebased_rev);
 
+        let mut scuba_logger = self.scuba_logger.clone();
         maybe_onto_head
             .join(pushrebased_rev)
             .and_then(move |(maybe_onto_head, pushrebased_rev)| {
@@ -757,9 +759,17 @@ impl Bundle2Resolver {
                     .map(|cursor| Bytes::from(cursor.into_inner()))
                     .context("While preparing response")
                     .from_err()
-                    .boxify()
             })
-            .boxify()
+            .timed({
+                move |stats, result| {
+                    if result.is_ok() {
+                        scuba_logger
+                            .add_future_stats(&stats)
+                            .log_with_msg("Pushrebase: prepared the response", None);
+                    }
+                    Ok(())
+                }
+            })
     }
 
     /// A method that can use any of the above maybe_resolve_* methods to return
@@ -819,6 +829,19 @@ impl Bundle2Resolver {
             onto_bookmark.clone(),
             changesets,
         ).map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
+            .timed({
+                let mut scuba_logger = self.scuba_logger.clone();
+                move |stats, result| {
+                    if let Ok(res) = result {
+                        scuba_logger
+                            .add_future_stats(&stats)
+                            .add("pushrebase_retry_num", res.retry_num)
+                            .log_with_msg("Pushrebase finished", None);
+                    }
+                    Ok(())
+                }
+            })
+            .map(|res| res.head)
             .boxify()
     }
 }

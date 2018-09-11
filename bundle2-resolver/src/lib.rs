@@ -20,6 +20,7 @@ extern crate fixtures;
 extern crate futures;
 #[macro_use]
 extern crate futures_ext;
+extern crate futures_stats;
 extern crate heapsize;
 #[cfg(test)]
 extern crate itertools;

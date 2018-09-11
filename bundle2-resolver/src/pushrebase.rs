@@ -82,6 +82,11 @@ impl From<Error> for PushrebaseError {
     }
 }
 
+pub struct PushrebaseSuccessResult {
+    pub head: ChangesetId,
+    pub retry_num: usize,
+}
+
 /// Does a pushrebase of a list of commits `pushed_set` onto `onto_bookmark`
 /// The commits from the pushed set should already be committed to the blobrepo
 /// Returns updated bookmark value.
@@ -90,7 +95,7 @@ pub fn do_pushrebase(
     config: PushrebaseParams,
     onto_bookmark: Bookmark,
     pushed_set: Vec<HgChangesetId>,
-) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
+) -> impl Future<Item = PushrebaseSuccessResult, Error = PushrebaseError> {
     fetch_bonsai_changesets(repo.clone(), pushed_set)
         .and_then(|pushed| {
             let head = find_only_head_or_fail(&pushed)?;
@@ -124,7 +129,8 @@ fn rebase_in_loop(
     head: ChangesetId,
     root: ChangesetId,
     client_cf: Vec<MPath>,
-) -> BoxFuture<ChangesetId, PushrebaseError> {
+) -> BoxFuture<PushrebaseSuccessResult, PushrebaseError> {
+    let mut retry_num = 1;
     loop_fn(root, move |root| {
         get_bookmark_value(&repo, &onto_bookmark).and_then({
             cloned!(client_cf, onto_bookmark, repo, config);
@@ -138,8 +144,14 @@ fn rebase_in_loop(
                     .and_then(move |()| {
                         do_rebase(repo, config, root, head, bookmark_val, onto_bookmark).map(
                             move |update_res| match update_res {
-                                Some(result) => Loop::Break(result),
-                                None => Loop::Continue(bookmark_val),
+                                Some(result) => Loop::Break(PushrebaseSuccessResult {
+                                    head: result,
+                                    retry_num,
+                                }),
+                                None => {
+                                    retry_num += 1;
+                                    Loop::Continue(bookmark_val)
+                                }
                             },
                         )
                     })
@@ -867,7 +879,7 @@ mod tests {
                 .expect("pushrebase failed");
 
             // should only rebase {bcs2, bcs3}
-            let rebased = find_rebased_set(repo_arc.clone(), bcs_id_master, bcs_id_rebased)
+            let rebased = find_rebased_set(repo_arc.clone(), bcs_id_master, bcs_id_rebased.head)
                 .wait()
                 .unwrap();
             assert_eq!(rebased.len(), 2);
@@ -1068,8 +1080,12 @@ mod tests {
                 .expect("push-rebase failed");
 
             let bcs = repo.get_bonsai_changeset(bcs).wait().unwrap();
-            let bcs_keep_date = repo.get_bonsai_changeset(bcs_keep_date).wait().unwrap();
-            let bcs_rewrite_date = repo.get_bonsai_changeset(bcs_rewrite_date).wait().unwrap();
+            let bcs_keep_date = repo.get_bonsai_changeset(bcs_keep_date.head)
+                .wait()
+                .unwrap();
+            let bcs_rewrite_date = repo.get_bonsai_changeset(bcs_rewrite_date.head)
+                .wait()
+                .unwrap();
 
             assert_eq!(bcs.author_date(), bcs_keep_date.author_date());
             assert!(bcs.author_date() < bcs_rewrite_date.author_date());
