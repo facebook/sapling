@@ -306,7 +306,7 @@ class HgServer(object):
         return 0
 
     def _is_mononoke_supported(self, name):
-        return name in ["fbsource"]
+        return name in ["fbsource", "www"]
 
     def _gen_options(self):
         repo_name = getattr(self.repo, "name", None)
