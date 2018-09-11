@@ -9,8 +9,9 @@ use std::io;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use bytes::Bytes;
 use failure::SlogKVError;
-use futures::{future, Future, IntoFuture, Stream};
+use futures::{future, stream, Future, IntoFuture, Stream};
 use futures::sync::mpsc;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use openssl::ssl::SslAcceptor;
@@ -26,6 +27,8 @@ use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 use errors::*;
 use repo_handlers::RepoHandler;
 use request_handler::request_handler;
+
+const CHUNK_SIZE: usize = 10000;
 
 /// This function accepts connections, reads Preamble and routes request to a thread responsible for
 /// a particular repo
@@ -167,8 +170,12 @@ where
                 let (otx, orx) = mpsc::channel(1);
                 let (etx, erx) = mpsc::channel(1);
 
-                let orx = orx.map(|v| SshMsg::new(SshStream::Stdout, v));
-                let erx = erx.map(|v| SshMsg::new(SshStream::Stderr, v));
+                let orx = orx.map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
+                    .flatten()
+                    .map(|v| SshMsg::new(SshStream::Stdout, v));
+                let erx = erx.map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
+                    .flatten()
+                    .map(|v| SshMsg::new(SshStream::Stderr, v));
 
                 // Glue them together
                 let fwd = orx.select(erx)
@@ -189,4 +196,18 @@ where
             })
         })
         .boxify()
+}
+
+// TODO(stash): T33775046 we had to chunk responses because hgcli
+// can't cope with big chunks
+fn split_bytes_in_chunk<E>(blob: Bytes, chunksize: usize) -> impl Stream<Item = Bytes, Error = E> {
+    stream::unfold(blob, move |mut remain| {
+        let len = remain.len();
+        if len > 0 {
+            let ret = remain.split_to(::std::cmp::min(chunksize, len));
+            Some(Ok((ret, remain)))
+        } else {
+            None
+        }
+    })
 }

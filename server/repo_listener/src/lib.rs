@@ -5,10 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![allow(deprecated)] // TODO(T33448938) use of deprecated item 'tokio::timer::Deadline': use Timeout instead
+// TODO(T33448938) use of deprecated item 'tokio::timer::Deadline': use Timeout instead
+#![allow(deprecated)]
 #![feature(never_type)]
 #![feature(try_from)]
 
+extern crate bytes;
 #[macro_use]
 extern crate cloned;
 extern crate context;
