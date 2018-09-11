@@ -2038,29 +2038,33 @@ def _findrecenttree(repo, startrev):
     cl = repo.changelog
     mfstore = repo.manifestlog.datastore
 
-    # Look up and down from the given rev
-    ancestors = iter(
-        repo.revs("reverse(ancestors(%d, %d)) & public()", startrev, BASENODESEARCHMAX)
-    )
+    with progress.spinner(repo.ui, _("finding nearest trees")):
+        # Look up and down from the given rev
+        ancestors = iter(
+            repo.revs(
+                "reverse(ancestors(%d, %d)) & public()", startrev, BASENODESEARCHMAX
+            )
+        )
 
-    descendantquery = "descendants(%d, %d) & public()"
-    if extensions.enabled().get("remotenames", False):
-        descendantquery += " & ::remotenames()"
-    descendants = iter(repo.revs(descendantquery, startrev, BASENODESEARCHMAX))
+        descendantquery = "descendants(%d, %d) & public()"
+        if extensions.enabled().get("remotenames", False):
+            descendantquery += " & ::remotenames()"
+        descendants = iter(repo.revs(descendantquery, startrev, BASENODESEARCHMAX))
 
-    revs = []
-    # Zip's the iterators together, using the fillvalue when the shorter
-    # iterator runs out of values.
-    candidates = itertools.izip_longest(ancestors, descendants, fillvalue=None)
-    for revs in candidates:
-        for rev in revs:
-            if rev is None:
-                continue
+        revs = []
 
-            mfnode = cl.changelogrevision(rev).manifest
-            missing = mfstore.getmissing([("", mfnode)])
-            if not missing:
-                return [mfnode]
+        # Zip's the iterators together, using the fillvalue when the shorter
+        # iterator runs out of values.
+        candidates = itertools.izip_longest(ancestors, descendants, fillvalue=None)
+        for revs in candidates:
+            for rev in revs:
+                if rev is None:
+                    continue
+
+                mfnode = cl.changelogrevision(rev).manifest
+                missing = mfstore.getmissing([("", mfnode)])
+                if not missing:
+                    return [mfnode]
 
     return []
 
