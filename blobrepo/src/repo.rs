@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::path::Path;
 use std::sync::Arc;
@@ -15,8 +15,8 @@ use bytes::Bytes;
 use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
 use failure::{Error, FutureFailureErrorExt, FutureFailureExt, Result, prelude::*};
 use futures::{Async, IntoFuture, Poll};
-use futures::future::{self, loop_fn, Either, Future, Loop};
-use futures::stream::{self, Stream};
+use futures::future::{self, loop_fn, ok, Either, Future, Loop};
+use futures::stream::{self, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
@@ -27,7 +27,7 @@ use time_ext::DurationExt;
 use uuid::Uuid;
 
 use super::changeset::HgChangesetContent;
-use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
+use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob,
                 MemWritesBlobstore, PrefixBlobstore};
 use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
@@ -1426,24 +1426,63 @@ pub struct ChangesetMetadata {
     pub comments: String,
 }
 
-pub fn save_bonsai_changeset(
-    bonsai_cs: BonsaiChangeset,
+/// This function uploads bonsai changests object to blobstore in parallel, and then does
+/// sequential writes to changesets table. Parents of the changesets should already by saved
+/// in the repository.
+pub fn save_bonsai_changesets(
+    bonsai_changesets: Vec<BonsaiChangeset>,
     repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
     let complete_changesets = repo.changesets.clone();
     let blobstore = repo.blobstore.clone();
     let repoid = repo.repoid.clone();
 
-    save_bonsai_changeset_object(blobstore, bonsai_cs.clone())
-        .and_then(move |()| {
+    let bonsai_changesets: HashMap<_, _> = bonsai_changesets
+        .into_iter()
+        .map(|bcs| (bcs.get_changeset_id(), bcs))
+        .collect();
+
+    // Order of inserting bonsai changesets objects doesn't matter, so we can join them
+    let mut bonsai_object_futs = FuturesUnordered::new();
+    for bcs in bonsai_changesets.values() {
+        bonsai_object_futs.push(save_bonsai_changeset_object(blobstore.clone(), bcs.clone()));
+    }
+    let bonsai_objects = bonsai_object_futs.collect();
+
+    // Order of inserting entries in changeset table matters though, so we first need to
+    // topologically sort commits.
+    let mut bcs_parents = HashMap::new();
+    for bcs in bonsai_changesets.values() {
+        let parents: Vec<_> = bcs.parents().cloned().collect();
+        bcs_parents.insert(bcs.get_changeset_id(), parents);
+    }
+
+    let mut topo_sorted_commits = sort_topological(&bcs_parents).expect("loop in commit chain!");
+    // Reverse output to have parents in the beginning
+    topo_sorted_commits.reverse();
+    let mut bonsai_complete_futs = vec![];
+    for bcs_id in topo_sorted_commits {
+        if let Some(bcs) = bonsai_changesets.get(&bcs_id) {
             let completion_record = ChangesetInsert {
                 repo_id: repoid,
-                cs_id: bonsai_cs.get_changeset_id(),
-                parents: bonsai_cs.parents().into_iter().cloned().collect(),
+                cs_id: bcs.get_changeset_id(),
+                parents: bcs.parents().into_iter().cloned().collect(),
             };
-            complete_changesets.add(completion_record)
-        })
-        .map(|_| ())
+            bonsai_complete_futs.push(complete_changesets.add(completion_record));
+        }
+    }
+
+    bonsai_objects.and_then(|_| {
+        // T33825303 - build a future that depends on parent futures instead of inserting them
+        // one by one.
+        loop_fn(
+            bonsai_complete_futs.into_iter(),
+            |mut futs| match futs.next() {
+                Some(fut) => fut.map(move |_| Loop::Continue(futs)).left_future(),
+                None => ok(Loop::Break(())).right_future(),
+            },
+        )
+    })
 }
 
 pub struct CreateChangeset {

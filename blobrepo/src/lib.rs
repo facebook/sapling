@@ -44,6 +44,9 @@ extern crate filenodes;
 #[macro_use]
 extern crate futures_ext;
 extern crate manifoldblob;
+#[cfg(test)]
+#[macro_use]
+extern crate maplit;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate mononoke_types;
@@ -74,7 +77,7 @@ pub use errors::*;
 pub use changeset::{HgBlobChangeset, HgChangesetContent};
 pub use file::HgBlobEntry;
 pub use manifest::BlobManifest;
-pub use repo::{save_bonsai_changeset, BlobRepo, ChangesetMetadata, ContentBlobInfo,
+pub use repo::{save_bonsai_changesets, BlobRepo, ChangesetMetadata, ContentBlobInfo,
                ContentBlobMeta, CreateChangeset, ManifoldArgs, UploadHgFileContents,
                UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
 pub use repo_commit::ChangesetHandle;

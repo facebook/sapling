@@ -39,7 +39,7 @@
 ///
 ///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
 ///  Note: Usually rebased set == pushed set. However in case of merges it may differ
-use blobrepo::{save_bonsai_changeset, BlobRepo};
+use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::Bookmark;
 use errors::*;
@@ -487,15 +487,8 @@ fn create_rebased_changesets(
 
         // XXX: This can potentially be slow for long stacks. To speed it up we can write
         // all bonsai changests at once
-        loop_fn(
-            rebased.into_iter(),
-            move |mut changesets| match changesets.next() {
-                Some(bcs) => save_bonsai_changeset(bcs, (*repo).clone())
-                    .map(|()| Loop::Continue(changesets))
-                    .boxify(),
-                None => ok(Loop::Break(())).boxify(),
-            },
-        ).map(move |_| remapping.get(&head).cloned().unwrap_or(head))
+        save_bonsai_changesets(rebased, (*repo).clone())
+            .map(move |_| remapping.get(&head).cloned().unwrap_or(head))
             .from_err()
             .right_future()
     })
@@ -649,7 +642,9 @@ mod tests {
             .unwrap();
 
         let bcs_id = bcs.get_changeset_id();
-        save_bonsai_changeset(bcs, repo.clone()).wait().unwrap();
+        save_bonsai_changesets(vec![bcs], repo.clone())
+            .wait()
+            .unwrap();
         bcs_id
     }
 

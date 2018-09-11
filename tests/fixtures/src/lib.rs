@@ -22,7 +22,7 @@ extern crate slog;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use blobrepo::{save_bonsai_changeset, BlobRepo};
+use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmarks::Bookmark;
 use bytes::Bytes;
 use futures::future::{join_all, Future};
@@ -96,7 +96,9 @@ fn create_bonsai_changeset_from_test_data(
         .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changeset(bcs, blobrepo.clone()).wait().unwrap();
+    save_bonsai_changesets(vec![bcs], blobrepo.clone())
+        .wait()
+        .unwrap();
 
     let hg_cs = blobrepo
         .get_hg_from_bonsai_changeset(bcs_id)
