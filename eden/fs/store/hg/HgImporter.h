@@ -117,6 +117,10 @@ class HgImporter : public Importer {
 
   virtual ~HgImporter();
 
+#ifndef EDEN_WIN
+  folly::ProcessReturnCode debugStopHelperProcess();
+#endif
+
   Hash importManifest(folly::StringPiece revName);
 
 #if EDEN_HAVE_HG_TREEMANIFEST
@@ -233,6 +237,8 @@ class HgImporter : public Importer {
   // Forbidden copy constructor and assignment operator
   HgImporter(const HgImporter&) = delete;
   HgImporter& operator=(const HgImporter&) = delete;
+
+  void stopHelperProcess();
 
   /**
    * Read a single manifest entry from a manifest response chunk,

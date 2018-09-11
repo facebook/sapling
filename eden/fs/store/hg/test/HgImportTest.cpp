@@ -205,6 +205,16 @@ TEST_P(HgImportTest, importTest) {
       "value not present in store");
 }
 
+// TODO(T33797958): Check hg_importer_helper's exit code on Windows (in
+// HgImportTest).
+#ifndef EDEN_WIN
+TEST_P(HgImportTest, importerHelperExitsCleanly) {
+  HgImporter importer(repo_.path(), &localStore_);
+  auto status = importer.debugStopHelperProcess();
+  EXPECT_EQ(status.str(), "exited with status 0");
+}
+#endif
+
 INSTANTIATE_TEST_CASE_P(
     FlatManifest,
     HgImportTest,

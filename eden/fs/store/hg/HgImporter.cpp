@@ -246,6 +246,8 @@ HgImporter::HgImporter(
     env->erase("PYTHONPATH");
     env->emplace("PYTHONPATH", FLAGS_hgPythonPath);
   }
+  // HACK(T33686765): Work around LSAN reports for hg_importer_helper.
+  (*env)["LSAN_OPTIONS"] = "detect_leaks=0";
   auto envVector = env.toVector();
   helper_ = Subprocess{cmd, opts, nullptr, &envVector};
   SCOPE_FAIL {
@@ -412,9 +414,22 @@ void HgImporter::initializeMononoke(const Options& options) {
 #endif
 
 HgImporter::~HgImporter() {
+  stopHelperProcess();
+}
+
 #ifndef EDEN_WIN
-  helper_.closeParentFd(STDIN_FILENO);
-  helper_.wait();
+folly::ProcessReturnCode HgImporter::debugStopHelperProcess() {
+  stopHelperProcess();
+  return helper_.returnCode();
+}
+#endif
+
+void HgImporter::stopHelperProcess() {
+#ifndef EDEN_WIN
+  if (helper_.returnCode().running()) {
+    helper_.closeParentFd(STDIN_FILENO);
+    helper_.wait();
+  }
 #endif
 }
 
