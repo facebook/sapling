@@ -146,7 +146,6 @@ testpats = [
         (r"(^|\|\s*)grep (-\w\s+)*[^|]*[(|]\w", "use egrep for extended grep syntax"),
         (r"(^|\|\s*)e?grep .*\\S", "don't use \\S in regular expression"),
         (r"(?<!!)/bin/", "don't use explicit paths for tools"),
-        (r"#!.*/bash", "don't use bash in shebang, use sh"),
         (r"[^\n]\Z", "no trailing newline"),
         (r"^source\b", "don't use 'source', use '.'"),
         (r"touch -d", "don't use 'touch -d', use 'touch -t' instead"),

@@ -2,19 +2,14 @@
 
 Setup
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
-
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
-  > #!/bin/sh
+  > #!/bin/bash
   > env | egrep "^HG_USERVAR_(DEBUG|BYPASS_REVIEW)" | sort
   > exit 0
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [hooks]
-  > pretxnchangegroup = sh $TESTTMP/pretxnchangegroup.sh
-  > [experimental]
-  > bundle2-exp = true
+  > pretxnchangegroup = bash $TESTTMP/pretxnchangegroup.sh
   > EOF
 
   $ hg init repo
@@ -71,3 +66,27 @@ Test pushing bad vars
   searching for changes
   abort: unable to parse variable 'DEBUG', should follow 'KEY=VALUE' or 'KEY=' format
   [255]
+
+Test Python hooks
+
+  $ cat >> $TESTTMP/pyhook.py << EOF
+  > def hook(ui, repo, hooktype, **kwargs):
+  >     for k, v in sorted(kwargs.items()):
+  >         if "USERVAR" in k:
+  >             ui.write("Got pushvar: %s=%s\n" % (k, v))
+  > EOF
+
+  $ cat >> $HGRCPATH << EOF
+  > [hooks]
+  > pretxnchangegroup.pyhook = python:$TESTTMP/pyhook.py:hook
+  > EOF
+
+  $ hg push --pushvars "A=1" --pushvars "B=2"
+  pushing to $TESTTMP/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  Got pushvar: USERVAR_A=1
+  Got pushvar: USERVAR_B=2
