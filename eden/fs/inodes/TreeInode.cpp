@@ -2977,44 +2977,94 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
   return folly::collectAll(results).unit();
 }
 
-void TreeInode::unloadChildrenNow() {
-  std::vector<TreeInodePtr> treeChildren;
-  std::vector<InodeBase*> toDelete;
-  auto* inodeMap = getInodeMap();
+namespace {
+
+/**
+ * WARNING: predicate is called while the InodeMap and TreeInode contents locks
+ * are held.
+ */
+template <typename Recurse, typename Predicate>
+size_t unloadChildrenIf(
+    TreeInode* const self,
+    InodeMap* const inodeMap,
+    std::vector<TreeInodePtr>& treeChildren,
+    Recurse&& recurse,
+    Predicate&& predicate) {
+  size_t unloadCount = 0;
+
+  // Recurse into children here. Children hold strong references to their parent
+  // trees, so unloading children can cause the parent to become unreferenced.
+  for (auto& child : treeChildren) {
+    unloadCount += recurse(*child);
+  }
+
+  // Release the treeChildren refcounts.
+  treeChildren.clear();
+
+  // Unload children whose reference count is zero.
+  std::vector<unique_ptr<InodeBase>> toDelete;
   {
-    auto contents = contents_.wlock();
+    auto contents = self->getContents().wlock();
     auto inodeMapLock = inodeMap->lockForUnload();
 
+    for (auto& entry : contents->entries) {
+      auto* entryInode = entry.second.getInode();
+      if (!entryInode) {
+        continue;
+      }
+
+      if (predicate(entryInode) && entryInode->isPtrAcquireCountZero()) {
+        // If it's a tree and it has a loaded child, its refcount will never be
+        // zero because the child holds a reference to its parent.
+
+        // Allocate space in the vector. This can throw std::bad_alloc.
+        toDelete.emplace_back();
+
+        // Forget other references to this inode.
+        (void)entry.second.clearInode(); // clearInode will not throw.
+        inodeMap->unloadInode(
+            entryInode, self, entry.first, false, inodeMapLock);
+
+        // If unloadInode threw, we'll leak the entryInode, but it's no big
+        // deal. This assignment cannot throw.
+        toDelete.back() = unique_ptr<InodeBase>{entryInode};
+      }
+    }
+  }
+
+  unloadCount += toDelete.size();
+  // Outside of the locks, deallocate all of the inodes scheduled to be deleted.
+  toDelete.clear();
+
+  return unloadCount;
+}
+
+} // namespace
+
+size_t TreeInode::unloadChildrenNow() {
+  std::vector<TreeInodePtr> treeChildren;
+  {
+    auto contents = contents_.rlock();
     for (auto& entry : contents->entries) {
       if (!entry.second.getInode()) {
         continue;
       }
 
+      // This has the side effect of incrementing the reference counts of all
+      // of the children. When that goes back to zero,
+      // InodeMap::onInodeUnreferenced will be called on the entry.
       if (auto asTree = entry.second.asTreePtrOrNull()) {
-        treeChildren.push_back(std::move(asTree));
-      } else {
-        if (entry.second.getInode()->isPtrAcquireCountZero()) {
-          // Unload the inode
-          inodeMap->unloadInode(
-              entry.second.getInode(), this, entry.first, false, inodeMapLock);
-          // Record that we should now delete this inode after releasing
-          // the locks.
-          toDelete.push_back(entry.second.clearInode());
-        }
+        treeChildren.emplace_back(std::move(asTree));
       }
     }
   }
 
-  for (auto* child : toDelete) {
-    delete child;
-  }
-  for (auto& child : treeChildren) {
-    child->unloadChildrenNow();
-  }
-
-  // Note: during mount point shutdown, returning from this function and
-  // destroying the treeChildren map will decrement the reference count on
-  // all of our children trees, which may result in them being destroyed.
+  return unloadChildrenIf(
+      this,
+      getInodeMap(),
+      treeChildren,
+      [](TreeInode& child) { return child.unloadChildrenNow(); },
+      [](InodeBase*) { return true; });
 }
 
 size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
@@ -3086,61 +3136,24 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
     }
   }
 
-  size_t unloadCount = 0;
-
-  // Recurse into children here. Children hold strong references to their parent
-  // trees, so unloading children can cause the parent to become unreferenced.
-  for (auto& child : treeChildren) {
-    unloadCount += child->unloadChildrenLastAccessedBefore(cutoff);
-  }
-
   // We no longer need pointers to the child inodes - release them. Beware that
   // this may deallocate inode instances for the children and clear them from
   // InodeMap and contents table as a natural side effect of their refcounts
   // going to zero.
+  //
+  // unloadChildrenIf below will clear treeChildren.
   fileChildren.clear();
-  treeChildren.clear();
 
-  // Unload qualified children whose reference count is zero.
-  // treeChildren contains subtrees to recurse into.
-  std::vector<std::unique_ptr<InodeBase>> toDelete;
-  {
-    auto* inodeMap = getInodeMap();
-    auto contents = contents_.wlock();
-    auto inodeMapLock = inodeMap->lockForUnload();
-
-    for (auto& entry : contents->entries) {
-      auto* entryInode = entry.second.getInode();
-      if (!entryInode) {
-        continue;
-      }
-
-      bool shouldBeUnloaded =
-          toUnload.count(entry.second.getInodeNumber()) != 0;
-      if (shouldBeUnloaded && entryInode->isPtrAcquireCountZero()) {
-        // If it's a tree and it has a loaded child, its refcount will never be
-        // zero because the child holds a reference to its parent.
-
-        // Allocate space in the vector. This can throw std::bad_alloc.
-        toDelete.emplace_back();
-
-        // Forget other references to this inode.
-        (void)entry.second.clearInode(); // clearInode will not throw.
-        inodeMap->unloadInode(
-            entryInode, this, entry.first, false, inodeMapLock);
-
-        // If unloadInode threw, we'll leak the entryInode, but it's no big
-        // deal. This assignment cannot throw.
-        toDelete.back() = std::unique_ptr<InodeBase>{entryInode};
-      }
-    }
-  }
-
-  unloadCount += toDelete.size();
-  // Outside of the locks, deallocate all of the inodes scheduled to be deleted.
-  toDelete.clear();
-
-  return unloadCount;
+  return unloadChildrenIf(
+      this,
+      getInodeMap(),
+      treeChildren,
+      [&](TreeInode& child) {
+        return child.unloadChildrenLastAccessedBefore(cutoff);
+      },
+      [&](InodeBase* child) {
+        return toUnload.count(child->getNodeId()) != 0;
+      });
 }
 
 void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {

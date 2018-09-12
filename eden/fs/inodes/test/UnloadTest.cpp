@@ -13,13 +13,23 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
+#include "eden/fs/testharness/InodeUnloader.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace std::chrono_literals;
 using folly::Optional;
 using namespace facebook::eden;
 
-TEST(Unload, inodesAreUnloaded) {
+namespace {
+template <typename Unloader>
+struct UnloadTest : ::testing::Test {
+  Unloader unloader;
+};
+} // namespace
+
+TYPED_TEST_CASE(UnloadTest, InodeUnloaderTypes);
+
+TYPED_TEST(UnloadTest, inodesAreUnloaded) {
   FakeTreeBuilder builder;
   builder.mkdir("docs");
   builder.setFile("docs/README.md", "readme");
@@ -64,15 +74,9 @@ TEST(Unload, inodesAreUnloaded) {
   EXPECT_EQ(12, inodeMap->getLoadedInodeCount());
   EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());
 
-  timespec endOfTime;
-  endOfTime.tv_sec = std::numeric_limits<time_t>::max();
-  endOfTime.tv_nsec = 999999999;
-
   // Count includes files only, and the root's refcount will never go to zero
   // while the mount is up.
-  EXPECT_EQ(
-      11,
-      edenMount->getRootInode()->unloadChildrenLastAccessedBefore(endOfTime));
+  EXPECT_EQ(11, this->unloader.unload(*edenMount->getRootInode()));
 
   EXPECT_EQ(1, inodeMap->getLoadedInodeCount());
   EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());

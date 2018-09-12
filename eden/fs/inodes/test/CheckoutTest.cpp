@@ -23,6 +23,7 @@
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
+#include "eden/fs/testharness/InodeUnloader.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -1028,7 +1029,18 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
 
-TEST(Checkout, unloadAndCheckoutRemembersInodeNumbersForFuseReferencedInodes) {
+namespace {
+template <typename Unloader>
+struct CheckoutUnloadTest : ::testing::Test {
+  Unloader unloader;
+};
+} // namespace
+
+TYPED_TEST_CASE(CheckoutUnloadTest, InodeUnloaderTypes);
+
+TYPED_TEST(
+    CheckoutUnloadTest,
+    unloadAndCheckoutRemembersInodeNumbersForFuseReferencedInodes) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("root/a/b/c/file1.txt", "before1");
   builder1.setFile("root/d/e/f/file2.txt", "before2");
@@ -1066,14 +1078,8 @@ TEST(Checkout, unloadAndCheckoutRemembersInodeNumbersForFuseReferencedInodes) {
   auto ghiInodeNumber = ghifile3->getParentRacy()->getNodeId();
   ghifile3.reset();
 
-  timespec endOfTime;
-  endOfTime.tv_sec = std::numeric_limits<time_t>::max();
-  endOfTime.tv_nsec = 999999999;
-
-  auto unloaded = edenMount->getInode("root"_relpath)
-                      .get(1ms)
-                      .asTreePtr()
-                      ->unloadChildrenLastAccessedBefore(endOfTime);
+  auto unloaded = this->unloader.unload(
+      *edenMount->getInode("root"_relpath).get(1ms).asTreePtr());
   // Everything was unloaded.
   EXPECT_EQ(12, unloaded);
 

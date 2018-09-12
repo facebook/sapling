@@ -327,8 +327,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *
    * This walks the children underneath this tree, unloading any inodes that
    * are unreferenced.
+   *
+   * Returns the number of inodes unloaded.
    */
-  void unloadChildrenNow();
+  size_t unloadChildrenNow();
 
   /**
    * Unload all unreferenced inodes under this tree whose last access time is
