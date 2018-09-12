@@ -29,7 +29,15 @@ template.
 """
 from __future__ import absolute_import
 
-from mercurial import error, extensions, localrepo, registrar, revset, smartset
+from mercurial import (
+    error,
+    extensions,
+    localrepo,
+    namespaces,
+    registrar,
+    revset,
+    smartset,
+)
 from mercurial.i18n import _
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
@@ -44,6 +52,7 @@ configitem("globalrevs", "reponame", default=None)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+namespacepredicate = registrar.namespacepredicate()
 revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 
@@ -246,6 +255,21 @@ def _lookupglobalrev(repo, grev):
             break
 
     return matchedrevs
+
+
+def _lookupname(repo, name):
+    if name.startswith("m") and name[1:].isdigit():
+        return _lookupglobalrev(repo, int(name[1:]))
+
+
+@namespacepredicate("globalrevs", priority=70)
+def _getnamespace(_repo):
+    return namespaces.namespace(
+        "globalrevs",
+        listnames=lambda repo: [],
+        namemap=_lookupname,
+        nodemap=lambda repo, node: [],
+    )
 
 
 @revsetpredicate("globalrev(number)", safe=True, weight=10)

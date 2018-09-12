@@ -536,6 +536,10 @@ Test resolving commits based on the strictly increasing global revision numbers.
   hg: parse error: the argument to globalrev() must be a number
   [255]
 
+  $ hg log -r 'munknown'
+  abort: unknown revision 'munknown'!
+  [255]
+
 
 - Test that correct lookups work as expected.
 
@@ -543,7 +547,8 @@ Test resolving commits based on the strictly increasing global revision numbers.
   > {
   >   local grevs=$(hg log -r 'all()' -T '{globalrev}\n' | sed '/^$/d')
   >   for grev in $grevs; do
-  >     if [ "${grev}" -ne `getglobalrev "globalrev(${grev})"` ]; then
+  >     if [ "${grev}" -ne `getglobalrev "globalrev(${grev})"` ] || \
+  >       [ "${grev}" -ne `getglobalrev "m${grev}"` ]; then
   >       return 1
   >     fi
   >   done
@@ -559,7 +564,22 @@ global revision number 4999 which should not exist as the counting starts from
 
   $ hg log -r 'globalrev(4999)'
 
+  $ hg log -r 'm4999'
+  abort: unknown revision 'm4999'!
+  [255]
+
+  $ hg log -r 'm1+m2'
+  abort: unknown revision 'm1'!
+  [255]
+
   $ hg log -r 'globalrev(-1)'
+
+
+- Creating a bookmark with prefix `m1` should still work.
+
+  $ hg bookmark -r null m1
+  $ hg log -r 'm1' -T '{node}\n'
+  0000000000000000000000000000000000000000
 
 
 Test errors for bad configuration of the hgsql extension on the first server
