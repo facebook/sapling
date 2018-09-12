@@ -1,17 +1,18 @@
 Test namespace registration using registrar
 
   $ shorttraceback
+
   $ newrepo
   $ newext << EOF
   > from mercurial import registrar, namespaces
   > namespacepredicate = registrar.namespacepredicate()
-  > @namespacepredicate("a", after=["b", "v"])
+  > @namespacepredicate("a", priority=60)
   > def a(_repo):
   >     return namespaces.namespace("a")
-  > @namespacepredicate("b", after=["c"])
+  > @namespacepredicate("b", priority=70)
   > def b(_repo):
   >     return None
-  > @namespacepredicate("c", after=["d"])
+  > @namespacepredicate("c", priority=50)
   > def c(_repo):
   >     return namespaces.namespace("c")
   > EOF
@@ -22,26 +23,13 @@ Test namespace registration using registrar
   $ newext << EOF
   > from mercurial import registrar, namespaces
   > namespacepredicate = registrar.namespacepredicate()
-  > @namespacepredicate("z", after=["a"])
+  > @namespacepredicate("z", priority=99)
   > def z(_repo):
   >     return namespaces.namespace("z")
-  > @namespacepredicate("d")
+  > @namespacepredicate("d", priority=15)
   > def d(_repo):
   >     return namespaces.namespace("d")
   > EOF
   $ hg debugshell -c "print(list(repo.names))"
-  ['bookmarks', 'tags', 'branches', 'd', 'c', 'a', 'z']
+  ['bookmarks', 'd', 'tags', 'branches', 'c', 'a', 'z']
 
-  $ newext << EOF
-  > from mercurial import registrar, namespaces
-  > namespacepredicate = registrar.namespacepredicate()
-  > @namespacepredicate("u", after=["a"])
-  > def u(_repo):
-  >     return namespaces.namespace("u")
-  > @namespacepredicate("v", after=["u"])
-  > def v(_repo):
-  >     return namespaces.namespace("v")
-  > EOF
-  $ hg debugshell -c "print(list(repo.names))"
-  ProgrammingError: namespace order constraints cannot be satisfied: a, b, u, v, z
-  [255]

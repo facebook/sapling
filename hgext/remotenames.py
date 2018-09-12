@@ -637,7 +637,7 @@ class remotenames(dict):
         return self._node2branch
 
 
-@namespacepredicate("remotebookmarks", after=["bookmarks"])
+@namespacepredicate("remotebookmarks", priority=55)
 def remotebookmarks(repo):
     if repo.ui.configbool("remotenames", "bookmarks"):
         return namespaces.namespace(
@@ -653,7 +653,7 @@ def remotebookmarks(repo):
         return None
 
 
-@namespacepredicate("hoistednames", after=["remotebookmarks"])
+@namespacepredicate("hoistednames", priority=60)
 def hoistednames(repo):
     hoist = repo.ui.config("remotenames", "hoist")
     # hoisting only works if there are remote bookmarks
@@ -675,7 +675,7 @@ def hoistednames(repo):
         return None
 
 
-@namespacepredicate("remotebranches", after=["hoistednames", "remotebookmarks"])
+@namespacepredicate("remotebranches", priority=65)
 def remotebranches(repo):
     if _branchesenabled(repo.ui):
         return namespaces.namespace(

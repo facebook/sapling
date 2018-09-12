@@ -220,14 +220,14 @@ class namespacepredicate(_funcregistrarbase):
 
         namespacepredicate = registrar.namespacepredicate()
 
-        @namespacepredicate('mynamespace', after=['bookmarks'])
+        @namespacepredicate('mynamespace', priority=50)
         def getmynamespace(repo):
             return namespaces.namespace(...)
 
-    Optional argument 'after' indicates the namespace is after specified
-    known namespaces. Unknown namespace names are silently ignored. This
-    allows extensions to use names registered by other extensions without
-    checking whether the other extension is enabled or not.
+    Optional argument 'priority' will be used to decide the order if no
+    'after' is specified. Smaller priority will be inserted first. If
+    namespaces have a same priority, their names will be used, and inserted
+    by the alphabet order.
 
     The function can read configurations from 'repo' and decide to not
     add the namespace by returning 'None'.
@@ -235,8 +235,10 @@ class namespacepredicate(_funcregistrarbase):
 
     _docformat = "``%s``\n    %s"
 
-    def _extrasetup(self, name, func, after=None):
-        func._after = after or []
+    def _extrasetup(self, name, func, priority=None):
+        # See namespaces.py for priorities of builtin namespaces.
+        # 50 is after all builtin namespaces.
+        func._priority = priority or 50
 
 
 class revsetpredicate(_funcregistrarbase):

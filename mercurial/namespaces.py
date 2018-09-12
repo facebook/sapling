@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from . import error, templatekw, util
+from . import error, registrar, templatekw, util
 from .i18n import _
 
 
@@ -17,6 +17,62 @@ def tolist(val):
         return [val]
 
 
+# Do not use builtinnamespace in extension code. Use `registrar.namespacetable`
+# instead.
+builtinnamespace = registrar.namespacepredicate(namespacetable)
+
+columns = templatekw.getlogcolumns()
+
+
+@builtinnamespace("bookmarks", priority=10)
+def bookmarks(repo):
+    bmknames = lambda repo: repo._bookmarks.keys()
+    bmknamemap = lambda repo, name: tolist(repo._bookmarks.get(name))
+    bmknodemap = lambda repo, node: repo.nodebookmarks(node)
+    return namespace(
+        "bookmarks",
+        templatename="bookmark",
+        logfmt=columns["bookmark"],
+        listnames=bmknames,
+        namemap=bmknamemap,
+        nodemap=bmknodemap,
+        builtin=True,
+    )
+
+
+@builtinnamespace("tags", priority=20)
+def tags(repo):
+    tagnames = lambda repo: [t for t, n in repo.tagslist()]
+    tagnamemap = lambda repo, name: tolist(repo._tagscache.tags.get(name))
+    tagnodemap = lambda repo, node: repo.nodetags(node)
+    return namespace(
+        "tags",
+        templatename="tag",
+        logfmt=columns["tag"],
+        listnames=tagnames,
+        namemap=tagnamemap,
+        nodemap=tagnodemap,
+        deprecated={"tip"},
+        builtin=True,
+    )
+
+
+@builtinnamespace("branches", priority=30)
+def branches(repo):
+    bnames = lambda repo: repo.branchmap().keys()
+    bnamemap = lambda repo, name: tolist(repo.branchtip(name, True))
+    bnodemap = lambda repo, node: [repo[node].branch()]
+    return namespace(
+        "branches",
+        templatename="branch",
+        logfmt=columns["branch"],
+        listnames=bnames,
+        namemap=bnamemap,
+        nodemap=bnodemap,
+        builtin=True,
+    )
+
+
 class namespaces(object):
     """provides an interface to register and operate on multiple namespaces. See
     the namespace class below for details on the namespace object.
@@ -27,76 +83,18 @@ class namespaces(object):
 
     def __init__(self, repo):
         self._names = util.sortdict()
-        columns = templatekw.getlogcolumns()
 
-        # TODO(quark): move builtin namespaces to namespacetable
+        # Insert namespaces specified in the namespacetable, sorted
+        # by priority.
+        def sortkey(tup):
+            name, func = tup
+            return (func._priority, name)
 
-        # we need current mercurial named objects (bookmarks, tags, and
-        # branches) to be initialized somewhere, so that place is here
-        bmknames = lambda repo: repo._bookmarks.keys()
-        bmknamemap = lambda repo, name: tolist(repo._bookmarks.get(name))
-        bmknodemap = lambda repo, node: repo.nodebookmarks(node)
-        n = namespace(
-            "bookmarks",
-            templatename="bookmark",
-            logfmt=columns["bookmark"],
-            listnames=bmknames,
-            namemap=bmknamemap,
-            nodemap=bmknodemap,
-            builtin=True,
-        )
-        self.addnamespace(n)
-
-        tagnames = lambda repo: [t for t, n in repo.tagslist()]
-        tagnamemap = lambda repo, name: tolist(repo._tagscache.tags.get(name))
-        tagnodemap = lambda repo, node: repo.nodetags(node)
-        n = namespace(
-            "tags",
-            templatename="tag",
-            logfmt=columns["tag"],
-            listnames=tagnames,
-            namemap=tagnamemap,
-            nodemap=tagnodemap,
-            deprecated={"tip"},
-            builtin=True,
-        )
-        self.addnamespace(n)
-
-        bnames = lambda repo: repo.branchmap().keys()
-        bnamemap = lambda repo, name: tolist(repo.branchtip(name, True))
-        bnodemap = lambda repo, node: [repo[node].branch()]
-        n = namespace(
-            "branches",
-            templatename="branch",
-            logfmt=columns["branch"],
-            listnames=bnames,
-            namemap=bnamemap,
-            nodemap=bnodemap,
-            builtin=True,
-        )
-        self.addnamespace(n)
-
-        # Insert namespaces specified in the namespacetable, with
-        # "after" constraints satisfied.
-        handled = set()
-        while len(handled) < len(namespacetable):
-            oldlen = len(handled)
-            for name, func in namespacetable.iteritems():
-                if name not in self._names and all(
-                    aftername in handled
-                    for aftername in func._after
-                    if aftername in namespacetable
-                ):
-                    handled.add(name)
-                    ns = func(repo)
-                    if ns is not None:
-                        assert ns.name == name
-                        self.addnamespace(ns)
-            if oldlen == len(handled):
-                raise error.ProgrammingError(
-                    "namespace order constraints cannot be satisfied: %s"
-                    % ", ".join(sorted(set(namespacetable) - set(self._names)))
-                )
+        for name, func in sorted(namespacetable.items(), key=sortkey):
+            ns = func(repo)
+            if ns is not None:
+                assert ns.name == name
+                self.addnamespace(ns)
 
     def __getitem__(self, namespace):
         """returns the namespace object"""
