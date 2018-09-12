@@ -137,7 +137,7 @@ class statichttprepository(localrepo.localrepository):
         self.cachevfs = vfsclass(self.vfs.join("cache"))
         self._phasedefaults = []
 
-        self.names = namespaces.namespaces()
+        self.names = namespaces.namespaces(self)
         self.filtername = None
 
         try:

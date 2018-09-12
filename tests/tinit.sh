@@ -55,6 +55,17 @@ setconfig() {
   python "$RUNTESTDIR/setconfig.py" "$@"
 }
 
+# Create a new extension
+newext() {
+  extname="$1"
+  if [ -z "$extname" ]; then
+    _extcount=$((_extcount+1))
+    extname=ext$_extcount
+  fi
+  cat > "$TESTTMP/$extname.py"
+  setconfig "extensions.$extname=$TESTTMP/$extname.py"
+}
+
 showgraph() {
   hg log --graph -T "{rev} {node|short} {desc|firstline}" | sed \$d
 }

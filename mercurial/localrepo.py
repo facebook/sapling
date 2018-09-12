@@ -548,7 +548,7 @@ class localrepository(object):
         self._postdsstatus = []
 
         # generic mapping between names and nodes
-        self.names = namespaces.namespaces()
+        self.names = namespaces.namespaces(self)
 
         # Key to signature value.
         self._sparsesignaturecache = {}

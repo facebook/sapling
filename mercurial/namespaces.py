@@ -1,7 +1,10 @@
 from __future__ import absolute_import
 
-from . import templatekw, util
+from . import error, templatekw, util
 from .i18n import _
+
+
+namespacetable = util.sortdict()
 
 
 def tolist(val):
@@ -22,9 +25,11 @@ class namespaces(object):
 
     _names_version = 0
 
-    def __init__(self):
+    def __init__(self, repo):
         self._names = util.sortdict()
         columns = templatekw.getlogcolumns()
+
+        # TODO(quark): move builtin namespaces to namespacetable
 
         # we need current mercurial named objects (bookmarks, tags, and
         # branches) to be initialized somewhere, so that place is here
@@ -70,6 +75,28 @@ class namespaces(object):
             builtin=True,
         )
         self.addnamespace(n)
+
+        # Insert namespaces specified in the namespacetable, with
+        # "after" constraints satisfied.
+        handled = set()
+        while len(handled) < len(namespacetable):
+            oldlen = len(handled)
+            for name, func in namespacetable.iteritems():
+                if name not in self._names and all(
+                    aftername in handled
+                    for aftername in func._after
+                    if aftername in namespacetable
+                ):
+                    handled.add(name)
+                    ns = func(repo)
+                    if ns is not None:
+                        assert ns.name == name
+                        self.addnamespace(ns)
+            if oldlen == len(handled):
+                raise error.ProgrammingError(
+                    "namespace order constraints cannot be satisfied: %s"
+                    % ", ".join(sorted(set(namespacetable) - set(self._names)))
+                )
 
     def __getitem__(self, namespace):
         """returns the namespace object"""
@@ -221,3 +248,10 @@ class namespace(object):
 
         """
         return sorted(self.namemap(repo, name))
+
+
+def loadpredicate(ui, extname, registrarobj):
+    for name, ns in registrarobj._table.iteritems():
+        if name in namespacetable:
+            raise error.ProgrammingError("namespace '%s' is already registered", name)
+        namespacetable[name] = ns

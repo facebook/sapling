@@ -49,7 +49,7 @@ class _funcregistrarbase(object):
 
     def __init__(self, table=None):
         if table is None:
-            self._table = {}
+            self._table = util.sortdict()
         else:
             self._table = table
 
@@ -211,6 +211,32 @@ class command(_funcregistrarbase):
         else:
             self._table[name] = func, list(options)
         return func
+
+
+class namespacepredicate(_funcregistrarbase):
+    """Decorator to register namespace predicate
+
+    Usage::
+
+        namespacepredicate = registrar.namespacepredicate()
+
+        @namespacepredicate('mynamespace', after=['bookmarks'])
+        def getmynamespace(repo):
+            return namespaces.namespace(...)
+
+    Optional argument 'after' indicates the namespace is after specified
+    known namespaces. Unknown namespace names are silently ignored. This
+    allows extensions to use names registered by other extensions without
+    checking whether the other extension is enabled or not.
+
+    The function can read configurations from 'repo' and decide to not
+    add the namespace by returning 'None'.
+    """
+
+    _docformat = "``%s``\n    %s"
+
+    def _extrasetup(self, name, func, after=None):
+        func._after = after or []
 
 
 class revsetpredicate(_funcregistrarbase):

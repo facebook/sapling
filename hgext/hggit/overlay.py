@@ -450,7 +450,7 @@ class overlayrepo(object):
             # Mercurial >= 3.3
             from mercurial import namespaces
 
-            self.names = namespaces.namespaces()
+            self.names = namespaces.namespaces(self)
         except (AttributeError, ImportError):
             pass
 
