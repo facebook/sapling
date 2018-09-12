@@ -3013,7 +3013,10 @@ size_t unloadChildrenIf(
         continue;
       }
 
-      if (predicate(entryInode) && entryInode->isPtrAcquireCountZero()) {
+      // Check isPtrAcquireCountZero() first. It's a single load instruction on
+      // x86 and if the predicate calls getFuseRefcount(), it will assert if
+      // isPtrAcquireCountZero() is false.
+      if (entryInode->isPtrAcquireCountZero() && predicate(entryInode)) {
         // If it's a tree and it has a loaded child, its refcount will never be
         // zero because the child holds a reference to its parent.
 
@@ -3039,12 +3042,10 @@ size_t unloadChildrenIf(
   return unloadCount;
 }
 
-} // namespace
-
-size_t TreeInode::unloadChildrenNow() {
+std::vector<TreeInodePtr> getTreeChildren(TreeInode* self) {
   std::vector<TreeInodePtr> treeChildren;
   {
-    auto contents = contents_.rlock();
+    auto contents = self->getContents().rlock();
     for (auto& entry : contents->entries) {
       if (!entry.second.getInode()) {
         continue;
@@ -3058,13 +3059,29 @@ size_t TreeInode::unloadChildrenNow() {
       }
     }
   }
+  return treeChildren;
+}
 
+} // namespace
+
+size_t TreeInode::unloadChildrenNow() {
+  auto treeChildren = getTreeChildren(this);
   return unloadChildrenIf(
       this,
       getInodeMap(),
       treeChildren,
       [](TreeInode& child) { return child.unloadChildrenNow(); },
       [](InodeBase*) { return true; });
+}
+
+size_t TreeInode::unloadChildrenUnreferencedByFuse() {
+  auto treeChildren = getTreeChildren(this);
+  return unloadChildrenIf(
+      this,
+      getInodeMap(),
+      treeChildren,
+      [](TreeInode& child) { return child.unloadChildrenUnreferencedByFuse(); },
+      [](InodeBase* child) { return child->getFuseRefcount() == 0; });
 }
 
 size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {

@@ -326,11 +326,21 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Unload all unreferenced children under this tree (recursively).
    *
    * This walks the children underneath this tree, unloading any inodes that
-   * are unreferenced.
+   * are unreferenced by Eden. If an inode is unreferenced by Eden but
+   * still has a positive FUSE reference count, it will be unloaded and moved
+   * into the InodeMap's unloadedInodes map.
    *
    * Returns the number of inodes unloaded.
    */
   size_t unloadChildrenNow();
+
+  /**
+   * Unload all children, recursively, neither referenced internally by Eden nor
+   * by FUSE.
+   *
+   * Returns the number of inodes unloaded.
+   */
+  size_t unloadChildrenUnreferencedByFuse();
 
   /**
    * Unload all unreferenced inodes under this tree whose last access time is

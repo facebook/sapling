@@ -81,3 +81,27 @@ TYPED_TEST(UnloadTest, inodesAreUnloaded) {
   EXPECT_EQ(1, inodeMap->getLoadedInodeCount());
   EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());
 }
+
+TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile("src/file.txt", "contents");
+  TestMount testMount{builder};
+
+  const auto* edenMount = testMount.getEdenMount().get();
+  auto inodeMap = edenMount->getInodeMap();
+
+  auto inode = edenMount->getInodeBlocking("src/file.txt"_relpath);
+  inode->incFuseRefcount();
+  inode.reset();
+
+  // 1 file + 1 subdirectory + 1 root + 1 .eden + 3 .eden entries
+  EXPECT_EQ(7, inodeMap->getLoadedInodeCount());
+  EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());
+
+  EXPECT_EQ(4, edenMount->getRootInode()->unloadChildrenUnreferencedByFuse());
+
+  // root + src + file.txt
+  EXPECT_EQ(3, inodeMap->getLoadedInodeCount());
+  EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());
+}
