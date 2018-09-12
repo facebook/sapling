@@ -50,6 +50,8 @@ else
 fi
 
 testrepohg () {
-    testrepohgenv
-    exec hg "$@"
+    (
+        testrepohgenv
+        exec hg "$@"
+    )
 }
