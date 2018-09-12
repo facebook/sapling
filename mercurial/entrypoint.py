@@ -14,12 +14,12 @@ def run(binaryexecution):
     # entrypoint is in mercurial/ dir, while we want 'from mercurial import ...',
     # 'from hgext import ...' and 'from hgdemandimport import ...' to work
     # so we are adding their parent directory to be the first item of sys.path
-    libdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..")
-    libdir = os.path.abspath(libdir)
+    # Do not follow symlinks (ex. do not use "realpath"). It breaks buck build.
+    filedir = os.path.dirname(os.path.abspath(__file__))
+    libdir = os.path.dirname(filedir)
     if sys.path[0] != libdir:
         sys.path.insert(0, libdir)
 
-    filedir = os.path.dirname(os.path.realpath(__file__))
     if filedir in sys.path:
         # the directory of entrypoint.py is mercurial/
         # and it should not be present in sys.path, as we use absolute_import
