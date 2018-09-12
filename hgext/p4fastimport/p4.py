@@ -414,7 +414,7 @@ class P4Changelist(object):
         desc = self.parsed["desc"]
         if desc == "":
             desc = "** empty changelist description **"
-        return desc.decode("ascii", "ignore")
+        return desc
 
     @property
     def user(self):

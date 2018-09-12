@@ -3,7 +3,7 @@ from __future__ import absolute_import
 
 import re
 
-from mercurial import context
+from mercurial import context, encoding
 from mercurial.i18n import _
 
 from . import importer, lfs, p4
@@ -149,10 +149,10 @@ class ChangelistImporter(object):
         return context.memctx(
             self.repo,  # repository
             (self.node, None),  # parents
-            p4cl.description,  # commit message
+            encoding.tolocal(p4cl.description),  # commit message
             p4flogs.keys(),  # files affected by this change
             getfile,  # fn - see above
-            user=p4cl.user,  # commit author
+            user=encoding.tolocal(p4cl.user),  # commit author
             date=p4cl.hgdate,  # commit date
             extra={"p4changelist": p4cl.cl},  # commit extras
         ).commit()
