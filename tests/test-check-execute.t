@@ -33,7 +33,6 @@
   contrib/plan9/9mail is not an executable but does have #!
   contrib/vagrant/provision.sh is not an executable but does have #!
   contrib/vagrant/run-tests.sh is not an executable but does have #!
-  mercurial/entrypoint.py is a Python script but does not have Python interpreter specified
   tests/fixtures/addspecial.sh is not an executable but does have #!
   tests/fixtures/mergeexternals.sh is not an executable but does have #!
   tests/fixtures/project_name_with_space.sh is not an executable but does have #!

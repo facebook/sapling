@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # mercurial - scalable distributed SCM
 #
 # Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
