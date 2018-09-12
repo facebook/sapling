@@ -541,6 +541,26 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         return std::move(journalDiffFuture)
             .then([this, ctx, fromTree, toTree]() {
               ctx->start(this->acquireRenameLock());
+
+              /**
+               * If a significant number of tree inodes are loaded or referenced
+               * by FUSE, then checkout is slow, because Eden must precisely
+               * manage changes to each one, as if the checkout was actually
+               * creating and removing files in each directory. If a tree is
+               * unloaded and unmodified, Eden can pretend the checkout
+               * operation blew away the entire subtree and assigned new inode
+               * numbers to everything under it, which is much cheaper.
+               *
+               * To make checkout faster, enumerate all loaded, unreferenced
+               * inodes and unload them, allowing checkout to use the fast path.
+               *
+               * Note that this will not unload any inodes currently referenced
+               * by FUSE, including the kernel's cache, so rapidly switching
+               * between commits while working should not be materially
+               * affected.
+               */
+              this->getRootInode()->unloadChildrenUnreferencedByFuse();
+
               return this->getRootInode()->checkout(
                   ctx.get(), fromTree, toTree);
             });
