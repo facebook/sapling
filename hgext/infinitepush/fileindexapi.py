@@ -15,7 +15,22 @@ import os
 import posixpath
 
 from indexapi import indexapi, indexexception
-from mercurial import util
+from mercurial import pycompat, util
+
+
+if pycompat.iswindows:
+
+    def _normalizepath(path):
+        # Remove known characters that is disallowed by Windows.
+        # ":" can appear in some tests where the path is joined like:
+        # "C:\\repo1\\.hg\\scratchbranches\\index\\bookmarkmap\\infinitepush/backups/test/HOSTNAME/C:\\repo2/heads"
+        return path.replace(":", "")
+
+
+else:
+
+    def _normalizepath(path):
+        return path
 
 
 class fileindexapi(indexapi):
@@ -106,6 +121,7 @@ class fileindexapi(indexapi):
 
     def _write(self, path, value):
         vfs = self._repo.vfs
+        path = _normalizepath(path)
         dirname = vfs.dirname(path)
         if not vfs.exists(dirname):
             vfs.makedirs(dirname)
@@ -114,12 +130,14 @@ class fileindexapi(indexapi):
 
     def _read(self, path):
         vfs = self._repo.vfs
+        path = _normalizepath(path)
         if not vfs.exists(path):
             return None
         return vfs.read(path)
 
     def _delete(self, path):
         vfs = self._repo.vfs
+        path = _normalizepath(path)
         if not vfs.exists(path):
             return
         return vfs.unlink(path)
