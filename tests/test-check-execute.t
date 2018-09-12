@@ -1,24 +1,45 @@
-#require test-repo execbit hg10 slow
+#require test-repo execbit hg10
 
   $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "`dirname "$TESTDIR"`"
 
-look for python scripts without the execute bit
+  $ testrepohg files . > "$TESTTMP/filelist"
 
-  $ testrepohg files 'set:**.py and not exec() and grep(r"^#!.*?python")'
-  [1]
-
-look for python scripts with execute bit but not shebang
-
-  $ testrepohg files 'set:**.py and exec() and not grep(r"^#!.*?python")'
-  [1]
-
-look for shell scripts with execute bit but not shebang
-
-  $ testrepohg files 'set:**.sh and exec() and not grep(r"^#!.*(ba)?sh")'
-  fb/tests/getdb.sh
-
-look for non scripts with no shebang
-
-  $ testrepohg files 'set:** and exec() and not **.sh and not **.py and not grep(r"^#!")'
-  [1]
+  $ python << EOF
+  > import os, stat
+  > for path in open(os.path.join(os.environ["TESTTMP"], "filelist")).read().splitlines():
+  >     if path.startswith("fb/"):
+  >         continue
+  >     content = open(path).read()
+  >     isexec = bool(stat.S_IEXEC & os.stat(path).st_mode)
+  >     ispy = path.endswith(".py")
+  >     issh = path.endswith(".sh")
+  >     isrs = path.endswith(".rs")
+  >     if content.startswith("#!"):
+  >         interpreter = os.path.basename(content.split("\n")[0].split()[-1])
+  >     else:
+  >         interpreter = None
+  >     if ispy and isexec and interpreter not in {"python", "python2", "python3"}:
+  >         print("%s is a Python script but does not have Python interpreter specified" % path)
+  >     elif issh and isexec and interpreter not in {"sh", "bash", "zsh", "fish"}:
+  >         print("%s is a Shell script but does not have Shell interpreter specified" % path)
+  >     elif isexec and not interpreter:
+  >         print("%s is executable but does not have #!" % path)
+  >     elif not isexec and interpreter and not isrs:
+  >         print("%s is not an executable but does have #!" % path)
+  > EOF
+  contrib/builddeb_fb/debian/rules is not an executable but does have #!
+  contrib/dockerlib.sh is not an executable but does have #!
+  contrib/plan9/9mail is not an executable but does have #!
+  contrib/vagrant/provision.sh is not an executable but does have #!
+  contrib/vagrant/run-tests.sh is not an executable but does have #!
+  mercurial/entrypoint.py is a Python script but does not have Python interpreter specified
+  tests/fixtures/addspecial.sh is not an executable but does have #!
+  tests/fixtures/mergeexternals.sh is not an executable but does have #!
+  tests/fixtures/project_name_with_space.sh is not an executable but does have #!
+  tests/fixtures/rename-closed-branch-dir.sh is not an executable but does have #!
+  tests/infinitepush/library.sh is not an executable but does have #!
+  tests/test-fb-hgext-cstore-datapackstore.py is a Python script but does not have Python interpreter specified
+  tests/test-fb-hgext-cstore-treemanifest.py is a Python script but does not have Python interpreter specified
+  tests/test-fb-hgext-cstore-uniondatapackstore.py is a Python script but does not have Python interpreter specified
+  tests/test-fb-hgext-revisionstore-datastore.py is a Python script but does not have Python interpreter specified
