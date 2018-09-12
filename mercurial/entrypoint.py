@@ -36,7 +36,7 @@ def run(binaryexecution):
 
     from mercurial import util
 
-    util.platform.setbinaryexecution(binaryexecution)
+    util.setbinaryexecution(binaryexecution)
 
     if (
         sys.argv[1:5] == ["serve", "--cmdserver", "chgunix", "--address"]

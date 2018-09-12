@@ -149,6 +149,7 @@ samedevice = platform.samedevice
 samefile = platform.samefile
 samestat = platform.samestat
 setbinary = platform.setbinary
+setbinaryexecution = platform.setbinaryexecution
 setflags = platform.setflags
 setsignalhandler = platform.setsignalhandler
 shellquote = platform.shellquote
