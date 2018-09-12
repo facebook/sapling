@@ -15,9 +15,11 @@ crate_root = dirname(dirname(os.path.realpath(__file__)))
 def expand_parser(pest):
     """expand the "#[derive(Parser)] part"""
     with tempfile.TemporaryDirectory() as tmp_root:
-        # Copy Cargo.toml
+        # Copy Cargo.toml, without [dev-dependencies] and [[bench]]
         with open(os.path.join(tmp_root, "Cargo.toml"), "w") as f:
-            f.write(open(os.path.join(crate_root, "Cargo.toml")).read())
+            content = open(os.path.join(crate_root, "Cargo.toml")).read()
+            content = content.split("[dev-dependencies]")[0]
+            f.write(content)
 
         # Copy spec.pest
         os.mkdir(os.path.join(tmp_root, "src"))
@@ -98,7 +100,7 @@ def write_generated_parser():
 //
 // #[derive(Parser)]
 // #[grammar = "spec.pest"]
-// struct ConfigParser;
+// pub(crate) struct ConfigParser;
 //
 // However, `#[grammar = "spec.pest"]` does not play well with Buck build,
 // because pest_derive cannot find "spec.pest" in buck build environment.

@@ -28,7 +28,7 @@ Invalid syntax: no key
   1 | =nokeyvalue
     | ^---
     |
-    = expected new_line, name, left_bracket, comment_line, or directive
+    = expected new_line, config_name, left_bracket, comment_line, or directive
   [255]
 
 Test hint about invalid syntax from leading white space

@@ -842,8 +842,8 @@ aliases:
   $ echo 'p2($1) = p1($1)' >> .hg/hgrc
   $ echo 'sincem = descendants(m)' >> .hg/hgrc
   $ echo 'd($1) = reverse(sort($1, date))' >> .hg/hgrc
-  $ echo 'rs(ARG1,ARG2) = reverse(sort(ARG1, ARG2))' >> .hg/hgrc
-  $ echo 'rs4(ARG1,ARGA,ARGB,ARG2) = reverse(sort(ARG1, ARG2))' >> .hg/hgrc
+  $ echo 'rs(ARG1, ARG2) = reverse(sort(ARG1, ARG2))' >> .hg/hgrc
+  $ echo 'rs4(ARG1, ARGA, ARGB, ARG2) = reverse(sort(ARG1, ARG2))' >> .hg/hgrc
 
   $ try m
   (symbol 'm')
@@ -943,8 +943,8 @@ test infinite recursion
   hg: parse error: infinite expansion of revset alias "recurse1" detected
   [255]
 
-  $ echo 'level1($1,$2) = $1 or $2' >> .hg/hgrc
-  $ echo 'level2($1,$2) = level1($2, $1)' >> .hg/hgrc
+  $ echo 'level1($1, $2) = $1 or $2' >> .hg/hgrc
+  $ echo 'level2($1, $2) = level1($2, $1)' >> .hg/hgrc
   $ try "level2(level1(1, 2), 3)"
   (func
     (symbol 'level2')
@@ -997,7 +997,7 @@ test nesting and variable passing
 
 test chained `or` operations are flattened at parsing phase
 
-  $ echo 'chainedorops($1,$2,$3) = $1|$2|$3' >> .hg/hgrc
+  $ echo 'chainedorops($1, $2, $3) = $1|$2|$3' >> .hg/hgrc
   $ try 'chainedorops(0:1, 1:2, 2:3)'
   (func
     (symbol 'chainedorops')
@@ -1104,7 +1104,7 @@ test unknown reference:
   * set:
   <baseset [9]>
   9
-  $ echo 'strictreplacing($1,$10) = $10 or desc("$1")' >> .hg/hgrc
+  $ echo 'strictreplacing($1, $10) = $10 or desc("$1")' >> .hg/hgrc
   $ try 'strictreplacing("foo", tip)'
   (func
     (symbol 'strictreplacing')
@@ -1429,7 +1429,7 @@ tests for concatenation of strings/symbols by "##"
   <baseset [0]>
   0
 
-  $ echo 'cat4($1,$2,$3,$4) = $1 ## $2 ## $3 ## $4' >> .hg/hgrc
+  $ echo 'cat4($1, $2, $3, $4) = $1 ## $2 ## $3 ## $4' >> .hg/hgrc
   $ try "cat4(278, '5f5', 1ee, 'ce5')"
   (func
     (symbol 'cat4')
@@ -1454,14 +1454,14 @@ tests for concatenation of strings/symbols by "##"
 
 (check concatenation in alias nesting)
 
-  $ echo 'cat2($1,$2) = $1 ## $2' >> .hg/hgrc
-  $ echo 'cat2x2($1,$2,$3,$4) = cat2($1 ## $2, $3 ## $4)' >> .hg/hgrc
+  $ echo 'cat2($1, $2) = $1 ## $2' >> .hg/hgrc
+  $ echo 'cat2x2($1, $2, $3, $4) = cat2($1 ## $2, $3 ## $4)' >> .hg/hgrc
   $ log "cat2x2(278, '5f5', 1ee, 'ce5')"
   0
 
 (check operator priority)
 
-  $ echo 'cat2n2($1,$2,$3,$4) = $1 ## $2 or $3 ## $4~2' >> .hg/hgrc
+  $ echo 'cat2n2($1, $2, $3, $4) = $1 ## $2 or $3 ## $4~2' >> .hg/hgrc
   $ log "cat2n2(2785f5, 1eece5, 24286f, 4ae135)"
   0
   4

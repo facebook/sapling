@@ -296,6 +296,9 @@ impl ConfigSet {
                 _ => Bytes::from(lines.join(&b'\n')),
             };
 
+            let (start, end) = strip_offsets(&value, 0, value.len());
+            let value = value.slice(start, end);
+
             this.set_internal(section, name, value.into(), location.into(), opts)
         };
 
@@ -304,7 +307,7 @@ impl ConfigSet {
             let mut name = Bytes::new();
             for pair in pairs {
                 match pair.as_rule() {
-                    Rule::name => name = extract(&buf, pair.into_span()),
+                    Rule::config_name => name = extract(&buf, pair.into_span()),
                     Rule::value => {
                         let span = pair.clone().into_span();
                         let location = ValueLocation {
@@ -324,7 +327,7 @@ impl ConfigSet {
             let pairs = pair.into_inner();
             for pair in pairs {
                 match pair.as_rule() {
-                    Rule::name => {
+                    Rule::section_name => {
                         *section = extract(&buf, pair.into_span());
                         return;
                     }
@@ -354,7 +357,7 @@ impl ConfigSet {
             let pairs = pair.into_inner();
             for pair in pairs {
                 match pair.as_rule() {
-                    Rule::name => {
+                    Rule::config_name => {
                         let name = extract(&buf, pair.into_span());
                         let location = ValueLocation {
                             path: shared_path.clone(),
@@ -408,13 +411,14 @@ impl ConfigSet {
 
                 Rule::comment_start
                 | Rule::compound
+                | Rule::config_name
                 | Rule::equal_sign
                 | Rule::file
                 | Rule::include
                 | Rule::left_bracket
                 | Rule::line
-                | Rule::name
                 | Rule::right_bracket
+                | Rule::section_name
                 | Rule::space
                 | Rule::unset
                 | Rule::value => unreachable!(),
@@ -643,19 +647,138 @@ pub(crate) mod tests {
     #[test]
     fn test_parse_spaces() {
         let mut cfg = ConfigSet::new();
+
         cfg.parse(
-            "[a]\n\
-             #\n\
-             x= \t1",
+            "# space after section name\n\
+             [a]    \n\
+             # empty lines\n    \n\t\n\n\
+             x=1\n\
+             # space in config name\n\
+             y y \t =2\n\
+             # space in multi-line config value, with trailing spaces\n\
+             z=\t 3 3 \n  \n  4  \n\t5  \n  \n\
+             # empty values\n\
+             e1 =\n\
+             e2 = \n\
+             e3 =\n  \n\
+             \n\
+             # space in section name\n\
+             [ b c\t]\n\
+             # space in unset\n\
+             y y =\n\
+             %unset  y y \n\
+             # no space at EOF\n\
+             x=4",
             &"".into(),
         );
 
         assert_eq!(cfg.get("a", "x"), Some("1".into()));
+        assert_eq!(cfg.get("a", "y y"), Some("2".into()));
+        assert_eq!(cfg.get("a", "z"), Some("3 3\n\n4\n5".into()));
+        assert_eq!(cfg.get("a", "e1"), Some("".into()));
+        assert_eq!(cfg.get("a", "e2"), Some("".into()));
+        assert_eq!(cfg.get("a", "e3"), Some("".into()));
+        assert_eq!(cfg.get("b c", "y y"), None);
+        assert_eq!(cfg.get("b c", "x"), Some("4".into()));
+    }
+
+    #[test]
+    fn test_corner_cases() {
+        let mut cfg = ConfigSet::new();
+        let errors = cfg.parse(
+            "# section looks like a config assignment\n\
+             [a=b]\n\
+             # comments look like config assignments\n\
+             # a = b\n\
+             ; a = b\n\
+             # multiple equal signs in a config assignment\n\
+             c = d = e\n\
+             #",
+            &"".into(),
+        );
+
+        assert_eq!(format!("{:?}", errors), "[]");
+        assert_eq!(cfg.get("a=b", "c"), Some("d = e".into()));
+        assert_eq!(cfg.get("a=b", "a"), None);
+        assert_eq!(cfg.get("a=b", "# a"), None);
+        assert_eq!(cfg.get("a=b", "; a"), None);
     }
 
     #[test]
     fn test_parse_errors() {
         let mut cfg = ConfigSet::new();
+        let errors = cfg.parse("=foo", &"test_parse_errors".into());
+        assert_eq!(
+            format!("{}", errors[0]),
+            "\"\":
+ --> 1:1
+  |
+1 | =foo
+  | ^---
+  |
+  = expected new_line, config_name, left_bracket, comment_line, or directive"
+        );
+
+        let errors = cfg.parse(" a=b", &"test_parse_errors".into());
+        assert_eq!(
+            format!("{}", errors[0]),
+            "\"\":
+ --> 1:2
+  |
+1 |  a=b
+  |  ^---
+  |
+  = expected new_line"
+        );
+
+        let errors = cfg.parse("%unset =foo", &"test_parse_errors".into());
+        assert_eq!(
+            format!("{}", errors[0]),
+            "\"\":
+ --> 1:8
+  |
+1 | %unset =foo
+  |        ^---
+  |
+  = expected space or config_name"
+        );
+
+        let errors = cfg.parse("[", &"test_parse_errors".into());
+        assert_eq!(
+            format!("{}", errors[0]),
+            "\"\":
+ --> 1:2
+  |
+1 | [
+  |  ^---
+  |
+  = expected section_name"
+        );
+
+        let errors = cfg.parse("[]", &"test_parse_errors".into());
+        assert_eq!(
+            format!("{}", errors[0]),
+            "\"\":
+ --> 1:2
+  |
+1 | []
+  |  ^---
+  |
+  = expected section_name"
+        );
+
+        let errors = cfg.parse("[a]]", &"test_parse_errors".into());
+        assert_eq!(
+            format!("{}", errors[0]),
+            "\"\":
+ --> 1:4
+  |
+1 | [a]]
+  |    ^---
+  |
+  = expected new_line or space"
+        );
+
         let errors = cfg.parse("# foo\n[y", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", errors[0]),

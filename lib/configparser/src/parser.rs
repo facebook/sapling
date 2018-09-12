@@ -6,12 +6,12 @@
 //
 // #[derive(Parser)]
 // #[grammar = "spec.pest"]
-// struct ConfigParser;
+// pub(crate) struct ConfigParser;
 //
 // However, `#[grammar = "spec.pest"]` does not play well with Buck build,
 // because pest_derive cannot find "spec.pest" in buck build environment.
 // Therefore this file is @generated. @no-lint.
-// pest-checksum: d00ac1967ce2bd9ff78af9d3e1345058a648964c.
+// pest-checksum: 7757107a8377c9da65e99e8c6a32d9100efd5f1a.
 
 
 #[allow(dead_code, non_camel_case_types)]
@@ -21,12 +21,13 @@ pub enum Rule {
     space,
     comment_start,
     line,
-    name,
     value,
     equal_sign,
+    config_name,
     config_item,
     left_bracket,
     right_bracket,
+    section_name,
     section,
     comment_line,
     blank_line,
@@ -138,118 +139,6 @@ impl ::pest::Parser<Rule> for ConfigParser {
             }
             #[inline]
             #[allow(unused_variables)]
-            pub fn name<'i>(pos: ::pest::Position<'i>,
-                            state: &mut ::pest::ParserState<'i, Rule>)
-             ->
-                 ::std::result::Result<::pest::Position<'i>,
-                                       ::pest::Position<'i>> {
-                state.rule(Rule::name, pos,
-                           |state, pos|
-                               {
-                                   state.atomic(::pest::Atomicity::Atomic,
-                                                move |state|
-                                                    {
-                                                        state.sequence(move
-                                                                           |state|
-                                                                           {
-                                                                               pos.sequence(|pos|
-                                                                                                {
-                                                                                                    state.sequence(move
-                                                                                                                       |state|
-                                                                                                                       {
-                                                                                                                           pos.sequence(|pos|
-                                                                                                                                            {
-                                                                                                                                                state.lookahead(false,
-                                                                                                                                                                move
-                                                                                                                                                                    |state|
-                                                                                                                                                                    {
-                                                                                                                                                                        pos.lookahead(false,
-                                                                                                                                                                                      |pos|
-                                                                                                                                                                                          {
-                                                                                                                                                                                              self::space(pos,
-                                                                                                                                                                                                          state).or_else(|pos|
-                                                                                                                                                                                                                             {
-                                                                                                                                                                                                                                 self::new_line(pos,
-                                                                                                                                                                                                                                                state).or_else(|pos|
-                                                                                                                                                                                                                                                                   {
-                                                                                                                                                                                                                                                                       self::comment_start(pos,
-                                                                                                                                                                                                                                                                                           state)
-                                                                                                                                                                                                                                                                   }).or_else(|pos|
-                                                                                                                                                                                                                                                                                  {
-                                                                                                                                                                                                                                                                                      pos.match_string("=")
-                                                                                                                                                                                                                                                                                  }).or_else(|pos|
-                                                                                                                                                                                                                                                                                                 {
-                                                                                                                                                                                                                                                                                                     pos.match_string("[")
-                                                                                                                                                                                                                                                                                                 }).or_else(|pos|
-                                                                                                                                                                                                                                                                                                                {
-                                                                                                                                                                                                                                                                                                                    pos.match_string("]")
-                                                                                                                                                                                                                                                                                                                })
-                                                                                                                                                                                                                             }).or_else(|pos|
-                                                                                                                                                                                                                                            {
-                                                                                                                                                                                                                                                pos.match_string("%")
-                                                                                                                                                                                                                                            })
-                                                                                                                                                                                          })
-                                                                                                                                                                    }).and_then(|pos|
-                                                                                                                                                                                    {
-                                                                                                                                                                                        self::any(pos,
-                                                                                                                                                                                                  state)
-                                                                                                                                                                                    })
-                                                                                                                                            })
-                                                                                                                       }).and_then(|pos|
-                                                                                                                                       {
-                                                                                                                                           pos.repeat(|pos|
-                                                                                                                                                          {
-                                                                                                                                                              state.sequence(move
-                                                                                                                                                                                 |state|
-                                                                                                                                                                                 {
-                                                                                                                                                                                     pos.sequence(|pos|
-                                                                                                                                                                                                      {
-                                                                                                                                                                                                          state.lookahead(false,
-                                                                                                                                                                                                                          move
-                                                                                                                                                                                                                              |state|
-                                                                                                                                                                                                                              {
-                                                                                                                                                                                                                                  pos.lookahead(false,
-                                                                                                                                                                                                                                                |pos|
-                                                                                                                                                                                                                                                    {
-                                                                                                                                                                                                                                                        self::space(pos,
-                                                                                                                                                                                                                                                                    state).or_else(|pos|
-                                                                                                                                                                                                                                                                                       {
-                                                                                                                                                                                                                                                                                           self::new_line(pos,
-                                                                                                                                                                                                                                                                                                          state).or_else(|pos|
-                                                                                                                                                                                                                                                                                                                             {
-                                                                                                                                                                                                                                                                                                                                 self::comment_start(pos,
-                                                                                                                                                                                                                                                                                                                                                     state)
-                                                                                                                                                                                                                                                                                                                             }).or_else(|pos|
-                                                                                                                                                                                                                                                                                                                                            {
-                                                                                                                                                                                                                                                                                                                                                pos.match_string("=")
-                                                                                                                                                                                                                                                                                                                                            }).or_else(|pos|
-                                                                                                                                                                                                                                                                                                                                                           {
-                                                                                                                                                                                                                                                                                                                                                               pos.match_string("[")
-                                                                                                                                                                                                                                                                                                                                                           }).or_else(|pos|
-                                                                                                                                                                                                                                                                                                                                                                          {
-                                                                                                                                                                                                                                                                                                                                                                              pos.match_string("]")
-                                                                                                                                                                                                                                                                                                                                                                          })
-                                                                                                                                                                                                                                                                                       }).or_else(|pos|
-                                                                                                                                                                                                                                                                                                      {
-                                                                                                                                                                                                                                                                                                          pos.match_string("%")
-                                                                                                                                                                                                                                                                                                      })
-                                                                                                                                                                                                                                                    })
-                                                                                                                                                                                                                              }).and_then(|pos|
-                                                                                                                                                                                                                                              {
-                                                                                                                                                                                                                                                  self::any(pos,
-                                                                                                                                                                                                                                                            state)
-                                                                                                                                                                                                                                              })
-                                                                                                                                                                                                      })
-                                                                                                                                                                                 })
-                                                                                                                                                          })
-                                                                                                                                       })
-                                                                                                })
-                                                                           })
-                                                    })
-                               })
-            }
-            #[inline]
-            #[allow(unused_variables)]
             pub fn value<'i>(pos: ::pest::Position<'i>,
                              state: &mut ::pest::ParserState<'i, Rule>)
              ->
@@ -327,21 +216,99 @@ impl ::pest::Parser<Rule> for ConfigParser {
                                                                            {
                                                                                pos.sequence(|pos|
                                                                                                 {
-                                                                                                    pos.repeat(|pos|
-                                                                                                                   {
-                                                                                                                       self::space(pos,
-                                                                                                                                   state)
-                                                                                                                   }).and_then(|pos|
-                                                                                                                                   {
-                                                                                                                                       pos.match_string("=")
-                                                                                                                                   }).and_then(|pos|
-                                                                                                                                                   {
-                                                                                                                                                       pos.repeat(|pos|
-                                                                                                                                                                      {
-                                                                                                                                                                          self::space(pos,
-                                                                                                                                                                                      state)
-                                                                                                                                                                      })
-                                                                                                                                                   })
+                                                                                                    pos.match_string("=").and_then(|pos|
+                                                                                                                                       {
+                                                                                                                                           pos.repeat(|pos|
+                                                                                                                                                          {
+                                                                                                                                                              self::space(pos,
+                                                                                                                                                                          state)
+                                                                                                                                                          })
+                                                                                                                                       })
+                                                                                                })
+                                                                           })
+                                                    })
+                               })
+            }
+            #[inline]
+            #[allow(unused_variables)]
+            pub fn config_name<'i>(pos: ::pest::Position<'i>,
+                                   state: &mut ::pest::ParserState<'i, Rule>)
+             ->
+                 ::std::result::Result<::pest::Position<'i>,
+                                       ::pest::Position<'i>> {
+                state.rule(Rule::config_name, pos,
+                           |state, pos|
+                               {
+                                   state.atomic(::pest::Atomicity::Atomic,
+                                                move |state|
+                                                    {
+                                                        state.sequence(move
+                                                                           |state|
+                                                                           {
+                                                                               pos.sequence(|pos|
+                                                                                                {
+                                                                                                    state.lookahead(false,
+                                                                                                                    move
+                                                                                                                        |state|
+                                                                                                                        {
+                                                                                                                            pos.lookahead(false,
+                                                                                                                                          |pos|
+                                                                                                                                              {
+                                                                                                                                                  pos.match_string("[").or_else(|pos|
+                                                                                                                                                                                    {
+                                                                                                                                                                                        pos.match_string("=").or_else(|pos|
+                                                                                                                                                                                                                          {
+                                                                                                                                                                                                                              pos.match_string("%")
+                                                                                                                                                                                                                          }).or_else(|pos|
+                                                                                                                                                                                                                                         {
+                                                                                                                                                                                                                                             self::space(pos,
+                                                                                                                                                                                                                                                         state)
+                                                                                                                                                                                                                                         }).or_else(|pos|
+                                                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                                                            self::comment_start(pos,
+                                                                                                                                                                                                                                                                                state)
+                                                                                                                                                                                                                                                        })
+                                                                                                                                                                                    }).or_else(|pos|
+                                                                                                                                                                                                   {
+                                                                                                                                                                                                       self::new_line(pos,
+                                                                                                                                                                                                                      state)
+                                                                                                                                                                                                   })
+                                                                                                                                              })
+                                                                                                                        }).and_then(|pos|
+                                                                                                                                        {
+                                                                                                                                            self::any(pos,
+                                                                                                                                                      state)
+                                                                                                                                        }).and_then(|pos|
+                                                                                                                                                        {
+                                                                                                                                                            pos.repeat(|pos|
+                                                                                                                                                                           {
+                                                                                                                                                                               state.sequence(move
+                                                                                                                                                                                                  |state|
+                                                                                                                                                                                                  {
+                                                                                                                                                                                                      pos.sequence(|pos|
+                                                                                                                                                                                                                       {
+                                                                                                                                                                                                                           state.lookahead(false,
+                                                                                                                                                                                                                                           move
+                                                                                                                                                                                                                                               |state|
+                                                                                                                                                                                                                                               {
+                                                                                                                                                                                                                                                   pos.lookahead(false,
+                                                                                                                                                                                                                                                                 |pos|
+                                                                                                                                                                                                                                                                     {
+                                                                                                                                                                                                                                                                         pos.match_string("=").or_else(|pos|
+                                                                                                                                                                                                                                                                                                           {
+                                                                                                                                                                                                                                                                                                               self::new_line(pos,
+                                                                                                                                                                                                                                                                                                                              state)
+                                                                                                                                                                                                                                                                                                           })
+                                                                                                                                                                                                                                                                     })
+                                                                                                                                                                                                                                               }).and_then(|pos|
+                                                                                                                                                                                                                                                               {
+                                                                                                                                                                                                                                                                   self::any(pos,
+                                                                                                                                                                                                                                                                             state)
+                                                                                                                                                                                                                                                               })
+                                                                                                                                                                                                                       })
+                                                                                                                                                                                                  })
+                                                                                                                                                                           })
+                                                                                                                                                        })
                                                                                                 })
                                                                            })
                                                     })
@@ -365,16 +332,16 @@ impl ::pest::Parser<Rule> for ConfigParser {
                                                                            {
                                                                                pos.sequence(|pos|
                                                                                                 {
-                                                                                                    self::name(pos,
-                                                                                                               state).and_then(|pos|
-                                                                                                                                   {
-                                                                                                                                       self::equal_sign(pos,
-                                                                                                                                                        state)
-                                                                                                                                   }).and_then(|pos|
-                                                                                                                                                   {
-                                                                                                                                                       self::value(pos,
-                                                                                                                                                                   state)
-                                                                                                                                                   })
+                                                                                                    self::config_name(pos,
+                                                                                                                      state).and_then(|pos|
+                                                                                                                                          {
+                                                                                                                                              self::equal_sign(pos,
+                                                                                                                                                               state)
+                                                                                                                                          }).and_then(|pos|
+                                                                                                                                                          {
+                                                                                                                                                              self::value(pos,
+                                                                                                                                                                          state)
+                                                                                                                                                          })
                                                                                                 })
                                                                            })
                                                     })
@@ -413,6 +380,84 @@ impl ::pest::Parser<Rule> for ConfigParser {
             }
             #[inline]
             #[allow(unused_variables)]
+            pub fn section_name<'i>(pos: ::pest::Position<'i>,
+                                    state: &mut ::pest::ParserState<'i, Rule>)
+             ->
+                 ::std::result::Result<::pest::Position<'i>,
+                                       ::pest::Position<'i>> {
+                state.rule(Rule::section_name, pos,
+                           |state, pos|
+                               {
+                                   state.atomic(::pest::Atomicity::Atomic,
+                                                move |state|
+                                                    {
+                                                        state.sequence(move
+                                                                           |state|
+                                                                           {
+                                                                               pos.sequence(|pos|
+                                                                                                {
+                                                                                                    state.sequence(move
+                                                                                                                       |state|
+                                                                                                                       {
+                                                                                                                           pos.sequence(|pos|
+                                                                                                                                            {
+                                                                                                                                                state.lookahead(false,
+                                                                                                                                                                move
+                                                                                                                                                                    |state|
+                                                                                                                                                                    {
+                                                                                                                                                                        pos.lookahead(false,
+                                                                                                                                                                                      |pos|
+                                                                                                                                                                                          {
+                                                                                                                                                                                              pos.match_string("]").or_else(|pos|
+                                                                                                                                                                                                                                {
+                                                                                                                                                                                                                                    self::new_line(pos,
+                                                                                                                                                                                                                                                   state)
+                                                                                                                                                                                                                                })
+                                                                                                                                                                                          })
+                                                                                                                                                                    }).and_then(|pos|
+                                                                                                                                                                                    {
+                                                                                                                                                                                        self::any(pos,
+                                                                                                                                                                                                  state)
+                                                                                                                                                                                    })
+                                                                                                                                            })
+                                                                                                                       }).and_then(|pos|
+                                                                                                                                       {
+                                                                                                                                           pos.repeat(|pos|
+                                                                                                                                                          {
+                                                                                                                                                              state.sequence(move
+                                                                                                                                                                                 |state|
+                                                                                                                                                                                 {
+                                                                                                                                                                                     pos.sequence(|pos|
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          state.lookahead(false,
+                                                                                                                                                                                                                          move
+                                                                                                                                                                                                                              |state|
+                                                                                                                                                                                                                              {
+                                                                                                                                                                                                                                  pos.lookahead(false,
+                                                                                                                                                                                                                                                |pos|
+                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                        pos.match_string("]").or_else(|pos|
+                                                                                                                                                                                                                                                                                          {
+                                                                                                                                                                                                                                                                                              self::new_line(pos,
+                                                                                                                                                                                                                                                                                                             state)
+                                                                                                                                                                                                                                                                                          })
+                                                                                                                                                                                                                                                    })
+                                                                                                                                                                                                                              }).and_then(|pos|
+                                                                                                                                                                                                                                              {
+                                                                                                                                                                                                                                                  self::any(pos,
+                                                                                                                                                                                                                                                            state)
+                                                                                                                                                                                                                                              })
+                                                                                                                                                                                                      })
+                                                                                                                                                                                 })
+                                                                                                                                                          })
+                                                                                                                                       })
+                                                                                                })
+                                                                           })
+                                                    })
+                               })
+            }
+            #[inline]
+            #[allow(unused_variables)]
             pub fn section<'i>(pos: ::pest::Position<'i>,
                                state: &mut ::pest::ParserState<'i, Rule>)
              ->
@@ -432,12 +477,26 @@ impl ::pest::Parser<Rule> for ConfigParser {
                                                                                                     self::left_bracket(pos,
                                                                                                                        state).and_then(|pos|
                                                                                                                                            {
-                                                                                                                                               self::name(pos,
-                                                                                                                                                          state)
+                                                                                                                                               state.sequence(move
+                                                                                                                                                                  |state|
+                                                                                                                                                                  {
+                                                                                                                                                                      pos.sequence(|pos|
+                                                                                                                                                                                       {
+                                                                                                                                                                                           self::section_name(pos,
+                                                                                                                                                                                                              state).and_then(|pos|
+                                                                                                                                                                                                                                  {
+                                                                                                                                                                                                                                      self::right_bracket(pos,
+                                                                                                                                                                                                                                                          state)
+                                                                                                                                                                                                                                  })
+                                                                                                                                                                                       })
+                                                                                                                                                                  })
                                                                                                                                            }).and_then(|pos|
                                                                                                                                                            {
-                                                                                                                                                               self::right_bracket(pos,
-                                                                                                                                                                                   state)
+                                                                                                                                                               pos.repeat(|pos|
+                                                                                                                                                                              {
+                                                                                                                                                                                  self::space(pos,
+                                                                                                                                                                                              state)
+                                                                                                                                                                              })
                                                                                                                                                            })
                                                                                                 })
                                                                            })
@@ -614,8 +673,8 @@ impl ::pest::Parser<Rule> for ConfigParser {
                                                                                                                                                                                                                                    })
                                                                                                                                                                                                               }).and_then(|pos|
                                                                                                                                                                                                                               {
-                                                                                                                                                                                                                                  self::name(pos,
-                                                                                                                                                                                                                                             state)
+                                                                                                                                                                                                                                  self::config_name(pos,
+                                                                                                                                                                                                                                                    state)
                                                                                                                                                                                                                               })
                                                                                                                                                                                        })
                                                                                                                                                                   })
@@ -764,14 +823,6 @@ impl ::pest::Parser<Rule> for ConfigParser {
                                    })
             }
             #[inline]
-            fn any<'i>(pos: ::pest::Position<'i>,
-                       _: &mut ::pest::ParserState<'i, Rule>)
-             ->
-                 ::std::result::Result<::pest::Position<'i>,
-                                       ::pest::Position<'i>> {
-                pos.skip(1)
-            }
-            #[inline]
             fn eoi<'i>(pos: ::pest::Position<'i>,
                        _: &mut ::pest::ParserState<'i, Rule>)
              ->
@@ -786,6 +837,14 @@ impl ::pest::Parser<Rule> for ConfigParser {
                  ::std::result::Result<::pest::Position<'i>,
                                        ::pest::Position<'i>> {
                 pos.at_start()
+            }
+            #[inline]
+            fn any<'i>(pos: ::pest::Position<'i>,
+                       _: &mut ::pest::ParserState<'i, Rule>)
+             ->
+                 ::std::result::Result<::pest::Position<'i>,
+                                       ::pest::Position<'i>> {
+                pos.skip(1)
             }
             #[inline]
             #[allow(dead_code)]
@@ -808,17 +867,20 @@ impl ::pest::Parser<Rule> for ConfigParser {
                                   Rule::comment_start =>
                                   rules::comment_start(pos, &mut state),
                                   Rule::line => rules::line(pos, &mut state),
-                                  Rule::name => rules::name(pos, &mut state),
                                   Rule::value =>
                                   rules::value(pos, &mut state),
                                   Rule::equal_sign =>
                                   rules::equal_sign(pos, &mut state),
+                                  Rule::config_name =>
+                                  rules::config_name(pos, &mut state),
                                   Rule::config_item =>
                                   rules::config_item(pos, &mut state),
                                   Rule::left_bracket =>
                                   rules::left_bracket(pos, &mut state),
                                   Rule::right_bracket =>
                                   rules::right_bracket(pos, &mut state),
+                                  Rule::section_name =>
+                                  rules::section_name(pos, &mut state),
                                   Rule::section =>
                                   rules::section(pos, &mut state),
                                   Rule::comment_line =>

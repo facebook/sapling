@@ -27,21 +27,37 @@ space = { " " | "\t" }
 comment_start = { ("#" | ";") }
 
 line = @{ (!new_line ~ any)* }
-name = @{ (!(space | new_line | comment_start | "=" | "[" | "]" | "%") ~ any)+ }
 
 value = ${ line ~ (new_line ~ space+ ~ line)* }
-equal_sign = @{ space* ~ "=" ~ space* }
-config_item = ${ name ~ equal_sign ~ value }
+equal_sign = @{ "=" ~ space* }
+
+// Excluding special prefixes explicitly from config_name affects error
+// messages. For example:
+//
+//    []
+//     ^ expect section_name (with "[" excluded)
+//      ^ except equal_sign (without "[" excluded)
+//
+//    %unknown
+//     ^ expect unset or include (with "%" excluded)
+//            ^ expect equal_sign (without "%" excluded)
+// 
+// The "expect equal_sign" version is less friendly.
+config_name = @{ !("[" | "=" | "%" | space | comment_start | new_line) ~ any ~ (!("=" | new_line) ~ any)* }
+config_item = ${ config_name ~ equal_sign ~ value }
 
 left_bracket = @{ "[" }
 right_bracket = @{ "]" }
-section = ${ left_bracket ~ name ~ right_bracket }
+
+section_name = @{ (!("]" | new_line) ~ any)+ }
+section = ${ left_bracket ~ section_name ~ right_bracket ~ space* }
+
 comment_line = @{ comment_start ~ line }
 blank_line = @{ space* }
 
 directive = ${ "%" ~ (include | unset) }
-include = ${ "include" ~ space+ ~ line  }
-unset = ${ "unset" ~ space+ ~ name ~ space* }
+include = ${ "include" ~ space+ ~ line }
+unset = ${ "unset" ~ space+ ~ config_name ~ space* }
 
-compound = _{ (config_item | section | comment_line | directive | blank_line) }
+compound = _{ (config_item | section | comment_line | directive | blank_line ) }
 file = _{ soi ~ compound ~ (new_line ~ compound)* ~ eoi }
