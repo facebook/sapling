@@ -112,7 +112,7 @@ _winpathfixes = [
     #     file:/*/$TESTTMP\largefiles-repo (glob)
     br".*: largefile \S+ not available from file:/\*/.+",
     # hgrc parse error (double escaped)
-    br"(?m)^hg: parse error:.*",
+    br"(?m)^hg: parse error: \".*",
 ]
 
 if os.name == "nt":
