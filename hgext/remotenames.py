@@ -81,6 +81,7 @@ configitem("remotenames", "transitionbookmarks", default=[])
 configitem("remotenames", "transitionmessage", default=None)
 configitem("remotenames", "upstream", default=[])
 
+namespacepredicate = registrar.namespacepredicate()
 templatekeyword = registrar.templatekeyword()
 revsetpredicate = registrar.revsetpredicate()
 
@@ -636,15 +637,10 @@ class remotenames(dict):
         return self._node2branch
 
 
-def reposetup(ui, repo):
-    if not repo.local():
-        return
-
-    repo._remotenames = remotenames(repo)
-    ns = namespaces.namespace
-
-    if ui.configbool("remotenames", "bookmarks"):
-        remotebookmarkns = ns(
+@namespacepredicate("remotebookmarks", after=["bookmarks"])
+def remotebookmarks(repo):
+    if repo.ui.configbool("remotenames", "bookmarks"):
+        return namespaces.namespace(
             "remotebookmarks",
             templatename="remotebookmarks",
             logname="bookmark",
@@ -653,28 +649,36 @@ def reposetup(ui, repo):
             namemap=lambda repo, name: repo._remotenames.mark2nodes().get(name, []),
             nodemap=lambda repo, node: repo._remotenames.node2marks().get(node, []),
         )
-        repo.names.addnamespace(remotebookmarkns)
+    else:
+        return None
 
-        # hoisting only works if there are remote bookmarks
-        hoist = ui.config("remotenames", "hoist")
-        if hoist:
-            hoistednamens = ns(
-                "hoistednames",
-                templatename="hoistednames",
-                logname="hoistedname",
-                colorname="hoistedname",
-                listnames=lambda repo: repo._remotenames.hoist2nodes(hoist).keys(),
-                namemap=lambda repo, name: repo._remotenames.hoist2nodes(hoist).get(
-                    name, []
-                ),
-                nodemap=lambda repo, node: repo._remotenames.node2hoists(hoist).get(
-                    node, []
-                ),
-            )
-            repo.names.addnamespace(hoistednamens)
 
-    if _branchesenabled(ui):
-        remotebranchns = ns(
+@namespacepredicate("hoistednames", after=["remotebookmarks"])
+def hoistednames(repo):
+    hoist = repo.ui.config("remotenames", "hoist")
+    # hoisting only works if there are remote bookmarks
+    if repo.ui.configbool("remotenames", "bookmarks") and hoist:
+        return namespaces.namespace(
+            "hoistednames",
+            templatename="hoistednames",
+            logname="hoistedname",
+            colorname="hoistedname",
+            listnames=lambda repo: repo._remotenames.hoist2nodes(hoist).keys(),
+            namemap=lambda repo, name: repo._remotenames.hoist2nodes(hoist).get(
+                name, []
+            ),
+            nodemap=lambda repo, node: repo._remotenames.node2hoists(hoist).get(
+                node, []
+            ),
+        )
+    else:
+        return None
+
+
+@namespacepredicate("remotebranches", after=["hoistednames", "remotebookmarks"])
+def remotebranches(repo):
+    if _branchesenabled(repo.ui):
+        return namespaces.namespace(
             "remotebranches",
             templatename="remotebranches",
             logname="branch",
@@ -683,7 +687,15 @@ def reposetup(ui, repo):
             namemap=lambda repo, name: repo._remotenames.branch2nodes().get(name, []),
             nodemap=lambda repo, node: repo._remotenames.node2branch().get(node, []),
         )
-        repo.names.addnamespace(remotebranchns)
+    else:
+        return None
+
+
+def reposetup(ui, repo):
+    if not repo.local():
+        return
+
+    repo._remotenames = remotenames(repo)
 
 
 def _tracking(ui):
