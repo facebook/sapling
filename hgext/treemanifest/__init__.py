@@ -2194,10 +2194,6 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth)
     historystore = repo.manifestlog.historystore
     datastore = repo.manifestlog.datastore
 
-    # Only use the first two base trees, since the current tree
-    # implementation cannot handle more yet.
-    basemfnodes = basemfnodes[:2]
-
     mfnodeset = set(mfnodes)
     basemfnodeset = set(basemfnodes)
 
@@ -2229,8 +2225,10 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth)
         if p2node != nullid and (p2node in mfnodeset or p2node in basemfnodeset):
             basetrees.append((rootdir, p2node))
 
+        # Only use the first two base trees, since the current tree
+        # implementation cannot handle more yet.
         subtrees = cstore.treemanifest.walksubdirtrees(
-            (rootdir, node), datastore, comparetrees=basetrees, depth=depth
+            (rootdir, node), datastore, comparetrees=basetrees[:2], depth=depth
         )
         for subname, subnode, subtext, x, x, x in subtrees:
             # Append data

@@ -62,6 +62,4 @@ The bundle should have 6 tree items in it - the root tree, and the directory tre
       97a6f48cdfe66f86ceca092b0619df4e5a99d6ec
       72e9b93c4354749519aa668d05dd8d358ec3b6c5
   b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
-      9 data items, 9 history items
-
-BUG: It has 9 trees - comparetrees only used 2 of the 3 possible base manifest, so one of the commits has a full treemanifest.
+      6 data items, 6 history items
