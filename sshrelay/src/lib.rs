@@ -132,12 +132,16 @@ impl SshDecoder {
     }
 }
 
+fn ioerr_cvt(err: netstring::Error) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, format!("{}", err))
+}
+
 impl Decoder for SshDecoder {
     type Item = SshMsg;
     type Error = io::Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> io::Result<Option<SshMsg>> {
-        if let Some(mut data) = self.0.decode(buf)? {
+        if let Some(mut data) = self.0.decode(buf).map_err(ioerr_cvt)? {
             if data.len() == 0 {
                 return Ok(None);
             }
@@ -188,17 +192,17 @@ impl Encoder for SshEncoder {
             SshStream::Stdin => {
                 v.put_u8(0);
                 v.put_slice(&msg.1);
-                Ok(self.0.encode(v.freeze(), buf)?)
+                Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
             SshStream::Stdout => {
                 v.put_u8(1);
                 v.put_slice(&msg.1);
-                Ok(self.0.encode(v.freeze(), buf)?)
+                Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
             SshStream::Stderr => {
                 v.put_u8(2);
                 v.put_slice(&msg.1);
-                Ok(self.0.encode(v.freeze(), buf)?)
+                Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
             SshStream::Preamble(preamble) => {
                 // msg.1 is ignored in preamble
@@ -206,7 +210,7 @@ impl Encoder for SshEncoder {
                 v.put_u8(3);
                 let preamble = serde_json::to_vec(&preamble)?;
                 v.extend_from_slice(&preamble);
-                Ok(self.0.encode(v.freeze(), buf)?)
+                Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
         }
     }

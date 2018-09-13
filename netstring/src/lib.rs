@@ -11,7 +11,7 @@
 
 extern crate bytes;
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
@@ -23,7 +23,14 @@ use std::marker::PhantomData;
 use bytes::{BufMut, BytesMut};
 use tokio_io::codec::{Decoder, Encoder};
 
-mod errors;
+mod errors {
+    pub use failure::{Error, Result};
+
+    #[derive(Clone, Debug, Fail)]
+    pub enum ErrorKind {
+        #[fail(display = "{}", _0)] NetstringDecode(&'static str),
+    }
+}
 pub use errors::*;
 
 #[derive(Debug, Copy, Clone)]
@@ -99,7 +106,9 @@ impl NetstringDecoder {
                                 next = Some((idx + 1, State::Body(cur)));
                                 break;
                             }
-                            _ => bail!(ErrorKind::NetstringDecode("Bad character in payload size")),
+                            _ => bail_err!(ErrorKind::NetstringDecode(
+                                "Bad character in payload size"
+                            )),
                         }
                     }
 
@@ -124,7 +133,7 @@ impl NetstringDecoder {
                         // start expecting the next buffer.
                         let v = Slice::new(consumed, len);
 
-                        ensure!(buf[len] == b',', ErrorKind::NetstringDecode("missing ','"));
+                        ensure_err!(buf[len] == b',', ErrorKind::NetstringDecode("missing ','"));
                         consumed += len + 1;
 
                         (State::Num(0), Some(Some((true, v))))
