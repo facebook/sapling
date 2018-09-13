@@ -30,7 +30,6 @@ def bookmarks(repo):
     bmknamemap = lambda repo, name: tolist(repo._bookmarks.get(name))
     bmknodemap = lambda repo, node: repo.nodebookmarks(node)
     return namespace(
-        "bookmarks",
         templatename="bookmark",
         logfmt=columns["bookmark"],
         listnames=bmknames,
@@ -46,7 +45,6 @@ def tags(repo):
     tagnamemap = lambda repo, name: tolist(repo._tagscache.tags.get(name))
     tagnodemap = lambda repo, node: repo.nodetags(node)
     return namespace(
-        "tags",
         templatename="tag",
         logfmt=columns["tag"],
         listnames=tagnames,
@@ -63,7 +61,6 @@ def branches(repo):
     bnamemap = lambda repo, name: tolist(repo.branchtip(name, True))
     bnodemap = lambda repo, node: [repo[node].branch()]
     return namespace(
-        "branches",
         templatename="branch",
         logfmt=columns["branch"],
         listnames=bnames,
@@ -93,8 +90,7 @@ class namespaces(object):
         for name, func in sorted(namespacetable.items(), key=sortkey):
             ns = func(repo)
             if ns is not None:
-                assert ns.name == name
-                self.addnamespace(ns)
+                self._addnamespace(name, ns)
 
     def __getitem__(self, namespace):
         """returns the namespace object"""
@@ -108,26 +104,21 @@ class namespaces(object):
 
     iteritems = items
 
-    def addnamespace(self, namespace, order=None):
+    def _addnamespace(self, name, namespace):
         """register a namespace
 
-        namespace: the name to be registered (in plural form)
-        order: optional argument to specify the order of namespaces
-               (e.g. 'branches' should be listed before 'bookmarks')
-
+        name: the name to be registered (in plural form)
+        namespace: namespace to be registered
         """
-        if order is not None:
-            self._names.insert(order, namespace.name, namespace)
-        else:
-            self._names[namespace.name] = namespace
+        self._names[name] = namespace
 
         # we only generate a template keyword if one does not already exist
-        if namespace.name not in templatekw.keywords:
+        if name not in templatekw.keywords:
 
             def generatekw(**args):
-                return templatekw.shownames(namespace.name, **args)
+                return templatekw.shownames(name, **args)
 
-            templatekw.keywords[namespace.name] = generatekw
+            templatekw.keywords[name] = generatekw
 
     def singlenode(self, repo, name):
         """
@@ -179,7 +170,6 @@ class namespace(object):
 
     def __init__(
         self,
-        name,
         templatename=None,
         logname=None,
         colorname=None,
@@ -192,7 +182,6 @@ class namespace(object):
     ):
         """create a namespace
 
-        name: the namespace to be registered (in plural form)
         templatename: the name to use for templating
         logname: the name to use for log output; if not specified templatename
                  is used
@@ -206,7 +195,6 @@ class namespace(object):
         deprecated: set of names to be masked for ordinary use
         builtin: whether namespace is implemented by core Mercurial
         """
-        self.name = name
         self.templatename = templatename
         self.logname = logname
         self.colorname = colorname

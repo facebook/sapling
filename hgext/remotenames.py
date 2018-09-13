@@ -641,7 +641,6 @@ class remotenames(dict):
 def remotebookmarks(repo):
     if repo.ui.configbool("remotenames", "bookmarks"):
         return namespaces.namespace(
-            "remotebookmarks",
             templatename="remotebookmarks",
             logname="bookmark",
             colorname="remotebookmark",
@@ -659,7 +658,6 @@ def hoistednames(repo):
     # hoisting only works if there are remote bookmarks
     if repo.ui.configbool("remotenames", "bookmarks") and hoist:
         return namespaces.namespace(
-            "hoistednames",
             templatename="hoistednames",
             logname="hoistedname",
             colorname="hoistedname",
@@ -679,7 +677,6 @@ def hoistednames(repo):
 def remotebranches(repo):
     if _branchesenabled(repo.ui):
         return namespaces.namespace(
-            "remotebranches",
             templatename="remotebranches",
             logname="branch",
             colorname="remotebranch",

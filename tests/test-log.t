@@ -2120,20 +2120,26 @@ Check that adding an arbitrary name shows up in log automatically
   $ cat > ../names.py <<EOF
   > """A small extension to test adding arbitrary names to a repo"""
   > from __future__ import absolute_import
-  > from mercurial import namespaces
+  > from mercurial import namespaces, registrar
   > 
-  > def reposetup(ui, repo):
+  > 
+  > namespacepredicate = registrar.namespacepredicate()
+  > 
+  > @namespacepredicate("bars", priority=70)
+  > def barlookup(repo):
   >     foo = {'foo': repo[0].node()}
   >     names = lambda r: foo.keys()
   >     namemap = lambda r, name: foo.get(name)
   >     nodemap = lambda r, node: [name for name, n in foo.iteritems()
   >                                if n == node]
-  >     ns = namespaces.namespace(
-  >         "bars", templatename="bar", logname="barlog",
-  >         colorname="barcolor", listnames=names, namemap=namemap,
-  >         nodemap=nodemap)
-  > 
-  >     repo.names.addnamespace(ns)
+  >     return namespaces.namespace(
+  >         templatename="bar",
+  >         logname="barlog",
+  >         colorname="barcolor",
+  >         listnames=names,
+  >         namemap=namemap,
+  >         nodemap=nodemap
+  >     )
   > EOF
 
   $ hg --config extensions.names=../names.py log -r 0

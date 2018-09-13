@@ -2,20 +2,22 @@
 
 from __future__ import absolute_import
 
-from mercurial import namespaces
+from mercurial import namespaces, registrar
 
 
-def reposetup(ui, repo):
+namespacepredicate = registrar.namespacepredicate()
+
+
+@namespacepredicate("revnames", priority=70)
+def _revnamelookup(repo):
     names = {"r%d" % rev: repo[rev].node() for rev in repo}
     namemap = lambda r, name: names.get(name)
     nodemap = lambda r, node: ["r%d" % repo[node].rev()]
 
-    ns = namespaces.namespace(
-        "revnames",
+    return namespaces.namespace(
         templatename="revname",
         logname="revname",
         listnames=lambda r: names.keys(),
         namemap=namemap,
         nodemap=nodemap,
     )
-    repo.names.addnamespace(ns)
