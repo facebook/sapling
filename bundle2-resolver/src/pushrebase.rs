@@ -576,77 +576,9 @@ mod tests {
 
     use super::*;
     use async_unit;
-    use bytes::Bytes;
     use fixtures::linear;
-    use mononoke_types::{BonsaiChangesetMut, DateTime, FileChange, FileContents, FileType};
-    use std::collections::BTreeMap;
+    use tests_utils::{store_files, store_rename, create_commit};
     use std::str::FromStr;
-
-    fn store_files(
-        files: BTreeMap<&str, Option<&str>>,
-        repo: BlobRepo,
-    ) -> BTreeMap<MPath, Option<FileChange>> {
-        let mut res = btreemap!{};
-
-        for (path, content) in files {
-            let path = MPath::new(path).unwrap();
-            match content {
-                Some(content) => {
-                    let size = content.len();
-                    let content = FileContents::Bytes(Bytes::from(content));
-                    let content_id = repo.unittest_store(content).wait().unwrap();
-
-                    let file_change =
-                        FileChange::new(content_id, FileType::Regular, size as u64, None);
-                    res.insert(path, Some(file_change));
-                }
-                None => {
-                    res.insert(path, None);
-                }
-            }
-        }
-        res
-    }
-
-    fn store_rename(
-        copy_src: (MPath, ChangesetId),
-        path: &str,
-        content: &str,
-        repo: BlobRepo,
-    ) -> (MPath, Option<FileChange>) {
-        let path = MPath::new(path).unwrap();
-        let size = content.len();
-        let content = FileContents::Bytes(Bytes::from(content));
-        let content_id = repo.unittest_store(content).wait().unwrap();
-
-        let file_change =
-            FileChange::new(content_id, FileType::Regular, size as u64, Some(copy_src));
-        (path, Some(file_change))
-    }
-
-    fn create_commit(
-        repo: BlobRepo,
-        parents: Vec<ChangesetId>,
-        file_changes: BTreeMap<MPath, Option<FileChange>>,
-    ) -> ChangesetId {
-        let bcs = BonsaiChangesetMut {
-            parents: parents,
-            author: "author".to_string(),
-            author_date: DateTime::from_timestamp(0, 0).unwrap(),
-            committer: None,
-            committer_date: None,
-            message: "message".to_string(),
-            extra: btreemap!{},
-            file_changes,
-        }.freeze()
-            .unwrap();
-
-        let bcs_id = bcs.get_changeset_id();
-        save_bonsai_changesets(vec![bcs], repo.clone())
-            .wait()
-            .unwrap();
-        bcs_id
-    }
 
     fn set_bookmark(repo: BlobRepo, book: &Bookmark, cs_id: &str) {
         let head = HgChangesetId::from_str(cs_id).unwrap();

@@ -39,6 +39,8 @@ extern crate scuba_ext;
 extern crate slog;
 #[macro_use]
 extern crate stats as stats_crate;
+#[cfg(test)]
+extern crate tests_utils;
 extern crate tokio_io;
 
 extern crate blobrepo;
