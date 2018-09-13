@@ -252,10 +252,9 @@ enum class OverlayRestartMode {
 
 class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
  public:
-  RawOverlayTest()
-      : testDir_{"eden_raw_overlay_test_"},
-        overlay{std::make_unique<Overlay>(
-            AbsolutePathPiece{testDir_.path().string()})} {}
+  RawOverlayTest() : testDir_{"eden_raw_overlay_test_"} {
+    loadOverlay();
+  }
 
   void recreate(folly::Optional<OverlayRestartMode> restartMode = folly::none) {
     overlay->close();
@@ -264,12 +263,20 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
       case OverlayRestartMode::CLEAN:
         break;
       case OverlayRestartMode::UNCLEAN:
-        if (unlink((testDir_.path() / "next-inode-number").c_str())) {
+        if (unlink((getLocalDir() + "next-inode-number"_pc).c_str())) {
           folly::throwSystemError("removing saved inode numebr");
         }
         break;
     }
-    overlay.reset(new Overlay{AbsolutePathPiece{testDir_.path().string()}});
+    loadOverlay();
+  }
+
+  void loadOverlay() {
+    overlay = std::make_unique<Overlay>(getLocalDir());
+  }
+
+  AbsolutePath getLocalDir() {
+    return AbsolutePath{testDir_.path().string()};
   }
 
   folly::test::TemporaryDirectory testDir_;
