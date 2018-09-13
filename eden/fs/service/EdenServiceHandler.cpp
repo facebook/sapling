@@ -137,19 +137,19 @@ class ThriftLogHelper {
   template <typename ReturnType>
   Future<ReturnType> wrapFuture(folly::Future<ReturnType>&& f) {
     wrapperExecuted_ = true;
-    return std::move(f).thenValue([timer = itcTimer_,
-                                   logger = this->itcLogger_,
-                                   funcName = itcFunctionName_,
-                                   level = level_,
-                                   filename = itcFileName_,
-                                   linenumber =
-                                       itcLineNumber_](ReturnType&& ret) {
-      // Logging completion time for the request
-      // The line number points to where the object was originally created
-      TLOG(logger, level, filename, linenumber) << folly::format(
-          "{}() took {:,}us", funcName, timer.elapsed().count());
-      return std::forward<ReturnType>(ret);
-    });
+    return std::move(f).thenValue(
+        [timer = itcTimer_,
+         logger = this->itcLogger_,
+         funcName = itcFunctionName_,
+         level = level_,
+         filename = itcFileName_,
+         linenumber = itcLineNumber_](ReturnType&& ret) {
+          // Logging completion time for the request
+          // The line number points to where the object was originally created
+          TLOG(logger, level, filename, linenumber) << folly::format(
+              "{}() took {:,}us", funcName, timer.elapsed().count());
+          return std::forward<ReturnType>(ret);
+        });
   }
 
  private:
@@ -161,6 +161,17 @@ class ThriftLogHelper {
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
   bool wrapperExecuted_ = false;
 };
+
+facebook::eden::InodePtr inodeFromUserPath(
+    facebook::eden::EdenMount& mount,
+    StringPiece rootRelativePath) {
+  if (rootRelativePath.empty() || rootRelativePath == ".") {
+    return mount.getRootInode();
+  } else {
+    return mount.getInode(facebook::eden::RelativePathPiece{rootRelativePath})
+        .get();
+  }
+}
 
 } // namespace
 
@@ -860,13 +871,7 @@ void EdenServiceHandler::debugInodeStatus(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   auto edenMount = server_->getMount(*mountPoint);
 
-  TreeInodePtr inode;
-  if (path->empty()) {
-    inode = edenMount->getRootInode();
-  } else {
-    inode = edenMount->getInode(RelativePathPiece{*path}).get().asTreePtr();
-  }
-
+  auto inode = inodeFromUserPath(*edenMount, *path).asTreePtr();
   inode->getDebugStatus(inodeInfo);
 }
 
@@ -977,12 +982,7 @@ int64_t EdenServiceHandler::unloadInodeForPath(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, *path);
   auto edenMount = server_->getMount(*mountPoint);
 
-  TreeInodePtr inode;
-  if (path->empty()) {
-    inode = edenMount->getRootInode();
-  } else {
-    inode = edenMount->getInode(RelativePathPiece{*path}).get().asTreePtr();
-  }
+  TreeInodePtr inode = inodeFromUserPath(*edenMount, *path).asTreePtr();
   auto cutoff = std::chrono::system_clock::now() -
       std::chrono::seconds(age->seconds) -
       std::chrono::nanoseconds(age->nanoSeconds);
@@ -1054,12 +1054,7 @@ Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
     std::unique_ptr<std::string> path) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path);
   auto edenMount = server_->getMount(*mountPoint);
-  InodePtr inode;
-  if (path->empty()) {
-    inode = edenMount->getRootInode();
-  } else {
-    inode = edenMount->getInode(RelativePathPiece{*path}).get();
-  }
+  InodePtr inode = inodeFromUserPath(*edenMount, *path);
   auto* fuseChannel = edenMount->getFuseChannel();
 
   // Invalidate cached pages and attributes

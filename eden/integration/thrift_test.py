@@ -120,6 +120,18 @@ class ThriftTest(testcase.EdenRepoTest):
             unload_count, 100, "Number of loaded inodes should reduce after unload"
         )
 
+    def test_unload_thrift_api_accepts_single_dot_as_root(self) -> None:
+        self.write_file("testfile.txt", "unload test case")
+
+        age = TimeSpec()
+        age.seconds = 0
+        age.nanoSeconds = 0
+        unload_count = self.client.unloadInodeForPath(self.mount_path_bytes, b".", age)
+
+        self.assertGreater(
+            unload_count, 0, "Number of loaded inodes should reduce after unload"
+        )
+
     def get_counter(self, name: str) -> int:
         self.client.flushStatsNow()
         return self.client.getCounters()[name]
