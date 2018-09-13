@@ -26,7 +26,7 @@ use tokio_io::codec::{Decoder, Encoder};
 mod errors;
 pub use errors::*;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 enum State {
     Num(usize),  // waiting for a complete number
     Body(usize), // waiting for remaining body and comma
@@ -35,14 +35,14 @@ enum State {
 /// A Netstring decoder.
 ///
 /// The items are always a `BytesMut` for now.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct NetstringDecoder {
     state: Option<State>,
 }
 
 /// A Netstring encoder.
 ///
-/// The items can be anything that
+/// The items can be anything that can be referenced as a `[u8]`.
 #[derive(Debug)]
 pub struct NetstringEncoder<Out>
 where
@@ -51,11 +51,98 @@ where
     _marker: PhantomData<Out>,
 }
 
+#[derive(Debug)]
+struct Slice(usize, usize);
+impl Slice {
+    fn new(base: usize, len: usize) -> Self {
+        Slice(base, len)
+    }
+    fn len(&self) -> usize {
+        self.1
+    }
+    fn start(&self) -> usize {
+        self.0
+    }
+    fn end(&self) -> usize {
+        self.0 + self.1
+    }
+}
 
 impl NetstringDecoder {
     pub fn new() -> Self {
         NetstringDecoder {
             state: Some(State::Num(0)),
+        }
+    }
+
+    /// Decode parser. This maintains the internal state machine which tracks what we've seen
+    /// before. It will return as much output as it can on each call, or None if nothing can be
+    /// returned. The second part of the tuple is the amount of the input buffer we have consumed;
+    /// it is always at least as much as the output option.
+    fn decode_buf<'a>(&mut self, buf: &'a [u8]) -> Result<(usize, Option<(bool, Slice)>)> {
+        let mut consumed = 0;
+        loop {
+            let state = self.state
+                .take()
+                .ok_or(ErrorKind::NetstringDecode("bad state"))?;
+
+            let buf = &buf[consumed..];
+
+            let (next, ret): (State, Option<Option<(bool, Slice)>>) = match state {
+                State::Num(mut cur) => {
+                    let mut next = None;
+
+                    for (idx, inp) in buf.iter().enumerate() {
+                        match *inp {
+                            digit @ b'0'...b'9' => cur = cur * 10 + ((digit - b'0') as usize),
+                            b':' => {
+                                next = Some((idx + 1, State::Body(cur)));
+                                break;
+                            }
+                            _ => bail!(ErrorKind::NetstringDecode("Bad character in payload size")),
+                        }
+                    }
+
+                    if let Some((eaten, next)) = next {
+                        // We got a complete length, so we can continue without returning
+                        // anything.
+                        consumed += eaten;
+                        (next, None)
+                    } else {
+                        // Partial input number - consume what we have then return indicating
+                        // we need more.
+                        consumed += buf.len();
+
+                        (State::Num(cur), Some(None))
+                    }
+                }
+
+                State::Body(len) => {
+                    // length of payload + ','
+                    if buf.len() >= len + 1 {
+                        // We have up to the end of the buffer, so we can return it and
+                        // start expecting the next buffer.
+                        let v = Slice::new(consumed, len);
+
+                        ensure!(buf[len] == b',', ErrorKind::NetstringDecode("missing ','"));
+                        consumed += len + 1;
+
+                        (State::Num(0), Some(Some((true, v))))
+                    } else {
+                        // Consume as much of the input as we can, and leave the state set up
+                        // to handle the rest as it arrives.
+                        let v = Slice::new(consumed, buf.len());
+                        consumed += v.len();
+
+                        (State::Body(len - v.len()), Some(Some((false, v))))
+                    }
+                }
+            };
+
+            self.state = Some(next);
+            if let Some(ret) = ret {
+                return Ok((consumed, ret));
+            }
         }
     }
 }
@@ -68,55 +155,43 @@ impl Decoder for NetstringDecoder {
     /// as it implies the framing is broken on the stream and the whole thing needs
     /// to be reset.
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
-        loop {
-            let state = self.state
-                .take()
-                .ok_or(ErrorKind::NetstringDecode("bad state"))?;
+        // The Decoder API can't deal with partial results, so if we don't get a complete
+        // result we roll back the internal state to this.
+        let saved = *self;
 
-            let (next, ret) = match state {
-                State::Num(mut cur) => {
-                    let mut next = None;
-                    for (idx, inp) in buf.as_ref().iter().enumerate() {
-                        match *inp {
-                            digit @ b'0'...b'9' => cur = cur * 10 + ((digit - b'0') as usize),
-                            b':' => {
-                                next = Some((idx + 1, State::Body(cur)));
-                                break;
-                            }
-                            _ => bail!(ErrorKind::NetstringDecode("Bad character in payload size")),
-                        }
-                    }
+        let (consumed, ret) = self.decode_buf(buf.as_ref())?;
 
-                    if let Some((consumed, next)) = next {
-                        buf.split_to(consumed);
-                        (next, None)
-                    } else {
-                        let len = buf.len();
-                        buf.split_to(len);
-                        (State::Num(cur), Some(None))
-                    }
+        match ret {
+            Some((true, slice)) => {
+                // Got a complete result from complete input
+                debug_assert!(
+                    slice.end() <= buf.len(),
+                    "slice {:?} end {} after buf {}",
+                    slice,
+                    slice.end(),
+                    buf.len()
+                );
+                debug_assert!(
+                    slice.end() <= consumed,
+                    "slice {:?} consumed {}",
+                    slice,
+                    consumed
+                );
+
+                let mut ret = buf.split_to(slice.end());
+
+                if consumed > slice.end() {
+                    let _ = buf.split_to(consumed - slice.end());
                 }
 
-                State::Body(len) => {
-                    // length of payload + ','
-                    if buf.len() >= len + 1 {
-                        let v = buf.split_to(len);
+                let _ = ret.split_to(slice.start());
 
-                        ensure!(
-                            buf.split_to(1)[0] == b',',
-                            ErrorKind::NetstringDecode("missing ','")
-                        );
-
-                        (State::Num(0), Some(Some(v)))
-                    } else {
-                        (State::Body(len), Some(None))
-                    }
-                }
-            };
-
-            self.state = Some(next);
-            if let Some(ret) = ret {
-                return Ok(ret);
+                Ok(Some(ret))
+            }
+            Some((false, _)) | None => {
+                // Either partial result or incomplete input - roll back state and ask for more.
+                *self = saved;
+                Ok(None)
             }
         }
     }
