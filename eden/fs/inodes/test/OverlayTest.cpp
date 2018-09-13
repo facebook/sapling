@@ -9,11 +9,14 @@
  */
 #include "eden/fs/inodes/Overlay.h"
 
+#include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/Subprocess.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include <iomanip>
+#include <sstream>
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -35,6 +38,10 @@ using std::string;
 
 namespace facebook {
 namespace eden {
+
+namespace {
+std::string debugDumpOverlayInodes(Overlay&, InodeNumber rootInode);
+}
 
 TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // eden/test-data/overlay-v2.tgz contains a saved copy of an overlay
@@ -323,6 +330,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
 
   recreate();
 
+  SCOPED_TRACE("Inodes:\n" + debugDumpOverlayInodes(*overlay, kRootNodeId));
   EXPECT_EQ(4_ino, overlay->scanForNextInodeNumber());
 }
 
@@ -364,6 +372,8 @@ TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
 
   recreate();
 
+  SCOPED_TRACE(
+      "Inodes from subdir:\n" + debugDumpOverlayInodes(*overlay, ino4));
   EXPECT_EQ(5_ino, overlay->scanForNextInodeNumber());
 }
 
@@ -397,6 +407,7 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
 
   recreate(OverlayRestartMode::CLEAN);
 
+  SCOPED_TRACE("Inodes:\n" + debugDumpOverlayInodes(*overlay, kRootNodeId));
   // Ensure an inode in the overlay but not referenced by the previous session
   // counts.
   EXPECT_EQ(5_ino, overlay->scanForNextInodeNumber());
@@ -416,6 +427,232 @@ TEST(OverlayInodePath, defaultInodePathIsEmpty) {
   Overlay::InodePath path;
   EXPECT_STREQ(path.c_str(), "");
 }
+
+class DebugDumpOverlayInodesTest : public ::testing::Test {
+ public:
+  DebugDumpOverlayInodesTest()
+      : testDir_{"eden_DebugDumpOverlayInodesTest"},
+        overlay{AbsolutePathPiece{testDir_.path().string()}} {}
+
+  folly::test::TemporaryDirectory testDir_;
+  Overlay overlay;
+};
+
+TEST_F(DebugDumpOverlayInodesTest, dump_empty_directory) {
+  auto ino = kRootNodeId;
+  EXPECT_EQ(1_ino, ino);
+
+  overlay.saveOverlayDir(ino, DirContents{}, InodeTimestamps{});
+  EXPECT_EQ(
+      "/\n"
+      "  Inode number: 1\n"
+      "  Entries (0 total):\n",
+      debugDumpOverlayInodes(overlay, ino));
+}
+
+TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_3_regular_files) {
+  auto rootIno = kRootNodeId;
+  EXPECT_EQ(1_ino, rootIno);
+  auto fileAIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(2_ino, fileAIno);
+  auto fileBIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(3_ino, fileBIno);
+  auto fileCIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(4_ino, fileCIno);
+
+  DirContents root;
+  root.emplace("file_a"_pc, S_IFREG | 0644, fileAIno);
+  root.emplace("file_b"_pc, S_IFREG | 0644, fileBIno);
+  root.emplace("file_c"_pc, S_IFREG | 0644, fileCIno);
+  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+
+  overlay.createOverlayFile(
+      fileAIno, InodeTimestamps{}, folly::ByteRange{""_sp});
+  overlay.createOverlayFile(
+      fileBIno, InodeTimestamps{}, folly::ByteRange{""_sp});
+  overlay.createOverlayFile(
+      fileCIno, InodeTimestamps{}, folly::ByteRange{""_sp});
+
+  EXPECT_EQ(
+      "/\n"
+      "  Inode number: 1\n"
+      "  Entries (3 total):\n"
+      "            2 f  644 file_a\n"
+      "            3 f  644 file_b\n"
+      "            4 f  644 file_c\n",
+      debugDumpOverlayInodes(overlay, rootIno));
+}
+
+TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_an_empty_subdirectory) {
+  auto rootIno = kRootNodeId;
+  EXPECT_EQ(1_ino, rootIno);
+  auto subdirIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(2_ino, subdirIno);
+
+  DirContents root;
+  root.emplace("subdir"_pc, S_IFDIR | 0755, subdirIno);
+  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+
+  overlay.saveOverlayDir(subdirIno, DirContents{}, InodeTimestamps{});
+
+  EXPECT_EQ(
+      "/\n"
+      "  Inode number: 1\n"
+      "  Entries (1 total):\n"
+      "            2 d  755 subdir\n"
+      "/subdir\n"
+      "  Inode number: 2\n"
+      "  Entries (0 total):\n",
+      debugDumpOverlayInodes(overlay, rootIno));
+}
+
+TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_subdirectory) {
+  auto rootIno = kRootNodeId;
+  EXPECT_EQ(1_ino, rootIno);
+  auto directoryDoesNotExistIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(2_ino, directoryDoesNotExistIno);
+
+  DirContents root;
+  root.emplace(
+      "directory_does_not_exist"_pc, S_IFDIR | 0755, directoryDoesNotExistIno);
+  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+
+  EXPECT_EQ(
+      "/\n"
+      "  Inode number: 1\n"
+      "  Entries (1 total):\n"
+      "            2 d  755 directory_does_not_exist\n"
+      "/directory_does_not_exist\n"
+      "  Inode number: 2\n",
+      debugDumpOverlayInodes(overlay, rootIno));
+}
+
+TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_regular_file) {
+  auto rootIno = kRootNodeId;
+  EXPECT_EQ(1_ino, rootIno);
+  auto regularFileDoesNotExistIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(2_ino, regularFileDoesNotExistIno);
+
+  DirContents root;
+  root.emplace(
+      "regular_file_does_not_exist"_pc,
+      S_IFREG | 0644,
+      regularFileDoesNotExistIno);
+  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+
+  EXPECT_EQ(
+      "/\n"
+      "  Inode number: 1\n"
+      "  Entries (1 total):\n"
+      "            2 f  644 regular_file_does_not_exist\n",
+      debugDumpOverlayInodes(overlay, rootIno));
+}
+
+TEST_F(DebugDumpOverlayInodesTest, directories_are_dumped_depth_first) {
+  auto rootIno = kRootNodeId;
+  EXPECT_EQ(1_ino, rootIno);
+  auto subdirAIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(2_ino, subdirAIno);
+  auto subdirAXIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(3_ino, subdirAXIno);
+  auto subdirAYIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(4_ino, subdirAYIno);
+  auto subdirBIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(5_ino, subdirBIno);
+  auto subdirBXIno = overlay.allocateInodeNumber();
+  EXPECT_EQ(6_ino, subdirBXIno);
+
+  DirContents root;
+  root.emplace("subdir_a"_pc, S_IFDIR | 0755, subdirAIno);
+  root.emplace("subdir_b"_pc, S_IFDIR | 0755, subdirBIno);
+  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+
+  DirContents subdirA;
+  subdirA.emplace("x"_pc, S_IFDIR | 0755, subdirAXIno);
+  subdirA.emplace("y"_pc, S_IFDIR | 0755, subdirAYIno);
+  overlay.saveOverlayDir(subdirAIno, subdirA, InodeTimestamps{});
+
+  DirContents subdirB;
+  subdirB.emplace("x"_pc, S_IFDIR | 0755, subdirBXIno);
+  overlay.saveOverlayDir(subdirBIno, subdirB, InodeTimestamps{});
+
+  overlay.saveOverlayDir(subdirAXIno, DirContents{}, InodeTimestamps{});
+  overlay.saveOverlayDir(subdirAYIno, DirContents{}, InodeTimestamps{});
+  overlay.saveOverlayDir(subdirBXIno, DirContents{}, InodeTimestamps{});
+
+  EXPECT_EQ(
+      "/\n"
+      "  Inode number: 1\n"
+      "  Entries (2 total):\n"
+      "            2 d  755 subdir_a\n"
+      "            5 d  755 subdir_b\n"
+      "/subdir_a\n"
+      "  Inode number: 2\n"
+      "  Entries (2 total):\n"
+      "            3 d  755 x\n"
+      "            4 d  755 y\n"
+      "/subdir_a/x\n"
+      "  Inode number: 3\n"
+      "  Entries (0 total):\n"
+      "/subdir_a/y\n"
+      "  Inode number: 4\n"
+      "  Entries (0 total):\n"
+      "/subdir_b\n"
+      "  Inode number: 5\n"
+      "  Entries (1 total):\n"
+      "            6 d  755 x\n"
+      "/subdir_b/x\n"
+      "  Inode number: 6\n"
+      "  Entries (0 total):\n",
+      debugDumpOverlayInodes(overlay, rootIno));
+}
+
+namespace {
+void debugDumpOverlayInodes(
+    Overlay& overlay,
+    InodeNumber rootInode,
+    AbsolutePathPiece path,
+    std::ostringstream& out) {
+  out << path << "\n";
+  out << "  Inode number: " << rootInode << "\n";
+
+  auto dir = overlay.loadOverlayDir(rootInode);
+  if (dir) {
+    auto& dirContents = dir->first;
+    out << "  Entries (" << dirContents.size() << " total):\n";
+
+    auto dtypeToString = [](dtype_t dtype) noexcept->const char* {
+      switch (dtype) {
+        case dtype_t::Dir:
+          return "d";
+        case dtype_t::Regular:
+          return "f";
+        default:
+          return "?";
+      }
+    };
+
+    for (const auto& [entryPath, entry] : dirContents) {
+      auto permissions = entry.getInitialMode() & ~S_IFMT;
+      out << "  " << std::dec << std::setw(11) << entry.getInodeNumber() << " "
+          << dtypeToString(entry.getDtype()) << " " << std::oct << std::setw(4)
+          << permissions << " " << entryPath << "\n";
+    }
+    for (const auto& [entryPath, entry] : dirContents) {
+      if (entry.getDtype() == dtype_t::Dir) {
+        debugDumpOverlayInodes(
+            overlay, entry.getInodeNumber(), path + entryPath, out);
+      }
+    }
+  }
+}
+
+std::string debugDumpOverlayInodes(Overlay& overlay, InodeNumber rootInode) {
+  std::ostringstream out;
+  debugDumpOverlayInodes(overlay, rootInode, AbsolutePathPiece{}, out);
+  return out.str();
+}
+} // namespace
 
 } // namespace eden
 } // namespace facebook
