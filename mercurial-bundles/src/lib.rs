@@ -100,6 +100,7 @@ pub enum Bundle2Item {
     B2xRebase(PartHeader, BoxStream<changegroup::Part, Error>),
     Replycaps(PartHeader, BoxFuture<capabilities::Capabilities, Error>),
     Pushkey(PartHeader, BoxFuture<(), Error>),
+    Pushvars(PartHeader, BoxFuture<(), Error>),
 }
 
 impl Bundle2Item {
@@ -142,11 +143,10 @@ impl fmt::Debug for Bundle2Item {
             &B2xRebasePack(ref header, _) => {
                 write!(f, "Bundle2Item::B2xRebasePack({:?}, ...)", header)
             }
-            &B2xRebase(ref header, _) => {
-                write!(f, "Bundle2Item::B2xRebase({:?}, ...)", header)
-            }
+            &B2xRebase(ref header, _) => write!(f, "Bundle2Item::B2xRebase({:?}, ...)", header),
             &Replycaps(ref header, _) => write!(f, "Bundle2Item::Replycaps({:?}, ...)", header),
             &Pushkey(ref header, _) => write!(f, "Bundle2Item::Pushkey({:?}, ...)", header),
+            &Pushvars(ref header, _) => write!(f, "Bundle2Item::Pushvars({:?}, ...)", header),
         }
     }
 }

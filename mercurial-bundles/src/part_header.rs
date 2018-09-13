@@ -51,6 +51,8 @@ pub enum PartHeaderType {
     Pushkey,
     /// Respond to a corresponding pushkey part
     ReplyPushkey,
+    /// Contains parameters that can be used by hooks
+    Pushvars,
     // RemoteChangegroup,       // We don't wish to support this functionality
     // CheckBookmarks,          // TODO Do we want to support this?
     // CheckHeads,              // TODO Do we want to support this?
@@ -68,7 +70,6 @@ pub enum PartHeaderType {
     // Obsmarkers,              // TODO Do we want to support this?
     // ReplyObsmarkers,         // TODO Do we want to support this?
     // HgtagsFnodes,            // TODO Do we want to support this?
-    // Pushvars,                // TODO Do we want to support this?
 }
 
 impl PartHeaderType {
@@ -88,6 +89,7 @@ impl PartHeaderType {
             "check:heads" => Ok(CheckHeads),
             "pushkey" => Ok(Pushkey),
             "reply:pushkey" => Ok(ReplyPushkey),
+            "pushvars" => Ok(Pushvars),
             bad => bail_msg!("unknown header type {}", bad),
         }
     }
@@ -107,6 +109,7 @@ impl PartHeaderType {
             B2xRebasePack => "b2x:rebasepackpart",
             CheckHeads => "check:heads",
             Pushkey => "pushkey",
+            Pushvars => "pushvars",
             ReplyPushkey => "reply:pushkey",
         }
     }

@@ -190,7 +190,11 @@ fn resolve_pushrebase(
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
-        .resolve_b2xtreegroup2(bundle2)
+        .maybe_resolve_pushvars(bundle2)
+        .and_then({
+            cloned!(resolver);
+            move |bundle2| resolver.resolve_b2xtreegroup2(bundle2)
+        })
         .and_then({
             cloned!(resolver);
             move |(manifests, bundle2)| {
@@ -398,6 +402,26 @@ impl Bundle2Resolver {
                 Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
                 _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
             })
+            .boxify()
+    }
+
+    /// Parse pushvars
+    /// It is used to store hook arguments.
+    fn maybe_resolve_pushvars(
+        &self,
+        bundle2: BoxStream<Bundle2Item, Error>,
+    ) -> BoxFuture<BoxStream<Bundle2Item, Error>, Error> {
+        next_item(bundle2)
+            .and_then(move |(newpart, bundle2)| match newpart {
+                Some(Bundle2Item::Pushvars(_header, emptypart)) => {
+                    // ignored for now, will be used for hooks
+                    emptypart.map(move |_| bundle2).boxify()
+                }
+                Some(part) => ok(stream::once(Ok(part)).chain(bundle2).boxify()).boxify(),
+                None => ok(bundle2).boxify(),
+            })
+            .context("While resolving Pushvars")
+            .from_err()
             .boxify()
     }
 

@@ -49,6 +49,7 @@ lazy_static! {
         m.insert(PartHeaderType::B2xTreegroup2, hashset!{"version", "cache", "category"});
         m.insert(PartHeaderType::Replycaps, hashset!{});
         m.insert(PartHeaderType::Pushkey, hashset!{ "namespace", "key", "old", "new" });
+        m.insert(PartHeaderType::Pushvars, hashset!{});
         m
     };
 }
@@ -152,6 +153,12 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             // Otherwise polling remainder stream may fail.
             let empty = wrapped_stream.decode(EmptyUnpacker).for_each(|_| Ok(()));
             Bundle2Item::Pushkey(header, Box::new(empty))
+        }
+        &PartHeaderType::Pushvars => {
+            // Pushvars part has an empty part payload, but we still need to "parse" it
+            // Otherwise polling remainder stream may fail.
+            let empty = wrapped_stream.decode(EmptyUnpacker).for_each(|_| Ok(()));
+            Bundle2Item::Pushvars(header, Box::new(empty))
         }
         _ => panic!("TODO: make this an error"),
     };
