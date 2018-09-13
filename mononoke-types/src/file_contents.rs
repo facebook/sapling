@@ -65,6 +65,14 @@ impl FileContents {
             FileContents::Bytes(bytes) => thrift::FileContents::Bytes(bytes.to_vec()),
         }
     }
+
+    pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
+        // TODO (T27336549) stop using SyncFailure once thrift is converted to failure
+        let thrift_tc = compact_protocol::deserialize(encoded_bytes.as_ref())
+            .map_err(SyncFailure::new)
+            .chain_err(ErrorKind::BlobDeserializeError("FileContents".into()))?;
+        Self::from_thrift(thrift_tc)
+    }
 }
 
 impl BlobstoreValue for FileContents {

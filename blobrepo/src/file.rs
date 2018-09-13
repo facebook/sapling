@@ -15,7 +15,7 @@ use mercurial_types::{FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifest
                       HgParents, MPath, MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::HgEntryId;
-use mononoke_types::{BlobstoreValue, ContentId, FileContents, MononokeId};
+use mononoke_types::{ContentId, FileContents, MononokeId};
 
 use blobstore::Blobstore;
 
@@ -160,7 +160,7 @@ pub fn fetch_file_contents(
                 Some(bytes) => bytes,
                 None => bail_err!(ErrorKind::ContentBlobMissing(content_id)),
             };
-            let file_contents = FileContents::from_blob(blobstore_bytes.into())?;
+            let file_contents = FileContents::from_encoded_bytes(blobstore_bytes.into_bytes())?;
             Ok(file_contents)
         })
         .with_context(|_| ErrorKind::FileContentsDeserializeFailed(blobstore_key))
