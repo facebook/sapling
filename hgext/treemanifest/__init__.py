@@ -252,6 +252,7 @@ def uisetup(ui):
     extensions.wrapfunction(
         debugcommands, "_findtreemanifest", _debugcmdfindtreemanifest
     )
+    extensions.wrapfunction(debugcommands, "_debugbundle2part", _debugbundle2part)
     extensions.wrapfunction(repair, "_collectfiles", collectfiles)
     extensions.wrapfunction(repair, "striptrees", striptrees)
     extensions.wrapfunction(repair, "_collectmanifest", _collectmanifest)
@@ -2458,6 +2459,14 @@ def _debugcmdfindtreemanifest(orig, ctx):
     except Exception:
         pass
     return orig(ctx)
+
+
+def _debugbundle2part(orig, ui, part, all, **opts):
+    if part.type == TREEGROUP_PARTTYPE2:
+        tempstore = wirepack.wirepackstore(part.read())
+        ui.write("    %s\n" % tempstore.debugstats())
+
+    orig(ui, part, all, **opts)
 
 
 def collectfiles(orig, repo, striprev):

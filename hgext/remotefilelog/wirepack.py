@@ -241,3 +241,6 @@ class wirepackstore(object):
 
     def cleanup(self, ledger):
         pass
+
+    def debugstats(self):
+        return "%d data items, %d history items" % (len(self._data), len(self._history))

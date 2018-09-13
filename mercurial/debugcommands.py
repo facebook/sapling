@@ -371,6 +371,11 @@ def _debugbundle2(ui, gen, all=None, **opts):
             _debugobsmarkers(ui, part, indent=4, **opts)
         if part.type == "phase-heads":
             _debugphaseheads(ui, part, indent=4)
+        _debugbundle2part(ui, part, all, **opts)
+
+
+def _debugbundle2part(ui, part, all, **opts):
+    pass
 
 
 @command(
