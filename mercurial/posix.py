@@ -90,18 +90,54 @@ def _locked(pathname):
         os.close(fd)
 
 
+def _issymlinklockstale(oldinfo, newinfo):
+    """Test if the lock is stale (owned by dead process).
+
+    Only works for symlink locks. Both oldinfo and newinfo have the form:
+
+        info := namespace + ":" + pid
+        namespace := hostname (non-Linux) | hostname + "/" + pid-namespace (Linux)
+
+    Return True if it's certain that oldinfo is stale. Return False if it's not
+    or not sure.
+    """
+
+    if ":" not in oldinfo or ":" not in newinfo:
+        # Malformed. Unsure.
+        return False
+
+    oldhost, oldpid = oldinfo.split(":", 1)
+    newhost, newpid = newinfo.split(":", 1)
+
+    if oldhost != newhost:
+        # Not in a same host, or namespace. Unsure.
+        return False
+
+    try:
+        pid = int(oldpid)
+    except ValueError:
+        # pid is not a number. Unsure.
+        return False
+
+    return not testpid(pid)
+
+
 def makelock(info, pathname):
     """Try to make a lock at given path. Write info inside it.
 
-    Stale non-symlink locks are removed automatically. Symlink locks
-    are only used by legacy code.
+    Stale non-symlink or symlink locks are removed automatically. Symlink locks
+    are only used by legacy code, or by the new code temporarily to prevent
+    issues running together with the old code.
 
     Return file descriptor on success. The file descriptor must be kept
     for the lock to be effective.
 
-    Raise EEXIST if another process is holding the lock.
-    Raise ELOOP if another legacy hg process is holding the lock.
-    Can also raise other errors.
+    Raise EAGAIN, likely caused by another process holding the lock.
+    Raise EEXIST or ELOOP, likely caused by another legacy hg process
+    holding the lock.
+
+    Can also raise other errors or those errors for other causes.
+    Callers should convert errors to error.LockHeld or error.LockUnavailable.
     """
 
     # This is a bit complex, since it aims to support old lock code where the
@@ -155,11 +191,16 @@ def makelock(info, pathname):
         try:
             fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW | O_CLOEXEC)
         except (OSError, IOError) as ex:
-            # ELOOP: symlink, lock taken by legacy process - return directly
-            if ex.errno != errno.ENOENT:
+            # ELOOP: symlink lock. Check if it's stale.
+            if ex.errno == errno.ELOOP:
+                oldinfo = os.readlink(pathname)
+                if _issymlinklockstale(oldinfo, info):
+                    os.unlink(pathname)
+            elif ex.errno != errno.ENOENT:
                 raise
         else:
             try:
+                # Use fcntl to test stale lock
                 fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
                 os.unlink(pathname)
             except (OSError, IOError) as ex:

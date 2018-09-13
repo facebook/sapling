@@ -369,15 +369,22 @@ class lock(object):
             m %= (info.namespace, lockinfo.getcurrentnamespace())
             self._debugprintonce(m)
             return info
-        if info.isrunning():
+        # On posix.makelock removes stale locks automatically. So there is no
+        # need to remove stale lock here.
+        if info.isrunning() or not pycompat.iswindows:
             m = _("locker is still running (full unique id: %r)\n")
             m %= (info.uniqueid,)
             self._debugprintonce(m)
             return info
+        # XXX: The below logic is broken since "read + test + unlink" should
+        # happen atomically, in a same critical section. Use another lock to
+        # only protect "unlink" is not enough.
+        #
         # if lockinfo dead, break lock.  must do this with another lock
         # held, or can race and break valid lock.
         try:
             # The "remove dead lock" logic is done by posix.makelock, not here.
+            assert pycompat.iswindows
             msg = _(
                 "trying to removed the stale lock file " "(will acquire %s for that)\n"
             )
