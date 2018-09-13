@@ -8,7 +8,7 @@ import types
 import unittest
 
 import silenttestrunner
-from mercurial import error, lock, vfs as vfsmod
+from mercurial import encoding, error, extensions, lock, pycompat, util, vfs as vfsmod
 
 
 testlockname = "testlock"
@@ -304,6 +304,28 @@ class testlock(unittest.TestCase):
             self.assertTrue(why.errno == errno.ETIMEDOUT)
             self.assertTrue(why.lockinfo == lock.emptylockinfo)
             state.assertlockexists(False)
+
+
+if not pycompat.iswindows:
+
+    class testposixmakelock(unittest.TestCase):
+        def testremovesymlinkplaceholder(self):
+            class SpecificError(Exception):
+                pass
+
+            # Rename is the last step of makelock. Make it fail.
+            def _failrename(orig, src, dst):
+                raise SpecificError()
+
+            testtmp = encoding.environ.get("TESTTMP")
+            lockpath = os.path.join(testtmp, "testlock")
+            with extensions.wrappedfunction(
+                os, "rename", _failrename
+            ), self.assertRaises(SpecificError):
+                util.makelock("foo:%s" % os.getpid(), lockpath)
+
+            # The placeholder lock should be removed.
+            self.assertFalse(os.path.lexists(lockpath))
 
 
 if __name__ == "__main__":

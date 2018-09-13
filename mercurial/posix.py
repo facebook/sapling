@@ -194,21 +194,26 @@ def makelock(info, pathname):
             fd = os.open(pathname, os.O_CREAT | os.O_WRONLY | os.O_EXCL | O_CLOEXEC)
             os.close(fd)
 
-        # Create new lock.
-        #
-        # mkstemp sets FD_CLOEXEC automatically. For thread-safety. Threads
-        # used here (progress, profiling, Winodws update worker) do not fork.
-        # So it's fine to not patch `os.open` here.
-        fd, tmppath = tempfile.mkstemp(prefix="makelock", dir=dirname)
         try:
-            os.fchmod(fd, 0o664)
-            fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
-            os.write(fd, info)
-            os.rename(tmppath, pathname)
-            return fd
+            # Create new lock.
+            #
+            # mkstemp sets FD_CLOEXEC automatically. For thread-safety. Threads
+            # used here (progress, profiling, Winodws update worker) do not fork.
+            # So it's fine to not patch `os.open` here.
+            fd, tmppath = tempfile.mkstemp(prefix="makelock", dir=dirname)
+            try:
+                os.fchmod(fd, 0o664)
+                fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
+                os.write(fd, info)
+                os.rename(tmppath, pathname)
+                return fd
+            except Exception:
+                unlink(tmppath)
+                os.close(fd)
+                raise
         except Exception:
-            unlink(tmppath)
-            os.close(fd)
+            # Remove the placeholder
+            unlink(pathname)
             raise
 
 
