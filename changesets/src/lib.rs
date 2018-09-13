@@ -10,6 +10,7 @@
 extern crate abomonation;
 #[macro_use]
 extern crate abomonation_derive;
+extern crate bytes;
 extern crate cachelib;
 extern crate db_conn;
 #[macro_use]
@@ -22,12 +23,16 @@ extern crate heapsize;
 extern crate heapsize_derive;
 extern crate tokio;
 
+extern crate changeset_entry_thrift;
 extern crate db;
 extern crate futures_ext;
 #[macro_use]
 extern crate lazy_static;
 extern crate mercurial_types;
 extern crate mononoke_types;
+#[cfg(test)]
+extern crate mononoke_types_mocks;
+extern crate rust_thrift;
 #[macro_use]
 extern crate stats;
 
@@ -36,6 +41,7 @@ use std::convert::TryFrom;
 use std::result;
 use std::sync::{Arc, MutexGuard};
 
+use bytes::Bytes;
 use db_conn::{MysqlConnInner, SqliteConnInner};
 use diesel::{insert_into, Connection, MysqlConnection, SqliteConnection};
 use diesel::backend::Backend;
@@ -43,12 +49,13 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::sql_types::HasSqlType;
-use failure::{ResultExt, chain::*};
+use failure::{ResultExt, SyncFailure, chain::*};
 
 use futures_ext::{asynchronize, BoxFuture, FutureExt};
 use mercurial_types::RepositoryId;
 use mononoke_types::ChangesetId;
 use mononoke_types::sql_types::ChangesetIdSql;
+use rust_thrift::compact_protocol;
 use stats::Timeseries;
 
 mod errors;
@@ -73,6 +80,45 @@ pub struct ChangesetEntry {
     pub cs_id: ChangesetId,
     pub parents: Vec<ChangesetId>,
     pub gen: u64,
+}
+
+pub fn serialize_cs_entries(cs_entries: Vec<ChangesetEntry>) -> Bytes {
+    let mut thrift_entries = vec![];
+    for entry in cs_entries {
+        let thrift_entry = changeset_entry_thrift::ChangesetEntry {
+            repo_id: changeset_entry_thrift::RepoId(entry.repo_id.id()),
+            cs_id: entry.cs_id.into_thrift(),
+            parents: entry.parents.into_iter().map(|p| p.into_thrift()).collect(),
+            gen: changeset_entry_thrift::GenerationNum(entry.gen as i64),
+        };
+        thrift_entries.push(thrift_entry);
+    }
+
+    compact_protocol::serialize(&thrift_entries)
+}
+
+pub fn deserialize_cs_entries(blob: Bytes) -> Result<Vec<ChangesetEntry>> {
+    let thrift_entries: Vec<changeset_entry_thrift::ChangesetEntry> =
+        compact_protocol::deserialize(&blob).map_err(SyncFailure::new)?;
+    let mut entries = vec![];
+    for thrift_entry in thrift_entries {
+        let parents: Result<Vec<_>> = thrift_entry
+            .parents
+            .into_iter()
+            .map(ChangesetId::from_thrift)
+            .collect();
+
+        let parents = parents?;
+        let entry = ChangesetEntry {
+            repo_id: RepositoryId::new(thrift_entry.repo_id.0),
+            cs_id: ChangesetId::from_thrift(thrift_entry.cs_id)?,
+            parents,
+            gen: thrift_entry.gen.0 as u64,
+        };
+        entries.push(entry);
+    }
+
+    Ok(entries)
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -438,5 +484,25 @@ fn check_missing_rows(
         Err(ErrorKind::MissingParents(
             diff.into_iter().map(|cs_id| *cs_id).collect(),
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn serialize_deserialize() {
+        let entry = ChangesetEntry {
+            repo_id: RepositoryId::new(0),
+            cs_id: mononoke_types_mocks::changesetid::ONES_CSID,
+            parents: vec![mononoke_types_mocks::changesetid::TWOS_CSID],
+            gen: 2,
+        };
+
+        let res = deserialize_cs_entries(serialize_cs_entries(vec![entry.clone(), entry.clone()]))
+            .unwrap();
+        assert_eq!(vec![entry.clone(), entry], res);
     }
 }
