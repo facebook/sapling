@@ -224,21 +224,24 @@ class namespacepredicate(_funcregistrarbase):
         def getmynamespace(repo):
             return namespaces.namespace(...)
 
-    Optional argument 'priority' will be used to decide the order if no
-    'after' is specified. Smaller priority will be inserted first. If
-    namespaces have a same priority, their names will be used, and inserted
-    by the alphabet order.
+    Argument 'priority' will be used to decide the order. Smaller priority will
+    be inserted first. If namespaces have a same priority, their names will be
+    used, and inserted by the alphabet order.
 
     The function can read configurations from 'repo' and decide to not
     add the namespace by returning 'None'.
+
+    In most cases, the priority should be higher than the builtinnamespaces.
+    See namespaces.py for priorities of builtin namespaces.
     """
 
     _docformat = "``%s``\n    %s"
 
-    def _extrasetup(self, name, func, priority=None):
-        # See namespaces.py for priorities of builtin namespaces.
-        # 50 is after all builtin namespaces.
-        func._priority = priority or 50
+    def _extrasetup(self, name, func, priority):
+        if priority is None:
+            raise error.ProgrammingError("namespace priority must be specified")
+
+        func._priority = priority
 
 
 class revsetpredicate(_funcregistrarbase):
