@@ -487,16 +487,6 @@ InodeNumber Overlay::scanForNextInodeNumber() {
     return InodeNumber{ino - 1};
   }
 
-  // TODO: We should probably store the max inode number in the header file
-  // during graceful unmount.  When opening an overlay we can then simply read
-  // back the max inode number from this file if the overlay was shut down
-  // cleanly last time.
-  //
-  // We would only then need to do a scan if the overlay was not cleanly shut
-  // down.
-  //
-  // For now we always do a scan.
-
   // Walk the root directory downwards to find all (non-unlinked) directory
   // inodes stored in the overlay.
   //
