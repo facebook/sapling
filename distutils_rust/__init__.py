@@ -14,6 +14,21 @@ import os
 import shutil
 import subprocess
 import tarfile
+import tempfile
+
+
+# This manifest is merged with the default .exe manifest to allow
+# it to support long paths on Windows
+LONG_PATHS_MANIFEST = """\
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+    <application>
+        <windowsSettings
+        xmlns:ws2="http://schemas.microsoft.com/SMI/2016/WindowsSettings">
+            <ws2:longPathAware>true</ws2:longPathAware>
+        </windowsSettings>
+    </application>
+</assembly>"""
 
 
 @contextlib.contextmanager
@@ -133,6 +148,13 @@ class BuildRustExt(distutils.core.Command):
             "ignore build-lib and put compiled extensions into the source "
             + "directory alongside your pure Python modules",
         ),
+        (
+            "long-paths-support",
+            "l",
+            "Windows-only. Add a manifest entry that makes the resulting binary long paths aware. "
+            + "See https://docs.microsoft.com/en-us/windows/desktop/fileio/naming-a-file"
+            + "#maximum-path-length-limitation for more details."
+        ),
     ]
 
     boolean_options = ["debug", "inplace"]
@@ -143,6 +165,7 @@ class BuildRustExt(distutils.core.Command):
         self.build_temp = None
         self.debug = None
         self.inplace = None
+        self.long_paths_support = False
 
     def finalize_options(self):
         self.set_undefined_options(
@@ -214,8 +237,13 @@ class BuildRustExt(distutils.core.Command):
             raise distutils.errors.CompileError(
                 "compilation of Rust targetension '%s' failed" % target.name
             )
-
+        
         src = os.path.join(self.get_temp_path(), self.get_temp_output(target))
+
+        if target.type == "binary" and distutils.util.get_platform().startswith("win-")\
+            and self.long_paths_support:
+            self.set_long_paths_manifest(src)
+
         dest = self.get_output_filename(target)
         try:
             os.makedirs(os.path.dirname(dest))
@@ -224,6 +252,48 @@ class BuildRustExt(distutils.core.Command):
         desttmp = dest + ".tmp"
         shutil.copy(src, desttmp)
         shutil.move(desttmp, dest)
+
+    def set_long_paths_manifest(self, fname):
+        if not distutils.util.get_platform().startswith("win-"):
+            # This only makes sense on Windows
+            distutils.log.info("skipping set_long_paths_manifest call for %s "
+                               "as the plaform in not Windows", fname)
+            return
+        if not fname.endswith(".exe"):
+            # we only care about executables
+            distutils.log.info("skipping set_long_paths_manifest call for %s "
+                               "as the file extension is not exe", fname)
+            return
+
+        fdauto, manfname = tempfile.mkstemp(suffix=".distutils_rust.manifest")
+        os.close(fdauto)
+        with open(manfname, "w") as f:
+            f.write(LONG_PATHS_MANIFEST)
+        distutils.log.debug("LongPathsAware manifest written into tempfile: %s", manfname)
+        inputresource = "-inputresource:%s;#1" % fname
+        outputresource = "-outputresource:%s;#1" % fname
+        command = ["mt.exe", "-nologo", "-manifest", manfname,
+                   outputresource, inputresource]
+        try:
+            distutils.log.debug("Trying to merge LongPathsAware manifest with the existing "
+                                "manifest of the binary %s", fname)
+            subprocess.check_output(command)
+            distutils.log.debug("LongPathsAware manifest successfully merged into %s", fname)
+        except subprocess.CalledProcessError as e:
+            no_resource_err = "The specified image file did not contain a resource section".lower()
+            if no_resource_err not in e.output.lower():
+                distutils.log.error("Setting LongPathsAware manifest failed: %r", e.output)
+                raise
+            distutils.log.debug("The binary %s does not have an existing manifest. Writing "
+                                "a LongPathsAware one", fname)
+            # Since the image does not contain a resource section, we don't try to merge manifests,
+            # but rather just write one.
+            command.remove(inputresource)
+            subprocess.check_output(command)
+            distutils.log.debug("LongPathsAware manifest successfully written into %s", fname)
+        finally:
+            os.remove(manfname)
+
 
     def build_binary(self, target):
         distutils.log.info("building '%s' binary", target.name)
