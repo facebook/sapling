@@ -59,6 +59,12 @@ impl FileContents {
         }
     }
 
+    pub fn as_bytes(&self) -> &Bytes {
+        match self {
+            FileContents::Bytes(bytes) => &bytes,
+        }
+    }
+
     pub(crate) fn into_thrift(self) -> thrift::FileContents {
         match self {
             // TODO (T26959816) -- allow Thrift to represent binary as Bytes

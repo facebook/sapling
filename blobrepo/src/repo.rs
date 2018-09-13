@@ -27,7 +27,7 @@ use time_ext::DurationExt;
 use uuid::Uuid;
 
 use super::changeset::HgChangesetContent;
-use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
+use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes, get_sha256_alias};
 use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob,
                 MemWritesBlobstore, PrefixBlobstore};
 use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
@@ -48,9 +48,9 @@ use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFil
                       HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
                       Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest::Content;
-use mononoke_types::{Blob, BlobstoreValue, BonsaiChangeset, ChangesetId, ContentId, DateTime,
-                     FileChange, FileContents, FileType, Generation, MPath, MPathElement,
-                     MononokeId};
+use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
+                     ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath,
+                     MPathElement, MononokeId};
 use rocksblob::Rocksblob;
 use rocksdb;
 
@@ -633,14 +633,11 @@ impl BlobRepo {
             .map(|res| res.map(|res| Generation::new(res.gen)))
     }
 
-    pub fn upload_blob<Id>(&self, blob: Blob<Id>) -> impl Future<Item = Id, Error = Error> + Send
-    where
-        Id: MononokeId,
-    {
-        STATS::upload_blob.add_value(1);
-        let id = blob.id().clone();
-        let blobstore_key = id.blobstore_key();
-
+    fn upload_blobstore_bytes(
+        &self,
+        key: String,
+        contents: BlobstoreBytes,
+    ) -> impl Future<Item = (), Error = Error> + Send {
         fn log_upload_stats(
             logger: Logger,
             blobstore_key: String,
@@ -656,18 +653,43 @@ impl BlobRepo {
             );
         }
 
-        self.blobstore
-            .put(blobstore_key.clone(), blob.into())
-            .map(move |_| id)
-            .timed({
-                let logger = self.logger.clone();
-                move |stats, result| {
-                    if result.is_ok() {
-                        log_upload_stats(logger, blobstore_key, "blob uploaded", stats)
-                    }
-                    Ok(())
+        self.blobstore.put(key.clone(), contents).timed({
+            let logger = self.logger.clone();
+            move |stats, result| {
+                if result.is_ok() {
+                    log_upload_stats(logger, key, "blob uploaded", stats)
                 }
-            })
+                Ok(())
+            }
+        })
+    }
+
+    pub fn upload_blob<Id>(
+        &self,
+        blob: Blob<Id>,
+        alias_key: String,
+    ) -> impl Future<Item = Id, Error = Error> + Send
+    where
+        Id: MononokeId,
+    {
+        STATS::upload_blob.add_value(1);
+        let id = blob.id().clone();
+        let blobstore_key = id.blobstore_key();
+        let blob_contents: BlobstoreBytes = blob.into();
+
+        // Upload {alias.sha256.sha256(blob_contents): blobstore_key}
+        let alias_key_operation = {
+            let contents = BlobstoreBytes::from_bytes(blobstore_key.as_bytes());
+            self.upload_blobstore_bytes(alias_key, contents)
+        };
+
+        // Upload {blobstore_key: blob_contents}
+        let blobstore_key_operation =
+            self.upload_blobstore_bytes(blobstore_key, blob_contents.clone());
+
+        blobstore_key_operation
+            .join(alias_key_operation)
+            .map(move |((), ())| id)
     }
 
     // This is used by tests
@@ -1226,6 +1248,9 @@ impl UploadHgFileContents {
                 // Upload the contents separately (they'll be used for bonsai changesets as well).
                 let contents = f.file_contents();
                 let size = contents.size() as u64;
+                // Get alias of raw file contents
+                // TODO(anastasiyaz) T33391519 case with file renaming
+                let alias_key = get_sha256_alias(&contents.as_bytes());
                 let contents_blob = contents.into_blob();
                 let cbinfo = ContentBlobInfo {
                     path: path.clone(),
@@ -1235,7 +1260,7 @@ impl UploadHgFileContents {
                     },
                 };
 
-                let upload_fut = repo.upload_blob(contents_blob)
+                let upload_fut = repo.upload_blob(contents_blob, alias_key)
                     .map(|_content_id| ())
                     .timed({
                         let logger = repo.logger.clone();

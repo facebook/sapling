@@ -32,10 +32,12 @@ use futures_ext::{BoxFuture, FutureExt};
 use quickcheck::{quickcheck, Arbitrary, Gen, TestResult, Testable};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
+use blobstore::{Blobstore, LazyMemblob, PrefixBlobstore};
 use mercurial_types::{manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId,
-                      HgManifestId, HgParents, MPath, MPathElement, RepoPath};
+                      HgManifestId, HgParents, MPath, MPathElement, RepoPath, RepositoryId};
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents,
                      MononokeId};
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
@@ -123,6 +125,43 @@ test_both_repotypes!(
     upload_blob_one_parent_lazy,
     upload_blob_one_parent_eager
 );
+
+#[test]
+fn upload_blob_aliases() {
+    async_unit::tokio_unit_test(|| {
+        // echo -n "blob" | sha256sum
+        let alias_key =
+            "alias.sha256.fa2c8cc4f28176bbeed4b736df569a34c79cd3723e9ec42f9674b4d46ac6b8b8";
+        let memblob = LazyMemblob::new();
+        let blobstore = Arc::new(memblob.clone());
+        // repo_id = 0 (prefix = "repo0000"), the same as in new_memblob_empty
+        let repoid = RepositoryId::new(0);
+        let prefixed_blobstore = PrefixBlobstore::new(memblob, repoid.prefix());
+
+        let repo =
+            BlobRepo::new_memblob_empty(None, Some(blobstore)).expect("cannot create empty repo");
+        let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
+
+        // The blob with alias does not exist...
+        assert!(
+            run_future(prefixed_blobstore.get(alias_key.to_string()))
+                .unwrap()
+                .is_none()
+        );
+
+        // We upload file and wait until file is uploaded...
+        let (_, future) = upload_file_no_parents(&repo, "blob", &fake_path);
+        run_future(future).unwrap();
+
+        let expected_content =
+            "content.blake2.07ccc95f3ee9252a9e1dbdeaef59844d6aabd9dcf911fa29f542e891a4c5e90a";
+
+        let contents = run_future(prefixed_blobstore.get(alias_key.to_string()))
+            .unwrap()
+            .unwrap();
+        assert_eq!(contents.as_bytes(), expected_content.as_bytes());
+    });
+}
 
 fn create_one_changeset(repo: BlobRepo) {
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
