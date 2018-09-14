@@ -53,7 +53,7 @@ folly::Future<std::vector<std::pair<RelativePath, Hash>>> HgProxyHash::getBatch(
     byteRanges.push_back(hash.getBytes());
   }
   return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
-      .then([blobHashes = hashCopies](std::vector<StoreResult>&& data) {
+      .thenValue([blobHashes = hashCopies](std::vector<StoreResult>&& data) {
         std::vector<std::pair<RelativePath, Hash>> results;
 
         for (size_t i = 0; i < blobHashes->size(); ++i) {

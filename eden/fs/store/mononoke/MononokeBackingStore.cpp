@@ -222,7 +222,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
   URL url(folly::sformat("/{}/tree/{}", repo_, id.toString()));
 
   return folly::via(executor_)
-      .then([this, url] { return sendRequest(url); })
+      .thenValue([this, url](auto&&) { return sendRequest(url); })
       .then([id](std::unique_ptr<folly::IOBuf>&& buf) {
         return convertBufToTree(std::move(buf), id);
       });
@@ -232,7 +232,7 @@ folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
     const Hash& id) {
   URL url(folly::sformat("/{}/blob/{}", repo_, id.toString()));
   return folly::via(executor_)
-      .then([this, url] { return sendRequest(url); })
+      .thenValue([this, url](auto&&) { return sendRequest(url); })
       .then([id](std::unique_ptr<folly::IOBuf>&& buf) {
         return std::make_unique<Blob>(id, *buf);
       });
@@ -242,7 +242,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
     const Hash& commitID) {
   URL url(folly::sformat("/{}/changeset/{}", repo_, commitID.toString()));
   return folly::via(executor_)
-      .then([this, url] { return sendRequest(url); })
+      .thenValue([this, url](auto&&) { return sendRequest(url); })
       .then([&](std::unique_ptr<folly::IOBuf>&& buf) {
         auto s = buf->moveToFbString();
         auto parsed = folly::parseJson(s);
@@ -292,7 +292,7 @@ folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
     const URL& url) {
   auto eventBase = folly::EventBaseManager::get()->getEventBase();
 
-  return getAddress(eventBase).then(
+  return getAddress(eventBase).thenValue(
       [=](folly::SocketAddress addr) { return sendRequestImpl(addr, url); });
 }
 
@@ -326,7 +326,7 @@ folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequestImpl(
 
   /* capture `connector` to make sure it stays alive for the duration of the
      connection */
-  return std::move(future).then(
+  return std::move(future).thenValue(
       [connector = std::move(connector), timer = std::move(timer)](
           std::unique_ptr<folly::IOBuf>&& buf) { return std::move(buf); });
 }

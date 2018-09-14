@@ -105,7 +105,7 @@ diffMountForStatus(const EdenMount* mount, Hash commitHash, bool listIgnored) {
   auto callback = std::make_unique<ThriftStatusCallback>();
   auto callbackPtr = callback.get();
   return mount->diff(callbackPtr, commitHash, listIgnored)
-      .then([callback = std::move(callback)]() {
+      .thenValue([callback = std::move(callback)](auto&&) {
         return std::make_unique<ScmStatus>(callback->extractStatus());
       });
 }

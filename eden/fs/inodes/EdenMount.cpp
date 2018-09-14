@@ -366,8 +366,8 @@ EdenMount::shutdownImpl(bool doTakeover) {
       : SerializedFileHandleMap{};
 
   return inodeMap_->shutdown(doTakeover)
-      .then([this, fileHandleMap = std::move(fileHandleMap)](
-                SerializedInodeMap inodeMap) {
+      .thenValue([this, fileHandleMap = std::move(fileHandleMap)](
+                     SerializedInodeMap inodeMap) {
         XLOG(DBG1) << "shutdown complete for EdenMount " << getPath();
         // Close the Overlay object to make sure we have released its lock.
         // This is important during graceful restart to ensure that we have
@@ -482,12 +482,12 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
     // before LHS, thus moving value of joinedExpected (in RHS) before using
     // it in LHS
     auto f = getInode(joinedExpected.value()); // get inode for symlink target
-    return std::move(f).then([this,
-                              joinedPath = std::move(joinedExpected.value()),
-                              depth](InodePtr target) mutable {
-      // follow the symlink chain recursively
-      return resolveSymlinkImpl(target, std::move(joinedPath), depth);
-    });
+    return std::move(f).thenValue(
+        [this, joinedPath = std::move(joinedExpected.value()), depth](
+            InodePtr target) mutable {
+          // follow the symlink chain recursively
+          return resolveSymlinkImpl(target, std::move(joinedPath), depth);
+        });
   });
 }
 
@@ -516,9 +516,9 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
 
   return folly::collect(fromTreeFuture, toTreeFuture)
-      .then([this, ctx, journalDiffCallback](
-                std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
-                    treeResults) {
+      .thenValue([this, ctx, journalDiffCallback](
+                     std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
+                         treeResults) {
         auto& fromTree = std::get<0>(treeResults);
         auto& toTree = std::get<1>(treeResults);
 
@@ -539,7 +539,7 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         // Perform the requested checkout operation after the journal diff
         // completes.
         return std::move(journalDiffFuture)
-            .then([this, ctx, fromTree, toTree]() {
+            .thenValue([this, ctx, fromTree, toTree](auto&&) {
               ctx->start(this->acquireRenameLock());
 
               /**
@@ -565,7 +565,7 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
                   ctx.get(), fromTree, toTree);
             });
       })
-      .then([ctx, snapshotHash] {
+      .thenValue([ctx, snapshotHash](auto&&) {
         // Complete the checkout and save the new snapshot hash
         return ctx->finish(snapshotHash);
       })
@@ -618,8 +618,8 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
 Future<Unit> EdenMount::diff(const DiffContext* ctxPtr, Hash commitHash) const {
   auto rootInode = getRootInode();
   return objectStore_->getTreeForCommit(commitHash)
-      .then([ctxPtr, rootInode = std::move(rootInode)](
-                std::shared_ptr<const Tree>&& rootTree) {
+      .thenValue([ctxPtr, rootInode = std::move(rootInode)](
+                     std::shared_ptr<const Tree>&& rootTree) {
         return rootInode->diff(
             ctxPtr,
             RelativePathPiece{},

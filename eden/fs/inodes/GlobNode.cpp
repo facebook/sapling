@@ -301,11 +301,11 @@ Future<vector<RelativePath>> GlobNode::evaluateImpl(
               auto candidateName = rootPath + name;
               futures.emplace_back(
                   store->getTree(root.entryHash(entry))
-                      .then([candidateName,
-                             store,
-                             innerNode = node.get(),
-                             fileBlobsToPrefetch](
-                                std::shared_ptr<const Tree> dir) {
+                      .thenValue([candidateName,
+                                  store,
+                                  innerNode = node.get(),
+                                  fileBlobsToPrefetch](
+                                     std::shared_ptr<const Tree> dir) {
                         return innerNode->evaluateImpl(
                             store,
                             candidateName,
@@ -337,11 +337,11 @@ Future<vector<RelativePath>> GlobNode::evaluateImpl(
                 auto candidateName = rootPath + name;
                 futures.emplace_back(
                     store->getTree(root.entryHash(entry))
-                        .then([candidateName,
-                               store,
-                               innerNode = node.get(),
-                               fileBlobsToPrefetch](
-                                  std::shared_ptr<const Tree> dir) {
+                        .thenValue([candidateName,
+                                    store,
+                                    innerNode = node.get(),
+                                    fileBlobsToPrefetch](
+                                       std::shared_ptr<const Tree> dir) {
                           return innerNode->evaluateImpl(
                               store,
                               candidateName,
@@ -478,8 +478,8 @@ Future<vector<RelativePath>> GlobNode::evaluateRecursiveComponentImpl(
         } else {
           futures.emplace_back(
               store->getTree(root.entryHash(entry))
-                  .then([candidateName, store, this, fileBlobsToPrefetch](
-                            const std::shared_ptr<const Tree>& tree) {
+                  .thenValue([candidateName, store, this, fileBlobsToPrefetch](
+                                 const std::shared_ptr<const Tree>& tree) {
                     return evaluateRecursiveComponentImpl(
                         store,
                         candidateName,

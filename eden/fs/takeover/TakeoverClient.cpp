@@ -43,7 +43,7 @@ TakeoverData takeoverMounts(
   auto connectTimeout = std::chrono::seconds(1);
   FutureUnixSocket socket;
   socket.connect(&evb, socketPath.stringPiece(), connectTimeout)
-      .then([&socket, supportedVersions] {
+      .thenValue([&socket, supportedVersions](auto&&) {
         // Send our protocol version so that the server knows
         // whether we're capable of handshaking successfully
 

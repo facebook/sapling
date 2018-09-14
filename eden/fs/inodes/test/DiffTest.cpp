@@ -182,9 +182,10 @@ class DiffTest {
     auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
     auto diffFuture =
         mount_.getEdenMount()->diff(callback.get(), commitHash, listIgnored);
-    return std::move(diffFuture).then([callback = std::move(callback)]() {
-      return callback->extractResults();
-    });
+    return std::move(diffFuture)
+        .thenValue([callback = std::move(callback)](auto&&) {
+          return callback->extractResults();
+        });
   }
 
   DiffResults resetCommitAndDiff(FakeTreeBuilder& builder, bool loadInodes);

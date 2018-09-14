@@ -295,12 +295,12 @@ void InodeMap::setupParentLookupPromise(
     folly::Optional<Hash> hash,
     mode_t mode) {
   promise.getFuture()
-      .then([name = PathComponent(childName),
-             this,
-             isUnlinked,
-             childInodeNumber,
-             hash,
-             mode](const InodePtr& inode) {
+      .thenValue([name = PathComponent(childName),
+                  this,
+                  isUnlinked,
+                  childInodeNumber,
+                  hash,
+                  mode](const InodePtr& inode) {
         startChildLookup(inode, name, isUnlinked, childInodeNumber, hash, mode);
       })
       .onError([this, childInodeNumber](const folly::exception_wrapper& ex) {

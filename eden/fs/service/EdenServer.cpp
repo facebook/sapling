@@ -231,7 +231,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
         info.takeoverPromise.emplace();
         auto future = info.takeoverPromise->getFuture();
         info.edenMount->getFuseChannel()->takeoverStop();
-        futures.emplace_back(std::move(future).then(
+        futures.emplace_back(std::move(future).thenValue(
             [self = this,
              edenMount = info.edenMount](TakeoverData::MountInfo takeover)
                 -> Future<Optional<TakeoverData::MountInfo>> {
@@ -240,7 +240,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
               }
               return self->serverState_->getPrivHelper()
                   ->fuseTakeoverShutdown(edenMount->getPath().stringPiece())
-                  .then([takeover = std::move(takeover)]() mutable {
+                  .thenValue([takeover = std::move(takeover)](auto&&) mutable {
                     return std::move(takeover);
                   });
             }));
@@ -473,9 +473,9 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
           ex.what(),
           "\nSkipping remount step.");
       return std::move(thriftRunningFuture)
-          .then([ew = folly::exception_wrapper(std::current_exception(), ex)] {
-            return makeFuture<Unit>(ew);
-          });
+          .thenValue(
+              [ew = folly::exception_wrapper(std::current_exception(), ex)](
+                  auto&&) { return makeFuture<Unit>(ew); });
     }
 
     if (dirs.empty()) {
@@ -559,30 +559,31 @@ void EdenServer::run() {
 
 Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {
   // stop processing new FUSE requests for the mounts,
-  return stopMountsForTakeover().then([this, socket = std::move(thriftSocket)](
-                                          TakeoverData&& takeover) mutable {
-    // Destroy the local store and backing stores.
-    // We shouldn't access the local store any more after giving up our
-    // lock, and we need to close it to release its lock before the new
-    // edenfs process tries to open it.
-    backingStores_.wlock()->clear();
-    // Explicit close the LocalStore before we reset our pointer, to
-    // ensure we release the RocksDB lock.  Since this is managed with a
-    // shared_ptr it is somewhat hard to confirm if we really have the
-    // last reference to it.
-    localStore_->close();
-    localStore_.reset();
+  return stopMountsForTakeover().thenValue(
+      [this,
+       socket = std::move(thriftSocket)](TakeoverData&& takeover) mutable {
+        // Destroy the local store and backing stores.
+        // We shouldn't access the local store any more after giving up our
+        // lock, and we need to close it to release its lock before the new
+        // edenfs process tries to open it.
+        backingStores_.wlock()->clear();
+        // Explicit close the LocalStore before we reset our pointer, to
+        // ensure we release the RocksDB lock.  Since this is managed with a
+        // shared_ptr it is somewhat hard to confirm if we really have the
+        // last reference to it.
+        localStore_->close();
+        localStore_.reset();
 
-    // Stop the privhelper process.
-    shutdownPrivhelper();
+        // Stop the privhelper process.
+        shutdownPrivhelper();
 
-    takeover.lockFile = std::move(lockFile_);
-    auto future = takeover.takeoverComplete.getFuture();
-    takeover.thriftSocket = std::move(socket);
+        takeover.lockFile = std::move(lockFile_);
+        auto future = takeover.takeoverComplete.getFuture();
+        takeover.thriftSocket = std::move(socket);
 
-    takeoverPromise_.setValue(std::move(takeover));
-    return future;
-  });
+        takeoverPromise_.setValue(std::move(takeover));
+        return future;
+      });
 }
 
 Future<Unit> EdenServer::performNormalShutdown() {
@@ -660,9 +661,9 @@ Future<Unit> EdenServer::performTakeoverFuseStart(
   }
   auto future = serverState_->getPrivHelper()->fuseTakeoverStartup(
       info.mountPath.stringPiece(), bindMounts);
-  return std::move(future).then([this,
-                                 edenMount = std::move(edenMount),
-                                 info = std::move(info)]() mutable {
+  return std::move(future).thenValue([this,
+                                      edenMount = std::move(edenMount),
+                                      info = std::move(info)](auto&&) mutable {
     return completeTakeoverFuseStart(std::move(edenMount), std::move(info));
   });
 }
@@ -707,8 +708,8 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
   channelData.connInfo = info.connInfo;
 
   // Start up the fuse workers.
-  return folly::collectAllSemiFuture(futures).toUnsafeFuture().then(
-      [edenMount, chData = std::move(channelData)]() mutable {
+  return folly::collectAllSemiFuture(futures).toUnsafeFuture().thenValue(
+      [edenMount, chData = std::move(channelData)](auto&&) mutable {
         return edenMount->takeoverFuse(std::move(chData));
       });
 }
@@ -729,10 +730,11 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       optionalTakeover ? folly::make_optional(optionalTakeover->inodeMap)
                        : folly::none);
   return std::move(initFuture)
-      .then([this,
-             doTakeover,
-             edenMount,
-             optionalTakeover = std::move(optionalTakeover)]() mutable {
+      .thenValue([this,
+                  doTakeover,
+                  edenMount,
+                  optionalTakeover =
+                      std::move(optionalTakeover)](auto&&) mutable {
         addToMountPoints(edenMount);
 
         return (optionalTakeover ? performTakeoverFuseStart(
@@ -771,8 +773,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                 // Perform all of the bind mounts associated with the
                 // client.  We don't need to do this for the takeover
                 // case as they are already mounted.
-                return edenMount->performBindMounts().then(
-                    [edenMount] { return edenMount; });
+                return edenMount->performBindMounts().thenValue(
+                    [edenMount](auto&&) { return edenMount; });
               }
             });
       });
@@ -791,8 +793,11 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
              future = it->second.unmountPromise.getFuture();
            }
 
-           return serverState_->getPrivHelper()->fuseUnmount(mountPath).then(
-               [f = std::move(future)]() mutable { return std::move(f); });
+           return serverState_->getPrivHelper()
+               ->fuseUnmount(mountPath)
+               .thenValue([f = std::move(future)](auto&&) mutable {
+                 return std::move(f);
+               });
          })
       .onError([path = mountPath.str()](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "Failed to perform unmount for \"" << path

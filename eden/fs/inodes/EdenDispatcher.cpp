@@ -216,7 +216,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::mknod(
   return inodeMap_->lookupTreeInode(parent).then(
       [childName = PathComponent{name}, mode, rdev](const TreeInodePtr& inode) {
         auto child = inode->mknod(childName, mode, rdev);
-        return child->getattr().then([child](Dispatcher::Attr attr) {
+        return child->getattr().thenValue([child](Dispatcher::Attr attr) {
           child->incFuseRefcount();
           return computeEntryParam(child->getNodeId(), attr);
         });
@@ -237,7 +237,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::mkdir(
   return inodeMap_->lookupTreeInode(parent).then(
       [childName = PathComponent{name}, mode](const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode);
-        return child->getattr().then([child](Dispatcher::Attr attr) {
+        return child->getattr().thenValue([child](Dispatcher::Attr attr) {
           child->incFuseRefcount();
           return computeEntryParam(child->getNodeId(), attr);
         });
@@ -275,7 +275,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::symlink(
        childName = PathComponent{name}](const TreeInodePtr& inode) {
         auto symlinkInode = inode->symlink(childName, linkContents);
         symlinkInode->incFuseRefcount();
-        return symlinkInode->getattr().then([symlinkInode](Attr&& attr) {
+        return symlinkInode->getattr().thenValue([symlinkInode](Attr&& attr) {
           return computeEntryParam(symlinkInode->getNodeId(), attr);
         });
       });
@@ -333,7 +333,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::link(
 
 Future<string> EdenDispatcher::getxattr(InodeNumber ino, StringPiece name) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "getxattr({}, {})", ino, name);
-  return inodeMap_->lookupInode(ino).then(
+  return inodeMap_->lookupInode(ino).thenValue(
       [attrName = name.str()](const InodePtr& inode) {
         return inode->getxattr(attrName);
       });

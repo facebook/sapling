@@ -134,13 +134,14 @@ TreeDiffer::diffTrees(RelativePathPiece path, Hash hash1, Hash hash2) {
   }
 
   return folly::collect(treeFuture1, treeFuture2)
-      .then([this, path = path.copy()](std::tuple<
-                                       std::shared_ptr<const Tree>,
-                                       std::shared_ptr<const Tree>>&& tup) {
-        auto tree1 = std::get<0>(tup);
-        auto tree2 = std::get<1>(tup);
-        return diffTrees(path, *tree1, *tree2);
-      });
+      .thenValue(
+          [this, path = path.copy()](std::tuple<
+                                     std::shared_ptr<const Tree>,
+                                     std::shared_ptr<const Tree>>&& tup) {
+            auto tree1 = std::get<0>(tup);
+            auto tree2 = std::get<1>(tup);
+            return diffTrees(path, *tree1, *tree2);
+          });
 }
 
 Future<Unit> TreeDiffer::diffTrees(
@@ -201,7 +202,7 @@ Future<Unit> TreeDiffer::diffOneTree(
     return diffOneTree(path, *std::move(future).get(), status);
   }
 
-  return std::move(future).then(
+  return std::move(future).thenValue(
       [this, status, path = path.copy()](std::shared_ptr<const Tree>&& tree) {
         return diffOneTree(path, *tree, status);
       });
@@ -301,8 +302,8 @@ Future<Unit> TreeDiffer::waitOnResults(ChildFutures&& childFutures) {
 
   return folly::collectAllSemiFuture(std::move(childFutures.futures))
       .toUnsafeFuture()
-      .then([this, paths = std::move(childFutures.paths)](
-                vector<Try<Unit>>&& results) {
+      .thenValue([this, paths = std::move(childFutures.paths)](
+                     vector<Try<Unit>>&& results) {
         DCHECK_EQ(paths.size(), results.size());
         for (size_t idx = 0; idx < results.size(); ++idx) {
           const auto& result = results[idx];
@@ -324,7 +325,9 @@ diffCommits(ObjectStore* store, Hash commit1, Hash commit2) {
     auto differ = make_unique<TreeDiffer>(store);
     auto* differRawPtr = differ.get();
     return differRawPtr->diffCommits(commit1, commit2)
-        .then([differ = std::move(differ)] { return differ->extractResult(); });
+        .thenValue([differ = std::move(differ)](auto&&) {
+          return differ->extractResult();
+        });
   });
 }
 
@@ -333,7 +336,9 @@ folly::Future<ScmStatus> diffTrees(ObjectStore* store, Hash tree1, Hash tree2) {
     auto differ = make_unique<TreeDiffer>(store);
     auto* differRawPtr = differ.get();
     return differRawPtr->diffTrees(RelativePathPiece{}, tree1, tree2)
-        .then([differ = std::move(differ)] { return differ->extractResult(); });
+        .thenValue([differ = std::move(differ)](auto&&) {
+          return differ->extractResult();
+        });
   });
 }
 
@@ -343,7 +348,9 @@ diffTrees(ObjectStore* store, const Tree& tree1, const Tree& tree2) {
     auto differ = make_unique<TreeDiffer>(store);
     auto* differRawPtr = differ.get();
     return differRawPtr->diffTrees(RelativePathPiece{}, tree1, tree2)
-        .then([differ = std::move(differ)] { return differ->extractResult(); });
+        .thenValue([differ = std::move(differ)](auto&&) {
+          return differ->extractResult();
+        });
   });
 }
 

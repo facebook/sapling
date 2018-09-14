@@ -127,8 +127,8 @@ Future<Unit> CheckoutAction::run(
     if (oldScmEntry_.hasValue()) {
       if (oldScmEntry_.value().isTree()) {
         store->getTree(oldScmEntry_.value().getHash())
-            .then([rc = LoadingRefcount(this)](
-                      std::shared_ptr<const Tree> oldTree) {
+            .thenValue([rc = LoadingRefcount(this)](
+                           std::shared_ptr<const Tree> oldTree) {
               rc->setOldTree(std::move(oldTree));
             })
             .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
@@ -136,8 +136,8 @@ Future<Unit> CheckoutAction::run(
             });
       } else {
         store->getBlob(oldScmEntry_.value().getHash())
-            .then([rc = LoadingRefcount(this)](
-                      std::shared_ptr<const Blob> oldBlob) {
+            .thenValue([rc = LoadingRefcount(this)](
+                           std::shared_ptr<const Blob> oldBlob) {
               rc->setOldBlob(std::move(oldBlob));
             })
             .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
@@ -151,8 +151,8 @@ Future<Unit> CheckoutAction::run(
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.isTree()) {
         store->getTree(newEntry.getHash())
-            .then([rc = LoadingRefcount(this)](
-                      std::shared_ptr<const Tree> newTree) {
+            .thenValue([rc = LoadingRefcount(this)](
+                           std::shared_ptr<const Tree> newTree) {
               rc->setNewTree(std::move(newTree));
             })
             .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
@@ -160,8 +160,8 @@ Future<Unit> CheckoutAction::run(
             });
       } else {
         store->getBlob(newEntry.getHash())
-            .then([rc = LoadingRefcount(this)](
-                      std::shared_ptr<const Blob> newBlob) {
+            .thenValue([rc = LoadingRefcount(this)](
+                           std::shared_ptr<const Blob> newBlob) {
               rc->setNewBlob(std::move(newBlob));
             })
             .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
@@ -174,7 +174,7 @@ Future<Unit> CheckoutAction::run(
     if (!inode_) {
       CHECK(inodeFuture_.valid());
       std::move(inodeFuture_)
-          .then([rc = LoadingRefcount(this)](InodePtr inode) {
+          .thenValue([rc = LoadingRefcount(this)](InodePtr inode) {
             rc->setInode(std::move(inode));
           })
           .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {

@@ -123,8 +123,8 @@ folly::Future<folly::Unit> diffRemovedTree(
     const TreeEntry& entry) {
   DCHECK(entry.isTree());
   return context->store->getTree(entry.getHash())
-      .then([context, currentPath = RelativePath{std::move(currentPath)}](
-                shared_ptr<const Tree>&& tree) {
+      .thenValue([context, currentPath = RelativePath{std::move(currentPath)}](
+                     shared_ptr<const Tree>&& tree) {
         return diffRemovedTree(context, std::move(currentPath), tree.get());
       });
 }
@@ -147,9 +147,9 @@ folly::Future<folly::Unit> diffRemovedTree(
 
   return folly::collectAllSemiFuture(subFutures)
       .toUnsafeFuture()
-      .then([currentPath = RelativePath{std::move(currentPath)},
-             tree = std::move(tree),
-             context](vector<folly::Try<Unit>> results) {
+      .thenValue([currentPath = RelativePath{std::move(currentPath)},
+                  tree = std::move(tree),
+                  context](vector<folly::Try<Unit>> results) {
         // Call diffError() for each error that occurred
         for (size_t n = 0; n < results.size(); ++n) {
           auto& result = results[n];
@@ -269,8 +269,8 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
 
     // Possibly modified directory.  Load the Tree in question.
     return context_->store->getTree(scmEntry_.getHash())
-        .then([this, treeInode = std::move(treeInode)](
-                  shared_ptr<const Tree>&& tree) {
+        .thenValue([this, treeInode = std::move(treeInode)](
+                       shared_ptr<const Tree>&& tree) {
           return treeInode->diff(
               context_, getPath(), std::move(tree), ignore_, isIgnored_);
         });

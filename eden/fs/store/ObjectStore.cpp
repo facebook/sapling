@@ -46,7 +46,7 @@ ObjectStore::~ObjectStore() {}
 
 Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
   // Check in the LocalStore first
-  return localStore_->getTree(id).then(
+  return localStore_->getTree(id).thenValue(
       [id, backingStore = backingStore_](shared_ptr<const Tree> tree) {
         if (tree) {
           XLOG(DBG4) << "tree " << id << " found in local store";
@@ -85,10 +85,10 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
 }
 
 Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
-  return localStore_->getBlob(id).then([id,
-                                        localStore = localStore_,
-                                        backingStore = backingStore_](
-                                           shared_ptr<const Blob> blob) {
+  return localStore_->getBlob(id).thenValue([id,
+                                             localStore = localStore_,
+                                             backingStore = backingStore_](
+                                                shared_ptr<const Blob> blob) {
     if (blob) {
       if (FLAGS_reverify_empty_files && blob->getContents().empty()) {
         return backingStore->verifyEmptyBlob(id).thenValue(
@@ -106,7 +106,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
     }
 
     // Look in the BackingStore
-    return backingStore->getBlob(id).then(
+    return backingStore->getBlob(id).thenValue(
         [localStore, id](unique_ptr<const Blob> loadedBlob) {
           if (!loadedBlob) {
             XLOG(DBG2) << "unable to find blob " << id;
@@ -157,7 +157,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
 }
 
 Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
-  return localStore_->getBlobMetadata(id).then(
+  return localStore_->getBlobMetadata(id).thenValue(
       [id, localStore = localStore_, backingStore = backingStore_](
           folly::Optional<BlobMetadata>&& localData) {
         if (localData.hasValue()) {
@@ -180,7 +180,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
         // TODO: It would be nice to add a smarter API to the BackingStore so
         // that we can query it just for the blob metadata if it supports
         // getting that without retrieving the full blob data.
-        return backingStore->getBlob(id).then(
+        return backingStore->getBlob(id).thenValue(
             [localStore, id](std::unique_ptr<Blob> blob) {
               if (!blob) {
                 // TODO: Perhaps we should do some short-term negative caching?

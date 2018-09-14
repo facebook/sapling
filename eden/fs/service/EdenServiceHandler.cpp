@@ -658,10 +658,10 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               RelativePathPiece(),
               rootInode,
               fileBlobsToPrefetch)
-          .then([edenMount,
-                 fileBlobsToPrefetch,
-                 suppressFileList = params->suppressFileList](
-                    std::vector<RelativePath>&& paths) {
+          .thenValue([edenMount,
+                      fileBlobsToPrefetch,
+                      suppressFileList = params->suppressFileList](
+                         std::vector<RelativePath>&& paths) {
             auto out = std::make_unique<Glob>();
 
             if (!suppressFileList) {

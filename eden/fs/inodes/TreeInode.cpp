@@ -473,8 +473,8 @@ void TreeInode::registerInodeLoadComplete(
   // This method should never be called with the contents_ lock held.  If the
   // future is already ready we will try to acquire the contents_ lock now.
   std::move(future)
-      .then([self = inodePtrFromThis(), childName = PathComponent{name}](
-                unique_ptr<InodeBase>&& childInode) {
+      .thenValue([self = inodePtrFromThis(), childName = PathComponent{name}](
+                     unique_ptr<InodeBase>&& childInode) {
         self->inodeLoadComplete(childName, std::move(childInode));
       })
       .onError([self = inodePtrFromThis(),
@@ -625,7 +625,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   if (!entry.isMaterialized()) {
     return getStore()
         ->getTree(entry.getHash())
-        .then(
+        .thenValue(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
              treeHash = entry.getHash(),
@@ -1002,7 +1002,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   // extra Future::then() call.  getattr() should always complete immediately
   // in this case.  We should be able to avoid calling stat() on the underlying
   // overlay file since we just created it and know it is an empty file.
-  return inode->getattr().then(
+  return inode->getattr().thenValue(
       [=, handle = std::move(handle)](Dispatcher::Attr attr) mutable {
         CreateResult result(getMount());
 
@@ -1136,7 +1136,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 }
 
 folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
-  return getOrLoadChild(name).then(
+  return getOrLoadChild(name).thenValue(
       [self = inodePtrFromThis(),
        childName = PathComponent{name}](const InodePtr& child) {
         return self->removeImpl<FileInodePtr>(std::move(childName), child, 1);
@@ -1144,7 +1144,7 @@ folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
 }
 
 folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
-  return getOrLoadChild(name).then(
+  return getOrLoadChild(name).thenValue(
       [self = inodePtrFromThis(),
        childName = PathComponent{name}](const InodePtr& child) {
         return self->removeImpl<TreeInodePtr>(std::move(childName), child, 1);
@@ -1234,9 +1234,9 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // side.
   auto childFuture = getOrLoadChild(name);
   return std::move(childFuture)
-      .then([self = inodePtrFromThis(),
-             childName = PathComponent{std::move(name)},
-             attemptNum](const InodePtr& loadedChild) {
+      .thenValue([self = inodePtrFromThis(),
+                  childName = PathComponent{std::move(name)},
+                  attemptNum](const InodePtr& loadedChild) {
         return self->removeImpl<InodePtrType>(
             childName, loadedChild, attemptNum + 1);
       });
@@ -1851,12 +1851,12 @@ Future<Unit> TreeInode::diff(
 
   if (!inode) {
     return std::move(inodeFuture)
-        .then([self = inodePtrFromThis(),
-               context,
-               currentPath = RelativePath{currentPath},
-               tree = std::move(tree),
-               parentIgnore,
-               isIgnored](InodePtr&& loadedInode) mutable {
+        .thenValue([self = inodePtrFromThis(),
+                    context,
+                    currentPath = RelativePath{currentPath},
+                    tree = std::move(tree),
+                    parentIgnore,
+                    isIgnored](InodePtr&& loadedInode) mutable {
           return self->loadGitIgnoreThenDiff(
               std::move(loadedInode),
               context,
@@ -2222,14 +2222,14 @@ Future<Unit> TreeInode::computeDiff(
   // destroyed before they complete.
   return folly::collectAllSemiFuture(deferredFutures)
       .toUnsafeFuture()
-      .then([self = std::move(self),
-             currentPath = RelativePath{std::move(currentPath)},
-             context,
-             // Capture ignore to ensure it remains valid until all of our
-             // children's diff operations complete.
-             ignore = std::move(ignore),
-             deferredJobs =
-                 std::move(deferredEntries)](vector<folly::Try<Unit>> results) {
+      .thenValue([self = std::move(self),
+                  currentPath = RelativePath{std::move(currentPath)},
+                  context,
+                  // Capture ignore to ensure it remains valid until all of our
+                  // children's diff operations complete.
+                  ignore = std::move(ignore),
+                  deferredJobs = std::move(deferredEntries)](
+                     vector<folly::Try<Unit>> results) {
         // Call diffError() for any jobs that failed.
         for (size_t n = 0; n < results.size(); ++n) {
           auto& result = results[n];
@@ -2274,11 +2274,11 @@ Future<Unit> TreeInode::checkout(
   // Wait for all of the actions, and record any errors.
   return folly::collectAllSemiFuture(actionFutures)
       .toUnsafeFuture()
-      .then([ctx,
-             self = inodePtrFromThis(),
-             toTree = std::move(toTree),
-             actions =
-                 std::move(actions)](vector<folly::Try<Unit>> actionResults) {
+      .thenValue([ctx,
+                  self = inodePtrFromThis(),
+                  toTree = std::move(toTree),
+                  actions = std::move(actions)](
+                     vector<folly::Try<Unit>> actionResults) {
         // Record any errors that occurred
         size_t numErrors = 0;
         for (size_t n = 0; n < actionResults.size(); ++n) {
@@ -2687,11 +2687,11 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
   // exactly what we want.  checkout() will even remove the directory before it
   // returns if the directory is empty.
   return treeInode->checkout(ctx, std::move(oldTree), nullptr)
-      .then([ctx,
-             name = PathComponent{name},
-             parentInode = inodePtrFromThis(),
-             treeInode,
-             newScmEntry]() {
+      .thenValue([ctx,
+                  name = PathComponent{name},
+                  parentInode = inodePtrFromThis(),
+                  treeInode,
+                  newScmEntry](auto&&) {
         // Make sure the treeInode was completely removed by the checkout.
         // If there were still untracked files inside of it, it won't have
         // been deleted, and we have a conflict that we cannot resolve.
