@@ -122,7 +122,7 @@ An upgrade of a repository created with recommended settings only suggests optim
   performing an upgrade with "--run" will make the following changes:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store
+     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
   
   additional optimizations are available by specifying "--optimize <name>":
   
@@ -146,7 +146,7 @@ An upgrade of a repository created with recommended settings only suggests optim
   performing an upgrade with "--run" will make the following changes:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store
+     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
   
   redeltaparent
      deltas within internal storage will choose a new base revision if needed
@@ -215,7 +215,7 @@ Various sub-optimal detections work
   
   requirements
      preserved: revlogv1, store
-     added: dotencode, fncache, generaldelta
+     added: dotencode, fncache, generaldelta, storerequirements
   
   fncache
      repository will be more resilient to storing certain paths and performance of certain operations should be improved
@@ -260,7 +260,7 @@ Various sub-optimal detections work
   
   requirements
      preserved: revlogv1, store
-     added: fncache, generaldelta
+     added: fncache, generaldelta, storerequirements
   
   fncache
      repository will be more resilient to storing certain paths and performance of certain operations should be improved
@@ -292,12 +292,13 @@ Upgrading a repository that is already modern essentially no-ops
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store
+     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
   
   beginning upgrade...
   repository locked and read-only
   creating temporary repository to stage migrated data: $TESTTMP/modern/.hg/upgrade.* (glob)
   (it is safe to interrupt this process any time before data migration completes)
+  copying requires
   data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
   starting in-place swap of repository data
@@ -325,7 +326,7 @@ Upgrading a repository to generaldelta works
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, revlogv1, store
+     preserved: dotencode, fncache, revlogv1, store, storerequirements
      added: generaldelta
   
   generaldelta
@@ -345,6 +346,7 @@ Upgrading a repository to generaldelta works
   finished migrating 3 changelog revisions; change in size: 0 bytes
   finished migrating 9 total revisions; total change in store size: 0 bytes
   copying phaseroots
+  copying requires
   data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
   starting in-place swap of repository data
@@ -363,6 +365,7 @@ Original requirements backed up
   fncache
   revlogv1
   store
+  storerequirements
 
 generaldelta added to original requirements files
 
@@ -372,6 +375,7 @@ generaldelta added to original requirements files
   generaldelta
   revlogv1
   store
+  storerequirements
 
 store directory has files we expect
 
@@ -381,6 +385,7 @@ store directory has files we expect
   data
   fncache
   phaseroots
+  requires
   undo
   undo.backupfiles
   undo.phaseroots
@@ -407,6 +412,7 @@ old store should be backed up
   data
   fncache
   phaseroots
+  requires
   undo
   undo.backup.fncache
   undo.backupfiles
@@ -426,7 +432,7 @@ store files with special filenames aren't encoded during copy
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store
+     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
   
   beginning upgrade...
   repository locked and read-only
@@ -443,6 +449,7 @@ store files with special filenames aren't encoded during copy
   finished migrating 3 total revisions; total change in store size: 0 bytes
   copying .XX_special_filename
   copying phaseroots
+  copying requires
   data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
   starting in-place swap of repository data
@@ -457,7 +464,7 @@ store files with special filenames aren't encoded during copy
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store
+     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
   
   redeltafulladd
      each revision will be added as new content to the internal storage; this will likely drastically slow down execution time, but some extensions might need it
@@ -477,6 +484,7 @@ store files with special filenames aren't encoded during copy
   finished migrating 3 total revisions; total change in store size: 0 bytes
   copying .XX_special_filename
   copying phaseroots
+  copying requires
   data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
   starting in-place swap of repository data
@@ -540,7 +548,7 @@ repository config is taken in account
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store
+     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
   
   redeltaall
      deltas within internal storage will be fully recomputed; this will likely drastically slow down execution time
@@ -559,6 +567,7 @@ repository config is taken in account
   finished migrating 3 changelog revisions; change in size: 0 bytes
   finished migrating 9 total revisions; total change in store size: -63 bytes
   copying phaseroots
+  copying requires
   data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
   starting in-place swap of repository data

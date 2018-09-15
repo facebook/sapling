@@ -192,6 +192,7 @@ more there after
   fncache
   journal.phaseroots
   phaseroots
+  requires
   undo
   undo.backup.fncache
   undo.backupfiles

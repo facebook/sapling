@@ -352,12 +352,15 @@ class localrepository(object):
         "exp-sparse",
         "treedirstate",
         "treestate",
+        "storerequirements",
     }
+    _basestoresupported = set()
     openerreqs = {"revlogv1", "generaldelta", "treemanifest", "manifestv2"}
 
-    # a list of (ui, featureset) functions.
+    # sets of (ui, featureset) functions for repo and store features.
     # only functions defined in module of enabled extensions are invoked
     featuresetupfuncs = set()
+    storefeaturesetupfuncs = set()
 
     # list of prefix for file which can be written without 'wlock'
     # Extensions should extend this list when needed
@@ -385,6 +388,7 @@ class localrepository(object):
 
     def __init__(self, baseui, path, create=False):
         self.requirements = set()
+        self.storerequirements = set()
         self.filtername = None
         # wvfs: rooted at the repository root, used to access the working copy
         self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True, cacheaudited=False)
@@ -426,14 +430,10 @@ class localrepository(object):
         cacheaudited = self.ui.configbool("unsafe", "wvfsauditorcache")
         self.wvfs.audit._cached = cacheaudited
 
-        if self.featuresetupfuncs:
-            self.supported = set(self._basesupported)  # use private copy
-            extmods = set(m.__name__ for n, m in extensions.extensions(self.ui))
-            for setupfunc in self.featuresetupfuncs:
-                if setupfunc.__module__ in extmods:
-                    setupfunc(self.ui, self.supported)
-        else:
-            self.supported = self._basesupported
+        self.supported = self._featuresetup(self.featuresetupfuncs, self._basesupported)
+        self.storesupported = self._featuresetup(
+            self.storefeaturesetupfuncs, self._basestoresupported
+        )
         color.setup(self.ui)
 
         # Add compression engines.
@@ -445,6 +445,8 @@ class localrepository(object):
         if not self.vfs.isdir():
             if create:
                 self.requirements = newreporequirements(self)
+                if "store" in self.requirements:
+                    self.storerequirements = newrepostorerequirements(self)
 
                 if not self.wvfs.exists():
                     self.wvfs.makedirs()
@@ -516,8 +518,17 @@ class localrepository(object):
             else:  # standard vfs
                 self.svfs.audit = self._getsvfsward(self.svfs.audit)
         self._applyopenerreqs()
+        if not create and "store" in self.requirements:
+            try:
+                self.storerequirements = scmutil.readrequires(
+                    self.svfs, self.storesupported
+                )
+            except IOError as inst:
+                if inst.errno != errno.ENOENT:
+                    raise
         if create:
             self._writerequirements()
+            self._writestorerequirements()
 
         self._dirstatevalidatewarned = False
 
@@ -623,6 +634,17 @@ class localrepository(object):
 
         return checksvfs
 
+    def _featuresetup(self, setupfuncs, basesupported):
+        if setupfuncs:
+            supported = set(basesupported)  # use private copy
+            extmods = set(m.__name__ for n, m in extensions.extensions(self.ui))
+            for setupfunc in setupfuncs:
+                if setupfunc.__module__ in extmods:
+                    setupfunc(self.ui, supported)
+        else:
+            supported = basesupported
+        return supported
+
     @unfilteredmethod
     def close(self):
         self._writecaches()
@@ -693,6 +715,10 @@ class localrepository(object):
 
     def _writerequirements(self):
         scmutil.writerequires(self.vfs, self.requirements)
+
+    def _writestorerequirements(self):
+        if "store" in self.requirements:
+            scmutil.writerequires(self.svfs, self.storerequirements)
 
     def _checknested(self, path):
         """Determine if path is a legal nested repository."""
@@ -2537,6 +2563,7 @@ def newreporequirements(repo):
     requirements = {"revlogv1"}
     if ui.configbool("format", "usestore"):
         requirements.add("store")
+        requirements.add("storerequirements")
         if ui.configbool("format", "usefncache"):
             requirements.add("fncache")
             if ui.configbool("format", "dotencode"):
@@ -2577,3 +2604,7 @@ def newreporequirements(repo):
         requirements.add(REVLOGV2_REQUIREMENT)
 
     return requirements
+
+
+def newrepostorerequirements(repo):
+    return set()

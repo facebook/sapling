@@ -27,6 +27,7 @@ Check the basic files created:
 Should be empty:
 
   $ ls .hg/store
+  requires
 
 Poke at a clone:
 

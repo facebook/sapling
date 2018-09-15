@@ -25,9 +25,9 @@ share it with bookmarks
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-add a future feature to repo1
+add a future store feature to repo1
 
-  $ echo test-futurestorefeature > repo1/.hg/requires
+  $ echo test-futurestorefeature > repo1/.hg/store/requires
 
 running log should fail because of the new store format feature
 
@@ -35,15 +35,16 @@ running log should fail because of the new store format feature
   abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
-
-but it doesn't for the shared repositories
-
   $ hg -R repo2 log -T '{node}\n'
-  d3873e73d99ef67873dac33fbcc66268d5d2b6f4
+  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
+  [255]
   $ hg -R repo3 log -T '{node}\n'
-  d3873e73d99ef67873dac33fbcc66268d5d2b6f4
+  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
+  [255]
 
-commands that lock the local working copy are ok, because wlock implies shared-wlock
+commands that lock the local working copy also fail correctly
 
   $ hg -R repo1 co 0
   abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
@@ -58,21 +59,17 @@ commands that lock the local working copy are ok, because wlock implies shared-w
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
 
-but commands that only lock the store don't check the shared repo requirements
+commands that only lock the store also fail correctly
 
   $ hg -R repo1 unbundle testbundle.hg
   abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ hg -R repo2 unbundle testbundle.hg
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 1 files
-  (run 'hg update' to get a working copy)
+  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
+  [255]
   $ hg -R repo3 unbundle testbundle.hg
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 1 files
-  (run 'hg update' to get a working copy)
+  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
+  [255]

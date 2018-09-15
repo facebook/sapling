@@ -31,6 +31,7 @@
   remotefilelog
   revlogv1
   store
+  storerequirements
   treemanifest
   treestate
   $ find .hg/store/meta | sort
@@ -72,6 +73,7 @@
   remotefilelog
   revlogv1
   store
+  storerequirements
   treemanifest
   treestate
   $ ls .hg/store/data
@@ -115,5 +117,6 @@
   remotefilelog
   revlogv1
   store
+  storerequirements
   treemanifest
   treestate

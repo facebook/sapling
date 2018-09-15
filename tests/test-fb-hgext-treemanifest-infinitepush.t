@@ -228,6 +228,7 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   drwxr-xr-x         data
   drwxrwxr-x         packs
   -rw-r--r--      43 phaseroots
+  -rw-r--r--       0 requires
   -rw-r--r--      18 undo
   -rw-r--r--       2 undo.backupfiles
   -rw-r--r--      43 undo.phaseroots

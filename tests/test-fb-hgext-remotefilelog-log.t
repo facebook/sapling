@@ -31,6 +31,7 @@ Shallow clone from full
   remotefilelog
   revlogv1
   store
+  storerequirements
   treestate
 
   $ hg update

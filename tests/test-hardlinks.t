@@ -52,6 +52,7 @@ Prepare repo r1:
   1 r1/.hg/store/data/f1.i
   1 r1/.hg/store/fncache
   1 r1/.hg/store/phaseroots
+  1 r1/.hg/store/requires
   1 r1/.hg/store/undo
   1 r1/.hg/store/undo.backup.fncache
   1 r1/.hg/store/undo.backupfiles
@@ -93,6 +94,7 @@ Repos r1 and r2 should now contain hardlinked files:
   2 r1/.hg/store/data/f1.i
   2 r1/.hg/store/fncache
   1 r1/.hg/store/phaseroots
+  1 r1/.hg/store/requires
   1 r1/.hg/store/undo
   1 r1/.hg/store/undo.backup.fncache
   1 r1/.hg/store/undo.backupfiles
@@ -114,6 +116,7 @@ Repo r3 should not be hardlinked:
   1 r3/.hg/store/data/f1.i
   1 r3/.hg/store/fncache
   1 r3/.hg/store/phaseroots
+  1 r3/.hg/store/requires
   1 r3/.hg/store/undo
   1 r3/.hg/store/undo.backupfiles
   1 r3/.hg/store/undo.phaseroots
@@ -140,6 +143,7 @@ Create a non-inlined filelog in r3:
   1 r3/.hg/store/data/f1.i
   1 r3/.hg/store/fncache
   1 r3/.hg/store/phaseroots
+  1 r3/.hg/store/requires
   1 r3/.hg/store/undo
   1 r3/.hg/store/undo.backup.fncache
   1 r3/.hg/store/undo.backup.phaseroots
@@ -254,6 +258,7 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/store/data/f3.i
   2 r4/.hg/store/fncache
   2 r4/.hg/store/phaseroots
+  2 r4/.hg/store/requires
   2 r4/.hg/store/undo
   2 r4/.hg/store/undo.backup.fncache
   2 r4/.hg/store/undo.backup.phaseroots
@@ -301,6 +306,7 @@ Update back to revision 12 in r4 should break hardlink of file f1 and f3:
   2 r4/.hg/store/data/f3.i
   2 r4/.hg/store/fncache
   2 r4/.hg/store/phaseroots
+  2 r4/.hg/store/requires
   2 r4/.hg/store/undo
   2 r4/.hg/store/undo.backup.fncache
   2 r4/.hg/store/undo.backup.phaseroots

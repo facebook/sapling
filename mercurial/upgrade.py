@@ -77,7 +77,14 @@ def supporteddestrequirements(repo):
 
     Extensions should monkeypatch this to add their custom requirements.
     """
-    return {"dotencode", "fncache", "generaldelta", "revlogv1", "store"}
+    return {
+        "dotencode",
+        "fncache",
+        "generaldelta",
+        "revlogv1",
+        "store",
+        "storerequirements",
+    }
 
 
 def allowednewrequirements(repo):
@@ -90,7 +97,7 @@ def allowednewrequirements(repo):
     bad additions because the whitelist approach is safer and will prevent
     future, unknown requirements from accidentally being added.
     """
-    return {"dotencode", "fncache", "generaldelta"}
+    return {"dotencode", "fncache", "generaldelta", "storerequirements"}
 
 
 def preservedrequirements(repo):

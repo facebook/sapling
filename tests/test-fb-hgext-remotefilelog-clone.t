@@ -28,6 +28,7 @@
   remotefilelog
   revlogv1
   store
+  storerequirements
   treestate
 
   $ hg update
@@ -62,6 +63,7 @@
   remotefilelog
   revlogv1
   store
+  storerequirements
   treestate
   $ ls .hg/store/data
   4a0a19218e082a343a1b17e5333409af9d98f0f5
@@ -112,4 +114,5 @@ check its contents separately.
   remotefilelog
   revlogv1
   store
+  storerequirements
   treestate

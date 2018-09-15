@@ -29,6 +29,7 @@ regular clone of an existing zlib repo should still use zlib
   generaldelta
   revlogv1
   store
+  storerequirements
   treestate
 
 pulled clone of zlib should use lz4
@@ -41,6 +42,7 @@ pulled clone of zlib should use lz4
   lz4revlog
   revlogv1
   store
+  storerequirements
   treestate
 
 disable lz4, then clone
@@ -60,6 +62,7 @@ disable lz4, then clone
   generaldelta
   revlogv1
   store
+  storerequirements
   treestate
 
 attempt to disable lz4 should be ignored for hardlinked clone
@@ -74,6 +77,7 @@ attempt to disable lz4 should be ignored for hardlinked clone
   lz4revlog
   revlogv1
   store
+  storerequirements
   treestate
 
 a new repo should use lz4 by default
@@ -102,6 +106,7 @@ a new repo should use lz4 by default
   lz4revlog
   revlogv1
   store
+  storerequirements
   treestate
 
 vanilla hg should bail in an lz4 repo
