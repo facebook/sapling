@@ -157,6 +157,9 @@ from ..extlib import pywatchman, watchmanclient
 # leave the attribute unspecified.
 testedwith = "ships-with-hg-core"
 
+cmdtable = {}
+command = registrar.command(cmdtable)
+
 configtable = {}
 configitem = registrar.configitem(configtable)
 
@@ -908,3 +911,49 @@ def reposetup(ui, repo):
                 return overridestatus(orig, self, *args, **kwargs)
 
         repo.__class__ = fsmonitorrepo
+
+
+@command("debugrefreshwatchmanclock")
+def debugrefreshwatchmanclock(ui, repo):
+    """refresh watchman clock, assume no changes since the last watchman clock
+
+    This is useful when used together with filesystem snapshots. Typically
+    right after restoring a snapshot of a clean working copy, in the following
+    pattern::
+
+        - At t0 time: path/repo1's watchman clock is updated to c1
+        - At t1: Snapshot path/repo1 with watchman clock = c1
+        - At t2: Restore the snapshot to path/repo2
+          - Since c1 is no longer a valid watchman clock in repo2, watchman
+            would do a re-crawl for correctness.
+        - At t3: Run 'hg debugrefreshwatchmanclock' before doing anything else
+          in repo2, to update the watchman clock to a valid value (c2).
+          - Correctness: changes between c1 (t0) and c2 (t3) are missed.
+            - Application can make sure there are no changes by using the
+              snapshot feature carefully. For example, make sure the working
+              copy is clean before snapshotting, and run
+              'debugrefreshwatchmanclock' right after restoring the snapshot.
+          - Since c2 is valid in repo2, watchman wouldn't need a re-crawl.
+
+        (t3 > t2 > t1 > t0)
+    """
+
+    # Sanity checks
+    if not ui.plain():
+        raise error.Abort(_("only automation can run this"))
+
+    if "treestate" not in repo.requirements:
+        raise error.Abort(_("treestate is required"))
+
+    with repo.wlock(), repo.lock(), repo.transaction("debugrefreshwatchmanclock") as tr:
+        try:
+            clock = repo.dirstate._watchmanclient.command(
+                "clock", {"sync_timeout": 10 * 1000}
+            )["clock"]
+        except Exception as ex:
+            raise error.Abort(_("cannot get watchman clock: %s") % ex)
+
+        ds = repo.dirstate
+        ui.status(_("updating watchman clock from %r to %r\n") % (ds.getclock(), clock))
+        ds.setclock(clock)
+        ds.write(tr)

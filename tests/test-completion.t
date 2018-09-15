@@ -1,3 +1,5 @@
+#require no-fsmonitor
+
 Show all commands except debug commands
   $ hg debugcomplete
   add
