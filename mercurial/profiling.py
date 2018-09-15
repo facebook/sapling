@@ -165,19 +165,18 @@ class profile(object):
     manager exits, profiling results will be written to the configured output.
     """
 
-    def __init__(self, ui, enabled=True):
+    def __init__(self, ui):
         self._ui = ui
         self._output = None
         self._fp = None
         self._fpdoclose = True
         self._profiler = None
-        self._enabled = enabled
         self._entered = False
         self._started = False
 
     def __enter__(self):
         self._entered = True
-        if self._enabled:
+        if self._ui.configbool("profiling", "enabled"):
             self.start()
         return self
 
