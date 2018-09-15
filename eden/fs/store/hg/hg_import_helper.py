@@ -818,6 +818,10 @@ def always_allow_pending(root):
     return True
 
 
+def always_allow_shared_pending(root, sharedroot):
+    return True
+
+
 ConfigOption = collections.namedtuple("ConfigOption", ["section", "name", "value"])
 
 
@@ -913,6 +917,7 @@ def main():
     # normalize the repository path the same way mercurial does, and make sure
     # we use the correct repository (in case of a shared repository).
     mercurial.txnutil.mayhavepending = always_allow_pending
+    mercurial.txnutil.mayhavesharedpending = always_allow_shared_pending
 
     server = HgServer(args.repo, config_overrides, in_fd=args.in_fd, out_fd=args.out_fd)
 
