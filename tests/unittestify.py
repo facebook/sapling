@@ -52,7 +52,7 @@ def prepareargsenv(runtestsdir, port=None):
     if not os.path.exists(os.path.join(runtestsdir, "run-tests.py")):
         raise SystemExit("cannot find run-tests.py from %s" % runtestsdir)
     env = os.environ.copy()
-    args = [pythonbinpath, "run-tests.py"]
+    args = [pythonbinpath, "run-tests.py", "--maxdifflines=1000"]
     if port:
         args += ["--port", "%s" % port]
 
