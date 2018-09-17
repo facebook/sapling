@@ -6,6 +6,7 @@
 
 use bytes::Bytes;
 use errors::*;
+use failure::err_msg;
 use std::collections::HashSet;
 use std::io::Cursor;
 use std::iter::FromIterator;
@@ -24,6 +25,10 @@ pub fn create_getbundle_response(
     common: Vec<HgChangesetId>,
     heads: Vec<HgChangesetId>,
 ) -> Result<Bundle2EncodeBuilder<Cursor<Vec<u8>>>> {
+    if common.is_empty() {
+        return Err(err_msg("no 'common' heads specified. Pull will be very inefficient. Please use hg clone instead"));
+    }
+
     let writer = Cursor::new(Vec::new());
     let mut bundle = Bundle2EncodeBuilder::new(writer);
     // Mercurial currently hangs while trying to read compressed bundles over the wire:
