@@ -546,6 +546,11 @@ Test resolving commits based on the strictly increasing global revision numbers.
   $ testlookup()
   > {
   >   local grevs=$(hg log -r 'all()' -T '{globalrev}\n' | sed '/^$/d')
+  >   # There should be at least one globalrev based commit otherwise something
+  >   # is wrong.
+  >   if [ -z "$grevs" ]; then
+  >      return 1
+  >   fi
   >   for grev in $grevs; do
   >     if [ "${grev}" -ne `getglobalrev "globalrev(${grev})"` ] || \
   >       [ "${grev}" -ne `getglobalrev "m${grev}"` ]; then
@@ -582,7 +587,7 @@ global revision number 4999 which should not exist as the counting starts from
   0000000000000000000000000000000000000000
 
 
-Test errors for bad configuration of the hgsql extension on the first server
+Test bypassing hgsql extension on the first server.
 
 - Configure the first server to bypass hgsql extension.
 
@@ -594,17 +599,6 @@ Test errors for bad configuration of the hgsql extension on the first server
   > EOF
 
 
-- Make a commit on the first client.
+- Queries not involving the hgsql extension should still work.
 
-  $ cd ../client
-  $ touch j && hg ci -Aqm j
-
-
-- Try to push the commit to the first server. It should fail because the hgsql
-extension is misconfigured.
-
-  $ hg push ssh://user@dummy/master --to master
-  pushing to ssh://user@dummy/master
-  remote: abort: hgsql using incorrect configuration
-  abort: no suitable response from remote hg!
-  [255]
+  $ testlookup

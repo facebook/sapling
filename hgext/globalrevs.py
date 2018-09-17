@@ -96,9 +96,17 @@ def uisetup(ui):
                 hgsubversionmod.svnrepo, "generate_repo_class", _svnlocalrepowrapper
             )
 
-    extensions.afterloaded("pushrebase", _pushrebasewrapper)
-    extensions.afterloaded("hgsql", _hgsqlwrapper)
-    extensions.afterloaded("hgsubversion", _hgsubversionwrapper)
+    def _wrapextensions():
+        extensions.afterloaded("pushrebase", _pushrebasewrapper)
+        extensions.afterloaded("hgsql", _hgsqlwrapper)
+        extensions.afterloaded("hgsubversion", _hgsubversionwrapper)
+
+    # We only wrap extensions for embedding strictly increasing global revision
+    # number in commits if the repository has `hgsql` enabled and configured to
+    # write commit data to the database. Therefore, do not wrap any extensions
+    # if that is not the case.
+    if not ishgsqlbypassed(ui):
+        _wrapextensions()
 
 
 def reposetup(ui, repo):
@@ -118,9 +126,6 @@ def _validateextensions(extensionlist):
 
 def _validaterepo(repo):
     ui = repo.ui
-
-    if ishgsqlbypassed(ui):
-        raise error.Abort(_("hgsql using incorrect configuration"))
 
     allowonlypushrebase = ui.configbool("globalrevs", "onlypushrebase")
     if allowonlypushrebase and not isnonpushrebaseblocked(repo):
