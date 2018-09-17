@@ -44,6 +44,7 @@ pub enum Required {
     Revlogv1,
     Largefiles,
     Lz4revlog,
+    StoreRequirements,
     SqlDirstate,
     HgSql,
     TreeDirstate,
@@ -65,6 +66,7 @@ impl Display for Required {
             &Revlogv1 => "revlogv1",
             &Largefiles => "largefiles",
             &Lz4revlog => "lz4revlog",
+            &StoreRequirements => "storerequirements",
             &SqlDirstate => "sqldirstate",
             &HgSql => "hgsql",
             &TreeDirstate => "treedirstate",
@@ -91,10 +93,32 @@ impl FromStr for Required {
             "revlogv1" => Ok(Revlogv1),
             "largefiles" => Ok(Largefiles),
             "lz4revlog" => Ok(Lz4revlog),
+            "storerequirements" => Ok(StoreRequirements),
             "sqldirstate" => Ok(SqlDirstate),
             "hgsql" => Ok(HgSql),
             "treedirstate" => Ok(TreeDirstate),
             "treestate" => Ok(TreeState),
+            unk => Err(ErrorKind::UnknownReq(unk.into()).into()),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum StoreRequired {
+}
+
+impl Display for StoreRequired {
+    fn fmt(&self, _fmt: &mut fmt::Formatter) -> fmt::Result {
+        // This library currently dooesn't support any store requirements.
+        unimplemented!()
+    }
+}
+
+impl FromStr for StoreRequired {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<StoreRequired> {
+        match s {
             unk => Err(ErrorKind::UnknownReq(unk.into()).into()),
         }
     }
@@ -116,13 +140,14 @@ impl FromStr for Required {
 ///  - per-file histories: .hg/store/data/.../<file>.[di]
 #[derive(Debug, Clone)]
 pub struct RevlogRepo {
-    basepath: PathBuf,               // path to .hg directory
-    requirements: HashSet<Required>, // requirements
-    changelog: Revlog,               // changes
-    inner: Arc<RwLock<RevlogInner>>, // Inner parts
-    inmemory_logs_capacity: usize,   // Limit on the number of filelogs and tree revlogs in memory.
-                                     // Note: there can be 2 * inmemory_logs_capacity revlogs in
-                                     // memory in total: half for filelogs and half for revlogs.
+    basepath: PathBuf,                          // path to .hg directory
+    requirements: HashSet<Required>,            // requirements
+    store_requirements: HashSet<StoreRequired>, // store requirements
+    changelog: Revlog,                          // changes
+    inner: Arc<RwLock<RevlogInner>>,            // Inner parts
+    inmemory_logs_capacity: usize, // Limit on the number of filelogs and tree revlogs in memory.
+                                   // Note: there can be 2 * inmemory_logs_capacity revlogs in
+                                   // memory in total: half for filelogs and half for revlogs.
 }
 
 pub struct RevlogRepoOptions {
@@ -166,9 +191,23 @@ impl RevlogRepo {
             requirements.insert(line.context("Line read failed")?.parse()?);
         }
 
+        let mut store_requirements = HashSet::new();
+        if requirements.contains(&Required::StoreRequirements) {
+            let store_requirements_file = store.join("requires");
+            // A missing store/requires files is the same as an empty one.
+            if store_requirements_file.exists() {
+                let file =
+                    fs::File::open(store_requirements_file).context("Can't open `store/requires`")?;
+                for line in BufReader::new(file).lines() {
+                    store_requirements.insert(line.context("Line read failed")?.parse()?);
+                }
+            }
+        }
+
         Ok(RevlogRepo {
             basepath: base.into(),
             requirements,
+            store_requirements,
             changelog,
             inner: Arc::new(RwLock::new(RevlogInner {
                 logcache: HashMap::new(),
@@ -228,6 +267,10 @@ impl RevlogRepo {
 
     pub fn get_requirements(&self) -> &HashSet<Required> {
         &self.requirements
+    }
+
+    pub fn get_store_requirements(&self) -> &HashSet<StoreRequired> {
+        &self.store_requirements
     }
 
     /// This method is used by RevlogManifest to traverse the Revlogs in search of manifests and
