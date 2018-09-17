@@ -11,12 +11,16 @@
 
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
+#include <folly/Range.h>
 #include <folly/Subprocess.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/logging/test/TestLogHandler.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
+#include "eden/fs/utils/PathFuncs.h"
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -41,6 +45,10 @@ namespace eden {
 
 namespace {
 std::string debugDumpOverlayInodes(Overlay&, InodeNumber rootInode);
+std::vector<std::string> filterLogMessages(
+    const folly::TestLogHandler&,
+    folly::StringPiece substring);
+std::string prettifyLogMessages(const folly::TestLogHandler&);
 }
 
 TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
@@ -264,6 +272,12 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
   }
 
   void recreate(folly::Optional<OverlayRestartMode> restartMode = folly::none) {
+    unloadOverlay(restartMode);
+    loadOverlay();
+  }
+
+  void unloadOverlay(
+      folly::Optional<OverlayRestartMode> restartMode = folly::none) {
     overlay->close();
     overlay.reset();
     switch (restartMode.value_or(GetParam())) {
@@ -275,11 +289,29 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         }
         break;
     }
-    loadOverlay();
   }
 
   void loadOverlay() {
     overlay = std::make_unique<Overlay>(getLocalDir());
+  }
+
+  void corruptOverlayFile(InodeNumber inodeNumber) {
+    corruptOverlayFileByTruncating(inodeNumber);
+  }
+
+  void corruptOverlayFileByTruncating(InodeNumber inodeNumber) {
+    EXPECT_FALSE(overlay) << "Overlay should not be open when corrupting";
+    folly::checkUnixError(
+        folly::truncateNoInt(getOverlayFilePath(inodeNumber).c_str(), 0));
+  }
+
+  void corruptOverlayFileByDeleting(InodeNumber inodeNumber) {
+    EXPECT_FALSE(overlay) << "Overlay should not be open when corrupting";
+    folly::checkUnixError(unlink(getOverlayFilePath(inodeNumber).c_str()));
+  }
+
+  AbsolutePath getOverlayFilePath(InodeNumber inodeNumber) {
+    return getLocalDir() + RelativePathPiece{overlay->getFilePath(inodeNumber)};
   }
 
   AbsolutePath getLocalDir() {
@@ -348,6 +380,147 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_file) {
   recreate();
 
   EXPECT_EQ(3_ino, overlay->scanForNextInodeNumber());
+}
+
+TEST_P(
+    RawOverlayTest,
+    inode_number_scan_includes_linked_directory_despite_its_corruption) {
+  auto subdirectoryIno = overlay->allocateInodeNumber();
+  auto rootIno = kRootNodeId;
+  ASSERT_GT(subdirectoryIno, rootIno);
+
+  DirContents root;
+  root.emplace("subdirectory"_pc, S_IFDIR | 0755, subdirectoryIno);
+  overlay->saveOverlayDir(rootIno, root, InodeTimestamps{});
+
+  overlay->saveOverlayDir(subdirectoryIno, DirContents{}, InodeTimestamps{});
+
+  unloadOverlay();
+  corruptOverlayFile(subdirectoryIno);
+  loadOverlay();
+
+  EXPECT_EQ(subdirectoryIno, overlay->scanForNextInodeNumber());
+}
+
+TEST_P(
+    RawOverlayTest,
+    inode_number_scan_continues_scanning_despite_corrupted_directory) {
+  // Given the following tree, if scanForNextInodeNumber stops scanning at
+  // /corrupted_by_truncation and doesn't recurse into /temp,
+  // scanForNextInodeNumber won't detect /temp/corrupted_by_truncation. Ensure
+  // scanForNextInodeNumber does detect /temp/corrupted_by_truncation.
+  //
+  //   /                               (rootIno)
+  //     corrupted_by_truncation/      (corruptedByTruncationIno)
+  //     temp/                         (tempDirIno)
+  //       temp/corrupted_by_deletion  (corruptedByDeletionIno)
+  //
+
+  struct PathNames {
+    PathComponentPiece corruptedByTruncationName;
+    PathComponentPiece tempName;
+  };
+
+  auto rootIno = kRootNodeId;
+  auto corruptedByTruncationIno = InodeNumber{};
+  auto tempDirIno = InodeNumber{};
+  auto corruptedByDeletionIno = InodeNumber{};
+
+  auto setUpOverlay = [&](const PathNames& pathNames) {
+    DirContents root;
+    root.emplace(
+        pathNames.corruptedByTruncationName,
+        S_IFDIR | 0755,
+        corruptedByTruncationIno);
+    root.emplace(pathNames.tempName, S_IFDIR | 0755, tempDirIno);
+    overlay->saveOverlayDir(rootIno, root, InodeTimestamps{});
+
+    overlay->saveOverlayDir(
+        corruptedByTruncationIno, DirContents{}, InodeTimestamps{});
+
+    DirContents tempDir;
+    tempDir.emplace(
+        "corrupted_by_deletion"_pc, S_IFDIR | 0755, corruptedByDeletionIno);
+    overlay->saveOverlayDir(tempDirIno, tempDir, InodeTimestamps{});
+
+    overlay->saveOverlayDir(
+        corruptedByDeletionIno, DirContents{}, InodeTimestamps{});
+  };
+
+  const PathNames pathNamesToTest[] = {
+      // Exercise all traversal orders in scanForNextInodeNumber.
+      PathNames{.corruptedByTruncationName = "A_corrupted_by_truncation"_pc,
+                .tempName = "B_temp"_pc},
+      PathNames{.corruptedByTruncationName = "B_corrupted_by_truncation"_pc,
+                .tempName = "A_temp"_pc},
+  };
+
+  for (auto pathNames : pathNamesToTest) {
+    corruptedByTruncationIno = overlay->allocateInodeNumber();
+    tempDirIno = overlay->allocateInodeNumber();
+    corruptedByDeletionIno = overlay->allocateInodeNumber();
+    auto maxIno = std::max(
+        {tempDirIno, corruptedByTruncationIno, corruptedByDeletionIno});
+    ASSERT_EQ(corruptedByDeletionIno, maxIno);
+
+    setUpOverlay(pathNames);
+
+    SCOPED_TRACE(
+        "Inodes before corruption:\n" +
+        debugDumpOverlayInodes(*overlay, rootIno));
+
+    unloadOverlay();
+    corruptOverlayFileByTruncating(corruptedByTruncationIno);
+    corruptOverlayFileByDeleting(corruptedByDeletionIno);
+    loadOverlay();
+
+    EXPECT_EQ(maxIno, overlay->scanForNextInodeNumber());
+  }
+}
+
+TEST_P(RawOverlayTest, inode_number_scan_logs_corrupt_directories_once) {
+  SKIP_IF(GetParam() == OverlayRestartMode::CLEAN)
+      << "scanForNextInodeNumber should not log about corrupt directories on clean restart.";
+
+  constexpr auto subdirCount = 5;
+  static_assert(
+      subdirCount >= 2, "Test should corrupt at least two directories");
+
+  auto subdirInos = std::vector<InodeNumber>{};
+  std::generate_n(std::back_inserter(subdirInos), subdirCount, [this] {
+    return overlay->allocateInodeNumber();
+  });
+
+  DirContents root;
+  for (auto subdirIno : subdirInos) {
+    auto subdirName =
+        PathComponent{folly::to<std::string>("subdir_", subdirIno)};
+    root.emplace(subdirName, S_IFDIR | 0755, subdirIno);
+  }
+  overlay->saveOverlayDir(kRootNodeId, root, InodeTimestamps{});
+  for (auto subdirIno : subdirInos) {
+    overlay->saveOverlayDir(subdirIno, DirContents{}, InodeTimestamps{});
+  }
+
+  unloadOverlay();
+  for (auto subdirIno : subdirInos) {
+    corruptOverlayFile(subdirIno);
+  }
+  loadOverlay();
+
+  auto logHandler = std::make_shared<folly::TestLogHandler>();
+  folly::LoggerDB::get()
+      .getCategory("eden.fs.inodes.Overlay")
+      ->addHandler(logHandler);
+
+  overlay->scanForNextInodeNumber();
+
+  SCOPED_TRACE(prettifyLogMessages(*logHandler));
+
+  auto corruptOverlayFileMessages = filterLogMessages(
+      *logHandler, "Ignoring failure to load directory inode"_sp);
+  EXPECT_EQ(1, corruptOverlayFileMessages.size())
+      << "scanForNextInodeNumber should have logged about corrupt directory inodes only once";
 }
 
 TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
@@ -650,6 +823,27 @@ void debugDumpOverlayInodes(
 std::string debugDumpOverlayInodes(Overlay& overlay, InodeNumber rootInode) {
   std::ostringstream out;
   debugDumpOverlayInodes(overlay, rootInode, AbsolutePathPiece{}, out);
+  return out.str();
+}
+
+std::vector<std::string> filterLogMessages(
+    const folly::TestLogHandler& logHandler,
+    folly::StringPiece substring) {
+  auto messages = std::vector<std::string>{};
+  for (auto message : logHandler.getMessageValues()) {
+    if (message.find(substring.str()) != message.npos) {
+      messages.emplace_back(std::move(message));
+    }
+  }
+  return messages;
+}
+
+std::string prettifyLogMessages(const folly::TestLogHandler& logHandler) {
+  auto out = std::ostringstream{};
+  out << "Log messages:\n";
+  for (auto message : logHandler.getMessageValues()) {
+    out << " - " << message << "\n";
+  }
   return out.str();
 }
 } // namespace

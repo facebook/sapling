@@ -198,6 +198,7 @@ class Overlay {
 
  private:
   FRIEND_TEST(OverlayTest, getFilePath);
+  friend class RawOverlayTest;
 
   /**
    * A request for the background GC thread.  There are two types of requests:

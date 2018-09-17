@@ -39,10 +39,11 @@ class OverlayStore:
         recorded in the overlay.  Returns the path to the overlay file that stores the
         data for this inode in the overlay.
         """
-        s = os.lstat(path)
+        path_in_mount = self.mount / path
+        s = os.lstat(path_in_mount)
         assert stat.S_ISDIR(s.st_mode)
         # Creating and then removing a file inside the directory will materialize it
-        with tempfile.NamedTemporaryFile(dir=str(path)):
+        with tempfile.NamedTemporaryFile(dir=str(path_in_mount)):
             pass
 
         return self._get_overlay_path(s.st_ino)
@@ -64,3 +65,6 @@ class OverlayStore:
         self.eden.unmount(self.mount)
         corrupt_function(overlay_file_path)
         self.eden.mount(self.mount)
+
+    def delete_cached_next_inode_number(self) -> None:
+        (self.overlay_dir / "next-inode-number").unlink()

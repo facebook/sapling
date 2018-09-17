@@ -79,3 +79,16 @@ class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             self.assertFalse(
                 full_path.exists(), f"{full_path} should not exist after being deleted"
             )
+
+    def test_mount_possible_after_corrupt_directory_and_cached_next_inode_number(
+        self
+    ) -> None:
+        test_dir_path = self.mount_path / "test_dir"
+        test_dir_path.mkdir()
+        test_dir_overlay_file_path = self.overlay.materialize_dir(test_dir_path)
+
+        self.eden.unmount(self.mount_path)
+        os.truncate(test_dir_overlay_file_path, 0)
+        self.overlay.delete_cached_next_inode_number()
+
+        self.eden.mount(self.mount_path)

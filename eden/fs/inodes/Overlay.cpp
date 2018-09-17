@@ -497,12 +497,21 @@ InodeNumber Overlay::scanForNextInodeNumber() {
   auto maxInode = kRootNodeId;
   std::vector<InodeNumber> toProcess;
   toProcess.push_back(maxInode);
+  auto encounteredBrokenDirectory = false;
   while (!toProcess.empty()) {
     auto dirInodeNumber = toProcess.back();
     toProcess.pop_back();
 
     InodeTimestamps timeStamps;
-    auto dir = deserializeOverlayDir(dirInodeNumber, timeStamps);
+    auto dir = Optional<overlay::OverlayDir>{};
+    try {
+      dir = deserializeOverlayDir(dirInodeNumber, timeStamps);
+    } catch (std::system_error& error) {
+      XLOG_IF(WARN, !encounteredBrokenDirectory)
+          << "Ignoring failure to load directory inode " << dirInodeNumber
+          << ": " << error.what();
+      encounteredBrokenDirectory = true;
+    }
     if (!dir.hasValue()) {
       continue;
     }
