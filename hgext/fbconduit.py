@@ -37,7 +37,6 @@ class HttpError(Exception):
 
 githashre = re.compile("g([0-9a-fA-F]{12,40})")
 phabhashre = re.compile("^r([A-Z]+)([0-9a-f]{12,40})$")
-fbsvnhash = re.compile("^r[A-Z]+(\d+)$")
 
 
 def extsetup(ui):
@@ -249,24 +248,6 @@ def overridestringset(orig, repo, subset, x, *args, **kwargs):
 
         if phabhash in repo:
             return orig(repo, subset, phabhash, *args, **kwargs)
-
-    # Is the given revset a phabricator svn revision (rO11223232323232)?
-    svnrev = fbsvnhash.match(x)
-    if svnrev and not x in repo:
-        try:
-            extensions.find("hgsubversion")
-            meta = repo.svnmeta()
-
-            desiredrevision = int(svnrev.group(1))
-            # For some odd reason, the key is a tuple instead of a revision num
-            # The second member always seems to be None
-            revmapkey = (desiredrevision, None)
-            hghash = meta.revmap.get(revmapkey)
-            if hghash:
-                return orig(repo, subset, hghash)
-
-        except KeyError:
-            pass
 
     m = githashre.match(x)
     if m is not None:
