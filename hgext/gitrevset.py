@@ -17,13 +17,14 @@ from __future__ import absolute_import
 
 import re
 
-from mercurial import error, extensions, hg, registrar, revset
+from mercurial import error, extensions, hg, namespaces, registrar, revset
 from mercurial.i18n import _
 
 
+namespacepredicate = registrar.namespacepredicate()
 revsetpredicate = registrar.revsetpredicate()
 
-githashre = re.compile("g([0-9a-fA-F]{40,40})")
+githashre = re.compile("g([0-9a-fA-F]{40})")
 
 templatekeyword = registrar.templatekeyword()
 
@@ -87,14 +88,22 @@ def _lookup_node(repo, hexnode, from_scm_type):
         return result
 
 
-def overridestringset(orig, repo, subset, x, *args, **kwargs):
-    m = githashre.match(x)
+@namespacepredicate("gitrev", priority=70)
+def _getnamespace(_repo):
+    return namespaces.namespace(
+        listnames=lambda repo: [], namemap=_gitlookup, nodemap=lambda repo, node: []
+    )
+
+
+def _gitlookup(repo, gitrev):
+    cl = repo.changelog
+    tonode = cl.node
+
+    def _gittohg(githash):
+        return [tonode(repo.revs("gitnode(%s)" % githash).first())]
+
+    m = githashre.match(gitrev)
     if m is not None:
-        return gitnode(repo, subset, ("string", m.group(1)))
-    return orig(repo, subset, x, *args, **kwargs)
-
-
-def extsetup(ui):
-    extensions.wrapfunction(revset, "stringset", overridestringset)
-    revset.methods["string"] = revset.stringset
-    revset.methods["symbol"] = revset.stringset
+        return _gittohg(m.group(1))
+    else:
+        return []
