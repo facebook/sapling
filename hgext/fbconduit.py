@@ -8,10 +8,13 @@ import json
 import re
 from urllib import urlencode
 
-from mercurial import error, extensions, node, registrar, revset, templater
+from mercurial import error, namespaces, node, registrar, revset, templater
 from mercurial.i18n import _
+from mercurial.node import bin
 from mercurial.util import httplib
 
+
+namespacepredicate = registrar.namespacepredicate()
 
 conduit_host = None
 conduit_path = None
@@ -35,7 +38,7 @@ class HttpError(Exception):
     pass
 
 
-githashre = re.compile("g([0-9a-fA-F]{12,40})")
+githashre = re.compile("g([0-9a-f]{40})")
 phabhashre = re.compile("^r([A-Z]+)([0-9a-f]{12,40})$")
 
 
@@ -46,9 +49,6 @@ def extsetup(ui):
 
     revset.symbols["gitnode"] = gitnode
     gitnode._weight = 10
-    extensions.wrapfunction(revset, "stringset", overridestringset)
-    revset.methods["string"] = revset.stringset
-    revset.methods["symbol"] = revset.stringset
 
 
 def conduit_config(ui, host=None, path=None, protocol=None):
@@ -236,24 +236,38 @@ def gitnode(repo, subset, x):
     return subset.filter(lambda r: r == rn)
 
 
-def overridestringset(orig, repo, subset, x, *args, **kwargs):
+@namespacepredicate("conduit", priority=70)
+def _getnamespace(_repo):
+    return namespaces.namespace(
+        listnames=lambda repo: [], namemap=_phablookup, nodemap=lambda repo, node: []
+    )
+
+
+def _phablookup(repo, phabrev):
     # Is the given revset a phabricator hg hash (ie: rHGEXTaaacb34aacb34aa)
-    phabmatch = phabhashre.match(x)
+    cl = repo.changelog
+    tonode = cl.node
+
+    def gittohg(githash):
+        return [tonode(repo.revs("gitnode(%s)" % githash).first())]
+
+    phabmatch = phabhashre.match(phabrev)
     if phabmatch:
         phabrepo = phabmatch.group(1)
         phabhash = phabmatch.group(2)
+
         # The hash may be a git hash
         if phabrepo in repo.ui.configlist("fbconduit", "gitcallsigns", []):
-            return overridestringset(orig, repo, subset, "g%s" % phabhash)
+            return gittohg(phabhash)
 
-        if phabhash in repo:
-            return orig(repo, subset, phabhash, *args, **kwargs)
+        phabnode = bin(phabhash)
+        if phabnode in cl.nodemap:
+            return [phabnode]
 
-    m = githashre.match(x)
+    m = githashre.match(phabrev)
     if m is not None:
         githash = m.group(1)
         if len(githash) == 40:
-            return gitnode(repo, subset, ("string", githash))
+            return gittohg(githash)
         else:
-            raise error.Abort("git hash must be 40 characters")
-    return orig(repo, subset, x, *args, **kwargs)
+            return []
