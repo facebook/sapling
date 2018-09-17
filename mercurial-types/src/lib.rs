@@ -111,7 +111,7 @@ pub use fsencode::{fncache_fsencode, simple_fsencode};
 pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
 pub use nodehash::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey,
-                   NULL_HASH};
+                   NULL_CSID, NULL_HASH};
 pub use repo::RepositoryId;
 pub use utils::percent_encode;
 

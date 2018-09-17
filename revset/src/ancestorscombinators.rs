@@ -34,11 +34,10 @@ use futures::stream::{self, empty, iter_ok, Peekable, Stream};
 use futures_ext::{SelectAll, StreamExt};
 
 use blobrepo::BlobRepo;
-use mercurial_types::HgNodeHash;
-use mercurial_types::nodehash::HgChangesetId;
+use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
-use NodeStream;
+use BonsaiNodeStream;
 use UniqueHeap;
 use errors::*;
 use setcommon::*;
@@ -82,7 +81,7 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     repo: Arc<BlobRepo>,
 
     // Nodes that we know about, grouped by generation.
-    next_generation: BTreeMap<Generation, HashSet<HgNodeHash>>,
+    next_generation: BTreeMap<Generation, HashSet<ChangesetId>>,
 
     // The generation of the nodes in `drain`. All nodes with bigger generation has already been
     // returned
@@ -90,14 +89,14 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
 
     // Parents of entries from `drain`. We fetch generation number for them.
     pending_changesets:
-        SelectAll<Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send>>,
+        SelectAll<Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send>>,
 
     // Stream of (Hashset, Generation) that needs to be excluded
     exclude_ancestors: Peekable<stream::Fuse<GroupedByGenenerationStream>>,
 
     // Nodes which generation is equal to `current_generation`. They will be returned from the
     // stream unless excluded.
-    drain: iter::Peekable<IntoIter<HgNodeHash>>,
+    drain: iter::Peekable<IntoIter<ChangesetId>>,
 
     // max heap of all relevant unique generation numbers
     sorted_unique_generations: UniqueHeap<Generation>,
@@ -105,8 +104,8 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
 
 fn make_pending(
     repo: Arc<BlobRepo>,
-    hash: HgNodeHash,
-) -> Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + Send> {
+    hash: ChangesetId,
+) -> Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
     let new_repo_changesets = repo.clone();
     let new_repo_gennums = repo.clone();
 
@@ -115,15 +114,15 @@ fn make_pending(
             .into_future()
             .and_then(move |hash| {
                 new_repo_changesets
-                    .get_changeset_parents(&HgChangesetId::new(hash))
-                    .map(|parents| parents.into_iter().map(|cs| cs.into_nodehash()))
-                    .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
+                    .get_changeset_parents_by_bonsai(&hash)
+                    .map(|parents| parents.into_iter())
+                    .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
             })
             .map(|parents| iter_ok::<_, Error>(parents))
             .flatten_stream()
             .and_then(move |node_hash| {
                 new_repo_gennums
-                    .get_generation_number(&HgChangesetId::new(node_hash))
+                    .get_generation_number_by_bonsai(&node_hash)
                     .and_then(move |genopt| {
                         genopt.ok_or_else(|| err_msg(format!("{} not found", node_hash)))
                     })
@@ -134,26 +133,26 @@ fn make_pending(
 }
 
 impl DifferenceOfUnionsOfAncestorsNodeStream {
-    pub fn new(repo: &Arc<BlobRepo>, hash: HgNodeHash) -> Box<NodeStream> {
+    pub fn new(repo: &Arc<BlobRepo>, hash: ChangesetId) -> Box<BonsaiNodeStream> {
         Self::new_with_excludes(repo, vec![hash], vec![])
     }
 
-    pub fn new_union(repo: &Arc<BlobRepo>, hashes: Vec<HgNodeHash>) -> Box<NodeStream> {
+    pub fn new_union(repo: &Arc<BlobRepo>, hashes: Vec<ChangesetId>) -> Box<BonsaiNodeStream> {
         Self::new_with_excludes(repo, hashes, vec![])
     }
 
     pub fn new_with_excludes(
         repo: &Arc<BlobRepo>,
-        hashes: Vec<HgNodeHash>,
-        excludes: Vec<HgNodeHash>,
-    ) -> Box<NodeStream> {
+        hashes: Vec<ChangesetId>,
+        excludes: Vec<ChangesetId>,
+    ) -> Box<BonsaiNodeStream> {
         let excludes = if !excludes.is_empty() {
             Self::new_union(repo, excludes)
         } else {
             empty().boxify()
         };
 
-        add_generations(stream::iter_ok(hashes.into_iter()).boxify(), repo.clone())
+        add_generations_by_bonsai(stream::iter_ok(hashes.into_iter()).boxify(), repo.clone())
             .collect()
             .map({
                 let repo = repo.clone();
@@ -169,7 +168,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                         sorted_unique_generations.push(generation);
                     }
 
-                    let excludes = add_generations(excludes, repo.clone());
+                    let excludes = add_generations_by_bonsai(excludes, repo.clone());
                     Self {
                         repo: repo.clone(),
                         next_generation,
@@ -193,7 +192,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
     fn exclude_node(
         &mut self,
-        node: HgNodeHash,
+        node: ChangesetId,
         current_generation: Generation,
     ) -> Poll<bool, Error> {
         loop {
@@ -229,7 +228,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 }
 
 impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
-    type Item = HgNodeHash;
+    type Item = ChangesetId;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
@@ -289,13 +288,13 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
 ///
 /// GroupedByGenenerationStream will return (4, {A}), (3, {B, C}), (2, {D, E}), (1, {F})
 struct GroupedByGenenerationStream {
-    input: stream::Fuse<InputStream>,
+    input: stream::Fuse<BonsaiInputStream>,
     current_generation: Option<Generation>,
-    hashes: HashSet<HgNodeHash>,
+    hashes: HashSet<ChangesetId>,
 }
 
 impl GroupedByGenenerationStream {
-    pub fn new(input: InputStream) -> Self {
+    pub fn new(input: BonsaiInputStream) -> Self {
         Self {
             input: input.fuse(),
             current_generation: None,
@@ -305,7 +304,7 @@ impl GroupedByGenenerationStream {
 }
 
 impl Stream for GroupedByGenenerationStream {
-    type Item = (HashSet<HgNodeHash>, Generation);
+    type Item = (HashSet<ChangesetId>, Generation);
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -348,8 +347,8 @@ mod test {
     use fixtures::linear;
     use fixtures::merge_uneven;
     use futures::executor::spawn;
-    use tests::assert_node_sequence;
-    use tests::string_to_nodehash;
+    use tests::assert_changesets_sequence;
+    use tests::string_to_bonsai;
 
     #[test]
     fn grouped_by_generation_simple() {
@@ -358,9 +357,9 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
                 &repo,
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
             ).boxify();
-            let inputstream = add_generations(nodestream, repo.clone());
+            let inputstream = add_generations_by_bonsai(nodestream, repo.clone());
 
             let res = spawn(GroupedByGenenerationStream::new(inputstream).collect())
                 .wait_future()
@@ -370,35 +369,35 @@ mod test {
                 res,
                 vec![
                     (
-                        hashset!{string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157")},
+                        hashset!{string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157")},
                         Generation::new(8),
                     ),
                     (
-                        hashset!{string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17")},
+                        hashset!{string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17")},
                         Generation::new(7),
                     ),
                     (
-                        hashset!{string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b")},
+                        hashset!{string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b")},
                         Generation::new(6),
                     ),
                     (
-                        hashset!{string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372")},
+                        hashset!{string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372")},
                         Generation::new(5),
                     ),
                     (
-                        hashset!{string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0")},
+                        hashset!{string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0")},
                         Generation::new(4),
                     ),
                     (
-                        hashset!{string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281")},
+                        hashset!{string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281")},
                         Generation::new(3),
                     ),
                     (
-                        hashset!{string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f")},
+                        hashset!{string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f")},
                         Generation::new(2),
                     ),
                     (
-                        hashset!{string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")},
+                        hashset!{string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")},
                         Generation::new(1),
                     ),
                 ],
@@ -413,9 +412,9 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
                 &repo,
-                string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
             ).boxify();
-            let inputstream = add_generations(nodestream, repo.clone());
+            let inputstream = add_generations_by_bonsai(nodestream, repo.clone());
 
             let res = spawn(GroupedByGenenerationStream::new(inputstream).collect())
                 .wait_future()
@@ -425,52 +424,52 @@ mod test {
                 res,
                 vec![
                     (
-                        hashset!{string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7")},
+                        hashset!{string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7")},
                         Generation::new(10),
                     ),
                     (
-                        hashset!{string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc")},
+                        hashset!{string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc")},
                         Generation::new(9),
                     ),
                     (
-                        hashset!{string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c")},
+                        hashset!{string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c")},
                         Generation::new(8),
                     ),
                     (
-                        hashset!{string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca")},
+                        hashset!{string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca")},
                         Generation::new(7),
                     ),
                     (
-                        hashset!{string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33")},
+                        hashset!{string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33")},
                         Generation::new(6),
                     ),
                     (
-                        hashset!{string_to_nodehash("795b8133cf375f6d68d27c6c23db24cd5d0cd00f")},
+                        hashset!{string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f")},
                         Generation::new(5),
                     ),
                     (
                         hashset!{
-                            string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                            string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                            string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                            string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
                         },
                         Generation::new(4),
                     ),
                     (
                         hashset!{
-                            string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                            string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                            string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                            string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
                         },
                         Generation::new(3),
                     ),
                     (
                         hashset!{
-                            string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                            string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                            string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                            string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                         },
                         Generation::new(2),
                     ),
                     (
-                        hashset!{string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c")},
+                        hashset!{string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c")},
                         Generation::new(1),
                     ),
                 ],
@@ -485,17 +484,17 @@ mod test {
 
             let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(&repo, vec![]).boxify();
 
-            assert_node_sequence(&repo, vec![], stream);
+            assert_changesets_sequence(&repo, vec![], stream);
 
             let excludes = vec![
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
             ];
 
             let stream =
                 DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(&repo, vec![], excludes)
                     .boxify();
 
-            assert_node_sequence(&repo, vec![], stream);
+            assert_changesets_sequence(&repo, vec![], stream);
         });
     }
 
@@ -507,17 +506,17 @@ mod test {
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
                 vec![
-                    string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                    string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 ],
                 vec![
-                    string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                    string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
                 ],
             ).boxify();
 
-            assert_node_sequence(
+            assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                    string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 ],
                 nodestream,
             );
@@ -532,14 +531,14 @@ mod test {
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
                 vec![
-                    string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                    string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
                 ],
                 vec![
-                    string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                    string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
                 ],
             ).boxify();
 
-            assert_node_sequence(&repo, vec![], nodestream);
+            assert_changesets_sequence(&repo, vec![], nodestream);
         });
     }
 
@@ -551,23 +550,23 @@ mod test {
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
                 &repo,
                 vec![
-                    string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                    string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
                 ],
             ).boxify();
-            assert_node_sequence(
+            assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                    string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                    string_to_nodehash("795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
-                    string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                    string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                    string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                    string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                    string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                    string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                    string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                    string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                    string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                    string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                    string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                    string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
                 ],
                 nodestream,
             );
@@ -582,20 +581,20 @@ mod test {
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
                 vec![
-                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                 ],
                 vec![
-                    string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                    string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
                 ],
             ).boxify();
 
-            assert_node_sequence(
+            assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
-                    string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
-                    string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
+                    string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                 ],
                 nodestream,
             );
@@ -610,25 +609,25 @@ mod test {
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &repo,
                 vec![
-                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                 ],
                 vec![
-                    string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
                 ],
             ).boxify();
 
-            assert_node_sequence(
+            assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
-                    string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
-                    string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
-                    string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                    string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                    string_to_nodehash("795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                    string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
+                    string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+                    string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                    string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                    string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                    string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
                 ],
                 nodestream,
             );

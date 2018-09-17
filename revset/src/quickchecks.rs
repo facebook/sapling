@@ -6,6 +6,7 @@
 
 use async_unit;
 use failure::Error;
+use futures::{stream, Future, Stream};
 use futures::executor::spawn;
 use futures_ext::{BoxStream, StreamExt};
 use quickcheck::{quickcheck, Arbitrary, Gen};
@@ -15,7 +16,8 @@ use std::iter::Iterator;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
-use mercurial_types::HgNodeHash;
+use mercurial_types::{HgChangesetId, HgNodeHash};
+use mononoke_types::ChangesetId;
 
 use fixtures::branch_even;
 use fixtures::branch_uneven;
@@ -26,6 +28,7 @@ use fixtures::merge_uneven;
 use fixtures::unshared_merge_even;
 use fixtures::unshared_merge_uneven;
 
+use BonsaiNodeStream;
 use NodeStream;
 use ancestors::AncestorsNodeStream;
 use ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
@@ -346,11 +349,44 @@ impl Iterator for IncludeExcludeDiscardCombinationsIterator {
     }
 }
 
+fn hg_to_bonsai_changesetid(repo: &Arc<BlobRepo>, nodes: Vec<HgNodeHash>) -> Vec<ChangesetId> {
+    stream::iter_ok(nodes.into_iter())
+        .boxify()
+        .and_then({
+            let repo = repo.clone();
+            move |hash| {
+                repo.get_bonsai_from_hg(&HgChangesetId::new(hash.clone()))
+                    .map(move |maybe_bonsai| {
+                        maybe_bonsai.expect("Failed to get Bonsai Changeset from HgNodeHash")
+                    })
+            }
+        })
+        .collect()
+        .wait()
+        .unwrap()
+}
+
+fn bonsai_nodestream_to_nodestream(
+    repo: &Arc<BlobRepo>,
+    stream: Box<BonsaiNodeStream>,
+) -> Box<NodeStream> {
+    stream
+        .and_then({
+            let repo = repo.clone();
+            move |bonsai| {
+                repo.get_hg_from_bonsai_changeset(bonsai)
+                    .map(|cs| cs.into_nodehash())
+            }
+        })
+        .boxify()
+}
+
 macro_rules! ancestors_check {
     ($test_name:ident, $repo:ident) => {
         #[test]
         fn $test_name() {
             async_unit::tokio_unit_test(|| {
+
                 let repo = Arc::new($repo::getrepo(None));
                 let all_changesets = get_changesets_from_repo(&*repo);
 
@@ -362,12 +398,16 @@ macro_rules! ancestors_check {
                     .collect();
                 let iter = IncludeExcludeDiscardCombinationsIterator::new(all_changesets);
                 for (include, exclude) in iter {
-                    let actual = ValidateNodeStream::new(
+                    let difference_stream =
                         DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                             &repo,
-                            include.clone(),
-                            exclude.clone(),
-                        ).boxify(),
+                            hg_to_bonsai_changesetid(&repo, include.clone()),
+                            hg_to_bonsai_changesetid(&repo, exclude.clone()),
+                        )
+                        .boxify();
+
+                    let actual = ValidateNodeStream::new(
+                        bonsai_nodestream_to_nodestream(&repo, difference_stream),
                         &repo.clone(),
                     );
 

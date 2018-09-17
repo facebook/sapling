@@ -14,11 +14,12 @@ use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use futures::{stream, Future, Stream};
-use futures_ext::StreamExt;
 use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
-use mercurial_types::{Changeset, HgBlobNode, HgChangesetId};
+use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, NULL_CSID};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+
+use mononoke_types::ChangesetId;
 
 pub fn create_getbundle_response(
     blobrepo: BlobRepo,
@@ -40,22 +41,37 @@ pub fn create_getbundle_response(
 
     let common_heads: HashSet<_> = HashSet::from_iter(common.iter());
 
-    let heads: Vec<_> = heads
-        .iter()
-        .filter(|head| !common_heads.contains(head))
-        .cloned()
-        .map(|head| head.into_nodehash())
-        .collect();
+    let heads = hg_to_bonsai_stream(
+        &blobrepo,
+        heads
+            .iter()
+            .filter(|head| !common_heads.contains(head))
+            .cloned()
+            .collect(),
+    );
 
-    let excludes: Vec<_> = common
-        .iter()
-        .map(|node| node.clone())
-        .map(|head| head.into_nodehash().into_option())
-        .filter_map(|maybenode| maybenode)
-        .collect();
-    let nodestosend =
-        DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(&blobrepo, heads, excludes)
-            .boxify();
+    let excludes = hg_to_bonsai_stream(
+        &blobrepo,
+        common
+            .iter()
+            .map(|node| node.clone())
+            .filter(|node| node.into_nodehash() != NULL_CSID.into_nodehash())
+            .collect(),
+    );
+
+    let nodestosend = heads
+        .join(excludes)
+        .map({
+            cloned!(blobrepo);
+            move |(heads, excludes)| {
+                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                    &blobrepo,
+                    heads,
+                    excludes,
+                )
+            }
+        })
+        .flatten_stream();
 
     // TODO(stash): avoid collecting all the changelogs in the vector - T25767311
     let nodestosend = nodestosend
@@ -66,11 +82,19 @@ pub fn create_getbundle_response(
     let buffer_size = 100; // TODO(stash): make it configurable
     let changelogentries = nodestosend
         .map({
-            let blobrepo = blobrepo.clone();
-            move |node| {
+            cloned!(blobrepo);
+            move |bonsai| {
                 blobrepo
-                    .get_changeset_by_changesetid(&HgChangesetId::new(node))
-                    .map(move |cs| (node, cs))
+                    .get_hg_from_bonsai_changeset(bonsai)
+                    .map(|cs| cs.into_nodehash())
+                    .and_then({
+                        cloned!(blobrepo);
+                        move |node| {
+                            blobrepo
+                                .get_changeset_by_changesetid(&HgChangesetId::new(node))
+                                .map(move |cs| (node, cs))
+                        }
+                    })
             }
         })
         .buffered(buffer_size)
@@ -95,4 +119,22 @@ pub fn create_getbundle_response(
 
     bundle.add_part(parts::changegroup_part(changelogentries)?);
     Ok(bundle)
+}
+
+fn hg_to_bonsai_stream(
+    repo: &Arc<BlobRepo>,
+    nodes: Vec<HgChangesetId>,
+) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
+    stream::iter_ok(nodes.into_iter())
+        .map({
+            cloned!(repo);
+            move |node| {
+                repo.get_bonsai_from_hg(&node)
+                    .and_then(move |maybe_bonsai| {
+                        maybe_bonsai.ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node).into())
+                    })
+            }
+        })
+        .buffered(100)
+        .collect()
 }

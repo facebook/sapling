@@ -10,10 +10,11 @@ use futures::future::Future;
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
-use mononoke_types::Generation;
+use mononoke_types::{ChangesetId, Generation};
 use std::boxed::Box;
 use std::sync::Arc;
 
+use BonsaiNodeStream;
 use NodeStream;
 use errors::*;
 use failure::{err_msg, Error};
@@ -21,6 +22,8 @@ use failure::{err_msg, Error};
 use futures::{Async, Poll};
 
 pub type InputStream = Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + 'static + Send>;
+pub type BonsaiInputStream =
+    Box<Stream<Item = (ChangesetId, Generation), Error = Error> + 'static + Send>;
 
 pub fn add_generations(stream: Box<NodeStream>, repo: Arc<BlobRepo>) -> InputStream {
     let stream = stream.and_then(move |node_hash| {
@@ -30,6 +33,21 @@ pub fn add_generations(stream: Box<NodeStream>, repo: Arc<BlobRepo>) -> InputStr
             })
             .map(move |gen_id| (node_hash, gen_id))
             .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
+    });
+    Box::new(stream)
+}
+
+pub fn add_generations_by_bonsai(
+    stream: Box<BonsaiNodeStream>,
+    repo: Arc<BlobRepo>,
+) -> BonsaiInputStream {
+    let stream = stream.and_then(move |changesetid| {
+        repo.get_generation_number_by_bonsai(&changesetid)
+            .and_then(move |maybe_generation| {
+                maybe_generation.ok_or_else(|| err_msg(format!("{} not found", changesetid)))
+            })
+            .map(move |gen_id| (changesetid, gen_id))
+            .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
     });
     Box::new(stream)
 }

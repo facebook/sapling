@@ -71,6 +71,7 @@ define_stats! {
     get_heads: timeseries(RATE, SUM),
     changeset_exists: timeseries(RATE, SUM),
     get_changeset_parents: timeseries(RATE, SUM),
+    get_changeset_parents_by_bonsai: timeseries(RATE, SUM),
     get_changeset_by_changesetid: timeseries(RATE, SUM),
     get_hg_file_copy_from_blobstore: timeseries(RATE, SUM),
     get_hg_from_bonsai_changeset: timeseries(RATE, SUM),
@@ -466,6 +467,23 @@ impl BlobRepo {
                 }
             })
             .boxify()
+    }
+
+    pub fn get_changeset_parents_by_bonsai(
+        &self,
+        cs: &ChangesetId,
+    ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
+        STATS::get_changeset_parents_by_bonsai.add_value(1);
+        let changesetid = *cs;
+        let repo = self.clone();
+        let repoid = self.repoid.clone();
+
+        repo.changesets
+            .get(repoid, changesetid)
+            .and_then(move |maybe_bonsai| {
+                maybe_bonsai.ok_or(ErrorKind::BonsaiNotFound(changesetid).into())
+            })
+            .map(|bonsai| bonsai.parents)
     }
 
     fn get_bonsai_cs_entry_or_fail(

@@ -17,6 +17,7 @@ extern crate mononoke_types;
 
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;
+use mononoke_types::ChangesetId;
 
 mod setcommon;
 
@@ -36,6 +37,7 @@ pub mod errors;
 pub use errors::{Error, ErrorKind};
 
 pub type NodeStream = Stream<Item = HgNodeHash, Error = errors::Error> + Send + 'static;
+pub type BonsaiNodeStream = Stream<Item = ChangesetId, Error = errors::Error> + Send + 'static;
 
 mod validation;
 pub use validation::ValidateNodeStream;

@@ -19,6 +19,14 @@ pub fn string_to_nodehash(hash: &'static str) -> HgNodeHash {
     HgNodeHash::from_static_str(hash).expect("Can't turn string to HgNodeHash")
 }
 
+pub fn string_to_bonsai(repo: &Arc<BlobRepo>, s: &'static str) -> ChangesetId {
+    let node = string_to_nodehash(s);
+    repo.get_bonsai_from_hg(&HgChangesetId::new(node))
+        .wait()
+        .unwrap()
+        .unwrap()
+}
+
 // TODO(stash): remove assert_node_sequence, use assert_changesets_sequence instead
 /// Accounting for reordering within generations, ensure that a NodeStream gives the expected
 /// NodeHashes for testing.
