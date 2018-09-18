@@ -660,6 +660,7 @@ impl Bundle2Resolver {
                         sub_entries,
                         // XXX pass content blobs to CreateChangeset here
                         cs_metadata,
+                        must_check_case_conflicts: true,
                     };
                     let scheduled_uploading = create_changeset.create(&repo, scuba_logger);
 

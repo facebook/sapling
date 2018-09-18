@@ -27,7 +27,7 @@ use mercurial_types::{Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, Hg
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::{self, BonsaiChangeset, ChangesetId};
 
 use BlobRepo;
 use HgBlobChangeset;
@@ -516,6 +516,82 @@ pub fn compute_changed_files(
         files
     })
         .boxify()
+}
+
+fn compute_added_files(
+    child: &Box<Manifest + Sync>,
+    parent: Option<&Box<Manifest + Sync>>,
+) -> impl Future<Item = Vec<MPath>, Error = Error> {
+    let s = match parent {
+        Some(parent) => changed_entry_stream(child, parent, None).boxify(),
+        None => {
+            let empty = manifest::EmptyManifest {};
+            changed_entry_stream(child, &empty, None).boxify()
+        }
+    };
+
+    s.filter_map(|change| match change.status {
+        EntryStatus::Added(entry) => {
+            if entry.get_type() == manifest::Type::Tree {
+                None
+            } else {
+                MPath::join_element_opt(change.dirname.as_ref(), entry.get_name())
+            }
+        }
+        _ => None,
+    }).collect()
+}
+
+/// Checks if new commit (or to be precise, it's manifest) introduces any new case conflicts
+/// It does it in three stages:
+/// 1) Checks that there are no case conflicts between added files
+/// 2) Checks that added files do not create new case conflicts with already existing files
+pub fn check_case_conflicts(
+    repo: BlobRepo,
+    child_root_mf: HgManifestId,
+    parent_root_mf: Option<HgManifestId>,
+) -> impl Future<Item = (), Error = Error> {
+    let child_mf_fut = repo.get_manifest_by_nodeid(&child_root_mf.clone().into_nodehash());
+
+    let parent_mf_fut = parent_root_mf.map({
+        cloned!(repo);
+        move |m| repo.get_manifest_by_nodeid(&m.into_nodehash())
+    });
+
+    child_mf_fut
+        .join(parent_mf_fut)
+        .and_then(move |(child_mf, parent_mf)| compute_added_files(&child_mf, parent_mf.as_ref()))
+        .and_then(
+            |added_files| match mononoke_types::check_case_conflicts(added_files.clone()) {
+                Some(path) => Err(ErrorKind::CaseConflict(path).into()),
+                None => Ok(added_files),
+            },
+        )
+        .and_then(move |added_files| match parent_root_mf {
+            Some(parent_root_mf) => {
+                let mut case_conflict_checks = stream::FuturesUnordered::new();
+                for f in added_files {
+                    case_conflict_checks.push(repo.check_case_conflict_in_manifest(
+                        &parent_root_mf,
+                        &child_root_mf,
+                        f.clone(),
+                    ).map(move |add_conflict| (add_conflict, f)));
+                }
+
+                case_conflict_checks
+                    .collect()
+                    .and_then(|results| {
+                        let maybe_conflict =
+                            results.into_iter().find(|(add_conflict, _f)| *add_conflict);
+                        match maybe_conflict {
+                            Some((_, path)) => Err(ErrorKind::CaseConflict(path).into()),
+                            None => Ok(()),
+                        }
+                    })
+                    .left_future()
+            }
+            None => Ok(()).into_future().right_future(),
+        })
 }
 
 fn mercurial_mpath_comparator(a: &MPath, b: &MPath) -> ::std::cmp::Ordering {

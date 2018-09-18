@@ -20,10 +20,13 @@ extern crate blobstore;
 extern crate changesets;
 extern crate dbbookmarks;
 extern crate fixtures;
+#[macro_use]
+extern crate maplit;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate mononoke_types;
+extern crate tests_utils;
 
 use failure::Error;
 use fixtures::{many_files_dirs, merge_uneven};
@@ -49,6 +52,8 @@ mod memory_manifest;
 use utils::{create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
             get_empty_lazy_repo, run_future, string_to_nodehash, upload_file_no_parents,
             upload_file_one_parent, upload_manifest_no_parents, upload_manifest_one_parent};
+
+use tests_utils::{create_commit, store_files};
 
 fn upload_blob_no_parents(repo: BlobRepo) {
     let expected_hash = string_to_nodehash("c3127cdbf2eae0f09653f9237d85c8436425b246");
@@ -796,14 +801,20 @@ fn test_get_manifest_from_bonsai() {
 fn test_case_conflict_in_manifest() {
     async_unit::tokio_unit_test(|| {
         let repo = many_files_dirs::getrepo(None);
-        let get_manifest_for_changeset = |cs_nodehash: &str| -> HgManifestId {
-            *run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(
-                string_to_nodehash(cs_nodehash),
-            ))).unwrap()
+        let get_manifest_for_changeset = |cs_id: &HgChangesetId| -> HgManifestId {
+            *run_future(repo.get_changeset_by_changesetid(cs_id))
+                .unwrap()
                 .manifestid()
         };
 
-        let mf = get_manifest_for_changeset("2f866e7e549760934e31bf0420a873f65100ad63");
+        let hg_cs = HgChangesetId::new(string_to_nodehash(
+            "2f866e7e549760934e31bf0420a873f65100ad63",
+        ));
+        let mf = get_manifest_for_changeset(&hg_cs);
+
+        let bonsai_parent = run_future(repo.get_bonsai_from_hg(&hg_cs))
+            .unwrap()
+            .unwrap();
 
         for (path, result) in &[
             ("dir1/file_1_in_dir1", false),
@@ -811,14 +822,200 @@ fn test_case_conflict_in_manifest() {
             ("DiR1/file_1_in_dir1", true),
             ("dir1/other_dir/file", false),
         ] {
+            let bcs_id = create_commit(
+                repo.clone(),
+                vec![bonsai_parent],
+                store_files(btreemap!{*path => Some("caseconflicttest")}, repo.clone()),
+            );
+
+            let child_hg_cs =
+                run_future(repo.get_hg_from_bonsai_changeset(bcs_id.clone())).unwrap();
+            let child_mf = get_manifest_for_changeset(&child_hg_cs);
             assert_eq!(
-                run_future(repo.check_case_conflict_in_manifest(&mf, MPath::new(path).unwrap()))
-                    .unwrap(),
+                run_future(repo.check_case_conflict_in_manifest(
+                    &mf,
+                    &child_mf,
+                    MPath::new(path).unwrap()
+                )).unwrap(),
                 *result,
                 "{} expected to {} cause conflict",
                 path,
                 if *result { "" } else { "not" },
             );
         }
+    });
+}
+
+#[test]
+fn test_case_conflict_two_changeset() {
+    async_unit::tokio_unit_test(|| {
+        let repo = get_empty_lazy_repo();
+
+        let fake_file_path_1 = RepoPath::file("file").expect("Can't generate fake RepoPath");
+        let (filehash_1, file_future_1) = upload_file_no_parents(&repo, "blob", &fake_file_path_1);
+
+        let (_roothash, root_manifest_future) =
+            upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash_1), &RepoPath::root());
+
+        let commit1 = create_changeset_no_parents(
+            &repo,
+            root_manifest_future.map(Some).boxify(),
+            vec![file_future_1],
+        );
+
+        let commit2 = {
+            let fake_file_path_2 = RepoPath::file("FILE").expect("Can't generate fake RepoPath");
+            let (filehash_2, file_future_2) =
+                upload_file_no_parents(&repo, "blob", &fake_file_path_2);
+            let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+                &repo,
+                format!("file\0{}\nFILE\0{}\n", filehash_1, filehash_2),
+                &RepoPath::root(),
+            );
+
+            create_changeset_one_parent(
+                &repo,
+                root_manifest_future.map(Some).boxify(),
+                vec![file_future_2],
+                commit1.clone(),
+            )
+        };
+
+        assert!(
+            run_future(
+                commit1
+                    .get_completed_changeset()
+                    .join(commit2.get_completed_changeset()),
+            ).is_err()
+        );
+    });
+}
+
+#[test]
+fn test_case_conflict_inside_one_changeset() {
+    async_unit::tokio_unit_test(|| {
+        let repo = get_empty_lazy_repo();
+        let fake_file_path_1 = RepoPath::file("file").expect("Can't generate fake RepoPath");
+        let (filehash_1, file_future_1) = upload_file_no_parents(&repo, "blob", &fake_file_path_1);
+
+        let fake_file_path_1 = RepoPath::file("FILE").expect("Can't generate fake RepoPath");
+        let (filehash_2, file_future_2) = upload_file_no_parents(&repo, "blob", &fake_file_path_1);
+
+        let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+            &repo,
+            format!("file\0{}\nFILE\0{}", filehash_1, filehash_2),
+            &RepoPath::root(),
+        );
+
+        let commit1 = create_changeset_no_parents(
+            &repo,
+            root_manifest_future.map(Some).boxify(),
+            vec![file_future_1, file_future_2],
+        );
+
+        assert!(run_future(commit1.get_completed_changeset()).is_err());
+    });
+}
+
+#[test]
+fn test_no_case_conflict_removal() {
+    async_unit::tokio_unit_test(|| {
+        let repo = get_empty_lazy_repo();
+
+        let fake_file_path_1 = RepoPath::file("file").expect("Can't generate fake RepoPath");
+        let (filehash_1, file_future_1) = upload_file_no_parents(&repo, "blob", &fake_file_path_1);
+
+        let (_roothash, root_manifest_future) =
+            upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash_1), &RepoPath::root());
+
+        let commit1 = create_changeset_no_parents(
+            &repo,
+            root_manifest_future.map(Some).boxify(),
+            vec![file_future_1],
+        );
+
+        let commit2 = {
+            let fake_file_path_2 = RepoPath::file("FILE").expect("Can't generate fake RepoPath");
+            let (filehash_2, file_future_2) =
+                upload_file_no_parents(&repo, "blob", &fake_file_path_2);
+            let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+                &repo,
+                format!("FILE\0{}\n", filehash_2),
+                &RepoPath::root(),
+            );
+
+            create_changeset_one_parent(
+                &repo,
+                root_manifest_future.map(Some).boxify(),
+                vec![file_future_2],
+                commit1.clone(),
+            )
+        };
+
+        assert!(
+            run_future(
+                commit1
+                    .get_completed_changeset()
+                    .join(commit2.get_completed_changeset()),
+            ).is_ok()
+        );
+    });
+}
+
+#[test]
+fn test_no_case_conflict_removal_dir() {
+    async_unit::tokio_unit_test(|| {
+        let repo = get_empty_lazy_repo();
+
+        let commit1 = {
+            let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
+            let fake_dir_path = RepoPath::file("dir").expect("Can't generate fake RepoPath");
+            let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+
+            let (dirhash_1, manifest_dir_future) =
+                upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
+
+            let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+                &repo,
+                format!("dir\0{}t\n", dirhash_1),
+                &RepoPath::root(),
+            );
+
+            create_changeset_no_parents(
+                &repo,
+                root_manifest_future.map(Some).boxify(),
+                vec![file_future, manifest_dir_future],
+            )
+        };
+
+        let commit2 = {
+            let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
+            let fake_dir_path = RepoPath::file("DIR").expect("Can't generate fake RepoPath");
+            let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+
+            let (dirhash_1, manifest_dir_future) =
+                upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
+
+            let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+                &repo,
+                format!("DIR\0{}t\n", dirhash_1),
+                &RepoPath::root(),
+            );
+
+            create_changeset_one_parent(
+                &repo,
+                root_manifest_future.map(Some).boxify(),
+                vec![file_future, manifest_dir_future],
+                commit1.clone(),
+            )
+        };
+
+        assert!(
+            run_future(
+                commit1
+                    .get_completed_changeset()
+                    .join(commit2.get_completed_changeset()),
+            ).is_ok()
+        );
     });
 }

@@ -101,4 +101,5 @@ pub enum ErrorKind {
     #[fail(display = "Incorrect copy info: not found a file version {} {} the file {} {} was copied from",
            from_path, from_node, to_path, to_node)]
     IncorrectCopyInfo{from_path: MPath, from_node: HgNodeHash, to_path: MPath, to_node: HgNodeHash},
+    #[fail(display = "Case conflict in a commit")] CaseConflict(MPath),
 }

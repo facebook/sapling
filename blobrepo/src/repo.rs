@@ -794,57 +794,93 @@ impl BlobRepo {
         }
     }
 
-    /// Check if adding path to manifest would cause case-conflict
+    /// Check if adding a single path to manifest would cause case-conflict
     ///
     /// Implementation traverses manifest and checks if correspoinding path element is present,
     /// if path element is not present, it lowercases current path element and checks if it
-    /// collides with any existing elements inside manifest, if so it is a case-conflict.
+    /// collides with any existing elements inside manifest. if so it also needs to check that
+    /// child manifest contains this entry, because it might have been removed.
     pub fn check_case_conflict_in_manifest(
         &self,
-        mf_id: &HgManifestId,
+        parent_mf_id: &HgManifestId,
+        child_mf_id: &HgManifestId,
         path: MPath,
     ) -> impl Future<Item = bool, Error = Error> {
-        self.get_manifest_by_nodeid(&mf_id.into_nodehash())
-            .and_then(|mf| {
-                loop_fn((mf, path.into_iter()), move |(mf, mut elements)| {
-                    match elements.next() {
-                        None => future::ok(Loop::Break(false)).left_future(),
-                        Some(element) => {
-                            match mf.lookup(&element) {
-                                Some(entry) => {
-                                    // avoid fetching file content
-                                    match entry.get_type() {
-                                        Type::File(_) => {
-                                            future::ok(Loop::Break(false)).left_future()
-                                        }
-                                        Type::Tree => entry
-                                            .get_content()
-                                            .map(move |content| match content {
-                                                Content::Tree(mf) => Loop::Continue((mf, elements)),
-                                                _ => Loop::Break(false),
-                                            })
-                                            .right_future(),
-                                    }
-                                }
-                                None => {
-                                    let element_utf8 = String::from_utf8(element.to_bytes());
-                                    let has_case_conflict = mf.list().any(|entry| {
-                                        let name = entry
-                                            .get_name()
-                                            .expect("Non-root entry has empty name");
-                                        match (&element_utf8, String::from_utf8(name.to_bytes())) {
-                                            (Ok(ref element), Ok(ref name)) => {
-                                                name.to_lowercase() == element.to_lowercase()
+        let repo = self.clone();
+        let child_mf_id = child_mf_id.clone();
+        self.get_manifest_by_nodeid(&parent_mf_id.into_nodehash())
+            .and_then(move |mf| {
+                loop_fn(
+                    (None, mf, path.into_iter()),
+                    move |(cur_path, mf, mut elements): (Option<MPath>, _, _)| {
+                        let next_element = elements.next();
+                        if let None = next_element {
+                            return future::ok(Loop::Break(false)).boxify();
+                        }
+                        let element = next_element.unwrap();
+
+                        match mf.lookup(&element) {
+                            Some(entry) => {
+                                let cur_path = MPath::join_opt_element(cur_path.as_ref(), &element);
+                                // avoid fetching file content
+                                match entry.get_type() {
+                                    Type::File(_) => future::ok(Loop::Break(false)).boxify(),
+                                    Type::Tree => entry
+                                        .get_content()
+                                        .map(move |content| match content {
+                                            Content::Tree(mf) => {
+                                                Loop::Continue((Some(cur_path), mf, elements))
                                             }
-                                            _ => false,
-                                        }
-                                    });
-                                    future::ok(Loop::Break(has_case_conflict)).left_future()
+                                            _ => Loop::Break(false),
+                                        })
+                                        .boxify(),
                                 }
                             }
+                            None => {
+                                let element_utf8 = String::from_utf8(element.to_bytes());
+                                let mut potential_conflicts = vec![];
+                                // Find all entries in the manifests that can potentially be a conflict.
+                                // Entry can potentially be a conflict if its lowercased version
+                                // is the same as lowercased version of the current element
+
+                                for entry in mf.list() {
+                                    let basename = entry
+                                        .get_name()
+                                        .expect("Non-root entry has empty basename");
+                                    let path =
+                                        MPath::join_element_opt(cur_path.as_ref(), Some(basename));
+                                    match (&element_utf8, String::from_utf8(basename.to_bytes())) {
+                                        (Ok(ref element), Ok(ref basename)) => {
+                                            if basename.to_lowercase() == element.to_lowercase() {
+                                                potential_conflicts.push(path);
+                                            }
+                                        }
+                                        _ => (),
+                                    }
+                                }
+
+                                // For each potential conflict we need to check if it's present in
+                                // child manifest. If it is, then we've got a conflict, otherwise
+                                // this has been deleted and it's no longer a conflict.
+                                let mut check_futs = vec![];
+                                for fullpath in potential_conflicts {
+                                    let check_fut =
+                                        repo.find_path_in_manifest(fullpath, child_mf_id.clone())
+                                            .map(|content| content.is_some());
+                                    check_futs.push(check_fut);
+                                }
+
+                                future::join_all(check_futs.into_iter())
+                                    .map(|potential_conflicts| {
+                                        let has_case_conflict =
+                                            potential_conflicts.iter().any(|val| *val);
+                                        Loop::Break(has_case_conflict)
+                                    })
+                                    .boxify()
+                            }
                         }
-                    }
-                })
+                    },
+                )
             })
     }
 
@@ -1538,6 +1574,7 @@ pub struct CreateChangeset {
     pub root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     pub sub_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
     pub cs_metadata: ChangesetMetadata,
+    pub must_check_case_conflicts: bool,
 }
 
 impl CreateChangeset {
@@ -1566,6 +1603,7 @@ impl CreateChangeset {
         let parents_complete = extract_parents_complete(&self.p1, &self.p2);
         let parents_data = handle_parents(scuba_logger.clone(), self.p1, self.p2)
             .context("While waiting for parents to upload data");
+        let must_check_case_conflicts = self.must_check_case_conflicts.clone();
         let changeset = {
             let mut scuba_logger = scuba_logger.clone();
             upload_entries
@@ -1598,8 +1636,17 @@ impl CreateChangeset {
                                 .boxify()
                         };
 
+                        let p1_mf = parent_manifest_hashes.get(0).cloned();
+                        let check_case_conflicts = if must_check_case_conflicts {
+                            check_case_conflicts(repo.clone(), root_hash.clone(), p1_mf)
+                                .left_future()
+                        } else {
+                            future::ok(()).right_future()
+                        };
+
                         let changesets = files
-                            .and_then(move |files| {
+                            .join(check_case_conflicts)
+                            .and_then(move |(files, ())| {
                                 STATS::create_changeset_cf_count.add_value(files.len() as i64);
                                 make_new_changeset(parents, root_hash, cs_metadata, files)
                             })

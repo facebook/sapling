@@ -324,6 +324,8 @@ impl UploadChangesets {
                     root_manifest: rootmf,
                     sub_entries: entries,
                     cs_metadata,
+                    // Repositories can contain case conflicts - we still need to import them
+                    must_check_case_conflicts: false,
                 };
                 let cshandle =
                     create_changeset.create(&blobrepo, ScubaSampleBuilder::with_discard());

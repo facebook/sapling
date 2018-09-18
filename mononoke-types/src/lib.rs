@@ -61,7 +61,7 @@ pub use datetime::DateTime;
 pub use file_change::{FileChange, FileType};
 pub use file_contents::FileContents;
 pub use generation::Generation;
-pub use path::{MPath, MPathElement, RepoPath};
+pub use path::{check_case_conflicts, MPath, MPathElement, RepoPath};
 pub use typed_hash::{ChangesetId, ContentId, MononokeId};
 
 mod thrift {

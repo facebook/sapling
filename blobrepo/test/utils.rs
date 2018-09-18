@@ -188,6 +188,7 @@ pub fn create_changeset_no_parents(
         root_manifest,
         sub_entries: futures_unordered(other_nodes).boxify(),
         cs_metadata,
+        must_check_case_conflicts: true,
     };
     create_changeset.create(repo, ScubaSampleBuilder::with_discard())
 }
@@ -212,6 +213,7 @@ pub fn create_changeset_one_parent(
         root_manifest,
         sub_entries: futures_unordered(other_nodes).boxify(),
         cs_metadata,
+        must_check_case_conflicts: true,
     };
     create_changeset.create(repo, ScubaSampleBuilder::with_discard())
 }
