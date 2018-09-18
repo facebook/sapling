@@ -168,7 +168,7 @@ impl Changesets for CachingChangests {
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
         let cache_key = format!("{}.{}", repo_id.prefix(), cs_id).to_string();
 
-        cachelib::get_cached(&self.cache_pool, cache_key, || {
+        cachelib::get_cached_or_fill(&self.cache_pool, cache_key, || {
             self.changesets.get(repo_id, cs_id)
         })
     }

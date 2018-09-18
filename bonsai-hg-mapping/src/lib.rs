@@ -40,7 +40,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 
-use cachelib::{get_cached, LruCachePool};
+use cachelib::{get_cached_or_fill, LruCachePool};
 use futures::Future;
 use futures_ext::{asynchronize, BoxFuture, FutureExt};
 use mercurial_types::{HgChangesetId, RepositoryId};
@@ -156,7 +156,7 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
         cs: BonsaiOrHgChangesetId,
     ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
         let cache_key = format!("{}.{:?}", repo_id.prefix(), cs).to_string();
-        get_cached(&self.cache_pool, cache_key, || {
+        get_cached_or_fill(&self.cache_pool, cache_key, || {
             self.mapping.get(repo_id, cs)
         })
     }

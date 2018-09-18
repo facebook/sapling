@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::usize;
 
-use cachelib::{get_cached, LruCachePool};
+use cachelib::{get_cached_or_fill, LruCachePool};
 use failure::{Error, Result};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
@@ -94,7 +94,7 @@ impl Filenodes for CachingFilenodes {
         repo_id: &RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error> {
         let cache_key = format!("{}.{}.{}", repo_id.prefix(), filenode, path).to_string();
-        get_cached(&self.cache_pool, cache_key, || {
+        get_cached_or_fill(&self.cache_pool, cache_key, || {
             self.filenodes.get_filenode(path, filenode, repo_id)
         })
     }
