@@ -104,7 +104,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .getbundle(args)
                     .map(SingleResponse::Getbundle)
                     .map_err(self::Error::into)
-                    .into_stream()
                     .boxify(),
                 ok(instream).boxify(),
             ),
@@ -475,8 +474,8 @@ pub trait HgCommands {
 
     // @wireprotocommand('getbundle', '*')
     // TODO: make this streaming
-    fn getbundle(&self, _args: GetbundleArgs) -> HgCommandRes<Bytes> {
-        unimplemented("getbundle")
+    fn getbundle(&self, _args: GetbundleArgs) -> BoxStream<Bytes, Error> {
+        once(Err(ErrorKind::Unimplemented("getbundle".into()).into())).boxify()
     }
 
     // @wireprotocommand('heads')

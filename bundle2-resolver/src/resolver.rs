@@ -13,7 +13,7 @@ use ascii::AsciiString;
 use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset,
                HgBlobEntry};
 use bookmarks::{Bookmark, Transaction};
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use failure::{err_msg, Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{Future, IntoFuture, Stream};
 use futures::future::{self, err, ok, Shared};
@@ -23,7 +23,7 @@ use futures_stats::Timed;
 use getbundle_response;
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::{Details, ManifestContent};
-use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
+use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
                       NULL_HASH};
 use metaconfig::PushrebaseParams;
@@ -777,10 +777,23 @@ impl Bundle2Resolver {
                 heads.push(pushrebased_rev);
                 getbundle_response::create_getbundle_response(repo, common, heads)
             })
-            .and_then(|bundle2_builder| {
-                bundle2_builder
-                    .build()
-                    .map(|cursor| Bytes::from(cursor.into_inner()))
+            .and_then(|cg_part_builder| {
+                let compression = None;
+                create_bundle_stream(vec![cg_part_builder], compression)
+                    .collect()
+                    .map(|chunks| {
+                        let mut total_capacity = 0;
+                        for c in chunks.iter() {
+                            total_capacity += c.len();
+                        }
+
+                        // TODO(stash): make push and pushrebase response streamable - T34090105
+                        let mut res = BytesMut::with_capacity(total_capacity);
+                        for c in chunks {
+                            res.extend_from_slice(&c);
+                        }
+                        res.freeze()
+                    })
                     .context("While preparing response")
                     .from_err()
             })

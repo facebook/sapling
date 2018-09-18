@@ -181,9 +181,10 @@ impl RepoClient {
         scuba_logger
     }
 
-    fn create_bundle(&self, args: GetbundleArgs) -> Result<HgCommandRes<Bytes>> {
+    fn create_bundle(&self, args: GetbundleArgs) -> Result<BoxStream<Bytes, Error>> {
         let blobrepo = self.repo.blobrepo();
-        let mut bundle_builder = bundle2_resolver::create_getbundle_response(
+        let mut bundle2_parts = vec![];
+        let cg_part_builder = bundle2_resolver::create_getbundle_response(
             blobrepo.clone(),
             args.common
                 .into_iter()
@@ -194,6 +195,7 @@ impl RepoClient {
                 .map(|head| HgChangesetId::new(head))
                 .collect(),
         )?;
+        bundle2_parts.push(cg_part_builder);
 
         // XXX Note that listkeys is NOT returned as a bundle2 capability -- see comment in
         // bundle2caps() for why.
@@ -205,15 +207,12 @@ impl RepoClient {
                 let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                 (name.to_string(), hash)
             });
-            bundle_builder.add_part(parts::listkey_part("bookmarks", items)?);
+            bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
         }
         // TODO(stash): handle includepattern= and excludepattern=
 
-        Ok(bundle_builder
-            .build()
-            .map(|cursor| Bytes::from(cursor.into_inner()))
-            .from_err()
-            .boxify())
+        let compression = None;
+        Ok(create_bundle_stream(bundle2_parts, compression).boxify())
     }
 
     fn gettreepack_untimed(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
@@ -486,19 +485,19 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getbundle', '*')
-    fn getbundle(&self, args: GetbundleArgs) -> HgCommandRes<Bytes> {
+    fn getbundle(&self, args: GetbundleArgs) -> BoxStream<Bytes, Error> {
         info!(self.logger(), "Getbundle: {:?}", args);
 
         let mut scuba_logger = self.scuba_logger(ops::GETBUNDLE, None);
 
         match self.create_bundle(args) {
-            Ok(res) => res,
-            Err(err) => Err(err).into_future().boxify(),
+            Ok(res) => res.boxify(),
+            Err(err) => stream::once(Err(err)).boxify(),
         }.traced(self.trace(), ops::GETBUNDLE, trace_args!())
             .timed(move |stats, _| {
                 STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
                 scuba_logger
-                    .add_future_stats(&stats)
+                    .add_stream_stats(&stats)
                     .log_with_msg("Command processed", None);
                 Ok(())
             })

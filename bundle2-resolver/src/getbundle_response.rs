@@ -8,14 +8,13 @@ use bytes::Bytes;
 use errors::*;
 use failure::err_msg;
 use std::collections::HashSet;
-use std::io::Cursor;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use futures::{stream, Future, Stream};
 use mercurial::{self, RevlogChangeset};
-use mercurial_bundles::{parts, Bundle2EncodeBuilder};
+use mercurial_bundles::{parts, part_encode::PartEncodeBuilder};
 use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, NULL_CSID};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 
@@ -25,17 +24,10 @@ pub fn create_getbundle_response(
     blobrepo: BlobRepo,
     common: Vec<HgChangesetId>,
     heads: Vec<HgChangesetId>,
-) -> Result<Bundle2EncodeBuilder<Cursor<Vec<u8>>>> {
+) -> Result<PartEncodeBuilder> {
     if common.is_empty() {
         return Err(err_msg("no 'common' heads specified. Pull will be very inefficient. Please use hg clone instead"));
     }
-
-    let writer = Cursor::new(Vec::new());
-    let mut bundle = Bundle2EncodeBuilder::new(writer);
-    // Mercurial currently hangs while trying to read compressed bundles over the wire:
-    // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-    // TODO: possibly enable compression support once this is fixed.
-    bundle.set_compressor_type(None);
 
     let blobrepo = Arc::new(blobrepo.clone());
 
@@ -117,8 +109,7 @@ pub fn create_getbundle_response(
             ))
         });
 
-    bundle.add_part(parts::changegroup_part(changelogentries)?);
-    Ok(bundle)
+    parts::changegroup_part(changelogentries)
 }
 
 fn hg_to_bonsai_stream(
