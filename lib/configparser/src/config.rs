@@ -496,22 +496,17 @@ impl<S: Into<Bytes>> From<S> for Options {
     }
 }
 
-/// Test if a binary char is a space.
-#[inline]
-fn is_space(byte: u8) -> bool {
-    b" \t\r\n".contains(&byte)
-}
-
-/// Remove space characters from both ends. `start` position is inclusive, `end` is exclusive.
+/// Remove space characters from both ends. Remove newline characters from the end.
+/// `start` position is inclusive, `end` is exclusive.
 /// Return the stripped `start` and `end` offsets.
 #[inline]
 fn strip_offsets(buf: &Bytes, start: usize, end: usize) -> (usize, usize) {
     let mut start = start;
     let mut end = end;
-    while start < end && is_space(buf[start]) {
+    while start < end && b" \t".contains(&buf[start]) {
         start += 1
     }
-    while start < end && is_space(buf[end - 1]) {
+    while start < end && b" \t\r\n".contains(&buf[end - 1]) {
         end -= 1
     }
     (start, end)
@@ -656,7 +651,7 @@ pub(crate) mod tests {
              # space in config name\n\
              y y \t =2\n\
              # space in multi-line config value, with trailing spaces\n\
-             z=\t 3 3 \n  \n  4  \n\t5  \n  \n\
+             z=\t \n 3 3 \n  \n  4  \n\t5  \n  \n\
              # empty values\n\
              e1 =\n\
              e2 = \n\
@@ -674,7 +669,7 @@ pub(crate) mod tests {
 
         assert_eq!(cfg.get("a", "x"), Some("1".into()));
         assert_eq!(cfg.get("a", "y y"), Some("2".into()));
-        assert_eq!(cfg.get("a", "z"), Some("3 3\n\n4\n5".into()));
+        assert_eq!(cfg.get("a", "z"), Some("\n3 3\n\n4\n5".into()));
         assert_eq!(cfg.get("a", "e1"), Some("".into()));
         assert_eq!(cfg.get("a", "e2"), Some("".into()));
         assert_eq!(cfg.get("a", "e3"), Some("".into()));
