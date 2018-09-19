@@ -14,7 +14,6 @@ import inspect
 import logging
 import os
 import pathlib
-import shutil
 import tempfile
 import time
 import types
@@ -28,7 +27,7 @@ from hypothesis import HealthCheck, settings
 from hypothesis.configuration import hypothesis_home_dir, set_hypothesis_home_dir
 from hypothesis.internal.detection import is_hypothesis_test
 
-from . import edenclient, gitrepo, hgrepo, repobase
+from . import edenclient, gitrepo, hgrepo, repobase, util
 
 
 def is_sandcastle() -> bool:
@@ -65,7 +64,7 @@ FILENAME_STRATEGY = st.text(
 # during hypothesis example runs.  We want to avoid putting this state in
 # the repo.
 set_hypothesis_home_dir(tempfile.mkdtemp(prefix="eden_hypothesis."))
-atexit.register(shutil.rmtree, hypothesis_home_dir())
+atexit.register(util.cleanup_tmp_dir, pathlib.Path(hypothesis_home_dir()))
 
 if not edenclient.can_run_eden():
     # This is avoiding a reporting noise issue in our CI that files
@@ -74,41 +73,6 @@ if not edenclient.can_run_eden():
     TestParent = typing.cast(Type[unittest.TestCase], object)
 else:
     TestParent = unittest.TestCase
-
-
-def _cleanup_tmp_dir(tmp_dir: str) -> None:
-    # "eden clone" makes the original mount point directory read-only.
-    # Attempting to delete the files inside it will fail unless we make the directory
-    # writable first.
-    #
-    # If we encounter an EPERM or EACCESS error removing a file try making its parent
-    # directory writable and then retry the removal.
-    def _remove_readonly(
-        func: Callable[[str], Any],
-        path: str,
-        exc_info: Tuple[Type, BaseException, types.TracebackType],
-    ) -> None:
-        _ex_type, ex, _traceback = exc_info
-        if path == tmp_dir:
-            logging.warning(
-                f"failed to remove temporary test directory {tmp_dir}: {ex}"
-            )
-            return
-        if not isinstance(ex, PermissionError):
-            logging.warning(f"error removing file in temporary directory {path}: {ex}")
-            return
-
-        try:
-            parent_dir = os.path.dirname(path)
-            os.chmod(parent_dir, 0o755)
-            # func() is the function that failed.
-            # This is usually os.unlink() or os.rmdir().
-            func(path)
-        except OSError as ex:
-            logging.warning(f"error removing file in temporary directory {path}: {ex}")
-            return
-
-    shutil.rmtree(tmp_dir, onerror=_remove_readonly)
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
@@ -178,7 +142,7 @@ class EdenTestCase(TestParent):
             if os.environ.get("EDEN_TEST_NO_CLEANUP"):
                 print("Leaving behind eden test directory %r" % self.tmp_dir)
             else:
-                _cleanup_tmp_dir(self.tmp_dir)
+                util.cleanup_tmp_dir(pathlib.Path(self.tmp_dir))
 
         self.tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
         self.addCleanup(cleanup_tmp_dir)

@@ -7,8 +7,12 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import logging
 import os
-from typing import Callable, List, Optional
+import shutil
+import types
+from pathlib import Path
+from typing import Any, Callable, List, Optional, Tuple, Type
 
 
 def gen_tree(
@@ -41,3 +45,43 @@ def gen_tree(
             gen_tree(subdir, fanouts[1:], leaf_function, internal_function)
         else:
             leaf_function(subdir)
+
+
+def cleanup_tmp_dir(tmp_dir: Path) -> None:
+    """Clean up a temporary directory.
+
+    This is similar to shutil.rmtree() but also handles removing read-only files and
+    directories.  This function changes the permissions on files and directories if this
+    is necessary to remove them.
+
+    This is necessary for removing Eden checkout directories since "eden clone" makes
+    the original mount point directory read-only.
+    """
+    # If we encounter an EPERM or EACCESS error removing a file try making its parent
+    # directory writable and then retry the removal.
+    def _remove_readonly(
+        func: Callable[[str], Any],
+        path: str,
+        exc_info: Tuple[Type, BaseException, types.TracebackType],
+    ) -> None:
+        _ex_type, ex, _traceback = exc_info
+        if path == tmp_dir:
+            logging.warning(
+                f"failed to remove temporary test directory {tmp_dir}: {ex}"
+            )
+            return
+        if not isinstance(ex, PermissionError):
+            logging.warning(f"error removing file in temporary directory {path}: {ex}")
+            return
+
+        try:
+            parent_dir = os.path.dirname(path)
+            os.chmod(parent_dir, 0o755)
+            # func() is the function that failed.
+            # This is usually os.unlink() or os.rmdir().
+            func(path)
+        except OSError as ex:
+            logging.warning(f"error removing file in temporary directory {path}: {ex}")
+            return
+
+    shutil.rmtree(tmp_dir, onerror=_remove_readonly)
