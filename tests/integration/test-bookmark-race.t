@@ -25,10 +25,15 @@ setup master bookmarks
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg repo
 
+start mononoke
+
+  $ mononoke
+  $ wait_for_mononoke $TESTTMP/repo
+
 setup two repos: one will be used to pull into, and one will be used to
 update master_bookmark concurrently.
 
-  $ hginit_treemanifest repo-pull
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull
 
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push
   $ cd repo-push
@@ -38,11 +43,14 @@ update master_bookmark concurrently.
   $ echo "b file content" > b
   $ hg add b
   $ hg ci -mb
-
-start mononoke
-
-  $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
+  $ hgmn push ssh://user@dummy/repo -r .
+  pushing to ssh://user@dummy/repo
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  searching for changes
+  updating bookmark master_bookmark
+  $ echo "c file content" > c
+  $ hg add c
+  $ hg ci -mc
 
   $ cd $TESTTMP/repo-pull
 
@@ -70,35 +78,13 @@ configure an extension so that a push happens right after pulldiscovery
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   *** starting discovery
+  searching for changes
   *** running push
   pushing to ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
   updating bookmark master_bookmark
   *** push complete
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
-  adding remote bookmark master_bookmark
-  new changesets 0e7ec5675652
-  (run 'hg update' to get a working copy)
-
-  $ hg bookmarks
-     master_bookmark           0:0e7ec5675652
-
-pull again to ensure the new version makes it into repo-pull
-
-  $ hgmn pull
-  backfilling missing flat manifests
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 0 files
-  pulling from ssh://user@dummy/repo
-  searching for changes
   adding changesets
   adding manifests
   adding file changes
@@ -106,5 +92,22 @@ pull again to ensure the new version makes it into repo-pull
   updating bookmark master_bookmark
   new changesets e2750f699c89
   (run 'hg update' to get a working copy)
+
   $ hg bookmarks
      master_bookmark           1:e2750f699c89
+
+pull again to ensure the new version makes it into repo-pull
+
+  $ hgmn pull
+  pulling from ssh://user@dummy/repo
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  updating bookmark master_bookmark
+  new changesets e5c8b04bf9a0
+  (run 'hg update' to get a working copy)
+  $ hg bookmarks
+     master_bookmark           2:e5c8b04bf9a0
