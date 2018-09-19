@@ -527,6 +527,7 @@ fn parse_with_params(
                 ))?,
             })))
         | command!("getfiles", Getfiles, parse_params, {})
+        | call!(parse_command, "stream_out_shallow", parse_params, 0+1, |_kv| Ok(StreamOutShallow))
     )
 }
 
@@ -1403,6 +1404,16 @@ mod test_parse {
                 },
             ]),
         );
+    }
+
+    #[test]
+    fn test_parse_stream_out_shallow() {
+        let inp = "stream_out_shallow\n\
+                   * 1\n\
+                   noflatmanifest 4\n\
+                   True";
+
+        test_parse(inp, Request::Single(SingleRequest::StreamOutShallow));
     }
 
 }

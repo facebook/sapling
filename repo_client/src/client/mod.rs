@@ -90,6 +90,9 @@ fn wireprotocaps() -> Vec<String> {
         "gettreepack".to_string(),
         "remotefilelog".to_string(),
         "pushkey".to_string(),
+        "stream-preferred".to_string(),
+        "stream_option".to_string(),
+        "streamreqs=generaldelta,lz4revlog,revlogv1".to_string(),
     ]
 }
 
@@ -649,6 +652,14 @@ impl HgCommands for RepoClient {
             })
             .buffered(getfiles_buffer_size)
             .boxify()
+    }
+
+    // @wireprotocommand('stream_out_shallow')
+    fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
+        info!(self.logger(), "stream_out_shallow");
+        // TODO(t34058163): actually send a real streaming response, not an empty one
+        let empty = Bytes::from_static(b"0\n0 0\n");
+        stream::once(Ok(empty)).boxify()
     }
 }
 

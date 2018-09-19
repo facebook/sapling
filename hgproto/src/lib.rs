@@ -106,6 +106,7 @@ pub enum SingleRequest {
     },
     Gettreepack(GettreepackArgs),
     Getfiles,
+    StreamOutShallow,
 }
 
 impl SingleRequest {
@@ -124,6 +125,7 @@ impl SingleRequest {
             &SingleRequest::Unbundle { .. } => "unbundle",
             &SingleRequest::Gettreepack(_) => "gettreepack",
             &SingleRequest::Getfiles => "getfiles",
+            &SingleRequest::StreamOutShallow => "stream_out_shallow",
         }
     }
 }
@@ -201,6 +203,7 @@ pub enum SingleResponse {
     Unbundle(Bytes),
     Gettreepack(Bytes),
     Getfiles(Bytes),
+    StreamOutShallow(Bytes),
 }
 
 impl SingleResponse {
@@ -209,7 +212,8 @@ impl SingleResponse {
         use SingleResponse::*;
 
         match self {
-            &Getbundle(_) | &ReadyForStream | &Unbundle(_) | &Gettreepack(_) => true,
+            &Getbundle(_) | &ReadyForStream | &Unbundle(_) | &Gettreepack(_)
+            | &StreamOutShallow(_) => true,
             _ => false,
         }
     }

@@ -196,3 +196,19 @@ to create a fileblob bookmark
 #  adding remote bookmark test-bookmark
 #  $ hg bookmarks
 #     test-bookmark             0:3903775176ed
+
+Do a streaming clone of the repo
+  $ hgmn clone --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true --config extensions.lz4revlog=
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  streaming all changes
+  0 files to transfer, * bytes of data (glob)
+  transferred * bytes in * seconds (* bytes/sec) (glob)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 10 changesets with 0 changes to 0 files (+1 heads)
+  new changesets * (glob)
+  updating to branch default
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved

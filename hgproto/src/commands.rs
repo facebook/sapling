@@ -214,6 +214,14 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     instream,
                 )
             }
+            SingleRequest::StreamOutShallow => (
+                hgcmds
+                    .stream_out_shallow()
+                    .map(SingleResponse::StreamOutShallow)
+                    .map_err(self::Error::into)
+                    .boxify(),
+                ok(instream).boxify(),
+            ),
         }
     }
 
@@ -520,6 +528,11 @@ pub trait HgCommands {
     // @wireprotocommand('getfiles', 'files*')
     fn getfiles(&self, _params: BoxStream<(HgNodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
         once(Err(ErrorKind::Unimplemented("getfiles".into()).into())).boxify()
+    }
+
+    // @wireprotocommand('stream_out_shallow', '*')
+    fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
+        once(Err(ErrorKind::Unimplemented("stream_out_shallow".into()).into())).boxify()
     }
 }
 

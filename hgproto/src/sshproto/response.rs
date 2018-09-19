@@ -138,6 +138,8 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
             Bytes::new()
         }
 
+        StreamOutShallow(res) => res,
+
         r => panic!("Response for {:?} unimplemented", r),
     }
 }
