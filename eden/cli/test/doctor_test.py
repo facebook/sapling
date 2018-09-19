@@ -19,7 +19,7 @@ import typing
 import unittest
 from collections import OrderedDict
 from textwrap import dedent
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Set, Tuple, Union
 from unittest.mock import call, patch
 
 import eden.cli.doctor as doctor
@@ -175,8 +175,8 @@ Checking {edenfs_path1}
 mercurial's parent commit for {edenfs_path1} is {edenfs_path1_dirstate_parent},
 but Eden's internal hash in its SNAPSHOT file is {edenfs_path1_snapshot}.
 
-Run "hg -R {edenfs_path1} reset --keep {edenfs_path1_snapshot}"
-to bring the mercurial state back in sync.
+Fixing Eden to point to parent commit {edenfs_path1_dirstate_parent}...\
+<green>fixed<reset>
 
 Checking {edenfs_path2}
 <yellow>- Found problem:<reset>
@@ -206,8 +206,8 @@ The most common cause of this is if you previously tried to manually remove this
 mount with "rm -rf".  You should instead remove it using "eden rm {edenfs_path3}",
 and can re-clone the checkout afterwards if desired.
 
-<yellow>Successfully fixed 1 problem.<reset>
-<yellow>3 issues require manual attention.<reset>
+<yellow>Successfully fixed 2 problems.<reset>
+<yellow>2 issues require manual attention.<reset>
 Ask in the Eden Users group if you need help fixing issues with Eden:
 https://fb.facebook.com/groups/eden.users/
 """,
@@ -568,16 +568,20 @@ command palette in Atom.
         return fixer, out.getvalue()
 
     def test_snapshot_and_dirstate_file_match(self):
-        dirstate_hash = b"\x12\x34\x56\x78" * 5
+        dirstate_hash_hex = "12345678" * 5
         snapshot_hex = "12345678" * 5
-        _mount_path, fixer, out = self._test_hash_check(dirstate_hash, snapshot_hex)
+        _instance, _mount_path, fixer, out = self._test_hash_check(
+            dirstate_hash_hex, snapshot_hex
+        )
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
     def test_snapshot_and_dirstate_file_differ(self):
-        dirstate_hash = b"\x12\x00\x00\x00" * 5
+        dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
-        mount_path, fixer, out = self._test_hash_check(dirstate_hash, snapshot_hex)
+        instance, mount_path, fixer, out = self._test_hash_check(
+            dirstate_hash_hex, snapshot_hex
+        )
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
@@ -585,28 +589,38 @@ mercurial's parent commit for {mount_path} is 1200000012000000120000001200000012
 but Eden's internal hash in its SNAPSHOT file is \
 1234567812345678123456781234567812345678.
 
-Run "hg -R {mount_path} reset --keep {snapshot_hex}"
-to bring the mercurial state back in sync.
+Fixing Eden to point to parent commit 1200000012000000120000001200000012000000...\
+<green>fixed<reset>
 
 """,
             out,
         )
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+        # Make sure resetParentCommits() was called once with the expected arguments
+        self.assertEqual(
+            instance.get_thrift_client().set_parents_calls,
+            [
+                ResetParentsCommitsArgs(
+                    mount=mount_path.encode("utf-8"),
+                    parent1=b"\x12\x00\x00\x00" * 5,
+                    parent2=None,
+                )
+            ],
+        )
 
     def _test_hash_check(
-        self, dirstate_hash: bytes, snapshot_hex: str
-    ) -> Tuple[str, doctor.ProblemFixer, str]:
-        mount_path = self._create_tmp_dir()
-        hg_dir = os.path.join(mount_path, ".hg")
-        os.mkdir(hg_dir)
-        dirstate = os.path.join(hg_dir, "dirstate")
-        parents = (dirstate_hash, b"\x00" * 20)
-        with open(dirstate, "wb") as f:
-            eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
+        self, dirstate_hash_hex: str, snapshot_hex: str
+    ) -> Tuple["FakeEdenInstance", str, doctor.ProblemFixer, str]:
+        instance = FakeEdenInstance(self._create_tmp_dir())
+        mount_path = instance.create_test_mount(
+            "path1", snapshot=snapshot_hex, dirstate_parent=dirstate_hash_hex
+        )
 
-        fixer, out = self.create_fixer(dry_run=True)
-        doctor.check_snapshot_dirstate_consistency(fixer, mount_path, snapshot_hex)
-        return mount_path, fixer, out.getvalue()
+        fixer, out = self.create_fixer(dry_run=False)
+        doctor.check_snapshot_dirstate_consistency(
+            fixer, typing.cast(EdenInstance, instance), mount_path, snapshot_hex
+        )
+        return instance, mount_path, fixer, out.getvalue()
 
     @patch("eden.cli.version.get_installed_eden_rpm_version")
     def test_edenfs_when_installed_and_running_match(self, mock_gierv):
@@ -1790,9 +1804,16 @@ def _create_watchman_subscription(
     return {"subscribers": subscribers}
 
 
+class ResetParentsCommitsArgs(NamedTuple):
+    mount: bytes
+    parent1: bytes
+    parent2: Optional[bytes]
+
+
 class FakeClient:
     def __init__(self):
         self._mounts = []
+        self.set_parents_calls: List[ResetParentsCommitsArgs] = []
 
     def __enter__(self):
         return self
@@ -1802,6 +1823,15 @@ class FakeClient:
 
     def listMounts(self):
         return self._mounts
+
+    def resetParentCommits(
+        self, mountPoint: bytes, parents: eden_ttypes.WorkingDirectoryParents
+    ):
+        self.set_parents_calls.append(
+            ResetParentsCommitsArgs(
+                mount=mountPoint, parent1=parents.parent1, parent2=parents.parent2
+            )
+        )
 
 
 class FakeEdenInstance:

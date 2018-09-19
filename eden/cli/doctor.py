@@ -20,9 +20,10 @@ import subprocess
 import typing
 from enum import IntEnum
 from textwrap import dedent
-from typing import Any, Dict, List, Optional, Set, TextIO
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import eden.dirstate
+import facebook.eden.ttypes as eden_ttypes
 
 from . import config as config_mod, filesystem, mtab, ui, version
 from .config import EdenInstance
@@ -281,7 +282,9 @@ def run_normal_checks(
 
         if client_info["scm_type"] == "hg":
             snapshot_hex = client_info["snapshot"]
-            check_snapshot_dirstate_consistency(tracker, mount_path, snapshot_hex)
+            check_snapshot_dirstate_consistency(
+                tracker, instance, mount_path, snapshot_hex
+            )
 
 
 def printable_bytes(b: bytes) -> str:
@@ -745,7 +748,7 @@ def check_nuclide_watchman_subscriptions(
 
 
 def check_snapshot_dirstate_consistency(
-    tracker: ProblemTracker, path: str, snapshot_hex: str
+    tracker: ProblemTracker, instance: EdenInstance, path: str, snapshot_hex: str
 ) -> None:
     dirstate = os.path.join(path, ".hg", "dirstate")
     try:
@@ -758,29 +761,48 @@ def check_snapshot_dirstate_consistency(
             tracker.add_problem(Problem(f"Unable to access {path}/.hg/dirstate: {ex}"))
         return
 
-    p1 = parents[0]
-    p1_hex = binascii.hexlify(p1).decode("utf-8")
-
+    p1_hex = binascii.hexlify(parents[0]).decode("utf-8")
     if snapshot_hex != p1_hex:
-        tracker.add_problem(SnapshotMismatchError(path, snapshot_hex, p1_hex))
+        tracker.add_problem(
+            SnapshotMismatchError(instance, path, snapshot_hex, parents)
+        )
 
 
-# TODO: we should perhaps turn this into a FixableProblem that automatically runs
-# `hg reset`
-class SnapshotMismatchError(Problem):
-    def __init__(self, path: str, snapshot_hex: str, p1_hex: str) -> None:
-        description = (
-            f"mercurial's parent commit for {path} is {p1_hex},\n"
-            f"but Eden's internal hash in its SNAPSHOT file is {snapshot_hex}.\n"
-        )
-        remediation = (
-            f'Run "hg -R {path} reset --keep {snapshot_hex}"\n'
-            "to bring the mercurial state back in sync."
-        )
-        super().__init__(description, remediation)
+class SnapshotMismatchError(FixableProblem):
+    def __init__(
+        self,
+        instance: EdenInstance,
+        path: str,
+        snapshot_hex: str,
+        hg_parents: Tuple[bytes, bytes],
+    ) -> None:
+        self._instance = instance
         self._path = path
         self._snapshot_hex = snapshot_hex
-        self._p1_hex = p1_hex
+        self._hg_parents = hg_parents
+
+    def p1_hex(self) -> str:
+        return binascii.hexlify(self._hg_parents[0]).decode("utf-8")
+
+    def description(self) -> str:
+        return (
+            f"mercurial's parent commit for {self._path} is {self.p1_hex()},\n"
+            f"but Eden's internal hash in its SNAPSHOT file is {self._snapshot_hex}.\n"
+        )
+
+    def dry_run_msg(self) -> str:
+        return f"Would fix Eden to point to parent commit {self.p1_hex()}"
+
+    def start_msg(self) -> str:
+        return f"Fixing Eden to point to parent commit {self.p1_hex()}"
+
+    def perform_fix(self) -> None:
+        parents = eden_ttypes.WorkingDirectoryParents(parent1=self._hg_parents[0])
+        if self._hg_parents[1] != (20 * b"\0"):
+            parents.parent2 = self._hg_parents[1]
+
+        with self._instance.get_thrift_client() as client:
+            client.resetParentCommits(self._path.encode("utf-8"), parents)
 
 
 class MissingHgDirectory(Problem):
