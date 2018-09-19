@@ -192,8 +192,13 @@ def reposetup(ui, repo):
     class commitcloudrepo(repo.__class__):
         def transaction(self, *args, **kwargs):
             def finalize(tr):
-                if util.safehasattr(tr, "_commitcloudskippendingobsmarkers"):
-                    return
+                for obj in tr, self:
+                    if (
+                        util.safehasattr(obj, "_commitcloudskippendingobsmarkers")
+                        and obj._commitcloudskippendingobsmarkers
+                    ):
+                        return
+
                 markers = tr.changes["obsmarkers"]
                 if markers:
                     commitcloudutil.addpendingobsmarkers(self, markers)

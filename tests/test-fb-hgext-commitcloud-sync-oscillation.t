@@ -154,72 +154,51 @@ Connect to commit cloud
   added 2 changesets with 2 changes to 3 files (+1 heads)
   new changesets 64b4d9634423:878302dcadc7
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  backing up stack rooted at 04b96a2be922
-  remote: pushing 2 commits:
-  remote:     04b96a2be922  A
-  remote:     14bec91a4bc5  B
   #commitcloud commits synchronized
 
-BUG: Syncing in each client oscillates the set of commits
+Syncing in the two repos causes the commits to be revived, and the cloud
+workspace does not oscillate between the two views.
+
   $ cd ..
   $ hg -R client1 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 04b96a2be922
-  remote: pushing 5 commits:
-  remote:     04b96a2be922  A
-  remote:     14bec91a4bc5  B
-  remote:     449486ddff7a  D
-  remote:     65299708466c  C
-  remote:     27ad02806080  E
   #commitcloud commits synchronized
   $ python dumpcommitcloudmetadata.py
-  version: 4
+  version: 2
   heads:
       27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
   $ hg -R client2 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 04b96a2be922
-  remote: pushing 2 commits:
-  remote:     04b96a2be922  A
-  remote:     14bec91a4bc5  B
   #commitcloud commits synchronized
   $ python dumpcommitcloudmetadata.py
-  version: 5
+  version: 2
   heads:
-      14bec91a4bc5aae750c73e42be20b4b296e2d121
+      27ad028060800678c2de95fea2e826bbd4bf2c21
+      65299708466caa8f13c05d82e76d611c183defee
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
   $ hg -R client1 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 04b96a2be922
-  remote: pushing 5 commits:
-  remote:     04b96a2be922  A
-  remote:     14bec91a4bc5  B
-  remote:     449486ddff7a  D
-  remote:     65299708466c  C
-  remote:     27ad02806080  E
   #commitcloud commits synchronized
   $ python dumpcommitcloudmetadata.py
-  version: 6
+  version: 2
   heads:
       27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
   $ hg -R client2 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 04b96a2be922
-  remote: pushing 2 commits:
-  remote:     04b96a2be922  A
-  remote:     14bec91a4bc5  B
   #commitcloud commits synchronized
   $ python dumpcommitcloudmetadata.py
-  version: 7
+  version: 2
   heads:
-      14bec91a4bc5aae750c73e42be20b4b296e2d121
+      27ad028060800678c2de95fea2e826bbd4bf2c21
+      65299708466caa8f13c05d82e76d611c183defee
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
 
-BUG: Smartlogs do not match
+Smartlogs match
+
   $ cd client1
   $ tglogp
   o  7: 878302dcadc7 draft 'G'
@@ -244,6 +223,12 @@ BUG: Smartlogs do not match
   |
   o  6: 64b4d9634423 draft 'F'
   |
+  | o  5: 27ad02806080 draft 'E'
+  | |
+  | | o  4: 65299708466c draft 'C'
+  | | |
+  | o |  3: 449486ddff7a draft 'D'
+  |/ /
   | o  2: 14bec91a4bc5 draft 'B'
   |/
   o  1: 04b96a2be922 draft 'A'

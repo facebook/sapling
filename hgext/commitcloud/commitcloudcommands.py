@@ -23,10 +23,10 @@ from mercurial import (
     hintutil,
     lock as lockmod,
     node as nodemod,
+    obsolete,
     obsutil,
     progress,
     registrar,
-    revsetlang,
     scmutil,
     util,
 )
@@ -520,6 +520,19 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
         localheads = _getheads(repo)
         localbookmarks = _getbookmarks(repo)
         obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
+
+        if not obsmarkers:
+            # If the heads have changed, and we don't have any obsmakers to
+            # send, then it's possible we have some obsoleted versions of
+            # commits that are visible in the cloud workspace that need to
+            # be revived.
+            cloudvisibleonly = repo.unfiltered().set(
+                "draft() & ::%ls & hidden()", lastsyncstate.heads
+            )
+            repo._commitcloudskippendingobsmarkers = True
+            obsolete.revive(cloudvisibleonly)
+            repo._commitcloudskippendingobsmarkers = False
+            localheads = _getheads(repo)
 
         if revspec:
             revs = scmutil.revrange(repo, revspec)
