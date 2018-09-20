@@ -22,6 +22,11 @@ template.
     # Allow new commits through only pushrebase.
     onlypushrebase = True
 
+    # In this configuration, `globalrevs` extension can only be used to query
+    # strictly increasing global revision numbers already embedded in the
+    # commits. In particular, `globalrevs` won't embed any data in the commits.
+    readonly = True
+
     # Repository name to be used as key for storing global revisions data in the
     # database. If not specified, name specified through the configuration
     # `hqsql.reponame` will be used.
@@ -48,6 +53,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("format", "useglobalrevs", default=False)
 configitem("globalrevs", "onlypushrebase", default=True)
+configitem("globalrevs", "readonly", default=False)
 configitem("globalrevs", "reponame", default=None)
 
 cmdtable = {}
@@ -102,10 +108,10 @@ def uisetup(ui):
         extensions.afterloaded("hgsubversion", _hgsubversionwrapper)
 
     # We only wrap extensions for embedding strictly increasing global revision
-    # number in commits if the repository has `hgsql` enabled and configured to
-    # write commit data to the database. Therefore, do not wrap any extensions
-    # if that is not the case.
-    if not ishgsqlbypassed(ui):
+    # number in commits if the repository has `hgsql` enabled and it is also
+    # configured to write data to the commits. Therefore, do not wrap any
+    # extensions if that is not the case.
+    if not ui.configbool("globalrevs", "readonly") and not ishgsqlbypassed(ui):
         _wrapextensions()
 
 

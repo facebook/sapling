@@ -587,11 +587,27 @@ global revision number 4999 which should not exist as the counting starts from
   0000000000000000000000000000000000000000
 
 
+- Test globalrevs extension with read only configuration on the first server.
+
+- Configure the first server to have read only mode for globalrevs extension.
+
+  $ cd ../master
+  $ cp .hg/hgrc.bak .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > [globalrevs]
+  > readonly = True
+  > EOF
+
+
+- Queries not involving writing data to commits should still work.
+
+  $ testlookup
+
+
 Test bypassing hgsql extension on the first server.
 
 - Configure the first server to bypass hgsql extension.
 
-  $ cd ../master
   $ mv .hg/hgrc.bak .hg/hgrc
   $ cat >> .hg/hgrc <<EOF
   > [hgsql]
