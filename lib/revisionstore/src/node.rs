@@ -1,5 +1,6 @@
 // Copyright Facebook, Inc. 2018
 use error::Result;
+use std::fmt::{self, Display};
 
 #[cfg(test)]
 use rand::RngCore;
@@ -9,6 +10,7 @@ use rand::RngCore;
 struct NodeError(String);
 
 const NODE_LEN: usize = 20;
+const HEX_CHARS: &[u8] = b"0123456789abcdef";
 
 /// A 20-byte identifier, often a hash. Nodes are used to uniquely identify
 /// commits, file versions, and many other things.
@@ -42,6 +44,34 @@ impl Node {
         Ok(Node(fixed_bytes))
     }
 
+    // Taken from Mononoke
+    pub fn from_str(s: &str) -> Result<Self> {
+        if s.len() != 40 {
+            return Err(NodeError(format!("invalid string length {:?}", s.len())).into());
+        }
+
+        let mut ret = Node([0u8; 20]);
+
+        for idx in 0..ret.0.len() {
+            ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
+                Ok(v) => v,
+                Err(_) => return Err(NodeError(format!("bad digit")).into()),
+            }
+        }
+
+        Ok(ret)
+    }
+
+    pub fn to_hex(&self) -> String {
+        let mut v = Vec::with_capacity(40);
+        for &byte in self.as_ref() {
+            v.push(HEX_CHARS[(byte >> 4) as usize]);
+            v.push(HEX_CHARS[(byte & 0xf) as usize]);
+        }
+
+        unsafe { String::from_utf8_unchecked(v) }
+    }
+
     #[cfg(test)]
     pub fn random(rng: &mut RngCore) -> Self {
         let mut bytes = [0; 20];
@@ -52,6 +82,12 @@ impl Node {
                 return node;
             }
         }
+    }
+}
+
+impl Display for Node {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.to_hex(), fmt)
     }
 }
 
