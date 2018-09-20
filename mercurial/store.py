@@ -124,6 +124,20 @@ def _buildencodefun(forfncache):
     '/'
     >>> dec(b'/')
     '/'
+
+    >>> enc(b'X' * 253 + b'_')
+    'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX__'
+    >>> enc(b'X' * 254 + b'_')
+    'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:'
+    >>> path = '/'.join([b'Z', b'X_' * 85, b'Y_' * 86])
+    >>> enc(path)
+    '_z/X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__/Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:'
+    >>> dec(enc(path)) == path
+    True
+    >>> dec(enc(b'_' * 128)) == '_' * 128
+    True
+    >>> dec(enc(b'_' * 127)) == '_' * 127
+    True
     """
     e = "_"
     xchr = pycompat.bytechr
@@ -149,10 +163,17 @@ def _buildencodefun(forfncache):
             assert c not in dmap
             dmap[c] = c
 
+        cmapverylong = cmaplong.copy()
+        cmapverylong["_"] = ":"
+        assert ":" not in dmap
+        dmap[":"] = "_"
+
         def encodecomp(comp):
             encoded = "".join(cmap[c] for c in comp)
             if len(encoded) > 255:
                 encoded = "".join(cmaplong[c] for c in comp)
+            if len(encoded) > 255:
+                encoded = "".join(cmapverylong[c] for c in comp)
             return encoded
 
         def encodemaybelong(path):
