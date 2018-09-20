@@ -717,7 +717,7 @@ impl CaseConflictTrie {
 
     /// Returns `true` if element was added successfully, or `false`
     /// if trie already contains case conflicting entry.
-    fn add<P: IntoIterator<Item = MPathElement>>(&mut self, path: P) -> bool {
+    fn add<'p, P: IntoIterator<Item = &'p MPathElement>>(&mut self, path: P) -> bool {
         let mut iter = path.into_iter();
         match iter.next() {
             None => true,
@@ -736,7 +736,7 @@ impl CaseConflictTrie {
                 }
 
                 self.children
-                    .entry(element)
+                    .entry(element.clone())
                     .or_insert(CaseConflictTrie::new())
                     .add(iter)
             }
@@ -744,22 +744,30 @@ impl CaseConflictTrie {
     }
 }
 
-impl FromIterator<MPath> for CaseConflictTrie {
-    fn from_iter<I: IntoIterator<Item = MPath>>(iter: I) -> Self {
+impl<P> FromIterator<P> for CaseConflictTrie
+where
+    P: ::std::borrow::Borrow<MPath>,
+{
+    fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
         let mut trie = CaseConflictTrie::new();
         for mpath in iter {
-            trie.add(mpath);
+            trie.add(mpath.borrow());
         }
         trie
     }
 }
 
 /// Returns first path that would introduce a case-conflict, if any
-pub fn check_case_conflicts<I: IntoIterator<Item = MPath>>(iter: I) -> Option<MPath> {
+pub fn check_case_conflicts<P, I>(iter: I) -> Option<MPath>
+where
+    P: ::std::borrow::Borrow<MPath>,
+    I: IntoIterator<Item = P>,
+{
     let mut trie = CaseConflictTrie::new();
     for path in iter {
-        if !trie.add(path.clone()) {
-            return Some(path);
+        let path = path.borrow();
+        if !trie.add(path) {
+            return Some(path.clone());
         }
     }
     None
@@ -949,18 +957,23 @@ mod test {
             .map(|p| MPath::new(p).unwrap())
             .collect();
 
-        assert!(trie.add(MPath::new("a/b/c").unwrap()));
-        assert!(trie.add(MPath::new("a/B/d").unwrap()) == false);
-        assert!(trie.add(MPath::new("a/b/C").unwrap()) == false);
+        assert!(trie.add(&MPath::new("a/b/c").unwrap()));
+        assert!(trie.add(&MPath::new("a/B/d").unwrap()) == false);
+        assert!(trie.add(&MPath::new("a/b/C").unwrap()) == false);
 
+        let paths = vec![
+            MPath::new("a/b/c").unwrap(),
+            MPath::new("a/b/c").unwrap(), // not a case conflict
+            MPath::new("a/d").unwrap(),
+            MPath::new("a/B/d").unwrap(),
+            MPath::new("a/c").unwrap(),
+        ];
         assert_eq!(
-            check_case_conflicts(vec![
-                MPath::new("a/b/c").unwrap(),
-                MPath::new("a/b/c").unwrap(), // not a case conflict
-                MPath::new("a/d").unwrap(),
-                MPath::new("a/B/d").unwrap(),
-                MPath::new("a/c").unwrap(),
-            ]),
+            check_case_conflicts(paths.iter()), // works from &MPath
+            Some(MPath::new("a/B/d").unwrap()),
+        );
+        assert_eq!(
+            check_case_conflicts(paths.into_iter()), // works from MPath
             Some(MPath::new("a/B/d").unwrap()),
         );
     }

@@ -48,7 +48,7 @@ use futures::future::{err, join_all, loop_fn, ok, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, MPath};
 use metaconfig::PushrebaseParams;
-use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime, FileChange};
+use mononoke_types::{check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange};
 
 use revset::RangeNodeStream;
 use std::cmp::Ordering;
@@ -59,6 +59,7 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub enum PushrebaseError {
     Conflicts(Vec<PushrebaseConflict>),
+    PotentialCaseConflict(MPath),
     RebaseOverMerge,
     RootTooFarBehind,
     Error(Error),
@@ -140,7 +141,12 @@ fn rebase_in_loop(
                     root.clone(),
                     bookmark_val,
                     /* reject_merges */ true,
-                ).and_then(|server_cf| intersect_changed_files(server_cf, client_cf))
+                ).and_then(|server_cf| {
+                    match check_case_conflicts(server_cf.iter().chain(&client_cf)) {
+                        Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
+                        None => intersect_changed_files(server_cf, client_cf),
+                    }
+                })
                     .and_then(move |()| {
                         do_rebase(repo, config, root, head, bookmark_val, onto_bookmark).map(
                             move |update_res| match update_res {
@@ -576,9 +582,9 @@ mod tests {
 
     use super::*;
     use async_unit;
-    use fixtures::linear;
-    use tests_utils::{store_files, store_rename, create_commit};
+    use fixtures::{linear, many_files_dirs};
     use std::str::FromStr;
+    use tests_utils::{create_commit, store_files, store_rename};
 
     fn set_bookmark(repo: BlobRepo, book: &Bookmark, cs_id: &str) {
         let head = HgChangesetId::from_str(cs_id).unwrap();
@@ -1016,6 +1022,44 @@ mod tests {
 
             assert_eq!(bcs.author_date(), bcs_keep_date.author_date());
             assert!(bcs.author_date() < bcs_rewrite_date.author_date());
+        })
+    }
+
+    #[test]
+    fn pushrebase_case_conflict() {
+        async_unit::tokio_unit_test(|| {
+            let repo = many_files_dirs::getrepo(None);
+            let root = repo.get_bonsai_from_hg(&HgChangesetId::from_str(
+                "5a28e25f924a5d209b82ce0713d8d83e68982bc8",
+            ).unwrap())
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            let bcs = create_commit(
+                repo.clone(),
+                vec![root],
+                store_files(
+                    btreemap!{"Dir1/file_1_in_dir1" => Some("data")},
+                    repo.clone(),
+                ),
+            );
+            let hgcss = vec![repo.get_hg_from_bonsai_changeset(bcs).wait().unwrap()];
+
+            let book = Bookmark::new("master").unwrap();
+            set_bookmark(
+                repo.clone(),
+                &book,
+                "2f866e7e549760934e31bf0420a873f65100ad63",
+            );
+
+            let result = do_pushrebase(Arc::new(repo), Default::default(), book, hgcss).wait();
+            match result {
+                Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
+                    assert_eq!(conflict, MPath::new("Dir1/file_1_in_dir1").unwrap())
+                }
+                _ => panic!("push-rebase should have failed with case conflict"),
+            }
         })
     }
 
