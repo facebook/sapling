@@ -183,21 +183,18 @@ class TokenLocator(object):
            this function fetches token from keychain
         """
         try:
+            args = [
+                "security",
+                "find-generic-password",
+                "-g",
+                "-s",
+                SERVICE,
+                "-a",
+                ACCOUNT,
+                "-w",
+            ]
             p = Popen(
-                [
-                    "security",
-                    "find-generic-password",
-                    "-g",
-                    "-s",
-                    SERVICE,
-                    "-a",
-                    ACCOUNT,
-                    "-w",
-                ],
-                stdin=None,
-                close_fds=util.closefds,
-                stdout=PIPE,
-                stderr=PIPE,
+                args, stdin=None, close_fds=util.closefds, stdout=PIPE, stderr=PIPE
             )
             (stdoutdata, stderrdata) = p.communicate()
             rc = p.returncode
@@ -214,7 +211,11 @@ class TokenLocator(object):
                 # if not found, not an error
                 if rc == 44:
                     return None
-                raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
+                raise commitcloudcommon.SubprocessError(
+                    self.ui,
+                    rc,
+                    "command: `%s`\nstderr: %s" % (" ".join(args), stderrdata),
+                )
             text = stdoutdata.strip()
             if text:
                 return text
@@ -230,22 +231,19 @@ class TokenLocator(object):
            this function puts the token to keychain
         """
         try:
+            args = [
+                "security",
+                "add-generic-password",
+                "-a",
+                ACCOUNT,
+                "-s",
+                SERVICE,
+                "-w",
+                token,
+                "-U",
+            ]
             p = Popen(
-                [
-                    "security",
-                    "add-generic-password",
-                    "-a",
-                    ACCOUNT,
-                    "-s",
-                    SERVICE,
-                    "-w",
-                    token,
-                    "-U",
-                ],
-                stdin=None,
-                close_fds=util.closefds,
-                stdout=PIPE,
-                stderr=PIPE,
+                args, stdin=None, close_fds=util.closefds, stdout=PIPE, stderr=PIPE
             )
             (stdoutdata, stderrdata) = p.communicate()
             rc = p.returncode
@@ -259,7 +257,12 @@ class TokenLocator(object):
                         "please run `security unlock-keychain` "
                         "to prove your identity",
                     )
-                raise commitcloudcommon.SubprocessError(self.ui, rc, stderrdata)
+                raise commitcloudcommon.SubprocessError(
+                    self.ui,
+                    rc,
+                    "command: `%s`\nstderr: %s"
+                    % (" ".join(args).replace(token, "<token>"), stderrdata),
+                )
             self.ui.debug("new token is stored in keychain\n")
         except OSError as e:
             raise commitcloudcommon.UnexpectedError(self.ui, e)
