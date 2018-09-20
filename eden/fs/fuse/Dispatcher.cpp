@@ -11,7 +11,6 @@
 
 #include <folly/Exception.h>
 #include <folly/Format.h>
-#include <folly/MoveWrapper.h>
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
