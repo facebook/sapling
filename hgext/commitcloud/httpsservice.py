@@ -63,13 +63,32 @@ class HttpsCommitCloudService(baseservice.BaseService):
             )
 
         self.remote_host = ui.config("commitcloud", "remote_host")
+        self.remote_port = ui.configint("commitcloud", "remote_port")
+        self.client_certs = util.expanduserpath(
+            ui.config("commitcloud", "tls.client_certs")
+        )
+        self.ca_certs = util.expanduserpath(ui.config("commitcloud", "tls.ca_certs"))
+
         if not self.remote_host:
             raise commitcloudcommon.ConfigurationError(
-                self.ui, _("remote_host is required")
+                self.ui, _("'remote_host' is required")
             )
 
-        # optional, but needed for using a sandbox
-        self.certs = ui.config("commitcloud", "certs")
+        if self.client_certs and not os.path.isfile(self.client_certs):
+            raise commitcloudcommon.ConfigurationError(
+                ui,
+                _("tls.ca_certs resolved to '%s' (no such file or is a directory)")
+                % self.client_certs,
+            )
+
+        if self.ca_certs and not os.path.isfile(self.ca_certs):
+            raise commitcloudcommon.ConfigurationError(
+                ui,
+                _("tls.ca_certs resolved to '%s' (no such file or is a directory)")
+                % self.ca_certs,
+            )
+
+        self.check_hostname = ui.configbool("commitcloud", "tls.check_hostname")
 
         # debug option
         self.debugrequests = ui.config("commitcloud", "debugrequests")
@@ -83,12 +102,23 @@ class HttpsCommitCloudService(baseservice.BaseService):
             "Content-Encoding": "gzip",
             "Authorization": "OAuth %s" % token,
         }
+
+        sslcontext = ssl.create_default_context()
+        sslcontext.check_hostname = self.check_hostname
+        if self.client_certs:
+            sslcontext.load_cert_chain(self.client_certs)
+        if self.ca_certs:
+            sslcontext.load_verify_locations(self.ca_certs)
+
         self.connection = httplib.HTTPSConnection(
             self.remote_host,
-            context=ssl.create_default_context(cafile=self.certs)
-            if self.certs
-            else ssl.create_default_context(),
+            self.remote_port,
+            context=sslcontext,
             timeout=DEFAULT_TIMEOUT,
+            check_hostname=self.check_hostname,
+        )
+        highlightdebug(
+            ui, "will be connecting to %s:%d\n" % (self.remote_host, self.remote_port)
         )
 
     def requiresauthentication(self):
@@ -137,6 +167,23 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 raise error.Abort(
                     _("network error: %s") % e, hint=_("check your network connection")
                 )
+            except socket.error as e:
+                raise commitcloudcommon.ServiceError(self.ui, str(e))
+            except ssl.CertificateError as e:
+                details = []
+                if self.ca_certs:
+                    details.append(
+                        _("certificate authority (CA) file used '%s'") % self.ca_certs
+                    )
+                if self.client_certs:
+                    details.append(_("client cert file used '%s'") % self.ca_certs)
+                if self.check_hostname:
+                    details.append(
+                        _(
+                            "tls hostname validation is enabled, to disable set config 'commitcloud.tls.check_hostname=false'"
+                        )
+                    )
+                raise commitcloudcommon.TLSAccessError(self.ui, str(e), details)
             time.sleep(sl)
             sl *= 2
         if e:

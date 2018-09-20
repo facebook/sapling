@@ -4158,3 +4158,10 @@ def timefunction(key, uiposition, uiname):
         return inner
 
     return wrapper
+
+
+def expanduserpath(path):
+    if not path:
+        return path
+    username = getuser()
+    return path.replace("%i", username).replace("${USER}", username)

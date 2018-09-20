@@ -28,6 +28,7 @@ from mercurial import (
     progress,
     registrar,
     scmutil,
+    templatefilters,
     util,
 )
 
@@ -538,8 +539,7 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             revs = scmutil.revrange(repo, revspec)
             pushheads = [ctx.hex() for ctx in repo.set("heads(%ld::)", revs)]
             if not pushheads:
-                highlightstatus(ui, _("revset doesn't match anything\n"))
-                return 1
+                highlightdebug(ui, _("revset doesn't match anything\n"))
             localheads = _filterpushside(
                 ui, repo, pushheads, localheads, lastsyncstate.heads
             )
@@ -564,12 +564,10 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             newheads = list(set(localheads) - set(lastsyncstate.heads))
 
             # if we are pushing too much it makes sense to check with the server first
-            nocheckbackepdulimit = ui.configint(
-                "commitcloud", "nocheckbackepdulimit", 4
-            )
+            nocheckbackeduplimit = ui.configint("commitcloud", "nocheckbackeduplimit")
 
             # Fast server-side check of what hasn't been pushed yet
-            if checkbackedup or len(newheads) > nocheckbackepdulimit:
+            if checkbackedup or len(newheads) > nocheckbackeduplimit:
                 newheads = serv.filterpushedheads(reponame, newheads)
 
             # all pushed to the server except maybe obsmarkers
@@ -768,10 +766,17 @@ def _filterpushside(ui, repo, pushheads, localheads, lastsyncstateheads):
     # local - allowed - synced
     skipped = set(localheads) - set(pushheads) - set(lastsyncstateheads)
     if skipped:
+
+        def firstline(hexnode):
+            return templatefilters.firstline(repo[hexnode].description())[:50]
+
+        skippedlist = "\n".join(
+            ["    %s    %s" % (hexnode[:16], firstline(hexnode)) for hexnode in skipped]
+        )
         highlightstatus(
             ui,
-            _("push filter: the stacks with heads '%s' are not included in the sync\n")
-            % ", ".join([ph[:6] for ph in skipped]),
+            _("push filter: list of unsynced local heads that will be skipped\n%s\n")
+            % skippedlist,
         )
 
     return list(set(localheads) & (set(lastsyncstateheads) | set(pushheads)))

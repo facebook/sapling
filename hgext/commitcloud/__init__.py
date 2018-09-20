@@ -13,18 +13,36 @@ Configs::
     # local or remote
     servicetype = local
 
-    # location of the commit cloud service to connect to
-    # (for servicetype = local)
+    # location of the commit cloud service to connect to (for servicetype = local)
     servicelocation = /path/to/dir
 
     # hostname to use for the system
     hostname = myhost
 
-    # Http endpoint host serving commit cloud requests
+    # Https endpoint host serving commit cloud requests (for servicetype = remote)
     remote_host = example.commitcloud.com
 
-    # SSL certificates
-    certs = /etc/pki/tls/certs/fb_certs.pem
+    # Https endpoint port serving commit cloud requests (for servicetype = remote)
+    # Default is the standard HTTPS port
+    remote_port = 443
+
+    # TLS client certificate (optional)
+    # path may contain ${USER} or %i placeholders to substitute with the user identity
+    # should be defined if mutual TLS is needed
+    # mutual TLS is vital for TLS based user authentication
+    tls.client_certs = /etc/pki/tls/certs/client_certs.pem
+
+    # TLS CA certificate (optional)
+    # path may contain ${USER} or %i placeholders to substitute with the user identity
+    # should be defined if location is not default
+    # see OPENSSLDIR in `openssl version -a` for the default location
+    tls.ca_certs = /etc/pki/tls/certs/ca.pem
+
+    # TLS CN/hostname check (true is the default)
+    # may be required to disable if non standard format is used, for example,
+    # CN field in x509 server cert contains different information rather than server's hostname.
+    # TODO: It is also possible to implement a wrapper for ssl.match_hostname method instead of disabling the check.
+    tls.check_hostname = False
 
     # help message to provide instruction on registration process
     auth_help = please obtain an authentication token from https://example.com/
@@ -49,7 +67,7 @@ Configs::
     # cloud sync can partially fail and manage to push some of the stacks
     # this will prevent repush of that stacks
     # this will not be needed with mononoke as server should optimize repush attempts
-    nocheckbackepdulimit = 4
+    nocheckbackeduplimit = 4
 
     # option to print incoming and outgoing requests to
     # commit cloud http endpoint in json format (with --debug option only)
@@ -65,7 +83,7 @@ Configs::
     scm_daemon_tcp_port = 15432
 
     # SCM Daemon log file (for hg rage)
-    # %i is substituted with the user identity
+    # path can contains ${USER} or %i to substitute with the user identity
     scm_daemon_log_path = /path/to/%i/logfile
 
     # Use secrets_tool for token backup between machines
@@ -111,6 +129,15 @@ colortable = {"commitcloud.tag": "yellow", "commitcloud.team": "bold"}
 
 hint = registrar.hint()
 revsetpredicate = registrar.revsetpredicate()
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem("commitcloud", "servicetype", default="remote")
+configitem("commitcloud", "remote_port", default=443)
+configitem("commitcloud", "tls.check_hostname", default=True)
+configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
+configitem("commitcloud", "nocheckbackeduplimit", default=4)
 
 
 def _smartlogbackupmessagemap(orig, ui, repo):

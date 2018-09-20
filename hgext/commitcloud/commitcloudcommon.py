@@ -69,7 +69,7 @@ class WorkspaceError(error.Abort):
 
 class ConfigurationError(error.Abort):
     def __init__(self, ui, message, *args):
-        topic = highlightmsg(ui, _("unexpected configuration error"))
+        topic = highlightmsg(ui, _("config error"))
         contact = _("please contact %s to report misconfiguration") % getownerteam(ui)
         message = "%s: %s\n%s" % (topic, message, contact)
         super(ConfigurationError, self).__init__(message, *args)
@@ -79,10 +79,15 @@ class ServiceError(error.Abort):
     """Commit Cloud errors from remote service"""
 
     def __init__(self, ui, message, *args):
-        topic = highlightmsg(ui, _("error from remote service"))
-        details = _("please retry later")
+        topic = highlightmsg(ui, _("error from the remote service"))
+        host = ui.config("commitcloud", "remote_host")
+        port = ui.configint("commitcloud", "remote_port")
+        details = _("commit cloud endpoint is '%s:%d' (retry might help)") % (
+            host,
+            port,
+        )
         contact = _("please contact %s if this error persists") % getownerteam(ui)
-        message = "%s: '%s'\n%s\n%s" % (topic, message, details, contact)
+        message = "%s: %s\n%s\n%s" % (topic, message, details, contact)
         super(ServiceError, self).__init__(message, *args)
 
 
@@ -118,6 +123,14 @@ class KeychainAccessError(error.Abort):
         contact = _("please contact %s if this error persists") % getownerteam(ui)
         message = "%s: '%s'\n%s\n%s" % (topic, reason, solution, contact)
         super(KeychainAccessError, self).__init__(message, *args)
+
+
+class TLSAccessError(error.Abort):
+    def __init__(self, ui, reason, details, *args):
+        topic = highlightmsg(ui, _("tls certificate error"))
+        contact = _("please contact %s if this error persists") % getownerteam(ui)
+        message = "%s: '%s'\n%s\n%s" % (topic, reason, "\n".join(details), contact)
+        super(TLSAccessError, self).__init__(message, *args)
 
 
 """

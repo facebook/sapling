@@ -374,7 +374,6 @@ class SubscriptionManager(object):
 
     dirname = ".commitcloud"
     joined = "joined"
-    default_scm_daemon_port = 15432
 
     def __init__(self, repo):
         self.ui = repo.ui
@@ -392,10 +391,10 @@ class SubscriptionManager(object):
             "\0".join([self.repo_root, self.repo_name, self.workspace])
         ).hexdigest()[:32]
         self.subscription_enabled = self.ui.configbool(
-            "commitcloud", "subscription_enabled", False
+            "commitcloud", "subscription_enabled"
         )
         self.scm_daemon_tcp_port = self.ui.configint(
-            "commitcloud", "scm_daemon_tcp_port", self.default_scm_daemon_port
+            "commitcloud", "scm_daemon_tcp_port"
         )
 
     def checksubscription(self):

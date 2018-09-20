@@ -164,28 +164,23 @@ def infinitepushbackuplogs(ui, repo):
 
 
 def scmdaemonlog(ui, repo):
-    logfile = ui.config("commitcloud", "scm_daemon_log_path")
+    logpath = ui.config("commitcloud", "scm_daemon_log_path")
 
-    if not logfile:
-        return "commitcloud.scm_daemon_log_path not set"
+    if not logpath:
+        return "'commitcloud.scm_daemon_log_path' is not set in the config"
 
-    try:
-        # the user name from the machine
-        username = util.getuser()
-    except Exception:
-        username = "unknown"
+    logpath = util.expanduserpath(logpath)
 
-    logfile = logfile.replace("%i", username)
+    if not os.path.exists(logpath):
+        return "%s: no such file or directory" % logpath
 
-    userlogdir = os.path.dirname(logfile)
-
-    if not os.path.exists(userlogdir):
-        return "log directory does not exist: %s" % userlogdir
-
-    userlogbasename = os.path.basename(logfile)
-    logfiles = [f for f in os.listdir(userlogdir) if userlogbasename in f]
-
-    return _tail(userlogdir, logfiles, 150)
+    # grab similar files as the original path to include rotated logs as well
+    logfiles = [
+        f
+        for f in os.listdir(os.path.dirname(logpath))
+        if os.path.basename(logpath) in f
+    ]
+    return _tail(os.path.dirname(logpath), logfiles, 150)
 
 
 def readinfinitepushbackupstate(repo):

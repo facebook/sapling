@@ -79,7 +79,7 @@ Registration:
   setting authentication token
   authentication successful
   $ hg cloud auth -t xxxxxx --config "commitcloud.user_token_path=$TESTTMP/somedir"
-  abort: #commitcloud unexpected configuration error: invalid commitcloud.user_token_path '$TESTTMP/somedir'
+  abort: #commitcloud config error: invalid commitcloud.user_token_path '$TESTTMP/somedir'
   please contact The Test Team @ FB to report misconfiguration
   [255]
 Joining:
@@ -228,10 +228,11 @@ Try to push selectively
   $ hg amend --rebase -m "`hg descr | head -n1` amended"
   rebasing 2:02f6fc2b7154 "commit2" (bookmark1)
 
-  $ hg cloud sync --push-revs a7bb357e7298
+  $ hg cloud sync --push-revs 'public() and draft()'
   #commitcloud synchronizing 'server' with 'user/test/default'
-  abort: unknown revision 'a7bb357e7298'!
-  [255]
+  #commitcloud push filter: list of unsynced local heads that will be skipped
+      48610b1a7ec03148    commit2
+  #commitcloud commits synchronized
 
   $ hg cloud sync --push-revs '.'
   #commitcloud synchronizing 'server' with 'user/test/default'
