@@ -78,12 +78,12 @@ class TokenLocator(object):
         self.vfs.createmode = 0o600
         # using platform username
         self.secretname = (SERVICE + "_" + util.getuser()).upper()
+        self.usesecretstool = self.ui.configbool("commitcloud", "use_secrets_tool")
 
     def _gettokenfromfile(self):
         """On platforms except macOS tokens are stored in a file"""
-        usesecretstool = self.ui.config("commitcloud", "use_secrets_tool")
         if not self.vfs.exists(self.filename):
-            if usesecretstool:
+            if self.usesecretstool:
                 # check if token has been backed up and recover it if possible
                 try:
                     token = self._gettokenfromsecretstool()
@@ -98,7 +98,7 @@ class TokenLocator(object):
             tokenconfig = config.config()
             tokenconfig.read(self.filename, f)
             token = tokenconfig.get("commitcloud", "user_token")
-            if usesecretstool:
+            if self.usesecretstool:
                 isbackedup = tokenconfig.get("commitcloud", "backedup")
                 if not isbackedup:
                     self._settokentofile(token)
@@ -107,8 +107,7 @@ class TokenLocator(object):
     def _settokentofile(self, token, isbackedup=False):
         """On platforms except macOS tokens are stored in a file"""
         # backup token if optional backup is enabled
-        usesecretstool = self.ui.config("commitcloud", "use_secrets_tool")
-        if usesecretstool and not isbackedup:
+        if self.usesecretstool and not isbackedup:
             try:
                 self._settokeninsecretstool(token)
                 isbackedup = True
