@@ -57,18 +57,16 @@ class HttpsCommitCloudService(baseservice.BaseService):
     def __init__(self, ui, token=None):
         self.ui = ui
         self.token = token
-        if token is None:
-            raise commitcloudcommon.RegistrationError(
-                ui, _("valid user token is required")
-            )
-
+        self.debugrequests = ui.config("commitcloud", "debugrequests")
         self.remote_host = ui.config("commitcloud", "remote_host")
         self.remote_port = ui.configint("commitcloud", "remote_port")
         self.client_certs = util.expanduserpath(
             ui.config("commitcloud", "tls.client_certs")
         )
         self.ca_certs = util.expanduserpath(ui.config("commitcloud", "tls.ca_certs"))
+        self.check_hostname = ui.configbool("commitcloud", "tls.check_hostname")
 
+        # validation
         if not self.remote_host:
             raise commitcloudcommon.ConfigurationError(
                 self.ui, _("'remote_host' is required")
@@ -88,28 +86,27 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 % self.ca_certs,
             )
 
-        self.check_hostname = ui.configbool("commitcloud", "tls.check_hostname")
+        self._setuphttpsconnection()
 
-        # debug option
-        self.debugrequests = ui.config("commitcloud", "debugrequests")
+    def _setuphttpsconnection(self):
+        # setting up HTTS connection
 
-        # we have control on compression here
-        # on both client side and server side compression
+        # enable client side compression
+        # data in the response is also requested compressed
         self.headers = {
-            "Connection": "Keep-Alive",
-            "Content-Type": "application/binary",
-            "Accept-encoding": "none, gzip",
+            "Connection": "keep-alive",
+            "Content-Type": "application/json",
+            "Accept-Encoding": "none, gzip",
             "Content-Encoding": "gzip",
-            "Authorization": "OAuth %s" % token,
         }
-
+        if self.token:
+            self.headers["Authorization"] = "OAuth %s" % self.token
         sslcontext = ssl.create_default_context()
         sslcontext.check_hostname = self.check_hostname
         if self.client_certs:
             sslcontext.load_cert_chain(self.client_certs)
         if self.ca_certs:
             sslcontext.load_verify_locations(self.ca_certs)
-
         self.connection = httplib.HTTPSConnection(
             self.remote_host,
             self.remote_port,
@@ -118,7 +115,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
             check_hostname=self.check_hostname,
         )
         highlightdebug(
-            ui, "will be connecting to %s:%d\n" % (self.remote_host, self.remote_port)
+            self.ui,
+            "will be connecting to %s:%d\n" % (self.remote_host, self.remote_port),
         )
 
     def requiresauthentication(self):
@@ -148,12 +146,14 @@ class HttpsCommitCloudService(baseservice.BaseService):
             try:
                 self.connection.request("POST", path, rdata, self.headers)
                 resp = self.connection.getresponse()
-                if resp.status == 401:
+                if resp.status == httplib.UNAUTHORIZED:
                     raise commitcloudcommon.RegistrationError(
                         self.ui, _("unauthorized client (token is invalid)")
                     )
-                if resp.status != 200:
-                    raise commitcloudcommon.ServiceError(self.ui, resp.reason)
+                if resp.status != httplib.OK:
+                    raise commitcloudcommon.ServiceError(
+                        self.ui, "%d %s" % (resp.status, resp.reason)
+                    )
                 if resp.getheader("Content-Encoding") == "gzip":
                     resp = gzip.GzipFile(fileobj=util.stringio(resp.read()))
                 data = json.load(resp)
