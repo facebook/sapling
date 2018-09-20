@@ -116,7 +116,7 @@ class BaseService(object):
                     (k.encode("utf-8"), v.encode("utf-8"))
                     for k, v in json.loads(m["meta"])
                 ),
-                (float(m["date"]), m["tz"]),
+                (m["date"], m["tz"]),
                 tuple(nodemod.bin(p) for p in m["predparents"]),
             )
             for m in data["new_obsmarkers_data"]
@@ -132,7 +132,7 @@ class BaseService(object):
                 "succs": [nodemod.hex(s) for s in m[1]],
                 "predparents": [nodemod.hex(p) for p in m[5]] if m[5] else [],
                 "flags": m[2],
-                "date": repr(m[4][0]),
+                "date": float(repr(m[4][0])),
                 "tz": m[4][1],
                 "meta": json.dumps(m[3]),
             }
