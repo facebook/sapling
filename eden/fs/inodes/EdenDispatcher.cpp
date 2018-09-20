@@ -54,9 +54,9 @@ namespace {
 fuse_entry_out computeEntryParam(
     InodeNumber number,
     const Dispatcher::Attr& attr) {
-  fuse_entry_out entry;
+  fuse_entry_out entry = {};
   entry.nodeid = number.get();
-  entry.generation = 1;
+  entry.generation = 0;
   auto fuse_attr = attr.asFuseAttr();
   entry.attr = fuse_attr.attr;
   entry.attr_valid = fuse_attr.attr_valid;
