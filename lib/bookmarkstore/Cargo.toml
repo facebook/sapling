@@ -1,0 +1,12 @@
+[package]
+name = "bookmarkstore"
+version = "0.1.0"
+authors = ["harveyhunt"]
+
+[dependencies]
+atomicwrites = "*"
+error-chain = "*"
+revisionstore = { path = "../revisionstore" }
+
+[dev-dependencies]
+tempfile = "*"

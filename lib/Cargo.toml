@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "argparse",
+    "bookmarkstore",
     "commitcloudsubscriber",
     "configparser",
     "encoding",
