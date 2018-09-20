@@ -407,6 +407,60 @@ void EdenServiceHandler::async_tm_subscribe(
   StreamingSubscriber::subscribe(std::move(callback), std::move(edenMount));
 }
 
+apache::thrift::Stream<JournalPosition>
+EdenServiceHandler::subscribeStreamTemporary(
+    std::unique_ptr<std::string> mountPoint) {
+  auto edenMount = server_->getMount(*mountPoint);
+
+  // We need a weak ref on the mount because the thrift stream plumbing
+  // may outlive the mount point
+  std::weak_ptr<EdenMount> weakMount(edenMount);
+
+  // We'll need to pass the subscriber id to both the disconnect
+  // and change callbacks.  We can't know the id until after we've
+  // created them both, so we need to share an optional id between them.
+  auto handle = std::make_shared<folly::Optional<Journal::SubscriberId>>();
+
+  // This is called when the subscription channel is torn down
+  auto onDisconnect = [weakMount, handle] {
+    XLOG(ERR) << "streaming client disconnected";
+    auto mount = weakMount.lock();
+    if (mount) {
+      mount->getJournal().cancelSubscriber(handle->value());
+    }
+  };
+
+  // Set up the actual publishing instance
+  auto [reader, writer] =
+      createStreamPublisher<JournalPosition>(std::move(onDisconnect));
+
+  auto stream =
+      std::make_shared<apache::thrift::StreamPublisher<JournalPosition>>(
+          std::move(writer));
+
+  // This is called each time the journal is updated
+  auto onJournalChange = [weakMount, stream]() mutable {
+    auto mount = weakMount.lock();
+    if (mount) {
+      auto& journal = mount->getJournal();
+      JournalPosition pos;
+
+      auto delta = journal.getLatest();
+      pos.sequenceNumber = delta->toSequence;
+      pos.snapshotHash = StringPiece(delta->toHash.getBytes()).str();
+      pos.mountGeneration = mount->getMountGeneration();
+      stream->next(pos);
+    }
+  };
+
+  // Register onJournalChange with the journal subsystem, and assign
+  // the subscriber id into the handle so that the callbacks can consume it.
+  handle->assign(
+      edenMount->getJournal().registerSubscriber(std::move(onJournalChange)));
+
+  return std::move(reader);
+}
+
 void EdenServiceHandler::getFilesChangedSince(
     FileDelta& out,
     std::unique_ptr<std::string> mountPoint,

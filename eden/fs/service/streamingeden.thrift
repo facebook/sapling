@@ -16,4 +16,13 @@ service StreamingEdenService extends eden.EdenService {
    */
   stream<eden.JournalPosition> subscribe(
     1: string mountPoint)
+
+  /** This is an implementation of the subscribe API using the
+   * new rsocket based streaming thrift protocol.
+   * The name is temporary: we want to make some API changes
+   * but want to start pushing out an implementation now because
+   * we've seen inflated memory usage for the older `subscribe`
+   * method above. */
+  stream eden.JournalPosition subscribeStreamTemporary(
+    1: string mountPoint)
 }
