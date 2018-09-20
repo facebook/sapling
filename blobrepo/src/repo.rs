@@ -7,6 +7,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use std::usize;
@@ -27,7 +28,8 @@ use time_ext::DurationExt;
 use uuid::Uuid;
 
 use super::changeset::HgChangesetContent;
-use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes, get_sha256_alias};
+use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes,
+                   get_sha256_alias, get_sha256_alias_key};
 use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob,
                 MemWritesBlobstore, PrefixBlobstore};
 use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
@@ -50,14 +52,14 @@ use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFil
 use mercurial_types::manifest::Content;
 use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
                      ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath,
-                     MPathElement, MononokeId};
+                     MPathElement, MononokeId, hash::Blake2, hash::Sha256};
 use rocksblob::Rocksblob;
 use rocksdb;
 
 use BlobManifest;
 use HgBlobChangeset;
 use errors::*;
-use file::{fetch_file_content_from_blobstore, fetch_raw_filenode_bytes,
+use file::{fetch_file_content_from_blobstore, fetch_file_contents, fetch_raw_filenode_bytes,
            fetch_rename_from_blobstore, HgBlobEntry};
 use memory_manifest::MemoryRootManifest;
 use repo_commit::*;
@@ -380,6 +382,55 @@ impl BlobRepo {
     pub fn get_file_content(&self, key: &HgNodeHash) -> BoxFuture<FileContents, Error> {
         STATS::get_file_content.add_value(1);
         fetch_file_content_from_blobstore(&self.blobstore, *key).boxify()
+    }
+
+    pub fn get_file_content_by_alias(
+        &self,
+        alias: Sha256,
+    ) -> impl Future<Item = FileContents, Error = Error> {
+        STATS::get_file_content.add_value(1);
+        let prefixed_key = get_sha256_alias_key(alias.to_hex().to_string());
+        let blobstore = self.blobstore.clone();
+
+        blobstore
+            .get(prefixed_key.clone())
+            .and_then(move |bytes| {
+                let content_key_bytes = match bytes {
+                    Some(bytes) => bytes,
+                    None => bail_err!(ErrorKind::MissingTypedKeyEntry(prefixed_key)),
+                };
+                Ok(content_key_bytes)
+            })
+            .and_then(move |content_key_bytes| {
+                let content_key = content_key_bytes.as_bytes().as_ref();
+
+                // TODO(anastasiyaz): T34097933 - remove hardcoded content prefix
+                // check expected prefix
+                let content_prefix = "content.blake2.";
+                let prefix_len = content_prefix.len();
+
+                if prefix_len > content_key.len()
+                    || &content_key[..prefix_len] != content_prefix.as_bytes()
+                {
+                    let e: Error = ErrorKind::IncorrectAliasBlobContent(alias).into();
+                    try_boxfuture!(Err(e))
+                }
+
+                let blake2_hash = &content_key[prefix_len..];
+
+                // Need to convert hex_bytes -> String -> bytes for Blake2
+                String::from_utf8(blake2_hash.to_vec())
+                    .into_future()
+                    .from_err()
+                    .and_then(|blake2_str| Blake2::from_str(&blake2_str))
+                    .and_then(move |blake2| {
+                        let content_id = ContentId::new(blake2);
+                        fetch_file_contents(&blobstore, content_id)
+                    })
+                    .context("While parsing alias blob contents")
+                    .from_err()
+                    .boxify()
+            })
     }
 
     // TODO: (rain1) T30456231 It should be possible in principle to make the return type a wrapper

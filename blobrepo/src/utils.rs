@@ -4,8 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate crypto;
-
 use bytes::Bytes;
 
 use std::collections::{HashMap, HashSet};
@@ -19,19 +17,22 @@ use futures::future::Future;
 use futures::stream;
 use futures_ext::StreamExt;
 
-use self::crypto::digest::Digest;
-use self::crypto::sha2::Sha256;
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
 
 use super::repo::BlobRepo;
 use filenodes::FilenodeInfo;
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 
+pub fn get_sha256_alias_key(key: String) -> String {
+    format!("alias.sha256.{}", key)
+}
+
 pub fn get_sha256_alias(contents: &Bytes) -> String {
     let mut hasher = Sha256::new();
     hasher.input(contents);
     let output = hasher.result_str();
-    let alias_key = format!("alias.sha256.{}", output);
-    alias_key
+    get_sha256_alias_key(output)
 }
 
 #[derive(Clone, Debug)]

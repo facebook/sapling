@@ -33,6 +33,9 @@ pub enum MononokeRepoQuery {
         proposed_ancestor: String,
         proposed_descendent: String,
     },
+    DownloadLargeFile {
+        oid: String,
+    },
 }
 
 pub struct MononokeQuery {

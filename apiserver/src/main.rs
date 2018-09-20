@@ -10,6 +10,7 @@
 extern crate actix;
 extern crate actix_web;
 extern crate apiserver_thrift;
+extern crate ascii;
 extern crate blobrepo;
 extern crate bookmarks;
 extern crate bytes;
@@ -108,6 +109,12 @@ struct HashQueryInfo {
     hash: String,
 }
 
+#[derive(Deserialize)]
+struct OidQueryInfo {
+    repo: String,
+    oid: String,
+}
+
 // The argument of this function is because the trait `actix_web::FromRequest` is implemented
 // for tuple (A, B, ...) (up to 9 elements) [1]. These arguments must implement
 // `actix_web::FromRequest` as well so actix-web will try to extract them from `actix::HttpRequest`
@@ -184,6 +191,17 @@ fn get_changeset(
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetChangeset {
             hash: info.hash.clone(),
+        },
+    })
+}
+
+fn download_large_file(
+    (state, info): (State<HttpServerState>, actix_web::Path<OidQueryInfo>),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    state.mononoke.send_query(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::DownloadLargeFile {
+            oid: info.oid.clone(),
         },
     })
 }
@@ -436,6 +454,9 @@ fn main() -> Result<()> {
                     })
                     .resource("/changeset/{hash}", |r| {
                         r.method(http::Method::GET).with_async(get_changeset)
+                    })
+                    .resource("/lfs/download/{oid}", |r| {
+                        r.method(http::Method::GET).with_async(download_large_file)
                     })
             })
     });

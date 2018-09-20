@@ -31,6 +31,9 @@ pub enum MononokeRepoResponse {
     IsAncestor {
         answer: bool,
     },
+    DownloadLargeFile {
+        content: Bytes,
+    },
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
@@ -59,6 +62,7 @@ impl Responder for MononokeRepoResponse {
                     "false".into()
                 }
             })),
+            DownloadLargeFile { content } => Ok(binary_response(content.into())),
         }
     }
 }

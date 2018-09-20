@@ -181,6 +181,89 @@ impl Arbitrary for Blake2 {
     }
 }
 
+// There is no NULL_HASH for Sha256 hashes. Any places that need a null hash should use an
+// Option type, or perhaps a list as desired.
+
+/// Raw SHA256 hash.
+///
+/// Used for references for blobs in blobstore.
+///
+#[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Serialize, Deserialize, HeapSizeOf)]
+pub struct Sha256([u8; 32]);
+
+impl Sha256 {
+    /// Construct a `Sha256` from an array of 32 bytes containing a
+    /// SHA256 hash (ie, *not* a hash of the bytes).
+    #[inline]
+    pub const fn from_byte_array(arr: [u8; 32]) -> Self {
+        Sha256(arr)
+    }
+
+    pub fn to_hex(&self) -> AsciiString {
+        let mut v = Vec::with_capacity(64);
+        for &byte in self.as_ref() {
+            v.push(HEX_CHARS[(byte >> 4) as usize]);
+            v.push(HEX_CHARS[(byte & 0xf) as usize]);
+        }
+
+        unsafe {
+            // A hex string is always a pure ASCII string.
+            AsciiString::from_ascii_unchecked(v)
+        }
+    }
+
+    #[inline]
+    pub fn from_ascii_str(s: &AsciiStr) -> Result<Self> {
+        Self::from_str(s.as_str())
+    }
+}
+
+impl FromStr for Sha256 {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        if s.len() != 64 {
+            bail_err!(ErrorKind::InvalidSha256Input(
+                "must be 64 hex digits".into()
+            ));
+        }
+
+        let mut ret = Sha256([0; 32]);
+
+        for idx in 0..ret.0.len() {
+            ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
+                Ok(v) => v,
+                Err(_) => bail_err!(ErrorKind::InvalidSha256Input("bad digit".into())),
+            };
+        }
+
+        Ok(ret)
+    }
+}
+
+/// Get a reference to the underlying bytes of a `Blake2`
+impl AsRef<[u8]> for Sha256 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0[..]
+    }
+}
+
+/// Custom `Debug` output for `Sha256` so it prints in hex.
+impl Debug for Sha256 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Sha256({})", self.to_hex())
+    }
+}
+
+/// Custom `Debug` output for `Sha256` so it prints in hex.
+impl Display for Sha256 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.to_hex(), fmt)
+    }
+}
+
+
 #[cfg(test)]
 mod test {
     use super::*;

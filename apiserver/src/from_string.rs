@@ -17,7 +17,7 @@ use api;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use mononoke_types::MPath;
+use mononoke_types::{MPath, hash::Sha256};
 
 use errors::ErrorKind;
 
@@ -50,4 +50,8 @@ pub fn string_to_bookmark_changeset_id(
         .and_then({ move |bookmark| api::get_changeset_by_bookmark(repo, bookmark).from_err() })
         .map_err(move |e| ErrorKind::InvalidInput(node_string.to_string(), Some(e.into())))
         .boxify()
+}
+
+pub fn get_sha256_oid(oid: String) -> Result<Sha256, ErrorKind> {
+    Sha256::from_str(&oid).map_err(|e| ErrorKind::InvalidInput(oid.to_string(), Some(e.into())))
 }

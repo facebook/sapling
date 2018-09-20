@@ -11,7 +11,7 @@ use bincode;
 
 use mercurial_types::{HgBlob, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath, RepoPath,
                       Type};
-use mononoke_types::{ChangesetId, ContentId};
+use mononoke_types::{ChangesetId, ContentId, hash::Sha256};
 
 use HgBlobChangeset;
 
@@ -43,6 +43,8 @@ impl fmt::Display for StateOpenError {
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Missing typed key entry for key: {}", _0)] MissingTypedKeyEntry(String),
+    // TODO(anastasiyaz): Use general Alias Key instead of Sha256
+    #[fail(display = "Incorrect content of alias blob: {}", _0)] IncorrectAliasBlobContent(Sha256),
     #[fail(display = "Error while opening state for {}", _0)] StateOpen(StateOpenError),
     #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(HgChangesetId),
     #[fail(display = "Error while deserializing changeset retrieved from key '{}'", _0)]

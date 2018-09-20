@@ -189,6 +189,20 @@ impl MononokeRepo {
             .boxify()
     }
 
+    fn download_large_file(&self, oid: String) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid));
+
+        self.repo
+            .get_file_content_by_alias(sha256_oid)
+            .and_then(move |content| match content {
+                FileContents::Bytes(content) => {
+                    Ok(MononokeRepoResponse::DownloadLargeFile { content })
+                }
+            })
+            .from_err()
+            .boxify()
+    }
+
     pub fn send_query(&self, msg: MononokeRepoQuery) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         use MononokeRepoQuery::*;
 
@@ -202,6 +216,8 @@ impl MononokeRepo {
                 proposed_ancestor,
                 proposed_descendent,
             } => self.is_ancestor(proposed_ancestor, proposed_descendent),
+
+            DownloadLargeFile { oid } => self.download_large_file(oid),
         }
     }
 }

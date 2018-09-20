@@ -11,6 +11,7 @@ setup testing repo for mononoke
   $ setup_hg_server
   $ TEST_CONTENT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 1000 | head -n 1)
   $ echo $TEST_CONTENT >> test
+  $ SHA=$(sha256sum test | awk '{print $1;}')
   $ ln -s test link
   $ mkdir -p folder/subfolder
   $ touch folder/subfolder/.keep
@@ -279,4 +280,18 @@ test get changeset
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/changeset/0000 | extract_json_error
   0000 is invalid
+  400
+
+test download LFS
+  $ sslcurl $APISERVER/repo/lfs/download/$SHA > output
+  $ diff output - <<< $TEST_CONTENT
+
+  $ NON_EXISTING_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ sslcurl  -w "\n%{http_code}" $APISERVER/repo/lfs/download/$NON_EXISTING_SHA | extract_json_error
+  internal server error: Missing typed key entry for key: alias.sha256.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  500
+
+  $ NON_VALID_SHA="1234"
+  $ sslcurl  -w "\n%{http_code}" $APISERVER/repo/lfs/download/$NON_VALID_SHA | extract_json_error
+  1234 is invalid
   400

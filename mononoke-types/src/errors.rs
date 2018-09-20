@@ -11,6 +11,7 @@ use MPath;
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "invalid blake2 input: {}", _0)] InvalidBlake2Input(String),
+    #[fail(display = "invalid sha256 input: {}", _0)] InvalidSha256Input(String),
     #[fail(display = "invalid path '{}': {}", _0, _1)] InvalidPath(String, String),
     #[fail(display = "invalid Mononoke path '{}': {}", _0, _1)] InvalidMPath(MPath, String),
     #[fail(display = "error while deserializing blob for '{}'", _0)] BlobDeserializeError(String),
