@@ -171,12 +171,15 @@ pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
         .value_of("panic-fate")
         .expect("no default on panic-fate")
     {
-        "continue" => Fate::Continue,
-        "exit" => Fate::Exit(101),
-        "abort" => Fate::Abort,
+        "none" => None,
+        "continue" => Some(Fate::Continue),
+        "exit" => Some(Fate::Exit(101)),
+        "abort" => Some(Fate::Abort),
         bad => panic!("bad panic-fate {}", bad),
     };
-    panichandler::set_panichandler(fate);
+    if let Some(fate) = fate {
+        panichandler::set_panichandler(fate);
+    }
 
     let severity = if matches.is_present("debug") {
         Severity::Debug
