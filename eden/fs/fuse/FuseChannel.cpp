@@ -1291,7 +1291,7 @@ folly::Future<folly::Unit> FuseChannel::fuseLookup(
   PathComponentPiece name{reinterpret_cast<const char*>(arg)};
   const auto parent = InodeNumber{header->nodeid};
 
-  XLOG(DBG7) << "FUSE_LOOKUP";
+  XLOG(DBG7) << "FUSE_LOOKUP parent=" << parent << " name=" << name;
 
   return dispatcher_->lookup(parent, name).thenValue([](fuse_entry_out param) {
     RequestData::get().sendReply(param);
@@ -1302,7 +1302,8 @@ folly::Future<folly::Unit> FuseChannel::fuseForget(
     const fuse_in_header* header,
     const uint8_t* arg) {
   auto forget = reinterpret_cast<const fuse_forget_in*>(arg);
-  XLOG(DBG7) << "FUSE_FORGET";
+  XLOG(DBG7) << "FUSE_FORGET inode=" << header->nodeid
+             << " nlookup=" << forget->nlookup;
   dispatcher_->forget(InodeNumber{header->nodeid}, forget->nlookup);
   RequestData::get().replyNone();
   return folly::unit;
@@ -1311,12 +1312,13 @@ folly::Future<folly::Unit> FuseChannel::fuseForget(
 folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
     const fuse_in_header* header,
     const uint8_t* arg) {
-  XLOG(DBG7) << "FUSE_GETATTR";
 
   // If we're new enough, check to see if a file handle was provided
   if (connInfo_->minor >= 9) {
     const auto getattr = reinterpret_cast<const fuse_getattr_in*>(arg);
     if (getattr->getattr_flags & FUSE_GETATTR_FH) {
+      XLOG(DBG7) << "FUSE_GETATTR inode=" << header->nodeid
+                 << " FH=" << getattr->fh;
       return dispatcher_->getGenericFileHandle(getattr->fh)
           ->getattr()
           .thenValue([](Dispatcher::Attr attr) {
@@ -1326,6 +1328,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
     // otherwise, fall through to regular inode based lookup
   }
 
+  XLOG(DBG7) << "FUSE_GETATTR inode=" << header->nodeid;
   return dispatcher_->getattr(InodeNumber{header->nodeid})
       .thenValue([](Dispatcher::Attr attr) {
         RequestData::get().sendReply(attr.asFuseAttr());
@@ -1354,7 +1357,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
 folly::Future<folly::Unit> FuseChannel::fuseReadLink(
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
-  XLOG(DBG7) << "FUSE_READLINK";
+  XLOG(DBG7) << "FUSE_READLINK inode=" << header->nodeid;
   return dispatcher_->readlink(InodeNumber{header->nodeid})
       .then([](std::string&& str) {
         RequestData::get().sendReply(folly::StringPiece(str));
