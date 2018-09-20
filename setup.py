@@ -1616,6 +1616,11 @@ rustextmodules = [
         manifest="mercurial/rust/treestate/Cargo.toml",
     ),
     RustExtension(
+        "bookmarkstore",
+        package="mercurial.rust",
+        manifest="mercurial/rust/bookmarkstore/Cargo.toml",
+    ),
+    RustExtension(
         "zstd", package="mercurial.rust", manifest="mercurial/rust/zstd/Cargo.toml"
     ),
 ]

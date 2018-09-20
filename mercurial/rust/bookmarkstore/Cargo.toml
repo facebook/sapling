@@ -1,0 +1,21 @@
+[package]
+name = "pybookmarkstore"
+version = "0.1.0"
+authors = ["harveyhunt"]
+
+[lib]
+name = "bookmarkstore"
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+
+[dependencies]
+bookmarkstore = { path = "../../../lib/bookmarkstore" }
+revisionstore = { path = "../../../lib/revisionstore" }
+encoding = { path = "../../../lib/encoding/" }
+
+[dependencies.cpython]
+version = "0.2"
+default-features = false
+features = ["python27-sys", "extension-module-2-7"]
