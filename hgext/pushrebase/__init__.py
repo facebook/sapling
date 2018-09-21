@@ -794,7 +794,7 @@ def _graft(op, rev, mapping, lastdestnode):
         # files on top of a copy of the p1 manifest, so we only need the diff
         # against p1.
         bundlerepo = rev._repo
-        files = rev.manifest().diff(bundlerepo[oldp1].manifest()).keys()
+        files = _getmanifest(op, rev).diff(_getmanifest(op, bundlerepo[oldp1])).keys()
     else:
         files = rev.files()
 
@@ -985,76 +985,93 @@ def bundle2rebase(op, part):
     bundle = None
     markerdate = util.makedate()
 
-    try:  # guards bundlefile
-        cgversion = params.get("cgversion", "01")
-        bundlefile = _makebundlefile(op, part, cgversion)
-        bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
-        bundle = _createbundlerepo(op, bundlepath)
-
-        prepushrebasehooks(op, params, bundle, bundlefile)
-
-        op.repo.ui.setconfig("pushrebase", pushrebasemarker, True)
-
-        bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
-
-        # Create a cache of rename sources while we don't have the lock.
-        renamesrccache = {
-            bundle[r].node(): _getrenamesrcs(op, bundle[r])
-            for r in bundle.revs("bundle()")
-        }
-
-        # Opening the transaction takes the lock, so do it after prepushrebase
-        # and after we've fetched all the cache information we'll need.
-        tr = op.gettransaction()
-        hookargs = dict(tr.hookargs)
-
-        # Recreate the bundle repo, since taking the lock in gettransaction()
-        # may have caused it to become out of date.
-        # (but grab a copy of the cache first)
-        bundle.close()
-        bundle = _createbundlerepo(op, bundlepath)
-
-        prefillcaches(op, bundle, bundlerepocache)
-
-        onto = getontotarget(op, params, bundle)
-
-        op.repo.pushrebaserecordingparams = {
-            "onto": params.get("onto", donotrebasemarker),
-            "ontorev": op.repo[onto].hex(),
-        }
-        revs, oldonto = _getrevs(op, bundle, onto, renamesrccache)
-
-        op.repo.hook("prechangegroup", **hookargs)
-
-        printpushmessage(op, revs, bundle)
-
-        # Prepopulate the revlog _cache with the original onto's fulltext. This
-        # means reading the new onto's manifest will likely have a much shorter
-        # delta chain to traverse.
-        if preontocache:
-            op.repo.manifestlog._revlog._cache = preontocache
-            onto.manifest()
-
-        # Perform the rebase + commit to the main repo
-        added, replacements = runrebase(op, revs, oldonto, onto)
-
-        op.repo.pushrebaseaddedchangesets = added
-        op.repo.pushrebasereplacements = replacements
-
-        # revs is modified by runrebase to ensure garbage collection of
-        # manifests, so don't use it from here on.
-        revs = None
-
-        markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
-    finally:
+    # Patch ctx._fileinfo so it can look into treemanifests. This covers more
+    # code paths (ex. fctx.renamed -> _copied -> ctx.filenode -> ctx._fileinfo
+    # -> "repo.manifestlog[self._changeset.manifest].find(path)")
+    def _fileinfo(orig, self, path):
         try:
-            if bundlefile:
-                os.unlink(bundlefile)
-        except OSError as e:
-            if e.errno != errno.ENOENT:
-                raise
-        if bundle:
+            return orig(self, path)
+        except LookupError:
+            # Try look up again
+            mf = _getmanifest(op, self)
+            try:
+                return mf.find(path)
+            except KeyError:
+                raise error.ManifestLookupError(
+                    self._node, path, _("not found in manifest")
+                )
+
+    with extensions.wrappedfunction(context.basectx, "_fileinfo", _fileinfo):
+        try:  # guards bundlefile
+            cgversion = params.get("cgversion", "01")
+            bundlefile = _makebundlefile(op, part, cgversion)
+            bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
+            bundle = _createbundlerepo(op, bundlepath)
+
+            prepushrebasehooks(op, params, bundle, bundlefile)
+
+            op.repo.ui.setconfig("pushrebase", pushrebasemarker, True)
+
+            bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
+
+            # Create a cache of rename sources while we don't have the lock.
+            renamesrccache = {
+                bundle[r].node(): _getrenamesrcs(op, bundle[r])
+                for r in bundle.revs("bundle()")
+            }
+
+            # Opening the transaction takes the lock, so do it after prepushrebase
+            # and after we've fetched all the cache information we'll need.
+            tr = op.gettransaction()
+            hookargs = dict(tr.hookargs)
+
+            # Recreate the bundle repo, since taking the lock in gettransaction()
+            # may have caused it to become out of date.
+            # (but grab a copy of the cache first)
             bundle.close()
+            bundle = _createbundlerepo(op, bundlepath)
+
+            prefillcaches(op, bundle, bundlerepocache)
+
+            onto = getontotarget(op, params, bundle)
+
+            op.repo.pushrebaserecordingparams = {
+                "onto": params.get("onto", donotrebasemarker),
+                "ontorev": op.repo[onto].hex(),
+            }
+            revs, oldonto = _getrevs(op, bundle, onto, renamesrccache)
+
+            op.repo.hook("prechangegroup", **hookargs)
+
+            printpushmessage(op, revs, bundle)
+
+            # Prepopulate the revlog _cache with the original onto's fulltext. This
+            # means reading the new onto's manifest will likely have a much shorter
+            # delta chain to traverse.
+            if preontocache:
+                op.repo.manifestlog._revlog._cache = preontocache
+                onto.manifest()
+
+            # Perform the rebase + commit to the main repo
+            added, replacements = runrebase(op, revs, oldonto, onto)
+
+            op.repo.pushrebaseaddedchangesets = added
+            op.repo.pushrebasereplacements = replacements
+
+            # revs is modified by runrebase to ensure garbage collection of
+            # manifests, so don't use it from here on.
+            revs = None
+
+            markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
+        finally:
+            try:
+                if bundlefile:
+                    os.unlink(bundlefile)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+            if bundle:
+                bundle.close()
 
     # Move public phase forward
     publishing = op.repo.ui.configbool("phases", "publish", untrusted=True)
@@ -1211,6 +1228,7 @@ def runrebase(op, revs, oldonto, onto):
     # Pop rev contexts from the list as we iterate, so we garbage collect the
     # manifests we're creating.
     revs.reverse()
+
     while revs:
         rev = revs.pop()
         newrev = _graft(op, rev, mapping, lastdestnode)

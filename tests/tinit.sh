@@ -17,14 +17,20 @@ newrepo() {
 
 # Enable extensions or features
 enable() {
+  local rcpath
+  if [ -f .hg/hgrc ]; then
+    rcpath=.hg/hgrc
+  else
+    rcpath="$HGRCPATH"
+  fi
   for name in "$@"; do
     if [ "$name" = obsstore ]; then
-      cat >> $HGRCPATH << EOF
+      cat >> $rcpath << EOF
 [experimental]
 evolution = createmarkers, allowunstable
 EOF
     else
-      cat >> $HGRCPATH << EOF
+      cat >> $rcpath << EOF
 [extensions]
 $name=
 EOF
