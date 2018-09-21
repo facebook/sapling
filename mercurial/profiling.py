@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 
 import contextlib
 import errno
+import time
 
 from . import encoding, error, extensions, pycompat, util
 from .i18n import _
@@ -188,7 +189,7 @@ class profile(object):
             raise error.ProgrammingError()
         if self._started:
             return
-        self._started = True
+        self._started = time.time()
         profiler = encoding.environ.get("HGPROF")
         proffn = None
         if profiler is None:
@@ -220,22 +221,24 @@ class profile(object):
             propagate = self._profiler.__exit__(
                 exception_type, exception_value, traceback
             )
-            output = self._ui.config("profiling", "output")
-            content = self._fp.getvalue()
-            if output == "blackbox":
-                self._ui.log("profile", "Profile:\n%s", content)
-            elif output:
-                path = self._ui.expandpath(output)
-                try:
-                    with open(path, "wb") as f:
-                        f.write(content)
-                except IOError as e:
-                    # CreateFile(.., CREATE_ALWAYS, ...) can fail
-                    # for existing "hidden" or "system" files.
-                    # See D8099420.
-                    if pycompat.iswindows and e.errno == errno.EACCES:
-                        with open(path, "r+b") as f:
+            elapsed = time.time() - self._started
+            if elapsed >= self._ui.configint("profiling", "minelapsed"):
+                output = self._ui.config("profiling", "output")
+                content = self._fp.getvalue()
+                if output == "blackbox":
+                    self._ui.log("profile", "Profile:\n%s", content)
+                elif output:
+                    path = self._ui.expandpath(output)
+                    try:
+                        with open(path, "wb") as f:
                             f.write(content)
-            else:
-                self._ui.write_err(content)
+                    except IOError as e:
+                        # CreateFile(.., CREATE_ALWAYS, ...) can fail
+                        # for existing "hidden" or "system" files.
+                        # See D8099420.
+                        if pycompat.iswindows and e.errno == errno.EACCES:
+                            with open(path, "r+b") as f:
+                                f.write(content)
+                else:
+                    self._ui.write_err(content)
         return propagate

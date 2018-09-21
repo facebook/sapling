@@ -162,3 +162,10 @@ profiler extension could be loaded before other extensions
 
   $ cd ..
 #endif
+
+Test minelapsed config option
+
+  $ hg --profile --config profiling.minelapsed=1000 debugshell -c 'print(1)'
+  1
+  $ hg --profile --config profiling.minelapsed=1 debugshell -c 'import time; time.sleep(1.1)' 2>&1 | grep Sample
+  Sample count: * (glob)

@@ -1669,6 +1669,10 @@ profiling is done using lsprof.
     Number of lines to show. Specific to the ``ls`` instrumenting profiler.
     (default: 30)
 
+``minelapsed``
+    Minimum seconds required to output the profiling result.
+    (default: 0)
+
 ``nested``
     Show at most this number of lines of drill-down info after each main entry.
     This can help explain the difference between Total and Inline.
