@@ -21,6 +21,7 @@ from . import (
     scmutil,
     simplemerge,
     tagmerge,
+    templatefilters,
     templatekw,
     templater,
     util,
@@ -392,6 +393,13 @@ def _mergecheck(repo, mynode, orig, fcd, fco, fca, toolconf):
     return True
 
 
+def _describe_failure(r, repo, mynode, orig, fcd, fco, fca):
+    """Describes a merge conflict, which is rendered as a warning to the user"""
+    return _(
+        "warning: conflicts while merging %s! (edit, then use 'hg resolve --mark')\n"
+    ) % repo.pathto(fcd.path())
+
+
 def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -404,12 +412,7 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     return True, r, False
 
 
-@internaltool(
-    "union",
-    fullmerge,
-    _("warning: conflicts while merging %s! " "(edit, then use 'hg resolve --mark')\n"),
-    precheck=_mergecheck,
-)
+@internaltool("union", fullmerge, _describe_failure, precheck=_mergecheck)
 def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -418,12 +421,7 @@ def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "union")
 
 
-@internaltool(
-    "merge",
-    fullmerge,
-    _("warning: conflicts while merging %s! " "(edit, then use 'hg resolve --mark')\n"),
-    precheck=_mergecheck,
-)
+@internaltool("merge", fullmerge, _describe_failure, precheck=_mergecheck)
 def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -433,12 +431,7 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "merge")
 
 
-@internaltool(
-    "merge3",
-    fullmerge,
-    _("warning: conflicts while merging %s! " "(edit, then use 'hg resolve --mark')\n"),
-    precheck=_mergecheck,
-)
+@internaltool("merge3", fullmerge, _describe_failure, precheck=_mergecheck)
 def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -752,7 +745,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
     Returns whether the merge is complete, the return value of the merge, and
     a boolean indicating whether the file was deleted from disk."""
 
-    if not fco.cmp(fcd):  # files identical?
+    if not fco.cmp(fcd):  # files ide gtical?
         return True, None, False
 
     ui = repo.ui
@@ -807,6 +800,13 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
 
     ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
+    def getfailuremsg(on_failure, num_conflicts):
+        # on_failure can be a string or a function which we'll call.
+        if callable(on_failure):
+            return on_failure(num_conflicts, repo, mynode, orig, fcd, fco, fca)
+        else:
+            return on_failure % relfd
+
     if precheck and not precheck(repo, mynode, orig, fcd, fco, fca, toolconf):
         if onfailure:
             if wctx.isinmemory():
@@ -815,7 +815,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
                     type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
                     paths=[fcd.path()],
                 )
-            ui.warn(onfailure % relfd)
+            ui.warn(getfailuremsg(onfailure, 1))
         return True, 1, False
 
     back = _makebackup(repo, ui, wctx, fcd, premerge)
@@ -848,7 +848,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
                         type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
                         paths=[fcd.path()],
                     )
-                ui.warn(onfailure % relfd)
+                ui.warn(getfailuremsg(onfailure, r))
             _onfilemergefailure(ui)
 
         return True, r, deleted

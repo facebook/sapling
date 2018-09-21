@@ -460,7 +460,8 @@ class internalmerge(_funcregistrarbase):
     Optional argument 'onfailure' is the format of warning message
     to be used at failure of merging (target filename is specified
     at formatting). Or, None or so, if warning message should be
-    suppressed.
+    suppressed. It can also be a function which is invoked to calculate
+    the error.
 
     Optional argument 'precheck' is the function to be used
     before actual invocation of internal merge tool itself.
