@@ -156,6 +156,9 @@ def statprofile(ui, fp):
             limit = ui.configwith(fraction, "profiling", "showmin", 0.05)
             kwargs["limit"] = limit
 
+        if ui.config("profiling", "output"):
+            kwargs["color"] = False
+
         statprof.display(fp, data=data, format=displayformat, **kwargs)
 
 

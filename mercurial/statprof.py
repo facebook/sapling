@@ -693,6 +693,15 @@ def display_hotpath(data, fp, limit=0.05, **kwargs):
         root.add(sample.stack[::-1], sample.time - lasttime)
         lasttime = sample.time
 
+    if kwargs.get("color", True):
+        redformat = "\033[91m%s\033[0m"
+        greyformat = "\033[90m%s\033[0m"
+        whiteformat = "%s"
+    else:
+        redformat = "* %s"
+        greyformat = "  %s"
+        whiteformat = "  %s"
+
     def _write(node, depth, multiple_siblings):
         site = node.site
         visiblechildren = [
@@ -725,10 +734,12 @@ def display_hotpath(data, fp, limit=0.05, **kwargs):
             childrensamples = sum([c.count for c in node.children.itervalues()])
             # Make frames that performed more than 10% of the operation red
             if node.count - childrensamples > (0.1 * root.count):
-                finalstring = "\033[91m" + finalstring + "\033[0m"
+                finalstring = redformat % finalstring
             # Make frames that didn't actually perform work dark grey
             elif node.count - childrensamples == 0:
-                finalstring = "\033[90m" + finalstring + "\033[0m"
+                finalstring = greyformat % finalstring
+            else:
+                finalstring = whiteformat % finalstring
             print(finalstring, file=fp)
 
         newdepth = depth
