@@ -18,9 +18,7 @@ from .config import EdenInstance
 from .util import ShutdownError, poll_until, print_stderr
 
 
-def wait_for_shutdown(
-    instance: EdenInstance, pid: int, timeout: float, kill_timeout: float = 5.0
-) -> bool:
+def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bool:
     """
     Wait for a process to exit.
 

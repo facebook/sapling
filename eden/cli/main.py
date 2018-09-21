@@ -957,7 +957,7 @@ re-open these files after Eden is restarted.
         # precedence over the default timeout passed in by our caller.
         if self.args.shutdown_timeout is not None:
             timeout = self.args.shutdown_timeout
-        daemon.wait_for_shutdown(instance, pid, timeout=timeout)
+        daemon.wait_for_shutdown(pid, timeout=timeout)
 
     def _do_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:
         with instance.get_thrift_client() as client:
@@ -1067,7 +1067,7 @@ class StopCmd(Subcmd):
             return SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
 
         try:
-            if daemon.wait_for_shutdown(instance, pid, timeout=args.timeout):
+            if daemon.wait_for_shutdown(pid, timeout=args.timeout):
                 print_stderr("edenfs exited cleanly.")
                 return SHUTDOWN_EXIT_CODE_NORMAL
             else:
