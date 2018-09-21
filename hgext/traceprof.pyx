@@ -27,19 +27,18 @@ Config::
     framededup = yes
 """
 
-from libc.stdio cimport FILE
+from libc.stdio cimport fopen, fclose, FILE
 from cpython.object cimport PyObject
 
 import contextlib
 import gc
+import os
+import tempfile
 
 cdef extern from "hgext/extlib/traceprofimpl.cpp":
     void enable()
     void disable()
-    IF UNAME_SYSNAME == "Windows":
-        void report()
-    ELSE:
-        void report(FILE *)
+    void report(FILE *)
     void settimethreshold(double)
     void setcountthreshold(size_t)
     void setdedup(int)
@@ -66,10 +65,19 @@ def profile(ui, fp):
         yield
     finally:
         disable()
-        IF UNAME_SYSNAME == "Windows":
-            # On Windows, "FILE*" could be incompatible between Python.exe and
-            # traceimpl.exp. Use stderr from traceimpl.exp conservatively.
-            report()
-        ELSE:
-            report(PyFile_AsFile(<PyObject *>fp))
+        # "report" only accepts a real file. "fp" could be stringio.
+        # Therefore always use a temporary file as a buffer.
+        pyfd, filename = tempfile.mkstemp("traceprof")
+        os.close(pyfd)
+        # Somehow the file handlers between Cython and CPython can be
+        # incompatible on Windows (linked with different CRTs?). Using
+        # the file handlers like `fdopen`, `PyFile_AsFile` would segfault
+        # on Windows. Workaround that by using `fopen` provided by Cython
+        # so only the Cython version of the file handlers are used.
+        cfp = fopen(filename, "w")
+        report(cfp)
+        fclose(cfp)
+        content = open(filename).read()
+        os.unlink(filename)
+        fp.write(content)
         clear()
