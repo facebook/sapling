@@ -167,9 +167,7 @@ class profile(object):
 
     def __init__(self, ui):
         self._ui = ui
-        self._output = None
         self._fp = None
-        self._fpdoclose = True
         self._profiler = None
         self._entered = False
         self._started = False
@@ -202,44 +200,19 @@ class profile(object):
                 self._ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
                 profiler = "stat"
 
-        self._output = self._ui.config("profiling", "output")
+        self._fp = util.stringio()
 
-        try:
-            if self._output == "blackbox":
-                self._fp = util.stringio()
-            elif self._output:
-                path = self._ui.expandpath(self._output)
-                try:
-                    self._fp = open(path, "wb")
-                except IOError as e:
-                    # Needed for the case when we create a tempfile
-                    # in Rust and then we try to write to that file.
-                    # Safe since we only run this if the previous
-                    # open failed and if it is on windows and we get
-                    # the Permission Denied error.
-                    # See D8099420.
-                    if pycompat.iswindows and e.errno == errno.EACCES:
-                        self._fp = open(path, "r+b")
-                    else:
-                        raise
-            else:
-                self._fpdoclose = False
-                self._fp = self._ui.ferr
+        if proffn is not None:
+            pass
+        elif profiler == "ls":
+            proffn = lsprofile
+        elif profiler == "flame":
+            proffn = flameprofile
+        else:
+            proffn = statprofile
 
-            if proffn is not None:
-                pass
-            elif profiler == "ls":
-                proffn = lsprofile
-            elif profiler == "flame":
-                proffn = flameprofile
-            else:
-                proffn = statprofile
-
-            self._profiler = proffn(self._ui, self._fp)
-            self._profiler.__enter__()
-        except:  # re-raises
-            self._closefp()
-            raise
+        self._profiler = proffn(self._ui, self._fp)
+        self._profiler.__enter__()
 
     def __exit__(self, exception_type, exception_value, traceback):
         propagate = None
@@ -247,15 +220,22 @@ class profile(object):
             propagate = self._profiler.__exit__(
                 exception_type, exception_value, traceback
             )
-            if self._output == "blackbox":
-                val = "Profile:\n%s" % self._fp.getvalue()
-                # ui.log treats the input as a format string,
-                # so we need to escape any % signs.
-                val = val.replace("%", "%%")
-                self._ui.log("profile", val)
-        self._closefp()
+            output = self._ui.config("profiling", "output")
+            content = self._fp.getvalue()
+            if output == "blackbox":
+                self._ui.log("profile", "Profile:\n%s", content)
+            elif output:
+                path = self._ui.expandpath(output)
+                try:
+                    with open(path, "wb") as f:
+                        f.write(content)
+                except IOError as e:
+                    # CreateFile(.., CREATE_ALWAYS, ...) can fail
+                    # for existing "hidden" or "system" files.
+                    # See D8099420.
+                    if pycompat.iswindows and e.errno == errno.EACCES:
+                        with open(path, "r+b") as f:
+                            f.write(content)
+            else:
+                self._ui.write_err(content)
         return propagate
-
-    def _closefp(self):
-        if self._fpdoclose and self._fp is not None:
-            self._fp.close()
