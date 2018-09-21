@@ -64,7 +64,7 @@ from mercurial import (
 )
 from mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
 from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid
+from mercurial.node import bin, hex, nullid, nullrev, short
 
 from . import recording
 from ..remotefilelog import (
@@ -117,6 +117,32 @@ def uisetup(ui):
     order.remove("pushrebase")
     order.append("pushrebase")
     extensions._order = order
+
+    def manifestlogrevision(orig, self, nodeorrev, **kwargs):
+        try:
+            haslock = util.islocked(os.path.join(self.opener.join(""), "../wlock"))
+
+            if nodeorrev != nullrev:
+                if haslock:
+                    msg = "manifest read for %s inside lock\n" % short(nodeorrev)
+                else:
+                    msg = "manifest read for %s inside lock\n" % short(nodeorrev)
+                # internal config: pushrebase.debugprintmanifestreads.user
+                if ui.configbool("pushrebase", "debugprintmanifestreads.user", False):
+                    ui.write_err(msg)
+                ui.log(msg)
+
+        except Exception as e:
+            ui.write_err("manifest-debug exception: %s\n" % e)
+            ui.log("manifest-debug exception: %s\n" % e)
+
+        return orig(self, nodeorrev, **kwargs)
+
+    # internal config: pushrebase.debugprintmanifestreads
+    if ui.configbool("pushrebase", "debugprintmanifestreads", False):
+        extensions.wrapfunction(
+            manifest.manifestrevlog, "revision", manifestlogrevision
+        )
 
 
 def extsetup(ui):
