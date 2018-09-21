@@ -223,6 +223,16 @@ impl ConfigSetHgExt for ConfigSet {
             }
         }
 
+        // Convert $HGPROF to profiling.type
+        if let Ok(profiling_type) = env::var("HGPROF") {
+            self.set(
+                "profiling",
+                "type",
+                Some(profiling_type.as_bytes()),
+                &"$HGPROF".into(),
+            );
+        }
+
         let opts = Options::new().source("user").process_hgplain();
 
         // If $HGRCPATH is set, use it instead.

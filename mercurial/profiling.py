@@ -200,10 +200,8 @@ class profile(object):
         if self._started:
             return
         self._started = time.time()
-        profiler = encoding.environ.get("HGPROF")
         proffn = None
-        if profiler is None:
-            profiler = self._ui.config(self._section, "type")
+        profiler = self._ui.config(self._section, "type")
         if profiler not in ("ls", "stat", "flame"):
             # try load profiler from extension with the same name
             proffn = _loadprofiler(self._ui, profiler)
