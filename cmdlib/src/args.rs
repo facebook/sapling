@@ -137,7 +137,7 @@ impl MononokeApp {
                 Arg::with_name("db-address")
                     .long("db-address")
                     .value_name("ADDRESS")
-                    .default_value("xdb.mononoke_test_2")
+                    .default_value("xdb.mononoke_production")
                     .help("database address"),
             )
             .args(&cache_args);

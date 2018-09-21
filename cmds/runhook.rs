@@ -152,7 +152,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
     let prefix = matches.value_of("manifold-prefix").unwrap_or("");
     let xdb_tier = matches
         .value_of("xdb-tier")
-        .unwrap_or("xdb.mononoke_test_2");
+        .unwrap_or("xdb.mononoke_production");
     BlobRepo::new_manifold(
         logger.clone(),
         &ManifoldArgs {
