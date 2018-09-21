@@ -430,7 +430,15 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         self._ui.log("fsmonitor_status", "", fsmonitor_status="normal")
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
             filelist = [e["name"] for e in result["files"]]
-            self._ui.log("fsmonitor_details", "watchman returned %r" % (filelist,))
+            limit = 20
+            if len(filelist) <= limit:
+                self._ui.log("fsmonitor_details", "watchman returned %r" % (filelist,))
+            else:
+                self._ui.log(
+                    "fsmonitor_details",
+                    "watchman returned %r and %s more entries"
+                    % (filelist[:limit], len(filelist) - limit),
+                )
 
     # for file paths which require normalization and we encounter a case
     # collision, we store our own foldmap
