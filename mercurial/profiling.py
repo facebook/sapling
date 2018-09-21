@@ -28,11 +28,11 @@ def _loadprofiler(ui, profiler):
 
 
 @contextlib.contextmanager
-def lsprofile(ui, fp):
-    format = ui.config("profiling", "format")
-    field = ui.config("profiling", "sort")
-    limit = ui.configint("profiling", "limit")
-    climit = ui.configint("profiling", "nested")
+def lsprofile(ui, fp, section):
+    format = ui.config(section, "format")
+    field = ui.config(section, "sort")
+    limit = ui.configint(section, "limit")
+    climit = ui.configint(section, "nested")
 
     if format not in ["text", "kcachegrind"]:
         ui.warn(_("unrecognized profiling format '%s'" " - Ignored\n") % format)
@@ -67,7 +67,7 @@ def lsprofile(ui, fp):
 
 
 @contextlib.contextmanager
-def flameprofile(ui, fp):
+def flameprofile(ui, fp, section):
     try:
         from flamegraph import flamegraph
     except ImportError:
@@ -78,7 +78,7 @@ def flameprofile(ui, fp):
             )
         )
     # developer config: profiling.freq
-    freq = ui.configint("profiling", "freq")
+    freq = ui.configint(section, "freq")
     filter_ = None
     collapse_recursion = True
     thread = flamegraph.ProfileThread(fp, 1.0 / freq, filter_, collapse_recursion)
@@ -100,10 +100,10 @@ def flameprofile(ui, fp):
 
 
 @contextlib.contextmanager
-def statprofile(ui, fp):
+def statprofile(ui, fp, section):
     from . import statprof
 
-    freq = ui.configint("profiling", "freq")
+    freq = ui.configint(section, "freq")
     if freq > 0:
         # Cannot reset when profiler is already active. So silently no-op.
         if statprof.state.profile_level == 0:
@@ -118,7 +118,7 @@ def statprofile(ui, fp):
     finally:
         data = statprof.stop()
 
-        profformat = ui.config("profiling", "statformat")
+        profformat = ui.config(section, "statformat")
 
         formats = {
             "byline": statprof.DisplayFormats.ByLine,
@@ -148,15 +148,15 @@ def statprofile(ui, fp):
             raise ValueError(s)
 
         if profformat == "chrome":
-            showmin = ui.configwith(fraction, "profiling", "showmin", 0.005)
-            showmax = ui.configwith(fraction, "profiling", "showmax")
+            showmin = ui.configwith(fraction, section, "showmin", 0.005)
+            showmax = ui.configwith(fraction, section, "showmax")
             kwargs.update(minthreshold=showmin, maxthreshold=showmax)
         elif profformat == "hotpath":
             # inconsistent config: profiling.showmin
-            limit = ui.configwith(fraction, "profiling", "showmin", 0.05)
+            limit = ui.configwith(fraction, section, "showmin", 0.05)
             kwargs["limit"] = limit
 
-        if ui.config("profiling", "output"):
+        if ui.config(section, "output"):
             kwargs["color"] = False
 
         statprof.display(fp, data=data, format=displayformat, **kwargs)
@@ -175,10 +175,11 @@ class profile(object):
         self._profiler = None
         self._entered = False
         self._started = False
+        self._section = "profiling"
 
     def __enter__(self):
         self._entered = True
-        if self._ui.configbool("profiling", "enabled"):
+        if self._ui.configbool(self._section, "enabled"):
             self.start()
         return self
 
@@ -196,7 +197,7 @@ class profile(object):
         profiler = encoding.environ.get("HGPROF")
         proffn = None
         if profiler is None:
-            profiler = self._ui.config("profiling", "type")
+            profiler = self._ui.config(self._section, "type")
         if profiler not in ("ls", "stat", "flame"):
             # try load profiler from extension with the same name
             proffn = _loadprofiler(self._ui, profiler)
@@ -225,8 +226,8 @@ class profile(object):
                 exception_type, exception_value, traceback
             )
             elapsed = time.time() - self._started
-            if elapsed >= self._ui.configint("profiling", "minelapsed"):
-                output = self._ui.config("profiling", "output")
+            if elapsed >= self._ui.configint(self._section, "minelapsed"):
+                output = self._ui.config(self._section, "output")
                 content = self._fp.getvalue()
                 if output == "blackbox":
                     self._ui.log("profile", "Profile:\n%s", content)

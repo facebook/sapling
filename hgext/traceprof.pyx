@@ -48,7 +48,7 @@ cdef extern from "Python.h":
     FILE* PyFile_AsFile(PyObject *p)
 
 @contextlib.contextmanager
-def profile(ui, fp):
+def profile(ui, fp, section="profiling"):
     if ui is not None:
         if ui.configbool(b'traceprof', b'disablegc'):
             gc.disable() # slightly more predictable

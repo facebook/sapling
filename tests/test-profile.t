@@ -120,7 +120,7 @@ profiler extension could be loaded before other extensions
   > from __future__ import absolute_import
   > import contextlib
   > @contextlib.contextmanager
-  > def profile(ui, fp):
+  > def profile(ui, fp, section):
   >     print('fooprof: start profile')
   >     yield
   >     print('fooprof: end profile')
