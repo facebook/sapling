@@ -300,8 +300,9 @@ File conflict is not allowed
   $ hg up -qC 3
   $ echo dirty >> a
   $ hg up -q 4
-  abort: conflicting changes
-  (commit or update --clean to discard changes)
+  abort: 1 conflicting file changes:
+   a
+  (commit, shelve, update --clean to discard them, or update --merge to merge them)
   [255]
   $ hg up -m 4
   merging a

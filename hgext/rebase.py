@@ -29,6 +29,7 @@ from mercurial import (
     error,
     extensions,
     hg,
+    i18n,
     lock,
     merge as mergemod,
     mergeutil,
@@ -529,15 +530,7 @@ class rebaseruntime(object):
                     clearstatus(repo)
                     mergemod.mergestate.clean(repo)
 
-                    # internal config: merge.numconflictpaths
-                    numconfictpaths = ui.config("merge", "numconflictpaths", 3)
-                    if len(e.paths) > numconfictpaths > 0:
-                        pathstr = ", ".join(
-                            e.paths[0:numconfictpaths]
-                        ) + ", and %d more" % (len(e.paths) - numconfictpaths)
-                    else:
-                        pathstr = ", ".join(e.paths)
-
+                    pathstr = ", ".join(i18n.limititems(e.paths, maxitems=3))
                     if e.type == error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS:
                         kindstr = _("hit merge conflicts")
                     else:

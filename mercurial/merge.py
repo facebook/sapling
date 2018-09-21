@@ -17,6 +17,7 @@ from . import (
     error,
     extensions,
     filemerge,
+    i18n,
     match as matchmod,
     obsutil,
     progress,
@@ -2086,11 +2087,22 @@ def update(
             )
 
         if updatecheck == "noconflict":
+            paths = []
+            cwd = repo.getcwd()
             for f, (m, args, msg) in actionbyfile.iteritems():
                 if m not in ("g", "k", "e", "r", "pr"):
-                    msg = _("conflicting changes")
-                    hint = _("commit or update --clean to discard changes")
-                    raise error.Abort(msg, hint=hint)
+                    paths.append(repo.pathto(f, cwd))
+
+            paths = sorted(paths)
+            if len(paths) > 0:
+                msg = _("%d conflicting file changes:\n") % len(paths)
+                for path in i18n.limititems(paths):
+                    msg += " %s\n" % path
+                hint = _(
+                    "commit, shelve, update --clean to discard them"
+                    ", or update --merge to merge them"
+                )
+                raise error.Abort(msg.strip(), hint=hint)
 
         # Prompt and create actions. Most of this is in the resolve phase
         # already, but we can't handle .hgsubstate in filemerge or

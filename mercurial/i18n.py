@@ -119,6 +119,13 @@ def _(message):
         return gettext(message)
 
 
+def limititems(items, maxitems=5):
+    if len(items) > maxitems > 0:
+        return items[0:maxitems] + ["...and %d more" % (len(items) - maxitems)]
+    else:
+        return items
+
+
 def init():
     """inline _plain() so it's faster. called by dispatch._dispatch"""
     global _encoding, _plain
