@@ -321,13 +321,3 @@ def shoulduselegacy(name):
         return name in legacy.split()
     else:
         return os.path.lexists(os.path.join(configdir, "legacy.%s" % name))
-
-
-# Put a file under configdir/legacy.ui to use the legacy ui module.
-# This is an emergency way to switch to the old config parser if the new Rust
-# parser has issues.  The legacy ui module should be removed once the new Rust
-# config parser is verified to work stably in production.
-if shoulduselegacy("ui"):
-    import mercurial.legacyui as ui
-
-    sys.modules["mercurial.ui"] = ui
