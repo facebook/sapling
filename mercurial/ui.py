@@ -651,6 +651,9 @@ class ui(object):
         """tell whether section exists in config."""
         return section in self._rcfg.sections()
 
+    def configsections(self):
+        return self._rcfg.sections()
+
     def configitems(self, section, untrusted=False, ignoresub=False):
         cfg = self._rcfg
         items = []

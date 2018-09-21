@@ -1603,6 +1603,10 @@ collected during profiling, while 'profiling report' stands for a
 statistical text report generated from the profiling data. The
 profiling is done using lsprof.
 
+If ``profiling.enabled`` is false, alternative sections can still enable
+profiling. Sections starting with ``profiling:`` are examined in alphabet
+order. The first one with ``enabled`` set to true will be used.
+
 ``enabled``
     Enable the profiler.
     (default: false)

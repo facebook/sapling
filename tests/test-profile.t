@@ -169,3 +169,16 @@ Test minelapsed config option
   1
   $ hg --profile --config profiling.minelapsed=1 debugshell -c 'import time; time.sleep(1.1)' 2>&1 | grep Sample
   Sample count: * (glob)
+
+Test other config sections
+
+  $ hg --config profiling:background.enabled=1 --config profiling:background.output=z debugshell -c '1'
+  unrecognized profiler 'None' - ignored
+  invalid sampling frequency 'None' - ignoring
+  unknown profiler output format: None
+  $ [ -f z ]
+
+  $ hg --profile --config profiling.output=x --config profiling:background.enabled=1 --config profiling:background.output=y debugshell -c '1'
+  $ [ -f x ]
+  $ [ -f y ]
+  [1]

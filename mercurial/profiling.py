@@ -179,8 +179,14 @@ class profile(object):
 
     def __enter__(self):
         self._entered = True
-        if self._ui.configbool(self._section, "enabled"):
-            self.start()
+        sections = sorted(
+            s for s in self._ui.configsections() if s.split(":", 1)[0] == "profiling"
+        )
+        for section in sections:
+            if self._ui.configbool(section, "enabled"):
+                self._section = section
+                self.start()
+                break
         return self
 
     def start(self):
@@ -216,7 +222,7 @@ class profile(object):
         else:
             proffn = statprofile
 
-        self._profiler = proffn(self._ui, self._fp)
+        self._profiler = proffn(self._ui, self._fp, self._section)
         self._profiler.__enter__()
 
     def __exit__(self, exception_type, exception_value, traceback):
