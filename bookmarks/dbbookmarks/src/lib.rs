@@ -6,6 +6,8 @@
 
 #![deny(warnings)]
 #![feature(never_type)]
+// FIXME T34253207, remove when https://github.com/diesel-rs/diesel/issues/1785 fixed
+#![allow(proc_macro_derive_resolution_fallback)]
 
 extern crate ascii;
 extern crate bookmarks;

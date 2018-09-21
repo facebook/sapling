@@ -5,6 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+// FIXME T34253207, remove when https://github.com/diesel-rs/diesel/issues/1785 fixed
+#![allow(proc_macro_derive_resolution_fallback)]
 #![feature(try_from, never_type)]
 
 extern crate abomonation;

@@ -7,6 +7,8 @@
 //! Base types used throughout Mononoke.
 
 #![deny(warnings)]
+// FIXME T34253207, remove when https://github.com/diesel-rs/diesel/issues/1785 fixed
+#![allow(proc_macro_derive_resolution_fallback)]
 // The allow(dead_code) is temporary until Thrift serialization is done.
 #![allow(dead_code)]
 #![feature(try_from)]

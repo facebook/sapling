@@ -43,6 +43,8 @@
 //! differences. These are for interfacing at the edges, but are not used within Mononoke's core
 //! structures at all.
 #![deny(warnings)]
+// FIXME T34253207, remove when https://github.com/diesel-rs/diesel/issues/1785 fixed
+#![allow(proc_macro_derive_resolution_fallback)]
 #![feature(const_fn)]
 #![feature(never_type)]
 #![feature(try_from)]
