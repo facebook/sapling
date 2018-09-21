@@ -102,6 +102,7 @@ class Merge3Text(object):
         """Return merge in cvs-like form.
         """
         self.conflicts = False
+        self.conflictscount = 0
         newline = "\n"
         if len(self.a) > 0:
             if self.a[0].endswith("\r\n"):
@@ -137,6 +138,7 @@ class Merge3Text(object):
                         yield self.b[i]
                 else:
                     self.conflicts = True
+                    self.conflictscount += 1
                     if start_marker is not None:
                         yield start_marker + newline
                     for i in range(t[3], t[4]):
@@ -432,6 +434,8 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     """Performs the simplemerge algorithm.
 
     The merged result is written into `localctx`.
+
+    Returns the number of conflicts.
     """
     opts = pycompat.byteskwargs(opts)
 
@@ -486,4 +490,4 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         localctx.write(mergedtext, flags)
 
     if m3.conflicts and not mode == "union":
-        return 1
+        return m3.conflictscount
