@@ -203,26 +203,7 @@ from distutils.version import StrictVersion, LooseVersion
 from distutils_rust import RustExtension, RustBinary, RustVendoredCrates, BuildRustExt
 import distutils
 
-haverust = False
-try:
-    cargo_version = subprocess.check_output(["cargo", "--version"]).split()[1]
-except Exception:
-    sys.stderr.write("not compiling Rust extensions: cargo is not available\n")
-else:
-    required_cargo_version = "0.21"
-    if LooseVersion(cargo_version) >= LooseVersion(required_cargo_version):
-        haverust = True
-    else:
-        sys.stderr.write(
-            "not compiling Rust extensions: cargo is too old "
-            + "(found %s, need %s or higher)\n"
-            % (cargo_version, required_cargo_version)
-        )
-
 havefb = os.path.exists("fb")
-
-if not haverust:
-    raise RuntimeError("Rust (and cargo >= 0.21) is required")
 
 iswindows = os.name == "nt"
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"

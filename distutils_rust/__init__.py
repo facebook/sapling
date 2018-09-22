@@ -225,12 +225,17 @@ class BuildRustExt(distutils.core.Command):
         if os.path.exists(cargolockpath):
             os.unlink(cargolockpath)
 
-        cmd = ["cargo", "build", "--manifest-path", target.manifest]
+        paths = self.rust_binary_paths()
+        cmd = [paths.get("cargo", "cargo"), "build", "--manifest-path", target.manifest]
         if not self.debug:
             cmd.append("--release")
 
         env = os.environ.copy()
         env["CARGO_TARGET_DIR"] = self.get_temp_path()
+        if "rustc" in paths:
+            env["RUSTC"] = paths["rustc"]
+        if "rustdoc" in paths:
+            env["RUSTDOC"] = paths["rustdoc"]
 
         rc = subprocess.call(cmd, env=env)
         if rc:
@@ -334,11 +339,14 @@ class BuildRustExt(distutils.core.Command):
         self.build_target(target)
 
     try:
-        from distutils_rust.fb import download_vendored_crates
+        from distutils_rust.fb import download_vendored_crates, rust_binary_paths
     except ImportError:
 
         def download_vendored_crates(self, ven):
             distutils.log.info("skipping downloading vendored crates")
+
+        def rust_binary_paths(self):
+            return {"cargo": "cargo"}
 
 
 distutils.dist.Distribution.rust_ext_modules = ()
