@@ -86,7 +86,7 @@ py_class!(class bookmarkstore |py| {
         let path = local_bytes_to_path(path.data(py)).map_err(|_| encoding_error(py, path))?;
 
         bm_store
-            .flush(path)
+            .flush(&path)
             .map_err(|e| PyErr::new::<exc::IOError, _>(py, format!("{}", e)))?;
         Ok(py.None())
     }
