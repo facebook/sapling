@@ -42,6 +42,8 @@ def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bo
             # anything else is unexpected
             elif ex.errno != errno.EPERM:
                 raise
+        if is_zombie_process(pid):
+            return True
         # Still running
         return None
 
@@ -82,6 +84,19 @@ def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bo
             "edenfs process {} did not terminate within {} seconds of "
             "sending SIGKILL.".format(pid, kill_timeout)
         )
+
+
+def is_zombie_process(pid: int) -> bool:
+    try:
+        with open(f"/proc/{pid}/stat", "rb") as proc_stat:
+            line = proc_stat.read()
+            pieces = line.split()
+            if len(pieces) > 2 and pieces[2] == b"Z":
+                return True
+    except FileNotFoundError:
+        pass
+
+    return False
 
 
 def _find_default_daemon_binary() -> Optional[str]:

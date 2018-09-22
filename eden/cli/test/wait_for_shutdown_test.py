@@ -15,7 +15,8 @@ import time
 import typing
 import unittest
 
-from ..daemon import wait_for_shutdown
+from ..daemon import is_zombie_process, wait_for_shutdown
+from ..util import poll_until
 
 
 class WaitForShutdownTest(unittest.TestCase):
@@ -27,6 +28,15 @@ class WaitForShutdownTest(unittest.TestCase):
         with stop_watch.measure():
             wait_for_shutdown(process.pid, timeout=5)
         self.assertLessEqual(stop_watch.elapsed, 3)
+
+    def test_waiting_for_zombie_process_finishes_immediately(self) -> None:
+        with subprocess.Popen(["true"]) as process:
+            wait_until_process_is_zombie(process)
+
+            stop_watch = StopWatch()
+            with stop_watch.measure():
+                wait_for_shutdown(process.pid, timeout=5)
+            self.assertLessEqual(stop_watch.elapsed, 3)
 
     def test_waiting_for_exiting_process_finishes_without_sigkill(self) -> None:
         process = AutoReapingChildProcess(["sleep", "1"])
@@ -41,6 +51,43 @@ class WaitForShutdownTest(unittest.TestCase):
         self.assertEqual(
             returncode, -signal.SIGKILL, "Process should have exited with SIGKILL"
         )
+
+    def test_waiting_for_alive_unreaped_child_process_kills_with_sigkill(self) -> None:
+        process = subprocess.Popen(["sleep", "30"])
+        # Don't reap the process yet.
+        wait_for_shutdown(process.pid, timeout=1)
+        returncode = process.wait()
+        self.assertEqual(
+            returncode, -signal.SIGKILL, "Process should have exited with SIGKILL"
+        )
+
+
+class IsZombieProcessTest(unittest.TestCase):
+    def test_init_process_is_not_a_zombie(self) -> None:
+        self.assertFalse(is_zombie_process(1))
+
+    def test_running_child_of_current_process_is_not_a_zombie(self) -> None:
+        process = subprocess.Popen(["sleep", "3"])
+        self.assertFalse(is_zombie_process(process.pid))
+
+    def test_dead_process_is_not_a_zombie(self) -> None:
+        with subprocess.Popen(["true"]) as process:
+            process.wait()
+            self.assertFalse(is_zombie_process(process.pid))
+
+    def test_exited_unreaped_child_of_current_process_is_a_zombie(self) -> None:
+        with subprocess.Popen(["true"]) as process:
+            # Wait for the process to finish, but don't reap it yet.
+            time.sleep(1)
+
+            self.assertTrue(is_zombie_process(process.pid))
+
+
+def wait_until_process_is_zombie(process: subprocess.Popen) -> None:
+    def is_zombie() -> typing.Optional[bool]:
+        return True if is_zombie_process(process.pid) else None
+
+    poll_until(is_zombie, timeout=3)
 
 
 class AutoReapingChildProcess:
