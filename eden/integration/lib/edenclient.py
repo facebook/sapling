@@ -240,17 +240,7 @@ class EdenFS(object):
         """
         assert self._process is not None
 
-        # We need to take care here: the normal `eden shutdown` command will
-        # wait for eden to successfully finish by repeatedly testing to see
-        # whether the process is alive.  However, running as root we don't
-        # spawn an intermediate process and this results in our child process
-        # (attached to self._process) to land in a defunct state such that
-        # the `kill(pid, 0)` test in the `eden shutdown` command still considers
-        # the process alive.   To avoid this situation we ask the shutdown
-        # command not to wait and instead perform our own polling here against
-        # the real process handle.
-        self.run_cmd("shutdown", "-t", "0")
-        util.poll_until(lambda: self._process.poll(), timeout=30)
+        self.run_cmd("shutdown", "-t", "30")
         return_code = self._process.wait()
         self._process = None
         if return_code != 0:
