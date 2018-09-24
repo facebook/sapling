@@ -28,7 +28,7 @@ import re
 import signal
 import subprocess
 
-from mercurial import error, extensions, hg, registrar, revset, smartset
+from mercurial import error, hg, namespaces, registrar, util
 from mercurial.i18n import _
 
 
@@ -42,6 +42,8 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("phrevset", "callsign", default=None)
+
+namespacepredicate = registrar.namespacepredicate()
 
 DIFFERENTIAL_REGEX = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL
@@ -170,7 +172,8 @@ def parsedesc(repo, resp, ignoreparsefailure):
     return match.group("id")
 
 
-def revsetdiff(repo, subset, diffid):
+@util.lrucachefunc
+def revsetdiff(repo, diffid):
     """Return a set of revisions corresponding to a given Differential ID """
 
     repo_callsign = repo.ui.config("phrevset", "callsign")
@@ -211,8 +214,7 @@ def revsetdiff(repo, subset, diffid):
         svnrev = parsedesc(repo, resp, ignoreparsefailure=False)
         repo.ui.debug("[diffrev] SVN rev is r%s\n" % svnrev)
 
-        args = ("string", svnrev)
-        return svnutil.revset_svnrev(repo, subset, args)
+        return svnutil.lookuprev(repo, svnrev)
 
     elif vcs == "git":
         gitrev = parsedesc(repo, resp, ignoreparsefailure=False)
@@ -294,16 +296,17 @@ def revsetdiff(repo, subset, diffid):
             )
 
 
-def revsetstringset(orig, repo, subset, revstr, *args, **kwargs):
-    """Wrapper that recognizes revisions starting with 'D'"""
+def _lookupname(repo, name):
+    cl = repo.changelog
+    tonode = cl.node
+    if name.startswith("D") and name[1:].isdigit():
+        return [tonode(r) for r in revsetdiff(repo, name[1:])]
+    else:
+        return []
 
-    if revstr.startswith("D") and revstr[1:].isdigit():
-        return smartset.baseset(revsetdiff(repo, subset, revstr[1:]))
 
-    return orig(repo, subset, revstr, *args, **kwargs)
-
-
-def extsetup(ui):
-    extensions.wrapfunction(revset, "stringset", revsetstringset)
-    revset.methods["string"] = revset.stringset
-    revset.methods["symbol"] = revset.stringset
+@namespacepredicate("phrevset", priority=70)
+def _getnamespace(_repo):
+    return namespaces.namespace(
+        listnames=lambda repo: [], namemap=_lookupname, nodemap=lambda repo, node: []
+    )
