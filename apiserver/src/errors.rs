@@ -19,9 +19,21 @@ use blobrepo::ErrorKind as BlobRepoError;
 use reachabilityindex::errors::ErrorKind as ReachabilityIndexError;
 
 #[derive(Serialize, Debug)]
-struct ErrorResponse {
+#[serde(untagged)]
+enum ErrorResponse {
+    APIErrorResponse(APIErrorResponse),
+    LFSErrorResponse(LFSErrorResponse),
+}
+
+#[derive(Serialize, Debug)]
+struct APIErrorResponse {
     message: String,
     causes: Vec<String>,
+}
+
+#[derive(Serialize, Debug)]
+struct LFSErrorResponse {
+    message: String,
 }
 
 #[derive(Debug)]
@@ -29,6 +41,7 @@ pub enum ErrorKind {
     NotFound(String, Option<Error>),
     InvalidInput(String, Option<Error>),
     InternalError(Error),
+    LFSNotFound(String),
 }
 
 impl ErrorKind {
@@ -39,17 +52,27 @@ impl ErrorKind {
             NotFound(..) => StatusCode::NOT_FOUND,
             InvalidInput(..) => StatusCode::BAD_REQUEST,
             InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            LFSNotFound(_) => StatusCode::NOT_FOUND,
         }
     }
 
     #[allow(deprecated)] // self.causes()
     fn into_error_response(&self) -> ErrorResponse {
-        ErrorResponse {
-            message: self.to_string(),
-            causes: self.causes()
-                .skip(1)
-                .map(|cause| cause.to_string())
-                .collect(),
+        use errors::ErrorKind::*;
+
+        match &self {
+            NotFound(..) | InvalidInput(..) | InternalError(_) => {
+                ErrorResponse::APIErrorResponse(APIErrorResponse {
+                    message: self.to_string(),
+                    causes: self.causes()
+                        .skip(1)
+                        .map(|cause| cause.to_string())
+                        .collect(),
+                })
+            }
+            LFSNotFound(_) => ErrorResponse::LFSErrorResponse(LFSErrorResponse {
+                message: self.to_string(),
+            }),
         }
     }
 }
@@ -61,6 +84,7 @@ impl Fail for ErrorKind {
         match self {
             NotFound(_, cause) | InvalidInput(_, cause) => cause.as_ref().map(|e| e.as_fail()),
             InternalError(err) => Some(err.as_fail()),
+            LFSNotFound(_) => None,
         }
     }
 }
@@ -73,6 +97,7 @@ impl fmt::Display for ErrorKind {
             NotFound(_0, _) => write!(f, "{} is not found", _0),
             InvalidInput(_0, _) => write!(f, "{} is invalid", _0),
             InternalError(_0) => write!(f, "internal server error: {}", _0),
+            LFSNotFound(_0) => write!(f, "{} is not found on LFS request", _0),
         }
     }
 }
@@ -183,6 +208,10 @@ impl From<ErrorKind> for MononokeAPIException {
             },
             e @ InternalError(_) => MononokeAPIException {
                 kind: MononokeAPIExceptionKind::InternalError,
+                reason: e.to_string(),
+            },
+            e @ LFSNotFound(_) => MononokeAPIException {
+                kind: MononokeAPIExceptionKind::NotFound,
                 reason: e.to_string(),
             },
         }

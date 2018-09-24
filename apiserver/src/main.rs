@@ -64,7 +64,7 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use actix_web::{http, server, App, HttpRequest, HttpResponse, State};
+use actix_web::{http, server, App, HttpRequest, HttpResponse, Json, State};
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::Arg;
@@ -82,7 +82,7 @@ use mercurial_types::nodehash::HgChangesetId;
 use metaconfig::RepoConfigs;
 use scuba_ext::ScubaSampleBuilder;
 
-use actor::{Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
+use actor::{BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
 use errors::ErrorKind;
 
 mod config {
@@ -113,6 +113,11 @@ struct HashQueryInfo {
 struct OidQueryInfo {
     repo: String,
     oid: String,
+}
+
+#[derive(Deserialize)]
+struct LfsBatchInfo {
+    repo: String,
 }
 
 // The argument of this function is because the trait `actix_web::FromRequest` is implemented
@@ -202,6 +207,22 @@ fn download_large_file(
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::DownloadLargeFile {
             oid: info.oid.clone(),
+        },
+    })
+}
+
+fn lfs_batch(
+    (state, req_json, info): (
+        State<HttpServerState>,
+        Json<BatchRequest>,
+        actix_web::Path<LfsBatchInfo>,
+    ),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    state.mononoke.send_query(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::LfsBatch {
+            req: req_json.into_inner(),
+            repo_name: info.repo.clone(),
         },
     })
 }
@@ -457,6 +478,9 @@ fn main() -> Result<()> {
                     })
                     .resource("/lfs/download/{oid}", |r| {
                         r.method(http::Method::GET).with_async(download_large_file)
+                    })
+                    .resource("/objects/batch", |r| {
+                        r.method(http::Method::POST).with_async(lfs_batch)
                     })
             })
     });

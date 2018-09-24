@@ -8,6 +8,7 @@ mod model;
 mod query;
 mod repo;
 mod response;
+mod lfs;
 
 use std::collections::HashMap;
 
@@ -20,6 +21,7 @@ use metaconfig::repoconfig::RepoConfigs;
 
 use errors::ErrorKind;
 
+pub use self::lfs::BatchRequest;
 pub use self::query::{MononokeQuery, MononokeRepoQuery};
 pub use self::repo::MononokeRepo;
 pub use self::response::MononokeRepoResponse;
@@ -52,7 +54,14 @@ impl Mononoke {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         match self.repos.get(&repo) {
             Some(repo) => repo.send_query(kind),
-            None => Err(ErrorKind::NotFound(repo, None)).into_future().boxify(),
+            None => match kind {
+                MononokeRepoQuery::LfsBatch { .. } => {
+                    // LFS batch request require error in the different format:
+                    // json: {"message": "Error message here"}
+                    Err(ErrorKind::LFSNotFound(repo)).into_future().boxify()
+                }
+                _ => Err(ErrorKind::NotFound(repo, None)).into_future().boxify(),
+            },
         }
     }
 }

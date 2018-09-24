@@ -28,6 +28,7 @@ use errors::ErrorKind;
 use from_string as FS;
 
 use super::{MononokeRepoQuery, MononokeRepoResponse};
+use super::lfs::{build_response, BatchRequest};
 use super::model::Entry;
 
 pub struct MononokeRepo {
@@ -203,6 +204,17 @@ impl MononokeRepo {
             .boxify()
     }
 
+    fn lfs_batch(
+        &self,
+        repo_name: String,
+        req: BatchRequest,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let response = build_response(repo_name, req);
+        Ok(MononokeRepoResponse::LfsBatch { response })
+            .into_future()
+            .boxify()
+    }
+
     pub fn send_query(&self, msg: MononokeRepoQuery) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         use MononokeRepoQuery::*;
 
@@ -218,6 +230,7 @@ impl MononokeRepo {
             } => self.is_ancestor(proposed_ancestor, proposed_descendent),
 
             DownloadLargeFile { oid } => self.download_large_file(oid),
+            LfsBatch { repo_name, req } => self.lfs_batch(repo_name, req),
         }
     }
 }

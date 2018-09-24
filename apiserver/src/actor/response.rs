@@ -10,6 +10,7 @@ use actix_web;
 use actix_web::{Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
 
+use super::lfs::BatchResponse;
 use super::model::{Changeset, Entry};
 
 pub enum MononokeRepoResponse {
@@ -33,6 +34,9 @@ pub enum MononokeRepoResponse {
     },
     DownloadLargeFile {
         content: Bytes,
+    },
+    LfsBatch {
+        response: BatchResponse,
     },
 }
 
@@ -63,6 +67,7 @@ impl Responder for MononokeRepoResponse {
                 }
             })),
             DownloadLargeFile { content } => Ok(binary_response(content.into())),
+            LfsBatch { response } => Json(response).respond_to(req),
         }
     }
 }

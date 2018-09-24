@@ -10,6 +10,8 @@ use failure::Error;
 
 use apiserver_thrift::types::MononokeGetRawParams;
 
+use super::lfs::BatchRequest;
+
 #[derive(Debug)]
 pub enum MononokeRepoQuery {
     GetRawFile {
@@ -35,6 +37,10 @@ pub enum MononokeRepoQuery {
     },
     DownloadLargeFile {
         oid: String,
+    },
+    LfsBatch {
+        repo_name: String,
+        req: BatchRequest,
     },
 }
 
