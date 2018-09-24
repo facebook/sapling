@@ -432,20 +432,6 @@ FileInodePtr InodeMap::lookupLoadedFile(InodeNumber number) {
   return inode.asFilePtr();
 }
 
-UnloadedInodeData InodeMap::lookupUnloadedInode(InodeNumber number) {
-  auto data = data_.rlock();
-  auto it = data->unloadedInodes_.find(number);
-  if (it == data->unloadedInodes_.end()) {
-    // This generally shouldn't happen.  If a InodeNumber has been allocated we
-    // should always know about it.  It's a bug if our caller calls us with an
-    // invalid InodeNumber number.
-    XLOG(ERR) << "InodeMap called with unknown inode number " << number;
-    throwSystemErrorExplicit(EINVAL, "unknown inode number ", number);
-  }
-
-  return UnloadedInodeData(it->second.parent, it->second.name);
-}
-
 folly::Optional<RelativePath> InodeMap::getPathForInode(
     InodeNumber inodeNumber) {
   auto data = data_.rlock();

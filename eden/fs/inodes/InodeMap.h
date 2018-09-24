@@ -184,8 +184,7 @@ class InodeMap {
    * Lookup an Inode object by inode number, if it alread exists.
    *
    * This returns an existing InodeBase object if one is currently loaded,
-   * but nullptr if one is not loaded.  lookupUnloadedInode() can then be
-   * called to find data for the unloaded inode.
+   * but nullptr if one is not loaded.
    */
   InodePtr lookupLoadedInode(InodeNumber number);
 
@@ -204,15 +203,6 @@ class InodeMap {
    * Throws EISDIR if this inode is loaded but refers to a directory.
    */
   FileInodePtr lookupLoadedFile(InodeNumber number);
-
-  /**
-   * Lookup data about an unloaded Inode object.
-   *
-   * Callers should generally call lookupLoadedInode() first to make sure the
-   * inode is not currently loaded.  Unloaded inode data will only be found if
-   * the object is not currently loaded.
-   */
-  UnloadedInodeData lookupUnloadedInode(InodeNumber number);
 
   /**
    * Recursively determines the path for a loaded or unloaded inode. If the
