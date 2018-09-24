@@ -88,7 +88,7 @@ def _lookup_node(repo, hexnode, from_scm_type):
         return result
 
 
-@namespacepredicate("gitrev", priority=70)
+@namespacepredicate("gitrev", priority=75)
 def _getnamespace(_repo):
     return namespaces.namespace(
         listnames=lambda repo: [], namemap=_gitlookup, nodemap=lambda repo, node: []

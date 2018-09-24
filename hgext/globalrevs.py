@@ -273,7 +273,7 @@ def _lookupname(repo, name):
         return _lookupglobalrev(repo, int(name[1:]))
 
 
-@namespacepredicate("globalrevs", priority=70)
+@namespacepredicate("globalrevs", priority=75)
 def _getnamespace(_repo):
     return namespaces.namespace(
         listnames=lambda repo: [], namemap=_lookupname, nodemap=lambda repo, node: []
