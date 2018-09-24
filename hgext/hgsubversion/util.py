@@ -375,23 +375,28 @@ def revset_svnrev(repo, subset, x):
     except ValueError:
         raise error.ParseError("the argument to svnrev() must be a number")
 
-    meta = repo.svnmeta(skiperrorcheck=True)
-    if not meta.revmapexists:
-        raise hgutil.Abort(
-            "svn metadata is missing - " "run 'hg svn rebuildmeta' to reconstruct it"
-        )
     torev = repo.changelog.rev
-    revs = revset.baseset(torev(r) for r in meta.revmap.revhashes(revnum))
+    revs = revset.baseset(torev(n) for n in lookuprev(repo, revnum))
     return subset & revs
 
 
 revsets = {"fromsvn": revset_fromsvn, "svnrev": revset_svnrev}
 
 
-def revset_stringset(orig, repo, subset, x, *args, **kwargs):
-    if x.startswith("r") and x[1:].isdigit():
-        return revset_svnrev(repo, subset, ("string", x[1:]))
-    return orig(repo, subset, x, *args, **kwargs)
+def lookupname(repo, name):
+    if name.startswith("r") and name[1:].isdigit():
+        return lookuprev(repo, int(name[1:]))
+    else:
+        return []
+
+
+def lookuprev(repo, svnrev):
+    """lookup a svn revision, return matched hg nodes"""
+    meta = repo.svnmeta(skiperrorcheck=True)
+    if not meta.revmapexists:
+        return []
+    else:
+        return [n for n in meta.revmap.revhashes(svnrev)]
 
 
 def getfilestoresize(ui):

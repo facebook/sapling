@@ -35,7 +35,9 @@ from mercurial import (
     help,
     hg,
     localrepo,
+    namespaces,
     policy,
+    registrar,
     revset,
     subrepo,
     util as hgutil,
@@ -55,6 +57,7 @@ base85 = policy.importmod(r"base85")
 
 demandimport.ignore.extend(["svn", "svn.client", "svn.core", "svn.delta", "svn.ra"])
 
+namespacepredicate = registrar.namespacepredicate()
 
 svnopts = [
     ("", "stupid", None, "use slower, but more compatible, protocol for Subversion")
@@ -232,11 +235,15 @@ def reposetup(ui, repo):
         for tunnel in ui.configlist("hgsubversion", "tunnels"):
             hg.schemes["svn+" + tunnel] = svnrepo
 
-    if ui.configbool("hgsubversion", "nativerevs"):
-        extensions.wrapfunction(revset, "stringset", util.revset_stringset)
-        revset.symbols["stringset"] = revset.stringset
-        revset.methods["string"] = revset.stringset
-        revset.methods["symbol"] = revset.stringset
+
+@namespacepredicate("hgsubversion", priority=80)
+def _getnamespace(repo):
+    if repo.ui.configbool("hgsubversion", "nativerevs"):
+        return namespaces.namespace(
+            listnames=lambda repo: [],
+            namemap=util.lookupname,
+            nodemap=lambda repo, node: [],
+        )
 
 
 _old_local = hg.schemes["file"]
