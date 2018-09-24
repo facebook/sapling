@@ -33,6 +33,7 @@ Configs::
     tls.client_certs = /etc/pki/tls/certs/client_certs.pem
 
     # TLS CA certificate (optional)
+    # File containing trusted CA's to validate server certificates
     # path may contain ${USER} or %i placeholders to substitute with the user identity
     # should be defined if location is not default
     # see OPENSSLDIR in `openssl version -a` for the default location
@@ -43,6 +44,12 @@ Configs::
     # CN field in x509 server cert contains different information rather than server's hostname.
     # TODO: It is also possible to implement a wrapper for ssl.match_hostname method instead of disabling the check.
     tls.check_hostname = False
+
+    # set true if TLS authentication is enough for the https endpoint port serving commit cloud requests
+    # this option definetely require the path to a valid client certificate in tls.client_certs option
+    # Try openssl to verify your TLS handshake
+    # Example: `openssl s_client -connect host:port -cert <tls.client_certs> -CAfile <tls.ca_certs>
+    tls.notoken = False
 
     # help message to provide instruction on registration process
     auth_help = please obtain an authentication token from https://example.com/

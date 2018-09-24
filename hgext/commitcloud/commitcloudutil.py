@@ -273,8 +273,11 @@ class TokenLocator(object):
         """Public API
             get token
                 returns None if token is not found
+                "not-required" is token is not needed
                 it can throw only in case of unexpected error
         """
+        if self.ui.configbool("commitcloud", "tls.notoken"):
+            return "not-required"
         if self.ui.config("commitcloud", "user_token_path"):
             token = self._gettokenfromfile()
         elif pycompat.isdarwin:
