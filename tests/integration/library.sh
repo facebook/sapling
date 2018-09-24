@@ -155,6 +155,21 @@ function apiserver {
   echo $! >> "$DAEMON_PIDS"
 }
 
+function wait_for_apiserver {
+  for _ in $(seq 1 200); do
+    PORT=$(grep "Listening to" < "$TESTTMP/apiserver.out" | grep -Pzo "(\\d+)\$") && break
+    sleep 0.1
+  done
+
+  if [[ -z "$PORT" ]]; then
+    echo "error: Mononoke API Server is not started"
+    cat "$TESTTMP/apiserver.out"
+    exit 1
+  fi
+  export APISERVER
+  APISERVER="http://localhost:$PORT"
+}
+
 function extract_json_error {
   input=$(cat)
   echo "$input" | head -1 | jq -r '.message'
