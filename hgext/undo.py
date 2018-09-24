@@ -546,7 +546,7 @@ def _localbranch(repo, subset, x):
     Returns all commits within the same localbranch as the changeset(s). A local
     branch is all draft changesets that are connected, uninterupted by public
     changesets.  Any draft commit within a branch, or a public commit at the
-    base of the branch, can be passed used to identify localbranches.
+    base of the branch, can be used to identify localbranches.
     """
     # executed on an filtered repo
     args = revset.getargsdict(x, "branchrevset", "changectx")
