@@ -492,26 +492,7 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
     if cloudrefs is None:
         cloudrefs = serv.getreferences(reponame, workspace, lastsyncstate.version)
 
-    # apply config setting to filter heads client code will include
-    # in 'new heads' to send to the server,
-    # this allows `cloud sync` works with some extra
-    # local only unbacked up commits on any machine
-    if not opts.get("push_revs") and (
-        workspace == getdefaultrepoworkspace(ui, repo)[1]
-    ):
-        pushrevs = ""
-
-        if ui.configbool("commitcloud", "user_commits_only"):
-            pushrevs += " & author(%s)" % util.emailuser(ui.username())
-
-        if ui.config("commitcloud", "custom_push_revs"):
-            pushrevs += " & (%s)" % ui.config("commitcloud", "custom_push_revs")
-
-        if pushrevs:
-            opts["push_revs"] = ["draft() " + pushrevs]
-
-    revspec = opts.get("push_revs")
-
+    pushrevspec = calcpushrevfilter(ui, repo, workspace, opts)
     synced = False
     pushfailures = set()
     while not synced:
@@ -535,8 +516,8 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             repo._commitcloudskippendingobsmarkers = False
             localheads = _getheads(repo)
 
-        if revspec:
-            revs = scmutil.revrange(repo, revspec)
+        if pushrevspec:
+            revs = scmutil.revrange(repo, pushrevspec)
             pushheads = [ctx.hex() for ctx in repo.set("heads(%ld::)", revs)]
             if not pushheads:
                 highlightdebug(ui, _("revset doesn't match anything\n"))
@@ -968,6 +949,36 @@ def backuplockcheck(ui, repo):
             highlightstatus(
                 ui, _("background cloud sync is in progress%s\n") % etimemsg
             )
+
+
+def calcpushrevfilter(ui, repo, workspace, opts):
+    """build a filter to figure out what unsynced commits to send to the server
+
+    This allows `cloud sync` to skip some local commits on any machine if configured
+    """
+    revspec = None
+    # command option has precedence
+    # multiple is allowed (will be union)
+    if opts.get("push_revs"):
+        revspec = opts.get("push_revs")
+    # configuration options (effective for the default workspace only)
+    # (will be intersection)
+    elif workspace == getdefaultrepoworkspace(ui, repo)[1]:
+        collect = []
+        if ui.configbool("commitcloud", "user_commits_only"):
+            collect.append("author(%s)" % util.emailuser(ui.username()))
+        if ui.config("commitcloud", "custom_push_revs"):
+            collect.append("(%s)" % ui.config("commitcloud", "custom_push_revs"))
+        if collect:
+            revspec = ["&".join(["draft()"] + collect)]
+    if not revspec:
+        return None
+    # check if rev spec makes any sense
+    # clean up the filter if it doesn't filter anything out
+    # this is useful until better performance of heads(%ld::)
+    if len(revspec) == 1 and not next(repo.set("draft()-(%s)" % revspec[0]), None):
+        return None
+    return revspec
 
 
 def missingcloudrevspull(repo, nodes):
