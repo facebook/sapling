@@ -7,17 +7,18 @@
 SYMLINK = "symlink"
 HARDLINK = "hardlink"
 EXECBIT = "execbit"
+ALWAYSCASESENSITIVE = "alwayscasesensitive"
 
-_ALL_CAPS = {SYMLINK: True, HARDLINK: True, EXECBIT: True}
+_ALL_CAPS = {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: True}
 
 _FS_CAP_TABLE = {
-    "apfs": _ALL_CAPS,
+    "apfs": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
     "btrfs": _ALL_CAPS,
-    "eden": {SYMLINK: True, HARDLINK: False, EXECBIT: True},
+    "eden": {SYMLINK: True, HARDLINK: False, EXECBIT: True, ALWAYSCASESENSITIVE: True},
     "ext2": _ALL_CAPS,
     "ext3": _ALL_CAPS,
     "ext4": _ALL_CAPS,
-    "hfs": _ALL_CAPS,
+    "hfs": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
     "jfs": _ALL_CAPS,
     "reiserfs": _ALL_CAPS,
     "tmpfs": _ALL_CAPS,

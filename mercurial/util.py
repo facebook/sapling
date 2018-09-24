@@ -1514,6 +1514,9 @@ def fscasesensitive(path):
     Requires a path (like /foo/.hg) ending with a foldable final
     directory component.
     """
+    fstype = getfstype(path)
+    if fstype is not None and fscap.getfscap(fstype, fscap.ALWAYSCASESENSITIVE):
+        return True
     s1 = os.lstat(path)
     d, b = os.path.split(path)
     b2 = b.upper()
