@@ -126,7 +126,7 @@ database.
   $ hg log -r 'tip' -T {node}
   0000000000000000000000000000000000000000 (no-eol)
 
-  $ touch a && hg ci -Aqm a
+  $ touch a && hg ci -Aqm a --config extensions.globalrevs=!
   $ hg book master
 
 
