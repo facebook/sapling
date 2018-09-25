@@ -15,7 +15,6 @@
 #include <folly/FileUtil.h>
 #include <folly/container/Array.h>
 #include <folly/dynamic.h>
-#include <folly/executors/GlobalExecutor.h>
 #include <folly/experimental/EnvUtil.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
@@ -42,13 +41,10 @@
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/SSLContext.h"
 #include "eden/fs/utils/TimeUtil.h"
 
-#if EDEN_HAVE_HG_TREEMANIFEST
+// Needed for MissingKeyError
 #include "hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
-#include "hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 
 using folly::ByteRange;
 using folly::Endian;
@@ -79,36 +75,10 @@ DEFINE_string(
     "this value is non-empty, the existing PYTHONPATH from the environment is "
     "replaced with this value.");
 
-DEFINE_bool(
-    use_hg_tree_manifest,
-    // treemanifest imports are disabled by default for now.
-    // We currently cannot access treemanifest data for pending transactions
-    // when mercurial invokes dirstate.setparents(), and this breaks
-    // many workflows.
-    true,
-    "Import mercurial trees using treemanifest in supported repositories.");
-DEFINE_bool(
-    hg_fetch_missing_trees,
-    true,
-    "Set this parameter to \"no\" to disable fetching missing treemanifest "
-    "trees from the remote mercurial server.  This is generally only useful "
-    "for testing/debugging purposes");
-DEFINE_bool(
-    allow_flatmanifest_fallback,
-    true,
-    "In mercurial repositories that support treemanifest, allow importing "
-    "commit information using flatmanifest if tree if an error occurs trying "
-    "to get treemanifest data.");
-
 DEFINE_int32(
     hgManifestImportBufferSize,
     256 * 1024 * 1024, // 256MB
     "Buffer size for batching LocalStore writes during hg manifest imports");
-
-DEFINE_int32(
-    mononoke_timeout,
-    2000, // msec
-    "[unit: ms] Timeout for Mononoke requests");
 
 namespace {
 using namespace facebook::eden;
@@ -216,13 +186,8 @@ namespace eden {
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    folly::Optional<AbsolutePath> clientCertificate,
-    bool useMononoke,
     folly::Optional<AbsolutePath> importHelperScript)
-    : repoPath_{repoPath},
-      store_{store},
-      clientCertificate_(clientCertificate),
-      useMononoke_(useMononoke) {
+    : repoPath_{repoPath}, store_{store} {
   auto importHelper = importHelperScript.hasValue() ? importHelperScript.value()
                                                     : getImportHelperPath();
 
@@ -283,15 +248,11 @@ HgImporter::HgImporter(
   helperOut_ = helper_.childOutPipe_->readHandle;
 
 #endif
-  auto options = waitForHelperStart();
-  initializeTreeManifestImport(options);
-#ifndef EDEN_WIN_NOMONONOKE
-  initializeMononoke(options);
-#endif
+  options_ = waitForHelperStart();
   XLOG(DBG1) << "hg_import_helper started for repository " << repoPath_;
 }
 
-HgImporter::Options HgImporter::waitForHelperStart() {
+ImporterOptions HgImporter::waitForHelperStart() {
   // Wait for the import helper to send the CMD_STARTED message indicating
   // that it has started successfully.
   auto header = readChunkHeader(0, "CMD_STARTED");
@@ -325,7 +286,7 @@ HgImporter::Options HgImporter::waitForHelperStart() {
         protocolVersion));
   }
 
-  Options options;
+  ImporterOptions options;
 
   auto flags = cursor.readBE<uint32_t>();
   auto numTreemanifestPaths = cursor.readBE<uint32_t>();
@@ -348,71 +309,6 @@ HgImporter::Options HgImporter::waitForHelperStart() {
   return options;
 }
 
-void HgImporter::initializeTreeManifestImport(const Options& options) {
-#if EDEN_HAVE_HG_TREEMANIFEST
-  if (!FLAGS_use_hg_tree_manifest) {
-    XLOG(DBG2) << "treemanifest import disabled via command line flags "
-                  "for repository "
-               << repoPath_;
-    return;
-  }
-  if (options.treeManifestPackPaths.empty()) {
-    XLOG(DBG2) << "treemanifest import not supported in repository "
-               << repoPath_;
-    return;
-  }
-
-  std::vector<DataStore*> storePtrs;
-  for (const auto& path : options.treeManifestPackPaths) {
-    XLOG(DBG5) << "treemanifest pack path: " << path;
-    // Create a new DatapackStore for path.  Note that we enable removing
-    // dead pack files.  This is only guaranteed to be safe so long as we copy
-    // the relevant data out of the datapack objects before we issue a
-    // subsequent call into the unionStore_.
-    dataPackStores_.emplace_back(std::make_unique<DatapackStore>(path, true));
-    storePtrs.emplace_back(dataPackStores_.back().get());
-  }
-
-  unionStore_ = std::make_unique<UnionDatapackStore>(storePtrs);
-  XLOG(DBG2) << "treemanifest import enabled in repository " << repoPath_;
-#endif // EDEN_HAVE_HG_TREEMANIFEST
-}
-
-#ifndef EDEN_WIN_NOMONONOKE
-void HgImporter::initializeMononoke(const Options& options) {
-#if EDEN_HAVE_HG_TREEMANIFEST
-  if (options.repoName.empty()) {
-    XLOG(DBG2) << "mononoke is disabled because it is not supported.";
-    return;
-  }
-
-  if (!useMononoke_) {
-    XLOG(DBG2) << "mononoke is disabled by config.";
-    return;
-  }
-
-  auto executor = folly::getIOExecutor();
-
-  std::shared_ptr<folly::SSLContext> sslContext;
-  try {
-    sslContext = buildSSLContext(clientCertificate_);
-  } catch (std::runtime_error& ex) {
-    XLOG(WARN) << "mononoke is disabled because of build failure when "
-                  "creating SSLContext: "
-               << ex.what();
-    return;
-  }
-
-  mononoke_ = std::make_unique<MononokeBackingStore>(
-      options.repoName,
-      std::chrono::milliseconds(FLAGS_mononoke_timeout),
-      executor.get(),
-      sslContext);
-  XLOG(DBG2) << "mononoke enabled for repository " << options.repoName;
-#endif
-}
-#endif
-
 HgImporter::~HgImporter() {
   stopHelperProcess();
 }
@@ -431,281 +327,6 @@ void HgImporter::stopHelperProcess() {
     helper_.wait();
   }
 #endif
-}
-
-unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
-#if EDEN_HAVE_HG_TREEMANIFEST
-  // importTree() only works with treemanifest.
-  // This can only be called if the root tree was imported with treemanifest,
-  // and we are now trying to import data for some subdirectory.
-  //
-  // If it looks like treemanifest import is no longer supported, we cannot
-  // import this data.  (This can happen if treemanifest was disabled in the
-  // repository and then eden is restarted with the new configuration.)
-  if (!unionStore_) {
-    throw std::domain_error(folly::to<string>(
-        "unable to import subtree ",
-        id.toString(),
-        " with treemanifest disabled after the parent tree was imported "
-        "with treemanifest"));
-  }
-
-  HgProxyHash pathInfo(store_, id, "importTree");
-  auto writeBatch = store_->beginWrite();
-  auto tree = importTreeImpl(
-      pathInfo.revHash(), // this is really the manifest node
-      id,
-      pathInfo.path(),
-      writeBatch.get());
-  writeBatch->flush();
-  return tree;
-#else // !EDEN_HAVE_HG_TREEMANIFEST
-  throw std::domain_error(folly::to<string>(
-      "requested to import subtree ",
-      id.toString(),
-      " but flatmanifest import should have already imported all subtrees"));
-#endif // EDEN_HAVE_HG_TREEMANIFEST
-}
-
-#if EDEN_HAVE_HG_TREEMANIFEST
-unique_ptr<Tree> HgImporter::importTreeImpl(
-    const Hash& manifestNode,
-    const Hash& edenTreeID,
-    RelativePathPiece path,
-    LocalStore::WriteBatch* writeBatch) {
-  XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
-             << manifestNode << " for path \"" << path << "\"";
-
-  // Explicitly check for the null ID on the root directory.
-  // This isn't actually present in the mercurial data store; it has to be
-  // handled specially in the code.
-  if (path.empty() && manifestNode == kZeroHash) {
-    auto tree = make_unique<Tree>(std::vector<TreeEntry>{}, edenTreeID);
-    auto serialized = LocalStore::serializeTree(tree.get());
-    writeBatch->put(
-        KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
-    return tree;
-  }
-
-  ConstantStringRef content;
-  try {
-    content = unionStore_->get(
-        Key(path.stringPiece().data(),
-            path.stringPiece().size(),
-            (const char*)manifestNode.getBytes().data(),
-            manifestNode.getBytes().size()));
-  } catch (const MissingKeyError& ex) {
-    XLOG(DBG2) << "didn't find path \"" << path << "\" + manifest "
-               << manifestNode << ", mark store for refresh and look again";
-    unionStore_->markForRefresh();
-
-    // Now try loading it again.
-    try {
-      content = unionStore_->get(
-          Key(path.stringPiece().data(),
-              path.stringPiece().size(),
-              (const char*)manifestNode.getBytes().data(),
-              manifestNode.getBytes().size()));
-    } catch (const MissingKeyError&) {
-      // Data for this tree was not present locally.
-      // Fall through and fetch the data from the server below.
-      if (!FLAGS_hg_fetch_missing_trees) {
-        throw;
-      }
-    }
-  }
-
-  if (!content.content() && mononoke_) {
-    // ask Mononoke API Server
-    XLOG(DBG4) << "importing tree \"" << manifestNode << "\" from mononoke";
-    try {
-      auto mononokeTree =
-          mononoke_->getTree(manifestNode)
-              .get(std::chrono::milliseconds(FLAGS_mononoke_timeout));
-      std::vector<TreeEntry> entries;
-
-      for (const auto& entry : mononokeTree->getTreeEntries()) {
-        auto blobHash = entry.getHash();
-        auto entryName = entry.getName();
-        auto proxyHash =
-            HgProxyHash::store(path + entryName, blobHash, writeBatch);
-
-        entries.emplace_back(
-            proxyHash, entryName.stringPiece(), entry.getType());
-      }
-
-      auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
-      auto serialized = LocalStore::serializeTree(tree.get());
-      writeBatch->put(
-          KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
-      return tree;
-    } catch (const std::exception& ex) {
-      XLOG(WARN) << "got exception from MononokeBackingStore: " << ex.what();
-    }
-  }
-
-  if (!content.content()) {
-    // Ask the hg_import_helper script to fetch data for this tree
-    XLOG(DBG1) << "fetching data for tree \"" << path << "\" at manifest node "
-               << manifestNode;
-    auto requestID = sendFetchTreeRequest(path, manifestNode);
-
-    ChunkHeader header;
-    try {
-      header = readChunkHeader(requestID, "CMD_FETCH_TREE");
-    } catch (const HgImportPyError& ex) {
-      if (FLAGS_allow_flatmanifest_fallback) {
-        // For now translate any error thrown into a MissingKeyError,
-        // so that our caller will retry this tree import using flatmanifest
-        // import if possible.
-        //
-        // The mercurial code can throw a wide variety of errors here that all
-        // effectively mean mean it couldn't fetch the tree data.
-        //
-        // We most commonly expect to get a MissingNodesError if the remote
-        // server does not know about these trees (for instance if they are only
-        // available locally, but simply only have flatmanifest information
-        // rather than treemanifest info).
-        //
-        // However we can also get lots of other errors: no remote server
-        // configured, remote repository does not exist, remote repository does
-        // not support fetching tree info, etc.
-        throw MissingKeyError(ex.what());
-      } else {
-        throw;
-      }
-    }
-
-    if (header.dataLength != 0) {
-      throw std::runtime_error(folly::to<string>(
-          "got unexpected length ",
-          header.dataLength,
-          " for FETCH_TREE response"));
-    }
-
-    // Now try loading it again (third time's the charm?).
-    unionStore_->markForRefresh();
-    content = unionStore_->get(
-        Key(path.stringPiece().data(),
-            path.stringPiece().size(),
-            (const char*)manifestNode.getBytes().data(),
-            manifestNode.getBytes().size()));
-  }
-
-  if (!content.content()) {
-    // This generally shouldn't happen: the UnionDatapackStore throws on error
-    // instead of returning null.  We're checking simply due to an abundance of
-    // caution.
-    throw std::domain_error(folly::to<string>(
-        "HgImporter::importTree received null tree from mercurial store for ",
-        path,
-        ", ID ",
-        manifestNode.toString()));
-  }
-
-  Manifest manifest(
-      content, reinterpret_cast<const char*>(manifestNode.getBytes().data()));
-  std::vector<TreeEntry> entries;
-
-  auto iter = manifest.getIterator();
-  while (!iter.isfinished()) {
-    auto* entry = iter.currentvalue();
-
-    // The node is the hex string representation of the hash, but
-    // it is not NUL terminated!
-    StringPiece node(entry->get_node(), 40);
-    Hash entryHash(node);
-
-    StringPiece entryName(entry->filename, entry->filenamelen);
-
-    TreeEntryType fileType;
-
-    StringPiece entryFlag;
-    if (entry->flag) {
-      // entry->flag is a char* but is unfortunately not nul terminated.
-      // All known flag values are currently only a single character, and there
-      // are never any multi-character flags.
-      entryFlag.assign(entry->flag, entry->flag + 1);
-    }
-
-    XLOG(DBG9) << "tree: " << manifestNode << " " << entryName
-               << " node: " << node << " flag: " << entryFlag;
-
-    if (entry->isdirectory()) {
-      fileType = TreeEntryType::TREE;
-    } else if (entry->flag) {
-      switch (*entry->flag) {
-        case 'x':
-          fileType = TreeEntryType::EXECUTABLE_FILE;
-          break;
-        case 'l':
-          fileType = TreeEntryType::SYMLINK;
-          break;
-        default:
-          throw std::runtime_error(folly::to<string>(
-              "unsupported file flags for ",
-              path,
-              "/",
-              entryName,
-              ": ",
-              entryFlag));
-      }
-    } else {
-      fileType = TreeEntryType::REGULAR_FILE;
-    }
-
-    auto proxyHash = HgProxyHash::store(
-        path + RelativePathPiece(entryName), entryHash, writeBatch);
-
-    entries.emplace_back(proxyHash, entryName, fileType);
-
-    iter.next();
-  }
-
-  auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
-  auto serialized = LocalStore::serializeTree(tree.get());
-  writeBatch->put(
-      KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
-  return tree;
-}
-
-Hash HgImporter::importTreeManifest(StringPiece revName) {
-  auto manifestNode = resolveManifestNode(revName);
-  XLOG(DBG2) << "revision " << revName << " has manifest node " << manifestNode;
-
-  // Record that we are at the root for this node
-  RelativePathPiece path{};
-  auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
-  auto writeBatch = store_->beginWrite();
-  auto tree =
-      importTreeImpl(manifestNode, proxyInfo.first, path, writeBatch.get());
-  // Only write the proxy hash value for this once we've imported
-  // the root.
-  HgProxyHash::store(proxyInfo, writeBatch.get());
-  writeBatch->flush();
-
-  return tree->getHash();
-}
-#endif // EDEN_HAVE_HG_TREEMANIFEST
-
-Hash HgImporter::importManifest(StringPiece revName) {
-#if EDEN_HAVE_HG_TREEMANIFEST
-  if (unionStore_) {
-    try {
-      return importTreeManifest(revName);
-    } catch (const MissingKeyError&) {
-      if (!FLAGS_allow_flatmanifest_fallback) {
-        throw;
-      }
-      // We don't have a tree manifest available for the target rev,
-      // so let's fall through to the full flat manifest importer.
-      XLOG(INFO) << "no treemanifest data available for revision " << revName
-                 << ": falling back to slower flatmanifest import";
-    }
-  }
-#endif // EDEN_HAVE_HG_TREEMANIFEST
-
-  return importFlatManifest(revName);
 }
 
 Hash HgImporter::importFlatManifest(StringPiece revName) {
@@ -765,19 +386,6 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(store_, blobHash, "importFileContents");
-
-  if (mononoke_) {
-    XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
-               << hgInfo.revHash().toString() << " from mononoke";
-    try {
-      return mononoke_->getBlob(hgInfo.revHash())
-          .get(std::chrono::milliseconds(FLAGS_mononoke_timeout));
-    } catch (const std::exception& ex) {
-      XLOG(WARN) << "Error while fetching file contents of '" << hgInfo.path()
-                 << "', " << hgInfo.revHash().toString()
-                 << " from mononoke: " << ex.what();
-    }
-  }
 
   XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
              << hgInfo.revHash().toString();
@@ -858,6 +466,23 @@ void HgImporter::prefetchFiles(
   // Read the response; throws if there was any error.
   // No payload is returned.
   readChunkHeader(requestID, "CMD_PREFETCH_FILES");
+}
+
+void HgImporter::fetchTree(RelativePathPiece path, Hash pathManifestNode) {
+  // Ask the hg_import_helper script to fetch data for this tree
+  XLOG(DBG1) << "fetching data for tree \"" << path << "\" at manifest node "
+             << pathManifestNode;
+  auto requestID = sendFetchTreeRequest(path, pathManifestNode);
+
+  ChunkHeader header;
+  header = readChunkHeader(requestID, "CMD_FETCH_TREE");
+
+  if (header.dataLength != 0) {
+    throw std::runtime_error(folly::to<string>(
+        "got unexpected length ",
+        header.dataLength,
+        " for FETCH_TREE response"));
+  }
 }
 
 Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
@@ -1195,16 +820,16 @@ void HgImporter::writeToHelper(
 #endif
 }
 
+const ImporterOptions& HgImporter::getOptions() const {
+  return options_;
+}
+
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    folly::Optional<AbsolutePath> clientCertificate,
-    bool useMononoke,
     folly::Optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       store_{store},
-      clientCertificate_{clientCertificate},
-      useMononoke_{useMononoke},
       importHelperScript_{importHelperScript} {}
 
 template <typename Fn>
@@ -1238,14 +863,16 @@ auto HgImporterManager::retryOnError(Fn&& fn) {
   }
 }
 
-Hash HgImporterManager::importManifest(StringPiece revName) {
-  return retryOnError(
-      [&](HgImporter* importer) { return importer->importManifest(revName); });
+Hash HgImporterManager::importFlatManifest(StringPiece revName) {
+  return retryOnError([&](HgImporter* importer) {
+    return importer->importFlatManifest(revName);
+  });
 }
 
-unique_ptr<Tree> HgImporterManager::importTree(const Hash& id) {
-  return retryOnError(
-      [&](HgImporter* importer) { return importer->importTree(id); });
+Hash HgImporterManager::resolveManifestNode(StringPiece revName) {
+  return retryOnError([&](HgImporter* importer) {
+    return importer->resolveManifestNode(revName);
+  });
 }
 
 unique_ptr<Blob> HgImporterManager::importFileContents(Hash blobHash) {
@@ -1260,14 +887,17 @@ void HgImporterManager::prefetchFiles(
       [&](HgImporter* importer) { return importer->prefetchFiles(files); });
 }
 
+void HgImporterManager::fetchTree(
+    RelativePathPiece path,
+    Hash pathManifestNode) {
+  return retryOnError([&](HgImporter* importer) {
+    return importer->fetchTree(path, pathManifestNode);
+  });
+}
+
 HgImporter* HgImporterManager::getImporter() {
   if (!importer_) {
-    importer_ = make_unique<HgImporter>(
-        repoPath_,
-        store_,
-        clientCertificate_,
-        useMononoke_,
-        importHelperScript_);
+    importer_ = make_unique<HgImporter>(repoPath_, store_, importHelperScript_);
   }
   return importer_.get();
 }

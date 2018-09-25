@@ -23,6 +23,7 @@
 
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
+#include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -50,11 +51,11 @@ DEFINE_bool(
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
-using folly::test::TemporaryDirectory;
 using folly::Endian;
 using folly::IOBuf;
 using folly::StringPiece;
 using folly::io::Cursor;
+using folly::test::TemporaryDirectory;
 using std::string;
 
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
@@ -95,7 +96,7 @@ std::unique_ptr<rocksdb::DB> createRocksDb(AbsolutePathPiece dbPath) {
 }
 
 void importTreeRecursive(
-    HgImporter* importer,
+    HgBackingStore* store,
     RelativePathPiece path,
     const Tree* tree) {
   for (const auto& entry : tree->getTreeEntries()) {
@@ -103,7 +104,7 @@ void importTreeRecursive(
       auto entryPath = path + entry.getName();
       std::unique_ptr<Tree> subtree;
       try {
-        subtree = importer->importTree(entry.getHash());
+        subtree = store->getTree(entry.getHash()).get();
       } catch (const std::exception& ex) {
         printf(
             "** error importing tree %s: %s\n",
@@ -114,7 +115,7 @@ void importTreeRecursive(
       printf(
           "  Recursively imported \"%s\"\n",
           entryPath.stringPiece().str().c_str());
-      importTreeRecursive(importer, entryPath, subtree.get());
+      importTreeRecursive(store, entryPath, subtree.get());
     }
   }
 }
@@ -125,11 +126,12 @@ int importTree(
     AbsolutePathPiece repoPath,
     StringPiece revName,
     RelativePath subdir) {
-  HgImporter importer(repoPath, store);
+  UnboundedQueueExecutor resultThreadPool(1, "ResultThread");
+  HgBackingStore backingStore(repoPath, store, &resultThreadPool);
 
   printf(
       "Importing revision \"%s\" using tree manifest\n", revName.str().c_str());
-  auto rootHash = importer.importTreeManifest(revName);
+  auto rootHash = backingStore.importTreeManifest(Hash(revName)).get();
   printf("/: %s\n", rootHash.toString().c_str());
 
   auto tree = store->getTree(rootHash).get(10s);
@@ -147,11 +149,11 @@ int importTree(
         "%s: %s\n",
         component.stringPiece().str().c_str(),
         entry->getHash().toString().c_str());
-    tree = importer.importTree(entry->getHash());
+    tree = backingStore.getTree(entry->getHash()).get();
   }
 
   if (FLAGS_tree_import_recurse) {
-    importTreeRecursive(&importer, subdir, tree.get());
+    importTreeRecursive(&backingStore, subdir, tree.get());
   }
 
   return EX_OK;
