@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 extern crate blobrepo;
+extern crate changesets;
 #[macro_use]
 extern crate failure_ext as failure;
 #[macro_use]

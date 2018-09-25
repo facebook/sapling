@@ -27,13 +27,13 @@ use std::collections::hash_set::IntoIter;
 use std::iter;
 use std::sync::Arc;
 
-use failure::{err_msg, prelude::*};
+use failure::prelude::*;
 use futures::{Async, IntoFuture, Poll};
 use futures::future::Future;
 use futures::stream::{self, empty, iter_ok, Peekable, Stream};
 use futures_ext::{SelectAll, StreamExt};
 
-use blobrepo::BlobRepo;
+use blobrepo::ChangesetFetcher;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
@@ -78,7 +78,7 @@ use setcommon::*;
 ///
 
 pub struct DifferenceOfUnionsOfAncestorsNodeStream {
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
 
     // Nodes that we know about, grouped by generation.
     next_generation: BTreeMap<Generation, HashSet<ChangesetId>>,
@@ -103,18 +103,18 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
 }
 
 fn make_pending(
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     hash: ChangesetId,
 ) -> Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
-    let new_repo_changesets = repo.clone();
-    let new_repo_gennums = repo.clone();
+    let new_repo_changesets = changeset_fetcher.clone();
+    let new_repo_gennums = changeset_fetcher.clone();
 
     Box::new(
         Ok::<_, Error>(hash)
             .into_future()
             .and_then(move |hash| {
                 new_repo_changesets
-                    .get_changeset_parents_by_bonsai(&hash)
+                    .get_parents(hash)
                     .map(|parents| parents.into_iter())
                     .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
             })
@@ -122,10 +122,7 @@ fn make_pending(
             .flatten_stream()
             .and_then(move |node_hash| {
                 new_repo_gennums
-                    .get_generation_number_by_bonsai(&node_hash)
-                    .and_then(move |genopt| {
-                        genopt.ok_or_else(|| err_msg(format!("{} not found", node_hash)))
-                    })
+                    .get_generation_number(node_hash)
                     .map(move |gen_id| (node_hash, gen_id))
                     .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
             }),
@@ -133,29 +130,37 @@ fn make_pending(
 }
 
 impl DifferenceOfUnionsOfAncestorsNodeStream {
-    pub fn new(repo: &Arc<BlobRepo>, hash: ChangesetId) -> Box<BonsaiNodeStream> {
-        Self::new_with_excludes(repo, vec![hash], vec![])
+    pub fn new(
+        changeset_fetcher: &Arc<ChangesetFetcher>,
+        hash: ChangesetId,
+    ) -> Box<BonsaiNodeStream> {
+        Self::new_with_excludes(changeset_fetcher, vec![hash], vec![])
     }
 
-    pub fn new_union(repo: &Arc<BlobRepo>, hashes: Vec<ChangesetId>) -> Box<BonsaiNodeStream> {
-        Self::new_with_excludes(repo, hashes, vec![])
+    pub fn new_union(
+        changeset_fetcher: &Arc<ChangesetFetcher>,
+        hashes: Vec<ChangesetId>,
+    ) -> Box<BonsaiNodeStream> {
+        Self::new_with_excludes(changeset_fetcher, hashes, vec![])
     }
 
     pub fn new_with_excludes(
-        repo: &Arc<BlobRepo>,
+        changeset_fetcher: &Arc<ChangesetFetcher>,
         hashes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
         let excludes = if !excludes.is_empty() {
-            Self::new_union(repo, excludes)
+            Self::new_union(changeset_fetcher, excludes)
         } else {
             empty().boxify()
         };
 
-        add_generations_by_bonsai(stream::iter_ok(hashes.into_iter()).boxify(), repo.clone())
-            .collect()
+        add_generations_by_bonsai(
+            stream::iter_ok(hashes.into_iter()).boxify(),
+            changeset_fetcher.clone(),
+        ).collect()
             .map({
-                let repo = repo.clone();
+                let changeset_fetcher = changeset_fetcher.clone();
                 move |hashes_generations| {
                     let mut next_generation = BTreeMap::new();
                     let mut sorted_unique_generations = UniqueHeap::new();
@@ -168,9 +173,9 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                         sorted_unique_generations.push(generation);
                     }
 
-                    let excludes = add_generations_by_bonsai(excludes, repo.clone());
+                    let excludes = add_generations_by_bonsai(excludes, changeset_fetcher.clone());
                     Self {
-                        repo: repo.clone(),
+                        changeset_fetcher: changeset_fetcher.clone(),
                         next_generation,
                         // Start with a fake state - maximum generation number and no entries
                         // for it (see drain below)
@@ -242,8 +247,10 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
                     continue;
                 } else {
                     let next_in_drain = self.drain.next();
-                    self.pending_changesets
-                        .push(make_pending(self.repo.clone(), next_in_drain.unwrap()));
+                    self.pending_changesets.push(make_pending(
+                        self.changeset_fetcher.clone(),
+                        next_in_drain.unwrap(),
+                    ));
                     return Ok(Async::Ready(next_in_drain));
                 }
             }
@@ -347,19 +354,20 @@ mod test {
     use fixtures::linear;
     use fixtures::merge_uneven;
     use futures::executor::spawn;
-    use tests::assert_changesets_sequence;
-    use tests::string_to_bonsai;
+    use tests::{assert_changesets_sequence, string_to_bonsai, TestChangesetFetcher};
 
     #[test]
     fn grouped_by_generation_simple() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
-                &repo,
+                &changeset_fetcher,
                 string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
             ).boxify();
-            let inputstream = add_generations_by_bonsai(nodestream, repo.clone());
+            let inputstream = add_generations_by_bonsai(nodestream, changeset_fetcher.clone());
 
             let res = spawn(GroupedByGenenerationStream::new(inputstream).collect())
                 .wait_future()
@@ -409,12 +417,14 @@ mod test {
     fn grouped_by_generation_merge_uneven() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
-                &repo,
+                &changeset_fetcher,
                 string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
             ).boxify();
-            let inputstream = add_generations_by_bonsai(nodestream, repo.clone());
+            let inputstream = add_generations_by_bonsai(nodestream, changeset_fetcher);
 
             let res = spawn(GroupedByGenenerationStream::new(inputstream).collect())
                 .wait_future()
@@ -481,8 +491,12 @@ mod test {
     fn empty_ancestors_combinators() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(&repo, vec![]).boxify();
+            let stream =
+                DifferenceOfUnionsOfAncestorsNodeStream::new_union(&changeset_fetcher, vec![])
+                    .boxify();
 
             assert_changesets_sequence(&repo, vec![], stream);
 
@@ -490,9 +504,11 @@ mod test {
                 string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
             ];
 
-            let stream =
-                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(&repo, vec![], excludes)
-                    .boxify();
+            let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                &changeset_fetcher,
+                vec![],
+                excludes,
+            ).boxify();
 
             assert_changesets_sequence(&repo, vec![], stream);
         });
@@ -502,9 +518,11 @@ mod test {
     fn linear_ancestors_with_excludes() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                &repo,
+                &changeset_fetcher,
                 vec![
                     string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 ],
@@ -527,9 +545,11 @@ mod test {
     fn linear_ancestors_with_excludes_empty() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                &repo,
+                &changeset_fetcher,
                 vec![
                     string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
                 ],
@@ -546,9 +566,11 @@ mod test {
     fn ancestors_union() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
-                &repo,
+                &changeset_fetcher,
                 vec![
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
                     string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
@@ -577,9 +599,11 @@ mod test {
     fn merge_ancestors_from_merge_excludes() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                &repo,
+                &changeset_fetcher,
                 vec![
                     string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                 ],
@@ -605,9 +629,11 @@ mod test {
     fn merge_ancestors_from_merge_excludes_union() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                &repo,
+                &changeset_fetcher,
                 vec![
                     string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
                 ],

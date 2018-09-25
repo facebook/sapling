@@ -51,13 +51,13 @@ pub fn create_getbundle_response(
             .collect(),
     );
 
+    let changeset_fetcher = blobrepo.get_changeset_fetcher();
     let nodestosend = heads
         .join(excludes)
         .map({
-            cloned!(blobrepo);
             move |(heads, excludes)| {
                 DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                    &blobrepo,
+                    &changeset_fetcher,
                     heads,
                     excludes,
                 )

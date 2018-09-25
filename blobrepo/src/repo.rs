@@ -28,6 +28,7 @@ use time_ext::DurationExt;
 use uuid::Uuid;
 
 use super::changeset::HgChangesetContent;
+use super::changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes,
                    get_sha256_alias, get_sha256_alias_key};
 use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob,
@@ -121,6 +122,9 @@ pub struct BlobRepo {
     changesets: Arc<Changesets>,
     bonsai_hg_mapping: Arc<BonsaiHgMapping>,
     repoid: RepositoryId,
+    // Returns new ChangesetFetcher that can be used by operation that work with commit graph
+    // (for example, revsets).
+    changeset_fetcher_factory: Arc<Fn() -> Arc<ChangesetFetcher + Send + Sync> + Send + Sync>,
 }
 
 impl BlobRepo {
@@ -133,6 +137,16 @@ impl BlobRepo {
         bonsai_hg_mapping: Arc<BonsaiHgMapping>,
         repoid: RepositoryId,
     ) -> Self {
+        let changeset_fetcher_factory = {
+            cloned!(changesets, repoid);
+            move || {
+                let res: Arc<ChangesetFetcher + Send + Sync> = Arc::new(
+                    SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
+                );
+                res
+            }
+        };
+
         BlobRepo {
             logger,
             bookmarks,
@@ -141,6 +155,7 @@ impl BlobRepo {
             changesets,
             bonsai_hg_mapping,
             repoid,
+            changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
         }
     }
 
@@ -320,6 +335,7 @@ impl BlobRepo {
             changesets,
             bonsai_hg_mapping,
             repoid,
+            ..
         } = self;
 
         // Drop the PrefixBlobstore (it will be wrapped up in one again by BlobRepo::new)
@@ -700,6 +716,10 @@ impl BlobRepo {
         repo.changesets
             .get(repoid, *cs)
             .map(|res| res.map(|res| Generation::new(res.gen)))
+    }
+
+    pub fn get_changeset_fetcher(&self) -> Arc<ChangesetFetcher> {
+        (self.changeset_fetcher_factory)()
     }
 
     fn upload_blobstore_bytes(
@@ -1869,6 +1889,7 @@ impl Clone for BlobRepo {
             changesets: self.changesets.clone(),
             bonsai_hg_mapping: self.bonsai_hg_mapping.clone(),
             repoid: self.repoid.clone(),
+            changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
         }
     }
 }

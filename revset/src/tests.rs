@@ -5,13 +5,14 @@
 // GNU General Public License version 2 or any later version.
 
 use NodeStream;
-use blobrepo::BlobRepo;
-use failure::Error;
+use blobrepo::{BlobRepo, ChangesetFetcher};
+use failure::{err_msg, Error};
 use futures::{Future, Stream};
 use futures::executor::spawn;
+use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, Generation};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -25,6 +26,29 @@ pub fn string_to_bonsai(repo: &Arc<BlobRepo>, s: &'static str) -> ChangesetId {
         .wait()
         .unwrap()
         .unwrap()
+}
+
+pub struct TestChangesetFetcher {
+    repo: Arc<BlobRepo>,
+}
+
+impl TestChangesetFetcher {
+    pub fn new(repo: Arc<BlobRepo>) -> Self {
+        Self { repo }
+    }
+}
+
+impl ChangesetFetcher for TestChangesetFetcher {
+    fn get_generation_number(&self, cs_id: ChangesetId) -> BoxFuture<Generation, Error> {
+        self.repo
+            .get_generation_number_by_bonsai(&cs_id)
+            .and_then(move |genopt| genopt.ok_or_else(|| err_msg(format!("{} not found", cs_id))))
+            .boxify()
+    }
+
+    fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error> {
+        self.repo.get_changeset_parents_by_bonsai(&cs_id).boxify()
+    }
 }
 
 // TODO(stash): remove assert_node_sequence, use assert_changesets_sequence instead

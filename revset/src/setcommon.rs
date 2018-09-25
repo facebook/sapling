@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, ChangesetFetcher};
 use failure::prelude::*;
 use futures::future::Future;
 use futures::stream::Stream;
@@ -39,13 +39,11 @@ pub fn add_generations(stream: Box<NodeStream>, repo: Arc<BlobRepo>) -> InputStr
 
 pub fn add_generations_by_bonsai(
     stream: Box<BonsaiNodeStream>,
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
 ) -> BonsaiInputStream {
     let stream = stream.and_then(move |changesetid| {
-        repo.get_generation_number_by_bonsai(&changesetid)
-            .and_then(move |maybe_generation| {
-                maybe_generation.ok_or_else(|| err_msg(format!("{} not found", changesetid)))
-            })
+        changeset_fetcher
+            .get_generation_number(changesetid)
             .map(move |gen_id| (changesetid, gen_id))
             .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
     });

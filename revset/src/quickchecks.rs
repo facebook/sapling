@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use super::tests::TestChangesetFetcher;
+
 use async_unit;
 use failure::Error;
 use futures::{stream, Future, Stream};
@@ -15,7 +17,7 @@ use std::collections::HashSet;
 use std::iter::Iterator;
 use std::sync::Arc;
 
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, ChangesetFetcher};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::ChangesetId;
 
@@ -388,6 +390,9 @@ macro_rules! ancestors_check {
             async_unit::tokio_unit_test(|| {
 
                 let repo = Arc::new($repo::getrepo(None));
+                let changeset_fetcher: Arc<ChangesetFetcher> =
+                    Arc::new(TestChangesetFetcher::new(repo.clone()));
+
                 let all_changesets = get_changesets_from_repo(&*repo);
 
                 // Limit the number of changesets, otherwise tests take too much time
@@ -400,7 +405,7 @@ macro_rules! ancestors_check {
                 for (include, exclude) in iter {
                     let difference_stream =
                         DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                            &repo,
+                            &changeset_fetcher,
                             hg_to_bonsai_changesetid(&repo, include.clone()),
                             hg_to_bonsai_changesetid(&repo, exclude.clone()),
                         )

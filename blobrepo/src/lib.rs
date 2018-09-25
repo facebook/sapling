@@ -65,6 +65,7 @@ extern crate mercurial_types_mocks;
 
 mod bonsai_generation;
 mod changeset;
+mod changeset_fetcher;
 mod errors;
 mod file;
 mod manifest;
@@ -76,6 +77,7 @@ mod utils;
 pub use errors::*;
 
 pub use changeset::{HgBlobChangeset, HgChangesetContent};
+pub use changeset_fetcher::ChangesetFetcher;
 pub use file::HgBlobEntry;
 pub use manifest::BlobManifest;
 pub use repo::{save_bonsai_changesets, BlobRepo, ChangesetMetadata, ContentBlobInfo,
