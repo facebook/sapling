@@ -142,7 +142,7 @@ fn create_poller(tailer: Tailer, logger: Logger) -> BoxFuture<(), ()> {
                             "changeset:{} hook_name:{} path:{} result:{:?}",
                             exec_id.cs_id,
                             exec_id.hook_name,
-                            exec_id.path,
+                            exec_id.file.path,
                             exec
                         );
                     });

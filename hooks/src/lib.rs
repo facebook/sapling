@@ -62,7 +62,8 @@ use mercurial_types::{Changeset, HgChangesetId, HgParents, MPath};
 use mononoke_types::FileContents;
 use slog::Logger;
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
+use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::mem;
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -80,6 +81,7 @@ pub struct HookManager {
     bookmark_hooks: HashMap<Bookmark, Vec<String>>,
     repo_name: String,
     changeset_store: Box<ChangesetStore>,
+    content_store: Arc<FileContentStore>,
     logger: Logger,
 }
 
@@ -98,7 +100,6 @@ impl HookManager {
         let filler = HookCacheFiller {
             file_hooks: file_hooks.clone(),
             repo_name: repo_name.clone(),
-            content_store,
         };
         let cache = Asyncmemo::with_limits("hooks", filler, entrylimit, weightlimit);
 
@@ -109,6 +110,7 @@ impl HookManager {
             bookmark_hooks: HashMap::new(),
             repo_name,
             changeset_store,
+            content_store,
             logger,
         }
     }
@@ -288,10 +290,10 @@ impl HookManager {
         let v: Vec<BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, _>> = changeset
             .files
             .iter()
-            .map(move |path| {
+            .map(move |file| {
                 HookManager::run_file_hooks(
                     changeset_id,
-                    path.to_string(),
+                    file.clone(),
                     hooks.clone(),
                     cache.clone(),
                     logger.clone(),
@@ -305,7 +307,7 @@ impl HookManager {
 
     fn run_file_hooks(
         cs_id: HgChangesetId,
-        path: String,
+        file: HookFile,
         hooks: Vec<String>,
         cache: Cache,
         logger: Logger,
@@ -317,7 +319,7 @@ impl HookManager {
                     FileHookExecutionID {
                         cs_id,
                         hook_name: hook_name.to_string(),
-                        path: path.clone(),
+                        file: file.clone(),
                     },
                     cache.clone(),
                     logger.clone(),
@@ -337,12 +339,28 @@ impl HookManager {
     }
 
     fn get_hook_changeset(&self, changeset_id: HgChangesetId) -> BoxFuture<HookChangeset, Error> {
+        let content_store = self.content_store.clone();
         Box::new(
             self.changeset_store
                 .get_changeset_by_changesetid(&changeset_id)
-                .then(|res| match res {
-                    Ok(cs) => HookChangeset::try_from(cs),
-                    Err(e) => Err(e),
+                .and_then(move |changeset| {
+                    let author = str::from_utf8(changeset.user())?.into();
+                    let files = changeset
+                        .files()
+                        .iter()
+                        .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
+                        .map(|path| {
+                            HookFile::new(path, content_store.clone(), changeset_id.clone())
+                        })
+                        .collect();
+                    let comments = str::from_utf8(changeset.user())?.into();
+                    let parents = HookChangesetParents::from(changeset.parents());
+                    Ok(HookChangeset {
+                        author,
+                        files,
+                        comments,
+                        parents,
+                    })
                 }),
         )
     }
@@ -360,7 +378,7 @@ where
 #[derive(Clone, Debug, PartialEq)]
 pub struct HookChangeset {
     pub author: String,
-    pub files: Vec<String>,
+    pub files: Vec<HookFile>,
     pub comments: String,
     pub parents: HookChangesetParents,
 }
@@ -370,6 +388,37 @@ pub struct HookFile {
     pub path: String,
     content_store: Arc<FileContentStore>,
     changeset_id: HgChangesetId,
+}
+
+impl fmt::Debug for HookFile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "HookFile path: {}, changeset_id: {}",
+            self.path, self.changeset_id
+        )
+    }
+}
+
+impl PartialEq for HookFile {
+    fn eq(&self, other: &HookFile) -> bool {
+        self.path == other.path && self.changeset_id == other.changeset_id
+    }
+}
+
+impl Weight for HookFile {
+    fn get_weight(&self) -> usize {
+        self.path.get_weight() + self.changeset_id.get_weight()
+    }
+}
+
+impl Eq for HookFile {}
+
+impl Hash for HookFile {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.path.hash(state);
+        self.changeset_id.hash(state);
+    }
 }
 
 impl HookFile {
@@ -412,7 +461,7 @@ impl HookFile {
 impl HookChangeset {
     pub fn new(
         author: String,
-        files: Vec<String>,
+        files: Vec<HookFile>,
         comments: String,
         parents: HookChangesetParents,
     ) -> HookChangeset {
@@ -445,7 +494,6 @@ impl Weight for HookExecution {
 pub struct HookRejectionInfo {
     pub description: String,
     pub long_description: String,
-    // TODO more fields
 }
 
 impl Weight for HookRejectionInfo {
@@ -527,6 +575,7 @@ pub trait FileContentStore: Send + Sync {
     ) -> BoxFuture<Bytes, Error>;
 }
 
+#[derive(Clone)]
 pub struct InMemoryFileContentStore {
     map: HashMap<(HgChangesetId, MPath), Bytes>,
 }
@@ -559,7 +608,7 @@ impl InMemoryFileContentStore {
 
 // TODO this can cache file content locally to prevent unnecessary lookup of changeset,
 // manifest and walk of manifest each time
-// It's likely that multiple hooks will want to bsee the same content for the same changeset
+// It's likely that multiple hooks will want to see the same content for the same changeset
 pub struct BlobRepoFileContentStore {
     pub repo: BlobRepo,
 }
@@ -598,7 +647,6 @@ impl BlobRepoFileContentStore {
 struct HookCacheFiller {
     repo_name: String,
     file_hooks: FileHooks,
-    content_store: Arc<FileContentStore>,
 }
 
 impl Filler for HookCacheFiller {
@@ -610,13 +658,11 @@ impl Filler for HookCacheFiller {
         match hooks.get(&key.hook_name) {
             Some(arc_hook) => {
                 let arc_hook = arc_hook.clone();
-                let hook_file = HookFile::new(
-                    key.path.clone(),
-                    self.content_store.clone(),
-                    key.cs_id.clone(),
+                let hook_context: HookContext<HookFile> = HookContext::new(
+                    key.hook_name.clone(),
+                    self.repo_name.clone(),
+                    key.file.clone(),
                 );
-                let hook_context: HookContext<HookFile> =
-                    HookContext::new(key.hook_name.clone(), self.repo_name.clone(), hook_file);
                 arc_hook.run(hook_context)
             }
             None => panic!("Can't find hook {}", key.hook_name), // TODO
@@ -630,7 +676,7 @@ impl Filler for HookCacheFiller {
 pub struct FileHookExecutionID {
     pub cs_id: HgChangesetId,
     pub hook_name: String,
-    pub path: String,
+    pub file: HookFile,
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
@@ -641,7 +687,7 @@ pub struct ChangesetHookExecutionID {
 
 impl Weight for FileHookExecutionID {
     fn get_weight(&self) -> usize {
-        self.cs_id.get_weight() + self.hook_name.get_weight() + self.path.get_weight()
+        self.cs_id.get_weight() + self.hook_name.get_weight() + self.file.get_weight()
     }
 }
 
@@ -650,26 +696,6 @@ pub enum HookChangesetParents {
     None,
     One(String),
     Two(String, String),
-}
-
-impl TryFrom<HgBlobChangeset> for HookChangeset {
-    type Error = Error;
-    fn try_from(changeset: HgBlobChangeset) -> Result<Self, Error> {
-        let author = str::from_utf8(changeset.user())?.into();
-        let files = changeset.files();
-        let files = files
-            .iter()
-            .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
-            .collect();
-        let comments = str::from_utf8(changeset.user())?.into();
-        let parents = HookChangesetParents::from(changeset.parents());
-        Ok(HookChangeset {
-            author,
-            files,
-            comments,
-            parents,
-        })
-    }
 }
 
 impl From<HgParents> for HookChangesetParents {
@@ -712,6 +738,7 @@ mod test {
     use super::*;
     use fixtures::many_files_dirs;
     use futures::Future;
+    use futures::future;
     use futures::future::finished;
     use slog::{Discard, Drain};
     use std::collections::hash_map::Entry;
@@ -760,6 +787,95 @@ mod test {
         expected_context: HookContext<HookChangeset>,
     ) -> Box<Hook<HookChangeset>> {
         Box::new(ContextMatchingChangesetHook { expected_context })
+    }
+
+    #[derive(Clone, Debug)]
+    struct ContentMatchingChangesetHook {
+        expected_content: HashMap<String, String>,
+    }
+
+    impl Hook<HookChangeset> for ContentMatchingChangesetHook {
+        fn run(&self, context: HookContext<HookChangeset>) -> BoxFuture<HookExecution, Error> {
+            let vec: Vec<BoxFuture<bool, Error>> = context
+                .data
+                .files
+                .clone()
+                .iter()
+                .map(|file| match self.expected_content.get(&file.path) {
+                    Some(content) => file.contains_string(&content),
+                    None => Box::new(finished(false)),
+                })
+                .collect();
+            future::join_all(vec)
+                .map(|vec| {
+                    let mut ok = true;
+                    for b in vec {
+                        if !b {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if ok {
+                        HookExecution::Accepted
+                    } else {
+                        default_rejection()
+                    }
+                })
+                .boxify()
+        }
+    }
+
+    fn content_matching_changeset_hook(
+        expected_content: HashMap<String, String>,
+    ) -> Box<Hook<HookChangeset>> {
+        Box::new(ContentMatchingChangesetHook { expected_content })
+    }
+
+    #[derive(Clone, Debug)]
+    struct LengthMatchingChangesetHook {
+        expected_lengths: HashMap<String, u64>,
+    }
+
+    impl Hook<HookChangeset> for LengthMatchingChangesetHook {
+        fn run(&self, context: HookContext<HookChangeset>) -> BoxFuture<HookExecution, Error> {
+            let vec: Vec<BoxFuture<bool, Error>> = context
+                .data
+                .files
+                .clone()
+                .iter()
+                .map(|file| match self.expected_lengths.get(&file.path) {
+                    Some(expected_length) => {
+                        let expected_length = *expected_length;
+                        file.len()
+                            .map(move |length| length == expected_length)
+                            .boxify()
+                    }
+                    None => Box::new(finished(false)),
+                })
+                .collect();
+            future::join_all(vec)
+                .map(|vec| {
+                    let mut ok = true;
+                    for b in vec {
+                        if !b {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if ok {
+                        HookExecution::Accepted
+                    } else {
+                        default_rejection()
+                    }
+                })
+                .boxify()
+        }
+    }
+
+    fn length_matching_changeset_hook(
+        expected_lengths: HashMap<String, u64>,
+    ) -> Box<Hook<HookChangeset>> {
+        Box::new(LengthMatchingChangesetHook { expected_lengths })
     }
 
     #[derive(Clone, Debug)]
@@ -916,15 +1032,21 @@ mod test {
     fn test_changeset_hook_context() {
         async_unit::tokio_unit_test(|| {
             let files = vec![
-                "dir1/subdir1/subsubdir1/file_1".into(),
-                "dir1/subdir1/subsubdir2/file_1".into(),
-                "dir1/subdir1/subsubdir2/file_2".into(),
+                "dir1/subdir1/subsubdir1/file_1".to_string(),
+                "dir1/subdir1/subsubdir2/file_1".to_string(),
+                "dir1/subdir1/subsubdir2/file_2".to_string(),
             ];
+            let content_store = Arc::new(InMemoryFileContentStore::new());
+            let cs_id = default_changeset_id();
+            let hook_files = files
+                .iter()
+                .map(|path| HookFile::new(path.clone(), content_store.clone(), cs_id))
+                .collect();
             let parents =
                 HookChangesetParents::One("2f866e7e549760934e31bf0420a873f65100ad63".into());
             let data = HookChangeset::new(
                 "Stanislau Hlebik <stash@fb.com>".into(),
-                files,
+                hook_files,
                 "Stanislau Hlebik <stash@fb.com>".into(),
                 parents,
             );
@@ -941,6 +1063,78 @@ mod test {
             };
             let expected = hashmap! {
                 "hook1".to_string() => HookExecution::Accepted
+            };
+            run_changeset_hooks("bm1", hooks, bookmarks, expected);
+        });
+    }
+
+    #[test]
+    fn test_changeset_hook_content() {
+        async_unit::tokio_unit_test(|| {
+            let hook1_map = hashmap![
+                "dir1/subdir1/subsubdir1/file_1".to_string() => "elephants".to_string(),
+                "dir1/subdir1/subsubdir2/file_1".to_string() => "hippopatami".to_string(),
+                "dir1/subdir1/subsubdir2/file_2".to_string() => "eels".to_string()
+            ];
+            let hook2_map = hashmap![
+                "dir1/subdir1/subsubdir1/file_1".to_string() => "anteaters".to_string(),
+                "dir1/subdir1/subsubdir2/file_1".to_string() => "hippopatami".to_string(),
+                "dir1/subdir1/subsubdir2/file_2".to_string() => "eels".to_string()
+            ];
+            let hook3_map = hashmap![
+                "dir1/subdir1/subsubdir1/file_1".to_string() => "anteaters".to_string(),
+                "dir1/subdir1/subsubdir2/file_1".to_string() => "giraffes".to_string(),
+                "dir1/subdir1/subsubdir2/file_2".to_string() => "lions".to_string()
+            ];
+            let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+                "hook1".to_string() => content_matching_changeset_hook(hook1_map),
+                "hook2".to_string() => content_matching_changeset_hook(hook2_map),
+                "hook3".to_string() => content_matching_changeset_hook(hook3_map),
+            };
+            let bookmarks = hashmap! {
+                "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string(), "hook3".to_string()]
+            };
+            let expected = hashmap! {
+                "hook1".to_string() => HookExecution::Accepted,
+                "hook2".to_string() => default_rejection(),
+                "hook3".to_string() => default_rejection(),
+            };
+            run_changeset_hooks("bm1", hooks, bookmarks, expected);
+        });
+    }
+
+    #[test]
+    fn test_changeset_hook_lengths() {
+        async_unit::tokio_unit_test(|| {
+            let hook1_map = hashmap![
+                "dir1/subdir1/subsubdir1/file_1".to_string() => 9,
+                "dir1/subdir1/subsubdir2/file_1".to_string() => 11,
+                "dir1/subdir1/subsubdir2/file_2".to_string() => 4
+            ];
+            let hook2_map = hashmap![
+                "dir1/subdir1/subsubdir1/file_1".to_string() => 9,
+                "dir1/subdir1/subsubdir2/file_1".to_string() => 12,
+                "dir1/subdir1/subsubdir2/file_2".to_string() => 4
+            ];
+            let hook3_map = hashmap![
+                "dir1/subdir1/subsubdir1/file_1".to_string() => 15,
+                "dir1/subdir1/subsubdir2/file_1".to_string() => 17,
+                "dir1/subdir1/subsubdir2/file_2".to_string() => 2
+            ];
+            let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+                "hook1".to_string() => length_matching_changeset_hook(hook1_map),
+                "hook2".to_string() => length_matching_changeset_hook(hook2_map),
+                "hook3".to_string() => length_matching_changeset_hook(hook3_map),
+            };
+            let bookmarks = hashmap! {
+                "bm1".to_string() => vec!["hook1".to_string(),
+                 "hook2".to_string(), "hook3".to_string()
+                 ]
+            };
+            let expected = hashmap! {
+                "hook1".to_string() => HookExecution::Accepted,
+                "hook2".to_string() => default_rejection(),
+                "hook3".to_string() => default_rejection(),
             };
             run_changeset_hooks("bm1", hooks, bookmarks, expected);
         });
@@ -1230,15 +1424,16 @@ mod test {
                 &Bookmark::new(bookmark_name).unwrap(),
             );
         let res = fut.wait().unwrap();
-        let map: HashMap<String, HashMap<String, HookExecution>> =
-            res.into_iter()
-                .fold(HashMap::new(), |mut m, (exec_id, exec)| {
-                    match m.entry(exec_id.hook_name) {
-                        Entry::Vacant(v) => v.insert(HashMap::new()).insert(exec_id.path, exec),
-                        Entry::Occupied(mut v) => v.get_mut().insert(exec_id.path, exec),
-                    };
-                    m
-                });
+        let map: HashMap<String, HashMap<String, HookExecution>> = res.into_iter().fold(
+            HashMap::new(),
+            |mut m, (exec_id, exec)| {
+                match m.entry(exec_id.hook_name) {
+                    Entry::Vacant(v) => v.insert(HashMap::new()).insert(exec_id.file.path, exec),
+                    Entry::Occupied(mut v) => v.get_mut().insert(exec_id.file.path, exec),
+                };
+                m
+            },
+        );
         assert_eq!(expected, map);
     }
 

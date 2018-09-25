@@ -5,6 +5,8 @@ __hook_start_base = function(info, arg, setup)
      local ctx = {}
      ctx.info=info
      setup(arg, ctx)
+     io = nil
+     os = nil
      acc, desc, long_desc = hook(ctx)
      if type(acc) ~= "boolean" then
         error("invalid hook return type")
