@@ -8,7 +8,6 @@ A new repository uses zlib storage, which doesn't need a requirement
   generaldelta
   revlogv1
   store
-  storerequirements
   treestate
 
   $ touch foo
@@ -49,7 +48,6 @@ A requirement specifying an unknown compression engine results in bail
   generaldelta
   revlogv1
   store
-  storerequirements
   treestate
 
   $ touch foo
@@ -74,7 +72,6 @@ with that engine or a requirement
   generaldelta
   revlogv1
   store
-  storerequirements
   treestate
 
   $ hg debugrevlog -c | grep 0x78

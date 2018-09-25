@@ -2563,7 +2563,6 @@ def newreporequirements(repo):
     requirements = {"revlogv1"}
     if ui.configbool("format", "usestore"):
         requirements.add("store")
-        requirements.add("storerequirements")
         if ui.configbool("format", "usefncache"):
             requirements.add("fncache")
             if ui.configbool("format", "dotencode"):

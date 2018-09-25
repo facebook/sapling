@@ -122,7 +122,7 @@ An upgrade of a repository created with recommended settings only suggests optim
   performing an upgrade with "--run" will make the following changes:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
   
   additional optimizations are available by specifying "--optimize <name>":
   
@@ -146,7 +146,7 @@ An upgrade of a repository created with recommended settings only suggests optim
   performing an upgrade with "--run" will make the following changes:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
   
   redeltaparent
      deltas within internal storage will choose a new base revision if needed
@@ -215,7 +215,7 @@ Various sub-optimal detections work
   
   requirements
      preserved: revlogv1, store
-     added: dotencode, fncache, generaldelta, storerequirements
+     added: dotencode, fncache, generaldelta
   
   fncache
      repository will be more resilient to storing certain paths and performance of certain operations should be improved
@@ -260,7 +260,7 @@ Various sub-optimal detections work
   
   requirements
      preserved: revlogv1, store
-     added: fncache, generaldelta, storerequirements
+     added: fncache, generaldelta
   
   fncache
      repository will be more resilient to storing certain paths and performance of certain operations should be improved
@@ -292,7 +292,7 @@ Upgrading a repository that is already modern essentially no-ops
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
   
   beginning upgrade...
   repository locked and read-only
@@ -326,7 +326,7 @@ Upgrading a repository to generaldelta works
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, revlogv1, store, storerequirements
+     preserved: dotencode, fncache, revlogv1, store
      added: generaldelta
   
   generaldelta
@@ -365,7 +365,6 @@ Original requirements backed up
   fncache
   revlogv1
   store
-  storerequirements
 
 generaldelta added to original requirements files
 
@@ -375,7 +374,6 @@ generaldelta added to original requirements files
   generaldelta
   revlogv1
   store
-  storerequirements
 
 store directory has files we expect
 
@@ -432,7 +430,7 @@ store files with special filenames aren't encoded during copy
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
   
   beginning upgrade...
   repository locked and read-only
@@ -464,7 +462,7 @@ store files with special filenames aren't encoded during copy
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
   
   redeltafulladd
      each revision will be added as new content to the internal storage; this will likely drastically slow down execution time, but some extensions might need it
@@ -548,7 +546,7 @@ repository config is taken in account
   upgrade will perform the following actions:
   
   requirements
-     preserved: dotencode, fncache, generaldelta, revlogv1, store, storerequirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
   
   redeltaall
      deltas within internal storage will be fully recomputed; this will likely drastically slow down execution time
