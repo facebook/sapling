@@ -28,7 +28,7 @@ use time_ext::DurationExt;
 use uuid::Uuid;
 
 use super::changeset::HgChangesetContent;
-use super::changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
+use super::changeset_fetcher::{CachingChangesetFetcher, ChangesetFetcher, SimpleChangesetFetcher};
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes,
                    get_sha256_alias, get_sha256_alias_key};
 use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob,
@@ -156,6 +156,28 @@ impl BlobRepo {
             bonsai_hg_mapping,
             repoid,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
+        }
+    }
+
+    fn new_with_changeset_fetcher_factory(
+        logger: Logger,
+        bookmarks: Arc<Bookmarks>,
+        blobstore: Arc<Blobstore>,
+        filenodes: Arc<Filenodes>,
+        changesets: Arc<Changesets>,
+        bonsai_hg_mapping: Arc<BonsaiHgMapping>,
+        repoid: RepositoryId,
+        changeset_fetcher_factory: Arc<Fn() -> Arc<ChangesetFetcher + Send + Sync> + Send + Sync>,
+    ) -> Self {
+        BlobRepo {
+            logger,
+            bookmarks,
+            blobstore: PrefixBlobstore::new(blobstore, repoid.prefix()),
+            filenodes,
+            changesets,
+            bonsai_hg_mapping,
+            repoid,
+            changeset_fetcher_factory,
         }
     }
 
@@ -291,12 +313,11 @@ impl BlobRepo {
 
         let changesets = MysqlChangesets::open(&args.db_address)
             .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
-        let changesets = CachingChangests::new(
-            Arc::new(changesets),
-            cachelib::get_pool("changesets").ok_or(Error::from(ErrorKind::MissingCachePool(
-                "changesets".to_string(),
-            )))?,
-        );
+        let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
+            ErrorKind::MissingCachePool("changesets".to_string()),
+        ))?;
+        let changesets = CachingChangests::new(Arc::new(changesets), changesets_cache_pool.clone());
+        let changesets = Arc::new(changesets);
 
         let bonsai_hg_mapping = MysqlBonsaiHgMapping::open(&args.db_address)
             .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
@@ -307,14 +328,27 @@ impl BlobRepo {
             ))?,
         );
 
-        Ok(Self::new(
+        let changeset_fetcher_factory = {
+            cloned!(changesets, repoid);
+            move || {
+                let res: Arc<ChangesetFetcher + Send + Sync> =
+                    Arc::new(CachingChangesetFetcher::new(
+                        changesets.clone(),
+                        repoid.clone(),
+                        changesets_cache_pool.clone(),
+                    ));
+                res
+            }
+        };
+        Ok(Self::new_with_changeset_fetcher_factory(
             logger,
             Arc::new(bookmarks),
             Arc::new(blobstore),
             Arc::new(filenodes),
-            Arc::new(changesets),
+            changesets,
             Arc::new(bonsai_hg_mapping),
             repoid,
+            Arc::new(changeset_fetcher_factory),
         ))
     }
 
