@@ -219,7 +219,7 @@ def extsetup(ui):
         )
 
     # Directly examining argv seems like a terrible idea, but it seems
-    # neccesary unless we refactor mercurial dispatch code. This is because
+    # necessary unless we refactor mercurial dispatch code. This is because
     # the first place we have access to parsed options is in the same function
     # (dispatch.dispatch) that created the repo and the repo creation initiates
     # the sync operation in which the lock is elided unless we set this.
@@ -2265,7 +2265,7 @@ def _sqlreplay(repo, startrev, endrev):
         wlock = repo.wlock()
         lock = repo.lock()
         # Disable all pretxnclose hooks, since these revisions are
-        # technically already commited.
+        # technically already committed.
         for name, value in repo.ui.configitems("hooks"):
             if name.startswith("pretxnclose"):
                 repo.ui.setconfig("hooks", name, None)
