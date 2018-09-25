@@ -100,7 +100,7 @@ def _gitlookup(repo, gitrev):
     tonode = cl.node
 
     def _gittohg(githash):
-        return [tonode(repo.revs("gitnode(%s)" % githash).first())]
+        return [tonode(rev) for rev in repo.revs("gitnode(%s)" % githash)]
 
     m = githashre.match(gitrev)
     if m is not None:

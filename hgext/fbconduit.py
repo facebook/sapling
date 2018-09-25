@@ -249,7 +249,7 @@ def _phablookup(repo, phabrev):
     tonode = cl.node
 
     def gittohg(githash):
-        return [tonode(repo.revs("gitnode(%s)" % githash).first())]
+        return [tonode(rev) for rev in repo.revs("gitnode(%s)" % githash)]
 
     phabmatch = phabhashre.match(phabrev)
     if phabmatch:
