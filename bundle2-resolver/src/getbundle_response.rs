@@ -71,7 +71,7 @@ pub fn create_getbundle_response(
         .map(|nodes| stream::iter_ok(nodes.into_iter().rev()))
         .flatten_stream();
 
-    let buffer_size = 100; // TODO(stash): make it configurable
+    let buffer_size = 1000; // TODO(stash): make it configurable
     let changelogentries = nodestosend
         .map({
             cloned!(blobrepo);
