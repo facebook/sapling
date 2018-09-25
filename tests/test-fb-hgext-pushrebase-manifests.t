@@ -118,27 +118,11 @@ Add an extension that logs whenever `manifest.readmf()` is called when the lock 
 
 Add a hook to the server to make it spin until .hg/flag exists.
   $ cd ../server
-  $ cat >> $TESTTMP/waithook.py <<EOF
-  > import time, sys, os, random
-  > def waithook(ui, repo, **kwargs):
-  >   start = time.time()
-  >   repo._wlockfreeprefix.add('hookrunning')
-  >   repo.vfs.write('hookrunning', '')
-  >   while not repo.vfs.exists('flag'):
-  >     if time.time() - start > 20:
-  >       print >> sys.stderr, "ERROR: Timeout waiting for .hg/flag"
-  >       repo.vfs.unlink('hookrunning')
-  >       return True
-  >     time.sleep(0.05)
-  >   repo.vfs.unlink('hookrunning')
-  >   return False
-  > EOF
-
   $ echo "[extensions]" >> .hg/hgrc
   $ echo "manifestcheck=$TESTTMP/manifestcheck.py" >> .hg/hgrc
   $ cp .hg/hgrc .hg/hgrc.bak
   $ echo "[hooks]" >> .hg/hgrc
-  $ echo "prepushrebase.wait=python:$TESTTMP/waithook.py:waithook" >> .hg/hgrc
+  $ echo "prepushrebase.wait=python:$TESTDIR/hgsql/waithook.py:waithook" >> .hg/hgrc
 
 Push from client1 -> server and detach. The background job will wait for
 .hg/flag.

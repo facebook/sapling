@@ -147,25 +147,9 @@ The two server repos should look identical:
 Add a hook to the server to make it spin until .hg/flag exists:
 
   $ cd ../server1
-  $ cat >> $TESTTMP/waithook.py <<EOF
-  > import time, sys, os, random
-  > def waithook(ui, repo, **kwargs):
-  >   start = time.time()
-  >   repo._wlockfreeprefix.add('hookrunning')
-  >   repo.vfs.write('hookrunning', '')
-  >   while not repo.vfs.exists('flag'):
-  >     if time.time() - start > 2:
-  >       print >> sys.stderr, "ERROR: Timeout waiting for .hg/flag"
-  >       repo.vfs.unlink('hookrunning')
-  >       return True
-  >     time.sleep(0.05)
-  >   repo.vfs.unlink('hookrunning')
-  >   return False
-  > EOF
-
   $ cp .hg/hgrc .hg/hgrc.bak
   $ echo "[hooks]" >> .hg/hgrc
-  $ echo "prepushrebase.wait=python:$TESTTMP/waithook.py:waithook" >> .hg/hgrc
+  $ echo "prepushrebase.wait=python:$TESTDIR/hgsql/waithook.py:waithook" >> .hg/hgrc
 
 
 Push from client1 -> server1 and detach. The background job will wait for
