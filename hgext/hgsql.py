@@ -6,6 +6,20 @@
 # GNU General Public License version 2 or any later version.
 #
 # no-check-code
+"""sync hg repos with MySQL
+
+Config::
+
+    [hgsql]
+    # Seconds. If it's non-negative. Try pulling from the database in a loop
+    # before entering the critical section. This is done by changing the SQL lock
+    # timeout to syncinterval, which should be much smaller than locktimeout.
+    # This could make the repo closer to the SQL state after entering the
+    # critical section so pulling from database might take less time there. If
+    # it's a negative value, do not sync before entering the critial section.
+    # (default: -1)
+    syncinterval = -1
+"""
 
 
 from __future__ import absolute_import
@@ -76,9 +90,14 @@ configitem("hgsql", "maxrowsize", default=1048576)
 configitem("hgsql", "profileoutput", default="/tmp")
 configitem("hgsql", "profiler", default=None)
 configitem("hgsql", "rootpidnsonly", default=False)
+configitem("hgsql", "syncinterval", default=-1)
 configitem("hgsql", "verbose", default=False)
 configitem("hgsql", "verifybatchsize", default=1000)
 configitem("hgsql", "waittimeout", default=300)
+
+# developer config: hgsql.debugminsqllockwaittime
+# do not get the sql lock unless specified time has passed
+configitem("hgsql", "debugminsqllockwaittime", default=0)
 
 mysql = None
 
@@ -408,7 +427,7 @@ class sqlcontext(object):
         if self.takelock and not writelock in repo.heldlocks:
             startwait = time.time()
             try:
-                repo.sqlwritelock()
+                repo.sqlwritelock(trysync=True)
             except error.Abort:
                 elapsed = time.time() - startwait
                 repo.ui.log(
@@ -604,23 +623,56 @@ def wraprepo(repo):
             lockname = "%s_%s" % (name, self.sqlreponame)
             return self.sqlconn.converter.escape(lockname)
 
-        def _sqllock(self, name):
+        def _sqllock(self, name, trysync):
+            """If trysync is True, try to sync the repo outside the lock so it
+            stays closer to the actual repo when the lock is acquired.
+            """
             lockname = self._lockname(name)
+            syncinterval = float(self.ui.config("hgsql", "syncinterval") or -1)
+            if syncinterval < 0:
+                trysync = False
 
-            # cast to int to prevent passing bad sql data
-            self.sqlcursor.execute(
-                "SELECT GET_LOCK('%s', %s)" % (lockname, self.locktimeout)
-            )
-
-            result = int(self.sqlcursor.fetchall()[0][0])
-            if result != 1:
-                raise util.Abort(
-                    "timed out waiting for mysql repo lock (%s)" % lockname
+            if trysync:
+                minwaittime = self.ui.configint("hgsql", "debugminsqllockwaittime")
+                # SELECT GET_LOCK(...) will block. Break the lock attempt into
+                # smaller lock attempts
+                starttime = time.time()
+                while True:
+                    elapsed = time.time() - starttime
+                    if elapsed >= self.locktimeout:
+                        raise util.Abort(
+                            "timed out waiting for mysql repo lock (%s)" % lockname
+                        )
+                    # Sync outside the SQL lock hoping that the repo is closer
+                    # to the SQL repo when we got the lock.
+                    self.syncdb(waitforlock=True)
+                    if elapsed < minwaittime:
+                        # Pretend we wait and timed out, without actually
+                        # getting the SQL lock. This is useful for testing.
+                        time.sleep(syncinterval)
+                    else:
+                        # Try to acquire SQL lock, with a small timeout. So
+                        # "forcesync" can get executed more frequently.
+                        self.sqlcursor.execute(
+                            "SELECT GET_LOCK('%s', %s)" % (lockname, syncinterval)
+                        )
+                        result = int(self.sqlcursor.fetchall()[0][0])
+                        if result == 1:
+                            break
+            else:
+                self.sqlcursor.execute(
+                    "SELECT GET_LOCK('%s', %s)" % (lockname, self.locktimeout)
                 )
+                # cast to int to prevent passing bad sql data
+                result = int(self.sqlcursor.fetchall()[0][0])
+                if result != 1:
+                    raise util.Abort(
+                        "timed out waiting for mysql repo lock (%s)" % lockname
+                    )
             self.heldlocks.add(name)
 
-        def sqlwritelock(self):
-            self._sqllock(writelock)
+        def sqlwritelock(self, trysync=False):
+            self._sqllock(writelock, trysync)
 
         def _hassqllock(self, name, checkserver=True):
             if not name in self.heldlocks:
@@ -792,6 +844,9 @@ def wraprepo(repo):
                 self._issyncing = False
 
         def _syncdb(self, waitforlock):
+            # MySQL could take a snapshot of the database view.
+            # Start a new transaction to get new changes.
+            self.sqlconn.rollback()
             if not self.needsync()[0]:
                 self.ui.debug("syncing not needed\n")
                 return
@@ -827,9 +882,6 @@ def wraprepo(repo):
                     overrides[("hooks", name)] = None
 
             with ui.configoverride(overrides, "hgsql"), wlock, lock:
-                # Someone else may have synced us while we were waiting.
-                # Restart the transaction so we have access to the latest rows.
-                self.sqlconn.rollback()
                 outofsync, sqlheads, sqlbookmarks, fetchend = self.needsync()
                 if not outofsync:
                     return

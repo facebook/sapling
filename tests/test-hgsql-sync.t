@@ -145,7 +145,7 @@
   waiting for lock on working directory of $TESTTMP/master held by * (glob)
   (hint: run 'hg debugprocesstree *' to see related processes) (glob)
   3 a
-  got lock after ? seconds (glob)
+  got lock after * seconds (glob)
   3 a
   $ cd ..
   $ cp backup.hgrc $HGRCPATH
