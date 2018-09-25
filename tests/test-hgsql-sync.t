@@ -7,6 +7,7 @@
 #endif
 
   $ . "$TESTDIR/hgsql/library.sh"
+  $ setconfig hgsql.verbose=1
 
 # Populate the db with an initial commit
 
@@ -19,7 +20,12 @@
   $ initserver master masterrepo
   $ cd master
   $ hg log
+  [hgsql] getting 0 commits from database
   $ hg pull -q ../client
+  [hgsql] getting 0 commits from database
+  [hgsql] got lock after * seconds (glob)
+  [hgsql] getting 0 commits from database
+  [hgsql] held lock for * seconds (glob)
 
   $ cd ..
 
@@ -28,6 +34,7 @@
   $ initserver master2 masterrepo
   $ cd master2
   $ hg log
+  [hgsql] getting 1 commits from database
   changeset:   0:b292c1e3311f
   tag:         tip
   user:        test
@@ -50,6 +57,7 @@
   $ hg push -q ssh://user@dummy/master
   $ cd ../master2
   $ hg log -l 1
+  [hgsql] getting 1 commits from database
   changeset:   1:b62091368546
   tag:         tip
   user:        test
@@ -68,10 +76,13 @@
   pushing to ssh://user@dummy/master
   searching for changes
   no changes found
+  remote: [hgsql] got lock after * seconds (glob)
+  remote: [hgsql] held lock for * seconds (glob)
   exporting bookmark mybook
   [1]
   $ cd ../master2
   $ hg book
+  [hgsql] getting 0 commits from database
      mybook                    1:b62091368546
 
 # Pull commit and bookmark to one master, verify in the other
@@ -83,8 +94,11 @@
   $ hg commit -qAm z
   $ cd ../master
   $ hg pull -q ssh://user@dummy/client
+  [hgsql] got lock after * seconds (glob)
+  [hgsql] held lock for * seconds (glob)
   $ cd ../master2
   $ hg log -l 1
+  [hgsql] getting 1 commits from database
   changeset:   2:f3a7cb746fa9
   bookmark:    mybook
   tag:         tip
@@ -95,13 +109,19 @@
 # Delete a bookmark in one, verify in the other
 
   $ hg book book1
+  [hgsql] got lock after * seconds (glob)
+  [hgsql] held lock for * seconds (glob)
   $ cd ../master
   $ hg book
+  [hgsql] getting 0 commits from database
      book1                     -1:000000000000
      mybook                    2:f3a7cb746fa9
   $ hg book -d book1
+  [hgsql] got lock after * seconds (glob)
+  [hgsql] held lock for * seconds (glob)
   $ cd ../master2
   $ hg book
+  [hgsql] getting 0 commits from database
      mybook                    2:f3a7cb746fa9
 
 # Verify that --forcesync works
@@ -120,6 +140,7 @@
   $ cd ../master
   $ hg log -l 1 --template '{rev} {desc}\n' &
   $ sleep 1
+  [hgsql] getting 1 commits from database
   $ hg log -l 1 --template '{rev} {desc}\n' --forcesync
   waiting for lock on working directory of $TESTTMP/master held by * (glob)
   (hint: run 'hg debugprocesstree *' to see related processes) (glob)
@@ -150,7 +171,9 @@
   > EOF
   $ cd master
   $ INSPECTSQL=DELETE,INSERT hg book mybook2
+  [hgsql] got lock after * seconds (glob)
   INSERT INTO revision_references(repo, namespace, name, value) VALUES (masterrepo, 'bookmarks', mybook2, 0000000000000000000000000000000000000000)
   INSERT INTO revision_references(repo, namespace, name, value) VALUES(masterrepo, 'tip', 'tip', 3) ON DUPLICATE KEY UPDATE value=3
+  [hgsql] held lock for * seconds (glob)
   $ cd ..
   $ cp backup.hgrc $HGRCPATH

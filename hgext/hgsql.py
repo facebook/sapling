@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 #
 # no-check-code
-# flake8: noqa
+
 
 from __future__ import absolute_import
 
@@ -65,6 +65,7 @@ configitem("hgsql", "password", default="")
 configitem("hgsql", "port", default=0)
 configitem("hgsql", "user", default=None)
 
+configitem("format", "usehgsql", default=True)
 configitem("hgsql", "bypass", default=False)
 configitem("hgsql", "enabled", default=False)
 configitem("hgsql", "engine", default="innodb")
@@ -75,9 +76,9 @@ configitem("hgsql", "maxrowsize", default=1048576)
 configitem("hgsql", "profileoutput", default="/tmp")
 configitem("hgsql", "profiler", default=None)
 configitem("hgsql", "rootpidnsonly", default=False)
+configitem("hgsql", "verbose", default=False)
 configitem("hgsql", "verifybatchsize", default=1000)
 configitem("hgsql", "waittimeout", default=300)
-configitem("format", "usehgsql", default=True)
 
 mysql = None
 
@@ -419,6 +420,7 @@ class sqlcontext(object):
                     success="false",
                     repository=repo.root,
                 )
+                repo._hgsqlnote("failed to get lock after %.2f seconds" % elapsed)
                 raise
 
             self._startprofile()
@@ -433,6 +435,7 @@ class sqlcontext(object):
                 success="true",
                 repository=repo.root,
             )
+            repo._hgsqlnote("got lock after %.2f seconds" % elapsed)
         self._startlocktime = time.time()
 
         if self._connected:
@@ -453,6 +456,7 @@ class sqlcontext(object):
                 )
                 self._stopprofile(elapsed)
                 repo.sqlunlock(writelock)
+                repo._hgsqlnote("held lock for %.2f seconds" % elapsed)
 
             if self._connected:
                 repo.sqlclose()
@@ -591,6 +595,11 @@ def wraprepo(repo):
             self.sqlcursor = None
             self.sqlconn = None
 
+        def _hgsqlnote(self, message):
+            if self.ui.configbool("hgsql", "verbose"):
+                self.ui.write_err("[hgsql] %s\n" % message)
+            self.ui.debug("%s\n" % message)
+
         def _lockname(self, name):
             lockname = "%s_%s" % (name, self.sqlreponame)
             return self.sqlconn.converter.escape(lockname)
@@ -658,7 +667,7 @@ def wraprepo(repo):
             return super(sqllocalrepo, self).wlock(*args, **kwargs)
 
         def _recordbadlockorder(self):
-            self.ui.debug("hgsql: invalid lock order\n")
+            self.ui.debug("invalid lock order\n")
 
         def transaction(self, *args, **kwargs):
             tr = super(sqllocalrepo, self).transaction(*args, **kwargs)
@@ -753,9 +762,9 @@ def wraprepo(repo):
                     limiter = self.synclimiter()
                     if not limiter:
                         # Someone else is already checking and updating the repo
-                        self.ui.debug(
+                        self._hgsqlnote(
                             "skipping database sync because another "
-                            "process is already syncing\n"
+                            "process is already syncing"
                         )
 
                         # It's important that we load bookmarks before the
@@ -777,9 +786,9 @@ def wraprepo(repo):
 
         def _syncdb(self, waitforlock):
             if not self.needsync()[0]:
-                ui.debug("syncing not needed\n")
+                self.ui.debug("syncing not needed\n")
                 return
-            ui.debug("syncing with mysql\n")
+            self.ui.debug("syncing with mysql\n")
 
             # Save a copy of the old manifest cache so we can put it back
             # afterwards.
@@ -794,7 +803,7 @@ def wraprepo(repo):
                 if waitforlock:
                     raise
                 # Oh well. Don't block this non-critical read-only operation.
-                ui.debug("skipping sync for current operation\n")
+                self._hgsqlnote("skipping sync for current operation")
                 return
 
             # Disable all pretxnclose hooks, since these revisions are
@@ -818,6 +827,10 @@ def wraprepo(repo):
                 if not outofsync:
                     return
 
+                self._hgsqlnote(
+                    "getting %s commits from database"
+                    % (fetchend - len(self.changelog) + 1)
+                )
                 transaction = self.transaction("syncdb")
 
                 self.hook("presyncdb", throw=True)
@@ -2056,10 +2069,9 @@ def sqlrefill(ui, startrev, **opts):
     repo.sqlconnect()
     repo.sqllock(writelock)
     try:
-        totalrevs = len(repo.changelog)
-
         revlogs = {}
         pendingrevs = []
+        # totalrevs = len(repo.changelog)
         # with progress.bar(ui, 'refilling', total=totalrevs - startrev) as prog:
         # prog.value += 1
         revlogrevs = _discoverrevisions(repo, startrev)

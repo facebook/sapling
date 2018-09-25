@@ -43,6 +43,7 @@ no-check-code
   $ hg log -l 2 --template "first:{rev}\n" --debug &
   $ sleep 3
   syncing with mysql
+  getting 1 commits from database
   running hook presyncdb.sleep: sleep 5
   $ hg log -l 2 --template "second:{rev}\n" --debug
   locker is still running (full unique id: '*') (glob)

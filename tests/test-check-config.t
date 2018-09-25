@@ -83,6 +83,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: hgsql.profiler (str)
   undocumented: hgsql.reponame (str)
   undocumented: hgsql.user (str)
+  undocumented: hgsql.verbose (bool)
   undocumented: hgsql.verifybatchsize (int)
   undocumented: hgsql.waittimeout (str)
   undocumented: hgsubversion.externals (str) ["svnexternals"]
