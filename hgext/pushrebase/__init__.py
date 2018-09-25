@@ -118,23 +118,38 @@ def uisetup(ui):
     order.append("pushrebase")
     extensions._order = order
 
-    def manifestlogrevision(orig, self, nodeorrev, **kwargs):
-        try:
-            haslock = util.islocked(os.path.join(self.opener.join(""), "../wlock"))
+    cache = {}
 
-            if nodeorrev != nullrev:
-                if haslock:
-                    msg = "manifest read for %s inside lock\n" % short(nodeorrev)
-                else:
-                    msg = "manifest read for %s inside lock\n" % short(nodeorrev)
-                # internal config: pushrebase.debugprintmanifestreads.user
-                if ui.configbool("pushrebase", "debugprintmanifestreads.user", False):
-                    ui.write_err(msg)
-                ui.log(msg)
+    def manifestlogrevision(orig, self, nodeorrev, **kwargs):
+        if nodeorrev == nullrev:
+            return orig(self, nodeorrev, **kwargs)
+
+        try:
+            # Convert rev numbers to nodes if needed
+            if isinstance(nodeorrev, int):
+                node = self.node(nodeorrev)
+            else:
+                node = nodeorrev
+
+            haslock = util.islocked(os.path.join(self.opener.join(""), "../wlock"))
+            wasincache = node in cache
+            cache[node] = True
+
+            msg = "%s manifest read for %s (%s lock)\n" % (
+                "cached" if wasincache else "*FULL*",
+                short(node),
+                "*inside*" if haslock else "outside",
+            )
+
+            # Write to user (stderr) if configured
+            # internal config: pushrebase.debugprintmanifestreads.user
+            if ui.configbool("pushrebase", "debugprintmanifestreads.user", False):
+                ui.write_err(msg)
+            ui.log("pushrebase", msg)
 
         except Exception as e:
             ui.write_err("manifest-debug exception: %s\n" % e)
-            ui.log("manifest-debug exception: %s\n" % e)
+            ui.log("pushrebase", "manifest-debug exception: %s\n" % e)
 
         return orig(self, nodeorrev, **kwargs)
 
