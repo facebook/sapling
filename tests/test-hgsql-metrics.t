@@ -44,7 +44,7 @@
   >     extensions.wrapfunction(hgsql.sqlcontext, '__enter__', fakeenter)
   > def fakeenter(orig, self):
   >     if self.takelock:
-  >         extensions.wrapfunction(self.repo.__class__, 'sqllock', lockthrow)
+  >         extensions.wrapfunction(self.repo.__class__, '_sqllock', lockthrow)
   >     return orig(self)
   > def lockthrow(*args, **kwargs):
   >     raise error.Abort("fake timeout")

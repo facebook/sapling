@@ -408,7 +408,7 @@ class sqlcontext(object):
         if self.takelock and not writelock in repo.heldlocks:
             startwait = time.time()
             try:
-                repo.sqllock(writelock)
+                repo.sqlwritelock()
             except error.Abort:
                 elapsed = time.time() - startwait
                 repo.ui.log(
@@ -455,7 +455,7 @@ class sqlcontext(object):
                     repository=repo.root,
                 )
                 self._stopprofile(elapsed)
-                repo.sqlunlock(writelock)
+                repo.sqlwriteunlock()
                 repo._hgsqlnote("held lock for %.2f seconds" % elapsed)
 
             if self._connected:
@@ -604,7 +604,7 @@ def wraprepo(repo):
             lockname = "%s_%s" % (name, self.sqlreponame)
             return self.sqlconn.converter.escape(lockname)
 
-        def sqllock(self, name):
+        def _sqllock(self, name):
             lockname = self._lockname(name)
 
             # cast to int to prevent passing bad sql data
@@ -619,7 +619,10 @@ def wraprepo(repo):
                 )
             self.heldlocks.add(name)
 
-        def hassqllock(self, name, checkserver=True):
+        def sqlwritelock(self):
+            self._sqllock(writelock)
+
+        def _hassqllock(self, name, checkserver=True):
             if not name in self.heldlocks:
                 return False
 
@@ -639,7 +642,10 @@ def wraprepo(repo):
 
             return lockheldby == myconnectid
 
-        def sqlunlock(self, name):
+        def hassqlwritelock(self, checkserver=True):
+            return self._hassqllock(writelock, checkserver)
+
+        def _sqlunlock(self, name):
             lockname = self._lockname(name)
             self.sqlcursor.execute("SELECT RELEASE_LOCK('%s')" % (lockname,))
             self.sqlcursor.fetchall()
@@ -649,20 +655,21 @@ def wraprepo(repo):
                 callback()
             self.sqlpostrelease = []
 
+        def sqlwriteunlock(self):
+            repo._sqlunlock(writelock)
+
         def lock(self, *args, **kwargs):
             wl = self._wlockref and self._wlockref()
             if (
                 not self._issyncing
                 and not (wl is not None and wl.held)
-                and not self.hassqllock(writelock, checkserver=False)
+                and not self.hassqlwritelock(checkserver=False)
             ):
                 self._recordbadlockorder()
             return super(sqllocalrepo, self).lock(*args, **kwargs)
 
         def wlock(self, *args, **kwargs):
-            if not self._issyncing and not self.hassqllock(
-                writelock, checkserver=False
-            ):
+            if not self._issyncing and not self.hassqlwritelock(checkserver=False):
                 self._recordbadlockorder()
             return super(sqllocalrepo, self).wlock(*args, **kwargs)
 
@@ -1121,7 +1128,7 @@ def wraprepo(repo):
 
                 # Just to be super sure, check the write lock before doing the
                 # final commit
-                if not self.hassqllock(writelock):
+                if not self.hassqlwritelock():
                     raise Exception(
                         "attempting to write to sql "
                         + "without holding %s (precommit)" % writelock
@@ -1242,7 +1249,7 @@ def wraprepo(repo):
             cursor = self.sqlcursor
 
             # Ensure we hold the write lock
-            if not self.hassqllock(writelock):
+            if not self.hassqlwritelock():
                 raise Exception(
                     "attempting to write to sql without holding %s (prevalidate)"
                     % writelock
@@ -1361,7 +1368,7 @@ def wraprepo(repo):
                 )
 
         def _afterlock(self, callback):
-            if self.hassqllock(writelock, checkserver=False):
+            if self.hassqlwritelock(checkserver=False):
                 self.sqlpostrelease.append(callback)
             else:
                 return super(sqllocalrepo, self)._afterlock(callback)
@@ -1923,7 +1930,7 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
         # strip from sql
         reponame = repo.sqlreponame
         repo.sqlconnect()
-        repo.sqllock(writelock)
+        repo.sqlwritelock()
         try:
             cursor = repo.sqlcursor
 
@@ -1942,7 +1949,7 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
             )
             repo.sqlconn.commit()
         finally:
-            repo.sqlunlock(writelock)
+            repo.sqlwriteunlock()
             repo.sqlclose()
 
     # strip from local
@@ -2067,7 +2074,7 @@ def sqlrefill(ui, startrev, **opts):
 
     repo = repo.unfiltered()
     repo.sqlconnect()
-    repo.sqllock(writelock)
+    repo.sqlwritelock()
     try:
         revlogs = {}
         pendingrevs = []
@@ -2095,7 +2102,7 @@ def sqlrefill(ui, startrev, **opts):
         repo._committodb(pendingrevs, ignoreduplicates=True)
         repo.sqlconn.commit()
     finally:
-        repo.sqlunlock(writelock)
+        repo.sqlwriteunlock()
         repo.sqlclose()
 
 
@@ -2163,7 +2170,7 @@ def sqlstrip(ui, rev, *args, **opts):
     try:
         repo.sqlconnect()
         try:
-            repo.sqllock(writelock)
+            repo.sqlwritelock()
 
             if rev not in repo:
                 raise util.Abort("revision %s is not in the repo" % rev)
@@ -2220,7 +2227,7 @@ def sqlstrip(ui, rev, *args, **opts):
 
             repo.sqlconn.commit()
         finally:
-            repo.sqlunlock(writelock)
+            repo.sqlwriteunlock()
             repo.sqlclose()
     finally:
         if lock:
