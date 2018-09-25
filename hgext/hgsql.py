@@ -912,10 +912,6 @@ def wraprepo(repo):
                     finally:
                         abort.set()
 
-                    phases.advanceboundary(
-                        self, transaction, phases.public, self.heads()
-                    )
-
                     transaction.close()
                 finally:
                     transaction.release()
