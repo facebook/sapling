@@ -954,6 +954,12 @@ def debugrefreshwatchmanclock(ui, repo):
         raise error.Abort(_("treestate is required"))
 
     with repo.wlock(), repo.lock(), repo.transaction("debugrefreshwatchmanclock") as tr:
+        # Make sure watchman is watching the repo. This might trigger a
+        # filesystem crawl.
+        try:
+            repo.dirstate._watchmanclient.command("watch")
+        except Exception as ex:
+            raise error.Abort(_("cannot watch repo: %s") % ex)
         try:
             clock = repo.dirstate._watchmanclient.command(
                 "clock", {"sync_timeout": 10 * 1000}
