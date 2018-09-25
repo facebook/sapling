@@ -1,5 +1,3 @@
-  $ . helpers-usechg.sh
-
 Setup
 
 
@@ -646,11 +644,11 @@ Test that hooks are fired with the correct variables
   pushing to $TESTTMP/hookserver (glob)
   searching for changes
   prepushrebase hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushrebase HG_HOOKTYPE=prepushrebase HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_ONTO=e95be919ac60f0c114075e32a0a4301afabadb60 HG_ONTO=master HG_SOURCE=push (glob)
-  prechangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=prechangegroup HG_HOOKTYPE=prechangegroup HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   pushing 3 changesets:
       4fcee35c508c  first
       11be4ca7f3f4  second
       a5e72ac0df88  last
+  prechangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=prechangegroup HG_HOOKTYPE=prechangegroup HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   pretxnchangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   prepushkey hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushkey HG_HOOKTYPE=prepushkey HG_KEY=master HG_NAMESPACE=bookmarks HG_NEW=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=file:$TESTTMP/hookserver (glob)

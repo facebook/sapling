@@ -92,7 +92,13 @@ Check that the blocked push is still running/blocked...
   $ wait
   [blocked push] pushing to ssh://user@dummy/server2
   [blocked push] searching for changes
-  [blocked push] remote: cannot rebase public changesets: 679b2ce82944, aab61efd8449
+  [blocked push] remote: pushing 2 changesets:
+  [blocked push] remote:     679b2ce82944  first commit
+  [blocked push] remote:     aab61efd8449  second commit
+  [blocked push] remote: conflicting changes in:
+  [blocked push]     c1
+  [blocked push]     c2
+  [blocked push] remote: (pull and rebase your changes locally, then try again)
   [blocked push] abort: push failed on remote
   $ log
   o  second commit [public:aab61efd8449] master

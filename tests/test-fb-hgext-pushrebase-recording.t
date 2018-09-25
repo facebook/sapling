@@ -150,15 +150,12 @@ Push conflicting changes
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
   repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
   42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
-  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select timestamps from pushrebaserecording'
   timestamps
   {"46a2df24e27273bb06dbf28b085fcc2e911bf986": [0.0, 0]}
-   (re)
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select recorded_manifest_hashes from pushrebaserecording'
   recorded_manifest_hashes
   {"46a2df24e27273bb06dbf28b085fcc2e911bf986": "adfcaf0f4d07a35613ae31df578e38305893406d"}
-   (re)
 
 Create two commits and push them
   $ cd ../client
@@ -180,7 +177,7 @@ Create two commits and push them
 Make sure that we don't record anything on non-pushrebase push
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select count(*) from pushrebaserecording'
   count(*)
-  3
+  2
   $ hg up -q 0
   $ echo stack1 > stack1 && hg add stack1 && hg ci -m stack1
   $ hg push --force
@@ -192,4 +189,4 @@ Make sure that we don't record anything on non-pushrebase push
   remote: added 4 changesets with 1 changes to 3 files (+2 heads)
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select count(*) from pushrebaserecording'
   count(*)
-  3
+  2

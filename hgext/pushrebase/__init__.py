@@ -21,6 +21,11 @@ Configs:
     treemanifests instead of incoming flat manifests. This is useful for the
     transition to treemanifest.
 
+    ``pushrebase.trystackpush`` use potentially faster "stackpush" code path
+    if possible.
+
+    ``pushrebase.verbose`` print verbose messages from the server.
+
     ``pushrebase.enablerecording`` whether to enable the recording of pushrebase
     requests.
 
@@ -66,7 +71,7 @@ from mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid, nullrev, short
 
-from . import recording
+from . import recording, stackpush
 from ..remotefilelog import (
     contentstore,
     datapack,
@@ -75,6 +80,7 @@ from ..remotefilelog import (
     shallowbundle,
     shallowutil,
 )
+from .errors import ConflictsError, StackPushUnsupportedError
 
 
 testedwith = "ships-with-fb-hgext"
@@ -97,17 +103,6 @@ experimental = "experimental"
 configonto = "server-rebase-onto"
 pushrebasemarker = "__pushrebase_processed__"
 donotrebasemarker = "__pushrebase_donotrebase__"
-
-
-class ConflictsError(error.Abort):
-    def __init__(self, conflicts):
-        self.conflicts = conflicts
-        msg = (
-            _("conflicting changes in:\n%s\n")
-            % "".join("    %s\n" % f for f in sorted(conflicts))
-        ).strip()
-        hint = _("pull and rebase your changes locally, then try again")
-        super(ConflictsError, self).__init__(msg, hint=hint)
 
 
 def uisetup(ui):
@@ -1025,6 +1020,7 @@ def bundle2rebase(op, part):
     bundlefile = None
     bundle = None
     markerdate = util.makedate()
+    ui = op.repo.ui
 
     # Patch ctx._fileinfo so it can look into treemanifests. This covers more
     # code paths (ex. fctx.renamed -> _copied -> ctx.filenode -> ctx._fileinfo
@@ -1051,57 +1047,137 @@ def bundle2rebase(op, part):
 
             prepushrebasehooks(op, params, bundle, bundlefile)
 
-            op.repo.ui.setconfig("pushrebase", pushrebasemarker, True)
+            ui.setconfig("pushrebase", pushrebasemarker, True)
+            ontoparam = params.get("onto", donotrebasemarker)
+            ontoctx = resolveonto(op.repo, ontoparam)
+            verbose = ontoctx is not None and ui.configbool("pushrebase", "verbose")
+            usestackpush = ontoctx is not None and ui.configbool(
+                "pushrebase", "trystackpush", True
+            )
+            if usestackpush:
+                try:
+                    pushrequest = stackpush.pushrequest.fromrevset(bundle, "bundle()")
+                except StackPushUnsupportedError as ex:
+                    # stackpush is unsupported. Fallback to old code path.
+                    if verbose:
+                        ui.write_err(_("not using stackpush: %s\n") % ex)
 
-            bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
+                    usestackpush = False
+            if usestackpush:
+                # This can happen in the following (rare) case:
+                #
+                # Client:         Server:
+                #
+                #  C
+                #  |
+                #  B               B
+                #  |               |
+                #  A               A master
+                #
+                # Client runs "push -r C --to master". "bundle()" only contains
+                # "C". The non-stackpush code path would fast-forward master to
+                # "C". The stackpush code path will try rebasing "C" to "A".
+                # Prevent that. An alternative fix is to pass "::bundle() % onto"
+                # to pushrequest.fromrevset. But that's more expensive and adds
+                # other complexities.
+                if ontoctx.node() != pushrequest.stackparentnode and op.repo.changelog.isancestor(
+                    ontoctx.node(), pushrequest.stackparentnode
+                ):
+                    if verbose:
+                        ui.write_err(_("not using stackpush: not rebasing backwards\n"))
+                    usestackpush = False
 
-            # Create a cache of rename sources while we don't have the lock.
-            renamesrccache = {
-                bundle[r].node(): _getrenamesrcs(op, bundle[r])
-                for r in bundle.revs("bundle()")
-            }
+            if usestackpush:
+                # stackpush code path - use "pushrequest" instead of "bundlerepo"
 
-            # Opening the transaction takes the lock, so do it after prepushrebase
-            # and after we've fetched all the cache information we'll need.
-            tr = op.gettransaction()
-            hookargs = dict(tr.hookargs)
+                # Check conflicts before entering the critical section. This is
+                # optional since there is another check inside the critical
+                # section.
+                if verbose:
+                    ui.write_err(_("checking conflicts with %s\n") % (ontoctx,))
+                pushrequest.check(ontoctx)
 
-            # Recreate the bundle repo, since taking the lock in gettransaction()
-            # may have caused it to become out of date.
-            # (but grab a copy of the cache first)
-            bundle.close()
-            bundle = _createbundlerepo(op, bundlepath)
+                msg = getpushmessage(
+                    pushrequest.pushcommits,
+                    lambda c: "%s  %s"
+                    % (short(c.orignode), c.desc.split("\n", 1)[0][:50]),
+                )
+                ui.write_err(msg)
 
-            prefillcaches(op, bundle, bundlerepocache)
+                # Enter the critical section! This triggers a hgsql sync.
+                tr = op.gettransaction()
+                hookargs = dict(tr.hookargs)
+                op.repo.hook("prechangegroup", **hookargs)
 
-            onto = getontotarget(op, params, bundle)
+                # ontoctx could move. Fetch the new one.
+                ontoctx = resolveonto(op.repo, ontoparam)
+                if verbose:
+                    ui.write_err(
+                        _("rebasing stack from %s onto %s\n")
+                        % (short(pushrequest.stackparentnode), ontoctx)
+                    )
+                added, replacements = pushrequest.pushonto(ontoctx)
 
-            op.repo.pushrebaserecordingparams = {
-                "onto": params.get("onto", donotrebasemarker),
-                "ontorev": op.repo[onto].hex(),
-            }
-            revs, oldonto = _getrevs(op, bundle, onto, renamesrccache)
+                op.repo.pushrebaserecordingparams = {
+                    "onto": ontoparam,
+                    "ontorev": ontoctx.hex(),
+                }
+            else:
+                # Old code path - use a bundlerepo
+                bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
 
-            op.repo.hook("prechangegroup", **hookargs)
+                # Create a cache of rename sources while we don't have the lock.
+                renamesrccache = {
+                    bundle[r].node(): _getrenamesrcs(op, bundle[r])
+                    for r in bundle.revs("bundle()")
+                }
 
-            printpushmessage(op, revs, bundle)
+                # Opening the transaction takes the lock, so do it after prepushrebase
+                # and after we've fetched all the cache information we'll need.
+                tr = op.gettransaction()
+                hookargs = dict(tr.hookargs)
 
-            # Prepopulate the revlog _cache with the original onto's fulltext. This
-            # means reading the new onto's manifest will likely have a much shorter
-            # delta chain to traverse.
-            if preontocache:
-                op.repo.manifestlog._revlog._cache = preontocache
-                onto.manifest()
+                # Recreate the bundle repo, since taking the lock in gettransaction()
+                # may have caused it to become out of date.
+                # (but grab a copy of the cache first)
+                bundle.close()
+                bundle = _createbundlerepo(op, bundlepath)
 
-            # Perform the rebase + commit to the main repo
-            added, replacements = runrebase(op, revs, oldonto, onto)
+                prefillcaches(op, bundle, bundlerepocache)
+
+                onto = getontotarget(op, params, bundle)
+
+                op.repo.pushrebaserecordingparams = {
+                    "onto": ontoparam,
+                    "ontorev": op.repo[onto].hex(),
+                }
+                revs, oldonto = _getrevs(op, bundle, onto, renamesrccache)
+
+                op.repo.hook("prechangegroup", **hookargs)
+
+                msg = getpushmessage(
+                    revs,
+                    lambda r: "%s  %s"
+                    % (r, bundle[r].description().split("\n", 1)[0][:50]),
+                )
+                ui.write_err(msg)
+
+                # Prepopulate the revlog _cache with the original onto's fulltext. This
+                # means reading the new onto's manifest will likely have a much shorter
+                # delta chain to traverse.
+                if preontocache:
+                    op.repo.manifestlog._revlog._cache = preontocache
+                    onto.manifest()
+
+                # Perform the rebase + commit to the main repo
+                added, replacements = runrebase(op, revs, oldonto, onto)
+
+                # revs is modified by runrebase to ensure garbage collection of
+                # manifests, so don't use it from here on.
+                revs = None
 
             op.repo.pushrebaseaddedchangesets = added
             op.repo.pushrebasereplacements = replacements
-
-            # revs is modified by runrebase to ensure garbage collection of
-            # manifests, so don't use it from here on.
-            revs = None
 
             markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
         finally:
@@ -1241,19 +1317,19 @@ def getontotarget(op, params, bundle):
     return onto
 
 
-def printpushmessage(op, revs, bundle):
+def getpushmessage(revs, getmessage):
     # Notify the user of what is being pushed
+    io = util.stringio()
     plural = "s" if len(revs) > 1 else ""
-    op.repo.ui.warn(_("pushing %s changeset%s:\n") % (len(revs), plural))
+    io.write(_("pushing %s changeset%s:\n") % (len(revs), plural))
     maxoutput = 10
     for i in range(0, min(len(revs), maxoutput)):
-        firstline = bundle[revs[i]].description().split("\n")[0][:50]
-        op.repo.ui.warn(("    %s  %s\n") % (revs[i], firstline))
+        io.write(("    %s\n") % (getmessage(revs[i])))
 
     if len(revs) > maxoutput + 1:
-        op.repo.ui.warn(("    ...\n"))
-        firstline = bundle[revs[-1]].description().split("\n")[0][:50]
-        op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
+        io.write(("    ...\n"))
+        io.write(("    %s\n") % (getmessage(revs[-1])))
+    return io.getvalue()
 
 
 def runrebase(op, revs, oldonto, onto):
