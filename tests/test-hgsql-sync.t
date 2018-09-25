@@ -20,11 +20,8 @@
   $ initserver master masterrepo
   $ cd master
   $ hg log
-  [hgsql] getting 0 commits from database
   $ hg pull -q ../client
-  [hgsql] getting 0 commits from database
   [hgsql] got lock after * seconds (glob)
-  [hgsql] getting 0 commits from database
   [hgsql] held lock for * seconds (glob)
 
   $ cd ..

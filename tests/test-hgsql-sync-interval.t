@@ -53,9 +53,7 @@ Repo1: 2 commits. Sync them to the database.
 
   $ cd $TESTTMP/repo1
   $ hg pull -r tip $TESTTMP/state1
-  [hgsql] getting 0 commits from database
   [hgsql] got lock after * seconds (glob)
-  [hgsql] getting 0 commits from database
   pulling from $TESTTMP/state1
   adding changesets
   adding manifests

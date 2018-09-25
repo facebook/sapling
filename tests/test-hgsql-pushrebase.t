@@ -36,14 +36,6 @@ Test verify sql lock is not held during prelockrebase and txnclose hooks
   $ touch a && hg ci -Aqm a
   error: txnclose hook failed: lock was FREE
   (run with --traceback for stack trace)
-  error: txnclose hook failed: lock was FREE
-  (run with --traceback for stack trace)
-  error: txnclose hook failed: lock was FREE
-  (run with --traceback for stack trace)
-  error: txnclose hook failed: lock was FREE
-  (run with --traceback for stack trace)
-  error: txnclose hook failed: lock was FREE
-  (run with --traceback for stack trace)
   $ hg book master
   error: txnclose hook failed: lock was FREE
   (run with --traceback for stack trace)

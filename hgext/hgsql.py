@@ -19,11 +19,17 @@ Config::
     # it's a negative value, do not sync before entering the critial section.
     # (default: -1)
     syncinterval = -1
+
+    # Enable faster "need sync or not" check. It could be 6x faster, and
+    # removes some time in the critial section.
+    # (default: true)
+    fastsynccheck = true
 """
 
 
 from __future__ import absolute_import
 
+import hashlib
 import os
 import Queue
 import sys
@@ -83,6 +89,7 @@ configitem("format", "usehgsql", default=True)
 configitem("hgsql", "bypass", default=False)
 configitem("hgsql", "enabled", default=False)
 configitem("hgsql", "engine", default="innodb")
+configitem("hgsql", "fastsynccheck", default=True)
 configitem("hgsql", "locktimeout", default=60)
 configitem("hgsql", "maxcommitsize", default=52428800)
 configitem("hgsql", "maxinsertsize", default=1048576)
@@ -751,9 +758,67 @@ def wraprepo(repo):
             tr.repo = self
             return tr
 
+        def needsyncfast(self):
+            """Returns True if the local repo might be out of sync.
+            False otherwise.
+
+            Faster than needsync. But do not return bookmarks or heads.
+            """
+            # Calculate local checksum in background.
+            localsynchashes = []
+            localthread = threading.Thread(
+                target=lambda results, repo: results.append(repo._localsynchash()),
+                args=(localsynchashes, self),
+            )
+            localthread.start()
+            # Let MySQL do the same calculation on their side
+            sqlsynchash = self._sqlsynchash()
+            localthread.join()
+            return sqlsynchash != localsynchashes[0]
+
+        def _localsynchash(self):
+            refs = dict(self._bookmarks)
+            refs["tip"] = self["tip"].rev()
+            sha = ""
+            for k, v in sorted(refs.iteritems()):
+                if k != "tip":
+                    v = hex(v)
+                sha = hashlib.sha1("%s%s%s" % (sha, k, v)).hexdigest()
+            return sha
+
+        def _sqlsynchash(self):
+            sql = """
+            SET @sha := '', @id = 0;
+            SELECT sha FROM (
+                SELECT
+                    @id := @id + 1 as id,
+                    @sha := sha1(concat(@sha, name, value)) as sha
+                FROM revision_references
+                WHERE repo = %s AND namespace IN ('bookmarks', 'tip') ORDER BY name
+            ) AS t ORDER BY id DESC LIMIT 1;
+            """
+
+            sqlresults = [
+                sqlresult.fetchall()
+                for sqlresult in repo.sqlcursor.execute(
+                    sql, (self.sqlreponame,), multi=True
+                )
+                if sqlresult.with_rows
+            ]
+            # is it a new repo with empty references?
+            if sqlresults == [[]]:
+                return hashlib.sha1("%s%s" % ("tip", -1)).hexdigest()
+            # sqlresults looks like [[('59237a7416a6a1764ea088f0bc1189ea58d5b592',)]]
+            sqlsynchash = sqlresults[0][0][0]
+            if len(sqlsynchash) != 40:
+                raise RuntimeError("malicious SHA1 returned by MySQL: %r" % sqlsynchash)
+            return sqlsynchash
+
         def needsync(self):
             """Returns True if the local repo is not in sync with the database.
             If it returns False, the heads and bookmarks match the database.
+
+            Also return bookmarks and heads.
             """
             self.sqlcursor.execute(
                 """SELECT namespace, name, value
@@ -847,9 +912,14 @@ def wraprepo(repo):
             # MySQL could take a snapshot of the database view.
             # Start a new transaction to get new changes.
             self.sqlconn.rollback()
-            if not self.needsync()[0]:
-                self.ui.debug("syncing not needed\n")
-                return
+            if self.ui.configbool("hgsql", "fastsynccheck"):
+                if not self.needsyncfast():
+                    self.ui.debug("syncing not needed\n")
+                    return
+            else:
+                if not self.needsync()[0]:
+                    self.ui.debug("syncing not needed\n")
+                    return
             self.ui.debug("syncing with mysql\n")
 
             # Save a copy of the old manifest cache so we can put it back
