@@ -92,7 +92,16 @@ py_class!(class config |py| {
                 // Calculate the line number - count "\n" till range.start
                 let file = source.file_content().unwrap();
                 let line = 1 + file.slice(0, range.start).iter().filter(|ch| **ch == b'\n').count();
-                (PyBytes::new(py, &bytes), range.start, range.end, line)
+                let pypath = if cfg!(windows) {
+                    // path.caonicalize() used internally by configparser
+                    // adds "\\?\" prefix on Windows.
+                    // It's unfriendly to users. Strip them.
+                    // Related: https://github.com/rust-lang/rust/issues/42869
+                    PyBytes::new(py, &bytes[4..bytes.len()])
+                } else {
+                    PyBytes::new(py, &bytes)
+                };
+                (pypath, range.start, range.end, line)
             });
             let source = PyBytes::new(py, source.source());
             result.push((value, file, source));
