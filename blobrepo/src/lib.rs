@@ -51,6 +51,8 @@ extern crate maplit;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate mononoke_types;
+#[cfg(test)]
+extern crate mononoke_types_mocks;
 extern crate rocksblob;
 extern crate rocksdb;
 extern crate scuba_ext;

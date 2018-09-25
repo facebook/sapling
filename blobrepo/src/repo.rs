@@ -298,7 +298,7 @@ impl BlobRepo {
             Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
                 ErrorKind::MissingCachePool("blobstore-presence".to_string()),
             ))?);
-        let blobstore = new_cachelib_blobstore(blobstore, blob_pool, presence_pool);
+        let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
 
         let filenodes = MysqlFilenodes::open(&args.db_address, DEFAULT_INSERT_CHUNK_SIZE)
             .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
@@ -329,13 +329,14 @@ impl BlobRepo {
         );
 
         let changeset_fetcher_factory = {
-            cloned!(changesets, repoid);
+            cloned!(blobstore, changesets, repoid);
             move || {
                 let res: Arc<ChangesetFetcher + Send + Sync> =
                     Arc::new(CachingChangesetFetcher::new(
                         changesets.clone(),
                         repoid.clone(),
                         changesets_cache_pool.clone(),
+                        blobstore.clone(),
                     ));
                 res
             }
@@ -343,7 +344,7 @@ impl BlobRepo {
         Ok(Self::new_with_changeset_fetcher_factory(
             logger,
             Arc::new(bookmarks),
-            Arc::new(blobstore),
+            blobstore,
             Arc::new(filenodes),
             changesets,
             Arc::new(bonsai_hg_mapping),

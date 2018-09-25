@@ -99,9 +99,9 @@ pub fn serialize_cs_entries(cs_entries: Vec<ChangesetEntry>) -> Bytes {
     compact_protocol::serialize(&thrift_entries)
 }
 
-pub fn deserialize_cs_entries(blob: Bytes) -> Result<Vec<ChangesetEntry>> {
+pub fn deserialize_cs_entries(blob: &Bytes) -> Result<Vec<ChangesetEntry>> {
     let thrift_entries: Vec<changeset_entry_thrift::ChangesetEntry> =
-        compact_protocol::deserialize(&blob).map_err(SyncFailure::new)?;
+        compact_protocol::deserialize(blob).map_err(SyncFailure::new)?;
     let mut entries = vec![];
     for thrift_entry in thrift_entries {
         let parents: Result<Vec<_>> = thrift_entry
@@ -144,6 +144,10 @@ pub trait Changesets: Send + Sync {
     ) -> BoxFuture<Option<ChangesetEntry>, Error>;
 }
 
+pub fn get_cachelib_cache_key(repo_id: &RepositoryId, cs_id: &ChangesetId) -> String {
+    format!("{}.{}", repo_id.prefix(), cs_id).to_string()
+}
+
 pub struct CachingChangests {
     changesets: Arc<Changesets>,
     cache_pool: cachelib::LruCachePool,
@@ -168,7 +172,7 @@ impl Changesets for CachingChangests {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
-        let cache_key = format!("{}.{}", repo_id.prefix(), cs_id).to_string();
+        let cache_key = get_cachelib_cache_key(&repo_id, &cs_id);
 
         cachelib::get_cached_or_fill(&self.cache_pool, cache_key, || {
             self.changesets.get(repo_id, cs_id)
@@ -503,7 +507,7 @@ mod tests {
             gen: 2,
         };
 
-        let res = deserialize_cs_entries(serialize_cs_entries(vec![entry.clone(), entry.clone()]))
+        let res = deserialize_cs_entries(&serialize_cs_entries(vec![entry.clone(), entry.clone()]))
             .unwrap();
         assert_eq!(vec![entry.clone(), entry], res);
     }
