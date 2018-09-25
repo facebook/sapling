@@ -534,6 +534,10 @@ pub(crate) fn expand_path(path: &str) -> PathBuf {
                     new_path.push('}');
                 }
                 is_starting = !is_starting;
+            } else if cfg!(windows) && ch == '/' {
+                // Only on Windows, change "/" to "\" automatically.
+                // This makes sure "%include /foo" works as expected.
+                new_path.push('\\')
             } else {
                 new_path.push(ch);
             }
