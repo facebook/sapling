@@ -12,6 +12,7 @@ import io
 import itertools
 import os
 import struct
+import subprocess
 import threading
 import time
 
@@ -118,14 +119,29 @@ class cacheconnection(object):
     """
 
     def __init__(self):
-        self.pipeo = self.pipei = self.pipee = None
+        self.pipeo = self.pipei = None
         self.subprocess = None
         self.connected = False
 
     def connect(self, cachecommand):
         if self.pipeo:
             raise error.Abort(_("cache connection already open"))
-        self.pipei, self.pipeo, self.pipee, self.subprocess = util.popen4(cachecommand)
+
+        # Use subprocess.Popen() directly rather than the wrappers in
+        # util in order to pipe stderr to /dev/null, thereby preventing
+        # hangs in cases where the cache process fills the stderr pipe
+        # buffer (since remotefilelog never reads from stderr).
+        self.subprocess = subprocess.Popen(
+            cachecommand,
+            shell=True,
+            close_fds=util.closefds,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=open(os.devnull, "wb"),
+        )
+
+        self.pipei = self.subprocess.stdin
+        self.pipeo = self.subprocess.stdout
         self.connected = True
 
     def close(self):
@@ -144,8 +160,6 @@ class cacheconnection(object):
             self.pipei = None
             tryclose(self.pipeo)
             self.pipeo = None
-            tryclose(self.pipee)
-            self.pipee = None
             try:
                 # Wait for process to terminate, making sure to avoid deadlock.
                 # See https://docs.python.org/2/library/subprocess.html for
