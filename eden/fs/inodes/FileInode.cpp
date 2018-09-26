@@ -731,13 +731,6 @@ folly::Future<std::shared_ptr<FileHandle>> FileInode::open(int flags) {
       // anything else we pass in a no-op lambda function.
       (void)runWhileMaterialized(
           std::move(state), [](LockedState&&) { return 0; });
-    } else {
-      // Begin prefetching the data as it's likely to be needed soon.
-      //
-      // Since we just want to load the data and don't need to do anything else
-      // we pass in a no-op lambda function.
-      (void)runWhileDataLoaded(
-          std::move(state), [](LockedState&&) { return 0; });
     }
   }
 
