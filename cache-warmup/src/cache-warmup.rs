@@ -32,10 +32,12 @@ use slog::Logger;
 
 mod errors {
     use bookmarks::Bookmark;
+    use mercurial_types::HgChangesetId;
 
     #[derive(Debug, Fail)]
     pub enum ErrorKind {
         #[fail(display = "Bookmark {} does not exist", _0)] BookmarkNotFound(Bookmark),
+        #[fail(display = "Bookmark value {} not found", _0)] BookmarkValueNotFound(HgChangesetId),
     }
 }
 
@@ -90,14 +92,22 @@ fn changesets_warmup(
     repo: Arc<BlobRepo>,
     cs_limit: usize,
     logger: Logger,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> {
     info!(logger, "about to start warming up changesets cache");
 
-    AncestorsNodeStream::new(&repo, start_rev.into_nodehash())
-        .take(cs_limit as u64)
-        .collect()
-        .map(|_| ())
-        .boxify()
+    repo.get_bonsai_from_hg(&start_rev)
+        .and_then({
+            let start_rev = start_rev.clone();
+            move |maybe_node| {
+                maybe_node.ok_or(errors::ErrorKind::BookmarkValueNotFound(start_rev).into())
+            }
+        })
+        .and_then(move |start_rev| {
+            AncestorsNodeStream::new(&repo, start_rev)
+                .take(cs_limit as u64)
+                .collect()
+                .map(|_| ())
+        })
 }
 
 fn do_cache_warmup(
@@ -114,8 +124,7 @@ fn do_cache_warmup(
                 Some(bookmark_rev) => {
                     let blobstore_warmup =
                         blobstore_and_filenodes_warmup(repo.clone(), bookmark_rev, logger.clone());
-                    let cs_warmup =
-                        changesets_warmup(bookmark_rev, repo, commit_limit, logger).boxify();
+                    let cs_warmup = changesets_warmup(bookmark_rev, repo, commit_limit, logger);
                     blobstore_warmup.join(cs_warmup).map(|_| ()).boxify()
                 }
                 None => {

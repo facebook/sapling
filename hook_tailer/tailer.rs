@@ -17,6 +17,7 @@ use hooks::{BlobRepoChangesetStore, BlobRepoFileContentStore, ChangesetHookExecu
 use manifold::{ManifoldHttpClient, PayloadRange};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use metaconfig::repoconfig::RepoConfig;
+use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
 use slog::Logger;
 use std::sync::Arc;
@@ -91,22 +92,31 @@ impl Tailer {
         let logger2 = logger.clone();
         let hm2 = hm.clone();
         let bm2 = bm.clone();
-        AncestorsNodeStream::new(&repo, end_rev)
+        nodehash_to_bonsai(&repo, end_rev)
+            .and_then(move |end_rev| {
+                AncestorsNodeStream::new(&repo, end_rev)
             .take(1000) // Limit number so we don't process too many
-            .take_while(move |node_hash| {
-                Ok(*node_hash != last_rev)
+            .map({
+                let repo = repo.clone();
+                move |cs| repo.get_hg_from_bonsai_changeset(cs)
+
             })
-            .and_then(move |node_hash| {
-                info!(logger, "Running file hooks for changeset {:?}", node_hash);
-                hm.run_file_hooks_for_bookmark(HgChangesetId::new(node_hash.clone()), &bm)
-                .map(move |res| (node_hash, res))
+            .buffered(100)
+            .take_while(move |hg_cs| {
+                Ok(*hg_cs != HgChangesetId::new(last_rev))
             })
-            .and_then(move |(node_hash, file_res)| {
-                info!(logger2, "Running changeset hooks for changeset {:?}", node_hash);
-                hm2.run_changeset_hooks_for_bookmark(HgChangesetId::new(node_hash.clone()), &bm2)
+            .and_then(move |hg_cs| {
+                info!(logger, "Running file hooks for changeset {:?}", hg_cs);
+                hm.run_file_hooks_for_bookmark(hg_cs.clone(), &bm)
+                .map(move |res| (hg_cs, res))
+            })
+            .and_then(move |(hg_cs, file_res)| {
+                info!(logger2, "Running changeset hooks for changeset {:?}", hg_cs);
+                hm2.run_changeset_hooks_for_bookmark(hg_cs.clone(), &bm2)
                 .map(|res| (file_res, res))
             })
             .collect()
+            })
             .boxify()
     }
 
@@ -192,8 +202,18 @@ impl Tailer {
     }
 }
 
+fn nodehash_to_bonsai(
+    repo: &Arc<BlobRepo>,
+    node: HgNodeHash,
+) -> impl Future<Item = ChangesetId, Error = Error> {
+    let hg_cs = HgChangesetId::new(node);
+    repo.get_bonsai_from_hg(&hg_cs)
+        .and_then(move |maybe_node| maybe_node.ok_or(ErrorKind::BonsaiNotFound(hg_cs).into()))
+}
+
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "No such bookmark '{}'", _0)] NoSuchBookmark(Bookmark),
     #[fail(display = "Cannot find last revision in blobstore")] NoLastRevision,
+    #[fail(display = "Cannot find bonsai for {}", _0)] BonsaiNotFound(HgChangesetId),
 }

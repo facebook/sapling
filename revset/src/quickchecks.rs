@@ -417,16 +417,22 @@ macro_rules! ancestors_check {
                     );
 
                     let mut includes = vec![];
-                    for i in include.clone() {
+                    for i in hg_to_bonsai_changesetid(&repo, include.clone()) {
                         includes.push(
-                            AncestorsNodeStream::new(&repo, i).boxify()
+                            bonsai_nodestream_to_nodestream(
+                                &repo,
+                                AncestorsNodeStream::new(&repo, i).boxify()
+                            )
                         );
                     }
 
                     let mut excludes = vec![];
-                    for i in exclude.clone() {
+                    for i in hg_to_bonsai_changesetid(&repo, exclude.clone()) {
                         excludes.push(
-                            AncestorsNodeStream::new(&repo, i).boxify()
+                            bonsai_nodestream_to_nodestream(
+                                &repo,
+                                AncestorsNodeStream::new(&repo, i).boxify()
+                            )
                         );
                     }
 
