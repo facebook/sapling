@@ -21,8 +21,8 @@
   $ cd master
   $ hg log
   $ hg pull -q ../client
-  [hgsql] got lock after * seconds (glob)
-  [hgsql] held lock for * seconds (glob)
+  [hgsql] got lock after * seconds (read 1 rows) (glob)
+  [hgsql] held lock for * seconds (read 5 rows; write 5 rows) (glob)
 
   $ cd ..
 
@@ -73,8 +73,8 @@
   pushing to ssh://user@dummy/master
   searching for changes
   no changes found
-  remote: [hgsql] got lock after * seconds (glob)
-  remote: [hgsql] held lock for * seconds (glob)
+  remote: [hgsql] got lock after * seconds (read 1 rows) (glob)
+  remote: [hgsql] held lock for * seconds (read 4 rows; write 1 rows) (glob)
   exporting bookmark mybook
   [1]
   $ cd ../master2
@@ -91,8 +91,8 @@
   $ hg commit -qAm z
   $ cd ../master
   $ hg pull -q ssh://user@dummy/client
-  [hgsql] got lock after * seconds (glob)
-  [hgsql] held lock for * seconds (glob)
+  [hgsql] got lock after * seconds (read 1 rows) (glob)
+  [hgsql] held lock for * seconds (read 6 rows; write 9 rows) (glob)
   $ cd ../master2
   $ hg log -l 1
   [hgsql] getting 1 commits from database
@@ -106,16 +106,16 @@
 # Delete a bookmark in one, verify in the other
 
   $ hg book book1
-  [hgsql] got lock after * seconds (glob)
-  [hgsql] held lock for * seconds (glob)
+  [hgsql] got lock after * seconds (read 1 rows) (glob)
+  [hgsql] held lock for * seconds (read 4 rows; write 1 rows) (glob)
   $ cd ../master
   $ hg book
   [hgsql] getting 0 commits from database
      book1                     -1:000000000000
      mybook                    2:f3a7cb746fa9
   $ hg book -d book1
-  [hgsql] got lock after * seconds (glob)
-  [hgsql] held lock for * seconds (glob)
+  [hgsql] got lock after * seconds (read 1 rows) (glob)
+  [hgsql] held lock for * seconds (read 4 rows; write 1 rows) (glob)
   $ cd ../master2
   $ hg book
   [hgsql] getting 0 commits from database
@@ -168,9 +168,9 @@
   > EOF
   $ cd master
   $ INSPECTSQL=DELETE,INSERT hg book mybook2
-  [hgsql] got lock after * seconds (glob)
+  [hgsql] got lock after * seconds (read 1 rows) (glob)
   INSERT INTO revision_references(repo, namespace, name, value) VALUES (masterrepo, 'bookmarks', mybook2, 0000000000000000000000000000000000000000)
   INSERT INTO revision_references(repo, namespace, name, value) VALUES(masterrepo, 'tip', 'tip', 3) ON DUPLICATE KEY UPDATE value=3
-  [hgsql] held lock for * seconds (glob)
+  [hgsql] held lock for * seconds (read 4 rows; write 1 rows) (glob)
   $ cd ..
   $ cp backup.hgrc $HGRCPATH

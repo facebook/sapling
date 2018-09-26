@@ -53,7 +53,7 @@ Repo1: 2 commits. Sync them to the database.
 
   $ cd $TESTTMP/repo1
   $ hg pull -r tip $TESTTMP/state1
-  [hgsql] got lock after * seconds (glob)
+  [hgsql] got lock after * seconds (read 1 rows) (glob)
   pulling from $TESTTMP/state1
   adding changesets
   adding manifests
@@ -61,7 +61,7 @@ Repo1: 2 commits. Sync them to the database.
   added 2 changesets with 2 changes to 2 files
   new changesets 426bada5c675:112478962961
   (run 'hg update' to get a working copy)
-  [hgsql] held lock for * seconds (glob)
+  [hgsql] held lock for * seconds (read 5 rows; write 8 rows) (glob)
 
 Repo2: Emulate client push. Hold the lock for long.
 
@@ -88,7 +88,7 @@ Explaination:
   [hgsql] getting 2 commits from database
   [hgsql] getting 1 commits from database
   [hgsql] getting 1 commits from database
-  [hgsql] got lock after * seconds (glob)
+  [hgsql] got lock after * seconds (read * rows) (glob)
   pulling from $TESTTMP/state4
   searching for changes
   adding changesets
@@ -97,13 +97,13 @@ Explaination:
   added 1 changesets with 1 changes to 1 files
   new changesets 9bc730a19041
   (run 'hg update' to get a working copy)
-  [hgsql] held lock for * seconds (glob)
+  [hgsql] held lock for * seconds (read * rows; write 7 rows) (glob)
 
 Make sure repo2 and repo3 log looks sane.
 
   $ cat $TESTTMP/repo2/out
   [hgsql] getting 2 commits from database
-  [hgsql] got lock after * seconds (glob)
+  [hgsql] got lock after * seconds (read 1 rows) (glob)
   pulling from $TESTTMP/state2
   searching for changes
   adding changesets
@@ -112,11 +112,11 @@ Make sure repo2 and repo3 log looks sane.
   added 1 changesets with 1 changes to 1 files
   new changesets 26805aba1e60
   (run 'hg update' to get a working copy)
-  [hgsql] held lock for * seconds (glob)
+  [hgsql] held lock for * seconds (read 6 rows; write 7 rows) (glob)
 
   $ cat $TESTTMP/repo3/out
   [hgsql] getting 2 commits from database
-  [hgsql] got lock after * seconds (glob)
+  [hgsql] got lock after * seconds (read 1 rows) (glob)
   [hgsql] getting 1 commits from database
   pulling from $TESTTMP/state3
   searching for changes
@@ -126,4 +126,4 @@ Make sure repo2 and repo3 log looks sane.
   added 1 changesets with 1 changes to 1 files
   new changesets f585351a92f8
   (run 'hg update' to get a working copy)
-  [hgsql] held lock for * seconds (glob)
+  [hgsql] held lock for * seconds (read 6 rows; write 7 rows) (glob)

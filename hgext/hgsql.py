@@ -271,7 +271,10 @@ def reposetup(ui, repo):
             executewithsql(repo, noop, waitforlock=waitforlock)
 
 
-# Incoming commits are only allowed via push and pull
+# Incoming commits are only allowed via push and pull.
+# This changes repo.transaction to take a sql write lock. Note:
+# repo.transaction outside unbundle is not changed. Question: is it better
+# to change repo.transaction for everything?
 def unbundle(orig, repo, cg, *args, **kwargs):
     if not issqlrepo(repo):
         return orig(repo, cg, *args, **kwargs)
@@ -427,6 +430,9 @@ class sqlcontext(object):
         self._active = True
 
         repo = self.repo
+        repo._sqlreadrows = 0
+        repo._sqlwriterows = 0
+
         if not repo.sqlconn:
             repo.sqlconnect()
             self._connected = True
@@ -439,7 +445,7 @@ class sqlcontext(object):
                 elapsed = time.time() - startwait
                 repo.ui.log(
                     "sqllock",
-                    "failed to get sql lock after %s " "seconds\n",
+                    "failed to get sql lock after %s seconds\n",
                     elapsed,
                     elapsed=elapsed * 1000,
                     valuetype="lockwait",
@@ -454,14 +460,20 @@ class sqlcontext(object):
             elapsed = time.time() - startwait
             repo.ui.log(
                 "sqllock",
-                "waited for sql lock for %s seconds\n",
+                "waited for sql lock for %s seconds (read %s rows)\n",
                 elapsed,
+                repo._sqlreadrows,
                 elapsed=elapsed * 1000,
                 valuetype="lockwait",
                 success="true",
+                readrows=repo._sqlreadrows,
                 repository=repo.root,
             )
-            repo._hgsqlnote("got lock after %.2f seconds" % elapsed)
+            repo._hgsqlnote(
+                "got lock after %.2f seconds (read %s rows)"
+                % (elapsed, repo._sqlreadrows)
+            )
+            repo._sqlreadrows = 0
         self._startlocktime = time.time()
 
         if self._connected:
@@ -472,17 +484,24 @@ class sqlcontext(object):
             repo = self.repo
             if self._locked:
                 elapsed = time.time() - self._startlocktime
+                repo.sqlwriteunlock()
+                self._stopprofile(elapsed)
                 repo.ui.log(
                     "sqllock",
-                    "held sql lock for %s seconds\n",
+                    "held sql lock for %s seconds (read %s rows; write %s rows)\n",
                     elapsed,
+                    repo._sqlreadrows,
+                    repo._sqlwriterows,
                     elapsed=elapsed * 1000,
                     valuetype="lockheld",
                     repository=repo.root,
+                    readrows=repo._sqlreadrows,
+                    writerows=repo._sqlwriterows,
                 )
-                self._stopprofile(elapsed)
-                repo.sqlwriteunlock()
-                repo._hgsqlnote("held lock for %.2f seconds" % elapsed)
+                repo._hgsqlnote(
+                    "held lock for %.2f seconds (read %s rows; write %s rows)"
+                    % (elapsed, repo._sqlreadrows, repo._sqlwriterows)
+                )
 
             if self._connected:
                 repo.sqlclose()
@@ -600,6 +619,25 @@ def wraprepo(repo):
             self.locktimeout = self.sqlconn.converter.escape("%s" % self.locktimeout)
 
             self.sqlcursor = self.sqlconn.cursor()
+            self._sqlreadrows = 0
+            self._sqlwriterows = 0
+
+            # Patch sqlcursor so it updates the read write counters.
+            def _fetchallupdatereadcount(orig):
+                result = orig()
+                self._sqlreadrows += self.sqlcursor.rowcount
+                return result
+
+            def _executeupdatewritecount(orig, sql, *args, **kwargs):
+                result = orig(sql, *args, **kwargs)
+                # naive ways to detect "writes"
+                if sql.split(" ", 1)[0].upper() in {"DELETE", "UPDATE", "INSERT"}:
+                    self._sqlwriterows += self.sqlcursor.rowcount
+                return result
+
+            wrapfunction(self.sqlcursor, "fetchall", _fetchallupdatereadcount)
+            wrapfunction(self.sqlcursor, "execute", _executeupdatewritecount)
+
             self.sqlcursor.execute("SET wait_timeout=%s" % waittimeout)
 
             if self.engine == "rocksdb":
@@ -1469,7 +1507,7 @@ def wraprepo(repo):
                     localnode = hex(rl.node(rev))
                     if localnode != node:
                         raise CorruptionException(
-                            ("expected node %s at rev %d of " "%s but found %s")
+                            ("expected node %s at rev %d of %s but found %s")
                             % (node, rev, path, localnode)
                         )
 
@@ -2004,7 +2042,7 @@ def sqlrecover(ui, *args, **opts):
             "",
             "i-know-what-i-am-doing",
             None,
-            _("only run sqltreestrip if you " "know exactly what you're doing"),
+            _("only run sqltreestrip if you know exactly what you're doing"),
         ),
     ],
     _("hg sqltreestrip REV"),
@@ -2019,7 +2057,7 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
         return 1
 
     if not repo.ui.configbool("treemanifest", "server"):
-        ui.warn(_("this repository is not configured to be a treemanifest " "server\n"))
+        ui.warn(_("this repository is not configured to be a treemanifest server\n"))
         return 1
 
     if not opts.get("i_know_what_i_am_doing"):
@@ -2547,7 +2585,7 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
             revlogentry = rl.index[rev]
             if revlogentry != sqlentry:
                 raise CorruptionException(
-                    ("'%s:%s' with linkrev %s, disk does " "not match mysql")
+                    ("'%s:%s' with linkrev %s, disk does not match mysql")
                     % (path, hex(node), str(linkrev))
                 )
     finally:

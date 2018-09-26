@@ -64,11 +64,11 @@
   $ hg push ssh://user@dummy/master
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: sqllock: waited for sql lock for * seconds (glob)
+  remote: sqllock: waited for sql lock for * seconds (read 1 rows) (glob)
   remote:  (elapsed=*, repository=$TESTTMP/master, success=true, valuetype=lockwait) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  remote: sqllock: held sql lock for * seconds (glob)
-  remote:  (elapsed=*, repository=$TESTTMP/master, valuetype=lockheld) (glob)
+  remote: sqllock: held sql lock for * seconds (read 5 rows; write 5 rows) (glob)
+  remote:  (elapsed=*, readrows=5, repository=$TESTTMP/master, valuetype=lockheld, writerows=5) (glob)
