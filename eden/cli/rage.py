@@ -42,6 +42,9 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
 
+    if health_status.is_healthy() and health_status.pid is not None:
+        print_edenfs_process_tree(health_status.pid, out)
+
     out.write(b"\nList of mount points:\n")
     mountpoint_paths = []
     for key in sorted(instance.get_mount_paths()):
@@ -116,3 +119,14 @@ def print_running_eden_process(out: IO[bytes]) -> None:
                 out.write(format_str.format(*word).encode())
     except Exception as e:
         out.write(b"Error getting the eden processes: %s\n" % str(e).encode())
+
+
+def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
+    try:
+        out.write(b"\nedenfs process tree:\n")
+        output = subprocess.check_output(
+            ["ps", "f", "-o", "pid,s,comm,start_time,etime,cputime,drs", "-s", str(pid)]
+        )
+        out.write(output)
+    except Exception as e:
+        out.write(b"Error getting edenfs process tree: %s\n" % str(e).encode())
