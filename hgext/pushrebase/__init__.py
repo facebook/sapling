@@ -1075,6 +1075,12 @@ def bundle2rebase(op, part):
             usestackpush = ontoctx is not None and ui.configbool(
                 "pushrebase", "trystackpush", True
             )
+
+            def log(msg, force=False):
+                if verbose or force:
+                    ui.write_err(msg)
+                ui.log("pushrebase", msg)
+
             if usestackpush:
                 try:
                     pushrequest = stackpush.pushrequest.fromrevset(bundle, "bundle()")
@@ -1114,16 +1120,18 @@ def bundle2rebase(op, part):
                 # Check conflicts before entering the critical section. This is
                 # optional since there is another check inside the critical
                 # section.
-                if verbose:
-                    ui.write_err(_("checking conflicts with %s\n") % (ontoctx,))
+                log(_("checking conflicts with %s\n") % (ontoctx,))
                 pushrequest.check(ontoctx)
 
-                msg = getpushmessage(
-                    pushrequest.pushcommits,
-                    lambda c: "%s  %s"
-                    % (short(c.orignode), c.desc.split("\n", 1)[0][:50]),
+                # Print and log what commits to push.
+                log(
+                    getpushmessage(
+                        pushrequest.pushcommits,
+                        lambda c: "%s  %s"
+                        % (short(c.orignode), c.desc.split("\n", 1)[0][:50]),
+                    ),
+                    force=True,
                 )
-                ui.write_err(msg)
 
                 # Enter the critical section! This triggers a hgsql sync.
                 tr = op.gettransaction()
@@ -1131,12 +1139,12 @@ def bundle2rebase(op, part):
                 op.repo.hook("prechangegroup", **hookargs)
 
                 # ontoctx could move. Fetch the new one.
+                # Print rebase source and destination.
                 ontoctx = resolveonto(op.repo, ontoparam)
-                if verbose:
-                    ui.write_err(
-                        _("rebasing stack from %s onto %s\n")
-                        % (short(pushrequest.stackparentnode), ontoctx)
-                    )
+                log(
+                    _("rebasing stack from %s onto %s\n")
+                    % (short(pushrequest.stackparentnode), ontoctx)
+                )
                 added, replacements = pushrequest.pushonto(ontoctx)
 
                 op.repo.pushrebaserecordingparams = {
@@ -1176,16 +1184,19 @@ def bundle2rebase(op, part):
 
                 op.repo.hook("prechangegroup", **hookargs)
 
-                msg = getpushmessage(
-                    revs,
-                    lambda r: "%s  %s"
-                    % (r, bundle[r].description().split("\n", 1)[0][:50]),
+                log(
+                    getpushmessage(
+                        revs,
+                        lambda r: "%s  %s"
+                        % (r, bundle[r].description().split("\n", 1)[0][:50]),
+                    ),
+                    force=True,
                 )
-                ui.write_err(msg)
 
                 # Prepopulate the revlog _cache with the original onto's fulltext. This
                 # means reading the new onto's manifest will likely have a much shorter
                 # delta chain to traverse.
+                log(_("rebasing onto %s\n") % (short(onto.node()),))
                 if preontocache:
                     op.repo.manifestlog._revlog._cache = preontocache
                     onto.manifest()

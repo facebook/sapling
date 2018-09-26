@@ -16,7 +16,7 @@ Config::
     # timeout to syncinterval, which should be much smaller than locktimeout.
     # This could make the repo closer to the SQL state after entering the
     # critical section so pulling from database might take less time there. If
-    # it's a negative value, do not sync before entering the critial section.
+    # it's a negative value, do not sync before entering the critical section.
     # (default: -1)
     syncinterval = -1
 
