@@ -421,7 +421,7 @@ macro_rules! ancestors_check {
                         includes.push(
                             bonsai_nodestream_to_nodestream(
                                 &repo,
-                                AncestorsNodeStream::new(&repo, i).boxify()
+                                AncestorsNodeStream::new(&changeset_fetcher, i).boxify()
                             )
                         );
                     }
@@ -431,7 +431,7 @@ macro_rules! ancestors_check {
                         excludes.push(
                             bonsai_nodestream_to_nodestream(
                                 &repo,
-                                AncestorsNodeStream::new(&repo, i).boxify()
+                                AncestorsNodeStream::new(&changeset_fetcher, i).boxify()
                             )
                         );
                     }

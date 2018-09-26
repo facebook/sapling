@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::collections::hash_set::IntoIter;
 use std::sync::Arc;
 
-use failure::{err_msg, prelude::*};
+use failure::prelude::*;
 
 use futures::{Async, Poll};
 use futures::future::Future;
@@ -20,7 +20,7 @@ use futures::stream::{iter_ok, Stream};
 use futures_ext::StreamExt;
 
 use UniqueHeap;
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, ChangesetFetcher};
 use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::{ChangesetId, Generation};
@@ -31,7 +31,7 @@ use NodeStream;
 use errors::*;
 
 pub struct AncestorsNodeStream {
-    repo: BlobRepo,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     next_generation: BTreeMap<Generation, HashSet<ChangesetId>>,
     pending_changesets: Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send>,
     drain: IntoIter<ChangesetId>,
@@ -41,29 +41,28 @@ pub struct AncestorsNodeStream {
 }
 
 fn make_pending(
-    repo: BlobRepo,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     hashes: IntoIter<ChangesetId>,
 ) -> Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
     let size = hashes.size_hint().0;
-    let new_repo_changesets = repo.clone();
-    let new_repo_gennums = repo.clone();
 
     Box::new(
         iter_ok::<_, Error>(hashes)
-            .map(move |hash| {
-                new_repo_changesets
-                    .get_changeset_parents_by_bonsai(&hash)
-                    .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
+            .map({
+                cloned!(changeset_fetcher);
+                move |hash| {
+                    changeset_fetcher
+                        .get_parents(hash)
+                        .map(|parents| parents.into_iter())
+                        .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
+                }
             })
             .buffered(size)
             .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
             .flatten()
             .and_then(move |node_cs| {
-                new_repo_gennums
-                    .get_generation_number_by_bonsai(&node_cs)
-                    .and_then(move |genopt| {
-                        genopt.ok_or_else(|| err_msg(format!("{} not found", node_cs)))
-                    })
+                changeset_fetcher
+                    .get_generation_number(node_cs)
                     .map(move |gen_id| (node_cs, gen_id))
                     .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
             }),
@@ -71,12 +70,15 @@ fn make_pending(
 }
 
 impl AncestorsNodeStream {
-    pub fn new(repo: &BlobRepo, hash: ChangesetId) -> Self {
+    pub fn new(changeset_fetcher: &Arc<ChangesetFetcher>, hash: ChangesetId) -> Self {
         let node_set: HashSet<ChangesetId> = hashset!{hash};
         AncestorsNodeStream {
-            repo: repo.clone(),
+            changeset_fetcher: changeset_fetcher.clone(),
             next_generation: BTreeMap::new(),
-            pending_changesets: make_pending(repo.clone(), node_set.clone().into_iter()),
+            pending_changesets: make_pending(
+                changeset_fetcher.clone(),
+                node_set.clone().into_iter(),
+            ),
             drain: node_set.into_iter(),
             sorted_unique_generations: UniqueHeap::new(),
         }
@@ -125,8 +127,10 @@ impl Stream for AncestorsNodeStream {
         let current_generation = self.next_generation
             .remove(&highest_generation)
             .expect("Highest generation doesn't exist");
-        self.pending_changesets =
-            make_pending(self.repo.clone(), current_generation.clone().into_iter());
+        self.pending_changesets = make_pending(
+            self.changeset_fetcher.clone(),
+            current_generation.clone().into_iter(),
+        );
         self.drain = current_generation.into_iter();
         Ok(Async::Ready(Some(self.drain.next().expect(
             "Cannot create a generation without at least one node hash",
@@ -134,7 +138,11 @@ impl Stream for AncestorsNodeStream {
     }
 }
 
-pub fn common_ancestors<I>(repo: &BlobRepo, nodes: I) -> Box<NodeStream>
+pub fn common_ancestors<I>(
+    repo: &BlobRepo,
+    changeset_fetcher: Arc<ChangesetFetcher>,
+    nodes: I,
+) -> Box<NodeStream>
 where
     I: IntoIterator<Item = HgNodeHash>,
 {
@@ -150,9 +158,9 @@ where
                     }
                 })
                 .map({
-                    cloned!(repo);
+                    cloned!(changeset_fetcher, repo);
                     move |node| {
-                        AncestorsNodeStream::new(&repo, node)
+                        AncestorsNodeStream::new(&changeset_fetcher, node)
                             .map({
                                 let repo = repo.clone();
                                 move |node| {
@@ -170,11 +178,15 @@ where
     IntersectNodeStream::new(&Arc::new(repo.clone()), nodes_iter).boxed()
 }
 
-pub fn greatest_common_ancestor<I>(repo: &BlobRepo, nodes: I) -> Box<NodeStream>
+pub fn greatest_common_ancestor<I>(
+    repo: &BlobRepo,
+    changeset_fetcher: Arc<ChangesetFetcher>,
+    nodes: I,
+) -> Box<NodeStream>
 where
     I: IntoIterator<Item = HgNodeHash>,
 {
-    Box::new(common_ancestors(repo, nodes).take(1))
+    Box::new(common_ancestors(repo, changeset_fetcher, nodes).take(1))
 }
 
 #[cfg(test)]
@@ -184,16 +196,18 @@ mod test {
     use fixtures::linear;
     use fixtures::merge_uneven;
     use fixtures::unshared_merge_uneven;
+    use tests::{string_to_bonsai, string_to_nodehash, TestChangesetFetcher};
     use tests::{assert_changesets_sequence, assert_node_sequence};
-    use tests::{string_to_bonsai, string_to_nodehash};
 
     #[test]
     fn linear_ancestors() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
-                &repo,
+                &changeset_fetcher,
                 string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
             ).boxed();
 
@@ -218,9 +232,11 @@ mod test {
     fn merge_ancestors_from_merge() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
-                &repo,
+                &changeset_fetcher,
                 string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
             ).boxed();
 
@@ -250,9 +266,11 @@ mod test {
     fn merge_ancestors_one_branch() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
-                &repo,
+                &changeset_fetcher,
                 string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
             ).boxed();
 
@@ -275,9 +293,11 @@ mod test {
             // The unshared_merge_uneven fixture has a commit after the merge. Pull in everything
             // by starting at the head and working back to the original unshared history commits
             let repo = Arc::new(unshared_merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
-                &repo,
+                &changeset_fetcher,
                 string_to_bonsai(&repo, "339ec3d2a986d55c5ac4670cca68cf36b8dc0b82)"),
             ).boxed();
 
@@ -313,9 +333,12 @@ mod test {
     fn no_common_ancestor() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(unshared_merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = greatest_common_ancestor(
                 &repo,
+                changeset_fetcher,
                 vec![
                     string_to_nodehash("64011f64aaf9c2ad2e674f57c033987da4016f51"),
                     string_to_nodehash("1700524113b1a3b1806560341009684b4378660b"),
@@ -329,9 +352,12 @@ mod test {
     fn greatest_common_ancestor_different_branches() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = greatest_common_ancestor(
                 &repo,
+                changeset_fetcher,
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
@@ -351,9 +377,12 @@ mod test {
     fn greatest_common_ancestor_same_branch() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = greatest_common_ancestor(
                 &repo,
+                changeset_fetcher,
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
@@ -373,9 +402,12 @@ mod test {
     fn all_common_ancestors_different_branches() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = common_ancestors(
                 &repo,
+                changeset_fetcher,
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
@@ -395,9 +427,12 @@ mod test {
     fn all_common_ancestors_same_branch() {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(merge_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = common_ancestors(
                 &repo,
+                changeset_fetcher,
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),

@@ -94,7 +94,7 @@ impl Tailer {
         let bm2 = bm.clone();
         nodehash_to_bonsai(&repo, end_rev)
             .and_then(move |end_rev| {
-                AncestorsNodeStream::new(&repo, end_rev)
+                AncestorsNodeStream::new(&repo.get_changeset_fetcher(), end_rev)
             .take(1000) // Limit number so we don't process too many
             .map({
                 let repo = repo.clone();

@@ -103,7 +103,7 @@ fn changesets_warmup(
             }
         })
         .and_then(move |start_rev| {
-            AncestorsNodeStream::new(&repo, start_rev)
+            AncestorsNodeStream::new(&repo.get_changeset_fetcher(), start_rev)
                 .take(cs_limit as u64)
                 .collect()
                 .map(|_| ())
