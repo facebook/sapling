@@ -38,6 +38,8 @@ Configs:
     ``pushrebase.recordingrepoid`` id of the repo for the pushrebase recording
 
     ``pushrebase.recordingsqlargs`` sql arguments for the pushrebase recording
+
+    ``pushrebase.syncondispatch`` perform a full SQL sync when receiving pushes
 """
 from __future__ import absolute_import
 
@@ -66,12 +68,14 @@ from mercurial import (
     revsetlang,
     scmutil,
     util,
+    wireproto,
 )
 from mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid, nullrev, short
 
 from . import recording, stackpush
+from .. import hgsql
 from ..remotefilelog import (
     contentstore,
     datapack,
@@ -153,6 +157,9 @@ def uisetup(ui):
         extensions.wrapfunction(
             manifest.manifestrevlog, "revision", manifestlogrevision
         )
+
+    if ui.configbool("pushrebase", "syncondispatch", True):
+        wrapfunction(wireproto, "dispatch", _wireprodispatch)
 
 
 def extsetup(ui):
@@ -243,6 +250,20 @@ def blocknonpushrebase(ui, repo, **kwargs):
                 "'hg push --to'"
             )
         )
+
+
+def _wireprodispatch(orig, repo, proto, command):
+    if command == "batch":
+        # Perform a full hgsql sync before negotiating the push with the client.
+        #
+        # This prevents cases where the client would send public commits that
+        # the server was unaware of (but were in the database), causing the
+        # push to fail ("cannot rebase public changesets").
+        #
+        # This can be caused if the synclimiter lock is held for a long time.
+        syncifneeded(repo)
+
+    return orig(repo, proto, command)
 
 
 def _peerorrepo(orig, ui, path, create=False, **kwargs):
@@ -1247,6 +1268,27 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
 
     revs = list(bundle.revs("bundle()"))
     changegroup.checkrevs(bundle, revs)
+
+
+def syncifneeded(repo):
+    """Performs a hgsql sync if enabled"""
+    # internal config: pushrebase.runhgsqlsync
+    if not repo.ui.configbool("pushrebase", "runhgsqlsync", False):
+        return
+
+    if hgsql.issqlrepo(repo):
+        oldrevcount = len(repo)
+        hgsql.executewithsql(repo, lambda: None, waitforlock=True)
+        newrevcount = len(repo)
+        if oldrevcount != newrevcount:
+            msg = "pushrebase: tip moved %d -> %d\n" % (oldrevcount, newrevcount)
+        else:
+            msg = "pushrebase: tip not moved\n"
+        repo.ui.log("pushrebase", msg)
+
+        # internal config: pushrebase.runhgsqlsync.debug
+        if repo.ui.configbool("pushrebase", "runhgsqlsync.debug", False):
+            repo.ui.write_err(msg)
 
 
 def prefetchcaches(op, params, bundle):

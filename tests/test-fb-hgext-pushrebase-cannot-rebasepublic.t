@@ -3,6 +3,8 @@ pushrebase.
 
   $ . "$TESTDIR/hgsql/library.sh"
   $ setconfig hgsql.verbose=True
+  $ setconfig pushrebase.verbose=True
+  $ enable pushrebase
   $ enable strip
   $ setconfig ui.ssh='python "$RUNTESTDIR/dummyssh"'
   $ commit() {
@@ -79,9 +81,15 @@ Create a _third_ draft commit, push to the (behind) server1:
   $ hg push --to master ssh://user@dummy/server1
   pushing to ssh://user@dummy/server1
   remote: [hgsql] skipping database sync because another process is already syncing
+  remote: [hgsql] getting 1 commits from database
   searching for changes
-  abort: cannot rebase public changesets: 8585ef078134
-  [255]
+  remote: checking conflicts with 8585ef078134
+  remote: pushing 1 changeset:
+  remote:     87df66bba286  third commit
+  remote: [hgsql] got lock after * seconds (glob)
+  remote: rebasing stack from 8585ef078134 onto 8585ef078134
+  remote: [hgsql] held lock for * seconds (glob)
+  updating bookmark master
 
 
   $ log
@@ -94,14 +102,18 @@ Create a _third_ draft commit, push to the (behind) server1:
   $ cd ../server1
   $ log
   [hgsql] skipping database sync because another process is already syncing
-  @  base [draft:4ced94c0a443]
+  o  third commit [public:87df66bba286] master
+  |
+  o  first [public:8585ef078134]
+  |
+  @  base [public:4ced94c0a443]
   
   $ cd ../server2
-  $ touch .hg/flag
-  $ wait
-
   $ log
-  @  first [draft:8585ef078134] master
+  [hgsql] getting 1 commits from database
+  o  third commit [draft:87df66bba286] master
+  |
+  @  first [draft:8585ef078134]
   |
   o  base [draft:4ced94c0a443]
   
