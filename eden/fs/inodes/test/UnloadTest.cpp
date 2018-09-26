@@ -82,6 +82,36 @@ TYPED_TEST(UnloadTest, inodesAreUnloaded) {
   EXPECT_EQ(0, inodeMap->getUnloadedInodeCount());
 }
 
+TYPED_TEST(UnloadTest, inodesCanBeUnloadedDuringLoad) {
+  auto builder = FakeTreeBuilder{};
+  builder.setFile("src/sub/file.txt", "this is a test file");
+  TestMount testMount{builder, false};
+
+  // Look up the "src" tree inode by name, which starts the load.
+  // The future should only be fulfilled when after we make the tree ready
+  auto rootInode = testMount.getEdenMount()->getRootInode();
+  auto srcFuture = rootInode->getOrLoadChild("src"_pc);
+  EXPECT_FALSE(srcFuture.isReady());
+
+  rootInode->unloadChildrenNow();
+
+  builder.setReady("src");
+  ASSERT_TRUE(srcFuture.isReady());
+  auto srcTree = std::move(srcFuture).get(1s).asTreePtr();
+  EXPECT_NE(kRootNodeId, srcTree->getNodeId());
+
+  auto subFuture = srcTree->getOrLoadChild("sub"_pc);
+  srcTree.reset();
+  EXPECT_FALSE(subFuture.isReady());
+
+  rootInode->unloadChildrenNow();
+  builder.setReady("src/sub");
+  ASSERT_TRUE(subFuture.isReady());
+
+  auto sub = std::move(subFuture).get(1s);
+  EXPECT_NE(kRootNodeId, sub->getNodeId());
+}
+
 TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   FakeTreeBuilder builder;
   builder.mkdir("src");
