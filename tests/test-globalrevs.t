@@ -1,11 +1,3 @@
-#testcases case-innodb case-rocksdb case-customreponame
-
-#if case-rocksdb
-  $ DBENGINE=rocksdb
-#elif case-innodb
-  $ DBENGINE=innodb
-#endif
-
   $ . "$TESTDIR/hgsql/library.sh"
 
 Test operations on server repository with bad configuration fail in expected
@@ -20,12 +12,10 @@ ways.
   > enabled = True
   > EOF
 
-#if case-customreponame
   $ cat >> .hg/hgrc <<EOF
   > [globalrevs]
   > reponame = customname
   > EOF
-#endif
 
 - Expectation is to fail because hgsql extension is not enabled.
 
@@ -81,15 +71,9 @@ previous command succeed as we won't care about the pushrebase configuration.
 - Test that the `globalrev` command fails because there is no entry in the
 database for the next available strictly increasing revision number.
 
-#if case-customreponame
   $ hg globalrev
   abort: no commit counters for customname in database
   [255]
-#else
-  $ hg globalrev
-  abort: no commit counters for master in database
-  [255]
-#endif
 
 
 - Test that the `initglobalrev` command fails when run without the
@@ -411,12 +395,10 @@ Test simultaneous pushes to different heads.
   > blocknonpushrebase=True
   > EOF
 
-#if case-customreponame
   $ cat >> .hg/hgrc <<EOF
   > [globalrevs]
   > reponame = customname
   > EOF
-#endif
 
 
 - Create a second client corresponding to the second server.

@@ -1,11 +1,3 @@
-#testcases case-innodb case-rocksdb
-
-#if case-rocksdb
-  $ DBENGINE=rocksdb
-#else
-  $ DBENGINE=innodb
-#endif
-
   $ . "$TESTDIR/hgsql/library.sh"
 
 Populate the db with an initial commit

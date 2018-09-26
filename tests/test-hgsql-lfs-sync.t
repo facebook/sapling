@@ -1,11 +1,3 @@
-#testcases case-innodb case-rocksdb
-
-#if case-rocksdb
-  $ DBENGINE=rocksdb
-#else
-  $ DBENGINE=innodb
-#endif
-
 Inital setup
 
   $ . $TESTDIR/require-ext.sh lfs
