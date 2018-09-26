@@ -47,7 +47,9 @@ default_settings = settings(
 settings.register_profile("dev", settings(default_settings, max_examples=5, timeout=0))
 # ... and use the defaults (which have more combinations) when running
 # on CI, which we want to be more deterministic.
-settings.register_profile("ci", settings(default_settings, derandomize=True, timeout=0))
+settings.register_profile(
+    "ci", settings(default_settings, derandomize=True, timeout=120)
+)
 
 # Use the dev profile by default, but use the ci profile on sandcastle.
 settings.load_profile(
