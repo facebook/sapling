@@ -32,20 +32,10 @@ def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bo
     """
     # Wait until the process exits on its own.
     def process_exited() -> Optional[bool]:
-        try:
-            os.kill(pid, 0)
-        except OSError as ex:
-            if ex.errno == errno.ESRCH:
-                # The process has exited
-                return True
-            # EPERM is okay (and means the process is still running),
-            # anything else is unexpected
-            elif ex.errno != errno.EPERM:
-                raise
-        if is_zombie_process(pid):
+        if did_process_exit(pid):
             return True
-        # Still running
-        return None
+        else:
+            return None
 
     try:
         poll_until(process_exited, timeout=timeout)
@@ -96,6 +86,23 @@ def is_zombie_process(pid: int) -> bool:
     except FileNotFoundError:
         pass
 
+    return False
+
+
+def did_process_exit(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except OSError as ex:
+        if ex.errno == errno.ESRCH:
+            # The process has exited
+            return True
+        # EPERM is okay (and means the process is still running),
+        # anything else is unexpected
+        elif ex.errno != errno.EPERM:
+            raise
+    if is_zombie_process(pid):
+        return True
+    # Still running
     return False
 
 

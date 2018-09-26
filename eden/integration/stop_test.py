@@ -7,14 +7,24 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import contextlib
+import os
+import pathlib
 import shutil
+import signal
 import subprocess
 import tempfile
+import typing
 import unittest
+
+from eden.cli.daemon import did_process_exit
+from eden.cli.util import poll_until
 
 from .lib.find_executables import FindExe
 
 
+SHUTDOWN_EXIT_CODE_NORMAL = 0
+SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN = 0
 SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
@@ -26,6 +36,23 @@ class StopTest(unittest.TestCase):
 
         self.tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
         self.addCleanup(cleanup_tmp_dir)
+
+    def test_stop_stops_running_daemon(self):
+        with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
+            stop_result = subprocess.run(
+                [
+                    FindExe.EDEN_CLI,
+                    "--config-dir",
+                    self.tmp_dir,
+                    "stop",
+                    "--timeout",
+                    "5",
+                ]
+            )
+            self.assertEqual(SHUTDOWN_EXIT_CODE_NORMAL, stop_result.returncode)
+            self.assertTrue(
+                did_process_exit(daemon_pid), f"Process {daemon_pid} should have died"
+            )
 
     def test_stop_sigkill(self):
         # Start eden, using the FAKE_EDENFS binary instead of the real edenfs.
@@ -63,6 +90,30 @@ class StopTest(unittest.TestCase):
             SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL, stop_result.returncode
         )
 
+    def test_async_stop_stops_daemon_eventually(self):
+        with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
+            stop_result = subprocess.run(
+                [
+                    FindExe.EDEN_CLI,
+                    "--config-dir",
+                    self.tmp_dir,
+                    "stop",
+                    "--timeout",
+                    "0",
+                ]
+            )
+            self.assertEqual(
+                SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN, stop_result.returncode
+            )
+
+            def daemon_exited() -> typing.Optional[bool]:
+                if did_process_exit(daemon_pid):
+                    return True
+                else:
+                    return None
+
+            poll_until(daemon_exited, timeout=10)
+
     def test_stop_not_running(self):
         stop_cmd = [
             FindExe.EDEN_CLI,
@@ -77,3 +128,39 @@ class StopTest(unittest.TestCase):
         )
         self.assertIn(b"edenfs is not running", stop_result.stderr)
         self.assertEqual(SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR, stop_result.returncode)
+
+    def test_stopping_killed_daemon_reports_not_running(self):
+        daemon_pid = spawn_fake_eden_daemon(pathlib.Path(self.tmp_dir))
+        os.kill(daemon_pid, signal.SIGKILL)
+
+        stop_result = subprocess.run(
+            [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        self.assertIn(b"edenfs is not running", stop_result.stderr)
+        self.assertEqual(SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR, stop_result.returncode)
+
+
+@contextlib.contextmanager
+def fake_eden_daemon(
+    eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+) -> typing.Iterator[int]:
+    daemon_pid = spawn_fake_eden_daemon(
+        eden_dir=eden_dir, extra_arguments=extra_arguments
+    )
+    try:
+        yield daemon_pid
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(daemon_pid, signal.SIGTERM)
+
+
+def spawn_fake_eden_daemon(
+    eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+) -> int:
+    command = [FindExe.FAKE_EDENFS, "--edenDir", str(eden_dir)]
+    command.extend(extra_arguments)
+    subprocess.check_call(command)
+    daemon_pid = int((eden_dir / "lock").read_text())
+    return daemon_pid
