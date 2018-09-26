@@ -295,24 +295,33 @@ void EdenServer::scheduleFlushStats() {
 }
 
 void EdenServer::unloadInodes() {
-  std::vector<TreeInodePtr> roots;
+  struct Root {
+    std::string mountName;
+    TreeInodePtr rootInode;
+  };
+  std::vector<Root> roots;
   {
     const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
-      roots.emplace_back(entry.second.edenMount->getRootInode());
+      roots.emplace_back(Root{std::string{entry.first},
+                              entry.second.edenMount->getRootInode()});
     }
   }
 
   if (!roots.empty()) {
-    XLOG(INFO) << "UnloadInodeScheduler Unloading Free Inodes";
     auto serviceData = stats::ServiceData::get();
 
     uint64_t totalUnloaded = serviceData->getCounter(kPeriodicUnloadCounterKey);
-    for (auto& rootInode : roots) {
-      auto cutoff = std::chrono::system_clock::now() -
-          std::chrono::minutes(FLAGS_unload_age_minutes);
-      auto cutoff_ts = folly::to<timespec>(cutoff);
-      totalUnloaded += rootInode->unloadChildrenLastAccessedBefore(cutoff_ts);
+    auto cutoff = std::chrono::system_clock::now() -
+        std::chrono::minutes(FLAGS_unload_age_minutes);
+    auto cutoff_ts = folly::to<timespec>(cutoff);
+    for (auto& [name, rootInode] : roots) {
+      auto unloaded = rootInode->unloadChildrenLastAccessedBefore(cutoff_ts);
+      if (unloaded) {
+        XLOG(INFO) << "Unloaded " << unloaded
+                   << " inodes in background from mount " << name;
+      }
+      totalUnloaded += unloaded;
     }
     serviceData->setCounter(kPeriodicUnloadCounterKey, totalUnloaded);
   }
@@ -322,7 +331,11 @@ void EdenServer::unloadInodes() {
 
 void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
   mainEventBase_->timer().scheduleTimeoutFn(
-      [this] { unloadInodes(); }, timeout);
+      [this] {
+        XLOG(DBG4) << "Beginning periodic inode unload";
+        unloadInodes();
+      },
+      timeout);
 }
 
 Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
