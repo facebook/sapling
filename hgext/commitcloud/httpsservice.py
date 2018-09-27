@@ -102,18 +102,28 @@ class HttpsCommitCloudService(baseservice.BaseService):
         if self.token:
             self.headers["Authorization"] = "OAuth %s" % self.token
         sslcontext = ssl.create_default_context()
-        sslcontext.check_hostname = self.check_hostname
         if self.client_certs:
             sslcontext.load_cert_chain(self.client_certs)
         if self.ca_certs:
             sslcontext.load_verify_locations(self.ca_certs)
-        self.connection = httplib.HTTPSConnection(
-            self.remote_host,
-            self.remote_port,
-            context=sslcontext,
-            timeout=DEFAULT_TIMEOUT,
-            check_hostname=self.check_hostname,
-        )
+
+        try:
+            sslcontext.check_hostname = self.check_hostname
+            self.connection = httplib.HTTPSConnection(
+                self.remote_host,
+                self.remote_port,
+                context=sslcontext,
+                timeout=DEFAULT_TIMEOUT,
+                check_hostname=self.check_hostname,
+            )
+        except TypeError:
+            sslcontext.check_hostname = self.check_hostname
+            self.connection = httplib.HTTPSConnection(
+                self.remote_host,
+                self.remote_port,
+                context=sslcontext,
+                timeout=DEFAULT_TIMEOUT,
+            )
         highlightdebug(
             self.ui,
             "will be connecting to %s:%d\n" % (self.remote_host, self.remote_port),
