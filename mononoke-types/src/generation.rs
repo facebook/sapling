@@ -12,7 +12,7 @@ use asyncmemo::Weight;
 ///
 /// The generation number for a changeset is defined as the max of the changeset's parents'
 /// generation number plus 1; if there are no parents then it's 1.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, HeapSizeOf)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, HeapSizeOf, Serialize)]
 pub struct Generation(u64);
 
 impl Weight for Generation {

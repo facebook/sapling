@@ -11,6 +11,8 @@ use rand::Isaac64Rng;
 use rand::distributions::{Distribution, LogNormal};
 use slog::Logger;
 
+use scribe_cxx::ScribeCxxClient;
+
 use blobrepo::BlobRepo;
 use mercurial_types::RepositoryId;
 use metaconfig::PushrebaseParams;
@@ -72,7 +74,9 @@ impl OpenableRepoType for RepoType {
             Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
             BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
-            BlobManifold(ref args) => BlobRepo::new_manifold(logger, args, repoid)?,
+            BlobManifold(ref args) => {
+                BlobRepo::new_manifold_scribe_commits(logger, args, repoid, ScribeCxxClient::new())?
+            }
             TestBlobDelayRocks(ref path, mean, stddev) => {
                 // We take in an arithmetic mean and stddev, and deduce a log normal
                 let mean = mean as f64 / 1_000_000.0;

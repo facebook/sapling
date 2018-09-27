@@ -22,6 +22,9 @@ extern crate db;
 extern crate lazy_static;
 extern crate serde;
 #[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
+#[macro_use]
 extern crate slog;
 #[macro_use]
 extern crate stats;
@@ -56,6 +59,7 @@ extern crate mononoke_types;
 extern crate mononoke_types_mocks;
 extern crate rocksblob;
 extern crate rocksdb;
+extern crate scribe;
 extern crate scuba_ext;
 extern crate time_ext;
 

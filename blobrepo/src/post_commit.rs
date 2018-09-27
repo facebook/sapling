@@ -4,9 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::sync::Arc;
+
 use failure::Error;
-use futures::IntoFuture;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{Future, IntoFuture};
+use futures_ext::{asynchronize, BoxFuture, FutureExt};
+use scribe::ScribeClient;
+use serde_json;
 
 use mercurial_types::RepositoryId;
 use mononoke_types::{BonsaiChangeset, ChangesetId, Generation};
@@ -21,11 +25,13 @@ pub struct PreCommitInfo {
 
 // ... and after we add the commit to the changesets table, we can add the generation number, too
 // These are separate structs so that the type system enforces the conversion.
+#[derive(Serialize)]
+#[serde(rename = "changeset_info")]
 pub struct PostCommitInfo {
-    pub repo_id: RepositoryId,
-    pub generation: Generation,
-    pub changeset_id: ChangesetId,
-    pub parents: Vec<ChangesetId>,
+    repo_id: RepositoryId,
+    generation: Generation,
+    changeset_id: ChangesetId,
+    parents: Vec<ChangesetId>,
 }
 
 impl PreCommitInfo {
@@ -78,5 +84,43 @@ impl Discard {
 impl PostCommitQueue for Discard {
     fn queue_commit(&self, _pc: PostCommitInfo) -> BoxFuture<(), Error> {
         Ok(()).into_future().boxify()
+    }
+}
+
+pub struct LogToScribe<C>
+where
+    C: ScribeClient + Sync + Send + 'static,
+{
+    client: Arc<C>,
+    category: String,
+}
+
+impl<C> LogToScribe<C>
+where
+    C: ScribeClient + Sync + Send + 'static,
+{
+    pub fn new(client: C, category: String) -> Self {
+        Self {
+            client: Arc::new(client),
+            category,
+        }
+    }
+}
+
+impl<C> PostCommitQueue for LogToScribe<C>
+where
+    C: ScribeClient + Sync + Send + 'static,
+{
+    fn queue_commit(&self, pc: PostCommitInfo) -> BoxFuture<(), Error> {
+        let pc = try_boxfuture!(serde_json::to_string(&pc));
+        self.client
+            .offer(&self.category, &pc)
+            .into_future()
+            .or_else({
+                cloned!(self.client, self.category);
+                move |_| asynchronize(move || client.blocking_put(&category, &pc))
+            })
+            .from_err()
+            .boxify()
     }
 }

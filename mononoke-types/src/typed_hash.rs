@@ -10,6 +10,7 @@ use std::str::FromStr;
 use ascii::{AsciiStr, AsciiString};
 use asyncmemo;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use serde;
 
 use blob::BlobstoreValue;
 use bonsai_changeset::BonsaiChangeset;
@@ -183,6 +184,15 @@ macro_rules! impl_typed_hash {
 
             fn shrink(&self) -> Box<Iterator<Item = Self>> {
                 empty_shrinker()
+            }
+        }
+
+        impl serde::Serialize for $typed {
+            fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                serializer.serialize_str(self.to_hex().as_str())
             }
         }
 

@@ -11,7 +11,7 @@ use diesel::sql_types::Integer;
 
 /// Represents a repository. This ID is used throughout storage.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, FromSqlRow, AsExpression, Abomonation)]
+#[derive(HeapSizeOf, FromSqlRow, AsExpression, Abomonation, Serialize)]
 #[sql_type = "Integer"]
 pub struct RepositoryId(i32);
 

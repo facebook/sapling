@@ -153,7 +153,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
     let xdb_tier = matches
         .value_of("xdb-tier")
         .unwrap_or("xdb.mononoke_production");
-    BlobRepo::new_manifold(
+    BlobRepo::new_manifold_no_postcommit(
         logger.clone(),
         &ManifoldArgs {
             bucket: bucket.to_string(),

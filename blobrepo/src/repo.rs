@@ -21,6 +21,7 @@ use futures::stream::{self, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
+use scribe::ScribeClient;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{Discard, Drain, Logger};
 use stats::Timeseries;
@@ -285,7 +286,26 @@ impl BlobRepo {
         ))
     }
 
-    pub fn new_manifold(logger: Logger, args: &ManifoldArgs, repoid: RepositoryId) -> Result<Self> {
+    pub fn new_manifold_scribe_commits<C>(
+        logger: Logger,
+        args: &ManifoldArgs,
+        repoid: RepositoryId,
+        scribe: C,
+    ) -> Result<Self>
+    where
+        C: ScribeClient + Sync + Send + 'static,
+    {
+        let mut repo = Self::new_manifold_no_postcommit(logger, args, repoid)?;
+        let category = format!("mononoke_commits");
+        repo.postcommit_queue = Arc::new(post_commit::LogToScribe::new(scribe, category));
+        Ok(repo)
+    }
+
+    pub fn new_manifold_no_postcommit(
+        logger: Logger,
+        args: &ManifoldArgs,
+        repoid: RepositoryId,
+    ) -> Result<Self> {
         // TODO(stash): T28429403 use local region first, fallback to master if not found
         let connection_params = get_connection_params(
             &args.db_address,
