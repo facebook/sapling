@@ -70,19 +70,6 @@ impl MononokeApp {
         };
 
         let name = name.into();
-        let hide_advanced_args = self.hide_advanced_args;
-        let cache_args: Vec<_> = CACHE_ARGS
-            .iter()
-            .map(|(flag, help)| {
-                // XXX figure out a way to get default values in here -- note that .default_value
-                // takes a &'a str, so we may need to have MononokeApp own it or similar.
-                Arg::with_name(flag)
-                    .long(flag)
-                    .value_name("SIZE")
-                    .hidden(hide_advanced_args)
-                    .help(help)
-            })
-            .collect();
         let default_log = if self.default_glog { "glog" } else { "compact" };
 
         let mut app = App::new(name)
@@ -139,10 +126,9 @@ impl MononokeApp {
                     .value_name("ADDRESS")
                     .default_value("xdb.mononoke_production")
                     .help("database address"),
-            )
-            .args(&cache_args);
+            );
 
-        app = add_cachelib_args(app);
+        app = add_cachelib_args(app, self.hide_advanced_args);
 
         if self.local_instances {
             app = app.arg(
@@ -261,7 +247,20 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
     Ok(())
 }
 
-pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> App<'a, 'b> {
+    let cache_args: Vec<_> = CACHE_ARGS
+        .iter()
+        .map(|(flag, help)| {
+            // XXX figure out a way to get default values in here -- note that .default_value
+            // takes a &'a str, so we may need to have MononokeApp own it or similar.
+            Arg::with_name(flag)
+                .long(flag)
+                .value_name("SIZE")
+                .hidden(hide_advanced_args)
+                .help(help)
+        })
+        .collect();
+
     app.arg(Arg::from_usage(
             "--cache-size-gb [SIZE] 'size of the cachelib cache, in GiB'",
     ))
@@ -274,6 +273,7 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     .arg(Arg::from_usage(
             "--min-process-size [SIZE] 'process size at which cachelib will grow back to cache-size-gb, in GiB'"
     ))
+    .args(&cache_args)
 }
 
 // TODO: (jsgf) T32777804 make the dependency between cachelib and blobrepo more visible

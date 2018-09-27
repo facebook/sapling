@@ -359,6 +359,7 @@ fn main() -> Result<()> {
                     .value_name("PATH")
                     .help("path to the ssl ca file"),
             ),
+        false, /* hide_advanced_args */
     ).get_matches();
     cmdlib::args::init_cachelib(&matches);
 

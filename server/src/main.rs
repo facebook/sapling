@@ -77,7 +77,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 
             -d, --debug                                          'print debug level output'
             "#,
-        ))
+        ),
+        false /* hide_advanced_args */
+    )
 }
 
 fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {

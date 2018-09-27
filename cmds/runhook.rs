@@ -72,6 +72,7 @@ fn run_hook(
                 "<HOOK_TYPE>               'the type of the hook (perfile, percs)\n",
                 "<REV>                     'revision hash'\n",
             )),
+        false, /* hide_advanced_args */
     ).get_matches_from(args);
 
     cmdlib::args::init_cachelib(&matches);
