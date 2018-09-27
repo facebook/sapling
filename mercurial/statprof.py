@@ -292,7 +292,7 @@ def samplerthread(tid):
         state.samples.append(Sample.from_frame(frame, state.accumulated_time))
 
         state.last_start_time = now
-        time.sleep(state.sample_interval)
+        stopthread.wait(state.sample_interval)
 
     stopthread.clear()
 

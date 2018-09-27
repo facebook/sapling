@@ -182,3 +182,14 @@ Test other config sections
   $ [ -f x ]
   $ [ -f y ]
   [1]
+
+Test statprof will not take at least frequency time.
+
+  >>> import time
+  >>> open('start', 'w').write('%s' % time.time())
+
+  $ hg --profile --config profiling.output=z --config profiling.type=stat --config profiling.freq=0.02 debugshell -c 'a=1'
+
+  >>> import time
+  >>> time.time() - float(open('start').read()) < 50
+  True

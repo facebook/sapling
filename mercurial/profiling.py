@@ -103,7 +103,7 @@ def flameprofile(ui, fp, section):
 def statprofile(ui, fp, section):
     from . import statprof
 
-    freq = ui.configint(section, "freq")
+    freq = ui.configwith(float, section, "freq")
     if freq > 0:
         # Cannot reset when profiler is already active. So silently no-op.
         if statprof.state.profile_level == 0:
