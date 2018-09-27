@@ -50,7 +50,7 @@ Then stop the profiling and print out the results:
 
 All of the numerical data is statistically approximate. In the
 following column descriptions, and in all of statprof, "time" refers
-to execution time (both user and system), not wall clock time.
+to the wall clock time, not execution time (both user and system).
 
 % time
     The percent of the time spent inside the procedure itself (not
@@ -145,8 +145,7 @@ skips = {
 
 
 def clock():
-    times = os.times()
-    return times[0] + times[1]
+    return time.time()
 
 
 ###########################################################################
