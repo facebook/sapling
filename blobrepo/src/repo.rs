@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::convert::From;
 use std::mem;
 use std::path::Path;
 use std::str::FromStr;
@@ -28,10 +29,10 @@ use stats::Timeseries;
 use time_ext::DurationExt;
 use uuid::Uuid;
 
+use super::alias::{get_sha256_alias, get_sha256_alias_key};
 use super::changeset::HgChangesetContent;
 use super::changeset_fetcher::{CachingChangesetFetcher, ChangesetFetcher, SimpleChangesetFetcher};
-use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes,
-                   get_sha256_alias, get_sha256_alias_key};
+use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob,
                 MemWritesBlobstore, PrefixBlobstore};
 use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
@@ -465,6 +466,20 @@ impl BlobRepo {
     pub fn get_file_content(&self, key: &HgNodeHash) -> BoxFuture<FileContents, Error> {
         STATS::get_file_content.add_value(1);
         fetch_file_content_from_blobstore(&self.blobstore, *key).boxify()
+    }
+
+    pub fn upload_file_content_by_alias(
+        &self,
+        _alias: Sha256,
+        raw_file_content: Bytes,
+    ) -> impl Future<Item = (), Error = Error> {
+        // Get alias of raw file contents
+        let alias_key = get_sha256_alias(&raw_file_content);
+        // Raw contents = file content only, excluding metadata in the beginning
+        let contents = FileContents::Bytes(raw_file_content);
+        self.upload_blob(contents.into_blob(), alias_key)
+            .map(|_| ())
+            .boxify()
     }
 
     pub fn get_file_content_by_alias(

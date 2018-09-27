@@ -155,6 +155,14 @@ function apiserver {
   echo $! >> "$DAEMON_PIDS"
 }
 
+function no_ssl_apiserver {
+  $MONONOKE_APISERVER "$@" \
+   --config-path "$TESTTMP/mononoke-config-rocks" \
+  --config-bookmark "local_master" >> "$TESTTMP/apiserver.out" 2>&1 &
+  echo $! >> "$DAEMON_PIDS"
+}
+
+
 function wait_for_apiserver {
   for _ in $(seq 1 200); do
     PORT=$(grep "Listening to" < "$TESTTMP/apiserver.out" | grep -Pzo "(\\d+)\$") && break
@@ -166,8 +174,12 @@ function wait_for_apiserver {
     cat "$TESTTMP/apiserver.out"
     exit 1
   fi
+
   export APISERVER
-  APISERVER="http://localhost:$PORT"
+  APISERVER="https://localhost:$PORT"
+  if [[ ($# -eq 1 && "$1" == "--no-ssl") ]]; then
+    APISERVER="http://localhost:$PORT"
+  fi
 }
 
 function extract_json_error {

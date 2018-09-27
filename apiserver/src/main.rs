@@ -53,6 +53,7 @@ extern crate srserver;
 extern crate time_ext;
 extern crate tokio;
 extern crate tokio_threadpool;
+extern crate url;
 
 mod actor;
 mod errors;
@@ -64,18 +65,22 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use bytes::Bytes;
+
 use actix_web::{http, server, App, HttpRequest, HttpResponse, Json, State};
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::Arg;
 use failure::{err_msg, Result};
 use futures::Future;
+use http::uri::Scheme;
 use panichandler::Fate;
 use percent_encoding::percent_decode;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use tokio::runtime::Runtime;
+use url::Url;
 
 use mercurial_types::RepositoryId;
 use mercurial_types::nodehash::HgChangesetId;
@@ -223,6 +228,20 @@ fn lfs_batch(
         kind: MononokeRepoQuery::LfsBatch {
             req: req_json.into_inner(),
             repo_name: info.repo.clone(),
+            host_address: state.clone().host_address,
+        },
+    })
+}
+
+// TODO(anastasiyaz): T32937714 Bytes -> Streaming
+fn upload_large_file(
+    (state, body, info): (State<HttpServerState>, Bytes, actix_web::Path<OidQueryInfo>),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    state.mononoke.send_query(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::UploadLargeFile {
+            oid: info.oid.clone(),
+            body: body,
         },
     })
 }
@@ -281,6 +300,7 @@ fn create_config<P: AsRef<Path>>(
 struct HttpServerState {
     mononoke: Arc<Mononoke>,
     logger: Logger,
+    host_address: Url,
 }
 
 fn main() -> Result<()> {
@@ -431,9 +451,15 @@ fn main() -> Result<()> {
         thrift::make_thrift(thrift_logger, host.to_string(), port, mononoke.clone());
     }
 
+    let host_address = match use_ssl {
+        true => Url::parse(&format!("{}://{}:{}", Scheme::HTTPS.as_str(), host, port)),
+        false => Url::parse(&format!("{}://{}:{}", Scheme::HTTP.as_str(), host, port)),
+    }.expect("Expected valid http address");
+
     let state = HttpServerState {
         mononoke,
         logger: actix_logger.clone(),
+        host_address: host_address,
     };
 
     let server = server::new(move || {
@@ -482,6 +508,9 @@ fn main() -> Result<()> {
                     })
                     .resource("/objects/batch", |r| {
                         r.method(http::Method::POST).with_async(lfs_batch)
+                    })
+                    .resource("/lfs/upload/{oid}", |r| {
+                        r.method(http::Method::PUT).with_async(upload_large_file)
                     })
             })
     });

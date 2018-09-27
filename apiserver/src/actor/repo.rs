@@ -7,15 +7,17 @@
 use std::convert::TryInto;
 use std::sync::Arc;
 
+use bytes::Bytes;
 use failure::{err_msg, Error};
 use futures::{Future, IntoFuture};
 use futures::sync::oneshot;
 use futures_ext::BoxFuture;
 use slog::Logger;
 use tokio::runtime::TaskExecutor;
+use url::Url;
 
 use api;
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, get_sha256_alias, get_sha256_alias_key};
 use futures_ext::FutureExt;
 use mercurial_types::RepositoryId;
 use mercurial_types::manifest::Content;
@@ -206,13 +208,38 @@ impl MononokeRepo {
             .boxify()
     }
 
+    fn upload_large_file(
+        &self,
+        oid: String,
+        body: Bytes,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid.clone()));
+
+        let calculated_sha256_key = get_sha256_alias(&body);
+        let given_sha256_key = get_sha256_alias_key(oid);
+
+        if calculated_sha256_key != given_sha256_key {
+            try_boxfuture!(Err(ErrorKind::InvalidInput(
+                "Upload file content has different sha256".to_string(),
+                None,
+            )))
+        }
+
+        self.repo
+            .upload_file_content_by_alias(sha256_oid, body)
+            .and_then(|_| Ok(MononokeRepoResponse::UploadLargeFile {}))
+            .from_err()
+            .boxify()
+    }
+
     fn lfs_batch(
         &self,
         repo_name: String,
         req: BatchRequest,
+        host_address: Url,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let response = build_response(repo_name, req);
-        Ok(MononokeRepoResponse::LfsBatch { response })
+        build_response(repo_name, req, host_address)
+            .map(|response| MononokeRepoResponse::LfsBatch { response })
             .into_future()
             .boxify()
     }
@@ -232,7 +259,12 @@ impl MononokeRepo {
             } => self.is_ancestor(proposed_ancestor, proposed_descendent),
 
             DownloadLargeFile { oid } => self.download_large_file(oid),
-            LfsBatch { repo_name, req } => self.lfs_batch(repo_name, req),
+            LfsBatch {
+                repo_name,
+                req,
+                host_address,
+            } => self.lfs_batch(repo_name, req, host_address),
+            UploadLargeFile { oid, body } => self.upload_large_file(oid, body),
         }
     }
 }

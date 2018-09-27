@@ -6,7 +6,9 @@
 
 use std::convert::TryFrom;
 
+use bytes::Bytes;
 use failure::Error;
+use url::Url;
 
 use apiserver_thrift::types::MononokeGetRawParams;
 
@@ -41,6 +43,11 @@ pub enum MononokeRepoQuery {
     LfsBatch {
         repo_name: String,
         req: BatchRequest,
+        host_address: Url,
+    },
+    UploadLargeFile {
+        oid: String,
+        body: Bytes,
     },
 }
 

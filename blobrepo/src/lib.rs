@@ -70,6 +70,7 @@ extern crate fixtures;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
 
+mod alias;
 mod bonsai_generation;
 mod changeset;
 mod changeset_fetcher;
@@ -82,6 +83,7 @@ mod repo;
 mod repo_commit;
 mod utils;
 
+pub use alias::*;
 pub use errors::*;
 
 pub use changeset::{HgBlobChangeset, HgChangesetContent};

@@ -48,20 +48,8 @@ import testing repo to mononoke
   $ blobimport repo-hg/.hg repo
 
 starts api server
-  $ apiserver -p 0
-
-  $ for i in $(seq 1 100); do
-  > PORT=$(cat $TESTTMP/apiserver.out | grep "Listening to" | grep -Pzo "(\\d+)\$") && break
-  > sleep 0.1
-  > done
-
-  $ if [[ -z "$PORT" ]]; then
-  >   echo "error: Mononoke API Server is not started"
-  >   cat $TESTTMP/apiserver.out
-  >   exit 1
-  > fi
-
-  $ APISERVER="https://localhost:$PORT"
+  $ apiserver -H "127.0.0.1" -p $(get_free_socket)
+  $ wait_for_apiserver
   $ alias sslcurl="sslcurl --silent"
 
 ping test
@@ -282,7 +270,7 @@ test get changeset
   0000 is invalid
   400
 
-test download LFS
+test download LFS (GET request)
   $ sslcurl $APISERVER/repo/lfs/download/$SHA > output
   $ diff output - <<< $TEST_CONTENT
 
@@ -295,3 +283,27 @@ test download LFS
   $ sslcurl  -w "\n%{http_code}" $APISERVER/repo/lfs/download/$NON_VALID_SHA | extract_json_error
   1234 is invalid
   400
+
+test upload+download LFS (PUT request)
+  $ LFS_UPLOAD_FILE_CONTENT="lfs-upload-file-content"
+  $ echo $LFS_UPLOAD_FILE_CONTENT > repo-hg/lfs-file
+  $ LFS_SHA=$(sha256sum repo-hg/lfs-file | awk '{print $1;}')
+  $ sslcurl -T repo-hg/lfs-file $APISERVER/repo/lfs/upload/$LFS_SHA
+
+  $ sslcurl $APISERVER/repo/lfs/download/$LFS_SHA > output
+  $ diff output - <<< $LFS_UPLOAD_FILE_CONTENT
+
+test batch LFS
+Replace localhost to 127.0.0.1, and add newline to curl output.
+Be careful, if you want to cat the result of your curl operation, or whatever, ALL console prints are replaced with
+127.0.0.1 -> $LOCALIP. Do not try to replace anything to $LOCALIP as a string.
+USE od (octal dump) if you stuck with the issue.
+  $ EXPECTED_OUTPUT="{\"transfer\":\"basic\",\"objects\":[{\"oid\":\"12345678\",\"size\":23,\"actions\":{\"download\":{\"href\":\"$APISERVER/repo/lfs/download/12345678\",\"expires_at\":\"2030-11-10T15:29:07Z\"}}}]}"
+  $ sed s/localhost/127.0.0.1/ - <<< $EXPECTED_OUTPUT > expected_output_file
+  $ sslcurl -d '{"operation": "download","transfers":["basic"],"objects":[{"oid": "12345678","size": 23}]}' -H "Content-Type: application/json" -X POST $APISERVER/repo/objects/batch > output
+  $ sed -i -e '$a\' output
+  $ diff -c output expected_output_file
+
+batch for unknown repo
+  $ sslcurl -d '{"operation": "download","transfers":["basic"],"objects":[{"oid": "12345678","size": 23}]}' -H "Content-Type: application/json" -X POST $APISERVER/unknown_repo/objects/batch | jq '.message'
+  "unknown_repo is not found on LFS request"

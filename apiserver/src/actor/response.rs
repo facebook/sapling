@@ -38,6 +38,7 @@ pub enum MononokeRepoResponse {
     LfsBatch {
         response: BatchResponse,
     },
+    UploadLargeFile {},
 }
 
 fn binary_response(content: Bytes) -> HttpResponse {
@@ -68,6 +69,7 @@ impl Responder for MononokeRepoResponse {
             })),
             DownloadLargeFile { content } => Ok(binary_response(content.into())),
             LfsBatch { response } => Json(response).respond_to(req),
+            UploadLargeFile {} => Ok(HttpResponse::Ok().into()),
         }
     }
 }
