@@ -19,6 +19,7 @@ extern crate tokio_uds;
 extern crate bytes;
 extern crate dns_lookup;
 extern crate futures;
+extern crate libc;
 extern crate openssl;
 extern crate secure_utils;
 extern crate tokio;

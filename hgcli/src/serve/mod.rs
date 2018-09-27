@@ -13,6 +13,7 @@ use slog::{Drain, Logger};
 use slog_term;
 
 use dns_lookup::lookup_addr;
+use libc::c_ulong;
 use openssl::ssl::{SslConnector, SslMethod};
 use tokio_io::AsyncRead;
 use tokio_io::codec::{FramedRead, FramedWrite};
@@ -34,6 +35,8 @@ use secure_utils::{build_identity, read_x509};
 use sshrelay::{Preamble, SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
 mod fdio;
+
+const X509_R_CERT_ALREADY_IN_HASH_TABLE: c_ulong = 185057381;
 
 pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
     if sub.is_present("stdio") {
@@ -178,10 +181,30 @@ impl<'a> StdioRelay<'a> {
             try_boxfuture!(connector.set_private_key(&pkcs12.pkey));
 
             // add root certificate
+
             try_boxfuture!(
                 connector
                     .cert_store_mut()
                     .add_cert(try_boxfuture!(read_x509(self.ca_pem)))
+                    .or_else(|err| {
+                        let mut failed = true;
+                        {
+                            let errors = err.errors();
+                            if errors.len() == 1 {
+                                if errors[0].code() == X509_R_CERT_ALREADY_IN_HASH_TABLE {
+                                    // Do not fail if certificate has already been added since it's
+                                    // not really an error
+                                    failed = false;
+                                }
+                            }
+                        }
+                        if failed {
+                            let err: Error = err.into();
+                            Err(err)
+                        } else {
+                            Ok(())
+                        }
+                    })
             );
 
             connector.build()
