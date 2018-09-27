@@ -12,6 +12,7 @@ extern crate cloned;
 extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
+extern crate tokio;
 
 extern crate bincode;
 extern crate bonsai_utils;
@@ -72,6 +73,7 @@ mod errors;
 mod file;
 mod manifest;
 mod memory_manifest;
+mod post_commit;
 mod repo;
 mod repo_commit;
 mod utils;
