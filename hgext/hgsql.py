@@ -287,7 +287,6 @@ def unbundle(orig, repo, cg, *args, **kwargs):
         exception = None
         oldopclass = None
         context = None
-        repo._checklockorder = True
         try:
             context = sqlcontext(repo, dbwritable=True, enforcepullfromdb=True)
 
@@ -322,7 +321,6 @@ def unbundle(orig, repo, cg, *args, **kwargs):
             exception = ex
             raise
         finally:
-            repo._checklockorder = False
             # Be extra sure to undo our wrapping
             if oldopclass:
                 bundle2.bundleoperation = oldopclass
@@ -597,7 +595,17 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
             enforcepullfromdb = kwargs["enforcepullfromdb"]
         del kwargs["enforcepullfromdb"]
 
-    with sqlcontext(repo, dbwritable=sqllock, enforcepullfromdb=enforcepullfromdb):
+    # Take repo lock if sqllock is set.
+    if sqllock:
+        wlock = repo.wlock()
+        lock = repo.lock()
+    else:
+        wlock = util.nullcontextmanager()
+        lock = util.nullcontextmanager()
+
+    with wlock, lock, sqlcontext(
+        repo, dbwritable=sqllock, enforcepullfromdb=enforcepullfromdb
+    ):
         return action(*args, **kwargs)
 
 
@@ -774,8 +782,6 @@ def wraprepo(repo):
             self._sqlunlock(writelock)
 
         def _enforcelocallocktaken(self):
-            if not getattr(self, "_checklockorder", False):
-                return
             if self._issyncing:
                 return
             if self._currentlock(self._lockref):
@@ -2094,28 +2100,31 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
     if not opts.get("local_only"):
         # strip from sql
         reponame = repo.sqlreponame
-        repo.sqlconnect()
-        repo.sqlwritelock()
-        try:
-            cursor = repo.sqlcursor
+        with repo.lock():
+            repo.sqlconnect()
+            repo.sqlwritelock()
+            try:
+                cursor = repo.sqlcursor
 
-            if rootonly:
-                ui.status(_("mysql: deleting root trees with linkrevs >= %s\n") % rev)
-                pathfilter = "(path = '00manifesttree.i')"
-            else:
-                ui.status(_("mysql: deleting trees with linkrevs >= %s\n") % rev)
-                pathfilter = "(path LIKE 'meta/%%' OR path = '00manifesttree.i')"
+                if rootonly:
+                    ui.status(
+                        _("mysql: deleting root trees with linkrevs >= %s\n") % rev
+                    )
+                    pathfilter = "(path = '00manifesttree.i')"
+                else:
+                    ui.status(_("mysql: deleting trees with linkrevs >= %s\n") % rev)
+                    pathfilter = "(path LIKE 'meta/%%' OR path = '00manifesttree.i')"
 
-            cursor.execute(
-                """DELETE FROM revisions WHERE repo = %s AND linkrev >= %s
-                   AND """
-                + pathfilter,
-                (reponame, rev),
-            )
-            repo.sqlconn.commit()
-        finally:
-            repo.sqlwriteunlock()
-            repo.sqlclose()
+                cursor.execute(
+                    """DELETE FROM revisions WHERE repo = %s AND linkrev >= %s
+                       AND """
+                    + pathfilter,
+                    (reponame, rev),
+                )
+                repo.sqlconn.commit()
+            finally:
+                repo.sqlwriteunlock()
+                repo.sqlclose()
 
     # strip from local
     with repo.wlock(), repo.lock(), repo.transaction("treestrip") as tr:
@@ -2238,37 +2247,38 @@ def sqlrefill(ui, startrev, **opts):
     startrev = int(startrev)
 
     repo = repo.unfiltered()
-    repo.sqlconnect()
-    repo.sqlwritelock()
-    try:
-        revlogs = {}
-        pendingrevs = []
-        # totalrevs = len(repo.changelog)
-        # with progress.bar(ui, 'refilling', total=totalrevs - startrev) as prog:
-        # prog.value += 1
-        revlogrevs = _discoverrevisions(repo, startrev)
+    with repo.lock():
+        repo.sqlconnect()
+        repo.sqlwritelock()
+        try:
+            revlogs = {}
+            pendingrevs = []
+            # totalrevs = len(repo.changelog)
+            # with progress.bar(ui, 'refilling', total=totalrevs - startrev) as prog:
+            # prog.value += 1
+            revlogrevs = _discoverrevisions(repo, startrev)
 
-        for path, rlrev in revlogrevs:
-            rl = revlogs.get(path)
-            if rl is None:
-                rl = revlog.revlog(repo.svfs, path)
-                revlogs[path] = rl
+            for path, rlrev in revlogrevs:
+                rl = revlogs.get(path)
+                if rl is None:
+                    rl = revlog.revlog(repo.svfs, path)
+                    revlogs[path] = rl
 
-            entry = rl.index[rlrev]
-            _, _, _, baserev, linkrev, p1r, p2r, node = entry
-            data = rl._getsegmentforrevs(rlrev, rlrev)[1]
-            data0, data1 = _parsecompressedrevision(data)
+                entry = rl.index[rlrev]
+                _, _, _, baserev, linkrev, p1r, p2r, node = entry
+                data = rl._getsegmentforrevs(rlrev, rlrev)[1]
+                data0, data1 = _parsecompressedrevision(data)
 
-            hexnode = hex(node)
-            sqlentry = rl._io.packentry(entry, hexnode, rl.version, rlrev)
-            revdata = (path, linkrev, rlrev, hexnode, sqlentry, data0, data1)
-            pendingrevs.append(revdata)
+                hexnode = hex(node)
+                sqlentry = rl._io.packentry(entry, hexnode, rl.version, rlrev)
+                revdata = (path, linkrev, rlrev, hexnode, sqlentry, data0, data1)
+                pendingrevs.append(revdata)
 
-        repo._committodb(pendingrevs, ignoreduplicates=True)
-        repo.sqlconn.commit()
-    finally:
-        repo.sqlwriteunlock()
-        repo.sqlclose()
+            repo._committodb(pendingrevs, ignoreduplicates=True)
+            repo.sqlconn.commit()
+        finally:
+            repo.sqlwriteunlock()
+            repo.sqlclose()
 
 
 @command(
