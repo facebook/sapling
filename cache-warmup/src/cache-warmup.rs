@@ -22,7 +22,7 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use futures::{Future, IntoFuture, Stream};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, MPath, RepoPath};
 use mercurial_types::manifest::{Entry, Type};
 use mercurial_types::manifest_utils::recursive_entry_stream;
@@ -74,12 +74,18 @@ fn blobstore_and_filenodes_warmup(
                         repo.get_linknode(&path, &hash.into_nodehash())
                     })
                     .buffered(buffer_size)
-                    .for_each(move |_| {
-                        i += 1;
-                        if i % 10000 == 0 {
-                            debug!(logger, "fetched {}th entry during precaching", i);
+                    .for_each({
+                        let logger = logger.clone();
+                        move |_| {
+                            i += 1;
+                            if i % 10000 == 0 {
+                                debug!(logger, "manifests warmup: fetched {}th entry", i);
+                            }
+                            Ok(())
                         }
-                        Ok(())
+                    })
+                    .map(move |()| {
+                        debug!(logger, "finished manifests warmup");
                     })
             }
         })
@@ -106,7 +112,9 @@ fn changesets_warmup(
             AncestorsNodeStream::new(&repo.get_changeset_fetcher(), start_rev)
                 .take(cs_limit as u64)
                 .collect()
-                .map(|_| ())
+                .map(move |_| {
+                    debug!(logger, "finished changesets warmup");
+                })
         })
 }
 
@@ -122,9 +130,13 @@ fn do_cache_warmup(
             let repo = repo.clone();
             move |bookmark_rev| match bookmark_rev {
                 Some(bookmark_rev) => {
-                    let blobstore_warmup =
-                        blobstore_and_filenodes_warmup(repo.clone(), bookmark_rev, logger.clone());
-                    let cs_warmup = changesets_warmup(bookmark_rev, repo, commit_limit, logger);
+                    let blobstore_warmup = spawn_future(blobstore_and_filenodes_warmup(
+                        repo.clone(),
+                        bookmark_rev,
+                        logger.clone(),
+                    ));
+                    let cs_warmup =
+                        spawn_future(changesets_warmup(bookmark_rev, repo, commit_limit, logger));
                     blobstore_warmup.join(cs_warmup).map(|_| ()).boxify()
                 }
                 None => {
