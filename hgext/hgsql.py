@@ -49,6 +49,7 @@ from mercurial import (
     extensions,
     hg,
     localrepo,
+    lock as lockmod,
     mdiff,
     phases,
     progress,
@@ -286,6 +287,7 @@ def unbundle(orig, repo, cg, *args, **kwargs):
         exception = None
         oldopclass = None
         context = None
+        repo._checklockorder = True
         try:
             context = sqlcontext(repo, takelock=True, waitforlock=True)
 
@@ -293,10 +295,17 @@ def unbundle(orig, repo, cg, *args, **kwargs):
             # locking mechanism.
             oldopclass = bundle2.bundleoperation
 
+            repolocks = []
+
             class sqllockedoperation(bundle2.bundleoperation):
                 def __init__(self, repo, transactiongetter, *args, **kwargs):
                     def sqllocktr():
+                        # Get local repo locks first.
+                        repolocks.append(repo.wlock(wait=True))
+                        repolocks.append(repo.lock(wait=True))
                         if not context.active():
+                            # Get global SQL transaction inside local lock.
+                            # This could change the repo.
                             context.__enter__()
                         return transactiongetter()
 
@@ -313,6 +322,7 @@ def unbundle(orig, repo, cg, *args, **kwargs):
             exception = ex
             raise
         finally:
+            repo._checklockorder = False
             # Be extra sure to undo our wrapping
             if oldopclass:
                 bundle2.bundleoperation = oldopclass
@@ -324,6 +334,8 @@ def unbundle(orig, repo, cg, *args, **kwargs):
                     value = exception
                     traceback = []  # This isn't really important
                 context.__exit__(type, value, traceback)
+            for lock in reversed(repolocks):
+                lockmod.release(lock)
     else:
         # bundle1 or non-lazy locked
         return executewithsql(repo, orig, True, repo, cg, *args, **kwargs)
