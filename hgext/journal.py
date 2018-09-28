@@ -120,17 +120,6 @@ def recordbookmarks(orig, store, fp):
     return orig(store, fp)
 
 
-# shared repository support
-def _readsharedfeatures(repo):
-    """A set of shared features for this repository"""
-    try:
-        return set(repo.vfs.read("shared").splitlines())
-    except IOError as inst:
-        if inst.errno != errno.ENOENT:
-            raise
-        return set()
-
-
 def _mergeentriesiter(*iterables, **kwargs):
     """Given a set of sorted iterables, yield the next entry in merged order
 
@@ -164,33 +153,31 @@ def wrappostshare(orig, sourcerepo, destrepo, **kwargs):
     """Mark this shared working copy as sharing journal information"""
     with destrepo.wlock():
         orig(sourcerepo, destrepo, **kwargs)
-        with destrepo.vfs("shared", "a") as fp:
+        with destrepo.localvfs("shared", "a") as fp:
             fp.write("journal\n")
 
 
 def unsharejournal(orig, ui, repo, repopath):
     """Copy shared journal entries into this repo when unsharing"""
     if repo.path == repopath and repo.shared() and util.safehasattr(repo, "journal"):
-        sharedrepo = repo._sharedprimaryrepo
-        sharedfeatures = _readsharedfeatures(repo)
-        if sharedrepo and sharedfeatures > {"journal"}:
+        if repo.shared() and "journal" in repo.sharedfeatures:
             # there is a shared repository and there are shared journal entries
-            # to copy. move shared date over from source to destination but
-            # move the local file first
-            if repo.vfs.exists("namejournal"):
-                journalpath = repo.vfs.join("namejournal")
+            # to copy. move shared data over from source to destination but
+            # rename the local file first
+            if repo.localvfs.exists("namejournal"):
+                journalpath = repo.localvfs.join("namejournal")
                 util.rename(journalpath, journalpath + ".bak")
             storage = repo.journal
             local = storage._open(
-                repo.vfs, filename="namejournal.bak", _newestfirst=False
+                repo.localvfs, filename="namejournal.bak", _newestfirst=False
             )
             shared = (
                 e
-                for e in storage._open(sharedrepo.vfs, _newestfirst=False)
-                if sharednamespaces.get(e.namespace) in sharedfeatures
+                for e in storage._open(repo.sharedvfs, _newestfirst=False)
+                if sharednamespaces.get(e.namespace) in repo.sharedfeatures
             )
             for entry in _mergeentriesiter(local, shared, order=min):
-                storage._write(repo.vfs, [entry])
+                storage._write(repo.localvfs, [entry])
 
     return orig(ui, repo, repopath)
 
@@ -270,16 +257,12 @@ class journalstorage(object):
     def __init__(self, repo):
         self.user = util.getuser()
         self.ui = repo.ui
-        self.vfs = repo.vfs
-
-        # is this working copy using a shared storage?
-        self.sharedfeatures = self.sharedvfs = None
-        if repo.shared():
-            features = _readsharedfeatures(repo)
-            sharedrepo = repo._sharedprimaryrepo
-            if sharedrepo is not None and "journal" in features:
-                self.sharedvfs = sharedrepo.vfs
-                self.sharedfeatures = features
+        self.localvfs = repo.localvfs
+        self.sharedfeatures = repo.sharedfeatures
+        if repo.shared() and "journal" in self.sharedfeatures:
+            self.sharedvfs = repo.sharedvfs
+        else:
+            self.sharedvfs = None
 
     # track the current command for recording in journal entries
     @property
@@ -362,13 +345,15 @@ class journalstorage(object):
         self._write(vfs, entries)
 
     def _getvfs(self, namespace):
-        vfs = self.vfs
-        if self.sharedvfs is not None:
-            # write to the shared repository if this feature is being
-            # shared between working copies.
-            if sharednamespaces.get(namespace) in self.sharedfeatures:
-                vfs = self.sharedvfs
-        return vfs
+        # write to the shared repository if this feature is being
+        # shared between working copies.
+        if (
+            self.sharedvfs is not None
+            and sharednamespaces.get(namespace) in self.sharedfeatures
+        ):
+            return self.sharedvfs
+        else:
+            return self.localvfs
 
     def _buildjournalentry(self, namespace, name, oldhashes, newhashes):
         if not isinstance(oldhashes, list):
@@ -436,7 +421,7 @@ class journalstorage(object):
         Yields journalentry instances for each contained journal record.
 
         """
-        local = self._open(self.vfs)
+        local = self._open(self.localvfs)
 
         if self.sharedvfs is None:
             return local
