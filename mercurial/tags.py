@@ -229,7 +229,7 @@ def _tagsfromfnodes(ui, repo, fnodes):
 def readlocaltags(ui, repo, alltags, tagtypes):
     """Read local tags in repo. Update alltags and tagtypes."""
     try:
-        data = repo.vfs.read("localtags")
+        data = repo.localvfs.read("localtags")
     except IOError as inst:
         if inst.errno != errno.ENOENT:
             raise
@@ -591,9 +591,9 @@ def _tag(repo, names, node, message, local, user, date, extra=None, editor=False
     prevtags = ""
     if local:
         try:
-            fp = repo.vfs("localtags", "r+")
+            fp = repo.localvfs("localtags", "r+")
         except IOError:
-            fp = repo.vfs("localtags", "a")
+            fp = repo.localvfs("localtags", "a")
         else:
             prevtags = fp.read()
 

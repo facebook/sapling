@@ -848,14 +848,14 @@ class hgsubrepo(abstractsubrepo):
         # sort the files that will be hashed in increasing (likely) file size
         filelist = ("bookmarks", "store/phaseroots", "store/00changelog.i")
         yield "# %s\n" % _expandedabspath(remotepath)
-        vfs = self._repo.vfs
+        vfs = self._repo.localvfs
         for relname in filelist:
             filehash = hashlib.sha1(vfs.tryread(relname)).hexdigest()
             yield "%s = %s\n" % (relname, filehash)
 
     @propertycache
     def _cachestorehashvfs(self):
-        return vfsmod.vfs(self._repo.vfs.join("cache/storehash"))
+        return vfsmod.vfs(self._repo.localvfs.join("cache/storehash"))
 
     def _readstorehashcache(self, remotepath):
         """read the store hash cache for a given remote repository"""
@@ -902,7 +902,7 @@ class hgsubrepo(abstractsubrepo):
             if defpath != defpushpath:
                 addpathconfig("default-push", defpushpath)
 
-            fp = self._repo.vfs("hgrc", "w", text=True)
+            fp = self._repo.localvfs("hgrc", "w", text=True)
             try:
                 fp.write("".join(lines))
             finally:
@@ -1046,8 +1046,8 @@ class hgsubrepo(abstractsubrepo):
         srcurl = _abssource(self._repo)
         other = hg.peer(self._repo, {}, srcurl)
         if len(self._repo) == 0:
-            # use self._repo.vfs instead of self.wvfs to remove .hg only
-            self._repo.vfs.rmtree()
+            # use self._repo.localvfs instead of self.wvfs to remove .hg only
+            self._repo.localvfs.rmtree()
             if parentrepo.shared():
                 self.ui.status(
                     _("sharing subrepo %s from %s\n") % (subrelpath(self), srcurl)

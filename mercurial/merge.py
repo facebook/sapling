@@ -132,7 +132,7 @@ class mergestate(object):
             self._mdstate = "s"
         else:
             self._mdstate = "u"
-        shutil.rmtree(self._repo.vfs.join("merge"), True)
+        shutil.rmtree(self._repo.localvfs.join("merge"), True)
         self._results = {}
         self._dirty = False
 
@@ -249,7 +249,7 @@ class mergestate(object):
         """
         records = []
         try:
-            f = self._repo.vfs(self.statepathv1)
+            f = self._repo.localvfs(self.statepathv1)
             for i, l in enumerate(f):
                 if i == 0:
                     records.append(("L", l[:-1]))
@@ -281,7 +281,7 @@ class mergestate(object):
         Returns list of records [(TYPE, data), ...]."""
         records = []
         try:
-            f = self._repo.vfs(self.statepathv2)
+            f = self._repo.localvfs(self.statepathv2)
             data = f.read()
             off = 0
             end = len(data)
@@ -348,8 +348,8 @@ class mergestate(object):
         return (
             bool(self._local)
             or bool(self._state)
-            or self._repo.vfs.exists(self.statepathv1)
-            or self._repo.vfs.exists(self.statepathv2)
+            or self._repo.localvfs.exists(self.statepathv1)
+            or self._repo.localvfs.exists(self.statepathv2)
         )
 
     def commit(self):
@@ -402,7 +402,7 @@ class mergestate(object):
 
     def _writerecordsv1(self, records):
         """Write current state on disk in a version 1 file"""
-        f = self._repo.vfs(self.statepathv1, "w")
+        f = self._repo.localvfs(self.statepathv1, "w")
         irecords = iter(records)
         lrecords = next(irecords)
         assert lrecords[0] == "L"
@@ -418,7 +418,7 @@ class mergestate(object):
         See the docstring for _readrecordsv2 for why we use 't'."""
         # these are the records that all version 2 clients can read
         whitelist = "LOF"
-        f = self._repo.vfs(self.statepathv2, "w")
+        f = self._repo.localvfs(self.statepathv2, "w")
         for key, data in records:
             assert len(key) == 1
             if key not in whitelist:
@@ -440,7 +440,7 @@ class mergestate(object):
             hash = nullhex
         else:
             hash = hex(hashlib.sha1(fcl.path()).digest())
-            self._repo.vfs.write("merge/" + hash, fcl.data())
+            self._repo.localvfs.write("merge/" + hash, fcl.data())
         self._state[fd] = [
             "u",
             hash,
@@ -537,7 +537,7 @@ class mergestate(object):
         if preresolve:
             # restore local
             if hash != nullhex:
-                f = self._repo.vfs("merge/" + hash)
+                f = self._repo.localvfs("merge/" + hash)
                 wctx[dfile].write(f.read(), flags)
                 f.close()
             else:
@@ -2183,7 +2183,7 @@ def update(
         if not partial and not wc.isinmemory():
             repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
             # note that we're in the middle of an update
-            repo.vfs.write("updatestate", p2.hex())
+            repo.localvfs.write("updatestate", p2.hex())
 
         # Advertise fsmonitor when its presence could be useful.
         #
@@ -2228,7 +2228,7 @@ def update(
                 repo.setparents(fp1, fp2)
                 recordupdates(repo, actions, branchmerge)
                 # update completed, clear state
-                util.unlink(repo.vfs.join("updatestate"))
+                util.unlink(repo.localvfs.join("updatestate"))
 
                 if not branchmerge:
                     repo.dirstate.setbranch(p2.branch())

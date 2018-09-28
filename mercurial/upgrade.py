@@ -772,7 +772,7 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     backupvfs = vfsmod.vfs(backuppath)
 
     # Make a backup of requires file first, as it is the first to be modified.
-    util.copyfile(srcrepo.vfs.join("requires"), backupvfs.join("requires"))
+    util.copyfile(srcrepo.localvfs.join("requires"), backupvfs.join("requires"))
 
     # We install an arbitrary requirement that clients must not support
     # as a mechanism to lock out new clients during the data swap. This is
@@ -784,7 +784,9 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
             "unable to read from repository\n"
         )
     )
-    scmutil.writerequires(srcrepo.vfs, srcrepo.requirements | {"upgradeinprogress"})
+    scmutil.writerequires(
+        srcrepo.localvfs, srcrepo.requirements | {"upgradeinprogress"}
+    )
 
     ui.write(_("starting in-place swap of repository data\n"))
     ui.write(_("replaced files will be backed up at %s\n") % backuppath)
@@ -807,7 +809,7 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
     ui.write(
         _("finalizing requirements file and making repository readable " "again\n")
     )
-    scmutil.writerequires(srcrepo.vfs, requirements)
+    scmutil.writerequires(srcrepo.localvfs, requirements)
 
     # The lock file from the old store won't be removed because nothing has a
     # reference to its new location. So clean it up manually. Alternatively, we
@@ -1007,7 +1009,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
 
         finally:
             ui.write(_("removing temporary repository %s\n") % tmppath)
-            repo.vfs.rmtree(tmppath, forcibly=True)
+            repo.localvfs.rmtree(tmppath, forcibly=True)
 
             if backuppath:
                 ui.warn(_("copy of old repository backed up at %s\n") % backuppath)

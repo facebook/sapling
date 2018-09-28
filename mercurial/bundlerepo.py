@@ -324,7 +324,7 @@ class bundlerepository(localrepo.localrepository):
         elif isinstance(bundle, changegroup.cg1unpacker):
             if bundle.compressed():
                 f = self._writetempbundle(bundle.read, ".hg10un", header="HG10UN")
-                bundle = exchange.readbundle(ui, f, bundlepath, self.vfs)
+                bundle = exchange.readbundle(ui, f, bundlepath, self.localvfs)
 
             self._bundlefile = bundle
             self._cgunpacker = bundle
@@ -356,7 +356,7 @@ class bundlerepository(localrepo.localrepository):
     def _writetempbundle(self, readfn, suffix, header=""):
         """Write a temporary file to disk
         """
-        fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-", suffix=suffix)
+        fdtemp, temp = self.localvfs.mkstemp(prefix="hg-bundle-", suffix=suffix)
         self.tempfile = temp
 
         with os.fdopen(fdtemp, pycompat.sysstr("wb")) as fptemp:
@@ -367,7 +367,7 @@ class bundlerepository(localrepo.localrepository):
                     break
                 fptemp.write(chunk)
 
-        return self.vfs.open(self.tempfile, mode="rb")
+        return self.localvfs.open(self.tempfile, mode="rb")
 
     @localrepo.unfilteredpropertycache
     def _phasecache(self):
@@ -440,7 +440,7 @@ class bundlerepository(localrepo.localrepository):
         """Close assigned bundle file immediately."""
         self._bundlefile.close()
         if self.tempfile is not None:
-            self.vfs.unlink(self.tempfile)
+            self.localvfs.unlink(self.tempfile)
         if self._tempparent:
             shutil.rmtree(self._tempparent, True)
 

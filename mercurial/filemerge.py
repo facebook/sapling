@@ -686,7 +686,7 @@ def _makebackup(repo, ui, wctx, fcd, premerge):
     a = _workingpath(repo, fcd)
     back = scmutil.origpath(ui, repo, a)
     inworkingdir = back.startswith(repo.wvfs.base) and not back.startswith(
-        repo.vfs.base
+        repo.localvfs.base
     )
     if isinstance(fcd, context.overlayworkingfilectx) and inworkingdir:
         # If the backup file is to be in the working directory, and we're

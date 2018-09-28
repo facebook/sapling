@@ -268,7 +268,7 @@ def debugbuilddag(
         tr.close()
 
         if tags:
-            repo.vfs.write("localtags", "".join(tags))
+            repo.localvfs.write("localtags", "".join(tags))
     finally:
         release(tr, lock, wlock)
 
@@ -1599,17 +1599,17 @@ def debuglocks(ui, repo, **opts):
 
     done = False
     ull = None
-    if repo.vfs.exists("undolog"):
+    if repo.localvfs.exists("undolog"):
         ull = os.path.join("undolog", "lock")
     if pycompat.iswindows:
         if opts.get(r"force_lock"):
             repo.svfs.unlink("lock")
             done = True
         if opts.get(r"force_wlock"):
-            repo.vfs.unlink("wlock")
+            repo.localvfs.unlink("wlock")
             done = True
         if opts.get(r"force_undolog_lock"):
-            repo.vfs.unlink(ull)
+            repo.localvfs.unlink(ull)
             done = True
     else:
         if (
@@ -1679,10 +1679,10 @@ def debuglocks(ui, repo, **opts):
         return 0
 
     held += report(repo.svfs, "lock", repo.lock)
-    held += report(repo.vfs, "wlock", repo.wlock)
+    held += report(repo.localvfs, "wlock", repo.wlock)
     if ull is not None:
-        ullmtd = lambda _: lockmod.lock(repo.vfs, ull, desc="undolog", timeout=0)
-        held += report(repo.vfs, ull, ullmtd)
+        ullmtd = lambda _: lockmod.lock(repo.localvfs, ull, desc="undolog", timeout=0)
+        held += report(repo.localvfs, ull, ullmtd)
 
     return held
 
@@ -2287,7 +2287,7 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
         # because parts other than the first 20 bytes are broken, while
         # the first 20 bytes are still valid.
         try:
-            rev = hex(repo.vfs.open("dirstate").read(20))
+            rev = hex(repo.localvfs.open("dirstate").read(20))
         except Exception:
             pass
 

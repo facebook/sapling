@@ -1863,7 +1863,7 @@ def config(ui, repo, *values, **opts):
         if opts.get("local"):
             if not repo:
                 raise error.Abort(_("can't use --local outside a repository"))
-            paths = [repo.vfs.join("hgrc")]
+            paths = [repo.localvfs.join("hgrc")]
         elif opts.get("global"):
             paths = rcutil.systemrcpath()
         else:
@@ -2446,7 +2446,7 @@ def _dograft(ui, repo, *revs, **opts):
 
         # read in unfinished revisions
         try:
-            nodes = repo.vfs.read("graftstate").splitlines()
+            nodes = repo.localvfs.read("graftstate").splitlines()
             revs = [repo[node].rev() for node in nodes]
         except IOError as inst:
             if inst.errno != errno.ENOENT:
@@ -2590,7 +2590,7 @@ def _dograft(ui, repo, *revs, **opts):
             if stats and stats[3] > 0:
                 # write out state for --continue
                 nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
-                repo.vfs.write("graftstate", "".join(nodelines))
+                repo.localvfs.write("graftstate", "".join(nodelines))
                 extra = ""
                 if opts.get("user"):
                     extra += " --user %s" % util.shellquote(opts["user"])
@@ -2615,7 +2615,7 @@ def _dograft(ui, repo, *revs, **opts):
 
     # remove state when we complete successfully
     if not opts.get("dry_run"):
-        repo.vfs.unlinkpath("graftstate", ignoremissing=True)
+        repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
 
     return 0
 
@@ -5647,9 +5647,9 @@ def summary(ui, repo, **opts):
     t = ", ".join(t)
     cleanworkdir = False
 
-    if repo.vfs.exists("graftstate"):
+    if repo.localvfs.exists("graftstate"):
         t += _(" (graft in progress)")
-    if repo.vfs.exists("updatestate"):
+    if repo.localvfs.exists("updatestate"):
         t += _(" (interrupted update)")
     elif len(parents) > 1:
         t += _(" (merge)")

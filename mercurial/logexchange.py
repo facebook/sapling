@@ -23,7 +23,7 @@ def readremotenamefile(repo, filename):
     yield a tuple (node, remotepath, name)
     """
 
-    vfs = vfsmod.vfs(repo.vfs.join(remotenamedir))
+    vfs = vfsmod.vfs(repo.localvfs.join(remotenamedir))
     if not vfs.exists(filename):
         return
     f = vfs(filename)
@@ -59,7 +59,7 @@ def readremotenames(repo):
 
 
 def writeremotenamefile(repo, remotepath, names, nametype):
-    vfs = vfsmod.vfs(repo.vfs.join(remotenamedir))
+    vfs = vfsmod.vfs(repo.localvfs.join(remotenamedir))
     f = vfs(nametype, "w", atomictemp=True)
     # write the storage version info on top of file
     # version '0' represents the very initial version of the storage format

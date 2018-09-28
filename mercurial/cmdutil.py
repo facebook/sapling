@@ -324,7 +324,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
             ]
         backups = {}
         if tobackup:
-            backupdir = repo.vfs.join("record-backups")
+            backupdir = repo.localvfs.join("record-backups")
             try:
                 os.mkdir(backupdir)
             except OSError as err:
@@ -650,7 +650,7 @@ def _bisectmsg():
 
 
 def fileexistspredicate(filename):
-    return lambda repo: repo.vfs.exists(filename)
+    return lambda repo: repo.localvfs.exists(filename)
 
 
 def _mergepredicate(repo):
@@ -4294,7 +4294,7 @@ def checkunfinished(repo, commit=False):
     for f, clearable, allowcommit, msg, hint in unfinishedstates:
         if commit and allowcommit:
             continue
-        if repo.vfs.exists(f):
+        if repo.localvfs.exists(f):
             raise error.Abort(msg, hint=hint)
 
 
@@ -4303,11 +4303,11 @@ def clearunfinished(repo):
     that are clearable.
     """
     for f, clearable, allowcommit, msg, hint in unfinishedstates:
-        if not clearable and repo.vfs.exists(f):
+        if not clearable and repo.localvfs.exists(f):
             raise error.Abort(msg, hint=hint)
     for f, clearable, allowcommit, msg, hint in unfinishedstates:
-        if clearable and repo.vfs.exists(f):
-            util.unlink(repo.vfs.join(f))
+        if clearable and repo.localvfs.exists(f):
+            util.unlink(repo.localvfs.join(f))
 
 
 afterresolvedstates = [("graftstate", _("hg graft --continue"))]
@@ -4325,7 +4325,7 @@ def howtocontinue(repo):
     """
     contmsg = _("continue: %s")
     for f, msg in afterresolvedstates:
-        if repo.vfs.exists(f):
+        if repo.localvfs.exists(f):
             return contmsg % msg, True
     if repo[None].dirty(missing=True, merge=False, branch=False):
         return contmsg % _("hg commit"), False

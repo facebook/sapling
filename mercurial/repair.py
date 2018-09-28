@@ -36,7 +36,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
     """create a bundle with the specified revisions as a backup"""
 
     backupdir = "strip-backup"
-    vfs = repo.vfs
+    vfs = repo.localvfs
     if not vfs.isdir(backupdir):
         vfs.mkdir(backupdir)
 
@@ -180,7 +180,7 @@ def strip(ui, repo, nodelist, backup=True, topic="backup"):
 
     # create a changegroup for all the branches we need to keep
     backupfile = None
-    vfs = repo.vfs
+    vfs = repo.localvfs
     node = nodelist[-1]
     if backup:
         backupfile = _bundle(repo, stripbases, cl.heads(), node, topic)

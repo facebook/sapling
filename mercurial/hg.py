@@ -249,7 +249,7 @@ def share(
 
     requirements = ""
     try:
-        requirements = srcrepo.vfs.read("requires")
+        requirements = srcrepo.localvfs.read("requires")
     except IOError as inst:
         if inst.errno != errno.ENOENT:
             raise
@@ -290,7 +290,7 @@ def unshare(ui, repo):
 
         destlock = copystore(ui, repo, repo.path)
 
-        sharefile = repo.vfs.join("sharedpath")
+        sharefile = repo.localvfs.join("sharedpath")
         util.rename(sharefile, sharefile + ".old")
 
         repo.requirements.discard("shared")
@@ -325,14 +325,14 @@ def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
     """
     default = defaultpath or sourcerepo.ui.config("paths", "default")
     if default:
-        fp = destrepo.vfs("hgrc", "w", text=True)
+        fp = destrepo.localvfs("hgrc", "w", text=True)
         fp.write("[paths]\n")
         fp.write("default = %s\n" % default)
         fp.close()
 
     with destrepo.wlock():
         if bookmarks:
-            fp = destrepo.vfs("shared", "w")
+            fp = destrepo.localvfs("shared", "w")
             fp.write(sharedbookmarks + "\n")
             fp.close()
 
@@ -488,7 +488,7 @@ def clonewithshare(
 # so just copy it
 def _copycache(srcrepo, dstcachedir, fname):
     """copy a cache from srcrepo to destcachedir (if it exists)"""
-    srcbranchcache = srcrepo.vfs.join("cache/%s" % fname)
+    srcbranchcache = srcrepo.localvfs.join("cache/%s" % fname)
     dstbranchcache = os.path.join(dstcachedir, fname)
     if os.path.exists(srcbranchcache):
         if not os.path.exists(dstcachedir):
@@ -687,7 +687,7 @@ def clone(
 
             destlock = copystore(ui, srcrepo, destpath)
             # copy bookmarks over
-            srcbookmarks = srcrepo.vfs.join("bookmarks")
+            srcbookmarks = srcrepo.localvfs.join("bookmarks")
             dstbookmarks = os.path.join(destpath, "bookmarks")
             if os.path.exists(srcbookmarks):
                 util.copyfile(srcbookmarks, dstbookmarks)
@@ -745,7 +745,7 @@ def clone(
         destrepo = destpeer.local()
         if destrepo:
             template = uimod.samplehgrcs["cloned"]
-            fp = destrepo.vfs("hgrc", "wb")
+            fp = destrepo.localvfs("hgrc", "wb")
             u = util.url(abspath)
             u.passwd = None
             defaulturl = bytes(u)
@@ -847,7 +847,7 @@ _update = update
 def clean(repo, node, show_stats=True, quietempty=False):
     """forcibly switch the working directory to node, clobbering changes"""
     stats = updaterepo(repo, node, True)
-    repo.vfs.unlinkpath("graftstate", ignoremissing=True)
+    repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
     if show_stats:
         _showstats(repo, stats, quietempty)
     return stats[3] > 0

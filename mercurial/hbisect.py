@@ -139,7 +139,7 @@ def extendrange(repo, state, nodes, good):
 
 def load_state(repo):
     state = {"current": [], "good": [], "bad": [], "skip": []}
-    for l in repo.vfs.tryreadlines("bisect.state"):
+    for l in repo.localvfs.tryreadlines("bisect.state"):
         kind, node = l[:-1].split()
         node = repo.lookup(node)
         if kind not in state:
@@ -149,7 +149,7 @@ def load_state(repo):
 
 
 def save_state(repo, state):
-    f = repo.vfs("bisect.state", "w", atomictemp=True)
+    f = repo.localvfs("bisect.state", "w", atomictemp=True)
     with repo.wlock():
         for kind in sorted(state):
             for node in state[kind]:
@@ -159,8 +159,8 @@ def save_state(repo, state):
 
 def resetstate(repo):
     """remove any bisect state from the repository"""
-    if repo.vfs.exists("bisect.state"):
-        repo.vfs.unlink("bisect.state")
+    if repo.localvfs.exists("bisect.state"):
+        repo.localvfs.unlink("bisect.state")
 
 
 def checkstate(state):

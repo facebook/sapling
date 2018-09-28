@@ -104,7 +104,7 @@ def patternsforrev(repo, rev):
     if not enabled:
         return set(), set(), set()
 
-    raw = repo.vfs.tryread("sparse")
+    raw = repo.localvfs.tryread("sparse")
     if not raw:
         return set(), set(), set()
 
@@ -188,11 +188,11 @@ def configsignature(repo, includetemp=True):
         tempsignature = "0"
 
     if signature is None or (includetemp and tempsignature is None):
-        signature = hashlib.sha1(repo.vfs.tryread("sparse")).hexdigest()
+        signature = hashlib.sha1(repo.localvfs.tryread("sparse")).hexdigest()
         cache["signature"] = signature
 
         if includetemp:
-            raw = repo.vfs.tryread("tempsparse")
+            raw = repo.localvfs.tryread("tempsparse")
             tempsignature = hashlib.sha1(raw).hexdigest()
             cache["tempsignature"] = tempsignature
 
@@ -201,7 +201,7 @@ def configsignature(repo, includetemp=True):
 
 def writeconfig(repo, includes, excludes, profiles):
     """Write the sparse config file given a sparse configuration."""
-    with repo.vfs("sparse", "wb") as fh:
+    with repo.localvfs("sparse", "wb") as fh:
         for p in sorted(profiles):
             fh.write("%%include %s\n" % p)
 
@@ -221,7 +221,7 @@ def writeconfig(repo, includes, excludes, profiles):
 
 
 def readtemporaryincludes(repo):
-    raw = repo.vfs.tryread("tempsparse")
+    raw = repo.localvfs.tryread("tempsparse")
     if not raw:
         return set()
 
@@ -229,7 +229,7 @@ def readtemporaryincludes(repo):
 
 
 def writetemporaryincludes(repo, includes):
-    repo.vfs.write("tempsparse", "\n".join(sorted(includes)))
+    repo.localvfs.write("tempsparse", "\n".join(sorted(includes)))
     repo._sparsesignaturecache.clear()
 
 
@@ -241,7 +241,7 @@ def addtemporaryincludes(repo, additional):
 
 
 def prunetemporaryincludes(repo):
-    if not enabled or not repo.vfs.exists("tempsparse"):
+    if not enabled or not repo.localvfs.exists("tempsparse"):
         return
 
     s = repo.status()
@@ -268,7 +268,7 @@ def prunetemporaryincludes(repo):
     for file in dropped:
         dirstate.drop(file)
 
-    repo.vfs.unlink("tempsparse")
+    repo.localvfs.unlink("tempsparse")
     repo._sparsesignaturecache.clear()
     msg = _("cleaned up %d temporarily added file(s) from the " "sparse checkout\n")
     repo.ui.status(msg % len(tempincludes))
@@ -564,7 +564,7 @@ def _updateconfigandrefreshwdir(
     repo, includes, excludes, profiles, force=False, removing=False
 ):
     """Update the sparse config and working directory state."""
-    raw = repo.vfs.tryread("sparse")
+    raw = repo.localvfs.tryread("sparse")
     oldincludes, oldexcludes, oldprofiles = parseconfig(repo.ui, raw)
 
     oldstatus = repo.status()
@@ -581,10 +581,10 @@ def _updateconfigandrefreshwdir(
 
     if "exp-sparse" in oldrequires and removing:
         repo.requirements.discard("exp-sparse")
-        scmutil.writerequires(repo.vfs, repo.requirements)
+        scmutil.writerequires(repo.localvfs, repo.requirements)
     elif "exp-sparse" not in oldrequires:
         repo.requirements.add("exp-sparse")
-        scmutil.writerequires(repo.vfs, repo.requirements)
+        scmutil.writerequires(repo.localvfs, repo.requirements)
 
     try:
         writeconfig(repo, includes, excludes, profiles)
@@ -593,7 +593,7 @@ def _updateconfigandrefreshwdir(
         if repo.requirements != oldrequires:
             repo.requirements.clear()
             repo.requirements |= oldrequires
-            scmutil.writerequires(repo.vfs, repo.requirements)
+            scmutil.writerequires(repo.localvfs, repo.requirements)
         writeconfig(repo, oldincludes, oldexcludes, oldprofiles)
         raise
 
@@ -605,7 +605,7 @@ def clearrules(repo, force=False):
     directory is refreshed, as needed.
     """
     with repo.wlock():
-        raw = repo.vfs.tryread("sparse")
+        raw = repo.localvfs.tryread("sparse")
         includes, excludes, profiles = parseconfig(repo.ui, raw)
 
         if not includes and not excludes:
@@ -622,7 +622,7 @@ def importfromfiles(repo, opts, paths, force=False):
     """
     with repo.wlock():
         # read current configuration
-        raw = repo.vfs.tryread("sparse")
+        raw = repo.localvfs.tryread("sparse")
         includes, excludes, profiles = parseconfig(repo.ui, raw)
         aincludes, aexcludes, aprofiles = activeconfig(repo)
 
@@ -679,7 +679,7 @@ def updateconfig(
     The new config is written out and a working directory refresh is performed.
     """
     with repo.wlock():
-        raw = repo.vfs.tryread("sparse")
+        raw = repo.localvfs.tryread("sparse")
         oldinclude, oldexclude, oldprofiles = parseconfig(repo.ui, raw)
 
         if reset:
