@@ -2396,7 +2396,7 @@ def sqlstrip(ui, rev, *args, **opts):
 
             ui.status("deleting revision data\n")
             cursor.execute(
-                """DELETE FROM revisions WHERE repo = %s and linkrev > %s""",
+                """DELETE FROM revisions WHERE repo = %s and linkrev >= %s""",
                 (reponame, rev),
             )
 

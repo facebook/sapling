@@ -166,3 +166,21 @@ Attempt to strip a non-integer
   *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   abort: specified rev must be an integer: 'master'
   [255]
+
+Strip everything. No revlog revisions should remain in the database:
+
+  $ hg sqlstrip --i-know-what-i-am-doing 0
+  *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
+  stripping locally
+  saved backup bundle to $TESTTMP/master2/.hg/strip-backup/bc3a71defa4a-eccbc5b4-sqlstrip.hg
+  stripping from the database
+  deleting old references
+  adding new head references
+  adding new tip reference
+  adding new bookmark references
+  deleting revision data
+  $ mysql -h "$DBHOST" -P "$DBPORT" -u "$DBUSER" "$DBPASSOPT" "$DBNAME" <<"EOS"
+  > SELECT COUNT(1) FROM revisions WHERE repo='masterrepo'
+  > EOS
+  COUNT(1)
+  0
