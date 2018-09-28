@@ -366,7 +366,7 @@ class _testui(ui.ui):
         from hgext.hgsubversion import util
 
         if util.smartset is not None:
-            config = args[0] if args else kwargs["config"]
+            config = args[0] if args else kwargs.get("config")
             raise Exception("flunked develwarn: %r (%r)" % (msg, config))
         return ui.ui.develwarn(self, msg, stacklevel=stacklevel, *args, **kwargs)
 
