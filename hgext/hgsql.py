@@ -422,6 +422,10 @@ def _localphasemove(orig, pushop, *args, **kwargs):
 
 class sqlcontext(object):
     def __init__(self, repo, dbwritable=False, enforcepullfromdb=False):
+        if dbwritable and not enforcepullfromdb:
+            raise error.ProgrammingError(
+                "enforcepullfromdb must be True if dbwritable is True"
+            )
         self.repo = repo
         self.dbwritable = dbwritable
         self.enforcepullfromdb = enforcepullfromdb
