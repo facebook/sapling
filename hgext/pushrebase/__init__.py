@@ -1289,7 +1289,7 @@ def syncifneeded(repo):
 
     if hgsql.issqlrepo(repo):
         oldrevcount = len(repo)
-        hgsql.executewithsql(repo, lambda: None, waitforlock=True)
+        hgsql.executewithsql(repo, lambda: None, enforcepullfromdb=True)
         newrevcount = len(repo)
         if oldrevcount != newrevcount:
             msg = "pushrebase: tip moved %d -> %d\n" % (oldrevcount, newrevcount)

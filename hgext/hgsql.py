@@ -268,8 +268,8 @@ def reposetup(ui, repo):
             def noop():
                 pass
 
-            waitforlock = initialsync == INITIAL_SYNC_FORCE
-            executewithsql(repo, noop, waitforlock=waitforlock)
+            enforcepullfromdb = initialsync == INITIAL_SYNC_FORCE
+            executewithsql(repo, noop, enforcepullfromdb=enforcepullfromdb)
 
 
 # Incoming commits are only allowed via push and pull.
@@ -289,7 +289,7 @@ def unbundle(orig, repo, cg, *args, **kwargs):
         context = None
         repo._checklockorder = True
         try:
-            context = sqlcontext(repo, takelock=True, waitforlock=True)
+            context = sqlcontext(repo, dbwritable=True, enforcepullfromdb=True)
 
             # Temporarily replace bundleoperation so we can hook into it's
             # locking mechanism.
@@ -421,10 +421,10 @@ def _localphasemove(orig, pushop, *args, **kwargs):
 
 
 class sqlcontext(object):
-    def __init__(self, repo, takelock=False, waitforlock=False):
+    def __init__(self, repo, dbwritable=False, enforcepullfromdb=False):
         self.repo = repo
-        self.takelock = takelock
-        self.waitforlock = waitforlock
+        self.dbwritable = dbwritable
+        self.enforcepullfromdb = enforcepullfromdb
         self._connected = False
         self._locked = False
         self._used = False
@@ -449,7 +449,7 @@ class sqlcontext(object):
             repo.sqlconnect()
             self._connected = True
 
-        if self.takelock and not writelock in repo.heldlocks:
+        if self.dbwritable and not writelock in repo.heldlocks:
             startwait = time.time()
             try:
                 repo.sqlwritelock(trysync=True)
@@ -489,7 +489,7 @@ class sqlcontext(object):
         self._startlocktime = time.time()
 
         if self._connected:
-            repo.syncdb(waitforlock=self.waitforlock)
+            repo.pullfromdb(enforcepullfromdb=self.enforcepullfromdb)
 
     def __exit__(self, type, value, traceback):
         try:
@@ -587,13 +587,13 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     # bookmarks during a pull), so track whether this call performed
     # the connect.
 
-    waitforlock = sqllock
-    if "waitforlock" in kwargs:
-        if not waitforlock:
-            waitforlock = kwargs["waitforlock"]
-        del kwargs["waitforlock"]
+    enforcepullfromdb = sqllock
+    if "enforcepullfromdb" in kwargs:
+        if not enforcepullfromdb:
+            enforcepullfromdb = kwargs["enforcepullfromdb"]
+        del kwargs["enforcepullfromdb"]
 
-    with sqlcontext(repo, takelock=sqllock, waitforlock=waitforlock):
+    with sqlcontext(repo, dbwritable=sqllock, enforcepullfromdb=enforcepullfromdb):
         return action(*args, **kwargs)
 
 
@@ -702,7 +702,7 @@ def wraprepo(repo):
                         )
                     # Sync outside the SQL lock hoping that the repo is closer
                     # to the SQL repo when we got the lock.
-                    self.syncdb(waitforlock=True)
+                    self.pullfromdb(enforcepullfromdb=True)
                     if elapsed < minwaittime:
                         # Pretend we wait and timed out, without actually
                         # getting the SQL lock. This is useful for testing.
@@ -911,18 +911,18 @@ def wraprepo(repo):
             except error.LockHeld:
                 return None
 
-        def syncdb(self, waitforlock=False):
+        def pullfromdb(self, enforcepullfromdb=False):
             """Attempts to sync the local repository with the latest bits in the
             database.
 
-            If `waitforlock` is False, the sync is on a best effort basis,
+            If `enforcepullfromdb` is False, the sync is on a best effort basis,
             and the repo may not actually be up-to-date afterwards. If
-            `waitforlock` is True, we guarantee that the repo is up-to-date when
+            `enforcepullfromdb` is True, we guarantee that the repo is up-to-date when
             this function returns, otherwise an exception will be thrown."""
             try:
                 self._issyncing = True
-                if waitforlock:
-                    return self._syncdb(waitforlock)
+                if enforcepullfromdb:
+                    return self._pullfromdb(enforcepullfromdb)
                 else:
                     # For operations that do not require the absolute latest bits,
                     # only let one process update the repo at a time.
@@ -945,13 +945,13 @@ def wraprepo(repo):
                         return
 
                     try:
-                        return self._syncdb(waitforlock)
+                        return self._pullfromdb(enforcepullfromdb)
                     finally:
                         limiter.release()
             finally:
                 self._issyncing = False
 
-        def _syncdb(self, waitforlock):
+        def _pullfromdb(self, enforcepullfromdb):
             # MySQL could take a snapshot of the database view.
             # Start a new transaction to get new changes.
             self.sqlconn.rollback()
@@ -972,10 +972,10 @@ def wraprepo(repo):
             wlock = util.nullcontextmanager()
             lock = util.nullcontextmanager()
             try:
-                wlock = self.wlock(wait=waitforlock)
-                lock = self.lock(wait=waitforlock)
+                wlock = self.wlock(wait=enforcepullfromdb)
+                lock = self.lock(wait=enforcepullfromdb)
             except error.LockHeld:
-                if waitforlock:
+                if enforcepullfromdb:
                     raise
                 # Oh well. Don't block this non-critical read-only operation.
                 self._hgsqlnote("skipping sync for current operation")
@@ -1003,7 +1003,7 @@ def wraprepo(repo):
                     "getting %s commits from database"
                     % (fetchend - len(self.changelog) + 1)
                 )
-                transaction = self.transaction("syncdb")
+                transaction = self.transaction("pullfromdb")
 
                 self.hook("presyncdb", throw=True)
 
@@ -1056,7 +1056,7 @@ def wraprepo(repo):
                     raise CorruptionException("tip doesn't match after sync")
 
                 self.disablesync = True
-                transaction = self.transaction("syncdb_bookmarks")
+                transaction = self.transaction("pullfromdb_bookmarks")
                 try:
                     bm = self._bookmarks
 
@@ -1993,7 +1993,7 @@ def sqlrecover(ui, *args, **opts):
     def iscorrupt():
         repo.sqlconnect()
         try:
-            repo.syncdb()
+            repo.pullfromdb()
         except:
             return True
         finally:

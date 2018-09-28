@@ -35,7 +35,7 @@
   >     hgsql = extensions.find('hgsql')
   >     extensions.wrapfunction(hgsql.sqlcontext, '__enter__', fakeenter)
   > def fakeenter(orig, self):
-  >     if self.takelock:
+  >     if self.dbwritable:
   >         extensions.wrapfunction(self.repo.__class__, '_sqllock', lockthrow)
   >     return orig(self)
   > def lockthrow(*args, **kwargs):
