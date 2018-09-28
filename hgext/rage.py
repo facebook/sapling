@@ -33,7 +33,6 @@ from mercurial import (
 )
 from mercurial.i18n import _
 
-from . import shareutil
 from .remotefilelog import constants, shallowutil
 
 
@@ -185,8 +184,8 @@ def scmdaemonlog(ui, repo):
 
 def readinfinitepushbackupstate(repo):
     filename = "infinitepushbackupstate"
-    if repo.vfs.exists(filename):
-        with repo.vfs.open(filename, "r") as f:
+    if repo.sharedvfs.exists(filename):
+        with repo.sharedvfs.open(filename, "r") as f:
             return json.dumps(json.load(f), indent=4) + "\n"
     else:
         return "no any infinitepushbackupstate file in the repo\n"
@@ -211,7 +210,7 @@ def readfsmonitorstate(repo):
     Based on file format version 4. See hgext/fsmonitor/state.py for real
     implementation.
     """
-    f = repo.vfs("fsmonitor.state", "rb")
+    f = repo.localvfs("fsmonitor.state", "rb")
     versionbytes = f.read(4)
     version = struct.unpack(">I", versionbytes)[0]
     data = f.read()
@@ -238,8 +237,6 @@ files (first 20 of %d):
 
 
 def _makerage(ui, repo, **opts):
-    srcrepo = shareutil.getsrcrepo(repo)
-
     # Make graphlog shorter.
     configoverrides = {("experimental", "graphshorten"): "1"}
 
@@ -261,12 +258,6 @@ def _makerage(ui, repo, **opts):
         finally:
             return ui.popbuffer()
 
-    def hgsrcrepofile(filename):
-        if srcrepo.vfs.exists(filename):
-            return srcrepo.vfs(filename).read()
-        else:
-            return "File not found: %s" % srcrepo.vfs.join(filename)
-
     basic = [
         ("date", lambda: time.ctime()),
         ("unixname", lambda: encoding.environ.get("LOGNAME")),
@@ -275,7 +266,7 @@ def _makerage(ui, repo, **opts):
         ("fstype", lambda: util.getfstype(repo.root)),
         ("active bookmark", lambda: bookmarks._readactive(repo, repo._bookmarks)),
         ("hg version", lambda: __import__("mercurial.__version__").__version__.version),
-        ("obsstore size", lambda: str(srcrepo.vfs.stat("store/obsstore").st_size)),
+        ("obsstore size", lambda: str(repo.svfs.stat("obsstore").st_size)),
     ]
 
     oldcolormode = ui._colormode
@@ -322,8 +313,8 @@ def _makerage(ui, repo, **opts):
             'last 100 lines of "hg debugobsolete"',
             lambda: "\n".join(hgcmd("debugobsolete").splitlines()[-100:]),
         ),
-        ("infinitepush backup state", lambda: readinfinitepushbackupstate(srcrepo)),
-        ("commit cloud workspace sync state", lambda: readcommitcloudstate(srcrepo)),
+        ("infinitepush backup state", lambda: readinfinitepushbackupstate(repo)),
+        ("commit cloud workspace sync state", lambda: readcommitcloudstate(repo)),
         (
             "infinitepush / commitcloud backup logs",
             lambda: infinitepushbackuplogs(ui, repo),
