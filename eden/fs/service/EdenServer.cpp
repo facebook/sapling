@@ -82,7 +82,7 @@ DEFINE_bool(thrift_enable_codel, false, "Enable Codel queuing timeout");
 DEFINE_int32(thrift_min_compress_bytes, 0, "Minimum response compression size");
 DEFINE_int64(
     unload_interval_minutes,
-    10,
+    0,
     "Frequency in minutes of background inode unloading");
 DEFINE_int64(
     start_delay_minutes,
