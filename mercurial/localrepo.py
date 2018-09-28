@@ -97,13 +97,21 @@ class _basefilecache(scmutil.filecache):
 class repofilecache(_basefilecache):
     """filecache for files in .hg but outside of .hg/store"""
 
-    def __init__(self, *paths):
+    def __init__(self, localpaths=(), sharedpaths=()):
+        paths = [(path, self.localjoin) for path in localpaths] + [
+            (path, self.sharedjoin) for path in sharedpaths
+        ]
         super(repofilecache, self).__init__(*paths)
-        for path in paths:
+        for path in localpaths:
             _cachedfiles.add((path, "local"))
+        for path in sharedpaths:
+            _cachedfiles.add((path, "shared"))
 
-    def join(self, obj, fname):
-        return obj.vfs.join(fname)
+    def localjoin(self, obj, fname):
+        return obj.localvfs.join(fname)
+
+    def sharedjoin(self, obj, fname):
+        return obj.sharedvfs.join(fname)
 
 
 class storecache(_basefilecache):
@@ -795,7 +803,7 @@ class localrepository(object):
         cls = repoview.newtype(self.unfiltered().__class__)
         return cls(self, name)
 
-    @repofilecache("shared")
+    @repofilecache(localpaths=["shared"])
     def sharedfeatures(self):
         """Returns the set of enabled 'shared' features for this repo"""
         try:
@@ -825,7 +833,7 @@ class localrepository(object):
         self._primaryrepo = primaryrepo
         return primaryrepo
 
-    @repofilecache("bookmarks", "bookmarks.current")
+    @repofilecache(localpaths=["bookmarks", "bookmarks.current"])
     def _bookmarks(self):
         return bookmarks.bmstore(self)
 
@@ -866,7 +874,7 @@ class localrepository(object):
     def manifestlog(self):
         return manifest.manifestlog(self.svfs, self)
 
-    @repofilecache("dirstate")
+    @repofilecache(localpaths=["dirstate"])
     def dirstate(self):
         sparsematchfn = lambda: sparse.matcher(self)
         istreestate = "treestate" in self.requirements
