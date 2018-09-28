@@ -1642,31 +1642,62 @@ Test interrupted shelve - this should not lose work
   $ echo 1 > file2
   $ hg commit -Aqm commit1
   $ echo 2 > file2
-  $ cat >> $TESTTMP/abortupdate.py <<EOF
-  > from mercurial import extensions, hg
-  > def update(orig, *args, **kwargs):
+  $ cat >> $TESTTMP/abortcreatemarkers.py <<EOF
+  > from mercurial import extensions, obsolete
+  > def createmarkers(orig, *args, **kwargs):
   >     orig(*args, **kwargs)
   >     raise KeyboardInterrupt
   > def extsetup(ui):
-  >     extensions.wrapfunction(hg, 'update', update)
+  >     extensions.wrapfunction(obsolete, "createmarkers", createmarkers)
   > EOF
-  $ hg shelve --config extensions.abortupdate=$TESTTMP/abortupdate.py
-  shelved as default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat >> $TESTTMP/abortupdate.py <<EOF
+  > from mercurial import extensions, hg
+  > def update(orig, repo, *args, **kwargs):
+  >     if repo.ui.configbool("abortupdate", "after"):
+  >         orig(repo, *args, **kwargs)
+  >     raise KeyboardInterrupt
+  > def extsetup(ui):
+  >     extensions.wrapfunction(hg, "update", update)
+  > EOF
+  $ hg shelve --config extensions.abortcreatemarkers=$TESTTMP/abortcreatemarkers.py
   transaction abort!
   rollback completed
   interrupted!
   [255]
   $ cat file2
-  1
-
-BUG: Oh no!  My 2 is lost!
-
+  2
+  $ tglog
+  @  0: 6408d34d8180 'commit1'
+  
+  $ hg shelve --config extensions.abortupdate=$TESTTMP/abortupdate.py
+  shelved as default
+  interrupted!
+  [255]
+  $ cat file2
+  2
+  $ tglog
+  @  0: 6408d34d8180 'commit1'
+  
+  $ hg update --clean --quiet .
   $ hg shelve --list
   default * shelve changes to: commit1 (glob)
   $ hg unshelve
   unshelving change 'default'
-  abort: shelved node f70d92a087e8b7614a4b15432f38913419e23c29 not found in repo
+  $ cat file2
+  2
+  $ hg shelve --config extensions.abortupdate=$TESTTMP/abortupdate.py --config abortupdate.after=true
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  interrupted!
   [255]
-
-BUG: And I can't get it back!
+  $ cat file2
+  1
+  $ tglog
+  @  0: 6408d34d8180 'commit1'
+  
+  $ hg shelve --list
+  default * shelve changes to: commit1 (glob)
+  $ hg unshelve
+  unshelving change 'default'
+  $ cat file2
+  2

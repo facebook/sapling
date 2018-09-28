@@ -456,7 +456,7 @@ def _nothingtoshelvemessaging(ui, repo, pats, opts):
         ui.status(_("nothing changed\n"))
 
 
-def _shelvecreatedcommit(ui, repo, node, name, tr):
+def _shelvecreatedcommit(ui, repo, node, name):
     shelvedfile(repo, name, "oshelve").writeobsshelveinfo({"node": nodemod.hex(node)})
     cmdutil.export(
         repo.unfiltered(),
@@ -471,14 +471,6 @@ def _includeunknownfiles(repo, pats, opts, extra):
     if s.unknown:
         extra["shelve_unknown"] = "\0".join(s.unknown)
         repo[None].add(s.unknown)
-
-
-def _finishshelve(ui, repo, tr, node, activebookmark):
-    if activebookmark:
-        bookmarks.activate(repo, activebookmark)
-    obsolete.createmarkers(repo, [(repo.unfiltered()[node], ())])
-    tr.close()
-    tr.release()
 
 
 def _docreatecmd(ui, repo, pats, opts):
@@ -497,58 +489,72 @@ def _docreatecmd(ui, repo, pats, opts):
     if not opts.get("message"):
         opts["message"] = desc
 
-    lock = tr = activebookmark = None
+    activebookmark = None
     try:
-        lock = repo.lock()
+        with repo.lock(), repo.transaction("commit", report=None):
 
-        # depending on whether shelve is traditional or
-        # obsolescense-based, we either abort or commit this
-        # transaction in the end. If we abort it, we don't
-        # want to print anything to stderr
-        report = None
-        tr = repo.transaction("commit", report=report)
-
-        interactive = opts.get("interactive", False)
-        includeunknown = opts.get("unknown", False) and not opts.get("addremove", False)
-
-        name = getshelvename(repo, parent, opts)
-        activebookmark = _backupactivebookmark(repo)
-        extra = {}
-        if includeunknown:
-            _includeunknownfiles(repo, pats, opts, extra)
-
-        if _iswctxonnewbranch(repo) and not _isbareshelve(pats, opts):
-            # In non-bare shelve we don't store newly created branch
-            # at bundled commit
-            repo.dirstate.setbranch(repo["."].branch())
-
-        commitfunc = getcommitfunc(extra, interactive, editor=True)
-        if not interactive:
-            node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
-        else:
-            node = cmdutil.dorecord(
-                ui, repo, commitfunc, None, False, cmdutil.recordfilter, *pats, **opts
+            interactive = opts.get("interactive", False)
+            includeunknown = opts.get("unknown", False) and not opts.get(
+                "addremove", False
             )
-        if not node:
-            _nothingtoshelvemessaging(ui, repo, pats, opts)
-            return 1
 
-        _shelvecreatedcommit(ui, repo, node, name, tr)
+            name = getshelvename(repo, parent, opts)
+            activebookmark = _backupactivebookmark(repo)
+            extra = {}
+            if includeunknown:
+                _includeunknownfiles(repo, pats, opts, extra)
 
-        if ui.formatted():
-            desc = util.ellipsis(desc, ui.termwidth())
-        ui.status(_("shelved as %s\n") % name)
-        # current wc parent may be already obsolete because
-        # it might have been created previously and shelve just
-        # reuses it
+            if _iswctxonnewbranch(repo) and not _isbareshelve(pats, opts):
+                # In non-bare shelve we don't store newly created branch
+                # at bundled commit
+                repo.dirstate.setbranch(repo["."].branch())
+
+            commitfunc = getcommitfunc(extra, interactive, editor=True)
+            if not interactive:
+                node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
+            else:
+                node = cmdutil.dorecord(
+                    ui,
+                    repo,
+                    commitfunc,
+                    None,
+                    False,
+                    cmdutil.recordfilter,
+                    *pats,
+                    **opts
+                )
+            if not node:
+                _nothingtoshelvemessaging(ui, repo, pats, opts)
+                return 1
+
+            obsolete.createmarkers(repo, [(repo.unfiltered()[node], ())])
+    except (KeyboardInterrupt, Exception):
+        if activebookmark:
+            bookmarks.activate(repo, activebookmark)
+        raise
+
+    _shelvecreatedcommit(ui, repo, node, name)
+
+    if ui.formatted():
+        desc = util.ellipsis(desc, ui.termwidth())
+    ui.status(_("shelved as %s\n") % name)
+
+    # current wc parent may be already obsolete because
+    # it might have been created previously and shelve just
+    # reuses it
+    try:
         hg.update(repo.unfiltered(), parent.node())
+    except (KeyboardInterrupt, Exception):
+        # failed to update to the original revision, which has left us on the
+        # (hidden) shelve commit.  Move directly to the original commit by
+        # updating the dirstate parents.
+        repo.setparents(parent.node())
+        raise
+    finally:
         if origbranch != repo["."].branch() and not _isbareshelve(pats, opts):
             repo.dirstate.setbranch(origbranch)
-
-        _finishshelve(ui, repo, tr, node, activebookmark)
-    finally:
-        _restoreactivebookmark(repo, activebookmark)
-        lockmod.release(tr, lock)
+        if activebookmark:
+            bookmarks.activate(repo, activebookmark)
 
 
 def _isbareshelve(pats, opts):
