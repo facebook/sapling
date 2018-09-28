@@ -110,7 +110,7 @@ amendopts = [
     ("", "rebase", None, _("rebases children after the amend")),
     ("", "fixup", None, _("rebase children from a previous amend")),
     ("", "to", "", _("amend to a specific commit in the current stack")),
-]
+] + cmdutil.templateopts
 
 # Never restack commits on amend.
 RESTACK_NEVER = "never"
@@ -247,6 +247,12 @@ def uisetup(ui):
     extensions.afterloaded("rebase", rebaseloaded)
 
 
+def showtemplate(ui, repo, rev, **opts):
+    if opts.get("template"):
+        displayer = cmdutil.show_changeset(ui, repo, opts)
+        displayer.show(rev)
+
+
 def commit(orig, ui, repo, *pats, **opts):
     if opts.get("amend"):
         # commit --amend default behavior is to prompt for edit
@@ -257,7 +263,10 @@ def commit(orig, ui, repo, *pats, **opts):
         if badflags:
             raise error.Abort(_("--%s must be called with --amend") % badflags[0])
 
-        return orig(ui, repo, *pats, **opts)
+        rc = orig(ui, repo, *pats, **opts)
+        current = repo["."]
+        showtemplate(ui, repo, current, **opts)
+        return rc
 
 
 def amend(ui, repo, *pats, **opts):
@@ -294,6 +303,7 @@ def amend(ui, repo, *pats, **opts):
         "user",
         "no-move-detection",
         "stack",
+        "template",
     ]
 
     if to and any(opts.get(flag, None) for flag in badtoflags):
@@ -426,6 +436,8 @@ def amend(ui, repo, *pats, **opts):
                 "restacking would create conflicts (%s in %s), so you must run it manually\n(run `hg restack` manually to restack this commit's children)"
             )
             fixupamend(ui, repo, noconflict=noconflict, noconflictmsg=noconflictmsg)
+
+        showtemplate(ui, repo, repo[node], **opts)
     finally:
         lockmod.release(wlock, lock, tr)
 
