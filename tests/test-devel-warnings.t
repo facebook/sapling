@@ -104,9 +104,10 @@
   $ hg properlocking
   $ hg nowaitlocking
 
-Writing without lock
+Writing without lock (also uses bare repo.vfs)
 
   $ hg no-wlock-write
+  devel-warn: use of bare vfs instead of localvfs or sharedvfs at: $TESTTMP/buggylocking.py:* (nowlockwrite) (glob)
   devel-warn: write with no wlock: "branch" at: $TESTTMP/buggylocking.py:* (nowlockwrite) (glob)
 
   $ hg no-lock-write

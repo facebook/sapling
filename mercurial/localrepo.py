@@ -400,8 +400,6 @@ class localrepository(object):
         self.filtername = None
         # wvfs: rooted at the repository root, used to access the working copy
         self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True, cacheaudited=False)
-        # vfs: rooted at .hg, used to access repo files outside of .hg/store
-        self.vfs = None
         # localvfs: rooted at .hg, used to access repo files outside of
         # the store that are local to this working copy.
         self.localvfs = None
@@ -517,9 +515,6 @@ class localrepository(object):
                 raise
             self.sharedvfs = self.localvfs
 
-        # self.vfs is an alias for the local vfs for now.
-        self.vfs = self.localvfs
-
         if "exp-sparse" in self.requirements and not sparse.enabled:
             raise error.RepoError(
                 _(
@@ -596,6 +591,13 @@ class localrepository(object):
         self._sparsesignaturecache = {}
         # Signature to cached matcher instance.
         self._sparsematchercache = {}
+
+    @property
+    def vfs(self):
+        self.ui.develwarn(
+            "use of bare vfs instead of localvfs or sharedvfs", stacklevel=1
+        )
+        return self.localvfs
 
     def _getvfsward(self, origfunc):
         """build a ward for self.localvfs and self.sharedvfs"""

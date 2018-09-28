@@ -133,7 +133,7 @@ class statichttprepository(localrepo.localrepository):
         self.path, authinfo = u.authinfo()
 
         vfsclass = build_opener(ui, authinfo)
-        self.sharedvfs = self.localvfs = self.vfs = vfsclass(self.path)
+        self.sharedvfs = self.localvfs = vfsclass(self.path)
         self.cachevfs = vfsclass(self.localvfs.join("cache"))
         self._phasedefaults = []
 
