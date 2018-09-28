@@ -40,31 +40,11 @@ def _getbkfile(repo):
     """
 
     if repo._hassharedbookmarks:
-        srcrepo = repo._sharedprimaryrepo
-        if srcrepo is not None:
-            # just orig(srcrepo) doesn't work as expected, because
-            # HG_PENDING refers repo.root.
-            try:
-                fp, pending = txnutil.trypending(repo.root, repo.vfs, "bookmarks")
-                if pending:
-                    # only in this case, bookmark information in repo
-                    # is up-to-date.
-                    return fp
-                fp.close()
-            except IOError as inst:
-                if inst.errno != errno.ENOENT:
-                    raise
-
-            # otherwise, we should read bookmarks from srcrepo,
-            # because .hg/bookmarks in srcrepo might be already
-            # changed via another sharing repo
-            repo = srcrepo
-
-            # TODO: Pending changes in repo are still invisible in
-            # srcrepo, because bookmarks.pending is written only into repo.
-            # See also https://www.mercurial-scm.org/wiki/SharedRepository
-
-    fp, pending = txnutil.trypending(repo.root, repo.vfs, "bookmarks")
+        fp, pending = txnutil.trysharedpending(
+            repo.root, repo.sharedroot, repo.sharedvfs, "bookmarks"
+        )
+    else:
+        fp, pending = txnutil.trypending(repo.root, repo.localvfs, "bookmarks")
     return fp
 
 
@@ -172,29 +152,14 @@ class bmstore(dict):
 
         The transaction is then responsible for updating the file content."""
         tr.addfilegenerator("bookmarks", ("bookmarks",), self._write, location="local")
+        if (
+            self._repo._hassharedbookmarks
+            and self._repo.localvfs is not self._repo.sharedvfs
+        ):
+            tr.addfilegenerator(
+                "shared-bookmarks", ("bookmarks",), self._write, location="shared"
+            )
         tr.hookargs["bookmark_moved"] = "1"
-        if self._repo._hassharedbookmarks:
-            srcrepo = self._repo._sharedprimaryrepo
-            if srcrepo is not None:
-                category = "share-bookmarks"
-                tr.addpostclose(category, lambda tr: self._writeprimaryrepo(srcrepo))
-
-    def _writeprimaryrepo(self, repo):
-        """Write bookmarks to the primary shared repo"""
-        rbm = repo._bookmarks
-        if rbm.active not in self:
-            rbm.active = None
-            rbm._writeactive()
-
-        with repo.wlock():
-            file_ = repo.vfs("bookmarks", "w", atomictemp=True, checkambig=True)
-            try:
-                self._write(file_)
-            except:  # re-raises
-                file_.discard()
-                raise
-            finally:
-                file_.close()
 
     def _writeactive(self):
         if self._aclean:

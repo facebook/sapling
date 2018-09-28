@@ -833,7 +833,9 @@ class localrepository(object):
         self._primaryrepo = primaryrepo
         return primaryrepo
 
-    @repofilecache(localpaths=["bookmarks", "bookmarks.current"])
+    @repofilecache(
+        sharedpaths=["bookmarks"], localpaths=["bookmarks", "bookmarks.current"]
+    )
     def _bookmarks(self):
         return bookmarks.bmstore(self)
 
