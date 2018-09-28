@@ -717,6 +717,7 @@ def wraprepo(repo):
             self.heldlocks.add(name)
 
         def sqlwritelock(self, trysync=False):
+            self._enforcelocallocktaken()
             self._sqllock(writelock, trysync)
 
         def _hassqllock(self, name, checkserver=True):
@@ -753,25 +754,17 @@ def wraprepo(repo):
             self.sqlpostrelease = []
 
         def sqlwriteunlock(self):
-            repo._sqlunlock(writelock)
+            self._enforcelocallocktaken()
+            self._sqlunlock(writelock)
 
-        def lock(self, *args, **kwargs):
-            wl = self._wlockref and self._wlockref()
-            if (
-                not self._issyncing
-                and not (wl is not None and wl.held)
-                and not self.hassqlwritelock(checkserver=False)
-            ):
-                self._recordbadlockorder()
-            return super(sqllocalrepo, self).lock(*args, **kwargs)
-
-        def wlock(self, *args, **kwargs):
-            if not self._issyncing and not self.hassqlwritelock(checkserver=False):
-                self._recordbadlockorder()
-            return super(sqllocalrepo, self).wlock(*args, **kwargs)
-
-        def _recordbadlockorder(self):
-            self.ui.debug("invalid lock order\n")
+        def _enforcelocallocktaken(self):
+            if not getattr(self, "_checklockorder", False):
+                return
+            if self._issyncing:
+                return
+            if self._currentlock(self._lockref):
+                return
+            raise error.ProgrammingError("invalid lock order")
 
         def transaction(self, *args, **kwargs):
             tr = super(sqllocalrepo, self).transaction(*args, **kwargs)
