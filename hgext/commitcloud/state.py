@@ -12,7 +12,6 @@ import json
 from mercurial.i18n import _
 
 from . import commitcloudcommon, commitcloudutil
-from .. import shareutil
 
 
 class SyncState(object):
@@ -40,7 +39,6 @@ class SyncState(object):
 
     def __init__(self, repo, workspace):
         self.filename = self._filename(workspace)
-        repo = shareutil.getsrcrepo(repo)
         self.repo = repo
         if repo.svfs.exists(self.filename):
             with repo.svfs.open(self.filename, "r") as f:

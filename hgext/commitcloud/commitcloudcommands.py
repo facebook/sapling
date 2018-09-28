@@ -36,7 +36,6 @@ from mercurial import (
 from mercurial.i18n import _
 
 from . import commitcloudcommon, commitcloudutil, service, state
-from .. import shareutil
 
 
 cmdtable = {}
@@ -404,8 +403,7 @@ def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
     # check if the background sync is running and provide all the details
     if ui.interactive():
         try:
-            srcrepo = shareutil.getsrcrepo(repo)
-            lock = lockmod.lock(srcrepo.vfs, _backuplockname, 0)
+            lock = lockmod.lock(repo.sharedvfs, _backuplockname, 0)
         except error.LockHeld as e:
             if e.errno == errno.ETIMEDOUT and e.lockinfo.isrunning():
                 etimemsg = ""
@@ -423,9 +421,8 @@ def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
     try:
         # wait at most 120 seconds, because cloud sync can take a while
         timeout = 120
-        srcrepo = shareutil.getsrcrepo(repo)
         with lock or lockmod.lock(
-            srcrepo.vfs,
+            repo.sharedvfs,
             _backuplockname,
             timeout=timeout,
             ui=ui,
@@ -905,9 +902,8 @@ def pushbackupbookmarks(ui, repo, getconnection, localheads, localbookmarks, **o
             )
 
         # Update the infinitepush local state.
-        srcrepo = shareutil.getsrcrepo(repo)
         infinitepushbackup._writelocalbackupstate(
-            srcrepo.vfs, list(localheads), localbookmarks
+            repo.sharedvfs, list(localheads), localbookmarks
         )
 
 
@@ -918,9 +914,8 @@ def recordbackup(ui, repo, newheads):
 
     backupstate = infinitepushbackup._readlocalbackupstate(ui, repo)
     backupheads = set(backupstate.heads) | set(newheads)
-    srcrepo = shareutil.getsrcrepo(repo)
     infinitepushbackup._writelocalbackupstate(
-        srcrepo.vfs, list(backupheads), backupstate.localbookmarks
+        repo.sharedvfs, list(backupheads), backupstate.localbookmarks
     )
 
 
@@ -930,8 +925,7 @@ def autosyncenabled(ui, _repo):
 
 def backuplockcheck(ui, repo):
     try:
-        srcrepo = shareutil.getsrcrepo(repo)
-        lockmod.trylock(ui, srcrepo.vfs, _backuplockname, 0, 0)
+        lockmod.trylock(ui, repo.sharedvfs, _backuplockname, 0, 0)
     except error.LockHeld as e:
         if e.lockinfo.isrunning():
             lockinfo = e.lockinfo

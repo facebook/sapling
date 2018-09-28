@@ -60,7 +60,9 @@ class filebundlestore(object):
         self.repo = repo
         self.storepath = ui.configpath("scratchbranch", "storepath")
         if not self.storepath:
-            self.storepath = self.repo.vfs.join("scratchbranches", "filebundlestore")
+            self.storepath = self.repo.localvfs.join(
+                "scratchbranches", "filebundlestore"
+            )
         if not os.path.exists(self.storepath):
             os.makedirs(self.storepath)
 

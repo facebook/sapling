@@ -78,7 +78,7 @@ class fileindexapi(indexapi):
         return self._read(nodepath)
 
     def getnodebyprefix(self, hashprefix):
-        vfs = self._repo.vfs
+        vfs = self._repo.localvfs
         if not vfs.exists(self._nodemap):
             return None
 
@@ -104,7 +104,7 @@ class fileindexapi(indexapi):
         return sorted(self._listbookmarks(query))
 
     def saveoptionaljsonmetadata(self, node, jsonmetadata):
-        vfs = self._repo.vfs
+        vfs = self._repo.localvfs
         vfs.write(os.path.join(self._metadatamap, node), jsonmetadata)
 
     def _listbookmarks(self, pattern):
@@ -112,7 +112,7 @@ class fileindexapi(indexapi):
             pattern = "re:^" + pattern[:-1] + ".*"
         kind, pat, matcher = util.stringmatcher(pattern)
         prefixlen = len(self._bookmarkmap) + 1
-        for dirpath, _, books in self._repo.vfs.walk(self._bookmarkmap):
+        for dirpath, _, books in self._repo.localvfs.walk(self._bookmarkmap):
             for book in books:
                 bookmark = posixpath.join(dirpath, book)[prefixlen:]
                 if not matcher(bookmark):
@@ -120,7 +120,7 @@ class fileindexapi(indexapi):
                 yield bookmark, self._read(os.path.join(dirpath, book))
 
     def _write(self, path, value):
-        vfs = self._repo.vfs
+        vfs = self._repo.localvfs
         path = _normalizepath(path)
         dirname = vfs.dirname(path)
         if not vfs.exists(dirname):
@@ -129,14 +129,14 @@ class fileindexapi(indexapi):
         vfs.write(path, value)
 
     def _read(self, path):
-        vfs = self._repo.vfs
+        vfs = self._repo.localvfs
         path = _normalizepath(path)
         if not vfs.exists(path):
             return None
         return vfs.read(path)
 
     def _delete(self, path):
-        vfs = self._repo.vfs
+        vfs = self._repo.localvfs
         path = _normalizepath(path)
         if not vfs.exists(path):
             return

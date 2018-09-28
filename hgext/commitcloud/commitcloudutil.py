@@ -24,7 +24,6 @@ from mercurial import (
 from mercurial.i18n import _
 
 from . import commitcloudcommon
-from .. import shareutil
 
 
 SERVICE = "commitcloud"
@@ -486,12 +485,11 @@ def getsyncingobsmarkers(repo):
     The caller must hold the backup lock.
     """
     # Move any new obsmarkers from the pending file to the syncing file
-    srcrepo = shareutil.getsrcrepo(repo)
     with lockmod.lock(repo.svfs, _obsmarkerslockname, timeout=_obsmarkerslocktimeout):
         if repo.svfs.exists(_obsmarkerspending):
             with repo.svfs.open(_obsmarkerspending) as f:
                 _version, markers = obsolete._readmarkers(f.read())
-            with srcrepo.vfs.open(_obsmarkerssyncing, "ab") as f:
+            with repo.sharedvfs.open(_obsmarkerssyncing, "ab") as f:
                 offset = f.tell()
                 # offset == 0: new file - add the version header
                 data = b"".join(
@@ -502,16 +500,15 @@ def getsyncingobsmarkers(repo):
 
     # Load the syncing obsmarkers
     markers = []
-    if srcrepo.vfs.exists(_obsmarkerssyncing):
-        with srcrepo.vfs.open(_obsmarkerssyncing) as f:
+    if repo.sharedvfs.exists(_obsmarkerssyncing):
+        with repo.sharedvfs.open(_obsmarkerssyncing) as f:
             _version, markers = obsolete._readmarkers(f.read())
     return markers
 
 
 def clearsyncingobsmarkers(repo):
     """Clears all syncing obsmarkers.  The caller must hold the backup lock."""
-    srcrepo = shareutil.getsrcrepo(repo)
-    srcrepo.vfs.unlink(_obsmarkerssyncing)
+    repo.sharedvfs.unlink(_obsmarkerssyncing)
 
 
 def getworkspacename(repo):

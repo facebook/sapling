@@ -73,8 +73,6 @@ from mercurial import (
 )
 from mercurial.i18n import _
 
-from . import shareutil
-
 
 osutil = policy.importmod(r"osutil")
 infinitepush = None
@@ -201,8 +199,8 @@ def backupenable(ui, repo, **opts):
         ui.write(_("background backup is already enabled\n"))
         return 0
 
-    localconfig = repo.vfs.join("hgrc")
-    generatedconfig = repo.vfs.join(localoverridesfile)
+    localconfig = repo.localvfs.join("hgrc")
+    generatedconfig = repo.localvfs.join(localoverridesfile)
     checkinsertgeneratedconfig(localconfig, generatedconfig)
     with open(generatedconfig, "w") as file:
         file.write("")
@@ -225,8 +223,8 @@ def backupdisable(ui, repo, **opts):
     if not autobackupenabled(ui):
         ui.write(_("note: background backup was already disabled\n"))
 
-    localconfig = repo.vfs.join("hgrc")
-    generatedconfig = repo.vfs.join(localoverridesfile)
+    localconfig = repo.localvfs.join("hgrc")
+    generatedconfig = repo.localvfs.join(localoverridesfile)
     checkinsertgeneratedconfig(localconfig, generatedconfig)
 
     try:
@@ -258,7 +256,7 @@ def backupdisable(ui, repo, **opts):
         )
     )
     try:
-        with lockmod.trylock(ui, repo.vfs, _backuplockname, 0, 0):
+        with lockmod.trylock(ui, repo.sharedvfs, _backuplockname, 0, 0):
             pass
     except error.LockHeld as e:
         if e.lockinfo.isrunning():
@@ -290,8 +288,7 @@ def backup(ui, repo, dest=None, **opts):
     try:
         # Wait at most 30 seconds, because that's the average backup time
         timeout = 30
-        srcrepo = shareutil.getsrcrepo(repo)
-        with lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
+        with lockmod.lock(repo.sharedvfs, _backuplockname, timeout=timeout):
             _dobackup(ui, repo, dest, **opts)
             return 0
     except error.LockHeld as e:
@@ -360,7 +357,7 @@ def restore(ui, repo, dest=None, **opts):
     # manually write local backup state and flag to not autobackup
     # just after we restored, which would be pointless
     _writelocalbackupstate(
-        repo.vfs, backupstate.heads.values(), backupstate.localbookmarks
+        repo.sharedvfs, backupstate.heads.values(), backupstate.localbookmarks
     )
     repo.ignoreautobackup = True
 
@@ -428,7 +425,7 @@ def backupdelete(ui, repo, dest=None, **opts):
     if not re.match(r"^[-a-zA-Z0-9.]+$", sourcehostname):
         msg = _("hostname contains unexpected characters")
         raise error.Abort(msg)
-    if sourcereporoot == repo.origroot and sourcehostname == namingmgr.hostname:
+    if sourcereporoot == repo.sharedroot and sourcehostname == namingmgr.hostname:
         ui.warn(_("warning: this backup matches the current repo\n"))
 
     other = _getremote(repo, ui, dest, **opts)
@@ -504,8 +501,7 @@ def waitbackup(ui, repo, timeout):
         raise error.Abort("timeout should be integer")
 
     try:
-        repo = shareutil.getsrcrepo(repo)
-        with lockmod.lock(repo.vfs, _backuplockname, timeout=timeout):
+        with lockmod.lock(repo.sharedvfs, _backuplockname, timeout=timeout):
             pass
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
@@ -599,8 +595,7 @@ def backingup(repo, **args):
 
 
 def _islocked(repo):
-    srcrepo = shareutil.getsrcrepo(repo)
-    path = srcrepo.vfs.join(_backuplockname)
+    path = repo.sharedvfs.join(_backuplockname)
     return util.islocked(path)
 
 
@@ -776,13 +771,12 @@ def _dobackup(ui, repo, dest, **opts):
     ui.status(_("starting backup %s\n") % time.strftime("%H:%M:%S %d %b %Y %Z"))
     start = time.time()
     # to handle multiple working copies correctly
-    repo = shareutil.getsrcrepo(repo)
-    currentbkpgenerationvalue = _readbackupgenerationfile(repo.vfs)
+    currentbkpgenerationvalue = _readbackupgenerationfile(repo.sharedvfs)
     newbkpgenerationvalue = ui.configint("infinitepushbackup", "backupgeneration", 0)
     if currentbkpgenerationvalue != newbkpgenerationvalue:
         # Unlinking local backup state will trigger re-backuping
         _deletebackupstate(repo)
-        _writebackupgenerationfile(repo.vfs, newbkpgenerationvalue)
+        _writebackupgenerationfile(repo.sharedvfs, newbkpgenerationvalue)
     bkpstate = _readlocalbackupstate(ui, repo)
 
     # Work out what the heads and bookmarks to backup are.
@@ -853,7 +847,7 @@ def _dobackup(ui, repo, dest, **opts):
                 ui.debug("heads added: %s\n" % ", ".join(newheads))
                 ui.debug("heads removed: %s\n" % ", ".join(removedheads))
                 _writelocalbackupstate(
-                    repo.vfs,
+                    repo.sharedvfs,
                     list((set(bkpstate.heads) | newheads) - removedheads),
                     backupbookmarks,
                 )
@@ -896,8 +890,7 @@ def _dobackgroundbackup(ui, repo, dest=None, command=None):
             if not _checkuserlogdir(userlogdir):
                 raise WrongPermissionsException(userlogdir)
 
-            reporoot = repo.origroot
-            reponame = os.path.basename(reporoot)
+            reponame = os.path.basename(repo.sharedroot)
             _removeoldlogfiles(userlogdir, reponame)
             logfile = _getlogfilename(logdir, username, reponame)
         except (OSError, IOError) as e:
@@ -1122,7 +1115,7 @@ class BackupBookmarkNamingManager(object):
         return "/".join(("infinitepush", "backups", self.username))
 
     def _getcommonprefix(self):
-        reporoot = self.repo.origroot
+        reporoot = self.repo.sharedroot
 
         result = "/".join((self._getcommonuserprefix(), self.hostname))
         if not reporoot.startswith("/"):
@@ -1201,19 +1194,18 @@ def _getinfinitepushbookmarks(
 
 
 def _localbackupstateexists(repo):
-    return repo.vfs.exists(_backupstatefile)
+    return repo.sharedvfs.exists(_backupstatefile)
 
 
 def _deletebackupstate(repo):
-    return repo.vfs.tryunlink(_backupstatefile)
+    return repo.sharedvfs.tryunlink(_backupstatefile)
 
 
 def _readlocalbackupstate(ui, repo):
-    repo = shareutil.getsrcrepo(repo)
     if not _localbackupstateexists(repo):
         return backupstate()
 
-    with repo.vfs(_backupstatefile) as f:
+    with repo.sharedvfs(_backupstatefile) as f:
         try:
             state = json.loads(f.read())
             if not isinstance(state["bookmarks"], dict) or not isinstance(
