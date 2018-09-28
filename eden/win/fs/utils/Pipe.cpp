@@ -8,12 +8,10 @@
  *
  */
 
-#include "Edenwin.h"
 #include "Pipe.h"
 #include <folly/portability/IOVec.h>
 #include <stdio.h>
 #include <strsafe.h>
-#include <windows.h>
 #include <iostream>
 #include <memory>
 #include <vector>

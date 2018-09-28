@@ -8,7 +8,6 @@
  *
  */
 
-#include "Edenwin.h"
 #include "Subprocess.h"
 #include <fcntl.h>
 #include <folly/logging/Init.h>
@@ -17,6 +16,7 @@
 #include <iostream>
 #include <string>
 #include "Pipe.h"
+#include "eden/win/fs/Edenwin.h"
 
 using namespace facebook::edenwin;
 using namespace std;

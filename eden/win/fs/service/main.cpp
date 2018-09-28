@@ -16,9 +16,9 @@
 #include <gflags/gflags.h>
 #include <iostream>
 #include <memory>
-#include "StringConv.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/win/fs/utils/StringConv.h"
 #include "folly/io/IOBuf.h"
 // DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 // DEFINE_string(edenDir, "", "The path to the .eden directory");

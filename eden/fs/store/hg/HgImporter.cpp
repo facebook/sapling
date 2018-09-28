@@ -27,8 +27,8 @@
 #ifndef EDEN_WIN
 #include <unistd.h>
 #else
-#include "eden/win/eden/Pipe.h" // @manual
-#include "eden/win/eden/Subprocess.h" // @manual
+#include "eden/win/fs/utils/Pipe.h" // @manual
+#include "eden/win/fs/utils/Subprocess.h" // @manual
 #endif
 
 #include <mutex>

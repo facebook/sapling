@@ -75,12 +75,16 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -109,7 +113,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>D:\edenwin64\folly\Release;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\edenwin64\folly\Release;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)build\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -148,7 +152,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>D:\edenwin64\folly\Release;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\edenwin64\folly\Release;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)build\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -177,9 +181,9 @@
     <ClCompile Include="..\..\fs\utils\PathFuncs.cpp" />
     <ClCompile Include="..\..\fs\utils\TimeUtil.cpp" />
     <ClCompile Include="..\..\fs\utils\UnboundedQueueExecutor.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="Pipe.cpp" />
-    <ClCompile Include="Subprocess.cpp" />
+    <ClCompile Include="service\main.cpp" />
+    <ClCompile Include="utils\Pipe.cpp" />
+    <ClCompile Include="utils\Subprocess.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\fs\model\Blob.h" />
@@ -210,9 +214,9 @@
     <ClInclude Include="..\..\fs\utils\TimeUtil.h" />
     <ClInclude Include="..\..\fs\utils\UnboundedQueueExecutor.h" />
     <ClInclude Include="Edenwin.h" />
-    <ClInclude Include="Pipe.h" />
-    <ClInclude Include="StringConv.h" />
-    <ClInclude Include="Subprocess.h" />
+    <ClInclude Include="utils\Pipe.h" />
+    <ClInclude Include="utils\StringConv.h" />
+    <ClInclude Include="utils\Subprocess.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

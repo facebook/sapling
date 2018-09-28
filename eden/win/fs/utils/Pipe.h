@@ -9,7 +9,7 @@
  */
 #pragma once
 #include <folly/portability/IOVec.h>
-#include <windows.h>
+#include <folly/portability/Windows.h>
 
 namespace facebook {
 namespace edenwin {

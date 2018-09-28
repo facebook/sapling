@@ -27,9 +27,6 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="fs\Util">
-      <UniqueIdentifier>{b784f067-e8b9-42ba-9226-5bf9ea3cd828}</UniqueIdentifier>
-    </Filter>
     <Filter Include="fs\Model\Git">
       <UniqueIdentifier>{f0165dbe-c908-44b9-9b11-8ec0ffec7d22}</UniqueIdentifier>
     </Filter>
@@ -42,11 +39,20 @@
     <Filter Include="fs\Store\Mononoke">
       <UniqueIdentifier>{a35f52c6-bc5e-41b4-9b1d-cfcebc220f1a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Win\fs">
+      <UniqueIdentifier>{7d7a8023-0973-4d0b-acaf-4b9466055375}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Win\fs\service">
+      <UniqueIdentifier>{db8b082b-a455-4f0d-9396-062d9a327742}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Win\fs\utils">
+      <UniqueIdentifier>{61acb7ce-8c87-4035-a52d-c1e99325daad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Utils">
+      <UniqueIdentifier>{b784f067-e8b9-42ba-9226-5bf9ea3cd828}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Win</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\fs\store\hg\HgBackingStore.cpp">
       <Filter>fs\Store\hg</Filter>
     </ClCompile>
@@ -74,9 +80,6 @@
     <ClCompile Include="..\..\fs\model\TreeEntry.cpp">
       <Filter>fs\Model</Filter>
     </ClCompile>
-    <ClCompile Include="Pipe.cpp">
-      <Filter>Win\Lib</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\fs\store\EmptyBackingStore.cpp">
       <Filter>fs\Store</Filter>
     </ClCompile>
@@ -96,7 +99,7 @@
       <Filter>fs\Store</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\utils\PathFuncs.cpp">
-      <Filter>fs\Util</Filter>
+      <Filter>fs\Utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\model\git\GitTree.cpp">
       <Filter>fs\Model\Git</Filter>
@@ -105,31 +108,34 @@
       <Filter>fs\Sqlite</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\utils\TimeUtil.cpp">
-      <Filter>fs\Util</Filter>
+      <Filter>fs\Utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\model\git\GitBlob.cpp">
       <Filter>fs\Model\Git</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\utils\Clock.cpp">
-      <Filter>fs\Util</Filter>
+      <Filter>fs\Utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\service\EdenCPUThreadPool.cpp">
       <Filter>fs\Service</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\utils\UnboundedQueueExecutor.cpp">
-      <Filter>fs\Util</Filter>
-    </ClCompile>
-    <ClCompile Include="Subprocess.cpp">
-      <Filter>Win\Lib</Filter>
+      <Filter>fs\Utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\store\BackingStore.cpp">
       <Filter>fs\Store</Filter>
     </ClCompile>
+    <ClCompile Include="service\main.cpp">
+      <Filter>Win\fs\service</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\Pipe.cpp">
+      <Filter>Win\fs\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\Subprocess.cpp">
+      <Filter>Win\fs\utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="StringConv.h">
-      <Filter>Win</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h">
       <Filter>fs\Store\hg</Filter>
     </ClInclude>
@@ -163,9 +169,6 @@
     <ClInclude Include="..\..\fs\model\TreeEntry.h">
       <Filter>fs\Model</Filter>
     </ClInclude>
-    <ClInclude Include="Pipe.h">
-      <Filter>Win\Lib</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\fs\store\BackingStore.h">
       <Filter>fs\Store</Filter>
     </ClInclude>
@@ -194,7 +197,7 @@
       <Filter>fs\Store</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\PathFuncs.h">
-      <Filter>fs\Util</Filter>
+      <Filter>fs\Utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\model\git\GitTree.h">
       <Filter>fs\Model\Git</Filter>
@@ -203,22 +206,28 @@
       <Filter>fs\Sqlite</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\TimeUtil.h">
-      <Filter>fs\Util</Filter>
+      <Filter>fs\Utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\model\git\GitBlob.h">
       <Filter>fs\Model\Git</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\Clock.h">
-      <Filter>fs\Util</Filter>
+      <Filter>fs\Utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\service\EdenCPUThreadPool.h">
       <Filter>fs\Service</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\UnboundedQueueExecutor.h">
-      <Filter>fs\Util</Filter>
+      <Filter>fs\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Subprocess.h">
-      <Filter>Win\Lib</Filter>
+    <ClInclude Include="utils\Pipe.h">
+      <Filter>Win\fs\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\StringConv.h">
+      <Filter>Win\fs\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\Subprocess.h">
+      <Filter>Win\fs\utils</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
