@@ -1633,3 +1633,40 @@ For this test enabled obsshelve extension is enough, and it is enabled at the to
   $ testshelvedcount 1
   $ hg unshelve > /dev/null
   $ testshelvedcount 0
+  $ cd ..
+
+Test interrupted shelve - this should not lose work
+
+  $ newrepo
+  $ echo 1 > file1
+  $ echo 1 > file2
+  $ hg commit -Aqm commit1
+  $ echo 2 > file2
+  $ cat >> $TESTTMP/abortupdate.py <<EOF
+  > from mercurial import extensions, hg
+  > def update(orig, *args, **kwargs):
+  >     orig(*args, **kwargs)
+  >     raise KeyboardInterrupt
+  > def extsetup(ui):
+  >     extensions.wrapfunction(hg, 'update', update)
+  > EOF
+  $ hg shelve --config extensions.abortupdate=$TESTTMP/abortupdate.py
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  transaction abort!
+  rollback completed
+  interrupted!
+  [255]
+  $ cat file2
+  1
+
+BUG: Oh no!  My 2 is lost!
+
+  $ hg shelve --list
+  default * shelve changes to: commit1 (glob)
+  $ hg unshelve
+  unshelving change 'default'
+  abort: shelved node f70d92a087e8b7614a4b15432f38913419e23c29 not found in repo
+  [255]
+
+BUG: And I can't get it back!
