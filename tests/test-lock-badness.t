@@ -23,7 +23,7 @@ Test that raising an exception in the release function doesn't cause the lock to
   >     def unlock():
   >         if releaseexc:
   >             raise error.Abort('expected release exception')
-  >     l = repo._lock(repo.vfs, 'testlock', False, unlock, None, 'test lock')
+  >     l = repo._lock(repo.localvfs, 'testlock', False, unlock, None, 'test lock')
   >     return l
   > 
   > @command(b'testlockexc')

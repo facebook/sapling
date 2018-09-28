@@ -24,7 +24,7 @@ class fakerepo(object):
         def join(self, p):
             return p
 
-    vfs = fakevfs()
+    vfs = localvfs = sharedvfs = fakevfs()
 
     def unfiltered(self):
         return self

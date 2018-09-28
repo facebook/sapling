@@ -171,7 +171,7 @@ class bmstore(dict):
         """record that bookmarks have been changed in a transaction
 
         The transaction is then responsible for updating the file content."""
-        tr.addfilegenerator("bookmarks", ("bookmarks",), self._write, location="plain")
+        tr.addfilegenerator("bookmarks", ("bookmarks",), self._write, location="local")
         tr.hookargs["bookmark_moved"] = "1"
         if self._repo._hassharedbookmarks:
             srcrepo = self._repo._sharedprimaryrepo
@@ -201,7 +201,7 @@ class bmstore(dict):
             return
         with self._repo.wlock():
             if self._active is not None:
-                f = self._repo.vfs(
+                f = self._repo.localvfs(
                     "bookmarks.current", "w", atomictemp=True, checkambig=True
                 )
                 try:
@@ -209,7 +209,7 @@ class bmstore(dict):
                 finally:
                     f.close()
             else:
-                self._repo.vfs.tryunlink("bookmarks.current")
+                self._repo.localvfs.tryunlink("bookmarks.current")
         self._aclean = True
 
     def _write(self, fp):
@@ -303,7 +303,7 @@ def _readactive(repo, marks):
     """
     mark = None
     try:
-        file = repo.vfs("bookmarks.current")
+        file = repo.localvfs("bookmarks.current")
     except IOError as inst:
         if inst.errno != errno.ENOENT:
             raise

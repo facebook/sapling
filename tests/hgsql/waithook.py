@@ -8,12 +8,12 @@ def waithook(ui, repo, **kwargs):
     """
     start = time.time()
     repo._wlockfreeprefix.add("hookrunning")
-    repo.vfs.write("hookrunning", "")
-    while not repo.vfs.exists("flag"):
+    repo.localvfs.write("hookrunning", "")
+    while not repo.localvfs.exists("flag"):
         if time.time() - start > 20:
             print >>sys.stderr, "ERROR: Timeout waiting for .hg/flag"
-            repo.vfs.unlink("hookrunning")
+            repo.localvfs.unlink("hookrunning")
             return True
         time.sleep(0.05)
-    repo.vfs.unlink("hookrunning")
+    repo.localvfs.unlink("hookrunning")
     return False

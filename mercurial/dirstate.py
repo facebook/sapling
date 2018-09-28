@@ -729,7 +729,7 @@ class dirstate(object):
 
             # delay writing in-memory changes out
             tr.addfilegenerator(
-                "dirstate", (self._filename,), self._writedirstate, location="plain"
+                "dirstate", (self._filename,), self._writedirstate, location="local"
             )
             return
 
@@ -1289,13 +1289,13 @@ class dirstate(object):
             # changes written out above, even if dirstate is never
             # changed after this
             tr.addfilegenerator(
-                "dirstate", (self._filename,), self._writedirstate, location="plain"
+                "dirstate", (self._filename,), self._writedirstate, location="local"
             )
 
             # ensure that pending file written above is unlinked at
             # failure, even if tr.writepending isn't invoked until the
             # end of this transaction
-            tr.registertmp(filename, location="plain")
+            tr.registertmp(filename, location="local")
 
         self._opener.tryunlink(backupname)
         # hardlink backup is okay because _writedirstate is always called

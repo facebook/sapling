@@ -202,7 +202,7 @@ def lighttransaction(repo):
     # executed, doesn't check repo locks, doesn't check
     # abandoned tr's (since we only record info) and doesn't
     # do any tag handling
-    vfsmap = {"plain": repo.vfs}
+    vfsmap = {"shared": repo.sharedvfs, "local": repo.localvfs}
     tr = transaction.transaction(
         repo.ui.warn, repo.vfs, vfsmap, "undolog/tr.journal", "undolog/tr.undo"
     )

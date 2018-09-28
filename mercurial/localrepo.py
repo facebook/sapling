@@ -100,7 +100,7 @@ class repofilecache(_basefilecache):
     def __init__(self, *paths):
         super(repofilecache, self).__init__(*paths)
         for path in paths:
-            _cachedfiles.add((path, "plain"))
+            _cachedfiles.add((path, "local"))
 
     def join(self, obj, fname):
         return obj.vfs.join(fname)
@@ -394,7 +394,13 @@ class localrepository(object):
         self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True, cacheaudited=False)
         # vfs: rooted at .hg, used to access repo files outside of .hg/store
         self.vfs = None
-        # svfs: usually rooted at .hg/store, used to access repository history
+        # localvfs: rooted at .hg, used to access repo files outside of
+        # the store that are local to this working copy.
+        self.localvfs = None
+        # sharedvfs: the local vfs of the primary shared repo for shared repos.
+        # for non-shared repos this is the same as localvfs.
+        self.sharedvfs = None
+        # svfs: store vfs - usually rooted at .hg/store, used to access repository history
         # If this is a shared repository, this vfs may point to another
         # repository's .hg/store directory.
         self.svfs = None
@@ -412,17 +418,18 @@ class localrepository(object):
         self.baseui = baseui
         self.ui = baseui.copy()
         self.ui.copy = baseui.copy  # prevent copying repo configuration
-        self.vfs = vfsmod.vfs(self.path, cacheaudited=True)
+        self.localvfs = vfsmod.vfs(self.path, cacheaudited=True)
         if self.ui.configbool("devel", "all-warnings") or self.ui.configbool(
             "devel", "check-locks"
         ):
-            self.vfs.audit = self._getvfsward(self.vfs.audit)
+            self.localvfs.audit = self._getvfsward(self.localvfs.audit)
+
         # A list of callback to shape the phase if no data were found.
         # Callback are in the form: func(repo, roots) --> processed root.
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
         try:
-            self.ui.readconfig(self.vfs.join("hgrc"), self.root)
+            self.ui.readconfig(self.localvfs.join("hgrc"), self.root)
             self._loadextensions()
         except IOError:
             pass
@@ -442,7 +449,7 @@ class localrepository(object):
             if engine.revlogheader():
                 self.supported.add("exp-compression-%s" % name)
 
-        if not self.vfs.isdir():
+        if not self.localvfs.isdir():
             if create:
                 self.requirements = newreporequirements(self)
                 if "store" in self.requirements:
@@ -450,13 +457,13 @@ class localrepository(object):
 
                 if not self.wvfs.exists():
                     self.wvfs.makedirs()
-                self.vfs.makedir(notindexed=True)
+                self.localvfs.makedir(notindexed=True)
 
                 if "store" in self.requirements:
-                    self.vfs.mkdir("store")
+                    self.localvfs.mkdir("store")
 
                     # create an invalid changelog
-                    self.vfs.append(
+                    self.localvfs.append(
                         "00changelog.i",
                         "\0\0\0\2"  # represents revlogv2
                         " dummy changelog to prevent using the old repo layout",
@@ -467,28 +474,43 @@ class localrepository(object):
             raise error.RepoError(_("repository %s already exists") % path)
         else:
             try:
-                self.requirements = scmutil.readrequires(self.vfs, self.supported)
+                self.requirements = scmutil.readrequires(self.localvfs, self.supported)
             except IOError as inst:
                 if inst.errno != errno.ENOENT:
                     raise
 
-        cachepath = self.vfs.join("cache")
+        cachepath = self.localvfs.join("cache")
         self.sharedpath = self.path
+        self.sharedroot = self.root
         try:
-            sharedpath = self.vfs.read("sharedpath").rstrip("\n")
+            sharedpath = self.localvfs.read("sharedpath").rstrip("\n")
             if "relshared" in self.requirements:
-                sharedpath = self.vfs.join(sharedpath)
-            vfs = vfsmod.vfs(sharedpath, realpath=True)
-            cachepath = vfs.join("cache")
-            s = vfs.base
-            if not vfs.exists():
+                sharedpath = self.localvfs.join(sharedpath)
+            sharedvfs = vfsmod.vfs(sharedpath, realpath=True)
+            cachepath = sharedvfs.join("cache")
+            s = sharedvfs.base
+            if not sharedvfs.exists():
                 raise error.RepoError(
                     _(".hg/sharedpath points to nonexistent directory %s") % s
                 )
             self.sharedpath = s
+            self.sharedroot = sharedvfs.dirname(s)
+            self.sharedvfs = sharedvfs
+            # Read the requirements of the shared repo to make sure we
+            # support them.
+            try:
+                scmutil.readrequires(self.sharedvfs, self.supported)
+            except IOError as inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+            self.sharedvfs.audit = self._getvfsward(self.sharedvfs.audit)
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
+            self.sharedvfs = self.localvfs
+
+        # self.vfs is an alias for the local vfs for now.
+        self.vfs = self.localvfs
 
         if "exp-sparse" in self.requirements and not sparse.enabled:
             raise error.RepoError(
@@ -507,7 +529,8 @@ class localrepository(object):
         self.spath = self.store.path
         self.svfs = self.store.vfs
         self.sjoin = self.store.join
-        self.vfs.createmode = self.store.createmode
+        self.localvfs.createmode = self.store.createmode
+        self.sharedvfs.createmode = self.store.createmode
         self.cachevfs = vfsmod.vfs(cachepath, cacheaudited=True)
         self.cachevfs.createmode = self.store.createmode
         if self.ui.configbool("devel", "all-warnings") or self.ui.configbool(
@@ -567,7 +590,7 @@ class localrepository(object):
         self._sparsematchercache = {}
 
     def _getvfsward(self, origfunc):
-        """build a ward for self.vfs"""
+        """build a ward for self.localvfs and self.sharedvfs"""
         rref = weakref.ref(self)
 
         def checkvfs(path, mode=None):
@@ -714,7 +737,7 @@ class localrepository(object):
         self.svfs.options["treemanifest-server"] = treemanifestserver
 
     def _writerequirements(self):
-        scmutil.writerequires(self.vfs, self.requirements)
+        scmutil.writerequires(self.localvfs, self.requirements)
 
     def _writestorerequirements(self):
         if "store" in self.requirements:
@@ -776,7 +799,7 @@ class localrepository(object):
     def sharedfeatures(self):
         """Returns the set of enabled 'shared' features for this repo"""
         try:
-            return set(self.vfs.read("shared").splitlines())
+            return set(self.localvfs.read("shared").splitlines())
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
@@ -797,7 +820,7 @@ class localrepository(object):
         from . import hg  # avoid import cycle
 
         # the sharedpath always ends in the .hg; we want the path to the repo
-        primary = self.vfs.split(self.sharedpath)[0]
+        primary = self.localvfs.split(self.sharedpath)[0]
         primaryrepo = hg.repository(self.ui, primary)
         self._primaryrepo = primaryrepo
         return primaryrepo
@@ -848,7 +871,7 @@ class localrepository(object):
         istreestate = "treestate" in self.requirements
 
         return dirstate.dirstate(
-            self.vfs,
+            self.localvfs,
             self.ui,
             self.root,
             self._dirstatevalidate,
@@ -1148,7 +1171,7 @@ class localrepository(object):
         return None
 
     def wjoin(self, f, *insidef):
-        return self.vfs.reljoin(self.root, f, *insidef)
+        return self.localvfs.reljoin(self.root, f, *insidef)
 
     def file(self, f):
         if f[0] == "/":
@@ -1293,7 +1316,7 @@ class localrepository(object):
             rp = report
         else:
             rp = self.ui.warn
-        vfsmap = {"plain": self.vfs}  # root of .hg/
+        vfsmap = {"shared": self.sharedvfs, "local": self.localvfs}
         # we must avoid cyclic reference between repo and transaction.
         reporef = weakref.ref(self)
         # Code to track tag movement
@@ -1345,7 +1368,7 @@ class localrepository(object):
                 changes = tagsmod.difftags(repo.ui, repo, oldfnodes, newfnodes)
                 if changes:
                     tr2.hookargs["tag_moved"] = "1"
-                    with repo.vfs(
+                    with repo.localvfs(
                         "changes/tags.changes", "w", atomictemp=True
                     ) as changesfile:
                         # note: we do not register the file to the transaction
@@ -1535,10 +1558,10 @@ class localrepository(object):
     def _journalfiles(self):
         return (
             (self.svfs, "journal"),
-            (self.vfs, "journal.dirstate"),
-            (self.vfs, "journal.branch"),
-            (self.vfs, "journal.desc"),
-            (self.vfs, "journal.bookmarks"),
+            (self.localvfs, "journal.dirstate"),
+            (self.localvfs, "journal.branch"),
+            (self.localvfs, "journal.desc"),
+            (self.localvfs, "journal.bookmarks"),
             (self.svfs, "journal.phaseroots"),
         )
 
@@ -1548,16 +1571,22 @@ class localrepository(object):
     @unfilteredmethod
     def _writejournal(self, desc):
         self.dirstate.savebackup(None, "journal.dirstate")
-        self.vfs.write("journal.branch", encoding.fromlocal(self.dirstate.branch()))
-        self.vfs.write("journal.desc", "%d\n%s\n" % (len(self), desc))
-        self.vfs.write("journal.bookmarks", self.vfs.tryread("bookmarks"))
+        self.localvfs.write(
+            "journal.branch", encoding.fromlocal(self.dirstate.branch())
+        )
+        self.localvfs.write("journal.desc", "%d\n%s\n" % (len(self), desc))
+        self.localvfs.write("journal.bookmarks", self.localvfs.tryread("bookmarks"))
         self.svfs.write("journal.phaseroots", self.svfs.tryread("phaseroots"))
 
     def recover(self):
         with self.lock():
             if self.svfs.exists("journal"):
                 self.ui.status(_("rolling back interrupted transaction\n"))
-                vfsmap = {"": self.svfs, "plain": self.vfs}
+                vfsmap = {
+                    "": self.svfs,
+                    "shared": self.sharedvfs,
+                    "local": self.localvfs,
+                }
                 transaction.rollback(
                     self.svfs,
                     vfsmap,
@@ -1590,7 +1619,7 @@ class localrepository(object):
     def _rollback(self, dryrun, force, dsguard):
         ui = self.ui
         try:
-            args = self.vfs.read("undo.desc").splitlines()
+            args = self.localvfs.read("undo.desc").splitlines()
             (oldlen, desc, detail) = (int(args[0]), args[1], None)
             if len(args) >= 3:
                 detail = args[2]
@@ -1621,12 +1650,12 @@ class localrepository(object):
 
         parents = self.dirstate.parents()
         self.destroying()
-        vfsmap = {"plain": self.vfs, "": self.svfs}
+        vfsmap = {"": self.svfs, "shared": self.sharedvfs, "local": self.localvfs}
         transaction.rollback(
             self.svfs, vfsmap, "undo", ui.warn, checkambigfiles=_cachedfiles
         )
-        if self.vfs.exists("undo.bookmarks"):
-            self.vfs.rename("undo.bookmarks", "bookmarks", checkambig=True)
+        if self.localvfs.exists("undo.bookmarks"):
+            self.localvfs.rename("undo.bookmarks", "bookmarks", checkambig=True)
         if self.svfs.exists("undo.phaseroots"):
             self.svfs.rename("undo.phaseroots", "phaseroots", checkambig=True)
         self.invalidate()
@@ -1641,7 +1670,7 @@ class localrepository(object):
 
             self.dirstate.restorebackup(None, "undo.dirstate")
             try:
-                branch = self.vfs.read("undo.branch")
+                branch = self.localvfs.read("undo.branch")
                 self.dirstate.setbranch(encoding.tolocal(branch))
             except IOError:
                 ui.warn(
@@ -1910,7 +1939,7 @@ class localrepository(object):
             self._filecache["dirstate"].refresh()
 
         l = self._lock(
-            self.vfs,
+            self.localvfs,
             "wlock",
             wait,
             unlock,
@@ -2528,7 +2557,7 @@ class localrepository(object):
         return "%s %s %s %s %s" % (one, two, three, four, five)
 
     def savecommitmessage(self, text):
-        fp = self.vfs("last-message.txt", "wb")
+        fp = self.localvfs("last-message.txt", "wb")
         try:
             fp.write(text)
         finally:

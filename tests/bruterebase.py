@@ -64,7 +64,7 @@ def debugbruterebase(ui, repo, source, dest):
                 descs.sort()
                 summary = " ".join(descs)
             ui.popbuffer()
-            repo.vfs.tryunlink(b"rebasestate")
+            repo.localvfs.tryunlink(b"rebasestate")
 
             subsetdesc = b"".join(getdesc(rev) for rev in subset)
             ui.write((b"%s: %s\n") % (subsetdesc.rjust(len(srevs)), summary))

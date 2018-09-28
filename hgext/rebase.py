@@ -211,7 +211,7 @@ class rebaseruntime(object):
         """Store the current status to allow recovery"""
         if tr:
             tr.addfilegenerator(
-                "rebasestate", ("rebasestate",), self._writestatus, location="plain"
+                "rebasestate", ("rebasestate",), self._writestatus, location="local"
             )
         else:
             with self.repo.vfs("rebasestate", "w") as f:

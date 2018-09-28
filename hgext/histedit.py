@@ -346,7 +346,7 @@ class histeditstate(object):
     def write(self, tr=None):
         if tr:
             tr.addfilegenerator(
-                "histedit-state", ("histedit-state",), self._write, location="plain"
+                "histedit-state", ("histedit-state",), self._write, location="local"
             )
         else:
             with self.repo.vfs("histedit-state", "w") as f:

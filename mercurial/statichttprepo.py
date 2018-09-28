@@ -133,15 +133,15 @@ class statichttprepository(localrepo.localrepository):
         self.path, authinfo = u.authinfo()
 
         vfsclass = build_opener(ui, authinfo)
-        self.vfs = vfsclass(self.path)
-        self.cachevfs = vfsclass(self.vfs.join("cache"))
+        self.sharedvfs = self.localvfs = self.vfs = vfsclass(self.path)
+        self.cachevfs = vfsclass(self.localvfs.join("cache"))
         self._phasedefaults = []
 
         self.names = namespaces.namespaces(self)
         self.filtername = None
 
         try:
-            requirements = scmutil.readrequires(self.vfs, self.supported)
+            requirements = scmutil.readrequires(self.localvfs, self.supported)
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
@@ -149,7 +149,7 @@ class statichttprepository(localrepo.localrepository):
 
             # check if it is a non-empty old-style repository
             try:
-                fp = self.vfs("00changelog.i")
+                fp = self.localvfs("00changelog.i")
                 fp.read(1)
                 fp.close()
             except IOError as inst:
