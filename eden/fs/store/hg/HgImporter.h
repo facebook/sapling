@@ -13,6 +13,7 @@
 #ifndef EDEN_WIN
 #include <folly/Subprocess.h>
 #else
+#include <folly/portability/IOVec.h>
 #include "eden/win/eden/Subprocess.h" // @manual
 #endif
 

@@ -10,12 +10,12 @@
 #include "HgBackingStore.h"
 
 #include <folly/ThreadLocal.h>
+#include <folly/Try.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
-
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -159,7 +159,7 @@ HgBackingStore::HgBackingStore(
   initializeTreeManifestImport(options, repository);
 #ifndef EDEN_WIN_NOMONONOKE
   initializeMononoke(options, useMononoke, clientCertificate);
-#endif
+#endif // EDEN_WIN_NOMONONOKE
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
@@ -316,6 +316,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     }
   }
 
+#ifndef EDEN_WIN_NOMONONOKE
   if (!content.content() && mononoke_) {
     // ask Mononoke API Server
     XLOG(DBG4) << "importing tree \"" << manifestNode << "\" from mononoke";
@@ -355,6 +356,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
           }
         });
   }
+#endif // !EDEN_WIN_NOMONONOKE
 
   if (!content.content()) {
     return fetchTreeFromImporter(
@@ -381,7 +383,8 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                                  ownedPath = std::move(path),
                                  node = std::move(manifestNode),
                                  treeID = std::move(edenTreeID),
-                                 batch = std::move(writeBatch)](auto val) {
+                                 batch = std::move(writeBatch)](
+                                    folly::Try<folly::Unit> val) {
     try {
       val.value();
       // Now try loading it again
@@ -537,6 +540,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
+#ifndef EDEN_WIN_NOMONONOKE
   if (mononoke_) {
     XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
                << hgInfo.revHash().toString() << " from mononoke";
@@ -548,6 +552,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
                  << " from mononoke: " << ex.what();
     }
   }
+#endif // EDEN_WIN_NOMONONOKE
 
   return folly::via(
              importThreadPool_.get(),

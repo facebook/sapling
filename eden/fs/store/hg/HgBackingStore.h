@@ -148,7 +148,9 @@ class HgBackingStore : public BackingStore {
   std::vector<std::unique_ptr<DatapackStore>> dataPackStores_;
   std::unique_ptr<folly::Synchronized<UnionDatapackStore>> unionStore_;
 
+#ifndef EDEN_WIN_NOMONONOKE
   std::unique_ptr<MononokeBackingStore> mononoke_;
+#endif // EDEN_WIN_NOMONONOKE
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 };
 } // namespace eden
