@@ -190,7 +190,7 @@ def expull(orig, repo, remote, *args, **kwargs):
         # because it may slow down clients.
         path = activepath(repo.ui, remote)
         remotebookmarkslist = []
-        if repo.vfs.exists(_selectivepullenabledfile):
+        if repo.localvfs.exists(_selectivepullenabledfile):
             # 'selectivepullenabled' file is used for transition between
             # non-selectivepull repo to selectivepull repo. It is used as
             # indicator to whether "non-interesting" bookmarks were removed
@@ -220,13 +220,13 @@ def expull(orig, repo, remote, *args, **kwargs):
     with extensions.wrappedfunction(setdiscovery, "findcommonheads", exfindcommonheads):
         res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote, bookmarks)
-    if repo.vfs.exists(_selectivepullenabledfile):
+    if repo.localvfs.exists(_selectivepullenabledfile):
         if not _isselectivepull(repo.ui):
             with repo.wlock():
-                repo.vfs.unlink(_selectivepullenabledfile)
+                repo.localvfs.unlink(_selectivepullenabledfile)
     else:
         if _isselectivepull(repo.ui):
-            with repo.wlock(), repo.vfs(_selectivepullenabledfile, "w") as f:
+            with repo.wlock(), repo.localvfs(_selectivepullenabledfile, "w") as f:
                 f.write("enabled")  # content doesn't matter
     return res
 
@@ -368,7 +368,7 @@ def exclone(orig, ui, *args, **opts):
         wlock = repo.wlock()
         try:
             try:
-                vfs = shareawarevfs(repo)
+                vfs = repo.sharedvfs
                 vfs.unlink("bookmarks")
             except OSError as inst:
                 if inst.errno != errno.ENOENT:
@@ -747,10 +747,10 @@ def expaths(orig, ui, repo, *args, **opts):
     if delete:
         # find the first section and remote path that matches, and delete that
         foundpaths = False
-        if not repo.vfs.isfile("hgrc"):
+        if not repo.localvfs.isfile("hgrc"):
             raise error.Abort(_("could not find hgrc file"))
-        oldhgrc = repo.vfs.read("hgrc").splitlines(True)
-        f = repo.vfs("hgrc", "w", atomictemp=True)
+        oldhgrc = repo.localvfs.read("hgrc").splitlines(True)
+        f = repo.localvfs("hgrc", "w", atomictemp=True)
         for line in oldhgrc:
             if "[paths]" in line:
                 foundpaths = True
@@ -766,9 +766,9 @@ def expaths(orig, ui, repo, *args, **opts):
         # not found add a new entry
         foundpaths = False
         oldhgrc = []
-        if repo.vfs.isfile("hgrc"):
-            oldhgrc = repo.vfs.read("hgrc").splitlines(True)
-        f = repo.vfs("hgrc", "w", atomictemp=True)
+        if repo.localvfs.isfile("hgrc"):
+            oldhgrc = repo.localvfs.read("hgrc").splitlines(True)
+        f = repo.localvfs("hgrc", "w", atomictemp=True)
         done = False
         for line in oldhgrc:
             if "[paths]" in line:
@@ -1289,7 +1289,7 @@ def exbranches(orig, ui, repo, *args, **opts):
 def _readtracking(repo):
     tracking = {}
     try:
-        vfs = shareawarevfs(repo)
+        vfs = repo.sharedvfs
         for line in vfs.read("bookmarks.tracking").strip().split("\n"):
             try:
                 book, track = line.strip().split(" ", 1)
@@ -1307,7 +1307,7 @@ def _writetracking(repo, tracking):
         data = ""
         for book, track in tracking.iteritems():
             data += "%s %s\n" % (book, track)
-        vfs = shareawarevfs(repo)
+        vfs = repo.sharedvfs
         vfs.write("bookmarks.tracking", data)
 
 
@@ -1598,13 +1598,6 @@ def joinremotename(remote, ref):
     return remote
 
 
-def shareawarevfs(repo):
-    if repo.shared():
-        return vfsmod.vfs(repo.sharedpath)
-    else:
-        return repo.vfs
-
-
 def shareawarecachevfs(repo):
     if repo.shared():
         return vfsmod.vfs(os.path.join(repo.sharedpath, "cache"))
@@ -1619,7 +1612,7 @@ def readbookmarknames(repo, remote):
 
 
 def readremotenames(repo):
-    vfs = shareawarevfs(repo)
+    vfs = repo.sharedvfs
     # exit early if there is nothing to do
     if not vfs.exists("remotenames"):
         return
@@ -1681,7 +1674,7 @@ def transition(repo, ui):
 
 
 def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
-    vfs = shareawarevfs(repo)
+    vfs = repo.sharedvfs
     wlock = repo.wlock()
     if branches is None:
         branches = {}

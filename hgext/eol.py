@@ -362,11 +362,11 @@ def reposetup(ui, repo):
 
             oldeol = None
             try:
-                cachemtime = os.path.getmtime(self.vfs.join("eol.cache"))
+                cachemtime = os.path.getmtime(self.localvfs.join("eol.cache"))
             except OSError:
                 cachemtime = 0
             else:
-                olddata = self.vfs.read("eol.cache")
+                olddata = self.localvfs.read("eol.cache")
                 if olddata:
                     oldeol = eolfile(self.ui, self.root, olddata)
 
@@ -406,7 +406,7 @@ def reposetup(ui, repo):
                         # the new .hgeol file specify a different filter
                         self.dirstate.normallookup(f)
                     # Write the cache to update mtime and cache .hgeol
-                    with self.vfs("eol.cache", "w") as f:
+                    with self.localvfs("eol.cache", "w") as f:
                         f.write(hgeoldata)
                 except errormod.LockUnavailable:
                     # If we cannot lock the repository and clear the

@@ -94,11 +94,11 @@ def graftmsg(repo, ui):
 
 
 def updatemsg(repo, ui):
-    previousargs = repo.vfs.tryread(UPDATEARGS)
+    previousargs = repo.localvfs.tryread(UPDATEARGS)
     if previousargs:
         continuecmd = "hg " + previousargs
     else:
-        continuecmd = "hg update " + repo.vfs.read("updatestate")[:12]
+        continuecmd = "hg update " + repo.localvfs.read("updatestate")[:12]
     abortcmd = updatecleanmsg(repo._activebookmark)
     helpmessage(ui, continuecmd, abortcmd)
 
@@ -118,7 +118,7 @@ def bisectmsg(repo, ui):
 
 
 def fileexistspredicate(filename):
-    return lambda repo: repo.vfs.exists(filename)
+    return lambda repo: repo.localvfs.exists(filename)
 
 
 def mergepredicate(repo):
@@ -161,12 +161,12 @@ def extsetup(ui):
 def saveupdateargs(repo, args, **kwargs):
     # args is a string containing all flags and arguments
     with repo.wlock():
-        repo.vfs.write(UPDATEARGS, args)
+        repo.localvfs.write(UPDATEARGS, args)
 
 
 def cleanupdateargs(repo, **kwargs):
     with repo.wlock():
-        repo.vfs.tryunlink(UPDATEARGS)
+        repo.localvfs.tryunlink(UPDATEARGS)
 
 
 def statuscmd(orig, ui, repo, *pats, **opts):

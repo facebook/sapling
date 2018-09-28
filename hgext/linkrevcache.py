@@ -304,7 +304,7 @@ def reposetup(ui, repo):
         # if the repo is single headed, adjustlinkrev can just return linkrev
         repo._singleheaded = len(repo.unfiltered().changelog.headrevs()) == 1
 
-        dbpath = repo.vfs.join(_linkrevdbpath)
+        dbpath = repo.localvfs.join(_linkrevdbpath)
         setattr(repo, "_linkrevcache", linkrevdb(dbpath, write=False))
 
 
@@ -323,7 +323,9 @@ def reposetup(ui, repo):
 def debugbuildlinkrevcache(ui, repo, *pats, **opts):
     """build the linkrev database from filelogs"""
     db = linkrevdb(
-        repo.vfs.join(_linkrevdbpath), write=True, copyonwrite=opts.get("atomic_temp")
+        repo.localvfs.join(_linkrevdbpath),
+        write=True,
+        copyonwrite=opts.get("atomic_temp"),
     )
     end = int(opts.get("end") or (len(repo) - 1))
     try:

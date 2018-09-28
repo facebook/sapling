@@ -228,7 +228,7 @@ def cachemanifestfillandtrim(ui, repo, revset):
     """
     try:
         with concurrency.looselock(
-            repo.vfs, "fastmanifest", constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT
+            repo.localvfs, "fastmanifest", constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT
         ):
             cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 

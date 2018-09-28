@@ -971,7 +971,7 @@ def readytofetch(repo):
     copy parent. Default delay between background prefetches is 2 minutes.
     """
     timeout = repo.ui.configint("remotefilelog", "prefetchdelay", 120)
-    fname = repo.vfs.join("lastprefetch")
+    fname = repo.localvfs.join("lastprefetch")
 
     ready = False
     with util.posixfile(fname, "a"):

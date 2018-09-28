@@ -721,17 +721,17 @@ def cleanup(ui, repo, debug=None):
         treesinuse = {}
         for f in dirstatefiles:
             try:
-                treeid = gettreeid(repo.vfs, f)
+                treeid = gettreeid(repo.localvfs, f)
                 if treeid is not None:
                     treesinuse.setdefault(treeid, set()).add(f)
             except Exception:
                 pass
-        for f in repo.vfs.listdir():
+        for f in repo.localvfs.listdir():
             if f.startswith(treefileprefix):
                 treeid = f[len(treefileprefix) :]
                 if treeid not in treesinuse:
                     debug("dirstate tree %s unused, deleting\n" % treeid)
-                    repo.vfs.unlink(f)
+                    repo.localvfs.unlink(f)
                 else:
                     debug(
                         "dirstate tree %s in use by %s\n"

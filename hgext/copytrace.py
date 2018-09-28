@@ -206,7 +206,7 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
 
     # Store the amend-copies against the amended context.
     if amend_copies:
-        path = repo.vfs.join("amendcopytrace")
+        path = repo.localvfs.join("amendcopytrace")
         try:
             # Open the database, creating it if it doesn't already exist.
             db = anydbm.open(path, "c")
@@ -267,7 +267,7 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
 
 
 def _getamendcopies(repo, dest, ancestor):
-    path = repo.vfs.join("amendcopytrace")
+    path = repo.localvfs.join("amendcopytrace")
     try:
         db = anydbm.open(path, "r")
     except anydbm.error:

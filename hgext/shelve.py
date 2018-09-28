@@ -93,8 +93,8 @@ class shelvedfile(object):
     def __init__(self, repo, name, filetype=None):
         self.repo = repo
         self.name = name
-        self.vfs = vfsmod.vfs(repo.vfs.join(shelvedir))
-        self.backupvfs = vfsmod.vfs(repo.vfs.join(backupdir))
+        self.vfs = vfsmod.vfs(repo.localvfs.join(shelvedir))
+        self.backupvfs = vfsmod.vfs(repo.localvfs.join(backupdir))
         self.ui = self.repo.ui
         if filetype:
             self.fname = name + "." + filetype
@@ -208,7 +208,7 @@ class shelvedstate(object):
     @classmethod
     def _getversion(cls, repo):
         """Read version information from shelvestate file"""
-        fp = repo.vfs(cls._filename)
+        fp = repo.localvfs(cls._filename)
         try:
             version = int(fp.readline().strip())
         except ValueError as err:
@@ -236,7 +236,7 @@ class shelvedstate(object):
         ]
         # this is executed only seldomly, so it is not a big deal
         # that we open this file twice
-        fp = repo.vfs(cls._filename)
+        fp = repo.localvfs(cls._filename)
         d = {}
         try:
             for key in keys:
@@ -251,7 +251,7 @@ class shelvedstate(object):
         if version < cls._version:
             d = cls._readold(repo)
         elif version == cls._version:
-            d = scmutil.simplekeyvaluefile(repo.vfs, cls._filename).read(
+            d = scmutil.simplekeyvaluefile(repo.localvfs, cls._filename).read(
                 firstlinenonkeyval=True
             )
         else:
@@ -302,17 +302,17 @@ class shelvedstate(object):
             "keep": cls._keep if keep else cls._nokeep,
             "activebook": activebook or cls._noactivebook,
         }
-        scmutil.simplekeyvaluefile(repo.vfs, cls._filename).write(
+        scmutil.simplekeyvaluefile(repo.localvfs, cls._filename).write(
             info, firstline=str(cls._version)
         )
 
     @classmethod
     def clear(cls, repo):
-        repo.vfs.unlinkpath(cls._filename, ignoremissing=True)
+        repo.localvfs.unlinkpath(cls._filename, ignoremissing=True)
 
 
 def cleanupoldbackups(repo):
-    vfs = vfsmod.vfs(repo.vfs.join(backupdir))
+    vfs = vfsmod.vfs(repo.localvfs.join(backupdir))
     maxbackups = repo.ui.configint("shelve", "maxbackups")
     hgfiles = [f for f in vfs.listdir() if f.endswith("." + patchextension)]
     hgfiles = sorted([(vfs.stat(f).st_mtime, f) for f in hgfiles])
@@ -568,7 +568,7 @@ def cleanupcmd(ui, repo):
     """subcommand that deletes all shelves"""
 
     with repo.wlock():
-        for (name, _type) in repo.vfs.readdir(shelvedir):
+        for (name, _type) in repo.localvfs.readdir(shelvedir):
             suffix = name.rsplit(".", 1)[-1]
             if suffix in shelvefileextensions:
                 shelvedfile(repo, name).movetobackup()
@@ -601,7 +601,7 @@ def deletecmd(ui, repo, pats):
 def listshelves(repo):
     """return all shelves in repo as list of (time, filename)"""
     try:
-        names = repo.vfs.readdir(shelvedir)
+        names = repo.localvfs.readdir(shelvedir)
     except OSError as err:
         if err.errno != errno.ENOENT:
             raise
@@ -691,11 +691,11 @@ def unshelveabort(ui, repo, state, opts):
         try:
             checkparents(repo, state)
 
-            repo.vfs.rename("unshelverebasestate", "rebasestate")
+            repo.localvfs.rename("unshelverebasestate", "rebasestate")
             try:
                 rebase.rebase(ui, repo, **{"abort": True})
             except Exception:
-                repo.vfs.rename("rebasestate", "unshelverebasestate")
+                repo.localvfs.rename("rebasestate", "unshelverebasestate")
                 raise
 
             mergefiles(ui, repo, state.wctx, state.pendingctx)
@@ -759,11 +759,11 @@ def unshelvecontinue(ui, repo, state, opts):
                 hint=_("see 'hg resolve', then 'hg unshelve --continue'"),
             )
 
-        repo.vfs.rename("unshelverebasestate", "rebasestate")
+        repo.localvfs.rename("unshelverebasestate", "rebasestate")
         try:
             rebase.rebase(ui, repo, **{"continue": True})
         except Exception:
-            repo.vfs.rename("rebasestate", "unshelverebasestate")
+            repo.localvfs.rename("rebasestate", "unshelverebasestate")
             raise
 
         shelvectx = repo["tip"]
@@ -864,7 +864,7 @@ def _rebaserestoredcommit(
             activebookmark,
         )
 
-        repo.vfs.rename("rebasestate", "unshelverebasestate")
+        repo.localvfs.rename("rebasestate", "unshelverebasestate")
         raise error.InterventionRequired(
             _(
                 "unresolved conflicts (see 'hg resolve', then "

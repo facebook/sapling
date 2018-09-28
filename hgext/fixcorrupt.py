@@ -88,14 +88,14 @@ def truncate(ui, repo, path, size, dryrun=True, backupprefix=""):
     if dryrun:
         return
 
-    repo.vfs.makedirs("truncate-backups")
+    repo.localvfs.makedirs("truncate-backups")
     with repo.svfs.open(path, "ab+") as f:
         f.seek(size)
         # backup the part being truncated
         backuppart = f.read(oldsize - size)
         if len(backuppart) != oldsize - size:
             raise error.Abort(_("truncate: cannot backup confidently"))
-        with repo.vfs.open(
+        with repo.localvfs.open(
             "truncate-backups/%s%s.backup-byte-%s-to-%s"
             % (backupprefix, repo.svfs.basename(path), size, oldsize),
             "w",

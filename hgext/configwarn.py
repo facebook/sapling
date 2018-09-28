@@ -32,7 +32,7 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    nonsystempaths = set(rcutil.userrcpath() + [repo.vfs.join("hgrc")])
+    nonsystempaths = set(rcutil.userrcpath() + [repo.localvfs.join("hgrc")])
     systemconfigs = ui.configlist("configwarn", "systemconfigs")
 
     for configname in systemconfigs:

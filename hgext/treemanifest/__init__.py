@@ -460,7 +460,7 @@ def _prunesharedpacks(repo, packpath):
 def setuptreestores(repo, mfl):
     ui = repo.ui
     if ui.configbool("treemanifest", "server"):
-        packpath = repo.vfs.join("cache/packs/%s" % PACK_CATEGORY)
+        packpath = repo.localvfs.join("cache/packs/%s" % PACK_CATEGORY)
 
         mutablelocalstore = mutablemanifeststore(mfl)
         ondemandstore = ondemandtreedatastore(repo)
@@ -2393,7 +2393,7 @@ class ondemandtreedatastore(generatingdatastore):
 
 
 def serverrepack(repo, incremental=False, options=None):
-    packpath = repo.vfs.join("cache/packs/%s" % PACK_CATEGORY)
+    packpath = repo.localvfs.join("cache/packs/%s" % PACK_CATEGORY)
 
     revlogstore = manifestrevlogstore(repo)
 

@@ -765,7 +765,7 @@ def _smartlog(ui, repo, *pats, **opts):
         )
 
     try:
-        with open(repo.vfs.join("completionhints"), "w+") as f:
+        with open(repo.localvfs.join("completionhints"), "w+") as f:
             for rev in revdag:
                 commit_hash = rev[2].node()
                 # Skip fakectxt nodes

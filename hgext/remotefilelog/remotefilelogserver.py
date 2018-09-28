@@ -446,7 +446,7 @@ def gcserver(ui, repo):
     neededfiles = set()
     heads = repo.revs("heads(tip~25000:) - null")
 
-    cachepath = repo.vfs.join("remotefilelogcache")
+    cachepath = repo.localvfs.join("remotefilelogcache")
     for head in heads:
         mf = repo[head].manifest()
         for filename, filenode in mf.iteritems():

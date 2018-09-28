@@ -542,7 +542,7 @@ def _preamendname(repo, node):
 
 
 def _histediting(repo):
-    return repo.vfs.exists("histedit-state")
+    return repo.localvfs.exists("histedit-state")
 
 
 def _fixbookmarks(repo, revs):

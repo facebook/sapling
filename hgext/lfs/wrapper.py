@@ -206,7 +206,7 @@ def convertsink(orig, sink):
                         self.repo._writerequirements()
 
                         # Permanently enable lfs locally
-                        with self.repo.vfs("hgrc", "a", text=True) as fp:
+                        with self.repo.localvfs("hgrc", "a", text=True) as fp:
                             fp.write("\n[extensions]\nlfs=\n")
 
                 return node
@@ -243,7 +243,7 @@ def hgclone(orig, ui, opts, *args, **kwargs):
 
         # If lfs is required for this repo, permanently enable it locally
         if "lfs" in repo.requirements:
-            with repo.vfs("hgrc", "a", text=True) as fp:
+            with repo.localvfs("hgrc", "a", text=True) as fp:
                 fp.write("\n[extensions]\nlfs=\n")
 
     return result
@@ -254,7 +254,7 @@ def hgpostshare(orig, sourcerepo, destrepo, bookmarks=True, defaultpath=None):
 
     # If lfs is required for this repo, permanently enable it locally
     if "lfs" in destrepo.requirements:
-        with destrepo.vfs("hgrc", "a", text=True) as fp:
+        with destrepo.localvfs("hgrc", "a", text=True) as fp:
             fp.write("\n[extensions]\nlfs=\n")
 
 

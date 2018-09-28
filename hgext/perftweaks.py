@@ -307,7 +307,7 @@ def _preloadrevs(repo):
     if repo.ui.configbool("perftweaks", "cachenoderevs", True):
         repo = repo.unfiltered()
         revs = set()
-        cachedir = repo.vfs.join("cache", "noderevs")
+        cachedir = repo.localvfs.join("cache", "noderevs")
         try:
             for cachefile in os.listdir(cachedir):
                 filename = _cachefilename(cachefile)
@@ -329,9 +329,9 @@ def _preloadrevs(repo):
 
 def _savepreloadrevs(repo, name, revs):
     if repo.ui.configbool("perftweaks", "cachenoderevs", True):
-        cachedir = repo.vfs.join("cache", "noderevs")
+        cachedir = repo.localvfs.join("cache", "noderevs")
         try:
-            repo.vfs.mkdir(cachedir)
+            repo.localvfs.mkdir(cachedir)
         except OSError as ex:
             # If we failed because the directory already exists,
             # continue.  In all other cases (e.g., no permission to create the

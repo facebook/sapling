@@ -81,7 +81,7 @@ def _getannotate(repo, proto, path, lastnode):
                 content = ""
                 with open(p, "rb") as f:
                     content = f.read()
-                vfsbaselen = len(repo.vfs.base + "/")
+                vfsbaselen = len(repo.localvfs.base + "/")
                 relpath = p[vfsbaselen:]
                 result += "%s\0%s\0%s" % (relpath, len(content), content)
     return result
@@ -207,8 +207,8 @@ def clientfetch(repo, paths, lastnodemap=None, peer=None):
                 ui.debug(
                     "fastannotate: writing %d bytes to %s\n" % (len(content), path)
                 )
-            repo.vfs.makedirs(os.path.dirname(path))
-            with repo.vfs(path, "wb") as f:
+            repo.localvfs.makedirs(os.path.dirname(path))
+            with repo.localvfs(path, "wb") as f:
                 f.write(content)
 
 

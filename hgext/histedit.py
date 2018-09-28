@@ -320,7 +320,7 @@ class histeditstate(object):
     def read(self):
         """Load histedit state from disk and set fields appropriately."""
         try:
-            state = self.repo.vfs.read("histedit-state")
+            state = self.repo.localvfs.read("histedit-state")
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
@@ -349,7 +349,7 @@ class histeditstate(object):
                 "histedit-state", ("histedit-state",), self._write, location="local"
             )
         else:
-            with self.repo.vfs("histedit-state", "w") as f:
+            with self.repo.localvfs("histedit-state", "w") as f:
                 self._write(f)
 
     def _write(self, fp):
@@ -375,7 +375,7 @@ class histeditstate(object):
         fp.write("%s\n" % backupfile)
 
     def _load(self):
-        fp = self.repo.vfs("histedit-state", "r")
+        fp = self.repo.localvfs("histedit-state", "r")
         lines = [l[:-1] for l in fp.readlines()]
 
         index = 0
@@ -425,10 +425,10 @@ class histeditstate(object):
 
     def clear(self):
         if self.inprogress():
-            self.repo.vfs.unlink("histedit-state")
+            self.repo.localvfs.unlink("histedit-state")
 
     def inprogress(self):
-        return self.repo.vfs.exists("histedit-state")
+        return self.repo.localvfs.exists("histedit-state")
 
 
 class histeditaction(object):
@@ -1294,8 +1294,8 @@ def _finishhistedit(ui, repo, state, fm):
     state.clear()
     if os.path.exists(repo.sjoin("undo")):
         os.unlink(repo.sjoin("undo"))
-    if repo.vfs.exists("histedit-last-edit.txt"):
-        repo.vfs.unlink("histedit-last-edit.txt")
+    if repo.localvfs.exists("histedit-last-edit.txt"):
+        repo.localvfs.unlink("histedit-last-edit.txt")
 
 
 def _aborthistedit(ui, repo, state):
@@ -1306,7 +1306,7 @@ def _aborthistedit(ui, repo, state):
 
         # Recover our old commits if necessary
         if not state.topmost in repo and state.backupfile:
-            backupfile = repo.vfs.join(state.backupfile)
+            backupfile = repo.localvfs.join(state.backupfile)
             f = hg.openpath(ui, backupfile)
             gen = exchange.readbundle(ui, f, backupfile)
             with repo.transaction("histedit.abort") as tr:
@@ -1521,7 +1521,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
     # Save edit rules in .hg/histedit-last-edit.txt in case
     # the user needs to ask for help after something
     # surprising happens.
-    f = open(repo.vfs.join("histedit-last-edit.txt"), "w")
+    f = open(repo.localvfs.join("histedit-last-edit.txt"), "w")
     f.write(rules)
     f.close()
 
@@ -1553,7 +1553,7 @@ def warnverifyactions(ui, repo, actions, state, ctxs):
     try:
         verifyactions(actions, state, ctxs)
     except error.ParseError:
-        if repo.vfs.exists("histedit-last-edit.txt"):
+        if repo.localvfs.exists("histedit-last-edit.txt"):
             ui.warn(
                 _("warning: histedit rules saved " "to: .hg/histedit-last-edit.txt\n")
             )
@@ -1747,7 +1747,7 @@ extensions.wrapfunction(repair, "strip", stripwrapper)
 
 
 def summaryhook(ui, repo):
-    if not os.path.exists(repo.vfs.join("histedit-state")):
+    if not os.path.exists(repo.localvfs.join("histedit-state")):
         return
     state = histeditstate(repo)
     state.read()

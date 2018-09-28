@@ -152,7 +152,7 @@ gitmetafiles = set([gitmapfile, "git-named-branches", "git-tags", "git-remote-re
 
 def _getfile(repo, filename):
     try:
-        return repo.vfs(filename)
+        return repo.localvfs(filename)
     except (IOError, OSError) as e:
         if e.errno != errno.ENOENT:
             repo.ui.warn(_("warning: unable to read %s: %s\n") % (filename, e))
@@ -287,7 +287,7 @@ def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
 
 
 def _writefile(op, filename, data):
-    with op.repo.vfs(filename, "w+", atomictemp=True) as f:
+    with op.repo.localvfs(filename, "w+", atomictemp=True) as f:
         op.repo.ui.note(_("writing .hg/%s\n") % filename)
         f.write(data)
         op.records.add("fb:gitmeta:writebytes", len(data))

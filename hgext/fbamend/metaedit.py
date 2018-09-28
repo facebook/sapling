@@ -205,4 +205,4 @@ def metaedit(ui, repo, templ, *revs, **opts):
 
 
 def _histediting(repo):
-    return repo.vfs.exists("histedit-state")
+    return repo.localvfs.exists("histedit-state")

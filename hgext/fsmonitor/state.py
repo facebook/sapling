@@ -22,7 +22,7 @@ _versionformat = ">I"
 
 class state(object):
     def __init__(self, repo):
-        self._vfs = repo.vfs
+        self._vfs = repo.localvfs
         self._ui = repo.ui
         self._rootdir = pathutil.normasprefix(repo.root)
         self._lastclock = None

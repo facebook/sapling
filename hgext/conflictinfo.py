@@ -102,7 +102,7 @@ def extsetup(ui):
 # as proof of culpability.
 def _findconflictcommand(repo):
     for path, data in CONFLICTSTATES:
-        if repo.vfs.exists(path):
+        if repo.localvfs.exists(path):
             return data
     return None
 

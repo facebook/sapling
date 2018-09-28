@@ -128,7 +128,7 @@ def sigwalk(repo):
     try:
         # read local signatures
         fn = "localsigs"
-        for item in parsefile(repo.vfs(fn), fn):
+        for item in parsefile(repo.localvfs(fn), fn):
             yield item
     except IOError:
         pass
@@ -294,7 +294,7 @@ def _dosign(ui, repo, *revs, **opts):
 
     # write it
     if opts["local"]:
-        repo.vfs.append("localsigs", sigmessage)
+        repo.localvfs.append("localsigs", sigmessage)
         return
 
     if not opts["force"]:

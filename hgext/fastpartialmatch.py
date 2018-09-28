@@ -538,19 +538,19 @@ class _header(object):
 
 
 def _needsrebuilding(repo):
-    return repo.vfs.exists(_needrebuildfile)
+    return repo.localvfs.exists(_needrebuildfile)
 
 
 def _markneedsrebuilding(ui, repo):
     try:
-        with repo.vfs(_needrebuildfile, "w") as fileobj:
+        with repo.localvfs(_needrebuildfile, "w") as fileobj:
             fileobj.write("content")  # content doesn't matter
     except IOError as e:
         ui.warn(_("error happened while triggering rebuild: %s\n") % e)
 
 
 def _unmarkneedsrebuilding(repo):
-    repo.vfs.tryunlink(_needrebuildfile)
+    repo.localvfs.tryunlink(_needrebuildfile)
 
 
 def _readgenerationnum(ui, vfs):

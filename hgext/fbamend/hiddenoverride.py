@@ -55,7 +55,7 @@ def shouldpinnodes(repo):
     if repo and repo.local():
         # working copy parent
         try:
-            wnode = repo.vfs("dirstate").read(20)
+            wnode = repo.localvfs("dirstate").read(20)
             result.add(wnode)
         except Exception:
             pass

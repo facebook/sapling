@@ -125,7 +125,7 @@ def wrapui(ui):
             vfs = None
             repo = getattr(self, "_bbrepo", lambda: None)()
             if repo:
-                vfs = repo.vfs
+                vfs = repo.localvfs
                 if not vfs.isdir("."):
                     vfs = None
             return vfs
@@ -257,11 +257,11 @@ def blackbox(ui, repo, *revs, **opts):
     """view the recent repository events
     """
 
-    if not repo.vfs.exists("blackbox.log"):
+    if not repo.localvfs.exists("blackbox.log"):
         return
 
     limit = opts.get(r"limit")
-    fp = repo.vfs("blackbox.log", "r")
+    fp = repo.localvfs("blackbox.log", "r")
     lines = fp.read().split("\n")
 
     count = 0

@@ -169,11 +169,11 @@ def safelog(repo, command):
         # which gap handling generally covers.
         try:
             try:
-                repo.vfs.makedirs("undolog")
+                repo.localvfs.makedirs("undolog")
             except OSError:
                 repo.ui.debug("can't make undolog folder in .hg\n")
                 return changes
-            with lockmod.lock(repo.vfs, "undolog/lock", desc="undolog", timeout=2):
+            with lockmod.lock(repo.localvfs, "undolog/lock", desc="undolog", timeout=2):
                 # developer config: undo._duringundologlock
                 if repo.ui.configbool("undo", "_duringundologlock"):
                     repo.hook("duringundologlock")
@@ -198,13 +198,13 @@ def lighttransaction(repo):
     #    that run commands
     # 2. they are really expensive performance wise
     #
-    # ligtthransaction avoids certain hooks from being
+    # lighttransaction avoids certain hooks from being
     # executed, doesn't check repo locks, doesn't check
     # abandoned tr's (since we only record info) and doesn't
     # do any tag handling
     vfsmap = {"shared": repo.sharedvfs, "local": repo.localvfs}
     tr = transaction.transaction(
-        repo.ui.warn, repo.vfs, vfsmap, "undolog/tr.journal", "undolog/tr.undo"
+        repo.ui.warn, repo.localvfs, vfsmap, "undolog/tr.journal", "undolog/tr.undo"
     )
     return tr
 
@@ -249,7 +249,7 @@ def log(repo, command, tr):
 def unfinished(repo):
     """like cmdutil.checkunfinished without raising an Abort"""
     for f, clearable, allowcommit, msg, hint in cmdutil.unfinishedstates:
-        if repo.vfs.exists(f):
+        if repo.localvfs.exists(f):
             return True
     return False
 
@@ -311,21 +311,21 @@ def _logindex(repo, tr, nodes):
 def _logundoredoindex(repo, reverseindex, branch=""):
     rlog = _getrevlog(repo, "index.i")
     hexnode = hex(rlog.node(_invertindex(rlog, reverseindex)))
-    return repo.vfs.write("undolog/redonode", str(hexnode) + "\0" + branch)
+    return repo.localvfs.write("undolog/redonode", str(hexnode) + "\0" + branch)
 
 
 def _delundoredo(repo):
     path = "undolog" + "/" + "redonode"
-    repo.vfs.tryunlink(path)
+    repo.localvfs.tryunlink(path)
 
 
 def _recordnewgap(repo, absoluteindex=None):
     path = "undolog" + "/" + "gap"
     if absoluteindex is None:
         rlog = _getrevlog(repo, "index.i")
-        repo.vfs.write(path, str(len(rlog) - 1))
+        repo.localvfs.write(path, str(len(rlog) - 1))
     else:
-        repo.vfs.write(path, str(absoluteindex))
+        repo.localvfs.write(path, str(absoluteindex))
 
 
 # Read
@@ -363,7 +363,7 @@ def _gapcheck(ui, repo, reverseindex):
     path = "undolog" + "/" + "gap"
     result = False
     try:
-        result = absoluteindex >= int(repo.vfs.read(path))
+        result = absoluteindex >= int(repo.localvfs.read(path))
     except IOError:
         # recreate file
         repo.ui.debug("failed to read gap file in %s, attempting recreation\n" % path)
@@ -1065,7 +1065,7 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
         sign = None
     if not absolute:
         try:  # attempt to get relative shift
-            nodebranch = repo.vfs.read("undolog/redonode").split("\0")
+            nodebranch = repo.localvfs.read("undolog/redonode").split("\0")
             hexnode = nodebranch[0]
             try:
                 oldbranch = nodebranch[1]
@@ -1342,16 +1342,16 @@ def _invertindex(rlog, indexorreverseindex):
 def _getrevlog(repo, filename):
     path = "undolog/" + filename
     try:
-        return revlog.revlog(repo.vfs, path)
+        return revlog.revlog(repo.localvfs, path)
     except error.RevlogError:
         # corruption: for now, we can simply nuke all files
         repo.ui.debug("caught revlog error. %s was probably corrupted\n" % path)
         _logtoscuba(repo.ui, "revlog error")
-        repo.vfs.rmtree("undolog")
-        repo.vfs.makedirs("undolog")
+        repo.localvfs.rmtree("undolog")
+        repo.localvfs.makedirs("undolog")
         # if we get the error a second time
         # then someone is actively messing with these files
-        return revlog.revlog(repo.vfs, path)
+        return revlog.revlog(repo.localvfs, path)
 
 
 def tohexnode(repo, spec):

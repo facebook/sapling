@@ -754,14 +754,14 @@ class pathhelper(object):
 
     @property
     def dirname(self):
-        return os.path.dirname(self._repo.vfs.join(self._vfspath))
+        return os.path.dirname(self._repo.localvfs.join(self._vfspath))
 
     @property
     def linelogpath(self):
-        return self._repo.vfs.join(self._vfspath + ".l")
+        return self._repo.localvfs.join(self._vfspath + ".l")
 
     def lock(self):
-        return lockmod.lock(self._repo.vfs, self._vfspath + ".lock")
+        return lockmod.lock(self._repo.localvfs, self._vfspath + ".lock")
 
     @contextlib.contextmanager
     def _lockflock(self):
@@ -781,7 +781,7 @@ class pathhelper(object):
 
     @property
     def revmappath(self):
-        return self._repo.vfs.join(self._vfspath + ".m")
+        return self._repo.localvfs.join(self._vfspath + ".m")
 
 
 @contextlib.contextmanager

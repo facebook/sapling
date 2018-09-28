@@ -472,9 +472,9 @@ def _setupdirstate(ui):
             self.sparsematch = None
 
         def __get__(self, obj, type=None):
-            repo = obj.repo
+            repo = obj.repo if util.safehasattr(obj, "repo") else None
             origignore = self.orig.__get__(obj)
-            if not util.safehasattr(repo, "sparsematch"):
+            if repo is None or not util.safehasattr(repo, "sparsematch"):
                 return origignore
 
             sparsematch = repo.sparsematch()
@@ -500,8 +500,10 @@ def _setupdirstate(ui):
             # skips O(working copy) scans, and affect absorb perf.
             return orig(self, parent, allfiles, changedfiles, exact=exact)
 
-        with progress.spinner(ui, "applying sparse profile"):
-            if util.safehasattr(self.repo, "sparsematch"):
+        if util.safehasattr(self, "repo") and util.safehasattr(
+            self.repo, "sparsematch"
+        ):
+            with progress.spinner(ui, "applying sparse profile"):
                 matcher = self.repo.sparsematch()
                 allfiles = allfiles.matches(matcher)
                 if changedfiles:
@@ -527,17 +529,18 @@ def _setupdirstate(ui):
     for func in editfuncs:
 
         def _wrapper(orig, self, *args):
-            repo = self.repo
-            if util.safehasattr(repo, "sparsematch"):
-                dirstate = repo.dirstate
-                sparsematch = repo.sparsematch()
-                for f in args:
-                    if f is not None and not sparsematch(f) and f not in dirstate:
-                        raise error.Abort(
-                            _("cannot add '%s' - it is outside " "the sparse checkout")
-                            % f,
-                            hint=hint,
-                        )
+            if util.safehasattr(self, "repo"):
+                repo = self.repo
+                if util.safehasattr(repo, "sparsematch"):
+                    dirstate = repo.dirstate
+                    sparsematch = repo.sparsematch()
+                    for f in args:
+                        if f is not None and not sparsematch(f) and f not in dirstate:
+                            raise error.Abort(
+                                _("cannot add '%s' - it is outside the sparse checkout")
+                                % f,
+                                hint=hint,
+                            )
             return orig(self, *args)
 
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
@@ -750,11 +753,13 @@ def _wraprepo(ui, repo):
 
             repo = self.unfiltered()
             if config is None:
-                if not self.vfs.exists("sparse"):
+                if not self.localvfs.exists("sparse"):
                     return SparseConfig(None, set(), set(), [])
 
-                raw = self.vfs.read("sparse")
-                config = self.readsparseconfig(raw, filename=self.vfs.join("sparse"))
+                raw = self.localvfs.read("sparse")
+                config = self.readsparseconfig(
+                    raw, filename=self.localvfs.join("sparse")
+                )
 
             # create copies, as these datastructures are updated further on
             includes, excludes, profiles = (
@@ -834,7 +839,7 @@ def _wraprepo(ui, repo):
                 signature = 0
                 if config is None:
                     try:
-                        sparsedata = self.vfs.read("sparse")
+                        sparsedata = self.localvfs.read("sparse")
                         signature = hashlib.sha1(sparsedata).hexdigest()
                     except (OSError, IOError):
                         pass
@@ -851,7 +856,7 @@ def _wraprepo(ui, repo):
                 tempsignature = 0
                 if includetemp:
                     try:
-                        tempsparsepath = self.vfs.read("tempsparse")
+                        tempsparsepath = self.localvfs.read("tempsparse")
                         tempsignature = hashlib.sha1(tempsparsepath).hexdigest()
                     except (OSError, IOError):
                         pass
@@ -975,7 +980,7 @@ def _wraprepo(ui, repo):
                 "\n".join(sorted(include)),
                 "\n".join(sorted(exclude)),
             )
-            self.vfs.write("sparse", raw)
+            self.localvfs.write("sparse", raw)
             self.invalidatesignaturecache()
 
         def addtemporaryincludes(self, files):
@@ -986,18 +991,18 @@ def _wraprepo(ui, repo):
 
         def gettemporaryincludes(self):
             existingtemp = set()
-            if self.vfs.exists("tempsparse"):
-                raw = self.vfs.read("tempsparse")
+            if self.localvfs.exists("tempsparse"):
+                raw = self.localvfs.read("tempsparse")
                 existingtemp.update(raw.split("\n"))
             return existingtemp
 
         def _writetemporaryincludes(self, includes):
             raw = "\n".join(sorted(includes))
-            self.vfs.write("tempsparse", raw)
+            self.localvfs.write("tempsparse", raw)
             self.invalidatesignaturecache()
 
         def prunetemporaryincludes(self):
-            if self.vfs.exists("tempsparse"):
+            if self.localvfs.exists("tempsparse"):
                 origstatus = self.status()
                 modified, added, removed, deleted, a, b, c = origstatus
                 if modified or added or removed or deleted:
@@ -1023,7 +1028,7 @@ def _wraprepo(ui, repo):
                 for file in dropped:
                     dirstate.drop(file)
 
-                self.vfs.unlink("tempsparse")
+                self.localvfs.unlink("tempsparse")
                 self.invalidatesignaturecache()
                 msg = _(
                     "cleaned up %d temporarily added file(s) from the "
@@ -1083,7 +1088,7 @@ def _discover(ui, repo, rev=None):
     """
     if not rev:
         included = repo.getactiveprofiles()
-        sparse = repo.vfs.read("sparse")
+        sparse = repo.localvfs.read("sparse")
         active = repo.readsparseconfig(sparse).profiles
         active = frozenset(active)
         rev = "."
@@ -1386,8 +1391,8 @@ def sparse(ui, repo, *pats, **opts):
         raise error.Abort(_("too many flags specified"))
 
     if count == 0:
-        if repo.vfs.exists("sparse"):
-            ui.status(repo.vfs.read("sparse") + "\n")
+        if repo.localvfs.exists("sparse"):
+            ui.status(repo.localvfs.read("sparse") + "\n")
             temporaryincludes = repo.gettemporaryincludes()
             if temporaryincludes:
                 ui.status(_("Temporarily Included Files (for merge/rebase):\n"))
@@ -1908,8 +1913,8 @@ def _config(
     try:
         oldsparsematch = repo.sparsematch()
 
-        if repo.vfs.exists("sparse"):
-            raw = repo.vfs.read("sparse")
+        if repo.localvfs.exists("sparse"):
+            raw = repo.localvfs.read("sparse")
             oldinclude, oldexclude, oldprofiles = map(set, repo.readsparseconfig(raw))
         else:
             oldinclude = set()
@@ -1994,8 +1999,8 @@ def _import(ui, repo, files, opts, force=False):
 
         # read current configuration
         raw = ""
-        if repo.vfs.exists("sparse"):
-            raw = repo.vfs.read("sparse")
+        if repo.localvfs.exists("sparse"):
+            raw = repo.localvfs.read("sparse")
         oincludes, oexcludes, oprofiles = repo.readsparseconfig(raw)
         includes, excludes, profiles = map(set, (oincludes, oexcludes, oprofiles))
 
@@ -2048,8 +2053,8 @@ def _clear(ui, repo, files, force=False):
 
     with repo.wlock():
         raw = ""
-        if repo.vfs.exists("sparse"):
-            raw = repo.vfs.read("sparse")
+        if repo.localvfs.exists("sparse"):
+            raw = repo.localvfs.read("sparse")
         includes, excludes, profiles = repo.readsparseconfig(raw)
 
         if includes or excludes:

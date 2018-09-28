@@ -350,8 +350,8 @@ def _rebase(orig, ui, repo, *pats, **opts):
 
     if (
         (contf or abortf)
-        and not repo.vfs.exists("rebasestate")
-        and repo.vfs.exists("histedit.state")
+        and not repo.localvfs.exists("rebasestate")
+        and repo.localvfs.exists("histedit.state")
     ):
         msg = _("no rebase in progress")
         hint = _(
@@ -433,5 +433,5 @@ def _rebase(orig, ui, repo, *pats, **opts):
         repo,
         node.hex(src),
         keep=keepf,
-        commands=repo.vfs.join("histedit-last-edit.txt"),
+        commands=repo.localvfs.join("histedit-last-edit.txt"),
     )

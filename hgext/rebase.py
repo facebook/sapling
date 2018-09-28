@@ -214,7 +214,7 @@ class rebaseruntime(object):
                 "rebasestate", ("rebasestate",), self._writestatus, location="local"
             )
         else:
-            with self.repo.vfs("rebasestate", "w") as f:
+            with self.repo.localvfs("rebasestate", "w") as f:
                 self._writestatus(f)
 
     def _writestatus(self, f):
@@ -253,7 +253,7 @@ class rebaseruntime(object):
         destmap = {}
 
         try:
-            f = repo.vfs("rebasestate")
+            f = repo.localvfs("rebasestate")
             for i, l in enumerate(f.read().splitlines()):
                 if i == 0:
                     originalwd = repo[l].rev()
@@ -1770,20 +1770,20 @@ def updatemq(repo, state, skipped, **opts):
 def storecollapsemsg(repo, collapsemsg):
     "Store the collapse message to allow recovery"
     collapsemsg = collapsemsg or ""
-    f = repo.vfs("last-message.txt", "w")
+    f = repo.localvfs("last-message.txt", "w")
     f.write("%s\n" % collapsemsg)
     f.close()
 
 
 def clearcollapsemsg(repo):
     "Remove collapse message file"
-    repo.vfs.unlinkpath("last-message.txt", ignoremissing=True)
+    repo.localvfs.unlinkpath("last-message.txt", ignoremissing=True)
 
 
 def restorecollapsemsg(repo, isabort):
     "Restore previously stored collapse message"
     try:
-        f = repo.vfs("last-message.txt")
+        f = repo.localvfs("last-message.txt")
         collapsemsg = f.readline().strip()
         f.close()
     except IOError as err:
@@ -1803,7 +1803,7 @@ def clearstatus(repo):
     tr = repo.currenttransaction()
     if tr:
         tr.removefilegenerator("rebasestate")
-    repo.vfs.unlinkpath("rebasestate", ignoremissing=True)
+    repo.localvfs.unlinkpath("rebasestate", ignoremissing=True)
 
 
 def needupdate(repo, state):
@@ -2129,7 +2129,7 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
 
 
 def summaryhook(ui, repo):
-    if not repo.vfs.exists("rebasestate"):
+    if not repo.localvfs.exists("rebasestate"):
         return
     try:
         rbsrt = rebaseruntime(repo, ui, None, {})

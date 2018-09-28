@@ -86,7 +86,7 @@ def checknewline(s, newline, ui=None, repo=None, filename=None):
                 "Before your next commit, please reconsider your "
                 "encode/decode settings in \nMercurial.ini or %s.\n"
             )
-            % (filename, newlinestr[newline], repo.vfs.join("hgrc"))
+            % (filename, newlinestr[newline], repo.localvfs.join("hgrc"))
         )
 
 

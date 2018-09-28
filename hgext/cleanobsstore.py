@@ -68,11 +68,11 @@ def _needtoclean(ui, repo):
     obsstoresizelimit = ui.configint("cleanobsstore", "obsstoresizelimit", 500000)
     return repo.svfs.stat(
         "obsstore"
-    ).st_size >= obsstoresizelimit and not repo.vfs.exists(_cleanedobsstorefile)
+    ).st_size >= obsstoresizelimit and not repo.localvfs.exists(_cleanedobsstorefile)
 
 
 def _markcleaned(repo):
-    with repo.vfs(_cleanedobsstorefile, "w") as f:
+    with repo.localvfs(_cleanedobsstorefile, "w") as f:
         f.write("1")  # any text will do
 
 
