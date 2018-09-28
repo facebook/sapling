@@ -11,8 +11,6 @@ import svnwrap
 import util
 from mercurial import context, node, revlog, util as hgutil
 
-from .. import shareutil
-
 
 class SVNMeta(object):
     def __init__(self, repo, uuid=None, subdir=None, skiperrorcheck=False):
@@ -23,8 +21,8 @@ class SVNMeta(object):
         """
         # simple and public variables
         self.ui = repo.ui
-        self.repo = shareutil.getsrcrepo(repo)
-        self.path = os.path.normpath(self.repo.vfs.join(".."))
+        self.repo = repo
+        self.path = repo.root
         self.lastdate = "1970-01-01 00:00:00 -0000"
         self.addedtags = {}
         self.deletedtags = {}
@@ -284,7 +282,7 @@ class SVNMeta(object):
 
     @property
     def metapath(self):
-        return os.path.join(self.path, ".hg", "svn")
+        return self.repo.sharedvfs.join("svn")
 
     @property
     def branch_info_file(self):

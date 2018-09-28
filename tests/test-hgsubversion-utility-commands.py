@@ -119,10 +119,10 @@ class UtilityTests(test_hgsubversion_util.TestBase):
 
     def test_missing_metadata(self):
         self._load_fixture_and_fetch("two_heads.svndump")
-        os.remove(self.repo.vfs.join("svn/branch_info"))
+        os.remove(self.repo.sharedvfs.join("svn/branch_info"))
         svncommands.updatemeta(self.ui(), self.repo, [])
 
-        test_hgsubversion_util.rmtree(self.repo.vfs.join("svn"))
+        test_hgsubversion_util.rmtree(self.repo.sharedvfs.join("svn"))
         self.assertRaises(hgutil.Abort, self.repo.svnmeta)
         self.assertRaises(
             hgutil.Abort, svncommands.info, self.ui(), repo=self.repo, args=[]
@@ -131,7 +131,7 @@ class UtilityTests(test_hgsubversion_util.TestBase):
             hgutil.Abort, svncommands.genignore, self.ui(), repo=self.repo, args=[]
         )
 
-        os.remove(self.repo.vfs.join("hgrc"))
+        os.remove(self.repo.localvfs.join("hgrc"))
         self.assertRaises(hgutil.Abort, self.repo.svnmeta)
         self.assertRaises(
             hgutil.Abort, svncommands.info, self.ui(), repo=self.repo, args=[]

@@ -390,7 +390,7 @@ def updateexternals(ui, args, repo, **opts):
 
     # Retrieve current externals status
     try:
-        oldext = file(repo.vfs.join("svn/externals"), "rb").read()  # noqa: F821
+        oldext = file(repo.sharedvfs.join("svn/externals"), "rb").read()  # noqa: F821
     except IOError:
         oldext = ""
     newext = ""
@@ -408,7 +408,7 @@ def updateexternals(ui, args, repo, **opts):
         else:
             raise hgutil.Abort(_("unknown update actions: %r") % action)
 
-    file(repo.vfs.join("svn/externals"), "wb").write(newext)  # noqa: F821
+    file(repo.sharedvfs.join("svn/externals"), "wb").write(newext)  # noqa: F821
 
 
 def getchanges(ui, repo, parentctx, exts):
