@@ -61,6 +61,8 @@ pull on repo2
   $ hgmn pull
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  warning: stream clone requested but client is missing requirements: lz4revlog
+  (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes
   adding changesets
   adding manifests
@@ -120,6 +122,8 @@ pull on repo3
   $ hgmn pull
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  warning: stream clone requested but client is missing requirements: lz4revlog
+  (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes
   adding changesets
   adding manifests

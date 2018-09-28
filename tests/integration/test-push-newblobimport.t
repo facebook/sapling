@@ -49,6 +49,8 @@ verify content
   $ cd client
   $ echo 'remotefilelog' >> .hg/requires
   $ hgmn pull -q
+  warning: stream clone requested but client is missing requirements: lz4revlog
+  (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   $ hgmn up c201a1696ba0db28be95eedf0949329fa8c44478 -q
   $ cat a
   $ cat b
