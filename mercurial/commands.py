@@ -1616,6 +1616,11 @@ def clone(ui, source, dest=None, **opts):
     if opts.get("noupdate") and opts.get("updaterev"):
         raise error.Abort(_("cannot specify both --noupdate and --updaterev"))
 
+    sharepool = ui.config("share", "pool")
+    if sharepool:
+        sharepool = util.expandpath(sharepool)
+    shareopts = {"pool": sharepool, "mode": ui.config("share", "poolnaming")}
+
     r = hg.clone(
         ui,
         opts,
@@ -1626,7 +1631,7 @@ def clone(ui, source, dest=None, **opts):
         rev=opts.get("rev"),
         update=opts.get("updaterev") or not opts.get("noupdate"),
         branch=opts.get("branch"),
-        shareopts=opts.get("shareopts"),
+        shareopts=shareopts,
     )
 
     return r is None

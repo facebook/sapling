@@ -772,6 +772,36 @@ class localrepository(object):
         cls = repoview.newtype(self.unfiltered().__class__)
         return cls(self, name)
 
+    @repofilecache("shared")
+    def sharedfeatures(self):
+        """Returns the set of enabled 'shared' features for this repo"""
+        try:
+            return set(self.vfs.read("shared").splitlines())
+        except IOError as inst:
+            if inst.errno != errno.ENOENT:
+                raise
+            return set()
+
+    @property
+    def _sharedprimaryrepo(self):
+        """
+        Returns the primary repository object for a given shared repository.
+        If repo is not a shared repository, return None.
+        """
+        if self.sharedpath == self.path:
+            return None
+
+        if util.safehasattr(self, "_primaryrepo"):
+            return self._primaryrepo
+
+        from . import hg  # avoid import cycle
+
+        # the sharedpath always ends in the .hg; we want the path to the repo
+        primary = self.vfs.split(self.sharedpath)[0]
+        primaryrepo = hg.repository(self.ui, primary)
+        self._primaryrepo = primaryrepo
+        return primaryrepo
+
     @repofilecache("bookmarks", "bookmarks.current")
     def _bookmarks(self):
         return bookmarks.bmstore(self)
@@ -779,6 +809,11 @@ class localrepository(object):
     @property
     def _activebookmark(self):
         return self._bookmarks.active
+
+    @property
+    def _hassharedbookmarks(self):
+        """Returns whether this repo has shared bookmarks"""
+        return "bookmarks" in self.sharedfeatures
 
     # _phasesets depend on changelog. what we need is to call
     # _phasecache.invalidate() if '00changelog.i' was changed, but it
@@ -1859,14 +1894,14 @@ class localrepository(object):
 
         # if this is a shared repo and we must also lock the shared wlock
         # or else we can deadlock due to lock ordering issues
-        srcwlock = None
-        srcrepo = self._getsrcrepo()
-        if srcrepo:
-            srcwlock = srcrepo.wlock()
+        sharedwlock = None
+        sharedrepo = self._sharedprimaryrepo
+        if sharedrepo:
+            sharedwlock = sharedrepo.wlock()
 
         def unlock():
-            if srcwlock:
-                srcwlock.release()
+            if sharedwlock:
+                sharedwlock.release()
             if self.dirstate.pendingparentchange():
                 self.dirstate.invalidate()
             else:
@@ -1886,26 +1921,6 @@ class localrepository(object):
         )
         self._wlockref = weakref.ref(l)
         return l
-
-    def _getsrcrepo(self):
-        """
-        Returns the source repository object for a given shared repository.
-        If repo is not a shared repository, returns None.
-        """
-        if self.sharedpath == self.path:
-            return None
-
-        if util.safehasattr(self, "srcrepo") and self.srcrepo:
-            return self.srcrepo
-
-        # the sharedpath always ends in the .hg; we want the path to the repo
-        source = self.vfs.split(self.sharedpath)[0]
-        from . import hg
-
-        srcrepo = hg.repository(self.ui, source)
-        # cache for later use
-        self.srcrepo = srcrepo
-        return srcrepo
 
     def _currentlock(self, lockref):
         """Returns the lock if it's held, or None if it's not."""

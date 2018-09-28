@@ -176,6 +176,7 @@ class statichttprepository(localrepo.localrepository):
         self.encodepats = None
         self.decodepats = None
         self._transref = None
+        self.sharedfeatures = set()
 
     def _restrictcapabilities(self, caps):
         caps = super(statichttprepository, self)._restrictcapabilities(caps)

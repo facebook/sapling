@@ -1899,6 +1899,33 @@ Controls generic server settings.
 
     See also ``server.zliblevel``.
 
+
+``share``
+---------
+
+Controls automatic pooled storage for clones.
+
+``pool``
+    Filesystem path where shared repository data will be stored. When
+    defined, :hg:`clone` will automatically use shared repository
+    storage instead of creating a store inside each clone.
+
+``poolnaming``
+    How directory names in ``share.pool`` are constructed.
+
+    "identity" means the name is derived from the first changeset in the
+    repository. In this mode, different remotes share storage if their
+    root/initial changeset is identical. In this mode, the local shared
+    repository is an aggregate of all encountered remote repositories.
+
+    "remote" means the name is derived from the source repository's
+    path or URL. In this mode, storage is only shared if the path or URL
+    requested in the :hg:`clone` command matches exactly to a repository
+    that was cloned before.
+
+    The default naming mode is "identity".
+
+
 ``smtp``
 --------
 
