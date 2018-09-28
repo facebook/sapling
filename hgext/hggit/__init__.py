@@ -46,7 +46,6 @@ from mercurial import (
     templatekw,
     ui as hgui,
     util as hgutil,
-    vfs as vfsmod,
 )
 from mercurial.error import LookupError
 from mercurial.i18n import _
@@ -242,15 +241,6 @@ def extsetup(ui):
     insort(help.helptable, entry)
 
 
-def _gitvfs(repo):
-    """return a vfs suitable to read git related data"""
-    # Mercurial >= 3.3:  repo.shared()
-    if repo.sharedpath != repo.path:
-        return vfsmod.vfs(repo.sharedpath)
-    else:
-        return repo.vfs
-
-
 def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):
         klass = hgrepo.generate_repo_subclass(repo.__class__)
@@ -307,14 +297,13 @@ def gverify(ui, repo, **opts):
 def git_cleanup(ui, repo):
     """clean up Git commit map after history editing"""
     new_map = []
-    vfs = _gitvfs(repo)
-    for line in vfs(GitHandler.map_file):
+    for line in repo.sharedvfs(GitHandler.map_file):
         gitsha, hgsha = line.strip().split(" ", 1)
         if hgsha in repo:
             new_map.append("%s %s\n" % (gitsha, hgsha))
     wlock = repo.wlock()
     try:
-        f = vfs(GitHandler.map_file, "wb")
+        f = repo.sharedvfs(GitHandler.map_file, "wb")
         map(f.write, new_map)
     finally:
         wlock.release()

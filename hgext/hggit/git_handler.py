@@ -98,11 +98,8 @@ class GitHandler(object):
     def __init__(self, dest_repo, ui):
         self.repo = dest_repo
         self.ui = ui
-        self.vfs = self.repo.vfs
+        self.vfs = self.repo.sharedvfs
 
-        # Mercurial >= 3.3:  repo.shared()
-        if dest_repo.sharedpath != dest_repo.path:
-            self.vfs = vfsmod.vfs(dest_repo.sharedpath)
         if compat.config(ui, "bool", "git", "intree"):
             self.gitdir = self.repo.wvfs.join(".git")
         else:
@@ -653,8 +650,8 @@ class GitHandler(object):
 
         >>> from collections import namedtuple
         >>> from mercurial.ui import ui
-        >>> mockrepo = namedtuple('localrepo', ['vfs'])
-        >>> mockrepo.vfs = ''
+        >>> mockrepo = namedtuple('localrepo', ['sharedvfs'])
+        >>> mockrepo.sharedvfs = ''
         >>> g = GitHandler(mockrepo, ui()).get_valid_git_username_email
         >>> g('John Doe')
         'John Doe'
@@ -1773,8 +1770,8 @@ class GitHandler(object):
         >>> from collections import namedtuple
         >>> from dulwich.client import HttpGitClient, SSHGitClient
         >>> from mercurial.ui import ui
-        >>> mockrepo = namedtuple('localrepo', ['vfs'])
-        >>> mockrepo.vfs = ''
+        >>> mockrepo = namedtuple('localrepo', ['sharedvfs'])
+        >>> mockrepo.sharedvfs = ''
         >>> g = GitHandler(mockrepo, ui())
         >>> client, url = g.get_transport_and_path('http://fqdn.com/test.git')
         >>> print isinstance(client, HttpGitClient)
