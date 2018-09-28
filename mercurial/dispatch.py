@@ -277,7 +277,6 @@ def _preimportmodules():
         "sampling",
         "schemes",
         "share",
-        "shareutil",
         "sigtrace",
         "simplecache",
         "smartlog",

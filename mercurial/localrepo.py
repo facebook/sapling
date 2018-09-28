@@ -813,26 +813,6 @@ class localrepository(object):
                 raise
             return set()
 
-    @property
-    def _sharedprimaryrepo(self):
-        """
-        Returns the primary repository object for a given shared repository.
-        If repo is not a shared repository, return None.
-        """
-        if self.sharedpath == self.path:
-            return None
-
-        if util.safehasattr(self, "_primaryrepo"):
-            return self._primaryrepo
-
-        from . import hg  # avoid import cycle
-
-        # the sharedpath always ends in the .hg; we want the path to the repo
-        primary = self.localvfs.split(self.sharedpath)[0]
-        primaryrepo = hg.repository(self.ui, primary)
-        self._primaryrepo = primaryrepo
-        return primaryrepo
-
     @repofilecache(
         sharedpaths=["bookmarks"], localpaths=["bookmarks", "bookmarks.current"]
     )
@@ -1935,9 +1915,17 @@ class localrepository(object):
         # if this is a shared repo and we must also lock the shared wlock
         # or else we can deadlock due to lock ordering issues
         sharedwlock = None
-        sharedrepo = self._sharedprimaryrepo
-        if sharedrepo:
-            sharedwlock = sharedrepo.wlock()
+        if self.shared():
+            sharedwlock = self._lock(
+                self.sharedvfs,
+                "wlock",
+                wait,
+                None,
+                None,
+                _("shared repository %s") % self.sharedroot,
+                inheritchecker=self._wlockchecktransaction,
+                parentenvvar="HG_WLOCK_LOCKER",
+            )
 
         def unlock():
             if sharedwlock:

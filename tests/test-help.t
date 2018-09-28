@@ -405,7 +405,6 @@ Test extension help:
        sampling      (no help text available)
        schemes       extend schemes with shortcuts to repository swarms
        share         share a common history between several working directories
-       shareutil     (no help text available)
        shelve        save and restore changes to the working directory
        sigtrace      sigtrace - dump stack and memory traces on signal
        smartlog      command to display a relevant subgraph
