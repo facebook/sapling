@@ -1121,6 +1121,7 @@ Test visibility of in-memory changes inside transaction to external hook
   > hg parents --template "VISIBLE {rev}:{node|short}\n"
   > # test that pending changes are hidden
   > unset HG_PENDING
+  > unset HG_SHAREDPENDING
   > hg parents --template "ACTUAL  {rev}:{node|short}\n"
   > echo "===="
   > EOF

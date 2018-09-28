@@ -135,7 +135,9 @@ def _readroots(repo, phasedefaults=None):
     dirty = False
     roots = [set() for i in allphases]
     try:
-        f, pending = txnutil.trypending(repo.root, repo.svfs, "phaseroots")
+        f, pending = txnutil.trysharedpending(
+            repo.root, repo.sharedroot, repo.svfs, "phaseroots"
+        )
         try:
             for line in f:
                 phase, nh = line.split()

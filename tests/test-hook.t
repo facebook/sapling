@@ -31,9 +31,9 @@ commit hooks can see env vars
   $ hg commit -m a
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=0000000000000000000000000000000000000000
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
   0:cb9a9f314b8b
-  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
+  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
   commit.b hook: HG_HOOKNAME=commit.b HG_HOOKTYPE=commit HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
@@ -59,9 +59,9 @@ pretxncommit and commit hooks can see both parents of merge
   $ hg commit -m a1 -d "1 0"
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
   1:ab228980c14d
-  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
+  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   commit.b hook: HG_HOOKNAME=commit.b HG_HOOKTYPE=commit HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
@@ -72,9 +72,9 @@ pretxncommit and commit hooks can see both parents of merge
   $ hg commit -m b -d '1 0'
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
   2:ee9deb46ab31
-  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
+  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   commit.b hook: HG_HOOKNAME=commit.b HG_HOOKTYPE=commit HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
@@ -84,9 +84,9 @@ pretxncommit and commit hooks can see both parents of merge
   $ hg commit -m merge -d '2 0'
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd HG_PENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
   3:07f3376c1e65
-  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
+  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
   commit.b hook: HG_HOOKNAME=commit.b HG_HOOKTYPE=commit HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
@@ -129,9 +129,9 @@ tag hooks can see env vars
   pretag hook: HG_HOOKNAME=pretag HG_HOOKTYPE=pretag HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
   4:539e4b31b6dc
-  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
+  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   tag hook: HG_HOOKNAME=tag HG_HOOKTYPE=tag HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
@@ -170,10 +170,10 @@ more there after
   $ hg commit -m 'fail' -d '4 0'
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
   5:6f611f8018c1
   5:6f611f8018c1
-  pretxncommit.forbid hook: HG_HOOKNAME=pretxncommit.forbid1 HG_HOOKTYPE=pretxncommit HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a
+  pretxncommit.forbid hook: HG_HOOKNAME=pretxncommit.forbid1 HG_HOOKTYPE=pretxncommit HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
   transaction abort!
   txnabort Python hook: txnid,txnname
   txnabort hook: HG_HOOKNAME=txnabort.1 HG_HOOKTYPE=txnabort HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
@@ -243,7 +243,7 @@ pushkey hook
   searching for changes
   no changes found
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=push
-  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_TXNNAME=push HG_URL=file:$TESTTMP/a
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_TXNNAME=push HG_URL=file:$TESTTMP/a
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_TXNNAME=push HG_URL=file:$TESTTMP/a
   exporting bookmark foo
   [1]
@@ -256,7 +256,7 @@ listkeys hook
   > EOF
   $ hg bookmark -r null bar
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
-  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
   $ cd ../b
   $ hg pull -B bar ../a
@@ -292,7 +292,7 @@ test that prelistkeys can prevent listing keys
   > EOF
   $ hg bookmark -r null quux
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
-  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
   $ cd ../b
   $ hg pull -B quux ../a
@@ -335,7 +335,7 @@ incoming changes no longer there after
   adding file changes
   added 1 changesets with 1 changes to 1 files
   4:539e4b31b6dc
-  pretxnchangegroup.forbid hook: HG_HOOKNAME=pretxnchangegroup.forbid1 HG_HOOKTYPE=pretxnchangegroup HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_NODE_LAST=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/b HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
+  pretxnchangegroup.forbid hook: HG_HOOKNAME=pretxnchangegroup.forbid1 HG_HOOKTYPE=pretxnchangegroup HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_NODE_LAST=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/b HG_SHAREDPENDING=$TESTTMP/b HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
   transaction abort!
   rollback completed
   abort: pretxnchangegroup.forbid1 hook exited with status 1

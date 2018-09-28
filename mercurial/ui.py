@@ -1334,6 +1334,7 @@ class ui(object):
         extra=None,
         editform=None,
         pending=None,
+        sharedpending=None,
         repopath=None,
         action=None,
     ):
@@ -1379,6 +1380,8 @@ class ui(object):
                 environ.update({"HGEDITFORM": editform})
             if pending:
                 environ.update({"HG_PENDING": pending})
+            if sharedpending:
+                environ.update({"HG_SHAREDPENDING": sharedpending})
 
             editor = self.geteditor()
 

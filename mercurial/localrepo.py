@@ -852,7 +852,8 @@ class localrepository(object):
     @storecache("00changelog.i")
     def changelog(self):
         return changelog.changelog(
-            self.svfs, trypending=txnutil.mayhavepending(self.root)
+            self.svfs,
+            trypending=txnutil.mayhavesharedpending(self.root, self.sharedroot),
         )
 
     def _constructmanifest(self):

@@ -16,11 +16,22 @@ def mayhavepending(root):
     """return whether 'root' may have pending changes, which are
     visible to this process.
     """
-    return root == encoding.environ.get("HG_PENDING")
+    localispending = root == encoding.environ.get("HG_PENDING")
+    localissharedpending = root == encoding.environ.get("HG_SHAREDPENDING")
+    return localispending or localissharedpending
+
+
+def mayhavesharedpending(root, sharedroot):
+    """return whether 'root' or 'sharedroot' may have pending changes, which
+    are visible to this process.
+    """
+    localispending = root == encoding.environ.get("HG_PENDING")
+    sharedissharedpending = sharedroot == encoding.environ.get("HG_SHAREDPENDING")
+    return localispending or sharedissharedpending
 
 
 def trypending(root, vfs, filename, **kwargs):
-    """Open  file to be read according to HG_PENDING environment variable
+    """Open a file to be read according to the HG_PENDING environment variable.
 
     This opens '.pending' of specified 'filename' only when HG_PENDING
     is equal to 'root'.
@@ -28,6 +39,16 @@ def trypending(root, vfs, filename, **kwargs):
     This returns '(fp, is_pending_opened)' tuple.
     """
     if mayhavepending(root):
+        try:
+            return (vfs("%s.pending" % filename, **kwargs), True)
+        except IOError as inst:
+            if inst.errno != errno.ENOENT:
+                raise
+    return (vfs(filename, **kwargs), False)
+
+
+def trysharedpending(root, sharedroot, vfs, filename, **kwargs):
+    if mayhavesharedpending(root, sharedroot):
         try:
             return (vfs("%s.pending" % filename, **kwargs), True)
         except IOError as inst:

@@ -127,6 +127,7 @@ def _exthook(ui, repo, htype, name, cmd, args, throw):
         repo.dirstate.write(tr)
         if tr and tr.writepending():
             env["HG_PENDING"] = repo.root
+            env["HG_SHAREDPENDING"] = repo.sharedroot
     env["HG_HOOKTYPE"] = htype
     env["HG_HOOKNAME"] = name
 

@@ -482,6 +482,7 @@ external process
   > hg status -amr
   > # test that pending changes are hidden
   > unset HG_PENDING
+  > unset HG_SHAREDPENDING
   > hg parents --template "ACTUAL  {rev}:{node|short}\n"
   > hg status -amr
   > echo "===="

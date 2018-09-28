@@ -3684,7 +3684,11 @@ def commitforceeditor(
     # make in-memory changes visible to external process
     tr = repo.currenttransaction()
     repo.dirstate.write(tr)
-    pending = tr and tr.writepending() and repo.root
+    if tr and tr.writepending():
+        pending = repo.root
+        sharedpending = repo.sharedroot
+    else:
+        pending = sharedpending = None
 
     editortext = repo.ui.edit(
         committext,
@@ -3692,6 +3696,7 @@ def commitforceeditor(
         ctx.extra(),
         editform=editform,
         pending=pending,
+        sharedpending=sharedpending,
         repopath=repo.path,
         action="commit",
     )
