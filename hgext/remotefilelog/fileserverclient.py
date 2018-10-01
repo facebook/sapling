@@ -401,6 +401,11 @@ class fileserverclient(object):
             try:
                 # receive cache misses from master
                 if missed:
+                    # try to get rid of possible duplicates
+                    missedset = set(missed)
+                    if len(missedset) != len(missed):
+                        self.ui.develwarn("Fetch request contains duplicates")
+                        missed = list(missedset)
 
                     def progresstick(name=""):
                         count[0] += 1
