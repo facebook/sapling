@@ -336,7 +336,7 @@ _rbcrevs = "rbc-revs" + _rbcversion
 _rbcrecfmt = ">4sI"
 _rbcrecsize = calcsize(_rbcrecfmt)
 _rbcnodelen = 4
-_rbcbranchidxmask = 0x7fffffff
+_rbcbranchidxmask = 0x7FFFFFFF
 _rbccloseflag = 0x80000000
 
 

@@ -19,7 +19,7 @@ from . import constants, fileserverclient, shallowutil
 
 # corresponds to uncompressed length of revlog's indexformatng (2 gigs, 4-byte
 # signed integer)
-_maxentrysize = 0x7fffffff
+_maxentrysize = 0x7FFFFFFF
 
 
 class remotefilelognodemap(object):

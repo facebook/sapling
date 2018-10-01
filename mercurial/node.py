@@ -28,7 +28,7 @@ wdirnodes = {newnodeid, addednodeid, modifiednodeid}
 
 # pseudo identifiers for working directory
 # (they are experimental, so don't add too many dependencies on them)
-wdirrev = 0x7fffffff
+wdirrev = 0x7FFFFFFF
 wdirid = b"\xff" * 20
 wdirhex = hex(wdirid)
 

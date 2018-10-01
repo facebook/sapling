@@ -110,7 +110,7 @@ def _hamming(a, b):
     d = a ^ b
     c = 0
     while d:
-        c += _htab[d & 0xff]
+        c += _htab[d & 0xFF]
         d >>= 8
     return c
 
@@ -155,7 +155,7 @@ def _mergevec(x, y, c):
 
 def _flipbit(v, node):
     # converting bit strings to longs is slow
-    bit = (hash(node) & 0xffffffff) % _vecbits
+    bit = (hash(node) & 0xFFFFFFFF) % _vecbits
     return v ^ (1 << bit)
 
 

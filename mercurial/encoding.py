@@ -551,12 +551,12 @@ def toutf8b(s):
             c = getutf8char(s, pos)
             if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
                 # have to re-escape existing U+DCxx characters
-                c = unichr(0xdc00 + ord(s[pos])).encode("utf-8", _utf8strict)
+                c = unichr(0xDC00 + ord(s[pos])).encode("utf-8", _utf8strict)
                 pos += 1
             else:
                 pos += len(c)
         except UnicodeDecodeError:
-            c = unichr(0xdc00 + ord(s[pos])).encode("utf-8", _utf8strict)
+            c = unichr(0xDC00 + ord(s[pos])).encode("utf-8", _utf8strict)
             pos += 1
         r += c
     return r
@@ -605,7 +605,7 @@ def fromutf8b(s):
         pos += len(c)
         # unescape U+DCxx characters
         if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
-            c = pycompat.bytechr(ord(c.decode("utf-8", _utf8strict)) & 0xff)
+            c = pycompat.bytechr(ord(c.decode("utf-8", _utf8strict)) & 0xFF)
         r += c
     return r
 

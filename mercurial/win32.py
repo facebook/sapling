@@ -359,7 +359,7 @@ def _raiseoserror(name):
     # Force the code to a signed int to avoid an 'int too large' error.
     # See https://bugs.python.org/issue28474
     code = _kernel32.GetLastError()
-    if code > 0x7fffffff:
+    if code > 0x7FFFFFFF:
         code -= 2 ** 32
     err = ctypes.WinError(code=code)
     raise OSError(err.errno, "%s: %s" % (name, encoding.strtolocal(err.strerror)))
@@ -738,7 +738,7 @@ def unlink(f):
     # implicit zombie filename blocking on a temporary name.
 
     for tries in xrange(10):
-        temp = "%s-%08x" % (f, random.randint(0, 0xffffffff))
+        temp = "%s-%08x" % (f, random.randint(0, 0xFFFFFFFF))
         try:
             os.rename(f, temp)  # raises OSError EEXIST if temp exists
             break

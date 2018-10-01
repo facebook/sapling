@@ -65,7 +65,7 @@ configitem("treedirstate", "migrateonpull", default=False)
 configitem("treedirstate", "cleanuppercent", default=1)
 
 # Sentinel length value for when a nonnormalset or otherparentset is absent.
-setabsent = 0xffffffff
+setabsent = 0xFFFFFFFF
 
 # Minimum size the treedirstate file can be before auto-repacking.
 configitem("treedirstate", "minrepackthreshold", default=1024 * 1024)

@@ -439,8 +439,8 @@ if pycompat.iswindows:
             ("dwMaximumWindowSize", _COORD),
         ]
 
-    _STD_OUTPUT_HANDLE = 0xfffffff5  # (DWORD)-11
-    _STD_ERROR_HANDLE = 0xfffffff4  # (DWORD)-12
+    _STD_OUTPUT_HANDLE = 0xFFFFFFF5  # (DWORD)-11
+    _STD_ERROR_HANDLE = 0xFFFFFFF4  # (DWORD)-12
 
     _FOREGROUND_BLUE = 0x0001
     _FOREGROUND_GREEN = 0x0002
@@ -530,10 +530,10 @@ if pycompat.iswindows:
                 return origattr
             elif val in passthrough:
                 return attr | val
-            elif val > 0x0f:
-                return (val & 0x70) | (attr & 0x8f)
+            elif val > 0x0F:
+                return (val & 0x70) | (attr & 0x8F)
             else:
-                return (val & 0x07) | (attr & 0xf8)
+                return (val & 0x07) | (attr & 0xF8)
 
         # determine console attributes based on labels
         for l in label.split():

@@ -23,7 +23,7 @@ stringio = util.stringio
 
 # from unzip source code:
 _UNX_IFREG = 0x8000
-_UNX_IFLNK = 0xa000
+_UNX_IFLNK = 0xA000
 
 
 def tidyprefix(dest, kind, prefix):

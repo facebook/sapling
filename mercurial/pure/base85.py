@@ -10,7 +10,10 @@ from __future__ import absolute_import
 import struct
 
 
-_b85chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" "abcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"
+_b85chars = (
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"
+)
 _b85chars2 = [(a + b) for a in _b85chars for b in _b85chars]
 _b85dec = {}
 
@@ -71,7 +74,7 @@ def b85decode(text):
     if cl:
         acc *= 85 ** (5 - cl)
         if cl > 1:
-            acc += 0xffffff >> (cl - 2) * 8
+            acc += 0xFFFFFF >> (cl - 2) * 8
         out[-1] = acc
 
     out = struct.pack(">%dL" % (len(out)), *out)

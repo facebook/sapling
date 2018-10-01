@@ -89,7 +89,7 @@ class testatomictempfile(unittest.TestCase):
             # st_mtime should be advanced "repetition" times, because
             # all atomicwrite() occurred at same time (in sec)
             self.assertTrue(
-                newstat.st_mtime == ((oldstat.st_mtime + repetition) & 0x7fffffff)
+                newstat.st_mtime == ((oldstat.st_mtime + repetition) & 0x7FFFFFFF)
             )
             # no more examination is needed, if assumption above is true
             break

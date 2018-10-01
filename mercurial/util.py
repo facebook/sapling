@@ -1367,7 +1367,7 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
                     newstat = filestat.frompath(dest)
                     if newstat.isambig(oldstat):
                         # stat of copied file is ambiguous to original one
-                        advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
+                        advanced = (oldstat.stat.st_mtime + 1) & 0x7FFFFFFF
                         os.utime(dest, (advanced, advanced))
         except shutil.Error as inst:
             raise Abort(str(inst))
@@ -1852,7 +1852,7 @@ class filestat(object):
 
         Otherwise, this returns True, as "ambiguity is avoided".
         """
-        advanced = (old.stat.st_mtime + 1) & 0x7fffffff
+        advanced = (old.stat.st_mtime + 1) & 0x7FFFFFFF
         try:
             os.utime(path, (advanced, advanced))
         except OSError as inst:
@@ -1904,7 +1904,7 @@ class atomictempfile(object):
                 newstat = filestat.frompath(filename)
                 if newstat.isambig(oldstat):
                     # stat of changed file is ambiguous to original one
-                    advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
+                    advanced = (oldstat.stat.st_mtime + 1) & 0x7FFFFFFF
                     os.utime(filename, (advanced, advanced))
             else:
                 rename(self._tempname, filename)
@@ -2142,8 +2142,8 @@ def datestr(date=None, format="%a %b %d %H:%M:%S %Y %1%2"):
         format = format.replace("%1", "%c%02d" % (sign, q))
         format = format.replace("%2", "%02d" % r)
     d = t - tz
-    if d > 0x7fffffff:
-        d = 0x7fffffff
+    if d > 0x7FFFFFFF:
+        d = 0x7FFFFFFF
     elif d < -0x80000000:
         d = -0x80000000
     # Never use time.gmtime() and datetime.datetime.fromtimestamp()
@@ -2300,7 +2300,7 @@ def parsedate(date, formats=None, bias=None):
     # time zone offset. values must fit in signed 32 bits for
     # current 32-bit linux runtimes. timezones go from UTC-12
     # to UTC+14
-    if when < -0x80000000 or when > 0x7fffffff:
+    if when < -0x80000000 or when > 0x7FFFFFFF:
         raise error.ParseError(_("date exceeds 32 bits: %d") % when)
     if offset < -50400 or offset > 43200:
         raise error.ParseError(_("impossible time zone offset: %d") % offset)

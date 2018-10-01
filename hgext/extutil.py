@@ -104,7 +104,7 @@ else:
                 )
                 returncode = 0
             except EnvironmentError as ex:
-                returncode = ex.errno & 0xff
+                returncode = ex.errno & 0xFF
                 if returncode == 0:
                     # This shouldn't happen, but just in case make sure the
                     # return code is never 0 here.

@@ -193,7 +193,7 @@ def _buildpackmeta(metadict):
     for k, v in sorted((metadict or {}).iteritems()):
         if len(k) != 1:
             raise error.ProgrammingError("packmeta: illegal key: %s" % k)
-        if len(v) > 0xfffe:
+        if len(v) > 0xFFFE:
             raise ValueError("metadata value is too long: 0x%x > 0xfffe" % len(v))
         metabuf += k
         metabuf += struct.pack("!H", len(v))
@@ -247,7 +247,7 @@ def int2bin(n):
     """convert a non-negative integer to raw binary buffer"""
     buf = bytearray()
     while n > 0:
-        buf.insert(0, n & 0xff)
+        buf.insert(0, n & 0xFF)
         n >>= 8
     return bytes(buf)
 

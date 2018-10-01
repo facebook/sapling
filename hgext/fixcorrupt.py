@@ -133,7 +133,7 @@ def fixcorrupt(ui, repo, *args, **opts):
     for name, log in logs:
         if (log.version & 0xFFFF) != revlog.REVLOGV1:
             raise error.Abort(
-                _("%s: unsupported revlog version %d") % (name, log.version & 0xffff)
+                _("%s: unsupported revlog version %d") % (name, log.version & 0xFFFF)
             )
         if log._inline:
             raise error.Abort(_("%s: inline index is not supported") % (name))

@@ -244,7 +244,7 @@ def _fm0readmarkers(data, off, stop):
             when, offset = metadata.pop("date", "0 0").split(" ")
             date = float(when), int(offset)
         except ValueError:
-            date = (0., 0)
+            date = (0.0, 0)
         parents = None
         if "p2" in metadata:
             parents = (metadata.pop("p1", None), metadata.pop("p2", None))

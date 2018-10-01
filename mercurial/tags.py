@@ -180,9 +180,9 @@ def findglobaltags(ui, repo):
         return alltags
 
     for head in reversed(heads):  # oldest to newest
-        assert head in repo.changelog.nodemap, (
-            "tag cache returned bogus head %s" % short(head)
-        )
+        assert (
+            head in repo.changelog.nodemap
+        ), "tag cache returned bogus head %s" % short(head)
     fnodes = _filterfnodes(tagfnode, reversed(heads))
     alltags = _tagsfromfnodes(ui, repo, fnodes)
 

@@ -7,7 +7,7 @@ import time
 from mercurial import error, util
 
 
-def retry(num=3, sleeps=.3):
+def retry(num=3, sleeps=0.3):
     def decorator(function):
         def wrapper(*args, **kwargs):
             for _try in range(1, num + 1):

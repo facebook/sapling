@@ -779,7 +779,7 @@ class buildhgexe(build_ext):
             log.warn("could not determine Python DLL filename; " "assuming pythonXY")
 
             hv = sys.hexversion
-            pythonlib = "python%d%d" % (hv >> 24, (hv >> 16) & 0xff)
+            pythonlib = "python%d%d" % (hv >> 24, (hv >> 16) & 0xFF)
 
         log.info("using %s as Python library name" % pythonlib)
         with open("mercurial/hgpythonlib.h", "wb") as f:

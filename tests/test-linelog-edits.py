@@ -10,8 +10,8 @@ from hgext.extlib import linelog
 randint = random.randint
 
 vecratio = 3  # number of replacelines / number of replacelines_vec
-maxlinenum = 0xffffff
-maxb1 = 0xffffff
+maxlinenum = 0xFFFFFF
+maxb1 = 0xFFFFFF
 maxdeltaa = 10  # max(a2 - b1)
 maxdeltab = 10  # max(b2 - b1)
 

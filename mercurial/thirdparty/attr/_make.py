@@ -44,7 +44,7 @@ class _Nothing(object):
         return "NOTHING"
 
     def __hash__(self):
-        return 0xdeadbeef
+        return 0xDEADBEEF
 
 
 NOTHING = _Nothing()

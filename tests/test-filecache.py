@@ -224,7 +224,7 @@ def antiambiguity():
 
         # st_mtime should be advanced "repetition * 2" times, because
         # all changes occurred at same time (in sec)
-        expected = (oldstat.st_mtime + repetition * 2) & 0x7fffffff
+        expected = (oldstat.st_mtime + repetition * 2) & 0x7FFFFFFF
         if newstat.st_mtime != expected:
             print(
                 "'newstat.st_mtime %s is not %s (as %s + %s * 2)"

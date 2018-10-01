@@ -269,7 +269,7 @@ def Popen4(cmd, wd, timeout, env=None):
         def t():
             start = time.time()
             while time.time() - start < timeout and p.returncode is None:
-                time.sleep(.1)
+                time.sleep(0.1)
             p.timeout = True
             if p.returncode is None:
                 terminate(p)
@@ -2574,7 +2574,7 @@ class TestSuite(unittest.TestSuite):
                     sys.stdout.flush()
                 for x in xrange(10):
                     if channels:
-                        time.sleep(.1)
+                        time.sleep(0.1)
                 count += 1
 
         def singleprogressbar(value, total, char="="):
@@ -2627,7 +2627,7 @@ class TestSuite(unittest.TestSuite):
                     )
                 ]
                 progress.update(lines)
-                time.sleep(.1)
+                time.sleep(0.1)
 
         stoppedearly = False
 
@@ -3259,7 +3259,7 @@ class TestRunner(object):
         try:
             return self._runtests(testdescs) or 0
         finally:
-            time.sleep(.1)
+            time.sleep(0.1)
             self._cleanup()
 
     def findtests(self, args):

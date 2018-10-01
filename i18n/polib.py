@@ -670,8 +670,8 @@ class MOFile(_BaseFile):
     extension, the python ``list`` type.
     """
 
-    BIG_ENDIAN = 0xde120495
-    LITTLE_ENDIAN = 0x950412de
+    BIG_ENDIAN = 0xDE120495
+    LITTLE_ENDIAN = 0x950412DE
 
     def __init__(self, *args, **kwargs):
         """

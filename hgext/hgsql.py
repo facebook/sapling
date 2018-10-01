@@ -140,7 +140,7 @@ def isrootpidns():
     try:
         # Linux implementation detail - inode number is 0xeffffffc for root
         # namespaces.
-        return os.stat("/proc/self/ns/pid").st_ino == 0xeffffffc
+        return os.stat("/proc/self/ns/pid").st_ino == 0xEFFFFFFC
     except Exception:
         # Cannot tell (not Linux, or no /proc mounted).
         return True

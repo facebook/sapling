@@ -286,7 +286,10 @@ def revsetdiff(repo, diffid):
 
     else:
         if not vcs:
-            msg = "D%s does not have an associated version control system\n" "You can view the diff at http://phabricator.fb.com/D%s\n\n"
+            msg = (
+                "D%s does not have an associated version control system\n"
+                "You can view the diff at http://phabricator.fb.com/D%s\n\n"
+            )
             repo.ui.warn(msg % (diffid, diffid))
 
             return []

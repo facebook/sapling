@@ -34,7 +34,7 @@ parsers = policy.importmod(r"parsers")
 
 propertycache = util.propertycache
 filecache = scmutil.filecache
-_rangemask = 0x7fffffff
+_rangemask = 0x7FFFFFFF
 
 dirstatetuple = parsers.dirstatetuple
 

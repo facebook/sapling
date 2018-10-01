@@ -41,15 +41,15 @@ _jsonmap.extend("\\u%04x" % x for x in range(32))
 _jsonmap.extend(pycompat.bytechr(x) for x in range(32, 127))
 _jsonmap.append("\\u007f")
 _jsonmap[0x09] = "\\t"
-_jsonmap[0x0a] = "\\n"
+_jsonmap[0x0A] = "\\n"
 _jsonmap[0x22] = '\\"'
-_jsonmap[0x5c] = "\\\\"
+_jsonmap[0x5C] = "\\\\"
 _jsonmap[0x08] = "\\b"
-_jsonmap[0x0c] = "\\f"
-_jsonmap[0x0d] = "\\r"
+_jsonmap[0x0C] = "\\f"
+_jsonmap[0x0D] = "\\r"
 _paranoidjsonmap = _jsonmap[:]
-_paranoidjsonmap[0x3c] = "\\u003c"  # '<' (e.g. escape "</script>")
-_paranoidjsonmap[0x3e] = "\\u003e"  # '>'
+_paranoidjsonmap[0x3C] = "\\u003c"  # '<' (e.g. escape "</script>")
+_paranoidjsonmap[0x3E] = "\\u003e"  # '>'
 _jsonmap.extend(pycompat.bytechr(x) for x in range(128, 256))
 
 

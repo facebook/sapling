@@ -159,7 +159,7 @@ class lazymanifestiterentries(object):
 def unhexlify(data, extra, pos, length):
     s = bin(data[pos : pos + length])
     if extra:
-        s += chr(extra & 0xff)
+        s += chr(extra & 0xFF)
     return s
 
 

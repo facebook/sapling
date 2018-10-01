@@ -325,7 +325,7 @@ versionformat_unpack = versionformat.unpack
 
 # corresponds to uncompressed length of indexformatng (2 gigs, 4-byte
 # signed integer)
-_maxentrysize = 0x7fffffff
+_maxentrysize = 0x7FFFFFFF
 
 
 class revlogio(object):
@@ -2437,7 +2437,7 @@ class revlog(object):
 
                 # Some classes override linkrev to take filtered revs into
                 # account. Use raw entry from index.
-                flags = entry[0] & 0xffff
+                flags = entry[0] & 0xFFFF
                 linkrev = entry[4]
                 p1 = index[entry[5]][7]
                 p2 = index[entry[6]][7]
