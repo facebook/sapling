@@ -129,7 +129,7 @@ CONFIG
 
   # We need to have a RocksDb version of config repo
   mkdir mononoke-config-rocks
-  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb mononoke-config/.hg --data-dir mononoke-config-rocks >> "$TESTTMP/mononoke-config-blobimport.out" 2>&1
+  blobimport mononoke-config/.hg mononoke-config-rocks
 }
 
 function blobimport {
@@ -137,7 +137,15 @@ function blobimport {
   output="$2"
   shift 2
   mkdir -p "$output"
-  $MONONOKE_BLOBIMPORT --repo_id 0 --blobstore rocksdb "$input" --data-dir "$output" "$@" >> "$TESTTMP/blobimport.out" 2>&1
+  $MONONOKE_BLOBIMPORT --repo_id 0 \
+     --blobstore rocksdb "$input" \
+     --data-dir "$output" "$@" >> "$TESTTMP/blobimport.out" 2>&1
+  BLOBIMPORT_RC="$?"
+  if [[ $BLOBIMPORT_RC -ne 0 ]]; then
+    cat "$TESTTMP/blobimport.out"
+    # set exit code, otherwise previous cat sets it to 0
+    return "$BLOBIMPORT_RC"
+  fi
 }
 
 function bonsai_verify {
