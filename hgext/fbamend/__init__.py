@@ -44,6 +44,12 @@ conflicts. To never automatically restack::
 
 Note that if --date is specified on the command line, it takes precedence.
 
+If a split creates multiple commits that have the same phabricator diff, the
+following advice for resolution will be shown::
+
+    [split]
+    phabricatoradvice = edit the commit messages to remove the association
+
 """
 
 from __future__ import absolute_import
@@ -169,6 +175,14 @@ def hintautorebase():
 @hint("update-prev")
 def hintprev():
     return _("use 'hg prev' to move to the parent changeset")
+
+
+@hint("split-phabricator")
+def hintsplitphabricator(advice):
+    msg = _("some split commits have the same Phabricator Diff associated with them")
+    if advice:
+        msg += "\n" + advice
+    return msg
 
 
 def uisetup(ui):

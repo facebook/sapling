@@ -11,6 +11,8 @@ Set up test environment.
   > interactive = true
   > [fbamend]
   > safestrip = false
+  > [hint]
+  > ack-hint-ack = true
   > EOF
   $ mkcommit() {
   >    echo "${1}1" > "${1}1"
@@ -347,3 +349,38 @@ Test that bookmarks are correctly moved.
   $ hg bookmarks
      test1                     2:* (glob)
    * test2                     2:* (glob)
+
+Test the hint for Phabricator Diffs being duplicated
+  $ cd ..
+  $ newrepo
+  $ echo 1 > a1
+  $ echo 2 > a2
+  $ hg commit -Aqm "Differential Revision: http://example.com/D1234"
+  $ hg split --config split.phabricatoradvice="amend the commit messages to remove them" << EOF
+  > y
+  > y
+  > n
+  > y
+  > EOF
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  adding a1
+  adding a2
+  diff --git a/a1 b/a1
+  new file mode 100644
+  examine changes to 'a1'? [Ynesfdaq?] y
+  
+  @@ -0,0 +1,1 @@
+  +1
+  record change 1/2 to 'a1'? [Ynesfdaq?] y
+  
+  diff --git a/a2 b/a2
+  new file mode 100644
+  examine changes to 'a2'? [Ynesfdaq?] n
+  
+  Done splitting? [yN] y
+  hint[split-phabricator]: some split commits have the same Phabricator Diff associated with them
+  amend the commit messages to remove them
+  $ showgraph
+  @  2 b696183283c3 Differential Revision: http://example.com/D1234
+  |
+  o  1 6add538b4b79 Differential Revision: http://example.com/D1234

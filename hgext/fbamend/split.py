@@ -17,6 +17,7 @@ from mercurial import (
     commands,
     error,
     hg,
+    hintutil,
     lock as lockmod,
     obsolete,
     registrar,
@@ -25,6 +26,7 @@ from mercurial import (
 from mercurial.i18n import _
 
 from . import common
+from ..extlib.phabricator import diffprops
 
 
 cmdtable = {}
@@ -128,6 +130,16 @@ def split(ui, repo, *revs, **opts):
                 ui.status(_("no more change to split\n"))
 
         if newcommits:
+            phabdiffs = {}
+            for c in newcommits:
+                phabdiff = diffprops.parserevfromcommitmsg(repo[c].description())
+                if phabdiff:
+                    phabdiffs.setdefault(phabdiff, []).append(c)
+            if any(len(commits) > 1 for commits in phabdiffs.values()):
+                hintutil.trigger(
+                    "split-phabricator", ui.config("split", "phabricatoradvice")
+                )
+
             tip = repo[newcommits[-1]]
             bmupdate(tip.node())
             if bookactive is not None:
