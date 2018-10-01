@@ -29,7 +29,8 @@ function mononoke {
   --debug \
   --listening-host-port 127.0.0.1:"$MONONOKE_SOCKET" \
   -P "$TESTTMP/mononoke-config-rocks" \
-   --configrepo_book local_master >> "$TESTTMP/mononoke.out" 2>&1 &
+   --configrepo_book local_master \
+   --do-not-init-cachelib >> "$TESTTMP/mononoke.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 
@@ -139,7 +140,7 @@ function blobimport {
   mkdir -p "$output"
   $MONONOKE_BLOBIMPORT --repo_id 0 \
      --blobstore rocksdb "$input" \
-     --data-dir "$output" "$@" >> "$TESTTMP/blobimport.out" 2>&1
+     --data-dir "$output" --do-not-init-cachelib "$@" >> "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
   if [[ $BLOBIMPORT_RC -ne 0 ]]; then
     cat "$TESTTMP/blobimport.out"
@@ -159,7 +160,8 @@ function apiserver {
     --config-bookmark "local_master" \
     --ssl-ca "$TESTDIR/testcert.crt" \
     --ssl-private-key "$TESTDIR/testcert.key" \
-    --ssl-certificate "$TESTDIR/testcert.crt" >> "$TESTTMP/apiserver.out" 2>&1 &
+    --ssl-certificate "$TESTDIR/testcert.crt" \
+    --do-not-init-cachelib >> "$TESTTMP/apiserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 

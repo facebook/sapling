@@ -273,11 +273,19 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
     .arg(Arg::from_usage(
             "--min-process-size [SIZE] 'process size at which cachelib will grow back to cache-size-gb, in GiB'"
     ))
+    .args_from_usage(
+        r#"
+        --do-not-init-cachelib 'do not init cachelib (useful for tests)'
+        "#,
+    )
     .args(&cache_args)
 }
 
 // TODO: (jsgf) T32777804 make the dependency between cachelib and blobrepo more visible
 pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
+    if matches.is_present("do-not-init-cachelib") {
+        return;
+    }
     let cache_size_gb = matches
         .value_of("cache-size-gb")
         .unwrap_or("20")
