@@ -1071,10 +1071,10 @@ void FuseChannel::processSession() {
     // to resolve this deadlock on kernel inode locks without rebooting the
     // system.
     if (UNLIKELY(static_cast<pid_t>(header->pid) == myPid)) {
+      replyError(*header, EIO);
       XLOG(DFATAL) << "Received FUSE request from our own pid: opcode="
                    << header->opcode << " nodeid=" << header->nodeid
                    << " pid=" << header->pid;
-      replyError(*header, EIO);
       continue;
     }
 
