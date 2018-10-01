@@ -1081,6 +1081,12 @@ def bundle2rebase(op, part):
                     ui.write_err(msg)
                 ui.log("pushrebase", msg)
 
+            def setrecordingparams(repo, ontoparam, ontoctx):
+                repo.pushrebaserecordingparams = {
+                    "onto": ontoparam,
+                    "ontorev": ontoctx.hex(),
+                }
+
             if usestackpush:
                 try:
                     pushrequest = stackpush.pushrequest.fromrevset(bundle, "bundle()")
@@ -1121,6 +1127,8 @@ def bundle2rebase(op, part):
                 # optional since there is another check inside the critical
                 # section.
                 log(_("checking conflicts with %s\n") % (ontoctx,))
+
+                setrecordingparams(op.repo, ontoparam, ontoctx)
                 pushrequest.check(ontoctx)
 
                 # Print and log what commits to push.
@@ -1145,12 +1153,8 @@ def bundle2rebase(op, part):
                     _("rebasing stack from %s onto %s\n")
                     % (short(pushrequest.stackparentnode), ontoctx)
                 )
+                setrecordingparams(op.repo, ontoparam, ontoctx)
                 added, replacements = pushrequest.pushonto(ontoctx)
-
-                op.repo.pushrebaserecordingparams = {
-                    "onto": ontoparam,
-                    "ontorev": ontoctx.hex(),
-                }
             else:
                 # Old code path - use a bundlerepo
                 bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
@@ -1176,10 +1180,7 @@ def bundle2rebase(op, part):
 
                 onto = getontotarget(op, params, bundle)
 
-                op.repo.pushrebaserecordingparams = {
-                    "onto": ontoparam,
-                    "ontorev": op.repo[onto].hex(),
-                }
+                setrecordingparams(op.repo, ontoparam, onto)
                 revs, oldonto = _getrevs(op, bundle, onto, renamesrccache)
 
                 op.repo.hook("prechangegroup", **hookargs)
