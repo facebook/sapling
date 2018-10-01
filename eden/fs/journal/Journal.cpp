@@ -59,11 +59,26 @@ uint64_t Journal::registerSubscriber(SubscriberCallback&& callback) {
 }
 
 void Journal::cancelSubscriber(uint64_t id) {
-  subscriberState_.wlock()->subscribers.erase(id);
+  auto subscriberState = subscriberState_.wlock();
+  auto it = subscriberState->subscribers.find(id);
+  if (it == subscriberState->subscribers.end()) {
+    return;
+  }
+  // Extend the lifetime of the value we're removing
+  auto callback = std::move(it->second);
+  subscriberState->subscribers.erase(it);
+  // release the lock before we trigger the destructor
+  subscriberState.unlock();
+  // callback can now run its destructor outside the lock
 }
 
 void Journal::cancelAllSubscribers() {
-  subscriberState_.wlock()->subscribers.clear();
+  // Take care: some subscribers will attempt to call cancelSubscriber()
+  // as part of their tear down, so we need to make sure that we aren't
+  // holding the lock when we trigger that.
+  std::unordered_map<SubscriberId, SubscriberCallback> subscribers;
+  subscriberState_.wlock()->subscribers.swap(subscribers);
+  subscribers.clear();
 }
 
 bool Journal::isSubscriberValid(uint64_t id) const {

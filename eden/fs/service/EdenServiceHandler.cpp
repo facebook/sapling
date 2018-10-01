@@ -434,9 +434,28 @@ EdenServiceHandler::subscribeStreamTemporary(
   auto [reader, writer] =
       createStreamPublisher<JournalPosition>(std::move(onDisconnect));
 
-  auto stream =
-      std::make_shared<apache::thrift::StreamPublisher<JournalPosition>>(
-          std::move(writer));
+  // A little wrapper around the StreamPublisher.
+  // This is needed because the destructor for StreamPublisherState
+  // triggers a FATAL if the stream has not been completed.
+  // We don't have an easy way to trigger this outside of just calling
+  // it in a destructor, so that's what we do here.
+  struct Publisher {
+    apache::thrift::StreamPublisher<JournalPosition> publisher;
+
+    explicit Publisher(
+        apache::thrift::StreamPublisher<JournalPosition> publisher)
+        : publisher(std::move(publisher)) {}
+
+    ~Publisher() {
+      // We have to send an exception as part of the completion, otherwise
+      // thrift doesn't seem to notify the peer of the shutdown
+      std::move(publisher).complete(
+          folly::make_exception_wrapper<std::runtime_error>(
+              "subscriber terminated"));
+    }
+  };
+
+  auto stream = std::make_shared<Publisher>(std::move(writer));
 
   // This is called each time the journal is updated
   auto onJournalChange = [weakMount, stream]() mutable {
@@ -449,7 +468,7 @@ EdenServiceHandler::subscribeStreamTemporary(
       pos.sequenceNumber = delta->toSequence;
       pos.snapshotHash = StringPiece(delta->toHash.getBytes()).str();
       pos.mountGeneration = mount->getMountGeneration();
-      stream->next(pos);
+      stream->publisher.next(pos);
     }
   };
 
