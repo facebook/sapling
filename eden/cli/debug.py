@@ -59,7 +59,7 @@ def escape_path(value: bytes) -> str:
     """
 
     def human_readable_byte(b: int) -> str:
-        if b < 0x20 or b >= 0x7f:
+        if b < 0x20 or b >= 0x7F:
             return "\\x{:02x}".format(b)
         elif b == ord(b"\\"):
             return "\\\\"

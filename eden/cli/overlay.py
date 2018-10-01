@@ -110,30 +110,30 @@ class OverlayHeader:
 
     @property
     def atime(self) -> float:
-        return self.atime_sec + (self.atime_nsec / 1000000000.0)
+        return self.atime_sec + (self.atime_nsec / 1_000_000_000.0)
 
     @atime.setter
     def atime(self, value: float) -> None:
         self.atime_sec = int(value)
-        self.atime_nsec = int((value - self.atime_sec) * 1000000000)
+        self.atime_nsec = int((value - self.atime_sec) * 1_000_000_000)
 
     @property
     def ctime(self) -> float:
-        return self.ctime_sec + (self.ctime_nsec / 1000000000.0)
+        return self.ctime_sec + (self.ctime_nsec / 1_000_000_000.0)
 
     @ctime.setter
     def ctime(self, value: float) -> None:
         self.ctime_sec = int(value)
-        self.ctime_nsec = int((value - self.ctime_sec) * 1000000000)
+        self.ctime_nsec = int((value - self.ctime_sec) * 1_000_000_000)
 
     @property
     def mtime(self) -> float:
-        return self.mtime_sec + (self.mtime_nsec / 1000000000.0)
+        return self.mtime_sec + (self.mtime_nsec / 1_000_000_000.0)
 
     @mtime.setter
     def mtime(self, value: float) -> None:
         self.mtime_sec = int(value)
-        self.mtime_nsec = int((value - self.mtime_sec) * 1000000000)
+        self.mtime_nsec = int((value - self.mtime_sec) * 1_000_000_000)
 
     def serialize(self) -> bytes:
         return struct.pack(
