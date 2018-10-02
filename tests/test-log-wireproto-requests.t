@@ -1,3 +1,4 @@
+  $ CACHEDIR=`pwd`/hgcache
   $ cat >> $TESTTMP/uilog.py <<EOF
   > from mercurial import extensions
   > from mercurial import ui as uimod
@@ -13,26 +14,38 @@
   >               if isinstance(arg, dict):
   >                 v = sorted(list(arg.iteritems()))
   >             v = str(v)
-  >           kw.append("%s=%s" % (k, v)) 
+  >           kw.append("%s=%s" % (k, v))
   >         kwstr = ", ".join(kw)
   >         msgstr = msg[0] % msg[1:]
   >         self.warn('%s: %s (%s)\n' % (service, msgstr, kwstr))
+  >         with open('$TESTTMP/loggedrequests', 'a') as f:
+  >           f.write('%s: %s (%s)\n' % (service, msgstr, kwstr))
   >     return orig(self, service, *msg, **opts)
   > EOF
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > uilog=$TESTTMP/uilog.py
+  > remotefilelog=
   > [ui]
   > ssh = python "$TESTDIR/dummyssh"
+  > [remotefilelog]
+  > cachepath=$CACHEDIR
   > EOF
 
   $ hg init repo
-  $ hg clone ssh://user@dummy/repo repo-clone -q
+  $ cd repo
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > server=True
+  > EOF
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo --shallow repo-clone -q
   $ cd repo
   $ cat >> .hg/hgrc <<EOF
   > [wireproto]
   > logrequests=batch,branchmap,getbundle,hello,listkeys,lookup,between,unbundle
+  > loggetfiles=true
   > EOF
   $ echo a > a && hg add a && hg ci -m a
   $ cd ../repo-clone
@@ -40,16 +53,22 @@
   remote: wireproto_requests:  (args=[], command=hello, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], command=batch, duration=*, responselen=*) (glob)
-  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$'), ('cg', '1'), ('common', '0000000000000000000000000000000000000000'), ('heads', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('listkeys', 'bookmarks'), ('phases', '1')], command=getbundle, duration=*, responselen=*) (glob)
+  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '1'), ('common', '0000000000000000000000000000000000000000'), ('heads', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('listkeys', 'bookmarks'), ('phases', '1')], command=getbundle, duration=*, responselen=*) (glob)
   $ cd ../repo
   $ echo b > b && hg add b && hg ci -m b
+  $ echo c > c && hg add c && hg ci -m c
   $ cd ../repo-clone
   $ hg pull 2>&1 | grep wireproto_requests
   remote: wireproto_requests:  (args=[], command=hello, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], command=batch, duration=*, responselen=*) (glob)
-  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$'), ('cg', '1'), ('common', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('heads', 'd2ae7f538514cd87c17547b0de4cea71fe1af9fb'), ('listkeys', 'bookmarks'), ('phases', '1')], command=getbundle, duration=*, responselen=*) (glob)
-  $ echo c > c && hg add c && hg ci -m c
+  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '1'), ('common', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('heads', '177f92b773850b59254aa5e923436f921b55483b'), ('listkeys', 'bookmarks'), ('phases', '1')], command=getbundle, duration=*, responselen=*) (glob)
+  $ hg up tip -q
+
+Looks like `ui.warn()` after getfiles might not make it's way to client hg. Let's read from file
+  $ grep 'getfiles' $TESTTMP/loggedrequests
+  wireproto_requests:  (args=[*], command=getfiles, duration=*, responselen=*) (glob)
+  $ echo cc > c && hg ci -m c
   $ hg push --force 2>&1 | grep wireproto_requests
   remote: wireproto_requests:  (args=[], command=hello, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, responselen=*) (glob)
@@ -62,3 +81,23 @@
   remote: wireproto_requests:  (args=[], command=hello, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, responselen=*) (glob)
   remote: wireproto_requests:  (args=['ololo'], command=lookup, duration=*, responselen=*) (glob)
+
+Enable clienttelemetry
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > clienttelemetry=
+  > EOF
+  $ hg pull 2>&1 | grep wireproto_requests
+  remote: wireproto_requests:  (args=[], command=hello, duration=*, responselen=*) (glob)
+  remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, responselen=*) (glob)
+  remote: wireproto_requests:  (args=[], client_fullcommand=pull, client_hostname=*, command=batch, duration=*, responselen=*) (glob)
+  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '0'), ('common', 'cc27a19b3db0a292460298a71c413840f27f6a37'), ('heads', 'cc27a19b3db0a292460298a71c413840f27f6a37'), ('listkeys', 'bookmarks'), ('phases', '1')], client_fullcommand=pull, client_hostname=*, command=getbundle, duration=*, responselen=*) (glob)
+  $ cd ../repo
+  $ echo xxx > xxx && hg add xxx && hg ci -m xxx
+  $ cd -
+  $TESTTMP/repo-clone
+  $ hg pull -q
+  $ hg up tip -q
+  $ grep 'getfiles' $TESTTMP/loggedrequests
+  wireproto_requests:  (args=[*], command=getfiles, duration=*, responselen=*) (glob)
+  wireproto_requests:  (args=[*], client_fullcommand=up tip -q, client_hostname=*, command=getfiles, duration=*, responselen=*) (glob)

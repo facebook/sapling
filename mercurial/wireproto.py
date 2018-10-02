@@ -21,6 +21,7 @@ from . import (
     encoding,
     error,
     exchange,
+    extensions,
     peer,
     pushkey as pushkeymod,
     pycompat,
@@ -628,9 +629,16 @@ def wrapstreamres(towrap, logger, start_time):
             return chunk
 
 
-def logwireprotorequest(ui, start_time, command, serializedargs, res):
+def logwireprotorequest(repo, ui, start_time, command, serializedargs, res):
+    kwargs = {}
+    try:
+        clienttelemetry = extensions.find("clienttelemetry")
+        kwargs = clienttelemetry.getclienttelemetry(repo)
+    except KeyError:
+        pass
+
     logger = functools.partial(
-        ui.log, "wireproto_requests", "", command=command, args=serializedargs
+        ui.log, "wireproto_requests", "", command=command, args=serializedargs, **kwargs
     )
     duration = int((time.time() - start_time) * 1000)
     if isinstance(res, streamres):
@@ -664,7 +672,7 @@ def dispatch(repo, proto, command):
     if command in logrequests:
         ui = repo.ui
         try:
-            logwireprotorequest(ui, start_time, command, serializedargs, res)
+            logwireprotorequest(repo, ui, start_time, command, serializedargs, res)
         except Exception as e:
             # No logging error should break client-server interaction,
             # but let's warn about the problem

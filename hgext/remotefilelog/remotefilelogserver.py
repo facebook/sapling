@@ -18,6 +18,7 @@ from mercurial import (
     context,
     error,
     exchange,
+    extensions,
     match,
     progress,
     sshserver,
@@ -364,6 +365,13 @@ def getfiles(repo, proto):
                 serializedargs = json.dumps(args)
             except Exception:
                 serializedargs = "Failed to serialize arguments"
+
+            kwargs = {}
+            try:
+                clienttelemetry = extensions.find("clienttelemetry")
+                kwargs = clienttelemetry.getclienttelemetry(repo)
+            except KeyError:
+                pass
             repo.ui.log(
                 "wireproto_requests",
                 "",
@@ -371,6 +379,7 @@ def getfiles(repo, proto):
                 args=serializedargs,
                 responselen=responselen,
                 duration=int((time.time() - start_time) * 1000),
+                **kwargs
             )
 
     return wireproto.streamres(streamer())

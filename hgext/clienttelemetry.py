@@ -17,7 +17,7 @@ import random
 import socket
 import string
 
-from mercurial import dispatch, extensions, hg, wireproto
+from mercurial import dispatch, extensions, hg, util, wireproto
 from mercurial.i18n import _
 
 
@@ -62,7 +62,20 @@ def _clienttelemetry(repo, proto, args):
     """Handle received client telemetry"""
     logargs = {"client_%s" % key: value for key, value in args.items()}
     repo.ui.log("clienttelemetry", "", **logargs)
+    # Make them available to other extensions
+    repo.clienttelemetry = logargs
     return socket.gethostname()
+
+
+def getclienttelemetry(repo):
+    kwargs = {}
+    if util.safehasattr(repo, "clienttelemetry"):
+        clienttelemetry = repo.clienttelemetry
+        fields = ["client_fullcommand", "client_hostname"]
+        for f in fields:
+            if f in clienttelemetry:
+                kwargs[f] = clienttelemetry[f]
+    return kwargs
 
 
 def _capabilities(orig, repo, proto):
