@@ -318,20 +318,20 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       break;
   }
 
-  return std::move(future).then([self = inodePtrFromThis(),
-                                 fn = std::forward<Fn>(fn)](
-                                    FileHandlePtr /* handle */) mutable {
-    // Simply call runWhileDataLoaded() again when we we finish loading the blob
-    // data.  The state should be BLOB_LOADED or MATERIALIZED_IN_OVERLAY this
-    // time around.
-    auto stateLock = LockedState{self};
-    DCHECK(
-        stateLock->tag == State::BLOB_LOADED ||
-        stateLock->tag == State::MATERIALIZED_IN_OVERLAY)
-        << "unexpected FileInode state after loading: " << stateLock->tag;
-    return self->runWhileMaterialized(
-        std::move(stateLock), std::forward<Fn>(fn));
-  });
+  return std::move(future).then(
+      [self = inodePtrFromThis(),
+       fn = std::forward<Fn>(fn)](FileHandlePtr /* handle */) mutable {
+        // Simply call runWhileDataLoaded() again when we we finish loading the
+        // blob data.  The state should be BLOB_LOADED or
+        // MATERIALIZED_IN_OVERLAY this time around.
+        auto stateLock = LockedState{self};
+        DCHECK(
+            stateLock->tag == State::BLOB_LOADED ||
+            stateLock->tag == State::MATERIALIZED_IN_OVERLAY)
+            << "unexpected FileInode state after loading: " << stateLock->tag;
+        return self->runWhileMaterialized(
+            std::move(stateLock), std::forward<Fn>(fn));
+      });
 }
 
 template <typename Fn>

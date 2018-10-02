@@ -20,7 +20,7 @@ class File;
 template <typename T>
 class Future;
 class Unit;
-}
+} // namespace folly
 
 namespace facebook {
 namespace eden {

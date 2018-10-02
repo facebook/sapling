@@ -603,8 +603,8 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
   throw HgImportPyError(errorType, message);
 }
 
-HgImporter::TransactionID
-    HgImporter::sendManifestRequest(folly::StringPiece revName) {
+HgImporter::TransactionID HgImporter::sendManifestRequest(
+    folly::StringPiece revName) {
   auto txnID = nextRequestID_++;
   ChunkHeader header;
   header.command = Endian::big<uint32_t>(CMD_MANIFEST);

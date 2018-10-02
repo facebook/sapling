@@ -85,41 +85,40 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
 }
 
 Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
-  return localStore_->getBlob(id).thenValue([id,
-                                             localStore = localStore_,
-                                             backingStore = backingStore_](
-                                                shared_ptr<const Blob> blob) {
-    if (blob) {
-      if (FLAGS_reverify_empty_files && blob->getContents().empty()) {
-        return backingStore->verifyEmptyBlob(id).thenValue(
-            [id, localStore, origBlob = std::move(blob)](
-                std::unique_ptr<Blob> updatedBlob) mutable {
-              if (!updatedBlob) {
-                return shared_ptr<const Blob>(std::move(origBlob));
-              }
-              localStore->putBlob(id, updatedBlob.get());
-              return shared_ptr<const Blob>(std::move(updatedBlob));
-            });
-      }
-      XLOG(DBG4) << "blob " << id << "  found in local store";
-      return makeFuture(shared_ptr<const Blob>(std::move(blob)));
-    }
-
-    // Look in the BackingStore
-    return backingStore->getBlob(id).thenValue(
-        [localStore, id](unique_ptr<const Blob> loadedBlob) {
-          if (!loadedBlob) {
-            XLOG(DBG2) << "unable to find blob " << id;
-            // TODO: Perhaps we should do some short-term negative caching?
-            throw std::domain_error(
-                folly::to<string>("blob ", id.toString(), " not found"));
+  return localStore_->getBlob(id).thenValue(
+      [id, localStore = localStore_, backingStore = backingStore_](
+          shared_ptr<const Blob> blob) {
+        if (blob) {
+          if (FLAGS_reverify_empty_files && blob->getContents().empty()) {
+            return backingStore->verifyEmptyBlob(id).thenValue(
+                [id, localStore, origBlob = std::move(blob)](
+                    std::unique_ptr<Blob> updatedBlob) mutable {
+                  if (!updatedBlob) {
+                    return shared_ptr<const Blob>(std::move(origBlob));
+                  }
+                  localStore->putBlob(id, updatedBlob.get());
+                  return shared_ptr<const Blob>(std::move(updatedBlob));
+                });
           }
+          XLOG(DBG4) << "blob " << id << "  found in local store";
+          return makeFuture(shared_ptr<const Blob>(std::move(blob)));
+        }
 
-          XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
-          localStore->putBlob(id, loadedBlob.get());
-          return shared_ptr<const Blob>(std::move(loadedBlob));
-        });
-  });
+        // Look in the BackingStore
+        return backingStore->getBlob(id).thenValue(
+            [localStore, id](unique_ptr<const Blob> loadedBlob) {
+              if (!loadedBlob) {
+                XLOG(DBG2) << "unable to find blob " << id;
+                // TODO: Perhaps we should do some short-term negative caching?
+                throw std::domain_error(
+                    folly::to<string>("blob ", id.toString(), " not found"));
+              }
+
+              XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
+              localStore->putBlob(id, loadedBlob.get());
+              return shared_ptr<const Blob>(std::move(loadedBlob));
+            });
+      });
 }
 
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(

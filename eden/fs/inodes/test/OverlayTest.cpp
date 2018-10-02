@@ -49,7 +49,7 @@ std::vector<std::string> filterLogMessages(
     const folly::TestLogHandler&,
     folly::StringPiece substring);
 std::string prettifyLogMessages(const folly::TestLogHandler&);
-}
+} // namespace
 
 TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // eden/test-data/overlay-v2.tgz contains a saved copy of an overlay

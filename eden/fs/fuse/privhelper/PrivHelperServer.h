@@ -23,7 +23,7 @@ class File;
 namespace io {
 class Cursor;
 }
-}
+} // namespace folly
 
 namespace facebook {
 namespace eden {

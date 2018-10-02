@@ -1312,7 +1312,6 @@ folly::Future<folly::Unit> FuseChannel::fuseForget(
 folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
     const fuse_in_header* header,
     const uint8_t* arg) {
-
   // If we're new enough, check to see if a file handle was provided
   if (connInfo_->minor >= 9) {
     const auto getattr = reinterpret_cast<const fuse_getattr_in*>(arg);

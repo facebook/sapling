@@ -379,46 +379,46 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
             return getThreadLocalImporter().fetchTree(path, manifestNode);
           })
           .via(serverThreadPool_);
-  return std::move(fut).thenTry([this,
-                                 ownedPath = std::move(path),
-                                 node = std::move(manifestNode),
-                                 treeID = std::move(edenTreeID),
-                                 batch = std::move(writeBatch)](
-                                    folly::Try<folly::Unit> val) {
-    try {
-      val.value();
-      // Now try loading it again
-      unionStore_->wlock()->markForRefresh();
-      auto content = unionStore_->wlock()->get(
-          Key(ownedPath.stringPiece().data(),
-              ownedPath.stringPiece().size(),
-              (const char*)node.getBytes().data(),
-              node.getBytes().size()));
-      return processTree(content, node, treeID, ownedPath, batch.get());
-    } catch (const HgImportPyError& ex) {
-      if (FLAGS_allow_flatmanifest_fallback) {
-        // For now translate any error thrown into a MissingKeyError,
-        // so that our caller will retry this tree import using
-        // flatmanifest import if possible.
-        //
-        // The mercurial code can throw a wide variety of errors here
-        // that all effectively mean mean it couldn't fetch the tree
-        // data.
-        //
-        // We most commonly expect to get a MissingNodesError if the
-        // remote server does not know about these trees (for instance
-        // if they are only available locally, but simply only have
-        // flatmanifest information rather than treemanifest info).
-        //
-        // However we can also get lots of other errors: no remote
-        // server configured, remote repository does not exist, remote
-        // repository does not support fetching tree info, etc.
-        throw MissingKeyError(ex.what());
-      } else {
-        throw;
-      }
-    }
-  });
+  return std::move(fut).thenTry(
+      [this,
+       ownedPath = std::move(path),
+       node = std::move(manifestNode),
+       treeID = std::move(edenTreeID),
+       batch = std::move(writeBatch)](folly::Try<folly::Unit> val) {
+        try {
+          val.value();
+          // Now try loading it again
+          unionStore_->wlock()->markForRefresh();
+          auto content = unionStore_->wlock()->get(
+              Key(ownedPath.stringPiece().data(),
+                  ownedPath.stringPiece().size(),
+                  (const char*)node.getBytes().data(),
+                  node.getBytes().size()));
+          return processTree(content, node, treeID, ownedPath, batch.get());
+        } catch (const HgImportPyError& ex) {
+          if (FLAGS_allow_flatmanifest_fallback) {
+            // For now translate any error thrown into a MissingKeyError,
+            // so that our caller will retry this tree import using
+            // flatmanifest import if possible.
+            //
+            // The mercurial code can throw a wide variety of errors here
+            // that all effectively mean mean it couldn't fetch the tree
+            // data.
+            //
+            // We most commonly expect to get a MissingNodesError if the
+            // remote server does not know about these trees (for instance
+            // if they are only available locally, but simply only have
+            // flatmanifest information rather than treemanifest info).
+            //
+            // However we can also get lots of other errors: no remote
+            // server configured, remote repository does not exist, remote
+            // repository does not support fetching tree info, etc.
+            throw MissingKeyError(ex.what());
+          } else {
+            throw;
+          }
+        }
+      });
 }
 
 std::unique_ptr<Tree> HgBackingStore::processTree(

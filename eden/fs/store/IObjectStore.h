@@ -16,7 +16,7 @@ namespace folly {
 template <typename T>
 class Future;
 struct Unit;
-}
+} // namespace folly
 
 namespace facebook {
 namespace eden {
