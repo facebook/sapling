@@ -137,5 +137,6 @@ struct FileChange {
 // This is only used optionally so it is OK to use `required` here.
 struct CopyInfo {
   1: required MPath file,
+  // cs_id must match one of the parents specified in BonsaiChangeset
   2: required ChangesetId cs_id,
 }
