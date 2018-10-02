@@ -28,6 +28,7 @@ extern crate slog_glog_fmt;
 
 extern crate blobrepo;
 extern crate bookmarks;
+extern crate hooks;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate metaconfig;

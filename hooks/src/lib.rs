@@ -74,6 +74,7 @@ type Cache = Asyncmemo<HookCacheFiller>;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
 /// Knows how to run hooks
+
 pub struct HookManager {
     cache: Cache,
     changeset_hooks: ChangesetHooks,
@@ -113,6 +114,17 @@ impl HookManager {
             content_store,
             logger,
         }
+    }
+
+    pub fn new_with_blobrepo(blobrepo: BlobRepo, logger: Logger) -> HookManager {
+        HookManager::new(
+            format!("repo-{:?}", blobrepo.get_repoid()),
+            Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
+            Arc::new(BlobRepoFileContentStore::new(blobrepo.clone())),
+            1024 * 1024, // TODO make configurable T34438181
+            1024 * 1024 * 1024,
+            logger,
+        )
     }
 
     pub fn register_changeset_hook(&mut self, hook_name: &str, hook: Arc<Hook<HookChangeset>>) {

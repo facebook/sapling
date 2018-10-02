@@ -7,6 +7,7 @@
 use std::cmp::min;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{App, Arg, ArgMatches};
@@ -21,9 +22,10 @@ use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
 use blobrepo::ManifoldArgs;
+use hooks::HookManager;
 use mercurial_types::RepositoryId;
 use metaconfig::RepoType;
-use repo_client::MononokeRepo;
+use repo_client::{open_blobrepo, MononokeRepo};
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -204,13 +206,13 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {
 
 /// Create a new `MononokeRepo` -- for local instances, expect its contents to be empty.
 #[inline]
-pub fn create_repo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> MononokeRepo {
+pub fn create_repo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<MononokeRepo> {
     open_repo_internal(logger, matches, true)
 }
 
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
 #[inline]
-pub fn open_repo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> MononokeRepo {
+pub fn open_repo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<MononokeRepo> {
     open_repo_internal(logger, matches, false)
 }
 
@@ -389,7 +391,11 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
     ).unwrap();
 }
 
-fn open_repo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: bool) -> MononokeRepo {
+fn open_repo_internal<'a>(
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+    create: bool,
+) -> Result<MononokeRepo> {
     let repo_id = get_repo_id(matches);
 
     let (logger, repo_type) = match matches.value_of("blobstore") {
@@ -431,9 +437,14 @@ fn open_repo_internal<'a>(logger: &Logger, matches: &ArgMatches<'a>, create: boo
         Some(bad) => panic!("unexpected blobstore type: {}", bad),
     };
 
+    let blobrepo = open_blobrepo(logger.clone(), repo_type.clone(), repo_id)?;
+    let hook_manager = HookManager::new_with_blobrepo(blobrepo.clone(), logger);
     // TODO fixup imports
-    MononokeRepo::new(logger, &repo_type, repo_id, &Default::default())
-        .expect("failed to setup repo")
+    Ok(MononokeRepo::new(
+        blobrepo,
+        &Default::default(),
+        Arc::new(hook_manager),
+    ))
 }
 
 pub fn parse_manifold_args<'a>(matches: &ArgMatches<'a>) -> ManifoldArgs {

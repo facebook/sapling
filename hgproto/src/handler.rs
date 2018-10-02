@@ -19,6 +19,7 @@ use slog::{self, Logger};
 
 use {HgCommands, Request, Response};
 use commands::HgCommandHandler;
+use hooks::HookManager;
 
 use errors::*;
 
@@ -48,6 +49,7 @@ impl HgProtoHandler {
         respenc: Enc,
         logger: L,
         wireproto_calls: Arc<Mutex<Vec<String>>>,
+        hook_manager: Arc<HookManager>,
     ) -> Self
     where
         In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
@@ -64,7 +66,7 @@ impl HgProtoHandler {
         };
 
         let inner = Arc::new(HgProtoHandlerInner {
-            commands_handler: HgCommandHandler::new(commands, logger.new(o!())),
+            commands_handler: HgCommandHandler::new(commands, logger.new(o!()), hook_manager),
             reqdec,
             respenc,
             _logger: logger,

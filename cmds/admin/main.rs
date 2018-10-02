@@ -393,7 +393,7 @@ fn hg_changeset_diff(
         })
 }
 
-fn main() {
+fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
     let logger = args::get_logger(&matches);
@@ -463,7 +463,7 @@ fn main() {
 
             args::init_cachelib(&matches);
 
-            let repo = args::open_repo(&logger, &matches);
+            let repo = args::open_repo(&logger, &matches)?;
             fetch_bonsai_changeset(rev, repo.blobrepo())
                 .map(|bcs| {
                     println!("{:?}", bcs);
@@ -476,7 +476,7 @@ fn main() {
 
             args::init_cachelib(&matches);
 
-            let repo = args::open_repo(&logger, &matches);
+            let repo = args::open_repo(&logger, &matches)?;
             fetch_content(logger.clone(), repo.blobrepo(), rev, path)
                 .and_then(|content| {
                     match content {
@@ -523,7 +523,8 @@ fn main() {
         (CONFIG_REPO, Some(sub_m)) => config_repo::handle_command(sub_m, logger),
         (BOOKMARKS, Some(sub_m)) => {
             args::init_cachelib(&matches);
-            let repo = args::open_repo(&logger, &matches);
+            let repo = args::open_repo(&logger, &matches)?;
+
             bookmarks_manager::handle_command(&repo.blobrepo(), sub_m, logger)
         }
         (HG_CHANGESET, Some(sub_m)) => match sub_m.subcommand() {
@@ -538,7 +539,7 @@ fn main() {
                     .and_then(HgChangesetId::from_str);
 
                 args::init_cachelib(&matches);
-                let repo = args::open_repo(&logger, &matches).blobrepo().clone();
+                let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
 
                 (left_cs, right_cs)
                     .into_future()
@@ -563,7 +564,7 @@ fn main() {
                     .and_then(HgChangesetId::from_str);
 
                 args::init_cachelib(&matches);
-                let repo = args::open_repo(&logger, &matches).blobrepo().clone();
+                let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
 
                 (start_cs, stop_cs)
                     .into_future()
@@ -620,6 +621,8 @@ fn main() {
         }
         ::std::process::exit(1);
     }));
+
+    Ok(())
 }
 
 fn detect_decode(key: &str, logger: &Logger) -> Option<&'static str> {

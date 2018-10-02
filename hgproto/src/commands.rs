@@ -12,6 +12,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead};
 use std::mem;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use slog::Logger;
 
@@ -33,6 +34,8 @@ use tokio_io::codec::Decoder;
 
 use {GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
 
+use hooks::HookManager;
+
 use errors::*;
 
 const HASH_SIZE: usize = 40;
@@ -40,11 +43,16 @@ const HASH_SIZE: usize = 40;
 pub struct HgCommandHandler<H> {
     commands: H,
     logger: Logger,
+    hook_manager: Arc<HookManager>,
 }
 
 impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
-    pub fn new(commands: H, logger: Logger) -> Self {
-        HgCommandHandler { commands, logger }
+    pub fn new(commands: H, logger: Logger, hook_manager: Arc<HookManager>) -> Self {
+        HgCommandHandler {
+            commands,
+            logger,
+            hook_manager,
+        }
     }
 
     /// Handles a single command (not batched) by returning a stream of responses and a future
@@ -189,7 +197,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     Either::A(ok(SingleResponse::ReadyForStream)),
                     Either::B(
                         hgcmds
-                            .unbundle(heads, bundle2stream)
+                            .unbundle(heads, bundle2stream, self.hook_manager.clone())
                             .map(|bytes| SingleResponse::Unbundle(bytes)),
                     ),
                 ]);
@@ -516,6 +524,7 @@ pub trait HgCommands {
         &self,
         _heads: Vec<String>,
         _stream: BoxStream<Bundle2Item, Error>,
+        _hook_manager: Arc<HookManager>,
     ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")
     }
@@ -541,7 +550,8 @@ mod test {
     use super::*;
 
     use futures::{future, stream};
-    use slog::Discard;
+    use hooks::{InMemoryChangesetStore, InMemoryFileContentStore};
+    use slog::{Discard, Drain};
 
     struct Dummy;
     impl HgCommands for Dummy {
@@ -569,7 +579,7 @@ mod test {
     #[test]
     fn hello() {
         let logger = Logger::root(Discard, o!());
-        let handler = HgCommandHandler::new(Dummy, logger);
+        let handler = HgCommandHandler::new(Dummy, logger, create_hook_manager());
 
         let (r, _) = handler.handle(SingleRequest::Hello, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());
@@ -587,7 +597,7 @@ mod test {
     #[test]
     fn unimpl() {
         let logger = Logger::root(Discard, o!());
-        let handler = HgCommandHandler::new(Dummy, logger);
+        let handler = HgCommandHandler::new(Dummy, logger, create_hook_manager());
 
         let (r, _) = handler.handle(SingleRequest::Heads, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());
@@ -666,4 +676,19 @@ mod test {
         let (paramstream, _input) = decode_getfiles_arg_stream(BytesStream::new(stream::empty()));
         assert!(paramstream.collect().wait().is_err());
     }
+
+    fn create_hook_manager() -> Arc<HookManager> {
+        let changeset_store = InMemoryChangesetStore::new();
+        let content_store = InMemoryFileContentStore::new();
+        let logger = Logger::root(Discard {}.ignore_res(), o!());
+        Arc::new(HookManager::new(
+            "some_repo".into(),
+            Box::new(changeset_store),
+            Arc::new(content_store),
+            1024,
+            1024 * 1024,
+            logger,
+        ))
+    }
+
 }

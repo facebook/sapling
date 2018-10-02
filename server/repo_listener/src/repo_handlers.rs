@@ -13,10 +13,11 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 
 use cache_warmup::cache_warmup;
+use hooks::{HookManager, hook_loader::load_hooks};
 use mercurial_types::RepositoryId;
 use metaconfig::repoconfig::RepoConfig;
 use ready_state::ReadyStateBuilder;
-use repo_client::MononokeRepo;
+use repo_client::{open_blobrepo, MononokeRepo};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 
 #[derive(Clone, Debug)]
@@ -47,15 +48,22 @@ pub fn repo_handlers(
             );
             let ready_handle = ready.create_handle(reponame.as_ref());
 
-            let repo = MononokeRepo::new(
-                root_log.new(o!("repo" => reponame.clone())),
-                &config.repotype,
-                RepositoryId::new(config.repoid),
-                &config.pushrebase,
-            ).expect(&format!("failed to initialize repo {}", reponame));
+            let logger = root_log.new(o!("repo" => reponame.clone()));
+            let repoid = RepositoryId::new(config.repoid);
+            let blobrepo = try_boxfuture!(open_blobrepo(
+                logger.clone(),
+                config.repotype.clone(),
+                repoid
+            ));
+
+            let mut hook_manager = HookManager::new_with_blobrepo(blobrepo.clone(), logger);
+
+            info!(root_log, "Loading hooks");
+            try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
+
+            let repo = MononokeRepo::new(blobrepo, &config.pushrebase, Arc::new(hook_manager));
 
             let listen_log = root_log.new(o!("repo" => reponame.clone()));
-
             let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
             scuba_logger.add_common_server_data();
 
@@ -67,20 +75,23 @@ pub fn repo_handlers(
                     listen_log.clone(),
                 ).context(format!("while warming up cache for repo: {}", reponame))
                     .from_err();
-            ready_handle.wait_for(initial_warmup).map({
-                cloned!(root_log);
-                move |()| {
-                    info!(root_log, "Repo warmup for {} complete", reponame);
-                    (
-                        reponame,
-                        RepoHandler {
-                            logger: listen_log,
-                            scuba: scuba_logger,
-                            repo: repo,
-                        },
-                    )
-                }
-            })
+            ready_handle
+                .wait_for(initial_warmup)
+                .map({
+                    cloned!(root_log);
+                    move |()| {
+                        info!(root_log, "Repo warmup for {} complete", reponame);
+                        (
+                            reponame,
+                            RepoHandler {
+                                logger: listen_log,
+                                scuba: scuba_logger,
+                                repo: repo,
+                            },
+                        )
+                    }
+                })
+                .boxify()
         })
         .collect();
 

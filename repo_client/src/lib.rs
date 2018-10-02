@@ -39,6 +39,7 @@ extern crate bundle2_resolver;
 extern crate context;
 extern crate filenodes;
 extern crate hgproto;
+extern crate hooks;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
@@ -52,4 +53,4 @@ mod errors;
 mod mononoke_repo;
 
 pub use client::RepoClient;
-pub use mononoke_repo::MononokeRepo;
+pub use mononoke_repo::{open_blobrepo, MononokeRepo};

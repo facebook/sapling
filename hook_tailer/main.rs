@@ -49,7 +49,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::{HgNodeHash, RepositoryId};
 use metaconfig::RepoConfigs;
-use repo_client::MononokeRepo;
+use repo_client::open_blobrepo;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
@@ -75,11 +75,10 @@ fn main() -> Result<()> {
     let err: Error = ErrorKind::NoSuchRepo(repo_name.into()).into();
     let config = configs.repos.get(repo_name).ok_or(err)?;
 
-    let mononoke_repo = MononokeRepo::new(
+    let blobrepo = open_blobrepo(
         logger.clone(),
-        &config.repotype,
+        config.repotype.clone(),
         RepositoryId::new(config.repoid),
-        &Default::default(),
     )?;
 
     let rc = RequestContext {
@@ -95,7 +94,7 @@ fn main() -> Result<()> {
     let tailer = Tailer::new(
         repo_name.to_string(),
         // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
-        Arc::new(mononoke_repo.blobrepo().clone()),
+        Arc::new(blobrepo),
         config.clone(),
         bookmark,
         manifold_client.clone(),

@@ -30,6 +30,7 @@ use sshrelay::{SenderBytesWrite, Stdio};
 use repo_handlers::RepoHandler;
 
 use context::CoreContext;
+use hooks::HookManager;
 
 define_stats! {
     prefix = "mononoke.request_handler";
@@ -45,6 +46,7 @@ pub fn request_handler(
     }: RepoHandler,
     stdio: Stdio,
     addr: SocketAddr,
+    hook_manager: Arc<HookManager>,
 ) -> impl Future<Item = (), Error = ()> {
     let mut scuba_logger = scuba;
     let Stdio {
@@ -131,6 +133,7 @@ pub fn request_handler(
         sshproto::HgSshCommandEncode,
         &conn_log,
         wireproto_calls.clone(),
+        hook_manager,
     );
 
     // send responses back

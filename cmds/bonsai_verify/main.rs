@@ -20,6 +20,7 @@ extern crate futures_ext;
 
 extern crate blobrepo_utils;
 extern crate cmdlib;
+extern crate failure_ext;
 extern crate mercurial_types;
 extern crate mononoke_types;
 
@@ -40,6 +41,8 @@ use futures_ext::FutureExt;
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use cmdlib::args;
 use mercurial_types::HgChangesetId;
+
+use failure_ext::Result;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp {
@@ -77,11 +80,11 @@ fn get_start_points<'a>(matches: &ArgMatches<'a>) -> Vec<HgChangesetId> {
     res.expect("failed to parse start points as hashes")
 }
 
-fn main() {
+fn main() -> Result<()> {
     let matches = setup_app().get_matches();
     let logger = args::get_logger(&matches);
     args::init_cachelib(&matches);
-    let repo = args::open_repo(&logger, &matches);
+    let repo = args::open_repo(&logger, &matches)?;
 
     let config = config::get_config(&matches).expect("getting configuration failed");
     let start_points = get_start_points(&matches);

@@ -59,7 +59,7 @@ fn main() -> Result<()> {
     let logger = args::get_logger(&matches);
 
     args::init_cachelib(&matches);
-    let repo = args::create_repo(&logger, &matches);
+    let repo = args::create_repo(&logger, &matches)?;
     let blobrepo = Arc::new(repo.blobrepo().clone());
 
     let revlogrepo_path = matches

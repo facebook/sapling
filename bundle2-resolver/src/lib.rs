@@ -46,6 +46,7 @@ extern crate tokio_io;
 extern crate blobrepo;
 extern crate bonsai_utils;
 extern crate bookmarks;
+extern crate hooks;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;

@@ -35,6 +35,7 @@ use stats::*;
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
 use errors::*;
+use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
 use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
@@ -55,8 +56,9 @@ pub fn resolve(
     pushrebase: PushrebaseParams,
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
+    hook_manager: Arc<HookManager>,
 ) -> BoxFuture<Bytes, Error> {
-    let resolver = Bundle2Resolver::new(repo, logger, scuba_logger, pushrebase);
+    let resolver = Bundle2Resolver::new(repo, logger, scuba_logger, pushrebase, hook_manager);
 
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
@@ -257,8 +259,13 @@ fn resolve_pushrebase(
             cloned!(resolver);
             move |(changesets, bookmark_pushes, onto)| {
                 resolver
-                    .pushrebase(changesets, bookmark_pushes, &onto)
-                    .map(|pushrebased_rev| (pushrebased_rev, onto))
+                    .run_hooks(changesets.clone(), &onto)
+                    .map_err(|err| err_msg(format!("hookrunner failed {:?}", err)))
+                    .and_then(move |()| {
+                        resolver
+                            .pushrebase(changesets.clone(), bookmark_pushes, &onto)
+                            .map(|pushrebased_rev| (pushrebased_rev, onto))
+                    })
             }
         })
         .and_then({
@@ -348,6 +355,7 @@ struct Bundle2Resolver {
     logger: Logger,
     scuba_logger: ScubaSampleBuilder,
     pushrebase: PushrebaseParams,
+    hook_manager: Arc<HookManager>,
 }
 
 impl Bundle2Resolver {
@@ -356,12 +364,14 @@ impl Bundle2Resolver {
         logger: Logger,
         scuba_logger: ScubaSampleBuilder,
         pushrebase: PushrebaseParams,
+        hook_manager: Arc<HookManager>,
     ) -> Self {
         Self {
             repo,
             logger,
             scuba_logger,
             pushrebase,
+            hook_manager,
         }
     }
 
@@ -881,6 +891,76 @@ impl Bundle2Resolver {
             })
             .map(|res| res.head)
             .boxify()
+    }
+
+    fn run_hooks(
+        &self,
+        changesets: Changesets,
+        onto_bookmark: &Bookmark,
+    ) -> BoxFuture<(), RunHooksError> {
+        let mut futs = stream::FuturesUnordered::new();
+        for (cs_id, _) in changesets {
+            let hg_cs_id = HgChangesetId::new(cs_id.clone());
+            futs.push(
+                self.hook_manager
+                    .run_changeset_hooks_for_bookmark(hg_cs_id.clone(), onto_bookmark)
+                    .join(
+                        self.hook_manager
+                            .run_file_hooks_for_bookmark(hg_cs_id, onto_bookmark),
+                    ),
+            )
+        }
+        futs.collect()
+            .from_err()
+            .and_then(|res| {
+                let (cs_hook_results, file_hook_results): (Vec<_>, Vec<_>) =
+                    res.into_iter().unzip();
+                let cs_hook_failures: Vec<
+                    (ChangesetHookExecutionID, HookExecution),
+                > = cs_hook_results
+                    .into_iter()
+                    .flatten()
+                    .filter(|(_, exec)| match exec {
+                        HookExecution::Accepted => false,
+                        HookExecution::Rejected(_) => true,
+                    })
+                    .collect();
+                let file_hook_failures: Vec<(FileHookExecutionID, HookExecution)> =
+                    file_hook_results
+                        .into_iter()
+                        .flatten()
+                        .filter(|(_, exec)| match exec {
+                            HookExecution::Accepted => false,
+                            HookExecution::Rejected(_) => true,
+                        })
+                        .collect();
+                if cs_hook_failures.len() > 0 || file_hook_failures.len() > 0 {
+                    Err(RunHooksError::Failures((
+                        cs_hook_failures,
+                        file_hook_failures,
+                    )))
+                } else {
+                    Ok(())
+                }
+            })
+            .boxify()
+    }
+}
+
+#[derive(Debug)]
+pub enum RunHooksError {
+    Failures(
+        (
+            Vec<(ChangesetHookExecutionID, HookExecution)>,
+            Vec<(FileHookExecutionID, HookExecution)>,
+        ),
+    ),
+    Error(Error),
+}
+
+impl From<Error> for RunHooksError {
+    fn from(error: Error) -> Self {
+        RunHooksError::Error(error)
     }
 }
 

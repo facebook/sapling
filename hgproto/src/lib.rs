@@ -40,6 +40,7 @@ extern crate revset;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
 // QuickCheck for randomized testing.
+extern crate hooks;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;

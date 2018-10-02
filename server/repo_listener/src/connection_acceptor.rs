@@ -102,7 +102,9 @@ fn accept(
                 .cloned()
                 .ok_or_else(|| error!(root_log, "Unknown repo: {}", stdio.preamble.reponame))
                 .into_future()
-                .and_then(move |handler| request_handler(handler.clone(), stdio, addr))
+                .and_then(move |handler| {
+                    request_handler(handler.clone(), stdio, addr, handler.repo.hook_manager())
+                })
         })
 }
 

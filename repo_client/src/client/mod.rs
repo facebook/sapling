@@ -41,6 +41,7 @@ use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 
 use self::remotefilelog::create_remotefilelog_blob;
 use errors::*;
+use hooks::HookManager;
 use mononoke_repo::MononokeRepo;
 
 const MAX_NODES_TO_LOG: usize = 5;
@@ -571,6 +572,7 @@ impl HgCommands for RepoClient {
         &self,
         heads: Vec<String>,
         stream: BoxStream<Bundle2Item, Error>,
+        hook_manager: Arc<HookManager>,
     ) -> HgCommandRes<Bytes> {
         let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
 
@@ -581,6 +583,7 @@ impl HgCommands for RepoClient {
             self.repo.pushrebase_params().clone(),
             heads,
             stream,
+            hook_manager,
         );
 
         res.traced(self.trace(), ops::UNBUNDLE, trace_args!())

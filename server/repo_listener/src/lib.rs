@@ -18,6 +18,7 @@ extern crate dns_lookup;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+#[macro_use]
 extern crate futures_ext;
 extern crate futures_stats;
 #[macro_use]
@@ -42,6 +43,7 @@ extern crate uuid;
 
 extern crate cache_warmup;
 extern crate hgproto;
+extern crate hooks;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate ready_state;
@@ -77,7 +79,7 @@ pub fn create_repo_listeners(
 
     (
         repo_handlers(repos, &root_log, &mut ready)
-            .and_then(move |handles| connection_acceptor(sockname, root_log, handles, tls_acceptor))
+            .and_then(move |handlers| connection_acceptor(sockname, root_log, handlers, tls_acceptor))
             .boxify(),
         ready.freeze(),
     )

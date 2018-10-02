@@ -45,11 +45,10 @@ use clap::{App, ArgMatches};
 use failure::{Error, Result};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use hooks::{BlobRepoChangesetStore, BlobRepoFileContentStore, HookExecution, HookManager};
+use hooks::{HookExecution, HookManager};
 use hooks::lua_hook::LuaHook;
 use mercurial_types::{HgChangesetId, RepositoryId};
 use slog::{Drain, Level, Logger};
-use slog::Discard;
 use slog_glog_fmt::default_drain as glog_drain;
 use std::env::args;
 use std::fs::File;
@@ -109,18 +108,7 @@ fn run_hook(
     println!("Hook file is {} revision is {:?}", hook_file, revstr);
     println!("Hook code is {}", code);
     println!("==============================");
-
-    let changeset_store = Box::new(BlobRepoChangesetStore::new(repo.clone()));
-    let content_store = Arc::new(BlobRepoFileContentStore::new(repo.clone()));
-    let logger = Logger::root(Discard {}.ignore_res(), o!());
-    let mut hook_manager = HookManager::new(
-        repo_name,
-        changeset_store,
-        content_store,
-        1024,
-        1024 * 1024,
-        logger,
-    );
+    let mut hook_manager = HookManager::new_with_blobrepo(repo.clone(), logger);
     let hook = LuaHook {
         name: String::from("testhook"),
         code,
