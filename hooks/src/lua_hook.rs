@@ -15,8 +15,8 @@ use failure::Error;
 use futures::{failed, Future};
 use futures::future::ok;
 use futures_ext::{BoxFuture, FutureExt};
-use hlua::{AnyLuaValue, Lua, LuaError, LuaFunctionCallError, LuaTable, PushGuard, TuplePushError,
-           Void, function0, function1, function2};
+use hlua::{AnyLuaString, AnyLuaValue, Lua, LuaError, LuaFunctionCallError, LuaTable, PushGuard,
+           TuplePushError, Void, function0, function1, function2};
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
 use std::collections::HashMap;
 
@@ -31,6 +31,7 @@ __hook_start = function(info, arg)
           file.path = path
           file.contains_string = function(s) return coroutine.yield(__contains_string(file.path, s)) end
           file.len = function() return coroutine.yield(__file_len(file.path)) end
+          file.content = function() return coroutine.yield(__file_content(file.path)) end
           files[#files+1] = file
         end
         ctx.files=files
@@ -45,6 +46,7 @@ __hook_start = function(info, arg)
         file.path = arg
         file.contains_string = function(s) return coroutine.yield(__contains_string(s)) end
         file.len = function() return coroutine.yield(__file_len()) end
+        file.content = function() return coroutine.yield(__file_content()) end
         ctx.file = file
     end)
 end
@@ -85,6 +87,7 @@ impl Hook<HookChangeset> for LuaHook {
             .map(|file| (file.path.clone(), file.clone()))
             .collect();
         let files_map2 = files_map.clone();
+        let files_map3 = files_map.clone();
 
         let contains_string = {
             move |path: String, string: String| -> Result<AnyFuture, Error> {
@@ -105,9 +108,30 @@ impl Hook<HookChangeset> for LuaHook {
             }
         };
         let contains_string = function2(contains_string);
-        let file_len = {
+        let file_content = {
             move |path: String| -> Result<AnyFuture, Error> {
                 match files_map2.get(&path) {
+                    Some(file) => {
+                        let future = file.file_content()
+                            .map_err(|err| {
+                                LuaError::ExecutionError(format!(
+                                    "failed to get file content: {}",
+                                    err
+                                ))
+                            })
+                            .map(|content| {
+                                AnyLuaValue::LuaAnyString(AnyLuaString(content.to_vec()))
+                            });
+                        Ok(AnyFuture::new(future))
+                    }
+                    None => Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(false)))),
+                }
+            }
+        };
+        let file_content = function1(file_content);
+        let file_len = {
+            move |path: String| -> Result<AnyFuture, Error> {
+                match files_map3.get(&path) {
                     Some(file) => {
                         let future = file.len()
                             .map_err(|err| {
@@ -129,6 +153,7 @@ impl Hook<HookChangeset> for LuaHook {
         lua.openlibs();
         lua.set("__contains_string", contains_string);
         lua.set("__file_len", file_len);
+        lua.set("__file_content", file_content);
         let res: Result<(), Error> = lua.execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
@@ -177,6 +202,20 @@ impl Hook<HookFile> for LuaHook {
             }
         };
         let contains_string = function1(contains_string);
+        let file_content = {
+            cloned!(context);
+            move || -> Result<AnyFuture, Error> {
+                let future = context
+                    .data
+                    .file_content()
+                    .map_err(|err| {
+                        LuaError::ExecutionError(format!("failed to get file content: {}", err))
+                    })
+                    .map(|content| AnyLuaValue::LuaAnyString(AnyLuaString(content.to_vec())));
+                Ok(AnyFuture::new(future))
+            }
+        };
+        let file_content = function0(file_content);
         let file_len = {
             cloned!(context);
             move || -> Result<AnyFuture, Error> {
@@ -195,6 +234,7 @@ impl Hook<HookFile> for LuaHook {
         lua.openlibs();
         lua.set("__contains_string", contains_string);
         lua.set("__file_len", file_len);
+        lua.set("__file_content", file_content);
         let res: Result<(), Error> = lua.execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
@@ -334,7 +374,7 @@ mod test {
     }
 
     #[test]
-    fn test_cs_hook_file_content_match() {
+    fn test_cs_hook_file_contains_string_match() {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
             let code = String::from(
@@ -342,6 +382,24 @@ mod test {
                  return ctx.files[1].contains_string(\"file1sausages\") and\n
                  ctx.files[2].contains_string(\"file2sausages\") and\n
                  ctx.files[3].contains_string(\"file3sausages\")\n
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_file_content_match() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.files[1].content() == \"file1sausages\" and\n
+                 ctx.files[2].content() == \"file2sausages\" and\n
+                 ctx.files[3].content() == \"file3sausages\"\n
                  end",
             );
             assert_matches!(
@@ -618,7 +676,7 @@ mod test {
     }
 
     #[test]
-    fn test_file_hook_content_matches() {
+    fn test_file_hook_contains_string_matches() {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_file();
             let code = String::from(
@@ -631,7 +689,7 @@ mod test {
     }
 
     #[test]
-    fn test_file_hook_content_no_matches() {
+    fn test_file_hook_contains_string_no_matches() {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_file();
             let code = String::from(
@@ -643,6 +701,19 @@ mod test {
                 run_file_hook(code, hook_file),
                 Ok(HookExecution::Rejected(_))
             );
+        });
+    }
+
+    #[test]
+    fn test_file_hook_content_matches() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.content() == \"sausages\"\n\
+                 end",
+            );
+            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
         });
     }
 
