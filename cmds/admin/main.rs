@@ -14,11 +14,14 @@ extern crate failure_ext as failure;
 extern crate futures;
 extern crate promptly;
 #[macro_use]
+extern crate serde_derive;
+#[macro_use]
 extern crate serde_json;
 extern crate tokio_process;
 
 extern crate blobrepo;
 extern crate blobstore;
+extern crate bonsai_utils;
 extern crate bookmarks;
 extern crate cmdlib;
 #[macro_use]
@@ -26,6 +29,7 @@ extern crate futures_ext;
 extern crate manifoldblob;
 extern crate mercurial_types;
 extern crate mononoke_types;
+extern crate revset;
 #[macro_use]
 extern crate slog;
 extern crate tempdir;
@@ -34,8 +38,13 @@ extern crate tokio;
 mod config_repo;
 mod bookmarks_manager;
 
+use std::borrow::Borrow;
+use std::collections::BTreeMap;
+
 use std::fmt;
+use std::io;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use clap::{App, Arg, SubCommand};
 use failure::{err_msg, Error, Result};
@@ -45,14 +54,16 @@ use futures::stream::iter_ok;
 
 use blobrepo::BlobRepo;
 use blobstore::{new_memcache_blobstore, Blobstore, CacheBlobstoreExt, PrefixBlobstore};
+use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::Bookmark;
 use cmdlib::args;
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
 use mercurial_types::{Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope,
-                      HgManifestEnvelope, MPath, MPathElement, Manifest};
+                      HgManifestEnvelope, HgManifestId, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
 use mononoke_types::{BlobstoreBytes, BlobstoreValue, BonsaiChangeset, FileContents};
+use revset::RangeNodeStream;
 use slog::Logger;
 
 const BLOBSTORE_FETCH: &'static str = "blobstore-fetch";
@@ -60,6 +71,10 @@ const BONSAI_FETCH: &'static str = "bonsai-fetch";
 const CONTENT_FETCH: &'static str = "content-fetch";
 const CONFIG_REPO: &'static str = "config";
 const BOOKMARKS: &'static str = "bookmarks";
+
+const HG_CHANGESET: &'static str = "hg-changeset";
+const HG_CHANGESET_DIFF: &'static str = "diff";
+const HG_CHANGESET_RANGE: &'static str = "range";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let blobstore_fetch = SubCommand::with_name(BLOBSTORE_FETCH)
@@ -103,6 +118,25 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("fetches content of the file or manifest from blobrepo")
         .args_from_usage("<HG_CHANGESET_OR_BOOKMARK>    'revision to fetch file from'");
 
+    let hg_changeset = SubCommand::with_name(HG_CHANGESET)
+        .about("mercural changeset level queries")
+        .subcommand(
+            SubCommand::with_name(HG_CHANGESET_DIFF)
+                .about("compare two changeset (used by pushrebase replayer)")
+                .args_from_usage(
+                    "<LEFT_CS>  'left changeset id'
+                     <RIGHT_CS> 'right changeset id'",
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_CHANGESET_RANGE)
+                .about("returns `x::y` revset")
+                .args_from_usage(
+                    "<START_CS> 'start changeset id'
+                     <STOP_CS>  'stop changeset id'",
+                ),
+        );
+
     let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
@@ -121,6 +155,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(bookmarks_manager::prepare_command(SubCommand::with_name(
             BOOKMARKS,
         )))
+        .subcommand(hg_changeset)
 }
 
 fn fetch_content_from_manifest(
@@ -229,6 +264,133 @@ fn get_cache<B: CacheBlobstoreExt>(
     } else {
         blobstore.get(key)
     }
+}
+
+#[derive(Serialize)]
+struct ChangesetDiff {
+    left: HgChangesetId,
+    right: HgChangesetId,
+    diff: Vec<ChangesetAttrDiff>,
+}
+
+#[derive(Serialize)]
+enum ChangesetAttrDiff {
+    #[serde(rename = "user")] User(String, String),
+    #[serde(rename = "comments")] Comments(String, String),
+    #[serde(rename = "manifest")] Manifest(ManifestDiff),
+    #[serde(rename = "files")] Files(Vec<String>, Vec<String>),
+    #[serde(rename = "extra")] Extra(BTreeMap<String, String>, BTreeMap<String, String>),
+}
+
+#[derive(Serialize)]
+struct ManifestDiff {
+    modified: Vec<String>,
+    deleted: Vec<String>,
+}
+
+fn mpath_to_str<P: Borrow<MPath>>(mpath: P) -> String {
+    let bytes = mpath.borrow().to_vec();
+    String::from_utf8_lossy(bytes.as_ref()).into_owned()
+}
+
+fn slice_to_str(slice: &[u8]) -> String {
+    String::from_utf8_lossy(slice).into_owned()
+}
+
+fn hg_manifest_diff(
+    repo: BlobRepo,
+    left: &HgManifestId,
+    right: &HgManifestId,
+) -> impl Future<Item = Option<ChangesetAttrDiff>, Error = Error> {
+    bonsai_diff(
+        repo.get_root_entry(left),
+        Some(repo.get_root_entry(right)),
+        None,
+    ).collect()
+        .map(|diffs| {
+            let diff = diffs.into_iter().fold(
+                ManifestDiff {
+                    modified: Vec::new(),
+                    deleted: Vec::new(),
+                },
+                |mut mdiff, diff| {
+                    match diff {
+                        BonsaiDiffResult::Changed(path, ..)
+                        | BonsaiDiffResult::ChangedReusedId(path, ..) => {
+                            mdiff.modified.push(mpath_to_str(path))
+                        }
+                        BonsaiDiffResult::Deleted(path) => mdiff.deleted.push(mpath_to_str(path)),
+                    };
+                    mdiff
+                },
+            );
+            if diff.modified.is_empty() && diff.deleted.is_empty() {
+                None
+            } else {
+                Some(ChangesetAttrDiff::Manifest(diff))
+            }
+        })
+}
+
+fn hg_changeset_diff(
+    repo: BlobRepo,
+    left_id: &HgChangesetId,
+    right_id: &HgChangesetId,
+) -> impl Future<Item = ChangesetDiff, Error = Error> {
+    (
+        repo.get_changeset_by_changesetid(left_id),
+        repo.get_changeset_by_changesetid(right_id),
+    ).into_future()
+        .and_then({
+            cloned!(repo, left_id, right_id);
+            move |(left, right)| {
+                let mut diff = ChangesetDiff {
+                    left: left_id,
+                    right: right_id,
+                    diff: Vec::new(),
+                };
+
+                if left.user() != right.user() {
+                    diff.diff.push(ChangesetAttrDiff::User(
+                        slice_to_str(left.user()),
+                        slice_to_str(right.user()),
+                    ));
+                }
+
+                if left.comments() != right.comments() {
+                    diff.diff.push(ChangesetAttrDiff::Comments(
+                        slice_to_str(left.comments()),
+                        slice_to_str(right.comments()),
+                    ))
+                }
+
+                if left.files() != right.files() {
+                    diff.diff.push(ChangesetAttrDiff::Files(
+                        left.files().iter().map(mpath_to_str).collect(),
+                        right.files().iter().map(mpath_to_str).collect(),
+                    ))
+                }
+
+                if left.extra() != right.extra() {
+                    diff.diff.push(ChangesetAttrDiff::Extra(
+                        left.extra()
+                            .iter()
+                            .map(|(k, v)| (slice_to_str(k), slice_to_str(v)))
+                            .collect(),
+                        right
+                            .extra()
+                            .iter()
+                            .map(|(k, v)| (slice_to_str(k), slice_to_str(v)))
+                            .collect(),
+                    ))
+                }
+
+                hg_manifest_diff(repo, left.manifestid(), right.manifestid()).map(move |mdiff| {
+                    diff.diff.extend(mdiff);
+                    diff
+                })
+            }
+        })
 }
 
 fn main() {
@@ -362,9 +524,86 @@ fn main() {
         (BOOKMARKS, Some(sub_m)) => {
             args::init_cachelib(&matches);
             let repo = args::open_repo(&logger, &matches);
-
             bookmarks_manager::handle_command(&repo.blobrepo(), sub_m, logger)
         }
+        (HG_CHANGESET, Some(sub_m)) => match sub_m.subcommand() {
+            (HG_CHANGESET_DIFF, Some(sub_m)) => {
+                let left_cs = sub_m
+                    .value_of("LEFT_CS")
+                    .ok_or(format_err!("LEFT_CS argument expected"))
+                    .and_then(HgChangesetId::from_str);
+                let right_cs = sub_m
+                    .value_of("RIGHT_CS")
+                    .ok_or(format_err!("RIGHT_CS argument expected"))
+                    .and_then(HgChangesetId::from_str);
+
+                args::init_cachelib(&matches);
+                let repo = args::open_repo(&logger, &matches).blobrepo().clone();
+
+                (left_cs, right_cs)
+                    .into_future()
+                    .and_then(move |(left_cs, right_cs)| {
+                        hg_changeset_diff(repo, &left_cs, &right_cs)
+                    })
+                    .and_then(|diff| {
+                        serde_json::to_writer(io::stdout(), &diff)
+                            .map(|_| ())
+                            .map_err(Error::from)
+                    })
+                    .boxify()
+            }
+            (HG_CHANGESET_RANGE, Some(sub_m)) => {
+                let start_cs = sub_m
+                    .value_of("START_CS")
+                    .ok_or(format_err!("START_CS argument expected"))
+                    .and_then(HgChangesetId::from_str);
+                let stop_cs = sub_m
+                    .value_of("STOP_CS")
+                    .ok_or(format_err!("STOP_CS argument expected"))
+                    .and_then(HgChangesetId::from_str);
+
+                args::init_cachelib(&matches);
+                let repo = args::open_repo(&logger, &matches).blobrepo().clone();
+
+                (start_cs, stop_cs)
+                    .into_future()
+                    .and_then({
+                        cloned!(repo);
+                        move |(start_cs, stop_cs)| {
+                            (
+                                repo.get_bonsai_from_hg(&start_cs),
+                                repo.get_bonsai_from_hg(&stop_cs),
+                            )
+                        }
+                    })
+                    .and_then(|(start_cs_opt, stop_cs_opt)| {
+                        (
+                            start_cs_opt.ok_or(err_msg("failed to resolve changeset")),
+                            stop_cs_opt.ok_or(err_msg("failed to resovle changeset")),
+                        )
+                    })
+                    .and_then({
+                        cloned!(repo);
+                        move |(start_cs, stop_cs)| {
+                            RangeNodeStream::new(&Arc::new(repo.clone()), start_cs, stop_cs)
+                                .map(move |cs| repo.get_hg_from_bonsai_changeset(cs))
+                                .buffered(100)
+                                .map(|cs| cs.to_hex().to_string())
+                                .collect()
+                        }
+                    })
+                    .and_then(|css| {
+                        serde_json::to_writer(io::stdout(), &css)
+                            .map(|_| ())
+                            .map_err(Error::from)
+                    })
+                    .boxify()
+            }
+            _ => {
+                println!("{}", sub_m.usage());
+                ::std::process::exit(1);
+            }
+        },
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
