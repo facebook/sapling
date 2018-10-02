@@ -550,6 +550,22 @@ when listing:
   $ hg sparse disableprofile nonesuch
   warning: sparse profile 'nonesuch' not found in rev 07b307002dae - ignoring it
 
+Can switch between profiles
+
+  $ test -f interesting/sizeable
+  [1]
+  $ hg sparse switchprofile profiles/bar/ham
+  $ hg sparse list
+  symbols: * = active profile, ~ = transitively included
+  warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
+  warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
+  ~ profiles/bar/eggs   - Profile including the profiles directory
+  * profiles/bar/ham    - An extended profile including some interesting files
+    profiles/bar/python
+    profiles/foo/errors
+    profiles/foo/spam   - Profile that only includes another
+  $ test -f interesting/sizeable
+
 We can look at invididual profiles:
 
   $ hg sparse explain profiles/bar/eggs

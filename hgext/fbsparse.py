@@ -1811,6 +1811,17 @@ def enableprofilesubcmd(ui, repo, *pats, **opts):
     _config(ui, repo, pats, opts, force=opts.get("force"), enableprofile=True)
 
 
+@subcmd("switchprofile", _common_config_opts, "[PROFILE]...")
+def switchprofilesubcmd(ui, repo, *pats, **opts):
+    """switches to the specified profile
+
+    Disables all other profiles and deletes all include/exclude rules.
+    """
+    _config(
+        ui, repo, pats, opts, force=opts.get("force"), reset=True, enableprofile=True
+    )
+
+
 @subcmd("delete", _common_config_opts, "[RULE]...")
 def deletesubcmd(ui, repo, *pats, **opts):
     """delete an include/exclude rule"""
