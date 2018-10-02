@@ -1072,9 +1072,9 @@ void FuseChannel::processSession() {
     // system.
     if (UNLIKELY(static_cast<pid_t>(header->pid) == myPid)) {
       replyError(*header, EIO);
-      XLOG(DFATAL) << "Received FUSE request from our own pid: opcode="
-                   << header->opcode << " nodeid=" << header->nodeid
-                   << " pid=" << header->pid;
+      XLOG(CRITICAL) << "Received FUSE request from our own pid: opcode="
+                     << header->opcode << " nodeid=" << header->nodeid
+                     << " pid=" << header->pid;
       continue;
     }
 
