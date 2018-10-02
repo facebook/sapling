@@ -372,6 +372,8 @@ def getfiles(repo, proto):
                 kwargs = clienttelemetry.getclienttelemetry(repo)
             except KeyError:
                 pass
+            reponame = repo.ui.config("common", "reponame", "unknown")
+            kwargs["reponame"] = reponame
             repo.ui.log(
                 "wireproto_requests",
                 "",

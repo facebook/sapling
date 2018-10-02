@@ -637,6 +637,8 @@ def logwireprotorequest(repo, ui, start_time, command, serializedargs, res):
     except KeyError:
         pass
 
+    reponame = repo.ui.config("common", "reponame", "unknown")
+    kwargs["reponame"] = reponame
     logger = functools.partial(
         ui.log, "wireproto_requests", "", command=command, args=serializedargs, **kwargs
     )

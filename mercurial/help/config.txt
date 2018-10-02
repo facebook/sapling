@@ -592,6 +592,13 @@ below can be referred as ``{listupfiles}``::
        "HG: removed {file}\n"   }{if(files, "",
        "HG: no files changed\n")}
 
+``common``
+------------------
+
+``reponame``
+    String: Name of the repo. Mostly intended to be used server-side to get
+    the canonical name of the repository
+
 ``connectionpool``
 ------------------
 
