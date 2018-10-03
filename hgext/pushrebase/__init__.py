@@ -1069,7 +1069,7 @@ def bundle2rebase(op, part):
             def setrecordingparams(repo, ontoparam, ontoctx):
                 repo.pushrebaserecordingparams = {
                     "onto": ontoparam,
-                    "ontorev": ontoctx.hex(),
+                    "ontorev": ontoctx and ontoctx.hex(),
                 }
 
             ontoparam = params.get("onto", donotrebasemarker)
