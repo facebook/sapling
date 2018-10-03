@@ -214,3 +214,59 @@ Check that new entry was added to the db
   42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
   42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
   42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
+
+
+Enable pretxnchangegroup hooks and make sure we record failed pushes in that case
+  $ cd ../server
+  $ setconfig hooks.pretxnchangegroup=false
+
+  $ cd -
+  $TESTTMP/client
+  $ hg up -q tip
+  $ echo '' > failedhook && hg commit -Am 'hook will fail'
+  adding failedhook
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select count(*) from pushrebaserecording'
+  count(*)
+  4
+  $ hg push -r . --to master
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: pushing 1 changeset:
+  remote:     e42da70f7a80  hook will fail
+  remote: transaction abort!
+  remote: rollback completed
+  remote: pretxnchangegroup hook exited with status 1
+  abort: push failed on remote
+  [255]
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
+  repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	pretxnchangegroup hook exited with status 1
+
+Enable prepushrebase hooks and make sure we record failed pushes in that case
+  $ cd ../server
+  $ setconfig hooks.prepushrebase=false
+
+  $ cd -
+  $TESTTMP/client
+  $ hg up -q tip
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select count(*) from pushrebaserecording'
+  count(*)
+  5
+  $ hg push -r . --to master
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: prepushrebase hook exited with status 1
+  abort: push failed on remote
+  [255]
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
+  repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	pretxnchangegroup hook exited with status 1
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	prepushrebase hook exited with status 1

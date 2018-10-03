@@ -1066,11 +1066,19 @@ def bundle2rebase(op, part):
             bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
             bundle = _createbundlerepo(op, bundlepath)
 
+            def setrecordingparams(repo, ontoparam, ontoctx):
+                repo.pushrebaserecordingparams = {
+                    "onto": ontoparam,
+                    "ontorev": ontoctx.hex(),
+                }
+
+            ontoparam = params.get("onto", donotrebasemarker)
+            ontoctx = resolveonto(op.repo, ontoparam)
+            setrecordingparams(op.repo, ontoparam, ontoctx)
+
             prepushrebasehooks(op, params, bundle, bundlefile)
 
             ui.setconfig("pushrebase", pushrebasemarker, True)
-            ontoparam = params.get("onto", donotrebasemarker)
-            ontoctx = resolveonto(op.repo, ontoparam)
             verbose = ontoctx is not None and ui.configbool("pushrebase", "verbose")
             usestackpush = ontoctx is not None and ui.configbool(
                 "pushrebase", "trystackpush", True
@@ -1080,12 +1088,6 @@ def bundle2rebase(op, part):
                 if verbose or force:
                     ui.write_err(msg)
                 ui.log("pushrebase", msg)
-
-            def setrecordingparams(repo, ontoparam, ontoctx):
-                repo.pushrebaserecordingparams = {
-                    "onto": ontoparam,
-                    "ontorev": ontoctx.hex(),
-                }
 
             if usestackpush:
                 try:

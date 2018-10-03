@@ -60,8 +60,8 @@ def _dorecordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
     # Collect the rest of the parameters.
     logparams.update(repo.pushrebaserecordingparams)
 
-    # Collect timestamps and manifest hashes
-    if getattr(repo, "pushrebaseaddedchangesets", None):
+    # Collect timestamps and manifest hashes (but only if there were no errors)
+    if not pushrebase_errmsg and getattr(repo, "pushrebaseaddedchangesets", None):
         # We want to record mappings from old commit hashes to timestamps
         # of new commits and manifest hashes of new commits. To do this, we
         # need to revert replacements dict
@@ -72,10 +72,12 @@ def _dorecordpushrebaserequest(repo, conflicts, pushrebase_errmsg, start_time):
         timestamps = {}
         manifests = {}
         for binaddednode in repo.pushrebaseaddedchangesets:
-            hexoldnode = reversedreplacements[hex(binaddednode)]
-            ctx = repo[binaddednode]
-            timestamps[hexoldnode] = ctx.date()
-            manifests[hexoldnode] = hex(ctx.manifestnode())
+            if hex(binaddednode) in reversedreplacements:
+                hexoldnode = reversedreplacements[hex(binaddednode)]
+                if binaddednode in repo:
+                    ctx = repo[binaddednode]
+                    timestamps[hexoldnode] = ctx.date()
+                    manifests[hexoldnode] = hex(ctx.manifestnode())
         logparams["timestamps"] = json.dumps(timestamps)
         logparams["recorded_manifest_hashes"] = json.dumps(manifests)
 
