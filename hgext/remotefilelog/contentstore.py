@@ -263,10 +263,11 @@ class remotecontentstore(object):
 
 class manifestrevlogstore(object):
     def __init__(self, repo):
-        self._store = repo.store
-        self._svfs = repo.svfs
+        # It's important that we store the repo, and not just the changelog,
+        # since the changelog may be mutated in memory. So we need to refetch
+        # the changelog each time we want to access it.
+        self.repo = repo
         self._revlogs = util.lrucachedict(100)
-        self._cl = revlog.revlog(self._svfs, "00changelog.i")
         self._repackstartlinkrev = 0
 
     def get(self, name, node):
@@ -307,14 +308,14 @@ class manifestrevlogstore(object):
             if p2 != nullid and p2 not in known:
                 missing.add(p2)
 
-            linknode = self._cl.node(rl.linkrev(ancrev))
+            linknode = self.repo.changelog.node(rl.linkrev(ancrev))
             ancestors[rl.node(ancrev)] = (p1, p2, linknode, "")
             if not missing:
                 break
         return ancestors
 
     def getnodeinfo(self, name, node):
-        cl = self._cl
+        cl = self.repo.changelog
         rl = self._revlog(name)
         parents = rl.parents(node)
         linkrev = rl.linkrev(rl.rev(node))
@@ -330,7 +331,7 @@ class manifestrevlogstore(object):
             if name == "":
                 indexfile = "00manifesttree.i"
             rl = manifest.manifestrevlog(
-                self._svfs, dir=name, indexfile=indexfile, treemanifest=True
+                self.repo.svfs, dir=name, indexfile=indexfile, treemanifest=True
             )
             self._revlogs[name] = rl
         return rl
@@ -352,7 +353,7 @@ class manifestrevlogstore(object):
         if options and options.get(constants.OPTION_PACKSONLY):
             return
         treename = ""
-        rl = revlog.revlog(self._svfs, "00manifesttree.i")
+        rl = revlog.revlog(self.repo.svfs, "00manifesttree.i")
         startlinkrev = self._repackstartlinkrev
         endlinkrev = self._repackendlinkrev
         for rev in xrange(len(rl) - 1, -1, -1):
@@ -365,13 +366,13 @@ class manifestrevlogstore(object):
             ledger.markdataentry(self, treename, node)
             ledger.markhistoryentry(self, treename, node)
 
-        for path, encoded, size in self._store.datafiles():
+        for path, encoded, size in self.repo.store.datafiles():
             if path[:5] != "meta/" or path[-2:] != ".i":
                 continue
 
             treename = path[5 : -len("/00manifest.i")]
 
-            rl = revlog.revlog(self._svfs, path)
+            rl = revlog.revlog(self.repo.svfs, path)
             for rev in xrange(len(rl) - 1, -1, -1):
                 linkrev = rl.linkrev(rev)
                 if linkrev < startlinkrev:

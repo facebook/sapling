@@ -37,15 +37,23 @@ Make server treeonly and push trees to it
   $ hg commit -Aqm "C"
   $ echo >> sub/C
   $ hg commit -qm "D"
-
-# BUG: This should succeed
-  $ hg push --to foo > /dev/null 2>&1
-  [255]
+  $ hg push --to foo
+  pushing rev 0560779f58ae to destination ssh://user@dummy/server bookmark foo
+  searching for changes
+  remote: pushing 2 changesets:
+  remote:     e297a1e684b7  C
+  remote:     0560779f58ae  D
+  remote: 2 new changesets from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  updating bookmark foo
 
   $ tglog --stat -l 2
-  @  3: 0560779f58ae 'D'   sub/C |  1 +
+  o  5: d9ee86e3acc1 'D'   sub/C |  1 +
   |   1 files changed, 1 insertions(+), 0 deletions(-)
   |
-  o  2: e297a1e684b7 'C'   sub/C |  1 +
+  o  4: 4197fbd39b1b 'C'   sub/C |  1 +
   |   1 files changed, 1 insertions(+), 0 deletions(-)
   ~
