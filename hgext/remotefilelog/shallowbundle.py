@@ -88,7 +88,7 @@ class shallowcg1packer(changegroup.cg1packer):
         if not util.safehasattr(repo.manifestlog, "_revlog"):
             return False
 
-        if repo.ui.configbool("treemanifest", "treeonly"):
+        if treeonly(repo):
             return False
 
         revlog = repo.manifestlog._revlog
@@ -175,7 +175,7 @@ class shallowcg1packer(changegroup.cg1packer):
                             p1node = mfctx.parents[0]
                             p1ctx = mflog[p1node]
                         except LookupError:
-                            if not repo.svfs.treemanifestserver:
+                            if not repo.svfs.treemanifestserver or treeonly(repo):
                                 raise
                             # If we can't find the flat version, look for trees
                             tmfl = mflog.treemanifestlog
@@ -555,7 +555,6 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
     if bundlecaps is None:
         bundlecaps = set()
     sendtrees = repo.ui.configbool("treemanifest", "sendtrees")
-    treeonly = repo.ui.configbool("treemanifest", "treeonly")
 
     def clienthascap(cap):
         return cap in bundlecaps or "True" in b2caps.get(cap, [])
@@ -587,7 +586,7 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         # they're doing a push, but that should almost never happen.
         result = LocalTrees
         prefetch = LocalTrees
-        if not treeonly:
+        if not treeonly(repo):
             # If we're sending trees and flats, then we need to prefetch
             # everything, since when it inspects the flat manifests it will
             # attempt to access the tree equivalent.
@@ -608,3 +607,7 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         pass
 
     return result
+
+
+def treeonly(repo):
+    return repo.ui.configbool("treemanifest", "treeonly")
