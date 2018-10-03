@@ -109,6 +109,21 @@ def _getrevsource(repo, r):
     return None
 
 
+def _getdepthargs(name, args):
+    startdepth = stopdepth = None
+    if "startdepth" in args:
+        n = getinteger(args["startdepth"], "%s expects an integer startdepth" % name)
+        if n < 0:
+            raise error.ParseError("negative startdepth")
+        startdepth = n
+    if "depth" in args:
+        n = getinteger(args["depth"], _("%s expects an integer depth") % name)
+        if n < 0:
+            raise error.ParseError(_("negative depth"))
+        stopdepth = n + 1
+    return startdepth, stopdepth
+
+
 # operator methods
 
 
@@ -365,18 +380,7 @@ def ancestors(repo, subset, x):
     if "set" not in args:
         # i18n: "ancestors" is a keyword
         raise error.ParseError(_("ancestors takes at least 1 argument"))
-    startdepth = stopdepth = None
-    if "startdepth" in args:
-        n = getinteger(args["startdepth"], "ancestors expects an integer startdepth")
-        if n < 0:
-            raise error.ParseError("negative startdepth")
-        startdepth = n
-    if "depth" in args:
-        # i18n: "ancestors" is a keyword
-        n = getinteger(args["depth"], _("ancestors expects an integer depth"))
-        if n < 0:
-            raise error.ParseError(_("negative depth"))
-        stopdepth = n + 1
+    startdepth, stopdepth = _getdepthargs("ancestors", args)
     return _ancestors(
         repo, subset, args["set"], startdepth=startdepth, stopdepth=stopdepth
     )
@@ -754,18 +758,7 @@ def descendants(repo, subset, x):
     if "set" not in args:
         # i18n: "descendants" is a keyword
         raise error.ParseError(_("descendants takes at least 1 argument"))
-    startdepth = stopdepth = None
-    if "startdepth" in args:
-        n = getinteger(args["startdepth"], "descendants expects an integer startdepth")
-        if n < 0:
-            raise error.ParseError("negative startdepth")
-        startdepth = n
-    if "depth" in args:
-        # i18n: "descendants" is a keyword
-        n = getinteger(args["depth"], _("descendants expects an integer depth"))
-        if n < 0:
-            raise error.ParseError(_("negative depth"))
-        stopdepth = n + 1
+    startdepth, stopdepth = _getdepthargs("descendants", args)
     return _descendants(
         repo, subset, args["set"], startdepth=startdepth, stopdepth=stopdepth
     )
@@ -2127,11 +2120,98 @@ def _mapbynodefunc(repo, s, f):
     return smartset.baseset(result - repo.changelog.filteredrevs)
 
 
-@predicate("successors(set)", safe=True)
+@predicate("allprecursors(set[, depth])")
+@predicate("allpredecessors(set[, depth])")
+def allpredecessors(repo, subset, x):
+    """Changesets that are predecessors of changesets in set, excluding the
+    given changesets themselves.
+
+    If depth is specified, the result only includes changesets up to
+    the specified iteration.
+    """
+    # startdepth is for internal use only until we can decide the UI
+    args = getargsdict(x, "allpredecessors", "set depth startdepth")
+    if "set" not in args:
+        # i18n: "allpredecessors" is a keyword
+        raise error.ParseError(_("allpredecessors takes at least 1 argument"))
+    startdepth, stopdepth = _getdepthargs("allpredecessors", args)
+    if startdepth is None:
+        startdepth = 1
+
+    return _predecessors(repo, subset, args["set"], startdepth, stopdepth)
+
+
+@predicate("precursors(set[, depth])", safe=True)
+@predicate("predecessors(set[, depth])", safe=True)
+def predecessors(repo, subset, x):
+    """Changesets that are predecessors of changesets in set, including the
+    given changesets themselves.
+
+    If depth is specified, the result only includes changesets up to
+    the specified iteration.
+    """
+    # startdepth is for internal use only until we can decide the UI
+    args = getargsdict(x, "predecessors", "set depth startdepth")
+    if "set" not in args:
+        # i18n: "predecessors" is a keyword
+        raise error.ParseError(_("predecessors takes at least 1 argument"))
+    startdepth, stopdepth = _getdepthargs("predecessors", args)
+
+    return _predecessors(repo, subset, args["set"], startdepth, stopdepth)
+
+
+def _predecessors(repo, subset, targetset, startdepth, stopdepth):
+    s = getset(repo, fullreposet(repo), targetset)
+    f = lambda nodes: obsutil.allpredecessors(
+        repo.obsstore, nodes, startdepth=startdepth, stopdepth=stopdepth
+    )
+    d = _mapbynodefunc(repo, s, f)
+    return subset & d
+
+
+@predicate("allsuccessors(set)")
+def allsuccessors(repo, subset, x):
+    """Changesets that are successors of changesets in set, excluding the
+    given changesets themselves.
+
+    If depth is specified, the result only includes changesets up to
+    the specified iteration.
+    """
+    # startdepth is for internal use only until we can decide the UI
+    args = getargsdict(x, "allsuccessors", "set depth startdepth")
+    if "set" not in args:
+        # i18n: "allsuccessors" is a keyword
+        raise error.ParseError(_("allsuccessors takes at least 1 argument"))
+    startdepth, stopdepth = _getdepthargs("allsuccessors", args)
+    if startdepth is None:
+        startdepth = 1
+
+    return _successors(repo, subset, args["set"], startdepth, stopdepth)
+
+
+@predicate("successors(set[, depth])", safe=True)
 def successors(repo, subset, x):
-    """All successors for set, including the given set themselves"""
-    s = getset(repo, fullreposet(repo), x)
-    f = lambda nodes: obsutil.allsuccessors(repo.obsstore, nodes)
+    """Changesets that are successors of changesets in set, including the
+    given changesets themselves.
+
+    If depth is specified, the result only includes changesets up to
+    the specified iteration.
+    """
+    # startdepth is for internal use only until we can decide the UI
+    args = getargsdict(x, "successors", "set depth startdepth")
+    if "set" not in args:
+        # i18n: "successors" is a keyword
+        raise error.ParseError(_("successors takes at least 1 argument"))
+    startdepth, stopdepth = _getdepthargs("successors", args)
+
+    return _successors(repo, subset, args["set"], startdepth, stopdepth)
+
+
+def _successors(repo, subset, targetset, startdepth, stopdepth):
+    s = getset(repo, fullreposet(repo), targetset)
+    f = lambda nodes: obsutil.allsuccessors(
+        repo.obsstore, nodes, startdepth=startdepth, stopdepth=stopdepth
+    )
     d = _mapbynodefunc(repo, s, f)
     return subset & d
 

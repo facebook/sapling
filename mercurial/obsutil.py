@@ -111,49 +111,60 @@ def allprecursors(*args, **kwargs):
     return allpredecessors(*args, **kwargs)
 
 
-def allpredecessors(obsstore, nodes, ignoreflags=0):
+def allpredecessors(obsstore, nodes, ignoreflags=0, startdepth=None, stopdepth=None):
     """Yield node for every precursors of <nodes>.
 
     Some precursors may be unknown locally.
 
     This is a linear yield unsuited to detecting folded changesets. It includes
-    initial nodes too."""
+    initial nodes too, if startdepth is None or 0."""
+    depth = 0
+    thislevel = set(nodes)
+    nextlevel = set()
+    seen = set(thislevel)
+    while thislevel and (stopdepth is None or depth < stopdepth):
+        for current in thislevel:
+            if startdepth is None or depth >= startdepth:
+                yield current
+            for mark in obsstore.predecessors.get(current, ()):
+                # ignore marker flagged with specified flag
+                if mark[2] & ignoreflags:
+                    continue
+                nextnode = mark[0]
+                if nextnode not in seen:
+                    seen.add(nextnode)
+                    nextlevel.add(nextnode)
+        thislevel = nextlevel
+        nextlevel = set()
+        depth += 1
 
-    remaining = set(nodes)
-    seen = set(remaining)
-    while remaining:
-        current = remaining.pop()
-        yield current
-        for mark in obsstore.predecessors.get(current, ()):
-            # ignore marker flagged with specified flag
-            if mark[2] & ignoreflags:
-                continue
-            suc = mark[0]
-            if suc not in seen:
-                seen.add(suc)
-                remaining.add(suc)
 
-
-def allsuccessors(obsstore, nodes, ignoreflags=0):
+def allsuccessors(obsstore, nodes, ignoreflags=0, startdepth=None, stopdepth=None):
     """Yield node for every successor of <nodes>.
 
     Some successors may be unknown locally.
 
     This is a linear yield unsuited to detecting split changesets. It includes
-    initial nodes too."""
-    remaining = set(nodes)
-    seen = set(remaining)
-    while remaining:
-        current = remaining.pop()
-        yield current
-        for mark in obsstore.successors.get(current, ()):
-            # ignore marker flagged with specified flag
-            if mark[2] & ignoreflags:
-                continue
-            for suc in mark[1]:
-                if suc not in seen:
-                    seen.add(suc)
-                    remaining.add(suc)
+    initial nodes too, if startdepth is None or 0."""
+    depth = 0
+    thislevel = set(nodes)
+    nextlevel = set()
+    seen = set(thislevel)
+    while thislevel and (stopdepth is None or depth < stopdepth):
+        for current in thislevel:
+            if startdepth is None or depth >= startdepth:
+                yield current
+            for mark in obsstore.successors.get(current, ()):
+                # ignore marker flagged with specified flag
+                if mark[2] & ignoreflags:
+                    continue
+                for nextnode in mark[1]:
+                    if nextnode not in seen:
+                        seen.add(nextnode)
+                        nextlevel.add(nextnode)
+        thislevel = nextlevel
+        nextlevel = set()
+        depth += 1
 
 
 def _filterprunes(markers):

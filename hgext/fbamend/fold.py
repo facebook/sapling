@@ -155,8 +155,7 @@ def fold(ui, repo, *revs, **opts):
                 hg.update(repo, newid)
 
             if torebase:
-                folded = repo.revs("allsuccessors(%ld)", revs).last()
-                common.restackonce(ui, repo, folded)
+                common.restackonce(ui, repo, repo[newid].rev())
 
 
 def _foldcheck(repo, revs):

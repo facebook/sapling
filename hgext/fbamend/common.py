@@ -48,7 +48,7 @@ def restackonce(
        or a custom rebase using `-d _destrestack(SRC)`.
     """
     # Get visible descendants of precusors of rev.
-    allpredecessors = repo.revs("allpredecessors(%d)", rev)
+    allpredecessors = repo.revs("predecessors(%d) - (%d)", rev, rev)
     fmt = "%s(%%ld) - %%ld" % ("children" if childrenonly else "descendants")
     descendants = repo.revs(fmt, allpredecessors, allpredecessors)
 
@@ -91,7 +91,7 @@ def latest(repo, rev):
        latest visible successor, or the revision itself if it has no
        visible successors.
     """
-    latest = repo.revs("allsuccessors(%d)", rev).last()
+    latest = repo.revs("successors(%d)", rev).last()
     return latest if latest is not None else rev
 
 

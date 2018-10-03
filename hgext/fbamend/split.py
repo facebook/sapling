@@ -147,8 +147,7 @@ def split(ui, repo, *revs, **opts):
             obsolete.createmarkers(repo, [(repo[r], newcommits)], operation="split")
 
             if torebase:
-                top = repo.revs("allsuccessors(%d)", rev).last()
-                common.restackonce(ui, repo, top)
+                common.restackonce(ui, repo, tip.rev())
         tr.close()
     finally:
         lockmod.release(tr, lock, wlock)

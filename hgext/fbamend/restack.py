@@ -36,7 +36,7 @@ def restack(ui, repo, rebaseopts=None):
                 ui.status(_("nothing to restack\n"))
                 return 1
         # 2. Connect revs via obsolete graph
-        revs = list(repo.revs("successors(%ld)+allpredecessors(%ld)", revs, revs))
+        revs = list(repo.revs("successors(%ld)+predecessors(%ld)", revs, revs))
         # 3. Connect revs via changelog again to cover missing revs
         revs = list(repo.revs("(draft() & ::%ld)::", revs))
 
@@ -51,6 +51,6 @@ def restack(ui, repo, rebaseopts=None):
         # if we are on the precursor of the base changeset) the
         # rebase will not update to the latest version, so we need
         # to do this manually.
-        successor = repo.revs("allsuccessors(.)").last()
+        successor = repo.revs("successors(.) - .").last()
         if successor is not None:
             commands.update(ui, repo, rev=successor)

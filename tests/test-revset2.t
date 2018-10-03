@@ -1634,30 +1634,51 @@ Test obsstore related revsets
   > evolution.createmarkers=True
   > EOF
 
-  $ hg debugdrawdag <<'EOS'
-  >        F G
-  >        |/    # split: B -> E, F
+  $ drawdag <<'EOS'
+  > H      F G
+  > |      |/    # split: B -> E, F
   > B C D  E     # amend: B -> C -> D
   >  \|/   |     # amend: F -> G
   >   A    A  Z  # amend: A -> Z
   > EOS
 
-  $ hg log -r 'successors(Z)' -T '{desc}\n'
+  $ hg log -G -r "all()" -T '{desc}\n'
+  o  H
+  |
+  | o  G
+  | |
+  | o  E
+  | |
+  | | o  D
+  | |/
+  x |  B
+  |/
+  | o  Z
+  |
+  x  A
+  
+
+  $ hg log -r "successors($Z)" -T '{desc}\n'
   Z
 
-  $ hg log -r 'successors(F)' -T '{desc}\n'
+  $ hg log -r "successors($F)" -T '{desc}\n' --hidden
   F
   G
 
-  $ hg tag --remove --local C D E F G
+  $ hg log -r "predecessors($Z)" -T '{desc}\n'
+  A
+  Z
 
-  $ hg log -r 'successors(B)' -T '{desc}\n'
+  $ hg log -r "predecessors($A)" -T '{desc}\n'
+  A
+
+  $ hg log -r "successors($B)" -T '{desc}\n'
   B
   D
   E
   G
 
-  $ hg log -r 'successors(B)' -T '{desc}\n' --hidden
+  $ hg log -r "successors($B)" -T '{desc}\n' --hidden
   B
   C
   D
@@ -1665,17 +1686,36 @@ Test obsstore related revsets
   F
   G
 
-  $ hg log -r 'successors(B)-obsolete()' -T '{desc}\n' --hidden
+  $ hg log -r "successors($B,1)" -T '{desc}\n' --hidden
+  B
+  C
+  E
+  F
+
+  $ hg log -r "predecessors($D)" -T '{desc}\n'
+  B
+  D
+
+  $ hg log -r "predecessors($D)" -T '{desc}\n' --hidden
+  B
+  C
+  D
+
+  $ hg log -r "predecessors($D,1)" -T '{desc}\n' --hidden
+  C
+  D
+
+  $ hg log -r "successors($B)-obsolete()" -T '{desc}\n' --hidden
   D
   E
   G
 
-  $ hg log -r 'successors(B+A)-contentdivergent()' -T '{desc}\n'
+  $ hg log -r "successors($B+$A)-contentdivergent()" -T '{desc}\n'
   A
   Z
   B
 
-  $ hg log -r 'successors(B+A)-contentdivergent()-obsolete()' -T '{desc}\n'
+  $ hg log -r "successors($B+$A)-contentdivergent()-obsolete()" -T '{desc}\n'
   Z
 
 Test `draft() & ::x` optimization
