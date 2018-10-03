@@ -15,6 +15,11 @@ newrepo() {
   hg init
 }
 
+switchrepo() {
+    reponame="$1"
+    cd $TESTTMP/$reponame
+}
+
 # Enable extensions or features
 enable() {
   local rcpath
