@@ -7,7 +7,7 @@
 //!
 //! File format:
 //!
-//! ```ignore
+//! ```plain,ignore
 //! INDEX       := HEADER + ENTRY_LIST
 //! HEADER      := '\0'  (takes offset 0, so 0 is not a valid offset for ENTRY)
 //! ENTRY_LIST  := RADIX | ENTRY_LIST + ENTRY
