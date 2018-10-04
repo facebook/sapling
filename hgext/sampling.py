@@ -18,7 +18,7 @@ import json
 import os
 import weakref
 
-from mercurial import encoding, pycompat, registrar, util
+from mercurial import encoding, localrepo, pycompat, registrar, util
 
 
 configtable = {}
@@ -174,6 +174,10 @@ def telemetry(reporef):
 
 
 def reposetup(ui, repo):
+    # Don't setup telemetry for sshpeer's
+    if not isinstance(repo, localrepo.localrepository):
+        return
+
     repo.ui.atexit(telemetry, weakref.ref(repo))
 
     # Log other information that we don't want to log in the wrapper, if it's
