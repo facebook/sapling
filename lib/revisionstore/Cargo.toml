@@ -11,7 +11,9 @@ memmap = "*"
 mpatch = { path = "../mpatch" }
 rust-crypto = "*"
 tempfile = "*"
+types = { path = "../types" }
 
 [dev-dependencies]
 rand = "*"
 quickcheck = "*"
+types = { path = "../types", default-features = false, features = ["for-tests"] }

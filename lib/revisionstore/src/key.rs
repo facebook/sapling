@@ -1,4 +1,4 @@
-use node::Node;
+use types::node::Node;
 
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Key {

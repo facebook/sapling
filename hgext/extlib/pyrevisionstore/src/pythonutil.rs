@@ -5,7 +5,7 @@ use pyerror::pyerr_to_error;
 use revisionstore::datastore::Delta;
 use revisionstore::error::{KeyError, Result};
 use revisionstore::key::Key;
-use revisionstore::node::Node;
+use types::node::Node;
 
 pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
     if error.downcast_ref::<KeyError>().is_some() {

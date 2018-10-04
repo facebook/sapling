@@ -10,7 +10,7 @@ use std::rc::Rc;
 use error::{KeyError, Result};
 use historystore::{Ancestors, NodeInfo};
 use key::Key;
-use node::Node;
+use types::node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "LooseFile Error: {:?}", _0)]

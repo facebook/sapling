@@ -7,8 +7,8 @@ use std::path::Path;
 
 use error::{KeyError, Result};
 use fanouttable::FanoutTable;
-use node::Node;
 use sliceext::SliceExt;
+use types::node::Node;
 
 const ENTRY_LEN: usize = 40;
 const SMALL_FANOUT_CUTOFF: usize = 8192; // 2^16 / 8

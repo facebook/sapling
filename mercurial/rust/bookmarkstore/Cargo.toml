@@ -12,8 +12,8 @@ lto = true
 
 [dependencies]
 bookmarkstore = { path = "../../../lib/bookmarkstore" }
-revisionstore = { path = "../../../lib/revisionstore" }
 encoding = { path = "../../../lib/encoding/" }
+types = { path = "../../../lib/types" }
 
 [dependencies.cpython]
 version = "0.2"

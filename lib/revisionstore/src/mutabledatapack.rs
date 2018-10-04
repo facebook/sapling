@@ -12,8 +12,8 @@ use datastore::{DataStore, Delta, Metadata};
 use failure::Error;
 use key::Key;
 use lz4_pyframe::compress;
-use node::Node;
 use tempfile::NamedTempFile;
+use types::node::Node;
 
 use error::Result;
 

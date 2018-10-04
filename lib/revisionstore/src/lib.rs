@@ -9,6 +9,7 @@ extern crate failure;
 extern crate lz4_pyframe;
 extern crate memmap;
 extern crate tempfile;
+extern crate types;
 
 #[cfg(test)]
 #[macro_use]
@@ -32,7 +33,6 @@ pub mod key;
 pub mod loosefile;
 pub mod mutabledatapack;
 pub mod mutablehistorypack;
-pub mod node;
 pub mod repack;
 pub mod uniondatastore;
 pub mod unionhistorystore;

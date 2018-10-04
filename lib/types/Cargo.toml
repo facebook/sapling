@@ -1,0 +1,17 @@
+[package]
+name = "types"
+version = "0.1.0"
+
+[features]
+default = []
+for-tests = ["rand", "quickcheck"]
+
+[dependencies]
+failure = "*"
+failure_derive = "*"
+rand = { version = "*", optional = true }
+quickcheck = { version = "*", optional = true }
+
+[dev-dependencies]
+rand = "*"
+quickcheck = "*"

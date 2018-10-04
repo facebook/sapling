@@ -5,7 +5,7 @@ use pythonutil::{from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to
                  to_pyerr};
 use revisionstore::datastore::DataStore;
 use revisionstore::key::Key;
-use revisionstore::node::Node;
+use types::node::Node;
 
 pub trait DataStorePyExt {
     fn get(&self, py: Python, name: &PyBytes, node: &PyBytes) -> PyResult<PyBytes>;

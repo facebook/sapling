@@ -73,10 +73,10 @@ pub trait Repackable: IterableStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use node::Node;
     use rand::SeedableRng;
     use rand::chacha::ChaChaRng;
     use std::cell::RefCell;
+    use types::node::Node;
 
     struct FakeStore {
         pub kind: RepackOutputType,

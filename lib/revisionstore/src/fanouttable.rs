@@ -10,9 +10,9 @@
 /// to the value of the last valid offset, or 0 if there is none.
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use error::Result;
-use node::Node;
 use std::io::{Cursor, Write};
 use std::option::Option;
+use types::node::Node;
 
 const SMALL_FANOUT_FACTOR: u8 = 1;
 const LARGE_FANOUT_FACTOR: u8 = 2;

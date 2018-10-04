@@ -11,9 +11,9 @@ use error::Result;
 use historyindex::HistoryIndex;
 use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
-use node::Node;
 use repack::{IterableStore, RepackOutputType, Repackable};
 use sliceext::SliceExt;
+use types::node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Historypack Error: {:?}", _0)]

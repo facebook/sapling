@@ -1,6 +1,6 @@
 use error::Result;
 use key::Key;
-use node::Node;
+use types::node::Node;
 
 use std::collections::HashMap;
 

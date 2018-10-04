@@ -2,14 +2,14 @@ extern crate bookmarkstore as bmstore;
 #[macro_use]
 extern crate cpython;
 extern crate encoding;
-extern crate revisionstore;
+extern crate types;
 
 use bmstore::BookmarkStore;
 use cpython::{exc, PyBytes, PyErr, PyList, PyObject, PyResult, PyString, Python, PythonObject};
 use cpython::exc::UnicodeDecodeError;
 use encoding::local_bytes_to_path;
-use revisionstore::node::Node;
 use std::cell::RefCell;
+use types::node::Node;
 
 py_module_initializer!(
     bookmarkstore,

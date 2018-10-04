@@ -15,6 +15,7 @@ encoding = { path = "../../../lib/encoding" }
 failure = "*"
 failure_derive = "*"
 revisionstore = { path = "../../../lib/revisionstore" }
+types = { path = "../../../lib/types" }
 
 [dependencies.cpython]
 version = "0.2"

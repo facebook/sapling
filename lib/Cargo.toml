@@ -15,6 +15,7 @@ members = [
     "radixbuf",
     "revisionstore",
     "treestate",
+    "types",
     "vlqencoding",
     "watchman_client",
     "zstdelta",

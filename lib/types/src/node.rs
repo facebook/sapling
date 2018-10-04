@@ -1,8 +1,8 @@
 // Copyright Facebook, Inc. 2018
-use error::Result;
+use errors::Result;
 use std::fmt::{self, Display};
 
-#[cfg(test)]
+#[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;
 
 #[derive(Debug, Fail)]
@@ -72,7 +72,7 @@ impl Node {
         unsafe { String::from_utf8_unchecked(v) }
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "for-tests"))]
     pub fn random(rng: &mut RngCore) -> Self {
         let mut bytes = [0; 20];
         rng.fill_bytes(&mut bytes);
@@ -109,10 +109,10 @@ impl AsRef<[u8]> for Node {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "for-tests"))]
 use quickcheck;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for Node {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         let mut bytes = [0u8; 20];

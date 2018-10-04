@@ -9,9 +9,9 @@
 extern crate atomicwrites;
 #[macro_use]
 extern crate error_chain;
-extern crate revisionstore;
 #[cfg(test)]
 extern crate tempfile;
+extern crate types;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -19,7 +19,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
-use revisionstore::node::Node;
+use types::node::Node;
 
 pub mod errors;
 pub use errors::{Error, ErrorKind, Result};
@@ -140,7 +140,6 @@ impl BookmarkStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use revisionstore::node::Node;
     use tempfile::NamedTempFile;
 
     #[test]

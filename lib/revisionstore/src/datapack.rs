@@ -87,9 +87,9 @@ use dataindex::{DataIndex, DeltaBaseOffset};
 use datastore::{DataStore, Delta, Metadata};
 use error::Result;
 use key::Key;
-use node::Node;
 use repack::{IterableStore, RepackOutputType, Repackable};
 use sliceext::SliceExt;
+use types::node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Datapack Error: {:?}", _0)]
@@ -414,10 +414,10 @@ mod tests {
     use super::*;
     use datastore::{Delta, Metadata};
     use mutabledatapack::MutableDataPack;
-    use node::Node;
     use rand::SeedableRng;
     use rand::chacha::ChaChaRng;
     use tempfile::TempDir;
+    use types::node::Node;
 
     fn make_pack(tempdir: &TempDir, deltas: &Vec<(Delta, Option<Metadata>)>) -> DataPack {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();

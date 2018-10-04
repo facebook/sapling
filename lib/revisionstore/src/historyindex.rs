@@ -12,8 +12,8 @@ use error::{KeyError, Result};
 use fanouttable::FanoutTable;
 use historypack::HistoryPackVersion;
 use key::Key;
-use node::Node;
 use sliceext::SliceExt;
+use types::node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "HistoryIndex Error: {:?}", _0)]

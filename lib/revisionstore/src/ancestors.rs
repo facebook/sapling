@@ -133,9 +133,9 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> Iterator for BatchedAncest
 #[cfg(test)]
 mod tests {
     use super::*;
-    use node::Node;
     use rand::SeedableRng;
     use rand::chacha::ChaChaRng;
+    use types::node::Node;
 
     fn build_diamond_graph() -> (Key, Ancestors) {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);

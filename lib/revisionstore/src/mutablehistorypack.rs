@@ -201,7 +201,7 @@ mod tests {
     use rand::chacha::ChaChaRng;
     use tempfile::tempdir;
 
-    use node::Node;
+    use types::node::Node;
 
     quickcheck! {
         fn test_get_ancestors(keys: Vec<(Key, bool)>) -> bool {
