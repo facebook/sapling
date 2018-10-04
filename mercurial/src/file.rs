@@ -142,6 +142,7 @@ impl File {
                 buf.write_all(COPY_REV_KEY)?;
                 buf.write_all(b": ")?;
                 buf.write_all(version.to_hex().as_ref())?;
+                buf.write_all(b"\n")?;
                 buf.write_all(META_MARKER)?;
             }
         };
@@ -286,7 +287,7 @@ mod test {
         ).expect("Vec::write_all should succeed");
         assert_eq!(
             out.as_slice(),
-            &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\x01\n"[..]
+            &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\n\x01\n"[..]
         );
     }
 
@@ -308,7 +309,7 @@ mod test {
         ).expect("Vec::write_all should succeed");
         assert_eq!(
             out.as_slice(),
-            &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\x01\n"[..]
+            &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\n\x01\n"[..]
         );
     }
 
