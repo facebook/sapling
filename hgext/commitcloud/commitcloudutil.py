@@ -204,7 +204,8 @@ class TokenLocator(object):
                         self.ui,
                         "failed to access your keychain",
                         "please run `security unlock-keychain` "
-                        "to prove your identity",
+                        "to prove your identity\n"
+                        "the command `%s` exited with code %d" % (" ".join(args), rc),
                     )
                 # if not found, not an error
                 if rc == 44:
@@ -253,7 +254,8 @@ class TokenLocator(object):
                         self.ui,
                         "failed to access your keychain",
                         "please run `security unlock-keychain` "
-                        "to prove your identity",
+                        "to prove your identity\n"
+                        "the command `%s` exited with code %d" % (" ".join(args), rc),
                     )
                 raise commitcloudcommon.SubprocessError(
                     self.ui,
