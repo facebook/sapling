@@ -444,6 +444,7 @@ fn open_repo_internal<'a>(
         blobrepo,
         &Default::default(),
         Arc::new(hook_manager),
+        None
     ))
 }
 

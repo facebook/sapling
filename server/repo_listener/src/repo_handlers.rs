@@ -15,9 +15,9 @@ use slog::Logger;
 use cache_warmup::cache_warmup;
 use hooks::{HookManager, hook_loader::load_hooks};
 use mercurial_types::RepositoryId;
-use metaconfig::repoconfig::RepoConfig;
+use metaconfig::repoconfig::{RepoConfig, RepoType};
 use ready_state::ReadyStateBuilder;
-use repo_client::{open_blobrepo, MononokeRepo};
+use repo_client::{open_blobrepo, streaming_clone, MononokeRepo};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 
 #[derive(Clone, Debug)]
@@ -61,7 +61,21 @@ pub fn repo_handlers(
             info!(root_log, "Loading hooks");
             try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
 
-            let repo = MononokeRepo::new(blobrepo, &config.pushrebase, Arc::new(hook_manager));
+            let streaming_clone = match config.repotype {
+                RepoType::BlobManifold(ref args) => Some(try_boxfuture!(streaming_clone(
+                    blobrepo.clone(),
+                    &args.db_address,
+                    repoid
+                ))),
+                _ => None,
+            };
+
+            let repo = MononokeRepo::new(
+                blobrepo,
+                &config.pushrebase,
+                Arc::new(hook_manager),
+                streaming_clone,
+            );
 
             let listen_log = root_log.new(o!("repo" => reponame.clone()));
             let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());

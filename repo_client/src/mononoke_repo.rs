@@ -15,6 +15,7 @@ use slog::Logger;
 use scribe_cxx::ScribeCxxClient;
 
 use blobrepo::BlobRepo;
+use blobstore::{Blobstore, PrefixBlobstore};
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
 use metaconfig::PushrebaseParams;
@@ -22,9 +23,18 @@ use metaconfig::repoconfig::RepoType;
 
 use errors::*;
 
+use client::streaming_clone::MysqlStreamingChunksFetcher;
+
 struct LogNormalGenerator {
     rng: Isaac64Rng,
     distribution: LogNormal,
+}
+
+#[derive(Clone)]
+pub struct MysqlStreamingCloneConfig {
+    pub blobstore: PrefixBlobstore<Arc<Blobstore>>,
+    pub fetcher: MysqlStreamingChunksFetcher,
+    pub repoid: RepositoryId,
 }
 
 #[derive(Clone)]
@@ -32,6 +42,7 @@ pub struct MononokeRepo {
     blobrepo: BlobRepo,
     pushrebase_params: PushrebaseParams,
     hook_manager: Arc<HookManager>,
+    streaming_clone: Option<MysqlStreamingCloneConfig>,
 }
 
 impl MononokeRepo {
@@ -40,11 +51,13 @@ impl MononokeRepo {
         blobrepo: BlobRepo,
         pushrebase_params: &PushrebaseParams,
         hook_manager: Arc<HookManager>,
+        streaming_clone: Option<MysqlStreamingCloneConfig>,
     ) -> Self {
         MononokeRepo {
             blobrepo,
             pushrebase_params: pushrebase_params.clone(),
-            hook_manager: hook_manager,
+            hook_manager,
+            streaming_clone,
         }
     }
 
@@ -60,11 +73,9 @@ impl MononokeRepo {
     pub fn hook_manager(&self) -> Arc<HookManager> {
         self.hook_manager.clone()
     }
-}
 
-impl Debug for MononokeRepo {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "MononokeRepo({:#?})", self.blobrepo.get_repoid())
+    pub fn streaming_clone(&self) -> &Option<MysqlStreamingCloneConfig> {
+        &self.streaming_clone
     }
 }
 
@@ -72,7 +83,7 @@ pub fn open_blobrepo(logger: Logger, repotype: RepoType, repoid: RepositoryId) -
     use hgproto::ErrorKind;
     use metaconfig::repoconfig::RepoType::*;
 
-    let ret = match repotype {
+    let blobrepo = match repotype {
         Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
         BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
         BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
@@ -121,5 +132,26 @@ pub fn open_blobrepo(logger: Logger, repotype: RepoType, repoid: RepositoryId) -
         }
     };
 
-    Ok(ret)
+    Ok(blobrepo)
+}
+
+pub fn streaming_clone(
+    blobrepo: BlobRepo,
+    db_address: &str,
+    repoid: RepositoryId,
+) -> Result<MysqlStreamingCloneConfig> {
+    let fetcher = MysqlStreamingChunksFetcher::open(db_address)?;
+    let streaming_clone = MysqlStreamingCloneConfig {
+        fetcher,
+        blobstore: blobrepo.get_blobstore(),
+        repoid,
+    };
+
+    Ok(streaming_clone)
+}
+
+impl Debug for MononokeRepo {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "MononokeRepo({:#?})", self.blobrepo.get_repoid())
+    }
 }

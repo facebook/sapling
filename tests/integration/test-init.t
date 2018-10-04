@@ -201,7 +201,7 @@ Do a streaming clone of the repo
   $ hgmn clone --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true --config extensions.lz4revlog=
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   streaming all changes
-  0 files to transfer, * bytes of data (glob)
+  2 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (* bytes/sec) (glob)
   requesting all changes
   adding changesets

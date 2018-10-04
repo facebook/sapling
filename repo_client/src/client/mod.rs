@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 mod remotefilelog;
+pub mod streaming_clone;
 
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
@@ -40,9 +41,11 @@ use blobrepo::BlobRepo;
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 
 use self::remotefilelog::create_remotefilelog_blob;
+use self::streaming_clone::RevlogStreamingChunks;
+
 use errors::*;
 use hooks::HookManager;
-use mononoke_repo::MononokeRepo;
+use mononoke_repo::{MononokeRepo, MysqlStreamingCloneConfig};
 
 const MAX_NODES_TO_LOG: usize = 5;
 
@@ -660,9 +663,64 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
         info!(self.logger(), "stream_out_shallow");
-        // TODO(t34058163): actually send a real streaming response, not an empty one
-        let empty = Bytes::from_static(b"0\n0 0\n");
-        stream::once(Ok(empty)).boxify()
+        let changelog = match self.repo.streaming_clone() {
+            None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
+            Some(MysqlStreamingCloneConfig {
+                blobstore,
+                fetcher,
+                repoid,
+            }) => fetcher
+                .fetch_changelog(*repoid, blobstore.clone())
+                .right_future(),
+        };
+
+        changelog
+            .map({
+                let logger = self.logger().clone();
+                move |changelog_chunks| {
+                    debug!(
+                        logger,
+                        "streaming changelog {} index bytes, {} data bytes",
+                        changelog_chunks.index_size,
+                        changelog_chunks.data_size
+                    );
+                    let mut response_header = Vec::new();
+                    // TODO(t34058163): actually send a real streaming response, not an empty one
+                    // Send OK response.
+                    response_header.push(Bytes::from_static(b"0\n"));
+                    // send header.
+                    let total_size = changelog_chunks.index_size + changelog_chunks.data_size;
+                    let file_count = 2;
+                    let header = format!("{} {}\n", file_count, total_size);
+                    response_header.push(header.into_bytes().into());
+                    let response = stream::iter_ok(response_header);
+
+                    fn build_file_stream(
+                        name: &str,
+                        size: usize,
+                        data: Vec<BoxFuture<Bytes, Error>>,
+                    ) -> impl Stream<Item = Bytes, Error = Error> + Send {
+                        let header = format!("{}\0{}\n", name, size);
+
+                        stream::once(Ok(header.into_bytes().into()))
+                            .chain(stream::iter_ok(data.into_iter()).buffered(100))
+                    }
+
+                    response
+                        .chain(build_file_stream(
+                            "00changelog.i",
+                            changelog_chunks.index_size,
+                            changelog_chunks.index_blobs,
+                        ))
+                        .chain(build_file_stream(
+                            "00changelog.d",
+                            changelog_chunks.data_size,
+                            changelog_chunks.data_blobs,
+                        ))
+                }
+            })
+            .flatten_stream()
+            .boxify()
     }
 }
 

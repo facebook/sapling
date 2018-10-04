@@ -12,4 +12,5 @@ use mercurial_types::RepoPath;
 pub enum ErrorKind {
     #[fail(display = "internal error: file {} copied from directory {}", _0, _1)]
     InconsistentCopyInfo(RepoPath, RepoPath),
+    #[fail(display = "internal error: streaming blob {} missing", _0)] MissingStreamingBlob(String),
 }
