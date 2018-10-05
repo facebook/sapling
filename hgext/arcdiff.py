@@ -183,7 +183,7 @@ def _diff(orig, ui, repo, *pats, **opts):
         pats = tuple(os.path.join(repo.root, p) for p in prev | curr)
 
     if opts.get("since_last_submit_2o"):
-        return _diff2o(ui, repo, rev, ".", **opts)
+        return _diff2o(ui, repo, rev, targetrev, **opts)
     else:
         return orig(ui, repo.unfiltered(), *pats, **opts)
 
