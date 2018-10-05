@@ -87,6 +87,7 @@ where
                         seen_path = None;
                         Ok(None)
                     }
+                    Part::SectionEnd(Section::Treemanifest) => Ok(None),
                     // Checking that there is exactly one Part::end is is covered by CheckEnd
                     // wrapper
                     Part::End if seen_path.is_none() => Ok(None),

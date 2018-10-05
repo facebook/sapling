@@ -11,7 +11,7 @@ pub use failure::{Error, Result, ResultExt};
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "bundle2 decode error: {}", _0)] Bundle2Decode(String),
-    #[fail(display = "changegroup2 decode error: {}", _0)] Cg2Decode(String),
+    #[fail(display = "changegroup decode error: {}", _0)] CgDecode(String),
     #[fail(display = "changegroup2 encode error: {}", _0)] Cg2Encode(String),
     #[fail(display = "wirepack decode error: {}", _0)] WirePackDecode(String),
     #[fail(display = "wirepack encode error: {}", _0)] WirePackEncode(String),

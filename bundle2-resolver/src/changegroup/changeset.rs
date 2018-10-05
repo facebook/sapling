@@ -94,6 +94,7 @@ mod tests {
             base,
             linknode,
             delta,
+            flags: None,
         };
 
         let result = convert_to_revlog_changesets(iter_ok(vec![ChangesetDeltaed { chunk }]))

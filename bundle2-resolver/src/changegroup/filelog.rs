@@ -89,6 +89,7 @@ where
                 p1,
                 p2,
                 linknode,
+                flags: _,
             } = chunk;
 
             delta_cache
@@ -330,6 +331,7 @@ mod tests {
                 base: NULL_HASH,
                 linknode: f.linknode.clone(),
                 delta: Delta::new_fulltext(f.data.as_ref()),
+                flags: None,
             },
         }
     }

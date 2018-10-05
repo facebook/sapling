@@ -72,6 +72,7 @@ where
             base,
             linknode,
             delta,
+            flags: None,
         };
         Part::CgChunk(Section::Changeset, deltachunk)
     });

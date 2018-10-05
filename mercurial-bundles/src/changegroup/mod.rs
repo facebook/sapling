@@ -9,10 +9,13 @@ use mercurial_types::{Delta, HgNodeHash, MPath};
 pub mod packer;
 pub mod unpacker;
 
+pub const CG_PART_VERSION_HEADER_NAME: &'static str = "cgversion";
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Section {
     Changeset,
     Manifest,
+    Treemanifest,
     Filelog(MPath),
 }
 
@@ -40,6 +43,7 @@ pub struct CgDeltaChunk {
     pub base: HgNodeHash,
     pub linknode: HgNodeHash,
     pub delta: Delta,
+    pub flags: Option<u16>,
 }
 
 #[cfg(test)]
@@ -123,7 +127,7 @@ mod test {
                     .map(|chunk| chunk.into_bytes().expect("expected normal chunk"));
 
                 let logger = make_root_logger();
-                let unpacker = unpacker::Cg2Unpacker::new(logger);
+                let unpacker = unpacker::CgUnpacker::new(logger, unpacker::CgVersion::Cg2Version);
                 let part_stream = chunks.decode(unpacker);
 
                 let parts = Vec::new();

@@ -12,6 +12,7 @@ use std::mem;
 
 use bytes::BytesMut;
 use slog;
+use std::str::FromStr;
 use tokio_io::codec::Decoder;
 
 use mercurial_types::MPath;
@@ -23,9 +24,39 @@ use utils::BytesExt;
 use super::{CgDeltaChunk, Part, Section};
 
 #[derive(Debug)]
-pub struct Cg2Unpacker {
+pub enum CgVersion {
+    Cg2Version,
+    Cg3Version,
+}
+
+impl FromStr for CgVersion {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<CgVersion> {
+        match s {
+            "02" => Ok(CgVersion::Cg2Version),
+            "03" => Ok(CgVersion::Cg3Version),
+            bad => Err(ErrorKind::CgDecode(format!(
+                "Non supported Cg version in Part Header {}",
+                bad
+            )).into()),
+        }
+    }
+}
+
+// See the chunk header definition below for the first 100 bytes. The last 4 is
+// for the length field itself. _CHANGEGROUPV2_DELTA_HEADER = "20s20s20s20s20s"
+const CHUNK_HEADER2_LEN: usize = 20 + 20 + 20 + 20 + 20 + 4;
+
+// See the chunk header definition below for the first 102 bytes. The last 4 is
+// for the length field itself. _CHANGEGROUPV3_DELTA_HEADER = ">20s20s20s20s20sH"
+const CHUNK_HEADER3_LEN: usize = 20 + 20 + 20 + 20 + 20 + 2 + 4;
+
+#[derive(Debug)]
+pub struct CgUnpacker {
     logger: slog::Logger,
     state: State,
+    version: CgVersion,
 }
 
 impl Part {
@@ -55,16 +86,12 @@ impl Part {
     }
 }
 
-// See the chunk header definition below for the first 100 bytes. The last 4 is
-// for the length field itself.
-const CHUNK_HEADER_LEN: usize = 20 + 20 + 20 + 20 + 20 + 4;
-
-impl Decoder for Cg2Unpacker {
+impl Decoder for CgUnpacker {
     type Item = Part;
     type Error = Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
-        match Self::decode_next(buf, self.state.take()) {
+        match Self::decode_next(buf, self.state.take(), &self.version) {
             Err(e) => {
                 self.state = State::Invalid;
                 Err(e)
@@ -90,14 +117,14 @@ impl Decoder for Cg2Unpacker {
                          buffer. State: {:?}, First 128 bytes: {:?}",
                         len, self.state, bytes,
                     );
-                    bail_err!(ErrorKind::Cg2Decode(msg));
+                    bail_err!(ErrorKind::CgDecode(msg));
                 }
                 if self.state != State::End {
                     let msg = format!(
                         "incomplete changegroup: expected state End, found {:?}",
                         self.state
                     );
-                    bail_err!(ErrorKind::Cg2Decode(msg));
+                    bail_err!(ErrorKind::CgDecode(msg));
                 }
                 Ok(None)
             }
@@ -106,17 +133,29 @@ impl Decoder for Cg2Unpacker {
     }
 }
 
-impl Cg2Unpacker {
-    pub fn new(logger: slog::Logger) -> Self {
-        Cg2Unpacker {
-            logger: logger,
+impl CgUnpacker {
+    pub fn new(logger: slog::Logger, version: CgVersion) -> Self {
+        CgUnpacker {
+            logger,
             state: State::Changeset,
+            version,
         }
     }
 
-    fn decode_next(buf: &mut BytesMut, state: State) -> Result<(Option<Part>, State)> {
+    fn chunk_header_len(version: &CgVersion) -> usize {
+        match version {
+            CgVersion::Cg2Version => CHUNK_HEADER2_LEN,
+            CgVersion::Cg3Version => CHUNK_HEADER3_LEN,
+        }
+    }
+
+    fn decode_next(
+        buf: &mut BytesMut,
+        state: State,
+        version: &CgVersion,
+    ) -> Result<(Option<Part>, State)> {
         match state {
-            State::Changeset => match Self::decode_chunk(buf)? {
+            State::Changeset => match Self::decode_chunk(buf, version)? {
                 None => Ok((None, State::Changeset)),
                 Some(CgChunk::Empty) => {
                     Ok((Some(Part::SectionEnd(Section::Changeset)), State::Manifest))
@@ -126,32 +165,50 @@ impl Cg2Unpacker {
                     State::Changeset,
                 )),
             },
-            State::Manifest => match Self::decode_chunk(buf)? {
+            State::Manifest => match Self::decode_chunk(buf, version)? {
                 None => Ok((None, State::Manifest)),
                 Some(CgChunk::Empty) => {
-                    Ok((Some(Part::SectionEnd(Section::Manifest)), State::Filename))
+                    let next_state = match version {
+                        CgVersion::Cg2Version => State::Filename,
+                        CgVersion::Cg3Version => State::Treemanifest,
+                    };
+                    Ok((Some(Part::SectionEnd(Section::Manifest)), next_state))
                 }
                 Some(CgChunk::Delta(chunk)) => Ok((
                     Some(Part::CgChunk(Section::Manifest, chunk)),
                     State::Manifest,
                 )),
             },
+            State::Treemanifest => match Self::decode_chunk(buf, version)? {
+                None => Ok((None, State::Treemanifest)),
+                Some(CgChunk::Empty) => Ok((
+                    Some(Part::SectionEnd(Section::Treemanifest)),
+                    State::Filename,
+                )),
+                Some(CgChunk::Delta(_)) => {
+                    Err(ErrorKind::CgDecode("Empty TreeManifest has expected".into()).into())
+                }
+            },
             State::Filename => {
                 let filename = Self::decode_filename(buf)?;
                 match filename {
                     DecodeRes::None => Ok((None, State::Filename)),
-                    DecodeRes::Some(f) => Self::decode_filelog_chunk(buf, f),
+                    DecodeRes::Some(f) => Self::decode_filelog_chunk(buf, f, version),
                     DecodeRes::End => Ok((Some(Part::End), State::End)),
                 }
             }
-            State::Filelog(filename) => Self::decode_filelog_chunk(buf, filename),
+            State::Filelog(filename) => Self::decode_filelog_chunk(buf, filename, version),
             State::End => Ok((None, State::End)),
-            State::Invalid => Err(ErrorKind::Cg2Decode("byte stream corrupt".into()).into()),
+            State::Invalid => Err(ErrorKind::CgDecode("byte stream corrupt".into()).into()),
         }
     }
 
-    fn decode_filelog_chunk(buf: &mut BytesMut, f: MPath) -> Result<(Option<Part>, State)> {
-        match Self::decode_chunk(buf)? {
+    fn decode_filelog_chunk(
+        buf: &mut BytesMut,
+        f: MPath,
+        version: &CgVersion,
+    ) -> Result<(Option<Part>, State)> {
+        match Self::decode_chunk(buf, version)? {
             None => Ok((None, State::Filelog(f))),
             Some(CgChunk::Empty) => {
                 Ok((Some(Part::SectionEnd(Section::Filelog(f))), State::Filename))
@@ -163,7 +220,7 @@ impl Cg2Unpacker {
         }
     }
 
-    fn decode_chunk(buf: &mut BytesMut) -> Result<Option<CgChunk>> {
+    fn decode_chunk(buf: &mut BytesMut, version: &CgVersion) -> Result<Option<CgChunk>> {
         if buf.len() < 4 {
             return Ok(None);
         }
@@ -176,17 +233,27 @@ impl Cg2Unpacker {
             let _ = buf.drain_i32();
             return Ok(Some(CgChunk::Empty));
         }
-        if chunk_len < CHUNK_HEADER_LEN {
+        if chunk_len < Self::chunk_header_len(version) {
             let msg = format!(
-                "invalid chunk: length >= {} required, found {}",
-                CHUNK_HEADER_LEN, chunk_len
+                "invalid chunk for version {:?}: length >= {} required, found {}",
+                version,
+                Self::chunk_header_len(version),
+                chunk_len,
             );
-            bail_err!(ErrorKind::Cg2Decode(msg));
+            bail_err!(ErrorKind::CgDecode(msg));
         }
 
         if buf.len() < chunk_len {
             return Ok(None);
         }
+        Self::decode_delta(buf, chunk_len, version)
+    }
+
+    fn decode_delta(
+        buf: &mut BytesMut,
+        chunk_len: usize,
+        version: &CgVersion,
+    ) -> Result<Option<CgChunk>> {
         let _ = buf.drain_i32();
 
         // A chunk header has:
@@ -196,6 +263,7 @@ impl Cg2Unpacker {
         // p2: HgNodeHash (20 bytes) -- NULL_HASH if only 1 parent
         // base node: HgNodeHash (20 bytes) (new in changegroup2)
         // link node: HgNodeHash (20 bytes)
+        // flags: unsigned short (2 bytes) -- (version 3 only)
         // ---
 
         let node = buf.drain_node();
@@ -203,8 +271,13 @@ impl Cg2Unpacker {
         let p2 = buf.drain_node();
         let base = buf.drain_node();
         let linknode = buf.drain_node();
+        let flags = match version {
+            CgVersion::Cg2Version => None,
+            CgVersion::Cg3Version => Some(buf.drain_u16()),
+        };
 
-        let delta = delta::decode_delta(buf.split_to(chunk_len - CHUNK_HEADER_LEN))?;
+        let delta = delta::decode_delta(buf.split_to(chunk_len - Self::chunk_header_len(version)))?;
+
         return Ok(Some(CgChunk::Delta(CgDeltaChunk {
             node: node,
             p1: p1,
@@ -212,6 +285,7 @@ impl Cg2Unpacker {
             base: base,
             linknode: linknode,
             delta: delta,
+            flags: flags,
         })));
     }
 
@@ -233,7 +307,7 @@ impl Cg2Unpacker {
         let _ = buf.split_to(4);
         let filename = buf.drain_path(filename_len - 4).with_context(|_| {
             let msg = format!("invalid filename of length {}", filename_len);
-            ErrorKind::Cg2Decode(msg)
+            ErrorKind::CgDecode(msg)
         })?;
         Ok(DecodeRes::Some(filename))
     }
@@ -254,6 +328,7 @@ enum CgChunk {
 enum State {
     Changeset,
     Manifest,
+    Treemanifest,
     Filename,
     Filelog(MPath),
     End,

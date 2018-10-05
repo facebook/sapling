@@ -81,6 +81,26 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
     }
 }
 
+pub fn get_cg_unpacker(
+    header: PartHeader,
+    logger: slog::Logger,
+) -> changegroup::unpacker::CgUnpacker {
+    // TODO(anastasiyaz): T34812941 return Result here, no default packer (version should be specified)
+    header
+    .aparams()
+    .get(changegroup::CG_PART_VERSION_HEADER_NAME)
+    .ok_or(ErrorKind::CgDecode("No changegroup version in Part Header in aparams".into()))
+    .and_then(|version_bytes| str::from_utf8(version_bytes).map_err(|e| ErrorKind::CgDecode(format!("{:?}", e))))
+    .and_then(|version_str| version_str.parse::<changegroup::unpacker::CgVersion>().map_err(|e| ErrorKind::CgDecode(format!("{:?}", e))))
+    .map(|version| changegroup::unpacker::CgUnpacker::new(logger.clone(), version))
+    // ChangeGroup2 by default
+    .unwrap_or_else(|e| {
+        warn!(logger, "{:?}", e);
+        let default_version = changegroup::unpacker::CgVersion::Cg2Version;
+        changegroup::unpacker::CgUnpacker::new(logger, default_version)
+    })
+}
+
 /// Convert an OuterStream into an InnerStream using the part header.
 pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
     header: PartHeader,
@@ -94,7 +114,8 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
 
     let bundle2item = match header.part_type() {
         &PartHeaderType::Changegroup => {
-            let cg2_stream = wrapped_stream.decode(changegroup::unpacker::Cg2Unpacker::new(
+            let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
+                header.clone(),
                 logger.new(o!("stream" => "cg2")),
             ));
             Bundle2Item::Changegroup(header, Box::new(cg2_stream))
@@ -104,7 +125,8 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             Bundle2Item::B2xCommonHeads(header, Box::new(heads_stream))
         }
         &PartHeaderType::B2xInfinitepush => {
-            let cg2_stream = wrapped_stream.decode(changegroup::unpacker::Cg2Unpacker::new(
+            let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
+                header.clone(),
                 logger.new(o!("stream" => "cg2")),
             ));
             Bundle2Item::B2xInfinitepush(header, Box::new(cg2_stream))
@@ -143,7 +165,8 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             Bundle2Item::B2xRebasePack(header, Box::new(wirepack_stream))
         }
         &PartHeaderType::B2xRebase => {
-            let cg2_stream = wrapped_stream.decode(changegroup::unpacker::Cg2Unpacker::new(
+            let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
+                header.clone(),
                 logger.new(o!("stream" => "cg2")),
             ));
             Bundle2Item::B2xRebase(header, Box::new(cg2_stream))

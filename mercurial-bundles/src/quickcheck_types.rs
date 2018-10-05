@@ -197,6 +197,7 @@ impl Arbitrary for changegroup::CgDeltaChunk {
             base: HgNodeHash::arbitrary(g),
             linknode: HgNodeHash::arbitrary(g),
             delta: Delta::arbitrary(g),
+            flags: None,
         }
     }
 
@@ -213,6 +214,7 @@ impl Arbitrary for changegroup::CgDeltaChunk {
                     base: clone.base.clone(),
                     linknode: clone.linknode.clone(),
                     delta: delta,
+                    flags: None,
                 }),
         )
     }
