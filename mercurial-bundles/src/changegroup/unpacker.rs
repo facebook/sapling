@@ -23,7 +23,7 @@ use utils::BytesExt;
 
 use super::{CgDeltaChunk, Part, Section};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum CgVersion {
     Cg2Version,
     Cg3Version,

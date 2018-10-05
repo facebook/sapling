@@ -17,21 +17,21 @@ use errors::*;
 
 use super::{CgDeltaChunk, Part, Section};
 
-pub struct Cg2Packer<S> {
+pub struct CgPacker<S> {
     delta_stream: S,
     last_seen: Section,
 }
 
-impl<S> Cg2Packer<S> {
+impl<S> CgPacker<S> {
     pub fn new(delta_stream: S) -> Self {
-        Cg2Packer {
+        CgPacker {
             delta_stream: delta_stream,
             last_seen: Section::Changeset,
         }
     }
 }
 
-impl<S> Stream for Cg2Packer<S>
+impl<S> Stream for CgPacker<S>
 where
     S: Stream<Item = Part>,
     Error: From<S::Error>,
@@ -111,6 +111,11 @@ impl ChunkBuilder {
         self.inner.put_slice(chunk.p2.as_ref());
         self.inner.put_slice(chunk.base.as_ref());
         self.inner.put_slice(chunk.linknode.as_ref());
+
+        if let Some(flags) = chunk.flags {
+            self.inner
+                .put_slice(&[(flags >> 8) as u8, (flags & 0xff) as u8]);
+        }
 
         delta::encode_delta(&chunk.delta, &mut self.inner);
 

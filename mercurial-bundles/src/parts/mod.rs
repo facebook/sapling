@@ -13,7 +13,7 @@ use futures::stream::{iter_ok, once};
 use futures_ext::BoxFuture;
 
 use super::changegroup::{CgDeltaChunk, Part, Section};
-use super::changegroup::packer::Cg2Packer;
+use super::changegroup::packer::CgPacker;
 use super::wirepack;
 use super::wirepack::packer::WirePackPacker;
 
@@ -85,7 +85,7 @@ where
         .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
         .chain(once(Ok(Part::End)));
 
-    let cgdata = Cg2Packer::new(changelogentries);
+    let cgdata = CgPacker::new(changelogentries);
     builder.set_data_generated(cgdata);
 
     Ok(builder)

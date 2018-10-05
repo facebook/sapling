@@ -81,17 +81,30 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
     }
 }
 
+pub fn get_cg_version(header: PartHeader) -> Result<changegroup::unpacker::CgVersion> {
+    header
+        .aparams()
+        .get(changegroup::CG_PART_VERSION_HEADER_NAME)
+        .ok_or(
+            ErrorKind::CgDecode("No changegroup version in Part Header in aparams".into()).into(),
+        )
+        .and_then(|version_bytes| {
+            str::from_utf8(version_bytes)
+                .map_err(|e| ErrorKind::CgDecode(format!("{:?}", e)).into())
+        })
+        .and_then(|version_str| {
+            version_str
+                .parse::<changegroup::unpacker::CgVersion>()
+                .map_err(|e| ErrorKind::CgDecode(format!("{:?}", e)).into())
+        })
+}
+
 pub fn get_cg_unpacker(
     header: PartHeader,
     logger: slog::Logger,
 ) -> changegroup::unpacker::CgUnpacker {
     // TODO(anastasiyaz): T34812941 return Result here, no default packer (version should be specified)
-    header
-    .aparams()
-    .get(changegroup::CG_PART_VERSION_HEADER_NAME)
-    .ok_or(ErrorKind::CgDecode("No changegroup version in Part Header in aparams".into()))
-    .and_then(|version_bytes| str::from_utf8(version_bytes).map_err(|e| ErrorKind::CgDecode(format!("{:?}", e))))
-    .and_then(|version_str| version_str.parse::<changegroup::unpacker::CgVersion>().map_err(|e| ErrorKind::CgDecode(format!("{:?}", e))))
+    get_cg_version(header)
     .map(|version| changegroup::unpacker::CgUnpacker::new(logger.clone(), version))
     // ChangeGroup2 by default
     .unwrap_or_else(|e| {
@@ -205,4 +218,41 @@ impl Decoder for EmptyUnpacker {
     fn decode(&mut self, _buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         Ok(None)
     }
+}
+
+#[cfg(test)]
+mod test {
+
+    use changegroup::unpacker::CgVersion;
+    use part_header::{PartHeaderBuilder, PartHeaderType};
+    use part_inner::*;
+
+    #[test]
+    fn test_cg_unpacker_v3() {
+        let mut header_builder =
+            PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
+        header_builder.add_aparam("cgversion", "03").unwrap();
+        let header = header_builder.build(1);
+
+        assert_eq!(get_cg_version(header).unwrap(), CgVersion::Cg3Version);
+    }
+
+    #[test]
+    fn test_cg_unpacker_v2() {
+        let mut header_builder =
+            PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
+        header_builder.add_aparam("cgversion", "02").unwrap();
+        let header = header_builder.build(1);
+
+        assert_eq!(get_cg_version(header).unwrap(), CgVersion::Cg2Version);
+    }
+
+    #[test]
+    fn test_cg_unpacker_default_v2() {
+        let header_builder = PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
+        let h = header_builder.build(1);
+
+        assert_eq!(get_cg_version(h).is_err(), true);
+    }
+
 }

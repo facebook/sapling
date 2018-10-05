@@ -47,17 +47,20 @@ impl Arbitrary for QCBytes {
 }
 
 #[derive(Clone, Debug)]
-pub struct Cg2PartSequence {
+pub struct CgPartSequence {
     // Storing the ends in here bypasses a number of lifetime issues.
     changesets: Vec<changegroup::Part>,
     changesets_end: changegroup::Part,
     manifests: Vec<changegroup::Part>,
     manifests_end: changegroup::Part,
+    treemanifest_end: Option<changegroup::Part>,
     filelogs: Vec<(Vec<changegroup::Part>, changegroup::Part)>,
     end: changegroup::Part,
+
+    version: changegroup::unpacker::CgVersion,
 }
 
-impl Cg2PartSequence {
+impl CgPartSequence {
     /// Combine all the changesets, manifests and filelogs into a single iterator.
     pub fn as_iter<'a>(&'a self) -> Box<Iterator<Item = &'a changegroup::Part> + 'a> {
         // Trying to describe the type here is madness. Just box it.
@@ -67,6 +70,7 @@ impl Cg2PartSequence {
                 .chain(iter::once(&self.changesets_end))
                 .chain(self.manifests.iter())
                 .chain(iter::once(&self.manifests_end))
+                .chain(self.treemanifest_end.iter())
                 .chain(
                     self.filelogs
                         .iter()
@@ -93,17 +97,37 @@ impl Cg2PartSequence {
         let part_results: Vec<_> = self.as_iter().cloned().map(|x| Ok(x)).collect();
         stream::iter_ok(part_results.into_iter())
     }
+
+    #[cfg(test)]
+    pub fn version(&self) -> &changegroup::unpacker::CgVersion {
+        &self.version
+    }
 }
 
-impl PartialEq<[changegroup::Part]> for Cg2PartSequence {
+impl PartialEq<[changegroup::Part]> for CgPartSequence {
     fn eq(&self, other: &[changegroup::Part]) -> bool {
         self.as_iter().eq(other.iter())
     }
 }
 
-impl Arbitrary for Cg2PartSequence {
+impl Arbitrary for CgPartSequence {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         use changegroup::*;
+        use changegroup::unpacker::*;
+
+        let version_ind = g.gen_weighted_bool(2);
+        let version = match version_ind {
+            true => CgVersion::Cg2Version,
+            false => CgVersion::Cg3Version,
+        };
+        let gen_parts = match version {
+            CgVersion::Cg2Version => gen_parts_v2,
+            CgVersion::Cg3Version => gen_parts_v3,
+        };
+        let gen_sequence = match version {
+            CgVersion::Cg2Version => gen_sequence_v2,
+            CgVersion::Cg3Version => gen_sequence_v3,
+        };
 
         // Generate a valid part sequence (changegroup, then manifest, then filelogs).
         let size = g.size();
@@ -121,18 +145,16 @@ impl Arbitrary for Cg2PartSequence {
             filelogs.push((gen_parts(Section::Filelog(path), g), section_end));
         }
 
-        Cg2PartSequence {
-            changesets: changesets,
-            changesets_end: Part::SectionEnd(Section::Changeset),
-            manifests: manifests,
-            manifests_end: Part::SectionEnd(Section::Manifest),
-            filelogs: filelogs,
-            end: Part::End,
-        }
+        gen_sequence(changesets, manifests, filelogs)
     }
 
     fn shrink(&self) -> Box<Iterator<Item = Self>> {
-        use changegroup::*;
+        use changegroup::unpacker::*;
+
+        let gen_sequence = match self.version {
+            CgVersion::Cg2Version => gen_sequence_v2,
+            CgVersion::Cg3Version => gen_sequence_v3,
+        };
 
         // All the parts can be shrinked independently as long as the section
         // remains the same (ensured in the impl of Arbitrary for
@@ -143,25 +165,67 @@ impl Arbitrary for Cg2PartSequence {
                 self.manifests.clone(),
                 self.filelogs.clone(),
             ).shrink()
-                .map(|(c, m, f)| Cg2PartSequence {
-                    changesets: c,
-                    changesets_end: Part::SectionEnd(Section::Changeset),
-                    manifests: m,
-                    manifests_end: Part::SectionEnd(Section::Manifest),
-                    filelogs: f,
-                    end: Part::End,
-                }),
+                .map(move |(c, m, f)| gen_sequence(c, m, f)),
         )
     }
 }
 
-fn gen_parts<G: Gen>(section: changegroup::Section, g: &mut G) -> Vec<changegroup::Part> {
+fn gen_parts_v2<G: Gen>(section: changegroup::Section, g: &mut G) -> Vec<changegroup::Part> {
     let size = g.size();
     (0..g.gen_range(0, size))
         .map(|_| {
             changegroup::Part::CgChunk(section.clone(), changegroup::CgDeltaChunk::arbitrary(g))
         })
         .collect()
+}
+
+fn gen_parts_v3<G: Gen>(section: changegroup::Section, g: &mut G) -> Vec<changegroup::Part> {
+    let size = g.size();
+    (0..g.gen_range(0, size))
+        .map(|_| {
+            changegroup::Part::CgChunk(
+                section.clone(),
+                changegroup::CgDeltaChunk::arbitrary_with_flags(g),
+            )
+        })
+        .collect()
+}
+
+fn gen_sequence_v2(
+    changesets: Vec<changegroup::Part>,
+    manifests: Vec<changegroup::Part>,
+    filelogs: Vec<(Vec<changegroup::Part>, changegroup::Part)>,
+) -> CgPartSequence {
+    use changegroup::*;
+    CgPartSequence {
+        changesets: changesets,
+        changesets_end: Part::SectionEnd(Section::Changeset),
+        manifests: manifests,
+        manifests_end: Part::SectionEnd(Section::Manifest),
+        treemanifest_end: None,
+        filelogs: filelogs,
+        end: Part::End,
+
+        version: changegroup::unpacker::CgVersion::Cg2Version,
+    }
+}
+fn gen_sequence_v3(
+    changesets: Vec<changegroup::Part>,
+    manifests: Vec<changegroup::Part>,
+    filelogs: Vec<(Vec<changegroup::Part>, changegroup::Part)>,
+) -> CgPartSequence {
+    use changegroup::*;
+    CgPartSequence {
+        changesets: changesets,
+        changesets_end: Part::SectionEnd(Section::Changeset),
+        manifests: manifests,
+        manifests_end: Part::SectionEnd(Section::Manifest),
+        treemanifest_end: Some(Part::SectionEnd(Section::Treemanifest)),
+        filelogs: filelogs,
+        end: Part::End,
+
+        version: changegroup::unpacker::CgVersion::Cg3Version,
+    }
 }
 
 impl Arbitrary for changegroup::Part {
@@ -214,8 +278,22 @@ impl Arbitrary for changegroup::CgDeltaChunk {
                     base: clone.base.clone(),
                     linknode: clone.linknode.clone(),
                     delta: delta,
-                    flags: None,
+                    flags: clone.flags.clone(),
                 }),
         )
+    }
+}
+
+impl changegroup::CgDeltaChunk {
+    fn arbitrary_with_flags<G: Gen>(g: &mut G) -> Self {
+        changegroup::CgDeltaChunk {
+            node: HgNodeHash::arbitrary(g),
+            p1: HgNodeHash::arbitrary(g),
+            p2: HgNodeHash::arbitrary(g),
+            base: HgNodeHash::arbitrary(g),
+            linknode: HgNodeHash::arbitrary(g),
+            delta: Delta::arbitrary(g),
+            flags: Some(g.gen_range(0, 0xffff)),
+        }
     }
 }

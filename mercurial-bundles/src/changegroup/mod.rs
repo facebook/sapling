@@ -62,7 +62,7 @@ mod test {
     use partial_io::{GenWouldBlock, PartialAsyncRead, PartialAsyncWrite, PartialWithErrors};
 
     use chunk::{ChunkDecoder, ChunkEncoder};
-    use quickcheck_types::Cg2PartSequence;
+    use quickcheck_types::CgPartSequence;
 
     use super::*;
 
@@ -80,7 +80,7 @@ mod test {
         quickcheck.quickcheck(
             roundtrip
                 as fn(
-                    Cg2PartSequence,
+                    CgPartSequence,
                     PartialWithErrors<GenWouldBlock>,
                     PartialWithErrors<GenWouldBlock>,
                 ) -> TestResult,
@@ -95,7 +95,7 @@ mod test {
         quickcheck.quickcheck(
             roundtrip
                 as fn(
-                    Cg2PartSequence,
+                    CgPartSequence,
                     PartialWithErrors<GenWouldBlock>,
                     PartialWithErrors<GenWouldBlock>,
                 ) -> TestResult,
@@ -103,20 +103,21 @@ mod test {
     }
 
     fn roundtrip(
-        seq: Cg2PartSequence,
+        seq: CgPartSequence,
         write_ops: PartialWithErrors<GenWouldBlock>,
         read_ops: PartialWithErrors<GenWouldBlock>,
     ) -> TestResult {
         // Encode this sequence.
         let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
         let partial_write = PartialAsyncWrite::new(cursor, write_ops);
-        let packer = packer::Cg2Packer::new(seq.to_stream().and_then(|x| x));
+        let packer = packer::CgPacker::new(seq.to_stream().and_then(|x| x));
         let sink = FramedWrite::new(partial_write, ChunkEncoder);
+        let unpacker_version = seq.version().clone();
 
         let fut = packer
             .forward(sink)
             .map_err(|e| -> () { panic!("unexpected error: {}", e) })
-            .and_then(|(_, sink)| {
+            .and_then(move |(_, sink)| {
                 let mut cursor = sink.into_inner().into_inner();
 
                 // Decode it.
@@ -127,7 +128,7 @@ mod test {
                     .map(|chunk| chunk.into_bytes().expect("expected normal chunk"));
 
                 let logger = make_root_logger();
-                let unpacker = unpacker::CgUnpacker::new(logger, unpacker::CgVersion::Cg2Version);
+                let unpacker = unpacker::CgUnpacker::new(logger, unpacker_version);
                 let part_stream = chunks.decode(unpacker);
 
                 let parts = Vec::new();
