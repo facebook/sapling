@@ -1,0 +1,34 @@
+[workspace]
+members = [
+    "exec/hgmain",
+    "exec/scm_daemon",
+    "hgext/extlib/indexes",
+    "hgext/extlib/pyrevisionstore",
+    "lib/argparse",
+    "lib/bookmarkstore",
+    "lib/commitcloudsubscriber",
+    "lib/configparser",
+    "lib/encoding",
+    "lib/hg_watchman_client",
+    "lib/indexedlog",
+    "lib/lz4-pyframe",
+    "lib/minibench",
+    "lib/mpatch",
+    "lib/mpatch-sys",
+    "lib/pathmatcher",
+    "lib/radixbuf",
+    "lib/revisionstore",
+    "lib/treestate",
+    "lib/types",
+    "lib/vlqencoding",
+    "lib/watchman_client",
+    "lib/zstdelta",
+    "mercurial/rust/bookmarkstore",
+    "mercurial/rust/config",
+    "mercurial/rust/matcher",
+    "mercurial/rust/treestate",
+    "mercurial/rust/zstd",
+]
+
+[profile.release]
+lto = true
