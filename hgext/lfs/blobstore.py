@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import hashlib
 import json
 import os
 import re
@@ -111,6 +112,11 @@ class local(object):
 
     def write(self, oid, data):
         """Write blob to local blobstore."""
+        contentsha256 = hashlib.sha256(data).hexdigest()
+        if contentsha256 != oid:
+            raise error.Abort(
+                _("lfs: sha256 mismatch (oid: %s, content: %s)") % (oid, contentsha256)
+            )
         with self.vfs(oid, "wb", atomictemp=True) as fp:
             fp.write(data)
 
