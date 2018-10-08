@@ -444,7 +444,9 @@ TEST(FileInode, readDuringLoad) {
   // Load the inode and start reading the contents
   auto inode = mount_.getFileInode("notready.txt");
   auto dataFuture = inode->open(O_RDONLY).thenValue(
-      [](std::shared_ptr<FileHandle> handle) { return handle->read(4096, 0); });
+      [inode](std::shared_ptr<FileHandle> /*handle*/) {
+        return inode->read(4096, 0);
+      });
   EXPECT_FALSE(dataFuture.isReady());
 
   // Make the backing store data ready now.
@@ -496,7 +498,7 @@ TEST(FileInode, truncateDuringLoad) {
   auto handleFuture = inode->open(O_RDWR);
   ASSERT_TRUE(handleFuture.isReady());
   auto handle = std::move(handleFuture).get();
-  auto dataFuture = handle->read(4096, 0);
+  auto dataFuture = inode->read(4096, 0);
   EXPECT_FALSE(dataFuture.isReady());
 
   // Open the file again with O_TRUNC while the initial read is in progress.
@@ -513,7 +515,7 @@ TEST(FileInode, truncateDuringLoad) {
   // For good measure, test reading and writing some more.
   truncHandle->write("foobar\n"_sp, 5).get(0ms);
 
-  dataFuture = handle->read(4096, 0);
+  dataFuture = inode->read(4096, 0);
   ASSERT_TRUE(dataFuture.isReady());
   EXPECT_EQ("\0\0\0\0\0foobar\n"_sp, std::move(dataFuture).get().copyData());
 

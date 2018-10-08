@@ -152,6 +152,11 @@ folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
   FUSELL_NOT_IMPL();
 }
 
+folly::Future<BufVec>
+Dispatcher::read(InodeNumber /*ino*/, size_t /*size*/, off_t /*off*/) {
+  FUSELL_NOT_IMPL();
+}
+
 folly::Future<folly::Unit> Dispatcher::flush(InodeNumber, uint64_t) {
   FUSELL_NOT_IMPL();
 }

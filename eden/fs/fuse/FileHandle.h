@@ -16,21 +16,6 @@ namespace eden {
 class FileHandle : public FileHandleBase {
  public:
   /**
-   * Read data
-   *
-   * Read should send exactly the number of bytes requested except
-   * on EOF or error, otherwise the rest of the data will be
-   * substituted with zeroes.  An exception to this is when the file
-   * has been opened in 'direct_io' mode, in which case the return
-   * value of the read system call will reflect the return value of
-   * this operation.
-   *
-   * @param size number of bytes to read
-   * @param off offset to read from
-   */
-  virtual folly::Future<BufVec> read(size_t size, off_t off) = 0;
-
-  /**
    * Write data
    *
    * Write should return exactly the number of bytes requested

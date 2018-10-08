@@ -1252,17 +1252,16 @@ void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRead(
-    const fuse_in_header* /*header*/,
+    const fuse_in_header* header,
     const uint8_t* arg) {
   const auto read = reinterpret_cast<const fuse_read_in*>(arg);
 
   XLOG(DBG7) << "FUSE_READ";
 
-  auto fh = dispatcher_->getFileHandle(read->fh);
-  XLOG(DBG7) << "reading " << read->size << "@" << read->offset;
-  return fh->read(read->size, read->offset).thenValue([](BufVec&& buf) {
-    RequestData::get().sendReply(buf.getIov());
-  });
+  auto ino = InodeNumber{header->nodeid};
+  return dispatcher_->read(ino, read->size, read->offset)
+      .thenValue(
+          [](BufVec&& buf) { RequestData::get().sendReply(buf.getIov()); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseWrite(

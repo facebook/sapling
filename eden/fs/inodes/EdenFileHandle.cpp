@@ -22,17 +22,6 @@ EdenFileHandle::~EdenFileHandle() {
   inode_->fileHandleDidClose();
 }
 
-folly::Future<BufVec> EdenFileHandle::read(size_t size, off_t off) {
-  FB_LOGF(
-      inode_->getMount()->getStraceLogger(),
-      DBG7,
-      "read({}, off={}, len={})",
-      inode_->getNodeId(),
-      off,
-      size);
-  return inode_->read(size, off);
-}
-
 folly::Future<size_t> EdenFileHandle::write(BufVec&& buf, off_t off) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),

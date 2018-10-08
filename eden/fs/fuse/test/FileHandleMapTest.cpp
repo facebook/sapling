@@ -33,9 +33,6 @@ class FakeDirHandle : public DirHandle {
 
 class FakeFileHandle : public FileHandle {
  public:
-  folly::Future<BufVec> read(size_t /*size*/, off_t /*off*/) override {
-    throw std::runtime_error("fake!");
-  }
   folly::Future<size_t> write(BufVec&& /*buf*/, off_t /*off*/) override {
     throw std::runtime_error("fake!");
   }

@@ -194,6 +194,19 @@ folly::Future<Dispatcher::Create> EdenDispatcher::create(
       });
 }
 
+folly::Future<BufVec>
+EdenDispatcher::read(InodeNumber ino, size_t size, off_t off) {
+  FB_LOGF(
+      mount_->getStraceLogger(),
+      DBG7,
+      "read({}, off={}, len={})",
+      ino,
+      off,
+      size);
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [size, off](FileInodePtr&& inode) { return inode->read(size, off); });
+}
+
 folly::Future<folly::Unit> EdenDispatcher::flush(
     InodeNumber ino,
     uint64_t lockOwner) {

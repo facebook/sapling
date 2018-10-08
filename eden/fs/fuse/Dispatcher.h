@@ -12,6 +12,7 @@
 #include <folly/Portability.h>
 #include <folly/Range.h>
 #include <sys/statvfs.h>
+#include "eden/fs/fuse/BufVec.h"
 #include "eden/fs/fuse/FileHandleMap.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -249,6 +250,21 @@ class Dispatcher {
   virtual folly::Future<std::shared_ptr<DirHandle>> opendir(
       InodeNumber ino,
       int flags);
+
+  /**
+   * Read data
+   *
+   * Read should send exactly the number of bytes requested except
+   * on EOF or error, otherwise the rest of the data will be
+   * substituted with zeroes.  An exception to this is when the file
+   * has been opened in 'direct_io' mode, in which case the return
+   * value of the read system call will reflect the return value of
+   * this operation.
+   *
+   * @param size number of bytes to read
+   * @param off offset to read from
+   */
+  virtual folly::Future<BufVec> read(InodeNumber ino, size_t size, off_t off);
 
   /**
    * This is called on each close() of the opened file.
