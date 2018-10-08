@@ -1265,7 +1265,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRead(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseWrite(
-    const fuse_in_header* /*header*/,
+    const fuse_in_header* header,
     const uint8_t* arg) {
   const auto write = reinterpret_cast<const fuse_write_in*>(arg);
   auto bufPtr = reinterpret_cast<const char*>(write + 1);
@@ -1274,12 +1274,13 @@ folly::Future<folly::Unit> FuseChannel::fuseWrite(
   }
   XLOG(DBG7) << "FUSE_WRITE " << write->size << " @" << write->offset;
 
+  auto ino = InodeNumber{header->nodeid};
   const auto fh = dispatcher_->getFileHandle(write->fh);
-
-  return fh->write(folly::StringPiece(bufPtr, write->size), write->offset)
-      .then([](size_t wrote) {
+  return dispatcher_
+      ->write(fh, ino, folly::StringPiece{bufPtr, write->size}, write->offset)
+      .thenValue([](size_t written) {
         fuse_write_out out = {};
-        out.size = wrote;
+        out.size = written;
         RequestData::get().sendReply(out);
       });
 }

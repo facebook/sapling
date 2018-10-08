@@ -48,11 +48,6 @@ class EdenFileHandle : public FileHandle {
    */
   ~EdenFileHandle() override;
 
-  FOLLY_NODISCARD folly::Future<size_t> write(BufVec&& buf, off_t off) override;
-  FOLLY_NODISCARD folly::Future<size_t> write(
-      folly::StringPiece data,
-      off_t off) override;
-
  private:
   EdenFileHandle() = delete;
   EdenFileHandle(const EdenFileHandle&) = delete;

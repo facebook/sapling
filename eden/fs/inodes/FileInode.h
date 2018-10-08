@@ -259,6 +259,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    */
   folly::Future<BufVec> read(size_t size, off_t off);
 
+  folly::Future<size_t> write(BufVec&& buf, off_t off);
   folly::Future<size_t> write(folly::StringPiece data, off_t off);
 
   void flush(uint64_t lock_owner);
@@ -417,7 +418,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    */
   ObjectStore* getObjectStore() const;
 
-  folly::Future<size_t> write(BufVec&& buf, off_t off);
   size_t writeImpl(
       LockedState& state,
       const struct iovec* iov,

@@ -267,6 +267,24 @@ class Dispatcher {
   virtual folly::Future<BufVec> read(InodeNumber ino, size_t size, off_t off);
 
   /**
+   * Write data
+   *
+   * Write should return exactly the number of bytes requested
+   * except on error.  An exception to this is when the file has
+   * been opened in 'direct_io' mode, in which case the return value
+   * of the write system call will reflect the return value of this
+   * operation.
+   *
+   * The FileHandle is passed in for now because it must stay valid while the
+   * write request is processed.
+   */
+  FOLLY_NODISCARD virtual folly::Future<size_t> write(
+      std::shared_ptr<FileHandle> ptr,
+      InodeNumber ino,
+      folly::StringPiece data,
+      off_t off);
+
+  /**
    * This is called on each close() of the opened file.
    *
    * Since file descriptors can be duplicated (dup, dup2, fork), for

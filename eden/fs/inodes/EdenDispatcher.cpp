@@ -207,6 +207,24 @@ EdenDispatcher::read(InodeNumber ino, size_t size, off_t off) {
       [size, off](FileInodePtr&& inode) { return inode->read(size, off); });
 }
 
+folly::Future<size_t> EdenDispatcher::write(
+    std::shared_ptr<FileHandle> ptr,
+    InodeNumber ino,
+    folly::StringPiece data,
+    off_t off) {
+  FB_LOGF(
+      mount_->getStraceLogger(),
+      DBG7,
+      "write({}, off={}, len={})",
+      ino,
+      off,
+      data.size());
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [ptr = std::move(ptr), copy = data.str(), off](FileInodePtr&& inode) {
+        return inode->write(copy, off);
+      });
+}
+
 folly::Future<folly::Unit> EdenDispatcher::flush(
     InodeNumber ino,
     uint64_t lockOwner) {

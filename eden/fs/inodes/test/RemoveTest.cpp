@@ -99,7 +99,7 @@ TEST_F(UnlinkTest, modified) {
       "testing testing\n"
       "123\n"
       "testing testing\n"};
-  auto writeResult = handle->write(newContents, 0).get();
+  auto writeResult = file->write(newContents, 0).get();
   EXPECT_EQ(newContents.size(), writeResult);
 
   // Now remove the child

@@ -22,26 +22,5 @@ EdenFileHandle::~EdenFileHandle() {
   inode_->fileHandleDidClose();
 }
 
-folly::Future<size_t> EdenFileHandle::write(BufVec&& buf, off_t off) {
-  FB_LOGF(
-      inode_->getMount()->getStraceLogger(),
-      DBG7,
-      "write({}, off={}, len={})",
-      inode_->getNodeId(),
-      off,
-      buf.size());
-  return inode_->write(std::move(buf), off);
-}
-
-folly::Future<size_t> EdenFileHandle::write(folly::StringPiece str, off_t off) {
-  FB_LOGF(
-      inode_->getMount()->getStraceLogger(),
-      DBG7,
-      "write({}, off={}, len={})",
-      inode_->getNodeId(),
-      off,
-      str.size());
-  return inode_->write(str, off);
-}
 } // namespace eden
 } // namespace facebook

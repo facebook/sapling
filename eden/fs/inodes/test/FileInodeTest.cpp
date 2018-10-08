@@ -380,7 +380,7 @@ TEST_F(FileInodeTest, writingMaterializesParent) {
   EXPECT_EQ(false, isInodeMaterialized(parent));
 
   auto handle = inode->open(O_WRONLY).get();
-  auto written = handle->write("abcd", 0).get();
+  auto written = inode->write("abcd", 0).get();
   EXPECT_EQ(4, written);
 
   EXPECT_EQ(true, isInodeMaterialized(grandparent));
@@ -471,7 +471,7 @@ TEST(FileInode, writeDuringLoad) {
   auto handle = std::move(handleFuture).get();
 
   auto newContents = "TENTS"_sp;
-  auto writeFuture = handle->write(newContents, 3);
+  auto writeFuture = inode->write(newContents, 3);
   EXPECT_FALSE(writeFuture.isReady());
 
   // Make the backing store data ready now.
@@ -513,7 +513,7 @@ TEST(FileInode, truncateDuringLoad) {
   EXPECT_EQ("", std::move(dataFuture).get().copyData());
 
   // For good measure, test reading and writing some more.
-  truncHandle->write("foobar\n"_sp, 5).get(0ms);
+  inode->write("foobar\n"_sp, 5).get(0ms);
 
   dataFuture = inode->read(4096, 0);
   ASSERT_TRUE(dataFuture.isReady());
