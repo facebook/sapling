@@ -1,3 +1,27 @@
+__set_common_file_functions = function(path, type)
+    local file = {}
+    file.path = path
+    if type == "added" then
+      file.is_added = function() return true end
+    else
+      file.is_added = function() return false end
+    end
+
+    if type == "deleted" then
+      file.is_deleted = function() return true end
+    else
+      file.is_deleted = function() return false end
+    end
+
+    if type == "modified" then
+      file.is_modified = function() return true end
+    else
+      file.is_modified = function() return false end
+    end
+
+    return file
+end
+
 __hook_start_base = function(info, arg, setup)
      if hook == nil then
         error("no hook function")

@@ -186,6 +186,24 @@ mod test {
         test_hook_accepted(false);
     }
 
+    #[test]
+    fn test_cs_hook_initial_commit() {
+        // Runs hook on a commit that has no parents
+        async_unit::tokio_unit_test(move || {
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return true\n\
+                 end",
+            );
+            let changeset_id = String::from("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
+            match test_hook(code, changeset_id, true /* file hook */) {
+                Ok(HookExecution::Accepted) => (),
+                Ok(HookExecution::Rejected(_)) => assert!(false, "Hook should be accepted"),
+                Err(e) => assert!(false, format!("Unexpected error {:?}", e)),
+            }
+        });
+    }
+
     fn test_hook_accepted(file: bool) {
         async_unit::tokio_unit_test(move || {
             let code = String::from(

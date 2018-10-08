@@ -48,6 +48,10 @@ pub trait Manifest: Send + 'static {
     }
 }
 
+pub fn get_empty_manifest() -> Box<Manifest + Sync> {
+    Box::new(EmptyManifest::new())
+}
+
 pub struct EmptyManifest;
 
 impl EmptyManifest {

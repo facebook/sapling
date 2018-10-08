@@ -8,8 +8,8 @@
 
 #![deny(warnings)]
 
-use super::{Hook, HookChangeset, HookChangesetParents, HookContext, HookExecution, HookFile,
-            HookRejectionInfo};
+use super::{ChangedFileType, Hook, HookChangeset, HookChangesetParents, HookContext,
+            HookExecution, HookFile, HookRejectionInfo};
 use super::errors::*;
 use failure::Error;
 use futures::{failed, Future};
@@ -26,15 +26,19 @@ const HOOK_START_CODE_CS: &str = "
 __hook_start = function(info, arg)
     return __hook_start_base(info, arg, function(arg, ctx)
         local files = {}
-        for _, path in ipairs(arg) do
-          local file = {}
-          file.path = path
-          file.contains_string = function(s) return coroutine.yield(__contains_string(file.path, s)) end
-          file.len = function() return coroutine.yield(__file_len(file.path)) end
-          file.content = function() return coroutine.yield(__file_content(file.path)) end
-          files[#files+1] = file
+
+        for _, file_data in ipairs(arg) do
+            local file = __set_common_file_functions(file_data.path, file_data.type)
+
+            if not file.is_deleted() then
+                file.contains_string = function(s) return coroutine.yield(__contains_string(file.path, s)) end
+                file.len = function() return coroutine.yield(__file_len(file.path)) end
+                file.content = function() return coroutine.yield(__file_content(file.path)) end
+            end
+            files[#files+1] = file
         end
-        ctx.files=files
+
+        ctx.files = files
     end)
 end
 ";
@@ -42,11 +46,13 @@ end
 const HOOK_START_CODE_FILE: &str = "
 __hook_start = function(info, arg)
     return __hook_start_base(info, arg, function(arg, ctx)
-        local file = {}
-        file.path = arg
-        file.contains_string = function(s) return coroutine.yield(__contains_string(s)) end
-        file.len = function() return coroutine.yield(__file_len()) end
-        file.content = function() return coroutine.yield(__file_content()) end
+        local file = __set_common_file_functions(arg.path, arg.type)
+
+        if not file.is_deleted() then
+            file.contains_string = function(s) return coroutine.yield(__contains_string(s)) end
+            file.len = function() return coroutine.yield(__file_len()) end
+            file.content = function() return coroutine.yield(__file_content()) end
+        end
         ctx.file = file
     end)
 end
@@ -169,14 +175,21 @@ impl Hook<HookChangeset> for LuaHook {
             Err(e) => return failed(e).boxify(),
         };
 
-        let file_paths: Vec<String> = context
-            .data
-            .files
-            .clone()
-            .iter()
-            .map(|file| file.path.clone())
-            .collect();
-        self.convert_coroutine_res(builder.create((hook_info, file_paths)))
+        let mut files = vec![];
+
+        for f in context.data.files {
+            let ty = match f.ty {
+                ChangedFileType::Added => "added",
+                ChangedFileType::Deleted => "deleted",
+                ChangedFileType::Modified => "modified",
+            };
+            files.push(hashmap!{
+                "path" => f.path,
+                "type" => ty.to_string(),
+            });
+        }
+
+        self.convert_coroutine_res(builder.create((hook_info, files)))
     }
 }
 
@@ -249,7 +262,16 @@ impl Hook<HookFile> for LuaHook {
             Ok(builder) => builder,
             Err(e) => return failed(e).boxify(),
         };
-        self.convert_coroutine_res(builder.create((hook_info, context.data.path.clone())))
+        let ty = match context.data.ty {
+            ChangedFileType::Added => "added".to_string(),
+            ChangedFileType::Deleted => "deleted".to_string(),
+            ChangedFileType::Modified => "modified".to_string(),
+        };
+        let data = hashmap!{
+            "path" => context.data.path.clone(),
+            "type" => ty,
+        };
+        self.convert_coroutine_res(builder.create((hook_info, data)))
     }
 }
 
@@ -295,7 +317,8 @@ impl LuaHook {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::{HookChangeset, HookChangesetParents, InMemoryFileContentStore};
+    use super::super::{ChangedFileType, HookChangeset, HookChangesetParents,
+                       InMemoryFileContentStore};
     use async_unit;
     use bytes::Bytes;
     use futures::Future;
@@ -363,7 +386,7 @@ mod test {
                 "hook = function (ctx)\n\
                  return ctx.files[0] == nil and ctx.files[1].path == \"file1\" and\n\
                  ctx.files[2].path == \"file2\" and ctx.files[3].path == \"file3\" and\n\
-                 ctx.files[4] == nil\n\
+                 ctx.files[6] == nil\n\
                  end",
             );
             assert_matches!(
@@ -399,7 +422,57 @@ mod test {
                 "hook = function (ctx)\n\
                  return ctx.files[1].content() == \"file1sausages\" and\n
                  ctx.files[2].content() == \"file2sausages\" and\n
-                 ctx.files[3].content() == \"file3sausages\"\n
+                 ctx.files[3].content() == \"file3sausages\" and\n
+                 ctx.files[5].content() == \"modifiedsausages\"\n
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_check_type() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 local added_file = ctx.files[1]
+                 local added = added_file.is_added() and \
+                    not added_file.is_deleted() and not added_file.is_modified()
+
+                 local deleted_file = ctx.files[4]
+                 local deleted = not deleted_file.is_added() and \
+                    deleted_file.is_deleted() and not deleted_file.is_modified()
+
+                 local modified_file = ctx.files[5]
+                 local modified = not modified_file.is_added() and \
+                    not modified_file.is_deleted() and modified_file.is_modified()
+
+                 return added and deleted and modified
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_deleted() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 for _, f in ipairs(ctx.files) do
+                    if f.is_deleted() then
+                        return f.path == \"deleted\"\n
+                    end
+                 end
+                 return false
                  end",
             );
             assert_matches!(
@@ -417,7 +490,8 @@ mod test {
                 "hook = function (ctx)\n\
                  return ctx.files[1].len() == 13 and\n
                  ctx.files[2].len() == 13 and\n
-                 ctx.files[3].len() == 13\n
+                 ctx.files[3].len() == 13 and\n
+                 ctx.files[5].len() == 16\n
                  end",
             );
             assert_matches!(
@@ -665,7 +739,7 @@ mod test {
     #[test]
     fn test_file_hook_path() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.path == \"/a/b/c.txt\"\n\
@@ -678,7 +752,7 @@ mod test {
     #[test]
     fn test_file_hook_contains_string_matches() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.contains_string(\"sausages\")\n\
@@ -691,7 +765,7 @@ mod test {
     #[test]
     fn test_file_hook_contains_string_no_matches() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.contains_string(\"gerbils\")\n\
@@ -707,7 +781,7 @@ mod test {
     #[test]
     fn test_file_hook_content_matches() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.content() == \"sausages\"\n\
@@ -718,9 +792,22 @@ mod test {
     }
 
     #[test]
+    fn test_file_hook_removed() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_removed_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.path == \"/a/b/c.txt\" and ctx.file.is_deleted()\n\
+                 end",
+            );
+            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
     fn test_file_hook_len_matches() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.len() == 8\n\
@@ -733,7 +820,7 @@ mod test {
     #[test]
     fn test_file_hook_len_no_matches() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.len() == 123\n\
@@ -749,7 +836,7 @@ mod test {
     #[test]
     fn test_file_hook_repo_name() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.info.repo_name == \"some-repo\"\n\
@@ -762,7 +849,7 @@ mod test {
     #[test]
     fn test_file_hook_rejected() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return false\n\
@@ -778,7 +865,7 @@ mod test {
     #[test]
     fn test_file_hook_no_hook_func() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "elephants = function (ctx)\n\
                  return true\n\
@@ -794,7 +881,7 @@ mod test {
     #[test]
     fn test_file_hook_invalid_hook() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from("invalid code");
             assert_matches!(
                 err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
@@ -807,7 +894,7 @@ mod test {
     #[test]
     fn test_file_hook_exception() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  if ctx.file.path == \"/a/b/c.txt\" then\n\
@@ -827,7 +914,7 @@ mod test {
     #[test]
     fn test_file_hook_invalid_return_val() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return \"aardvarks\"\n\
@@ -844,7 +931,7 @@ mod test {
     #[test]
     fn test_file_hook_invalid_short_desc() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return false, 23, \"long desc\"\n\
@@ -861,7 +948,7 @@ mod test {
     #[test]
     fn test_file_hook_invalid_long_desc() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return false, \"short desc\", 23\n\
@@ -878,7 +965,7 @@ mod test {
     #[test]
     fn test_file_hook_no_io_nor_os() {
         async_unit::tokio_unit_test(|| {
-            let hook_file = default_hook_file();
+            let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return io == nil and os == nil\n
@@ -901,24 +988,38 @@ mod test {
     }
 
     fn default_changeset() -> HookChangeset {
-        let files = vec!["file1".into(), "file2".into(), "file3".into()];
-        create_hook_changeset(files)
+        let added = vec!["file1".into(), "file2".into(), "file3".into()];
+        let deleted = vec!["deleted".into()];
+        let modified = vec!["modified".into()];
+        create_hook_changeset(added, deleted, modified)
     }
 
-    fn create_hook_changeset(paths: Vec<String>) -> HookChangeset {
+    fn create_hook_changeset(
+        added: Vec<String>,
+        deleted: Vec<String>,
+        modified: Vec<String>,
+    ) -> HookChangeset {
         let mut content_store = InMemoryFileContentStore::new();
         let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        let paths2 = paths.clone();
-        for path in paths {
+        for path in added.iter().chain(modified.iter()) {
             let content = path.clone() + "sausages";
             let content_bytes: Bytes = content.into();
             content_store.insert((cs_id.clone(), to_mpath(&path)), content_bytes.into());
         }
         let content_store = Arc::new(content_store);
-        let hook_files = paths2
-            .into_iter()
-            .map(|path| HookFile::new(path.clone(), content_store.clone(), cs_id))
-            .collect();
+
+        let create_hook_files = move |files: Vec<String>, ty: ChangedFileType| -> Vec<HookFile> {
+            files
+                .into_iter()
+                .map(|path| HookFile::new(path.clone(), content_store.clone(), cs_id, ty.clone()))
+                .collect()
+        };
+
+        let mut hook_files = vec![];
+        hook_files.extend(create_hook_files(added, ChangedFileType::Added));
+        hook_files.extend(create_hook_files(deleted, ChangedFileType::Deleted));
+        hook_files.extend(create_hook_files(modified, ChangedFileType::Modified));
+
         HookChangeset::new(
             "some-author".into(),
             hook_files,
@@ -927,11 +1028,27 @@ mod test {
         )
     }
 
-    fn default_hook_file() -> HookFile {
+    fn default_hook_added_file() -> HookFile {
         let mut content_store = InMemoryFileContentStore::new();
         let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
         content_store.insert((cs_id.clone(), to_mpath("/a/b/c.txt")), "sausages".into());
-        HookFile::new("/a/b/c.txt".into(), Arc::new(content_store), cs_id)
+        HookFile::new(
+            "/a/b/c.txt".into(),
+            Arc::new(content_store),
+            cs_id,
+            ChangedFileType::Added,
+        )
+    }
+
+    fn default_hook_removed_file() -> HookFile {
+        let content_store = InMemoryFileContentStore::new();
+        let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        HookFile::new(
+            "/a/b/c.txt".into(),
+            Arc::new(content_store),
+            cs_id,
+            ChangedFileType::Deleted,
+        )
     }
 
 }

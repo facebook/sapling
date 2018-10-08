@@ -56,9 +56,10 @@ use bookmarks::Bookmark;
 use bytes::Bytes;
 pub use errors::*;
 use failure::Error;
-use futures::{failed, finished, Future};
+use futures::{failed, finished, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{Changeset, HgChangesetId, HgParents, MPath};
+use mercurial_types::{Changeset, HgChangesetId, HgParents, MPath, manifest::get_empty_manifest,
+                      manifest_utils::{self, EntryStatus}};
 use mononoke_types::FileContents;
 use slog::Logger;
 use std::collections::{HashMap, HashSet};
@@ -352,29 +353,28 @@ impl HookManager {
 
     fn get_hook_changeset(&self, changeset_id: HgChangesetId) -> BoxFuture<HookChangeset, Error> {
         let content_store = self.content_store.clone();
-        Box::new(
-            self.changeset_store
-                .get_changeset_by_changesetid(&changeset_id)
-                .and_then(move |changeset| {
-                    let author = str::from_utf8(changeset.user())?.into();
-                    let files = changeset
-                        .files()
-                        .iter()
-                        .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
-                        .map(|path| {
-                            HookFile::new(path, content_store.clone(), changeset_id.clone())
-                        })
-                        .collect();
-                    let comments = str::from_utf8(changeset.user())?.into();
-                    let parents = HookChangesetParents::from(changeset.parents());
-                    Ok(HookChangeset {
-                        author,
-                        files,
-                        comments,
-                        parents,
+        let hg_changeset = self.changeset_store
+            .get_changeset_by_changesetid(&changeset_id);
+        let changed_files = self.changeset_store.get_changed_files(&changeset_id);
+        Box::new((hg_changeset, changed_files).into_future().and_then(
+            move |(changeset, changed_files)| {
+                let author = str::from_utf8(changeset.user())?.into();
+                let files = changed_files
+                    .into_iter()
+                    .map(|(path, ty)| {
+                        HookFile::new(path, content_store.clone(), changeset_id.clone(), ty)
                     })
-                }),
-        )
+                    .collect();
+                let comments = str::from_utf8(changeset.user())?.into();
+                let parents = HookChangesetParents::from(changeset.parents());
+                Ok(HookChangeset {
+                    author,
+                    files,
+                    comments,
+                    parents,
+                })
+            },
+        ))
     }
 }
 
@@ -396,10 +396,28 @@ pub struct HookChangeset {
 }
 
 #[derive(Clone)]
+pub enum ChangedFileType {
+    Added,
+    Deleted,
+    Modified,
+}
+
+impl From<EntryStatus> for ChangedFileType {
+    fn from(entry_status: EntryStatus) -> Self {
+        match entry_status {
+            EntryStatus::Added(_) => ChangedFileType::Added,
+            EntryStatus::Deleted(_) => ChangedFileType::Deleted,
+            EntryStatus::Modified { .. } => ChangedFileType::Modified,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct HookFile {
     pub path: String,
     content_store: Arc<FileContentStore>,
     changeset_id: HgChangesetId,
+    ty: ChangedFileType,
 }
 
 impl fmt::Debug for HookFile {
@@ -438,11 +456,13 @@ impl HookFile {
         path: String,
         content_store: Arc<FileContentStore>,
         changeset_id: HgChangesetId,
+        ty: ChangedFileType,
     ) -> HookFile {
         HookFile {
             path,
             content_store,
             changeset_id,
+            ty,
         }
     }
 
@@ -528,6 +548,11 @@ pub trait ChangesetStore: Send + Sync {
         &self,
         changesetid: &HgChangesetId,
     ) -> BoxFuture<HgBlobChangeset, Error>;
+
+    fn get_changed_files(
+        &self,
+        changesetid: &HgChangesetId,
+    ) -> BoxFuture<Vec<(String, ChangedFileType)>, Error>;
 }
 
 pub struct BlobRepoChangesetStore {
@@ -540,6 +565,44 @@ impl ChangesetStore for BlobRepoChangesetStore {
         changesetid: &HgChangesetId,
     ) -> BoxFuture<HgBlobChangeset, Error> {
         self.repo.get_changeset_by_changesetid(changesetid)
+    }
+
+    fn get_changed_files(
+        &self,
+        changesetid: &HgChangesetId,
+    ) -> BoxFuture<Vec<(String, ChangedFileType)>, Error> {
+        cloned!(self.repo);
+        self.repo
+            .get_changeset_by_changesetid(changesetid)
+            .and_then(move |cs| {
+                let mf_id = cs.manifestid();
+                let mf = repo.get_manifest_by_nodeid(&mf_id.into_nodehash());
+                let parents = cs.parents();
+                let (maybe_p1, _) = parents.get_nodes();
+                // TODO(stash): generate changed file stream correctly for merges
+                let p_mf = match maybe_p1.cloned() {
+                    Some(p1) => repo.get_changeset_by_changesetid(&HgChangesetId::new(p1))
+                        .and_then({
+                            cloned!(repo);
+                            move |p1| repo.get_manifest_by_nodeid(&p1.manifestid().into_nodehash())
+                        })
+                        .left_future(),
+                    None => finished(get_empty_manifest()).right_future(),
+                };
+                (mf, p_mf)
+            })
+            .and_then(|(mf, p_mf)| {
+                manifest_utils::changed_file_stream(&mf, &p_mf, None)
+                    .map(|changed_entry| {
+                        let path = changed_entry
+                            .get_full_path()
+                            .expect("File should have a path");
+                        let ty = ChangedFileType::from(changed_entry.status);
+                        (String::from_utf8_lossy(&path.to_vec()).into_owned(), ty)
+                    })
+                    .collect()
+            })
+            .boxify()
     }
 }
 
@@ -560,6 +623,24 @@ impl ChangesetStore for InMemoryChangesetStore {
     ) -> BoxFuture<HgBlobChangeset, Error> {
         match self.map.get(changesetid) {
             Some(cs) => Box::new(finished(cs.clone())),
+            None => Box::new(failed(
+                ErrorKind::NoSuchChangeset(changesetid.to_string()).into(),
+            )),
+        }
+    }
+
+    fn get_changed_files(
+        &self,
+        changesetid: &HgChangesetId,
+    ) -> BoxFuture<Vec<(String, ChangedFileType)>, Error> {
+        match self.map.get(changesetid) {
+            Some(cs) => Box::new(finished(
+                cs.files()
+                    .into_iter()
+                    .map(|arr| String::from_utf8_lossy(&arr.to_vec()).into_owned())
+                    .map(|path| (path, ChangedFileType::Added))
+                    .collect(),
+            )),
             None => Box::new(failed(
                 ErrorKind::NoSuchChangeset(changesetid.to_string()).into(),
             )),
@@ -1108,7 +1189,14 @@ mod test {
             let cs_id = default_changeset_id();
             let hook_files = files
                 .iter()
-                .map(|path| HookFile::new(path.clone(), content_store.clone(), cs_id))
+                .map(|path| {
+                    HookFile::new(
+                        path.clone(),
+                        content_store.clone(),
+                        cs_id,
+                        ChangedFileType::Added,
+                    )
+                })
                 .collect();
             let parents =
                 HookChangesetParents::One("2f866e7e549760934e31bf0420a873f65100ad63".into());
