@@ -44,7 +44,7 @@ Init treemanifest and remotefilelog
 blobimport
 
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport rocksdb repo-hg/.hg repo
 
 smoke test to ensure bonsai_verify works
 

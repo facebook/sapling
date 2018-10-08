@@ -31,7 +31,7 @@ verify content
    (re)
 
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport rocksdb repo-hg/.hg repo
 
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits

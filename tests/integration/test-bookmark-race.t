@@ -23,7 +23,7 @@ setup master bookmarks
   $ hg bookmark master_bookmark -r 'tip'
 
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport rocksdb repo-hg/.hg repo
 
 start mononoke
 

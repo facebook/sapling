@@ -22,7 +22,7 @@ use futures_ext::FutureExt;
 use mercurial_types::RepositoryId;
 use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::RepoConfig;
-use metaconfig::repoconfig::RepoType::{BlobManifold, BlobRocks};
+use metaconfig::repoconfig::RepoType::{BlobFiles, BlobManifold, BlobRocks};
 use mononoke_types::FileContents;
 use reachabilityindex::{GenerationNumberBFS, ReachabilityIndex};
 
@@ -43,6 +43,7 @@ impl MononokeRepo {
     pub fn new(logger: Logger, config: RepoConfig, executor: TaskExecutor) -> Result<Self, Error> {
         let repoid = RepositoryId::new(config.repoid);
         let repo = match config.repotype {
+            BlobFiles(ref path) => BlobRepo::new_files(logger.clone(), &path, repoid),
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid),
             BlobManifold(ref args) => {
                 BlobRepo::new_manifold_no_postcommit(logger.clone(), args, repoid)

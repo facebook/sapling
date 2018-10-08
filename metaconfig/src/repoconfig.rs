@@ -300,6 +300,7 @@ impl RepoConfigs {
 
         let repotype = match this.repotype {
             RawRepoType::Revlog => RepoType::Revlog(get_path(&this)?),
+            RawRepoType::Files => RepoType::BlobFiles(get_path(&this)?),
             RawRepoType::BlobRocks => RepoType::BlobRocks(get_path(&this)?),
             RawRepoType::TestBlobManifold => {
                 let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
@@ -424,6 +425,7 @@ struct RawHookConfig {
 #[derive(Clone, Debug, Deserialize)]
 enum RawRepoType {
     #[serde(rename = "revlog")] Revlog,
+    #[serde(rename = "blob:files")] Files,
     #[serde(rename = "blob:rocks")] BlobRocks,
     #[serde(rename = "blob:testmanifold")] TestBlobManifold,
     #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,

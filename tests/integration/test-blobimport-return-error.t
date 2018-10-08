@@ -38,7 +38,7 @@ Init treemanifest and remotefilelog
   $ cd $TESTTMP
 
 blobimport with missing first commit, it should fail
-  $ blobimport --panic-fate=exit repo-hg/.hg repo --skip 1 > out.txt
+  $ blobimport rocksdb repo-hg/.hg repo --skip 1 --panic-fate=exit > out.txt
   [101]
   $ grep PANIC < out.txt
-  PANIC: cannot open revlogrepo: Os { code: 2, kind: NotFound, message: "No such file or directory" }
+  PANIC: import failed

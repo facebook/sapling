@@ -28,7 +28,7 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport rocksdb repo-hg/.hg repo
 
 start mononoke
   $ mononoke
@@ -175,4 +175,3 @@ Push stack
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     A
    (re)
-

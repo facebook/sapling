@@ -4,7 +4,7 @@
 function get_free_socket {
 
 # From https://unix.stackexchange.com/questions/55913/whats-the-easiest-way-to-find-an-unused-local-port
-  cat >> "$TESTTMP/get_free_socket.py" <<EOF
+  cat > "$TESTTMP/get_free_socket.py" <<EOF
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind(('', 0))
@@ -68,8 +68,9 @@ function wait_for_mononoke_cache_warmup {
   fi
 }
 
-function setup_common_config {
-    setup_config_repo
+function setup_common_config() {
+  # Pass repotype as the second param
+    setup_config_repo "$@"
   cat >> "$HGRCPATH" <<EOF
 [ui]
 ssh="$DUMMYSSH"
@@ -80,7 +81,7 @@ cachepath=$TESTTMP/cachepath
 EOF
 }
 
-function setup_config_repo {
+function setup_config_repo() {
   hg init mononoke-config
   cd mononoke-config || exit
   cat >> .hg/hgrc <<EOF
@@ -94,10 +95,15 @@ server=True
 shallowtrees=True
 EOF
 
+  REPOTYPE="blob:rocks"
+  if [[ $# -gt 0 ]]; then
+    REPOTYPE="$1"
+  fi
+
   mkdir -p repos/repo
   cat > repos/repo/server.toml <<CONFIG
 path="$TESTTMP/repo"
-repotype="blob:rocks"
+repotype="$REPOTYPE"
 repoid=0
 enabled=true
 
@@ -115,7 +121,7 @@ fi
   mkdir -p repos/disabled_repo
   cat > repos/disabled_repo/server.toml <<CONFIG
 path="$TESTTMP/disabled_repo"
-repotype="blob:rocks"
+repotype="$REPOTYPE"
 repoid=2
 enabled=false
 CONFIG
@@ -130,16 +136,17 @@ CONFIG
 
   # We need to have a RocksDb version of config repo
   mkdir mononoke-config-rocks
-  blobimport mononoke-config/.hg mononoke-config-rocks
+  blobimport rocksdb mononoke-config/.hg mononoke-config-rocks
 }
 
-function blobimport {
-  input="$1"
-  output="$2"
-  shift 2
+function blobimport() {
+  blobstore="$1"
+  input="$2"
+  output="$3"
+  shift 3
   mkdir -p "$output"
   $MONONOKE_BLOBIMPORT --repo_id 0 \
-     --blobstore rocksdb "$input" \
+     --blobstore "$blobstore" "$input" \
      --data-dir "$output" --do-not-init-cachelib "$@" >> "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
   if [[ $BLOBIMPORT_RC -ne 0 ]]; then
@@ -171,7 +178,6 @@ function no_ssl_apiserver {
   --config-bookmark "local_master" >> "$TESTTMP/apiserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
-
 
 function wait_for_apiserver {
   for _ in $(seq 1 200); do

@@ -25,7 +25,7 @@ setup repo-push and repo-pull
 
 blobimport
 
-  $ blobimport repo-hg/.hg repo
+  $ blobimport rocksdb repo-hg/.hg repo
 
 start mononoke
 

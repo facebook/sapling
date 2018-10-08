@@ -112,8 +112,8 @@ setup master bookmarks
 blobimport
 
   $ cd ..
-  $ blobimport repo-hg/.hg repo
-  $ blobimport repo-hg/.hg enabled_repo
+  $ blobimport rocksdb repo-hg/.hg repo
+  $ blobimport rocksdb repo-hg/.hg enabled_repo
 
 start mononoke
 

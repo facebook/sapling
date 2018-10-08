@@ -35,7 +35,7 @@
 
 # 2. Blobimport hg nolfs to mononoke (rocksDB).
   $ cd ..
-  $ blobimport repo-hg-nolfs/.hg repo
+  $ blobimport rocksdb repo-hg-nolfs/.hg repo
 
   $ cd repo-hg-nolfs
   $ cat >> $HGRCPATH << EOF
