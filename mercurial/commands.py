@@ -764,8 +764,14 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         ("e", "extend", False, _("extend the bisect range")),
         ("c", "command", "", _("use command to check changeset state"), _("CMD")),
         ("U", "noupdate", False, _("do not update to target")),
+        (
+            "S",
+            "nosparseskip",
+            False,
+            _("do not skip changesets with no changes in sparse profile"),
+        ),
     ],
-    _("[-gbsr] [-U] [-c CMD] [REV]"),
+    _("[-gbsr] [-U] [-S] [-c CMD] [REV]"),
 )
 def bisect(
     ui,
@@ -779,6 +785,7 @@ def bisect(
     skip=None,
     extend=None,
     noupdate=None,
+    nosparseskip=None,
 ):
     """subdivision search of changesets
 
@@ -789,7 +796,9 @@ def bisect(
     for testing (unless the -U/--noupdate option is specified). Once
     you have performed tests, mark the working directory as good or
     bad, and bisect will either update to another candidate changeset
-    or announce that it has found the bad revision.
+    or announce that it has found the bad revision. The command will
+    also skip changesets, which don't contain changes in the sparse
+    profile, unless the -S/--nosparseskip option is specified.
 
     As a shortcut, you can also use the revision argument to mark a
     revision as good or bad without checking it out first.
@@ -918,6 +927,43 @@ def bisect(
         cmdutil.bailifchanged(repo)
         return hg.clean(repo, node, show_stats=show_stats)
 
+    def sparseskip(node, changesets, bgood, badnode, goodnode):
+        """
+        Skip testing next nodes if nothing was changed since last good or bad node
+        in sparse profile.
+        """
+
+        nodestate = hbisect.checksparsebisectskip(repo, node, badnode, goodnode)
+        while nodestate != "check":
+            basenode = goodnode if nodestate == "good" else badnode
+            skipsparsed = "Skipping changeset %d:%s as there are no changes inside\n\
+the sparse profile from the known %s changeset %d:%s\n"
+            ui.write(
+                _(skipsparsed)
+                % (
+                    repo.changelog.rev(node),
+                    short(node),
+                    nodestate,
+                    repo.changelog.rev(basenode),
+                    short(basenode),
+                )
+            )
+
+            state[nodestate].append(node)
+
+            nodes, changesets, bgood, badnode, goodnode = hbisect.bisect(repo, state)
+            node = nodes[0]
+
+            # update state
+            state["current"] = [node]
+            hbisect.save_state(repo, state)
+
+            if changesets == 0:
+                return (node, changesets, bgood)
+            nodestate = hbisect.checksparsebisectskip(repo, node, badnode, goodnode)
+
+        return (node, changesets, bgood)
+
     displayer = cmdutil.show_changeset(ui, repo, {})
 
     if command:
@@ -962,9 +1008,16 @@ def bisect(
                 ui.status(_("changeset %d:%s: %s\n") % (ctx, ctx, transition))
                 hbisect.checkstate(state)
                 # bisect
-                nodes, changesets, bgood = hbisect.bisect(repo, state)
-                # update to next check
+                nodes, changesets, bgood, badnode, goodnode = hbisect.bisect(
+                    repo, state
+                )
                 node = nodes[0]
+
+                if changesets != 0 and not nosparseskip:
+                    node, changesets, bgood = sparseskip(
+                        node, changesets, bgood, badnode, goodnode
+                    )
+
                 mayupdate(repo, node, show_stats=False)
         finally:
             state["current"] = [node]
@@ -975,18 +1028,44 @@ def bisect(
     hbisect.checkstate(state)
 
     # actually bisect
-    nodes, changesets, good = hbisect.bisect(repo, state)
+    nodes, changesets, good, badnode, goodnode = hbisect.bisect(repo, state)
+
+    def showtestingnext(rev, node, changesets):
+        # compute the approximate number of remaining tests
+        tests, size = 0, 2
+        while size <= changesets:
+            tests, size = tests + 1, size * 2
+        ui.write(
+            _("Testing changeset %d:%s " "(%d changesets remaining, ~%d tests)\n")
+            % (rev, short(node), changesets, tests)
+        )
+
+    # update to next check
     if extend:
         if not changesets:
             extendnode = hbisect.extendrange(repo, state, nodes, good)
             if extendnode is not None:
-                ui.write(
-                    _("Extending search to changeset %d:%s\n")
-                    % (extendnode.rev(), extendnode)
-                )
-                state["current"] = [extendnode.node()]
+                extnode, extrev = extendnode.node(), extendnode.rev()
+                state["current"] = [extnode]
                 hbisect.save_state(repo, state)
-                return mayupdate(repo, extendnode.node())
+                ui.write(
+                    _("Extending search to changeset %d:%s\n") % (extrev, extendnode)
+                )
+
+                if not nosparseskip:
+                    node, changesets, good = sparseskip(
+                        extnode, changesets, good, badnode, goodnode
+                    )
+                    if node != extnode:
+                        if changesets == 0:
+                            hbisect.printresult(
+                                ui, repo, state, displayer, [node], good
+                            )
+                            return
+                        showtestingnext(repo.changelog.rev(node), node, changesets)
+                        extnode = node
+
+                return mayupdate(repo, extnode)
         raise error.Abort(_("nothing to extend"))
 
     if changesets == 0:
@@ -994,17 +1073,21 @@ def bisect(
     else:
         assert len(nodes) == 1  # only a single node can be tested next
         node = nodes[0]
-        # compute the approximate number of remaining tests
-        tests, size = 0, 2
-        while size <= changesets:
-            tests, size = tests + 1, size * 2
-        rev = repo.changelog.rev(node)
-        ui.write(
-            _("Testing changeset %d:%s " "(%d changesets remaining, ~%d tests)\n")
-            % (rev, short(node), changesets, tests)
-        )
+
         state["current"] = [node]
         hbisect.save_state(repo, state)
+
+        if not nosparseskip:
+            node, changesets, good = sparseskip(
+                node, changesets, good, badnode, goodnode
+            )
+            if changesets == 0:
+                hbisect.printresult(ui, repo, state, displayer, [node], good)
+                return
+
+        rev = repo.changelog.rev(node)
+        showtestingnext(rev, node, changesets)
+
         return mayupdate(repo, node)
 
 

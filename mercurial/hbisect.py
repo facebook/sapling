@@ -12,14 +12,15 @@ from __future__ import absolute_import
 
 import collections
 
-from . import error
+from . import error, util
 from .i18n import _
 from .node import hex, short
 
 
 def bisect(repo, state):
     """find the next node (if any) for testing during a bisect search.
-    returns a (nodes, number, good) tuple.
+    returns a (nodes, number, good, badnode, goodnode) tuple, where badnode and
+    goodnode - borders of the range.
 
     'nodes' is the final result of the bisect if 'number' is 0.
     Otherwise 'number' indicates the remaining possible candidates for
@@ -34,18 +35,19 @@ def bisect(repo, state):
 
     def buildancestors(bad, good):
         badrev = min([changelog.rev(n) for n in bad])
+        goodrev = max([changelog.rev(n) for n in good])
         ancestors = collections.defaultdict(lambda: None)
         for rev in repo.revs("descendants(%ln) - ancestors(%ln)", good, good):
             ancestors[rev] = []
         if ancestors[badrev] is None:
-            return badrev, None
-        return badrev, ancestors
+            return badrev, goodrev, None
+        return badrev, goodrev, ancestors
 
     good = False
-    badrev, ancestors = buildancestors(state["bad"], state["good"])
+    badrev, goodrev, ancestors = buildancestors(state["bad"], state["good"])
     if not ancestors:  # looking for bad to good transition?
         good = True
-        badrev, ancestors = buildancestors(state["good"], state["bad"])
+        badrev, goodrev, ancestors = buildancestors(state["good"], state["bad"])
     bad = changelog.node(badrev)
     if not ancestors:  # now we're confused
         if (
@@ -57,6 +59,9 @@ def bisect(repo, state):
         raise error.Abort(
             _("inconsistent state, %s:%s is good and bad") % (badrev, short(bad))
         )
+
+    badnode = changelog.node(badrev)
+    goodnode = changelog.node(goodrev)
 
     # build children dict
     children = {}
@@ -80,7 +85,7 @@ def bisect(repo, state):
     tot = len(candidates)
     unskipped = [c for c in candidates if (c not in skip) and (c != badrev)]
     if tot == 1 or not unskipped:
-        return ([changelog.node(c) for c in candidates], 0, good)
+        return ([changelog.node(c) for c in candidates], 0, good, badnode, goodnode)
     perfect = tot // 2
 
     # find the best node to test
@@ -119,7 +124,38 @@ def bisect(repo, state):
     assert best_rev is not None
     best_node = changelog.node(best_rev)
 
-    return ([best_node], tot, good)
+    return ([best_node], tot, good, badnode, goodnode)
+
+
+def checksparsebisectskip(repo, candidatenode, badnode, goodnode):
+    """
+    Checks if the candidate node can be skipped as the contents haven't changed
+    within the sparse profile.
+    goodnode and badnode - borders of the bisect range.
+
+    Returns "good" if the node can be skipped as it's the same as goodnode,
+    "bad" if the node can be skipped as it's the same as badnode, "check" otherwise.
+    """
+
+    def diffsparsematch(node, diff):
+        if not util.safehasattr(repo, "sparsematch"):
+            return True
+        rev = repo.changelog.rev(node)
+        sparsematch = repo.sparsematch(rev)
+        return any(f for f in diff.keys() if sparsematch(f))
+
+    badmanifest = repo[badnode].manifest()
+    bestmanifest = repo[candidatenode].manifest()
+    goodmanifest = repo[goodnode].manifest()
+
+    baddiff = diffsparsematch(candidatenode, badmanifest.diff(bestmanifest))
+    gooddiff = diffsparsematch(candidatenode, bestmanifest.diff(goodmanifest))
+    if baddiff and not gooddiff:
+        return "good"
+    if not baddiff and gooddiff:
+        return "bad"
+
+    return "check"
 
 
 def extendrange(repo, state, nodes, good):
