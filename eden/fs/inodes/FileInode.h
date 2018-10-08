@@ -245,6 +245,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   folly::Future<size_t> write(folly::StringPiece data, off_t off);
 
+  void flush(uint64_t lock_owner);
+  void fsync(bool datasync);
+
  private:
   using State = FileInodeState;
   class LockedState;
@@ -422,8 +425,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       off_t off);
 
   folly::Future<struct stat> stat();
-  void flush(uint64_t lock_owner);
-  void fsync(bool datasync);
 
   /**
    * Update the st_blocks field in a stat structure based on the st_size value.

@@ -45,39 +45,6 @@ class FileHandle : public FileHandleBase {
   FOLLY_NODISCARD virtual folly::Future<size_t> write(
       folly::StringPiece data,
       off_t off) = 0;
-
-  /**
-   * Flush method
-   *
-   * This is called on each close() of the opened file.
-   *
-   * Since file descriptors can be duplicated (dup, dup2, fork), for
-   * one open call there may be many flush calls.
-   *
-   * Filesystems shouldn't assume that flush will always be called
-   * after some writes, or that if will be called at all.
-   *
-   * NOTE: the name of the method is misleading, since (unlike
-   * fsync) the filesystem is not forced to flush pending writes.
-   * One reason to flush data, is if the filesystem wants to return
-   * write errors.
-   *
-   * If the filesystem supports file locking operations (setlk,
-   * getlk) it should remove all locks belonging to 'lock_owner'.
-   */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> flush(
-      uint64_t lock_owner) = 0;
-
-  /**
-   * Synchronize file contents
-   *
-   * If the datasync parameter is non-zero, then only the user data
-   * should be flushed, not the meta data.
-   *
-   * @param datasync flag indicating if only data should be flushed
-   * @param fi file information
-   */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsync(bool datasync) = 0;
 };
 
 } // namespace eden

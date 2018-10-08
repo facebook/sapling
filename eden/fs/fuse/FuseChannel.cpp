@@ -1527,7 +1527,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRelease(
 
 folly::Future<folly::Unit> FuseChannel::fuseFsync(
 
-    const fuse_in_header* /*header*/,
+    const fuse_in_header* header,
     const uint8_t* arg) {
   const auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
   // There's no symbolic constant for this :-/
@@ -1535,9 +1535,10 @@ folly::Future<folly::Unit> FuseChannel::fuseFsync(
 
   XLOG(DBG7) << "FUSE_FSYNC";
 
-  auto fh = dispatcher_->getFileHandle(fsync->fh);
-  return fh->fsync(datasync).thenValue(
-      [](auto&&) { RequestData::get().replyError(0); });
+  auto ino = InodeNumber{header->nodeid};
+  return dispatcher_->fsync(ino, datasync).thenValue([](auto&&) {
+    RequestData::get().replyError(0);
+  });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
@@ -1624,13 +1625,13 @@ folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFlush(
-    const fuse_in_header* /*header*/,
+    const fuse_in_header* header,
     const uint8_t* arg) {
   const auto flush = reinterpret_cast<const fuse_flush_in*>(arg);
   XLOG(DBG7) << "FUSE_FLUSH";
-  const auto fh = dispatcher_->getFileHandle(flush->fh);
 
-  return fh->flush(flush->lock_owner).thenValue([](auto&&) {
+  auto ino = InodeNumber{header->nodeid};
+  return dispatcher_->flush(ino, flush->lock_owner).thenValue([](auto&&) {
     RequestData::get().replyError(0);
   });
 }

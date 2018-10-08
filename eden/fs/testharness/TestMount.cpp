@@ -322,8 +322,8 @@ void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   auto createResult =
       treeInode->create(relativePath.basename(), /*mode*/ 0644, /*flags*/ 0)
           .get();
-  createResult.file->write(contents, /*off*/ 0).get(0ms);
-  createResult.file->fsync(/*datasync*/ true).get(0ms);
+  createResult.inode->write(contents, /*off*/ 0).get(0ms);
+  createResult.inode->fsync(/*datasync*/ true);
 }
 
 void TestMount::addSymlink(
@@ -338,8 +338,8 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   auto file = getFileInode(path);
   auto fileHandle = file->open(O_RDWR | O_TRUNC).get();
   off_t offset = 0;
-  fileHandle->write(contents, offset).get(0ms);
-  fileHandle->fsync(/*datasync*/ true).get(0ms);
+  file->write(contents, offset).get(0ms);
+  file->fsync(/*datasync*/ true);
 }
 
 void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {

@@ -58,12 +58,6 @@ class FakeFileHandle : public FileHandle {
       override {
     throw std::runtime_error("fake!");
   }
-  folly::Future<folly::Unit> flush(uint64_t /*lock_owner*/) override {
-    throw std::runtime_error("fake!");
-  }
-  folly::Future<folly::Unit> fsync(bool /*datasync*/) override {
-    throw std::runtime_error("fake!");
-  }
 };
 } // namespace
 

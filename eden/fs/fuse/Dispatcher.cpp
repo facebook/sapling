@@ -152,6 +152,14 @@ folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
   FUSELL_NOT_IMPL();
 }
 
+folly::Future<folly::Unit> Dispatcher::flush(InodeNumber, uint64_t) {
+  FUSELL_NOT_IMPL();
+}
+
+folly::Future<folly::Unit> Dispatcher::fsync(InodeNumber, bool) {
+  FUSELL_NOT_IMPL();
+}
+
 folly::Future<struct fuse_kstatfs> Dispatcher::statfs(InodeNumber /*ino*/) {
   struct fuse_kstatfs info = {};
 

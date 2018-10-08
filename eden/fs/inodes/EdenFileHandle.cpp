@@ -73,25 +73,5 @@ folly::Future<size_t> EdenFileHandle::write(folly::StringPiece str, off_t off) {
       str.size());
   return inode_->write(str, off);
 }
-
-folly::Future<folly::Unit> EdenFileHandle::flush(uint64_t lock_owner) {
-  FB_LOGF(
-      inode_->getMount()->getStraceLogger(),
-      DBG7,
-      "flush({})",
-      inode_->getNodeId());
-  inode_->flush(lock_owner);
-  return folly::unit;
-}
-
-folly::Future<folly::Unit> EdenFileHandle::fsync(bool datasync) {
-  FB_LOGF(
-      inode_->getMount()->getStraceLogger(),
-      DBG7,
-      "fsync({})",
-      inode_->getNodeId());
-  inode_->fsync(datasync);
-  return folly::unit;
-}
 } // namespace eden
 } // namespace facebook

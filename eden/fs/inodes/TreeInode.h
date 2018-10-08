@@ -82,7 +82,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
     /// file attributes and cache ttls.
     Dispatcher::Attr attr;
     /// The newly created inode instance.
-    InodePtr inode;
+    FileInodePtr inode;
     /// The newly opened file handle.
     std::shared_ptr<EdenFileHandle> file;
 

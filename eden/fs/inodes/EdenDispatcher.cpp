@@ -194,6 +194,22 @@ folly::Future<Dispatcher::Create> EdenDispatcher::create(
       });
 }
 
+folly::Future<folly::Unit> EdenDispatcher::flush(
+    InodeNumber ino,
+    uint64_t lockOwner) {
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "flush({})", ino);
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [lockOwner](FileInodePtr inode) { return inode->flush(lockOwner); });
+}
+
+folly::Future<folly::Unit> EdenDispatcher::fsync(
+    InodeNumber ino,
+    bool datasync) {
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "fsync({})", ino);
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [datasync](FileInodePtr inode) { return inode->fsync(datasync); });
+};
+
 folly::Future<std::string> EdenDispatcher::readlink(InodeNumber ino) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "readlink({})", ino);
   return inodeMap_->lookupFileInode(ino).then(

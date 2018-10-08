@@ -251,6 +251,37 @@ class Dispatcher {
       int flags);
 
   /**
+   * This is called on each close() of the opened file.
+   *
+   * Since file descriptors can be duplicated (dup, dup2, fork), for
+   * one open call there may be many flush calls.
+   *
+   * Filesystems shouldn't assume that flush will always be called
+   * after some writes, or that if will be called at all.
+   *
+   * NOTE: the name of the method is misleading, since (unlike
+   * fsync) the filesystem is not forced to flush pending writes.
+   * One reason to flush data, is if the filesystem wants to return
+   * write errors.
+   *
+   * If the filesystem supports file locking operations (setlk,
+   * getlk) it should remove all locks belonging to 'lock_owner'.
+   */
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> flush(
+      InodeNumber ino,
+      uint64_t lock_owner);
+
+  /**
+   * Ensure file content changes are flushed to disk.
+   *
+   * If the datasync parameter is true, then only the user data should be
+   * flushed, not the meta data.
+   */
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsync(
+      InodeNumber ino,
+      bool datasync);
+
+  /**
    * Get file system statistics
    *
    * @param ino the inode number, zero means "undefined"

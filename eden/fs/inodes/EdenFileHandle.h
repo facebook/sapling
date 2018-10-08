@@ -57,9 +57,6 @@ class EdenFileHandle : public FileHandle {
   FOLLY_NODISCARD folly::Future<size_t> write(
       folly::StringPiece data,
       off_t off) override;
-  FOLLY_NODISCARD folly::Future<folly::Unit> flush(
-      uint64_t lock_owner) override;
-  FOLLY_NODISCARD folly::Future<folly::Unit> fsync(bool datasync) override;
 
  private:
   EdenFileHandle() = delete;

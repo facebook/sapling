@@ -75,6 +75,11 @@ class EdenDispatcher : public Dispatcher {
       PathComponentPiece name,
       mode_t mode,
       int flags) override;
+
+  folly::Future<folly::Unit> flush(InodeNumber ino, uint64_t lockOwner)
+      override;
+  folly::Future<folly::Unit> fsync(InodeNumber ino, bool datasync) override;
+
   folly::Future<std::string> getxattr(InodeNumber ino, folly::StringPiece name)
       override;
   folly::Future<std::vector<std::string>> listxattr(InodeNumber ino) override;
