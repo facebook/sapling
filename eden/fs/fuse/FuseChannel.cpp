@@ -1490,15 +1490,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
           throw std::runtime_error("Dispatcher::open failed to set fh");
         }
         fuse_open_out out = {};
-        if (fh->usesDirectIO()) {
-          out.open_flags |= FOPEN_DIRECT_IO;
-        }
-        if (fh->preserveCache()) {
-          out.open_flags |= FOPEN_KEEP_CACHE;
-        }
-        if (!fh->isSeekable()) {
-          out.open_flags |= FOPEN_NONSEEKABLE;
-        }
+        out.open_flags |= FOPEN_KEEP_CACHE;
         out.fh = dispatcher_->getFileHandles().recordHandle(std::move(fh));
         try {
           RequestData::get().sendReply(out);
@@ -1721,15 +1713,7 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
       ->create(InodeNumber{header->nodeid}, name, create->mode, create->flags)
       .thenValue([this](Dispatcher::Create info) {
         fuse_open_out out = {};
-        if (info.fh->usesDirectIO()) {
-          out.open_flags |= FOPEN_DIRECT_IO;
-        }
-        if (info.fh->preserveCache()) {
-          out.open_flags |= FOPEN_KEEP_CACHE;
-        }
-        if (!info.fh->isSeekable()) {
-          out.open_flags |= FOPEN_NONSEEKABLE;
-        }
+        out.open_flags |= FOPEN_KEEP_CACHE;
         out.fh = dispatcher_->getFileHandles().recordHandle(std::move(info.fh));
 
         XLOG(DBG7) << "CREATE fh=" << out.fh << " flags=" << out.open_flags;

@@ -45,14 +45,6 @@ folly::Future<Dispatcher::Attr> EdenFileHandle::setattr(
   return inode_->setattr(attr);
 }
 
-bool EdenFileHandle::preserveCache() const {
-  return true;
-}
-
-bool EdenFileHandle::isSeekable() const {
-  return true;
-}
-
 folly::Future<BufVec> EdenFileHandle::read(size_t size, off_t off) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),

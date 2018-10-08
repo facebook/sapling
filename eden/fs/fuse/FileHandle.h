@@ -16,21 +16,6 @@ namespace eden {
 class FileHandle : public FileHandleBase {
  public:
   /**
-   * Return true if this file handle uses direct IO
-   */
-  virtual bool usesDirectIO() const;
-
-  /**
-   * Return true if, at open() time, the kernel can retain cached info.
-   */
-  virtual bool preserveCache() const;
-
-  /**
-   * Return true if the file is seekable.
-   */
-  virtual bool isSeekable() const;
-
-  /**
    * Read data
    *
    * Read should send exactly the number of bytes requested except
