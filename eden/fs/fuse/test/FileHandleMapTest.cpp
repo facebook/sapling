@@ -22,11 +22,6 @@ namespace {
 
 class FakeDirHandle : public DirHandle {
  public:
-  explicit FakeDirHandle(InodeNumber inode) : inode_(inode) {}
-
-  InodeNumber getInodeNumber() override {
-    return inode_;
-  }
   folly::Future<Dispatcher::Attr> getattr() override {
     throw std::runtime_error("fake!");
   }
@@ -41,18 +36,10 @@ class FakeDirHandle : public DirHandle {
   folly::Future<folly::Unit> fsyncdir(bool /*datasync*/) override {
     throw std::runtime_error("fake!");
   }
-
- private:
-  InodeNumber inode_;
 };
 
 class FakeFileHandle : public FileHandle {
  public:
-  explicit FakeFileHandle(InodeNumber inode) : inode_(inode) {}
-
-  InodeNumber getInodeNumber() override {
-    return inode_;
-  }
   folly::Future<Dispatcher::Attr> getattr() override {
     throw std::runtime_error("fake!");
   }
@@ -77,9 +64,6 @@ class FakeFileHandle : public FileHandle {
   folly::Future<folly::Unit> fsync(bool /*datasync*/) override {
     throw std::runtime_error("fake!");
   }
-
- private:
-  InodeNumber inode_;
 };
 } // namespace
 
@@ -94,11 +78,11 @@ FileHandleMapEntry makeEntry(uint64_t inode, uint64_t handleId, bool isDir) {
 TEST(FileHandleMap, Serialization) {
   FileHandleMap fmap;
 
-  auto fileHandle = std::make_shared<FakeFileHandle>(123_ino);
-  auto dirHandle = std::make_shared<FakeDirHandle>(345_ino);
+  auto fileHandle = std::make_shared<FakeFileHandle>();
+  auto dirHandle = std::make_shared<FakeDirHandle>();
 
-  auto fileHandleNo = fmap.recordHandle(fileHandle);
-  auto dirHandleNo = fmap.recordHandle(dirHandle);
+  auto fileHandleNo = fmap.recordHandle(fileHandle, 123_ino);
+  auto dirHandleNo = fmap.recordHandle(dirHandle, 345_ino);
 
   auto serialized = fmap.serializeMap();
 
@@ -115,8 +99,8 @@ TEST(FileHandleMap, Serialization) {
   EXPECT_EQ(expected, serialized.entries);
 
   FileHandleMap newMap;
-  newMap.recordHandle(fileHandle, fileHandleNo);
-  newMap.recordHandle(dirHandle, dirHandleNo);
+  newMap.recordHandle(fileHandle, 123_ino, fileHandleNo);
+  newMap.recordHandle(dirHandle, 345_ino, dirHandleNo);
 
   auto newSerialized = newMap.serializeMap();
 

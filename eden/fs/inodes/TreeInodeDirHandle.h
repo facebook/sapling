@@ -23,7 +23,6 @@ class TreeInodeDirHandle : public DirHandle {
   folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
   folly::Future<folly::Unit> fsyncdir(bool datasync) override;
   folly::Future<Dispatcher::Attr> getattr() override;
-  InodeNumber getInodeNumber() override;
 
  private:
   TreeInodePtr inode_;

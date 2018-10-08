@@ -135,9 +135,5 @@ folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool /*datasync*/) {
 folly::Future<Dispatcher::Attr> TreeInodeDirHandle::getattr() {
   return inode_->getattr();
 }
-
-InodeNumber TreeInodeDirHandle::getInodeNumber() {
-  return inode_->getNodeId();
-}
 } // namespace eden
 } // namespace facebook

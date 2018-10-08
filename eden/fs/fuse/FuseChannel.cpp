@@ -1484,14 +1484,15 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
     const uint8_t* arg) {
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
   XLOG(DBG7) << "FUSE_OPEN";
-  return dispatcher_->open(InodeNumber{header->nodeid}, open->flags)
-      .thenValue([this](std::shared_ptr<FileHandle> fh) {
+  auto ino = InodeNumber{header->nodeid};
+  return dispatcher_->open(ino, open->flags)
+      .thenValue([this, ino](std::shared_ptr<FileHandle> fh) {
         if (!fh) {
           throw std::runtime_error("Dispatcher::open failed to set fh");
         }
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;
-        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(fh));
+        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(fh), ino);
         try {
           RequestData::get().sendReply(out);
         } catch (const std::system_error&) {
@@ -1639,13 +1640,14 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
     const uint8_t* arg) {
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
   XLOG(DBG7) << "FUSE_OPENDIR";
-  return dispatcher_->opendir(InodeNumber{header->nodeid}, open->flags)
-      .thenValue([this](std::shared_ptr<DirHandle> dh) {
+  auto ino = InodeNumber{header->nodeid};
+  return dispatcher_->opendir(ino, open->flags)
+      .thenValue([this, ino](std::shared_ptr<DirHandle> dh) {
         if (!dh) {
           throw std::runtime_error("Dispatcher::opendir failed to set dh");
         }
         fuse_open_out out = {};
-        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(dh));
+        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(dh), ino);
         XLOG(DBG7) << "OPENDIR fh=" << out.fh;
         try {
           RequestData::get().sendReply(out);
@@ -1709,12 +1711,13 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
   const auto create = reinterpret_cast<const fuse_create_in*>(arg);
   const PathComponentPiece name{reinterpret_cast<const char*>(create + 1)};
   XLOG(DBG7) << "FUSE_CREATE " << name;
-  return dispatcher_
-      ->create(InodeNumber{header->nodeid}, name, create->mode, create->flags)
-      .thenValue([this](Dispatcher::Create info) {
+  auto ino = InodeNumber{header->nodeid};
+  return dispatcher_->create(ino, name, create->mode, create->flags)
+      .thenValue([this, ino](Dispatcher::Create info) {
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;
-        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(info.fh));
+        out.fh =
+            dispatcher_->getFileHandles().recordHandle(std::move(info.fh), ino);
 
         XLOG(DBG7) << "CREATE fh=" << out.fh << " flags=" << out.open_flags;
 

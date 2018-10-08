@@ -32,7 +32,7 @@ std::shared_ptr<FileHandleBase> FileHandleMap::getGenericFileHandle(
     folly::throwSystemErrorExplicit(
         EBADF, "file number ", fh, " is not tracked by this FileHandleMap");
   }
-  return iter->second;
+  return iter->second.handle;
 }
 
 std::shared_ptr<FileHandle> FileHandleMap::getFileHandle(uint64_t fh) {
@@ -57,6 +57,7 @@ std::shared_ptr<DirHandle> FileHandleMap::getDirHandle(uint64_t fh) {
 
 void FileHandleMap::recordHandle(
     std::shared_ptr<FileHandleBase> fh,
+    InodeNumber inodeNumber,
     uint64_t number) {
   const auto handles = handles_.wlock();
 
@@ -65,10 +66,12 @@ void FileHandleMap::recordHandle(
         EEXIST, "file number ", number, " is already present in the map!?");
   }
 
-  handles->emplace(number, fh);
+  handles->emplace(number, HandleEntry{fh, inodeNumber});
 }
 
-uint64_t FileHandleMap::recordHandle(std::shared_ptr<FileHandleBase> fh) {
+uint64_t FileHandleMap::recordHandle(
+    std::shared_ptr<FileHandleBase> fh,
+    InodeNumber inodeNumber) {
   auto handles = handles_.wlock();
 
   // Our assignment strategy is just to take the address of the instance
@@ -91,9 +94,9 @@ uint64_t FileHandleMap::recordHandle(std::shared_ptr<FileHandleBase> fh) {
   for (auto attempts = 0; attempts < 100; ++attempts) {
     auto& entry = (*handles)[number];
 
-    if (LIKELY(!entry)) {
+    if (LIKELY(!entry.handle)) {
       // Successfully inserted with no collision
-      entry = std::move(fh);
+      entry = HandleEntry{std::move(fh), inodeNumber};
       return number;
     }
 
@@ -119,7 +122,7 @@ std::shared_ptr<FileHandleBase> FileHandleMap::forgetGenericHandle(
   }
   auto result = iter->second;
   handles->erase(iter);
-  return result;
+  return result.handle;
 }
 
 SerializedFileHandleMap FileHandleMap::serializeMap() {
@@ -130,8 +133,9 @@ SerializedFileHandleMap FileHandleMap::serializeMap() {
     FileHandleMapEntry entry;
 
     entry.handleId = (int64_t)it.first;
-    entry.isDir = std::dynamic_pointer_cast<DirHandle>(it.second) != nullptr;
-    entry.inodeNumber = it.second->getInodeNumber().get();
+    entry.isDir =
+        std::dynamic_pointer_cast<DirHandle>(it.second.handle) != nullptr;
+    entry.inodeNumber = it.second.inodeNumber.get();
 
     result.entries.push_back(std::move(entry));
   }

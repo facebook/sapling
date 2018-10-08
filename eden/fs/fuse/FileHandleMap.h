@@ -11,6 +11,7 @@
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <unordered_map>
+#include "eden/fs/fuse/FuseTypes.h"
 
 namespace facebook {
 namespace eden {
@@ -56,12 +57,17 @@ class FileHandleMap {
    * In some situations, it may not be possible to assign a number
    * in a reasonable number of attempts and EMFILE will be thrown.
    **/
-  uint64_t recordHandle(std::shared_ptr<FileHandleBase> fh);
+  uint64_t recordHandle(
+      std::shared_ptr<FileHandleBase> fh,
+      InodeNumber inodeNumber);
 
   /** Records a file handle mapping when deserializing the map.
    * This is required to ensure that we record the correct mapping
    * when bootstrapping the map during a graceful restart. */
-  void recordHandle(std::shared_ptr<FileHandleBase> fh, uint64_t number);
+  void recordHandle(
+      std::shared_ptr<FileHandleBase> fh,
+      InodeNumber inodeNumber,
+      uint64_t number);
 
   /** Delete the association from the fh to a handle instance.
    * Throws EBADF if the file handle is not tracked by this map.
@@ -77,9 +83,11 @@ class FileHandleMap {
   SerializedFileHandleMap serializeMap();
 
  private:
-  folly::Synchronized<
-      std::unordered_map<uint64_t, std::shared_ptr<FileHandleBase>>>
-      handles_;
+  struct HandleEntry {
+    std::shared_ptr<FileHandleBase> handle;
+    InodeNumber inodeNumber;
+  };
+  folly::Synchronized<std::unordered_map<uint64_t, HandleEntry>> handles_;
 };
 
 } // namespace eden

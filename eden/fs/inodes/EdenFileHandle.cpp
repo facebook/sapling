@@ -31,10 +31,6 @@ folly::Future<Dispatcher::Attr> EdenFileHandle::getattr() {
   return inode_->getattr();
 }
 
-InodeNumber EdenFileHandle::getInodeNumber() {
-  return inode_->getNodeId();
-}
-
 folly::Future<Dispatcher::Attr> EdenFileHandle::setattr(
     const fuse_setattr_in& attr) {
   FB_LOGF(

@@ -696,10 +696,14 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
           // the correct flags here.
           dispatcher
               ->opendir(InodeNumber::fromThrift(handleEntry.inodeNumber), 0)
-              .thenValue([dispatcher, number = handleEntry.handleId](
+              .thenValue([dispatcher,
+                          inodeNumber = handleEntry.inodeNumber,
+                          number = handleEntry.handleId](
                              std::shared_ptr<DirHandle> handle) {
                 dispatcher->getFileHandles().recordHandle(
-                    std::static_pointer_cast<FileHandleBase>(handle), number);
+                    std::static_pointer_cast<FileHandleBase>(handle),
+                    InodeNumber::fromThrift(inodeNumber),
+                    number);
               }));
     } else {
       futures.emplace_back(
@@ -708,10 +712,14 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
           // the correct flags here.
           dispatcher
               ->open(InodeNumber::fromThrift(handleEntry.inodeNumber), O_RDWR)
-              .thenValue([dispatcher, number = handleEntry.handleId](
+              .thenValue([dispatcher,
+                          inodeNumber = handleEntry.inodeNumber,
+                          number = handleEntry.handleId](
                              std::shared_ptr<FileHandle> handle) {
                 dispatcher->getFileHandles().recordHandle(
-                    std::static_pointer_cast<FileHandleBase>(handle), number);
+                    std::static_pointer_cast<FileHandleBase>(handle),
+                    InodeNumber::fromThrift(inodeNumber),
+                    number);
               }));
     }
   }

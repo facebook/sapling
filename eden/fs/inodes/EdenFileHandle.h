@@ -48,7 +48,6 @@ class EdenFileHandle : public FileHandle {
    */
   ~EdenFileHandle() override;
 
-  InodeNumber getInodeNumber() override;
   folly::Future<Dispatcher::Attr> getattr() override;
   FOLLY_NODISCARD folly::Future<Dispatcher::Attr> setattr(
       const fuse_setattr_in& attr) override;
