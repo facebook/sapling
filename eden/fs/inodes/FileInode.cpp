@@ -674,11 +674,10 @@ folly::Future<bool> FileInode::isSameAs(
   }
 
   auto f1 = getSha1();
-  auto f2 = getMount()->getObjectStore()->getBlobMetadata(blobID);
-  return folly::collect(f1, f2).thenValue(
-      [](std::tuple<Hash, BlobMetadata>&& result) {
-        return std::get<0>(result) == std::get<1>(result).sha1;
-      });
+  auto f2 = getMount()->getObjectStore()->getSha1(blobID);
+  return folly::collect(f1, f2).thenValue([](std::tuple<Hash, Hash>&& result) {
+    return std::get<0>(result) == std::get<1>(result);
+  });
 }
 
 mode_t FileInode::getMode() const {
@@ -772,10 +771,7 @@ Future<Hash> FileInode::getSha1() {
     case State::BLOB_LOADING:
     case State::BLOB_LOADED:
       // If a file is not materialized it should have a hash value.
-      return getObjectStore()
-          ->getBlobMetadata(state->hash.value())
-          .thenValue(
-              [](const BlobMetadata& metadata) { return metadata.sha1; });
+      return getObjectStore()->getSha1(state->hash.value());
     case State::MATERIALIZED_IN_OVERLAY:
       state.ensureFileOpen(this);
       if (state->sha1Valid) {
@@ -1088,7 +1084,7 @@ void FileInode::materializeNow(LockedState& state) {
   // Look up the blob metadata so we can get the blob contents SHA1
   // Since this uses state->hash we perform this before calling
   // state.setMaterialized()
-  auto blobMetadata = getObjectStore()->getBlobMetadata(state->hash.value());
+  auto blobSha1 = getObjectStore()->getSha1(state->hash.value());
 
   auto timestamps = getMetadataLocked(*state).timestamps;
 
@@ -1099,8 +1095,8 @@ void FileInode::materializeNow(LockedState& state) {
   // If we have a SHA-1 from the metadata, apply it to the new file.  This
   // saves us from recomputing it again in the case that something opens the
   // file read/write and closes it without changing it.
-  if (blobMetadata.isReady()) {
-    storeSha1(state, blobMetadata.value().sha1);
+  if (blobSha1.isReady()) {
+    storeSha1(state, blobSha1.value());
   } else {
     // Leave the SHA-1 attribute dirty - it is not very likely that a file
     // will be opened for writing, closed without changing, and then have

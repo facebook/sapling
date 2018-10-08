@@ -1167,7 +1167,7 @@ TEST(DiffTest, fileNotReady) {
   auto t1 = builder1.getStoredBlob("src/t.txt"_relpath);
   auto u1 = builder1.getStoredBlob("src/u.txt"_relpath);
 
-  // The diff process calls both getBlob() and getBlobMetadata(), which can end
+  // The diff process calls both getBlob() and getSha1(), which can end
   // up waiting on these objects to load multiple times.
   //
   // trigger these objects multiple times without marking them fully ready yet.

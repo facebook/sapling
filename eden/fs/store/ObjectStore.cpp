@@ -191,5 +191,10 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
             });
       });
 }
+
+Future<Hash> ObjectStore::getSha1(const Hash& id) const {
+  return getBlobMetadata(id).thenValue(
+      [](const BlobMetadata& metadata) { return metadata.sha1; });
+}
 } // namespace eden
 } // namespace facebook

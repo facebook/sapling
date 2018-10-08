@@ -80,6 +80,11 @@ class ObjectStore : public IObjectStore {
   folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;
 
   /**
+   * Returns the SHA-1 hash of the contents of the blob with the given ID.
+   */
+  folly::Future<Hash> getSha1(const Hash& id) const;
+
+  /**
    * Get the LocalStore used by this ObjectStore
    */
   const std::shared_ptr<LocalStore>& getLocalStore() const {
