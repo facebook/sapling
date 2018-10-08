@@ -20,9 +20,7 @@ class TreeInodeDirHandle : public DirHandle {
 
   folly::Future<DirList> readdir(DirList&& list, off_t off) override;
 
-  folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
   folly::Future<folly::Unit> fsyncdir(bool datasync) override;
-  folly::Future<Dispatcher::Attr> getattr() override;
 
  private:
   TreeInodePtr inode_;

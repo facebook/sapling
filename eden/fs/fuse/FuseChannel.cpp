@@ -1312,21 +1312,6 @@ folly::Future<folly::Unit> FuseChannel::fuseForget(
 folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
     const fuse_in_header* header,
     const uint8_t* arg) {
-  // If we're new enough, check to see if a file handle was provided
-  if (connInfo_->minor >= 9) {
-    const auto getattr = reinterpret_cast<const fuse_getattr_in*>(arg);
-    if (getattr->getattr_flags & FUSE_GETATTR_FH) {
-      XLOG(DBG7) << "FUSE_GETATTR inode=" << header->nodeid
-                 << " FH=" << getattr->fh;
-      return dispatcher_->getGenericFileHandle(getattr->fh)
-          ->getattr()
-          .thenValue([](Dispatcher::Attr attr) {
-            RequestData::get().sendReply(attr.asFuseAttr());
-          });
-    }
-    // otherwise, fall through to regular inode based lookup
-  }
-
   XLOG(DBG7) << "FUSE_GETATTR inode=" << header->nodeid;
   return dispatcher_->getattr(InodeNumber{header->nodeid})
       .thenValue([](Dispatcher::Attr attr) {
@@ -1338,19 +1323,11 @@ folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto setattr = reinterpret_cast<const fuse_setattr_in*>(arg);
-  XLOG(DBG7) << "FUSE_SETATTR";
-  if (setattr->valid & FATTR_FH) {
-    return dispatcher_->getGenericFileHandle(setattr->fh)
-        ->setattr(*setattr)
-        .thenValue([](Dispatcher::Attr attr) {
-          RequestData::get().sendReply(attr.asFuseAttr());
-        });
-  } else {
-    return dispatcher_->setattr(InodeNumber{header->nodeid}, *setattr)
-        .thenValue([](Dispatcher::Attr attr) {
-          RequestData::get().sendReply(attr.asFuseAttr());
-        });
-  }
+  XLOG(DBG7) << "FUSE_SETATTR inode=" << header->nodeid;
+  return dispatcher_->setattr(InodeNumber{header->nodeid}, *setattr)
+      .thenValue([](Dispatcher::Attr attr) {
+        RequestData::get().sendReply(attr.asFuseAttr());
+      });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReadLink(

@@ -22,25 +22,6 @@ EdenFileHandle::~EdenFileHandle() {
   inode_->fileHandleDidClose();
 }
 
-folly::Future<Dispatcher::Attr> EdenFileHandle::getattr() {
-  FB_LOGF(
-      inode_->getMount()->getStraceLogger(),
-      DBG7,
-      "getattr({})",
-      inode_->getNodeId());
-  return inode_->getattr();
-}
-
-folly::Future<Dispatcher::Attr> EdenFileHandle::setattr(
-    const fuse_setattr_in& attr) {
-  FB_LOGF(
-      inode_->getMount()->getStraceLogger(),
-      DBG7,
-      "setattr({})",
-      inode_->getNodeId());
-  return inode_->setattr(attr);
-}
-
 folly::Future<BufVec> EdenFileHandle::read(size_t size, off_t off) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),

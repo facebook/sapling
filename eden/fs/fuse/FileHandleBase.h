@@ -22,24 +22,6 @@ class FileHandleBase {
  public:
   virtual ~FileHandleBase();
 
-  /**
-   * Get file attributes
-   */
-  virtual folly::Future<Dispatcher::Attr> getattr() = 0;
-
-  /**
-   * Set file attributes
-   *
-   * In the 'attr' argument only members indicated by the 'to_set'
-   * bitmask contain valid values.  Other members contain undefined
-   * values.
-   *
-   * @param attr the attributes
-   * @param to_set bit mask of attributes which should be set
-   */
-  virtual folly::Future<Dispatcher::Attr> setattr(
-      const fuse_setattr_in& attr) = 0;
-
   /* The result of an ioctl operation */
   struct Ioctl {
     int result;

@@ -22,13 +22,6 @@ namespace {
 
 class FakeDirHandle : public DirHandle {
  public:
-  folly::Future<Dispatcher::Attr> getattr() override {
-    throw std::runtime_error("fake!");
-  }
-  folly::Future<Dispatcher::Attr> setattr(
-      const fuse_setattr_in& /* attr */) override {
-    throw std::runtime_error("fake!");
-  }
   folly::Future<DirList> readdir(DirList&& /*list*/, off_t /*off*/) override {
     throw std::runtime_error("fake!");
   }
@@ -40,14 +33,6 @@ class FakeDirHandle : public DirHandle {
 
 class FakeFileHandle : public FileHandle {
  public:
-  folly::Future<Dispatcher::Attr> getattr() override {
-    throw std::runtime_error("fake!");
-  }
-  folly::Future<Dispatcher::Attr> setattr(
-      const fuse_setattr_in& /* attr */) override {
-    throw std::runtime_error("fake!");
-  }
-
   folly::Future<BufVec> read(size_t /*size*/, off_t /*off*/) override {
     throw std::runtime_error("fake!");
   }

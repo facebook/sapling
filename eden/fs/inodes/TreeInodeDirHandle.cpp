@@ -122,18 +122,9 @@ folly::Future<DirList> TreeInodeDirHandle::readdir(DirList&& list, off_t off) {
   return std::move(list);
 }
 
-folly::Future<Dispatcher::Attr> TreeInodeDirHandle::setattr(
-    const fuse_setattr_in& attr) {
-  return inode_->setattr(attr);
-}
-
 folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool /*datasync*/) {
   // We're read-only here, so there is nothing to sync
   return folly::unit;
-}
-
-folly::Future<Dispatcher::Attr> TreeInodeDirHandle::getattr() {
-  return inode_->getattr();
 }
 } // namespace eden
 } // namespace facebook
