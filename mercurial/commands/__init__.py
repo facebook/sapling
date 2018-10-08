@@ -13,7 +13,7 @@ import os
 import re
 import sys
 
-from . import (
+from .. import (
     archival,
     bookmarks,
     bundle2,
@@ -53,8 +53,8 @@ from . import (
     ui as uimod,
     util,
 )
-from .i18n import _
-from .node import hex, nullid, nullrev, short
+from ..i18n import _
+from ..node import hex, nullid, nullrev, short
 
 
 release = lockmod.release
