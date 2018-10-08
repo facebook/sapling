@@ -204,6 +204,24 @@ mod test {
         });
     }
 
+    #[test]
+    fn test_cs_hook_check_comments() {
+        // Runs hook on a commit that has no parents
+        async_unit::tokio_unit_test(move || {
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.info.comments == \"modified 10\"\n\
+                 end",
+            );
+            let changeset_id = String::from("79a13814c5ce7330173ec04d279bf95ab3f652fb");
+            match test_hook(code, changeset_id, false) {
+                Ok(HookExecution::Accepted) => (),
+                Ok(HookExecution::Rejected(_)) => assert!(false, "Hook should be accepted"),
+                Err(e) => assert!(false, format!("Unexpected error {:?}", e)),
+            }
+        });
+    }
+
     fn test_hook_accepted(file: bool) {
         async_unit::tokio_unit_test(move || {
             let code = String::from(

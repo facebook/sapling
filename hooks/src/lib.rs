@@ -365,7 +365,7 @@ impl HookManager {
                         HookFile::new(path, content_store.clone(), changeset_id.clone(), ty)
                     })
                     .collect();
-                let comments = str::from_utf8(changeset.user())?.into();
+                let comments = str::from_utf8(changeset.comments())?.into();
                 let parents = HookChangesetParents::from(changeset.parents());
                 Ok(HookChangeset {
                     author,
@@ -1203,7 +1203,7 @@ mod test {
             let data = HookChangeset::new(
                 "Stanislau Hlebik <stash@fb.com>".into(),
                 hook_files,
-                "Stanislau Hlebik <stash@fb.com>".into(),
+                "3".into(),
                 parents,
             );
             let expected_context = HookContext {
