@@ -1,9 +1,3 @@
-
-  $ cat << EOF >> $HGRCPATH
-  > [extensions]
-  > age=
-  > EOF
-
 Setup repo
   $ hg init repo
   $ cd repo

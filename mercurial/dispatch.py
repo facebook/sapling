@@ -209,7 +209,6 @@ def _preimportmodules():
     ]
     extmods = [
         "absorb",
-        "age",
         "arcdiff",
         "automv",
         "blackbox",

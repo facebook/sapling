@@ -293,7 +293,6 @@ Test extension help:
       disabled extensions:
   
        absorb        apply working directory changes to changesets
-       age
        arcdiff       (no help text available)
        backups       display recently made backups to recover stripped
                      changesets

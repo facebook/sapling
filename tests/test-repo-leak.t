@@ -112,7 +112,6 @@ Somehow problematic: With many extensions
   > mergedriver =
   > pushrebase =
   > treemanifest =
-  > age=
   > automv=
   > blackbox=
   > crdump=
