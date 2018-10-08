@@ -49,30 +49,39 @@ namespace {
 
 class FakeEdenServiceHandler;
 
+enum class StopBehavior {
+  DoNothing,
+  TerminateEventLoop,
+};
+
 class FakeEdenServer {
  public:
   FakeEdenServer() {}
 
   void run(folly::SocketAddress thriftAddress, StartupLogger& startupLogger);
   void stop(StringPiece reason) {
-    if (!honorStop_) {
-      XLOG(INFO) << "ignoring stop attempt: " << reason;
-      return;
-    }
+    XLOG(INFO) << "received stop request: " << reason;
 
-    XLOG(INFO) << "stopping: " << reason;
-    eventBase_->terminateLoopSoon();
+    switch (stopBehavior_) {
+      case StopBehavior::DoNothing:
+        XLOG(INFO) << "ignoring stop attempt";
+        break;
+      case StopBehavior::TerminateEventLoop:
+        XLOG(INFO) << "stopping";
+        eventBase_->terminateLoopSoon();
+        break;
+    }
   }
 
-  void setHonorStop(bool honorStop) {
-    honorStop_ = honorStop;
+  void setStopBehavior(StopBehavior stopBehavior) {
+    stopBehavior_ = stopBehavior;
   }
 
  private:
   EventBase* eventBase_{nullptr};
   ThriftServer server_;
   std::shared_ptr<FakeEdenServiceHandler> handler_;
-  bool honorStop_{true};
+  StopBehavior stopBehavior_{StopBehavior::TerminateEventLoop};
 };
 
 class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
@@ -97,7 +106,9 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
       if (boolValue.hasError()) {
         badOption();
       }
-      server_->setHonorStop(boolValue.value());
+      server_->setStopBehavior(
+          boolValue.value() ? StopBehavior::TerminateEventLoop
+                            : StopBehavior::DoNothing);
     } else if (*name == "status") {
       if (*value == "starting") {
         status_ = fb_status::STARTING;
@@ -242,7 +253,7 @@ int main(int argc, char** argv) {
 
   FakeEdenServer server;
   if (FLAGS_ignoreStop) {
-    server.setHonorStop(false);
+    server.setStopBehavior(StopBehavior::DoNothing);
   }
   server.run(thriftAddress, startupLogger);
   return 0;
