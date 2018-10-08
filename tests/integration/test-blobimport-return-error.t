@@ -29,12 +29,12 @@ Init treemanifest and remotefilelog
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
-  
+   (re)
   changeset:   0:3903775176ed
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
-  
+   (re)
   $ cd $TESTTMP
 
 blobimport with missing first commit, it should fail

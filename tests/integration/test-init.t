@@ -37,7 +37,7 @@ Init treemanifest and remotefilelog
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
-  
+   (re)
   $ cd $TESTTMP
 
 setup repo2
@@ -90,7 +90,7 @@ setup repo2
   o |  9a827afb7e25 B
   |/
   o  af6aa0dfdf3d A
-  
+   (re)
   @  28468743616e rename
   |
   o  329b10223740 modify file
@@ -102,7 +102,7 @@ setup repo2
   o  0e067c57feba b
   |
   o  3903775176ed a
-  
+   (re)
 
 setup master bookmarks
 
@@ -144,7 +144,7 @@ Pull the rest
   o  0e067c57feba b
   |
   @  3903775176ed a
-  
+   (re)
   $ ls
   a
   $ hgmn up 28468743616e -q

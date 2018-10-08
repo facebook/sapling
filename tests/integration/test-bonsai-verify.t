@@ -37,7 +37,7 @@ Init treemanifest and remotefilelog
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
-  
+   (re)
   $ hg log -r. -T '{node}\n'
   3903775176ed42b1458a6281db4a0ccf4d9f287a
 
@@ -49,5 +49,5 @@ blobimport
 smoke test to ensure bonsai_verify works
 
   $ bonsai_verify repo 3903775176ed42b1458a6281db4a0ccf4d9f287a
-  summary: 
+  summary:  (re)
    * INFO 100.00% valid, total: 1, valid: 1, errors: 0, ignored: 0 (glob)

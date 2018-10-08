@@ -35,7 +35,7 @@ setup repo-hg
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
-  
+   (re)
 
 create master bookmark
   $ hg bookmark master_bookmark -r tip
@@ -78,7 +78,7 @@ pull on repo2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
-  
+   (re)
   $ hgmn update -r master_bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -104,12 +104,12 @@ push one more long path from repo2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long2
-  
+   (re)
   changeset:   0:bf1993b0fae3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
-  
+   (re)
   $ hgmn push
   pushing to ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
@@ -139,12 +139,12 @@ pull on repo3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long2
-  
+   (re)
   changeset:   0:bf1993b0fae3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
-  
+   (re)
   $ hgmn update -r master_bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -19,12 +19,12 @@ setup repo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
-  
+   (re)
   changeset:   0:3903775176ed
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
-  
+   (re)
 
 setup master bookmark
   $ hg bookmark master_bookmark -r 3903775176ed
@@ -60,7 +60,7 @@ Helper script to test the lookup function
   > EOF
 
 Lookup non-existent hash
-  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup fffffffffffff6c66edf28380101a92122cbea50 
+  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup fffffffffffff6c66edf28380101a92122cbea50
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   abort: fffffffffffff6c66edf28380101a92122cbea50 not found!
   [255]
@@ -80,9 +80,9 @@ Lookup existing bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
 
 Lookup bookmark with hash name that exists as a hash (returns hash)
-  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup 3903775176ed42b1458a6281db4a0ccf4d9f287a 
+  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup 3903775176ed42b1458a6281db4a0ccf4d9f287a
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
 
 Lookup bookmark with hash name that doesn't exist as a hash (returns bookmark -> hash)
-  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup ffff775176ed42b1458a6281db4a0ccf4d9f287a 
+  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup ffff775176ed42b1458a6281db4a0ccf4d9f287a
   remote: * DEBG Session with Mononoke started with uuid: * (glob)

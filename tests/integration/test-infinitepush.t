@@ -124,7 +124,7 @@ Pushbackup also works
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   backup complete
   heads added: 95cad53aab1b0b33eceee14473b3983312721529
-  heads removed: 
+  heads removed:  (re)
   finished in * seconds (glob)
 
   $ cd ../repo-pull
@@ -159,6 +159,6 @@ Pushbackup that pushes only bookmarks
   bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   backup complete
-  heads added: 
-  heads removed: 
+  heads added:  (re)
+  heads removed:  (re)
   finished in * seconds (glob)

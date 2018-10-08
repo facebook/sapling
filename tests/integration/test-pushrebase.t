@@ -92,7 +92,7 @@ TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     A
-  
+   (re)
 
 
 Push rebase fails with conflict
@@ -174,5 +174,5 @@ Push stack
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     A
-  
+   (re)
 
