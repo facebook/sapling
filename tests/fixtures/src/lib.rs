@@ -256,6 +256,18 @@ pub mod linear {
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
 
+        let files = btreemap!{
+            "10" => Some("modified10\n"),
+        };
+        let commit_metadata = btreemap!{
+            "parents"=> "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            "author"=> "Jeremy Fitzhardinge <jsgf@fb.com>",
+            "author_date"=> "1504041761 25200",
+            "message"=> "modified 10",
+            "expected_hg_changeset"=> "79a13814c5ce7330173ec04d279bf95ab3f652fb",
+        };
+        create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+
         blobrepo
     }
 }

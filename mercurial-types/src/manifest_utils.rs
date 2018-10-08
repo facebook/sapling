@@ -120,7 +120,6 @@ impl ChangedEntry {
                 from_entry,
             } => {
                 debug_assert!(to_entry.get_type().is_tree() == from_entry.get_type().is_tree());
-                debug_assert!(to_entry.get_type().is_tree());
 
                 let dirname = self.dirname.clone();
                 let entry_path = to_entry.get_name().cloned();

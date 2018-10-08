@@ -24,7 +24,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
-use fixtures::many_files_dirs;
+use fixtures::{linear, many_files_dirs};
 use futures::{Future, Stream};
 use futures::executor::spawn;
 use futures_ext::select_all;
@@ -234,27 +234,18 @@ fn check_changed_paths(
 
     for changed_entry in actual {
         match changed_entry.status {
-            EntryStatus::Added(entry) => {
-                paths_added.push(MPath::join_element_opt(
-                    changed_entry.dirname.as_ref(),
-                    entry.get_name(),
-                ));
+            EntryStatus::Added(_) => {
+                paths_added.push(changed_entry.get_full_path());
             }
-            EntryStatus::Deleted(entry) => {
-                paths_deleted.push(MPath::join_element_opt(
-                    changed_entry.dirname.as_ref(),
-                    entry.get_name(),
-                ));
+            EntryStatus::Deleted(_) => {
+                paths_deleted.push(changed_entry.get_full_path());
             }
             EntryStatus::Modified {
-                to_entry,
-                from_entry,
+                ref to_entry,
+                ref from_entry,
             } => {
                 assert_eq!(to_entry.get_type(), from_entry.get_type());
-                paths_modified.push(MPath::join_element_opt(
-                    changed_entry.dirname.as_ref(),
-                    to_entry.get_name(),
-                ));
+                paths_modified.push(changed_entry.get_full_path());
             }
         }
     }
@@ -344,6 +335,26 @@ fn do_check(
         NoopPruner,
         None,
     )
+}
+
+#[test]
+fn test_recursive_changed_entry_stream_linear() {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let repo = Arc::new(linear::getrepo(None));
+        let main_hash = HgNodeHash::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
+        let base_hash = HgNodeHash::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
+
+        let expected_modified = vec!["10"];
+        do_check(
+            repo,
+            main_hash,
+            base_hash,
+            vec![],
+            vec![],
+            expected_modified,
+        );
+        Ok(())
+    }).expect("test failed")
 }
 
 #[test]
