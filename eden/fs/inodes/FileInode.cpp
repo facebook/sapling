@@ -964,6 +964,14 @@ size_t FileInode::writeImpl(
 
   updateMtimeAndCtimeLocked(*state, getNow());
 
+  state.unlock();
+
+  auto myname = getPath();
+  if (myname.hasValue()) {
+    getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
+        std::move(myname.value()), JournalDelta::CHANGED));
+  }
+
   return xfer;
 }
 

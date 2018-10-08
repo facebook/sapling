@@ -60,14 +60,7 @@ folly::Future<size_t> EdenFileHandle::write(BufVec&& buf, off_t off) {
       inode_->getNodeId(),
       off,
       buf.size());
-  return inode_->write(std::move(buf), off).then([inode = inode_](size_t size) {
-    auto myname = inode->getPath();
-    if (myname.hasValue()) {
-      inode->getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
-          std::move(myname.value()), JournalDelta::CHANGED));
-    }
-    return size;
-  });
+  return inode_->write(std::move(buf), off);
 }
 
 folly::Future<size_t> EdenFileHandle::write(folly::StringPiece str, off_t off) {
@@ -78,14 +71,7 @@ folly::Future<size_t> EdenFileHandle::write(folly::StringPiece str, off_t off) {
       inode_->getNodeId(),
       off,
       str.size());
-  return inode_->write(str, off).then([inode = inode_](size_t size) {
-    auto myname = inode->getPath();
-    if (myname.hasValue()) {
-      inode->getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
-          std::move(myname.value()), JournalDelta::CHANGED));
-    }
-    return size;
-  });
+  return inode_->write(str, off);
 }
 
 folly::Future<folly::Unit> EdenFileHandle::flush(uint64_t lock_owner) {
