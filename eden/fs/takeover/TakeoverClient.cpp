@@ -53,12 +53,12 @@ TakeoverData takeoverMounts(
         return socket.send(
             CompactSerializer::serialize<folly::IOBufQueue>(query).move());
       })
-      .then([&socket] {
+      .thenValue([&socket](auto&&) {
         // Wait for the takeover data response
         auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
         return socket.receive(timeout);
       })
-      .then([&expectedMessage](UnixSocket::Message&& msg) {
+      .thenValue([&expectedMessage](UnixSocket::Message&& msg) {
         expectedMessage = std::move(msg);
       })
       .onError([&expectedMessage](folly::exception_wrapper&& ew) {

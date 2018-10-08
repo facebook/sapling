@@ -223,7 +223,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
 
   return folly::via(executor_)
       .thenValue([this, url](auto&&) { return sendRequest(url); })
-      .then([id](std::unique_ptr<folly::IOBuf>&& buf) {
+      .thenValue([id](std::unique_ptr<folly::IOBuf>&& buf) {
         return convertBufToTree(std::move(buf), id);
       });
 }
@@ -233,7 +233,7 @@ folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
   URL url(folly::sformat("/{}/blob/{}", repo_, id.toString()));
   return folly::via(executor_)
       .thenValue([this, url](auto&&) { return sendRequest(url); })
-      .then([id](std::unique_ptr<folly::IOBuf>&& buf) {
+      .thenValue([id](std::unique_ptr<folly::IOBuf>&& buf) {
         return std::make_unique<Blob>(id, *buf);
       });
 }
@@ -243,7 +243,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
   URL url(folly::sformat("/{}/changeset/{}", repo_, commitID.toString()));
   return folly::via(executor_)
       .thenValue([this, url](auto&&) { return sendRequest(url); })
-      .then([&](std::unique_ptr<folly::IOBuf>&& buf) {
+      .thenValue([&](std::unique_ptr<folly::IOBuf>&& buf) {
         auto s = buf->moveToFbString();
         auto parsed = folly::parseJson(s);
         auto hash = Hash(parsed.at("manifest").asString());

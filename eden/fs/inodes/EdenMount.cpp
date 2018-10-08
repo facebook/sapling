@@ -205,7 +205,7 @@ folly::Future<folly::Unit> EdenMount::initialize(
 
   CHECK(overlay_->hasInitializedNextInodeNumber());
 
-  return createRootInode(*parents).then(
+  return createRootInode(*parents).thenValue(
       [this, parents, takeover](TreeInodePtr initTreeNode) {
         if (takeover) {
           inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
@@ -244,7 +244,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
 folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
   // Set up the magic .eden dir
   return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName})
-      .then([=](TreeInodePtr dotEdenInode) {
+      .thenValue([=](TreeInodePtr dotEdenInode) {
         // We could perhaps do something here to ensure that it reflects the
         // current state of the world, but for the moment we trust that it
         // still reflects how things were when we set it up.
@@ -467,10 +467,11 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
     return makeFuture<InodePtr>(bug.toException());
   }
 
-  return fileInode->readAll().then([this,
-                                    pInode,
-                                    path = std::move(path),
-                                    depth](std::string&& pointsTo) mutable {
+  return fileInode->readAll().thenValue([this,
+                                         pInode,
+                                         path = std::move(path),
+                                         depth](
+                                            std::string&& pointsTo) mutable {
     // normalized path to symlink target
     auto joinedExpected = joinAndNormalize(path.dirname(), pointsTo);
     if (joinedExpected.hasError()) {
@@ -569,8 +570,8 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         // Complete the checkout and save the new snapshot hash
         return ctx->finish(snapshotHash);
       })
-      .then([this, ctx, oldParents, snapshotHash, journalDiffCallback](
-                std::vector<CheckoutConflict>&& conflicts) {
+      .thenValue([this, ctx, oldParents, snapshotHash, journalDiffCallback](
+                     std::vector<CheckoutConflict>&& conflicts) {
         if (ctx->isDryRun()) {
           // This is a dry run, so all we need to do is tell the caller about
           // the conflicts: we should not modify any files or add any entries to
@@ -711,7 +712,7 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
         .thenValue([this](folly::File&& fuseDevice) {
           createFuseChannel(std::move(fuseDevice));
           return channel_->initialize()
-              .then([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
+              .thenValue([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
                 fuseInitSuccessful(std::move(fuseCompleteFuture));
               })
               .onError([this](folly::exception_wrapper&& ew) {
