@@ -50,6 +50,7 @@ using namespace facebook::eden;
 namespace facebook {
 namespace eden {
 std::string getEdenfsBuildName();
+void runServer(const EdenServer& server);
 } // namespace eden
 } // namespace facebook
 
@@ -259,7 +260,7 @@ int main(int argc, char** argv) {
         startupLogger->success();
       });
 
-  server->run();
+  server->run(runServer);
 
   XLOG(INFO) << "edenfs exiting successfully";
   return EX_OK;

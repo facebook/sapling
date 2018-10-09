@@ -536,17 +536,14 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
       });
 }
 
-// Defined separately in RunServer.cpp
-void runServer(const EdenServer& server);
-
-void EdenServer::run() {
+void EdenServer::run(void (*runThriftServer)(const EdenServer&)) {
   if (!lockFile_) {
     throw std::runtime_error(
         "prepare() must be called before EdenServer::run()");
   }
 
   // Run the thrift server
-  runServer(*this);
+  runThriftServer(*this);
 
   bool takeover;
   folly::File thriftSocket;

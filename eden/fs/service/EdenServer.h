@@ -105,7 +105,7 @@ class EdenServer : private TakeoverHandler {
    * prepare() must have been called before calling run(), but the future
    * returned by prepare() does not need to be complete yet.
    */
-  void run();
+  void run(void (*runThriftServer)(const EdenServer&));
 
   /**
    * Stops this server, which includes the underlying Thrift server.
