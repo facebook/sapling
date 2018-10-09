@@ -190,6 +190,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                           --init_revision [INIT_REVISION]        'the initial revision to start at'
 
             -d, --debug                                          'print debug level output'
+            -p, --myrouter-port=[PORT]                           'port for local myrouter instance'
         "#,
         )
 }

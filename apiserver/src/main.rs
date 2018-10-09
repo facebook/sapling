@@ -378,6 +378,12 @@ fn main() -> Result<()> {
                     .long("ssl-ca")
                     .value_name("PATH")
                     .help("path to the ssl ca file"),
+            )
+            .arg(
+                Arg::with_name("myrouter-port")
+                    .long("myrouter-port")
+                    .value_name("PORT")
+                    .help("port for local myrouter instance"),
             ),
         false, /* hide_advanced_args */
     ).get_matches();

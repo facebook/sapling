@@ -76,6 +76,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             <ca_pem>      --ca-pem [PATH]                       'path to a file with CA certificate'
 
             -d, --debug                                          'print debug level output'
+            --myrouter-port=[PORT]                               'port for local myrouter instance'
             "#,
         ),
         false /* hide_advanced_args */

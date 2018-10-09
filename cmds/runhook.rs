@@ -70,6 +70,7 @@ fn run_hook(
                 "<HOOK_FILE>               'file containing hook code\n",
                 "<HOOK_TYPE>               'the type of the hook (perfile, percs)\n",
                 "<REV>                     'revision hash'\n",
+                "-p, --myrouter-port=[PORT] 'port for local myrouter instance'\n",
             )),
         false, /* hide_advanced_args */
     ).get_matches_from(args);
