@@ -499,21 +499,14 @@ def ancestorsaged(repo, subset, x):
     excluded. This only matters if there are changesets that have ancestors that
     are newer than them.
 
-    For example, given the changesets::
+    For example, given the changesets:
 
-        o aaa (1 hour ago)
-        |
-        o bbb (2 hours ago)
-        |
-        o ccc (3 hours ago)
-        |
-        o ddd (4 hours ago)
-        |
-        o eee (2 hours ago)
-        |
-        o fff (5 hours ago)
-        |
-        ~
+    - ``aaa``: (1 hour ago)
+    - ``bbb``: (2 hours ago)
+    - ``ccc``: (3 hours ago)
+    - ``ddd``: (4 hours ago)
+    - ``eee``: (2 hours ago)
+    - ``fff``: (5 hours ago)
 
     The expression ``ancestorsaged(aaa, "30m-3h30m")`` would match changesets
     ``bbb`` and ``ccc`` only.  The changeset ``eee`` is excluded by virtue of
