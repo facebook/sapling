@@ -467,29 +467,29 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
     return makeFuture<InodePtr>(bug.toException());
   }
 
-  return fileInode->readAll().thenValue([this,
-                                         pInode,
-                                         path = std::move(path),
-                                         depth](
-                                            std::string&& pointsTo) mutable {
-    // normalized path to symlink target
-    auto joinedExpected = joinAndNormalize(path.dirname(), pointsTo);
-    if (joinedExpected.hasError()) {
-      return makeFuture<InodePtr>(InodeError(joinedExpected.error(), pInode));
-    }
-    XLOG(DBG7) << "joinedExpected.value() = " << joinedExpected.value();
-    // getting future below and doing .then on it are two separate statements
-    // due to C++14 semantics (fixed in C++17) wherein RHS may be executed
-    // before LHS, thus moving value of joinedExpected (in RHS) before using
-    // it in LHS
-    auto f = getInode(joinedExpected.value()); // get inode for symlink target
-    return std::move(f).thenValue(
-        [this, joinedPath = std::move(joinedExpected.value()), depth](
-            InodePtr target) mutable {
-          // follow the symlink chain recursively
-          return resolveSymlinkImpl(target, std::move(joinedPath), depth);
-        });
-  });
+  return fileInode->readlink().thenValue(
+      [this, pInode, path = std::move(path), depth](
+          std::string&& pointsTo) mutable {
+        // normalized path to symlink target
+        auto joinedExpected = joinAndNormalize(path.dirname(), pointsTo);
+        if (joinedExpected.hasError()) {
+          return makeFuture<InodePtr>(
+              InodeError(joinedExpected.error(), pInode));
+        }
+        XLOG(DBG7) << "joinedExpected.value() = " << joinedExpected.value();
+        // getting future below and doing .then on it are two separate
+        // statements due to C++14 semantics (fixed in C++17) wherein RHS may be
+        // executed before LHS, thus moving value of joinedExpected (in RHS)
+        // before using it in LHS
+        auto f =
+            getInode(joinedExpected.value()); // get inode for symlink target
+        return std::move(f).thenValue(
+            [this, joinedPath = std::move(joinedExpected.value()), depth](
+                InodePtr target) mutable {
+              // follow the symlink chain recursively
+              return resolveSymlinkImpl(target, std::move(joinedPath), depth);
+            });
+      });
 }
 
 folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
