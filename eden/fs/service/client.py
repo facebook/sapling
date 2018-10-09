@@ -8,7 +8,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-from typing import Any, cast
+from typing import Any, Iterator, Optional, cast  # noqa: F401
 
 from facebook.eden import EdenService
 from thrift.protocol.THeaderProtocol import THeaderProtocol
@@ -60,7 +60,8 @@ class EdenClient(EdenService.Client):
         # We used to set a timeout here, but picking the right duration is hard,
         # and safely retrying an arbitrary thrift call may not be safe.  So we
         # just leave the client with no timeout.
-        # self._socket.setTimeout(60000)  # in milliseconds
+        # self.set_timeout(60)
+        self.set_timeout(None)
         self._transport = THeaderTransport(self._socket)
         self._protocol = THeaderProtocol(self._transport)
         super(EdenClient, self).__init__(self._protocol)
@@ -108,6 +109,18 @@ class EdenClient(EdenService.Client):
                 super().shutdown()
             else:
                 raise
+
+    def set_timeout(self, timeout):
+        # type: (Optional[float]) -> None
+        if timeout is None:
+            timeout_ms = None
+        else:
+            timeout_ms = timeout * 1000
+        self.set_timeout_ms(timeout_ms)
+
+    def set_timeout_ms(self, timeout_ms):
+        # type: (Optional[float]) -> None
+        self._socket.setTimeout(timeout_ms)
 
 
 def create_thrift_client(eden_dir=None, socket_path=None):

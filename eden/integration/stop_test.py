@@ -7,7 +7,6 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import contextlib
 import os
 import pathlib
 import shutil
@@ -20,6 +19,7 @@ import unittest
 from eden.cli.daemon import did_process_exit
 from eden.cli.util import poll_until
 
+from .lib.fake_edenfs import fake_eden_daemon, spawn_fake_eden_daemon
 from .lib.find_executables import FindExe
 
 
@@ -140,27 +140,3 @@ class StopTest(unittest.TestCase):
         )
         self.assertIn(b"edenfs is not running", stop_result.stderr)
         self.assertEqual(SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR, stop_result.returncode)
-
-
-@contextlib.contextmanager
-def fake_eden_daemon(
-    eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
-) -> typing.Iterator[int]:
-    daemon_pid = spawn_fake_eden_daemon(
-        eden_dir=eden_dir, extra_arguments=extra_arguments
-    )
-    try:
-        yield daemon_pid
-    finally:
-        with contextlib.suppress(ProcessLookupError):
-            os.kill(daemon_pid, signal.SIGTERM)
-
-
-def spawn_fake_eden_daemon(
-    eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
-) -> int:
-    command = [FindExe.FAKE_EDENFS, "--edenDir", str(eden_dir)]
-    command.extend(extra_arguments)
-    subprocess.check_call(command)
-    daemon_pid = int((eden_dir / "lock").read_text())
-    return daemon_pid

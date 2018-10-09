@@ -19,6 +19,7 @@ import typing
 from typing import Any, Callable, List, Optional, TypeVar
 
 import eden.thrift
+import thrift.transport
 from fb303.ttypes import fb_status
 from thrift import Thrift
 
@@ -139,7 +140,9 @@ def _create_dead_health_status() -> HealthStatus:
 
 
 def check_health(
-    get_client: Callable[[], eden.thrift.EdenClient], config_dir: str
+    get_client: Callable[[], eden.thrift.EdenClient],
+    config_dir: str,
+    timeout: Optional[float] = None,
 ) -> HealthStatus:
     """
     Get the status of the edenfs daemon.
@@ -150,9 +153,13 @@ def check_health(
     status = fb_status.DEAD
     try:
         with get_client() as client:
+            client.set_timeout(timeout)
             pid = client.getPid()
             status = client.getStatus()
-    except eden.thrift.EdenNotRunningError:
+    except (
+        eden.thrift.EdenNotRunningError,
+        thrift.transport.TTransport.TTransportException,
+    ):
         # It is possible that the edenfs process is running, but the Thrift
         # server is not running. This could be during the startup, shutdown,
         # or takeover of the edenfs process. As a backup to requesting the

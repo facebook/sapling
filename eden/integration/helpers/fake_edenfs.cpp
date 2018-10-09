@@ -15,6 +15,8 @@
 #include <signal.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <array>
+#include <chrono>
+#include <thread>
 
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/StartupLogger.h"
@@ -22,6 +24,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
+using namespace std::literals::chrono_literals;
 using apache::thrift::ThriftServer;
 using facebook::fb303::cpp2::fb_status;
 using folly::EventBase;
@@ -32,6 +35,10 @@ using std::string;
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 DEFINE_bool(foreground, false, "Run edenfs in the foreground");
 DEFINE_bool(ignoreStop, false, "Ignore attempts to stop edenfs");
+DEFINE_double(
+    sleepBeforeGetPid,
+    0.0,
+    "Sleep for this many seconds before responding to getPid");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(
     etcEdenDir,
@@ -48,6 +55,11 @@ FOLLY_INIT_LOGGING_CONFIG(".=INFO,eden=DBG2");
 namespace {
 
 class FakeEdenServiceHandler;
+
+template <class Rep, class Ratio>
+std::string prettyPrint(
+    std::chrono::duration<Rep, Ratio> duration,
+    bool addSpace = true);
 
 enum class StopBehavior {
   DoNothing,
@@ -73,8 +85,22 @@ class FakeEdenServer {
     }
   }
 
+  uint64_t getPid() const {
+    if (getPidSleepDuration_ > 0ms) {
+      XLOG(INFO) << "pausing getPid call for "
+                 << prettyPrint(getPidSleepDuration_);
+      std::this_thread::sleep_for(getPidSleepDuration_);
+    }
+
+    return getpid();
+  }
+
   void setStopBehavior(StopBehavior stopBehavior) {
     stopBehavior_ = stopBehavior;
+  }
+
+  void setGetPidSleepDuration(std::chrono::milliseconds getPidSleepDuration) {
+    getPidSleepDuration_ = getPidSleepDuration;
   }
 
  private:
@@ -82,6 +108,7 @@ class FakeEdenServer {
   ThriftServer server_;
   std::shared_ptr<FakeEdenServiceHandler> handler_;
   StopBehavior stopBehavior_{StopBehavior::TerminateEventLoop};
+  std::chrono::milliseconds getPidSleepDuration_{0ms};
 };
 
 class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
@@ -123,7 +150,7 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
   }
 
   int64_t getPid() override {
-    return getpid();
+    return server_->getPid();
   }
 
   void listMounts(std::vector<MountInfo>& /* results */) override {
@@ -255,6 +282,23 @@ int main(int argc, char** argv) {
   if (FLAGS_ignoreStop) {
     server.setStopBehavior(StopBehavior::DoNothing);
   }
+  server.setGetPidSleepDuration(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::duration<double>{FLAGS_sleepBeforeGetPid}));
   server.run(thriftAddress, startupLogger);
   return 0;
 }
+
+namespace {
+
+template <class Rep, class Ratio>
+std::string prettyPrint(
+    std::chrono::duration<Rep, Ratio> duration,
+    bool addSpace) {
+  auto durationInSeconds =
+      std::chrono::duration_cast<std::chrono::duration<double>>(duration);
+  return folly::prettyPrint(
+      durationInSeconds.count(), folly::PRETTY_TIME, addSpace);
+}
+
+} // namespace

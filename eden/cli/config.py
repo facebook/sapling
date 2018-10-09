@@ -643,13 +643,15 @@ Do you want to run `eden mount %s` instead?"""
                 raise
         os.rmdir(path)
 
-    def check_health(self) -> HealthStatus:
+    def check_health(self, timeout: Optional[float] = None) -> HealthStatus:
         """
         Get the status of the edenfs daemon.
 
         Returns a HealthStatus object containing health information.
         """
-        return util.check_health(lambda: self.get_thrift_client(), self._config_dir)
+        return util.check_health(
+            lambda: self.get_thrift_client(), self._config_dir, timeout=timeout
+        )
 
     def get_edenfs_start_cmd(
         self,

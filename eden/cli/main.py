@@ -108,9 +108,18 @@ class InfoCmd(Subcmd):
 
 @subcmd("status", "Check the health of the Eden service", aliases=["health"])
 class StatusCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--timeout",
+            type=float,
+            default=15.0,
+            help="Wait up to TIMEOUT seconds for the daemon to respond "
+            "(default=%(default)s).",
+        )
+
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        health_info = instance.check_health()
+        health_info = instance.check_health(timeout=args.timeout)
         if health_info.is_healthy():
             print("eden running normally (pid {})".format(health_info.pid))
             return 0
