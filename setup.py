@@ -990,6 +990,7 @@ packages = [
     "mercurial",
     "mercurial.cext",
     "mercurial.cffi",
+    "mercurial.commands",
     "mercurial.hgweb",
     "mercurial.httpclient",
     "mercurial.pure",
