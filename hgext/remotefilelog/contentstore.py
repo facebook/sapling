@@ -144,6 +144,26 @@ class unioncontentstore(object):
         else:
             raise RuntimeError("no writable store configured")
 
+    def addremotefilelogpack(self, name, node, data, p1node, p2node, linknode, meta):
+        if self.writestore:
+            self.writestore.addremotefilelogpack(
+                name, node, data, p1node, p2node, linknode, meta
+            )
+        else:
+            raise RuntimeError("no writable store configured")
+
+    def commitpending(self):
+        if self.writestore:
+            self.writestore.commitpending()
+        else:
+            raise RuntimeError("no writable store configured")
+
+    def abortpending(self):
+        if self.writestore:
+            self.writestore.abortpending()
+        else:
+            raise RuntimeError("no writable store configured")
+
     def markledger(self, ledger, options=None):
         for store in self.stores:
             store.markledger(ledger, options)

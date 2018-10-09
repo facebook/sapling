@@ -183,8 +183,14 @@ class remotefilelog(object):
             # calls addrawrevision directly. remotefilelog needs to get and
             # strip filelog metadata.
             meta, blobtext = shallowutil.parsemeta(rawtext, flags)
-        data = self._createfileblob(blobtext, meta, flags, p1, p2, node, linknode)
-        self.repo.contentstore.addremotefilelognode(self.filename, node, data)
+
+        if self.repo.ui.configbool("remotefilelog", "packlocaldata"):
+            self.repo.contentstore.addremotefilelogpack(
+                self.filename, node, blobtext, p1, p2, linknode, meta
+            )
+        else:
+            data = self._createfileblob(blobtext, meta, flags, p1, p2, node, linknode)
+            self.repo.contentstore.addremotefilelognode(self.filename, node, data)
 
         return node
 

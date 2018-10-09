@@ -7,11 +7,11 @@ import shutil
 import stat
 import time
 
-from mercurial import error, progress, pycompat, util
+from mercurial import error, progress, pycompat, revlog, util
 from mercurial.i18n import _
 from mercurial.node import bin, hex
 
-from . import constants, shallowutil
+from . import constants, datapack, historypack, shallowutil
 
 
 try:
@@ -44,6 +44,8 @@ class basestore(object):
             self._validatecache = "on"
         if self._validatecache == "off":
             self._validatecache = False
+
+        self._mutablepacks = None
 
         if shared:
             shallowutil.mkstickygroupdir(self.ui, path)
@@ -232,6 +234,51 @@ class basestore(object):
             )
 
         return data
+
+    def _getmutablepacks(self):
+        """Returns a tuple containing a data pack and a history pack."""
+        if self._mutablepacks is None:
+            if self._shared:
+                packpath = shallowutil.getcachepackpath(
+                    self.repo, constants.FILEPACK_CATEGORY
+                )
+            else:
+                packpath = shallowutil.getlocalpackpath(
+                    self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+                )
+
+            self._mutablepacks = (
+                datapack.mutabledatapack(self.ui, packpath),
+                historypack.mutablehistorypack(self.ui, packpath),
+            )
+        return self._mutablepacks
+
+    def addremotefilelogpack(self, name, node, data, p1node, p2node, linknode, meta):
+        dpack, hpack = self._getmutablepacks()
+        dpack.add(name, node, revlog.nullid, data, metadata=meta)
+
+        copyfrom = ""
+        realp1node = p1node
+        if meta and "copy" in meta:
+            copyfrom = meta["copy"]
+            realp1node = bin(meta["copyrev"])
+        hpack.add(name, node, realp1node, p2node, linknode, copyfrom)
+
+    def commitpending(self):
+        if self._mutablepacks is not None:
+            dpack, hpack = self._mutablepacks
+            dpack.close()
+            hpack.close()
+
+            self._mutablelocalpacks = None
+
+    def abortpending(self):
+        if self._mutablepacks is not None:
+            dpack, hpack = self._mutablepacks
+            dpack.abort()
+            hpack.abort()
+
+            self._mutablepacks = None
 
     def addremotefilelognode(self, name, node, data):
         filepath = self._getfilepath(name, node)
