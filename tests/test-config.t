@@ -28,7 +28,7 @@ Invalid syntax: no key
   1 | =nokeyvalue
     | ^---
     |
-    = expected new_line, config_name, left_bracket, comment_line, or directive
+    = expected EOI, new_line, config_name, left_bracket, comment_line, or directive
   [255]
 
 Test hint about invalid syntax from leading white space
@@ -43,7 +43,7 @@ Test hint about invalid syntax from leading white space
   1 |  key=value
     |  ^---
     |
-    = expected new_line
+    = expected EOI or new_line
   [255]
 
   $ cat > .hg/hgrc << EOF
@@ -57,7 +57,7 @@ Test hint about invalid syntax from leading white space
   1 |  [section]
     |  ^---
     |
-    = expected new_line
+    = expected EOI or new_line
   [255]
 
 Reset hgrc
