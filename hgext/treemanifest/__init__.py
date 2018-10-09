@@ -1077,6 +1077,35 @@ def serverreposetup(repo):
     else:
         extensions.wrapfunction(wireproto, "capabilities", _capabilities)
 
+    repo.ui.setconfig("hooks", "pretxnclose.checkmanifest", verifymanifesthook)
+
+
+def verifymanifesthook(ui, repo, **kwargs):
+    """pretxnclose hook that verifies that every newly added commit has a
+    corresponding root manifest."""
+    node = kwargs.get("node")
+    if node is None:
+        return
+
+    newctxs = list(repo.set("%s:", node))
+    mfnodes = set(ctx.manifestnode() for ctx in newctxs)
+
+    mfdatastore = repo.manifestlog.datastore
+    missing = mfdatastore.getmissing(("", mfnode) for mfnode in mfnodes)
+
+    if missing:
+        missingmfnodes = set(hex(key[1]) for key in missing)
+        hexnodes = list(
+            ctx.hex() for ctx in newctxs if hex(ctx.manifestnode()) in missingmfnodes
+        )
+        raise error.Abort(
+            _(
+                "attempting to close transaction which includes commits (%s) without "
+                "manifests (%s)"
+            )
+            % (", ".join(hexnodes), ", ".join(missingmfnodes))
+        )
+
 
 def getmanifestlog(orig, self):
     if not treeenabled(self.ui):

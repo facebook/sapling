@@ -423,6 +423,11 @@ Attempt to push from a treeonly repo without sending trees
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  remote: error: pretxnclose.checkmanifest hook failed: attempting to close transaction which includes commits (ab5f5b4a91cff8dbded4c96f5b2c3e7d0995c882) without manifests (9921ee5733f3898386a12357ec28a58057fe32d9)
+  remote: transaction abort!
+  remote: rollback completed
+  remote: attempting to close transaction which includes commits (ab5f5b4a91cff8dbded4c96f5b2c3e7d0995c882) without manifests (9921ee5733f3898386a12357ec28a58057fe32d9)
+  abort: push failed on remote
+  [255]
 
-  $ hg -R ../master export tip 2>&1 | grep "LookupError:"
-  LookupError: (*, '00manifest.i', 'no node') (glob)
+  $ hg -R ../master export tip > /dev/null
