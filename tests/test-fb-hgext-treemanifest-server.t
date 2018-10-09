@@ -408,3 +408,21 @@ Try pulling while treemanifest.blocksendflat is True
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets a30b520ebf7a
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+
+Attempt to push from a treeonly repo without sending trees
+  $ cd ../client2
+  $ hg up tip
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  $ echo >> subdir2/z
+  $ hg commit -qm "Edit subdir2/z"
+  $ hg push --config treemanifest.sendtrees=False
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+  $ hg -R ../master export tip 2>&1 | grep "LookupError:"
+  LookupError: (*, '00manifest.i', 'no node') (glob)
