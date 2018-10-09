@@ -1840,11 +1840,13 @@ class FakeEdenInstance:
         tmp_dir: str,
         is_healthy: bool = True,
         build_info: Optional[Dict[str, str]] = None,
+        config: Optional[Dict[str, str]] = None,
     ) -> None:
         self._tmp_dir = tmp_dir
         self._mount_paths: Dict[str, Dict[str, Any]] = {}
         self._is_healthy = is_healthy
         self._build_info = build_info if build_info else {}
+        self._config = config if config else {}
         self._fake_client = FakeClient()
 
         self.mount_table = FakeMountTable()
@@ -1962,6 +1964,9 @@ class FakeEdenInstance:
 
     def get_thrift_client(self) -> FakeClient:
         return self._fake_client
+
+    def get_config_value(self, key: str):
+        return self._config.get(key)
 
 
 class FakeMountTable(mtab.MountTable):
@@ -2089,3 +2094,38 @@ class FakeFsUtil(filesystem.FsUtil):
             return path
         error = self.path_error[path] or "[Errno 2] no such file or directory (faked)"
         raise OSError(error)
+
+
+class OperatingSystemsCheckTest(DoctorTestBase):
+    def setUp(self):
+        test_config = {
+            "doctor.minimum-kernel-version": "4.11.3-67",
+            "doctor.known-bad-kernel-versions": "^4.*_fbk13,TODO,TEST",
+        }
+        tmp_dir = self._create_tmp_dir()
+        self.instance = FakeEdenInstance(tmp_dir, config=test_config)
+
+    def test_kernel_version_min(self):
+        # Each of these are ((test_value, expected_result), ...)
+        min_kernel_versions_tests = (
+            ("4.6.7-73_fbk21_3608_gb5941a6", True),
+            ("4.6", True),
+            ("4.11", True),
+            ("4.11.3", True),
+            ("4.11.3.66", True),
+            ("4.11.3-77_fbk20_4162_g6e876878d18e", False),
+            ("4.11.3-77", False),
+        )
+        for fake_release, expected in min_kernel_versions_tests:
+            with self.subTest(fake_release=fake_release):
+                result = doctor._os_is_kernel_version_too_old(
+                    self.instance, fake_release
+                )
+                self.assertIs(result, expected)
+
+    def test_bad_kernel_versions(self):
+        bad_kernel_versions_tests = ("4.11.3-52_fbk13", "999.2.3-4_TEST", "777.1_TODO")
+        for bad_release in bad_kernel_versions_tests:
+            with self.subTest(bad_release=bad_release):
+                result = doctor._os_is_bad_release(self.instance, bad_release)
+                self.assertTrue(result)

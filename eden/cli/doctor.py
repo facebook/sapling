@@ -15,6 +15,8 @@ import io
 import json
 import logging
 import os
+import platform
+import re
 import stat
 import subprocess
 import typing
@@ -159,6 +161,9 @@ def cure_what_ails_you(
     if working_directory_was_stale:
         fixer.add_problem(StaleWorkingDirectory())
 
+    # check OS type, kernel version etc.
+    run_operating_system_checks(fixer, instance, out)
+
     status = instance.check_health()
     if not status.is_healthy():
         run_edenfs_not_healthy_checks(
@@ -210,6 +215,91 @@ def cure_what_ails_you(
         "https://fb.facebook.com/groups/eden.users/\n"
     )
     return 1
+
+
+class OSProblem(Problem):
+    pass
+
+
+def _parse_os_kernel_version(version: str) -> Tuple[int, ...]:
+    """Parses kernel version string.
+    Example version string: 4.11.3-67_fbk17_4093_g2bf19e7a0b95
+    Returns integer representations of the version, eg. (4, 11, 3, 67).
+    """
+    version = version.split("_")[0]
+    version = version.replace("-", ".")
+    parsed_kernel_version = tuple(map(int, version.split(".")))
+    if len(parsed_kernel_version) < 4:
+        # right pad with zeros if the kernel version isn't 4 numbers
+        parsed_kernel_version = (
+            *parsed_kernel_version,
+            *[0] * (4 - len(parsed_kernel_version)),
+        )
+    return parsed_kernel_version
+
+
+def _os_is_kernel_version_too_old(instance: EdenInstance, release: str) -> bool:
+    try:
+        min_kernel_version = instance.get_config_value("doctor.minimum-kernel-version")
+    except KeyError:
+        return False
+    if min_kernel_version is None:
+        return False
+    return _parse_os_kernel_version(release) < _parse_os_kernel_version(
+        min_kernel_version
+    )
+
+
+def _os_is_bad_release(instance: EdenInstance, release: str) -> bool:
+    try:
+        known_bad_kernel_versions = instance.get_config_value(
+            "doctor.known-bad-kernel-versions"
+        )
+    except KeyError:
+        return False
+    if known_bad_kernel_versions is None:
+        return False
+    for regex in known_bad_kernel_versions.split(","):
+        if re.search(regex, release):
+            return True  # matched known bad release
+    return False  # no match to bad release
+
+
+def run_operating_system_checks(
+    tracker: ProblemTracker, instance: EdenInstance, out: ui.Output
+) -> None:
+    if platform.system() != "Linux":
+        return
+
+    # get kernel version string; same as "uname -r"
+    current_kernel_release = platform.release()
+
+    # check if version too low
+    result = _os_is_kernel_version_too_old(instance, current_kernel_release)
+    if result:
+        tracker.add_problem(
+            OSProblem(
+                # TODO: Reword these messages prior to public release
+                description=f"Kernel version {current_kernel_release} too low.",
+                remediation=f"Reboot to upgrade kernel version.",
+            )
+        )
+        # if the kernel version is too low, return here as continuing to
+        # further checks has no benefit
+        return
+
+    # check against known bad versions
+    result = _os_is_bad_release(instance, current_kernel_release)
+    if result:
+        tracker.add_problem(
+            OSProblem(
+                # TODO: Reword these messages prior to public release
+                description=f"Kernel {current_kernel_release} is a known "
+                + "bad kernel.",
+                remediation="Reboot to upgrade kernel version.",
+            )
+        )
+        return
 
 
 def run_edenfs_not_healthy_checks(
