@@ -452,6 +452,6 @@ Stripping in a treeonly server
   $ hg strip -r tip --config treemanifest.blocksendflat=False
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/ab5f5b4a91cf-cb006139-backup.hg
   $ ls -l .hg/store/meta/subdir2/00manifest.i
-  * 216 * .hg/store/meta/subdir2/00manifest.i (glob)
+  * 108 * .hg/store/meta/subdir2/00manifest.i (glob)
   $ ls -l .hg/store/00manifesttree.i
-  * 366 * .hg/store/00manifesttree.i (glob)
+  * 240 * .hg/store/00manifesttree.i (glob)

@@ -323,6 +323,7 @@ def _collectmanifest(orig, repo, striprev):
 
 def stripmanifest(orig, repo, striprev, tr, files):
     if treeenabled(repo.ui) and repo.ui.configbool("treemanifest", "treeonly"):
+        repair.striptrees(repo, tr, striprev, files)
         return
     orig(repo, striprev, tr, files)
 
@@ -2528,7 +2529,15 @@ def striptrees(orig, repo, tr, striprev, files):
         return orig(repo, tr, striprev, files)
 
     if repo.ui.configbool("treemanifest", "server"):
-        treerevlog = repo.manifestlog.treemanifestlog._revlog
+        mfl = repo.manifestlog
+        if isinstance(mfl, hybridmanifestlog):
+            treemfl = repo.manifestlog.treemanifestlog
+        elif isinstance(mfl, treemanifestlog):
+            treemfl = mfl
+        else:
+            raise RuntimeError("cannot strip trees from %s type manifestlog" % mfl)
+
+        treerevlog = treemfl._revlog
         for dir in util.dirs(files):
             # If the revlog doesn't exist, this returns an empty revlog and is a
             # no-op.
