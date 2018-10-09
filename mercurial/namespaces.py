@@ -21,8 +21,6 @@ def tolist(val):
 # instead.
 builtinnamespace = registrar.namespacepredicate(namespacetable)
 
-columns = templatekw.getlogcolumns()
-
 
 @builtinnamespace("bookmarks", priority=10)
 def bookmarks(repo):
@@ -31,7 +29,7 @@ def bookmarks(repo):
     bmknodemap = lambda repo, node: repo.nodebookmarks(node)
     return namespace(
         templatename="bookmark",
-        logfmt=columns["bookmark"],
+        logfmt=templatekw.getlogcolumns()["bookmark"],
         listnames=bmknames,
         namemap=bmknamemap,
         nodemap=bmknodemap,
@@ -46,7 +44,7 @@ def tags(repo):
     tagnodemap = lambda repo, node: repo.nodetags(node)
     return namespace(
         templatename="tag",
-        logfmt=columns["tag"],
+        logfmt=templatekw.getlogcolumns()["tag"],
         listnames=tagnames,
         namemap=tagnamemap,
         nodemap=tagnodemap,
@@ -62,7 +60,7 @@ def branches(repo):
     bnodemap = lambda repo, node: [repo[node].branch()]
     return namespace(
         templatename="branch",
-        logfmt=columns["branch"],
+        logfmt=templatekw.getlogcolumns()["branch"],
         listnames=bnames,
         namemap=bnamemap,
         nodemap=bnodemap,
