@@ -269,15 +269,21 @@ Future<Unit> EdenMount::performBindMounts() {
   vector<Future<Unit>> futures;
 
   for (const auto& bindMount : bindMounts_) {
-    const auto& pathInMountDir = bindMount.pathInMountDir;
     futures.push_back(folly::makeFutureWith([&] {
       // If pathInMountDir does not exist, then it must be created before
       // the bind mount is performed.
-      ensureDirectoryExists(pathInMountDir);
-
-      return serverState_->getPrivHelper()->bindMount(
-          bindMount.pathInClientDir.stringPiece(),
-          pathInMountDir.stringPiece());
+      // pathInMountDir is absolute, rather than relative from the mount point.
+      // This unfortunately is hard to change because it's baked into the
+      // takeover protocol. So relativize here.
+      auto relativePath = getPath().relativize(bindMount.pathInMountDir);
+      return this->ensureDirectoryExists(relativePath)
+          .thenValue([this,
+                      pathInClientDir = AbsolutePath{bindMount.pathInClientDir},
+                      pathInMountDir =
+                          AbsolutePath{bindMount.pathInMountDir}](auto&&) {
+            return serverState_->getPrivHelper()->bindMount(
+                pathInClientDir.stringPiece(), pathInMountDir.stringPiece());
+          });
     }));
   }
 
@@ -812,6 +818,54 @@ struct stat EdenMount::initStatData() const {
 InodeMetadata EdenMount::getInitialInodeMetadata(mode_t mode) const {
   return InodeMetadata{
       mode, uid_, gid_, InodeTimestamps{getLastCheckoutTime()}};
+}
+
+namespace {
+Future<Unit> ensureDirectoryExistsHelper(
+    TreeInodePtr parent,
+    PathComponentPiece childName,
+    RelativePathPiece rest) {
+  auto contents = parent->getContents().rlock();
+  if (auto* child = folly::get_ptr(contents->entries, childName)) {
+    if (!child->isDirectory()) {
+      throw InodeError(EEXIST, parent, childName);
+    }
+
+    contents.unlock();
+
+    if (rest.empty()) {
+      return folly::unit;
+    }
+    return parent->getOrLoadChildTree(childName).thenValue(
+        [rest = RelativePath{rest}](TreeInodePtr child) {
+          auto [nextChildName, nextRest] = splitFirst(rest);
+          return ensureDirectoryExistsHelper(child, nextChildName, nextRest);
+        });
+  }
+
+  contents.unlock();
+  TreeInodePtr child;
+  try {
+    child = parent->mkdir(childName, S_IFDIR | 0755);
+  } catch (std::system_error& e) {
+    // If two threads are racing to create the subdirectory, that's fine, just
+    // try again.
+    if (e.code().value() == EEXIST) {
+      return ensureDirectoryExistsHelper(parent, childName, rest);
+    }
+    throw;
+  }
+  if (rest.empty()) {
+    return folly::unit;
+  }
+  auto [nextChildName, nextRest] = splitFirst(rest);
+  return ensureDirectoryExistsHelper(child, nextChildName, nextRest);
+}
+} // namespace
+
+Future<Unit> EdenMount::ensureDirectoryExists(RelativePathPiece fromRoot) {
+  auto [childName, rest] = splitFirst(fromRoot);
+  return ensureDirectoryExistsHelper(getRootInode(), childName, rest);
 }
 } // namespace eden
 } // namespace facebook

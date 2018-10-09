@@ -324,3 +324,62 @@ TEST(EdenMount, testCanChownFilesAndDirs) {
   EXPECT_EQ(attr.uid, fileResult.st.st_uid);
   EXPECT_EQ(attr.gid, fileResult.st.st_gid);
 }
+
+TEST(EdenMount, ensureDirectoryExists) {
+  auto builder = FakeTreeBuilder{};
+  builder.mkdir("sub/foo/bar");
+  builder.setFile("sub/file.txt", "");
+  TestMount testMount{builder};
+  auto edenMount = testMount.getEdenMount();
+
+  edenMount->ensureDirectoryExists("sub/foo/bar"_relpath).get(0ms);
+  EXPECT_NE(nullptr, testMount.getTreeInode("sub/foo/bar"));
+
+  edenMount->ensureDirectoryExists("sub/other/stuff/here"_relpath).get(0ms);
+  EXPECT_NE(nullptr, testMount.getTreeInode("sub/other/stuff/here"));
+
+  auto f1 =
+      edenMount->ensureDirectoryExists("sub/file.txt/baz"_relpath).wait(0ms);
+  EXPECT_TRUE(f1.isReady());
+  EXPECT_THROW(std::move(f1).get(0ms), std::system_error);
+
+  auto f2 = edenMount->ensureDirectoryExists("sub/file.txt"_relpath).wait(0ms);
+  EXPECT_TRUE(f2.isReady());
+  EXPECT_THROW(std::move(f2).get(0ms), std::system_error);
+}
+
+TEST(EdenMount, concurrentDeepEnsureDirectoryExists) {
+  auto builder = FakeTreeBuilder{};
+  TestMount testMount{builder};
+  auto edenMount = testMount.getEdenMount();
+
+  auto dirPath = "foo/bar/baz/this/should/be/very/long"_relpath;
+
+  constexpr unsigned kThreadCount = 10;
+
+  std::vector<std::thread> threads;
+  threads.reserve(kThreadCount);
+  std::vector<folly::Baton<>> batons{kThreadCount};
+
+  for (unsigned i = 0; i < kThreadCount; ++i) {
+    threads.emplace_back([&, i] {
+      batons[i].wait();
+      try {
+        edenMount->ensureDirectoryExists(dirPath).get(0ms);
+      } catch (std::exception& e) {
+        printf("ensureDirectoryExists failed: %s\n", e.what());
+        throw;
+      }
+    });
+  }
+
+  for (auto& baton : batons) {
+    baton.post();
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  EXPECT_NE(nullptr, testMount.getTreeInode(dirPath));
+}

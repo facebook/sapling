@@ -450,6 +450,14 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> performBindMounts();
 
+  /**
+   * Ensures the path `fromRoot` is a directory. If it is not, then it creates
+   * subdirectories until it is. If creating a subdirectory fails, it throws an
+   * exception.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> ensureDirectoryExists(
+      RelativePathPiece fromRoot);
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;
