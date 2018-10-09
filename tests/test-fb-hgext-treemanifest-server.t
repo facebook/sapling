@@ -285,6 +285,7 @@ Test fetching from the server populates the cache
   > [extensions]
   > treemanifest=
   > fastmanifest=
+  > pushrebase=
   > [fastmanifest]
   > usetree=True
   > usecache=False
@@ -431,3 +432,26 @@ Attempt to push from a treeonly repo without sending trees
   [255]
 
   $ hg -R ../master export tip > /dev/null
+
+Stripping in a treeonly server
+  $ cat >> ../master/.hg/hgrc <<EOF
+  > [treemanifest]
+  > treeonly=True
+  > EOF
+  $ hg push --to master
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: pushing 1 changeset:
+  remote:     ab5f5b4a91cf  Edit subdir2/z
+
+  $ cd ../master
+  $ ls -l .hg/store/meta/subdir2/00manifest.i
+  * 216 * .hg/store/meta/subdir2/00manifest.i (glob)
+  $ ls -l .hg/store/00manifesttree.i
+  * 366 * .hg/store/00manifesttree.i (glob)
+  $ hg strip -r tip --config treemanifest.blocksendflat=False
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/ab5f5b4a91cf-cb006139-backup.hg
+  $ ls -l .hg/store/meta/subdir2/00manifest.i
+  * 216 * .hg/store/meta/subdir2/00manifest.i (glob)
+  $ ls -l .hg/store/00manifesttree.i
+  * 366 * .hg/store/00manifesttree.i (glob)
