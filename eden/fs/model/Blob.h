@@ -19,10 +19,14 @@ namespace eden {
 class Blob {
  public:
   Blob(const Hash& hash, folly::IOBuf&& contents)
-      : hash_(hash), contents_(std::move(contents)) {}
+      : hash_{hash},
+        contents_{std::move(contents)},
+        size_{contents_.computeChainDataLength()} {}
 
   Blob(const Hash& hash, const folly::IOBuf& contents)
-      : hash_(hash), contents_(contents) {}
+      : hash_{hash},
+        contents_{contents},
+        size_{contents_.computeChainDataLength()} {}
 
   const Hash& getHash() const {
     return hash_;
@@ -32,9 +36,14 @@ class Blob {
     return contents_;
   }
 
+  size_t getSize() const {
+    return size_;
+  }
+
  private:
   const Hash hash_;
   const folly::IOBuf contents_;
+  const size_t size_;
 };
 } // namespace eden
 } // namespace facebook

@@ -814,8 +814,7 @@ folly::Future<struct stat> FileInode::stat() {
           // state->tag is either MATERIALIZED_IN_OVERLAY or BLOB_LOADED.
           DCHECK_EQ(state->tag, State::BLOB_LOADED);
           CHECK(state->blob);
-          auto buf = state->blob->getContents();
-          st.st_size = buf.computeChainDataLength();
+          st.st_size = state->blob->getSize();
 
           // NOTE: we don't set rdev to anything special here because we
           // don't support committing special device nodes.
