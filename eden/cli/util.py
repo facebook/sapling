@@ -95,7 +95,7 @@ def poll_until(
         time.sleep(interval)
 
 
-def _check_health_using_lockfile(config_dir: str) -> HealthStatus:
+def check_health_using_lockfile(config_dir: str) -> HealthStatus:
     """Make a best-effort to produce a HealthStatus based on the PID in the
     Eden lockfile.
     """
@@ -165,7 +165,7 @@ def check_health(
         # or takeover of the edenfs process. As a backup to requesting the
         # PID from the Thrift server, we read it from the lockfile and try
         # to deduce the current status of Eden.
-        return _check_health_using_lockfile(config_dir)
+        return check_health_using_lockfile(config_dir)
     except Thrift.TException as ex:
         detail = "error talking to edenfs: " + str(ex)
         return HealthStatus(status, pid, detail)

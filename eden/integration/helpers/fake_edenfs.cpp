@@ -33,12 +33,20 @@ using std::make_shared;
 using std::string;
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
+DEFINE_bool(
+    exitWithoutCleanupOnStop,
+    false,
+    "Respond to stop requests by exiting abruptly");
 DEFINE_bool(foreground, false, "Run edenfs in the foreground");
 DEFINE_bool(ignoreStop, false, "Ignore attempts to stop edenfs");
 DEFINE_double(
     sleepBeforeGetPid,
     0.0,
     "Sleep for this many seconds before responding to getPid");
+DEFINE_double(
+    sleepBeforeStop,
+    0.0,
+    "Sleep for this many seconds before stopping");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(
     etcEdenDir,
@@ -63,6 +71,7 @@ std::string prettyPrint(
 
 enum class StopBehavior {
   DoNothing,
+  ExitWithoutCleanup,
   TerminateEventLoop,
 };
 
@@ -74,10 +83,19 @@ class FakeEdenServer {
   void stop(StringPiece reason) {
     XLOG(INFO) << "received stop request: " << reason;
 
+    if (stopSleepDuration_ > 0ms) {
+      XLOG(INFO) << "pausing stop attempt for "
+                 << prettyPrint(stopSleepDuration_);
+      std::this_thread::sleep_for(stopSleepDuration_);
+    }
+
     switch (stopBehavior_) {
       case StopBehavior::DoNothing:
         XLOG(INFO) << "ignoring stop attempt";
         break;
+      case StopBehavior::ExitWithoutCleanup:
+        XLOG(INFO) << "exiting without cleanup";
+        _exit(1);
       case StopBehavior::TerminateEventLoop:
         XLOG(INFO) << "stopping";
         eventBase_->terminateLoopSoon();
@@ -103,12 +121,17 @@ class FakeEdenServer {
     getPidSleepDuration_ = getPidSleepDuration;
   }
 
+  void setStopSleepDuration(std::chrono::milliseconds stopSleepDuration) {
+    stopSleepDuration_ = stopSleepDuration;
+  }
+
  private:
   EventBase* eventBase_{nullptr};
   ThriftServer server_;
   std::shared_ptr<FakeEdenServiceHandler> handler_;
   StopBehavior stopBehavior_{StopBehavior::TerminateEventLoop};
   std::chrono::milliseconds getPidSleepDuration_{0ms};
+  std::chrono::milliseconds stopSleepDuration_{0ms};
 };
 
 class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
@@ -282,9 +305,15 @@ int main(int argc, char** argv) {
   if (FLAGS_ignoreStop) {
     server.setStopBehavior(StopBehavior::DoNothing);
   }
+  if (FLAGS_exitWithoutCleanupOnStop) {
+    server.setStopBehavior(StopBehavior::ExitWithoutCleanup);
+  }
   server.setGetPidSleepDuration(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::duration<double>{FLAGS_sleepBeforeGetPid}));
+  server.setStopSleepDuration(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::duration<double>{FLAGS_sleepBeforeStop}));
   server.run(thriftAddress, startupLogger);
   return 0;
 }

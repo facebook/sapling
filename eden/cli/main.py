@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Any, List, Optional, Set, Tuple
 
 import eden.thrift
+import thrift.transport
+from eden.cli.util import check_health_using_lockfile
 from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import GlobParams
@@ -1058,15 +1060,24 @@ class StopCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
+        pid = None
         try:
-            with instance.get_thrift_client() as client:
-                pid = client.getPid()
-                stop_aux_processes(client)
-                # Ask the client to shutdown
-                print(f"Stopping edenfs daemon (pid {pid})...")
-                client.initiateShutdown(
-                    f"`eden stop` requested by pid={os.getpid()} uid={os.getuid()}"
-                )
+            try:
+                with instance.get_thrift_client() as client:
+                    client.set_timeout(self.__thrift_timeout(args))
+                    pid = client.getPid()
+                    stop_aux_processes(client)
+                    # Ask the client to shutdown
+                    print(f"Stopping edenfs daemon (pid {pid})...")
+                    client.initiateShutdown(
+                        f"`eden stop` requested by pid={os.getpid()} uid={os.getuid()}"
+                    )
+            except thrift.transport.TTransport.TTransportException as e:
+                print_stderr(f"warning: edenfs is not responding: {e}")
+                if pid is None:
+                    pid = check_health_using_lockfile(args.config_dir).pid
+                    if pid is None:
+                        raise EdenNotRunningError(args.config_dir) from e
         except EdenNotRunningError:
             print_stderr("error: edenfs is not running")
             return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
@@ -1085,6 +1096,12 @@ class StopCmd(Subcmd):
         except ShutdownError as ex:
             print_stderr("Error: " + str(ex))
             return SHUTDOWN_EXIT_CODE_ERROR
+
+    def __thrift_timeout(self, args: argparse.Namespace) -> Optional[float]:
+        if args.timeout == 0:
+            return None
+        else:
+            return args.timeout
 
 
 def create_parser() -> argparse.ArgumentParser:

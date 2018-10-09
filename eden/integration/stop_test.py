@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import contextlib
 import os
 import pathlib
 import shutil
@@ -14,6 +15,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import typing
 import unittest
 
@@ -137,3 +139,72 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin):
         self.assert_process_exit_code(
             stop_process, SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
         )
+
+    def test_killing_hung_daemon_during_stop_makes_stop_finish(self):
+        with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
+            os.kill(daemon_pid, signal.SIGSTOP)
+            try:
+                stop_process = pexpect.spawn(
+                    FindExe.EDEN_CLI,
+                    ["--config-dir", self.tmp_dir, "stop", "--timeout", "5"],
+                    encoding="utf-8",
+                    logfile=sys.stderr,
+                )
+
+                time.sleep(2)
+                self.assertTrue(
+                    stop_process.isalive(),
+                    "'eden stop' should wait while daemon is hung",
+                )
+
+                os.kill(daemon_pid, signal.SIGKILL)
+
+                stop_process.expect_exact("error: edenfs is not running")
+                self.assert_process_exit_code(
+                    stop_process, SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
+                )
+            finally:
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(daemon_pid, signal.SIGCONT)
+
+    def test_stopping_daemon_stopped_by_sigstop_kills_daemon(self):
+        with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
+            os.kill(daemon_pid, signal.SIGSTOP)
+            try:
+                stop_process = pexpect.spawn(
+                    FindExe.EDEN_CLI,
+                    ["--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
+                    encoding="utf-8",
+                    logfile=sys.stderr,
+                )
+                stop_process.expect_exact("warning: edenfs is not responding")
+                self.assert_process_exit_code(
+                    stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
+                )
+            finally:
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(daemon_pid, signal.SIGCONT)
+
+    def test_hanging_thrift_call_kills_daemon_with_sigkill(self):
+        with fake_eden_daemon(pathlib.Path(self.tmp_dir), ["--sleepBeforeStop=5"]):
+            stop_process = pexpect.spawn(
+                FindExe.EDEN_CLI,
+                ["--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
+                encoding="utf-8",
+                logfile=sys.stderr,
+            )
+            self.assert_process_exit_code(
+                stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
+            )
+
+    def test_stop_succeeds_if_thrift_call_abruptly_kills_daemon(self):
+        with fake_eden_daemon(
+            pathlib.Path(self.tmp_dir), ["--exitWithoutCleanupOnStop"]
+        ):
+            stop_process = pexpect.spawn(
+                FindExe.EDEN_CLI,
+                ["--config-dir", self.tmp_dir, "stop", "--timeout", "10"],
+                encoding="utf-8",
+                logfile=sys.stderr,
+            )
+            self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
