@@ -29,6 +29,7 @@
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
+#include "eden/fs/inodes/EdenMountError.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -266,26 +267,39 @@ EdenMount::~EdenMount() {}
 
 Future<Unit> EdenMount::performBindMounts() {
   vector<Future<Unit>> futures;
+
   for (const auto& bindMount : bindMounts_) {
     const auto& pathInMountDir = bindMount.pathInMountDir;
-    try {
+    futures.push_back(folly::makeFutureWith([&] {
       // If pathInMountDir does not exist, then it must be created before
       // the bind mount is performed.
       ensureDirectoryExists(pathInMountDir);
 
-      auto bindFuture = serverState_->getPrivHelper()->bindMount(
+      return serverState_->getPrivHelper()->bindMount(
           bindMount.pathInClientDir.stringPiece(),
           pathInMountDir.stringPiece());
-      futures.push_back(std::move(bindFuture));
-    } catch (const std::exception& ex) {
-      // Consider recording all failed bind mounts in a way that can be
-      // communicated back to the caller in a structured way.
-      XLOG(ERR) << "Failed to perform bind mount for " << pathInMountDir
-                << " due to: " << folly::exceptionStr(ex);
-    }
+    }));
   }
 
-  return folly::collect(futures).unit();
+  return folly::collectAll(futures).thenValue(
+      [](std::vector<folly::Try<folly::Unit>> results) {
+        std::vector<folly::exception_wrapper> errors;
+        for (auto& result : results) {
+          if (result.hasException()) {
+            errors.push_back(result.exception());
+          }
+        }
+
+        if (errors.empty()) {
+          return folly::unit;
+        } else {
+          std::string message{"Error creating bind mounts:\n"};
+          for (const auto& error : errors) {
+            message += folly::to<std::string>("  ", error.what(), "\n");
+          }
+          throw EdenMountError{message};
+        }
+      });
 }
 
 bool EdenMount::doStateTransition(State expected, State newState) {

@@ -777,9 +777,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                     }
                     mountFinished(edenMount.get(), std::move(optTakeover));
                   });
-              // We're deliberately discarding the future here; we don't
-              // need to wait for it to finish.
-              (void)finishFuture;
 
               registerStats(edenMount);
 
@@ -791,8 +788,22 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                 // Perform all of the bind mounts associated with the
                 // client.  We don't need to do this for the takeover
                 // case as they are already mounted.
-                return edenMount->performBindMounts().thenValue(
-                    [edenMount](auto&&) { return edenMount; });
+                return edenMount->performBindMounts()
+                    .thenValue([edenMount](auto&&) { return edenMount; })
+                    .onError([this,
+                              edenMount,
+                              finishFuture = std::move(finishFuture)](
+                                 folly::exception_wrapper ew) mutable {
+                      // Creating a bind mount failed. Trigger an unmount.
+                      return unmount(edenMount->getPath().stringPiece())
+                          .thenTry([finishFuture = std::move(finishFuture)](
+                                       auto&&) mutable {
+                            return std::move(finishFuture);
+                          })
+                          .thenTry([ew = std::move(ew)](auto&&) {
+                            return makeFuture<shared_ptr<EdenMount>>(ew);
+                          });
+                    });
               }
             });
       });
@@ -1027,10 +1038,10 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
 
     state->takeoverShutdown = true;
 
-    // Make a copy of the thrift server socket so we can transfer it to the new
-    // edenfs process.  Our local thrift will close its own socket when we stop
-    // the server.  The easiest way to avoid completely closing the server
-    // socket for now is simply by duplicating the socket to a new fd.
+    // Make a copy of the thrift server socket so we can transfer it to the
+    // new edenfs process.  Our local thrift will close its own socket when we
+    // stop the server.  The easiest way to avoid completely closing the
+    // server socket for now is simply by duplicating the socket to a new fd.
     // We will transfer this duplicated FD to the new edenfs process.
     const int takeoverThriftSocket = dup(server_->getListenSocket());
     folly::checkUnixError(
