@@ -22,6 +22,7 @@ from eden.cli.daemon import wait_for_shutdown
 from .lib import edenclient, testcase
 from .lib.fake_edenfs import fake_eden_daemon
 from .lib.find_executables import FindExe
+from .lib.pexpect import PexpectAssertionMixin
 
 
 class HealthTest(testcase.EdenTestCase):
@@ -37,7 +38,7 @@ class HealthTest(testcase.EdenTestCase):
             self.assertFalse(client.is_healthy())
 
 
-class HealthOfFakeEdenFSTest(unittest.TestCase):
+class HealthOfFakeEdenFSTest(unittest.TestCase, PexpectAssertionMixin):
     def setUp(self):
         super().setUp()
 
@@ -95,37 +96,3 @@ class HealthOfFakeEdenFSTest(unittest.TestCase):
             status_process.logfile = sys.stderr
             status_process.expect_exact("eden running normally")
             self.assert_process_succeeds(status_process)
-
-    def assert_process_succeeds(self, process: pexpect.spawn):
-        actual_exit_code = wait_for_pexpect_process(process)
-        self.assertEqual(
-            actual_exit_code,
-            0,
-            f"Command should return success: {pexpect_process_shell_command(process)}",
-        )
-
-    def assert_process_fails(self, process: pexpect.spawn, exit_code: int):
-        assert exit_code != 0
-        actual_exit_code = wait_for_pexpect_process(process)
-        self.assertEqual(
-            actual_exit_code,
-            exit_code,
-            f"Command should return an error code: "
-            f"{pexpect_process_shell_command(process)}",
-        )
-
-
-def pexpect_process_shell_command(process: pexpect.spawn) -> str:
-    def str_from_strlike(s: typing.Union[bytes, str]) -> str:
-        if isinstance(s, str):
-            return s
-        else:
-            return s.decode("utf-8")
-
-    command_parts = [process.command] + [str_from_strlike(arg) for arg in process.args]
-    return " ".join(map(shlex.quote, command_parts))
-
-
-def wait_for_pexpect_process(process: pexpect.spawn) -> int:
-    process.expect_exact(pexpect.EOF)
-    return process.wait()

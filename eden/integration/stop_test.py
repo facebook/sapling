@@ -12,15 +12,18 @@ import pathlib
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 import typing
 import unittest
 
+import pexpect
 from eden.cli.daemon import did_process_exit
 from eden.cli.util import poll_until
 
 from .lib.fake_edenfs import fake_eden_daemon, spawn_fake_eden_daemon
 from .lib.find_executables import FindExe
+from .lib.pexpect import PexpectAssertionMixin
 
 
 SHUTDOWN_EXIT_CODE_NORMAL = 0
@@ -29,7 +32,7 @@ SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 
-class StopTest(unittest.TestCase):
+class StopTest(unittest.TestCase, PexpectAssertionMixin):
     def setUp(self):
         def cleanup_tmp_dir() -> None:
             shutil.rmtree(self.tmp_dir, ignore_errors=True)
@@ -39,17 +42,14 @@ class StopTest(unittest.TestCase):
 
     def test_stop_stops_running_daemon(self):
         with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
-            stop_result = subprocess.run(
-                [
-                    FindExe.EDEN_CLI,
-                    "--config-dir",
-                    self.tmp_dir,
-                    "stop",
-                    "--timeout",
-                    "5",
-                ]
+            stop_process = pexpect.spawn(
+                FindExe.EDEN_CLI,
+                ["--config-dir", self.tmp_dir, "stop", "--timeout", "5"],
+                encoding="utf-8",
+                logfile=sys.stderr,
             )
-            self.assertEqual(SHUTDOWN_EXIT_CODE_NORMAL, stop_result.returncode)
+            stop_process.expect_exact("edenfs exited cleanly.")
+            self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
             self.assertTrue(
                 did_process_exit(daemon_pid), f"Process {daemon_pid} should have died"
             )
@@ -82,28 +82,25 @@ class StopTest(unittest.TestCase):
             "1",
         ]
         print("Stopping eden: %r" % (stop_cmd,))
-        stop_result = subprocess.run(
-            stop_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        stop_process = pexpect.spawn(
+            stop_cmd[0], stop_cmd[1:], encoding="utf-8", logfile=sys.stderr
         )
-        self.assertIn(b"Terminated edenfs with SIGKILL", stop_result.stderr)
-        self.assertEqual(
-            SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL, stop_result.returncode
+        stop_process.expect_exact("Terminated edenfs with SIGKILL")
+        self.assert_process_exit_code(
+            stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
         )
 
     def test_async_stop_stops_daemon_eventually(self):
         with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
-            stop_result = subprocess.run(
-                [
-                    FindExe.EDEN_CLI,
-                    "--config-dir",
-                    self.tmp_dir,
-                    "stop",
-                    "--timeout",
-                    "0",
-                ]
+            stop_process = pexpect.spawn(
+                FindExe.EDEN_CLI,
+                ["--config-dir", self.tmp_dir, "stop", "--timeout", "0"],
+                encoding="utf-8",
+                logfile=sys.stderr,
             )
-            self.assertEqual(
-                SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN, stop_result.returncode
+            stop_process.expect_exact("Sent async shutdown request to edenfs.")
+            self.assert_process_exit_code(
+                stop_process, SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
             )
 
             def daemon_exited() -> typing.Optional[bool]:
@@ -115,28 +112,28 @@ class StopTest(unittest.TestCase):
             poll_until(daemon_exited, timeout=10)
 
     def test_stop_not_running(self):
-        stop_cmd = [
+        stop_process = pexpect.spawn(
             FindExe.EDEN_CLI,
-            "--config-dir",
-            self.tmp_dir,
-            "stop",
-            "--timeout",
-            "1",
-        ]
-        stop_result = subprocess.run(
-            stop_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            ["--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
+            encoding="utf-8",
+            logfile=sys.stderr,
         )
-        self.assertIn(b"edenfs is not running", stop_result.stderr)
-        self.assertEqual(SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR, stop_result.returncode)
+        stop_process.expect_exact("edenfs is not running")
+        self.assert_process_exit_code(
+            stop_process, SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
+        )
 
     def test_stopping_killed_daemon_reports_not_running(self):
         daemon_pid = spawn_fake_eden_daemon(pathlib.Path(self.tmp_dir))
         os.kill(daemon_pid, signal.SIGKILL)
 
-        stop_result = subprocess.run(
-            [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+        stop_process = pexpect.spawn(
+            FindExe.EDEN_CLI,
+            ["--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
+            encoding="utf-8",
+            logfile=sys.stderr,
         )
-        self.assertIn(b"edenfs is not running", stop_result.stderr)
-        self.assertEqual(SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR, stop_result.returncode)
+        stop_process.expect_exact("edenfs is not running")
+        self.assert_process_exit_code(
+            stop_process, SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
+        )
