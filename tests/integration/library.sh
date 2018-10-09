@@ -68,9 +68,7 @@ function wait_for_mononoke_cache_warmup {
   fi
 }
 
-function setup_common_config() {
-  # Pass repotype as the second param
-    setup_config_repo "$@"
+function setup_common_hg_configs {
   cat >> "$HGRCPATH" <<EOF
 [ui]
 ssh="$DUMMYSSH"
@@ -81,7 +79,17 @@ cachepath=$TESTTMP/cachepath
 EOF
 }
 
-function setup_config_repo() {
+function setup_common_config {
+    setup_config_repo "$@"
+    setup_common_hg_configs
+}
+
+function setup_config_repo {
+  setup_hg_config_repo "$@"
+  commit_and_blobimport_config_repo
+}
+
+function setup_hg_config_repo {
   hg init mononoke-config
   cd mononoke-config || exit
   cat >> .hg/hgrc <<EOF
@@ -125,11 +133,10 @@ repotype="$REPOTYPE"
 repoid=2
 enabled=false
 CONFIG
+}
 
-
-
-  hg add -q repos
-  hg ci -ma
+function commit_and_blobimport_config_repo {
+  hg ci -Aqma
   hg backfilltree
   hg book local_master
   cd ..
@@ -139,7 +146,22 @@ CONFIG
   blobimport rocksdb mononoke-config/.hg mononoke-config-rocks
 }
 
-function blobimport() {
+function register_hook {
+  path="$1"
+  hook_type="$2"
+  hook_basename=${path##*/}
+  hook_name="${hook_basename%.lua}"
+  cat >> repos/repo/server.toml <<CONFIG
+[[bookmarks.hooks]]
+hook_name="$hook_name"
+[[hooks]]
+name="$hook_name"
+path="$path"
+hook_type="$hook_type"
+CONFIG
+}
+
+function blobimport {
   blobstore="$1"
   input="$2"
   output="$3"

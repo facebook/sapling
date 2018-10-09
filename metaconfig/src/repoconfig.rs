@@ -73,7 +73,7 @@ pub enum HookType {
     /// A hook that runs on the whole changeset
     PerChangeset,
     /// A hook that runs on a file in a changeset
-    PerFile,
+    PerAddedOrModifiedFile,
 }
 
 /// Configuration for a hook
@@ -466,7 +466,7 @@ mod test {
             [[hooks]]
             name="hook1"
             path="common/hooks/hook1.lua"
-            hook_type="PerFile"
+            hook_type="PerAddedOrModifiedFile"
             [[hooks]]
             name="hook2"
             path="./hooks/hook2.lua"
@@ -517,7 +517,7 @@ mod test {
                     HookParams {
                         name: "hook1".to_string(),
                         code: "this is hook1".to_string(),
-                        hook_type: HookType::PerFile,
+                        hook_type: HookType::PerAddedOrModifiedFile,
                     },
                     HookParams {
                         name: "hook2".to_string(),

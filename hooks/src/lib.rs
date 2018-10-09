@@ -303,14 +303,20 @@ impl HookManager {
         let v: Vec<BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, _>> = changeset
             .files
             .iter()
-            .map(move |file| {
-                HookManager::run_file_hooks(
-                    changeset_id,
-                    file.clone(),
-                    hooks.clone(),
-                    cache.clone(),
-                    logger.clone(),
-                )
+            // Do not run file hooks for deleted files
+            .filter_map(move |file| {
+                match file.ty {
+                    ChangedFileType::Added | ChangedFileType::Modified => Some(
+                        HookManager::run_file_hooks(
+                            changeset_id,
+                            file.clone(),
+                            hooks.clone(),
+                            cache.clone(),
+                            logger.clone(),
+                        )
+                    ),
+                    ChangedFileType::Deleted => None,
+                }
             })
             .collect();
         futures::future::join_all(v)

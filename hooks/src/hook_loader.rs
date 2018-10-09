@@ -24,7 +24,7 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                 let name = hook.name;
                 let lua_hook = LuaHook::new(name.clone(), hook.code.clone());
                 match hook.hook_type {
-                    HookType::PerFile => hook_manager.register_file_hook(&name, Arc::new(lua_hook)),
+                    HookType::PerAddedOrModifiedFile => hook_manager.register_file_hook(&name, Arc::new(lua_hook)),
                     HookType::PerChangeset => {
                         hook_manager.register_changeset_hook(&name, Arc::new(lua_hook))
                     }
@@ -93,12 +93,12 @@ mod test {
                     HookParams {
                         name: "hook1".into(),
                         code: "hook1 code".into(),
-                        hook_type: HookType::PerFile,
+                        hook_type: HookType::PerAddedOrModifiedFile,
                     },
                     HookParams {
                         name: "hook2".into(),
                         code: "hook2 code".into(),
-                        hook_type: HookType::PerFile,
+                        hook_type: HookType::PerAddedOrModifiedFile,
                     },
                     HookParams {
                         name: "hook3".into(),
@@ -137,7 +137,7 @@ mod test {
                     HookParams {
                         name: "hook1".into(),
                         code: "hook1 code".into(),
-                        hook_type: HookType::PerFile,
+                        hook_type: HookType::PerAddedOrModifiedFile,
                     },
                 ]),
                 pushrebase: Default::default(),
