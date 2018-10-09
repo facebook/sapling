@@ -407,7 +407,7 @@ impl ConfigSet {
                 Rule::config_item => handle_config_item(self, pair, section.clone()),
                 Rule::section => handle_section(pair, &mut section),
                 Rule::directive => handle_directive(self, pair, &section, errors),
-                Rule::blank_line | Rule::comment_line | Rule::new_line => (),
+                Rule::blank_line | Rule::comment_line | Rule::new_line | Rule::EOI => (),
 
                 Rule::comment_start
                 | Rule::compound
@@ -715,7 +715,7 @@ pub(crate) mod tests {
 1 | =foo
   | ^---
   |
-  = expected new_line, config_name, left_bracket, comment_line, or directive"
+  = expected EOI, new_line, config_name, left_bracket, comment_line, or directive"
         );
 
         let errors = cfg.parse(" a=b", &"test_parse_errors".into());
@@ -727,7 +727,7 @@ pub(crate) mod tests {
 1 |  a=b
   |  ^---
   |
-  = expected new_line"
+  = expected EOI or new_line"
         );
 
         let errors = cfg.parse("%unset =foo", &"test_parse_errors".into());
@@ -775,7 +775,7 @@ pub(crate) mod tests {
 1 | [a]]
   |    ^---
   |
-  = expected new_line or space"
+  = expected EOI, new_line, or space"
         );
 
         let errors = cfg.parse("# foo\n[y", &"test_parse_errors".into());

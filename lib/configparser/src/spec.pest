@@ -26,7 +26,7 @@ new_line = { "\n" | "\r\n" }
 space = { " " | "\t" }
 comment_start = { ("#" | ";") }
 
-line = @{ (!new_line ~ any)* }
+line = @{ (!new_line ~ ANY)* }
 
 value = ${ line ~ (new_line ~ space+ ~ line)* }
 equal_sign = @{ "=" ~ space* }
@@ -41,15 +41,15 @@ equal_sign = @{ "=" ~ space* }
 //    %unknown
 //     ^ expect unset or include (with "%" excluded)
 //            ^ expect equal_sign (without "%" excluded)
-// 
+//
 // The "expect equal_sign" version is less friendly.
-config_name = @{ !("[" | "=" | "%" | space | comment_start | new_line) ~ any ~ (!("=" | new_line) ~ any)* }
+config_name = @{ !("[" | "=" | "%" | space | comment_start | new_line) ~ ANY ~ (!("=" | new_line) ~ ANY)* }
 config_item = ${ config_name ~ equal_sign ~ value }
 
 left_bracket = @{ "[" }
 right_bracket = @{ "]" }
 
-section_name = @{ (!("]" | new_line) ~ any)+ }
+section_name = @{ (!("]" | new_line) ~ ANY)+ }
 section = ${ left_bracket ~ section_name ~ right_bracket ~ space* }
 
 comment_line = @{ comment_start ~ line }
@@ -60,4 +60,4 @@ include = ${ "include" ~ space+ ~ line }
 unset = ${ "unset" ~ space+ ~ config_name ~ space* }
 
 compound = _{ (config_item | section | comment_line | directive | blank_line ) }
-file = _{ soi ~ compound ~ (new_line ~ compound)* ~ eoi }
+file = _{ SOI ~ compound ~ (new_line ~ compound)* ~ EOI }
