@@ -1156,7 +1156,7 @@ class AbsolutePathBase : public ComposedPathBase<
    * `"bar/baz"_relpath`. If `this` and `child` are equal, then this
    * returns `RelativePathPiece()`.
    */
-  RelativePathPiece relativize(AbsolutePath child) const {
+  RelativePathPiece relativize(AbsolutePathPiece child) const {
     auto myPaths = this->paths();
     auto childPaths = child.paths();
     auto myIter = myPaths.begin();
@@ -1164,15 +1164,13 @@ class AbsolutePathBase : public ComposedPathBase<
     while (true) {
       if (childIter == childPaths.end()) {
         throw std::runtime_error(folly::to<std::string>(
-            child.c_str(), " should be under ", this->stringPiece()));
+            child, " should be under ", this->stringPiece()));
       }
 
       // Note that a RelativePath cannot contain "../" path elements.
       if (myIter.piece() != childIter.piece()) {
         throw std::runtime_error(folly::to<std::string>(
-            this->stringPiece(),
-            " does not seem to be a prefix of ",
-            child.c_str()));
+            this->stringPiece(), " does not seem to be a prefix of ", child));
       }
 
       myIter++;

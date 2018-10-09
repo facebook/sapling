@@ -432,6 +432,16 @@ TEST(PathFuncs, AbsolutePath) {
   // auto bad = rel + abs; doesn't compile; invalid for ABS to be on RHS
 }
 
+TEST(PathFuncs, relativize_memory_safety) {
+  AbsolutePath abs{"/some/dir/this/has/to/be/long/enough/to/exceed/sso"};
+
+  // This test validates that the result is accessible as long as the
+  // argument's memory is alive.
+  const auto& child = abs + "foo"_relpath;
+  auto piece = abs.relativize(child);
+  EXPECT_EQ("foo"_relpath, piece);
+}
+
 TEST(PathFuncs, dirname) {
   EXPECT_EQ("foo/bar", dirname("foo/bar/baz"));
   EXPECT_EQ("foo", dirname("foo/bar"));
