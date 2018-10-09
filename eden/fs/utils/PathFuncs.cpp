@@ -245,6 +245,20 @@ AbsolutePath normalizeBestEffort(folly::StringPiece path) {
   return normalizeBestEffort(path.str().c_str());
 }
 
+std::pair<PathComponentPiece, RelativePathPiece> splitFirst(
+    RelativePathPiece path) {
+  auto piece = path.stringPiece();
+  auto p = piece.find(kDirSeparator);
+  if (p != std::string::npos) {
+    return {PathComponentPiece{
+                folly::StringPiece{piece.begin(), piece.begin() + p}},
+            RelativePathPiece{
+                folly::StringPiece{piece.begin() + p + 1, piece.end()}}};
+  } else {
+    return {PathComponentPiece{piece}, RelativePathPiece{}};
+  }
+}
+
 void validatePathComponentLength(PathComponentPiece name) {
   if (name.value().size() > kMaxPathComponentLength) {
     folly::throwSystemErrorExplicit(

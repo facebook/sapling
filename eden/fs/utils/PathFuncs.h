@@ -1051,7 +1051,7 @@ class RelativePathBase : public ComposedPathBase<
   bool isParentDirOf(const RelativePathPiece& other) const {
     return other.findParent(*this) != other.allPaths().end();
   }
-};
+}; // namespace detail
 
 /// Asserts that val is well formed absolute path
 struct AbsolutePathSanityCheck {
@@ -1179,8 +1179,9 @@ class AbsolutePathBase : public ComposedPathBase<
       if (myIter != myPaths.end()) {
         childIter++;
       } else {
-        // We do not want to increment childIter here or else we will be missing
-        // a path component when we call remainder() after the while loop.
+        // We do not want to increment childIter here or else we will be
+        // missing a path component when we call remainder() after the while
+        // loop.
         break;
       }
     }
@@ -1233,8 +1234,8 @@ class AbsolutePathBase : public ComposedPathBase<
  * An iterator over suffixes in a composed path.
  *
  * PathSuffixIterator always returns RelativePathPiece objects, even when
- * iterating over an AbsolutePath.  This is intentional, since the suffixes are
- * relative to some other location inside the path.
+ * iterating over an AbsolutePath.  This is intentional, since the suffixes
+ * are relative to some other location inside the path.
  *
  * For example, when iterating forwards over the path "foo/bar/baz", the
  * iterator yields:
@@ -1651,6 +1652,14 @@ typename std::enable_if<folly::IsSomeString<T>::value, AbsolutePath>::type
 normalizeBestEffort(const T& path) {
   return normalizeBestEffort(path.c_str());
 }
+
+/**
+ * Splits a path into the first component and the remainder of the path.
+ * If the path has only one component, the remainder will be empty. If the
+ * path is empty, an exception is thrown.
+ */
+std::pair<PathComponentPiece, RelativePathPiece> splitFirst(
+    RelativePathPiece path);
 
 /**
  * Throws std::system_error with ENAMETOOLONG if the given PathComponent is

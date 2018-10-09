@@ -515,6 +515,22 @@ TEST(PathFuncs, format) {
   EXPECT_EQ("x(src/abc.def)", folly::sformat("x({})", relPiece));
 }
 
+TEST(PathFuncs, splitFirst) {
+  using SplitResult = decltype(splitFirst(std::declval<RelativePath>()));
+
+  RelativePath rp1{""};
+  EXPECT_THROW(splitFirst(rp1), std::domain_error);
+
+  RelativePath rp2{"foo"};
+  EXPECT_EQ((SplitResult{"foo", ""}), splitFirst(rp2));
+
+  RelativePath rp3{"foo/bar"};
+  EXPECT_EQ((SplitResult{"foo", "bar"}), splitFirst(rp3));
+
+  RelativePath rp4{"foo/bar/baz"};
+  EXPECT_EQ((SplitResult{"foo", "bar/baz"}), splitFirst(rp4));
+}
+
 namespace {
 /*
  * Helper class to create a temporary directory and cd into it while this
