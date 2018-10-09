@@ -638,13 +638,9 @@ mod test {
             "Thread count too small to prove parallelism"
         );
 
-        let mut threadpool_builder = tokio::executor::thread_pool::Builder::new();
-        threadpool_builder
-            .name_prefix("my-runtime-worker-")
-            .pool_size(THREAD_COUNT);
-
         let mut runtime = tokio::runtime::Builder::new()
-            .threadpool_builder(threadpool_builder)
+            .name_prefix("my-runtime-worker-")
+            .core_threads(THREAD_COUNT)
             .build()
             .unwrap();
         fn sleep() -> Result<(), failure::Error> {
