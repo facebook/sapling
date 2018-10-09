@@ -66,7 +66,7 @@ issue1829: wrong indentation
   2 |   x = y
     |   ^---
     |
-    = expected new_line
+    = expected EOI or new_line
   [255]
 
   $ $PYTHON -c "print '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n'" \
