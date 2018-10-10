@@ -251,6 +251,10 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
       });
 }
 
+namespace {
+const std::string kTierName{"mononoke-apiserver"};
+}
+
 folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
     folly::EventBase* eventBase) {
   if (socketAddress_.hasValue()) {
@@ -263,7 +267,7 @@ folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
   auto selector = factory.getSelector();
 
   selector->getSelectionAsync(
-      "mononoke-apiserver",
+      kTierName,
       servicerouter::DebugContext(),
       servicerouter::SelectionCacheCallback(
           [promise = std::move(promise)](
@@ -271,7 +275,7 @@ folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
               servicerouter::DebugContext&& /* unused */) mutable {
             if (selection.hosts.empty()) {
               auto ex = make_exception_wrapper<std::runtime_error>(
-                  std::string("no host found"));
+                  folly::to<std::string>("no hosts found in tier ", kTierName));
               promise.setException(ex);
               return;
             }

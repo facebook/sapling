@@ -324,36 +324,36 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     RelativePath ownedPath(path);
     return mononoke_->getTree(manifestNode)
         .within(std::chrono::milliseconds(FLAGS_mononoke_timeout))
-        .thenTry([this, manifestNode, edenTreeID, ownedPath, writeBatch](
+        .thenTry([edenTreeID, ownedPath, writeBatch](
                      auto mononokeTreeTry) mutable {
-          try {
-            auto& mononokeTree = mononokeTreeTry.value();
-            std::vector<TreeEntry> entries;
+          auto& mononokeTree = mononokeTreeTry.value();
+          std::vector<TreeEntry> entries;
 
-            for (const auto& entry : mononokeTree->getTreeEntries()) {
-              auto blobHash = entry.getHash();
-              auto entryName = entry.getName();
-              auto proxyHash = HgProxyHash::store(
-                  ownedPath + entryName, blobHash, writeBatch.get());
+          for (const auto& entry : mononokeTree->getTreeEntries()) {
+            auto blobHash = entry.getHash();
+            auto entryName = entry.getName();
+            auto proxyHash = HgProxyHash::store(
+                ownedPath + entryName, blobHash, writeBatch.get());
 
-              entries.emplace_back(
-                  proxyHash, entryName.stringPiece(), entry.getType());
-            }
-
-            auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
-            auto serialized = LocalStore::serializeTree(tree.get());
-            writeBatch->put(
-                KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
-            return makeFuture(std::move(tree));
-          } catch (const std::exception& ex) {
-            XLOG(WARN) << "got exception from MononokeBackingStore: "
-                       << ex.what();
-            return fetchTreeFromImporter(
-                manifestNode,
-                edenTreeID,
-                std::move(ownedPath),
-                std::move(writeBatch));
+            entries.emplace_back(
+                proxyHash, entryName.stringPiece(), entry.getType());
           }
+
+          auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
+          auto serialized = LocalStore::serializeTree(tree.get());
+          writeBatch->put(
+              KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
+          return makeFuture(std::move(tree));
+        })
+        .onError([this, manifestNode, edenTreeID, ownedPath, writeBatch](
+                     const folly::exception_wrapper& ex) mutable {
+          XLOG(WARN) << "got exception from MononokeBackingStore: "
+                     << ex.what();
+          return fetchTreeFromImporter(
+              manifestNode,
+              edenTreeID,
+              std::move(ownedPath),
+              std::move(writeBatch));
         });
   }
 #endif // !EDEN_WIN_NOMONONOKE
@@ -544,13 +544,23 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   if (mononoke_) {
     XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
                << hgInfo.revHash().toString() << " from mononoke";
-    try {
-      return mononoke_->getBlob(hgInfo.revHash());
-    } catch (const std::exception& ex) {
-      XLOG(WARN) << "Error while fetching file contents of '" << hgInfo.path()
-                 << "', " << hgInfo.revHash().toString()
-                 << " from mononoke: " << ex.what();
-    }
+    auto revHashCopy = hgInfo.revHash();
+    return mononoke_->getBlob(revHashCopy)
+        .onError([this, id, path = hgInfo.path(), revHash = revHashCopy](
+                     const folly::exception_wrapper& ex) {
+          XLOG(ERR) << "Error while fetching file contents of '" << path
+                    << "', " << revHash.toString()
+                    << " from mononoke: " << ex.what()
+                    << ", fall back to import helper.";
+          return folly::via(
+                     importThreadPool_.get(),
+                     [id] {
+                       return getThreadLocalImporter().importFileContents(id);
+                     })
+              // Ensure that the control moves back to the main thread pool
+              // to process the caller-attached .then routine.
+              .via(serverThreadPool_);
+        });
   }
 #endif // EDEN_WIN_NOMONONOKE
 
