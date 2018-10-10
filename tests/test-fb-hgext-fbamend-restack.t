@@ -2,7 +2,7 @@
 
 Set up test environment.
 
-  $ enable fbamend inhibit rebase
+  $ enable fbamend rebase
   $ setconfig experimental.evolution.allowdivergence=True
   $ setconfig experimental.evolution="createmarkers, allowunstable"
   $ mkcommit() {

@@ -4,7 +4,6 @@
   > cat << EOF >> .hg/hgrc
   > [extensions]
   > fbamend=
-  > inhibit=
   > smartlog=
   > [infinitepushbackup]
   > enablestatus = True

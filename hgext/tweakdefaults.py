@@ -1134,13 +1134,7 @@ def _computeobsoletenotrebasedwrapper(orig, repo, rebaseobsrevs, dest):
 
 
 def _checkobsrebasewrapper(orig, repo, ui, *args):
-    overrides = {}
-    try:
-        extensions.find("inhibit")
-        # if inhibit is enabled, allow divergence
-        overrides[("experimental", "evolution.allowdivergence")] = True
-    except KeyError:
-        pass
+    overrides = {("experimental", "evolution.allowdivergence"): True}
     with repo.ui.configoverride(overrides, "tweakdefaults"):
         orig(repo, ui, *args)
 

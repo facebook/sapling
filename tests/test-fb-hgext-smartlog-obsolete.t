@@ -2,7 +2,6 @@
   > [extensions]
   > fbamend=
   > histedit=
-  > inhibit=
   > rebase=
   > smartlog=
   > tweakdefaults=

@@ -1,5 +1,5 @@
 Set up test environment.
-  $ enable fbamend inhibit rebase obsstore
+  $ enable fbamend rebase obsstore
   $ showgraph() {
   >   hg log --graph -T "{rev} {bookmarks} {desc|firstline}" | sed \$d
   > }

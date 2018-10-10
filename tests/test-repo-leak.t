@@ -119,7 +119,6 @@ Somehow problematic: With many extensions
   > fastmanifest=
   > fbamend=
   > fbshow=
-  > inhibit=
   > logginghelper=
   > lz4revlog=
   > patchrmdir=

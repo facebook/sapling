@@ -3,7 +3,6 @@ This test confirms cacheinvalidation in hg fold.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fbamend=
-  > inhibit=
   > undo=
   > rebase=
   > [experimental]

@@ -2,7 +2,6 @@ Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fbamend=
-  > inhibit=
   > rebase=
   > strip=
   > tweakdefaults=

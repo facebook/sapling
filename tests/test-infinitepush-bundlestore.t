@@ -417,7 +417,6 @@ Scratch pull of pruned commits
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > fbamend=
-  > inhibit=
   > [experimental]
   > evolution=createmarkers
   > EOF

@@ -1,7 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > undo=
-  > inhibit=
   > [undo]
   > _duringundologlock=1
   > [experimental]

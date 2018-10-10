@@ -1,8 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [experimental]
   > evolution=createmarkers
-  > [extensions]
-  > inhibit=
   > EOF
 
   $ hg init inhibit
@@ -47,15 +45,14 @@ Test revive works inside a transaction
 
   $ cat > $TESTTMP/revivetest.py <<'EOF'
   > from __future__ import absolute_import, print_function
-  > from mercurial import extensions, registrar
+  > from mercurial import extensions, obsolete, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('revivetest')
   > def revivetest(ui, repo, revset):
   >     with repo.wlock(), repo.lock(), repo.transaction('revivetest') as tr:
-  >         inhibit = extensions.find('inhibit')
   >         ctxs = list(repo.unfiltered().set(revset))
-  >         inhibit.revive(ctxs)
+  >         obsolete.revive(ctxs)
   >         # make sure they are revived by checking them
   >         for ctx in ctxs:
   >             if not repo[ctx.node()].obsolete() and not ctx.obsolete():

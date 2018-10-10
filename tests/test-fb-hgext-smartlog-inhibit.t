@@ -1,14 +1,12 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fbamend=
-  > inhibit=
   > smartlog=
   > [experimental]
   > evolution = createmarkers
   > EOF
 
-Test that changesets with visible precursors are rendered as x's, even
-with the inhibit extension enabled.
+Test that changesets with visible precursors are rendered as x's
   $ hg init repo
   $ cd repo
   $ hg debugbuilddag +4

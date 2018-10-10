@@ -6,7 +6,6 @@ Setup
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > histedit=
-  > inhibit=
   > fbamend=
   > rebase=
   > fbhistedit=

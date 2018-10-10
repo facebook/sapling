@@ -521,7 +521,7 @@ Test non-remotenames use of pull --rebase and --update requires --dest
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd $TESTTMP
 
-Prepare a repo for testing divergence warnings with respect to inhibit extension
+Prepare a repo for testing divergence warnings with respect to inhibit
 and allowance of prune rebases
   $ hg init repodiv && cd repodiv
   $ cat >> .hg/hgrc << EOF
@@ -549,16 +549,7 @@ and allowance of prune rebases
   $ hg rebase -r 1 -d 2
   rebasing 1:09d39afb522a "a"
 
-Test that we show divergence warning if inhibit is disabled
-  $ hg rebase -r 1 -d 3 --hidden
-  abort: this rebase will cause divergences from: 09d39afb522a
-  (to force the rebase please set experimental.evolution.allowdivergence=True)
-  [255]
-
-Test that we do not show divergence warning if inhibit is enabled
-  $ cat >> .hg/hgrc <<EOF
-  > inhibit=
-  > EOF
+Test that we do not show divergence warning
   $ hg rebase -r 1 -d 3 --hidden
   rebasing 1:09d39afb522a "a"
 

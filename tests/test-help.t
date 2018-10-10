@@ -313,7 +313,6 @@ Test extension help:
        crdump        (no help text available)
        debugcommitmessage
                      (no help text available)
-       debuginhibit  (no help text available)
        dialect       replace terms with more widely used equivalents
        directaccess  This extension provides direct access
        dirsync
@@ -359,8 +358,6 @@ Test extension help:
        infinitepush  store draft commits in the cloud
        infinitepushbackup
                      back up draft commits in the cloud
-       inhibit       redefine obsolete(), bumped(), divergent() revsets
-       inhibitwarn   (no help text available)
        interactiveui
                      (no help text available)
        linkrevcache  a simple caching layer to speed up _adjustlinkrev
@@ -1622,14 +1619,12 @@ Test -e / -c / -k combinations
   $ hg help -e|egrep '^[A-Z].*:|^ debug'
   Extensions:
    debugcommitmessage  (no help text available)
-   debuginhibit        (no help text available)
    debugshell          a python shell with repo, changelog & manifest objects
   $ hg help -k|egrep '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
    debugcommitmessage  (no help text available)
-   debuginhibit        (no help text available)
    debugshell          a python shell with repo, changelog & manifest objects
   Extension Commands:
   $ hg help -c schemes

@@ -247,7 +247,6 @@ def _preimportmodules():
         "hiddenerror",
         "histedit",
         "infinitepush",
-        "inhibit",
         "journal",
         "lfs",
         "logginghelper",

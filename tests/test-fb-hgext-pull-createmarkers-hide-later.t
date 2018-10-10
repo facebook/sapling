@@ -12,7 +12,6 @@ Test that hg pull creates obsolescence markers for landed diffs
   > evolution= createmarkers
   > rebaseskipobsolete=True
   > [extensions]
-  > inhibit=
   > fbamend=
   > strip=
   > rebase=
