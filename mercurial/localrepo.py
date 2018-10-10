@@ -865,6 +865,7 @@ class localrepository(object):
     def dirstate(self):
         sparsematchfn = lambda: sparse.matcher(self)
         istreestate = "treestate" in self.requirements
+        istreedirstate = "treedirstate" in self.requirements
 
         return dirstate.dirstate(
             self.localvfs,
@@ -873,6 +874,7 @@ class localrepository(object):
             self._dirstatevalidate,
             sparsematchfn,
             istreestate=istreestate,
+            istreedirstate=istreedirstate,
         )
 
     def _dirstatevalidate(self, node):

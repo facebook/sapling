@@ -2,27 +2,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""tree-based dirstate implementation
-
-::
-
-    [treedirstate]
-    # Migrate dirstate format to ``format.dirstate`` on pull (default: false).
-    migrateonpull = true
-
-    # Minimum size before a tree file will be repacked.
-    minrepackthreshold = 1048576
-
-    # Number of times a tree file can grow by before it is repacked.
-    repackfactor = 3
-
-    # Percentage probability of performing a cleanup after a write to a
-    # treedirstate file that doesn't involve a repack.
-    cleanuppercent = 1
-
-    # Verify trees on each update by re-reading the tree root.
-    verify = True
-"""
+"""tree-based dirstate"""
 
 from __future__ import absolute_import
 
@@ -30,29 +10,14 @@ import binascii
 import errno
 import heapq
 import itertools
-import os
 import random
 import string
 import struct
 import time
 
-from mercurial import (
-    commands,
-    dirstate,
-    encoding,
-    error,
-    extensions,
-    localrepo,
-    node,
-    pycompat,
-    registrar,
-    scmutil,
-    treestate,
-    txnutil,
-    util,
-)
+from mercurial import error, node, pycompat, registrar, treestate, txnutil, util
 from mercurial.i18n import _
-from mercurial.rust import treestate as rusttreedirstate
+from mercurial.rust import treestate as rusttreestate
 
 
 dirstateheader = b"########################treedirstate####"
@@ -62,17 +27,9 @@ treefileprefix = "dirstate.tree."
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("treedirstate", "migrateonpull", default=False)
-configitem("treedirstate", "cleanuppercent", default=1)
 
 # Sentinel length value for when a nonnormalset or otherparentset is absent.
 setabsent = 0xFFFFFFFF
-
-# Minimum size the treedirstate file can be before auto-repacking.
-configitem("treedirstate", "minrepackthreshold", default=1024 * 1024)
-
-# Number of times the treedirstate file can grow by, compared to its initial
-# size, before auto-repacking.
-configitem("treedirstate", "repackfactor", default=3)
 
 
 class _reader(object):
@@ -102,30 +59,6 @@ class _writer(object):
     def writestr(self, v):
         self.writeuint(len(v))
         self.buffer.write(v)
-
-
-class _overlaydict(dict):
-    def __init__(self, lookup, *args, **kwargs):
-        super(_overlaydict, self).__init__(*args, **kwargs)
-        self.lookup = lookup
-
-    def get(self, key, default=None):
-        s = super(_overlaydict, self)
-        if s.__contains__(key):
-            return s.__getitem__(key)
-        r = self.lookup(key)
-        if r is not None:
-            return r
-        return default
-
-    def __getitem__(self, key):
-        s = super(_overlaydict, self)
-        if s.__contains__(key):
-            return s[key]
-        r = self.lookup(key)
-        if r is not None:
-            return r
-        raise KeyError(key)
 
 
 # The treedirstatemap iterator uses the getnext method on the dirstatemap
@@ -160,7 +93,7 @@ class treedirstatemap(object):
         self.copymap = {}
 
         self._filename = "dirstate"
-        self._rmap = rusttreedirstate.treedirstatemap(ui, opener)
+        self._rmap = rusttreestate.treedirstatemap(ui, opener)
         self._treeid = None
         self._parents = None
         self._dirtyparents = False
@@ -227,6 +160,10 @@ class treedirstatemap(object):
 
     def getcasefoldedtracked(self, filename, foldfunc):
         return self._rmap.getcasefoldedtracked(filename, foldfunc, id(foldfunc))
+
+    def getfiltered(self, filename, foldfunc):
+        f = self.getcasefoldedtracked(filename, foldfunc)
+        return [f] if f else []
 
     def __getitem__(self, filename):
         item = self._rmap.gettracked(filename, None) or self._rmap.getremoved(
@@ -379,7 +316,7 @@ class treedirstatemap(object):
             else:
                 return None
 
-        return _overlaydict(lookup)
+        return treestate._overlaydict(lookup)
 
     @util.propertycache
     def dirfoldmap(self):
@@ -395,7 +332,7 @@ class treedirstatemap(object):
             else:
                 return None
 
-        return _overlaydict(lookup)
+        return treestate._overlaydict(lookup)
 
     @property
     def identity(self):
@@ -476,16 +413,15 @@ class treedirstatemap(object):
             def nonnormadd(f):
                 pass
 
-        repackfactor = self._ui.configint("treedirstate", "repackfactor")
-        minrepackthreshold = self._ui.configint("treedirstate", "minrepackthreshold")
+        repackfactor = self._ui.configint("treestate", "repackfactor")
+        minrepackthreshold = self._ui.configbytes("treestate", "minrepackthreshold")
         repackthreshold = max(self._packedsize * repackfactor, minrepackthreshold)
         if self._rmap.storeoffset() > repackthreshold:
             self._ui.note(_("auto-repacking treedirstate\n"))
             self._ui.log("treedirstate_repacking", "", treedirstate_repacking=True)
             self._repacked = True
             self._treeid = None
-        else:
-            self._extended = True
+            self._gc()
         if self._treeid is None:
             self._treeid = newtree(self._opener)
             self._rmap.write(treefileprefix + self._treeid, now, nonnormadd)
@@ -494,11 +430,11 @@ class treedirstatemap(object):
             self._rmap.writedelta(now, nonnormadd)
         st.write(self._genrootdata())
         st.close()
-        if self._ui.configbool("treedirstate", "verify"):
-            self._verify()
         self._dirtyparents = False
 
     def writeflat(self):
+        from mercurial import dirstate
+
         with self._opener("dirstate", "w", atomictemp=True, checkambig=True) as st:
             newdmap = {}
             for k, v in self.iteritems():
@@ -545,6 +481,45 @@ class treedirstatemap(object):
                     data = f.read(32)
             raise error.Abort(_("error verifying treedirstate"))
 
+    def _gc(self):
+        """Clean up old tree files.
+
+        When repacking, we write out the tree data to a new file.  This allows us
+        to rollback transactions without fear of losing dirstate information, as
+        the old dirstate file points at the old tree file.
+
+        This leaves old tree files lying around.  We must periodically clean up
+        any tree files that are not referred to by any of the dirstate files.
+        """
+        treesinuse = {}
+        for f in ["dirstate", "undo.dirstate", "undo.backup.dirstate"]:
+            try:
+                treeid = gettreeid(self._opener, f)
+                if treeid is not None:
+                    treesinuse.setdefault(treeid, set()).add(f)
+            except Exception:
+                pass
+        from . import dirstate  # avoid cycle
+
+        fsnow = dirstate._getfsnow(self._opener)
+        maxmtime = fsnow - self._ui.configint("treestate", "mingcage")
+        for f in self._opener.listdir():
+            if f.startswith(treefileprefix):
+                treeid = f[len(treefileprefix) :]
+                if treeid in treesinuse:
+                    self._ui.debug(
+                        "dirstate tree %s in use by %s\n"
+                        % (treeid, ", ".join(treesinuse[treeid]))
+                    )
+                    continue
+                try:
+                    if self._opener.stat(f).st_mtime > maxmtime:
+                        continue
+                except OSError:
+                    continue
+                self._ui.debug("removing old unreferenced dirstate tree %s\n" % treeid)
+                self._opener.tryunlink(f)
+
     def _genrootdata(self):
         w = _writer()
         if self._parents:
@@ -580,24 +555,6 @@ class treedirstatemap(object):
         return w.buffer.getvalue()
 
 
-def istreedirstate(repo):
-    requirements = getattr(repo, "requirements", ())
-    # Eden has its own dirstate implementation
-    if "eden" in requirements or "treestate" in requirements:
-        return False
-    return "treedirstate" in requirements
-
-
-def activealternativedirstates(repo):
-    """
-    Returns a set containing the names of any alternative dirstate
-    implementations in use.
-    """
-    alternatives = {"eden", "sqldirstate"}
-    requirements = getattr(repo, "requirements", set())
-    return alternatives & requirements
-
-
 def newtree(opener):
     while True:
         treeid = "".join([random.choice(string.digits) for _c in range(8)])
@@ -616,324 +573,3 @@ def gettreeid(opener, dirstatefile):
     if version != treedirstateversion:
         return None
     return r.readstr()
-
-
-def currentversion(repo):
-    """get the current dirstate version"""
-    if "treestate" in repo.requirements:
-        return 2
-    elif "treedirstate" in repo.requirements:
-        return 1
-    else:
-        return 0
-
-
-def migrate(ui, repo, version):
-    """migrate dirstate to specified version"""
-    wanted = version
-    current = currentversion(repo)
-    if current == wanted:
-        return
-
-    alternatives = activealternativedirstates(repo)
-    if alternatives:
-        raise error.Abort(
-            _("repo has alternative dirstate active: %s") % ", ".join(alternatives)
-        )
-
-    with repo.wlock():
-        vfs = repo.dirstate._opener
-        newmap = None
-        # Reset repo requirements
-        for req in ["treestate", "treedirstate"]:
-            if req in repo.requirements:
-                repo.requirements.remove(req)
-        if wanted == 1 and current in [0, 2]:
-            # to treedirstate
-            newmap = treedirstatemap(ui, vfs, repo.root, importmap=repo.dirstate._map)
-            repo.requirements.add("treedirstate")
-        elif wanted == 2 and current in [0, 1]:
-            # to treestate
-            vfs.makedirs("treestate")
-            newmap = treestate.treestatemap(
-                ui, vfs, repo.root, importdirstate=repo.dirstate
-            )
-            repo.requirements.add("treestate")
-        elif wanted == 0 and current == 1:
-            # treedirstate -> flat dirstate
-            repo.dirstate._map.writeflat()
-        elif wanted == 0 and current == 2:
-            # treestate does not support writeflat.
-            # downgrade to treedirstate (version 1) first.
-            migrate(ui, repo, 1)
-            return migrate(ui, repo, wanted)
-        else:
-            # unreachable
-            raise error.Abort(
-                _("cannot migrate dirstate from version %s to version %s")
-                % (current, wanted)
-            )
-
-        if newmap is not None:
-            with vfs("dirstate", "w", atomictemp=True) as f:
-                newmap.write(f, dirstate._getfsnow(vfs))
-        repo._writerequirements()
-        repo.dirstate.invalidate()  # trigger fsmonitor state invalidation
-        repo.invalidatedirstate()
-
-
-def repack(ui, repo):
-    version = currentversion(repo)
-    if version == 1:
-        with repo.wlock():
-            repo.dirstate._map._treeid = None
-            repo.dirstate._dirty = True
-    elif version == 2:
-        with repo.wlock(), repo.lock(), repo.transaction("dirstate") as tr:
-            repo.dirstate._map._threshold = 1
-            repo.dirstate._dirty = True
-            repo.dirstate.write(tr)
-    else:
-        ui.note(_("not repacking because repo does not have treedirstate"))
-        return
-
-
-dirstatefiles = [
-    "dirstate",
-    "dirstate.pending",
-    "undo.dirstate",
-    "undo.backup.dirstate",
-]
-
-
-def cleanup(ui, repo, debug=None):
-    """Clean up old tree files.
-
-    When repacking, we write out the tree data to a new file.  This allows us
-    to rollback transactions without fear of losing dirstate information, as
-    the old dirstate file points at the old tree file.
-
-    This leaves old tree files lying around.  We must periodically clean up
-    any tree files that are not referred to by any of the dirstate files.
-    """
-    debug = debug or (lambda msg: None)
-    with repo.wlock():
-        treesinuse = {}
-        for f in dirstatefiles:
-            try:
-                treeid = gettreeid(repo.localvfs, f)
-                if treeid is not None:
-                    treesinuse.setdefault(treeid, set()).add(f)
-            except Exception:
-                pass
-        for f in repo.localvfs.listdir():
-            if f.startswith(treefileprefix):
-                treeid = f[len(treefileprefix) :]
-                if treeid not in treesinuse:
-                    debug("dirstate tree %s unused, deleting\n" % treeid)
-                    repo.localvfs.unlink(f)
-                else:
-                    debug(
-                        "dirstate tree %s in use by %s\n"
-                        % (treeid, ", ".join(treesinuse[treeid]))
-                    )
-
-    if "treestate" in repo.requirements:
-        repo.dirstate._map._gc()
-
-
-def wrapdirstate(orig, self):
-    ds = orig(self)
-    if istreedirstate(self):
-        ds._mapcls = treedirstatemap
-    return ds
-
-
-class casecollisionauditor(object):
-    def __init__(self, ui, abort, dirstate):
-        self._ui = ui
-        self._abort = abort
-        self._dirstate = dirstate
-        # The purpose of _newfiles is so that we don't complain about
-        # case collisions if someone were to call this object with the
-        # same filename twice.
-        self._newfiles = set()
-        self._newfilesfolded = set()
-
-    def __call__(self, f):
-        if f in self._newfiles:
-            return
-        fl = encoding.lower(f)
-        if f not in self._dirstate and (
-            fl in self._newfilesfolded
-            or self._dirstate._map.getcasefoldedtracked(fl, encoding.lower)
-        ):
-            msg = _("possible case-folding collision for %s") % f
-            if self._abort:
-                raise error.Abort(msg)
-            self._ui.warn(_("warning: %s\n") % msg)
-        self._newfiles.add(f)
-        self._newfilesfolded.add(fl)
-
-
-def wrapcca(orig, ui, abort, dirstate):
-    if util.safehasattr(dirstate._map, "getcasefoldedtracked"):
-        return casecollisionauditor(ui, abort, dirstate)
-    else:
-        return orig(ui, abort, dirstate)
-
-
-def wrapclose(orig, self):
-    """
-    Wraps repo.close to perform cleanup of old dirstate tree files.  This
-    happens whenever the treefile is repacked, and also on 1% of other
-    invocations that involve writing to treedirstate.
-    """
-    # For chg, do not clean up on the "serve" command
-    if "CHGINTERNALMARK" in encoding.environ:
-        return orig(self)
-
-    try:
-        return orig(self)
-    finally:
-        istreedirstate = "_map" in self.dirstate.__dict__ and isinstance(
-            self.dirstate._map, treedirstatemap
-        )
-        if istreedirstate:
-            haverepacked = getattr(self.dirstate._map, "_repacked", False)
-            haveextended = getattr(self.dirstate._map, "_extended", False)
-            cleanuppercent = self.ui.configint("treedirstate", "cleanuppercent")
-            if haverepacked or (
-                haveextended and random.randint(0, 99) < cleanuppercent
-            ):
-                # We have written to the dirstate as part of this command, so
-                # cleaning up should also be able to write to the repo.
-                cleanup(self.ui, self)
-
-
-def wrappull(orig, ui, repo, *args, **kwargs):
-    if ui.configbool(
-        "treedirstate", "migrateonpull"
-    ) and not activealternativedirstates(repo):
-        version = repo.ui.configint("format", "dirstate")
-        current = currentversion(repo)
-        if current > version:
-            ui.status(_("downgrading dirstate format...\n"))
-        elif current < version:
-            ui.status(
-                _(
-                    "please wait while we migrate dirstate format to version %s\n"
-                    "this will make your hg commands faster...\n"
-                )
-                % version
-            )
-        migrate(ui, repo, version)
-
-    return orig(ui, repo, *args, **kwargs)
-
-
-def wrapdebugpathcomplete(orig, ui, repo, *specs, **opts):
-    if istreedirstate(repo):
-        cwd = repo.getcwd()
-        matches = []
-        rootdir = repo.root + pycompat.ossep
-        acceptable = ""
-        if opts[r"normal"]:
-            acceptable += "nm"
-        if opts[r"added"]:
-            acceptable += "a"
-        if opts[r"removed"]:
-            acceptable += "r"
-        if not acceptable:
-            acceptable = "nmar"
-        fullpaths = bool(opts[r"full"])
-        fixpaths = pycompat.ossep != "/"
-        treedirstatemap = repo.dirstate._map._rmap
-        for spec in sorted(specs) or [""]:
-            spec = os.path.normpath(os.path.join(pycompat.getcwd(), spec))
-            if spec != repo.root and not spec.startswith(rootdir):
-                continue
-            if os.path.isdir(spec):
-                spec += "/"
-            spec = spec[len(rootdir) :]
-            if fixpaths:
-                spec = spec.replace(pycompat.ossep, "/")
-            treedirstatemap.pathcomplete(spec, acceptable, matches.append, fullpaths)
-        for p in matches:
-            p = repo.pathto(p, cwd).rstrip("/")
-            if fixpaths:
-                p = p.replace("/", pycompat.ossep)
-            ui.write(p)
-            ui.write("\n")
-    else:
-        return orig(ui, repo, *specs, **opts)
-
-
-def featuresetup(ui, supported):
-    supported |= {"treedirstate"}
-
-
-def extsetup(ui):
-    # Check this version of Mercurial has the extension points we need
-    if not util.safehasattr(dirstate.dirstatemap, "hasdir"):
-        ui.warn(_("this version of Mercurial doesn't support treedirstate\n"))
-        return
-
-    localrepo.localrepository.featuresetupfuncs.add(featuresetup)
-    extensions.wrapfilecache(localrepo.localrepository, "dirstate", wrapdirstate)
-    extensions.wrapfunction(scmutil, "casecollisionauditor", wrapcca)
-    extensions.wrapfunction(localrepo.localrepository, "close", wrapclose)
-    extensions.wrapcommand(commands.table, "pull", wrappull)
-    extensions.wrapcommand(commands.table, "debugpathcomplete", wrapdebugpathcomplete)
-
-
-def reposetup(ui, repo):
-    ui.log("treedirstate_enabled", "", treedirstate_enabled=istreedirstate(repo))
-
-
-# debug commands
-cmdtable = {}
-command = registrar.command(cmdtable)
-
-
-@command(
-    "debugtreedirstate|debugtreestate",
-    [],
-    "hg debugtreedirstate [on|off|status|repack|cleanup|v0|v1|v2]",
-)
-def debugtreedirstate(ui, repo, cmd="status", **opts):
-    """manage treedirstate
-
-    v0/off: migrate to flat dirstate
-    v1: migrate to treedirstate
-    v2: migrate to treestate
-    on: migrate to the latest version (v2)
-    """
-    if cmd in ["v2", "on"]:
-        migrate(ui, repo, 2)
-    elif cmd == "v1":
-        migrate(ui, repo, 1)
-    elif cmd in ["v0", "off"]:
-        migrate(ui, repo, 0)
-        cleanup(ui, repo, debug=ui.debug)
-    elif cmd == "repack":
-        repack(ui, repo)
-        cleanup(ui, repo, debug=ui.debug)
-    elif cmd == "cleanup":
-        cleanup(ui, repo, debug=ui.debug)
-    elif cmd == "status":
-        dmap = repo.dirstate._map
-        if istreedirstate(repo):
-            ui.status(
-                _("dirstate v1 (using dirstate.tree.%s, %s files tracked)\n")
-                % (dmap._treeid, len(dmap))
-            )
-        elif "treestate" in repo.requirements:
-            ui.status(
-                _("dirstate v2 (using treestate/%s, offset %s, %s files tracked)\n")
-                % (dmap._filename, dmap._rootid, len(dmap))
-            )
-        else:
-            ui.status(_("dirstate v0 (flat dirstate, %s files tracked)\n") % len(dmap))
-    else:
-        raise error.Abort("unrecognised command: %s" % cmd)

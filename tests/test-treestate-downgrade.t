@@ -36,12 +36,12 @@ Check downgrade with "hg pull"
 
   $ hg init $TESTTMP/repo3 --config format.dirstate=2
   $ cd $TESTTMP/repo3
-  $ hg pull ../repo2 --config format.dirstate=1 --config treedirstate.migrateonpull=1 --config extensions.rebase= --rebase -q
+  $ hg pull ../repo2 --config format.dirstate=1 --config treestate.migrateonpull=1 --config extensions.rebase= --rebase -q
 
 fsmonitor state is invalidated after upgrade
 
   $ ls .hg/fsmonitor.state
   .hg/fsmonitor.state
-  $ hg pull ../repo2 --config format.dirstate=2 --config treedirstate.migrateonpull=1 --config extensions.rebase= --rebase -q
+  $ hg pull ../repo2 --config format.dirstate=2 --config treestate.migrateonpull=1 --config extensions.rebase= --rebase -q
   $ [ -f .hg/fsmonitor.state ]
   [1]

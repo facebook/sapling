@@ -871,7 +871,6 @@ Issue811: Problem loading extensions twice (by site and by user)
 
   $ hg debugextensions | egrep -v "(default)"
   strip
-  treedirstate (untested!)
 
 For extensions, which name matches one of its commands, help
 message should ask '-v -e' to get list of built-in aliases

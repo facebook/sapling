@@ -543,3 +543,112 @@ class treestatemap(object):
             return copied
         else:
             return None
+
+
+def currentversion(repo):
+    """get the current dirstate version"""
+    if "treestate" in repo.requirements:
+        return 2
+    elif "treedirstate" in repo.requirements:
+        return 1
+    else:
+        return 0
+
+
+def cleanup(ui, repo):
+    """Clean up old tree files."""
+    if repo.dirstate._istreedirstate or repo.dirstate._istreestate:
+        repo.dirstate._map._gc()
+
+
+def migrate(ui, repo, version):
+    """migrate dirstate to specified version"""
+    wanted = version
+    current = currentversion(repo)
+    if current == wanted:
+        return
+
+    if "eden" in repo.requirements:
+        raise error.Abort(
+            _("eden checkouts cannot be migrated to a different dirstate format")
+        )
+
+    with repo.wlock():
+        vfs = repo.dirstate._opener
+        newmap = None
+        # Reset repo requirements
+        for req in ["treestate", "treedirstate"]:
+            if req in repo.requirements:
+                repo.requirements.remove(req)
+        if wanted == 1 and current in [0, 2]:
+            # to treedirstate
+            from . import treedirstate
+
+            newmap = treedirstate.treedirstatemap(
+                ui, vfs, repo.root, importmap=repo.dirstate._map
+            )
+            repo.requirements.add("treedirstate")
+        elif wanted == 2 and current in [0, 1]:
+            # to treestate
+            vfs.makedirs("treestate")
+            newmap = treestatemap(ui, vfs, repo.root, importdirstate=repo.dirstate)
+            repo.requirements.add("treestate")
+        elif wanted == 0 and current == 1:
+            # treedirstate -> flat dirstate
+            repo.dirstate._map.writeflat()
+        elif wanted == 0 and current == 2:
+            # treestate does not support writeflat.
+            # downgrade to treedirstate (version 1) first.
+            migrate(ui, repo, 1)
+            return migrate(ui, repo, wanted)
+        else:
+            # unreachable
+            raise error.Abort(
+                _("cannot migrate dirstate from version %s to version %s")
+                % (current, wanted)
+            )
+
+        if newmap is not None:
+            with vfs("dirstate", "w", atomictemp=True) as f:
+                from . import dirstate  # avoid cycle
+
+                newmap.write(f, dirstate._getfsnow(vfs))
+        repo._writerequirements()
+        repo.dirstate.invalidate()  # trigger fsmonitor state invalidation
+        repo.invalidatedirstate()
+
+
+def repack(ui, repo):
+    if "eden" in repo.requirements:
+        return
+    version = currentversion(repo)
+    if version > 0:
+        with repo.wlock(), repo.lock(), repo.transaction("dirstate") as tr:
+            repo.dirstate._map._threshold = 1
+            repo.dirstate._dirty = True
+            repo.dirstate.write(tr)
+    else:
+        ui.note(_("not repacking because repo does not have treestate"))
+        return
+
+
+def onpull(ui, repo):
+    if "eden" in repo.requirements:
+        return
+    if not repo.ui.configbool("treestate", "migrateonpull"):
+        return
+    version = repo.ui.configint("format", "dirstate")
+    current = currentversion(repo)
+    if current == version:
+        return
+    elif current > version:
+        ui.status(_("downgrading dirstate format...\n"))
+    elif current < version:
+        ui.status(
+            _(
+                "please wait while we migrate dirstate format to version %s\n"
+                "this will make your hg commands faster...\n"
+            )
+            % version
+        )
+    migrate(ui, repo, version)

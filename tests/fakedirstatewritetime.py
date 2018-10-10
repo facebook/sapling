@@ -7,8 +7,16 @@
 
 from __future__ import absolute_import
 
-from hgext import treedirstate
-from mercurial import context, dirstate, extensions, policy, registrar, treestate, util
+from mercurial import (
+    context,
+    dirstate,
+    extensions,
+    policy,
+    registrar,
+    treedirstate,
+    treestate,
+    util,
+)
 
 
 configtable = {}

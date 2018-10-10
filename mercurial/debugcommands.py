@@ -64,6 +64,7 @@ from . import (
     streamclone,
     templater,
     treediscovery,
+    treestate,
     upgrade,
     util,
     vfs as vfsmod,
@@ -1974,35 +1975,28 @@ def debugpathcomplete(ui, repo, *specs, **opts):
     Completion extends only to the next path segment unless
     --full is specified, in which case entire paths are used."""
 
-    def complete(path, acceptable):
-        dirstate = repo.dirstate
-        spec = os.path.normpath(os.path.join(pycompat.getcwd(), path))
-        rootdir = repo.root + pycompat.ossep
-        if spec != repo.root and not spec.startswith(rootdir):
-            return [], []
-        if os.path.isdir(spec):
-            spec += "/"
-        spec = spec[len(rootdir) :]
-        fixpaths = pycompat.ossep != "/"
-        if fixpaths:
-            spec = spec.replace(pycompat.ossep, "/")
-        speclen = len(spec)
-        fullpaths = opts[r"full"]
-        files, dirs = set(), set()
-        adddir, addfile = dirs.add, files.add
-        for f, st in dirstate.iteritems():
-            if f.startswith(spec) and st[0] in acceptable:
-                if fixpaths:
-                    f = f.replace("/", pycompat.ossep)
-                if fullpaths:
-                    addfile(f)
-                    continue
-                s = f.find(pycompat.ossep, speclen)
-                if s >= 0:
-                    adddir(f[:s])
-                else:
-                    addfile(f)
-        return files, dirs
+    if "treedirstate" in repo.requirements:
+
+        def complete(spec, acceptable, matches, fullpaths):
+            repo.dirstate._map._rmap.pathcomplete(
+                spec, acceptable, matches.add, fullpaths
+            )
+
+    else:
+
+        def complete(spec, acceptable, matches, fullpaths):
+            addmatch = matches.add
+            speclen = len(spec)
+            for f, st in repo.dirstate.iteritems():
+                if f.startswith(spec) and st[0] in acceptable:
+                    if fullpaths:
+                        addmatch(f)
+                        continue
+                    s = f.find("/", speclen)
+                    if s >= 0:
+                        addmatch(f[:s])
+                    else:
+                        addmatch(f)
 
     acceptable = ""
     if opts[r"normal"]:
@@ -2011,18 +2005,29 @@ def debugpathcomplete(ui, repo, *specs, **opts):
         acceptable += "a"
     if opts[r"removed"]:
         acceptable += "r"
+    if not acceptable:
+        acceptable = "nmar"
+    fullpaths = bool(opts[r"full"])
     cwd = repo.getcwd()
-    if not specs:
-        specs = ["."]
-
-    files, dirs = set(), set()
-    for spec in specs:
-        f, d = complete(spec, acceptable or "nmar")
-        files.update(f)
-        dirs.update(d)
-    files.update(dirs)
-    ui.write("\n".join(repo.pathto(p, cwd) for p in sorted(files)))
-    ui.write("\n")
+    rootdir = repo.root + pycompat.ossep
+    fixpaths = pycompat.ossep != "/"
+    matches = set()
+    for spec in sorted(specs) or [""]:
+        spec = os.path.normpath(os.path.join(pycompat.getcwd(), spec))
+        if spec != repo.root and not spec.startswith(rootdir):
+            continue
+        if os.path.isdir(spec):
+            spec += "/"
+        spec = spec[len(rootdir) :]
+        if fixpaths:
+            spec = spec.replace(pycompat.ossep, "/")
+        complete(spec, acceptable, matches, fullpaths)
+    for p in sorted(matches):
+        p = repo.pathto(p, cwd).rstrip("/")
+        if fixpaths:
+            p = p.replace("/", pycompat.ossep)
+        ui.write(p)
+        ui.write("\n")
 
 
 @command(
@@ -3138,3 +3143,48 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
                     res = 1
 
     return res
+
+
+@command(
+    "debugtreestate|debugtreedirstate",
+    [],
+    "hg debugtreestate [on|off|status|repack|cleanup|v0|v1|v2]",
+)
+def debugtreestate(ui, repo, cmd="status", **opts):
+    """manage treestate
+
+    v0/off: migrate to flat dirstate
+    v1: migrate to treedirstate
+    v2: migrate to treestate
+    on: migrate to the latest version (v2)
+    """
+    if cmd in ["v2", "on"]:
+        treestate.migrate(ui, repo, 2)
+    elif cmd == "v1":
+        treestate.migrate(ui, repo, 1)
+    elif cmd in ["v0", "off"]:
+        treestate.migrate(ui, repo, 0)
+        treestate.cleanup(ui, repo)
+    elif cmd == "repack":
+        treestate.repack(ui, repo)
+        treestate.cleanup(ui, repo)
+    elif cmd == "cleanup":
+        treestate.cleanup(ui, repo)
+    elif cmd == "status":
+        dmap = repo.dirstate._map
+        if "eden" in repo.requirements:
+            ui.status(_("eden checkout dirstate is managed by edenfs\n"))
+        elif "treedirstate" in repo.requirements:
+            ui.status(
+                _("dirstate v1 (using dirstate.tree.%s, %s files tracked)\n")
+                % (dmap._treeid, len(dmap))
+            )
+        elif "treestate" in repo.requirements:
+            ui.status(
+                _("dirstate v2 (using treestate/%s, offset %s, %s files tracked)\n")
+                % (dmap._filename, dmap._rootid, len(dmap))
+            )
+        else:
+            ui.status(_("dirstate v0 (flat dirstate, %s files tracked)\n") % len(dmap))
+    else:
+        raise error.Abort("unrecognised command: %s" % cmd)

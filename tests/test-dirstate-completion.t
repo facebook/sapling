@@ -1,10 +1,17 @@
+#testcases v0 v1 v2
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > treedirstate=
-  > [treedirstate]
-  > useinnewrepos=True
-  > EOF
+#if v0
+  $ setconfig format.dirstate=0
+#endif
+
+#if v1
+  $ setconfig format.dirstate=1
+#endif
+
+#if v2
+  $ setconfig format.dirstate=2
+#endif
+
   $ hg init repo
   $ cd repo
   $ echo file1 > file1

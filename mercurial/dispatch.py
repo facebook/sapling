@@ -283,7 +283,6 @@ def _preimportmodules():
         "stat",
         "strip",
         "traceprof",
-        "treedirstate",
         "treemanifest",
         "tweakdefaults",
         "undo",

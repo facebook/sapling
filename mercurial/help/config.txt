@@ -2041,6 +2041,9 @@ See :hg:`help templates` for details.
 ``treestate``
 -------------
 
+``migrateonpull``
+    Migrate dirstate format to ``format.dirstate`` on pull (default: false).
+
 ``mingcage``
     Seconds. Only files older than that would be garbage collected.
     (default: 1209600, 2 weeks)

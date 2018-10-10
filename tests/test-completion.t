@@ -124,7 +124,7 @@ Show debug commands if there are no other candidates
   debugsub
   debugsuccessorssets
   debugtemplate
-  debugtreedirstate
+  debugtreestate
   debugupdatecaches
   debugupgraderepo
   debugwalk
@@ -314,7 +314,7 @@ Show all commands + options
   debugsub: rev
   debugsuccessorssets: closest
   debugtemplate: rev, define
-  debugtreedirstate: 
+  debugtreestate: 
   debugupdatecaches: 
   debugupgraderepo: optimize, run
   debugwalk: include, exclude

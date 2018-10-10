@@ -22,6 +22,7 @@ from . import (
     policy,
     pycompat,
     scmutil,
+    treedirstate,
     treestate,
     txnutil,
     util,
@@ -88,7 +89,16 @@ def _isgitignore(path):
 
 
 class dirstate(object):
-    def __init__(self, opener, ui, root, validate, sparsematchfn, istreestate=False):
+    def __init__(
+        self,
+        opener,
+        ui,
+        root,
+        validate,
+        sparsematchfn,
+        istreestate=False,
+        istreedirstate=False,
+    ):
         """Create a new dirstate object.
 
         opener is an open()-like callable that can be used to open the
@@ -114,9 +124,12 @@ class dirstate(object):
         self._updatedfiles = set()
         # TODO(quark): after migrating to treestate, remove legacy code.
         self._istreestate = istreestate
+        self._istreedirstate = istreedirstate
         if istreestate:
             opener.makedirs("treestate")
             self._mapcls = treestate.treestatemap
+        elif istreedirstate:
+            self._mapcls = treedirstate.treedirstatemap
         else:
             self._mapcls = dirstatemap
 

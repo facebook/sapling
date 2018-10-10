@@ -50,6 +50,7 @@ from .. import (
     streamclone,
     tags as tagsmod,
     templatekw,
+    treestate,
     ui as uimod,
     util,
 )
@@ -4527,6 +4528,7 @@ def pull(ui, repo, source="default", **opts):
 
     Returns 0 on success, 1 if an update had unresolved files.
     """
+    treestate.onpull(ui, repo)
 
     opts = pycompat.byteskwargs(opts)
     if ui.configbool("commands", "update.requiredest") and opts.get("update"):

@@ -1,6 +1,7 @@
 Setup
 
   $ setconfig format.dirstate=1
+  $ setconfig treestate.mingcage=0
   $ hg init repo
   $ cd repo
   $ echo base > base
@@ -110,16 +111,41 @@ Test autorepack
   $ echo data > file
 
 After the first repack, the old trees are kept around by the transaction undo backups.
-  $ hg add file --config treedirstate.minrepackthreshold=1 --config treedirstate.repackfactor=0 --debug | grep -v 'in use by'
+  $ hg add file --config treestate.minrepackthreshold=1 --config treestate.repackfactor=0 --debug | grep -v 'in use by'
   adding file
   auto-repacking treedirstate
+  $ ls .hg/dirstate.tree.*
+  .hg/dirstate.tree.* (glob)
+  .hg/dirstate.tree.* (glob)
 
-After the second repack, the tree is replaced by a new tree and then deleted.
-  $ hg forget file --config treedirstate.minrepackthreshold=1 --config treedirstate.repackfactor=0 --debug | grep -v 'in use by'
+After the second repack, the old trees are still kept around.
+  $ hg forget file --config treestate.minrepackthreshold=1 --config treestate.repackfactor=0 --debug | grep -v 'in use by'
   fsmonitor: fallback to core status, full rewalk requested (fsmonitor !)
   removing file
   auto-repacking treedirstate
   $ ls .hg/dirstate.tree.*
+  .hg/dirstate.tree.* (glob)
+  .hg/dirstate.tree.* (glob)
+  .hg/dirstate.tree.* (glob)
+
+On the third repack, the original tree is removed.
+  $ hg add file --config treestate.minrepackthreshold=1 --config treestate.repackfactor=0 --debug | grep -v 'in use by'
+  adding file
+  auto-repacking treedirstate
+  removing old unreferenced dirstate tree * (glob)
+  $ ls .hg/dirstate.tree.*
+  .hg/dirstate.tree.* (glob)
+  .hg/dirstate.tree.* (glob)
+  .hg/dirstate.tree.* (glob)
+
+On the fourth repack, the second tree is removed.
+  $ hg forget file --config treestate.minrepackthreshold=1 --config treestate.repackfactor=0 --debug | grep -v 'in use by'
+  fsmonitor: fallback to core status, full rewalk requested (fsmonitor !)
+  removing file
+  auto-repacking treedirstate
+  removing old unreferenced dirstate tree * (glob)
+  $ ls .hg/dirstate.tree.*
+  .hg/dirstate.tree.* (glob)
   .hg/dirstate.tree.* (glob)
   .hg/dirstate.tree.* (glob)
 
@@ -145,7 +171,7 @@ Test downgrade on pull
   $ hg rm dir3/file3
   $ grep treedirstate .hg/requires
   treedirstate
-  $ hg pull --config treedirstate.migrateonpull=true --config format.dirstate=0
+  $ hg pull --config treestate.migrateonpull=true --config format.dirstate=0
   downgrading dirstate format...
   pulling from $TESTTMP/repo (glob)
   searching for changes
@@ -162,29 +188,9 @@ Test downgrade on pull
   $ grep treedirstate .hg/requires
   [1]
 
-Test upgrade on pull with conflicting dirstate reimplementation
-
-  $ cat > $TESTTMP/fakesqldirstate.py << EOF
-  > from mercurial import localrepo
-  > def featuresetup(ui, supported):
-  >     supported |= {'sqldirstate'}
-  > def extsetup(ui):
-  >     localrepo.localrepository.featuresetupfuncs.add(featuresetup)
-  > EOF
-  $ cp .hg/requires .hg/requires.test-backup
-  $ echo sqldirstate >> .hg/requires
-  $ hg pull --config treedirstate.migrateonpull=true --config extensions.fakesqldirstate=$TESTTMP/fakesqldirstate.py
-  pulling from $TESTTMP/repo (glob)
-  searching for changes
-  no changes found
-  $ hg debugtreedirstate on --config extensions.fakesqldirstate=$TESTTMP/fakesqldirstate.py
-  abort: repo has alternative dirstate active: sqldirstate
-  [255]
-  $ mv -f .hg/requires.test-backup .hg/requires
-
 Test upgrade on pull
 
-  $ hg pull --config treedirstate.migrateonpull=true --config format.dirstate=1
+  $ hg pull --config treestate.migrateonpull=true --config format.dirstate=1
   please wait while we migrate dirstate format to version 1
   this will make your hg commands faster...
   pulling from $TESTTMP/repo (glob)
@@ -206,11 +212,3 @@ Test upgrade on pull
   searching for changes
   no changes found
 
-Test cleaning up on normal commands
-
-  $ echo fakedirstatetree > .hg/dirstate.tree.fake
-  $ hg forget newfile --debug --config treedirstate.cleanuppercent=100
-  fsmonitor: fallback to core status, full rewalk requested (fsmonitor !)
-  removing newfile
-  $ test -f .hg/dirstate.tree.fake
-  [1]

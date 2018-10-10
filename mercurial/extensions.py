@@ -31,6 +31,7 @@ _builtin = {
     "mq",
     "parentrevspec",
     "progress",
+    "treedirstate",
 }
 _blacklist = {"extlib"}
 
@@ -54,7 +55,7 @@ DEFAULT_EXTENSIONS = {
 }
 
 # Similar to DEFAULT_EXTENSIONS. But cannot be disabled.
-ALWAYS_ON_EXTENSIONS = {"treedirstate"}
+ALWAYS_ON_EXTENSIONS = ()
 
 
 def extensions(ui=None):

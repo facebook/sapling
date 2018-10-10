@@ -319,7 +319,7 @@ class casecollisionauditor(object):
     def __init__(self, ui, abort, dirstate):
         self._ui = ui
         self._abort = abort
-        if not dirstate._istreestate:
+        if not dirstate._istreestate and not dirstate._istreedirstate:
             allfiles = "\0".join(dirstate._map)
             self._loweredfiles = set(encoding.lower(allfiles).split("\0"))
         else:
@@ -338,7 +338,7 @@ class casecollisionauditor(object):
         fl = encoding.lower(f)
         ds = self._dirstate
         shouldwarn = False
-        if ds._istreestate:
+        if ds._istreestate or ds._istreedirstate:
             dmap = ds._map
             candidates = dmap.getfiltered(fl, encoding.lower)
             # Note: fl might be outside dirstate, but got "tested" here. In
