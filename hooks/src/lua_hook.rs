@@ -39,6 +39,7 @@ __hook_start = function(info, arg)
         end
 
         ctx.files = files
+        ctx.file_content = function(path) return coroutine.yield(__file_content(path)) end
     end)
 end
 ";
@@ -93,7 +94,6 @@ impl Hook<HookChangeset> for LuaHook {
             .map(|file| (file.path.clone(), file.clone()))
             .collect();
         let files_map2 = files_map.clone();
-        let files_map3 = files_map.clone();
 
         let contains_string = {
             move |path: String, string: String| -> Result<AnyFuture, Error> {
@@ -115,29 +115,25 @@ impl Hook<HookChangeset> for LuaHook {
         };
         let contains_string = function2(contains_string);
         let file_content = {
+            let context2 = context.clone();
             move |path: String| -> Result<AnyFuture, Error> {
-                match files_map2.get(&path) {
-                    Some(file) => {
-                        let future = file.file_content()
-                            .map_err(|err| {
-                                LuaError::ExecutionError(format!(
-                                    "failed to get file content: {}",
-                                    err
-                                ))
-                            })
-                            .map(|content| {
-                                AnyLuaValue::LuaAnyString(AnyLuaString(content.to_vec()))
-                            });
-                        Ok(AnyFuture::new(future))
-                    }
-                    None => Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(false)))),
-                }
+                let future = context2
+                    .data
+                    .file_content(path)
+                    .map_err(|err| {
+                        LuaError::ExecutionError(format!("failed to get file content: {}", err))
+                    })
+                    .map(|opt| match opt {
+                        Some(content) => AnyLuaValue::LuaAnyString(AnyLuaString(content.to_vec())),
+                        None => AnyLuaValue::LuaNil,
+                    });
+                Ok(AnyFuture::new(future))
             }
         };
         let file_content = function1(file_content);
         let file_len = {
             move |path: String| -> Result<AnyFuture, Error> {
-                match files_map3.get(&path) {
+                match files_map2.get(&path) {
                     Some(file) => {
                         let future = file.len()
                             .map_err(|err| {
@@ -424,6 +420,40 @@ mod test {
                  ctx.files[2].content() == \"file2sausages\" and\n
                  ctx.files[3].content() == \"file3sausages\" and\n
                  ctx.files[5].content() == \"modifiedsausages\"\n
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_other_file_content_match() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file_content(\"file1\") == \"file1sausages\" and\n
+                 ctx.file_content(\"file2\") == \"file2sausages\" and\n
+                 ctx.file_content(\"file3\") == \"file3sausages\"\n
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
+    fn test_file_content_not_found_returns_nil() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file_content(\"no/such/path\") == nil\n
                  end",
             );
             assert_matches!(
@@ -1007,6 +1037,7 @@ mod test {
             content_store.insert((cs_id.clone(), to_mpath(&path)), content_bytes.into());
         }
         let content_store = Arc::new(content_store);
+        let content_store2 = content_store.clone();
 
         let create_hook_files = move |files: Vec<String>, ty: ChangedFileType| -> Vec<HookFile> {
             files
@@ -1025,6 +1056,8 @@ mod test {
             hook_files,
             "some-comments".into(),
             HookChangesetParents::One("p1-hash".into()),
+            cs_id,
+            content_store2,
         )
     }
 

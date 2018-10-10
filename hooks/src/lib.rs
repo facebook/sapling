@@ -373,12 +373,14 @@ impl HookManager {
                     .collect();
                 let comments = str::from_utf8(changeset.comments())?.into();
                 let parents = HookChangesetParents::from(changeset.parents());
-                Ok(HookChangeset {
+                Ok(HookChangeset::new(
                     author,
                     files,
                     comments,
                     parents,
-                })
+                    changeset_id,
+                    content_store,
+                ))
             },
         ))
     }
@@ -393,12 +395,30 @@ where
 
 /// Represents a changeset - more user friendly than the blob changeset
 /// as this uses String not Vec[u8]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct HookChangeset {
     pub author: String,
     pub files: Vec<HookFile>,
     pub comments: String,
     pub parents: HookChangesetParents,
+    content_store: Arc<FileContentStore>,
+    changeset_id: HgChangesetId,
+}
+
+impl fmt::Debug for HookChangeset {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "HookChangeset changeset_id: {:?} files: {:?}, comments: {:?}",
+            self.changeset_id, self.files, self.comments
+        )
+    }
+}
+
+impl PartialEq for HookChangeset {
+    fn eq(&self, other: &HookChangeset) -> bool {
+        self.changeset_id == other.changeset_id
+    }
 }
 
 #[derive(Clone)]
@@ -490,8 +510,12 @@ impl HookFile {
 
     pub fn file_content(&self) -> BoxFuture<Bytes, Error> {
         let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
+        let changeset_id = self.changeset_id.clone();
         self.content_store
-            .get_file_content_for_changeset(self.changeset_id, path)
+            .get_file_content_for_changeset(self.changeset_id, path.clone())
+            .and_then(move |opt| {
+                opt.ok_or(ErrorKind::NoFileContent(changeset_id, path.into()).into())
+            })
             .boxify()
     }
 }
@@ -502,13 +526,24 @@ impl HookChangeset {
         files: Vec<HookFile>,
         comments: String,
         parents: HookChangesetParents,
+        changeset_id: HgChangesetId,
+        content_store: Arc<FileContentStore>,
     ) -> HookChangeset {
         HookChangeset {
             author,
             files,
             comments,
             parents,
+            content_store,
+            changeset_id,
         }
+    }
+
+    pub fn file_content(&self, path: String) -> BoxFuture<Option<Bytes>, Error> {
+        let path = try_boxfuture!(MPath::new(path.as_bytes()));
+        self.content_store
+            .get_file_content_for_changeset(self.changeset_id, path.clone())
+            .boxify()
     }
 }
 
@@ -671,7 +706,7 @@ pub trait FileContentStore: Send + Sync {
         &self,
         changesetid: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Bytes, Error>;
+    ) -> BoxFuture<Option<Bytes>, Error>;
 }
 
 #[derive(Clone)]
@@ -684,12 +719,11 @@ impl FileContentStore for InMemoryFileContentStore {
         &self,
         changesetid: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Bytes, Error> {
-        let fut = match self.map.get(&(changesetid, path.clone())) {
-            Some(bytes) => finished(bytes.clone()),
-            None => failed(ErrorKind::NoFileContent(changesetid, path.into()).into()),
-        };
-        fut.boxify()
+    ) -> BoxFuture<Option<Bytes>, Error> {
+        let opt = self.map
+            .get(&(changesetid, path.clone()))
+            .map(|bytes| bytes.clone());
+        finished(opt).boxify()
     }
 }
 
@@ -717,21 +751,26 @@ impl FileContentStore for BlobRepoFileContentStore {
         &self,
         changesetid: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Bytes, Error> {
+    ) -> BoxFuture<Option<Bytes>, Error> {
         let repo = self.repo.clone();
         let repo2 = repo.clone();
-        let path2 = path.clone();
         repo.get_changeset_by_changesetid(&changesetid)
             .and_then(move |changeset| {
                 repo.find_file_in_manifest(&path, changeset.manifestid().clone())
             })
-            .and_then(move |opt| {
-                opt.ok_or(ErrorKind::NoFileContent(changesetid, path2.into()).into())
+            .and_then(move |opt| match opt {
+                Some(hash) => repo2
+                    .get_file_content(&hash.into_nodehash())
+                    .map(|content| Some(content))
+                    .boxify(),
+                None => finished(None).boxify(),
             })
-            .and_then(move |hash| repo2.get_file_content(&hash.into_nodehash()))
-            .and_then(|content| {
-                let FileContents::Bytes(bytes) = content;
-                Ok(bytes)
+            .and_then(|opt| match opt {
+                Some(content) => {
+                    let FileContents::Bytes(bytes) = content;
+                    Ok(Some(bytes))
+                }
+                None => Ok(None),
             })
             .boxify()
     }
@@ -1007,6 +1046,40 @@ mod test {
     }
 
     #[derive(Clone, Debug)]
+    struct OtherFileMatchingChangesetHook {
+        file_path: String,
+        expected_content: Option<String>,
+    }
+
+    impl Hook<HookChangeset> for OtherFileMatchingChangesetHook {
+        fn run(&self, context: HookContext<HookChangeset>) -> BoxFuture<HookExecution, Error> {
+            let expected_content = self.expected_content.clone();
+            context
+                .data
+                .file_content(self.file_path.clone())
+                .map(|opt| opt.map(|content| str::from_utf8(&*content).unwrap().to_string()))
+                .map(move |opt| {
+                    if opt == expected_content {
+                        HookExecution::Accepted
+                    } else {
+                        default_rejection()
+                    }
+                })
+                .boxify()
+        }
+    }
+
+    fn other_file_matching_changeset_hook(
+        file_path: String,
+        expected_content: Option<String>,
+    ) -> Box<Hook<HookChangeset>> {
+        Box::new(OtherFileMatchingChangesetHook {
+            file_path,
+            expected_content,
+        })
+    }
+
+    #[derive(Clone, Debug)]
     struct FnFileHook {
         f: fn(HookContext<HookFile>) -> HookExecution,
     }
@@ -1211,6 +1284,8 @@ mod test {
                 hook_files,
                 "3".into(),
                 parents,
+                cs_id,
+                content_store,
             );
             let expected_context = HookContext {
                 hook_name: "hook1".into(),
@@ -1260,6 +1335,30 @@ mod test {
                 "hook1".to_string() => HookExecution::Accepted,
                 "hook2".to_string() => default_rejection(),
                 "hook3".to_string() => default_rejection(),
+            };
+            run_changeset_hooks("bm1", hooks, bookmarks, expected);
+        });
+    }
+
+    #[test]
+    fn test_changeset_hook_other_file_content() {
+        async_unit::tokio_unit_test(|| {
+            let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
+                "hook1".to_string() => other_file_matching_changeset_hook("dir1/subdir1/subsubdir1/file_1".to_string(), Some("elephants".to_string())),
+                "hook2".to_string() => other_file_matching_changeset_hook("dir1/subdir1/subsubdir1/file_1".to_string(), Some("giraffes".to_string())),
+                "hook3".to_string() => other_file_matching_changeset_hook("dir1/subdir1/subsubdir2/file_2".to_string(), Some("aardvarks".to_string())),
+                "hook4".to_string() => other_file_matching_changeset_hook("no/such/path".to_string(), None),
+                "hook5".to_string() => other_file_matching_changeset_hook("no/such/path".to_string(), Some("whateva".to_string())),
+            };
+            let bookmarks = hashmap! {
+                "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string(), "hook3".to_string(), "hook4".to_string(), "hook5".to_string()]
+            };
+            let expected = hashmap! {
+                "hook1".to_string() => HookExecution::Accepted,
+                "hook2".to_string() => default_rejection(),
+                "hook3".to_string() => default_rejection(),
+                "hook4".to_string() => HookExecution::Accepted,
+                "hook5".to_string() => default_rejection(),
             };
             run_changeset_hooks("bm1", hooks, bookmarks, expected);
         });
