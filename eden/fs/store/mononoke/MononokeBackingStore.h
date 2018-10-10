@@ -46,6 +46,8 @@ class MononokeBackingStore : public BackingStore {
       const std::chrono::milliseconds& timeout,
       folly::Executor* executor,
       const std::shared_ptr<folly::SSLContext> sslContext);
+
+  // This constructor should only be used in testing.
   MononokeBackingStore(
       const folly::SocketAddress& socketAddress,
       const std::string& repo,

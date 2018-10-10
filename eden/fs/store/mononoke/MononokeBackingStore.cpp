@@ -191,7 +191,6 @@ std::unique_ptr<Tree> convertBufToTree(
 
 } // namespace
 
-// This constructor should only be used in testing.
 MononokeBackingStore::MononokeBackingStore(
     const folly::SocketAddress& socketAddress,
     const std::string& repo,
