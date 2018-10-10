@@ -131,6 +131,19 @@ class HgImporterTestExecutor : public folly::InlineExecutor {
     threadLocalImporter.release();
   }
 };
+
+// A helper function to avoid repeating noisy casts/conversions when
+// loading data from a UnionDatapackStore instance.
+template <typename UnionStore>
+ConstantStringRef
+unionStoreGet(UnionStore&& unionStore, StringPiece name, const Hash& id) {
+  return unionStore->get(
+      Key(name.data(),
+          name.size(),
+          (const char*)id.getBytes().data(),
+          id.getBytes().size()));
+}
+
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -289,11 +302,8 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
   ConstantStringRef content;
   try {
-    content = unionStore_->wlock()->get(
-        Key(path.stringPiece().data(),
-            path.stringPiece().size(),
-            (const char*)manifestNode.getBytes().data(),
-            manifestNode.getBytes().size()));
+    content =
+        unionStoreGet(unionStore_->wlock(), path.stringPiece(), manifestNode);
   } catch (const MissingKeyError& ex) {
     XLOG(DBG2) << "didn't find path \"" << path << "\" + manifest "
                << manifestNode << ", mark store for refresh and look again";
@@ -301,11 +311,8 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
     // Now try loading it again.
     try {
-      content = unionStore_->wlock()->get(
-          Key(path.stringPiece().data(),
-              path.stringPiece().size(),
-              (const char*)manifestNode.getBytes().data(),
-              manifestNode.getBytes().size()));
+      content =
+          unionStoreGet(unionStore_->wlock(), path.stringPiece(), manifestNode);
     } catch (const MissingKeyError&) {
       // Data for this tree was not present locally.
       // Fall through and fetch the data from the server below.
@@ -389,11 +396,8 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
           val.value();
           // Now try loading it again
           unionStore_->wlock()->markForRefresh();
-          auto content = unionStore_->wlock()->get(
-              Key(ownedPath.stringPiece().data(),
-                  ownedPath.stringPiece().size(),
-                  (const char*)node.getBytes().data(),
-                  node.getBytes().size()));
+          auto content = unionStoreGet(
+              unionStore_->wlock(), ownedPath.stringPiece(), node);
           return processTree(content, node, treeID, ownedPath, batch.get());
         } catch (const HgImportPyError& ex) {
           if (FLAGS_allow_flatmanifest_fallback) {
