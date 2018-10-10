@@ -147,6 +147,18 @@ class testtreestate(unittest.TestCase):
             rootid = tree.flush()
             tree = treestate.treestate(treepath, rootid)
 
+    def testdirfilter(self):
+        treepath = os.path.join(testtmp, "walk")
+        tree = treestate.treestate(treepath, 0)
+        files = ["a/b", "a/b/c", "b/c", "c/d"]
+        for path in files:
+            tree.insert(path, 1, 2, 3, 4, None)
+        self.assertEqual(tree.walk(1, 0, None), files)
+        self.assertEqual(
+            tree.walk(1, 0, lambda dir: dir in {"a/b/", "c/"}), ["a/b", "b/c"]
+        )
+        self.assertEqual(tree.walk(1, 0, lambda dir: True), [])
+
     def testflush(self):
         treepath = os.path.join(testtmp, "flush")
         tree = treestate.treestate(treepath, 0)

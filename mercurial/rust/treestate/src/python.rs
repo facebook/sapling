@@ -545,8 +545,15 @@ py_class!(class treestate |py| {
         Ok(convert_result(py, state.has_dir(path))?)
     }
 
-    def walk(&self, setbits: u16, unsetbits: u16) -> PyResult<Vec<PyBytes>> {
+    def walk(
+        &self,
+        setbits: u16,
+        unsetbits: u16,
+        dirfilter: Option<PyObject> = None
+    ) -> PyResult<Vec<PyBytes>> {
         // Get all file paths with `setbits` all set, `unsetbits` all unset.
+        // If dirfilter is provided. It is a callable that takes a directory path, and returns True
+        // if the path should be skipped.
         assert_eq!(setbits & unsetbits, 0, "setbits cannot overlap with unsetbits");
         let setbits = StateFlags::from_bits_truncate(setbits);
         let unsetbits = StateFlags::from_bits_truncate(unsetbits);
@@ -559,10 +566,23 @@ py_class!(class treestate |py| {
                 result.push(path);
                 Ok(VisitorResult::NotChanged)
             },
-            &|_, dir| match dir.get_aggregated_state() {
-                None => true,
-                Some(state) =>
-                    state.union.contains(setbits) && !state.intersection.intersects(unsetbits),
+            &|components, dir| {
+                if let Some(state) = dir.get_aggregated_state() {
+                    if !state.union.contains(setbits) || state.intersection.intersects(unsetbits) {
+                        return false;
+                    }
+                }
+                if let Some(ref dirfilter) = dirfilter {
+                    let path = PyBytes::new(py, &components.concat());
+                    if let Ok(result) = dirfilter.call(py, (path,), None) {
+                        if let Ok(result) = result.is_true(py) {
+                            if result {  // should skip
+                                return false;  // do not visit
+                            }
+                        }
+                    }
+                }
+                true  // do visit
             },
             &|_, file| file.state & mask == setbits,
         ))?;
