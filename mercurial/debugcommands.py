@@ -1975,7 +1975,22 @@ def debugpathcomplete(ui, repo, *specs, **opts):
     Completion extends only to the next path segment unless
     --full is specified, in which case entire paths are used."""
 
-    if "treedirstate" in repo.requirements:
+    if "treestate" in repo.requirements:
+
+        def complete(spec, acceptable, matches, fullpaths):
+            t = treestate.treestate
+            for k, setbits, unsetbits in [
+                ("nm", t.EXIST_P1 | t.EXIST_NEXT, 0),
+                ("nm", t.EXIST_P2 | t.EXIST_NEXT, 0),
+                ("a", t.EXIST_NEXT, t.EXIST_P1 | t.EXIST_P2),
+                ("r", 0, t.EXIST_NEXT),
+            ]:
+                if k in acceptable:
+                    repo.dirstate._map._tree.pathcomplete(
+                        spec, setbits, unsetbits, matches.add, fullpaths
+                    )
+
+    elif "treedirstate" in repo.requirements:
 
         def complete(spec, acceptable, matches, fullpaths):
             repo.dirstate._map._rmap.pathcomplete(

@@ -43,3 +43,22 @@ Test debugpathcomplete with removed files
   $ hg debugpathcomplete -n d
   dira
 
+
+Test debugpathcomplete with merges
+
+  $ cd ..
+  $ newrepo
+  $ drawdag << EOS
+  >   D     # A/filenormal = 1
+  >  / \    # B/filep1 = 1
+  > B   C   # B/filemerged = 1
+  >  \ /    # C/filep2 = 1
+  >   A     # C/filemerged = 2
+  >         # D/filemerged = 12
+  > EOS
+  $ hg up -q $D
+  $ hg debugpathcomplete f
+  filemerged
+  filenormal
+  filep1
+  filep2
