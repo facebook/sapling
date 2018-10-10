@@ -2280,10 +2280,10 @@ class forceincludematcher(matchmod.basematcher):
     def __init__(self, matcher, includes):
         super(forceincludematcher, self).__init__(matcher._root, matcher._cwd)
         self._matcher = matcher
-        self._includes = includes
+        self._includes = set(includes).union([""])
 
     def __call__(self, value):
-        return value in self._includes or self._matcher(value)
+        return bool(value in self._includes or self._matcher(value))
 
     def __repr__(self):
         return "<forceincludematcher matcher=%r includes=%r>" % (
