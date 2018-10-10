@@ -59,10 +59,10 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
     session->closeWhenIdle();
   }
 
-  void connectError(const folly::AsyncSocketException& /* ex */) override {
+  void connectError(const folly::AsyncSocketException& ex) override {
     // handler won't be used anymore, should be safe to delete
-    promise_.setException(
-        make_exception_wrapper<std::runtime_error>("connect error"));
+    promise_.setException(make_exception_wrapper<std::runtime_error>(
+        folly::to<std::string>("mononoke connection error: ", ex.what())));
     delete this;
   }
 
@@ -82,7 +82,7 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
         promise_.setValue(std::move(body_));
       } else {
         auto error_msg = folly::to<std::string>(
-            "request failed: ",
+            "mononoke request failed: ",
             status_code_,
             ", ",
             body_ ? body_->moveToFbString() : "");
@@ -128,8 +128,8 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
   void onUpgrade(UpgradeProtocol /* protocol */) noexcept override {}
 
   void onError(const HTTPException& error) noexcept override {
-    auto exception =
-        make_exception_wrapper<std::runtime_error>(error.describe());
+    auto exception = make_exception_wrapper<std::runtime_error>(
+        folly::to<std::string>("mononoke HTTP error: ", error.describe()));
     error_.swap(exception);
   }
 
@@ -164,7 +164,8 @@ std::unique_ptr<Tree> convertBufToTree(
   auto s = buf->moveToFbString();
   auto parsed = folly::parseJson(s);
   if (!parsed.isArray()) {
-    throw std::runtime_error("malformed json: should be array");
+    throw std::runtime_error(
+        "malformed json response from mononoke: should be array");
   }
 
   std::vector<TreeEntry> entries;
@@ -182,7 +183,8 @@ std::unique_ptr<Tree> convertBufToTree(
     } else if (str_type == "symlink") {
       file_type = TreeEntryType::SYMLINK;
     } else {
-      throw std::runtime_error("unknown file type");
+      throw std::runtime_error(folly::to<std::string>(
+          "unknown file type from mononoke: ", str_type));
     }
     entries.push_back(TreeEntry(hash, name, file_type));
   }
