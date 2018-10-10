@@ -65,7 +65,6 @@ def get_default_hgrc() -> configparser.ConfigParser:
         "fbamend": "",
         "fbhistedit": "",
         "histedit": "",
-        "inhibit": "",
         "purge": "",
         "rebase": "",
         "reset": "",
