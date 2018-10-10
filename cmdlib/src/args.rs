@@ -90,6 +90,12 @@ impl MononokeApp {
                     .help("numeric ID of repository")
             )
             .arg(
+                Arg::with_name("myrouter-port")
+                    .long("myrouter-port")
+                    .value_name("PORT")
+                    .help("port for local myrouter instance")
+            )
+            .arg(
                 Arg::with_name("log-style")
                     .short("l")
                     .long("log-style")
@@ -444,7 +450,7 @@ fn open_repo_internal<'a>(
         blobrepo,
         &Default::default(),
         Arc::new(hook_manager),
-        None
+        None,
     ))
 }
 
