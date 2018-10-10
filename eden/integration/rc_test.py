@@ -10,6 +10,7 @@
 import os
 import stat
 import tempfile
+import textwrap
 
 from eden.cli import util
 
@@ -74,21 +75,15 @@ class RCTest(testcase.EdenRepoTest):
         assert repo_info is not None
 
         # Create temporary system config
-        f, path = tempfile.mkstemp(dir=self.system_config_dir)
+        f, path = tempfile.mkstemp(dir=self.system_config_dir, suffix=".toml")
 
         # Add system_repo to system config file
-        config = (
-            """\
-[repository """
-            + self.repo_name
-            + """]
-path = """
-            + repo_info.source
-            + """
-type = """
-            + repo_info.type
-            + """
-"""
+        config = textwrap.dedent(
+            f"""\
+            ["repository {self.repo_name}"]
+            path = "{repo_info.source}"
+            type = "{repo_info.type}"
+            """
         )
         os.write(f, config.encode("utf-8"))
         os.close(f)
@@ -111,18 +106,12 @@ type = """
         # Add system_repo to system config file with new name
         repo_name = "repo"
         f = os.open(path, os.O_WRONLY)
-        config = (
-            """\
-[repository """
-            + repo_name
-            + """]
-path = """
-            + repo_info.source
-            + """
-type = """
-            + repo_info.type
-            + """
-"""
+        config = textwrap.dedent(
+            f"""\
+            ["repository {repo_name}"]
+            path = "{repo_info.source}"
+            type = "{repo_info.type}"
+            """
         )
         os.write(f, config.encode("utf-8"))
         os.close(f)

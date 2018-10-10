@@ -26,23 +26,23 @@ class RepoTest(testcase.EdenTestCase):
         self.assertEqual([], self._list_repos())
 
         config = """\
-[repository fbsource]
-path = /data/users/carenthomas/fbsource
-type = git
+["repository fbsource"]
+path = "/data/users/carenthomas/fbsource"
+type = "git"
 
-[bindmounts fbsource]
-fbcode-buck-out = fbcode/buck-out
-fbandroid-buck-out = fbandroid/buck-out
-fbobjc-buck-out = fbobjc/buck-out
-buck-out = buck-out
+["bindmounts fbsource"]
+fbcode-buck-out = "fbcode/buck-out"
+fbandroid-buck-out = "fbandroid/buck-out"
+fbobjc-buck-out = "fbobjc/buck-out"
+buck-out = "buck-out"
 
-[repository git]
-path = /home/carenthomas/src/git
-type = git
+["repository git"]
+path = "/home/carenthomas/src/git"
+type = "git"
 
-[repository hg-crew]
-url = /data/users/carenthomas/facebook-hg-rpms/hg-crew
-type = hg
+["repository hg-crew"]
+url = "/data/users/carenthomas/facebook-hg-rpms/hg-crew"
+type = "hg"
 """
         home_config_file = os.path.join(self.home_dir, ".edenrc")
         with open(home_config_file, "w") as f:

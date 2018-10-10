@@ -18,6 +18,7 @@ import textwrap
 from textwrap import dedent
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
+import toml
 from eden.integration.lib import find_executables, hgrepo, testcase
 
 
@@ -133,18 +134,17 @@ class EdenHgTestCase(testcase.EdenTestCase):
         os.symlink(POST_CLONE, post_clone_hook)
 
         edenrc = os.path.join(os.environ["HOME"], ".edenrc")
-        config = configparser.ConfigParser()
-        config.read(edenrc)
+        toml_config = toml.load(edenrc)
 
         # Set the hg.edenextension path to the empty string, so that
         # we use the version of the eden extension built into hg.par
-        config["hooks"] = {}
-        config["hooks"]["hg.edenextension"] = ""
+        toml_config["hooks"] = {}
+        toml_config["hooks"]["hg.edenextension"] = ""
 
-        config["repository %s" % self.backing_repo_name]["hooks"] = hooks_dir
+        toml_config["repository %s" % self.backing_repo_name]["hooks"] = hooks_dir
 
         with open(edenrc, "w") as f:
-            config.write(f)
+            toml.dump(toml_config, f)
 
     def hg(
         self,

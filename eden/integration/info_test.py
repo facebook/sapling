@@ -24,12 +24,12 @@ class InfoTest(testcase.EdenRepoTest):
         with open(edenrc, "w") as f:
             f.write(
                 """\
-[repository {repo_name}]
-path = {repo_path}
-type = {repo_type}
+["repository {repo_name}"]
+path = "{repo_path}"
+type = "{repo_type}"
 
-[bindmounts {repo_name}]
-buck-out = buck-out
+["bindmounts {repo_name}"]
+buck-out = "buck-out"
 """.format(
                     repo_name=self.repo_name,
                     repo_path=self.repo.get_canonical_root(),

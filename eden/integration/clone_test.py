@@ -111,13 +111,13 @@ class CloneTest(testcase.EdenRepoTest):
             f.write(
                 dedent(
                     f"""\
-            [repository {project_id}]
-            path = {self.repo.get_canonical_root()}
-            type = {self.repo.get_type()}
+            ["repository {project_id}"]
+            path = "{self.repo.get_canonical_root()}"
+            type = "{self.repo.get_type()}"
 
-            [bindmounts {project_id}]
-            mnt1 = foo/stuff/build_output
-            mnt2 = node_modules
+            ["bindmounts {project_id}"]
+            mnt1 = "foo/stuff/build_output"
+            mnt2 = "node_modules"
             """
                 )
             )
@@ -169,13 +169,13 @@ class CloneTest(testcase.EdenRepoTest):
             f.write(
                 dedent(
                     f"""\
-            [repository {repo_name}]
-            path = {self.repo.get_canonical_root()}
-            type = {self.repo.get_type()}
+            ["repository {repo_name}"]
+            path = "{self.repo.get_canonical_root()}"
+            type = "{self.repo.get_type()}"
 
-            [bindmounts {repo_name}]
-            bm1 = tmp/bm1
-            bm2 = tmp/bm2
+            ["bindmounts {repo_name}"]
+            bm1 = "tmp/bm1"
+            bm2 = "tmp/bm2"
             """
                 )
             )
@@ -286,10 +286,10 @@ class CloneTest(testcase.EdenRepoTest):
         with open(edenrc, "w") as f:
             f.write(
                 """\
-[repository {repo_name}]
-path = {repo_path}
-type = {repo_type}
-hooks = {hooks_dir}
+["repository {repo_name}"]
+path = "{repo_path}"
+type = "{repo_type}"
+hooks = "{hooks_dir}"
 """.format(
                     repo_name=repo_name,
                     repo_path=self.repo.get_canonical_root(),
