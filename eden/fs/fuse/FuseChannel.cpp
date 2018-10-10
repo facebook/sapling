@@ -995,7 +995,21 @@ void FuseChannel::readInitPacket() {
   // initPromise_, so that the kernel will put the mount point in use and will
   // not block further filesystem access on us while running the Dispatcher
   // callback code.
-  sendReply(init.header, connInfo);
+  static_assert(
+      FUSE_KERNEL_MINOR_VERSION > 22,
+      "Your kernel headers are too old to build Eden.");
+  if (init.init.minor > 22) {
+    sendReply(init.header, connInfo);
+  } else {
+    // If the protocol version predates the expansion of fuse_init_out, only
+    // send the start of the packet.
+    static_assert(FUSE_COMPAT_22_INIT_OUT_SIZE <= sizeof(connInfo));
+    sendReply(
+        init.header,
+        ByteRange{reinterpret_cast<const uint8_t*>(&connInfo),
+                  FUSE_COMPAT_22_INIT_OUT_SIZE});
+  }
+
   dispatcher_->initConnection(connInfo);
 }
 
