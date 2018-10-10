@@ -51,7 +51,8 @@ class HgBackingStore : public BackingStore {
       LocalStore* localStore,
       UnboundedQueueExecutor* serverThreadPool,
       folly::Optional<AbsolutePath> clientCertificate = folly::none,
-      bool useMononoke = false);
+      bool useMononoke = false,
+      folly::StringPiece mononokeTierName = folly::StringPiece());
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline
@@ -102,7 +103,8 @@ class HgBackingStore : public BackingStore {
   void initializeMononoke(
       const ImporterOptions& options,
       bool useMononoke,
-      folly::Optional<AbsolutePath> clientCertificate);
+      folly::Optional<AbsolutePath> clientCertificate,
+      folly::StringPiece tierName);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
 

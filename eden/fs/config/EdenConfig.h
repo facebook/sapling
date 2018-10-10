@@ -151,6 +151,14 @@ class FieldConverter<AbsolutePath> {
 };
 
 template <>
+class FieldConverter<std::string> {
+ public:
+  folly::Expected<std::string, std::string> operator()(
+      folly::StringPiece value,
+      const std::map<std::string, std::string>& convData) const;
+};
+
+template <>
 class FieldConverter<bool> {
  public:
   /**
@@ -363,6 +371,9 @@ class EdenConfig : public ConfigSettingManager {
   /** Get the use mononoke flag. Default false */
   bool getUseMononoke() const;
 
+  /** Which tier to use when talking to mononoke */
+  const std::string& getMononokeTierName() const;
+
   void setUserConfigPath(AbsolutePath userConfigPath);
 
   void setSystemConfigDir(AbsolutePath systemConfigDir);
@@ -455,6 +466,9 @@ class EdenConfig : public ConfigSettingManager {
                                                  kUnspecifiedDefault,
                                                  this};
   ConfigSetting<bool> useMononoke_{"mononoke:use-mononoke", false, this};
+  ConfigSetting<std::string> mononokeTierName_{"mononoke:tier",
+                                               "mononoke-apiserver",
+                                               this};
 
   struct stat systemConfigFileStat_ = {};
   struct stat userConfigFileStat_ = {};

@@ -180,6 +180,7 @@ EdenServer::EdenServer(
   configPath_ = edenConfig->getUserConfigPath();
   clientCertificate_ = edenConfig->getClientCertificate();
   useMononoke_ = edenConfig->getUseMononoke();
+  mononokeTierName_ = edenConfig->getMononokeTierName();
 }
 
 EdenServer::~EdenServer() {}
@@ -944,7 +945,8 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         localStore_.get(),
         serverState_->getThreadPool().get(),
         clientCertificate_,
-        useMononoke_);
+        useMononoke_,
+        mononokeTierName_);
   } else if (type == "git") {
     const auto repoPath = realpath(name);
     return make_shared<GitBackingStore>(repoPath, localStore_.get());

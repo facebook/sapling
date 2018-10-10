@@ -205,11 +205,13 @@ MononokeBackingStore::MononokeBackingStore(
       sslContext_(sslContext) {}
 
 MononokeBackingStore::MononokeBackingStore(
+    folly::StringPiece tierName,
     const std::string& repo,
     const std::chrono::milliseconds& timeout,
     folly::Executor* executor,
     const std::shared_ptr<folly::SSLContext> sslContext)
     : socketAddress_(folly::none),
+      tierName_(tierName.str()),
       repo_(repo),
       timeout_(timeout),
       executor_(executor),
@@ -251,10 +253,6 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
       });
 }
 
-namespace {
-const std::string kTierName{"mononoke-apiserver"};
-}
-
 folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
     folly::EventBase* eventBase) {
   if (socketAddress_.hasValue()) {
@@ -267,15 +265,15 @@ folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
   auto selector = factory.getSelector();
 
   selector->getSelectionAsync(
-      kTierName,
+      tierName_,
       servicerouter::DebugContext(),
       servicerouter::SelectionCacheCallback(
-          [promise = std::move(promise)](
+          [this, promise = std::move(promise)](
               const servicerouter::Selection& selection,
               servicerouter::DebugContext&& /* unused */) mutable {
             if (selection.hosts.empty()) {
               auto ex = make_exception_wrapper<std::runtime_error>(
-                  folly::to<std::string>("no hosts found in tier ", kTierName));
+                  folly::to<std::string>("no hosts found in tier ", tierName_));
               promise.setException(ex);
               return;
             }

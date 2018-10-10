@@ -41,6 +41,7 @@ class Tree;
 class MononokeBackingStore : public BackingStore {
  public:
   MononokeBackingStore(
+      folly::StringPiece tierName,
       const std::string& repo,
       const std::chrono::milliseconds& timeout,
       folly::Executor* executor,
@@ -72,6 +73,7 @@ class MononokeBackingStore : public BackingStore {
       const proxygen::URL& url);
 
   folly::Optional<folly::SocketAddress> socketAddress_;
+  std::string tierName_;
   std::string repo_;
   std::chrono::milliseconds timeout_;
   folly::Executor* executor_;

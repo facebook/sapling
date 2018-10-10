@@ -151,7 +151,8 @@ HgBackingStore::HgBackingStore(
     LocalStore* localStore,
     UnboundedQueueExecutor* serverThreadPool,
     folly::Optional<AbsolutePath> clientCertificate,
-    bool useMononoke)
+    bool useMononoke,
+    folly::StringPiece mononokeTierName)
     : localStore_(localStore),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
@@ -171,7 +172,7 @@ HgBackingStore::HgBackingStore(
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
 #ifndef EDEN_WIN_NOMONONOKE
-  initializeMononoke(options, useMononoke, clientCertificate);
+  initializeMononoke(options, useMononoke, clientCertificate, mononokeTierName);
 #endif // EDEN_WIN_NOMONONOKE
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 }
@@ -224,7 +225,8 @@ void HgBackingStore::initializeTreeManifestImport(
 void HgBackingStore::initializeMononoke(
     const ImporterOptions& options,
     bool useMononoke,
-    folly::Optional<AbsolutePath> clientCertificate) {
+    folly::Optional<AbsolutePath> clientCertificate,
+    folly::StringPiece tierName) {
 #ifndef EDEN_WIN_NOMONONOKE
 #if EDEN_HAVE_HG_TREEMANIFEST
   if (options.repoName.empty()) {
@@ -250,6 +252,7 @@ void HgBackingStore::initializeMononoke(
   }
 
   mononoke_ = std::make_unique<MononokeBackingStore>(
+      tierName,
       options.repoName,
       std::chrono::milliseconds(FLAGS_mononoke_timeout),
       executor.get(),

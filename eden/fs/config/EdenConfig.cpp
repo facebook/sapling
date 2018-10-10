@@ -201,6 +201,10 @@ bool EdenConfig::getUseMononoke() const {
   return useMononoke_.getValue();
 }
 
+const std::string& EdenConfig::getMononokeTierName() const {
+  return mononokeTierName_.getValue();
+}
+
 void EdenConfig::setUserConfigPath(AbsolutePath userConfigPath) {
   userConfigPath_ = userConfigPath;
 }
@@ -472,6 +476,13 @@ operator()(
         "' to an absolute path, error : ",
         ex.what()));
   }
+}
+
+folly::Expected<std::string, std::string> FieldConverter<std::string>::
+operator()(
+    folly::StringPiece value,
+    const std::map<std::string, std::string>& /* unused */) const {
+  return folly::makeExpected<std::string, std::string>(value.toString());
 }
 
 folly::Expected<bool, std::string> FieldConverter<bool>::operator()(
