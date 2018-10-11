@@ -261,7 +261,28 @@ fn resolve_pushrebase(
             move |(changesets, bookmark_pushes, maybe_pushvars, onto)| {
                 resolver
                     .run_hooks(changesets.clone(), maybe_pushvars, &onto)
-                    .map_err(|err| err_msg(format!("hookrunner failed {:?}", err)))
+                    .map_err(|err| {
+                        match err {
+                            RunHooksError::Failures((cs_hook_failures, file_hook_failures)) => {
+                                let mut err_msgs = vec![];
+                                for (exec_id, exec_info) in cs_hook_failures {
+                                    if let HookExecution::Rejected(info) = exec_info {
+                                        err_msgs.push(format!("{}: {}", exec_id.hook_name, info.description));
+                                    }
+                                }
+                                for (exec_id, exec_info) in file_hook_failures {
+                                    if let HookExecution::Rejected(info) = exec_info {
+                                        err_msgs.push(format!("{}: {}", exec_id.hook_name, info.description));
+                                    }
+                                }
+                                err_msg(format!("hooks failed:\n{}", err_msgs.join("\n")))
+                            }
+                            RunHooksError::Error(err) => {
+                                err
+                            }
+                        }
+
+                    })
                     .and_then(move |()| {
                         resolver
                             .pushrebase(changesets.clone(), bookmark_pushes, &onto)
