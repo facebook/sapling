@@ -330,7 +330,7 @@ impl MemoryManifestEntry {
                 Some(manifest_id) => Either::B(
                     BlobManifest::load(blobstore, &HgManifestId::new(*manifest_id))
                         .and_then({
-                            let manifest_id = *manifest_id;
+                            let manifest_id = HgManifestId::new(*manifest_id);
                             move |m| m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
                         })
                         .and_then({
@@ -672,13 +672,13 @@ impl MemoryManifestEntry {
                         } else {
                             // Do the lookup in base_manifest_id
                             if let Some(manifest_id) = base_manifest_id {
-                                BlobManifest::load(&blobstore, &HgManifestId::new(*manifest_id))
-                                    .and_then({
-                                        let manifest_id = *manifest_id;
+                                let manifest_id = HgManifestId::new(*manifest_id);
+                                BlobManifest::load(&blobstore, &manifest_id)
+                                    .and_then(
                                         move |m| {
                                             m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
                                         }
-                                    })
+                                    )
                                     .map({
                                         let entry_changes = entry_changes.clone();
                                         let element = element.clone();

@@ -670,10 +670,11 @@ impl BlobRepo {
         manifestid: &HgManifestId,
     ) -> BoxFuture<Box<Manifest + Sync>, Error> {
         STATS::get_manifest_by_nodeid.add_value(1);
-        let nodeid = manifestid.into_nodehash();
-        let manifestid = *manifestid;
         BlobManifest::load(&self.blobstore, &manifestid)
-            .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(nodeid).into()))
+            .and_then({
+                let manifestid = *manifestid;
+                move |mf| mf.ok_or(ErrorKind::ManifestMissing(manifestid).into())
+            })
             .map(|m| m.boxed())
             .boxify()
     }

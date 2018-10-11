@@ -9,8 +9,8 @@ use std::fmt;
 use ascii::AsciiString;
 use bincode;
 
-use mercurial_types::{HgBlob, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath, RepoPath,
-                      Type};
+use mercurial_types::{HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
+                      MPath, RepoPath, Type};
 use mononoke_types::{ChangesetId, ContentId, hash::Sha256};
 
 use HgBlobChangeset;
@@ -53,7 +53,7 @@ pub enum ErrorKind {
     ManifestDeserializeFailed(String),
     #[fail(display = "Error while deserializing file node retrieved from key '{}'", _0)]
     FileNodeDeserializeFailed(String),
-    #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(HgNodeHash),
+    #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(HgManifestId),
     #[fail(display = "Node id {} is missing", _0)] NodeMissing(HgNodeHash),
     #[fail(display = "Mercurial content missing for node {} (type {})", _0, _1)]
     HgContentMissing(HgNodeHash, Type),
