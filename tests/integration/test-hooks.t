@@ -194,3 +194,19 @@ Bypass large file hook
   adding file changes
   added 1 changesets with 0 changes to 0 files
   server ignored bookmark master_bookmark update
+
+Send large file inside a directory
+  $ hg up -q 0
+  $ mkdir dir/
+  $ echo 'aaaaaaaaaaa' > dir/largefile
+  $ hg ci -Aqm 'dir/largefile'
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev cbc62a724366 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
+  remote: File is too large, root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nFile is too large"
+  remote: }, backtrace: , session_uuid: * (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]

@@ -277,15 +277,6 @@ impl Pruner for FilePruner {
 }
 
 #[derive(Clone)]
-pub struct TreePruner;
-
-impl Pruner for TreePruner {
-    fn keep(&mut self, entry: &ChangedEntry) -> bool {
-        !entry.status.is_tree()
-    }
-}
-
-#[derive(Clone)]
 pub struct DeletedPruner;
 
 impl Pruner for DeletedPruner {
@@ -379,7 +370,9 @@ where
     TM: Manifest,
     FM: Manifest,
 {
-    changed_entry_stream_with_pruner(to, from, path, TreePruner, None).boxify()
+    changed_entry_stream_with_pruner(to, from, path, NoopPruner, None)
+        .filter(|changed_entry| !changed_entry.status.is_tree())
+        .boxify()
 }
 
 pub fn changed_entry_stream_with_pruner<TM, FM>(

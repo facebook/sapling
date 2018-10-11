@@ -125,7 +125,15 @@ fn run_hook(
     if file_hook {
         hook_manager
             .run_file_hooks_for_bookmark(id, &bookmark, None)
-            .map(|executions| executions.get(0).unwrap().1.clone())
+            .map(|executions| {
+                for execution in executions.iter() {
+                    if let (_, HookExecution::Rejected(_)) = execution {
+                        println!("Returning the first failed hook");
+                        return execution.1.clone();
+                    }
+                }
+                executions.get(0).unwrap().1.clone()
+            })
             .boxify()
     } else {
         hook_manager
@@ -249,6 +257,30 @@ mod test {
         test_hook_rejected(false)
     }
 
+    #[test]
+    fn test_another_repo_file_hook_rejected() {
+        async_unit::tokio_unit_test(move || {
+            let code = String::from(
+                r#"hook = function (ctx)
+                      if ctx.file.path == "dir1/file_1_in_dir1" then
+                        return false, "sausages"
+                      end
+                      return true
+                end"#,
+            );
+
+            let changeset_id = String::from("2f866e7e549760934e31bf0420a873f65100ad63");
+            let res = test_hook_with_repo(code, changeset_id, true, test_many_files_dirs);
+            match res {
+                Ok(HookExecution::Accepted) => assert!(false, "Hook should be rejected"),
+                Ok(HookExecution::Rejected(rejection_info)) => {
+                    assert!(rejection_info.description.starts_with("sausages"))
+                }
+                Err(e) => assert!(false, format!("Unexpected error {:?}", e)),
+            }
+        });
+    }
+
     fn test_hook_rejected(file: bool) {
         async_unit::tokio_unit_test(move || {
             let code = String::from(
@@ -268,6 +300,15 @@ mod test {
     }
 
     fn test_hook(code: String, changeset_id: String, run_file: bool) -> Result<HookExecution> {
+        test_hook_with_repo(code, changeset_id, run_file, test_blobrepo)
+    }
+
+    fn test_hook_with_repo(
+        code: String,
+        changeset_id: String,
+        run_file: bool,
+        repo_creator: fn(&Logger, &ArgMatches) -> BlobRepo,
+    ) -> Result<HookExecution> {
         let dir = TempDir::new("runhook").unwrap();
         let file_path = dir.path().join("testhook.lua");
         let mut file = File::create(file_path.clone()).unwrap();
@@ -283,11 +324,15 @@ mod test {
             },
             changeset_id,
         ];
-        run_hook(args, test_blobrepo).wait()
+        run_hook(args, repo_creator).wait()
     }
 
     fn test_blobrepo(_logger: &Logger, _matches: &ArgMatches) -> BlobRepo {
         fixtures::linear::getrepo(None)
+    }
+
+    fn test_many_files_dirs(_logger: &Logger, _matches: &ArgMatches) -> BlobRepo {
+        fixtures::many_files_dirs::getrepo(None)
     }
 
 }
