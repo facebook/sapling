@@ -317,3 +317,67 @@ server=False
 reponame=repo
 EOF
 }
+
+# Does all the setup necessary for hook tests
+function hook_test_setup() {
+  . "$TESTDIR"/library.sh
+
+  setup_hg_config_repo
+  cd "$TESTTMP/mononoke-config" || exit 1
+
+  cat >> repos/repo/server.toml <<CONFIG
+[[bookmarks]]
+name="master_bookmark"
+CONFIG
+
+  HOOK_FILE="$1"
+  HOOK_NAME="$2"
+  HOOK_TYPE="$3"
+  shift 3
+  BYPASS=""
+  if [[ $# -gt 0 ]]; then
+    BYPASS="$1"
+  fi
+
+  mkdir -p common/hooks
+  cp "$HOOK_FILE" common/hooks/"$HOOK_NAME".lua
+  register_hook common/hooks/"$HOOK_NAME".lua "$HOOK_TYPE" "$BYPASS"
+
+  commit_and_blobimport_config_repo
+  setup_common_hg_configs
+  cd "$TESTTMP" || exit 1
+
+  cat >> "$HGRCPATH" <<EOF
+[ui]
+ssh="$DUMMYSSH"
+EOF
+
+  hg init repo-hg
+  cd repo-hg || exit 1
+  setup_hg_server
+  hg debugdrawdag <<EOF
+C
+|
+B
+|
+A
+EOF
+
+  hg bookmark master_bookmark -r tip
+
+  cd ..
+  blobimport rocksdb repo-hg/.hg repo
+
+  mononoke
+  wait_for_mononoke "$TESTTMP"/repo
+
+  hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
+  cd repo2 || exit 1
+  setup_hg_client
+  cat >> .hg/hgrc <<EOF
+[extensions]
+pushrebase =
+remotenames =
+EOF
+
+}
