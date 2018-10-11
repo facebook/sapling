@@ -48,6 +48,16 @@ pub struct RepoConfig {
     pub pushrebase: PushrebaseParams,
 }
 
+impl RepoConfig {
+    /// Returns a db address that is referenced in this config or None if there is none
+    pub fn get_db_address(&self) -> Option<&str> {
+        match self.repotype {
+            RepoType::BlobManifold(ref args) => Some(&args.db_address),
+            _ => None,
+        }
+    }
+}
+
 /// Configuration of warming up the Mononoke cache. This warmup happens on startup
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CacheWarmupParams {

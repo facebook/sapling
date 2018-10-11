@@ -30,6 +30,7 @@ extern crate openssl;
 extern crate slog;
 extern crate slog_kvfilter;
 extern crate slog_term;
+extern crate sql;
 #[macro_use]
 extern crate stats;
 extern crate time_ext;

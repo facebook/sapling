@@ -12,7 +12,8 @@ mod lfs;
 
 use std::collections::HashMap;
 
-use futures::IntoFuture;
+use failure::Error;
+use futures::{Future, IntoFuture, future::join_all};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 use tokio::runtime::TaskExecutor;
@@ -36,21 +37,22 @@ impl Mononoke {
         config: RepoConfigs,
         myrouter_port: Option<u16>,
         executor: TaskExecutor,
-    ) -> Self {
+    ) -> impl Future<Item = Self, Error = Error> {
         let logger = logger.clone();
-        let repos = config
-            .repos
-            .into_iter()
-            .filter(move |&(_, ref config)| config.enabled)
-            .map(move |(name, config)| {
-                cloned!(logger, executor);
-                let repo = MononokeRepo::new(logger, config, myrouter_port, executor)
-                    .expect("Unable to initialize repo");
-                (name, repo)
-            })
-            .collect();
-
-        Self { repos }
+        join_all(
+            config
+                .repos
+                .into_iter()
+                .filter(move |&(_, ref config)| config.enabled)
+                .map({
+                    move |(name, config)| {
+                        MononokeRepo::new(logger.clone(), config, myrouter_port, executor.clone())
+                            .map(|repo| (name, repo))
+                    }
+                }),
+        ).map(|repos| Self {
+            repos: repos.into_iter().collect(),
+        })
     }
 
     pub fn send_query(

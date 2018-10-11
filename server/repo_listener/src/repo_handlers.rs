@@ -11,6 +11,7 @@ use failure::prelude::*;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
+use sql::myrouter;
 
 use cache_warmup::cache_warmup;
 use hooks::{HookManager, hook_loader::load_hooks};
@@ -47,6 +48,18 @@ pub fn repo_handlers(
                 root_log,
                 "Start warming for repo {}, type {:?}", reponame, config.repotype
             );
+            let ensure_myrouter_ready = match config.get_db_address() {
+                None => future::ok(()).left_future(),
+                Some(db_address) => {
+                    let myrouter_port = try_boxfuture!(myrouter_port.ok_or_else(|| format_err!(
+                        "No port for MyRouter provided, but repo {} needs to connect do db {}",
+                        reponame,
+                        db_address
+                    )));
+                    myrouter::wait_for_myrouter(myrouter_port, db_address).right_future()
+                }
+            };
+
             let ready_handle = ready.create_handle(reponame.as_ref());
 
             let logger = root_log.new(o!("repo" => reponame.clone()));
@@ -84,13 +97,15 @@ pub fn repo_handlers(
             scuba_logger.add_common_server_data();
 
             // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
-            let initial_warmup =
-                cache_warmup(
-                    Arc::new(repo.blobrepo().clone()),
-                    config.cache_warmup,
-                    listen_log.clone(),
-                ).context(format!("while warming up cache for repo: {}", reponame))
-                    .from_err();
+            let initial_warmup = ensure_myrouter_ready.and_then({
+                cloned!(reponame, listen_log);
+                let blobrepo = repo.blobrepo().clone();
+                move |()| {
+                    cache_warmup(Arc::new(blobrepo), config.cache_warmup, listen_log)
+                        .chain_err(format!("while warming up cache for repo: {}", reponame))
+                        .from_err()
+                }
+            });
             ready_handle
                 .wait_for(initial_warmup)
                 .map({

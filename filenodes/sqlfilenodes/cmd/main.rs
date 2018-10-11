@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![feature(duration_as_u128)]
+
 extern crate clap;
 extern crate db;
 extern crate failure_ext as failure;
@@ -14,8 +16,8 @@ extern crate mercurial_types;
 extern crate slog;
 extern crate slog_glog_fmt;
 extern crate slog_term;
+extern crate sql;
 extern crate sqlfilenodes;
-extern crate time_ext;
 extern crate tokio;
 
 use failure::prelude::*;
@@ -27,7 +29,6 @@ use slog_glog_fmt::default_drain as glog_drain;
 use sqlfilenodes::SqlFilenodes;
 use std::str::FromStr;
 use std::time::Instant;
-use time_ext::DurationExt;
 
 fn main() -> Result<()> {
     let matches = clap::App::new("revlog to blob importer")
@@ -86,7 +87,13 @@ fn main() -> Result<()> {
 
     let filenode_hash = HgNodeHash::from_str(filenode).expect("incorrect filenode: should be sha1");
     let filenode_hash = HgFileNodeId::new(filenode_hash);
-    let filenodes = SqlFilenodes::with_myrouter(xdb_tier, myrouter_port);
+    let filenodes = SqlFilenodes::with_myrouter(xdb_tier.clone(), myrouter_port);
+
+    let mut runtime = tokio::runtime::Runtime::new().expect("failed to create Runtime");
+
+    info!(root_log, "Waiting for MyRouter to be accessible...");
+    runtime.block_on(sql::myrouter::wait_for_myrouter(myrouter_port, xdb_tier))?;
+    info!(root_log, "MyRouter is accessible");
 
     info!(root_log, "Fetching parents...");
     let before = Instant::now();
@@ -105,7 +112,6 @@ fn main() -> Result<()> {
             })
     });
 
-    let mut runtime = tokio::runtime::Runtime::new().expect("failed to create Runtime");
     let res = runtime.block_on(fut)?;
 
     info!(

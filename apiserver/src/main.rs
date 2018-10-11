@@ -49,6 +49,7 @@ extern crate slog_scope;
 extern crate slog_stats;
 extern crate slog_stdlog;
 extern crate slog_term;
+extern crate sql;
 extern crate srserver;
 extern crate time_ext;
 extern crate tokio;
@@ -458,12 +459,12 @@ fn main() -> Result<()> {
     let use_ssl = ssl_acceptor.is_some();
     let sys = actix::System::new("mononoke-apiserver");
     let executor = runtime.executor();
-    let mononoke = Mononoke::new(
+    let mononoke = runtime.block_on(Mononoke::new(
         mononoke_logger.clone(),
         repo_configs,
         myrouter_port,
         executor,
-    );
+    ))?;
     let mononoke = Arc::new(mononoke);
 
     if let Ok(port) = thrift_port {

@@ -11,14 +11,14 @@ use bytes::Bytes;
 use failure::{err_msg, Error};
 use futures::{Future, IntoFuture};
 use futures::sync::oneshot;
-use futures_ext::BoxFuture;
+use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
+use sql::myrouter;
 use tokio::runtime::TaskExecutor;
 use url::Url;
 
 use api;
 use blobrepo::{BlobRepo, get_sha256_alias, get_sha256_alias_key};
-use futures_ext::FutureExt;
 use mercurial_types::{HgManifestId, RepositoryId};
 use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::RepoConfig;
@@ -45,20 +45,37 @@ impl MononokeRepo {
         config: RepoConfig,
         myrouter_port: Option<u16>,
         executor: TaskExecutor,
-    ) -> Result<Self, Error> {
+    ) -> impl Future<Item = Self, Error = Error> {
         let repoid = RepositoryId::new(config.repoid);
         let repo = match config.repotype {
-            BlobFiles(ref path) => BlobRepo::new_files(logger.clone(), &path, repoid),
-            BlobRocks(ref path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid),
-            BlobManifold(ref args) => BlobRepo::new_manifold_no_postcommit(
-                logger.clone(),
-                args,
-                repoid,
-                myrouter_port.ok_or(err_msg(
+            BlobFiles(path) => BlobRepo::new_files(logger.clone(), &path, repoid)
+                .into_future()
+                .left_future(),
+            BlobRocks(path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid)
+                .into_future()
+                .left_future(),
+            BlobManifold(args) => match myrouter_port {
+                None => Err(err_msg(
                     "Missing myrouter port, unable to open BlobManifold repo",
-                ))?,
-            ),
-            _ => Err(err_msg("Unsupported repo type.")),
+                )).into_future()
+                    .left_future(),
+                Some(myrouter_port) => myrouter::wait_for_myrouter(myrouter_port, &args.db_address)
+                    .and_then({
+                        cloned!(logger);
+                        move |()| {
+                            BlobRepo::new_manifold_no_postcommit(
+                                logger,
+                                &args,
+                                repoid,
+                                myrouter_port,
+                            )
+                        }
+                    })
+                    .right_future(),
+            },
+            _ => Err(err_msg("Unsupported repo type."))
+                .into_future()
+                .left_future(),
         };
 
         repo.map(|repo| Self {
