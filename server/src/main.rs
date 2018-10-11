@@ -169,8 +169,17 @@ fn main() {
             ca_pem,
         };
 
+        let myrouter_port = match matches.value_of("myrouter-port") {
+            Some(port) => Some(
+                port.parse::<u16>()
+                    .expect("Provided --myrouter-port is not u16"),
+            ),
+            None => None,
+        };
+
         let (repo_listeners, ready) = repo_listener::create_repo_listeners(
             config.repos.into_iter(),
+            myrouter_port,
             root_log,
             matches
                 .value_of("listening-host-port")

@@ -8,6 +8,7 @@ use std::fmt::{self, Debug};
 use std::sync::Arc;
 use std::time::Duration;
 
+use failure::err_msg;
 use rand::Isaac64Rng;
 use rand::distributions::{Distribution, LogNormal};
 use slog::Logger;
@@ -79,7 +80,12 @@ impl MononokeRepo {
     }
 }
 
-pub fn open_blobrepo(logger: Logger, repotype: RepoType, repoid: RepositoryId) -> Result<BlobRepo> {
+pub fn open_blobrepo(
+    logger: Logger,
+    repotype: RepoType,
+    repoid: RepositoryId,
+    myrouter_port: Option<u16>,
+) -> Result<BlobRepo> {
     use hgproto::ErrorKind;
     use metaconfig::repoconfig::RepoType::*;
 
@@ -87,9 +93,15 @@ pub fn open_blobrepo(logger: Logger, repotype: RepoType, repoid: RepositoryId) -
         Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
         BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
         BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
-        BlobManifold(ref args) => {
-            BlobRepo::new_manifold_scribe_commits(logger, args, repoid, ScribeCxxClient::new())?
-        }
+        BlobManifold(ref args) => BlobRepo::new_manifold_scribe_commits(
+            logger,
+            args,
+            repoid,
+            myrouter_port.ok_or(err_msg(
+                "Missing myrouter port, unable to open BlobManifold repo",
+            ))?,
+            ScribeCxxClient::new(),
+        )?,
         TestBlobDelayRocks(ref path, mean, stddev) => {
             // We take in an arithmetic mean and stddev, and deduce a log normal
             let mean = mean as f64 / 1_000_000.0;

@@ -151,6 +151,11 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
     let xdb_tier = matches
         .value_of("xdb-tier")
         .unwrap_or("xdb.mononoke_production");
+    let myrouter_port = matches
+        .value_of("myrouter-port")
+        .expect("missing myrouter port")
+        .parse::<u16>()
+        .expect("myrouter port is not a valid u16");
     BlobRepo::new_manifold_no_postcommit(
         logger.clone(),
         &ManifoldArgs {
@@ -159,6 +164,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
             db_address: xdb_tier.to_string(),
         },
         RepositoryId::new(0),
+        myrouter_port,
     ).expect("failed to create blobrepo instance")
 }
 

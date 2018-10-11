@@ -443,7 +443,15 @@ fn open_repo_internal<'a>(
         Some(bad) => panic!("unexpected blobstore type: {}", bad),
     };
 
-    let blobrepo = open_blobrepo(logger.clone(), repo_type.clone(), repo_id)?;
+    let myrouter_port = match matches.value_of("myrouter-port") {
+        Some(port) => Some(
+            port.parse::<u16>()
+                .expect("Provided --myrouter-port is not u16"),
+        ),
+        None => None,
+    };
+
+    let blobrepo = open_blobrepo(logger.clone(), repo_type.clone(), repo_id, myrouter_port)?;
     let hook_manager = HookManager::new_with_blobrepo(blobrepo.clone(), logger);
     // TODO fixup imports
     Ok(MononokeRepo::new(

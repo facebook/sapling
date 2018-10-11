@@ -40,14 +40,24 @@ pub struct MononokeRepo {
 }
 
 impl MononokeRepo {
-    pub fn new(logger: Logger, config: RepoConfig, executor: TaskExecutor) -> Result<Self, Error> {
+    pub fn new(
+        logger: Logger,
+        config: RepoConfig,
+        myrouter_port: Option<u16>,
+        executor: TaskExecutor,
+    ) -> Result<Self, Error> {
         let repoid = RepositoryId::new(config.repoid);
         let repo = match config.repotype {
             BlobFiles(ref path) => BlobRepo::new_files(logger.clone(), &path, repoid),
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid),
-            BlobManifold(ref args) => {
-                BlobRepo::new_manifold_no_postcommit(logger.clone(), args, repoid)
-            }
+            BlobManifold(ref args) => BlobRepo::new_manifold_no_postcommit(
+                logger.clone(),
+                args,
+                repoid,
+                myrouter_port.ok_or(err_msg(
+                    "Missing myrouter port, unable to open BlobManifold repo",
+                ))?,
+            ),
             _ => Err(err_msg("Unsupported repo type.")),
         };
 

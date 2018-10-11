@@ -43,7 +43,6 @@ extern crate changesets;
 extern crate crypto;
 extern crate dbbookmarks;
 extern crate delayblob;
-extern crate dieselfilenodes;
 extern crate fileblob;
 extern crate filenodes;
 #[macro_use]
@@ -61,6 +60,7 @@ extern crate rocksblob;
 extern crate rocksdb;
 extern crate scribe;
 extern crate scuba_ext;
+extern crate sqlfilenodes;
 extern crate time_ext;
 
 #[cfg(test)]

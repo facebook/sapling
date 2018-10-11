@@ -29,6 +29,7 @@ pub struct RepoHandler {
 
 pub fn repo_handlers(
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
+    myrouter_port: Option<u16>,
     root_log: &Logger,
     ready: &mut ReadyStateBuilder,
 ) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
@@ -53,7 +54,8 @@ pub fn repo_handlers(
             let blobrepo = try_boxfuture!(open_blobrepo(
                 logger.clone(),
                 config.repotype.clone(),
-                repoid
+                repoid,
+                myrouter_port,
             ));
 
             let mut hook_manager = HookManager::new_with_blobrepo(blobrepo.clone(), logger);

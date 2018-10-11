@@ -399,6 +399,14 @@ fn main() -> Result<()> {
         .expect("must set config path");
     let with_scuba = matches.is_present("with-scuba");
 
+    let myrouter_port = match matches.value_of("myrouter-port") {
+        Some(port) => Some(
+            port.parse::<u16>()
+                .expect("Provided --myrouter-port is not u16"),
+        ),
+        None => None,
+    };
+
     let address = format!("{}:{}", host, port);
 
     let root_logger = setup_logger(debug);
@@ -450,7 +458,12 @@ fn main() -> Result<()> {
     let use_ssl = ssl_acceptor.is_some();
     let sys = actix::System::new("mononoke-apiserver");
     let executor = runtime.executor();
-    let mononoke = Mononoke::new(mononoke_logger.clone(), repo_configs, executor);
+    let mononoke = Mononoke::new(
+        mononoke_logger.clone(),
+        repo_configs,
+        myrouter_port,
+        executor,
+    );
     let mononoke = Arc::new(mononoke);
 
     if let Ok(port) = thrift_port {

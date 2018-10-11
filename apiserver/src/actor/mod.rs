@@ -31,7 +31,12 @@ pub struct Mononoke {
 }
 
 impl Mononoke {
-    pub fn new(logger: Logger, config: RepoConfigs, executor: TaskExecutor) -> Self {
+    pub fn new(
+        logger: Logger,
+        config: RepoConfigs,
+        myrouter_port: Option<u16>,
+        executor: TaskExecutor,
+    ) -> Self {
         let logger = logger.clone();
         let repos = config
             .repos
@@ -39,8 +44,8 @@ impl Mononoke {
             .filter(move |&(_, ref config)| config.enabled)
             .map(move |(name, config)| {
                 cloned!(logger, executor);
-                let repo =
-                    MononokeRepo::new(logger, config, executor).expect("Unable to initialize repo");
+                let repo = MononokeRepo::new(logger, config, myrouter_port, executor)
+                    .expect("Unable to initialize repo");
                 (name, repo)
             })
             .collect();

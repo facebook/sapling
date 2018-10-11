@@ -77,10 +77,20 @@ fn main() -> Result<()> {
     let config = configs.repos.get(repo_name).ok_or(err)?;
 
     cmdlib::args::init_cachelib(&matches);
+
+    let myrouter_port = match matches.value_of("myrouter-port") {
+        Some(port) => Some(
+            port.parse::<u16>()
+                .expect("Provided --myrouter-port is not u16"),
+        ),
+        None => None,
+    };
+
     let blobrepo = open_blobrepo(
         logger.clone(),
         config.repotype.clone(),
         RepositoryId::new(config.repoid),
+        myrouter_port,
     )?;
 
     let rc = RequestContext {
