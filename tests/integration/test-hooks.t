@@ -29,6 +29,18 @@ setup configuration
   > CONFIG
   $ register_hook common/hooks/no_owners_file_deletes.lua PerChangeset "bypass_commit_string=\"@allow_delete_owners\""
 
+  $ cat > common/hooks/no_owners2_file_deletes_pushvars.lua <<CONFIG
+  > hook = function (ctx)
+  >   for _, f in ipairs(ctx.files) do
+  >     if f.is_deleted() and string.match(f.path, ".*OWNERS2$") then
+  >       return false, "Deletion of OWNERS files is not allowed"
+  >     end
+  >   end
+  >   return true
+  > end
+  > CONFIG
+  $ register_hook common/hooks/no_owners2_file_deletes_pushvars.lua PerChangeset "bypass_pushvar=\"ALLOW_DELETE_OWNERS=true\""
+
   $ commit_and_blobimport_config_repo
   $ setup_common_hg_configs
   $ cd $TESTTMP
@@ -118,6 +130,31 @@ Bypass owners check
   $ hgmn push -r . --to master_bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 67730b0d6122 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  server ignored bookmark master_bookmark update
+
+Add OWNERS2 file. This time bypass it with pushvars
+  $ touch OWNERS2 && hg ci -Aqm 'add OWNERS2'
+  $ hgmn push -r . --to master_bookmark -q
+  server ignored bookmark master_bookmark update
+  $ hg rm OWNERS2
+  $ hg ci -m 'remove OWNERS2'
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 55334cb4e1e4 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  remote: * ERRO Command failed, remote: true, error: hookrunner failed Failures(([(ChangesetHookExecutionID { cs_id: HgChangesetId(HgNodeHash(Sha1(55334cb4e1e487f6de665629326eb1aaddccde53))), hook_name: "no_owners2_file_deletes_pushvars" }, Rejected(HookRejectionInfo { description: "Deletion of OWNERS files is not allowed", long_description: "" }))], [])), root_cause: ErrorMessage { (glob)
+  remote:     msg: "hookrunner failed Failures(([(ChangesetHookExecutionID { cs_id: HgChangesetId(HgNodeHash(Sha1(55334cb4e1e487f6de665629326eb1aaddccde53))), hook_name: \"no_owners2_file_deletes_pushvars\" }, Rejected(HookRejectionInfo { description: \"Deletion of OWNERS files is not allowed\", long_description: \"\" }))], []))"
+  remote: }, backtrace: , session_uuid: * (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+  $ hgmn push -r . --to master_bookmark --pushvars "ALLOW_DELETE_OWNERS=true"
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 55334cb4e1e4 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

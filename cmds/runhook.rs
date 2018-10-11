@@ -124,12 +124,12 @@ fn run_hook(
     let id = try_boxfuture!(HgChangesetId::from_str(revstr));
     if file_hook {
         hook_manager
-            .run_file_hooks_for_bookmark(id, &bookmark)
+            .run_file_hooks_for_bookmark(id, &bookmark, None)
             .map(|executions| executions.get(0).unwrap().1.clone())
             .boxify()
     } else {
         hook_manager
-            .run_changeset_hooks_for_bookmark(id, &bookmark)
+            .run_changeset_hooks_for_bookmark(id, &bookmark, None)
             .map(|executions| executions.get(0).unwrap().1.clone())
             .boxify()
     }

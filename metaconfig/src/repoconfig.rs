@@ -81,6 +81,13 @@ pub enum HookType {
 pub enum HookBypass {
     /// Bypass that checks that a string is in the commit message
     CommitMessage(String),
+    /// Bypass that checks that a string is in the commit message
+    Pushvar {
+        /// Name of the pushvar
+        name: String,
+        /// Value of the pushvar
+        value: String,
+    },
 }
 
 /// Configuration for a hook
@@ -251,9 +258,34 @@ impl RepoConfigs {
                     ).and_then(|bytes| {
                         let code = str::from_utf8(&bytes)?;
                         let code = code.to_string();
-                        let bypass = raw_hook_config
+
+                        let bypass_commit_message = raw_hook_config
                             .bypass_commit_string
                             .map(|s| HookBypass::CommitMessage(s));
+
+                        let bypass_pushvar = raw_hook_config.bypass_pushvar.and_then(|s| {
+                            let pushvar: Vec<_> = s.split('=').map(|val| val.to_string()).collect();
+                            if pushvar.len() != 2 {
+                                return Some(Err(ErrorKind::InvalidPushvar(s).into()));
+                            }
+                            Some(Ok((
+                                pushvar.get(0).unwrap().clone(),
+                                pushvar.get(1).unwrap().clone(),
+                            )))
+                        });
+                        let bypass_pushvar = match bypass_pushvar {
+                            Some(Err(err)) => {
+                                return Err(err);
+                            }
+                            Some(Ok((name, value))) => Some(HookBypass::Pushvar { name, value }),
+                            None => None,
+                        };
+
+                        if bypass_commit_message.is_some() && bypass_pushvar.is_some() {
+                            return Err(ErrorKind::TooManyBypassOptions(raw_hook_config.name).into());
+                        }
+                        let bypass = bypass_commit_message.or(bypass_pushvar);
+
                         Ok(HookParams {
                             name: raw_hook_config.name,
                             code,
@@ -433,6 +465,7 @@ struct RawHookConfig {
     path: String,
     hook_type: HookType,
     bypass_commit_string: Option<String>,
+    bypass_pushvar: Option<String>,
 }
 
 /// Types of repositories supported
@@ -486,7 +519,7 @@ mod test {
             name="hook2"
             path="./hooks/hook2.lua"
             hook_type="PerChangeset"
-            bypass_commit_string="@allow_hook2"
+            bypass_pushvar="pushvar=pushval"
             [pushrebase]
             rewritedates = false
             recursion_limit = 1024
@@ -540,7 +573,10 @@ mod test {
                         name: "hook2".to_string(),
                         code: "this is hook2".to_string(),
                         hook_type: HookType::PerChangeset,
-                        bypass: Some(HookBypass::CommitMessage("@allow_hook2".into())),
+                        bypass: Some(HookBypass::Pushvar {
+                            name: "pushvar".into(),
+                            value: "pushval".into(),
+                        }),
                     },
                 ]),
                 pushrebase: PushrebaseParams {
@@ -570,5 +606,59 @@ mod test {
                 repos,
             }
         )
+    }
+
+    #[test]
+    fn test_broken_config() {
+        // Two bypasses for one hook
+        let hook1_content = "this is hook1";
+        let content = r#"
+            path="/tmp/fbsource"
+            repotype="blob:rocks"
+            repoid=0
+            [[bookmarks]]
+            name="master"
+            [[bookmarks.hooks]]
+            hook_name="hook1"
+            [[hooks]]
+            name="hook1"
+            path="common/hooks/hook1.lua"
+            hook_type="PerAddedOrModifiedFile"
+            bypass_commit_string="@allow_hook1"
+            bypass_pushvar="var=val"
+        "#;
+
+        let paths = btreemap! {
+            "common/hooks/hook1.lua" => (FileType::Regular, hook1_content),
+            "repos/fbsource/server.toml" => (FileType::Regular, content),
+        };
+        let root_manifest = MockManifest::from_paths(paths).expect("manifest is valid");
+        let res = RepoConfigs::read_manifest(&root_manifest).wait();
+        assert!(res.is_err());
+
+        // Incorrect bypass string
+        let hook1_content = "this is hook1";
+        let content = r#"
+            path="/tmp/fbsource"
+            repotype="blob:rocks"
+            repoid=0
+            [[bookmarks]]
+            name="master"
+            [[bookmarks.hooks]]
+            hook_name="hook1"
+            [[hooks]]
+            name="hook1"
+            path="common/hooks/hook1.lua"
+            hook_type="PerAddedOrModifiedFile"
+            bypass_pushvar="var"
+        "#;
+
+        let paths = btreemap! {
+            "common/hooks/hook1.lua" => (FileType::Regular, hook1_content),
+            "repos/fbsource/server.toml" => (FileType::Regular, content),
+        };
+        let root_manifest = MockManifest::from_paths(paths).expect("manifest is valid");
+        let res = RepoConfigs::read_manifest(&root_manifest).wait();
+        assert!(res.is_err());
     }
 }

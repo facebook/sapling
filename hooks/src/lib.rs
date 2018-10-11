@@ -175,6 +175,7 @@ impl HookManager {
         &self,
         changeset_id: HgChangesetId,
         bookmark: &Bookmark,
+        maybe_pushvars: Option<HashMap<String, Bytes>>,
     ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
         match self.bookmark_hooks.get(bookmark) {
             Some(hooks) => {
@@ -183,7 +184,7 @@ impl HookManager {
                     .into_iter()
                     .filter(|name| self.changeset_hooks.contains_key(name))
                     .collect();
-                self.run_changeset_hooks_for_changeset_id(changeset_id, hooks)
+                self.run_changeset_hooks_for_changeset_id(changeset_id, hooks, maybe_pushvars)
             }
             None => return finished(Vec::new()).boxify(),
         }
@@ -193,6 +194,7 @@ impl HookManager {
         &self,
         changeset_id: HgChangesetId,
         hooks: Vec<String>,
+        maybe_pushvars: Option<HashMap<String, Bytes>>,
     ) -> BoxFuture<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
         let hooks: Result<Vec<(String, (Arc<Hook<HookChangeset>>, _))>, Error> = hooks
             .iter()
@@ -208,7 +210,7 @@ impl HookManager {
         self.get_hook_changeset(changeset_id)
             .and_then({
                 move |hcs| {
-                    let hooks = HookManager::filter_bypassed_hooks(hooks, &hcs.comments);
+                    let hooks = HookManager::filter_bypassed_hooks(hooks, &hcs.comments, maybe_pushvars.as_ref());
 
                     HookManager::run_changeset_hooks_for_changeset(
                         repo_name,
@@ -265,6 +267,7 @@ impl HookManager {
         &self,
         changeset_id: HgChangesetId,
         bookmark: &Bookmark,
+        maybe_pushvars: Option<HashMap<String, Bytes>>,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         debug!(
             self.logger.clone(),
@@ -279,7 +282,12 @@ impl HookManager {
                     .into_iter()
                     .filter_map(|name| file_hooks.get(&name).map(|hook| (name, hook.clone())))
                     .collect();
-                self.run_file_hooks_for_changeset_id(changeset_id, hooks, self.logger.clone())
+                self.run_file_hooks_for_changeset_id(
+                    changeset_id,
+                    hooks,
+                    maybe_pushvars,
+                    self.logger.clone(),
+                )
             }
             None => return Box::new(finished(Vec::new())),
         }
@@ -289,6 +297,7 @@ impl HookManager {
         &self,
         changeset_id: HgChangesetId,
         hooks: Vec<(String, (Arc<Hook<HookFile>>, Option<HookBypass>))>,
+        maybe_pushvars: Option<HashMap<String, Bytes>>,
         logger: Logger,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         debug!(
@@ -298,8 +307,13 @@ impl HookManager {
         let cache = self.cache.clone();
         self.get_hook_changeset(changeset_id)
             .and_then(move |hcs| {
-                let hooks = HookManager::filter_bypassed_hooks(hooks.clone(), &hcs.comments);
+                let hooks = HookManager::filter_bypassed_hooks(
+                    hooks.clone(),
+                    &hcs.comments,
+                    maybe_pushvars.as_ref(),
+                );
                 let hooks = hooks.into_iter().map(|(name, _)| name).collect();
+
                 HookManager::run_file_hooks_for_changeset(
                     changeset_id,
                     hcs.clone(),
@@ -406,13 +420,14 @@ impl HookManager {
     fn filter_bypassed_hooks<T: Clone>(
         hooks: Vec<(String, (T, Option<HookBypass>))>,
         commit_msg: &String,
+        maybe_pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Vec<(String, T)> {
         hooks
             .clone()
             .into_iter()
             .filter_map(|(hook_name, (hook, bypass))| match bypass {
                 Some(bypass) => {
-                    if HookManager::is_hook_bypassed(&bypass, commit_msg) {
+                    if HookManager::is_hook_bypassed(&bypass, commit_msg, maybe_pushvars) {
                         None
                     } else {
                         Some((hook_name, hook))
@@ -423,9 +438,26 @@ impl HookManager {
             .collect()
     }
 
-    fn is_hook_bypassed(bypass: &HookBypass, cs_msg: &String) -> bool {
+    fn is_hook_bypassed(
+        bypass: &HookBypass,
+        cs_msg: &String,
+        maybe_pushvars: Option<&HashMap<String, Bytes>>,
+    ) -> bool {
         match bypass {
             HookBypass::CommitMessage(bypass_string) => cs_msg.contains(bypass_string),
+            HookBypass::Pushvar { name, value } => {
+                if let Some(pushvars) = maybe_pushvars {
+                    let pushvar_val = pushvars
+                        .get(name)
+                        .map(|bytes| String::from_utf8(bytes.to_vec()));
+
+                    if let Some(Ok(pushvar_val)) = pushvar_val {
+                        return &pushvar_val == value;
+                    }
+                    return false;
+                }
+                return false;
+            }
         }
     }
 }
@@ -1764,6 +1796,7 @@ mod test {
         let fut = hook_manager.run_changeset_hooks_for_bookmark(
             default_changeset_id(),
             &Bookmark::new(bookmark_name).unwrap(),
+            None,
         );
         let res = fut.wait().unwrap();
         let map: HashMap<String, HookExecution> = res.into_iter()
@@ -1796,6 +1829,7 @@ mod test {
             .run_file_hooks_for_bookmark(
                 default_changeset_id(),
                 &Bookmark::new(bookmark_name).unwrap(),
+                None,
             );
         let res = fut.wait().unwrap();
         let map: HashMap<String, HashMap<String, HookExecution>> = res.into_iter().fold(

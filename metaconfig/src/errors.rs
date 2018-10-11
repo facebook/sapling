@@ -24,4 +24,10 @@ pub enum ErrorKind {
     /// Config is invalid
     #[fail(display = "invalid path: {}", _0)]
     InvalidPath(MPath),
+    /// Invalid pushvar
+    #[fail(display = "invalid pushvar, should be KEY=VALUE: {}", _0)]
+    InvalidPushvar(String),
+    /// Too many bypass options for a hook
+    #[fail(display = "Only one bypass option is allowed. Hook: {}", _0)]
+    TooManyBypassOptions(String),
 }

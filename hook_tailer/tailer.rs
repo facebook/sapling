@@ -107,12 +107,12 @@ impl Tailer {
             })
             .and_then(move |hg_cs| {
                 info!(logger, "Running file hooks for changeset {:?}", hg_cs);
-                hm.run_file_hooks_for_bookmark(hg_cs.clone(), &bm)
+                hm.run_file_hooks_for_bookmark(hg_cs.clone(), &bm, None)
                 .map(move |res| (hg_cs, res))
             })
             .and_then(move |(hg_cs, file_res)| {
                 info!(logger2, "Running changeset hooks for changeset {:?}", hg_cs);
-                hm2.run_changeset_hooks_for_bookmark(hg_cs.clone(), &bm2)
+                hm2.run_changeset_hooks_for_bookmark(hg_cs.clone(), &bm2, None)
                 .map(|res| (file_res, res))
             })
             .collect()

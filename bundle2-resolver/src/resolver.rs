@@ -195,46 +195,47 @@ fn resolve_pushrebase(
         .maybe_resolve_pushvars(bundle2)
         .and_then({
             cloned!(resolver);
-            move |bundle2| resolver.resolve_b2xtreegroup2(bundle2)
+            move |(maybe_pushvars, bundle2)| resolver.resolve_b2xtreegroup2(bundle2)
+                .map(move |(manifests, bundle2)| (manifests, maybe_pushvars, bundle2))
         })
         .and_then({
             cloned!(resolver);
-            move |(manifests, bundle2)| {
+            move |(manifests, maybe_pushvars, bundle2)| {
                 resolver
                     .maybe_resolve_changegroup(bundle2)
-                    .map(move |(cg_push, bundle2)| (cg_push, manifests, bundle2))
+                    .map(move |(cg_push, bundle2)| (cg_push, manifests, maybe_pushvars, bundle2))
             }
         })
-        .and_then(|(cg_push, manifests, bundle2)| {
+        .and_then(|(cg_push, manifests, maybe_pushvars, bundle2)| {
             cg_push
                 .ok_or(err_msg("Empty pushrebase"))
                 .into_future()
-                .map(|cg_push| (cg_push, manifests, bundle2))
+                .map(move |cg_push| (cg_push, manifests, maybe_pushvars, bundle2))
         })
         .and_then(
-            |(cg_push, manifests, bundle2)| match cg_push.mparams.get("onto").cloned() {
+            |(cg_push, manifests, maybe_pushvars, bundle2)| match cg_push.mparams.get("onto").cloned() {
                 Some(onto_bookmark) => {
                     let v = Vec::from(onto_bookmark.as_ref());
                     let onto_bookmark = String::from_utf8(v)?;
                     let onto_bookmark = Bookmark::new(onto_bookmark)?;
 
-                    Ok((onto_bookmark, cg_push, manifests, bundle2))
+                    Ok((onto_bookmark, cg_push, manifests, maybe_pushvars, bundle2))
                 }
                 None => Err(err_msg("onto is not specified")),
             },
         )
         .and_then({
             cloned!(resolver);
-            move |(onto, cg_push, manifests, bundle2)| {
+            move |(onto, cg_push, manifests, maybe_pushvars, bundle2)| {
                 let changesets = cg_push.changesets.clone();
                 resolver
                     .upload_changesets(cg_push, manifests)
-                    .map(move |()| (changesets, onto, bundle2))
+                    .map(move |()| (changesets, onto, maybe_pushvars, bundle2))
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changesets, onto, bundle2)| {
+            move |(changesets, onto, maybe_pushvars, bundle2)| {
                 resolver
                     .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
                     .and_then({
@@ -250,16 +251,16 @@ fn resolve_pushrebase(
 
                             resolver
                                 .ensure_stream_finished(bundle2)
-                                .map(move |()| (changesets, bookmark_pushes, onto))
+                                .map(move |()| (changesets, bookmark_pushes, maybe_pushvars, onto))
                         }
                     })
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changesets, bookmark_pushes, onto)| {
+            move |(changesets, bookmark_pushes, maybe_pushvars, onto)| {
                 resolver
-                    .run_hooks(changesets.clone(), &onto)
+                    .run_hooks(changesets.clone(), maybe_pushvars, &onto)
                     .map_err(|err| err_msg(format!("hookrunner failed {:?}", err)))
                     .and_then(move |()| {
                         resolver
@@ -420,15 +421,22 @@ impl Bundle2Resolver {
     fn maybe_resolve_pushvars(
         &self,
         bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<BoxStream<Bundle2Item, Error>, Error> {
+    ) -> BoxFuture<
+        (
+            Option<HashMap<String, Bytes>>,
+            BoxStream<Bundle2Item, Error>,
+        ),
+        Error,
+    > {
         next_item(bundle2)
             .and_then(move |(newpart, bundle2)| match newpart {
-                Some(Bundle2Item::Pushvars(_header, emptypart)) => {
+                Some(Bundle2Item::Pushvars(header, emptypart)) => {
+                    let pushvars = header.aparams().clone();
                     // ignored for now, will be used for hooks
-                    emptypart.map(move |_| bundle2).boxify()
+                    emptypart.map(move |_| (Some(pushvars), bundle2)).boxify()
                 }
-                Some(part) => ok(stream::once(Ok(part)).chain(bundle2).boxify()).boxify(),
-                None => ok(bundle2).boxify(),
+                Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
+                None => ok((None, bundle2)).boxify(),
             })
             .context("While resolving Pushvars")
             .from_err()
@@ -896,6 +904,7 @@ impl Bundle2Resolver {
     fn run_hooks(
         &self,
         changesets: Changesets,
+        pushvars: Option<HashMap<String, Bytes>>,
         onto_bookmark: &Bookmark,
     ) -> BoxFuture<(), RunHooksError> {
         let mut futs = stream::FuturesUnordered::new();
@@ -903,11 +912,16 @@ impl Bundle2Resolver {
             let hg_cs_id = HgChangesetId::new(cs_id.clone());
             futs.push(
                 self.hook_manager
-                    .run_changeset_hooks_for_bookmark(hg_cs_id.clone(), onto_bookmark)
-                    .join(
-                        self.hook_manager
-                            .run_file_hooks_for_bookmark(hg_cs_id, onto_bookmark),
-                    ),
+                    .run_changeset_hooks_for_bookmark(
+                        hg_cs_id.clone(),
+                        onto_bookmark,
+                        pushvars.clone(),
+                    )
+                    .join(self.hook_manager.run_file_hooks_for_bookmark(
+                        hg_cs_id,
+                        onto_bookmark,
+                        pushvars.clone(),
+                    )),
             )
         }
         futs.collect()
