@@ -15,10 +15,11 @@ extern crate slog;
 extern crate slog_glog_fmt;
 extern crate slog_term;
 extern crate time_ext;
+extern crate tokio;
 
 use dieselfilenodes::{MysqlFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
 use filenodes::Filenodes;
-use futures::future::Future;
+use futures::{future::{loop_fn, Future, Loop}, sync::oneshot};
 use mercurial_types::{HgFileNodeId, HgNodeHash, RepoPath, RepositoryId};
 use slog::{Drain, Level};
 use slog_glog_fmt::default_drain as glog_drain;
@@ -74,9 +75,9 @@ fn main() {
         info!(root_log, "file");
         RepoPath::file(filename).expect("incorrect repopath")
     };
-    let filenode_hash = HgNodeHash::from_str(filenode).expect("incorrect filenode: should be sha1");
 
-    let mut filenode_hash = HgFileNodeId::new(filenode_hash);
+    let filenode_hash = HgNodeHash::from_str(filenode).expect("incorrect filenode: should be sha1");
+    let filenode_hash = HgFileNodeId::new(filenode_hash);
 
     info!(root_log, "Connecting to mysql...");
     let filenodes =
@@ -85,26 +86,25 @@ fn main() {
 
     info!(root_log, "Fetching parents...");
     let before = Instant::now();
-    let mut res = 0;
-    loop {
-        let filenode = filenodes
+    let (send, recv) = oneshot::channel();
+
+    let fut = loop_fn((1, filenode_hash), move |(res, filenode_hash)| {
+        filenodes
             .get_filenode(&filename, &filenode_hash, &RepositoryId::new(0))
-            .wait()
-            .expect("failed to fetch")
-            .expect("not found");
-        res += 1;
-        if Some(res) == depth {
-            break;
-        }
-        match filenode.p1 {
-            Some(p1) => {
-                filenode_hash = p1;
-            }
-            None => {
-                break;
-            }
-        }
-    }
+            .map(move |filenode| {
+                if Some(res) == depth {
+                    return Loop::Break(res);
+                }
+                match filenode.expect("not found").p1 {
+                    Some(p1) => Loop::Continue((res + 1, p1)),
+                    None => Loop::Break(res),
+                }
+            })
+    }).map_err(|_| ())
+        .and_then(|res| send.send(res).map_err(|_| ()));
+    tokio::run(fut);
+
+    let res = recv.wait().expect("failed to run future to completion");
 
     info!(
         root_log,
