@@ -76,6 +76,13 @@ pub enum HookType {
     PerAddedOrModifiedFile,
 }
 
+/// Hook bypass
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum HookBypass {
+    /// Bypass that checks that a string is in the commit message
+    CommitMessage(String),
+}
+
 /// Configuration for a hook
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct HookParams {
@@ -85,6 +92,8 @@ pub struct HookParams {
     pub hook_type: HookType,
     /// The code of the hook
     pub code: String,
+    /// An optional way to bypass a hook
+    pub bypass: Option<HookBypass>,
 }
 
 /// Pushrebase configuration options
@@ -242,10 +251,14 @@ impl RepoConfigs {
                     ).and_then(|bytes| {
                         let code = str::from_utf8(&bytes)?;
                         let code = code.to_string();
+                        let bypass = raw_hook_config
+                            .bypass_commit_string
+                            .map(|s| HookBypass::CommitMessage(s));
                         Ok(HookParams {
                             name: raw_hook_config.name,
                             code,
                             hook_type: raw_hook_config.hook_type,
+                            bypass,
                         })
                     })
                         .boxify()
@@ -419,6 +432,7 @@ struct RawHookConfig {
     name: String,
     path: String,
     hook_type: HookType,
+    bypass_commit_string: Option<String>,
 }
 
 /// Types of repositories supported
@@ -467,10 +481,12 @@ mod test {
             name="hook1"
             path="common/hooks/hook1.lua"
             hook_type="PerAddedOrModifiedFile"
+            bypass_commit_string="@allow_hook1"
             [[hooks]]
             name="hook2"
             path="./hooks/hook2.lua"
             hook_type="PerChangeset"
+            bypass_commit_string="@allow_hook2"
             [pushrebase]
             rewritedates = false
             recursion_limit = 1024
@@ -518,11 +534,13 @@ mod test {
                         name: "hook1".to_string(),
                         code: "this is hook1".to_string(),
                         hook_type: HookType::PerAddedOrModifiedFile,
+                        bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),
                     },
                     HookParams {
                         name: "hook2".to_string(),
                         code: "this is hook2".to_string(),
                         hook_type: HookType::PerChangeset,
+                        bypass: Some(HookBypass::CommitMessage("@allow_hook2".into())),
                     },
                 ]),
                 pushrebase: PushrebaseParams {

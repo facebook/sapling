@@ -12,10 +12,10 @@ setup configuration
   $ mkdir -p common/hooks
   $ cat > common/hooks/file_size_hook.lua <<CONFIG
   > hook = function (ctx)
-  >  return ctx.file.len() <= 100000
+  >  return ctx.file.len() <= 10
   > end
   > CONFIG
-  $ register_hook common/hooks/file_size_hook.lua PerAddedOrModifiedFile
+  $ register_hook common/hooks/file_size_hook.lua PerAddedOrModifiedFile "bypass_commit_string=\"@allow_large_files\""
 
   $ cat > common/hooks/no_owners_file_deletes.lua <<CONFIG
   > hook = function (ctx)
@@ -27,7 +27,7 @@ setup configuration
   >   return true
   > end
   > CONFIG
-  $ register_hook common/hooks/no_owners_file_deletes.lua PerChangeset
+  $ register_hook common/hooks/no_owners_file_deletes.lua PerChangeset "bypass_commit_string=\"@allow_delete_owners\""
 
   $ commit_and_blobimport_config_repo
   $ setup_common_hg_configs
@@ -107,3 +107,47 @@ Add OWNERS file, then delete it. Make sure deletion is not allowed
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
+
+Bypass owners check
+  $ cat >> .hg/hgrc <<CONFIG
+  > [extensions]
+  > fbamend=
+  > CONFIG
+  $ hg amend -m 'remove OWNERS\n@allow_delete_owners'
+  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/2d1a0bcf73ee-65b66be0-amend.hg (glob)
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 67730b0d6122 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  server ignored bookmark master_bookmark update
+
+Send large file
+  $ hg up -q 0
+  $ echo 'aaaaaaaaaaa' > largefile
+  $ hg ci -Aqm 'largefile'
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 3e0db158edcc to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  remote: * ERRO Command failed, remote: true, error: hookrunner failed Failures(([], [(FileHookExecutionID { cs_id: HgChangesetId(HgNodeHash(Sha1(3e0db158edcc82d93b971f44c13ac74836db5714))), hook_name: "file_size_hook", file: HookFile path: largefile, changeset_id: 3e0db158edcc82d93b971f44c13ac74836db5714 }, Rejected(HookRejectionInfo { description: "", long_description: "" }))])), root_cause: ErrorMessage { (glob)
+  remote:     msg: "hookrunner failed Failures(([], [(FileHookExecutionID { cs_id: HgChangesetId(HgNodeHash(Sha1(3e0db158edcc82d93b971f44c13ac74836db5714))), hook_name: \"file_size_hook\", file: HookFile path: largefile, changeset_id: 3e0db158edcc82d93b971f44c13ac74836db5714 }, Rejected(HookRejectionInfo { description: \"\", long_description: \"\" }))]))"
+  remote: }, backtrace: , session_uuid: * (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+
+Bypass large file hook
+  $ hg amend -m '@allow_large_files'
+  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/3e0db158edcc-6025a9b3-amend.hg (glob)
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev 51fea0e7527d to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  server ignored bookmark master_bookmark update

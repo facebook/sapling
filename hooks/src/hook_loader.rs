@@ -24,9 +24,11 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                 let name = hook.name;
                 let lua_hook = LuaHook::new(name.clone(), hook.code.clone());
                 match hook.hook_type {
-                    HookType::PerAddedOrModifiedFile => hook_manager.register_file_hook(&name, Arc::new(lua_hook)),
+                    HookType::PerAddedOrModifiedFile => {
+                        hook_manager.register_file_hook(&name, Arc::new(lua_hook), hook.bypass)
+                    }
                     HookType::PerChangeset => {
-                        hook_manager.register_changeset_hook(&name, Arc::new(lua_hook))
+                        hook_manager.register_changeset_hook(&name, Arc::new(lua_hook), hook.bypass)
                     }
                 }
                 hook_set.insert(name);
@@ -94,16 +96,19 @@ mod test {
                         name: "hook1".into(),
                         code: "hook1 code".into(),
                         hook_type: HookType::PerAddedOrModifiedFile,
+                        bypass: None,
                     },
                     HookParams {
                         name: "hook2".into(),
                         code: "hook2 code".into(),
                         hook_type: HookType::PerAddedOrModifiedFile,
+                        bypass: None,
                     },
                     HookParams {
                         name: "hook3".into(),
                         code: "hook3 code".into(),
                         hook_type: HookType::PerChangeset,
+                        bypass: None,
                     },
                 ]),
                 pushrebase: Default::default(),
@@ -138,6 +143,7 @@ mod test {
                         name: "hook1".into(),
                         code: "hook1 code".into(),
                         hook_type: HookType::PerAddedOrModifiedFile,
+                        bypass: None
                     },
                 ]),
                 pushrebase: Default::default(),

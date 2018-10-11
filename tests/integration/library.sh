@@ -149,6 +149,13 @@ function commit_and_blobimport_config_repo {
 function register_hook {
   path="$1"
   hook_type="$2"
+
+  shift 2
+  BYPASS=""
+  if [[ $# -gt 0 ]]; then
+    BYPASS="$1"
+  fi
+
   hook_basename=${path##*/}
   hook_name="${hook_basename%.lua}"
   cat >> repos/repo/server.toml <<CONFIG
@@ -158,6 +165,7 @@ hook_name="$hook_name"
 name="$hook_name"
 path="$path"
 hook_type="$hook_type"
+$BYPASS
 CONFIG
 }
 
