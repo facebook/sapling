@@ -1,6 +1,6 @@
   $ . helpers-usechg.sh
 
-  $ enable fbamend rebase
+  $ enable amend rebase
   $ setconfig experimental.evolution.allowdivergence=True
   $ setconfig experimental.evolution="createmarkers, allowunstable"
   $ mkcommit() {

@@ -33,7 +33,7 @@ Create flat manifest client
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > pushrebase=
   > EOF
 
@@ -291,7 +291,7 @@ commits
   
   $ hg debugindex -m --config treemanifest.treeonly=False | tail -1
        2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
-  $ hg strip -r . --config fbamend.safestrip=False
+  $ hg strip -r . --config amend.safestrip=False
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/87da9865954c-3cfa5389-backup.hg (glob)
 

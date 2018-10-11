@@ -1,7 +1,7 @@
 Test new conflict switching:
 
   $ newrepo
-  $ enable rebase purge fbamend morestatus
+  $ enable amend morestatus purge rebase
   $ setconfig morestatus.show=True
   $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True

@@ -13,8 +13,8 @@
   > git = 1
   > unified = 0
   > [extensions]
+  > amend=
   > rebase=
-  > fbamend=
   > [experimental]
   > evolution=createmarkers, allowunstable
   > EOF

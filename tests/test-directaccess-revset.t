@@ -1,4 +1,4 @@
-  $ enable directaccess fbamend obsstore
+  $ enable amend directaccess obsstore
   $ newrepo
   $ drawdag <<'EOS'
   > C E

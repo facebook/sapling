@@ -1,14 +1,14 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend =
+  > amend =
+  > arcconfig=$TESTDIR/../hgext/extlib/phabricator/arcconfig.py
+  > arcdiff=
+  > commitcloud =
   > infinitepush =
   > infinitepushbackup =
-  > commitcloud =
   > rebase =
   > remotenames =
   > share =
-  > arcconfig=$TESTDIR/../hgext/extlib/phabricator/arcconfig.py
-  > arcdiff=
   > [ui]
   > ssh = python "$TESTDIR/dummyssh"
   > [infinitepush]

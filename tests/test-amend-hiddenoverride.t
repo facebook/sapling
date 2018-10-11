@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > amend=
   > blackbox=
-  > fbamend=
   > [experimental]
   > evolution = all
   > [blackbox]

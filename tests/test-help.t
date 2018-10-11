@@ -290,6 +290,8 @@ Test extension help:
       disabled extensions:
   
        absorb        apply working directory changes to changesets
+       eden          accelerated hg functionality in Eden checkouts (eden !)
+       amend         extends the existing commit amend functionality
        arcdiff       (no help text available)
        backups       display recently made backups to recover stripped
                      changesets
@@ -317,7 +319,6 @@ Test extension help:
        directaccess  This extension provides direct access
        dirsync
        drop          drop specified changeset from the stack
-       eden          accelerated hg functionality in Eden checkouts (eden !)
        edrecord      (no help text available)
        eol           automatically manage newlines in repository files
        extdiff       command to allow external programs to compare revisions
@@ -330,7 +331,6 @@ Test extension help:
                      comparison
        fastpartialmatch
                      extension that makes node prefix lookup faster
-       fbamend       extends the existing commit amend functionality
        fbconduit     (no help text available)
        fbhistedit    extends the existing histedit functionality
        fbshow        show changesets in detail with full log message, patches

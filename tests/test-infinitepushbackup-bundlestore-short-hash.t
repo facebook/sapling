@@ -60,7 +60,7 @@ Quick test `hg hide` / `hg up`
 Check update now accesses hidden commits rather than trying to pull
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > [experimental]
   > evolution=exchange
   > evolution.createmarkers=True

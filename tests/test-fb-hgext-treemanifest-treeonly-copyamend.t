@@ -95,9 +95,9 @@ Create a client
   > [experimental]
   > evolution = createmarkers, allowunstable
   > [extensions]
-  > treemanifest=
+  > amend=
   > fastmanifest=
-  > fbamend=
+  > treemanifest=
   > [treemanifest]
   > sendtrees=True
   > treeonly=True

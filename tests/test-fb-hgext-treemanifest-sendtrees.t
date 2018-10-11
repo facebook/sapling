@@ -41,7 +41,7 @@ Create flat manifest clients
 Transition to hybrid flat+tree client
   $ cat >> client1/.hg/hgrc <<EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > fastmanifest=
   > treemanifest=
   > [fastmanifest]
@@ -52,7 +52,7 @@ Transition to hybrid flat+tree client
   > EOF
   $ cat >> client2/.hg/hgrc <<EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > fastmanifest=
   > treemanifest=
   > [fastmanifest]

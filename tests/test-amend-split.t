@@ -1,14 +1,14 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > rebase=
   > strip=
   > [experimental]
   > evolution = createmarkers, allowunstable
   > [ui]
   > interactive = true
-  > [fbamend]
+  > [amend]
   > safestrip = false
   > [hint]
   > ack-hint-ack = true

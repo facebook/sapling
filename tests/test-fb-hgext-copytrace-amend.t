@@ -1,8 +1,8 @@
   $ . "$TESTDIR/copytrace.sh"
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > amend=
   > copytrace=
-  > fbamend=
   > rebase=
   > shelve=
   > [experimental]

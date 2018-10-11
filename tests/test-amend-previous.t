@@ -1,12 +1,12 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > rebase=
   > [experimental]
   > evolution = createmarkers
   > EOF
-  $ hg init fbamendprevious && cd fbamendprevious
+  $ hg init amendprevious && cd amendprevious
 
 Check help text for new options and removal of unsupported options.
   $ hg previous --help

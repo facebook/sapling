@@ -209,6 +209,7 @@ def _preimportmodules():
     ]
     extmods = [
         "absorb",
+        "amend",
         "arcdiff",
         "automv",
         "blackbox",
@@ -232,7 +233,6 @@ def _preimportmodules():
         "fastannotate",
         "fastlog",
         "fastmanifest",
-        "fbamend",
         "fbconduit",
         "fbhistedit",
         "fbshow",

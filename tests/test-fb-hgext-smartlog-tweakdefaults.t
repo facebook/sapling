@@ -1,9 +1,9 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > amend=
   > rebase=
   > smartlog=
   > tweakdefaults=
-  > fbamend=
   > [experimental]
   > evolution=createmarkers
   > evolution.allowdivergence=on

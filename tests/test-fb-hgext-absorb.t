@@ -335,7 +335,7 @@ Test config option absorb.amendflags and running as a sub command of amend:
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=$TESTTMP/dummyamend.py
+  > amend=$TESTTMP/dummyamend.py
   > [absorb]
   > amendflag = correlated
   > EOF

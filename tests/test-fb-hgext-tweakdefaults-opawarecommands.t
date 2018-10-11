@@ -1,8 +1,8 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=
-  > fbamend=
+  > amend=
   > rebase=
+  > tweakdefaults=
   > [experimental]
   > evolution=createmarkers
   > EOF

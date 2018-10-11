@@ -5,10 +5,10 @@ Setup
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > histedit=
-  > fbamend=
-  > rebase=
+  > amend=
   > fbhistedit=
+  > histedit=
+  > rebase=
   > [experimental]
   > evolution = createmarkers
   > EOF

@@ -68,7 +68,7 @@ Create flat manifest client
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > pushrebase=
   > EOF
 

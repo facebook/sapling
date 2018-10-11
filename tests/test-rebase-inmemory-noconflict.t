@@ -1,6 +1,6 @@
 Tests the --noconflict rebase flag
 
-  $ enable rebase fbamend morestatus
+  $ enable amend morestatus rebase
   $ setconfig morestatus.show=True
   $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True

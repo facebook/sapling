@@ -1,4 +1,4 @@
-# fbamend.py - improved amend functionality
+# amend.py - improved amend functionality
 #
 # Copyright 2013 Facebook, Inc.
 #
@@ -20,7 +20,7 @@ automatically disable itself if changeset evolution is enabled.
 To disable the creation of preamend bookmarks and use obsolescence
 markers instead to fix up amends, enable the userestack option::
 
-    [fbamend]
+    [amend]
     userestack = true
 
 To make `hg previous` and `hg next` always pick the newest commit at
@@ -28,12 +28,12 @@ each step of walking up or down the stack instead of aborting when
 encountering non-linearity (equivalent to the --newest flag), enable
 the following config option::
 
-    [fbamend]
+    [amend]
     alwaysnewest = true
 
 To automatically update the commit date, enable the following config option::
 
-    [fbamend]
+    [amend]
     date = implicitupdate
 
 Commits are restacked automatically on amend, if doing so doesn't create
@@ -104,10 +104,10 @@ cmdtable.update(unamend.cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("fbamend", "alwaysnewest", default=False)
-configitem("fbamend", "date", default=None)
-configitem("fbamend", "education", default=None)
-configitem("fbamend", "safestrip", default=True)
+configitem("amend", "alwaysnewest", default=False)
+configitem("amend", "date", default=None)
+configitem("amend", "education", default=None)
+configitem("amend", "safestrip", default=True)
 configitem("commands", "amend.autorebase", default=True)
 
 testedwith = "ships-with-fb-hgext"
@@ -349,7 +349,7 @@ def amend(ui, repo, *pats, **opts):
 
     commitdate = opts.get("date")
     if not commitdate:
-        if ui.config("fbamend", "date") == "implicitupdate":
+        if ui.config("amend", "date") == "implicitupdate":
             commitdate = "now"
         else:
             commitdate = old.date()

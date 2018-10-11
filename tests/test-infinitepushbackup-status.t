@@ -3,7 +3,7 @@
   $ setup() {
   > cat << EOF >> .hg/hgrc
   > [extensions]
-  > fbamend=
+  > amend=
   > smartlog=
   > [infinitepushbackup]
   > enablestatus = True

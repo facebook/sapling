@@ -12,13 +12,13 @@ Test that hg pull creates obsolescence markers for landed diffs
   > evolution= createmarkers
   > rebaseskipobsolete=True
   > [extensions]
-  > fbamend=
-  > strip=
+  > amend=
+  > pullcreatemarkers=
+  > pushrebase=
   > rebase=
   > remotenames =
-  > pushrebase=
-  > pullcreatemarkers=
-  > [fbamend]
+  > strip=
+  > [amend]
   > safestrip=false
   > [remotenames]
   > allownonfastforward=True

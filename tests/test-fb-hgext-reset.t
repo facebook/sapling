@@ -153,7 +153,7 @@ Reset + Obsolete tests
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > rebase=
   > [experimental]
   > evolution=all

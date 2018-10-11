@@ -1,5 +1,5 @@
   $ . helpers-usechg.sh
-  $ enable fbamend rebase
+  $ enable amend rebase
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.singletransaction=True
   $ setconfig experimental.evolution.allowdivergence=True

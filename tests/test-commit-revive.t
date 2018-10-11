@@ -1,4 +1,4 @@
-  $ enable obsstore fbamend
+  $ enable amend obsstore
 
 "import" can revive a commit
 

@@ -416,7 +416,7 @@ Push to svn server should fail
 Scratch pull of pruned commits
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > [experimental]
   > evolution=createmarkers
   > EOF

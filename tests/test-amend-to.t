@@ -1,8 +1,8 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > amend=
   > directaccess=
-  > fbamend=
   > histedit=
   > rebase=
   > [experimental]

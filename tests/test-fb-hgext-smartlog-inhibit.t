@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > smartlog=
   > [experimental]
   > evolution = createmarkers

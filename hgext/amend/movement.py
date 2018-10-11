@@ -105,7 +105,7 @@ def _moverelative(ui, repo, args, opts, reverse=False):
     if n <= 0:
         return
 
-    if ui.configbool("fbamend", "alwaysnewest"):
+    if ui.configbool("amend", "alwaysnewest"):
         opts["newest"] = True
 
     # Check that the given combination of arguments is valid.

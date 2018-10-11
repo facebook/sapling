@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > crdump=
   > [experimental]
   > evolution.createmarkers=True

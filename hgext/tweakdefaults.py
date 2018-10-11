@@ -258,9 +258,9 @@ def extsetup(ui):
     wrapcommand(commands.table, "tags", tagscmd)
     wrapcommand(commands.table, "graft", graftcmd)
     try:
-        fbamendmodule = extensions.find("fbamend")
+        amendmodule = extensions.find("amend")
         opawareamend = markermetadatawritingcommand(ui, amendcmd, "amend")
-        wrapcommand(fbamendmodule.cmdtable, "amend", opawareamend)
+        wrapcommand(amendmodule.cmdtable, "amend", opawareamend)
     except KeyError:
         pass
     try:

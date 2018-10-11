@@ -1,6 +1,6 @@
   $ cat << EOF >> $HGRCPATH
   > [extensions]
-  > fbamend=
+  > amend=
   > rebase=
   > [experimental]
   > evolution = createmarkers, allowunstable

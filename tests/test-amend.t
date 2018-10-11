@@ -170,20 +170,12 @@ Amend in the middle of a stack
   $ hg update -q B
   $ echo 2 >> B
   $ hg amend
-  abort: cannot amend changeset with children
-  [255]
+  warning: orphaned descendants detected, not stripping 112478962961 (obsstore-off !)
+  hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
 
 #if obsstore-on
 
-With allowunstable, amend could work in the middle of a stack
-
-  $ cat >> $HGRCPATH <<EOF
-  > [experimental]
-  > evolution.createmarkers=True
-  > evolution.allowunstable=True
-  > EOF
-
-  $ hg amend
   $ hg log -T '{rev} {node|short} {desc}\n' -G
   @  3 be169c7e8dbe B
   |
@@ -193,17 +185,6 @@ With allowunstable, amend could work in the middle of a stack
   |/
   o  0 426bada5c675 A
   
-Checking the note stored in the obsmarker
-
-  $ echo foo > bar
-  $ hg add bar
-  $ hg amend --note 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
-  abort: cannot store a note of more than 255 bytes
-  [255]
-  $ hg amend --note "adding bar"
-  $ hg debugobsolete -r .
-  112478962961147124edd43549aedd1a335e44bf be169c7e8dbe21cd10b3d79691cbe7f241e3c21c 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
-  be169c7e8dbe21cd10b3d79691cbe7f241e3c21c 16084da537dd8f84cfdb3055c633772269d62e1b 0 (Thu Jan 01 00:00:01 1970 +0000) {'note': 'adding bar', 'operation': 'amend', 'user': 'test'}
 #endif
 
 Cannot amend public changeset
@@ -212,7 +193,6 @@ Cannot amend public changeset
   $ hg update -C -q A
   $ hg amend -m AMEND
   abort: cannot amend public changesets
-  (see 'hg help phases' for details)
   [255]
 
 Amend a merge changeset

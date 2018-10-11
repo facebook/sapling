@@ -12,15 +12,15 @@ Test that hg pull creates obsolescence markers for landed diffs
   > evolution= createmarkers
   > rebaseskipobsolete=True
   > [extensions]
-  > fbamend=
-  > strip=
+  > amend=
+  > pullcreatemarkers=
+  > pushrebase=
   > rebase=
   > remotenames =
-  > pushrebase=
-  > pullcreatemarkers=
+  > strip=
   > [remotenames]
   > allownonfastforward=True
-  > [fbamend]
+  > [amend]
   > safestrip=false
   > EOF
   $ hg init server

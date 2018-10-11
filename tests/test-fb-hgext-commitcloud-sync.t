@@ -1,9 +1,9 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend =
+  > amend =
+  > commitcloud =
   > infinitepush =
   > infinitepushbackup =
-  > commitcloud =
   > rebase =
   > remotenames =
   > share =

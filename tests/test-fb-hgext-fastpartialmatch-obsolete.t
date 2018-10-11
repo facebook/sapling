@@ -7,10 +7,10 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > amend=
   > fastpartialmatch=
-  > strip=
   > histedit=
-  > fbamend=
+  > strip=
   > [experimental]
   > evolution=createmarkers
   > [ui]

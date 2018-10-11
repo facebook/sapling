@@ -5,7 +5,7 @@
   $ setup() {
   > cat << EOF >> .hg/hgrc
   > [extensions]
-  > fbamend=
+  > amend=
   > [experimental]
   > evolution=createmarkers
   > EOF

@@ -48,7 +48,7 @@ prints the missing commits in reverse chronological order, and acts as a
 pseudo-replacement for Git's reflog.
 
 
-fbamend
+amend
 ==========
 
 An extension that adds the 'hg amend --rebase' command. When working with a

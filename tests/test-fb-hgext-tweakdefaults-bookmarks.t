@@ -4,7 +4,7 @@ Set up
   > [experimental]
   > evolution=all
   > [extensions]
-  > fbamend=
+  > amend=
   > tweakdefaults=
   > EOF
 

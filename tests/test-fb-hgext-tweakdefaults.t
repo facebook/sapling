@@ -2,10 +2,10 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=
-  > fbamend=
-  > rebase=
+  > amend=
   > histedit=
+  > rebase=
+  > tweakdefaults=
   > [experimental]
   > updatecheck=noconflict
   > EOF
@@ -530,8 +530,8 @@ and allowance of prune rebases
   > prunestrip=on
   > evolution.allowdivergence=off
   > [extensions]
+  > amend=
   > strip=
-  > fbamend=
   > EOF
   $ echo root > root && hg ci -Am root  # rev 0
   adding root
@@ -723,7 +723,7 @@ Test bookmark -D
   |
   o  0
   
-  $ hg bookmark -D feature2 --config extensions.fbamend=!
+  $ hg bookmark -D feature2 --config extensions.amend=!
   saved backup bundle to $TESTTMP/book-D/.hg/strip-backup/1c4dfc7a8985-4027cf08-backup.hg (glob)
   bookmark 'feature2' deleted
   $ hg log -G -T '{rev} {bookmarks}' -r 'all()' --hidden

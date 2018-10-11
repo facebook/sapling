@@ -384,9 +384,9 @@ divergence cases in undo.  The original split/divergence obsmarkers suffice for
 checking split/divergence.
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
+  > amend=
   > smartlog=
   > tweakdefaults=
-  > fbamend=
   > EOF
   $ hg undo
   undone to *, before commit --amend (glob)
@@ -456,9 +456,9 @@ checking split/divergence.
   75f63379f12bf02d40fe7444587ad67be9ae81b8 75f63379f12bf02d40fe7444587ad67be9ae81b8 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'revive', 'user': 'test'}
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > smartlog =!
-  > tweakdefaults =!
-  > fbamend =!
+  > amend=!
+  > smartlog=!
+  > tweakdefaults=!
   > EOF
 
 File corruption handling
@@ -711,8 +711,8 @@ Check local undo works forward
 Check local undo with facebook style strip
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > strip =
-  > fbamend=
+  > amend=
+  > strip=
   > EOF
   $ hg strip 3ee6
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -727,7 +727,7 @@ Check local undo with facebook style strip
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > strip =!
-  > fbamend =!
+  > amend =!
   > EOF
 
 hg undo --preview test
@@ -1268,7 +1268,7 @@ permanently delete a commit, we do not want to undo to this state.
 Obsmarkers for instack amend
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > EOF
   $ hg update 0963
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

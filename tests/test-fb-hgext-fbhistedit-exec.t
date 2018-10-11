@@ -341,11 +341,11 @@ test 'execr' executing in the current directory
   added short
   $ cd ..
 
-Test that we can recover exec with fbamend on
+Test that we can recover exec with amend on
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=
+  > amend=
   > [experimental]
   > evolution=createmarkers, allowunstable
   > EOF
