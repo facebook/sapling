@@ -5,10 +5,11 @@
 // GNU General Public License version 2 or any later version.
 
 use std::fmt::{self, Debug, Display};
+use std::io::Write;
 use std::str::FromStr;
 
 use ascii::{AsciiStr, AsciiString};
-use blake2::Blake2b;
+use blake2::VarBlake2b;
 use blake2::digest::{Input, VariableOutput};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
@@ -99,13 +100,13 @@ impl Blake2 {
 
 /// Context for incrementally computing a `Blake2` hash.
 #[derive(Clone)]
-pub struct Context(Blake2b);
+pub struct Context(VarBlake2b);
 
 impl Context {
     /// Construct a `Context`
     #[inline]
     pub fn new(key: &[u8]) -> Self {
-        Context(Blake2b::new_keyed(key, 32))
+        Context(VarBlake2b::new_keyed(key, 32))
     }
 
     #[inline]
@@ -113,15 +114,17 @@ impl Context {
     where
         T: AsRef<[u8]>,
     {
-        self.0.process(data.as_ref())
+        self.0.input(data.as_ref())
     }
 
     #[inline]
     pub fn finish(self) -> Blake2 {
-        let mut ret = [0; 32];
-        self.0
-            .variable_result(&mut ret)
-            .expect("32-byte array must work with 32-byte blake2b");
+        let mut ret = [0u8; 32];
+        self.0.variable_result(|res| {
+            ret.as_mut()
+                .write_all(res)
+                .expect("32-byte array must work with 32-byte blake2b");
+        });
         Blake2(ret)
     }
 }
