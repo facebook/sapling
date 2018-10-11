@@ -62,8 +62,8 @@ def get_default_hgrc() -> configparser.ConfigParser:
     }
     hgrc["extensions"] = {
         "absorb": "",
+        "amend": "",
         "directaccess": "",
-        "fbamend": "",
         "fbhistedit": "",
         "histedit": "",
         "purge": "",
