@@ -11,7 +11,6 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import unittest
 from typing import Any
 
@@ -20,15 +19,12 @@ import eden.thrift.client
 import pexpect
 
 from .lib.find_executables import FindExe
+from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
-class RestartTest(unittest.TestCase):
+class RestartTest(unittest.TestCase, TemporaryDirectoryMixin):
     def setUp(self) -> None:
-        def cleanup_tmp_dir() -> None:
-            shutil.rmtree(self.tmp_dir, ignore_errors=True)
-
-        self.tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
-        self.addCleanup(cleanup_tmp_dir)
+        self.tmp_dir = self.make_temporary_directory()
 
         def ensure_stopped() -> None:
             stop_cmd = [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir, "stop"]

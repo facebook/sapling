@@ -26,6 +26,7 @@ from eden.cli.util import poll_until
 from .lib.fake_edenfs import fake_eden_daemon, spawn_fake_eden_daemon
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
+from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 SHUTDOWN_EXIT_CODE_NORMAL = 0
@@ -34,13 +35,9 @@ SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 
-class StopTest(unittest.TestCase, PexpectAssertionMixin):
+class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin):
     def setUp(self):
-        def cleanup_tmp_dir() -> None:
-            shutil.rmtree(self.tmp_dir, ignore_errors=True)
-
-        self.tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
-        self.addCleanup(cleanup_tmp_dir)
+        self.tmp_dir = self.make_temporary_directory()
 
     def test_stop_stops_running_daemon(self):
         with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:

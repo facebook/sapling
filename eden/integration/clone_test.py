@@ -12,7 +12,6 @@ import json
 import os
 import stat
 import subprocess
-import tempfile
 from textwrap import dedent
 from typing import Optional, Set
 
@@ -34,7 +33,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     def test_clone_to_non_existent_directory(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         non_existent_dir = os.path.join(tmp, "foo/bar/baz")
 
         self.eden.run_cmd("clone", repo_name, non_existent_dir)
@@ -44,7 +43,7 @@ class CloneTest(testcase.EdenRepoTest):
         )
 
     def test_clone_to_dir_under_symlink(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         empty_dir = os.path.join(tmp, "foo/bar")
         os.makedirs(empty_dir)
 
@@ -70,7 +69,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.eden.run_cmd("remove", "--yes", symlinked_target)
 
     def test_clone_to_existing_empty_directory(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         empty_dir = os.path.join(tmp, "foo/bar/baz")
         os.makedirs(empty_dir)
 
@@ -83,7 +82,7 @@ class CloneTest(testcase.EdenRepoTest):
     def test_clone_from_repo(self) -> None:
         # Specify the source of the clone as an existing local repo rather than
         # an alias for a config.
-        destination_dir = self._new_tmp_dir()
+        destination_dir = self.make_temporary_directory()
         self.eden.run_cmd("clone", self.repo.path, destination_dir)
         self.assertTrue(
             os.path.isfile(os.path.join(destination_dir, "hello")),
@@ -125,7 +124,7 @@ class CloneTest(testcase.EdenRepoTest):
         # Clone the repository using its path.
         # We should find the config from the project_id field in
         # the .arcconfig file
-        eden_clone = self._new_tmp_dir()
+        eden_clone = self.make_temporary_directory()
         self.eden.run_cmd("clone", self.repo.path, eden_clone)
         self.assertTrue(
             os.path.isdir(os.path.join(eden_clone, "foo/stuff/build_output")),
@@ -151,7 +150,7 @@ class CloneTest(testcase.EdenRepoTest):
             assert isinstance(self.repo, HgRepository)
             head_rev = self.repo.get_head_hash()
             self.repo.update(before_arcconfig)
-            alt_eden_clone = self._new_tmp_dir()
+            alt_eden_clone = self.make_temporary_directory()
             self.eden.run_cmd("clone", "-r", head_rev, self.repo.path, alt_eden_clone)
             self.assertTrue(
                 os.path.isdir(os.path.join(alt_eden_clone, "foo/stuff/build_output")),
@@ -181,7 +180,7 @@ class CloneTest(testcase.EdenRepoTest):
             )
 
         # Create an Eden mount from the config alias.
-        eden_clone1 = self._new_tmp_dir()
+        eden_clone1 = self.make_temporary_directory()
         self.eden.run_cmd("clone", repo_name, eden_clone1)
         self.assertTrue(
             os.path.isdir(os.path.join(eden_clone1, "tmp/bm1")),
@@ -189,7 +188,7 @@ class CloneTest(testcase.EdenRepoTest):
         )
 
         # Clone the Eden clone! Note it should inherit its config.
-        eden_clone2 = self._new_tmp_dir()
+        eden_clone2 = self.make_temporary_directory()
         self.eden.run_cmd(
             "clone", "--rev", self.repo.get_head_hash(), eden_clone1, eden_clone2
         )
@@ -200,7 +199,7 @@ class CloneTest(testcase.EdenRepoTest):
         )
 
     def test_clone_with_valid_revision_cmd_line_arg_works(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         target = os.path.join(tmp, "foo/bar/baz")
         self.eden.run_cmd(
             "clone", "--rev", self.repo.get_head_hash(), repo_name, target
@@ -211,7 +210,7 @@ class CloneTest(testcase.EdenRepoTest):
         )
 
     def test_clone_with_short_revision_cmd_line_arg_works(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         target = os.path.join(tmp, "foo/bar/baz")
         short = self.repo.get_head_hash()[:6]
         self.eden.run_cmd("clone", "--rev", short, repo_name, target)
@@ -221,7 +220,7 @@ class CloneTest(testcase.EdenRepoTest):
         )
 
     def test_clone_to_non_empty_directory_fails(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         non_empty_dir = os.path.join(tmp, "foo/bar/baz")
         os.makedirs(non_empty_dir)
         with open(os.path.join(non_empty_dir, "example.txt"), "w") as f:
@@ -237,7 +236,7 @@ class CloneTest(testcase.EdenRepoTest):
         )
 
     def test_clone_with_invalid_revision_cmd_line_arg_fails(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         empty_dir = os.path.join(tmp, "foo/bar/baz")
         os.makedirs(empty_dir)
 
@@ -251,7 +250,7 @@ class CloneTest(testcase.EdenRepoTest):
         )
 
     def test_clone_to_file_fails(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         non_empty_dir = os.path.join(tmp, "foo/bar/baz")
         os.makedirs(non_empty_dir)
         file_in_directory = os.path.join(non_empty_dir, "example.txt")
@@ -266,7 +265,7 @@ class CloneTest(testcase.EdenRepoTest):
         )
 
     def test_clone_to_non_existent_directory_that_is_under_a_file_fails(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         non_existent_dir = os.path.join(tmp, "foo/bar/baz")
         with open(os.path.join(tmp, "foo"), "w") as f:
             f.write("I am not empty.\n")
@@ -318,7 +317,7 @@ echo -n "$1" >> "{scratch_file}"
 
         # Verify that the hook gets run as part of `eden clone`.
         self.assertEqual("ok", util.read_all(scratch_file))
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         self.eden.clone(repo_name, tmp)
         new_contents = "ok" + self.repo.get_type()
         self.assertEqual(new_contents, util.read_all(scratch_file))
@@ -329,7 +328,7 @@ echo -n "$1" >> "{scratch_file}"
         self.assertEqual(new_contents, util.read_all(scratch_file))
 
     def test_attempt_clone_invalid_repo_name(self) -> None:
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         repo_name = "repo-name-that-is-not-in-the-config"
 
         with self.assertRaises(edenclient.EdenCommandError) as context:
@@ -357,7 +356,7 @@ echo -n "$1" >> "{scratch_file}"
         extra_daemon_args = self.eden.get_extra_daemon_args()
 
         # Verify that clone starts the daemon.
-        tmp = self._new_tmp_dir()
+        tmp = self.make_temporary_directory()
         clone_output = self.eden.run_cmd(
             "clone",
             "--daemon-binary",
@@ -388,7 +387,7 @@ echo -n "$1" >> "{scratch_file}"
             f.write(custom_readme_text)
 
         # Perform a clone
-        new_mount = self._new_tmp_dir()
+        new_mount = self.make_temporary_directory()
         readme_path = os.path.join(new_mount, "README_EDEN.txt")
         self.eden.run_cmd("clone", self.repo.path, new_mount)
         self.assertEqual("hola\n", util.read_all(os.path.join(new_mount, "hello")))
@@ -398,6 +397,3 @@ echo -n "$1" >> "{scratch_file}"
         self.eden.run_cmd("unmount", new_mount)
         self.assertFalse(os.path.exists(os.path.join(new_mount, "hello")))
         self.assertEqual(custom_readme_text, util.read_all(readme_path))
-
-    def _new_tmp_dir(self) -> str:
-        return tempfile.mkdtemp(dir=self.tmp_dir)

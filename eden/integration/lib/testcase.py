@@ -28,6 +28,7 @@ from hypothesis.configuration import hypothesis_home_dir, set_hypothesis_home_di
 from hypothesis.internal.detection import is_hypothesis_test
 
 from . import edenclient, gitrepo, hgrepo, repobase, util
+from .temporary_directory import TemporaryDirectoryMixin
 
 
 def is_sandcastle() -> bool:
@@ -72,13 +73,13 @@ if not edenclient.can_run_eden():
     # This is avoiding a reporting noise issue in our CI that files
     # tasks about skipped tests.  Let's just skip defining most of them
     # to avoid the noise if we know that they won't work anyway.
-    TestParent = typing.cast(Type[unittest.TestCase], object)
+    TestParents = (typing.cast(Type[unittest.TestCase], object),)
 else:
-    TestParent = unittest.TestCase
+    TestParents = (unittest.TestCase, TemporaryDirectoryMixin)
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
-class EdenTestCase(TestParent):
+class EdenTestCase(*TestParents):
     """
     Base class for eden integration test cases.
 
@@ -140,14 +141,7 @@ class EdenTestCase(TestParent):
         self.addCleanup(self.report_time, "clean up started")
 
     def setup_eden_test(self) -> None:
-        def cleanup_tmp_dir() -> None:
-            if os.environ.get("EDEN_TEST_NO_CLEANUP"):
-                print("Leaving behind eden test directory %r" % self.tmp_dir)
-            else:
-                util.cleanup_tmp_dir(pathlib.Path(self.tmp_dir))
-
-        self.tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
-        self.addCleanup(cleanup_tmp_dir)
+        self.tmp_dir = self.make_temporary_directory()
 
         # The home directory, to make sure eden looks at this rather than the
         # real home directory of the user running the tests.
