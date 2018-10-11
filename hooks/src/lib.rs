@@ -693,7 +693,7 @@ impl ChangesetStore for BlobRepoChangesetStore {
             .get_changeset_by_changesetid(changesetid)
             .and_then(move |cs| {
                 let mf_id = cs.manifestid();
-                let mf = repo.get_manifest_by_nodeid(&mf_id.into_nodehash());
+                let mf = repo.get_manifest_by_nodeid(&mf_id);
                 let parents = cs.parents();
                 let (maybe_p1, _) = parents.get_nodes();
                 // TODO(stash): generate changed file stream correctly for merges
@@ -701,7 +701,7 @@ impl ChangesetStore for BlobRepoChangesetStore {
                     Some(p1) => repo.get_changeset_by_changesetid(&HgChangesetId::new(p1))
                         .and_then({
                             cloned!(repo);
-                            move |p1| repo.get_manifest_by_nodeid(&p1.manifestid().into_nodehash())
+                            move |p1| repo.get_manifest_by_nodeid(&p1.manifestid())
                         })
                         .left_future(),
                     None => finished(get_empty_manifest()).right_future(),

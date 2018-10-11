@@ -19,7 +19,7 @@ use url::Url;
 use api;
 use blobrepo::{BlobRepo, get_sha256_alias, get_sha256_alias_key};
 use futures_ext::FutureExt;
-use mercurial_types::RepositoryId;
+use mercurial_types::{HgManifestId, RepositoryId};
 use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::RepoConfig;
 use metaconfig::repoconfig::RepoType::{BlobFiles, BlobManifold, BlobRocks};
@@ -170,9 +170,9 @@ impl MononokeRepo {
 
     fn get_tree(&self, hash: String) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let treehash = try_boxfuture!(FS::get_nodehash(&hash));
-
+        let treemanifestid = HgManifestId::new(treehash);
         self.repo
-            .get_manifest_by_nodeid(&treehash)
+            .get_manifest_by_nodeid(&treemanifestid)
             .map(|tree| {
                 tree.list()
                     .filter_map(|entry| -> Option<Entry> { entry.try_into().ok() })

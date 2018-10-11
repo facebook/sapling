@@ -206,7 +206,7 @@ fn fetch_content(
         .map(|cs| cs.manifestid().clone())
         .and_then({
             cloned!(repo);
-            move |root_mf_id| repo.get_manifest_by_nodeid(&root_mf_id.into_nodehash())
+            move |root_mf_id| repo.get_manifest_by_nodeid(&root_mf_id)
         });
 
     let all_but_last = iter_ok::<_, Error>(path.clone().into_iter().rev().skip(1).rev());

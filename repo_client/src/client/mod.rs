@@ -733,16 +733,15 @@ fn get_changed_manifests_stream(
     max_depth: usize,
     trace: TraceContext,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
-    let manifest = repo.get_manifest_by_nodeid(mfid)
+    let mfid = HgManifestId::new(*mfid);
+    let manifest = repo.get_manifest_by_nodeid(&mfid)
         .traced(&trace, "fetch rootmf", trace_args!());
+    let basemfid = HgManifestId::new(*basemfid);
     let basemanifest =
-        repo.get_manifest_by_nodeid(basemfid)
+        repo.get_manifest_by_nodeid(&basemfid)
             .traced(&trace, "fetch baserootmf", trace_args!());
 
-    let root_entry_stream = stream::once(Ok((
-        repo.get_root_entry(&HgManifestId::new(*mfid)),
-        rootpath.clone(),
-    )));
+    let root_entry_stream = stream::once(Ok((repo.get_root_entry(&mfid), rootpath.clone())));
 
     if max_depth == 1 {
         return root_entry_stream.boxify();

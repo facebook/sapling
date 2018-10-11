@@ -13,7 +13,8 @@ use utils::run_future;
 use blobrepo::HgBlobEntry;
 use blobrepo::internal::{IncompleteFilenodes, MemoryManifestEntry, MemoryRootManifest};
 use fixtures::many_files_dirs;
-use mercurial_types::{Entry, FileType, HgNodeHash, MPath, MPathElement, Type, nodehash::HgEntryId};
+use mercurial_types::{Entry, FileType, HgManifestId, HgNodeHash, MPath, MPathElement, Type,
+                      nodehash::HgEntryId};
 use mercurial_types_mocks::nodehash;
 use mononoke_types::RepoPath;
 
@@ -124,12 +125,13 @@ fn save_manifest() {
             MPathElement::new(b"dir".to_vec()).expect("dir is no longer a valid MPathElement");
         insert_entry(&memory_manifest.unittest_root(), path.clone(), dir);
 
-        let manifest_id = memory_manifest
+        let manifest_entry = memory_manifest
             .save()
             .wait()
             .expect("Could not save manifest");
+        let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(&manifest_id.get_hash().into_nodehash())
+        let refound = repo.get_manifest_by_nodeid(&manifest_id)
             .map(|m| m.lookup(&path))
             .wait()
             .expect("Lookup of entry just saved failed")
@@ -207,8 +209,9 @@ fn remove_item() {
             .save()
             .wait()
             .expect("Could not save manifest");
+        let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
+        let refound = repo.get_manifest_by_nodeid(&manifest_id)
             .map(|m| m.lookup(&dir2))
             .wait()
             .expect("Lookup of entry just saved failed");
@@ -262,8 +265,9 @@ fn add_item() {
             .save()
             .wait()
             .expect("Could not save manifest");
+        let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
+        let refound = repo.get_manifest_by_nodeid(&manifest_id)
             .map(|m| m.lookup(&new_file))
             .wait()
             .expect("Lookup of entry just saved failed")
@@ -317,8 +321,9 @@ fn replace_item() {
             .save()
             .wait()
             .expect("Could not save manifest");
+        let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(&manifest_entry.get_hash().into_nodehash())
+        let refound = repo.get_manifest_by_nodeid(&manifest_id)
             .map(|m| m.lookup(&new_file))
             .wait()
             .expect("Lookup of entry just saved failed")

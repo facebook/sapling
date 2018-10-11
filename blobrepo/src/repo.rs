@@ -668,11 +668,11 @@ impl BlobRepo {
 
     pub fn get_manifest_by_nodeid(
         &self,
-        nodeid: &HgNodeHash,
+        manifestid: &HgManifestId,
     ) -> BoxFuture<Box<Manifest + Sync>, Error> {
         STATS::get_manifest_by_nodeid.add_value(1);
-        let nodeid = *nodeid;
-        let manifestid = HgManifestId::new(nodeid);
+        let nodeid = manifestid.into_nodehash();
+        let manifestid = *manifestid;
         BlobManifest::load(&self.blobstore, &manifestid)
             .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(nodeid).into()))
             .map(|m| m.boxed())
@@ -961,7 +961,7 @@ impl BlobRepo {
     ) -> impl Future<Item = bool, Error = Error> {
         let repo = self.clone();
         let child_mf_id = child_mf_id.clone();
-        self.get_manifest_by_nodeid(&parent_mf_id.into_nodehash())
+        self.get_manifest_by_nodeid(&parent_mf_id)
             .and_then(move |mf| {
                 loop_fn(
                     (None, mf, path.into_iter()),
@@ -1059,7 +1059,7 @@ impl BlobRepo {
                 .boxify()
         }
 
-        self.get_manifest_by_nodeid(&manifest.into_nodehash())
+        self.get_manifest_by_nodeid(&manifest)
             .and_then(move |manifest| {
                 let content_init = future::ok(Some(Content::Tree(manifest))).boxify();
                 match path {

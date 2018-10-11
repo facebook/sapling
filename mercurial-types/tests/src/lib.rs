@@ -44,9 +44,7 @@ fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &HgChangesetId) -> Box<Ma
         .wait()
         .unwrap();
     let manifestid = cs.manifestid();
-    repo.get_manifest_by_nodeid(&manifestid.into_nodehash())
-        .wait()
-        .unwrap()
+    repo.get_manifest_by_nodeid(&manifestid).wait().unwrap()
 }
 
 fn get_hash(c: char) -> HgEntryId {
@@ -434,7 +432,7 @@ fn test_recursive_entry_stream() {
 
         assert_eq!(actual, expected);
 
-        let root_mf = repo.get_manifest_by_nodeid(&manifestid.into_nodehash())
+        let root_mf = repo.get_manifest_by_nodeid(&manifestid)
             .wait()
             .unwrap();
 

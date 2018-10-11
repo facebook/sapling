@@ -70,8 +70,10 @@ pub struct BonsaiMFVerifyDifference {
 impl BonsaiMFVerifyDifference {
     /// What entries changed from the original manifest to the roundtripped one.
     pub fn changes(&self) -> impl Stream<Item = ChangedEntry, Error = Error> + Send {
-        let original_mf = self.repo.get_manifest_by_nodeid(&self.lookup_mf_id);
-        let roundtrip_mf = self.repo.get_manifest_by_nodeid(&self.roundtrip_mf_id);
+        let lookup_mf_id = HgManifestId::new(self.lookup_mf_id);
+        let roundtrip_mf_id = HgManifestId::new(self.roundtrip_mf_id);
+        let original_mf = self.repo.get_manifest_by_nodeid(&lookup_mf_id);
+        let roundtrip_mf = self.repo.get_manifest_by_nodeid(&roundtrip_mf_id);
         original_mf
             .join(roundtrip_mf)
             .map(|(original_mf, roundtrip_mf)| {

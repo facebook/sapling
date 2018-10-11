@@ -551,11 +551,11 @@ pub fn check_case_conflicts(
     child_root_mf: HgManifestId,
     parent_root_mf: Option<HgManifestId>,
 ) -> impl Future<Item = (), Error = Error> {
-    let child_mf_fut = repo.get_manifest_by_nodeid(&child_root_mf.clone().into_nodehash());
+    let child_mf_fut = repo.get_manifest_by_nodeid(&child_root_mf.clone());
 
     let parent_mf_fut = parent_root_mf.map({
         cloned!(repo);
-        move |m| repo.get_manifest_by_nodeid(&m.into_nodehash())
+        move |m| repo.get_manifest_by_nodeid(&m)
     });
 
     child_mf_fut
@@ -644,7 +644,7 @@ pub fn process_entries(
                 manifest::EmptyManifest.boxed(),
                 HgManifestId::new(NULL_HASH),
             )).boxify(),
-            Some(root_hash) => repo.get_manifest_by_nodeid(&root_hash)
+            Some(root_hash) => repo.get_manifest_by_nodeid(&HgManifestId::new(root_hash))
                 .context("While fetching root manifest")
                 .from_err()
                 .map(move |m| (m, HgManifestId::new(root_hash)))
@@ -740,10 +740,9 @@ pub fn fetch_parent_manifests(
     let p2_manifest_hash = parent_manifest_hashes.get(1);
     let p1_manifest = p1_manifest_hash.map({
         cloned!(repo);
-        move |m| repo.get_manifest_by_nodeid(&m.into_nodehash())
+        move |m| repo.get_manifest_by_nodeid(&m)
     });
-    let p2_manifest =
-        p2_manifest_hash.map(move |m| repo.get_manifest_by_nodeid(&m.into_nodehash()));
+    let p2_manifest = p2_manifest_hash.map(move |m| repo.get_manifest_by_nodeid(&m));
 
     p1_manifest.join(p2_manifest).boxify()
 }

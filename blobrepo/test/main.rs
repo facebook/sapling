@@ -594,7 +594,7 @@ fn test_compute_changed_files_no_parents() {
 
         let cs =
             run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
-        let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
+        let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid())).unwrap();
 
         let diff = run_future(compute_changed_files(&mf, None, None)).unwrap();
         assert!(
@@ -627,13 +627,11 @@ fn test_compute_changed_files_one_parent() {
 
         let cs =
             run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
-        let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
+        let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid())).unwrap();
 
         let parent_cs =
             run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(parenthash))).unwrap();
-        let parent_mf = run_future(repo.get_manifest_by_nodeid(
-            &parent_cs.manifestid().into_nodehash(),
-        )).unwrap();
+        let parent_mf = run_future(repo.get_manifest_by_nodeid(&parent_cs.manifestid())).unwrap();
 
         let diff = run_future(compute_changed_files(&mf, Some(&parent_mf), None)).unwrap();
         assert!(
@@ -688,7 +686,7 @@ fn test_get_manifest_from_bonsai() {
         };
         let get_entries =
             |ms_hash: &HgManifestId| -> BoxFuture<HashMap<String, Box<Entry + Sync>>, Error> {
-                repo.get_manifest_by_nodeid(&ms_hash.into_nodehash())
+                repo.get_manifest_by_nodeid(&ms_hash)
                     .map(|ms| {
                         ms.list()
                             .map(|e| {

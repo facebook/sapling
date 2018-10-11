@@ -164,7 +164,7 @@ impl RepoConfigs {
         Box::new(
             repo.get_changeset_by_changesetid(&changesetid)
                 .and_then(move |changeset| {
-                    repo.get_manifest_by_nodeid(&changeset.manifestid().clone().into_nodehash())
+                    repo.get_manifest_by_nodeid(&changeset.manifestid().clone())
                 })
                 .context("failed to get manifest from changeset")
                 .from_err()
