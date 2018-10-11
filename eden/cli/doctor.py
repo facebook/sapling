@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
+from thrift.Thrift import TApplicationException
 
 from . import config as config_mod, filesystem, mtab, ui, version
 from .config import EdenInstance
@@ -843,7 +844,7 @@ def check_snapshot_dirstate_consistency(
     dirstate = os.path.join(path, ".hg", "dirstate")
     try:
         with open(dirstate, "rb") as f:
-            parents, _tuples_dict, _copymap = eden.dirstate.read(f, dirstate)
+            parents, tuples_dict, copymap = eden.dirstate.read(f, dirstate)
     except OSError as ex:
         if ex.errno == errno.ENOENT:
             tracker.add_problem(MissingHgDirectory(path))
@@ -852,10 +853,117 @@ def check_snapshot_dirstate_consistency(
         return
 
     p1_hex = binascii.hexlify(parents[0]).decode("utf-8")
-    if snapshot_hex != p1_hex:
+    p2_hex = binascii.hexlify(parents[1]).decode("utf-8")
+    is_p2_hex_valid = True
+    try:
+        is_snapshot_hex_valid = is_commit_hash_valid(instance, path, snapshot_hex)
+        is_p1_hex_valid = is_commit_hash_valid(instance, path, p1_hex)
+        if p2_hex != (20 * b"\0"):
+            is_p2_hex_valid = is_commit_hash_valid(instance, path, p2_hex)
+    except Exception as ex:
         tracker.add_problem(
-            SnapshotMismatchError(instance, path, snapshot_hex, parents)
+            Problem(f"Unable to get scm status for path {path}:\n {ex}")
         )
+        return
+
+    if is_p2_hex_valid is not True:
+        p2_hex = "0000000000000000000000000000000000000000"
+
+    if snapshot_hex != p1_hex:
+        if is_p1_hex_valid:
+            new_parents = (binascii.unhexlify(p1_hex), binascii.unhexlify(p2_hex))
+            tracker.add_problem(
+                SnapshotMismatchError(instance, path, snapshot_hex, parents)
+            )
+        elif is_snapshot_hex_valid:
+            new_parents = (binascii.unhexlify(snapshot_hex), binascii.unhexlify(p2_hex))
+            tracker.add_problem(
+                DirStateInvalidError(  # type: ignore
+                    instance, path, p1_hex, new_parents, tuples_dict, copymap
+                )
+            )
+
+    if (not is_snapshot_hex_valid) and (not is_p1_hex_valid):
+        last_valid_commit_hash = get_tip_commit_hash()
+        new_parents = (
+            binascii.unhexlify(last_valid_commit_hash),
+            binascii.unhexlify(p2_hex),
+        )
+        tracker.add_problem(
+            DirStateInvalidError(  # type: ignore
+                instance, path, p1_hex, new_parents, tuples_dict, copymap
+            )
+        )
+
+
+class DirStateInvalidError(FixableProblem):
+    def __init__(
+        self,
+        instance: EdenInstance,
+        mount_path: str,
+        invalid_commit_hash: str,
+        hg_parents: Tuple[bytes, bytes],
+        tuples_dict: Dict[bytes, Tuple[str, int, bytes]],
+        copymap: Dict[bytes, bytes],
+    ) -> None:
+        self._instance = instance
+        self._mount_path = mount_path
+        self._invalid_commit_hash = invalid_commit_hash
+        self._hg_parents = hg_parents
+        self._tuples_dict = tuples_dict
+        self._copymap = copymap
+
+    def dirstate(self) -> str:
+        return os.path.join(self._mount_path, ".hg", "dirstate")
+
+    def p1_hex(self) -> str:
+        return binascii.hexlify(self._hg_parents[0]).decode("utf-8")
+
+    def description(self) -> str:
+        return (
+            f"mercurial's parent commit {self._invalid_commit_hash}"
+            f" in {self.dirstate()} is invalid\n"
+        )
+
+    def dry_run_msg(self) -> str:
+        return f"Would fix Eden to point to parent commit {self.p1_hex()}"
+
+    def start_msg(self) -> str:
+        return f"Fixing Eden to point to parent commit {self.p1_hex()}"
+
+    def perform_fix(self) -> None:
+        with open(self.dirstate(), "wb") as f:
+            eden.dirstate.write(  # type: ignore
+                f, self._hg_parents, self._tuples_dict, self._copymap
+            )
+
+        parents = eden_ttypes.WorkingDirectoryParents(parent1=self._hg_parents[0])
+        if self._hg_parents[1] != (20 * b"\0"):
+            parents.parent2 = self._hg_parents[1]
+
+        with self._instance.get_thrift_client() as client:
+            client.resetParentCommits(self._mount_path.encode("utf-8"), parents)
+
+
+def get_tip_commit_hash() -> str:
+    args = ["hg", "log", "-T", "{node}\n", "-r", "tip"]
+    env = dict(os.environ, HGPLAIN="1")
+    stdout = subprocess.check_output(args, universal_newlines=True, env=env)
+    lines: List[str] = list(filter(None, stdout.split("\n")))
+    return lines[-1]
+
+
+def is_commit_hash_valid(
+    instance: EdenInstance, mount_path: str, commit_hash: str
+) -> bool:
+    try:
+        with instance.get_thrift_client() as client:
+            client.getScmStatus(mount_path, False, commit_hash)
+            return True
+    except TApplicationException as ex:
+        if "RepoLookupError: unknown revision" in str(ex):
+            return False
+        raise
 
 
 class SnapshotMismatchError(FixableProblem):

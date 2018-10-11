@@ -84,6 +84,22 @@ class DoctorTestBase(unittest.TestCase):
         self.assertEqual(num_manual_fixes, fixer.num_manual_fixes)
 
 
+def _commit_hash_valid_test_dirstate_hex_invalid(
+    instance, mount_path, commit_hash
+) -> bool:
+    if commit_hash == "12000000" * 5:
+        return False
+    else:
+        return True
+
+
+def _commit_hash_valid_test_snapshot_invalid(instance, mount_path, commit_hash) -> bool:
+    if commit_hash == "12345678" * 5:
+        return False
+    else:
+        return True
+
+
 class DoctorTest(DoctorTestBase):
     # The diffs for what is written to stdout can be large.
     maxDiff = None
@@ -608,13 +624,168 @@ Fixing Eden to point to parent commit 1200000012000000120000001200000012000000..
             ],
         )
 
+    @patch(
+        "eden.cli.doctor.is_commit_hash_valid",
+        new=_commit_hash_valid_test_snapshot_invalid,
+    )
+    def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self):
+        dirstate_hash_hex = "12000000" * 5
+        snapshot_hex = "12345678" * 5
+        instance, mount_path, fixer, out = self._test_hash_check(
+            dirstate_hash_hex, snapshot_hex
+        )
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+mercurial's parent commit for {mount_path} is 1200000012000000120000001200000012000000,
+but Eden's internal hash in its SNAPSHOT file is \
+1234567812345678123456781234567812345678.
+
+Fixing Eden to point to parent commit 1200000012000000120000001200000012000000...\
+<green>fixed<reset>
+
+""",
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+        # Make sure resetParentCommits() was called once with the expected arguments
+        self.assertEqual(
+            instance.get_thrift_client().set_parents_calls,
+            [
+                ResetParentsCommitsArgs(
+                    mount=mount_path.encode("utf-8"),
+                    parent1=b"\x12\x00\x00\x00" * 5,
+                    parent2=None,
+                )
+            ],
+        )
+
+    @patch("eden.cli.doctor.is_commit_hash_valid", return_value=False)
+    @patch("eden.cli.doctor.get_tip_commit_hash", return_value="87654321" * 5)
+    def test_snapshot_and_dirstate_file_differ_and_all_commit_hash_invalid(
+        self, mock_is_commit_hash_valid, mock_get_tip_commit_hash
+    ):
+        dirstate_hash_hex = "12000000" * 5
+        snapshot_hex = "12345678" * 5
+        valid_commit_hash = "87654321" * 5
+        instance, mount_path, fixer, out = self._test_hash_check(
+            dirstate_hash_hex, snapshot_hex
+        )
+
+        dirstate = os.path.join(mount_path, ".hg", "dirstate")
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+mercurial's parent commit {dirstate_hash_hex} in {dirstate} is invalid
+
+Fixing Eden to point to parent commit {valid_commit_hash}...\
+<green>fixed<reset>
+
+""",
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+        # Make sure resetParentCommits() was called once with the expected arguments
+        self.assertEqual(
+            instance.get_thrift_client().set_parents_calls,
+            [
+                ResetParentsCommitsArgs(
+                    mount=mount_path.encode("utf-8"),
+                    parent1=b"\x87\x65\x43\x21" * 5,
+                    parent2=None,
+                )
+            ],
+        )
+
+    @patch("eden.cli.doctor.is_commit_hash_valid", return_value=False)
+    @patch("eden.cli.doctor.get_tip_commit_hash", return_value="87654321" * 5)
+    def test_snapshot_and_dirstate_file_differ_and_all_parents_invalid(
+        self, mock_is_commit_hash_valid, mock_get_tip_commit_hash
+    ):
+        dirstate_hash_hex = "12000000" * 5
+        dirstate_parent2_hash_hex = "12340000" * 5
+        snapshot_hex = "12345678" * 5
+        valid_commit_hash = "87654321" * 5
+        instance, mount_path, fixer, out = self._test_hash_check(
+            dirstate_hash_hex, snapshot_hex, dirstate_parent2_hash_hex
+        )
+
+        dirstate = os.path.join(mount_path, ".hg", "dirstate")
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+mercurial's parent commit {dirstate_hash_hex} in {dirstate} is invalid
+
+Fixing Eden to point to parent commit {valid_commit_hash}...\
+<green>fixed<reset>
+
+""",
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+        # Make sure resetParentCommits() was called once with the expected arguments
+        self.assertEqual(
+            instance.get_thrift_client().set_parents_calls,
+            [
+                ResetParentsCommitsArgs(
+                    mount=mount_path.encode("utf-8"),
+                    parent1=b"\x87\x65\x43\x21" * 5,
+                    parent2=None,
+                )
+            ],
+        )
+
+    @patch(
+        "eden.cli.doctor.is_commit_hash_valid",
+        side_effect=_commit_hash_valid_test_dirstate_hex_invalid,
+    )
+    def test_snapshot_and_dirstate_file_differ_and_dirstate_commit_hash_invalid(
+        self, mock_is_commit_hash_valid
+    ):
+        dirstate_hash_hex = "12000000" * 5
+        snapshot_hex = "12345678" * 5
+        instance, mount_path, fixer, out = self._test_hash_check(
+            dirstate_hash_hex, snapshot_hex
+        )
+
+        dirstate = os.path.join(mount_path, ".hg", "dirstate")
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+mercurial's parent commit {dirstate_hash_hex} in {dirstate} is invalid
+
+Fixing Eden to point to parent commit {snapshot_hex}...\
+<green>fixed<reset>
+
+""",
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+        self.assertEqual(
+            instance.get_thrift_client().set_parents_calls,
+            [
+                ResetParentsCommitsArgs(
+                    mount=mount_path.encode("utf-8"),
+                    parent1=b"\x12\x34\x56\x78" * 5,
+                    parent2=None,
+                )
+            ],
+        )
+
     def _test_hash_check(
-        self, dirstate_hash_hex: str, snapshot_hex: str
+        self, dirstate_hash_hex: str, snapshot_hex: str, dirstate_parent2_hash_hex=None
     ) -> Tuple["FakeEdenInstance", str, doctor.ProblemFixer, str]:
         instance = FakeEdenInstance(self._create_tmp_dir())
-        mount_path = instance.create_test_mount(
-            "path1", snapshot=snapshot_hex, dirstate_parent=dirstate_hash_hex
-        )
+        if dirstate_parent2_hash_hex is None:
+            mount_path = instance.create_test_mount(
+                "path1", snapshot=snapshot_hex, dirstate_parent=dirstate_hash_hex
+            )
+        else:
+            mount_path = instance.create_test_mount(
+                "path1",
+                snapshot=snapshot_hex,
+                dirstate_parent=(dirstate_hash_hex, dirstate_parent2_hash_hex),
+            )
 
         fixer, out = self.create_fixer(dry_run=False)
         doctor.check_snapshot_dirstate_consistency(
@@ -1832,6 +2003,11 @@ class FakeClient:
                 mount=mountPoint, parent1=parents.parent1, parent2=parents.parent2
             )
         )
+
+    def getScmStatus(
+        self, mountPoint=None, listIgnored=None, commit=None
+    ) -> Optional[eden_ttypes.ScmStatus]:
+        return None
 
 
 class FakeEdenInstance:
