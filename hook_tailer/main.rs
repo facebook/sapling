@@ -14,6 +14,7 @@ extern crate blobstore;
 extern crate bookmarks;
 extern crate bytes;
 extern crate clap;
+extern crate cmdlib;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -75,6 +76,7 @@ fn main() -> Result<()> {
     let err: Error = ErrorKind::NoSuchRepo(repo_name.into()).into();
     let config = configs.repos.get(repo_name).ok_or(err)?;
 
+    cmdlib::args::init_cachelib(&matches);
     let blobrepo = open_blobrepo(
         logger.clone(),
         config.repotype.clone(),
@@ -171,7 +173,7 @@ fn create_poller(tailer: Tailer, logger: Logger) -> BoxFuture<(), ()> {
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    App::new("mononoke hook server")
+    cmdlib::args::add_cachelib_args(App::new("mononoke hook server")
         .version("0.0.0")
         .about("run hooks against repo")
         .args_from_usage(
@@ -192,7 +194,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             -d, --debug                                          'print debug level output'
             -p, --myrouter-port=[PORT]                           'port for local myrouter instance'
         "#,
-        )
+    ),
+        false /* hide_advanced_args */
+)
 }
 
 fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
@@ -230,12 +234,13 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         RepositoryId::new(0),
     )?;
 
+    let mut tokio_runtime = tokio::runtime::Runtime::new()?;
+
     let changesetid = match matches.value_of("crbook") {
         Some(book) => {
             let book = bookmarks::Bookmark::new(book).expect("book must be ascii");
-            config_repo
-                .get_bookmark(&book)
-                .wait()?
+            tokio_runtime
+                .block_on(config_repo.get_bookmark(&book))?
                 .expect("bookmark not found")
         }
         None => mercurial_types::nodehash::HgChangesetId::from_str(
@@ -250,9 +255,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         "Config repository will be read from commit: {}", changesetid
     );
 
-    RepoConfigs::read_config_repo(config_repo, changesetid)
-        .from_err()
-        .wait()
+    tokio_runtime.block_on(RepoConfigs::read_config_repo(config_repo, changesetid).from_err())
 }
 
 #[derive(Debug, Fail)]
