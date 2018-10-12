@@ -4,11 +4,12 @@ extern crate libc;
 extern crate python27_sys;
 
 mod python;
+mod hgenv;
 use cpython::{exc, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
 use encoding::{osstring_to_local_cstring, path_to_local_bytes, path_to_local_cstring};
+use hgenv::HgEnv;
 use python::{py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_no_site_flag,
              py_set_program_name, py_set_python_home};
-use std::env;
 
 use std::ffi::{CString, OsStr};
 use std::path::{Path, PathBuf};
@@ -64,10 +65,10 @@ struct HgPython {
 }
 
 impl HgPython {
-    pub fn new() -> HgPython {
-        let exe_path = env::current_exe().expect("failed to call current_exe");
+    pub fn new(env: &HgEnv) -> HgPython {
+        let exe_path = std::env::current_exe().expect("failed to call current_exe");
         let installation_root = exe_path.parent().unwrap();
-        let entry_point = Self::find_hg_py_entry_point(&installation_root);
+        let entry_point = Self::find_hg_py_entry_point(&installation_root, env);
         let embedded = Self::is_embedded(&entry_point);
         Self::setup_python(&installation_root, &entry_point, embedded);
 
@@ -150,7 +151,7 @@ impl HgPython {
     }
 
     /// Detect the entry point Python script for current Mercurial run
-    fn find_hg_py_entry_point(installation_root: &Path) -> PathBuf {
+    fn find_hg_py_entry_point(installation_root: &Path, env: &HgEnv) -> PathBuf {
         let mut candidates: Vec<PathBuf> = vec![];
 
         // Pri 1: the zip file under the dir where the binary lives (embedded case)
@@ -167,7 +168,7 @@ impl HgPython {
         // Note that HGPYENTRYPOINTSEARCHPATH is in a PATH format and each item is
         // expected to end in mercurial/
         if let Some(compile_time_locations) = option_env!("HGPYENTRYPOINTSEARCHPATH") {
-            for path in env::split_paths(compile_time_locations) {
+            for path in std::env::split_paths(compile_time_locations) {
                 candidates.push(Self::entry_point_in_installation(&path));
             }
         }
@@ -191,7 +192,7 @@ impl HgPython {
     }
 
     fn args_to_local_cstrings() -> Vec<CString> {
-        env::args_os()
+        std::env::args_os()
             .map(|x| osstring_to_local_cstring(&x))
             .collect()
     }
@@ -293,7 +294,8 @@ impl Drop for HgPython {
 
 fn main() {
     let code = {
-        let hgpython = HgPython::new();
+        let e = HgEnv::new();
+        let hgpython = HgPython::new(&e);
         hgpython.run()
     };
     std::process::exit(code);

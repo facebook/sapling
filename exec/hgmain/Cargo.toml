@@ -15,3 +15,7 @@ features = ["python27-sys"]
 
 [dependencies.python27-sys]
 version = "0.2"
+
+[features]
+default = []
+hgdev = []
