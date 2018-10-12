@@ -11,6 +11,4 @@ Updating across a rename
   $ hg mv a A
   $ hg commit -qm "move a to A"
   $ hg up -q '.^'
-BUG: hg status should be empty here
   $ hg status
-  ? A

@@ -608,6 +608,17 @@ class dirstate(object):
                 self._updatedfiles.add(f)
                 self._map.copymap.pop(f, None)
 
+    def delete(self, f):
+        """Removes a file from the dirstate entirely. This is useful during
+        operations like update, to remove files from the dirstate that are known
+        to be deleted."""
+        oldstate = self[f]
+        if self._map.deletefile(f, oldstate):
+            self._dirty = True
+            if not self._istreestate:
+                self._updatedfiles.add(f)
+                self._map.copymap.pop(f, None)
+
     def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
         if exists is None:
             exists = os.path.lexists(os.path.join(self._root, path))
@@ -1459,6 +1470,15 @@ class dirstatemap(object):
             self.filefoldmap.pop(normed, None)
         self._insert_tuple(f, "r", 0, size, 0)
         self.nonnormalset.add(f)
+
+    def deletefile(self, f, oldstat):
+        """
+        Removes a file from the dirstate entirely, implying it doesn't even
+        exist on disk anymore and may not be untracked.
+        """
+        # In the default dirstate implementation, deletefile is the same as
+        # untrackfile.
+        self.untrackfile(f, oldstat)
 
     def untrackfile(self, f, oldstate):
         """

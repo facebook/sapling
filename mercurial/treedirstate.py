@@ -261,6 +261,16 @@ class treedirstatemap(object):
             self._otherparentset.discard(f)
         return self._rmap.untrackfile(f)
 
+    def deletefile(self, f, oldstate):
+        """
+        Drops a file from the dirstate entirely, as if it was deleted from disk.
+        Useful for informing the map that it doesn't need to keep a record of
+        this file for future checking.
+
+        In the treedirstate implementation, it is the same as untrackfile.
+        """
+        return self.untrackfile(f, oldstate)
+
     def clearambiguoustimes(self, files, now):
         """Mark files with an mtime of `now` as being out of date.
 

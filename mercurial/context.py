@@ -1619,7 +1619,7 @@ class committablectx(basectx):
             for f in self.modified() + self.added():
                 self._repo.dirstate.normal(f)
             for f in self.removed():
-                self._repo.dirstate.untrack(f)
+                self._repo.dirstate.delete(f)
             self._repo.dirstate.setparents(node)
 
         # write changes out explicitly, because nesting wlock at

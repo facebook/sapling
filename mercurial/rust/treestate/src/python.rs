@@ -321,6 +321,13 @@ py_class!(class treedirstatemap |py| {
         Ok(py.None())
     }
 
+    def deletefile(&self, filename: PyBytes) -> PyResult<bool> {
+        let mut dirstate = self.dirstate(py).borrow_mut();
+        dirstate
+            .drop_file(filename.data(py))
+            .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))
+    }
+
     def untrackfile(&self, filename: PyBytes) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
