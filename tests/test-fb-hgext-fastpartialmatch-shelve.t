@@ -1,4 +1,5 @@
 
+  $ enable obsstore
   $ mkcommit() {
   >  echo "$1" > "$1"
   >  hg add "$1"
@@ -8,7 +9,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fastpartialmatch=
-  > shelve=
+  > obsshelve=
   > [ui]
   > ssh = python "$TESTDIR/dummyssh"
   > EOF
@@ -27,4 +28,4 @@
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
-  rebasing 2:341fd0af395d "changes to: first" (tip)
+  rebasing * "shelve changes to: first" (glob)
