@@ -41,6 +41,7 @@ Show all commands except debug commands
   phase
   pull
   push
+  record
   recover
   remove
   rename
@@ -134,6 +135,7 @@ Show debug commands if there are no other candidates
 Do not show the alias of a debug command if there are other candidates
 (this should hide rawcommit)
   $ hg debugcomplete r
+  record
   recover
   remove
   rename
@@ -248,6 +250,7 @@ Show all commands + options
   merge: force, rev, preview, tool
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
   push: force, rev, bookmark, branch, new-branch, pushvars, ssh, remotecmd, insecure
+  record: addremove, close-branch, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, subrepos, include, exclude
   remove: after, force, subrepos, include, exclude
   serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only, subrepos
   show: nodates, noprefix, stat, git, unified, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, style, template, include, exclude

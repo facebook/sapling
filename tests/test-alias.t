@@ -480,6 +480,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
    show          show revision in detail
@@ -508,6 +509,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
    show          show revision in detail
@@ -536,6 +538,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
    show          show revision in detail

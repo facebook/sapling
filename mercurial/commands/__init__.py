@@ -4771,6 +4771,65 @@ def push(ui, repo, dest=None, **opts):
     return result
 
 
+@command(
+    "^record",
+    [
+        (
+            "A",
+            "addremove",
+            None,
+            _("mark new/missing files as added/removed before committing"),
+        ),
+        ("", "close-branch", None, _("mark a branch head as closed")),
+        ("", "amend", None, _("amend the parent of the working directory")),
+        ("s", "secret", None, _("use the secret phase for committing")),
+        ("e", "edit", None, _("invoke editor on commit messages")),
+    ]
+    + commitopts
+    + commitopts2
+    + diffwsopts
+    + subrepoopts
+    + walkopts,
+    _("hg record [OPTION]... [FILE]..."),
+)
+def record(ui, repo, *pats, **opts):
+    """interactively select changes to commit
+
+    If a list of files is omitted, all changes reported by :hg:`status`
+    will be candidates for recording.
+
+    See :hg:`help dates` for a list of formats valid for -d/--date.
+
+    If using the text interface (see :hg:`help config`),
+    you will be prompted for whether to record changes to each
+    modified file, and for files with multiple changes, for each
+    change to use. For each query, the following responses are
+    possible::
+
+      y - record this change
+      n - skip this change
+      e - edit this change manually
+
+      s - skip remaining changes to this file
+      f - record remaining changes to this file
+
+      d - done, skip remaining changes and files
+      a - record all changes to all remaining files
+      q - quit, recording no changes
+
+      ? - display help
+
+    This command is not available when committing a merge."""
+
+    if not ui.interactive():
+        raise error.Abort(_("running non-interactively, use %s instead") % "commit")
+
+    opts[r"interactive"] = True
+    overrides = {("experimental", "crecord"): False}
+    with ui.configoverride(overrides, "record"):
+        return commit(ui, repo, *pats, **opts)
+
+
 @command("recover", [])
 def recover(ui, repo):
     """roll back an interrupted transaction

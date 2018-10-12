@@ -330,6 +330,7 @@ Testing -h/--help:
    phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    recover       roll back an interrupted transaction
    remove        remove the specified files on the next commit
    rename        rename files; equivalent of copy + remove
@@ -429,6 +430,7 @@ Testing -h/--help:
    phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    recover       roll back an interrupted transaction
    remove        remove the specified files on the next commit
    rename        rename files; equivalent of copy + remove

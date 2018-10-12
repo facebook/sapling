@@ -1747,6 +1747,10 @@ help/ shows help topics
         "topic": "push"
       },
       {
+        "summary": "interactively select changes to commit",
+        "topic": "record"
+      },
+      {
         "summary": "remove the specified files on the next commit",
         "topic": "remove"
       },

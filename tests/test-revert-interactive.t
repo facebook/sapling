@@ -14,7 +14,6 @@ Revert interactive tests
   > [ui]
   > interactive = true
   > [extensions]
-  > record =
   > purge = 
   > EOF
 

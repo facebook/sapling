@@ -119,8 +119,6 @@ diffstat
    a |  2 \x1b[0;32m+\x1b[0m\x1b[0;31m-\x1b[0m (esc)
    1 files changed, 1 insertions(+), 1 deletions(-)
   $ cat <<EOF >> $HGRCPATH
-  > [extensions]
-  > record =
   > [ui]
   > interactive = true
   > [diff]

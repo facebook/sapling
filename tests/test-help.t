@@ -20,6 +20,7 @@ Short help:
    merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
    show          show revision in detail
@@ -43,6 +44,7 @@ Short help:
    merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
    show          show revision in detail
@@ -91,6 +93,7 @@ Short help:
    phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    recover       roll back an interrupted transaction
    remove        remove the specified files on the next commit
    rename        rename files; equivalent of copy + remove
@@ -184,6 +187,7 @@ Short help:
    phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    recover       roll back an interrupted transaction
    remove        remove the specified files on the next commit
    rename        rename files; equivalent of copy + remove
@@ -442,6 +446,7 @@ Test short command list with verbose option
    merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    remove, rm    remove the specified files on the next commit
    serve         start stand-alone webserver
    show          show revision in detail
@@ -809,6 +814,7 @@ Test command without options
    merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
    show          show revision in detail
@@ -1004,6 +1010,7 @@ Test that default list of commands omits extension commands
    phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
+   record        interactively select changes to commit
    recover       roll back an interrupted transaction
    remove        remove the specified files on the next commit
    rename        rename files; equivalent of copy + remove
@@ -2405,6 +2412,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   push changes to the specified destination
+  </td></tr>
+  <tr><td>
+  <a href="/help/record">
+  record
+  </a>
+  </td><td>
+  interactively select changes to commit
   </td></tr>
   <tr><td>
   <a href="/help/remove">

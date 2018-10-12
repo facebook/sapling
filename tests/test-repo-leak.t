@@ -169,7 +169,6 @@ Somehow problematic: With many extensions
   > rage=
   > rebase =
   > rebase=
-  > record=
   > remotefilelog =
   > remotefilelog=
   > remotenames=

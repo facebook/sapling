@@ -3,8 +3,6 @@ Set up a repo
   $ cat <<EOF >> $HGRCPATH
   > [ui]
   > interactive = true
-  > [extensions]
-  > record =
   > EOF
 
   $ hg init a
