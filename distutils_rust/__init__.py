@@ -55,11 +55,12 @@ class RustExtension(object):
     'manifest' is the path to the Cargo.toml file for the Rust project.
     """
 
-    def __init__(self, name, package=None, manifest=None):
+    def __init__(self, name, package=None, manifest=None, features=None):
         self.name = name
         self.package = package
         self.manifest = manifest or "Cargo.toml"
         self.type = "library"
+        self.features = features
 
     @property
     def dstnametmp(self):
@@ -92,11 +93,12 @@ class RustBinary(object):
     'manifest' is the path to the Cargo.toml file for the Rust project.
     """
 
-    def __init__(self, name, package=None, manifest=None, rename=None):
+    def __init__(self, name, package=None, manifest=None, rename=None, features=None):
         self.name = name
         self.manifest = manifest or "Cargo.toml"
         self.type = "binary"
         self.final_name = rename or name
+        self.features = features
 
     @property
     def dstnametmp(self):
@@ -166,6 +168,7 @@ class BuildRustExt(distutils.core.Command):
         self.debug = None
         self.inplace = None
         self.long_paths_support = False
+        self.features = None
 
     def finalize_options(self):
         self.set_undefined_options(
@@ -229,6 +232,10 @@ class BuildRustExt(distutils.core.Command):
         cmd = [paths.get("cargo", "cargo"), "build", "--manifest-path", target.manifest]
         if not self.debug:
             cmd.append("--release")
+
+        if target.features:
+            cmd.append("--features")
+            cmd.append(target.features)
 
         env = os.environ.copy()
         env["CARGO_TARGET_DIR"] = self.get_temp_path()
