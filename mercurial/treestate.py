@@ -217,7 +217,11 @@ class treestatemap(object):
             size = 0
         self._tree.insert(f, state, mode, size, mtime, copied)
 
-    def dropfile(self, f, oldstate, real=False):
+    def untrackfile(self, f, oldstate, real=False):
+        """
+        Removes the state marking a file as tracked, but leaves it in the
+        treestate for future inspection.
+        """
         if real or not self._clock:
             # If watchman clock is not set, watchman is not used, drop
             # untracked files directly. This is also correct if watchman

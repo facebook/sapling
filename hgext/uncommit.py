@@ -122,7 +122,7 @@ def _fixdirstate(repo, oldctx, newctx, status):
     for f in s.added:
         if ds[f] == "r":
             # added + removed -> unknown
-            ds.drop(f)
+            ds.untrack(f)
         elif ds[f] != "a":
             ds.add(f)
 

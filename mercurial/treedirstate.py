@@ -250,7 +250,7 @@ class treedirstatemap(object):
         if size == -2 and self._otherparentset is not None:
             self._otherparentset.add(f)
 
-    def dropfile(self, f, oldstate):
+    def untrackfile(self, f, oldstate):
         """
         Drops a file from the dirstate.  Returns True if it was previously
         recorded.
@@ -259,7 +259,7 @@ class treedirstatemap(object):
             self._nonnormalset.discard(f)
         if self._otherparentset is not None:
             self._otherparentset.discard(f)
-        return self._rmap.dropfile(f)
+        return self._rmap.untrackfile(f)
 
     def clearambiguoustimes(self, files, now):
         """Mark files with an mtime of `now` as being out of date.

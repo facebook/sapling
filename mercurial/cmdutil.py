@@ -3638,7 +3638,7 @@ def amend(ui, repo, old, extra, pats, opts):
         # to "removed" in the dirstate.
         removedfiles = set(wctx.removed()) & filestoamend
         for f in removedfiles:
-            dirstate.drop(f)
+            dirstate.untrack(f)
 
     return newid
 
@@ -4134,11 +4134,11 @@ def _performrevert(repo, parents, ctx, actions, interactive=False, tobackup=None
                 _("forget added file %s (Yn)?$$ &Yes $$ &No") % f
             )
             if choice == 0:
-                repo.dirstate.drop(f)
+                repo.dirstate.untrack(f)
             else:
                 excluded_files.append(repo.wjoin(f))
         else:
-            repo.dirstate.drop(f)
+            repo.dirstate.untrack(f)
     for f in actions["remove"][0]:
         audit_path(f)
         if interactive:

@@ -1800,12 +1800,12 @@ def recordupdates(repo, actions, branchmerge):
             if branchmerge:
                 repo.dirstate.remove(f)
             else:
-                repo.dirstate.drop(f)
+                repo.dirstate.untrack(f)
             prog.value += 1
 
         # forget (must come first)
         for f, args, msg in actions.get("f", []):
-            repo.dirstate.drop(f)
+            repo.dirstate.untrack(f)
             prog.value += 1
 
         # resolve path conflicts
@@ -1818,7 +1818,7 @@ def recordupdates(repo, actions, branchmerge):
             if f0 == origf0:
                 repo.dirstate.remove(f0)
             else:
-                repo.dirstate.drop(f0)
+                repo.dirstate.untrack(f0)
             prog.value += 1
 
         # re-add
@@ -1874,7 +1874,7 @@ def recordupdates(repo, actions, branchmerge):
                 if f2 == f:  # file not locally copied/moved
                     repo.dirstate.normallookup(f)
                 if move:
-                    repo.dirstate.drop(f1)
+                    repo.dirstate.untrack(f1)
             prog.value += 1
 
         # directory rename, move local
@@ -1886,7 +1886,7 @@ def recordupdates(repo, actions, branchmerge):
                 repo.dirstate.copy(f0, f)
             else:
                 repo.dirstate.normal(f)
-                repo.dirstate.drop(f0)
+                repo.dirstate.untrack(f0)
             prog.value += 1
 
         # directory rename, get

@@ -1619,7 +1619,7 @@ class committablectx(basectx):
             for f in self.modified() + self.added():
                 self._repo.dirstate.normal(f)
             for f in self.removed():
-                self._repo.dirstate.drop(f)
+                self._repo.dirstate.untrack(f)
             self._repo.dirstate.setparents(node)
 
         # write changes out explicitly, because nesting wlock at
@@ -1739,7 +1739,7 @@ class workingctx(committablectx):
                 elif self._repo.dirstate[f] != "a":
                     self._repo.dirstate.remove(f)
                 else:
-                    self._repo.dirstate.drop(f)
+                    self._repo.dirstate.untrack(f)
             return rejected
 
     def undelete(self, list):

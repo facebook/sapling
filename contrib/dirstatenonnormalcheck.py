@@ -55,4 +55,4 @@ def extsetup(ui):
             extensions.wrapfunction(dirstatecl, "add", _checkdirstate)
             extensions.wrapfunction(dirstatecl, "remove", _checkdirstate)
             extensions.wrapfunction(dirstatecl, "merge", _checkdirstate)
-            extensions.wrapfunction(dirstatecl, "drop", _checkdirstate)
+            extensions.wrapfunction(dirstatecl, "untrack", _checkdirstate)

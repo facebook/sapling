@@ -321,7 +321,7 @@ py_class!(class treedirstatemap |py| {
         Ok(py.None())
     }
 
-    def dropfile(&self, filename: PyBytes) -> PyResult<bool> {
+    def untrackfile(&self, filename: PyBytes) -> PyResult<bool> {
         let mut dirstate = self.dirstate(py).borrow_mut();
         dirstate
             .drop_file(filename.data(py))

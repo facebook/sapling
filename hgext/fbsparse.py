@@ -1026,7 +1026,7 @@ def _wraprepo(ui, repo):
 
                 # Fix dirstate
                 for file in dropped:
-                    dirstate.drop(file)
+                    dirstate.untrack(file)
 
                 self.localvfs.unlink("tempsparse")
                 self.invalidatesignaturecache()
@@ -2184,7 +2184,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
 
         for file in dropped:
             prog.value += 1
-            dirstate.drop(file)
+            dirstate.untrack(file)
 
         for file in lookup:
             prog.value += 1

@@ -19,7 +19,7 @@
   >       if opts.get('normal_lookup'):
   >         repo.dirstate.normallookup(file)
   >       else:
-  >         repo.dirstate.drop(file)
+  >         repo.dirstate.untrack(file)
   > 
   >     repo.dirstate.write(repo.currenttransaction())
   >   finally:

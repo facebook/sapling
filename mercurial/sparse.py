@@ -266,7 +266,7 @@ def prunetemporaryincludes(repo):
 
     # Fix dirstate
     for file in dropped:
-        dirstate.drop(file)
+        dirstate.untrack(file)
 
     repo.localvfs.unlink("tempsparse")
     repo._sparsesignaturecache.clear()
@@ -534,7 +534,7 @@ def refreshwdir(repo, origstatus, origsparsematch, force=False):
         dirstate.normal(file)
 
     for file in dropped:
-        dirstate.drop(file)
+        dirstate.untrack(file)
 
     for file in lookup:
         # File exists on disk, and we're bringing it back in an unknown state.

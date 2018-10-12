@@ -597,10 +597,12 @@ class dirstate(object):
             return self.normallookup(f)
         return self.otherparent(f)
 
-    def drop(self, f):
-        """Drop a file from the dirstate"""
+    def untrack(self, f):
+        """Stops tracking a file in the dirstate. This is useful during
+        operations that want to stop tracking a file, but still have it show up
+        as untracked (like hg forget)."""
         oldstate = self[f]
-        if self._map.dropfile(f, oldstate):
+        if self._map.untrackfile(f, oldstate):
             self._dirty = True
             if not self._istreestate:
                 self._updatedfiles.add(f)
@@ -708,7 +710,7 @@ class dirstate(object):
             if f in allfiles:
                 self.normallookup(f)
             else:
-                self.drop(f)
+                self.untrack(f)
 
         self._dirty = True
 
@@ -1349,7 +1351,7 @@ class dirstatemap(object):
       where state is a single character representing 'normal', 'added',
       'removed', or 'merged'. It is read by treating the dirstate as a
       dict.  File state is updated by calling the `addfile`, `removefile` and
-      `dropfile` methods.
+      `untrackfile` methods.
 
     - `copymap` maps destination filenames to their source filename.
 
@@ -1458,10 +1460,10 @@ class dirstatemap(object):
         self._insert_tuple(f, "r", 0, size, 0)
         self.nonnormalset.add(f)
 
-    def dropfile(self, f, oldstate):
+    def untrackfile(self, f, oldstate):
         """
-        Remove a file from the dirstate.  Returns True if the file was
-        previously recorded.
+        Remove a file from the dirstate, leaving it untracked.  Returns True if
+        the file was previously recorded.
         """
         exists = self._map.pop(f, None) is not None
         if exists:

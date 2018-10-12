@@ -136,7 +136,7 @@ class state(object):
             dmap = ds._map
             changed = bool(self._droplist) or bool(self._lastisfresh)
             for path in self._droplist:
-                dmap.dropfile(path, None, real=True)
+                dmap.untrackfile(path, None, real=True)
             self._droplist = []
             for path in notefiles:
                 changed |= ds.needcheck(path)
