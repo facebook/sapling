@@ -1102,19 +1102,19 @@ kill -9 475206
         )
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
-        @patch(
-            "subprocess.check_output",
-            return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
-        )
-        @patch("eden.cli.util.read_all", return_value="475203")
-        def test_when_only_valid_edenfs_process_running(
-            self, readall_function, subprocess_function
-        ):
-            fake_pid_results_when_no_process = []
-            process_finder = FakeProcessFinder(fake_pid_results_when_no_process)
-            fixer, out = self.run_check(process_finder, dry_run=False)
-            self.assertEqual("", out)
-            self.assert_results(fixer, num_problems=0)
+    @patch(
+        "subprocess.check_output",
+        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
+    )
+    @patch("eden.cli.util.read_all", return_value="475203")
+    def test_when_only_valid_edenfs_process_running(
+        self, readall_function, subprocess_function
+    ):
+        fake_pid_results_when_no_process = []
+        process_finder = FakeProcessFinder(fake_pid_results_when_no_process)
+        fixer, out = self.run_check(process_finder, dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
 
     @patch(
         "subprocess.check_output",
@@ -1158,8 +1158,14 @@ kill -9 475204 475205 575204 575205
     def throw_io_error(self):
         raise IOError()
 
+    @patch(
+        "subprocess.check_output",
+        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
+    )
     @patch("eden.cli.util.read_all", side_effect=throw_io_error)
-    def test_when_lock_file_op_has_io_exception(self, read_all_function):
+    def test_when_lock_file_op_has_io_exception(
+        self, read_all_function, subprocess_function
+    ):
         linux_process_finder = process_finder.LinuxProcessFinder()
         with self.assertLogs() as logs_assertion:
             fixer, out = self.run_check(linux_process_finder, dry_run=False)
@@ -1175,9 +1181,15 @@ kill -9 475204 475205 575204 575205
     def throw_value_error(self):
         raise ValueError()
 
+    @patch(
+        "subprocess.check_output",
+        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
+    )
     @patch("eden.cli.util.read_all", side_effect=throw_value_error)
     @patch("eden.cli.process_finder.log")
-    def test_when_lock_file_data_is_garbage(self, warning, readall_function):
+    def test_when_lock_file_data_is_garbage(
+        self, warning, readall_function, subprocess_function
+    ):
         linux_process_finder = process_finder.LinuxProcessFinder()
         fixer, out = self.run_check(linux_process_finder, dry_run=False)
         self.assertEqual("", out)
