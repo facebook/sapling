@@ -2,20 +2,9 @@
 name = "hgmain"
 version = "0.1.0"
 
-[dependencies]
-libc = "0.2"
-
-[dependencies.encoding]
-path = "../../lib/encoding"
-
-[dependencies.cpython]
-version = "0.2"
-default-features = false
-features = ["python27-sys"]
-
-[dependencies.python27-sys]
-version = "0.2"
+[dependencies.hgpython]
+path = "../../lib/hgpython"
 
 [features]
 default = []
-hgdev = []
+hgdev = ["hgpython/hgdev"]

@@ -1,0 +1,23 @@
+[package]
+name = "hgpython"
+version = "0.1.0"
+
+[dependencies]
+libc = "0.2"
+
+[dependencies.encoding]
+path = "../encoding"
+
+[dependencies.cpython]
+version = "0.2"
+default-features = false
+features = ["python27-sys"]
+
+[dependencies.python27-sys]
+version = "0.2"
+
+[features]
+default = []
+# hgdev lets hgpython know that the crate is build to be used
+# in the development environment
+hgdev = []
