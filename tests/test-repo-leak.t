@@ -136,7 +136,6 @@ Somehow problematic: With many extensions
   > fastpartialmatch=!
   > fbconduit=
   > fbhistedit=
-  > fbshow=
   > fbsparse=
   > githelp=
   > gitlookup=!
@@ -177,6 +176,7 @@ Somehow problematic: With many extensions
   > reset=
   > sampling=
   > shelve=
+  > show=
   > sigtrace=
   > simplecache=
   > smartlog=

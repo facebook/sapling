@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > dialect=
-  > show=$TESTDIR/../hgext/fbshow.py
+  > show=
   > EOF
 
   $ hg help -e show | head -n 1

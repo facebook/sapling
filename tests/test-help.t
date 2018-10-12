@@ -333,8 +333,6 @@ Test extension help:
                      extension that makes node prefix lookup faster
        fbconduit     (no help text available)
        fbhistedit    extends the existing histedit functionality
-       fbshow        show changesets in detail with full log message, patches
-                     etc
        fbsparse      allow sparse checkouts of the working directory
        fixcorrupt    (no help text available)
        generic_bisect
@@ -398,6 +396,8 @@ Test extension help:
        schemes       extend schemes with shortcuts to repository swarms
        share         share a common history between several working directories
        shelve        save and restore changes to the working directory
+       show          show changesets in detail with full log message, patches
+                     etc
        sigtrace      sigtrace - dump stack and memory traces on signal
        smartlog      command to display a relevant subgraph
        sparse        allow sparse checkouts of the working directory

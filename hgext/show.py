@@ -1,4 +1,4 @@
-# fbshow.py
+# show.py
 #
 # Copyright 2016 Facebook, Inc.
 #
@@ -47,7 +47,6 @@ from mercurial.i18n import _
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-testedwith = "ships-with-fb-hgext"
 
 
 def uisetup(ui):
