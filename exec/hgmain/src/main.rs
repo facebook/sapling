@@ -69,7 +69,7 @@ impl HgPython {
         let installation_root = exe_path.parent().unwrap();
         let entry_point = Self::find_hg_py_entry_point(&installation_root);
         let embedded = Self::is_embedded(&entry_point);
-        Self::setup(&installation_root, &entry_point, embedded);
+        Self::setup_python(&installation_root, &entry_point, embedded);
 
         HgPython {
             embedded,
@@ -77,7 +77,9 @@ impl HgPython {
         }
     }
 
-    fn setup(installation_root: &Path, entry_point: &Path, embedded: bool) {
+    /// Setup everything related to the python interpreter
+    /// used by Mercurial
+    fn setup_python(installation_root: &Path, entry_point: &Path, embedded: bool) {
         if embedded {
             // In an embedded case, we don't need the site.py logic, as
             // we don't need any filesystem discovery: we know the location
@@ -108,6 +110,9 @@ impl HgPython {
         path.as_ref().extension() == Some(OsStr::new("zip"))
     }
 
+    /// Return the zipfile base of a path if run from a zipfile
+    /// Example: get_zip_base('/a/b.zip/mercurial/entrypoint.py')
+    /// is '/a/b.zip'
     fn get_zip_base(path: &Path) -> Option<&Path> {
         let mut path = path.as_ref();
         // We can be at any location in the .zip file:
@@ -126,10 +131,16 @@ impl HgPython {
         }
     }
 
+    /// Detect if Mercurial is run in an embedded mode
+    /// We are in an embedded mode if all Python files are stored
+    /// in a zipfile.
     fn is_embedded<P: AsRef<Path>>(entry_point: P) -> bool {
         Self::get_zip_base(entry_point.as_ref()) != None
     }
 
+    /// Check if the entrypoint candidate looks like an actual entrypoint
+    ///
+    /// Either the candidate itself should exist, or its zip base should
     fn is_suitable_candidate<P: AsRef<Path>>(candidate: P) -> bool {
         let candidate = candidate.as_ref();
         candidate.exists() || match Self::get_zip_base(candidate) {
@@ -138,6 +149,7 @@ impl HgPython {
         }
     }
 
+    /// Detect the entry point Python script for current Mercurial run
     fn find_hg_py_entry_point(installation_root: &Path) -> PathBuf {
         let mut candidates: Vec<PathBuf> = vec![];
 
@@ -184,6 +196,7 @@ impl HgPython {
             .collect()
     }
 
+    /// Given a `sys.path` Python list, add a `path` component there
     fn add_to_sys_path<P: AsRef<Path>>(
         &self,
         py: Python,
@@ -196,6 +209,7 @@ impl HgPython {
         Ok(())
     }
 
+    /// Prepare Python `sys.path` to run Mercurial
     fn adjust_path(&self, py: Python) -> PyResult<()> {
         let sys_mod = py.import("sys").unwrap();
         let sys_path = sys_mod.get(py, "path").unwrap();
