@@ -1,3 +1,4 @@
+// Copyright Facebook, Inc. 2018
 use cpython::{exc, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
 use encoding::{osstring_to_local_cstring, path_to_local_bytes, path_to_local_cstring};
 use hgenv::HgEnv;

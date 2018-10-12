@@ -1,3 +1,4 @@
+// Copyright Facebook, Inc. 2018
 use std;
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};

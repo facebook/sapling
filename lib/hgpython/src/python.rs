@@ -1,3 +1,4 @@
+// Copyright Facebook, Inc. 2018
 use encoding::path_to_local_cstring;
 use libc::c_int;
 use python27_sys::{PyEval_InitThreads, PySys_SetArgvEx, Py_Finalize, Py_Initialize, Py_NoSiteFlag,
