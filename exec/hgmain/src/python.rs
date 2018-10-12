@@ -1,6 +1,6 @@
 use encoding::path_to_local_cstring;
 use libc::c_int;
-use python27_sys::{PyEval_InitThreads, PySys_SetArgvEx, Py_Finalize, Py_Initialize,
+use python27_sys::{PyEval_InitThreads, PySys_SetArgvEx, Py_Finalize, Py_Initialize, Py_NoSiteFlag,
                    Py_SetProgramName, Py_SetPythonHome};
 use std;
 use std::ffi::CString;
@@ -41,5 +41,11 @@ pub fn py_finalize() {
 pub fn py_init_threads() {
     unsafe {
         PyEval_InitThreads();
+    }
+}
+
+pub fn py_set_no_site_flag() {
+    unsafe {
+        Py_NoSiteFlag = 1 as c_int;
     }
 }
