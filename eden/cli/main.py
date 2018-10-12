@@ -37,6 +37,7 @@ from . import (
     fsck as fsck_mod,
     mtab,
     overlay as overlay_mod,
+    process_finder,
     rage as rage_mod,
     stats as stats_mod,
     subcmd as subcmd_mod,
@@ -430,6 +431,7 @@ class DoctorCmd(Subcmd):
             args.dry_run,
             mount_table=mtab.LinuxMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
+            process_finder=process_finder.LinuxProcessFinder(),
         )
 
 

@@ -17,6 +17,7 @@ import logging
 import os
 import platform
 import re
+import shlex
 import stat
 import subprocess
 import typing
@@ -28,7 +29,7 @@ import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from thrift.Thrift import TApplicationException
 
-from . import config as config_mod, filesystem, mtab, ui, version
+from . import config as config_mod, filesystem, mtab, process_finder, ui, version
 from .config import EdenInstance
 
 
@@ -149,6 +150,7 @@ def cure_what_ails_you(
     dry_run: bool,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
+    process_finder: process_finder.ProcessFinder,
     out: Optional[ui.Output] = None,
 ) -> int:
     if out is None:
@@ -164,6 +166,9 @@ def cure_what_ails_you(
 
     # check OS type, kernel version etc.
     run_operating_system_checks(fixer, instance, out)
+
+    # check multiple edenfs running with some rogue stale PIDs
+    check_many_edenfs_are_running(fixer, process_finder)
 
     status = instance.check_health()
     if not status.is_healthy():
@@ -380,6 +385,34 @@ def run_normal_checks(
 
 def printable_bytes(b: bytes) -> str:
     return b.decode("utf-8", "backslashreplace")
+
+
+def check_many_edenfs_are_running(
+    tracker: ProblemTracker, process_finder: process_finder.ProcessFinder
+) -> None:
+    rogue_pids_list = process_finder.find_rogue_pids()
+    if len(rogue_pids_list) > 0:
+        rogue_pids_problem = ManyEdenFsRunning(rogue_pids_list)
+        tracker.add_problem(rogue_pids_problem)
+
+
+class ManyEdenFsRunning(Problem):
+    def __init__(self, rogue_pids_list):
+        self._rogue_pids_list = rogue_pids_list
+        self.set_manual_remediation_message()
+
+    def description(self) -> str:
+        return f"Many edenfs proesses are running. Please keep only one for \
+each config directory."
+
+    def severity(self) -> ProblemSeverity:
+        return ProblemSeverity.ADVICE
+
+    def set_manual_remediation_message(self) -> None:
+        if self._rogue_pids_list is not None:
+            kill_command = ["kill", "-9"]
+            kill_command.extend(map(str, self._rogue_pids_list))
+            self._remediation = " ".join(map(shlex.quote, kill_command))
 
 
 class CheckoutNotMounted(FixableProblem):

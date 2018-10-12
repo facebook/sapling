@@ -17,16 +17,16 @@ import subprocess
 import tempfile
 import typing
 import unittest
-from collections import OrderedDict
 from textwrap import dedent
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Set, Tuple, Union
 from unittest.mock import call, patch
 
 import eden.cli.doctor as doctor
+import eden.cli.process_finder
 import eden.cli.ui
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
-from eden.cli import filesystem, mtab
+from eden.cli import filesystem, mtab, process_finder, util
 from eden.cli.config import EdenInstance, HealthStatus
 from fb303.ttypes import fb_status
 
@@ -181,6 +181,7 @@ class DoctorTest(DoctorTestBase):
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
+            process_finder=process_finder.LinuxProcessFinder(),
             out=out,
         )
 
@@ -258,6 +259,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             mount_table=instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
+            process_finder=process_finder.LinuxProcessFinder(),
             out=out,
         )
 
@@ -282,6 +284,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
+            process_finder=process_finder.LinuxProcessFinder(),
             out=out,
         )
 
@@ -301,6 +304,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
+            process_finder=process_finder.LinuxProcessFinder(),
             out=out,
         )
 
@@ -858,6 +862,7 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
+            process_finder=process_finder.LinuxProcessFinder(),
             out=out,
         )
 
@@ -921,6 +926,7 @@ Checking {mounts[0]}
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
+            process_finder=process_finder.LinuxProcessFinder(),
             out=out,
         )
         return exit_code, out.getvalue(), mounts
@@ -942,6 +948,7 @@ Checking {mounts[0]}
             dry_run=False,
             mount_table=instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
+            process_finder=process_finder.LinuxProcessFinder(),
             out=out,
         )
 
@@ -960,6 +967,222 @@ Remounting {mount}...<green>fixed<reset>
 """,
         )
         self.assertEqual(exit_code, 0)
+
+
+def choose_mock_readall_output(path: bytes) -> str:
+    if b"config1" in path:
+        return "475203"
+    if b"config2" in path:
+        return "575203"
+    else:
+        return "WRONG_TEST_DATA"
+
+
+class MultipleEdenfsRunningTest(DoctorTestBase):
+    maxDiff = None
+
+    def run_check(
+        self, process_finder: process_finder.ProcessFinder, dry_run: bool
+    ) -> Tuple[doctor.ProblemFixer, str]:
+        fixer, out = self.create_fixer(dry_run)
+        doctor.check_many_edenfs_are_running(fixer, process_finder)
+        return fixer, out.getvalue()
+
+    def test_when_there_are_rogue_pids(self):
+        process_finder = FakeProcessFinder([123, 124])
+        fixer, out = self.run_check(process_finder, dry_run=False)
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+        self.assertEqual(
+            out,
+            f"""\
+<yellow>- Found problem:<reset>
+Many edenfs proesses are running. Please keep only one for each config directory.
+kill -9 123 124
+
+""",
+        )
+
+    def test_when_no_rogue_edenfs_process_running(self):
+        fake_pid_results_when_no_process = []
+        process_finder = FakeProcessFinder(fake_pid_results_when_no_process)
+        fixer, out = self.run_check(process_finder, dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
+
+    def exception_throwing_subprocess(self):
+        raise subprocess.CalledProcessError(
+            2, cmd="pgrep -aU " + util.get_username() + " edenfs"
+        )
+
+    @patch("subprocess.check_output", side_effect=exception_throwing_subprocess)
+    def test_when_pgrep_fails(self, subprocess_function):
+        linux_process_finder = process_finder.LinuxProcessFinder()
+        with self.assertLogs() as logs_assertion:
+            fixer, out = self.run_check(linux_process_finder, dry_run=False)
+            self.assertEqual("", out)
+            self.assert_results(fixer, num_problems=0)
+        logs = "\n".join(logs_assertion.output)
+        self.assertIn(
+            "WARNING:eden.cli.process_finder:Error running command: ['pgrep', \
+'-aU', '"
+            + util.get_username()
+            + "', 'edenfs']\nIt exited with failure status.",
+            logs,
+            "Check should have reported that pgrep failed",
+        )
+
+    @patch("subprocess.check_output", return_value="")
+    def test_when_os_found_no_pids_at_all(self, subprocess_function):
+        linux_process_finder = process_finder.LinuxProcessFinder()
+        with self.assertLogs() as logs_assertion:
+            fixer, out = self.run_check(linux_process_finder, dry_run=False)
+            self.assertEqual("", out)
+            self.assert_results(fixer, num_problems=0)
+            logs = "\n".join(logs_assertion.output)
+            self.assertIn(
+                "WARNING:eden.cli.process_finder:No output received from \
+the OS for cmd: ['pgrep', '-aU', '"
+                + util.get_username()
+                + "', 'edenfs']",
+                logs,
+                "when no edenfs processes running at all",
+            )
+
+    @patch("subprocess.check_output", return_value=b"1614248 edenfs\n1639164 edenfs")
+    def test_when_os_found_pids_but_edenDir_not_in_cmdline(self, subprocess_function):
+        linux_process_finder = process_finder.LinuxProcessFinder()
+        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
+
+    @patch(
+        "subprocess.check_output",
+        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        475204 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        475205 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
+    )
+    @patch("eden.cli.util.read_all", return_value="475203")
+    def test_when_many_edenfs_procs_run_for_same_config(
+        self, readall_function, subprocess_function
+    ):
+        linux_process_finder = process_finder.LinuxProcessFinder()
+        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+        self.assertEqual(
+            out,
+            f"""\
+<yellow>- Found problem:<reset>
+Many edenfs proesses are running. Please keep only one for each config directory.
+kill -9 475204 475205
+
+""",
+        )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+
+    @patch(
+        "subprocess.check_output",
+        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        475204 /foobar/fooedenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        475205 /foobar/edenfsbar --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        475206 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
+    )
+    @patch("eden.cli.util.read_all", return_value="475203")
+    def test_when_other_processes_with_similar_names_running(
+        self, readall_function, subprocess_function
+    ):
+        linux_process_finder = process_finder.LinuxProcessFinder()
+        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+        self.assertEqual(
+            out,
+            f"""\
+<yellow>- Found problem:<reset>
+Many edenfs proesses are running. Please keep only one for each config directory.
+kill -9 475206
+
+""",
+        )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+
+        @patch(
+            "subprocess.check_output",
+            return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
+        )
+        @patch("eden.cli.util.read_all", return_value="475203")
+        def test_when_only_valid_edenfs_process_running(
+            self, readall_function, subprocess_function
+        ):
+            fake_pid_results_when_no_process = []
+            process_finder = FakeProcessFinder(fake_pid_results_when_no_process)
+            fixer, out = self.run_check(process_finder, dry_run=False)
+            self.assertEqual("", out)
+            self.assert_results(fixer, num_problems=0)
+
+    @patch(
+        "subprocess.check_output",
+        return_value=b"1614248 edenfs --edenDir\n1639164 edenfs",
+    )
+    def test_when_os_found_pids_but_edenDir_value_not_in_cmdline(
+        self, subprocess_function
+    ):
+        linux_process_finder = process_finder.LinuxProcessFinder()
+        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
+
+    @patch(
+        "subprocess.check_output",
+        return_value=b"475203 /foobar/edenfs --edenDir /tmp/config1/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        475204 /foobar/edenfs --edenDir /tmp/config1/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        475205 /foobar/edenfs --edenDir /tmp/config1/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        575203 /foobar/edenfs --edenDir /tmp/config2/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        575204 /foobar/edenfs --edenDir /tmp/config2/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
+        575205 /foobar/edenfs --edenDir /tmp/config2/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
+    )
+    @patch("eden.cli.util.read_all", side_effect=choose_mock_readall_output)
+    def test_when_differently_configured_edenfs_processes_running_with_rogue_pids(
+        self, readall_function, subprocess_function
+    ):
+        linux_process_finder = process_finder.LinuxProcessFinder()
+        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+        self.assertEqual(
+            out,
+            f"""\
+<yellow>- Found problem:<reset>
+Many edenfs proesses are running. Please keep only one for each config directory.
+kill -9 475204 475205 575204 575205
+
+""",
+        )
+
+    def throw_io_error(self):
+        raise IOError()
+
+    @patch("eden.cli.util.read_all", side_effect=throw_io_error)
+    def test_when_lock_file_op_has_io_exception(self, read_all_function):
+        linux_process_finder = process_finder.LinuxProcessFinder()
+        with self.assertLogs() as logs_assertion:
+            fixer, out = self.run_check(linux_process_finder, dry_run=False)
+            self.assertEqual("", out)
+            self.assert_results(fixer, num_problems=0)
+            logs = "\n".join(logs_assertion.output)
+            self.assertIn(
+                "WARNING:eden.cli.process_finder:Lock file cannot be read for",
+                logs,
+                "when lock file cant be opened",
+            )
+
+    def throw_value_error(self):
+        raise ValueError()
+
+    @patch("eden.cli.util.read_all", side_effect=throw_value_error)
+    @patch("eden.cli.process_finder.log")
+    def test_when_lock_file_data_is_garbage(self, warning, readall_function):
+        linux_process_finder = process_finder.LinuxProcessFinder()
+        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
+        self.assertTrue(warning.warning.called)
 
 
 class BindMountsCheckTest(DoctorTestBase):
@@ -2143,6 +2366,14 @@ class FakeEdenInstance:
 
     def get_config_value(self, key: str):
         return self._config.get(key)
+
+
+class FakeProcessFinder(process_finder.ProcessFinder):
+    def __init__(self, pid_list: List[process_finder.ProcessID]) -> None:
+        self._pid_list = pid_list
+
+    def find_rogue_pids(self) -> List[process_finder.ProcessID]:
+        return self._pid_list
 
 
 class FakeMountTable(mtab.MountTable):

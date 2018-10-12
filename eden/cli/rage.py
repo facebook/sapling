@@ -18,6 +18,7 @@ from . import (
     doctor as doctor_mod,
     filesystem,
     mtab,
+    process_finder,
     stats as stats_mod,
     ui as ui_mod,
 )
@@ -78,6 +79,7 @@ def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
         dry_run=dry_run,
         mount_table=mtab.LinuxMountTable(),
         fs_util=filesystem.LinuxFsUtil(),
+        process_finder=process_finder.LinuxProcessFinder(),
         out=ui_mod.PlainOutput(doctor_output),
     )
     out.write(

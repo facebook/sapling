@@ -442,8 +442,8 @@ def is_valid_sha1(sha1: str) -> bool:
     return set(sha1).issubset(string.hexdigits)
 
 
-def read_all(path: str) -> str:
-    """One-liner to read the contents of a file and properly close the fd."""
+def read_all(path: bytes) -> str:
+    """One-liner to read the contents of a text file and properly close the fd."""
     with open(path, "r") as f:
         return f.read()
 
@@ -462,3 +462,7 @@ def get_eden_mount_name(path_arg: str) -> str:
         elif ex.errno == errno.ENOENT:
             raise NotAnEdenMountError(path_arg)
         raise
+
+
+def get_username() -> str:
+    return pwd.getpwuid(os.getuid()).pw_name

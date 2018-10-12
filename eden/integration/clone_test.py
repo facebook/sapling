@@ -316,16 +316,16 @@ echo -n "$1" >> "{scratch_file}"
         os.chmod(hg_post_clone_hook, stat.S_IRWXU)
 
         # Verify that the hook gets run as part of `eden clone`.
-        self.assertEqual("ok", util.read_all(scratch_file))
+        self.assertEqual("ok", util.read_all(bytes(scratch_file, "utf-8")))
         tmp = self.make_temporary_directory()
         self.eden.clone(repo_name, tmp)
         new_contents = "ok" + self.repo.get_type()
-        self.assertEqual(new_contents, util.read_all(scratch_file))
+        self.assertEqual(new_contents, util.read_all(bytes(scratch_file, "utf-8")))
 
         # Restart Eden and verify that post-clone is NOT run again.
         self.eden.shutdown()
         self.eden.start()
-        self.assertEqual(new_contents, util.read_all(scratch_file))
+        self.assertEqual(new_contents, util.read_all(bytes(scratch_file, "utf-8")))
 
     def test_attempt_clone_invalid_repo_name(self) -> None:
         tmp = self.make_temporary_directory()
@@ -375,7 +375,9 @@ echo -n "$1" >> "{scratch_file}"
         self.assertEqual(
             mount_points, self.eden.list_cmd(), msg="Eden should have two mounts."
         )
-        self.assertEqual("hola\n", util.read_all(os.path.join(tmp, "hello")))
+        self.assertEqual(
+            "hola\n", util.read_all(bytes(os.path.join(tmp, "hello"), "utf-8"))
+        )
 
     def test_custom_not_mounted_readme(self) -> None:
         """Test that "eden clone" creates a README file in the mount point directory
@@ -390,10 +392,12 @@ echo -n "$1" >> "{scratch_file}"
         new_mount = self.make_temporary_directory()
         readme_path = os.path.join(new_mount, "README_EDEN.txt")
         self.eden.run_cmd("clone", self.repo.path, new_mount)
-        self.assertEqual("hola\n", util.read_all(os.path.join(new_mount, "hello")))
+        self.assertEqual(
+            "hola\n", util.read_all(bytes(os.path.join(new_mount, "hello"), "utf-8"))
+        )
         self.assertFalse(os.path.exists(readme_path))
 
         # Now unmount the checkout and make sure we see the readme
         self.eden.run_cmd("unmount", new_mount)
         self.assertFalse(os.path.exists(os.path.join(new_mount, "hello")))
-        self.assertEqual(custom_readme_text, util.read_all(readme_path))
+        self.assertEqual(custom_readme_text, util.read_all(bytes(readme_path, "utf-8")))
