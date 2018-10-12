@@ -27,6 +27,10 @@ def run(binaryexecution):
         # and it should not be present in sys.path, as we use absolute_import
         sys.path.remove(filedir)
 
+    import hgdemandimport
+
+    hgdemandimport.tryenableembedded()
+
     from mercurial import encoding
 
     if encoding.environ.get("HGUNICODEPEDANTRY", False):
@@ -53,8 +57,6 @@ def run(binaryexecution):
         # Non-chg path
         try:
             if sys.version_info[0] < 3 or sys.version_info >= (3, 6):
-                import hgdemandimport
-
                 hgdemandimport.enable()
         except ImportError:
             sys.stderr.write(
