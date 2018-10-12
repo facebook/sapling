@@ -266,7 +266,6 @@ def _preimportmodules():
         "pushrebase",
         "rage",
         "rebase",
-        "record",
         "remotefilelog",
         "remotenames",
         "reset",
