@@ -59,7 +59,7 @@ def main() -> int:
         output_path = Path(args.output)
     else:
         date_stamp = time.strftime("%Y%m%d")
-        base_name = f"{args.name}-{date_stamp}.tar.bz2"
+        base_name = f"{args.name}-{date_stamp}.tar.xz"
         output_path = Path(
             FindExe.REPO_ROOT, "eden", "test-data", "snapshots", base_name
         )
