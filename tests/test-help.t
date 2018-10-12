@@ -369,7 +369,6 @@ Test extension help:
        morestatus    make status give a bit more context
        myparent
        nointerrupt   warns but doesn't exit when the user first hits Ctrl+C
-       obsshelve     save and restore changes to the working directory
        ownercheck    prevent operations on repos not owned by the current user
        p4fastimport  p4fastimport - A fast importer from Perforce to Mercurial
        patchbomb     command to send changesets as (a series of) patch emails

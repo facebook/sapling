@@ -1,4 +1,4 @@
-# obsshelve.py - save/restore working directory state using obsolescense
+# shelve.py - save/restore working directory state using obsolescense
 # markers
 #
 # Copyright 2017 Facebook, Inc.
@@ -58,7 +58,7 @@ from . import rebase
 
 configtable = {}
 configitem = registrar.configitem(configtable)
-configitem("obsshelve", "maxbackups", default=10)
+configitem("shelve", "maxbackups", default=10)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -186,13 +186,19 @@ class shelvedstate(object):
     _traditional = "traditional"
 
     @classmethod
+    def _parsenodelist(cls, s):
+        if not s:
+            return []
+        return [nodemod.bin(h) for h in s.split(" ")]
+
+    @classmethod
     def _verifyandtransform(cls, d):
         """Some basic shelvestate syntactic verification and transformation"""
         try:
             d["originalwctx"] = nodemod.bin(d["originalwctx"])
             d["pendingctx"] = nodemod.bin(d["pendingctx"])
-            d["parents"] = [nodemod.bin(h) for h in d["parents"].split(" ")]
-            d["nodestoremove"] = [nodemod.bin(h) for h in d["nodestoremove"].split(" ")]
+            d["parents"] = cls._parsenodelist(d["parents"])
+            d["nodestoremove"] = cls._parsenodelist(d["nodestoremove"])
         except (ValueError, TypeError, KeyError) as err:
             raise error.CorruptedState(str(err))
 
@@ -317,7 +323,7 @@ class shelvedstate(object):
 
 def cleanupoldbackups(repo):
     vfs = vfsmod.vfs(repo.localvfs.join(backupdir))
-    maxbackups = repo.ui.configint("obsshelve", "maxbackups")
+    maxbackups = repo.ui.configint("shelve", "maxbackups")
     hgfiles = [f for f in vfs.listdir() if f.endswith("." + patchextension)]
     hgfiles = sorted([(vfs.stat(f).st_mtime, f) for f in hgfiles])
     if 0 < maxbackups and maxbackups < len(hgfiles):
@@ -1026,7 +1032,7 @@ def unshelve(ui, repo, *shelved, **opts):
 
     After a successful unshelve, the shelved changes are stored in a
     backup directory. Only the N most recent backups are kept. N
-    defaults to 10 but can be overridden using the ``obsshelve.maxbackups``
+    defaults to 10 but can be overridden using the ``shelve.maxbackups``
     configuration option.
 
     .. container:: verbose
@@ -1283,12 +1289,6 @@ def extsetup(ui):
     cmdutil.afterresolvedstates.append(
         [shelvedstate._filename, _("hg unshelve --continue")]
     )
-
-
-def reposetup(ui, repo):
-    order = extensions._order
-    if "shelve" in order:
-        raise error.Abort("shelve must be disabled when obsshelve is enabled")
 
 
 revsetpredicate = registrar.revsetpredicate()

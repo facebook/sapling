@@ -18,10 +18,6 @@ Make sure obs-based shelve can be used with an empty repo
   $ cd $TESTTMP
   $ hg init obsrepo
   $ cd obsrepo
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > obsshelve=True
-  > EOF
 
   $ mkdir a b
   $ echo a > a/a
@@ -481,11 +477,6 @@ Shelve should still work even if mq is disabled
 Shelve should leave dirstate clean (issue4055)
   $ hg init obsshelverebase
   $ cd obsshelverebase
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ printf 'x\ny\n' > x
   $ echo z > z
   $ hg commit -Aqm xy
@@ -513,11 +504,6 @@ Shelve should leave dirstate clean (issue4055)
 Shelve should only unshelve pending changes (issue4068)
   $ hg init obssh-onlypendingchanges
   $ cd obssh-onlypendingchanges
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ touch a
   $ hg ci -Aqm a
   $ touch b
@@ -1041,11 +1027,6 @@ Test .orig files go where the user wants them to
 ---------------------------------------------------------------
   $ hg init obssh-salvage
   $ cd obssh-salvage
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ echo 'content' > root
   $ hg commit -A -m 'root' -q
   $ echo '' > root
@@ -1131,11 +1112,6 @@ unknown state after unshelve if and only if it was either absent or unknown
 before the unshelve operation.
   $ hg init obssh-unknowns
   $ cd obssh-unknowns
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
 
 The simplest case is if I simply have an unknown file that I shelve and unshelve
   $ echo unknown > unknown
@@ -1197,11 +1173,6 @@ We expects that non-bare shelve keeps newly created branch in
 working directory.
   $ hg init obs-shelve-preserve-new-branch
   $ cd obs-shelve-preserve-new-branch
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ echo "a" >> a
   $ hg add a
   $ echo "b" >> b
@@ -1260,11 +1231,6 @@ When i shelve commit on newly created branch i expect
 that after unshelve newly created branch will be preserved.
   $ hg init obs-shelve_on_new_branch_simple
   $ cd obs-shelve_on_new_branch_simple
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ echo "aaa" >> a
   $ hg commit -A -m "a"
   adding a
@@ -1301,11 +1267,6 @@ running unshelve --continue newly created branch
 will be preserved.
   $ hg init obs-shelve_on_new_branch_conflict
   $ cd obs-shelve_on_new_branch_conflict
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ echo "aaa" >> a
   $ hg commit -A -m "a"
   adding a
@@ -1381,11 +1342,6 @@ restored and branch will be unchanged.
 shelve on new branch, conflict with previous shelvedstate
   $ hg init obs-conflict
   $ cd obs-conflict
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ echo "aaa" >> a
   $ hg commit -A -m "a"
   adding a
@@ -1438,11 +1394,6 @@ in previous versions) and running unshelve --continue
 On non bare shelve the branch information shouldn't be restored
   $ hg init obssh-bare_shelve_on_new_branch
   $ cd obssh-bare_shelve_on_new_branch
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ echo "aaa" >> a
   $ hg commit -A -m "a"
   adding a
@@ -1476,11 +1427,6 @@ On non bare shelve the branch information shouldn't be restored
 
 Prepare unshelve with a corrupted shelvedstate
   $ hg init obssh-r1 && cd obssh-r1
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ echo text1 > file && hg add file
   $ hg shelve
   shelved as default
@@ -1517,11 +1463,6 @@ progress
 
 Unshelve respects --keep even if user intervention is needed
   $ hg init obs-unshelvekeep && cd obs-unshelvekeep
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ echo 1 > file && hg ci -Am 1
   adding file
   $ echo 2 >> file
@@ -1551,11 +1492,6 @@ Unshelve respects --keep even if user intervention is needed
 
 Unshelving a stripped commit aborts with an explanatory message
   $ hg init obs-unshelve-stripped-commit && cd obs-unshelve-stripped-commit
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution=createmarkers
-  > obsshelve=True
-  > EOF
   $ echo 1 > file && hg ci -Am 1
   adding file
   $ echo 2 >> file
