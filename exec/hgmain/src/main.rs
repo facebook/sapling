@@ -11,7 +11,7 @@ use hgenv::HgEnv;
 use python::{py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_no_site_flag,
              py_set_program_name, py_set_python_home};
 
-use std::ffi::{CString, OsStr};
+use std::ffi::{CString, OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 /// A default name of the python script that this Rust binary will try to
@@ -70,7 +70,7 @@ impl HgPython {
         let installation_root = exe_path.parent().unwrap();
         let entry_point = Self::find_hg_py_entry_point(&installation_root, env);
         let embedded = Self::is_embedded(&entry_point);
-        Self::setup_python(&installation_root, &entry_point, embedded);
+        Self::setup_python(&installation_root, &entry_point, embedded, &env);
 
         HgPython {
             embedded,
@@ -80,14 +80,16 @@ impl HgPython {
 
     /// Setup everything related to the python interpreter
     /// used by Mercurial
-    fn setup_python(installation_root: &Path, entry_point: &Path, embedded: bool) {
+    fn setup_python(installation_root: &Path, entry_point: &Path, embedded: bool, env: &HgEnv) {
         if embedded {
             // In an embedded case, we don't need the site.py logic, as
             // we don't need any filesystem discovery: we know the location
             // of all the packages in advance.
             py_set_no_site_flag();
         } else if cfg!(target_os = "windows") {
-            py_set_python_home(&installation_root.join("hg-python"));
+            let hgpython: OsString = env.var_os("HGPYTHONHOME")
+                .unwrap_or(installation_root.join("hg-python").into());
+            py_set_python_home(&hgpython);
         }
 
         let mut args = Self::args_to_local_cstrings();
