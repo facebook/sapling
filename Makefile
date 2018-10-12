@@ -22,6 +22,8 @@ DEFAULT_RE2SRC = build/re2-2018-04-01
 RE2SRC ?= $(DEFAULT_RE2SRC)
 export RE2SRC
 
+HGDEV := 1
+export HGDEV
 
 # Set this to e.g. "mingw32" to use a non-default compiler.
 COMPILER=
@@ -71,10 +73,14 @@ local: build/re2-2018-04-01/README
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i --re2-src $(RE2SRC) \
-	  build_rust_ext -i \
-	  build_hgexe $(COMPILERFLAG) -i \
+	  build_rust_ext -i -l\
 	  build_mo
+ifeq ($(OS),Windows_NT)
+	cp build/scripts-2.7/hg.rust.exe hg.exe
+	cp build/hg/hg-python/python27.dll python27.dll
+else
 	cp build/scripts-2.7/hg.rust .
+endif
 	env HGRCPATH= $(PYTHON) hg version
 
 build:
@@ -96,7 +102,11 @@ cleanbutpackages:
 	rm -rf build mercurial/locale
 	$(MAKE) -C doc clean
 	$(MAKE) -C contrib/chg distclean
+ifeq ($(OS),Windows_NT)
+	rm -rf hg-python hg.exe python27.dll
+else
 	rm -f hg.rust
+endif
 
 clean: cleanbutpackages
 	rm -rf packages

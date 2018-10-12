@@ -1897,7 +1897,12 @@ rustextmodules = [
 
 rustextbinaries = [
     RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
-    RustBinary("hgmain", manifest="exec/hgmain/Cargo.toml", rename="hg.rust"),
+    RustBinary(
+        "hgmain",
+        manifest="exec/hgmain/Cargo.toml",
+        rename="hg.rust",
+        features="hgdev" if os.environ.get("HGDEV") else None,
+    ),
 ]
 
 setup(

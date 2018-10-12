@@ -82,3 +82,8 @@ hg.py
 
 # rust binary
 hg.rust
+
+# make-local Windows artifacts
+hgrc.d
+make.bat
+mercurial.ini
