@@ -9,12 +9,23 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from distutils.version import LooseVersion
+import contextlib
+import ctypes
+import ctypes.util
 import errno
+import imp
 import glob
 import os
+import py_compile
+import re
+import shutil
+import stat
 import struct
 import subprocess
 import sys
+import tempfile
+import time
+import zipfile
 
 
 def ensureenv():
@@ -170,12 +181,6 @@ else:
 
 ispypy = "PyPy" in sys.version
 
-import ctypes
-import stat
-import re
-import shutil
-import tempfile
-from distutils import log
 
 # We have issues with setuptools on some platforms and builders. Until
 # those are resolved, setuptools is opt-in except for platforms where
@@ -185,8 +190,10 @@ if issetuptools:
     from setuptools import setup
 else:
     from distutils.core import setup
+from distutils import log
 from distutils.ccompiler import new_compiler
 from distutils.core import Command, Extension
+from distutils.dir_util import copy_tree
 from distutils.dist import Distribution
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
@@ -236,6 +243,48 @@ def write_if_changed(path, content):
     if current != content:
         with open(path, "wb") as fh:
             fh.write(content)
+
+
+pjoin = os.path.join
+relpath = os.path.relpath
+scriptdir = os.path.realpath(pjoin(__file__, ".."))
+
+
+def ensureexists(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+def ensureempty(path):
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.makedirs(path)
+
+
+def samepath(path1, path2):
+    p1 = os.path.normpath(os.path.normcase(path1))
+    p2 = os.path.normpath(os.path.normcase(path2))
+    return p1 == p2
+
+
+def copy_to(source, target):
+    if os.path.isdir(source):
+        copy_tree(source, target)
+    else:
+        ensureexists(os.path.dirname(target))
+        shutil.copy2(source, target)
+
+
+@contextlib.contextmanager
+def chdir(nwd):
+    cwd = os.getcwd()
+    try:
+        log.debug("chdir: %s", nwd)
+        os.chdir(nwd)
+        yield
+    finally:
+        log.debug("restore chdir: %s", cwd)
+        os.chdir(cwd)
 
 
 scripts = ["hg"]
@@ -641,6 +690,239 @@ class hgbuildscripts(build_scripts):
             os.rename(oldpath, newpath)
 
 
+class buildembedded(Command):
+    extsuffixes = [s[0] for s in imp.get_suffixes() if s[2] == imp.C_EXTENSION]
+    srcsuffixes = [s[0] for s in imp.get_suffixes() if s[2] == imp.PY_SOURCE]
+    # there should be at least one compiled python suffix, and we don't care about more
+    compsuffix = [s[0] for s in imp.get_suffixes() if s[2] == imp.PY_COMPILED][0]
+    description = (
+        "Build the embedded version of Mercurial. Intended to be used on Windows."
+    )
+
+    user_options = [
+        (
+            "local-bins",
+            "l",
+            "use binary files (shared libs and executables) "
+            "from the hg dir (where this script lives), rather "
+            "than ./build. Note that Python files are always "
+            "taken from the hg dir",
+        )
+    ]
+
+    def initialize_options(self):
+        self.local_bins = False
+
+    def finalize_options(self):
+        pass
+
+    def _is_ext_file(self, path):
+        """Return True if file is a native Python extension"""
+        return any(map(lambda sf: path.endswith(sf), self.extsuffixes))
+
+    def _process_dir(self, dirtowalk, target_prefix, skipdirs, dirforpycs):
+        """Py-Compile all the files recursively in dir
+
+        `dirtowalk` - a dir to process
+        `target_prefix` - put compiled files in this subdir. It has to be
+                          a suffix of `dirtowalk`. For example, we would call
+                          this with `dirtowalk` ".../hg/mercurial" and
+                          `target_prefix` "mercurial" and expect any processed
+                          files to be put in `dirforpycs`/mercurial
+        `skipdirs` - do not process dirs in this list
+        `dirforpycs` - a place to put .pyc files
+        """
+        # we need to chdir to be able to use relative source paths, see below
+        # so if dirtowalk is /a/b/c/ and target_prefix is b/c/, tmpcwd would be /a/
+        tmpcwd = dirtowalk[: -len(target_prefix)] if target_prefix else dirtowalk
+        with chdir(tmpcwd):
+            for dirpath, dirnames, filenames in os.walk(dirtowalk):
+                relative_dirpath = (
+                    pjoin(target_prefix, relpath(dirpath, dirtowalk)) + os.path.sep
+                )  # trailing separator is needed to match skipdirs
+                if any(
+                    map(lambda skipdir: relative_dirpath.startswith(skipdir), skipdirs)
+                ):
+                    continue
+                target_dir = os.path.join(dirforpycs, relative_dirpath)
+                ensureexists(target_dir)
+                for filename in filenames:
+                    if not any(filename.endswith(suff) for suff in self.srcsuffixes):
+                        continue
+                    # it is important to use relative source path rather than absolute
+                    # since it is what gets baked into the resulting .pyc
+                    relative_source_path = os.path.join(relative_dirpath, filename)
+                    compfilename = None
+                    # we are certain that this loop will produce a good compiled filename
+                    # because we know that filename ends with one of the suffixes
+                    # from our chek above
+                    for suff in self.srcsuffixes:
+                        if not filename.endswith(suff):
+                            continue
+                        compfilename = filename[: -len(suff)] + self.compsuffix
+                        break
+
+                    targetpath = os.path.join(target_dir, compfilename)
+                    py_compile.compile(relative_source_path, targetpath)
+
+    def _process_python_install(self, dirforpycs):
+        """Py-Compile all of the files in python installation and
+        copy results to `dirforpycs`"""
+        interp_dir = os.path.realpath(pjoin(sys.executable, ".."))
+
+        def good_path_item(pitem):
+            if not os.path.exists(pitem):
+                return False
+            if not os.path.isdir(item):
+                return False
+            if samepath(pitem, scriptdir):
+                return False
+            if samepath(pitem, interp_dir):
+                return False
+            return True
+
+        for item in sys.path:
+            if not good_path_item(item):
+                continue
+            skipdirs = []
+            for other in sys.path:
+                if other != item and other.startswith(item):
+                    skipdirs.append(relpath(other, item))
+            # hardcoded list of things we want to skip
+            skipdirs.extend(["test", "tests", "lib2to3", "py2exe"])
+            if "cython" in item.lower():
+                skipdirs.append("Demos")
+            skipdirs = set(skipdir + os.path.sep for skipdir in skipdirs)
+            self._process_dir(item, "", skipdirs, dirforpycs)
+
+    def _process_hg_source(self, dirforpycs):
+        """Py-Compile all of the Mercurial Python files and copy
+        results to `dirforpycs`"""
+        hgdirs = ["mercurial", "hgdemandimport", "hgext"]
+        for d, p in {pjoin(scriptdir, hgdir): hgdir for hgdir in hgdirs}.items():
+            self._process_dir(d, p, set(), dirforpycs)
+
+    def _process_hg_exts(self, dirforexts):
+        """Prepare Mercurail Python extensions to be used by EmbeddedImporter
+
+        Since all of the Mercurial extensions are in packages, we know to
+        just rename the .pyd/.so files into `path.to.module.pyd`"""
+        parentdir = scriptdir
+        if not self.local_bins:
+            # copy .pyd's from ./build/lib.win-amd64/, not from ./
+            parentdir = pjoin(scriptdir, "build", distutils_dir_name("lib"))
+        hgdirs = ["mercurial", "hgdemandimport", "hgext"]
+        for hgdir in hgdirs:
+            fulldir = pjoin(parentdir, hgdir)
+            for dirpath, dirnames, filenames in os.walk(fulldir):
+                for filename in filenames:
+                    if not self._is_ext_file(filename):
+                        continue
+                    # Mercurial exts are in packages, so rename the files
+                    # mercurial/cext/osutil.pyd => mercurial.cext.osutil.pyd
+                    newfilename = relpath(pjoin(dirpath, filename), parentdir)
+                    newfilename = newfilename.replace(os.path.sep, ".")
+                    log.debug("copying %s from %s" % (dirpath, filename))
+                    copy_to(
+                        os.path.join(dirpath, filename),
+                        os.path.join(dirforexts, newfilename),
+                    )
+
+    def _process_py_exts(self, dirforexts):
+        """Prepare Python extensions to be used by EmbeddedImporter
+
+        Unlike Mercurial files, we can't be sure about native extensions
+        from the Python installation. Most of them are standalone modules
+        (like lz4, all of the standard python .pyds/.sos), so we err on
+        this side. If we learn about third-party packaged native
+        extensions, we'll have to hardcode them here"""
+        for item in sys.path:
+            if not os.path.exists(item) or not os.path.isdir(item):
+                continue
+            for filename in os.listdir(item):
+                if not self._is_ext_file(filename):
+                    continue
+                copy_to(pjoin(item, filename), pjoin(dirforexts, filename))
+
+    def _zip_pyc_files(self, zipname, dirtozip):
+        """Create a zip archive of all the .pyc files"""
+        with zipfile.ZipFile(zipname, "w") as z:
+            for dirpath, dirnames, filenames in os.walk(dirtozip):
+                for filename in filenames:
+                    fullfname = pjoin(dirpath, filename)
+                    relname = fullfname[len(dirtozip) + 1 :]
+                    z.write(fullfname, relname)
+
+    def _copy_py_lib(self, dirtocopy):
+        """Copy main Python shared library"""
+        pylib = "python27" if iswindows else "python2.7"
+        pylibext = pylib + (".dll" if iswindows else ".so")
+        # First priority is the python lib that lives alongside the executable
+        pylibpath = os.path.realpath(pjoin(sys.executable, "..", pylibext))
+        if not os.path.exists(pylibpath):
+            # a fallback option
+            pylibpath = ctypes.util.find_library(pylib)
+        log.debug("Python dynamic library is copied from: %s" % pylibpath)
+        copy_to(pylibpath, pjoin(dirtocopy, os.path.basename(pylibpath)))
+
+    def _copy_hg_exe(self, dirtocopy):
+        """Copy main mercurial executable which would load the embedded Python"""
+        bindir = scriptdir
+        if not self.local_bins:
+            # copy .exe's from ./build/lib.win-amd64/, not from ./
+            bindir = pjoin(scriptdir, "build", distutils_dir_name("scripts"))
+            sourcename = "hg.rust.exe" if iswindows else "hg.rust"
+        else:
+            sourcename = "hg.exe" if iswindows else "hg"
+        targetname = "hg.exe" if iswindows else "hg"
+        log.debug("copying main mercurial binary from %s" % bindir)
+        copy_to(pjoin(bindir, sourcename), pjoin(dirtocopy, targetname))
+
+    def _copy_configs(self, dirtocopy):
+        """Copy the relevant config bits into an embedded directory"""
+        source = pjoin(
+            scriptdir, "fb", "staticfiles", "etc", "mercurial", "include_for_nupkg.rc"
+        )
+        target = pjoin(dirtocopy, "hgrc.d", "include.rc")
+        copy_to(source, target)
+
+    def _copy_other(self, dirtocopy):
+        """Copy misc files, which aren't main hg codebase"""
+        tocopy = {
+            "CONTRIBUTING": "CONTRIBUTING",
+            "CONTRIBUTORS": "CONTRIBUTORS",
+            "contrib": "contrib",
+            pjoin("mercurial", "templates"): "templates",
+            pjoin("mercurial", "help"): "help",
+        }
+        for sname, tname in tocopy.items():
+            source = pjoin(scriptdir, sname)
+            target = pjoin(dirtocopy, tname)
+            copy_to(source, target)
+
+    def run(self):
+        embdir = pjoin(scriptdir, "build", "embedded")
+        libdir = pjoin(embdir, "lib")
+        tozip = pjoin(embdir, "_tozip")
+        ensureempty(embdir)
+        ensureexists(libdir)
+        ensureexists(tozip)
+        self._process_python_install(tozip)
+        self._process_hg_source(tozip)
+        self._process_hg_exts(libdir)
+        self._process_py_exts(libdir)
+        self._zip_pyc_files(pjoin(libdir, "library.zip"), tozip)
+        shutil.rmtree(tozip)
+        # On Windows, Python shared library has to live at the same level
+        # as the main project binary, since this is the location which
+        # has the first priority in dynamic linker search path.
+        self._copy_py_lib(embdir)
+        self._copy_hg_exe(embdir)
+        if havefb:
+            self._copy_configs(embdir)
+        self._copy_other(embdir)
+
+
 class hgbuildpy(build_py):
     def finalize_options(self):
         build_py.finalize_options(self)
@@ -984,6 +1266,7 @@ cmdclass = {
     "install_scripts": hginstallscripts,
     "build_hgexe": buildhgexe,
     "build_rust_ext": BuildRustExt,
+    "build_embedded": buildembedded,
 }
 
 packages = [
@@ -1054,7 +1337,12 @@ def filter_existing_dirs(dirs):
 
 def distutils_dir_name(dname):
     """Returns the name of a distutils build directory"""
-    f = "{dirname}.{platform}-{version}"
+    if dname == "scripts":
+        # "scripts" dir in distutils builds does not contain
+        # any platform info, just the Python version
+        f = "{dirname}-{version}"
+    else:
+        f = "{dirname}.{platform}-{version}"
     return f.format(
         dirname=dname, platform=distutils.util.get_platform(), version=sys.version[:3]
     )
