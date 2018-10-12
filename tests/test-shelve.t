@@ -4,11 +4,11 @@
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > strip =
-  > obsshelve=
+  > shelve=
   > [defaults]
   > diff = --nodates --git
   > qnew = --date '0 0'
-  > [obsshelve]
+  > [shelve]
   > maxbackups = 2
   > [experimental]
   > evolution=createmarkers
@@ -1505,44 +1505,10 @@ Unshelving a stripped commit aborts with an explanatory message
   unshelving change 'default'
   abort: shelved node 49351a7ca59142b32064896a48f50bdecccf8ea0 not found in repo
   [255]
-
-Enabling both shelve and obsshelve should not be allowed
-  $ hg --config extensions.obsshelve= --config extensions.shelve= log -r .
-  extension 'shelve' overrides commands: * (glob)
-  abort: shelve must be disabled when obsshelve is enabled
-  [255]
-  $ cd ..
-
-Obsshelve knows how to unshelve traditional shelves
-  $ hg init tradshelves && cd tradshelves
-  $ echo root > root && hg ci -Am root
-  adding root
-  $ echo something >> root
-  $ hg diff
-  diff --git a/root b/root
-  --- a/root
-  +++ b/root
-  @@ -1,1 +1,2 @@
-   root
-  +something
-  $ hg shelve --config extensions.obsshelve=! --config extensions.shelve=
-  shelved as default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ ls .hg/shelved/default.hg  # .hg extension indicates a traditional shelve
-  .hg/shelved/default.hg
-  $ hg unshelve --keep
-  unshelving change 'default'
-  $ hg diff
-  diff --git a/root b/root
-  --- a/root
-  +++ b/root
-  @@ -1,1 +1,2 @@
-   root
-  +something
   $ cd ..
 
 Test revsetpredicate 'shelved'
-For this test enabled obsshelve extension is enough, and it is enabled at the top of the file
+For this test enabled shelve extension is enough, and it is enabled at the top of the file
   $ hg init test-log-shelved && cd test-log-shelved
   $ testshelvedcount() {
   >   hg log --hidden -r "shelved()" --template "{node}\n" | wc -l | grep -v $1 | cat

@@ -9,7 +9,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fastpartialmatch=
-  > obsshelve=
+  > shelve=
   > [ui]
   > ssh = python "$TESTDIR/dummyssh"
   > EOF

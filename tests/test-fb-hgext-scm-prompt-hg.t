@@ -1,6 +1,8 @@
 To run this test against other shells, use the shell argument, eg:
 run-tests.py --shell=zsh test-scm-prompt*
 
+  $ enable obsstore
+
 Initialize scm prompt
   $ . $TESTDIR/../contrib/scm-prompt.sh
 
@@ -120,7 +122,7 @@ Test unshelve
   $ cmd hg unshelve --config "extensions.shelve="
   unshelving change 'default'
   rebasing shelved changes
-  rebasing 4:29190234e4ef "changes to: c3" (tip)
+  rebasing 4:19f7fec7f80b "shelve changes to: c3" (tip)
   other [source] changed b which local [dest] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')

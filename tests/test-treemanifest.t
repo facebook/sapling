@@ -1,5 +1,5 @@
 #require killdaemons
-
+  $ enable obsstore
   $ cat << EOF >> $HGRCPATH
   > [format]
   > usegeneraldelta=yes
@@ -879,7 +879,6 @@ Committing a empty commit does not duplicate root treemanifest
   $ hg commit -Aqm 'pre-empty commit'
   $ hg rm z
   $ hg commit --amend -m 'empty commit'
-  saved backup bundle to $TESTTMP/grafted-dir-repo-clone/.hg/strip-backup/cb99d5717cea-9e3b6b02-amend.hg
   $ hg log -r 'tip + tip^' -T '{manifest}\n'
   1:678d3574b88c
   1:678d3574b88c
@@ -887,6 +886,6 @@ Committing a empty commit does not duplicate root treemanifest
 
 Shelve works with treemanifest
   $ echo ababagalamaga >> file
-  $ hg shelve --config extensions.obsshelve= --config experimental.evolution=createmarkers
+  $ hg shelve --config extensions.shelve= --config experimental.evolution=createmarkers
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -156,7 +156,6 @@ Somehow problematic: With many extensions
   > morecolors=
   > morestatus=
   > myparent=
-  > obsshelve=
   > patchbomb=
   > patchrmdir=
   > perftweaks=
@@ -177,7 +176,7 @@ Somehow problematic: With many extensions
   > remotenames=
   > reset=
   > sampling=
-  > shelve=!
+  > shelve=
   > sigtrace=
   > simplecache=
   > smartlog=
@@ -186,7 +185,6 @@ Somehow problematic: With many extensions
   > strip=
   > traceprof=
   > treedirstate=
-  > treemanifest =
   > treemanifest=
   > tweakdefaults=
   > uncommit=

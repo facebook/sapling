@@ -1,5 +1,6 @@
 Setup
 
+  $ enable obsstore
 
 Check diagnosis, debugging information
 1) Setup configuration
@@ -360,7 +361,7 @@ Amend a changeset which probably requires readdelta to be implemented
 Ensure shelve works (t15991119)
   $ echo >> a
   $ hg commit -m a2
-  $ hg up 0
+  $ hg up 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b >> a
   $ hg debugcachemanifest -r .
@@ -368,7 +369,7 @@ Ensure shelve works (t15991119)
 # 0 must be public so it doesnt get added to the bundle. That triggers a
 # condition where the manifest ctx cache wont contain the manifest for commit 0,
 # which tests an edge case in fastmanifest.
-  $ hg phase -p -r 0
+  $ hg phase -p -r 1
   $ hg shelve --config extensions.shelve=
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -1,3 +1,4 @@
+  $ enable obsstore
   $ cat >> $HGRCPATH << EOF
   > [morestatus]
   > show=True
@@ -70,11 +71,11 @@ Test hg status is normal after bisect reset
   $ hg status
 
 Test graft state
-  $ hg up -q -r 0
+  $ hg up -q -r 1
   $ echo '' > a
   $ hg commit -q -m 'remove content'
 
-  $ hg up -q -r 0
+  $ hg up -q -r 1
   $ echo 'ab' > a
   $ hg commit -q -m 'add content'
   $ hg graft -q 2977a57
@@ -135,7 +136,7 @@ Test hg status is normal after unshelve abort
 
 Test rebase state
   $ echo "rebase=" >> $HGRCPATH
-  $ hg up -r 0 -q
+  $ hg up -r 1 -q
   $ echo 'ab' > a
   $ hg commit -q -m 'add content'
   $ hg rebase -s 2977a57 -d . -q
@@ -228,7 +229,7 @@ Test hg status is normal after merge abort
   $ rm a.orig
 
 Test non-conflicted merge state
-  $ hg up -r 0 -q
+  $ hg up -r 1 -q
   $ touch z
   $ hg add z
   $ hg commit -m 'a commit that will merge without conflicts' -q

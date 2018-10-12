@@ -562,6 +562,8 @@ Dont mirror during shelve
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > shelve=
+  > [experimental]
+  > evolution=createmarkers
   > [dirsync]
   > group1.dir1 = dir1/
   > group1.dir2 = dir2/

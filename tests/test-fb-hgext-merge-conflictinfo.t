@@ -716,6 +716,8 @@ mergestate (like shelve):
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > shelve=
+  > [experimental]
+  > evolution = createmarkers
   > EOF
   $ hg debugdrawdag <<'EOS'
   > b c
@@ -732,7 +734,7 @@ mergestate (like shelve):
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
-  rebasing 3:91906e06e40b "changes to: c" (tip)
+  rebasing 3:b0582bede31d "shelve changes to: c" (tip)
   merging b
   warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -742,7 +744,7 @@ mergestate (like shelve):
    {
     "command": "unshelve",
     "command_details": {"cmd": "unshelve", "to_abort": "unshelve --abort", "to_continue": "unshelve --continue"},
-    "conflicts": [{"base": {"contents": "", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "b", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "state\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "<<<<<<< dest:   488e1b7e7341 b - test: b\nb=======\nstate\n>>>>>>> source: 91906e06e40b - shelve: changes to: c\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/cornercases/foo/foo/foo/command_details/b"}, "path": "b"}],
+    "conflicts": [{"base": {"contents": "", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "b", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "state\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "<<<<<<< dest:   488e1b7e7341 b - test: b\nb=======\nstate\n>>>>>>> source: b0582bede31d - test: shelve changes to: c\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/cornercases/foo/foo/foo/command_details/b"}, "path": "b"}],
     "pathconflicts": []
    }
   ]
