@@ -22,6 +22,7 @@ Short help:
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
+   show          show revision in detail
    status        show changed files in the working directory
    summary       summarize working directory state
    update        update working directory (or switch revisions)
@@ -44,6 +45,7 @@ Short help:
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
+   show          show revision in detail
    status        show changed files in the working directory
    summary       summarize working directory state
    update        update working directory (or switch revisions)
@@ -96,6 +98,7 @@ Short help:
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
+   show          show revision in detail
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
@@ -188,6 +191,7 @@ Short help:
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
+   show          show revision in detail
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
@@ -396,8 +400,6 @@ Test extension help:
        schemes       extend schemes with shortcuts to repository swarms
        share         share a common history between several working directories
        shelve        save and restore changes to the working directory
-       show          show changesets in detail with full log message, patches
-                     etc
        sigtrace      sigtrace - dump stack and memory traces on signal
        smartlog      command to display a relevant subgraph
        sparse        allow sparse checkouts of the working directory
@@ -442,6 +444,7 @@ Test short command list with verbose option
    push          push changes to the specified destination
    remove, rm    remove the specified files on the next commit
    serve         start stand-alone webserver
+   show          show revision in detail
    status, st    show changed files in the working directory
    summary, sum  summarize working directory state
    update, up, checkout, co
@@ -808,6 +811,7 @@ Test command without options
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
+   show          show revision in detail
    status        show changed files in the working directory
    summary       summarize working directory state
    update        update working directory (or switch revisions)
@@ -1007,6 +1011,7 @@ Test that default list of commands omits extension commands
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
+   show          show revision in detail
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
@@ -2414,6 +2419,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   start stand-alone webserver
+  </td></tr>
+  <tr><td>
+  <a href="/help/show">
+  show
+  </a>
+  </td><td>
+  show revision in detail
   </td></tr>
   <tr><td>
   <a href="/help/status">

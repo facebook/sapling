@@ -274,7 +274,6 @@ def _preimportmodules():
         "schemes",
         "share",
         "shelve",
-        "show",
         "sigtrace",
         "simplecache",
         "smartlog",

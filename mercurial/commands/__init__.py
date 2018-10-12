@@ -5418,6 +5418,70 @@ def serve(ui, repo, **opts):
 
 
 @command(
+    "^show",
+    [
+        (
+            "",
+            "nodates",
+            None,
+            _("omit dates from diff headers " + "(but keeps it in commit header)"),
+        ),
+        ("", "noprefix", None, _("omit a/ and b/ prefixes from filenames")),
+        ("", "stat", None, _("output diffstat-style summary of changes")),
+        ("g", "git", None, _("use git extended diff format")),
+        ("U", "unified", int, _("number of lines of diff context to show")),
+    ]
+    + diffwsopts
+    + templateopts
+    + walkopts,
+    _("[OPTION]... [REV [FILE]...]"),
+    inferrepo=True,
+    cmdtype=readonly,
+)
+def show(ui, repo, *args, **opts):
+    """show revision in detail
+
+    This behaves similarly to :hg:`log -vp -r REV [OPTION]... [FILE]...`, or
+    if called without a REV, :hg:`log -vp -r . [OPTION]...` Use
+    :hg:`log` for more powerful operations than supported by hg show
+
+    See :hg:`help templates` for more about pre-packaged styles and
+    specifying custom templates.
+
+    """
+    ui.pager("show")
+    if len(args) == 0:
+        opts["rev"] = ["."]
+        pats = []
+    else:
+        opts["rev"] = [args[0]]
+        pats = args[1:]
+        if not scmutil.revrange(repo, opts["rev"]):
+            h = _("if %s is a file, try `hg show . %s`") % (args[0], args[0])
+            raise error.Abort(_("unknown revision %s") % args[0], hint=h)
+
+    opts["patch"] = not opts["stat"]
+    opts["verbose"] = True
+
+    # Copy tracking is slow when doing a git diff. Override hgrc, and rely on
+    # opts getting us a git diff if it's been requested. Ideally, we'd find and
+    # fix the slowness in copy tracking, but this works for now.
+    # On a commit with lots of possible copies, Bryan O'Sullivan found that this
+    # reduces "time hg show" from 1.76 seconds to 0.81 seconds.
+    overrides = {
+        ("diff", "git"): opts.get("git"),
+        ("diff", "unified"): opts.get("unified"),
+        ("ui", "verbose"): True,
+    }
+
+    logcmd, defaultlogopts = cmdutil.getcmdanddefaultopts("log", table)
+    defaultlogopts.update(opts)
+
+    with ui.configoverride(overrides, "show"):
+        logcmd(ui, repo, *pats, **defaultlogopts)
+
+
+@command(
     "^status|st",
     [
         ("A", "all", None, _("show status of all files")),

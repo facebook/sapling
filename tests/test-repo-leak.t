@@ -176,7 +176,6 @@ Somehow problematic: With many extensions
   > reset=
   > sampling=
   > shelve=
-  > show=
   > sigtrace=
   > simplecache=
   > smartlog=

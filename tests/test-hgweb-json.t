@@ -1755,6 +1755,10 @@ help/ shows help topics
         "topic": "serve"
       },
       {
+        "summary": "show revision in detail",
+        "topic": "show"
+      },
+      {
         "summary": "show changed files in the working directory",
         "topic": "status"
       },

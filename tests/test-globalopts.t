@@ -337,6 +337,7 @@ Testing -h/--help:
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
+   show          show revision in detail
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
@@ -435,6 +436,7 @@ Testing -h/--help:
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
+   show          show revision in detail
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision

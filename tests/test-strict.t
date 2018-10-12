@@ -34,6 +34,7 @@
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
    serve         start stand-alone webserver
+   show          show revision in detail
    status        show changed files in the working directory
    summary       summarize working directory state
    update        update working directory (or switch revisions)

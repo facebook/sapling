@@ -49,6 +49,7 @@ Show all commands except debug commands
   rollback
   root
   serve
+  show
   status
   summary
   tag
@@ -229,7 +230,7 @@ Show the options for the "serve" command
 Show an error if we use --options with an ambiguous abbreviation
   $ hg debugcomplete --options s
   hg: command 's' is ambiguous:
-      serve showconfig status summary
+      serve show showconfig status summary
   [255]
 
 Show all commands + options
@@ -249,6 +250,7 @@ Show all commands + options
   push: force, rev, bookmark, branch, new-branch, pushvars, ssh, remotecmd, insecure
   remove: after, force, subrepos, include, exclude
   serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only, subrepos
+  show: nodates, noprefix, stat, git, unified, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, style, template, include, exclude
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, subrepos, template
   summary: remote
   update: clean, check, merge, date, rev, tool
