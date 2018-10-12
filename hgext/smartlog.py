@@ -199,10 +199,10 @@ def singlepublicsuccessor(repo, ctx, templ, **args):
     return "" if first and second else first
 
 
-@templatekeyword("obsshelveenabled")
-def obsshelveenabled(repo, ctx, **args):
-    """Bool. Return true if obsshelve extension is enabled"""
-    return "obsshelve" in extensions.enabled().keys()
+@templatekeyword("shelveenabled")
+def shelveenabled(repo, ctx, **args):
+    """Bool. Return true if shelve extension is enabled"""
+    return "shelve" in extensions.enabled().keys()
 
 
 @templatekeyword("rebasesuccessors")
