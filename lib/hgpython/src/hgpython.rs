@@ -1,7 +1,7 @@
 // Copyright Facebook, Inc. 2018
+use buildenv::BuildEnv;
 use cpython::{exc, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
 use encoding::{osstring_to_local_cstring, path_to_local_bytes, path_to_local_cstring};
-use hgenv::HgEnv;
 use python::{py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_no_site_flag,
              py_set_program_name, py_set_python_home};
 
@@ -60,10 +60,11 @@ pub struct HgPython {
 }
 
 impl HgPython {
-    pub fn new(env: &HgEnv) -> HgPython {
+    pub fn new() -> HgPython {
         let exe_path = std::env::current_exe().expect("failed to call current_exe");
         let installation_root = exe_path.parent().unwrap();
-        let entry_point = Self::find_hg_py_entry_point(&installation_root, env);
+        let env = BuildEnv::new();
+        let entry_point = Self::find_hg_py_entry_point(&installation_root);
         let embedded = Self::is_embedded(&entry_point);
         Self::setup_python(&installation_root, &entry_point, embedded, &env);
 
@@ -75,7 +76,7 @@ impl HgPython {
 
     /// Setup everything related to the python interpreter
     /// used by Mercurial
-    fn setup_python(installation_root: &Path, entry_point: &Path, embedded: bool, env: &HgEnv) {
+    fn setup_python(installation_root: &Path, entry_point: &Path, embedded: bool, env: &BuildEnv) {
         if embedded {
             // In an embedded case, we don't need the site.py logic, as
             // we don't need any filesystem discovery: we know the location
@@ -148,7 +149,7 @@ impl HgPython {
     }
 
     /// Detect the entry point Python script for current Mercurial run
-    fn find_hg_py_entry_point(installation_root: &Path, env: &HgEnv) -> PathBuf {
+    fn find_hg_py_entry_point(installation_root: &Path) -> PathBuf {
         let mut candidates: Vec<PathBuf> = vec![];
 
         // Pri 1: the zip file under the dir where the binary lives (embedded case)

@@ -4,9 +4,9 @@ extern crate encoding;
 extern crate libc;
 extern crate python27_sys;
 
-mod hgenv;
+mod buildenv;
 mod hgpython;
 mod python;
 
-pub use hgenv::HgEnv;
+pub use buildenv::BuildEnv;
 pub use hgpython::HgPython;

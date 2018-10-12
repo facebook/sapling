@@ -15,11 +15,11 @@ fn is_dev_env() -> bool {
 /// A wrapper around environment variable-related functions
 /// This functionality mainly serves to facilitate the use of `build/env` file
 /// on Windows, which is populated by the preparation script.
-pub struct HgEnv {
+pub struct BuildEnv {
     stored: Option<StoredEnv>,
 }
 
-impl HgEnv {
+impl BuildEnv {
     pub fn new() -> Self {
         let stored = if is_dev_env() {
             let exe_path = std::env::current_exe().unwrap();
