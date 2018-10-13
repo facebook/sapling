@@ -224,11 +224,13 @@ class FindExeClass(object):
     def _find_exe(self, name: str, env: str, candidates: List[str]) -> str:
         if env is not None:
             path = os.environ.get(env)
-            if path and not os.access(path, os.X_OK):
-                raise Exception(
-                    f"unable to find {name}: specified as {path!r} "
-                    f"by ${env}, but not available there"
-                )
+            if path:
+                if not os.access(path, os.X_OK):
+                    raise Exception(
+                        f"unable to find {name}: specified as {path!r} "
+                        f"by ${env}, but not available there"
+                    )
+                return path
 
         for path in candidates:
             if os.access(path, os.X_OK):
