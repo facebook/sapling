@@ -43,7 +43,7 @@ Change a few lines:
 
 Preview absorb changes:
 
-  $ hg absorb --print-changes --dry-run
+  $ hg absorb --dry-run
   showing changes for a
           @@ -0,2 +0,2 @@
   4ec16f8 -1
@@ -55,23 +55,33 @@ Preview absorb changes:
   4f55fa6 -5
   ad8b8b7 +4d
   4f55fa6 +5e
-
-  $ hg absorb --print-changes --print-descriptions --dry-run --config absorb.maxdescwidth=15
-  showing changes for a
-                           @@ -0,2 +0,2 @@
-  4ec16f8 commit 1         -1
-  5c5f952 commit 2         -2
-  4ec16f8 commit 1         +1a
-  5c5f952 commit 2         +2b
-                           @@ -3,2 +3,2 @@
-  ad8b8b7 commit 4         -4
-  4f55fa6 commit 5         -5
-  ad8b8b7 commit 4         +4d
-  4f55fa6 commit 5         +5e
+  
+  4 changesets affected
+  4f55fa6 commit 5
+  ad8b8b7 commit 4
+  5c5f952 commit 2
+  4ec16f8 commit 1
 
 Run absorb:
 
-  $ hg absorb
+  $ hg absorb --apply-changes
+  showing changes for a
+          @@ -0,2 +0,2 @@
+  4ec16f8 -1
+  5c5f952 -2
+  4ec16f8 +1a
+  5c5f952 +2b
+          @@ -3,2 +3,2 @@
+  ad8b8b7 -4
+  4f55fa6 -5
+  ad8b8b7 +4d
+  4f55fa6 +5e
+  
+  4 changesets affected
+  4f55fa6 commit 5
+  ad8b8b7 commit 4
+  5c5f952 commit 2
+  4ec16f8 commit 1
   saved backup bundle to * (glob)
   2 of 2 chunk(s) applied
   $ hg annotate a
@@ -87,7 +97,20 @@ Delete a few lines and related commits will be removed if they will be empty:
   > 2b
   > 4d
   > EOF
-  $ hg absorb
+  $ echo y | hg absorb --config ui.interactive=1
+  showing changes for a
+          @@ -0,1 +0,0 @@
+  f548282 -1a
+          @@ -2,1 +1,0 @@
+  ff5d556 -3
+          @@ -4,1 +2,0 @@
+  84e5416 -5e
+  
+  3 changesets affected
+  84e5416 commit 5
+  ff5d556 commit 3
+  f548282 commit 1
+  apply changes (yn)?  y
   saved backup bundle to * (glob)
   3 of 3 chunk(s) applied
   $ hg annotate a
@@ -115,7 +138,12 @@ Delete a few lines and related commits will be removed if they will be empty:
 Non 1:1 map changes will be ignored:
 
   $ echo 1 > a
-  $ hg absorb
+  $ hg absorb --apply-changes
+  showing changes for a
+          @@ -0,2 +0,1 @@
+          -2b
+          -4d
+          +1
   nothing applied
   [1]
 
@@ -127,7 +155,7 @@ Insertaions:
   > 4d
   > insert aftert 4d
   > EOF
-  $ hg absorb -q
+  $ hg absorb -aq
   $ hg status
   $ hg annotate a
   1: insert before 2b
@@ -145,7 +173,7 @@ Bookmarks are moved:
      b2                        2:946e4bc87915
    * ba                        2:946e4bc87915
   $ sedi 's/insert/INSERT/' a
-  $ hg absorb -q
+  $ hg absorb -aq
   $ hg status
   $ hg bookmarks
      b1                        1:a4183e9b3d31
@@ -159,11 +187,22 @@ Non-mofified files are ignored:
   $ touch c
   $ hg add c
   $ hg rm b
-  $ hg absorb
+  $ hg absorb -a
   nothing applied
   [1]
   $ sedi 's/INSERT/Insert/' a
-  $ hg absorb
+  $ hg absorb -a
+  showing changes for a
+          @@ -0,1 +0,1 @@
+  a4183e9 -INSERT before 2b
+  a4183e9 +Insert before 2b
+          @@ -3,1 +3,1 @@
+  c9b20c9 -INSERT aftert 4d
+  c9b20c9 +Insert aftert 4d
+  
+  2 changesets affected
+  c9b20c9 commit 4
+  a4183e9 commit 2
   saved backup bundle to * (glob)
   2 of 2 chunk(s) applied
   $ hg status
@@ -174,7 +213,7 @@ Public commits will not be changed:
 
   $ hg phase -p 1
   $ sedi 's/Insert/insert/' a
-  $ hg absorb -pn
+  $ hg absorb -n
   showing changes for a
           @@ -0,1 +0,1 @@
           -Insert before 2b
@@ -182,7 +221,20 @@ Public commits will not be changed:
           @@ -3,1 +3,1 @@
   85b4e0e -Insert aftert 4d
   85b4e0e +insert aftert 4d
-  $ hg absorb
+  
+  1 changesets affected
+  85b4e0e commit 4
+  $ hg absorb -a
+  showing changes for a
+          @@ -0,1 +0,1 @@
+          -Insert before 2b
+          +insert before 2b
+          @@ -3,1 +3,1 @@
+  85b4e0e -Insert aftert 4d
+  85b4e0e +insert aftert 4d
+  
+  1 changesets affected
+  85b4e0e commit 4
   saved backup bundle to * (glob)
   1 of 2 chunk(s) applied
   $ hg diff -U 0
@@ -233,7 +285,7 @@ Merge commit will not be changed:
   
   $ echo 2 >> m1
   $ echo 2 >> m2
-  $ hg absorb
+  $ hg absorb -a
   abort: no changeset to change
   [255]
   $ hg revert -q -C m1 m2
@@ -257,15 +309,35 @@ Use pattern to select files to be fixed up:
   $ hg status
   M a
   M b
-  $ hg absorb a
+  $ hg absorb -a a
+  showing changes for a
+          @@ -0,2 +0,2 @@
+  6905bbb -a line 1
+  4472dd5 -a line 2
+  6905bbb +a Line 1
+  4472dd5 +a Line 2
+  
+  2 changesets affected
+  4472dd5 commit a 2
+  6905bbb commit a 1
   saved backup bundle to * (glob)
   1 of 1 chunk(s) applied
   $ hg status
   M b
-  $ hg absorb --exclude b
+  $ hg absorb -a --exclude b
   nothing applied
   [1]
-  $ hg absorb b
+  $ hg absorb -a b
+  showing changes for b
+          @@ -0,2 +0,2 @@
+  2517e37 -b line 1
+  61782db -b line 2
+  2517e37 +b Line 1
+  61782db +b Line 2
+  
+  2 changesets affected
+  61782db commit b 2
+  2517e37 commit b 1
   saved backup bundle to * (glob)
   1 of 1 chunk(s) applied
   $ hg status
@@ -283,7 +355,7 @@ Test config option absorb.maxstacksize:
   2:74cfa6294160149d60adbf7582b99ce37a4597ec commit b 1
   1:28f10dcf96158f84985358a2e5d5b3505ca69c22 commit a 2
   0:f9a81da8dc53380ed91902e5b82c1b36255a4bd0 commit a 1
-  $ hg --config absorb.maxstacksize=1 absorb -pn
+  $ hg --config absorb.maxstacksize=1 absorb -n
   absorb: only the recent 1 changesets will be analysed
   showing changes for a
           @@ -0,2 +0,2 @@
@@ -297,6 +369,9 @@ Test config option absorb.maxstacksize:
   712d16a -b Line 2
           +b line 1
   712d16a +b line 2
+  
+  1 changesets affected
+  712d16a commit b 2
 
 Test obsolete markers creation:
 
@@ -307,15 +382,39 @@ Test obsolete markers creation:
   > addnoise=1
   > EOF
 
-  $ hg --config absorb.maxstacksize=3 sf
+  $ hg --config absorb.maxstacksize=3 sf -a
   absorb: only the recent 3 changesets will be analysed
+  showing changes for a
+          @@ -0,2 +0,2 @@
+          -a Line 1
+  28f10dc -a Line 2
+          +a line 1
+  28f10dc +a line 2
+  showing changes for b
+          @@ -0,2 +0,2 @@
+  74cfa62 -b Line 1
+  712d16a -b Line 2
+  74cfa62 +b line 1
+  712d16a +b line 2
+  
+  3 changesets affected
+  712d16a commit b 2
+  74cfa62 commit b 1
+  28f10dc commit a 2
   2 of 2 chunk(s) applied
   $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
   6:3dfde4199b46 commit b 2 712d16a8f445834e36145408eabc1d29df05ec09
   5:99cfab7da5ff commit b 1 74cfa6294160149d60adbf7582b99ce37a4597ec
   4:fec2b3bd9e08 commit a 2 28f10dcf96158f84985358a2e5d5b3505ca69c22
   0:f9a81da8dc53 commit a 1 
-  $ hg absorb
+  $ hg absorb -a
+  showing changes for a
+          @@ -0,1 +0,1 @@
+  f9a81da -a Line 1
+  f9a81da +a line 1
+  
+  1 changesets affected
+  f9a81da commit a 1
   1 of 1 chunk(s) applied
   $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
   10:e1c8c1e030a4 commit b 2 3dfde4199b4610ea6e3c6fa9f5bdad8939d69524
@@ -358,7 +457,16 @@ Test config option absorb.amendflags and running as a sub command of amend:
   $ sedi $'2i\\\nINS\n' b
   $ echo END >> b
   $ hg rm a
-  $ hg amend --correlated
+  $ echo y | hg amend --correlated --config ui.interactive=1
+  showing changes for b
+          @@ -1,0 +1,1 @@
+          +INS
+          @@ -2,0 +3,1 @@
+  e1c8c1e +END
+  
+  1 changesets affected
+  e1c8c1e commit b 2
+  apply changes (yn)?  y
   1 of 2 chunk(s) applied
   
   # changes not applied and left in working directory:
@@ -379,12 +487,22 @@ Executable files:
   $ hg commit -mfoo
 
   $ echo bla > foo.py
-  $ hg absorb --dry-run --print-changes
+  $ hg absorb --dry-run
   showing changes for foo.py
           @@ -0,1 +0,1 @@
   99b4ae7 -
   99b4ae7 +bla
-  $ hg absorb
+  
+  1 changesets affected
+  99b4ae7 foo
+  $ hg absorb --apply-changes
+  showing changes for foo.py
+          @@ -0,1 +0,1 @@
+  99b4ae7 -
+  99b4ae7 +bla
+  
+  1 changesets affected
+  99b4ae7 foo
   1 of 1 chunk(s) applied
   $ hg diff -c .
   diff --git a/foo.py b/foo.py
@@ -414,7 +532,7 @@ Remove lines may delete changesets:
   $ hg commit -m b4
   $ echo 1 > b
   $ echo 3 >> a
-  $ hg absorb -pn
+  $ hg absorb -n
   showing changes for a
           @@ -2,0 +2,1 @@
   bfafb49 +3
@@ -423,7 +541,13 @@ Remove lines may delete changesets:
   1154859 -2
   30970db -3
   a393a58 -4
-  $ hg absorb -v | grep became
+  
+  4 changesets affected
+  a393a58 b4
+  30970db b3
+  1154859 b12
+  bfafb49 a12
+  $ hg absorb -av | grep became
   bfafb49242db: 1 file(s) changed, became 1a2de97fc652
   115485984805: 2 file(s) changed, became 0c930dfab74c
   30970dbf7b40: became empty and was dropped

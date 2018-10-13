@@ -21,7 +21,19 @@ Do not strip innocent children. See https://bitbucket.org/facebook/hg-experiment
   $ hg up E -q
   $ echo 1 >> B
   $ echo 2 >> D
-  $ hg absorb
+  $ hg absorb -a
+  showing changes for B
+          @@ -0,1 +0,1 @@
+  1124789 -B
+  1124789 +B1
+  showing changes for D
+          @@ -0,1 +0,1 @@
+  f585351 -D
+  f585351 +D2
+  
+  2 changesets affected
+  f585351 D
+  1124789 B
   saved backup bundle to * (glob)
   2 of 2 chunk(s) applied
 

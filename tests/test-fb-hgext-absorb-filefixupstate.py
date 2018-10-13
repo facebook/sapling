@@ -50,7 +50,7 @@ def testfilefixup(oldcontents, workingcopy, expectedcontents, fixups=None):
     expectedcontents = insertreturns(expectedcontents)
     oldcontents = insertreturns(oldcontents)
     workingcopy = insertreturns(workingcopy)
-    state = absorb.filefixupstate(map(simplefctx, oldcontents))
+    state = absorb.filefixupstate(map(simplefctx, oldcontents), "path")
     state.diffwith(simplefctx(workingcopy))
     if fixups is not None:
         assertlistequal(state.fixups, fixups)

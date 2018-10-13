@@ -35,15 +35,7 @@ rename a to b, then b to a
   2 0b888b00216c a: 3
 
   $ sedi 's/$/a/' a
-  $ hg absorb -pq
-  showing changes for a
-          @@ -0,3 +0,3 @@
-  eff892d -1
-  bf56e1f -2
-  0b888b0 -3
-  eff892d +1a
-  bf56e1f +2a
-  0b888b0 +3a
+  $ hg absorb -aq
 
   $ hg status
 
@@ -58,15 +50,7 @@ when the first changeset is public
 
   $ sedi 's/a/A/' a
 
-  $ hg absorb -pq
-  showing changes for a
-          @@ -0,3 +0,3 @@
-          -1a
-  9a14ffe -2a
-  9191d12 -3a
-          +1A
-  9a14ffe +2A
-  9191d12 +3A
+  $ hg absorb -aq
 
   $ hg diff
   diff --git a/a b/a
@@ -97,17 +81,7 @@ copy a to b
   $ sedi 's/$/a/' a
   $ sedi 's/$/b/' b
 
-  $ hg absorb -pq
-  showing changes for a
-          @@ -0,1 +0,1 @@
-  eff892d -1
-  eff892d +1a
-  showing changes for b
-          @@ -0,2 +0,2 @@
-          -1
-  17b7212 -2
-          +1b
-  17b7212 +2b
+  $ hg absorb -aq
 
   $ hg diff
   diff --git a/b b/b
@@ -137,17 +111,7 @@ copy b to a
   $ sedi 's/$/a/' a
   $ sedi 's/$/a/' b
 
-  $ hg absorb -pq
-  showing changes for a
-          @@ -0,2 +0,2 @@
-          -1
-  e62c256 -2
-          +1a
-  e62c256 +2a
-  showing changes for b
-          @@ -0,1 +0,1 @@
-  55105f9 -1
-  55105f9 +1a
+  $ hg absorb -aq
 
   $ hg diff
   diff --git a/a b/a
@@ -180,19 +144,7 @@ copy b to a
   $ sedi 's/$/a/' a
   $ sedi 's/$/c/' c
 
-  $ hg absorb -pq
-  showing changes for a
-          @@ -0,2 +0,2 @@
-  55105f9 -1
-  366daad -2
-  55105f9 +1a
-  366daad +2a
-  showing changes for c
-          @@ -0,2 +0,2 @@
-          -1
-  366daad -3
-          +1c
-  366daad +3c
+  $ hg absorb -aq
 
   $ hg log -G -p -T '{rev}:{node|short} {desc}\n'
   @  1:70606019f91b cp
@@ -224,11 +176,7 @@ copy b to a
   
 run absorb again would apply the change to c
 
-  $ hg absorb -pq
-  showing changes for c
-          @@ -0,1 +0,1 @@
-  7060601 -1
-  7060601 +1c
+  $ hg absorb -aq
 
   $ hg log -G -p -T '{rev}:{node|short} {desc}\n'
   @  1:8bd536cce368 cp
@@ -286,19 +234,7 @@ run absorb again would apply the change to c
   $ sedi 's/$/e/' e
   $ sedi 's/$/d/' d
 
-  $ hg absorb -pq
-  showing changes for d
-          @@ -0,2 +0,2 @@
-  55105f9 -1
-  7bc3d43 -4
-  55105f9 +1d
-  7bc3d43 +4d
-  showing changes for e
-          @@ -0,2 +0,2 @@
-          -1
-  7bc3d43 -2
-          +1e
-  7bc3d43 +2e
+  $ hg absorb -aq
 
   $ hg diff
   diff --git a/e b/e

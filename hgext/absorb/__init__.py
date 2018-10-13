@@ -23,7 +23,7 @@ amend modified chunks into the corresponding non-public changesets.
     maxdescwidth = 50
 
     [color]
-    absorb.description = magenta
+    absorb.description = yellow
     absorb.node = blue bold
     absorb.path = bold
 """
@@ -66,7 +66,7 @@ configitem("absorb", "amendflag", default=None)
 configitem("absorb", "maxdescwidth", default=50)
 
 colortable = {
-    "absorb.description": "magenta",
+    "absorb.description": "yellow",
     "absorb.node": "blue bold",
     "absorb.path": "bold",
 }
@@ -292,13 +292,14 @@ class filefixupstate(object):
         4. read results from "finalcontents", or call getfinalcontent
     """
 
-    def __init__(self, fctxs, ui=None, opts=None):
+    def __init__(self, fctxs, path, ui=None, opts=None):
         """([fctx], ui or None) -> None
 
         fctxs should be linear, and sorted by topo order - oldest first.
         fctxs[0] will be considered as "immutable" and will not be changed.
         """
         self.fctxs = fctxs
+        self.path = path
         self.ui = ui or nullui()
         self.opts = opts or {}
 
@@ -314,8 +315,9 @@ class filefixupstate(object):
         self.targetlines = []  # [str]
         self.fixups = []  # [(linelog rev, a1, a2, b1, b2)]
         self.finalcontents = []  # [str]
+        self.ctxaffected = set()
 
-    def diffwith(self, targetfctx, showchanges=False, showdescs=False):
+    def diffwith(self, targetfctx, fm=None):
         """calculate fixups needed by examining the differences between
         self.fctxs[-1] and targetfctx, chunk by chunk.
 
@@ -347,8 +349,8 @@ class filefixupstate(object):
             self.chunkstats[0] += bool(newfixups)  # 1 or 0
             self.chunkstats[1] += 1
             self.fixups += newfixups
-            if showchanges:
-                self._showchanges(alines, blines, chunk, newfixups, showdescs)
+            if fm is not None:
+                self._showchanges(fm, alines, blines, chunk, newfixups)
 
     def apply(self):
         """apply self.fixups. update self.linelog, self.finalcontents.
@@ -576,13 +578,11 @@ class filefixupstate(object):
         pushchunk()
         return result
 
-    def _showchanges(self, alines, blines, chunk, fixups, showdescs=False):
-        ui = self.ui
-
-        def label(line, label):
+    def _showchanges(self, fm, alines, blines, chunk, fixups):
+        def trim(line):
             if line.endswith("\n"):
                 line = line[:-1]
-            return ui.label(line, label)
+            return line
 
         # this is not optimized for perf but _showchanges only gets executed
         # with an extra command-line flag.
@@ -594,36 +594,31 @@ class filefixupstate(object):
             for i in xrange(fb1, fb2):
                 bidxs[i - b1] = (max(idx, 1) - 1) // 2
 
-        buf = []  # [(idx, content)]
-        buf.append(
-            (0, label("@@ -%d,%d +%d,%d @@" % (a1, a2 - a1, b1, b2 - b1), "diff.hunk"))
+        fm.startitem()
+        fm.write(
+            "hunk",
+            "        %s\n",
+            "@@ -%d,%d +%d,%d @@" % (a1, a2 - a1, b1, b2 - b1),
+            label="diff.hunk",
         )
-        buf += [
-            (aidxs[i - a1], label("-" + alines[i], "diff.deleted"))
-            for i in xrange(a1, a2)
-        ]
-        buf += [
-            (bidxs[i - b1], label("+" + blines[i], "diff.inserted"))
-            for i in xrange(b1, b2)
-        ]
-        for idx, line in buf:
-            fctx = self.fctxs[idx]
-            shortnode = idx and node.short(fctx.node()) or ""
-            if showdescs:
-                w = ui.configint("absorb", "maxdescwidth")
-                if w < 0:
-                    w = 0
-                if shortnode:
-                    dlines = fctx.changectx().description().splitlines()
-                    d = dlines[0][:w] if dlines else ""
-                    desc = ui.label(d.ljust(w + 2), "absorb.description")
-                else:
-                    desc = " " * (w + 2)
-            else:
-                desc = ""
-            ui.write(
-                ui.label(shortnode[0:7].ljust(8), "absorb.node") + desc + line + "\n"
-            )
+        fm.data(path=self.path, linetype="hunk")
+
+        def writeline(idx, diffchar, line, linetype, linelabel):
+            fm.startitem()
+            node = ""
+            if idx:
+                ctx = self.fctxs[idx].changectx()
+                fm.context(ctx=ctx)
+                node = ctx.hex()
+                self.ctxaffected.add(ctx)
+            fm.write("node", "%-7.7s ", node, label="absorb.node")
+            fm.write("diffchar " + linetype, "%s%s\n", diffchar, line, label=linelabel)
+            fm.data(path=self.path, linetype=linetype)
+
+        for i in xrange(a1, a2):
+            writeline(aidxs[i - a1], "-", trim(alines[i]), "deleted", "diff.deleted")
+        for i in xrange(b1, b2):
+            writeline(bidxs[i - b1], "+", trim(blines[i]), "inserted", "diff.inserted")
 
 
 class fixupstate(object):
@@ -658,8 +653,9 @@ class fixupstate(object):
         self.fixupmap = {}  # {path: filefixupstate}
         self.replacemap = {}  # {oldnode: newnode or None}
         self.finalnode = None  # head after all fixups
+        self.ctxaffected = set()  # ctx that will be absorbed into
 
-    def diffwith(self, targetctx, match=None, showchanges=False, showdescs=False):
+    def diffwith(self, targetctx, match=None, fm=None):
         """diff and prepare fixups. update self.fixupmap, self.paths"""
         # only care about modified files
         self.status = self.stack[-1].status(targetctx, match)
@@ -691,14 +687,16 @@ class fixupstate(object):
                 continue
             seenfctxs.update(fctxs[1:])
             self.fctxmap[path] = ctx2fctx
-            fstate = filefixupstate(fctxs, ui=self.ui, opts=self.opts)
-            if showchanges:
-                colorpath = self.ui.label(path, "absorb.path")
-                header = "showing changes for " + colorpath
-                self.ui.write(header + "\n")
-            fstate.diffwith(targetfctx, showchanges=showchanges, showdescs=showdescs)
+            fstate = filefixupstate(fctxs, path, ui=self.ui, opts=self.opts)
+            if fm is not None:
+                fm.startitem()
+                fm.plain("showing changes for ")
+                fm.write("path", "%s\n", path, label="absorb.path")
+                fm.data(linetype="path")
+            fstate.diffwith(targetfctx, fm)
             self.fixupmap[path] = fstate
             self.paths.append(path)
+            self.ctxaffected.update(fstate.ctxaffected)
 
     def apply(self):
         """apply fixups to individual filefixupstates"""
@@ -977,13 +975,28 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
         origchunks = patch.parsepatch(diff)
         chunks = cmdutil.recordfilter(ui, origchunks)[0]
         targetctx = overlaydiffcontext(stack[-1], chunks)
-    state.diffwith(
-        targetctx,
-        matcher,
-        showchanges=opts.get("print_changes"),
-        showdescs=opts.get("print_descriptions"),
-    )
+    fm = None
+    if not (ui.quiet and opts.get("apply_changes")) and not opts.get("edit_lines"):
+        fm = ui.formatter("absorb", opts)
+    state.diffwith(targetctx, matcher, fm)
+    if fm is not None and state.ctxaffected:
+        fm.startitem()
+        fm.write("count", _("\n%d changesets affected\n"), len(state.ctxaffected))
+        fm.data(linetype="summary")
+        for ctx in reversed(stack):
+            if ctx not in state.ctxaffected:
+                continue
+            fm.startitem()
+            fm.context(ctx=ctx)
+            fm.data(linetype="changeset")
+            fm.write("node", "%-7.7s ", ctx.hex(), label="absorb.node")
+            descfirstline = ctx.description().splitlines()[0]
+            fm.write("descfirstline", "%s\n", descfirstline, label="absorb.description")
+        fm.end()
     if not opts.get("dry_run"):
+        if not opts.get("apply_changes"):
+            if ui.promptchoice("apply changes (yn)? $$ &Yes $$ &No", default=1):
+                raise error.Abort(_("absorb cancelled\n"))
         state.apply()
         if state.commit():
             state.printchunkstats()
@@ -996,10 +1009,16 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     "^absorb|sf",
     [
         (
+            "a",
+            "apply-changes",
+            None,
+            _("apply changes without prompting for confirmation"),
+        ),
+        (
             "p",
             "print-changes",
             None,
-            _("print which changesets are modified by which changes"),
+            _("print which changesets are modified by which changes (DEPRECATED)"),
         ),
         (
             "i",
@@ -1016,14 +1035,9 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
                 "(EXPERIMENTAL)"
             ),
         ),
-        (
-            "d",
-            "print-descriptions",
-            None,
-            _("print the first line of the changeset description"),
-        ),
     ]
     + commands.dryrunopts
+    + commands.templateopts
     + commands.walkopts,
     _("hg absorb [OPTION] [FILE]..."),
 )
@@ -1044,8 +1058,10 @@ def absorbcmd(ui, repo, *pats, **opts):
 
     Changesets that become empty after applying the changes will be deleted.
 
-    If in doubt, run :hg:`absorb -pn` to preview what changesets will
-    be amended by what changed lines, without actually changing anything.
+    By default, absorb will show what it plans to do and prompt for
+    confirmation.  If you are confident that the changes will be absorbed
+    to the correct place, run :hg:`absorb -a` to apply the changes
+    immediately.
 
     Returns 0 on success, 1 if all chunks were ignored and nothing amended.
     """
