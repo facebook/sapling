@@ -35,12 +35,13 @@ void StartupLogger::success() {
   writeMessage(
       origStdout_,
       folly::LogLevel::INFO,
-      folly::to<string>(
-          "Started edenfs (pid ",
-          getpid(),
-          ")",
-          logPath_.empty() ? "" : ".  Logs available at ",
-          logPath_.empty() ? "" : logPath_));
+      folly::to<string>("Started edenfs (pid ", getpid(), ")"));
+  if (!logPath_.empty()) {
+    writeMessage(
+        origStdout_,
+        folly::LogLevel::INFO,
+        folly::to<string>("Logs available at ", logPath_));
+  }
   sendResult(0);
 }
 
