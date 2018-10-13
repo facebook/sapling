@@ -95,7 +95,7 @@ last line
         old_commits = self.repo.log()
 
         # Run "hg absorb" to fold these changes into their respective commits
-        out = self.hg("absorb", "-p")
+        out = self.hg("absorb", "-ap")
         log.debug("absorb output:\n%s" % (out,))
         self.assert_status_empty()
 
