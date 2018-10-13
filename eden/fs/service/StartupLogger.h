@@ -90,7 +90,7 @@ class StartupLogger {
   void success();
 
  private:
-  friend class StartupLoggerTest;
+  friend class DaemonStartupLoggerTest;
 
   using ResultType = uint8_t;
 

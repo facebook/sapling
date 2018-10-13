@@ -12,13 +12,18 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/Subprocess.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <signal.h>
 #include <sysexits.h>
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
 #include <thread>
 
 using namespace facebook::eden;
@@ -29,11 +34,22 @@ using folly::StringPiece;
 using folly::test::TemporaryFile;
 using std::string;
 using testing::HasSubstr;
+using testing::Not;
 
 namespace facebook {
 namespace eden {
 
-class StartupLoggerTest : public ::testing::Test {
+namespace {
+struct FunctionResult {
+  std::string standardOutput;
+  std::string standardError;
+  folly::ProcessReturnCode returnCode;
+};
+
+FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName);
+} // namespace
+
+class DaemonStartupLoggerTest : public ::testing::Test {
  protected:
   /*
    * Use StartupLogger::daemonizeImpl() to run the specified function in the
@@ -100,7 +116,7 @@ class StartupLoggerTest : public ::testing::Test {
   TemporaryFile logFile_{"eden_test_log"};
 };
 
-TEST_F(StartupLoggerTest, crashWithNoResult) {
+TEST_F(DaemonStartupLoggerTest, crashWithNoResult) {
   // Fork a child that just kills itself
   auto result = runDaemonize([](StartupLogger&&) {
     fprintf(stderr, "this message should go to the log\n");
@@ -126,7 +142,7 @@ TEST_F(StartupLoggerTest, crashWithNoResult) {
   EXPECT_EQ("this message should go to the log\n", readLogContents());
 }
 
-TEST_F(StartupLoggerTest, exitWithNoResult) {
+TEST_F(DaemonStartupLoggerTest, exitWithNoResult) {
   // Fork a child that exits unsuccessfully
   auto result = runDaemonize([](StartupLogger&&) { _exit(19); });
 
@@ -140,7 +156,7 @@ TEST_F(StartupLoggerTest, exitWithNoResult) {
       result.errorMessage);
 }
 
-TEST_F(StartupLoggerTest, exitSuccessfullyWithNoResult) {
+TEST_F(DaemonStartupLoggerTest, exitSuccessfullyWithNoResult) {
   // Fork a child that exits successfully
   auto result = runDaemonize([](StartupLogger&&) { _exit(0); });
 
@@ -155,7 +171,7 @@ TEST_F(StartupLoggerTest, exitSuccessfullyWithNoResult) {
       result.errorMessage);
 }
 
-TEST_F(StartupLoggerTest, closePipeWhileStillRunning) {
+TEST_F(DaemonStartupLoggerTest, closePipeWhileStillRunning) {
   // Fork a child process that will destroy the StartupLogger and then wait
   // until we tell it to exit.
   std::array<int, 2> pipeFDs;
@@ -192,7 +208,7 @@ TEST_F(StartupLoggerTest, closePipeWhileStillRunning) {
   writePipe.close();
 }
 
-TEST_F(StartupLoggerTest, closePipeWithWaitError) {
+TEST_F(DaemonStartupLoggerTest, closePipeWithWaitError) {
   // Call waitForChildStatus() with our own pid.
   // wait() will return an error trying to wait on ourself.
   StartupLogger logger;
@@ -209,13 +225,13 @@ TEST_F(StartupLoggerTest, closePipeWithWaitError) {
       result.errorMessage);
 }
 
-TEST_F(StartupLoggerTest, success) {
+TEST_F(DaemonStartupLoggerTest, success) {
   auto result = runDaemonize([](StartupLogger&& logger) { logger.success(); });
   EXPECT_EQ(0, result.exitCode);
   EXPECT_EQ("", result.errorMessage);
 }
 
-TEST_F(StartupLoggerTest, failure) {
+TEST_F(DaemonStartupLoggerTest, failure) {
   auto result = runDaemonize([](StartupLogger&& logger) {
     logger.exitUnsuccessfully(3, "example failure for tests");
   });
@@ -224,5 +240,89 @@ TEST_F(StartupLoggerTest, failure) {
   EXPECT_THAT(readLogContents(), HasSubstr("example failure for tests"));
 }
 
+TEST(ForegroundStartupLoggerTest, loggedMessagesAreWrittenToStandardError) {
+  auto result = runFunctionInSeparateProcess(
+      "loggedMessagesAreWrittenToStandardErrorChild");
+  EXPECT_THAT(result.standardOutput, Not(HasSubstr("warn message")));
+  EXPECT_THAT(result.standardError, HasSubstr("warn message"));
+}
+
+void loggedMessagesAreWrittenToStandardErrorChild() {
+  auto logger = StartupLogger{};
+  logger.warn("warn message");
+}
+
+TEST(ForegroundStartupLoggerTest, exitUnsuccessfullyMakesProcessExitWithCode) {
+  auto result = runFunctionInSeparateProcess(
+      "exitUnsuccessfullyMakesProcessExitWithCodeChild");
+  EXPECT_EQ("exited with status 42", result.returnCode.str());
+}
+
+void exitUnsuccessfullyMakesProcessExitWithCodeChild() {
+  auto logger = StartupLogger{};
+  logger.exitUnsuccessfully(42, "intentionally exiting");
+}
+
+TEST(ForegroundStartupLoggerTest, xlogsAfterSuccessAreWrittenToStandardError) {
+  auto result = runFunctionInSeparateProcess(
+      "xlogsAfterSuccessAreWrittenToStandardErrorChild");
+  EXPECT_THAT(result.standardError, HasSubstr("test error message with xlog"));
+}
+
+void xlogsAfterSuccessAreWrittenToStandardErrorChild() {
+  auto logger = StartupLogger{};
+  logger.success();
+  XLOG(ERR) << "test error message with xlog";
+}
+
+namespace {
+FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
+  auto process = folly::Subprocess{
+      std::vector<std::string>{{
+          folly::fs::executable_path().string(),
+          std::string{functionName},
+      }},
+      folly::Subprocess::Options{}.pipeStdout().pipeStderr(),
+  };
+  SCOPE_FAIL {
+    process.takeOwnershipOfPipes();
+    process.wait();
+  };
+  auto [out, err] = process.communicate();
+  auto returnCode = process.wait();
+  return FunctionResult{out, err, returnCode};
+}
+
+[[noreturn]] void runFunctionInCurrentProcess(folly::StringPiece functionName) {
+  auto checkFunction = [&](folly::StringPiece name, void (*function)()) {
+    if (functionName == name) {
+      function();
+      std::exit(0);
+    }
+  };
+#define CHECK_FUNCTION(name) checkFunction(#name, name)
+  CHECK_FUNCTION(loggedMessagesAreWrittenToStandardErrorChild);
+  CHECK_FUNCTION(exitUnsuccessfullyMakesProcessExitWithCodeChild);
+  CHECK_FUNCTION(xlogsAfterSuccessAreWrittenToStandardErrorChild);
+#undef CHECK_FUNCTION
+  std::fprintf(
+      stderr,
+      "error: unknown function: %s\n",
+      std::string{functionName}.c_str());
+  std::exit(2);
+}
+
+} // namespace
+
 } // namespace eden
 } // namespace facebook
+
+int main(int argc, char** argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  auto removeFlags = true;
+  auto initGuard = folly::Init(&argc, &argv, removeFlags);
+  if (argc >= 2) {
+    runFunctionInCurrentProcess(argv[1]);
+  }
+  return RUN_ALL_TESTS();
+}
