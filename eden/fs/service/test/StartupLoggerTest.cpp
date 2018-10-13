@@ -33,6 +33,7 @@ using folly::File;
 using folly::StringPiece;
 using folly::test::TemporaryFile;
 using std::string;
+using testing::ContainsRegex;
 using testing::HasSubstr;
 using testing::Not;
 
@@ -140,6 +141,22 @@ TEST_F(DaemonStartupLoggerTest, crashWithNoResult) {
 
   // Verify that the log message from the child went to the log file
   EXPECT_EQ("this message should go to the log\n", readLogContents());
+}
+
+TEST_F(DaemonStartupLoggerTest, successWritesStartedMessageToStandardOutput) {
+  auto result = runFunctionInSeparateProcess(
+      "successWritesStartedMessageToStandardOutputDaemonChild");
+  EXPECT_THAT(
+      result.standardOutput, ContainsRegex("Started edenfs \\(pid [0-9]+\\)"));
+  EXPECT_THAT(result.standardOutput, HasSubstr("Logs available at "));
+}
+
+void successWritesStartedMessageToStandardOutputDaemonChild() {
+  auto logFile = TemporaryFile{"eden_test_log"};
+  auto logger = StartupLogger{};
+  logger.daemonize(logFile.path().string());
+  logger.success();
+  exit(0);
 }
 
 TEST_F(DaemonStartupLoggerTest, exitWithNoResult) {
@@ -275,6 +292,19 @@ void xlogsAfterSuccessAreWrittenToStandardErrorChild() {
   XLOG(ERR) << "test error message with xlog";
 }
 
+TEST(ForegroundStartupLoggerTest, successWritesStartedMessageToStandardError) {
+  auto result = runFunctionInSeparateProcess(
+      "successWritesStartedMessageToStandardOutputForegroundChild");
+  EXPECT_THAT(
+      result.standardError,
+      ContainsRegex("Started edenfs \\(pid [0-9]+\\)\n$"));
+}
+
+void successWritesStartedMessageToStandardOutputForegroundChild() {
+  auto logger = StartupLogger{};
+  logger.success();
+}
+
 namespace {
 FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
   auto process = folly::Subprocess{
@@ -301,8 +331,10 @@ FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
     }
   };
 #define CHECK_FUNCTION(name) checkFunction(#name, name)
-  CHECK_FUNCTION(loggedMessagesAreWrittenToStandardErrorChild);
   CHECK_FUNCTION(exitUnsuccessfullyMakesProcessExitWithCodeChild);
+  CHECK_FUNCTION(loggedMessagesAreWrittenToStandardErrorChild);
+  CHECK_FUNCTION(successWritesStartedMessageToStandardOutputDaemonChild);
+  CHECK_FUNCTION(successWritesStartedMessageToStandardOutputForegroundChild);
   CHECK_FUNCTION(xlogsAfterSuccessAreWrittenToStandardErrorChild);
 #undef CHECK_FUNCTION
   std::fprintf(
