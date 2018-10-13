@@ -11,9 +11,9 @@ Watchman clock is set after "status"
   $ hg debugshell -c 'print(repo.dirstate.getclock())'
   c:* (glob)
 
-XXX: Watchman clock is reset after a "purge --all"
+Watchman clock is not reset after a "purge --all"
 
   $ hg purge --all
   $ hg debugshell -c 'print(repo.dirstate.getclock())'
-  None
+  c:* (glob)
   $ hg status

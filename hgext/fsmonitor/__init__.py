@@ -736,7 +736,12 @@ def poststatustreestate(wctx, status):
         + status.deleted
         + status.unknown
     )
-    wctx.repo()._fsmonitorstate.set(clock, hashignore, notefiles)
+    # For treestate, the clock and the file state are always consistent - they
+    # should not affect "status" correctness, even if they are not the latest
+    # state. Changing the clock to None would make the next "status" command
+    # slower. Therefore avoid doing that.
+    if clock is not None:
+        wctx.repo()._fsmonitorstate.set(clock, hashignore, notefiles)
 
 
 class poststatus(object):
