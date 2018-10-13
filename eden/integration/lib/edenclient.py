@@ -36,8 +36,11 @@ class EdenFS(object):
         storage_engine: str = "memory",
     ) -> None:
         if eden_dir is None:
-            eden_dir = tempfile.mkdtemp(prefix="eden_test.")
-        self._eden_dir = eden_dir
+            self._eden_dir = tempfile.mkdtemp(prefix="eden_test.")
+            self._cleanup_eden_dir = True
+        else:
+            self._eden_dir = eden_dir
+            self._cleanup_eden_dir = False
         self._storage_engine = storage_engine
 
         self._process: Optional[subprocess.Popen] = None
@@ -62,7 +65,8 @@ class EdenFS(object):
     def cleanup(self) -> None:
         """Stop the instance and clean up its temporary directories"""
         self.kill()
-        self.cleanup_dirs()
+        if self._cleanup_eden_dir:
+            self.cleanup_dirs()
 
     def cleanup_dirs(self) -> None:
         """Remove any temporary dirs we have created."""
