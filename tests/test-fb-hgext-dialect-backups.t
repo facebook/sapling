@@ -1,5 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > backups=
   > dialect=
   > EOF
 
