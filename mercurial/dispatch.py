@@ -604,7 +604,7 @@ def _callcatch(ui, func):
         else:
             ui.pager("help")
             ui.warn(_("hg: %s\n") % inst.args[1])
-            commands.help_(ui, "shortlist")
+            commands.help_(ui)
     except error.ParseError as inst:
         _formatparse(ui.warn, inst)
         return -1
@@ -627,7 +627,7 @@ def _callcatch(ui, func):
             if not suggested:
                 ui.pager("help")
                 ui.warn(nocmdmsg)
-                commands.help_(ui, "shortlist")
+                commands.help_(ui)
     except error.UnknownSubcommand as inst:
         cmd, subcmd, allsubcmds = inst.args
         suggested = False
@@ -1275,7 +1275,7 @@ def _dispatch(req):
         if options["help"]:
             return commands.help_(ui, cmd, command=cmd is not None)
         elif not cmd:
-            return commands.help_(ui, "shortlist")
+            return commands.help_(ui)
 
         repo = None
         deferred = []

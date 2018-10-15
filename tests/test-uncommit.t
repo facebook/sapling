@@ -28,7 +28,7 @@ Help for uncommit
   
   (use 'hg help -e uncommit' to show help for the uncommit extension)
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
       --keep                allow an empty commit after uncommiting
    -I --include PATTERN [+] include names matching the given patterns

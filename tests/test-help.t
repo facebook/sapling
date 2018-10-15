@@ -5,242 +5,222 @@ Short help:
   $ hg
   Mercurial Distributed SCM
   
-  basic commands:
+  hg COMMAND [OPTIONS]
+  
+  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  commands, and 'hg help COMMAND' to get help on a specific command.
+  
+  Create repositories:
+  
+   clone         make a copy of an existing repository
+   init          create a new repository in the given directory
+  
+  Examine files in your current checkout:
+  
+   grep          search revision history for a pattern in specified files
+   status        show changed files in the working directory
+  
+  Work on your current checkout:
   
    add           add the specified files on the next commit
-   annotate      show changeset information by line for each file
-   clone         make a copy of an existing repository
-   commit        commit the specified files or all outstanding changes
-   diff          diff repository (or selected files)
-   export        dump the header and diffs for one or more changesets
-   forget        forget the specified files on the next commit
-   githelp       suggests the Mercurial equivalent of the given git command
-   init          create a new repository in the given directory
-   log           show revision history of entire repository or files
-   merge         merge another revision into working directory
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
-   record        interactively select changes to commit
+   copy          mark files as copied for the next commit
    remove        remove the specified files on the next commit
-   serve         start stand-alone webserver
+   rename        rename files; equivalent of copy + remove
+  
+  Commit changes and modify commits:
+  
+   commit        commit the specified files or all outstanding changes
+  
+  Look at commits and commit history:
+  
+   diff          diff repository (or selected files)
+   log           show revision history of entire repository or files
    show          show revision in detail
-   status        show changed files in the working directory
-   summary       summarize working directory state
+  
+  Checkout other commits:
+  
    update        update working directory (or switch revisions)
   
-  (use 'hg help' for the full list of commands or 'hg -v' for details)
+  Rearrange commits:
+  
+   graft         copy changes from other branches onto the current branch
+  
+  Exchange commits with a server:
+  
+   pull          pull changes from the specified source
+   push          push changes to the specified destination
+  
+  Additional help topics:
+  
+   glossary      glossary
+   patterns      file name patterns
+   revisions     specifying revisions
+   templating    template usage
 
   $ hg -q
-   add           add the specified files on the next commit
-   annotate      show changeset information by line for each file
+  Mercurial Distributed SCM
+  
+  hg COMMAND [OPTIONS]
+  
+  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  commands, and 'hg help COMMAND' to get help on a specific command.
+  
+  Create repositories:
+  
    clone         make a copy of an existing repository
-   commit        commit the specified files or all outstanding changes
-   diff          diff repository (or selected files)
-   export        dump the header and diffs for one or more changesets
-   forget        forget the specified files on the next commit
-   githelp       suggests the Mercurial equivalent of the given git command
    init          create a new repository in the given directory
+  
+  Examine files in your current checkout:
+  
+   grep          search revision history for a pattern in specified files
+   status        show changed files in the working directory
+  
+  Work on your current checkout:
+  
+   add           add the specified files on the next commit
+   copy          mark files as copied for the next commit
+   remove        remove the specified files on the next commit
+   rename        rename files; equivalent of copy + remove
+  
+  Commit changes and modify commits:
+  
+   commit        commit the specified files or all outstanding changes
+  
+  Look at commits and commit history:
+  
+   diff          diff repository (or selected files)
    log           show revision history of entire repository or files
-   merge         merge another revision into working directory
+   show          show revision in detail
+  
+  Checkout other commits:
+  
+   update        update working directory (or switch revisions)
+  
+  Rearrange commits:
+  
+   graft         copy changes from other branches onto the current branch
+  
+  Exchange commits with a server:
+  
    pull          pull changes from the specified source
    push          push changes to the specified destination
-   record        interactively select changes to commit
-   remove        remove the specified files on the next commit
-   serve         start stand-alone webserver
-   show          show revision in detail
-   status        show changed files in the working directory
-   summary       summarize working directory state
-   update        update working directory (or switch revisions)
+  
+  Additional help topics:
+  
+   glossary      glossary
+   patterns      file name patterns
+   revisions     specifying revisions
+   templating    template usage
 
   $ hg help
   Mercurial Distributed SCM
   
-  list of commands:
+  hg COMMAND [OPTIONS]
+  
+  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  commands, and 'hg help COMMAND' to get help on a specific command.
+  
+  Create repositories:
+  
+   clone         make a copy of an existing repository
+   init          create a new repository in the given directory
+  
+  Examine files in your current checkout:
+  
+   grep          search revision history for a pattern in specified files
+   status        show changed files in the working directory
+  
+  Work on your current checkout:
   
    add           add the specified files on the next commit
-   addremove     add all new files, delete all missing files
-   annotate      show changeset information by line for each file
-   archive       create an unversioned archive of a repository revision
-   backout       reverse effect of earlier changeset
-   bisect        subdivision search of changesets
-   bookmarks     create a new bookmark or list existing bookmarks
-   branch        set or show the current branch name
-   branches      list repository named branches
-   bundle        create a bundle file
-   cat           output the current or given revision of files
-   clone         make a copy of an existing repository
-   commit        commit the specified files or all outstanding changes
-   config        show combined config settings from all hgrc files
    copy          mark files as copied for the next commit
-   diff          diff repository (or selected files)
-   export        dump the header and diffs for one or more changesets
-   files         list tracked files
-   forget        forget the specified files on the next commit
-   graft         copy changes from other branches onto the current branch
-   grep          search revision history for a pattern in specified files
-   heads         show branch heads
-   help          show help for a given topic or a help overview
-   hint          acknowledge hints
-   identify      identify the working directory or specified revision
-   import        import an ordered set of patches
-   incoming      show new changesets found in source
-   init          create a new repository in the given directory
-   log           show revision history of entire repository or files
-   manifest      output the current or given revision of the project manifest
-   merge         merge another revision into working directory
-   outgoing      show changesets not found in the destination
-   paths         show aliases for remote repositories
-   phase         set or show the current phase name
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
-   record        interactively select changes to commit
-   recover       roll back an interrupted transaction
    remove        remove the specified files on the next commit
    rename        rename files; equivalent of copy + remove
-   resolve       redo merges or set/view the merge status of files
-   revert        restore files to their checkout state
-   root          print the root (top) of the current working directory
-   serve         start stand-alone webserver
+  
+  Commit changes and modify commits:
+  
+   commit        commit the specified files or all outstanding changes
+  
+  Look at commits and commit history:
+  
+   diff          diff repository (or selected files)
+   log           show revision history of entire repository or files
    show          show revision in detail
-   status        show changed files in the working directory
-   summary       summarize working directory state
-   tag           add one or more tags for the current or given revision
-   tags          list repository tags
-   unbundle      apply one or more bundle files
+  
+  Checkout other commits:
+  
    update        update working directory (or switch revisions)
-   verify        verify the integrity of the repository
-   version       output version and copyright information
   
-  enabled extensions:
+  Rearrange commits:
   
-   conflictinfo
-   debugshell    a python shell with repo, changelog & manifest objects
-   errorredirect
-                 redirect error message
-   githelp       try mapping git commands to Mercurial commands
-   mergedriver   custom merge drivers for autoresolved files
-   progressfile  allows users to have JSON progress bar information written to a
-                 path
-   simplecache
+   graft         copy changes from other branches onto the current branch
   
-  additional help topics:
+  Exchange commits with a server:
   
-   bundlespec    Bundle File Formats
-   color         Colorizing Outputs
-   config        Configuration Files
-   dates         Date Formats
-   diffs         Diff Formats
-   environment   Environment Variables
-   extensions    Using Additional Features
-   filesets      Specifying File Sets
-   flags         Command-line flags
-   glossary      Glossary
-   hgignore      Syntax for Mercurial Ignore Files
-   hgweb         Configuring hgweb
-   internals     Technical implementation topics
-   merge-tools   Merge Tools
-   pager         Pager Support
-   patterns      File Name Patterns
-   phases        Working with Phases
-   revisions     Specifying Revisions
-   scripting     Using Mercurial from scripts and automation
-   subrepos      Subrepositories
-   templating    Template Usage
-   urls          URL Paths
+   pull          pull changes from the specified source
+   push          push changes to the specified destination
   
-  (use 'hg help -v' to show built-in aliases and global options)
+  Additional help topics:
+  
+   glossary      glossary
+   patterns      file name patterns
+   revisions     specifying revisions
+   templating    template usage
 
   $ hg -q help
-   add           add the specified files on the next commit
-   addremove     add all new files, delete all missing files
-   annotate      show changeset information by line for each file
-   archive       create an unversioned archive of a repository revision
-   backout       reverse effect of earlier changeset
-   bisect        subdivision search of changesets
-   bookmarks     create a new bookmark or list existing bookmarks
-   branch        set or show the current branch name
-   branches      list repository named branches
-   bundle        create a bundle file
-   cat           output the current or given revision of files
+  Mercurial Distributed SCM
+  
+  hg COMMAND [OPTIONS]
+  
+  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  commands, and 'hg help COMMAND' to get help on a specific command.
+  
+  Create repositories:
+  
    clone         make a copy of an existing repository
-   commit        commit the specified files or all outstanding changes
-   config        show combined config settings from all hgrc files
-   copy          mark files as copied for the next commit
-   diff          diff repository (or selected files)
-   export        dump the header and diffs for one or more changesets
-   files         list tracked files
-   forget        forget the specified files on the next commit
-   graft         copy changes from other branches onto the current branch
-   grep          search revision history for a pattern in specified files
-   heads         show branch heads
-   help          show help for a given topic or a help overview
-   hint          acknowledge hints
-   identify      identify the working directory or specified revision
-   import        import an ordered set of patches
-   incoming      show new changesets found in source
    init          create a new repository in the given directory
-   log           show revision history of entire repository or files
-   manifest      output the current or given revision of the project manifest
-   merge         merge another revision into working directory
-   outgoing      show changesets not found in the destination
-   paths         show aliases for remote repositories
-   phase         set or show the current phase name
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
-   record        interactively select changes to commit
-   recover       roll back an interrupted transaction
+  
+  Examine files in your current checkout:
+  
+   grep          search revision history for a pattern in specified files
+   status        show changed files in the working directory
+  
+  Work on your current checkout:
+  
+   add           add the specified files on the next commit
+   copy          mark files as copied for the next commit
    remove        remove the specified files on the next commit
    rename        rename files; equivalent of copy + remove
-   resolve       redo merges or set/view the merge status of files
-   revert        restore files to their checkout state
-   root          print the root (top) of the current working directory
-   serve         start stand-alone webserver
+  
+  Commit changes and modify commits:
+  
+   commit        commit the specified files or all outstanding changes
+  
+  Look at commits and commit history:
+  
+   diff          diff repository (or selected files)
+   log           show revision history of entire repository or files
    show          show revision in detail
-   status        show changed files in the working directory
-   summary       summarize working directory state
-   tag           add one or more tags for the current or given revision
-   tags          list repository tags
-   unbundle      apply one or more bundle files
+  
+  Checkout other commits:
+  
    update        update working directory (or switch revisions)
-   verify        verify the integrity of the repository
-   version       output version and copyright information
   
-  enabled extensions:
+  Rearrange commits:
   
-   conflictinfo
-   debugshell    a python shell with repo, changelog & manifest objects
-   errorredirect
-                 redirect error message
-   githelp       try mapping git commands to Mercurial commands
-   mergedriver   custom merge drivers for autoresolved files
-   progressfile  allows users to have JSON progress bar information written to a
-                 path
-   simplecache
+   graft         copy changes from other branches onto the current branch
   
-  additional help topics:
+  Exchange commits with a server:
   
-   bundlespec    Bundle File Formats
-   color         Colorizing Outputs
-   config        Configuration Files
-   dates         Date Formats
-   diffs         Diff Formats
-   environment   Environment Variables
-   extensions    Using Additional Features
-   filesets      Specifying File Sets
-   flags         Command-line flags
-   glossary      Glossary
-   hgignore      Syntax for Mercurial Ignore Files
-   hgweb         Configuring hgweb
-   internals     Technical implementation topics
-   merge-tools   Merge Tools
-   pager         Pager Support
-   patterns      File Name Patterns
-   phases        Working with Phases
-   revisions     Specifying Revisions
-   scripting     Using Mercurial from scripts and automation
-   subrepos      Subrepositories
-   templating    Template Usage
-   urls          URL Paths
+   pull          pull changes from the specified source
+   push          push changes to the specified destination
+  
+  Additional help topics:
+  
+   glossary      glossary
+   patterns      file name patterns
+   revisions     specifying revisions
+   templating    template usage
 
 Test extension help:
   $ hg help extensions --config extensions.rebase= --config extensions.children=
@@ -281,11 +261,12 @@ Test extension help:
         # ditto, but no path was supplied for extension baz
         baz = !
   
-      enabled extensions:
+      Enabled extensions:
   
        children      command to display child changesets (DEPRECATED)
        conflictinfo
        debugshell    a python shell with repo, changelog & manifest objects
+       eden          accelerated hg functionality in Eden checkouts (eden !)
        errorredirect
                      redirect error message
        githelp       try mapping git commands to Mercurial commands
@@ -295,7 +276,7 @@ Test extension help:
        rebase        command to move sets of revisions to a different ancestor
        simplecache
   
-      disabled extensions:
+      Disabled extensions:
   
        absorb        apply working directory changes to changesets
        eden          accelerated hg functionality in Eden checkouts (eden !)
@@ -425,64 +406,7 @@ Verify that extension keywords appear in help templates
 
   $ hg help --config extensions.transplant= templating|grep transplant > /dev/null
 
-Test short command list with verbose option
-
-  $ hg -v help shortlist
-  Mercurial Distributed SCM
-  
-  basic commands:
-  
-   add           add the specified files on the next commit
-   annotate, blame
-                 show changeset information by line for each file
-   clone         make a copy of an existing repository
-   commit, ci    commit the specified files or all outstanding changes
-   diff          diff repository (or selected files)
-   export        dump the header and diffs for one or more changesets
-   forget        forget the specified files on the next commit
-   githelp, git  suggests the Mercurial equivalent of the given git command
-   init          create a new repository in the given directory
-   log, history  show revision history of entire repository or files
-   merge         merge another revision into working directory
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
-   record        interactively select changes to commit
-   remove, rm    remove the specified files on the next commit
-   serve         start stand-alone webserver
-   show          show revision in detail
-   status, st    show changed files in the working directory
-   summary, sum  summarize working directory state
-   update, up, checkout, co
-                 update working directory (or switch revisions)
-  
-  global options ([+] can be repeated):
-  
-   -R --repository REPO     repository root directory or name of overlay bundle
-                            file
-      --cwd DIR             change working directory
-   -y --noninteractive      do not prompt, automatically pick the first choice
-                            for all prompts
-   -q --quiet               suppress output
-   -v --verbose             enable additional output
-      --color TYPE          when to colorize (boolean, always, auto, never, or
-                            debug)
-      --config CONFIG [+]   set/override config option (use
-                            'section.name=value')
-      --configfile FILE [+] enables the given config file
-      --debug               enable debugging output
-      --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
-      --encodingmode MODE   set the charset encoding mode (default: strict)
-      --traceback           always print a traceback on exception
-      --time                time how long the command takes
-      --profile             print command execution profile
-      --version             output version information and exit
-   -h --help                display help and exit
-      --hidden              consider hidden changesets
-      --pager TYPE          when to paginate (boolean, always, auto, or never)
-                            (default: auto)
-  
-  (use 'hg help' for the full list of commands)
+Normal help for add
 
   $ hg add -h
   hg add [OPTION]... [FILE]...
@@ -499,7 +423,7 @@ Test short command list with verbose option
   
       Returns 0 if all files are successfully added.
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
@@ -550,14 +474,14 @@ Verbose help for add
   
       Returns 0 if all files are successfully added.
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -S --subrepos            recurse into subrepositories
    -n --dry-run             do not perform actions, just print output
   
-  global options ([+] can be repeated):
+  Global options ([+] can be repeated):
   
    -R --repository REPO     repository root directory or name of overlay bundle
                             file
@@ -616,7 +540,7 @@ Test help option with version option
   
   add the specified files on the next commit
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
@@ -629,12 +553,10 @@ Test help option with version option
 Test ambiguous command help
 
   $ hg help ad
-  list of commands:
+  Commands:
   
    add           add the specified files on the next commit
    addremove     add all new files, delete all missing files
-  
-  (use 'hg help -v ad' to show built-in aliases and global options)
 
 Test command without options
 
@@ -661,7 +583,7 @@ Test command without options
         [verify]
             skipmanifests = true
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -r --rev REV [+] verify the specified revision or revset
   
@@ -698,7 +620,7 @@ Test command without options
   
       Returns 0 on success.
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -r --rev REV [+]         revision
    -c --change REV          change made by revision
@@ -764,7 +686,7 @@ Test command without options
   
       Returns 0 on success.
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -A --all                 show status of all files
    -m --modified            show only modified files
@@ -799,30 +721,57 @@ Test command without options
   hg: unknown command 'skjdfks'
   Mercurial Distributed SCM
   
-  basic commands:
+  hg COMMAND [OPTIONS]
+  
+  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  commands, and 'hg help COMMAND' to get help on a specific command.
+  
+  Create repositories:
+  
+   clone         make a copy of an existing repository
+   init          create a new repository in the given directory
+  
+  Examine files in your current checkout:
+  
+   grep          search revision history for a pattern in specified files
+   status        show changed files in the working directory
+  
+  Work on your current checkout:
   
    add           add the specified files on the next commit
-   annotate      show changeset information by line for each file
-   clone         make a copy of an existing repository
-   commit        commit the specified files or all outstanding changes
-   diff          diff repository (or selected files)
-   export        dump the header and diffs for one or more changesets
-   forget        forget the specified files on the next commit
-   githelp       suggests the Mercurial equivalent of the given git command
-   init          create a new repository in the given directory
-   log           show revision history of entire repository or files
-   merge         merge another revision into working directory
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
-   record        interactively select changes to commit
+   copy          mark files as copied for the next commit
    remove        remove the specified files on the next commit
-   serve         start stand-alone webserver
+   rename        rename files; equivalent of copy + remove
+  
+  Commit changes and modify commits:
+  
+   commit        commit the specified files or all outstanding changes
+  
+  Look at commits and commit history:
+  
+   diff          diff repository (or selected files)
+   log           show revision history of entire repository or files
    show          show revision in detail
-   status        show changed files in the working directory
-   summary       summarize working directory state
+  
+  Checkout other commits:
+  
    update        update working directory (or switch revisions)
   
-  (use 'hg help' for the full list of commands or 'hg -v' for details)
+  Rearrange commits:
+  
+   graft         copy changes from other branches onto the current branch
+  
+  Exchange commits with a server:
+  
+   pull          pull changes from the specified source
+   push          push changes to the specified destination
+  
+  Additional help topics:
+  
+   glossary      glossary
+   patterns      file name patterns
+   revisions     specifying revisions
+   templating    template usage
   [255]
 
 Typoed command gives suggestion
@@ -915,7 +864,7 @@ Test for aliases
   
   defined by: helpext
   
-  options:
+  Options:
   
     --remote check for push and pull
   
@@ -939,7 +888,7 @@ Test command with no help text
   
   (no help text available)
   
-  options:
+  Options:
   
       --longdesc VALUE xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (default: 3)
@@ -972,107 +921,63 @@ Test that default list of commands omits extension commands
   $ hg help
   Mercurial Distributed SCM
   
-  list of commands:
+  hg COMMAND [OPTIONS]
+  
+  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  commands, and 'hg help COMMAND' to get help on a specific command.
+  
+  Create repositories:
+  
+   clone         make a copy of an existing repository
+   init          create a new repository in the given directory
+  
+  Examine files in your current checkout:
+  
+   grep          search revision history for a pattern in specified files
+   status        show changed files in the working directory
+  
+  Work on your current checkout:
   
    add           add the specified files on the next commit
-   addremove     add all new files, delete all missing files
-   annotate      show changeset information by line for each file
-   archive       create an unversioned archive of a repository revision
-   backout       reverse effect of earlier changeset
-   bisect        subdivision search of changesets
-   bookmarks     create a new bookmark or list existing bookmarks
-   branch        set or show the current branch name
-   branches      list repository named branches
-   bundle        create a bundle file
-   cat           output the current or given revision of files
-   clone         make a copy of an existing repository
-   commit        commit the specified files or all outstanding changes
-   config        show combined config settings from all hgrc files
    copy          mark files as copied for the next commit
-   diff          diff repository (or selected files)
-   export        dump the header and diffs for one or more changesets
-   files         list tracked files
-   forget        forget the specified files on the next commit
-   graft         copy changes from other branches onto the current branch
-   grep          search revision history for a pattern in specified files
-   heads         show branch heads
-   help          show help for a given topic or a help overview
-   hint          acknowledge hints
-   identify      identify the working directory or specified revision
-   import        import an ordered set of patches
-   incoming      show new changesets found in source
-   init          create a new repository in the given directory
-   log           show revision history of entire repository or files
-   manifest      output the current or given revision of the project manifest
-   merge         merge another revision into working directory
-   outgoing      show changesets not found in the destination
-   paths         show aliases for remote repositories
-   phase         set or show the current phase name
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
-   record        interactively select changes to commit
-   recover       roll back an interrupted transaction
    remove        remove the specified files on the next commit
    rename        rename files; equivalent of copy + remove
-   resolve       redo merges or set/view the merge status of files
-   revert        restore files to their checkout state
-   root          print the root (top) of the current working directory
-   serve         start stand-alone webserver
+  
+  Commit changes and modify commits:
+  
+   commit        commit the specified files or all outstanding changes
+  
+  Look at commits and commit history:
+  
+   diff          diff repository (or selected files)
+   log           show revision history of entire repository or files
    show          show revision in detail
-   status        show changed files in the working directory
-   summary       summarize working directory state
-   tag           add one or more tags for the current or given revision
-   tags          list repository tags
-   unbundle      apply one or more bundle files
+  
+  Checkout other commits:
+  
    update        update working directory (or switch revisions)
-   verify        verify the integrity of the repository
-   version       output version and copyright information
   
-  enabled extensions:
+  Rearrange commits:
   
-   conflictinfo
-   debugshell    a python shell with repo, changelog & manifest objects
-   errorredirect
-                 redirect error message
-   githelp       try mapping git commands to Mercurial commands
-   helpext       (no help text available)
-   mergedriver   custom merge drivers for autoresolved files
-   progressfile  allows users to have JSON progress bar information written to a
-                 path
-   simplecache
+   graft         copy changes from other branches onto the current branch
   
-  additional help topics:
+  Exchange commits with a server:
   
-   bundlespec    Bundle File Formats
-   color         Colorizing Outputs
-   config        Configuration Files
-   dates         Date Formats
-   diffs         Diff Formats
-   environment   Environment Variables
-   extensions    Using Additional Features
-   filesets      Specifying File Sets
-   flags         Command-line flags
-   glossary      Glossary
-   hgignore      Syntax for Mercurial Ignore Files
-   hgweb         Configuring hgweb
-   internals     Technical implementation topics
-   merge-tools   Merge Tools
-   pager         Pager Support
-   patterns      File Name Patterns
-   phases        Working with Phases
-   revisions     Specifying Revisions
-   scripting     Using Mercurial from scripts and automation
-   subrepos      Subrepositories
-   templating    Template Usage
-   urls          URL Paths
+   pull          pull changes from the specified source
+   push          push changes to the specified destination
   
-  (use 'hg help -v' to show built-in aliases and global options)
+  Additional help topics:
+  
+   glossary      glossary
+   patterns      file name patterns
+   revisions     specifying revisions
+   templating    template usage
 
 
 Test list of internal help commands
 
   $ hg help debug
-  debug commands (internal and unsupported):
+  Debug commands (internal and unsupported):
   
    debugancestor
                  find the ancestor revision of two revisions in a given index
@@ -1139,6 +1044,7 @@ Test list of internal help commands
    debugprocesstree
                  show process tree related to hg
    debugprogress
+                 (no help text available)
    debugpushkey  access the pushkey key/value protocol
    debugpvec     (no help text available)
    debugrebuilddirstate
@@ -1167,8 +1073,6 @@ Test list of internal help commands
    debugwalk     show how files match on given patterns
    debugwireargs
                  (no help text available)
-  
-  (use 'hg help -v debug' to show built-in aliases and global options)
 
 internals topic renders index of available sub-topics
 
@@ -1387,11 +1291,9 @@ Test list of commands with command with no help text
   $ hg help helpext
   helpext extension - no help text available
   
-  list of commands:
+  Commands:
   
    nohelp        (no help text available)
-  
-  (use 'hg help -v helpext' to show built-in aliases and global options)
 
 
 test advanced, deprecated and experimental options are hidden in command help
@@ -2832,7 +2734,7 @@ Dish up an empty repo; serve it cold.
   Returns 0 if all files are successfully added.
   </p>
   <p>
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   </p>
   <table>
   <tr><td>-I</td>
@@ -2849,7 +2751,7 @@ Dish up an empty repo; serve it cold.
   <td>do not perform actions, just print output</td></tr>
   </table>
   <p>
-  global options ([+] can be repeated):
+  Global options ([+] can be repeated):
   </p>
   <table>
   <tr><td>-R</td>
@@ -3033,7 +2935,7 @@ Dish up an empty repo; serve it cold.
   Returns 0 on success, 1 if any warnings encountered.
   </p>
   <p>
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   </p>
   <table>
   <tr><td>-A</td>
@@ -3053,7 +2955,7 @@ Dish up an empty repo; serve it cold.
   <td>exclude names matching the given patterns</td></tr>
   </table>
   <p>
-  global options ([+] can be repeated):
+  Global options ([+] can be repeated):
   </p>
   <table>
   <tr><td>-R</td>

@@ -604,7 +604,7 @@ Make sure no one adds back a -b option:
   
   (use 'hg help -e strip' to show help for the strip extension)
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -r --rev REV [+]        strip specified revision (optional, can specify
                            revisions without this option)

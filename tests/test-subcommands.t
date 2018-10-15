@@ -205,7 +205,7 @@
   
   second test subcommand
   
-  global options ([+] can be repeated):
+  Global options ([+] can be repeated):
   
    -R --repository REPO     repository root directory or name of overlay bundle
                             file
@@ -240,7 +240,7 @@
   
   other test command
   
-  global options ([+] can be repeated):
+  Global options ([+] can be repeated):
   
    -R --repository REPO     repository root directory or name of overlay bundle
                             file

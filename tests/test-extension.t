@@ -585,7 +585,7 @@ hide outer repo
   
   show information about active extensions
   
-  options:
+  Options:
   
     --excludedefault exclude extensions marked as default-on
   
@@ -597,12 +597,12 @@ hide outer repo
   
   show information about active extensions
   
-  options:
+  Options:
   
       --excludedefault    exclude extensions marked as default-on
    -T --template TEMPLATE display with template (EXPERIMENTAL)
   
-  global options ([+] can be repeated):
+  Global options ([+] can be repeated):
   
    -R --repository REPO     repository root directory or name of overlay bundle
                             file
@@ -639,12 +639,12 @@ hide outer repo
   
   show information about active extensions
   
-  options:
+  Options:
   
       --excludedefault    exclude extensions marked as default-on
    -T --template TEMPLATE display with template (EXPERIMENTAL)
   
-  global options ([+] can be repeated):
+  Global options ([+] can be repeated):
   
    -R --repository REPO     repository root directory or name of overlay bundle
                             file
@@ -710,7 +710,7 @@ Extension module help vs command help:
   
   (use 'hg help -e extdiff' to show help for the extdiff extension)
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -p --program CMD         comparison program to run
    -o --option OPT [+]      pass option to comparison program
@@ -784,11 +784,9 @@ Extension module help vs command help:
   running the external diff program will actually be pretty fast (at least
   faster than having to compare the entire tree).
   
-  list of commands:
+  Commands:
   
    extdiff       use external program to diff repository (or selected files)
-  
-  (use 'hg help -v -e extdiff' to show built-in aliases and global options)
 
 
 
@@ -898,59 +896,29 @@ along with extension help itself
 
   $ echo "dodo = $dodopath" >> $HGRCPATH
 
-Make sure that user is asked to enter '-v -e' to get list of built-in aliases
+Make sure that '-e' prints help for the extension.
   $ hg help -e dodo
   dodo extension -
   
   This is an awesome 'dodo' extension. It does nothing and writes 'Foo foo'
   
-  list of commands:
+  Commands:
   
    dodo          Does nothing
    foofoo        Writes 'Foo foo'
-  
-  (use 'hg help -v -e dodo' to show built-in aliases and global options)
 
-Make sure that '-v -e' prints list of built-in aliases along with
-extension help itself
+Make sure that '-v -e' prints help for the extension.
   $ hg help -v -e dodo
   dodo extension -
   
   This is an awesome 'dodo' extension. It does nothing and writes 'Foo foo'
   
-  list of commands:
+  Commands:
   
    dodo          Does nothing
    foofoo        Writes 'Foo foo'
-  
-  global options ([+] can be repeated):
-  
-   -R --repository REPO     repository root directory or name of overlay bundle
-                            file
-      --cwd DIR             change working directory
-   -y --noninteractive      do not prompt, automatically pick the first choice
-                            for all prompts
-   -q --quiet               suppress output
-   -v --verbose             enable additional output
-      --color TYPE          when to colorize (boolean, always, auto, never, or
-                            debug)
-      --config CONFIG [+]   set/override config option (use
-                            'section.name=value')
-      --configfile FILE [+] enables the given config file
-      --debug               enable debugging output
-      --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
-      --encodingmode MODE   set the charset encoding mode (default: strict)
-      --traceback           always print a traceback on exception
-      --time                time how long the command takes
-      --profile             print command execution profile
-      --version             output version information and exit
-   -h --help                display help and exit
-      --hidden              consider hidden changesets
-      --pager TYPE          when to paginate (boolean, always, auto, or never)
-                            (default: auto)
 
-Make sure that single '-v' option shows help and built-ins only for 'dodo' command
+Make sure that single '-v' option shows help and global options for the 'dodo' command
   $ hg help -v dodo
   hg dodo
   
@@ -958,7 +926,7 @@ Make sure that single '-v' option shows help and built-ins only for 'dodo' comma
   
   (use 'hg help -e dodo' to show help for the dodo extension)
   
-  global options ([+] can be repeated):
+  Global options ([+] can be repeated):
   
    -R --repository REPO     repository root directory or name of overlay bundle
                             file
@@ -1015,12 +983,10 @@ along with extension help
   This is an awesome 'dudu' extension. It does something and also writes 'Beep
   beep'
   
-  list of commands:
+  Commands:
   
    beep          Writes 'Beep beep'
    something     Does something
-  
-  (use 'hg help -v dudu' to show built-in aliases and global options)
 
 In case when extension name doesn't match any of its commands,
 help options '-v' and '-v -e' should be equivalent
@@ -1030,37 +996,10 @@ help options '-v' and '-v -e' should be equivalent
   This is an awesome 'dudu' extension. It does something and also writes 'Beep
   beep'
   
-  list of commands:
+  Commands:
   
    beep          Writes 'Beep beep'
    something     Does something
-  
-  global options ([+] can be repeated):
-  
-   -R --repository REPO     repository root directory or name of overlay bundle
-                            file
-      --cwd DIR             change working directory
-   -y --noninteractive      do not prompt, automatically pick the first choice
-                            for all prompts
-   -q --quiet               suppress output
-   -v --verbose             enable additional output
-      --color TYPE          when to colorize (boolean, always, auto, never, or
-                            debug)
-      --config CONFIG [+]   set/override config option (use
-                            'section.name=value')
-      --configfile FILE [+] enables the given config file
-      --debug               enable debugging output
-      --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
-      --encodingmode MODE   set the charset encoding mode (default: strict)
-      --traceback           always print a traceback on exception
-      --time                time how long the command takes
-      --profile             print command execution profile
-      --version             output version information and exit
-   -h --help                display help and exit
-      --hidden              consider hidden changesets
-      --pager TYPE          when to paginate (boolean, always, auto, or never)
-                            (default: auto)
 
   $ hg help -v -e dudu
   dudu extension -
@@ -1068,37 +1007,10 @@ help options '-v' and '-v -e' should be equivalent
   This is an awesome 'dudu' extension. It does something and also writes 'Beep
   beep'
   
-  list of commands:
+  Commands:
   
    beep          Writes 'Beep beep'
    something     Does something
-  
-  global options ([+] can be repeated):
-  
-   -R --repository REPO     repository root directory or name of overlay bundle
-                            file
-      --cwd DIR             change working directory
-   -y --noninteractive      do not prompt, automatically pick the first choice
-                            for all prompts
-   -q --quiet               suppress output
-   -v --verbose             enable additional output
-      --color TYPE          when to colorize (boolean, always, auto, never, or
-                            debug)
-      --config CONFIG [+]   set/override config option (use
-                            'section.name=value')
-      --configfile FILE [+] enables the given config file
-      --debug               enable debugging output
-      --debugger            start debugger
-      --encoding ENCODE     set the charset encoding (default: ascii)
-      --encodingmode MODE   set the charset encoding mode (default: strict)
-      --traceback           always print a traceback on exception
-      --time                time how long the command takes
-      --profile             print command execution profile
-      --version             output version information and exit
-   -h --help                display help and exit
-      --hidden              consider hidden changesets
-      --pager TYPE          when to paginate (boolean, always, auto, or never)
-                            (default: auto)
 
 Disabled extension commands:
 

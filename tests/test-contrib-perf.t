@@ -41,7 +41,7 @@ perfstatus
   $ hg help perfstatusext
   perfstatusext extension - helper extension to measure performance
   
-  list of commands:
+  Commands:
   
    perfaddremove
                  (no help text available)
@@ -119,8 +119,6 @@ perfstatus
                  benchmark the computation of various volatile set
    perfwalk      (no help text available)
    perfwrite     microbenchmark ui.write
-  
-  (use 'hg help -v perfstatusext' to show built-in aliases and global options)
   $ hg perfaddremove
   $ hg perfancestors
   $ hg perfancestorset 2

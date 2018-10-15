@@ -3067,8 +3067,8 @@ def heads(ui, repo, *branchrevs, **opts):
 @command(
     "help",
     [
-        ("e", "extension", None, _("show only help for extensions")),
-        ("c", "command", None, _("show only help for commands")),
+        ("e", "extension", None, _("show help for extensions")),
+        ("c", "command", None, _("show help for commands")),
         ("k", "keyword", None, _("show topics matching keyword")),
         ("s", "system", [], _("show help for specific platform(s)")),
     ],

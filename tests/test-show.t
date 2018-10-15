@@ -447,7 +447,7 @@ Confirm that --help works (it didn't when we used an alias)
       See 'hg help templates' for more about pre-packaged styles and specifying
       custom templates.
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
       --nodates             omit dates from diff headers (but keeps it in commit
                             header)
@@ -477,7 +477,7 @@ Confirm that --help works (it didn't when we used an alias)
       See 'hg help templates' for more about pre-packaged styles and specifying
       custom templates.
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
       --nodates             omit dates from diff headers (but keeps it in commit
                             header)
@@ -495,7 +495,7 @@ Confirm that --help works (it didn't when we used an alias)
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
   
-  global options ([+] can be repeated):
+  Global options ([+] can be repeated):
   
    -R --repository REPO     repository root directory or name of overlay bundle
                           * (glob)

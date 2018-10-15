@@ -60,30 +60,57 @@ typical client does not want echo-back messages, so test without it:
   *** runcommand 
   Mercurial Distributed SCM
   
-  basic commands:
+  hg COMMAND [OPTIONS]
+  
+  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  commands, and 'hg help COMMAND' to get help on a specific command.
+  
+  Create repositories:
+  
+   clone         make a copy of an existing repository
+   init          create a new repository in the given directory
+  
+  Examine files in your current checkout:
+  
+   grep          search revision history for a pattern in specified files
+   status        show changed files in the working directory
+  
+  Work on your current checkout:
   
    add           add the specified files on the next commit
-   annotate      show changeset information by line for each file
-   clone         make a copy of an existing repository
-   commit        commit the specified files or all outstanding changes
-   diff          diff repository (or selected files)
-   export        dump the header and diffs for one or more changesets
-   forget        forget the specified files on the next commit
-   githelp       suggests the Mercurial equivalent of the given git command
-   init          create a new repository in the given directory
-   log           show revision history of entire repository or files
-   merge         merge another revision into working directory
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
-   record        interactively select changes to commit
+   copy          mark files as copied for the next commit
    remove        remove the specified files on the next commit
-   serve         start stand-alone webserver
+   rename        rename files; equivalent of copy + remove
+  
+  Commit changes and modify commits:
+  
+   commit        commit the specified files or all outstanding changes
+  
+  Look at commits and commit history:
+  
+   diff          diff repository (or selected files)
+   log           show revision history of entire repository or files
    show          show revision in detail
-   status        show changed files in the working directory
-   summary       summarize working directory state
+  
+  Checkout other commits:
+  
    update        update working directory (or switch revisions)
   
-  (use 'hg help' for the full list of commands or 'hg -v' for details)
+  Rearrange commits:
+  
+   graft         copy changes from other branches onto the current branch
+  
+  Exchange commits with a server:
+  
+   pull          pull changes from the specified source
+   push          push changes to the specified destination
+  
+  Additional help topics:
+  
+   glossary      glossary
+   patterns      file name patterns
+   revisions     specifying revisions
+   templating    template usage
   *** runcommand id --quiet
   000000000000
   *** runcommand id

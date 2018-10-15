@@ -43,7 +43,7 @@ Should diff cloned directories:
       compared to the working directory, and, when no revisions are specified,
       the working directory files are compared to its parent.
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -o --option OPT [+]      pass option to comparison program
    -r --rev REV [+]         revision

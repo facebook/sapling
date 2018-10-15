@@ -129,7 +129,7 @@ configitem("fastmanifest", "usetree", default=False)
 
 
 @command(
-    "^debugcachemanifest",
+    "debugcachemanifest",
     [
         ("r", "rev", [], "cache the manifest for revs", "REV"),
         ("a", "all", False, "cache all relevant revisions", ""),
@@ -183,7 +183,7 @@ def debugcachemanifest(ui, repo, *pats, **opts):
     cachemanager.cachemanifestfillandtrim(ui, repo, revset)
 
 
-@command("^cachemanifest", [], "hg cachemanifest")
+@command("cachemanifest", [], "hg cachemanifest")
 def cachemanifest(ui, repo, *pats, **opts):
     cachemanager.cacher.cachemanifest(repo)
 

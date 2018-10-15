@@ -376,7 +376,7 @@
                     does not convert tags from the source repo to the target
                     repo. The default is False.
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -s --source-type TYPE source repository type
    -d --dest-type TYPE   destination repository type

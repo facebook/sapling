@@ -59,9 +59,9 @@ def listexts(header, exts, indent=1, showdeprecated=False):
 def extshelp(ui):
     rst = loaddoc("extensions")(ui).splitlines(True)
     rst.extend(
-        listexts(_("enabled extensions:"), extensions.enabled(), showdeprecated=True)
+        listexts(_("Enabled extensions:"), extensions.enabled(), showdeprecated=True)
     )
-    rst.extend(listexts(_("disabled extensions:"), extensions.disabled()))
+    rst.extend(listexts(_("Disabled extensions:"), extensions.disabled()))
     doc = "".join(rst)
     return doc
 
@@ -339,7 +339,7 @@ def makesubcmdlist(cmd, subcommands, verbose, quiet):
     rst.extend(sorted(cmdhelp))
     if not quiet:
         rst.append(
-            _("\n(use 'hg help %s [subcommand]' " "to show complete subcommand help)\n")
+            _("\n(use 'hg help %s [subcommand]' to show complete subcommand help)\n")
             % cmd
         )
     return rst
@@ -362,6 +362,20 @@ addtopicsymbols("templates", ".. keywordsmarker", templatekw.keywords)
 addtopicsymbols("templates", ".. filtersmarker", templatefilters.filters)
 addtopicsymbols("templates", ".. functionsmarker", templater.funcs)
 addtopicsymbols("hgweb", ".. webcommandsmarker", webcommands.commands, dedent=True)
+
+helphomecommands = [
+    ("Create repositories", {"init", "clone"}),
+    ("Examine files in your current checkout", {"status", "grep"}),
+    ("Work on your current checkout", {"add", "remove", "rename", "copy"}),
+    ("Commit changes and modify commits", {"commit", "amend", "absorb", "metaedit"}),
+    ("Look at commits and commit history", {"log", "show", "diff", "smartlog"}),
+    ("Checkout other commits", {"checkout", "next", "previous"}),
+    ("Rearrange commits", {"rebase", "histedit", "fold", "split", "graft", "hide"}),
+    ("Undo changes", {"undo", "uncommit", "unamend", "redo"}),
+    ("Exchange commits with a server", {"pull", "push", "prefetch"}),
+]
+
+helphometopics = {"revisions", "glossary", "patterns", "templating"}
 
 
 class _helpdispatch(object):
@@ -407,7 +421,7 @@ class _helpdispatch(object):
             # py3k fix: except vars can't be used outside the scope of the
             # except block, nor can be used inside a lambda. python issue4617
             prefix = inst.args[0]
-            select = lambda c: c.lstrip("^").startswith(prefix)
+            select = lambda c: c.lstrip("^").partition("|")[0].startswith(prefix)
             rst = self.helplist(name, select)
             return rst
         except error.UnknownSubcommand as inst:
@@ -471,20 +485,21 @@ class _helpdispatch(object):
             mod = extensions.find(name)
             doc = gettext(pycompat.getdoc(mod)) or ""
             if "\n" in doc.strip():
-                msg = _(
-                    "(use 'hg help -e %s' to show help for " "the %s extension)"
-                ) % (name, name)
+                msg = _("(use 'hg help -e %s' to show help for the %s extension)") % (
+                    name,
+                    name,
+                )
                 rst.append("\n%s\n" % msg)
         except KeyError:
             pass
 
         # options
         if not self.ui.quiet and entry[1]:
-            rst.append(optrst(_("options"), entry[1], self.ui.verbose))
+            rst.append(optrst(_("Options"), entry[1], self.ui.verbose))
 
         if self.ui.verbose:
             rst.append(
-                optrst(_("global options"), self.commands.globalopts, self.ui.verbose)
+                optrst(_("Global options"), self.commands.globalopts, self.ui.verbose)
             )
 
         # subcommands
@@ -500,52 +515,32 @@ class _helpdispatch(object):
                 rst.append(_("\n(use 'hg %s -h' to show more help)\n") % name)
             elif not self.ui.quiet:
                 rst.append(
-                    _("\n(some details hidden, use --verbose " "to show complete help)")
+                    _("\n(some details hidden, use --verbose to show complete help)")
                 )
 
         return rst
 
-    def helplist(self, name, select=None, **opts):
-        # list of commands
-        if name == "shortlist":
-            header = _("basic commands:\n\n")
-        elif name == "debug":
-            header = _("debug commands (internal and unsupported):\n\n")
-        else:
-            header = _("list of commands:\n\n")
-
+    def helpcmdlist(self, name, select=None):
         h = {}
         cmds = {}
         for c, e in self.commands.table.iteritems():
-            f = c.partition("|")[0]
-            if select and not select(f):
+            if select and not select(c):
                 continue
-            if (
-                not select
-                and name != "shortlist"
-                and e[0].__module__ != self.commands.__name__
-            ):
-                continue
-            if name == "shortlist" and not f.startswith("^"):
-                continue
-            f = f.lstrip("^")
+            f = c.lstrip("^").partition("|")[0]
             doc = pycompat.getdoc(e[0])
             if filtercmd(self.ui, f, name, doc):
                 continue
             doc = gettext(doc)
+            if doc:
+                doc = doc.splitlines()[0].rstrip()
             if not doc:
                 doc = _("(no help text available)")
-            h[f] = doc.splitlines()[0].rstrip()
+            h[f] = doc
             cmds[f] = c.lstrip("^")
 
-        rst = []
         if not h:
-            if not self.ui.quiet:
-                rst.append(_("no commands defined\n"))
-            return rst
-
-        if not self.ui.quiet:
-            rst.append(header)
+            return [], {}
+        rst = []
         fns = sorted(h)
         for f in fns:
             if self.ui.verbose:
@@ -553,59 +548,56 @@ class _helpdispatch(object):
                 rst.append(" :%s: %s\n" % (commacmds, h[f]))
             else:
                 rst.append(" :%s: %s\n" % (f, h[f]))
+        return rst, cmds
 
-        ex = self.opts.get
-        anyopts = ex(r"keyword") or not (ex(r"command") or ex(r"extension"))
-        if not name and anyopts:
-            exts = listexts(_("enabled extensions:"), extensions.enabled())
-            if exts:
-                rst.append("\n")
-                rst.extend(exts)
+    def helplist(self, name, select=None, **opts):
+        # list of commands
+        rst, cmds = self.helpcmdlist(name, select)
+        if not rst:
+            if not self.ui.quiet:
+                rst.append(_("no commands defined\n"))
+            return rst
 
-            rst.append(_("\nadditional help topics:\n\n"))
-            topics = []
-            for names, header, doc in helptable:
-                topics.append((names[0], header))
-            for t, desc in topics:
-                rst.append(" :%s: %s\n" % (t, desc))
-
-        if self.ui.quiet:
-            pass
-        elif self.ui.verbose:
-            rst.append(
-                "\n%s\n"
-                % optrst(_("global options"), self.commands.globalopts, self.ui.verbose)
-            )
-            if name == "shortlist":
-                rst.append(_("\n(use 'hg help' for the full list " "of commands)\n"))
-        else:
-            if name == "shortlist":
-                rst.append(
-                    _(
-                        "\n(use 'hg help' for the full list of commands "
-                        "or 'hg -v' for details)\n"
-                    )
-                )
-            elif name and not self.full:
-                rst.append(
-                    _("\n(use 'hg help %s' to show the full help " "text)\n") % name
-                )
-            elif name and cmds and name in cmds.keys():
-                rst.append(
-                    _(
-                        "\n(use 'hg help -v -e %s' to show built-in "
-                        "aliases and global options)\n"
-                    )
-                    % name
-                )
+        if not self.ui.quiet:
+            if name == "debug":
+                header = _("Debug commands (internal and unsupported):\n\n")
             else:
-                rst.append(
-                    _(
-                        "\n(use 'hg help -v%s' to show built-in aliases "
-                        "and global options)\n"
-                    )
-                    % (name and " " + name or "")
-                )
+                header = _("Commands:\n\n")
+            rst.insert(0, header)
+
+        return rst
+
+    def helphome(self):
+        rst = [
+            _("Mercurial Distributed SCM\n"),
+            "\n",
+            "hg COMMAND [OPTIONS]\n",
+            "\n",
+            "These are some common Mercurial commands.  Use 'hg help commands' to list all "
+            "commands, and 'hg help COMMAND' to get help on a specific command.\n",
+            "\n",
+        ]
+
+        for desc, commands in helphomecommands:
+
+            def match(cmdspec):
+                return any(c in commands for c in cmdspec.lstrip("^").split("|"))
+
+            sectionrst, sectioncmds = self.helpcmdlist(None, match)
+            if sectionrst:
+                rst.append(desc + ":\n\n")
+                rst.extend(sectionrst)
+                rst.append("\n")
+
+        topics = []
+        for names, header, doc in helptable:
+            if names[0] in helphometopics:
+                topics.append((names[0], header))
+        if topics:
+            rst.append(_("\nAdditional help topics:\n\n"))
+            for t, desc in topics:
+                rst.append(" :%s: %s\n" % (t, desc.lower()))
+
         return rst
 
     def helptopic(self, name, subtopic=None):
@@ -632,13 +624,13 @@ class _helpdispatch(object):
             rst += ["    %s\n" % l for l in doc(self.ui).splitlines()]
 
         if not self.ui.verbose:
-            omitted = _("(some details hidden, use --verbose" " to show complete help)")
+            omitted = _("(some details hidden, use --verbose to show complete help)")
             indicateomitted(rst, omitted)
 
         try:
             cmdutil.findcmd(name, self.commands.table)
             rst.append(
-                _("\nuse 'hg help -c %s' to see help for " "the %s command\n")
+                _("\nuse 'hg help -c %s' to see help for the %s command\n")
                 % (name, name)
             )
         except error.UnknownCommand:
@@ -665,7 +657,7 @@ class _helpdispatch(object):
             rst.append("\n")
 
         if not self.ui.verbose:
-            omitted = _("(some details hidden, use --verbose" " to show complete help)")
+            omitted = _("(some details hidden, use --verbose to show complete help)")
             indicateomitted(rst, omitted)
 
         if mod:
@@ -673,8 +665,7 @@ class _helpdispatch(object):
                 ct = mod.cmdtable
             except AttributeError:
                 ct = {}
-            modcmds = set([c.partition("|")[0] for c in ct])
-            rst.extend(self.helplist(name, modcmds.__contains__))
+            rst.extend(self.helplist(name, ct.__contains__))
         else:
             rst.append(
                 _(
@@ -695,14 +686,14 @@ class _helpdispatch(object):
             doc = doc.splitlines()[0]
 
         rst = listexts(
-            _("'%s' is provided by the following " "extension:") % cmd,
+            _("'%s' is provided by the following extension:") % cmd,
             {ext: doc},
             indent=4,
             showdeprecated=True,
         )
         rst.append("\n")
         rst.append(
-            _("(use 'hg help extensions' for information on enabling " "extensions)\n")
+            _("(use 'hg help extensions' for information on enabling extensions)\n")
         )
         return rst
 
@@ -741,13 +732,14 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None, **opts
             msg = _("no matches")
             hint = _("try 'hg help' for a list of topics")
             raise error.Abort(msg, hint=hint)
-    elif name and name != "shortlist":
-        rst = dispatch.dispatch(name)
-    else:
-        # program name
+    elif name == "commands":
         if not ui.quiet:
             rst = [_("Mercurial Distributed SCM\n"), "\n"]
-        rst.extend(dispatch.helplist(name, None, **pycompat.strkwargs(opts)))
+        rst.extend(dispatch.helplist(None, None, **pycompat.strkwargs(opts)))
+    elif name:
+        rst = dispatch.dispatch(name)
+    else:
+        rst = dispatch.helphome()
 
     return "".join(rst)
 

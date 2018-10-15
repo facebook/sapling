@@ -14,7 +14,7 @@ Check help text for new options and removal of unsupported options.
   
   update to parent changeset
   
-  options:
+  Options:
   
       --clean                discard uncommitted changes (no backup)
       --newest               always pick the newest parent when a changeset has

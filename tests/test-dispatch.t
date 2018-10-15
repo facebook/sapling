@@ -19,7 +19,7 @@ Missing arg:
   
   output the current or given revision of files
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -o --output FORMAT       print output to file with formatted name
    -r --rev REV             print the given revision

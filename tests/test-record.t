@@ -40,7 +40,7 @@ Record help
   
       This command is not available when committing a merge.
   
-  options ([+] can be repeated):
+  Options ([+] can be repeated):
   
    -A --addremove           mark new/missing files as added/removed before
                             committing
