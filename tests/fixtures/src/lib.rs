@@ -982,7 +982,7 @@ pub mod merge_uneven {
             "author"=> "Simon Farnsworth <simonfar@fb.com>",
             "author_date"=> "1506435672 25200",
             "message"=> "Merge two branches",
-            "expected_hg_changeset"=> "b47ca72355a0af2c749d45a5689fd5bcce9898c7",
+            "expected_hg_changeset"=> "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
 
@@ -1391,17 +1391,17 @@ pub mod unshared_merge_uneven {
             "author"=> "Simon Farnsworth <simonfar@fb.com>",
             "author_date"=> "1506443464 25200",
             "message"=> "Merge",
-            "expected_hg_changeset"=> "396c60c14337b31ffd0b6aa58a026224713dc07d",
+            "expected_hg_changeset"=> "a5ab070634ab9cbdfc92404b3ec648f7e29547bc",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
 
         let files = btreemap!{};
         let commit_metadata = btreemap!{
-            "parents"=> "396c60c14337b31ffd0b6aa58a026224713dc07d",
+            "parents"=> "a5ab070634ab9cbdfc92404b3ec648f7e29547bc",
             "author"=> "Simon Farnsworth <simonfar@fb.com>",
             "author_date"=> "1506443471 25200",
             "message"=> "And remove",
-            "expected_hg_changeset"=> "339ec3d2a986d55c5ac4670cca68cf36b8dc0b82",
+            "expected_hg_changeset"=> "c10443fa4198c6abad76dc6c69c1417b2e821508",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
 

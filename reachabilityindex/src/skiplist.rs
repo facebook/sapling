@@ -713,7 +713,7 @@ mod test {
                 string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
             ];
 
-            let merge_node = string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7");
+            let merge_node = string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055");
             let sli = SkiplistIndex::new();
             sli.add_node(repo, merge_node, 100).wait().unwrap();
             for node in branch_1.into_iter() {
@@ -766,7 +766,7 @@ mod test {
             ];
             let branch_2_head = string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc");
 
-            let _merge_node = string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7");
+            let _merge_node = string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055");
             let sli = SkiplistIndex::new();
 
             // index just one branch first
@@ -1219,7 +1219,7 @@ mod test {
                 string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                 string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
             ];
-            let merge_node = string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7");
+            let merge_node = string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055");
             let sli = SkiplistIndex::new();
 
             // This test tries to advance the merge node forward.
@@ -1325,7 +1325,7 @@ mod test {
                 string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
             ];
 
-            let merge_node = string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7");
+            let merge_node = string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055");
             let sli = SkiplistIndex::new();
 
             // This test partially indexes the top few of the graph.

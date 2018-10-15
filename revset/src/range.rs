@@ -335,13 +335,13 @@ mod test {
             let nodestream = RangeNodeStream::new(
                 &repo,
                 string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
             ).boxify();
 
             assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                     string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
                     string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
                 ],
@@ -358,13 +358,13 @@ mod test {
             let nodestream = RangeNodeStream::new(
                 &repo,
                 string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
-                string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
             ).boxify();
 
             assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                     string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
                     string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),

@@ -396,7 +396,7 @@ mod test {
             // Merge commit, and one from each branch
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
-                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
@@ -437,7 +437,7 @@ mod test {
             assert_node_sequence(
                 &repo,
                 vec![
-                    string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                 ],
                 nodestream,

@@ -458,11 +458,11 @@ mod test {
             // Post-merge, merge, and both unshared branches
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
-                    string_to_nodehash("339ec3d2a986d55c5ac4670cca68cf36b8dc0b82)"),
+                    string_to_nodehash("c10443fa4198c6abad76dc6c69c1417b2e821508)"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
-                    string_to_nodehash("396c60c14337b31ffd0b6aa58a026224713dc07d)"),
+                    string_to_nodehash("a5ab070634ab9cbdfc92404b3ec648f7e29547bc)"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(

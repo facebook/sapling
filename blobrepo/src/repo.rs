@@ -44,6 +44,7 @@ use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, 
                  SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
+use file::fetch_file_envelope;
 use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ThriftManifoldBlob;
@@ -880,13 +881,62 @@ impl BlobRepo {
         self.filenodes.clone()
     }
 
+    pub fn store_file_change_or_reuse(
+        &self,
+        p1: Option<HgFileNodeId>,
+        p2: Option<HgFileNodeId>,
+        path: &MPath,
+        change: Option<&FileChange>,
+    ) -> impl Future<Item = Option<(HgBlobEntry, Option<IncompleteFilenodeInfo>)>, Error = Error>
+    {
+        // we can reuse same HgFileNodeId if we have only one parent with same
+        // file content but different type (Regular|Executable)
+        match (p1, p2, change) {
+            (Some(parent), None, Some(change)) | (None, Some(parent), Some(change)) => {
+                let store = self.get_blobstore();
+                let parent = parent.into_nodehash();
+                cloned!(change, path);
+                fetch_file_envelope(&store, parent)
+                    .map(move |parent_envelope| {
+                        if parent_envelope.content_id() == change.content_id()
+                            && change.copy_from().is_none()
+                        {
+                            Some((
+                                HgBlobEntry::new(
+                                    store,
+                                    path.basename().clone(),
+                                    parent,
+                                    Type::File(change.file_type()),
+                                ),
+                                None,
+                            ))
+                        } else {
+                            None
+                        }
+                    })
+                    .right_future()
+            }
+            _ => future::ok(None).left_future(),
+        }.and_then({
+            let repo = self.clone();
+            let change = change.cloned();
+            let path = path.clone();
+
+            move |maybe_entry| match maybe_entry {
+                None => repo.store_file_change(p1, p2, &path, change.as_ref())
+                    .right_future(),
+                _ => future::ok(maybe_entry).left_future(),
+            }
+        })
+    }
+
     pub fn store_file_change(
         &self,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
         path: &MPath,
         change: Option<&FileChange>,
-    ) -> impl Future<Item = Option<(HgBlobEntry, IncompleteFilenodeInfo)>, Error = Error> + Send
+    ) -> impl Future<Item = Option<(HgBlobEntry, Option<IncompleteFilenodeInfo>)>, Error = Error> + Send
     {
         let repo = self.clone();
         match change {
@@ -935,7 +985,7 @@ impl BlobRepo {
                                     p2,
                                     copyfrom: copy_from.map(|(p, h)| (RepoPath::FilePath(p), h)),
                                 };
-                                Some((entry, node_info))
+                                Some((entry, Some(node_info)))
                             }),
                             Err(err) => return future::err(err).left_future(),
                         };
@@ -1128,7 +1178,7 @@ impl BlobRepo {
                             let entry = entry.cloned();
                             cloned!(repo, path);
                             move |(p1, p2)| {
-                                repo.store_file_change(
+                                repo.store_file_change_or_reuse(
                                     p1.and_then(|x| x),
                                     p2.and_then(|x| x),
                                     &path,
@@ -1138,8 +1188,10 @@ impl BlobRepo {
                         })
                         .and_then(move |entry| match entry {
                             None => memory_manifest.change_entry(&path, None),
-                            Some((entry, node_info)) => {
-                                incomplete_filenodes.add(node_info);
+                            Some((entry, node_infos)) => {
+                                for node_info in node_infos {
+                                    incomplete_filenodes.add(node_info);
+                                }
                                 memory_manifest.change_entry(&path, Some(entry))
                             }
                         });

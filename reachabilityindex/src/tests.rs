@@ -73,7 +73,7 @@ pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(index_crea
             string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
         ];
 
-        let _merge_node = string_to_nodehash("b47ca72355a0af2c749d45a5689fd5bcce9898c7");
+        let _merge_node = string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055");
 
         for left_node in branch_1.into_iter() {
             for right_node in branch_2.iter() {

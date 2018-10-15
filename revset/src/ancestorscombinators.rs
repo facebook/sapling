@@ -422,7 +422,7 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
                 &changeset_fetcher,
-                string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
             ).boxify();
             let inputstream = add_generations_by_bonsai(nodestream, changeset_fetcher);
 
@@ -434,7 +434,7 @@ mod test {
                 res,
                 vec![
                     (
-                        hashset!{string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7")},
+                        hashset!{string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055")},
                         Generation::new(10),
                     ),
                     (
@@ -605,7 +605,7 @@ mod test {
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &changeset_fetcher,
                 vec![
-                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                 ],
                 vec![
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
@@ -616,7 +616,7 @@ mod test {
             assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                     string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
                     string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                 ],
@@ -635,7 +635,7 @@ mod test {
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &changeset_fetcher,
                 vec![
-                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                 ],
                 vec![
                     string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
@@ -645,7 +645,7 @@ mod test {
             assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "b47ca72355a0af2c749d45a5689fd5bcce9898c7"),
+                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                     string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
                     string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),

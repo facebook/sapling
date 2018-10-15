@@ -1089,4 +1089,81 @@ mod tests {
             _ => panic!("should contain conflict"),
         }
     }
+
+    #[test]
+    fn pushrebase_executable_bit_change() {
+        use mononoke_types::FileType;
+
+        async_unit::tokio_unit_test(|| {
+            let repo = linear::getrepo(None);
+            let path_1 = MPath::new("1").unwrap();
+
+            let root_hg =
+                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+            let root_cs = repo.get_changeset_by_changesetid(&root_hg).wait().unwrap();
+            let root_1_id = repo.find_file_in_manifest(&path_1, *root_cs.manifestid())
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            // crate filechange with with same content as "1" but set executable bit
+            let root = repo.get_bonsai_from_hg(root_hg).wait().unwrap().unwrap();
+            let root_bcs = repo.get_bonsai_changeset(root).wait().unwrap();
+            let file_1 = root_bcs
+                .file_changes()
+                .find(|(path, _)| path == &&path_1)
+                .unwrap()
+                .1
+                .unwrap()
+                .clone();
+            assert_eq!(file_1.file_type(), FileType::Regular);
+            let file_1_exec = FileChange::new(
+                *file_1.content_id(),
+                FileType::Executable,
+                file_1.size(),
+                /* copy_from */ None,
+            );
+
+            let bcs = create_commit(
+                repo.clone(),
+                vec![root],
+                btreemap!{path_1.clone() => Some(file_1_exec.clone())},
+            );
+            let hgcss = vec![repo.get_hg_from_bonsai_changeset(bcs).wait().unwrap()];
+
+            let book = Bookmark::new("master").unwrap();
+            set_bookmark(
+                repo.clone(),
+                &book,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            );
+
+            let result = do_pushrebase(Arc::new(repo.clone()), Default::default(), book, hgcss)
+                .wait()
+                .expect("pushrebase failed");
+            let result_bcs = repo.get_bonsai_changeset(result.head).wait().unwrap();
+            let file_1_result = result_bcs
+                .file_changes()
+                .find(|(path, _)| path == &&path_1)
+                .unwrap()
+                .1
+                .unwrap();
+            assert_eq!(file_1_result, &file_1_exec);
+
+            let result_hg = repo.get_hg_from_bonsai_changeset(result.head)
+                .wait()
+                .unwrap();
+            let result_cs = repo.get_changeset_by_changesetid(&result_hg)
+                .wait()
+                .unwrap();
+            let result_1_id = repo.find_file_in_manifest(&path_1, *result_cs.manifestid())
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            // `result_1_id` should be equal to `root_1_id`, because executable flag
+            // is not a part of file envelope
+            assert_eq!(root_1_id, result_1_id);
+        })
+    }
 }
