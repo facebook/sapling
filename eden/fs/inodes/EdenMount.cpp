@@ -596,7 +596,7 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
           // This is a dry run, so all we need to do is tell the caller about
           // the conflicts: we should not modify any files or add any entries to
           // the journal.
-          return conflicts;
+          return std::move(conflicts);
         }
 
         // Save the new snapshot hash to the config
@@ -622,7 +622,7 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         journalDelta->toHash = snapshotHash;
         journal_.addDelta(std::move(journalDelta));
 
-        return conflicts;
+        return std::move(conflicts);
       });
 }
 
