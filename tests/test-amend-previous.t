@@ -69,6 +69,7 @@ Test --bottom flag.
   (activating bookmark top)
   $ hg previous --bottom
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark top)
   [1ea734] r0
 
 Test bookmark navigation.
@@ -76,6 +77,7 @@ Test bookmark navigation.
   $ hg book -r 012414 bookmark
   $ hg up top
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark top)
   $ hg previous --bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark top)
@@ -83,6 +85,7 @@ Test bookmark navigation.
   (activating bookmark bookmark)
   $ hg previous --bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark bookmark)
   [1ea734] (root) r0
   (activating bookmark root)
 
@@ -97,6 +100,7 @@ Test bookmark activation.
   (activating bookmark bookmark)
   $ hg previous 2 --no-activate-bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark bookmark)
   [1ea734] (root) r0
 
 Test dirty working copy and --merge.

@@ -1,13 +1,7 @@
-Tests --inacitve flag for update
 hg update --inactive should behave like update except that
 it should not activate deactivated bookmarks and
 should not print the related ui.status outputs
 (eg: "activating bookmarks")
-
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > tweakdefaults=
-  > EOF
 
 Set up the repository.
   $ hg init repo

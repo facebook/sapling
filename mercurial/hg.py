@@ -832,7 +832,10 @@ def updaterepo(repo, node, overwrite, updatecheck=None):
 
 
 def update(repo, node, quietempty=False, updatecheck=None):
-    """update the working directory to node"""
+    """update the working directory to node
+
+    Returns if any files were unresolved.
+    """
     stats = updaterepo(repo, node, False, updatecheck=updatecheck)
     _showstats(repo, stats, quietempty)
     if stats[3]:
@@ -845,7 +848,10 @@ _update = update
 
 
 def clean(repo, node, show_stats=True, quietempty=False):
-    """forcibly switch the working directory to node, clobbering changes"""
+    """forcibly switch the working directory to node, clobbering changes
+
+    Returns if any files were unresolved.
+    """
     stats = updaterepo(repo, node, True)
     repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
     if show_stats:
@@ -895,14 +901,13 @@ def updatetotally(ui, repo, checkout, brev, clean=False, updatecheck=None):
             warndest = True
 
         if clean:
-            ret = _clean(repo, checkout)
+            hasunresolved = _clean(repo, checkout)
         else:
             if updatecheck == "abort":
                 cmdutil.bailifchanged(repo, merge=False)
                 updatecheck = "none"
-            ret = _update(repo, checkout, updatecheck=updatecheck)
-
-        if not ret and movemarkfrom:
+            hasunresolved = _update(repo, checkout, updatecheck=updatecheck)
+        if not hasunresolved and movemarkfrom:
             if movemarkfrom == repo["."].node():
                 pass  # no-op update
             elif bookmarks.update(repo, [movemarkfrom], repo["."].node()):
@@ -918,7 +923,7 @@ def updatetotally(ui, repo, checkout, brev, clean=False, updatecheck=None):
                 b = ui.label(brev, "bookmarks.active")
                 ui.status(_("(activating bookmark %s)\n") % b)
             bookmarks.activate(repo, brev)
-        elif brev:
+        else:
             if repo._activebookmark:
                 b = ui.label(repo._activebookmark, "bookmarks")
                 ui.status(_("(leaving bookmark %s)\n") % b)
@@ -927,7 +932,7 @@ def updatetotally(ui, repo, checkout, brev, clean=False, updatecheck=None):
         if warndest:
             destutil.statusotherdests(ui, repo)
 
-    return ret
+    return hasunresolved
 
 
 def merge(repo, node, force=None, remind=True, mergeforce=False, labels=None):

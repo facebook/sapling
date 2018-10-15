@@ -6318,6 +6318,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         ("m", "merge", None, _("merge uncommitted changes")),
         ("d", "date", "", _("tipmost revision matching date"), _("DATE")),
         ("r", "rev", "", _("revision"), _("REV")),
+        ("", "inactive", None, _("update without activating bookmarks")),
     ]
     + mergetoolopts,
     _("[-C|-c|-m] [-d DATE] [[-r] REV]"),
@@ -6332,6 +6333,7 @@ def update(
     check=False,
     merge=None,
     tool=None,
+    inactive=None,
 ):
     """checkout a specific commit
 
@@ -6420,8 +6422,10 @@ def update(
         if date:
             rev = cmdutil.finddate(ui, repo, date)
 
-        # if we defined a bookmark, we have to remember the original name
-        brev = rev
+        if inactive:
+            brev = None
+        else:
+            brev = rev
         rev = scmutil.revsingle(repo, rev, rev).rev()
 
         repo.ui.setconfig("ui", "forcemerge", tool, "update")

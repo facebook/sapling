@@ -163,9 +163,6 @@ def uisetup(ui):
 
 def extsetup(ui):
     entry = wrapcommand(commands.table, "update", update)
-    options = entry[1]
-    # try to put in alphabetical order
-    options.insert(3, ("", "inactive", None, _("update without activating bookmarks")))
     wrapblame()
 
     entry = wrapcommand(commands.table, "commit", commitcmd)
@@ -466,21 +463,7 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
             + '"hg rebase -d <destination>".',
         )
 
-    # Doesn't activate inactive bookmarks with this flag
-    # In order to avoid submitting to upstream:
-    #   assumes checkout not to be none
-    #   assumes whitespace to be illegal bookmark char
-    # Wrapping bookmarks' active with pass will
-    # give you the same behavior without the assumptions
-    # but will print wrong output
-    inactive = kwargs.pop("inactive")
-    if inactive:
-        wrapfunction(hg, "updatetotally", _wrapupdatetotally)
-
     result = orig(ui, repo, node=node, rev=rev, **kwargs)
-
-    if inactive:
-        extensions.unwrapfunction(hg, "updatetotally", _wrapupdatetotally)
 
     # If the command succeed a message for 'hg update .^' will appear
     # suggesting to use hg prev
@@ -488,15 +471,6 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
         hintutil.trigger("update-prev")
 
     return result
-
-
-def _wrapupdatetotally(orig, ui, repo, checkout, brev, *args, **kwargs):
-    # set brev to invalidbookmark to prevent bookmark update
-    invalidbookmark = " "
-    assert checkout is not None
-    assert invalidbookmark not in repo._bookmarks
-    # assert invalidbookmark is not None
-    orig(ui, repo, checkout, invalidbookmark, *args, **kwargs)
 
 
 def wrapblame():

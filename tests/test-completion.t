@@ -256,7 +256,7 @@ Show all commands + options
   show: nodates, noprefix, stat, git, unified, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, style, template, include, exclude
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, subrepos, template
   summary: remote
-  update: clean, check, merge, date, rev, tool
+  update: clean, check, merge, date, rev, inactive, tool
   addremove: similarity, subrepos, include, exclude, dry-run
   archive: no-decode, prefix, rev, type, subrepos, include, exclude
   backout: merge, commit, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
