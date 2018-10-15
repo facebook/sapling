@@ -1735,6 +1735,7 @@ def clone(ui, source, dest=None, **opts):
         ("s", "secret", None, _("use the secret phase for committing")),
         ("e", "edit", None, _("invoke editor on commit messages")),
         ("i", "interactive", None, _("use interactive mode")),
+        ("M", "reuse-message", "", _("reuse commit message from REV"), _("REV")),
     ]
     + walkopts
     + commitopts
@@ -1824,6 +1825,18 @@ def _docommit(ui, repo, *pats, **opts):
             raise error.Abort(_("cannot amend with --subrepos"))
         # Let --subrepos on the command line override config setting.
         ui.setconfig("ui", "commitsubrepos", True, "commit")
+
+    # Allow the commit message from another commit to be reused.
+    reuserev = opts.get("reuse_message")
+    if reuserev:
+        incompatibleopts = ["message", "logfile"]
+        currentinvaliopts = [opt for opt in incompatibleopts if opts.get(opt)]
+        if currentinvaliopts:
+            raise error.Abort(
+                _("--reuse-message and --%s are mutually exclusive")
+                % (currentinvaliopts[0])
+            )
+        opts["message"] = scmutil.revsingle(repo, reuserev).description()
 
     cmdutil.checkunfinished(repo, commit=True)
 

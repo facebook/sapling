@@ -169,10 +169,6 @@ def extsetup(ui):
     wrapblame()
 
     entry = wrapcommand(commands.table, "commit", commitcmd)
-    options = entry[1]
-    options.insert(
-        9, ("M", "reuse-message", "", _("reuse commit message from REV"), _("REV"))
-    )
     opawarerebase = markermetadatawritingcommand(ui, _rebase, "rebase")
     wrapcommand(rebase.cmdtable, "rebase", opawarerebase)
     wrapfunction(scmutil, "cleanupnodes", cleanupnodeswrapper)
@@ -458,20 +454,6 @@ def commitcmd(orig, ui, repo, *pats, **opts):
         and not ui.configbool("tweakdefaults", "amendkeepdate")
     ):
         opts["date"] = currentdate()
-
-    rev = opts.get("reuse_message")
-    if rev:
-        invalidargs = ["message", "logfile"]
-        currentinvalidargs = [ia for ia in invalidargs if opts.get(ia)]
-        if currentinvalidargs:
-            raise error.Abort(
-                _("--reuse-message and --%s are " "mutually exclusive")
-                % (currentinvalidargs[0])
-            )
-
-    if rev:
-        opts["message"] = scmutil.revsingle(repo, rev).description()
-
     return orig(ui, repo, *pats, **opts)
 
 

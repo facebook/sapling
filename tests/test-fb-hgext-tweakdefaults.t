@@ -416,37 +416,6 @@ Test histedit date when tweakdefaults.histeditkeepdate is not set
   18 commit 3 for histedit
   17 commit 2 for histedit
 
-Test reuse message flag by taking message from previous commit
-  $ cd ../..
-  $ hg up -q hyphen-book
-  $ touch afile
-  $ hg add afile
-  $ hg commit -M 2
-  $ hg log --template {desc} -r .
-  b (no-eol)
-  $ echo 'canada rocks, eh?' > afile
-  $ hg commit -M . -m 'this command will fail'
-  abort: --reuse-message and --message are mutually exclusive
-  [255]
-  $ echo 'Super duper commit message' > ../commitmessagefile
-  $ hg commit -M . -l ../commitmessagefile
-  abort: --reuse-message and --logfile are mutually exclusive
-  [255]
-  $ hg commit -M thisrevsetdoesnotexist
-  abort: unknown revision 'thisrevsetdoesnotexist'!
-  [255]
-  $ HGEDITOR=cat hg commit -M . -e
-  b
-  
-  
-  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
-  HG: Leave message empty to abort commit.
-  HG: --
-  HG: user: test
-  HG: branch 'foo'
-  HG: bookmark 'hyphen-book'
-  HG: changed afile
-
 Test non-remotenames use of pull --rebase and --update requires --dest
   $ cd $TESTTMP
   $ hg clone repo clone
