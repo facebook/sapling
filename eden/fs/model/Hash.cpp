@@ -55,7 +55,7 @@ std::string Hash::toString() const {
   return result;
 }
 
-size_t Hash::getHashCode() const {
+size_t Hash::getHashCode() const noexcept {
   static_assert(sizeof(size_t) <= RAW_SIZE, "crazy size_t type");
   size_t result;
   memcpy(&result, bytes_.data(), sizeof(size_t));

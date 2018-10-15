@@ -60,7 +60,7 @@ class Hash : boost::totally_ordered<Hash> {
   /** @return 40-character [lowercase] hex representation of this hash. */
   std::string toString() const;
 
-  size_t getHashCode() const;
+  size_t getHashCode() const noexcept;
 
   bool operator==(const Hash&) const;
   bool operator<(const Hash&) const;
@@ -87,7 +87,7 @@ void toAppend(const Hash& hash, std::string* result);
 namespace std {
 template <>
 struct hash<facebook::eden::Hash> {
-  size_t operator()(const facebook::eden::Hash& hash) const {
+  size_t operator()(const facebook::eden::Hash& hash) const noexcept {
     return hash.getHashCode();
   }
 };
