@@ -59,7 +59,7 @@ __hook_start = function(info, arg)
 end
 ";
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LuaHook {
     pub name: String,
     /// The Lua code of the hook
