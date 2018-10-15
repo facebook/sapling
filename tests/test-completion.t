@@ -261,7 +261,7 @@ Show all commands + options
   archive: no-decode, prefix, rev, type, subrepos, include, exclude
   backout: merge, commit, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate, nosparseskip
-  bookmarks: force, rev, delete, rename, inactive, template
+  bookmarks: force, rev, delete, strip, rename, inactive, template
   branch: force, clean
   branches: active, closed, template
   bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure

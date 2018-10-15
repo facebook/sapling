@@ -1098,6 +1098,7 @@ the sparse profile from the known %s changeset %d:%s\n"
         ("f", "force", False, _("force")),
         ("r", "rev", "", _("revision for bookmark action"), _("REV")),
         ("d", "delete", False, _("delete a given bookmark")),
+        ("D", "strip", None, _("like --delete, but also strip changesets")),
         ("m", "rename", "", _("rename a given bookmark"), _("OLD")),
         ("i", "inactive", False, _("mark a bookmark inactive")),
     ]
@@ -1157,6 +1158,7 @@ def bookmark(ui, repo, *names, **opts):
     delete = opts.get(r"delete")
     rename = opts.get(r"rename")
     inactive = opts.get(r"inactive")
+    strip = opts.get("strip")
 
     if delete and rename:
         raise error.Abort(_("--delete and --rename are incompatible"))
@@ -1166,6 +1168,26 @@ def bookmark(ui, repo, *names, **opts):
         raise error.Abort(_("--rev is incompatible with --rename"))
     if not names and (delete or rev):
         raise error.Abort(_("bookmark name required"))
+    if strip:
+        # Check for incompatible options.
+        for name in [
+            "force",
+            "rev",
+            "rename",
+            "inactive",
+            "track",
+            "untrack",
+            "all",
+            "remote",
+        ]:
+            if opts.get(name):
+                raise error.Abort(
+                    _("--strip cannot be used together with %s") % ("--%s" % name)
+                )
+            # book --strip is just an alias for strip -B.
+            # (it may raise UnknownCommand)
+            stripfunc = cmdutil.findcmd("strip", table)[1][0]
+            return stripfunc(ui, repo, bookmark=names, rev=[])
 
     if delete or rename or names or inactive:
         with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:

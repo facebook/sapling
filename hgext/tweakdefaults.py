@@ -240,10 +240,6 @@ def extsetup(ui):
     wrapfunction(obsolete, "createmarkers", _createmarkers)
 
     # bookmark -D is an alias to strip -B
-    entry = wrapcommand(commands.table, "bookmarks", bookmarkcmd)
-    entry[1].insert(
-        3, ("D", "strip", None, _("like --delete but also strip changesets"))
-    )
 
     # wrap bookmarks after remotenames
     def afterloaded(loaded):
@@ -1182,31 +1178,6 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     elif not pats or (len(pats) == 1 and pats[0] == "re:"):
         pats = [""]
     return orig(ui, repo, *pats, **opts)
-
-
-def bookmarkcmd(orig, ui, repo, *names, **opts):
-    strip = opts.pop("strip")
-    if not strip:
-        return orig(ui, repo, *names, **opts)
-    # check conflicted opts
-    for name in [
-        "force",
-        "rev",
-        "rename",
-        "inactive",
-        "track",
-        "untrack",
-        "all",
-        "remote",
-    ]:
-        if opts.get(name):
-            raise error.Abort(
-                _("--strip cannot be used together with %s") % ("--%s" % name)
-            )
-
-    # call strip -B, may raise UnknownCommand
-    stripfunc = cmdutil.findcmd("strip", commands.table)[1][0]
-    return stripfunc(ui, repo, bookmark=names, rev=[])
 
 
 def unfilteredcmd(orig, *args, **opts):
