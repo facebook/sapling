@@ -132,13 +132,13 @@ fn rebase_in_loop(
     client_cf: Vec<MPath>,
 ) -> BoxFuture<PushrebaseSuccessResult, PushrebaseError> {
     let mut retry_num = 1;
-    loop_fn(root, move |root| {
+    loop_fn(root.clone(), move |latest_rebase_attempt| {
         get_bookmark_value(&repo, &onto_bookmark).and_then({
             cloned!(client_cf, onto_bookmark, repo, config);
             move |bookmark_val| {
                 find_changed_files(
                     &repo,
-                    root.clone(),
+                    latest_rebase_attempt.clone(),
                     bookmark_val,
                     /* reject_merges */ true,
                 ).and_then(|server_cf| {
@@ -148,18 +148,23 @@ fn rebase_in_loop(
                     }
                 })
                     .and_then(move |()| {
-                        do_rebase(repo, config, root, head, bookmark_val, onto_bookmark).map(
-                            move |update_res| match update_res {
-                                Some(result) => Loop::Break(PushrebaseSuccessResult {
-                                    head: result,
-                                    retry_num,
-                                }),
-                                None => {
-                                    retry_num += 1;
-                                    Loop::Continue(bookmark_val)
-                                }
-                            },
-                        )
+                        do_rebase(
+                            repo,
+                            config,
+                            root.clone(),
+                            head,
+                            bookmark_val,
+                            onto_bookmark,
+                        ).map(move |update_res| match update_res {
+                            Some(result) => Loop::Break(PushrebaseSuccessResult {
+                                head: result,
+                                retry_num,
+                            }),
+                            None => {
+                                retry_num += 1;
+                                Loop::Continue(bookmark_val)
+                            }
+                        })
                     })
             }
         })
@@ -582,7 +587,10 @@ mod tests {
 
     use super::*;
     use async_unit;
+    use failure::err_msg;
     use fixtures::{linear, many_files_dirs};
+    use futures::future::join_all;
+    use futures_ext::spawn_future;
     use std::str::FromStr;
     use tests_utils::{create_commit, store_files, store_rename};
 
@@ -1164,6 +1172,66 @@ mod tests {
             // `result_1_id` should be equal to `root_1_id`, because executable flag
             // is not a part of file envelope
             assert_eq!(root_1_id, result_1_id);
+        })
+    }
+
+    #[test]
+    fn pushrebase_simultaneously() {
+        async_unit::tokio_unit_test(|| {
+            let repo = linear::getrepo(None);
+            // Bottom commit of the repo
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+            let p = repo.get_bonsai_from_hg(&root).wait().unwrap().unwrap();
+            let parents = vec![p];
+
+            let book = Bookmark::new("master").unwrap();
+            set_bookmark(
+                repo.clone(),
+                &book,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            );
+
+            let num_pushes = 10;
+            let mut futs = vec![];
+            for i in 0..10 {
+                let f = format!("file{}", i);
+                let bcs_id = create_commit(
+                    repo.clone(),
+                    parents.clone(),
+                    store_files(btreemap!{ f.as_ref() => Some("content")}, repo.clone()),
+                );
+                let hg_cs = repo.get_hg_from_bonsai_changeset(bcs_id).wait().unwrap();
+
+                let fut = spawn_future(
+                    do_pushrebase(
+                        Arc::new(repo.clone()),
+                        Default::default(),
+                        book.clone(),
+                        vec![hg_cs],
+                    ).map_err(|_| err_msg("error while pushrebasing")),
+                );
+                futs.push(fut);
+            }
+            join_all(futs).wait().expect("pushrebase failed");
+
+            let previous_master =
+                HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
+            let previous_master = repo.get_bonsai_from_hg(&previous_master)
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            let new_master = repo.get_bookmark(&book).wait().unwrap().unwrap();
+            let new_master = repo.get_bonsai_from_hg(&new_master)
+                .wait()
+                .unwrap()
+                .unwrap();
+            let res = RangeNodeStream::new(&Arc::new(repo), previous_master, new_master)
+                .collect()
+                .wait()
+                .unwrap();
+            // `- 1` because RangeNodeStream is inclusive
+            assert_eq!(res.len() - 1, num_pushes);
         })
     }
 }
