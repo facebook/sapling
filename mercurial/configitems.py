@@ -436,6 +436,7 @@ coreconfigitem("trusted", "groups", default=list)
 coreconfigitem("trusted", "users", default=list)
 coreconfigitem("ui", "_usedassubrepo", default=False)
 coreconfigitem("ui", "allowemptycommit", default=False)
+coreconfigitem("ui", "allowmerge", default=True)
 coreconfigitem("ui", "archivemeta", default=True)
 coreconfigitem("ui", "askusername", default=False)
 # TODO: This config should be set to False and removed, once all tests are

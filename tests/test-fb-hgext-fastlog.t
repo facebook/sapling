@@ -65,7 +65,7 @@ Graphlog still works
 
 Create a merge
 
-  $ hg merge --config tweakdefaults.allowmerge=True
+  $ hg merge --config ui.allowmerge=True
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg log -T '{rev} {desc}\n'

@@ -32,7 +32,6 @@ Config::
     # whether to allow or disable some commands
     allowbranch = True
     allowfullrepohistgrep = False
-    allowmerge = True
     allowrollback = True
     allowtags = True
 
@@ -48,7 +47,6 @@ Config::
     bmnodestmsg = ''
     branchmessage = ''
     branchesmessage = ''
-    mergemessage = ''
     nodesthint = ''
     nodestmsg = ''
     rollbackhint = ''
@@ -130,7 +128,6 @@ configitem("tweakdefaults", "rebasekeepdate", default=False)
 
 configitem("tweakdefaults", "allowbranch", default=True)
 configitem("tweakdefaults", "allowfullrepohistgrep", default=False)
-configitem("tweakdefaults", "allowmerge", default=True)
 configitem("tweakdefaults", "allowrollback", default=True)
 configitem("tweakdefaults", "allowtags", default=True)
 
@@ -153,11 +150,6 @@ configitem(
     default=_("new named branches are disabled in this repository"),
 )
 configitem("tweakdefaults", "branchesmessage", default=None)
-configitem(
-    "tweakdefaults",
-    "mergemessage",
-    default=_("merging is not supported for this repository"),
-)
 configitem(
     "tweakdefaults",
     "nodesthint",
@@ -245,8 +237,6 @@ def extsetup(ui):
     options = entry[1]
     options.append(("", "new", None, _("allow branch creation")))
     wrapcommand(commands.table, "branches", branchescmd)
-
-    wrapcommand(commands.table, "merge", mergecmd)
 
     entry = wrapcommand(commands.table, "status", statuscmd)
     options = entry[1]
@@ -1200,18 +1190,6 @@ def branchescmd(orig, ui, repo, active, closed, **opts):
     if message:
         ui.warn(message + "\n")
     return orig(ui, repo, active, closed, **opts)
-
-
-def mergecmd(orig, ui, repo, node=None, **opts):
-    """
-    Allowing to disable merges
-    """
-    if ui.configbool("tweakdefaults", "allowmerge"):
-        return orig(ui, repo, node, **opts)
-    else:
-        message = ui.config("tweakdefaults", "mergemessage")
-        hint = ui.config("tweakdefaults", "mergehint", _("use rebase instead"))
-        raise error.Abort(message, hint=hint)
 
 
 def statuscmd(orig, ui, repo, *pats, **opts):

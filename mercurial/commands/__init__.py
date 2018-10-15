@@ -4100,9 +4100,18 @@ def merge(ui, repo, node=None, **opts):
     will check out a clean copy of the original merge parent, losing
     all changes.
 
+    .. container:: verbose
+
+      The merge command can be entirely disabled by setting the
+      ``ui.allowmerge`` configuration setting to false.
+
     Returns 0 on success, 1 if there are unresolved files.
     """
-
+    if not ui.configbool("ui", "allowmerge", default=True):
+        raise error.Abort(
+            _("merging is not supported for this repository"),
+            hint=_("use rebase instead"),
+        )
     opts = pycompat.byteskwargs(opts)
     if opts.get("rev") and node:
         raise error.Abort(_("please specify just one revision"))
