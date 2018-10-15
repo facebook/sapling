@@ -32,7 +32,7 @@ class RestartTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         self.addCleanup(ensure_stopped)
 
-    def _spawn_restart(self, *args: str) -> pexpect.spawn:
+    def _spawn_restart(self, *args: str) -> "pexpect.spawn[bytes]":
         restart_cmd = [
             FindExe.EDEN_CLI,
             "--config-dir",
