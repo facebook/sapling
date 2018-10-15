@@ -54,7 +54,7 @@ starts api server
 
 ping test
   $ sslcurl -i $APISERVER/status | grep -iv "date"
-  HTTP/1.1 200 OK\r (esc)
+  HTTP/* 200 * (glob)
   content-length: 2\r (esc)
   \r (esc)
   ok
@@ -96,10 +96,10 @@ test cat renamed file
   400
 
   $ sslcurl -i $APISERVER//raw/000/test 2> /dev/null | grep 404
-  HTTP/1.1 404 Not Found\r (esc)
+  HTTP/* 404 * (glob)
 
   $ sslcurl -i $APISERVER/sup/raw/ 2> /dev/null | grep 404
-  HTTP/1.1 404 Not Found\r (esc)
+  HTTP/* 404 * (glob)
 
 test reachability in basic repo
   $ sslcurl $APISERVER/repo/is_ancestor/$COMMIT1/$COMMIT2
