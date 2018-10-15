@@ -295,17 +295,8 @@ Don't break automation
   A dir1/file with space
   A dir1/subdir1/subf1
 
-Test tweaked tag command
+This tag is kept to keep the rest of the test consistent:
   $ hg tag foo
-  $ hg tag --config tweakdefaults.allowtags=false foo
-  abort: new tags are disabled in this repository
-  [255]
-  $ hg tag --config tweakdefaults.allowtags=false --config tweakdefaults.tagmessage='testing' foo
-  abort: testing
-  [255]
-
-  $ hg tags --config tweakdefaults.tagsmessage='testing' > /dev/null
-  testing
 
 Test graft date when tweakdefaults.graftkeepdate is not set
   $ hg revert -a -q

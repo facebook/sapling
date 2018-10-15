@@ -6060,8 +6060,15 @@ def tag(ui, repo, name1, *names, **opts):
     Since tag names have priority over branch names during revision
     lookup, using an existing branch name as a tag name is discouraged.
 
+    .. container:: verbose
+
+      The tag commands can be entirely disabled by setting the
+      ``ui.allowtags`` configuration setting to false.
+
     Returns 0 on success.
     """
+    if not ui.configbool("ui", "allowtags", default=True):
+        raise error.Abort(_("new tags are disabled in this repository"))
     opts = pycompat.byteskwargs(opts)
     wlock = lock = None
     try:
@@ -6159,7 +6166,8 @@ def tags(ui, repo, **opts):
 
     Returns 0 on success.
     """
-
+    if not ui.configbool("ui", "allowtags", default=True):
+        raise error.Abort(_("tags are disabled in this repository"))
     opts = pycompat.byteskwargs(opts)
     ui.pager("tags")
     fm = ui.formatter("tags", opts)

@@ -32,7 +32,6 @@ Config::
     # whether to allow or disable some commands
     allowbranch = True
     allowfullrepohistgrep = False
-    allowtags = True
 
     # change rebase exit from 1 to 0 if nothing is rebased
     nooprebase = True
@@ -49,8 +48,6 @@ Config::
     nodesthint = ''
     nodestmsg = ''
     singlecolonmsg = ''
-    tagmessage = ''
-    tagsmessage = ''
 
     # output new hashes when nodes get updated
     showupdated = False
@@ -125,7 +122,6 @@ configitem("tweakdefaults", "rebasekeepdate", default=False)
 
 configitem("tweakdefaults", "allowbranch", default=True)
 configitem("tweakdefaults", "allowfullrepohistgrep", default=False)
-configitem("tweakdefaults", "allowtags", default=True)
 
 rebasemsg = _(
     "you must use a bookmark with tracking "
@@ -156,10 +152,6 @@ configitem(
 )
 configitem("tweakdefaults", "nodestmsg", default=rebasemsg)
 configitem("tweakdefaults", "singlecolonmsg", default=_("use of ':' is deprecated"))
-configitem(
-    "tweakdefaults", "tagmessage", default=_("new tags are disabled in this repository")
-)
-configitem("tweakdefaults", "tagsmessage", default="")
 
 
 def uisetup(ui):
@@ -234,8 +226,6 @@ def extsetup(ui):
     options = entry[1]
     options.append(("", "root-relative", None, _("show status relative to root")))
 
-    wrapcommand(commands.table, "tag", tagcmd)
-    wrapcommand(commands.table, "tags", tagscmd)
     wrapcommand(commands.table, "graft", graftcmd)
     try:
         amendmodule = extensions.find("amend")
@@ -1210,24 +1200,6 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     elif not pats or (len(pats) == 1 and pats[0] == "re:"):
         pats = [""]
     return orig(ui, repo, *pats, **opts)
-
-
-def tagcmd(orig, ui, repo, name1, *names, **opts):
-    """
-    Allowing to disable tags
-    """
-    message = ui.config("tweakdefaults", "tagmessage")
-    if ui.configbool("tweakdefaults", "allowtags"):
-        return orig(ui, repo, name1, *names, **opts)
-    else:
-        raise error.Abort(message)
-
-
-def tagscmd(orig, ui, repo, **opts):
-    message = ui.config("tweakdefaults", "tagsmessage")
-    if message:
-        ui.warn(message + "\n")
-    return orig(ui, repo, **opts)
 
 
 def bookmarkcmd(orig, ui, repo, *names, **opts):
