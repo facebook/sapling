@@ -32,7 +32,7 @@ class RestartTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         self.addCleanup(ensure_stopped)
 
-    def _spawn_restart(self, *args: str, **kwargs: Any) -> pexpect.spawn:
+    def _spawn_restart(self, *args: str) -> pexpect.spawn:
         restart_cmd = [
             FindExe.EDEN_CLI,
             "--config-dir",
@@ -43,11 +43,10 @@ class RestartTest(unittest.TestCase, TemporaryDirectoryMixin):
         ]
         restart_cmd.extend(args)
 
-        kwargs.setdefault("logfile", sys.stdout.buffer)
-        kwargs.setdefault("timeout", 5)
-
         print("Retarting eden: %r" % (restart_cmd,))
-        return pexpect.spawn(restart_cmd[0], restart_cmd[1:], **kwargs)
+        return pexpect.spawn(
+            restart_cmd[0], restart_cmd[1:], logfile=sys.stdout.buffer, timeout=5
+        )
 
     def _start_fake_edenfs(self) -> int:
         # Run "eden restart".  It should start it without prompting since edenfs is not
