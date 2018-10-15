@@ -295,18 +295,6 @@ Don't break automation
   A dir1/file with space
   A dir1/subdir1/subf1
 
-Test tweaked rollback command
-  $ hg rollback --config tweakdefaults.allowrollback=false
-  abort: the use of rollback is disabled
-  [255]
-  $ hg rollback --config tweakdefaults.allowrollback=false --config tweakdefaults.rollbackmessage='testing'
-  abort: testing
-  [255]
-  $ hg rollback --config tweakdefaults.allowrollback=false --config tweakdefaults.rollbackmessage='testing' --config tweakdefaults.rollbackhint='hint'
-  abort: testing
-  (hint)
-  [255]
-
 Test tweaked tag command
   $ hg tag foo
   $ hg tag --config tweakdefaults.allowtags=false foo

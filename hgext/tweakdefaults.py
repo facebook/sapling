@@ -32,7 +32,6 @@ Config::
     # whether to allow or disable some commands
     allowbranch = True
     allowfullrepohistgrep = False
-    allowrollback = True
     allowtags = True
 
     # change rebase exit from 1 to 0 if nothing is rebased
@@ -49,8 +48,6 @@ Config::
     branchesmessage = ''
     nodesthint = ''
     nodestmsg = ''
-    rollbackhint = ''
-    rollbackmessage = ''
     singlecolonmsg = ''
     tagmessage = ''
     tagsmessage = ''
@@ -128,7 +125,6 @@ configitem("tweakdefaults", "rebasekeepdate", default=False)
 
 configitem("tweakdefaults", "allowbranch", default=True)
 configitem("tweakdefaults", "allowfullrepohistgrep", default=False)
-configitem("tweakdefaults", "allowrollback", default=True)
 configitem("tweakdefaults", "allowtags", default=True)
 
 rebasemsg = _(
@@ -159,10 +155,6 @@ configitem(
     ),
 )
 configitem("tweakdefaults", "nodestmsg", default=rebasemsg)
-configitem(
-    "tweakdefaults", "rollbackmessage", default=_("the use of rollback is disabled")
-)
-configitem("tweakdefaults", "rollbackhint", default=None)
 configitem("tweakdefaults", "singlecolonmsg", default=_("use of ':' is deprecated"))
 configitem(
     "tweakdefaults", "tagmessage", default=_("new tags are disabled in this repository")
@@ -241,8 +233,6 @@ def extsetup(ui):
     entry = wrapcommand(commands.table, "status", statuscmd)
     options = entry[1]
     options.append(("", "root-relative", None, _("show status relative to root")))
-
-    wrapcommand(commands.table, "rollback", rollbackcmd)
 
     wrapcommand(commands.table, "tag", tagcmd)
     wrapcommand(commands.table, "tags", tagscmd)
@@ -1220,18 +1210,6 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     elif not pats or (len(pats) == 1 and pats[0] == "re:"):
         pats = [""]
     return orig(ui, repo, *pats, **opts)
-
-
-def rollbackcmd(orig, ui, repo, **opts):
-    """
-    Allowing to disable the rollback command
-    """
-    if ui.configbool("tweakdefaults", "allowrollback"):
-        return orig(ui, repo, **opts)
-    else:
-        message = ui.config("tweakdefaults", "rollbackmessage")
-        hint = ui.config("tweakdefaults", "rollbackhint")
-        raise error.Abort(message, hint=hint)
 
 
 def tagcmd(orig, ui, repo, name1, *names, **opts):
