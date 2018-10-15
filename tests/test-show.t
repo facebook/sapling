@@ -438,7 +438,7 @@ Confirm that --help works (it didn't when we used an alias)
   $ hg show --help
   hg show [OPTION]... [REV [FILE]...]
   
-  show revision in detail
+  show commit in detail
   
       This behaves similarly to 'hg log -vp -r REV [OPTION]... [FILE]...', or if
       called without a REV, 'hg log -vp -r . [OPTION]...' Use 'hg log' for more
@@ -468,7 +468,7 @@ Confirm that --help works (it didn't when we used an alias)
   $ hg show --help --verbose
   hg show [OPTION]... [REV [FILE]...]
   
-  show revision in detail
+  show commit in detail
   
       This behaves similarly to 'hg log -vp -r REV [OPTION]... [FILE]...', or if
       called without a REV, 'hg log -vp -r . [OPTION]...' Use 'hg log' for more

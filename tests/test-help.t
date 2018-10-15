@@ -33,17 +33,17 @@ Short help:
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
+   graft         copy commits from a different location
   
   Exchange commits with a server:
   
@@ -88,17 +88,17 @@ Short help:
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
+   graft         copy commits from a different location
   
   Exchange commits with a server:
   
@@ -143,17 +143,17 @@ Short help:
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
+   graft         copy commits from a different location
   
   Exchange commits with a server:
   
@@ -198,17 +198,17 @@ Short help:
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
+   graft         copy commits from a different location
   
   Exchange commits with a server:
   
@@ -592,7 +592,7 @@ Test command without options
   $ hg help diff
   hg diff [OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...
   
-  diff repository (or selected files)
+  show differences between commits
   
       Show differences between revisions for the specified files.
   
@@ -749,17 +749,17 @@ Test command without options
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
+   graft         copy commits from a different location
   
   Exchange commits with a server:
   
@@ -949,17 +949,17 @@ Test that default list of commands omits extension commands
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
+   graft         copy commits from a different location
   
   Exchange commits with a server:
   
@@ -1583,7 +1583,7 @@ Test keyword search help
    bookmarks create a new bookmark or list existing bookmarks
    clone     make a copy of an existing repository
    paths     show aliases for remote repositories
-   update    update working directory (or switch revisions)
+   update    checkout a specific commit
   
   Extensions:
   
@@ -2257,7 +2257,7 @@ Dish up an empty repo; serve it cold.
   diff
   </a>
   </td><td>
-  diff repository (or selected files)
+  show differences between commits
   </td></tr>
   <tr><td>
   <a href="/help/export">
@@ -2292,7 +2292,7 @@ Dish up an empty repo; serve it cold.
   log
   </a>
   </td><td>
-  show revision history of entire repository or files
+  show commit history
   </td></tr>
   <tr><td>
   <a href="/help/merge">
@@ -2341,7 +2341,7 @@ Dish up an empty repo; serve it cold.
   show
   </a>
   </td><td>
-  show revision in detail
+  show commit in detail
   </td></tr>
   <tr><td>
   <a href="/help/status">
@@ -2362,7 +2362,7 @@ Dish up an empty repo; serve it cold.
   update
   </a>
   </td><td>
-  update working directory (or switch revisions)
+  checkout a specific commit
   </td></tr>
   
   
@@ -2458,7 +2458,7 @@ Dish up an empty repo; serve it cold.
   graft
   </a>
   </td><td>
-  copy changes from other branches onto the current branch
+  copy commits from a different location
   </td></tr>
   <tr><td>
   <a href="/help/grep">

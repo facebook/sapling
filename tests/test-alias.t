@@ -493,18 +493,18 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
-   rebase        move changeset (and descendants) to a different branch
+   graft         copy commits from a different location
+   rebase        move commits from one location to another
   
   Exchange commits with a server:
   
@@ -550,18 +550,18 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
-   rebase        move changeset (and descendants) to a different branch
+   graft         copy commits from a different location
+   rebase        move commits from one location to another
   
   Exchange commits with a server:
   
@@ -607,18 +607,18 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
-   rebase        move changeset (and descendants) to a different branch
+   graft         copy commits from a different location
+   rebase        move commits from one location to another
   
   Exchange commits with a server:
   

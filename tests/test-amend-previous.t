@@ -12,7 +12,7 @@ Check help text for new options and removal of unsupported options.
   $ hg previous --help
   hg previous [OPTIONS]... [STEPS]
   
-  update to parent changeset
+  checkout the parent changeset
   
   Options:
   

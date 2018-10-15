@@ -2111,7 +2111,7 @@ def debugcomplete(ui, cmd="", **opts):
     cmdtype=readonly,
 )
 def diff(ui, repo, *pats, **opts):
-    """diff repository (or selected files)
+    """show differences between commits
 
     Show differences between revisions for the specified files.
 
@@ -2434,7 +2434,7 @@ def forget(ui, repo, *pats, **opts):
     _("[OPTION]... [-r REV]... REV..."),
 )
 def graft(ui, repo, *revs, **opts):
-    """copy changes from other branches onto the current branch
+    """copy commits from a different location
 
     This command uses Mercurial's merge logic to copy individual
     changes from other branches without merging branches in the
@@ -3789,7 +3789,7 @@ def locate(ui, repo, *pats, **opts):
     cmdtype=readonly,
 )
 def log(ui, repo, *pats, **opts):
-    """show revision history of entire repository or files
+    """show commit history
 
     Print the revision history of the specified files or the entire
     project.
@@ -5507,7 +5507,7 @@ def serve(ui, repo, **opts):
     cmdtype=readonly,
 )
 def show(ui, repo, *args, **opts):
-    """show revision in detail
+    """show commit in detail
 
     This behaves similarly to :hg:`log -vp -r REV [OPTION]... [FILE]...`, or
     if called without a REV, :hg:`log -vp -r . [OPTION]...` Use
@@ -6298,7 +6298,7 @@ def update(
     merge=None,
     tool=None,
 ):
-    """update working directory (or switch revisions)
+    """checkout a specific commit
 
     Update the repository's working directory to the specified
     changeset. If no changeset is specified, update to the tip of the

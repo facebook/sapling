@@ -747,7 +747,7 @@ def oldworkingparenttemplate(context, mapping, args):
     ],
 )
 def undo(ui, repo, *args, **opts):
-    """perform an undo
+    """undo the last command
 
     Undoes an undoable command.  An undoable command is one that changed at
     least one of the following three: bookmarks, working copy parent or
@@ -885,7 +885,7 @@ def undo(ui, repo, *args, **opts):
     [("p", "preview", False, _("see smartlog like preview of future redo " "state"))],
 )
 def redo(ui, repo, *args, **opts):
-    """ perform a redo
+    """undo the last undo
 
     Rolls back the previous undo.
     """

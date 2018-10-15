@@ -53,7 +53,7 @@ moveopts = [
     _("[OPTIONS]... [STEPS]"),
 )
 def previous(ui, repo, *args, **opts):
-    """update to parent changeset"""
+    """checkout the parent changeset"""
     _moverelative(ui, repo, args, opts, reverse=True)
 
 
@@ -82,7 +82,7 @@ def previous(ui, repo, *args, **opts):
     _("[OPTIONS]... [STEPS]"),
 )
 def next(ui, repo, *args, **opts):
-    """update to child changeset"""
+    """checkout a child changeset"""
     _moverelative(ui, repo, args, opts, reverse=False)
 
 

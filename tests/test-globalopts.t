@@ -320,17 +320,17 @@ Testing -h/--help:
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
+   graft         copy commits from a different location
   
   Exchange commits with a server:
   
@@ -377,17 +377,17 @@ Testing -h/--help:
   
   Look at commits and commit history:
   
-   diff          diff repository (or selected files)
-   log           show revision history of entire repository or files
-   show          show revision in detail
+   diff          show differences between commits
+   log           show commit history
+   show          show commit in detail
   
   Checkout other commits:
   
-   update        update working directory (or switch revisions)
+   update        checkout a specific commit
   
   Rearrange commits:
   
-   graft         copy changes from other branches onto the current branch
+   graft         copy commits from a different location
   
   Exchange commits with a server:
   

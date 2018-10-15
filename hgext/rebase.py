@@ -834,7 +834,7 @@ class rebaseruntime(object):
     cmdtemplate=True,
 )
 def rebase(ui, repo, templ=None, **opts):
-    """move changeset (and descendants) to a different branch
+    """move commits from one location to another
 
     Rebase uses repeated merging to graft changesets from one part of
     history (the source) onto another (the destination). This can be

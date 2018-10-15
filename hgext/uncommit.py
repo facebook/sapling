@@ -171,9 +171,9 @@ def _fixdirstate(repo, oldctx, newctx, status):
     _("[OPTION]... [FILE]..."),
 )
 def uncommit(ui, repo, *pats, **opts):
-    """uncommit part or all of a local changeset
+    """uncommit part or all of the current commit
 
-    This command undoes the effect of a local commit, returning the affected
+    This command undoes the effect of running commit, returning the affected
     files to their uncommitted state. This means that files modified or
     deleted in the changeset will be left unchanged, and so will remain
     modified in the working directory.

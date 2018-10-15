@@ -405,7 +405,7 @@ def _makerage(ui, repo, **opts):
 
 @command("^rage", rageopts, _("hg rage"))
 def rage(ui, repo, *pats, **opts):
-    """collect useful diagnostics for asking help from the source control team
+    """collect useful diagnostics for asking for help
 
     The rage command collects useful diagnostic information.
 

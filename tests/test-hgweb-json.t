@@ -1711,7 +1711,7 @@ help/ shows help topics
         "topic": "commit"
       },
       {
-        "summary": "diff repository (or selected files)",
+        "summary": "show differences between commits",
         "topic": "diff"
       },
       {
@@ -1731,7 +1731,7 @@ help/ shows help topics
         "topic": "init"
       },
       {
-        "summary": "show revision history of entire repository or files",
+        "summary": "show commit history",
         "topic": "log"
       },
       {
@@ -1759,7 +1759,7 @@ help/ shows help topics
         "topic": "serve"
       },
       {
-        "summary": "show revision in detail",
+        "summary": "show commit in detail",
         "topic": "show"
       },
       {
@@ -1771,7 +1771,7 @@ help/ shows help topics
         "topic": "summary"
       },
       {
-        "summary": "update working directory (or switch revisions)",
+        "summary": "checkout a specific commit",
         "topic": "update"
       }
     ],
@@ -1825,7 +1825,7 @@ help/ shows help topics
         "topic": "files"
       },
       {
-        "summary": "copy changes from other branches onto the current branch",
+        "summary": "copy commits from a different location",
         "topic": "graft"
       },
       {

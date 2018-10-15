@@ -9,7 +9,7 @@ Check help text for new options and removal of unsupported options.
   $ hg next --help
   hg next [OPTIONS]... [STEPS]
   
-  update to child changeset
+  checkout a child changeset
   
   Options:
   
