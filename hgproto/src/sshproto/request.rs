@@ -9,7 +9,7 @@ use std::iter;
 use std::str::{self, FromStr};
 
 use bytes::{Bytes, BytesMut};
-use nom::{is_alphanumeric, is_digit, ErrorKind, FindSubstring, IResult, Needed, Slice};
+use nom::{is_alphanumeric, is_digit, Err, ErrorKind, FindSubstring, IResult, Needed, Slice};
 
 use HgNodeHash;
 
@@ -26,7 +26,7 @@ fn digit<F: Fn(u8) -> bool>(input: &[u8], isdigit: F) -> IResult<&[u8], &[u8]> {
     for (idx, item) in input.iter().enumerate() {
         if !isdigit(*item) {
             if idx == 0 {
-                return IResult::Error(ErrorKind::Digit);
+                return IResult::Error(Err::Code(ErrorKind::Digit));
             } else {
                 return IResult::Done(&input[idx..], &input[0..idx]);
             }
@@ -53,7 +53,7 @@ fn ident(input: &[u8]) -> IResult<&[u8], &[u8]> {
             _ => if idx > 0 {
                 return IResult::Done(&input[idx..], &input[0..idx]);
             } else {
-                return IResult::Error(ErrorKind::AlphaNumeric);
+                return IResult::Error(Err::Code(ErrorKind::AlphaNumeric));
             },
         }
     }
@@ -336,7 +336,7 @@ where
         IResult::Done(rest, v) => {
             match func(v) {
                 Ok(t) => IResult::Done(rest, t),
-                Err(_e) => IResult::Error(ErrorKind::Custom(999999)), // ugh
+                Err(_e) => IResult::Error(Err::Code(ErrorKind::Custom(999999))), // ugh
             }
         }
         IResult::Error(e) => IResult::Error(e),
@@ -357,7 +357,7 @@ fn ident_string(inp: &[u8]) -> IResult<&[u8], String> {
 fn utf8_string_complete(inp: &[u8]) -> IResult<&[u8], String> {
     match String::from_utf8(Vec::from(inp)) {
         Ok(s) => IResult::Done(b"", s),
-        Err(_) => IResult::Error(ErrorKind::Custom(BAD_UTF8_ERR_CODE)),
+        Err(_) => IResult::Error(Err::Code(ErrorKind::Custom(BAD_UTF8_ERR_CODE))),
     }
 }
 
@@ -432,8 +432,18 @@ fn parse_batchrequest(inp: &[u8]) -> IResult<&[u8], Vec<SingleRequest>> {
     let mut parsed_cmds = Vec::with_capacity(batch.cmds.len());
     for cmd in batch.cmds {
         let full_cmd = Bytes::from([cmd.0, cmd.1].join(&b'\n'));
-        let (eof, cmd) = try_parse!(&full_cmd[..], complete!(parse_cmd));
-        let _ = try_parse!(eof, eof!());
+        // Jump through hoops to prevent the lifetime of `full_cmd` from leaking into the IResult
+        // via errors.
+        let cmd = match complete!(&full_cmd[..], parse_cmd) {
+            IResult::Done(rest, out) => {
+                if !rest.is_empty() {
+                    return IResult::Error(Err::Code(ErrorKind::Eof));
+                };
+                out
+            }
+            IResult::Incomplete(need) => return IResult::Incomplete(need),
+            IResult::Error(err) => return IResult::Error(Err::Code(err.into_error_kind())),
+        };
         parsed_cmds.push(cmd);
     }
     IResult::Done(rest, parsed_cmds)
@@ -545,8 +555,14 @@ mod test {
 
     #[test]
     fn test_ident() {
-        assert_eq!(ident(b"1234 "), IResult::Error(ErrorKind::AlphaNumeric));
-        assert_eq!(ident(b" 1234 "), IResult::Error(ErrorKind::AlphaNumeric));
+        assert_eq!(
+            ident(b"1234 "),
+            IResult::Error(Err::Code(ErrorKind::AlphaNumeric))
+        );
+        assert_eq!(
+            ident(b" 1234 "),
+            IResult::Error(Err::Code(ErrorKind::AlphaNumeric))
+        );
         assert_eq!(ident(b"foo"), IResult::Incomplete(Needed::Unknown));
         assert_eq!(ident(b"foo "), IResult::Done(&b" "[..], &b"foo"[..]));
     }
@@ -676,7 +692,7 @@ mod test {
         }
 
         match params(p, 5) {
-            IResult::Error(ErrorKind::Alt) => (),
+            IResult::Error(Err::Position(ErrorKind::Alt, _)) => (),
             bad => panic!("bad result {:?}", bad),
         }
 
@@ -822,8 +838,9 @@ mod test {
         );
 
         assert_eq!(
-            nodehash(b"000000000000000000000000000000x000000000"),
-            IResult::Error(ErrorKind::MapRes)
+            nodehash(b"000000000000000000000000000000x000000000")
+                .map_err(|err| Err::Code(err.into_error_kind())),
+            IResult::Error(Err::Code(ErrorKind::MapRes,))
         );
 
         assert_eq!(

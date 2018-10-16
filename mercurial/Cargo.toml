@@ -10,7 +10,7 @@ futures = "0.1.17"
 itertools = "0.7.2"
 lz4 = "1.22.0"
 memmap = "0.6.1"
-nom = "3.2.1"
+nom = { version="3.2.1", features=["verbose-errors"] }
 time = "0.1.38"
 
 bookmarks = { path = "../bookmarks" }

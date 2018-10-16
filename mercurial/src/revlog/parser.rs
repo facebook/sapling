@@ -10,7 +10,7 @@ use std::fmt::Debug;
 use std::io::Read;
 
 use flate2::read::ZlibDecoder;
-use nom::{ErrorKind, IResult, Needed, be_u16, be_u32};
+use nom::{Err, ErrorKind, IResult, Needed, be_u16, be_u32};
 
 use mercurial_types::{HgNodeHash, bdiff::Delta};
 
@@ -227,21 +227,24 @@ named!(pub literal<Vec<u8> >,
 );
 
 // Remap error to remove reference to `data`
-pub fn detach_result<'a, O, E>(
-    res: IResult<&[u8], O, E>,
-    rest: &'a [u8],
-) -> IResult<&'a [u8], O, E> {
+pub fn detach_result<'inp, 'out, O: 'out, E: 'out>(
+    res: IResult<&'inp [u8], O, E>,
+    rest: &'out [u8],
+) -> IResult<&'out [u8], O, E> {
     match res {
         IResult::Done(_, o) => IResult::Done(rest, o),
         IResult::Incomplete(n) => IResult::Incomplete(n),
-        IResult::Error(e) => IResult::Error(e),
+        IResult::Error(Err::Code(e))
+        | IResult::Error(Err::Node(e, _))
+        | IResult::Error(Err::Position(e, _))
+        | IResult::Error(Err::NodePosition(e, ..)) => IResult::Error(Err::Code(e)),
     }
 }
 
 /// Unpack a chunk of data and apply a parse function to the output.
-fn zlib_decompress<P, R, E: Debug>(i: &[u8], parse: P) -> IResult<&[u8], R, E>
+fn zlib_decompress<'a, P, R: 'a, E: Debug + 'a>(i: &'a [u8], parse: P) -> IResult<&'a [u8], R, E>
 where
-    for<'a> P: Fn(&'a [u8]) -> IResult<&'a [u8], R, E> + 'a,
+    for<'p> P: Fn(&'p [u8]) -> IResult<&'p [u8], R, E>,
 {
     let mut data = Vec::new();
 

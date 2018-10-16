@@ -34,10 +34,7 @@ extern crate assert_matches;
 extern crate itertools;
 extern crate memmap;
 
-#[cfg(not(test))]
-extern crate quickcheck;
-#[cfg(test)]
-#[macro_use]
+#[cfg_attr(test, macro_use)]
 extern crate quickcheck;
 
 extern crate serde;
