@@ -90,15 +90,15 @@ def extsetup(ui):
 
     wrapfunction(namespaces.namespaces, "singlenode", _singlenode)
 
-    def wrapcheckcollisionafterfbsparse(loaded=False):
-        # wrap merge._checkcollision after fbsparse has had a chance to wrapped
-        # it, to ensure we don't do the extra work in fbsparse's version when
+    def wrapcheckcollisionaftersparse(loaded=False):
+        # wrap merge._checkcollision after sparse has had a chance to wrapped
+        # it, to ensure we don't do the extra work in sparse's version when
         # this extension disabled the collision check.
-        # Note: this wrapping takes place even when fbsparse is not loaded at
+        # Note: this wrapping takes place even when sparse is not loaded at
         # all, which is intentional.
         wrapfunction(merge, "_checkcollision", _checkcollision)
 
-    extensions.afterloaded("fbsparse", wrapcheckcollisionafterfbsparse)
+    extensions.afterloaded("sparse", wrapcheckcollisionaftersparse)
 
 
 def reposetup(ui, repo):
@@ -367,7 +367,7 @@ def hintexplainverbose(dirstatesize, repo):
 def sparseenabled():
     sparse = None
     try:
-        sparse = extensions.find("fbsparse")
+        sparse = extensions.find("sparse")
     except KeyError:
         return False
     if sparse:

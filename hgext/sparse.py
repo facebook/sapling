@@ -1,4 +1,4 @@
-# fbsparse.py - allow sparse checkouts of the working directory
+# sparse.py - allow sparse checkouts of the working directory
 #
 # Copyright 2014 Facebook, Inc.
 #
