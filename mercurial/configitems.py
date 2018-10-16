@@ -421,7 +421,7 @@ coreconfigitem("smtp", "password", default=None)
 coreconfigitem("smtp", "port", default=dynamicdefault)
 coreconfigitem("smtp", "tls", default="none")
 coreconfigitem("smtp", "username", default=None)
-coreconfigitem("sparse", "missingwarning", default=True)
+coreconfigitem("sparse", "missingwarning", default=False)
 coreconfigitem(
     "subrepos", "allowed", default=dynamicdefault  # to make backporting simpler
 )

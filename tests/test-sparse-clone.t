@@ -31,7 +31,6 @@ Verify local clone with a sparse profile works
 
   $ hg clone --enable-profile webpage.sparse myrepo clone1
   updating to branch default
-  warning: sparse profile 'webpage.sparse' not found in rev 000000000000 - ignoring it
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd clone1
   $ ls
@@ -65,7 +64,6 @@ Verify local clone with exclude works
 Verify sparse clone profile over ssh works
 
   $ hg clone -q --enable-profile webpage.sparse ssh://user@dummy/myrepo clone4
-  warning: sparse profile 'webpage.sparse' not found in rev 000000000000 - ignoring it
   $ cd clone4
   $ ls
   index.html
