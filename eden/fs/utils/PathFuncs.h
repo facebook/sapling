@@ -1112,9 +1112,6 @@ class AbsolutePathBase : public ComposedPathBase<
 
   iterator_range paths() const {
     auto p = this->piece();
-    // The +1 allows us to deal with the case where we're iterating
-    // over literally "/".  Without this +1, we would emit
-    // "/" twice and we don't want that.
     return iterator_range(iterator{p}, iterator{p, nullptr});
   }
 
