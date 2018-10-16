@@ -155,8 +155,10 @@ testedwith = "ships-with-fb-hgext"
 cwdrealtivepatkinds = ("glob", "relpath")
 
 
-configitem("sparse", "largecheckouthint", default=False)
-configitem("sparse", "largecheckoutcount", default=0)
+configitem("sparse", "largecheckouthint", default=False,
+           alias=[("perftweaks", "largecheckouthint")])
+configitem("sparse", "largecheckoutcount", default=0,
+           alias=[("perftweaks", "largecheckoutcount")])
 
 
 def uisetup(ui):
