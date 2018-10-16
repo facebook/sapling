@@ -1224,6 +1224,13 @@ def bookmark(ui, repo, *names, **opts):
             _("set branch name even if it shadows an existing branch"),
         ),
         ("C", "clean", None, _("reset branch name to parent branch name")),
+        # Note: for compatibility for tweakdefaults users
+        (
+            "",
+            "new",
+            None,
+            _("allow branch creation (no longer  required) (DEPRECATED)"),
+        ),
     ],
     _("[-fC] [NAME]"),
 )
@@ -1256,6 +1263,11 @@ def branch(ui, repo, label=None, **opts):
 
     Returns 0 on success.
     """
+    if not ui.configbool("ui", "allowbranches", default=True):
+        raise error.Abort(
+            _("named branches are disabled in this repository"),
+            hint=ui.config("ui", "disallowedbrancheshint", _("use bookmarks instead")),
+        )
     opts = pycompat.byteskwargs(opts)
     if label:
         label = label.strip()
@@ -1322,7 +1334,12 @@ def branches(ui, repo, active=False, closed=False, **opts):
 
     Returns 0.
     """
-
+    if not ui.configbool("ui", "allowbranches", default=True):
+        # internal config: ui.disallowedbrancheshint
+        raise error.Abort(
+            _("named branches are disabled in this repository"),
+            hint=ui.config("ui", "disallowedbrancheshint", _("use bookmarks instead")),
+        )
     opts = pycompat.byteskwargs(opts)
     ui.pager("branches")
     fm = ui.formatter("branches", opts)

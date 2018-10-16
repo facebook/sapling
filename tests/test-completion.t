@@ -262,7 +262,7 @@ Show all commands + options
   backout: merge, commit, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate, nosparseskip
   bookmarks: force, rev, delete, strip, rename, inactive, template
-  branch: force, clean
+  branch: force, clean, new
   branches: active, closed, template
   bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure
   cat: output, rev, decode, include, exclude, template

@@ -155,4 +155,5 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: smartlog.ignorebookmarks (str) ["!"]
   undocumented: ssl.timeout (int) [5]
   undocumented: treemanifest.verifyautocreate (bool)
+  undocumented: ui.allowbranches (bool) [True]
   undocumented: ui.editor.chunkselector (str)

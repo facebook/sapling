@@ -12,7 +12,6 @@ This extension changes defaults to be more user friendly.
   hg log        always follows history (-f)
   hg rebase     aborts without arguments
   hg update     aborts without arguments
-  hg branch     aborts and encourages use of bookmarks
   hg grep       greps the working directory instead of history
   hg histgrep   renamed from grep
 
@@ -30,7 +29,6 @@ Config::
     histeditkeepdate = False
 
     # whether to allow or disable some commands
-    allowbranch = True
     allowfullrepohistgrep = False
 
     # change rebase exit from 1 to 0 if nothing is rebased
@@ -43,8 +41,6 @@ Config::
     # educational messages
     bmnodesthint = ''
     bmnodestmsg = ''
-    branchmessage = ''
-    branchesmessage = ''
     nodesthint = ''
     nodestmsg = ''
     singlecolonmsg = ''
@@ -120,7 +116,6 @@ configitem("tweakdefaults", "graftkeepdate", default=False)
 configitem("tweakdefaults", "histeditkeepdate", default=False)
 configitem("tweakdefaults", "rebasekeepdate", default=False)
 
-configitem("tweakdefaults", "allowbranch", default=True)
 configitem("tweakdefaults", "allowfullrepohistgrep", default=False)
 
 rebasemsg = _(
@@ -136,12 +131,6 @@ configitem(
     ),
 )
 configitem("tweakdefaults", "bmnodestmsg", default=rebasemsg)
-configitem(
-    "tweakdefaults",
-    "branchmessage",
-    default=_("new named branches are disabled in this repository"),
-)
-configitem("tweakdefaults", "branchesmessage", default=None)
 configitem(
     "tweakdefaults",
     "nodesthint",
@@ -209,11 +198,6 @@ def extsetup(ui):
     for opt in logopts:
         opt = (opt[0], opt[1], opt[2], opt[3])
         entry[1].append(opt)
-
-    entry = wrapcommand(commands.table, "branch", branchcmd)
-    options = entry[1]
-    options.append(("", "new", None, _("allow branch creation")))
-    wrapcommand(commands.table, "branches", branchescmd)
 
     entry = wrapcommand(commands.table, "status", statuscmd)
     options = entry[1]
@@ -1087,29 +1071,6 @@ def log(orig, ui, repo, *pats, **opts):
         opts["follow"] = True
 
     return orig(ui, repo, *pats, **opts)
-
-
-def branchcmd(orig, ui, repo, label=None, **opts):
-    message = ui.config("tweakdefaults", "branchmessage")
-    enabled = ui.configbool("tweakdefaults", "allowbranch")
-    if (enabled and opts.get("new")) or label is None:
-        if "new" in opts:
-            del opts["new"]
-        return orig(ui, repo, label, **opts)
-    elif enabled:
-        raise error.Abort(
-            _("do not use branches; use bookmarks instead"),
-            hint=_("use --new if you are certain you want a branch"),
-        )
-    else:
-        raise error.Abort(message)
-
-
-def branchescmd(orig, ui, repo, active, closed, **opts):
-    message = ui.config("tweakdefaults", "branchesmessage")
-    if message:
-        ui.warn(message + "\n")
-    return orig(ui, repo, active, closed, **opts)
 
 
 def statuscmd(orig, ui, repo, *pats, **opts):
