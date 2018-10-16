@@ -451,18 +451,6 @@ def commitcmd(orig, ui, repo, *pats, **opts):
 
 
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
-    # 'hg update' should do nothing
-    #  Note if you want to change this:
-    # --inactive requires arg checkout of
-    # updatetotally not to be none
-    if not node and not rev and not kwargs["date"]:
-        raise error.Abort(
-            "You must specify a destination to update to,"
-            + ' for example "hg update master".',
-            hint="If you're trying to move a bookmark forward, try "
-            + '"hg rebase -d <destination>".',
-        )
-
     result = orig(ui, repo, node=node, rev=rev, **kwargs)
 
     # If the command succeed a message for 'hg update .^' will appear

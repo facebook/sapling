@@ -6410,6 +6410,18 @@ def update(
             _("can only specify one of -C/--clean, -c/--check, " "or -m/--merge")
         )
 
+    # If nothing was passed, the default behavior (moving to branch tip)
+    # can be disabled and replaced with an error.
+    # internal config: ui.disallowemptyupdate
+    if ui.configbool("ui", "disallowemptyupdate"):
+        if not node and not rev and not date:
+            raise error.Abort(
+                "You must specify a destination to update to,"
+                + ' for example "hg update master".',
+                hint="If you're trying to move a bookmark forward, try "
+                + '"hg rebase -d <destination>".',
+            )
+
     updatecheck = None
     if check:
         updatecheck = "abort"

@@ -22,21 +22,7 @@ Setup repo
   $ hg up -q 0
   $ echo x >> a
   $ hg commit -Aqm a2
-
-Empty update fails
-
-  $ hg up -q 0
-  $ hg up
-  abort: You must specify a destination to update to, for example "hg update master".
-  (If you're trying to move a bookmark forward, try "hg rebase -d <destination>".)
-  [255]
-
-  $ hg up -q -r 1
-  $ hg log -r . -T '{rev}\n'
-  1
   $ hg up -q 1
-  $ hg log -r . -T '{rev}\n'
-  1
 
 Updating to a specific date isn't blocked by our extensions'
 
