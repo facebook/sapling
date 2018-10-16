@@ -77,7 +77,7 @@ local: build/re2-2018-04-01/README
 	  build_mo
 ifeq ($(OS),Windows_NT)
 	cp build/scripts-2.7/hg.rust.exe hg.exe
-	cp build/hg/hg-python/python27.dll python27.dll
+	cp build/hg-python/python27.dll python27.dll
 else
 	cp build/scripts-2.7/hg.rust .
 endif
