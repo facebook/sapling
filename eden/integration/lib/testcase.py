@@ -28,6 +28,7 @@ from hypothesis.configuration import hypothesis_home_dir, set_hypothesis_home_di
 from hypothesis.internal.detection import is_hypothesis_test
 
 from . import edenclient, gitrepo, hgrepo, repobase, util
+from .environment_variable import EnvironmentVariableMixin
 from .temporary_directory import TemporaryDirectoryMixin
 
 
@@ -75,7 +76,7 @@ if not edenclient.can_run_eden():
     # to avoid the noise if we know that they won't work anyway.
     TestParents = (typing.cast(Type[unittest.TestCase], object),)
 else:
-    TestParents = (unittest.TestCase, TemporaryDirectoryMixin)
+    TestParents = (unittest.TestCase, EnvironmentVariableMixin, TemporaryDirectoryMixin)
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
@@ -147,16 +148,7 @@ class EdenTestCase(*TestParents):
         # real home directory of the user running the tests.
         self.home_dir = os.path.join(self.tmp_dir, "homedir")
         os.mkdir(self.home_dir)
-        old_home = os.getenv("HOME")
-
-        def restore_home() -> None:
-            if old_home is None:
-                del os.environ["HOME"]
-            else:
-                os.environ["HOME"] = old_home
-
-        os.environ["HOME"] = self.home_dir
-        self.addCleanup(restore_home)
+        self.set_environment_variable("HOME", self.home_dir)
 
         # TODO: Make this configurable via ~/.edenrc.
         # The eden config directory.
