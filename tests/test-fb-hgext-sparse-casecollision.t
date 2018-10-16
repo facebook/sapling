@@ -15,7 +15,7 @@ profile.
   $ cd myrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > fbsparse=$TESTDIR/../hgext/fbsparse.py
+  > sparse=$TESTDIR/../hgext/sparse.py
   > EOF
 
   $ mkdir profiles

@@ -1,4 +1,4 @@
-  $ enable fbsparse
+  $ enable sparse
   $ newrepo
   $ hg sparse include src
   $ mkdir src

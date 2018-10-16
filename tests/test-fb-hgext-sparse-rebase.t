@@ -2,7 +2,7 @@
   $ cd repo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext/fbsparse.py
+  > sparse=$TESTDIR/../hgext/sparse.py
   > rebase=
   > EOF
 

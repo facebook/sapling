@@ -77,7 +77,7 @@ Fine extension: sparse
 
   $ newrepo
   __del__ called
-  $ setconfig extensions.fbsparse=
+  $ setconfig extensions.sparse=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
   __del__ called
@@ -136,7 +136,6 @@ Somehow problematic: With many extensions
   > fastpartialmatch=!
   > fbconduit=
   > fbhistedit=
-  > fbsparse=
   > githelp=
   > gitlookup=!
   > gitrevset=!
@@ -178,6 +177,7 @@ Somehow problematic: With many extensions
   > sigtrace=
   > simplecache=
   > smartlog=
+  > sparse=
   > sshaskpass=
   > stat=
   > strip=

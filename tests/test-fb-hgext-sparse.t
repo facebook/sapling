@@ -4,7 +4,7 @@ test sparse
   $ cd myrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext/fbsparse.py
+  > sparse=$TESTDIR/../hgext/sparse.py
   > strip=
   > EOF
 
@@ -387,7 +387,7 @@ Test non-sparse repos work while sparse is loaded
   $ cd sparserepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext/fbsparse.py
+  > sparse=$TESTDIR/../hgext/sparse.py
   > EOF
   $ cd ../nonsparserepo
   $ echo x > x && hg add x && hg commit -qAm x

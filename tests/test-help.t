@@ -322,7 +322,7 @@ Test extension help:
                      extension that makes node prefix lookup faster
        fbconduit     (no help text available)
        fbhistedit    extends the existing histedit functionality
-       fbsparse      allow sparse checkouts of the working directory
+
        fixcorrupt    (no help text available)
        generic_bisect
                      (no help text available)

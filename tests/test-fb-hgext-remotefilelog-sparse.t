@@ -26,7 +26,7 @@
   searching for changes
   no changes found
   $ cd shallow
-  $ printf "[extensions]\nsparse=$TESTDIR/../hgext/fbsparse.py\n" >> .hg/hgrc
+  $ printf "[extensions]\nsparse=$TESTDIR/../hgext/sparse.py\n" >> .hg/hgrc
 
   $ hg sparse -I x
   $ hg prefetch -r 0
@@ -79,7 +79,7 @@
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ cd shallow2
-  $ printf "[extensions]\nsparse=$TESTDIR/../hgext/fbsparse.py\n" >> .hg/hgrc
+  $ printf "[extensions]\nsparse=$TESTDIR/../hgext/sparse.py\n" >> .hg/hgrc
 
   $ hg up -q 0
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)

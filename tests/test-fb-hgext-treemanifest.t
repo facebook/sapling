@@ -147,7 +147,7 @@ Test rebasing a stack of commits results in a pack with all the trees
 Test treemanifest with sparse enabled
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbsparse=
+  > sparse=
   > reset=
   > EOF
   $ hg sparse -I subdir
