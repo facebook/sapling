@@ -20,8 +20,6 @@ class BranchTest(EdenHgTestCase):
         original_branch = self.hg("branch")
         self.assertEqual("default", original_branch.rstrip())
 
-        # Note that with tweakdefaults, we discourage the user from creating a
-        # branch, so we require them to specify `--new`.
-        self.hg("branch", "--new", "foo-bar")
+        self.hg("branch", "foo-bar")
         new_branch = self.hg("branch")
         self.assertEqual("foo-bar", new_branch.rstrip())
