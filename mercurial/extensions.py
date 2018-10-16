@@ -21,19 +21,22 @@ _extensions = {}
 _disabledextensions = {}
 _aftercallbacks = {}
 _order = []
-_builtin = {
+_ignoreextensions = {
     "bookmarks",
     "color",
+    "fbsparse",
     "hbisect",
     "hgcia",
     "inotify",
     "interhg",
     "mq",
+    "obsshelve",
     "parentrevspec",
     "progress",
     "treedirstate",
 }
 _blacklist = {"extlib"}
+
 
 # root of the directory, or installed distribution
 _hgroot = os.path.abspath(os.path.join(__file__, "../../"))
@@ -274,7 +277,7 @@ def load(ui, name, path):
         shortname = name[6:]
     else:
         shortname = name
-    if shortname in _builtin:
+    if shortname in _ignoreextensions:
         return None
     if shortname in _extensions:
         return _extensions[shortname]
