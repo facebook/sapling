@@ -55,6 +55,8 @@ extern crate abomonation_derive;
 extern crate ascii;
 extern crate asyncmemo;
 extern crate bincode;
+#[macro_use]
+extern crate bitflags;
 extern crate bytes;
 extern crate crypto;
 #[macro_use]
@@ -101,6 +103,7 @@ pub mod blobnode;
 pub mod changeset;
 pub mod repo;
 pub mod sql_types;
+pub mod flags;
 mod node;
 mod envelope;
 
@@ -110,6 +113,7 @@ pub use changeset::Changeset;
 pub use delta::Delta;
 pub use envelope::{HgChangesetEnvelope, HgChangesetEnvelopeMut, HgFileEnvelope, HgFileEnvelopeMut,
                    HgManifestEnvelope, HgManifestEnvelopeMut};
+pub use flags::{parse_rev_flags, RevFlags};
 pub use fsencode::{fncache_fsencode, simple_fsencode};
 pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;

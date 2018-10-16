@@ -16,10 +16,12 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
-use blobrepo::{BlobRepo, ContentBlobInfo, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry,
-               UploadHgNodeHash};
+use blobrepo::{BlobRepo, ContentBlobInfo, ContentBlobMeta, HgBlobEntry, UploadHgFileContents,
+               UploadHgFileEntry, UploadHgNodeHash};
+use mercurial::file::File;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, Delta, FileType, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH};
+use mercurial_types::{delta, parse_rev_flags, Delta, FileType, HgNodeHash, HgNodeKey, MPath,
+                      RepoPath, RevFlags, NULL_HASH};
 
 use errors::*;
 use stats::*;
@@ -32,12 +34,19 @@ pub struct FilelogDeltaed {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub enum FilelogData {
+    RawBytes(Bytes),
+    LfsMetaData(ContentBlobMeta),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Filelog {
     pub node_key: HgNodeKey,
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
     pub linknode: HgNodeHash,
-    pub data: Bytes,
+    pub data: FilelogData,
+    pub flags: RevFlags,
 }
 
 impl UploadableHgBlob for Filelog {
@@ -57,9 +66,21 @@ impl UploadableHgBlob for Filelog {
             RepoPath::FilePath(path) => path.clone(),
             other => bail_msg!("internal error: expected file path, got {}", other),
         };
+
+        // TODO(anastasiya): T34959977 Check real SHA1 of uploaded file. Believe to user for now.
+        let upload_node_id = if self.flags.contains(RevFlags::REVIDX_DEFAULT_FLAGS) {
+            UploadHgNodeHash::Supplied(node_key.hash)
+        } else {
+            UploadHgNodeHash::Checked(node_key.hash)
+        };
+        let contents = match self.data {
+            FilelogData::RawBytes(bytes) => UploadHgFileContents::RawBytes(bytes),
+            FilelogData::LfsMetaData(meta) => UploadHgFileContents::ContentUploaded(meta),
+        };
+
         let upload = UploadHgFileEntry {
-            upload_node_id: UploadHgNodeHash::Checked(node_key.hash),
-            contents: UploadHgFileContents::RawBytes(self.data),
+            upload_node_id,
+            contents,
             // XXX should this really be Regular?
             file_type: FileType::Regular,
             p1: self.p1,
@@ -79,7 +100,7 @@ pub fn convert_to_revlog_filelog<S>(repo: Arc<BlobRepo>, deltaed: S) -> BoxStrea
 where
     S: Stream<Item = FilelogDeltaed, Error = Error> + Send + 'static,
 {
-    let mut delta_cache = DeltaCache::new(repo);
+    let mut delta_cache = DeltaCache::new(repo.clone());
     deltaed
         .and_then(move |FilelogDeltaed { path, chunk }| {
             let CgDeltaChunk {
@@ -89,25 +110,31 @@ where
                 p1,
                 p2,
                 linknode,
-                flags: _,
+                flags: flags_value,
             } = chunk;
 
             delta_cache
                 .decode(node.clone(), base.into_option(), delta)
                 .and_then({
-                    let node = node.clone();
-                    let path = path.clone();
+                    cloned!(node, path, repo);
                     move |data| {
-                        Ok(Filelog {
-                            node_key: HgNodeKey {
-                                path: RepoPath::FilePath(path),
-                                hash: node,
-                            },
-                            p1: p1.into_option(),
-                            p2: p2.into_option(),
-                            linknode,
-                            data,
-                        })
+                        parse_rev_flags(flags_value)
+                            .into_future()
+                            .and_then(move |flags| {
+                                get_filelog_data(repo, data, flags).map(move |file_log_data| {
+                                    Filelog {
+                                        node_key: HgNodeKey {
+                                            path: RepoPath::FilePath(path),
+                                            hash: node,
+                                        },
+                                        p1: p1.into_option(),
+                                        p2: p2.into_option(),
+                                        linknode,
+                                        data: file_log_data,
+                                        flags,
+                                    }
+                                })
+                            })
                     }
                 })
                 .with_context(move |_| {
@@ -120,6 +147,40 @@ where
                 .boxify()
         })
         .boxify()
+}
+
+fn generate_lfs_meta_data(
+    repo: Arc<BlobRepo>,
+    data: Bytes,
+) -> impl Future<Item = ContentBlobMeta, Error = Error> {
+    // TODO(anastasiyaz): check size
+    File::data_only(data)
+        .get_lfs_content()
+        .into_future()
+        .and_then(move |lfs_content| {
+            (
+                repo.get_file_content_id_by_alias(lfs_content.oid()),
+                Ok(lfs_content.copy_from()),
+            )
+        })
+        .map(move |(content_id, copy_from)| ContentBlobMeta {
+            id: content_id,
+            copy_from,
+        })
+}
+
+fn get_filelog_data(
+    repo: Arc<BlobRepo>,
+    data: Bytes,
+    flags: RevFlags,
+) -> impl Future<Item = FilelogData, Error = Error> {
+    if flags.contains(RevFlags::REVIDX_EXTSTORED) {
+        generate_lfs_meta_data(repo, data)
+            .map(|cbmeta| FilelogData::LfsMetaData(cbmeta))
+            .left_future()
+    } else {
+        Ok(FilelogData::RawBytes(data)).into_future().right_future()
+    }
 }
 
 struct DeltaCache {
@@ -221,7 +282,8 @@ impl Arbitrary for Filelog {
             p1: HgNodeHash::arbitrary(g).into_option(),
             p2: HgNodeHash::arbitrary(g).into_option(),
             linknode: HgNodeHash::arbitrary(g),
-            data: Bytes::from(Vec::<u8>::arbitrary(g)),
+            data: FilelogData::RawBytes(Bytes::from(Vec::<u8>::arbitrary(g))),
+            flags: RevFlags::REVIDX_DEFAULT_FLAGS,
         }
     }
 
@@ -257,10 +319,12 @@ impl Arbitrary for Filelog {
             append(&mut result, f);
         }
 
-        if self.data.len() != 0 {
-            let mut f = self.clone();
-            f.data = Bytes::from(Vec::new());
-            append(&mut result, f);
+        if let FilelogData::RawBytes(ref bytes) = self.data {
+            if bytes.len() != 0 {
+                let mut f = self.clone();
+                f.data = FilelogData::RawBytes(Bytes::from(Vec::new()));
+                append(&mut result, f);
+            }
         }
 
         Box::new(result.into_iter())
@@ -322,17 +386,29 @@ mod tests {
     }
 
     fn filelog_to_deltaed(f: &Filelog) -> FilelogDeltaed {
-        FilelogDeltaed {
-            path: f.node_key.path.mpath().unwrap().clone(),
-            chunk: CgDeltaChunk {
-                node: f.node_key.hash.clone(),
-                p1: f.p1.clone().unwrap_or(NULL_HASH),
-                p2: f.p2.clone().unwrap_or(NULL_HASH),
-                base: NULL_HASH,
-                linknode: f.linknode.clone(),
-                delta: Delta::new_fulltext(f.data.as_ref()),
-                flags: None,
+        match f.data {
+            FilelogData::RawBytes(ref bytes) => FilelogDeltaed {
+                path: f.node_key.path.mpath().unwrap().clone(),
+                chunk: CgDeltaChunk {
+                    node: f.node_key.hash.clone(),
+                    p1: f.p1.clone().unwrap_or(NULL_HASH),
+                    p2: f.p2.clone().unwrap_or(NULL_HASH),
+                    base: NULL_HASH,
+                    linknode: f.linknode.clone(),
+                    delta: Delta::new_fulltext(bytes.as_ref()),
+                    flags: None,
+                },
             },
+            _ => panic!("RawBytes FilelogData is only supported in tests"),
+        }
+    }
+
+    fn filelog_compute_delta(b1: &FilelogData, b2: &FilelogData) -> Delta {
+        match (b1, b2) {
+            (FilelogData::RawBytes(b1_data), FilelogData::RawBytes(b2_data)) => {
+                compute_delta(&b1_data, &b2_data)
+            }
+            _ => panic!("RawBytes FilelogData is only supported in tests"),
         }
     }
 
@@ -393,7 +469,8 @@ mod tests {
             p1: Some(TWOS_HASH),
             p2: Some(THREES_HASH),
             linknode: FOURS_HASH,
-            data: Bytes::from("test file content"),
+            data: FilelogData::RawBytes(Bytes::from("test file content")),
+            flags: RevFlags::REVIDX_DEFAULT_FLAGS,
         };
 
         let f2 = Filelog {
@@ -404,7 +481,8 @@ mod tests {
             p1: Some(SIXES_HASH),
             p2: Some(SEVENS_HASH),
             linknode: EIGHTS_HASH,
-            data: Bytes::from("test2 file content"),
+            data: FilelogData::RawBytes(Bytes::from("test2 file content")),
+            flags: RevFlags::REVIDX_DEFAULT_FLAGS,
         };
 
         check_conversion(
@@ -422,7 +500,8 @@ mod tests {
             p1: Some(TWOS_HASH),
             p2: Some(THREES_HASH),
             linknode: FOURS_HASH,
-            data: Bytes::from("test file content"),
+            data: FilelogData::RawBytes(Bytes::from("test file content")),
+            flags: RevFlags::REVIDX_DEFAULT_FLAGS,
         };
 
         let f2 = Filelog {
@@ -433,14 +512,15 @@ mod tests {
             p1: Some(SIXES_HASH),
             p2: Some(SEVENS_HASH),
             linknode: EIGHTS_HASH,
-            data: Bytes::from("test2 file content"),
+            data: FilelogData::RawBytes(Bytes::from("test2 file content")),
+            flags: RevFlags::REVIDX_DEFAULT_FLAGS,
         };
 
         let f1_deltaed = filelog_to_deltaed(&f1);
         let mut f2_deltaed = filelog_to_deltaed(&f2);
 
         f2_deltaed.chunk.base = f1.node_key.hash.clone();
-        f2_deltaed.chunk.delta = compute_delta(&f1.data, &f2.data);
+        f2_deltaed.chunk.delta = filelog_compute_delta(&f1.data, &f2.data);
 
         let inp = if correct_order {
             vec![f1_deltaed, f2_deltaed]
@@ -507,7 +587,7 @@ mod tests {
                 let mut delta = filelog_to_deltaed(filelog);
                 delta.chunk.base = f.node_key.hash.clone();
                 delta.chunk.delta =
-                    compute_delta(&f.data, &filelog.data);
+                    filelog_compute_delta(&f.data, &filelog.data);
                 deltas.push(delta);
             }
 
@@ -535,7 +615,7 @@ mod tests {
                     let mut delta = filelog_to_deltaed(next);
                     delta.chunk.base = prev.node_key.hash.clone();
                     delta.chunk.delta =
-                        compute_delta(&prev.data, &next.data);
+                        filelog_compute_delta(&prev.data, &next.data);
                     deltas.push(delta);
                 }
 

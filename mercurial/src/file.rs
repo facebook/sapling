@@ -7,12 +7,13 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::str;
+use std::str::FromStr;
 
 use bytes::Bytes;
 use itertools::Itertools;
 
 use mercurial_types::{HgBlob, HgBlobNode, HgNodeHash, MPath};
-use mononoke_types::FileContents;
+use mononoke_types::{FileContents, hash::Sha256};
 
 use errors::*;
 
@@ -70,27 +71,36 @@ impl File {
         }
     }
 
-    fn parse_meta(file: &[u8]) -> HashMap<&[u8], &[u8]> {
-        let (meta, _) = Self::extract_meta(file);
+    fn parse_to_hash_map<'a>(content: &'a [u8], delimiter: &[u8]) -> HashMap<&'a [u8], &'a [u8]> {
         let mut kv = HashMap::new();
+        let delimiter_len = delimiter.len();
 
-        // Yay, Mercurial has yet another ad-hoc encoding. This one is kv pairs separated by \n,
-        // with ": " separating the key and value
-        for line in meta.split(|c| *c == b'\n') {
-            if line.len() < 2 {
+        for line in content.split(|c| *c == b'\n') {
+            if line.len() < delimiter_len {
                 continue;
             }
 
-            // split on ": " - no quoting within key/value
-            for idx in 0..line.len() - 1 {
-                if line[idx] == b':' && line[idx + 1] == b' ' {
-                    kv.insert(&line[..idx], &line[idx + 2..]);
+            // split on "delimiter" - no quoting within key/value
+            for idx in 0..line.len() - delimiter_len + 1 {
+                if &line[idx..idx + delimiter_len] == delimiter {
+                    kv.insert(&line[..idx], &line[idx + delimiter_len..]);
                     break;
                 }
             }
         }
-
         kv
+    }
+
+    fn parse_meta(file: &[u8]) -> HashMap<&[u8], &[u8]> {
+        let (meta, _) = Self::extract_meta(file);
+
+        // Yay, Mercurial has yet another ad-hoc encoding. This one is kv pairs separated by \n,
+        // with ": " separating the key and value
+        Self::parse_to_hash_map(meta, &[b':', b' '])
+    }
+
+    fn parse_content_to_lfs_hash_map(content: &[u8]) -> HashMap<&[u8], &[u8]> {
+        Self::parse_to_hash_map(content, &[b' '])
     }
 
     pub fn copied_from(&self) -> Result<Option<(MPath, HgNodeHash)>> {
@@ -100,14 +110,16 @@ impl File {
 
         let buf = self.node.as_blob().as_slice();
 
-        Self::get_copied_from(Self::parse_meta(buf))
+        Self::get_copied_from(&Self::parse_meta(buf))
     }
 
-    pub(crate) fn get_copied_from(
-        meta: HashMap<&[u8], &[u8]>,
+    fn get_copied_from_with_keys(
+        meta: &HashMap<&[u8], &[u8]>,
+        copy_path_key: &'static [u8],
+        copy_rev_key: &'static [u8],
     ) -> Result<Option<(MPath, HgNodeHash)>> {
-        let path = meta.get(COPY_PATH_KEY).cloned().map(MPath::new);
-        let nodeid = meta.get(COPY_REV_KEY)
+        let path = meta.get(copy_path_key).cloned().map(MPath::new);
+        let nodeid = meta.get(copy_rev_key)
             .and_then(|rev| str::from_utf8(rev).ok())
             .and_then(|rev| rev.parse().ok());
         match (path, nodeid) {
@@ -115,6 +127,12 @@ impl File {
             (Some(Err(e)), _) => Err(e.context("invalid path in copy metadata").into()),
             _ => Ok(None),
         }
+    }
+
+    pub(crate) fn get_copied_from(
+        meta: &HashMap<&[u8], &[u8]>,
+    ) -> Result<Option<(MPath, HgNodeHash)>> {
+        Self::get_copied_from_with_keys(meta, COPY_PATH_KEY, COPY_REV_KEY)
     }
 
     pub fn generate_metadata<T>(
@@ -175,6 +193,100 @@ impl File {
         } else {
             self.node.size()
         }
+    }
+
+    pub fn get_lfs_content(&self) -> Result<LFSContent> {
+        let data = self.node.as_blob().as_inner();
+        let (_, off) = Self::extract_meta(data);
+
+        Self::get_lfs_struct(&Self::parse_content_to_lfs_hash_map(&data.slice_from(off)))
+    }
+
+    fn parse_mandatory_lfs(contents: &HashMap<&[u8], &[u8]>) -> Result<(String, Sha256, u64)> {
+        let version = contents
+            .get(VERSION)
+            .and_then(|s| str::from_utf8(*s).ok())
+            .map(|s| s.to_string())
+            .ok_or(ErrorKind::IncorrectLfsFileContent(
+                "VERSION mandatory field parsing failed in Lfs file content".to_string(),
+            ))?;
+
+        let oid = contents
+            .get(OID)
+            .and_then(|s| str::from_utf8(*s).ok())
+            .and_then(|s| {
+                let prefix_len = SHA256_PREFIX.len();
+
+                let check = prefix_len <= s.len() && &s[..prefix_len].as_bytes() == &SHA256_PREFIX;
+                if check {
+                    Some(s[prefix_len..].to_string())
+                } else {
+                    None
+                }
+            })
+            .and_then(|s| Sha256::from_str(&s).ok())
+            .ok_or(ErrorKind::IncorrectLfsFileContent(
+                "OID mandatory field parsing failed in Lfs file content".to_string(),
+            ))?;
+        let size = contents
+            .get(SIZE)
+            .and_then(|s| str::from_utf8(*s).ok())
+            .and_then(|s| s.parse::<u64>().ok())
+            .ok_or(ErrorKind::IncorrectLfsFileContent(
+                "SIZE mandatory field parsing failed in Lfs file content".to_string(),
+            ))?;
+        Ok((version, oid, size))
+    }
+
+    fn get_lfs_struct(contents: &HashMap<&[u8], &[u8]>) -> Result<LFSContent> {
+        Self::parse_mandatory_lfs(contents)
+            .and_then(|(version, oid, size)| {
+                Self::get_copied_lfs(contents).map(move |copy_from| (version, oid, size, copy_from))
+            })
+            .map(|(version, oid, size, copy_from)| LFSContent {
+                _version: version,
+                oid,
+                size,
+                copy_from,
+            })
+    }
+
+    fn get_copied_lfs(contents: &HashMap<&[u8], &[u8]>) -> Result<Option<(MPath, HgNodeHash)>> {
+        Self::get_copied_from_with_keys(contents, HGCOPY, HGCOPYREV)
+    }
+}
+
+const VERSION: &[u8] = b"version";
+const OID: &[u8] = b"oid";
+const SIZE: &[u8] = b"size";
+const HGCOPY: &[u8] = b"x-hg-copy";
+const HGCOPYREV: &[u8] = b"x-hg-copyrev";
+const _ISBINARY: &[u8] = b"x-is-binary";
+const SHA256_PREFIX: &[u8] = b"sha256:";
+
+// See [https://www.mercurial-scm.org/wiki/LfsPlan], By default, version, oid and size are required
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct LFSContent {
+    // mandatory fields
+    _version: String,
+    oid: Sha256,
+    size: u64,
+
+    // copy fields
+    copy_from: Option<(MPath, HgNodeHash)>,
+}
+
+impl LFSContent {
+    pub fn size(&self) -> u64 {
+        self.size
+    }
+
+    pub fn oid(&self) -> Sha256 {
+        self.oid.clone()
+    }
+
+    pub fn copy_from(&self) -> Option<(MPath, HgNodeHash)> {
+        self.copy_from.clone()
     }
 }
 
@@ -271,6 +383,52 @@ mod test {
     }
 
     #[test]
+    fn test_hash_meta_delimiter_only_0() {
+        const DELIMITER: &[u8] = b"DELIMITER";
+        const DATA: &[u8] = b"DELIMITER\n";
+
+        let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+            .into_iter()
+            .collect();
+        kv.as_mut_slice().sort();
+        assert_eq!(kv, vec![(b"".as_ref(), b"".as_ref())])
+    }
+
+    #[test]
+    fn test_hash_meta_delimiter_only_1() {
+        const DELIMITER: &[u8] = b"DELIMITER";
+        const DATA: &[u8] = b"DELIMITER";
+
+        let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+            .into_iter()
+            .collect();
+        kv.as_mut_slice().sort();
+        assert_eq!(kv, vec![(b"".as_ref(), b"".as_ref())])
+    }
+
+    #[test]
+    fn test_hash_meta_delimiter_short_0() {
+        const DELIMITER: &[u8] = b"DELIMITER";
+        const DATA: &[u8] = b"DELIM";
+
+        let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+            .into_iter()
+            .collect();
+        assert!(kv.as_mut_slice().is_empty())
+    }
+
+    #[test]
+    fn test_hash_meta_delimiter_short_1() {
+        const DELIMITER: &[u8] = b"DELIMITER";
+        const DATA: &[u8] = b"\n";
+
+        let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+            .into_iter()
+            .collect();
+        assert!(kv.as_mut_slice().is_empty())
+    }
+
+    #[test]
     fn generate_metadata_0() {
         const FILE_CONTENTS: &[u8] = b"foobar";
         let file_contents = FileContents::Bytes(Bytes::from(FILE_CONTENTS));
@@ -313,6 +471,102 @@ mod test {
         );
     }
 
+    #[test]
+    fn test_get_lfs_hash_map() {
+        const DATA: &[u8] = b"version https://git-lfs.github.com/spec/v1\noid sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97\nsize 17";
+
+        let mut kv: Vec<_> = File::parse_content_to_lfs_hash_map(DATA)
+            .into_iter()
+            .collect();
+        kv.as_mut_slice().sort();
+
+        assert_eq!(
+            kv,
+            vec![
+                (
+                    b"oid".as_ref(),
+                    b"sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97"
+                        .as_ref(),
+                ),
+                (b"size".as_ref(), b"17".as_ref()),
+                (
+                    b"version".as_ref(),
+                    b"https://git-lfs.github.com/spec/v1".as_ref(),
+                ),
+            ]
+        )
+    }
+
+    #[test]
+    fn test_get_lfs_struct_0() {
+        let mut kv = HashMap::new();
+        kv.insert(
+            b"version".as_ref(),
+            b"https://git-lfs.github.com/spec/v1".as_ref(),
+        );
+        kv.insert(
+            b"oid".as_ref(),
+            b"sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97".as_ref(),
+        );
+        kv.insert(b"size".as_ref(), b"17".as_ref());
+        let lfs = File::get_lfs_struct(&kv);
+
+        assert_eq!(
+            lfs.unwrap(),
+            LFSContent {
+                _version: "https://git-lfs.github.com/spec/v1".to_string(),
+                oid: Sha256::from_str(
+                    "27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97"
+                ).unwrap(),
+                size: 17,
+                copy_from: None,
+            }
+        )
+    }
+
+    #[test]
+    fn test_get_lfs_struct_wrong_small_sha256() {
+        let mut kv = HashMap::new();
+        kv.insert(
+            b"version".as_ref(),
+            b"https://git-lfs.github.com/spec/v1".as_ref(),
+        );
+        kv.insert(b"oid".as_ref(), b"sha256:123".as_ref());
+        kv.insert(b"size".as_ref(), b"17".as_ref());
+        let lfs = File::get_lfs_struct(&kv);
+
+        assert_eq!(lfs.is_err(), true)
+    }
+
+    #[test]
+    fn test_get_lfs_struct_wrong_size() {
+        let mut kv = HashMap::new();
+        kv.insert(
+            b"version".as_ref(),
+            b"https://git-lfs.github.com/spec/v1".as_ref(),
+        );
+        kv.insert(
+            b"oid".as_ref(),
+            b"sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97".as_ref(),
+        );
+        kv.insert(b"size".as_ref(), b"wrong_size_length".as_ref());
+        let lfs = File::get_lfs_struct(&kv);
+
+        assert_eq!(lfs.is_err(), true)
+    }
+
+    #[test]
+    fn test_get_lfs_struct_non_all_mandatory_fields() {
+        let mut kv = HashMap::new();
+        kv.insert(
+            b"oid".as_ref(),
+            b"sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97".as_ref(),
+        );
+        let lfs = File::get_lfs_struct(&kv);
+
+        assert_eq!(lfs.is_err(), true)
+    }
+
     quickcheck! {
         fn copy_info_roundtrip(
             copy_info: Option<(MPath, HgNodeHash)>,
@@ -321,7 +575,7 @@ mod test {
             let mut buf = Vec::new();
             let result = File::generate_metadata(copy_info.as_ref(), &contents, &mut buf)
                 .and_then(|_| {
-                    File::get_copied_from(File::parse_meta(&buf))
+                    File::get_copied_from(&File::parse_meta(&buf))
                 });
             match result {
                 Ok(out_copy_info) => copy_info == out_copy_info,

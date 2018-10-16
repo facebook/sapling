@@ -486,6 +486,17 @@ impl BlobRepo {
         &self,
         alias: Sha256,
     ) -> impl Future<Item = FileContents, Error = Error> {
+        let blobstore = self.blobstore.clone();
+
+        self.get_file_content_id_by_alias(alias)
+            .and_then(move |content_id| fetch_file_contents(&blobstore, content_id))
+            .from_err()
+    }
+
+    pub fn get_file_content_id_by_alias(
+        &self,
+        alias: Sha256,
+    ) -> impl Future<Item = ContentId, Error = Error> {
         STATS::get_file_content.add_value(1);
         let prefixed_key = get_sha256_alias_key(alias.to_hex().to_string());
         let blobstore = self.blobstore.clone();
@@ -521,11 +532,8 @@ impl BlobRepo {
                     .into_future()
                     .from_err()
                     .and_then(|blake2_str| Blake2::from_str(&blake2_str))
-                    .and_then(move |blake2| {
-                        let content_id = ContentId::new(blake2);
-                        fetch_file_contents(&blobstore, content_id)
-                    })
-                    .context("While parsing alias blob contents")
+                    .map(ContentId::new)
+                    .context("While casting alias blob contents, to content id")
                     .from_err()
                     .boxify()
             })

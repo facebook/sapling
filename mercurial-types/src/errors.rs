@@ -12,6 +12,7 @@ pub enum ErrorKind {
     #[fail(display = "invalid fragment list: {}", _0)] InvalidFragmentList(String),
     #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)] InvalidThrift(String, String),
     #[fail(display = "error while deserializing blob for '{}'", _0)] BlobDeserializeError(String),
+    #[fail(display = "imposssible to parse unknown rev flags")] UnknownRevFlags,
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;

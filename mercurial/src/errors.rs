@@ -14,4 +14,5 @@ pub enum ErrorKind {
     #[fail(display = "Path: {}", _0)] Path(String),
     #[fail(display = "Unknown requirement: {}", _0)] UnknownReq(String),
     #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)] InvalidThrift(String, String),
+    #[fail(display = "Incorrect LFS file content {}", _0)] IncorrectLfsFileContent(String),
 }
