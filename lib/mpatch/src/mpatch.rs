@@ -28,6 +28,11 @@ unsafe extern "C" fn get_next_link(deltas: *mut c_void, index: ssize_t) -> *mut 
 }
 
 pub fn get_full_text(base_text: &[u8], deltas: &Vec<&[u8]>) -> Result<Vec<u8>, &'static str> {
+    // If there are no deltas, just return the full text portion
+    if deltas.len() == 0 {
+        return Ok(base_text.to_vec());
+    }
+
     unsafe {
         let patch: *mut mpatch_flist = mpatch_fold(
             deltas as *const Vec<&[u8]> as *mut c_void,
@@ -68,6 +73,20 @@ pub fn get_full_text(base_text: &[u8], deltas: &Vec<&[u8]>) -> Result<Vec<u8>, &
 #[cfg(test)]
 mod tests {
     use super::get_full_text;
+
+    #[test]
+    fn no_deltas() {
+        let base_text = b"hello";
+        let full_text = get_full_text(&base_text[..], &vec![]).unwrap();
+        assert_eq!(base_text, full_text.as_slice());
+    }
+
+    #[test]
+    fn no_deltas_empty_base() {
+        let base_text = b"";
+        let full_text = get_full_text(&base_text[..], &vec![]).unwrap();
+        assert_eq!(base_text, full_text.as_slice());
+    }
 
     #[test]
     fn test_apply_delta() {
