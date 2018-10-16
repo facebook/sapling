@@ -138,13 +138,13 @@ Delete a few lines and related commits will be removed if they will be empty:
 Non 1:1 map changes will be ignored:
 
   $ echo 1 > a
-  $ hg absorb --apply-changes
+  $ hg absorb
   showing changes for a
           @@ -0,2 +0,1 @@
           -2b
           -4d
           +1
-  nothing applied
+  nothing to absorb
   [1]
 
 Insertaions:
@@ -187,8 +187,8 @@ Non-mofified files are ignored:
   $ touch c
   $ hg add c
   $ hg rm b
-  $ hg absorb -a
-  nothing applied
+  $ hg absorb
+  nothing to absorb
   [1]
   $ sedi 's/INSERT/Insert/' a
   $ hg absorb -a
@@ -325,7 +325,7 @@ Use pattern to select files to be fixed up:
   $ hg status
   M b
   $ hg absorb -a --exclude b
-  nothing applied
+  nothing to absorb
   [1]
   $ hg absorb -a b
   showing changes for b

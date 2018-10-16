@@ -993,7 +993,11 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
             descfirstline = ctx.description().splitlines()[0]
             fm.write("descfirstline", "%s\n", descfirstline, label="absorb.description")
         fm.end()
-    if not opts.get("dry_run"):
+    if not opts.get("edit_lines") and not any(
+        f.fixups for f in state.fixupmap.values()
+    ):
+        ui.write(_("nothing to absorb\n"))
+    elif not opts.get("dry_run"):
         if not opts.get("apply_changes"):
             if ui.promptchoice("apply changes (yn)? $$ &Yes $$ &No", default=1):
                 raise error.Abort(_("absorb cancelled\n"))
@@ -1063,7 +1067,7 @@ def absorbcmd(ui, repo, *pats, **opts):
     to the correct place, run :hg:`absorb -a` to apply the changes
     immediately.
 
-    Returns 0 on success, 1 if all chunks were ignored and nothing amended.
+    Returns 0 on success, 1 if all chunks were ignored and nothing absorbed.
     """
     state = absorb(ui, repo, pats=pats, opts=opts)
     if sum(s[0] for s in state.chunkstats.values()) == 0:
