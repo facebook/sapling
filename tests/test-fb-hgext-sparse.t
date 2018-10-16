@@ -454,3 +454,62 @@ manifest and some are not.
   n 644          0 * included (glob)
   a   0         -1 * includedadded (glob)
 
+Test logging the dirsize and sparse profiles
+
+Set up the sampling extension and set a log file, then do a repo status.
+We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it!
+
+  $ touch a && hg add a
+  $ unset SCM_SAMPLING_FILEPATH
+  $ hg ci -m "add some new files"
+  $ LOGDIR=`pwd`/logs
+  $ mkdir $LOGDIR
+  $ cat >> $HGRCPATH << EOF
+  > [sampling]
+  > key.dirstate_size=dirstate_size
+  > key.sparse_profiles=sparse_profiles
+  > filepath = $LOGDIR/samplingpath.txt
+  > [extensions]
+  > sampling=
+  > EOF
+  $ rm -f $LOGDIR/samplingpath.txt
+  $ hg status
+  >>> import json
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read()
+  >>> for record in data.strip("\0").split("\0"):
+  ...     parsedrecord = json.loads(record)
+  ...     if parsedrecord['category'] == 'dirstate_size':
+  ...         print('{0}: {1}'.format(parsedrecord['category'],
+  ...                                 parsedrecord['data']['dirstate_size']))
+  dirstate_size: 3
+  $ cat >> profile_base << EOF
+  > [include]
+  > a
+  > EOF
+  $ cat >> profile_extended << EOF
+  > %include profile_base
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [sparse]
+  > largecheckouthint=True
+  > largecheckoutcount=1
+  > EOF
+  $ hg add profile_base profile_extended
+  hint[sparse-largecheckout]: Your repository checkout has * files which makes Many mercurial commands slower. Learn how to make it smaller at https://fburl.com/hgsparse (glob)
+  hint[hint-ack]: use 'hg hint --ack sparse-largecheckout' to silence these hints
+  $ hg ci -m 'adding sparse profiles'
+  hint[sparse-largecheckout]: Your repository checkout has * files which makes Many mercurial commands slower. Learn how to make it smaller at https://fburl.com/hgsparse (glob)
+  hint[hint-ack]: use 'hg hint --ack sparse-largecheckout' to silence these hints
+  $ rm -f $LOGDIR/samplingpath.txt
+  $ hg sparse --enable-profile profile_extended
+  hint[sparse-largecheckout]: Your repository checkout has * files which makes Many mercurial commands slower. Learn how to make it smaller at https://fburl.com/hgsparse (glob)
+  hint[hint-ack]: use 'hg hint --ack sparse-largecheckout' to silence these hints
+  >>> import json
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read()
+  >>> for record in data.strip("\0").split("\0"):
+  ...     parsedrecord = json.loads(record)
+  ...     if parsedrecord['category'] == 'sparse_profiles':
+  ...         print('active_profiles:', parsedrecord['data']['active_profiles'])
+  active_profiles: profile_base,profile_extended

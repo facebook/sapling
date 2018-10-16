@@ -23,6 +23,7 @@ Test integration with simplecache for profile reads
   $ hg sparse --enable-profile .hgsparse
   $ hg status --debug
   got value for key sparseprofile:.hgsparse:52fe6c0958d7d08df53bdf7ee62a261abb7f599e:v1 from local
+  got value for key sparseprofile:.hgsparse:52fe6c0958d7d08df53bdf7ee62a261abb7f599e:v1 from local
 
 #if fsmonitor
 Test fsmonitor integration (if available)

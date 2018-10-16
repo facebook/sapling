@@ -99,6 +99,15 @@ reflected in the UI.
     profile_directory = tools/scm/sparse
 
 It is not set by default.
+
+It is also possible to show hints where dirstate size is too large.
+
+    [sparse]
+    # Whether to advertise usage of the sparse profiles when the checkout size
+    # is very large.
+    largecheckouthint = False
+    # The number of files in the checkout that constitute a "large checkout".
+    largecheckoutcount = 0
 """
 
 from __future__ import division
@@ -114,6 +123,7 @@ from mercurial import (
     commands,
     context,
     dirstate,
+    dispatch,
     error,
     extensions,
     hg,
@@ -137,9 +147,16 @@ from mercurial.thirdparty import attr
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+configtable = {}
+configitem = registrar.configitem(configtable)
 testedwith = "ships-with-fb-hgext"
 
+
 cwdrealtivepatkinds = ("glob", "relpath")
+
+
+configitem("sparse", "largecheckouthint", default=False)
+configitem("sparse", "largecheckoutcount", default=0)
 
 
 def uisetup(ui):
@@ -148,6 +165,8 @@ def uisetup(ui):
 
 
 def extsetup(ui):
+    extensions.wrapfunction(dispatch, "runcommand", _trackdirstatesizes)
+    extensions.wrapfunction(dispatch, "runcommand", _tracksparseprofiles)
     _setupclone(ui)
     _setuplog(ui)
     _setupadd(ui)
@@ -215,6 +234,10 @@ def _checksparse(repo):
 
     if not util.safehasattr(repo, "sparsematch"):
         raise error.Abort(_("this is not a sparse repository"))
+
+
+def _hassparse(repo):
+    return "eden" not in repo.requirements and util.safehasattr(repo, "sparsematch")
 
 
 def _setupupdates(ui):
@@ -374,6 +397,43 @@ def _setuplog(ui):
         return revs
 
     extensions.wrapfunction(cmdutil, "_logrevs", _logrevs)
+
+
+def _tracksparseprofiles(runcommand, lui, repo, *args):
+    res = runcommand(lui, repo, *args)
+    if repo is not None and repo.local():
+        # config override is used to prevent duplicated "profile not found"
+        # messages. This code flow is purely for hints/reporting, it makes
+        # no sense for it to warn user about the profiles for the second time
+        with repo.ui.configoverride({("sparse", "missingwarning"): False}):
+            if util.safehasattr(repo, "getactiveprofiles"):
+                profiles = repo.getactiveprofiles()
+                lui.log(
+                    "sparse_profiles", "", active_profiles=",".join(sorted(profiles))
+                )
+    return res
+
+
+def _trackdirstatesizes(runcommand, lui, repo, *args):
+    res = runcommand(lui, repo, *args)
+    if repo is not None and repo.local():
+        dirstate = repo.dirstate
+        dirstatesize = None
+        try:
+            # Eden and flat dirstate.
+            dirstatesize = len(dirstate._map._map)
+        except AttributeError:
+            # Treestate and treedirstate.
+            dirstatesize = len(dirstate._map)
+        if dirstatesize is not None:
+            lui.log("dirstate_size", "", dirstate_size=dirstatesize)
+            if (
+                repo.ui.configbool("sparse", "largecheckouthint")
+                and dirstatesize >= repo.ui.configint("sparse", "largecheckoutcount")
+                and _hassparse(repo)
+            ):
+                hintutil.trigger("sparse-largecheckout", dirstatesize, repo)
+    return res
 
 
 def _clonesparsecmd(orig, ui, repo, *args, **opts):
@@ -1246,6 +1306,18 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
 
 # hints
 hint = registrar.hint()
+
+
+@hint("sparse-largecheckout")
+def hintlargecheckout(dirstatesize, repo):
+    return (
+        _(
+            "Your repository checkout has %s files which makes Many mercurial "
+            "commands slower. Learn how to make it smaller at "
+            "https://fburl.com/hgsparse"
+        )
+        % dirstatesize
+    )
 
 
 @hint("sparse-explain-verbose")

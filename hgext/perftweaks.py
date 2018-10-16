@@ -7,19 +7,10 @@
 """extension for tweaking Mercurial features to improve performance.
 
 ::
-
     [perftweaks]
     # Whether to use faster hidden cache. It has faster cache hash calculation
     # which only check stat of a few files inside store/ directory.
     fasthiddencache = False
-
-
-    [perftweaks]
-    # Whether to advertise usage of the sparse profiles when the checkout size
-    # is very large.
-    largecheckouthint = False
-    # The number of files in the checkout that constitute a "large checkout".
-    largecheckoutcount = 0
 """
 
 import errno
@@ -29,12 +20,10 @@ from mercurial import (
     branchmap,
     dispatch,
     extensions,
-    hintutil,
     localrepo,
     merge,
     namespaces,
     phases,
-    registrar,
     scmutil,
     tags,
     util,
@@ -45,12 +34,6 @@ from mercurial.node import bin
 
 
 testedwith = "ships-with-fb-hgext"
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("perftweaks", "largecheckouthint", default=False)
-configitem("perftweaks", "largecheckoutcount", default=0)
 
 
 def extsetup(ui):
@@ -64,8 +47,6 @@ def extsetup(ui):
     wrapfunction(branchmap, "replacecache", _branchmapreplacecache)
     wrapfunction(branchmap, "updatecache", _branchmapupdatecache)
 
-    wrapfunction(dispatch, "runcommand", _trackdirstatesizes)
-    wrapfunction(dispatch, "runcommand", _tracksparseprofiles)
     wrapfunction(merge, "update", _trackupdatesize)
 
     try:
@@ -347,64 +328,6 @@ def _savepreloadrevs(repo, name, revs):
         except EnvironmentError:
             # No permission to write? No big deal
             pass
-
-
-hint = registrar.hint()
-
-
-@hint("perftweaks-largecheckout")
-def hintexplainverbose(dirstatesize, repo):
-    return (
-        _(
-            "Your repository checkout has %s files which makes Many mercurial "
-            "commands slower. Learn how to make it smaller at "
-            "https://fburl.com/hgsparse"
-        )
-        % dirstatesize
-    )
-
-
-def sparseenabled():
-    sparse = None
-    try:
-        sparse = extensions.find("sparse")
-    except KeyError:
-        return False
-    if sparse:
-        return True
-
-
-def _trackdirstatesizes(runcommand, lui, repo, *args):
-    res = runcommand(lui, repo, *args)
-    if repo is not None and repo.local():
-        dirstate = repo.dirstate
-        dirstatesize = None
-        try:
-            # Eden and flat dirstate.
-            dirstatesize = len(dirstate._map._map)
-        except AttributeError:
-            # Treestate and treedirstate.
-            dirstatesize = len(dirstate._map)
-        if dirstatesize is not None:
-            lui.log("dirstate_size", "", dirstate_size=dirstatesize)
-            if (
-                repo.ui.configbool("perftweaks", "largecheckouthint")
-                and dirstatesize
-                >= repo.ui.configint("perftweaks", "largecheckoutcount")
-                # eden has the sparse extension disabled
-                and sparseenabled()
-            ):
-                hintutil.trigger("perftweaks-largecheckout", dirstatesize, repo)
-    return res
-
-
-def _tracksparseprofiles(runcommand, lui, repo, *args):
-    res = runcommand(lui, repo, *args)
-    if repo is not None and repo.local():
-        if util.safehasattr(repo, "getactiveprofiles"):
-            profiles = repo.getactiveprofiles()
-            lui.log("sparse_profiles", "", active_profiles=",".join(sorted(profiles)))
-    return res
 
 
 def _trackupdatesize(orig, repo, node, branchmerge, *args, **kwargs):
