@@ -13,6 +13,7 @@
 #include <folly/Try.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/GlobalExecutor.h>
+#include <folly/executors/task_queue/UnboundedBlockingQueue.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
@@ -156,15 +157,20 @@ HgBackingStore::HgBackingStore(
     : localStore_(localStore),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
-          make_unique<folly::LifoSemMPMCQueue<
-              folly::CPUThreadPoolExecutor::CPUTask,
-              // block if full; Eden with fail a CHECK in multiple code
-              // paths if the import throws exceptions.  We should remove
-              // those checks and replace them with saner exception handling
-              // in the long run, but for now we avoid that problem by
-              // blocking here.
-              folly::QueueBehaviorIfFull::BLOCK>>(
-              /* max_capacity */ FLAGS_num_hg_import_threads * 128),
+          /* Eden performance will degrade when, for example, a status operation
+           * causes a large number of import requests to be scheduled before a
+           * lightweight operation needs to check the RocksDB cache. In that
+           * case, the RocksDB threads can end up all busy inserting work into
+           * the importer queue, preventing future requests that would hit cache
+           * from succeeding.
+           *
+           * Thus, make the import queue unbounded.
+           *
+           * In the long term, we'll want a more comprehensive approach to
+           * bounding the parallelism of scheduled work.
+           */
+          make_unique<folly::UnboundedBlockingQueue<
+              folly::CPUThreadPoolExecutor::CPUTask>>(),
           std::make_shared<HgImporterThreadFactory>(repository, localStore))),
       serverThreadPool_(serverThreadPool) {
 #if EDEN_HAVE_HG_TREEMANIFEST
