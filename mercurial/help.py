@@ -364,18 +364,24 @@ addtopicsymbols("templates", ".. functionsmarker", templater.funcs)
 addtopicsymbols("hgweb", ".. webcommandsmarker", webcommands.commands, dedent=True)
 
 helphomecommands = [
-    ("Create repositories", {"init", "clone"}),
-    ("Examine files in your current checkout", {"status", "grep"}),
-    ("Work on your current checkout", {"add", "remove", "rename", "copy"}),
-    ("Commit changes and modify commits", {"commit", "amend", "absorb", "metaedit"}),
-    ("Look at commits and commit history", {"log", "show", "diff", "smartlog"}),
-    ("Checkout other commits", {"checkout", "next", "previous"}),
-    ("Rearrange commits", {"rebase", "histedit", "fold", "split", "graft", "hide"}),
-    ("Undo changes", {"undo", "uncommit", "unamend", "redo"}),
-    ("Exchange commits with a server", {"pull", "push", "prefetch"}),
+    ("Get the latest commits from the server", ["pull"]),
+    ("View commits", ["ssl", "show", "diff"]),
+    ("Check out a commit", ["checkout"]),
+    (
+        "Work with your checkout",
+        ["status", "add", "remove", "revert", "forget", "purge", "shelve"],
+    ),
+    ("Commit changes and modify commits", ["commit", "amend", "metaedit"]),
+    ("Rearrange commits", ["rebase", "graft", "hide", "unhide"]),
+    (
+        "Work with stacks of commits",
+        ["previous", "next", "split", "fold", "histedit", "absorb"],
+    ),
+    ("Undo changes", ["uncommit", "unamend", "undo", "redo"]),
+    ("Other commands", ["config", "grep", "journal", "rage"]),
 ]
 
-helphometopics = {"revisions", "glossary", "patterns", "templating"}
+helphometopics = {"revisions", "filesets", "glossary", "patterns", "templating"}
 
 
 class _helpdispatch(object):
@@ -388,6 +394,11 @@ class _helpdispatch(object):
         self.unknowncmd = unknowncmd
         self.full = full
         self.opts = opts
+
+        self.commandindex = {}
+        for name, cmd in commands.table.iteritems():
+            for n in name.lstrip("^").split("|"):
+                self.commandindex[n] = cmd
 
     def dispatch(self, name):
         queries = []
@@ -520,7 +531,22 @@ class _helpdispatch(object):
 
         return rst
 
-    def helpcmdlist(self, name, select=None):
+    def _helpcmddoc(self, doc):
+        doc = gettext(doc)
+        if doc:
+            doc = doc.splitlines()[0].rstrip()
+        if not doc:
+            doc = _("(no help text available)")
+        return doc
+
+    def _helpcmditem(self, name):
+        cmd = self.commandindex.get(name)
+        if cmd is None:
+            return None
+        doc = self._helpcmddoc(pycompat.getdoc(cmd[0]))
+        return " :%s: %s\n" % (name, doc)
+
+    def helplist(self, name, select=None, **opts):
         h = {}
         cmds = {}
         for c, e in self.commands.table.iteritems():
@@ -530,30 +556,11 @@ class _helpdispatch(object):
             doc = pycompat.getdoc(e[0])
             if filtercmd(self.ui, f, name, doc):
                 continue
-            doc = gettext(doc)
-            if doc:
-                doc = doc.splitlines()[0].rstrip()
-            if not doc:
-                doc = _("(no help text available)")
-            h[f] = doc
+            h[f] = self._helpcmddoc(gettext(doc))
             cmds[f] = c.lstrip("^")
 
-        if not h:
-            return [], {}
         rst = []
-        fns = sorted(h)
-        for f in fns:
-            if self.ui.verbose:
-                commacmds = cmds[f].replace("|", ", ")
-                rst.append(" :%s: %s\n" % (commacmds, h[f]))
-            else:
-                rst.append(" :%s: %s\n" % (f, h[f]))
-        return rst, cmds
-
-    def helplist(self, name, select=None, **opts):
-        # list of commands
-        rst, cmds = self.helpcmdlist(name, select)
-        if not rst:
+        if not h:
             if not self.ui.quiet:
                 rst.append(_("no commands defined\n"))
             return rst
@@ -563,7 +570,15 @@ class _helpdispatch(object):
                 header = _("Debug commands (internal and unsupported):\n\n")
             else:
                 header = _("Commands:\n\n")
-            rst.insert(0, header)
+            rst.append(header)
+
+        fns = sorted(h)
+        for f in fns:
+            if self.ui.verbose:
+                commacmds = cmds[f].replace("|", ", ")
+                rst.append(" :%s: %s\n" % (commacmds, h[f]))
+            else:
+                rst.append(" :%s: %s\n" % (f, h[f]))
 
         return rst
 
@@ -580,10 +595,12 @@ class _helpdispatch(object):
 
         for desc, commands in helphomecommands:
 
-            def match(cmdspec):
-                return any(c in commands for c in cmdspec.lstrip("^").split("|"))
+            sectionrst = []
+            for command in commands:
+                cmdrst = self._helpcmditem(command)
+                if cmdrst:
+                    sectionrst.append(cmdrst)
 
-            sectionrst, sectioncmds = self.helpcmdlist(None, match)
             if sectionrst:
                 rst.append(desc + ":\n\n")
                 rst.extend(sectionrst)
@@ -597,6 +614,11 @@ class _helpdispatch(object):
             rst.append(_("\nAdditional help topics:\n\n"))
             for t, desc in topics:
                 rst.append(" :%s: %s\n" % (t, desc.lower()))
+
+        localhelp = self.ui.config("help", "localhelp")
+        if localhelp:
+            rst.append("\n")
+            rst.append(localhelp)
 
         return rst
 

@@ -880,6 +880,12 @@ Supported arguments:
 ``color``
     Set branch edges color in hexadecimal RGB notation.
 
+``help``
+--------
+
+``localhelp``
+    Additional information to display at the end of ``hg help``.
+
 ``hint``
 --------
 

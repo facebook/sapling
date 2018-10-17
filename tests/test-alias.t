@@ -470,49 +470,44 @@ invalid global arguments for normal commands, aliases, and shell aliases
   These are some common Mercurial commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
-  Create repositories:
+  Get the latest commits from the server:
   
-   clone         make a copy of an existing repository
-   init          create a new repository in the given directory
+   pull          pull changes from the specified source
   
-  Examine files in your current checkout:
+  View commits:
   
-   grep          search revision history for a pattern in specified files
+   show          show commit in detail
+   diff          show differences between commits
+  
+  Check out a commit:
+  
+   checkout      checkout a specific commit
+  
+  Work with your checkout:
+  
    status        show changed files in the working directory
-  
-  Work on your current checkout:
-  
    add           add the specified files on the next commit
-   copy          mark files as copied for the next commit
    remove        remove the specified files on the next commit
-   rename        rename files; equivalent of copy + remove
+   revert        restore files to their checkout state
+   forget        forget the specified files on the next commit
   
   Commit changes and modify commits:
   
    commit        commit the specified files or all outstanding changes
   
-  Look at commits and commit history:
-  
-   diff          show differences between commits
-   log           show commit history
-   show          show commit in detail
-  
-  Checkout other commits:
-  
-   update        checkout a specific commit
-  
   Rearrange commits:
   
-   graft         copy commits from a different location
    rebase        move commits from one location to another
+   graft         copy commits from a different location
   
-  Exchange commits with a server:
+  Other commands:
   
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
+   config        show combined config settings from all hgrc files
+   grep          search revision history for a pattern in specified files
   
   Additional help topics:
   
+   filesets      specifying file sets
    glossary      glossary
    patterns      file name patterns
    revisions     specifying revisions
@@ -527,49 +522,44 @@ invalid global arguments for normal commands, aliases, and shell aliases
   These are some common Mercurial commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
-  Create repositories:
+  Get the latest commits from the server:
   
-   clone         make a copy of an existing repository
-   init          create a new repository in the given directory
+   pull          pull changes from the specified source
   
-  Examine files in your current checkout:
+  View commits:
   
-   grep          search revision history for a pattern in specified files
+   show          show commit in detail
+   diff          show differences between commits
+  
+  Check out a commit:
+  
+   checkout      checkout a specific commit
+  
+  Work with your checkout:
+  
    status        show changed files in the working directory
-  
-  Work on your current checkout:
-  
    add           add the specified files on the next commit
-   copy          mark files as copied for the next commit
    remove        remove the specified files on the next commit
-   rename        rename files; equivalent of copy + remove
+   revert        restore files to their checkout state
+   forget        forget the specified files on the next commit
   
   Commit changes and modify commits:
   
    commit        commit the specified files or all outstanding changes
   
-  Look at commits and commit history:
-  
-   diff          show differences between commits
-   log           show commit history
-   show          show commit in detail
-  
-  Checkout other commits:
-  
-   update        checkout a specific commit
-  
   Rearrange commits:
   
-   graft         copy commits from a different location
    rebase        move commits from one location to another
+   graft         copy commits from a different location
   
-  Exchange commits with a server:
+  Other commands:
   
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
+   config        show combined config settings from all hgrc files
+   grep          search revision history for a pattern in specified files
   
   Additional help topics:
   
+   filesets      specifying file sets
    glossary      glossary
    patterns      file name patterns
    revisions     specifying revisions
@@ -584,49 +574,44 @@ invalid global arguments for normal commands, aliases, and shell aliases
   These are some common Mercurial commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
-  Create repositories:
+  Get the latest commits from the server:
   
-   clone         make a copy of an existing repository
-   init          create a new repository in the given directory
+   pull          pull changes from the specified source
   
-  Examine files in your current checkout:
+  View commits:
   
-   grep          search revision history for a pattern in specified files
+   show          show commit in detail
+   diff          show differences between commits
+  
+  Check out a commit:
+  
+   checkout      checkout a specific commit
+  
+  Work with your checkout:
+  
    status        show changed files in the working directory
-  
-  Work on your current checkout:
-  
    add           add the specified files on the next commit
-   copy          mark files as copied for the next commit
    remove        remove the specified files on the next commit
-   rename        rename files; equivalent of copy + remove
+   revert        restore files to their checkout state
+   forget        forget the specified files on the next commit
   
   Commit changes and modify commits:
   
    commit        commit the specified files or all outstanding changes
   
-  Look at commits and commit history:
-  
-   diff          show differences between commits
-   log           show commit history
-   show          show commit in detail
-  
-  Checkout other commits:
-  
-   update        checkout a specific commit
-  
   Rearrange commits:
   
-   graft         copy commits from a different location
    rebase        move commits from one location to another
+   graft         copy commits from a different location
   
-  Exchange commits with a server:
+  Other commands:
   
-   pull          pull changes from the specified source
-   push          push changes to the specified destination
+   config        show combined config settings from all hgrc files
+   grep          search revision history for a pattern in specified files
   
   Additional help topics:
   
+   filesets      specifying file sets
    glossary      glossary
    patterns      file name patterns
    revisions     specifying revisions
