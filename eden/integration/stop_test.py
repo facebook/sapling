@@ -10,11 +10,9 @@
 import contextlib
 import os
 import pathlib
-import shutil
 import signal
 import subprocess
 import sys
-import tempfile
 import time
 import typing
 import unittest
@@ -41,12 +39,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
 
     def test_stop_stops_running_daemon(self):
         with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
-            stop_process = pexpect.spawn(
-                FindExe.EDEN_CLI,
-                ["--config-dir", self.tmp_dir, "stop", "--timeout", "5"],
-                encoding="utf-8",
-                logfile=sys.stderr,
-            )
+            stop_process = self.spawn_stop(["--timeout", "5"])
             stop_process.expect_exact("edenfs exited cleanly.")
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
             self.assertTrue(
@@ -72,18 +65,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
 
         # Ask the CLI to stop edenfs, with a 1 second timeout.
         # It should have to kill the process with SIGKILL
-        stop_cmd = [
-            FindExe.EDEN_CLI,
-            "--config-dir",
-            self.tmp_dir,
-            "stop",
-            "--timeout",
-            "1",
-        ]
-        print("Stopping eden: %r" % (stop_cmd,))
-        stop_process = pexpect.spawn(
-            stop_cmd[0], stop_cmd[1:], encoding="utf-8", logfile=sys.stderr
-        )
+        stop_process = self.spawn_stop(["--timeout", "1"])
         stop_process.expect_exact("Terminated edenfs with SIGKILL")
         self.assert_process_exit_code(
             stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
@@ -91,12 +73,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
 
     def test_async_stop_stops_daemon_eventually(self):
         with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
-            stop_process = pexpect.spawn(
-                FindExe.EDEN_CLI,
-                ["--config-dir", self.tmp_dir, "stop", "--timeout", "0"],
-                encoding="utf-8",
-                logfile=sys.stderr,
-            )
+            stop_process = self.spawn_stop(["--timeout", "0"])
             stop_process.expect_exact("Sent async shutdown request to edenfs.")
             self.assert_process_exit_code(
                 stop_process, SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
@@ -111,12 +88,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
             poll_until(daemon_exited, timeout=10)
 
     def test_stop_not_running(self):
-        stop_process = pexpect.spawn(
-            FindExe.EDEN_CLI,
-            ["--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
-            encoding="utf-8",
-            logfile=sys.stderr,
-        )
+        stop_process = self.spawn_stop(["--timeout", "1"])
         stop_process.expect_exact("edenfs is not running")
         self.assert_process_exit_code(
             stop_process, SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
@@ -126,12 +98,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
         daemon_pid = spawn_fake_eden_daemon(pathlib.Path(self.tmp_dir))
         os.kill(daemon_pid, signal.SIGKILL)
 
-        stop_process = pexpect.spawn(
-            FindExe.EDEN_CLI,
-            ["--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
-            encoding="utf-8",
-            logfile=sys.stderr,
-        )
+        stop_process = self.spawn_stop(["--timeout", "1"])
         stop_process.expect_exact("edenfs is not running")
         self.assert_process_exit_code(
             stop_process, SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
@@ -141,12 +108,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
         with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
             os.kill(daemon_pid, signal.SIGSTOP)
             try:
-                stop_process = pexpect.spawn(
-                    FindExe.EDEN_CLI,
-                    ["--config-dir", self.tmp_dir, "stop", "--timeout", "5"],
-                    encoding="utf-8",
-                    logfile=sys.stderr,
-                )
+                stop_process = self.spawn_stop(["--timeout", "5"])
 
                 time.sleep(2)
                 self.assertTrue(
@@ -168,12 +130,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
         with fake_eden_daemon(pathlib.Path(self.tmp_dir)) as daemon_pid:
             os.kill(daemon_pid, signal.SIGSTOP)
             try:
-                stop_process = pexpect.spawn(
-                    FindExe.EDEN_CLI,
-                    ["--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
-                    encoding="utf-8",
-                    logfile=sys.stderr,
-                )
+                stop_process = self.spawn_stop(["--timeout", "1"])
                 stop_process.expect_exact("warning: edenfs is not responding")
                 self.assert_process_exit_code(
                     stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
@@ -184,12 +141,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
 
     def test_hanging_thrift_call_kills_daemon_with_sigkill(self):
         with fake_eden_daemon(pathlib.Path(self.tmp_dir), ["--sleepBeforeStop=5"]):
-            stop_process = pexpect.spawn(
-                FindExe.EDEN_CLI,
-                ["--config-dir", self.tmp_dir, "stop", "--timeout", "1"],
-                encoding="utf-8",
-                logfile=sys.stderr,
-            )
+            stop_process = self.spawn_stop(["--timeout", "1"])
             self.assert_process_exit_code(
                 stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
             )
@@ -198,10 +150,13 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
         with fake_eden_daemon(
             pathlib.Path(self.tmp_dir), ["--exitWithoutCleanupOnStop"]
         ):
-            stop_process = pexpect.spawn(
-                FindExe.EDEN_CLI,
-                ["--config-dir", self.tmp_dir, "stop", "--timeout", "10"],
-                encoding="utf-8",
-                logfile=sys.stderr,
-            )
+            stop_process = self.spawn_stop(["--timeout", "10"])
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
+
+    def spawn_stop(self, extra_args: typing.List[str]) -> "pexpect.spawn[str]":
+        return pexpect.spawn(
+            FindExe.EDEN_CLI,
+            ["--config-dir", self.tmp_dir, "stop"] + extra_args,
+            encoding="utf-8",
+            logfile=sys.stderr,
+        )

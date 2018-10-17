@@ -9,7 +9,6 @@
 
 import os
 import pathlib
-import shlex
 import signal
 import sys
 import tempfile
@@ -48,12 +47,7 @@ class HealthOfFakeEdenFSTest(unittest.TestCase, PexpectAssertionMixin):
 
     def test_healthy_daemon_is_healthy(self):
         with fake_eden_daemon(self.temp_dir):
-            status_process = pexpect.spawn(
-                FindExe.EDEN_CLI,
-                ["--config-dir", str(self.temp_dir), "status"],
-                encoding="utf-8",
-                logfile=sys.stderr,
-            )
+            status_process = self.spawn_status([])
             status_process.expect_exact("eden running normally")
             self.assert_process_succeeds(status_process)
 
@@ -62,23 +56,13 @@ class HealthOfFakeEdenFSTest(unittest.TestCase, PexpectAssertionMixin):
             os.kill(daemon_pid, signal.SIGKILL)
             wait_for_shutdown(pid=daemon_pid, timeout=5)
 
-            status_process = pexpect.spawn(
-                FindExe.EDEN_CLI,
-                ["--config-dir", str(self.temp_dir), "status"],
-                encoding="utf-8",
-                logfile=sys.stderr,
-            )
+            status_process = self.spawn_status([])
             status_process.expect_exact("edenfs not running")
             self.assert_process_fails(status_process, exit_code=1)
 
     def test_hanging_thrift_call_reports_daemon_is_unresponsive(self):
         with fake_eden_daemon(self.temp_dir, ["--sleepBeforeGetPid=5"]):
-            status_process = pexpect.spawn(
-                FindExe.EDEN_CLI,
-                ["--config-dir", str(self.temp_dir), "status", "--timeout", "1"],
-                encoding="utf-8",
-                logfile=sys.stderr,
-            )
+            status_process = self.spawn_status(["--timeout", "1"])
             status_process.expect_exact(
                 "Eden's Thrift server does not appear to be running, but the "
                 "process is still alive"
@@ -87,12 +71,15 @@ class HealthOfFakeEdenFSTest(unittest.TestCase, PexpectAssertionMixin):
 
     def test_slow_thrift_call_reports_daemon_is_healthy(self):
         with fake_eden_daemon(self.temp_dir, ["--sleepBeforeGetPid=2"]):
-            status_process = pexpect.spawn(
-                FindExe.EDEN_CLI,
-                ["--config-dir", str(self.temp_dir), "status", "--timeout", "10"],
-                encoding="utf-8",
-                logfile=sys.stderr,
-            )
+            status_process = self.spawn_status(["--timeout", "10"])
             status_process.logfile = sys.stderr
             status_process.expect_exact("eden running normally")
             self.assert_process_succeeds(status_process)
+
+    def spawn_status(self, extra_args: typing.List[str]) -> "pexpect.spawn[str]":
+        return pexpect.spawn(
+            FindExe.EDEN_CLI,
+            ["--config-dir", str(self.temp_dir), "status"] + extra_args,
+            encoding="utf-8",
+            logfile=sys.stderr,
+        )
