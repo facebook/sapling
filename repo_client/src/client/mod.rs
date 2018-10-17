@@ -642,6 +642,7 @@ impl HgCommands for RepoClient {
                     node,
                     path.clone(),
                     trace.clone(),
+                    repo.lfs_params().clone(),
                 ).traced(
                     this.trace(),
                     ops::GETFILES,

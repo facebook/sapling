@@ -112,6 +112,7 @@ mod test {
                     },
                 ]),
                 pushrebase: Default::default(),
+                lfs: Default::default(),
             };
 
             let mut hm = hook_manager_blobrepo();
@@ -143,10 +144,11 @@ mod test {
                         name: "hook1".into(),
                         code: "hook1 code".into(),
                         hook_type: HookType::PerAddedOrModifiedFile,
-                        bypass: None
+                        bypass: None,
                     },
                 ]),
                 pushrebase: Default::default(),
+                lfs: Default::default(),
             };
 
             let mut hm = hook_manager_blobrepo();

@@ -19,7 +19,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PrefixBlobstore};
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
-use metaconfig::PushrebaseParams;
+use metaconfig::{LfsParams, PushrebaseParams};
 use metaconfig::repoconfig::RepoType;
 
 use errors::*;
@@ -44,6 +44,7 @@ pub struct MononokeRepo {
     pushrebase_params: PushrebaseParams,
     hook_manager: Arc<HookManager>,
     streaming_clone: Option<MysqlStreamingCloneConfig>,
+    lfs_params: LfsParams,
 }
 
 impl MononokeRepo {
@@ -53,12 +54,14 @@ impl MononokeRepo {
         pushrebase_params: &PushrebaseParams,
         hook_manager: Arc<HookManager>,
         streaming_clone: Option<MysqlStreamingCloneConfig>,
+        lfs_params: LfsParams,
     ) -> Self {
         MononokeRepo {
             blobrepo,
             pushrebase_params: pushrebase_params.clone(),
             hook_manager,
             streaming_clone,
+            lfs_params: lfs_params,
         }
     }
 
@@ -77,6 +80,10 @@ impl MononokeRepo {
 
     pub fn streaming_clone(&self) -> &Option<MysqlStreamingCloneConfig> {
         &self.streaming_clone
+    }
+
+    pub fn lfs_params(&self) -> &LfsParams {
+        &self.lfs_params
     }
 }
 

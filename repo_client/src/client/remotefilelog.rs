@@ -15,7 +15,11 @@ use pylz4;
 
 use blobrepo::BlobRepo;
 use filenodes::FilenodeInfo;
-use mercurial_types::{HgChangesetId, HgNodeHash, HgParents, MPath, RepoPath, NULL_HASH};
+
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath, RepoPath,
+                      RevFlags, NULL_HASH};
+
+use metaconfig::LfsParams;
 use tracing::{TraceContext, Traced};
 
 use errors::*;
@@ -30,12 +34,36 @@ pub fn create_remotefilelog_blob(
     node: HgNodeHash,
     path: MPath,
     trace: TraceContext,
+    lfs_params: LfsParams,
 ) -> BoxFuture<Bytes, Error> {
     let trace_args = trace_args!("node" => node.to_string(), "path" => path.to_string());
 
     // raw_content includes copy information
-    let raw_content_bytes = repo.get_file_content(&node)
-        .and_then(move |raw_content| {
+    let raw_content_bytes = repo.get_file_size(&HgFileNodeId::new(node))
+        .map({
+            move |file_size| match lfs_params.threshold {
+                Some(threshold) => (file_size <= threshold, file_size),
+                None => (true, file_size),
+            }
+        })
+        .and_then({
+            cloned!(repo);
+            move |(direct_fetching_file, file_size)| {
+                if direct_fetching_file {
+                    (
+                        repo.get_file_content(&node).left_future(),
+                        Ok(RevFlags::REVIDX_DEFAULT_FLAGS).into_future(),
+                    )
+                } else {
+                    (
+                        repo.generate_lfs_file(&HgFileNodeId::new(node), file_size)
+                            .right_future(),
+                        Ok(RevFlags::REVIDX_EXTSTORED).into_future(),
+                    )
+                }
+            }
+        })
+        .and_then(move |(raw_content, meta_key_flag)| {
             let raw_content = raw_content.into_bytes();
             // requires digit counting to know for sure, use reasonable approximation
             let approximate_header_size = 12;
@@ -44,14 +72,13 @@ pub fn create_remotefilelog_blob(
             ));
 
             // Write header
-            // TODO(stash): support LFS files using METAKEYFLAG
             let res = write!(
                 writer,
                 "v1\n{}{}\n{}{}\0",
                 METAKEYSIZE,
                 raw_content.len(),
                 METAKEYFLAG,
-                0,
+                meta_key_flag,
             );
 
             res.and_then(|_| writer.write_all(&raw_content))

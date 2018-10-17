@@ -22,7 +22,7 @@
 # 6. Hg push from hg client repo.
 # 6.1 Hg push renamed file.
 # 7. Hg pull from hg client repo.
-
+#   7.1 Note: That lfs-cache folders should be different for both client repos
 
 # 1. Setup nolfs hg repo, create several commit to it
   $ hginit_treemanifest repo-hg-nolfs
@@ -57,16 +57,12 @@
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs
   $ setup_hg_client
+  $ setup_hg_lfs $APISERVER/repo 1000B $TESTTMP/lfs-cache1
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
   > remotenames =
-  > lfs=
-  > [lfs]
-  > threshold=1000B
-  > usercache=$TESTTMP/lfs-cache
-  > url=$APISERVER/repo
   > EOF
 
 # get smallfile
@@ -120,12 +116,43 @@
   added 0 changesets with 0 changes to 0 files
   server ignored bookmark master_bookmark update
 
+# Fail to push if LFS blob is not uploaded to the server
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > lfs=
+  > [lfs]
+  > url=file://$TESTTMP/unused-dummystore
+  > EOF
+
+  $ echo $LONG"ANOTHER-LFS" > f
+  $ hg commit -m f -A f
+  $ hgmn push -r . --to master_bookmark -v
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  searching for changes
+  validated revset for rebase
+  1 changesets found
+  uncompressed size of bundle content:
+       176 (changelog)
+       270  f
+  remote: * ERRO Command failed, remote: true, error: While resolving Changegroup, root_cause: MissingTypedKeyEntry( (glob)
+  remote:     "alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7"
+  remote: ), backtrace: , cause: While uploading File Blobs, cause: While decoding delta cache for file id c9d07fd7e2ec8a7a84ffa605085c8d98012cae47, path f, cause: Missing typed key entry for key: alias.sha256.098e78d6738b5d3c2e01095bc16456f31e9f669e2eda7c6e11653fac755ce8a7, session_uuid: * (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
 
   $ cd ..
 7. Hg pull from hg client repo.
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs2
   $ setup_hg_client
+  $ setup_hg_lfs $APISERVER/repo 1000B $TESTTMP/lfs-cache2
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase =
+  > remotenames =
+  > EOF
 
   $ hgmn pull -v
   pulling from ssh://user@dummy/repo
@@ -136,13 +163,17 @@
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  adding remote bookmark master_bookmark
   new changesets cbf96639d87c:5ff46b53dca4
   (run 'hg update' to get a working copy)
 
   $ hgmn update -r master_bookmark -v
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   resolving manifests
+  lfs: need to transfer 2 objects (2.94 KB)
+  lfs: downloading 8e861bc81e64491883d375bf97e9b5dbe4626f8651483cfa9c95db0e32da4a00 (1.48 KB)
+  lfs: processed: 8e861bc81e64491883d375bf97e9b5dbe4626f8651483cfa9c95db0e32da4a00
+  lfs: downloading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.47 KB)
+  lfs: processed: f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
   getting lfs-largefile
   getting lfs-largefile-renamed
   getting smallfile

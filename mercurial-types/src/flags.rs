@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use errors::ErrorKind;
+use std::fmt;
 
 use errors::*;
 
@@ -30,5 +31,11 @@ pub fn parse_rev_flags(flags: Option<u16>) -> Result<RevFlags> {
             None => Err(ErrorKind::UnknownRevFlags.into()),
         },
         None => Ok(RevFlags::REVIDX_DEFAULT_FLAGS),
+    }
+}
+
+impl fmt::Display for RevFlags {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.bits())
     }
 }

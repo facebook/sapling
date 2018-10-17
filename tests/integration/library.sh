@@ -126,6 +126,13 @@ bookmark="$CACHE_WARMUP_BOOKMARK"
 CONFIG
 fi
 
+if [[ -v LFS_THRESHOLD ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+[lfs]
+threshold=$LFS_THRESHOLD
+CONFIG
+fi
+
   mkdir -p repos/disabled_repo
   cat > repos/disabled_repo/server.toml <<CONFIG
 path="$TESTTMP/disabled_repo"
@@ -379,5 +386,15 @@ EOF
 pushrebase =
 remotenames =
 EOF
+}
 
+function setup_hg_lfs() {
+  cat >> .hg/hgrc <<EOF
+[extensions]
+lfs=
+[lfs]
+url=$1
+threshold=$2
+usercache=$3
+EOF
 }

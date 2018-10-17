@@ -244,7 +244,7 @@ impl File {
                 Self::get_copied_lfs(contents).map(move |copy_from| (version, oid, size, copy_from))
             })
             .map(|(version, oid, size, copy_from)| LFSContent {
-                _version: version,
+                version,
                 oid,
                 size,
                 copy_from,
@@ -254,6 +254,17 @@ impl File {
     fn get_copied_lfs(contents: &HashMap<&[u8], &[u8]>) -> Result<Option<(MPath, HgNodeHash)>> {
         Self::get_copied_from_with_keys(contents, HGCOPY, HGCOPYREV)
     }
+
+    pub fn generate_lfs_file(oid: Sha256, size: u64) -> Result<Bytes> {
+        let git_version = String::from_utf8(GIT_VERSION.to_vec())?;
+        let lfs_content = LFSContent {
+            version: git_version,
+            oid,
+            size,
+            copy_from: None,
+        };
+        lfs_content.into_bytes()
+    }
 }
 
 const VERSION: &[u8] = b"version";
@@ -262,13 +273,14 @@ const SIZE: &[u8] = b"size";
 const HGCOPY: &[u8] = b"x-hg-copy";
 const HGCOPYREV: &[u8] = b"x-hg-copyrev";
 const _ISBINARY: &[u8] = b"x-is-binary";
+const GIT_VERSION: &[u8] = b"https://git-lfs.github.com/spec/v1";
 const SHA256_PREFIX: &[u8] = b"sha256:";
 
 // See [https://www.mercurial-scm.org/wiki/LfsPlan], By default, version, oid and size are required
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LFSContent {
     // mandatory fields
-    _version: String,
+    version: String,
     oid: Sha256,
     size: u64,
 
@@ -287,6 +299,28 @@ impl LFSContent {
 
     pub fn copy_from(&self) -> Option<(MPath, HgNodeHash)> {
         self.copy_from.clone()
+    }
+
+    pub fn into_bytes(&self) -> Result<Bytes> {
+        let mut out: Vec<u8> = vec![];
+
+        out.write_all(VERSION)?;
+        out.write_all(b" ")?;
+        out.write_all(self.version.as_ref())?;
+        out.write_all(b"\n")?;
+
+        out.write_all(OID)?;
+        out.write_all(b" ")?;
+        out.write_all(SHA256_PREFIX)?;
+        out.write_all(self.oid.to_hex().as_ref())?;
+        out.write_all(b"\n")?;
+
+        out.write_all(SIZE)?;
+        out.write_all(b" ")?;
+        out.write_all(format!("{}", self.size).as_ref())?;
+        out.write_all(b"\n")?;
+
+        Ok(Bytes::from(out))
     }
 }
 
@@ -429,6 +463,23 @@ mod test {
     }
 
     #[test]
+    fn test_parse_to_hash_map_long_delimiter() {
+        const DATA: &[u8] = b"x\nfooDELIMITERbar\nfoo1DELIMITERbar1";
+        const DELIMITER: &[u8] = b"DELIMITER";
+        let mut kv: Vec<_> = File::parse_to_hash_map(DATA, DELIMITER)
+            .into_iter()
+            .collect();
+        kv.as_mut_slice().sort();
+        assert_eq!(
+            kv,
+            vec![
+                (b"foo".as_ref(), b"bar".as_ref()),
+                (b"foo1".as_ref(), b"bar1".as_ref()),
+            ]
+        )
+    }
+
+    #[test]
     fn generate_metadata_0() {
         const FILE_CONTENTS: &[u8] = b"foobar";
         let file_contents = FileContents::Bytes(Bytes::from(FILE_CONTENTS));
@@ -514,7 +565,7 @@ mod test {
         assert_eq!(
             lfs.unwrap(),
             LFSContent {
-                _version: "https://git-lfs.github.com/spec/v1".to_string(),
+                version: "https://git-lfs.github.com/spec/v1".to_string(),
                 oid: Sha256::from_str(
                     "27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97"
                 ).unwrap(),
@@ -565,6 +616,25 @@ mod test {
         let lfs = File::get_lfs_struct(&kv);
 
         assert_eq!(lfs.is_err(), true)
+    }
+
+    #[test]
+    fn test_roundtrip_lfs_content() {
+        let oid = Sha256::from_str(
+            "27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97",
+        ).unwrap();
+        let size = 10;
+
+        let generated_file = File::generate_lfs_file(oid, size).unwrap();
+        let lfs_struct = File::data_only(generated_file).get_lfs_content().unwrap();
+
+        let expected_lfs_struct = LFSContent {
+            version: "https://git-lfs.github.com/spec/v1".to_string(),
+            oid,
+            size,
+            copy_from: None,
+        };
+        assert_eq!(lfs_struct, expected_lfs_struct)
     }
 
     quickcheck! {

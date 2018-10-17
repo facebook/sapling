@@ -46,6 +46,8 @@ pub struct RepoConfig {
     pub hooks: Option<Vec<HookParams>>,
     /// Pushrebase configuration options
     pub pushrebase: PushrebaseParams,
+    /// LFS configuration options
+    pub lfs: LfsParams,
 }
 
 impl RepoConfig {
@@ -128,6 +130,19 @@ impl Default for PushrebaseParams {
             rewritedates: true,
             recursion_limit: 16384, // this number is fairly arbirary
         }
+    }
+}
+
+/// LFS configuration options
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct LfsParams {
+    /// threshold in bytes, If None, Lfs is disabled
+    pub threshold: Option<u64>,
+}
+
+impl Default for LfsParams {
+    fn default() -> Self {
+        LfsParams { threshold: None }
     }
 }
 
@@ -418,6 +433,13 @@ impl RepoConfigs {
             })
             .unwrap_or_default();
 
+        let lfs = match this.lfs {
+            Some(lfs_params) => LfsParams {
+                threshold: lfs_params.threshold,
+            },
+            None => LfsParams { threshold: None },
+        };
+
         Ok(RepoConfig {
             enabled,
             repotype,
@@ -428,6 +450,7 @@ impl RepoConfigs {
             bookmarks,
             hooks: hooks_opt,
             pushrebase,
+            lfs,
         })
     }
 }
@@ -450,6 +473,7 @@ struct RawRepoConfig {
     bookmarks: Option<Vec<RawBookmarkConfig>>,
     hooks: Option<Vec<RawHookConfig>>,
     pushrebase: Option<RawPushrebaseParams>,
+    lfs: Option<RawLfsParams>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -494,6 +518,11 @@ struct RawPushrebaseParams {
     recursion_limit: Option<usize>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+struct RawLfsParams {
+    threshold: Option<u64>,
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -533,6 +562,8 @@ mod test {
             [pushrebase]
             rewritedates = false
             recursion_limit = 1024
+            [lfs]
+            threshold = 1000
         "#;
         let www_content = r#"
             path="/tmp/www"
@@ -593,6 +624,9 @@ mod test {
                     rewritedates: false,
                     recursion_limit: 1024,
                 },
+                lfs: LfsParams {
+                    threshold: Some(1000),
+                },
             },
         );
         repos.insert(
@@ -607,6 +641,7 @@ mod test {
                 bookmarks: None,
                 hooks: None,
                 pushrebase: Default::default(),
+                lfs: Default::default(),
             },
         );
         assert_eq!(

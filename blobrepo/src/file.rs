@@ -10,12 +10,14 @@ use failure::{Error, FutureFailureErrorExt};
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
+use super::alias::get_sha256;
+
 use mercurial::file;
 use mercurial_types::{FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash,
                       HgParents, MPath, MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::HgEntryId;
-use mononoke_types::{ContentId, FileContents, MononokeId};
+use mononoke_types::{ContentId, FileContents, MononokeId, hash::Sha256};
 
 use blobstore::Blobstore;
 
@@ -84,6 +86,22 @@ pub fn fetch_file_content_from_blobstore(
             fetch_file_contents(&blobstore, content_id.clone())
         }
     })
+}
+
+pub fn fetch_file_size_from_blobstore(
+    blobstore: &RepoBlobstore,
+    node_id: HgFileNodeId,
+) -> impl Future<Item = u64, Error = Error> {
+    fetch_file_envelope(blobstore, node_id.into_nodehash())
+        .map({ |envelope| envelope.content_size() })
+}
+
+pub fn fetch_file_sha256_from_blobstore(
+    blobstore: &RepoBlobstore,
+    node_id: HgFileNodeId,
+) -> impl Future<Item = Sha256, Error = Error> {
+    fetch_file_content_from_blobstore(blobstore, node_id.into_nodehash())
+        .map(|file_content| get_sha256(&file_content.into_bytes()))
 }
 
 pub fn fetch_rename_from_blobstore(

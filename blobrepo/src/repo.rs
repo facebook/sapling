@@ -63,8 +63,9 @@ use rocksdb;
 use BlobManifest;
 use HgBlobChangeset;
 use errors::*;
-use file::{fetch_file_content_from_blobstore, fetch_file_contents, fetch_raw_filenode_bytes,
-           fetch_rename_from_blobstore, HgBlobEntry};
+use file::{fetch_file_content_from_blobstore, fetch_file_contents, fetch_file_size_from_blobstore,
+           fetch_raw_filenode_bytes, fetch_rename_from_blobstore, HgBlobEntry,
+           fetch_file_sha256_from_blobstore};
 use memory_manifest::MemoryRootManifest;
 use post_commit::{self, PostCommitQueue};
 use repo_commit::*;
@@ -471,6 +472,14 @@ impl BlobRepo {
         fetch_file_content_from_blobstore(&self.blobstore, *key).boxify()
     }
 
+    pub fn get_file_size(&self, key: &HgFileNodeId) -> impl Future<Item = u64, Error = Error> {
+        fetch_file_size_from_blobstore(&self.blobstore, *key)
+    }
+
+    pub fn get_file_sha256(&self, key: &HgFileNodeId) -> impl Future<Item = Sha256, Error = Error> {
+        fetch_file_sha256_from_blobstore(&self.blobstore, *key)
+    }
+
     pub fn upload_file_content_by_alias(
         &self,
         _alias: Sha256,
@@ -540,6 +549,16 @@ impl BlobRepo {
                     .from_err()
                     .boxify()
             })
+    }
+
+    pub fn generate_lfs_file(
+        &self,
+        key: &HgFileNodeId,
+        file_size: u64,
+    ) -> impl Future<Item = FileContents, Error = Error> {
+        self.get_file_sha256(key)
+            .and_then(move |alias| File::generate_lfs_file(alias, file_size))
+            .map(|bytes| FileContents::Bytes(bytes))
     }
 
     // TODO: (rain1) T30456231 It should be possible in principle to make the return type a wrapper

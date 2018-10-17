@@ -459,6 +459,8 @@ fn open_repo_internal<'a>(
         &Default::default(),
         Arc::new(hook_manager),
         None,
+        // TODO(anastasiya) T35014200, condiser non default value for LFS repos
+        Default::default(),
     ))
 }
 
