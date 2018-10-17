@@ -701,7 +701,7 @@ def aliasinterpolate(name, args, cmd):
 
 
 class cmdalias(object):
-    def __init__(self, name, definition, cmdtable, source):
+    def __init__(self, name, definition, cmdtable, source, aliasdoc=None):
         self.name = self.cmd = name
         self.cmdname = ""
         self.definition = definition
@@ -712,6 +712,7 @@ class cmdalias(object):
         self.badalias = None
         self.unknowncmd = False
         self.source = source
+        self.aliasdoc = aliasdoc
 
         try:
             aliases, entry = cmdutil.findcmd(self.name, cmdtable)
@@ -862,6 +863,7 @@ class lazyaliasentry(object):
         self.definition = definition
         self.cmdtable = cmdtable
         self.source = source
+        self.aliasdoc = None
 
         # If an alias and its definition have a same command name (ex.
         # "log = log -v"). Copy the command table right now so the old
@@ -886,7 +888,9 @@ class lazyaliasentry(object):
             )
         self._resolving.append(self.name)
         try:
-            return cmdalias(self.name, self.definition, self.cmdtable, self.source)
+            return cmdalias(
+                self.name, self.definition, self.cmdtable, self.source, self.aliasdoc
+            )
         finally:
             popped = self._resolving.pop()
             assert popped == self.name
@@ -936,7 +940,11 @@ def addaliases(ui, cmdtable):
     # aliases are processed after extensions have been loaded, so they
     # may use extension commands. Aliases can also use other alias definitions,
     # but only if they have been defined prior to the current definition.
+    aliasdoc = {}
     for alias, definition in ui.configitems("alias"):
+        if alias.endswith(":doc"):
+            aliasdoc[alias[:-4]] = definition
+            continue
         try:
             if cmdtable[alias].definition == definition:
                 continue
@@ -947,6 +955,9 @@ def addaliases(ui, cmdtable):
         source = ui.configsource("alias", alias)
         entry = lazyaliasentry(alias, definition, cmdtable, source)
         cmdtable[alias] = entry
+    for alias, doc in aliasdoc.items():
+        if alias in cmdtable:
+            cmdtable[alias].aliasdoc = doc
 
 
 def _parse(ui, args):

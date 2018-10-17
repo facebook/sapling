@@ -45,6 +45,8 @@
   > escaped3 = !sh -c 'echo "\$1 is \$\$\$1"'
   > escaped4 = !printf '\$\$0 \$\$@\n'
   > exit1 = !sh -c 'exit 1'
+  > documented = id
+  > documented:doc = an alias for the id command
   > 
   > [defaults]
   > mylog = -q
@@ -671,3 +673,49 @@ return code of command and shell aliases:
   abort: no repository found in '$TESTTMP' (.hg not found)!
   [255]
 #endif
+
+documented aliases
+
+  $ hg help documented
+  hg documented [-nibtB] [-r REV] [SOURCE]
+  
+  an alias for the id command
+  
+  alias for: hg id
+  
+  identify the working directory or specified revision
+  
+      Print a summary identifying the repository state at REV using one or two
+      parent hash identifiers, followed by a "+" if the working directory has
+      uncommitted changes, the branch name (if not default), a list of tags, and
+      a list of bookmarks.
+  
+      When REV is not given, print a summary of the current state of the
+      repository.
+  
+      Specifying a path to a repository root or Mercurial bundle will cause
+      lookup to operate on that repository/bundle.
+  
+      See 'hg log' for generating more information about specific revisions,
+      including full hash identifiers.
+  
+      Returns 0 if successful.
+  
+  defined by: * (glob)
+  
+  Options:
+  
+   -r --rev REV       identify the specified revision
+   -n --num           show local revision number
+   -i --id            show global revision id
+   -b --branch        show branch
+   -t --tags          show tags
+   -B --bookmarks     show bookmarks
+   -e --ssh CMD       specify ssh command to use
+      --remotecmd CMD specify hg command to run on the remote side
+      --insecure      do not verify server certificate (ignoring web.cacerts
+                      config)
+  
+  (some details hidden, use --verbose to show complete help)
+  $ hg help commands | grep documented
+   documented    an alias for the id command

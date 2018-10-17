@@ -471,14 +471,19 @@ class _helpdispatch(object):
         if not doc:
             doc = _("(no help text available)")
         if util.safehasattr(entry[0], "definition"):  # aliased command
+            aliasdoc = ""
+            if util.safehasattr(entry[0], "aliasdoc") and entry[0].aliasdoc is not None:
+                aliasdoc = entry[0].aliasdoc + "\n\n"
             source = entry[0].source
             if entry[0].definition.startswith("!"):  # shell alias
-                doc = _("shell alias for::\n\n    %s\n\ndefined by: %s\n") % (
+                doc = _("%sshell alias for::\n\n    %s\n\ndefined by: %s\n") % (
+                    aliasdoc,
                     entry[0].definition[1:],
                     source,
                 )
             else:
-                doc = _("alias for: hg %s\n\n%s\n\ndefined by: %s\n") % (
+                doc = _("%salias for: hg %s\n\n%s\n\ndefined by: %s\n") % (
+                    aliasdoc,
                     entry[0].definition,
                     doc,
                     source,
@@ -531,7 +536,9 @@ class _helpdispatch(object):
 
         return rst
 
-    def _helpcmddoc(self, doc):
+    def _helpcmddoc(self, cmd, doc):
+        if util.safehasattr(cmd, "aliasdoc") and cmd.aliasdoc is not None:
+            return gettext(cmd.aliasdoc)
         doc = gettext(doc)
         if doc:
             doc = doc.splitlines()[0].rstrip()
@@ -543,7 +550,7 @@ class _helpdispatch(object):
         cmd = self.commandindex.get(name)
         if cmd is None:
             return None
-        doc = self._helpcmddoc(pycompat.getdoc(cmd[0]))
+        doc = self._helpcmddoc(cmd[0], pycompat.getdoc(cmd[0]))
         return " :%s: %s\n" % (name, doc)
 
     def helplist(self, name, select=None, **opts):
@@ -556,7 +563,7 @@ class _helpdispatch(object):
             doc = pycompat.getdoc(e[0])
             if filtercmd(self.ui, f, name, doc):
                 continue
-            h[f] = self._helpcmddoc(gettext(doc))
+            h[f] = self._helpcmddoc(e[0], doc)
             cmds[f] = c.lstrip("^")
 
         rst = []
