@@ -985,8 +985,8 @@ impl BlobRepo {
                         })
                         .and_then({
                             cloned!(path);
-                            move |node_id| match node_id {
-                                Some(node_id) => Ok(Some((path, node_id))),
+                            move |res| match res {
+                                Some((_, node_id)) => Ok(Some((path, node_id))),
                                 None => Err(ErrorKind::PathNotFound(path).into()),
                             }
                         })
@@ -1153,7 +1153,7 @@ impl BlobRepo {
         &self,
         path: &MPath,
         manifest: HgManifestId,
-    ) -> impl Future<Item = Option<HgFileNodeId>, Error = Error> + Send {
+    ) -> impl Future<Item = Option<(FileType, HgFileNodeId)>, Error = Error> + Send {
         let (dirname, basename) = path.split_dirname();
         self.find_path_in_manifest(dirname, manifest).map({
             let basename = basename.clone();
@@ -1161,8 +1161,8 @@ impl BlobRepo {
                 None => None,
                 Some(Content::Tree(manifest)) => match manifest.lookup(&basename) {
                     None => None,
-                    Some(entry) => if let Type::File(_) = entry.get_type() {
-                        Some(HgFileNodeId::new(entry.get_hash().into_nodehash()))
+                    Some(entry) => if let Type::File(t) = entry.get_type() {
+                        Some((t, HgFileNodeId::new(entry.get_hash().into_nodehash())))
                     } else {
                         None
                     },
@@ -1197,10 +1197,16 @@ impl BlobRepo {
                 for (path, entry) in bcs.file_changes() {
                     cloned!(path, memory_manifest, incomplete_filenodes);
                     let p1 = manifest_p1
-                        .map(|manifest| repo.find_file_in_manifest(&path, manifest))
+                        .map(|manifest| {
+                            repo.find_file_in_manifest(&path, manifest)
+                                .map(|o| o.map(|(_, x)| x))
+                        })
                         .into_future();
                     let p2 = manifest_p2
-                        .map(|manifest| repo.find_file_in_manifest(&path, manifest))
+                        .map(|manifest| {
+                            repo.find_file_in_manifest(&path, manifest)
+                                .map(|o| o.map(|(_, x)| x))
+                        })
                         .into_future();
                     let future = (p1, p2)
                         .into_future()

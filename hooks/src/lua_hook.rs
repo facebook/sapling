@@ -18,6 +18,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use hlua::{AnyLuaString, AnyLuaValue, Lua, LuaError, LuaFunctionCallError, LuaTable, PushGuard,
            TuplePushError, Void, function0, function1, function2};
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
+use mononoke_types::FileType;
 use std::collections::HashMap;
 
 const HOOK_START_CODE_BASE: &str = include_str!("hook_start_base.lua");
@@ -53,6 +54,7 @@ __hook_start = function(info, arg)
             file.contains_string = function(s) return coroutine.yield(__contains_string(s)) end
             file.len = function() return coroutine.yield(__file_len()) end
             file.content = function() return coroutine.yield(__file_content()) end
+            file.is_symlink = function() return coroutine.yield(__is_symlink()) end
         end
         ctx.file = file
     end)
@@ -225,6 +227,26 @@ impl Hook<HookFile> for LuaHook {
             }
         };
         let file_content = function0(file_content);
+        let is_symlink = {
+            cloned!(context);
+            move || -> Result<AnyFuture, Error> {
+                let future = context
+                    .data
+                    .file_type()
+                    .map_err(|err| {
+                        LuaError::ExecutionError(format!("failed to get file content: {}", err))
+                    })
+                    .map(|file_type| {
+                        let is_symlink = match file_type {
+                            FileType::Symlink => true,
+                            _ => false,
+                        };
+                        AnyLuaValue::LuaBoolean(is_symlink)
+                    });
+                Ok(AnyFuture::new(future))
+            }
+        };
+        let is_symlink = function0(is_symlink);
         let file_len = {
             cloned!(context);
             move || -> Result<AnyFuture, Error> {
@@ -244,6 +266,7 @@ impl Hook<HookFile> for LuaHook {
         lua.set("__contains_string", contains_string);
         lua.set("__file_len", file_len);
         lua.set("__file_content", file_content);
+        lua.set("__is_symlink", is_symlink);
         let res: Result<(), Error> = lua.execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
@@ -822,6 +845,35 @@ mod test {
     }
 
     #[test]
+    fn test_file_hook_is_symlink() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_symlink_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.is_symlink()\n\
+                 end",
+            );
+            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_file_hook_is_not_symlink() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_added_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.is_symlink()\n\
+                 end",
+            );
+            assert_matches!(
+                run_file_hook(code, hook_file),
+                Ok(HookExecution::Rejected(_))
+            );
+        });
+    }
+
+    #[test]
     fn test_file_hook_removed() {
         async_unit::tokio_unit_test(|| {
             let hook_file = default_hook_removed_file();
@@ -1034,7 +1086,10 @@ mod test {
         for path in added.iter().chain(modified.iter()) {
             let content = path.clone() + "sausages";
             let content_bytes: Bytes = content.into();
-            content_store.insert((cs_id.clone(), to_mpath(&path)), content_bytes.into());
+            content_store.insert(
+                (cs_id.clone(), to_mpath(&path)),
+                (FileType::Regular, content_bytes.into()),
+            );
         }
         let content_store = Arc::new(content_store);
         let content_store2 = content_store.clone();
@@ -1061,10 +1116,28 @@ mod test {
         )
     }
 
+    fn default_hook_symlink_file() -> HookFile {
+        let mut content_store = InMemoryFileContentStore::new();
+        let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        content_store.insert(
+            (cs_id.clone(), to_mpath("/a/b/c.txt")),
+            (FileType::Symlink, "sausages".into()),
+        );
+        HookFile::new(
+            "/a/b/c.txt".into(),
+            Arc::new(content_store),
+            cs_id,
+            ChangedFileType::Added,
+        )
+    }
+
     fn default_hook_added_file() -> HookFile {
         let mut content_store = InMemoryFileContentStore::new();
         let cs_id = HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-        content_store.insert((cs_id.clone(), to_mpath("/a/b/c.txt")), "sausages".into());
+        content_store.insert(
+            (cs_id.clone(), to_mpath("/a/b/c.txt")),
+            (FileType::Regular, "sausages".into()),
+        );
         HookFile::new(
             "/a/b/c.txt".into(),
             Arc::new(content_store),

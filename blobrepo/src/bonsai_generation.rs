@@ -175,8 +175,8 @@ fn get_copy_info(
                             cloned!(repopath);
                             move |(bonsai_parent, parent_mf)| {
                                 repo.find_file_in_manifest(&repopath, parent_mf).map(
-                                    move |maybenode| match maybenode {
-                                        Some(node) if node == HgFileNodeId::new(copyfromnode) => {
+                                    move |res| match res {
+                                        Some((_, node)) if node == HgFileNodeId::new(copyfromnode) => {
                                             Some(bonsai_parent)
                                         }
                                         _ => None,

@@ -61,7 +61,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, HgParents, MPath, manifest::get_empty_manifest,
                       manifest_utils::{self, EntryStatus}};
 use metaconfig::repoconfig::HookBypass;
-use mononoke_types::FileContents;
+use mononoke_types::{FileContents, FileType};
 use slog::Logger;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -210,7 +210,11 @@ impl HookManager {
         self.get_hook_changeset(changeset_id)
             .and_then({
                 move |hcs| {
-                    let hooks = HookManager::filter_bypassed_hooks(hooks, &hcs.comments, maybe_pushvars.as_ref());
+                    let hooks = HookManager::filter_bypassed_hooks(
+                        hooks,
+                        &hcs.comments,
+                        maybe_pushvars.as_ref(),
+                    );
 
                     HookManager::run_changeset_hooks_for_changeset(
                         repo_name,
@@ -592,6 +596,19 @@ impl HookFile {
             .and_then(move |opt| {
                 opt.ok_or(ErrorKind::NoFileContent(changeset_id, path.into()).into())
             })
+            .map(|(_, bytes)| bytes)
+            .boxify()
+    }
+
+    pub fn file_type(&self) -> BoxFuture<FileType, Error> {
+        let path = try_boxfuture!(MPath::new(self.path.as_bytes()));
+        let changeset_id = self.changeset_id.clone();
+        self.content_store
+            .get_file_content_for_changeset(self.changeset_id, path.clone())
+            .and_then(move |opt| {
+                opt.ok_or(ErrorKind::NoFileContent(changeset_id, path.into()).into())
+            })
+            .map(|(file_type, _)| file_type)
             .boxify()
     }
 }
@@ -619,6 +636,7 @@ impl HookChangeset {
         let path = try_boxfuture!(MPath::new(path.as_bytes()));
         self.content_store
             .get_file_content_for_changeset(self.changeset_id, path.clone())
+            .map(|opt| opt.map(|(_, bytes)| bytes))
             .boxify()
     }
 }
@@ -782,12 +800,12 @@ pub trait FileContentStore: Send + Sync {
         &self,
         changesetid: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<Bytes>, Error>;
+    ) -> BoxFuture<Option<(FileType, Bytes)>, Error>;
 }
 
 #[derive(Clone)]
 pub struct InMemoryFileContentStore {
-    map: HashMap<(HgChangesetId, MPath), Bytes>,
+    map: HashMap<(HgChangesetId, MPath), (FileType, Bytes)>,
 }
 
 impl FileContentStore for InMemoryFileContentStore {
@@ -795,10 +813,10 @@ impl FileContentStore for InMemoryFileContentStore {
         &self,
         changesetid: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<Bytes>, Error> {
+    ) -> BoxFuture<Option<(FileType, Bytes)>, Error> {
         let opt = self.map
             .get(&(changesetid, path.clone()))
-            .map(|bytes| bytes.clone());
+            .map(|(file_type, bytes)| (file_type.clone(), bytes.clone()));
         finished(opt).boxify()
     }
 }
@@ -810,7 +828,7 @@ impl InMemoryFileContentStore {
         }
     }
 
-    pub fn insert(&mut self, key: (HgChangesetId, MPath), content: Bytes) {
+    pub fn insert(&mut self, key: (HgChangesetId, MPath), content: (FileType, Bytes)) {
         self.map.insert(key, content);
     }
 }
@@ -827,7 +845,7 @@ impl FileContentStore for BlobRepoFileContentStore {
         &self,
         changesetid: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<Bytes>, Error> {
+    ) -> BoxFuture<Option<(FileType, Bytes)>, Error> {
         let repo = self.repo.clone();
         let repo2 = repo.clone();
         repo.get_changeset_by_changesetid(&changesetid)
@@ -835,16 +853,16 @@ impl FileContentStore for BlobRepoFileContentStore {
                 repo.find_file_in_manifest(&path, changeset.manifestid().clone())
             })
             .and_then(move |opt| match opt {
-                Some(hash) => repo2
+                Some((file_type, hash)) => repo2
                     .get_file_content(&hash.into_nodehash())
-                    .map(|content| Some(content))
+                    .map(move |content| Some((file_type, content)))
                     .boxify(),
                 None => finished(None).boxify(),
             })
             .and_then(|opt| match opt {
-                Some(content) => {
+                Some((file_type, content)) => {
                     let FileContents::Bytes(bytes) = content;
-                    Ok(Some(bytes))
+                    Ok(Some((file_type, bytes)))
                 }
                 None => Ok(None),
             })
@@ -1251,6 +1269,36 @@ mod test {
 
     fn file_content_matching_file_hook(content: String) -> Box<Hook<HookFile>> {
         Box::new(FileContentMatchingFileHook { content })
+    }
+
+    #[derive(Clone, Debug)]
+    struct IsSymLinkMatchingFileHook {
+        is_symlink: bool,
+    }
+
+    impl Hook<HookFile> for IsSymLinkMatchingFileHook {
+        fn run(&self, context: HookContext<HookFile>) -> BoxFuture<HookExecution, Error> {
+            let is_symlink = self.is_symlink;
+            context
+                .data
+                .file_type()
+                .map(move |file_type| {
+                    let actual = match file_type {
+                        FileType::Symlink => true,
+                        _ => false,
+                    };
+                    if is_symlink == actual {
+                        HookExecution::Accepted
+                    } else {
+                        default_rejection()
+                    }
+                })
+                .boxify()
+        }
+    }
+
+    fn is_symlink_matching_file_hook(is_symlink: bool) -> Box<Hook<HookFile>> {
+        Box::new(IsSymLinkMatchingFileHook { is_symlink })
     }
 
     #[derive(Clone, Debug)]
@@ -1702,6 +1750,34 @@ mod test {
     }
 
     #[test]
+    fn test_file_hook_is_symlink() {
+        async_unit::tokio_unit_test(|| {
+            let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
+                "hook1".to_string() => is_symlink_matching_file_hook(true),
+                "hook2".to_string() => is_symlink_matching_file_hook(false),
+            };
+            let bookmarks = hashmap! {
+                "bm1".to_string() => vec!["hook1".to_string(),
+                "hook2".to_string()
+            ]
+            };
+            let expected = hashmap! {
+                "hook1".to_string() => hashmap! {
+                    "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
+                    "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
+                    "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
+                },
+                "hook2".to_string() => hashmap! {
+                    "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
+                    "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
+                    "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
+                },
+            };
+            run_file_hooks("bm1", hooks, bookmarks, expected);
+        });
+    }
+
+    #[test]
     fn test_file_hook_length() {
         async_unit::tokio_unit_test(|| {
             let hooks: HashMap<String, Box<Hook<HookFile>>> = hashmap! {
@@ -1890,15 +1966,15 @@ mod test {
         let mut content_store = InMemoryFileContentStore::new();
         content_store.insert(
             (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir1/file_1")),
-            "elephants".into(),
+            (FileType::Symlink, "elephants".into()),
         );
         content_store.insert(
             (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir2/file_1")),
-            "hippopatami".into(),
+            (FileType::Regular, "hippopatami".into()),
         );
         content_store.insert(
             (cs_id.clone(), to_mpath("dir1/subdir1/subsubdir2/file_2")),
-            "eels".into(),
+            (FileType::Regular, "eels".into()),
         );
         let logger = Logger::root(Discard {}.ignore_res(), o!());
         HookManager::new(

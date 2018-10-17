@@ -1171,7 +1171,7 @@ mod tests {
 
             // `result_1_id` should be equal to `root_1_id`, because executable flag
             // is not a part of file envelope
-            assert_eq!(root_1_id, result_1_id);
+            assert_eq!(root_1_id.1, result_1_id.1);
         })
     }
 
