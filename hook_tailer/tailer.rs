@@ -11,7 +11,7 @@ use bookmarks::Bookmark;
 use failure::Error;
 use failure::Result;
 use futures::{Future, Stream};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, FutureExt, spawn_future};
 use hooks::{BlobRepoChangesetStore, BlobRepoFileContentStore, ChangesetHookExecutionID,
             FileHookExecutionID, HookExecution, HookManager, hook_loader::load_hooks};
 use manifold::{ManifoldHttpClient, PayloadRange};
@@ -88,34 +88,26 @@ impl Tailer {
         Error,
     > {
         debug!(logger, "Running in range {} to {}", last_rev, end_rev);
-        let logger = logger.clone();
-        let logger2 = logger.clone();
-        let hm2 = hm.clone();
-        let bm2 = bm.clone();
+        cloned!(logger);
         nodehash_to_bonsai(&repo, end_rev)
             .and_then(move |end_rev| {
                 AncestorsNodeStream::new(&repo.get_changeset_fetcher(), end_rev)
-            .take(1000) // Limit number so we don't process too many
-            .map({
-                let repo = repo.clone();
-                move |cs| repo.get_hg_from_bonsai_changeset(cs)
-
-            })
-            .buffered(100)
-            .take_while(move |hg_cs| {
-                Ok(*hg_cs != HgChangesetId::new(last_rev))
-            })
-            .and_then(move |hg_cs| {
-                debug!(logger, "Running file hooks for changeset {:?}", hg_cs);
-                hm.run_file_hooks_for_bookmark(hg_cs.clone(), &bm, None)
-                .map(move |res| (hg_cs, res))
-            })
-            .and_then(move |(hg_cs, file_res)| {
-                debug!(logger2, "Running changeset hooks for changeset {:?}", hg_cs);
-                hm2.run_changeset_hooks_for_bookmark(hg_cs.clone(), &bm2, None)
-                .map(|res| (file_res, res))
-            })
-            .collect()
+                    .take(1000) // Limit number so we don't process too many
+                    .map({
+                        move |cs| {
+                            cloned!(bm, hm, logger, repo);
+                            run_hooks_for_changeset(repo, hm, bm, cs, logger)
+                        }
+                    })
+                    .map(spawn_future)
+                    .buffered(100)
+                    .take_while(move |(hg_cs, _, _)| {
+                        Ok(*hg_cs != HgChangesetId::new(last_rev))
+                    })
+                    .map(|(_, file_res, res)| {
+                        (file_res, res)
+                    })
+                    .collect()
             })
             .boxify()
     }
@@ -209,6 +201,34 @@ fn nodehash_to_bonsai(
     let hg_cs = HgChangesetId::new(node);
     repo.get_bonsai_from_hg(&hg_cs)
         .and_then(move |maybe_node| maybe_node.ok_or(ErrorKind::BonsaiNotFound(hg_cs).into()))
+}
+
+fn run_hooks_for_changeset(
+    repo: Arc<BlobRepo>,
+    hm: Arc<HookManager>,
+    bm: Bookmark,
+    cs: ChangesetId,
+    logger: Logger,
+) -> impl Future<
+    Item = (
+        HgChangesetId,
+        Vec<(FileHookExecutionID, HookExecution)>,
+        Vec<(ChangesetHookExecutionID, HookExecution)>,
+    ),
+    Error = Error,
+> {
+    repo.get_hg_from_bonsai_changeset(cs)
+        .and_then(move |hg_cs| {
+            debug!(logger, "Running file hooks for changeset {:?}", hg_cs);
+            hm.run_file_hooks_for_bookmark(hg_cs.clone(), &bm, None)
+                .map(move |res| (hg_cs, res))
+                .and_then(move |(hg_cs, file_res)| {
+                    let hg_cs = hg_cs.clone();
+                    debug!(logger, "Running changeset hooks for changeset {:?}", hg_cs);
+                    hm.run_changeset_hooks_for_bookmark(hg_cs.clone(), &bm, None)
+                        .map(move |res| (hg_cs, file_res, res))
+                })
+        })
 }
 
 #[derive(Debug, Fail)]

@@ -14,6 +14,8 @@ extern crate blobstore;
 extern crate bookmarks;
 extern crate bytes;
 extern crate clap;
+#[macro_use]
+extern crate cloned;
 extern crate cmdlib;
 #[macro_use]
 extern crate failure_ext as failure;
