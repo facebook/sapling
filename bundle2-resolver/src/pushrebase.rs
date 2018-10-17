@@ -131,44 +131,43 @@ fn rebase_in_loop(
     root: ChangesetId,
     client_cf: Vec<MPath>,
 ) -> BoxFuture<PushrebaseSuccessResult, PushrebaseError> {
-    let mut retry_num = 1;
-    loop_fn(root.clone(), move |latest_rebase_attempt| {
-        get_bookmark_value(&repo, &onto_bookmark).and_then({
-            cloned!(client_cf, onto_bookmark, repo, config);
-            move |bookmark_val| {
-                find_changed_files(
-                    &repo,
-                    latest_rebase_attempt.clone(),
-                    bookmark_val,
-                    /* reject_merges */ true,
-                ).and_then(|server_cf| {
-                    match check_case_conflicts(server_cf.iter().chain(&client_cf)) {
-                        Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
-                        None => intersect_changed_files(server_cf, client_cf),
-                    }
-                })
-                    .and_then(move |()| {
-                        do_rebase(
-                            repo,
-                            config,
-                            root.clone(),
-                            head,
-                            bookmark_val,
-                            onto_bookmark,
-                        ).map(move |update_res| match update_res {
-                            Some(result) => Loop::Break(PushrebaseSuccessResult {
-                                head: result,
-                                retry_num,
-                            }),
-                            None => {
-                                retry_num += 1;
-                                Loop::Continue(bookmark_val)
-                            }
-                        })
+    loop_fn(
+        (root.clone(), 0),
+        move |(latest_rebase_attempt, retry_num)| {
+            get_bookmark_value(&repo, &onto_bookmark).and_then({
+                cloned!(client_cf, onto_bookmark, repo, config);
+                move |bookmark_val| {
+                    find_changed_files(
+                        &repo,
+                        latest_rebase_attempt.clone(),
+                        bookmark_val,
+                        /* reject_merges */ true,
+                    ).and_then(|server_cf| {
+                        match check_case_conflicts(server_cf.iter().chain(&client_cf)) {
+                            Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
+                            None => intersect_changed_files(server_cf, client_cf),
+                        }
                     })
-            }
-        })
-    }).boxify()
+                        .and_then(move |()| {
+                            do_rebase(
+                                repo,
+                                config,
+                                root.clone(),
+                                head,
+                                bookmark_val,
+                                onto_bookmark,
+                            ).map(move |update_res| match update_res {
+                                Some(result) => Loop::Break(PushrebaseSuccessResult {
+                                    head: result,
+                                    retry_num,
+                                }),
+                                None => Loop::Continue((bookmark_val, retry_num + 1)),
+                            })
+                        })
+                }
+            })
+        },
+    ).boxify()
 }
 
 fn do_rebase(
@@ -1193,7 +1192,7 @@ mod tests {
 
             let num_pushes = 10;
             let mut futs = vec![];
-            for i in 0..10 {
+            for i in 0..num_pushes {
                 let f = format!("file{}", i);
                 let bcs_id = create_commit(
                     repo.clone(),
@@ -1212,7 +1211,15 @@ mod tests {
                 );
                 futs.push(fut);
             }
-            join_all(futs).wait().expect("pushrebase failed");
+            let res = join_all(futs).wait().expect("pushrebase failed");
+            let mut has_retry_num_bigger_1 = false;
+            for r in res {
+                if r.retry_num > 1 {
+                    has_retry_num_bigger_1 = true;
+                }
+            }
+
+            assert!(has_retry_num_bigger_1);
 
             let previous_master =
                 HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
