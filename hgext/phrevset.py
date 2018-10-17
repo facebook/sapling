@@ -214,7 +214,7 @@ def revsetdiff(repo, diffid):
         svnrev = parsedesc(repo, resp, ignoreparsefailure=False)
         repo.ui.debug("[diffrev] SVN rev is r%s\n" % svnrev)
 
-        return svnutil.lookuprev(repo, svnrev)
+        return [repo[n].rev() for n in svnutil.lookuprev(repo, svnrev)]
 
     elif vcs == "git":
         gitrev = parsedesc(repo, resp, ignoreparsefailure=False)
