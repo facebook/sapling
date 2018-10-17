@@ -41,7 +41,6 @@ def extsetup(ui):
     if ui.config("extensions", "clindex") == "":
         # disable cachenoderevs if clindex is enabled.
         ui.setconfig("perftweaks", "cachenoderevs", "false", "perftweaks")
-    wrapfunction(tags, "_readtagcache", _readtagcache)
     wrapfunction(branchmap.branchcache, "update", _branchmapupdate)
     wrapfunction(branchmap, "read", _branchmapread)
     wrapfunction(branchmap, "replacecache", _branchmapreplacecache)
@@ -133,14 +132,6 @@ def _singlenode(orig, self, repo, name):
         return orig(self, repo, name)
     finally:
         self.names = namesbak
-
-
-def _readtagcache(orig, ui, repo):
-    """Disables reading tags if the repo is known to not contain any."""
-    if ui.configbool("perftweaks", "disabletags"):
-        return (None, None, None, {}, False)
-
-    return orig(ui, repo)
 
 
 def _checkcollision(orig, repo, wmf, actions):

@@ -393,6 +393,9 @@ def _readtagcache(ui, repo):
     If the cache is not up to date, the caller is responsible for reading tag
     info from each returned head. (See findglobaltags().)
     """
+    # Disable reading tags if the repo is known to not contain any.
+    if ui.configbool("perftweaks", "disabletags"):
+        return None, None, None, {}, False
     try:
         cachefile = repo.cachevfs(_filename(repo), "r")
         # force reading the file for static-http
