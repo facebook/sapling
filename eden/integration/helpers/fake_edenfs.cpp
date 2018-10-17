@@ -18,6 +18,7 @@
 #include <chrono>
 #include <thread>
 
+#include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
@@ -37,6 +38,12 @@ DEFINE_bool(
     exitWithoutCleanupOnStop,
     false,
     "Respond to stop requests by exiting abruptly");
+#if EDEN_HAVE_SYSTEMD
+DEFINE_bool(
+    experimentalSystemd,
+    false,
+    "EXPERIMENTAL: Run edenfs as if systemd controls its lifecycle");
+#endif
 DEFINE_bool(foreground, false, "Run edenfs in the foreground");
 DEFINE_bool(ignoreStop, false, "Ignore attempts to stop edenfs");
 DEFINE_double(
@@ -266,6 +273,12 @@ int main(int argc, char** argv) {
   identity.dropPrivileges();
 
   auto init = folly::Init(&argc, &argv);
+
+#if EDEN_HAVE_SYSTEMD
+  if (FLAGS_experimentalSystemd) {
+    XLOG(INFO) << "Running in experimental systemd mode";
+  }
+#endif
 
   StartupLogger startupLogger;
   if (!FLAGS_foreground) {

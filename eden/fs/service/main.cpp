@@ -21,11 +21,18 @@
 #include <unistd.h>
 #include "EdenServer.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/StartupLogger.h"
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
+#if EDEN_HAVE_SYSTEMD
+DEFINE_bool(
+    experimentalSystemd,
+    false,
+    "EXPERIMENTAL: Run edenfs as if systemd controls its lifecycle");
+#endif
 DEFINE_bool(
     foreground,
     false,
@@ -139,6 +146,12 @@ int main(int argc, char** argv) {
         "eden as root.\n");
     return EX_USAGE;
   }
+
+#if EDEN_HAVE_SYSTEMD
+  if (FLAGS_experimentalSystemd) {
+    XLOG(INFO) << "Running in experimental systemd mode";
+  }
+#endif
 
   // normalizeBestEffort() to try resolving symlinks in these paths but don't
   // fail if they don't exist.

@@ -14,6 +14,14 @@ import typing
 
 class EnvironmentVariableMixin(metaclass=abc.ABCMeta):
     def set_environment_variable(self, name: str, value: str) -> None:
+        self.__add_cleanup_for_environment_variable(name)
+        os.environ[name] = value
+
+    def unset_environment_variable(self, name: str) -> None:
+        self.__add_cleanup_for_environment_variable(name)
+        del os.environ[name]
+
+    def __add_cleanup_for_environment_variable(self, name: str) -> None:
         old_value = os.getenv(name)
 
         def restore() -> None:
@@ -22,7 +30,6 @@ class EnvironmentVariableMixin(metaclass=abc.ABCMeta):
             else:
                 os.environ[name] = old_value
 
-        os.environ[name] = value
         self.addCleanup(restore)
 
     def addCleanup(

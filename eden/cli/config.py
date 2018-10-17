@@ -665,6 +665,8 @@ Do you want to run `eden mount %s` instead?"""
             cmd = ["strace", "-fttT", "-o", strace_file] + cmd
         if extra_args:
             cmd.extend(extra_args)
+        if should_use_experimental_systemd_mode():
+            cmd.append("--experimentalSystemd")
         if takeover:
             cmd.append("--takeover")
         if foreground:
@@ -1156,3 +1158,9 @@ def _verify_mount_point(mount_point: str) -> None:
             )
             % (parent_dir, mount_point, parent_dir)
         )
+
+
+def should_use_experimental_systemd_mode() -> bool:
+    # TODO(T33122320): Delete this environment variable when systemd is properly
+    # integrated.
+    return os.getenv("EDEN_EXPERIMENTAL_SYSTEMD") == "1"

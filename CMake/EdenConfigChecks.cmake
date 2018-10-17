@@ -25,3 +25,6 @@ find_package(cpptoml REQUIRED)
 
 # We currently do not have treemanifest support in the opensource build
 set(EDEN_HAVE_HG_TREEMANIFEST OFF)
+
+# TODO(strager): Support systemd in the opensource build.
+set(EDEN_HAVE_SYSTEMD OFF)
