@@ -33,12 +33,10 @@ namespace eden {
 
 void StartupLogger::success() {
   writeMessage(
-      origStderr_,
       folly::LogLevel::INFO,
       folly::to<string>("Started edenfs (pid ", getpid(), ")"));
   if (!logPath_.empty()) {
     writeMessage(
-        origStderr_,
         folly::LogLevel::INFO,
         folly::to<string>("Logs available at ", logPath_));
   }
@@ -51,7 +49,6 @@ void StartupLogger::failAndExit(uint8_t exitCode) {
 }
 
 void StartupLogger::writeMessage(
-    const File& file,
     folly::LogLevel level,
     StringPiece message) {
   // Log the message
@@ -60,6 +57,7 @@ void StartupLogger::writeMessage(
 
   // If we also have a file where we should write the message directly,
   // do so now.
+  auto& file = origStderr_;
   if (file) {
     std::array<iovec, 2> iov;
     iov[0].iov_base = const_cast<char*>(message.data());
@@ -84,9 +82,7 @@ void StartupLogger::sendResult(ResultType result) {
     pipe_.close();
   }
 
-  // Close the original stdout and stderr file descriptors once initialization
-  // is complete.
-  origStdout_.close();
+  // Close the original stderr file descriptors once initialization is complete.
   origStderr_.close();
 
   // Call setsid() to create a new process group and detach from the
@@ -174,10 +170,9 @@ void StartupLogger::redirectOutput(StringPiece logPath) {
   try {
     logPath_ = logPath.str();
 
-    // Save copies of the original stdout and stderr descriptors,
-    // so we can still write startup status messages directly to these
-    // descriptors.  These will be closed once we complete initialization.
-    origStdout_ = File(STDOUT_FILENO, /*ownsFd=*/false).dup();
+    // Save a copy of the original stderr descriptors, so we can still write
+    // startup status messages directly to this descriptor.  This will be closed
+    // once we complete initialization.
     origStderr_ = File(STDERR_FILENO, /*ownsFd=*/false).dup();
 
     File logHandle(logPath, O_APPEND | O_CREAT | O_WRONLY | O_CLOEXEC, 0644);

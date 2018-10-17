@@ -50,7 +50,6 @@ class StartupLogger {
   template <typename... Args>
   void log(Args&&... args) {
     writeMessage(
-        origStderr_,
         folly::LogLevel::DBG2,
         folly::to<std::string>(std::forward<Args>(args)...));
   }
@@ -61,7 +60,6 @@ class StartupLogger {
   template <typename... Args>
   void warn(Args&&... args) {
     writeMessage(
-        origStderr_,
         folly::LogLevel::WARN,
         folly::to<std::string>(std::forward<Args>(args)...));
   }
@@ -75,7 +73,6 @@ class StartupLogger {
   template <typename... Args>
   [[noreturn]] void exitUnsuccessfully(uint8_t exitCode, Args&&... args) {
     writeMessage(
-        origStderr_,
         folly::LogLevel::ERR,
         folly::to<std::string>(std::forward<Args>(args)...));
     failAndExit(exitCode);
@@ -132,21 +129,18 @@ class StartupLogger {
   ParentResult handleChildCrash(pid_t childPid);
 
   void writeMessage(
-      const folly::File& file,
       folly::LogLevel level,
       folly::StringPiece message);
   void sendResult(ResultType result);
 
-  // If stdout and stderr have been redirected during process daemonization,
-  // origStdout_ and origStderr_ contain file descriptors referencing the
-  // original stdout and stderr.  These are used to continue to print
-  // informational messages directly to the user during startup even after
-  // normal log redirection.
+  // If stderr has been redirected during process daemonization, origStderr_
+  // contains a file descriptor referencing the original stderr.  It is used to
+  // continue to print informational messages directly to the user during
+  // startup even after normal log redirection.
   //
   // If log redirection has not occurred these will simply be closed File
   // objects.  The normal logging mechanism is sufficient to show messages to
   // the user in this case.
-  folly::File origStdout_;
   folly::File origStderr_;
   std::string logPath_;
 
