@@ -55,6 +55,7 @@ use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use slog_scuba::ScubaDrain;
+use std::fmt;
 use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -161,10 +162,15 @@ fn create_poller(tailer: Tailer, logger: Logger) -> BoxFuture<Tailer, Error> {
     tailer
         .run()
         .map(move |res| {
+            let mut file_hooks_stat = HookExecutionStat::new();
+            let mut cs_hooks_stat = HookExecutionStat::new();
+
             res.into_iter().for_each(|(v_files, v_cs)| {
-                info!(logger, "==== File hooks results ====");
+                debug!(logger, "==== File hooks results ====");
                 v_files.into_iter().for_each(|(exec_id, exec)| {
-                    info!(
+                    file_hooks_stat.record_hook_execution(&exec);
+
+                    debug!(
                         logger,
                         "changeset:{} hook_name:{} path:{} result:{:?}",
                         exec_id.cs_id,
@@ -173,9 +179,10 @@ fn create_poller(tailer: Tailer, logger: Logger) -> BoxFuture<Tailer, Error> {
                         exec
                     );
                 });
-                info!(logger, "==== Changeset hooks results ====");
+                debug!(logger, "==== Changeset hooks results ====");
                 v_cs.into_iter().for_each(|(exec_id, exec)| {
-                    info!(
+                    cs_hooks_stat.record_hook_execution(&exec);
+                    debug!(
                         logger,
                         "changeset:{} hook_name:{} result:{:?}",
                         exec_id.cs_id,
@@ -184,10 +191,45 @@ fn create_poller(tailer: Tailer, logger: Logger) -> BoxFuture<Tailer, Error> {
                     );
                 });
             });
+
+            info!(logger, "==== File hooks stat: {} ====", file_hooks_stat);
+            info!(logger, "==== Changeset hooks stat: {} ====", cs_hooks_stat);
+
             ()
         })
         .map(move |()| tailer)
         .boxify()
+}
+
+struct HookExecutionStat {
+    accepted: usize,
+    rejected: usize,
+}
+
+impl HookExecutionStat {
+    pub fn new() -> Self {
+        Self {
+            accepted: 0,
+            rejected: 0,
+        }
+    }
+
+    pub fn record_hook_execution(&mut self, exec: &hooks::HookExecution) {
+        match exec {
+            hooks::HookExecution::Accepted => {
+                self.accepted += 1;
+            }
+            hooks::HookExecution::Rejected(_) => {
+                self.rejected += 1;
+            }
+        };
+    }
+}
+
+impl fmt::Display for HookExecutionStat {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "accepted: {}, rejected: {}", self.accepted, self.rejected)
+    }
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
