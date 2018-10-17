@@ -38,6 +38,7 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> AncestorIterator<T> {
             queue: VecDeque::new(),
         };
         iter.queue.push_back(key.clone());
+        iter.seen.insert(key.clone());
 
         // Insert the null id so we stop iterating there
         iter.seen.insert(Key::default());
@@ -55,6 +56,7 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> BatchedAncestorIterator<T>
             pending_infos: HashMap::new(),
         };
         iter.queue.push_back(key.clone());
+        iter.seen.insert(key.clone());
 
         // Insert the null id so we stop iterating there
         iter.seen.insert(Key::default());
@@ -70,9 +72,9 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> Iterator for AncestorIterat
             return match (self.get_more)(&current, &self.seen) {
                 Err(e) => match self.traversal {
                     AncestorTraversal::Partial => {
-                        // If the only entry is the null entry, then we were
-                        // unable to find the desired key, which is an error.
-                        if self.seen.len() == 1 {
+                        // If the only entries are the original and the the null entry,
+                        // then we were unable to find the desired key, which is an error.
+                        if self.seen.len() == 2 {
                             return Some(Err(e));
                         }
                         continue;
@@ -80,9 +82,11 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> Iterator for AncestorIterat
                     AncestorTraversal::Complete => Some(Err(e)),
                 },
                 Ok(node_info) => {
-                    self.seen.insert(current.clone());
                     for parent in node_info.parents.iter() {
-                        if !self.seen.contains(parent) {
+                        // We add the parent to seen here (vs when we pop it off), so we can
+                        // avoid processing commits an exponential number of times same
+                        // commits multiple times when traversing across a very mergy history.
+                        if self.seen.insert(parent.clone()) {
                             self.queue.push_back(parent.clone());
                         }
                     }
@@ -110,9 +114,8 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> Iterator for BatchedAncest
             }
 
             if let Some(node_info) = self.pending_infos.remove(&current) {
-                self.seen.insert(current.clone());
                 for parent in &node_info.parents {
-                    if !self.seen.contains(parent) {
+                    if self.seen.insert(parent.clone()) {
                         self.queue.push_back(parent.clone());
                     }
                 }
@@ -214,6 +217,53 @@ mod tests {
                 }
                 Ok(k_ancestors)
             },
+            AncestorTraversal::Complete,
+        ).collect::<Result<Ancestors>>()
+            .unwrap();
+        assert_eq!(ancestors, found_ancestors);
+    }
+
+    #[test]
+    fn test_mergey_ancestor_iterator() {
+        /// Tests for exponential time complexity in a merge ancestory. This doesn't won't fail,
+        /// but may take a long time if there is bad time complexity.
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+
+        let size = 5000;
+        let mut ancestors = Ancestors::new();
+        let mut keys = vec![];
+        for i in 0..size {
+            keys.push(Key::new(Box::from([]), Node::random(&mut rng)));
+        }
+
+        let null_key = Key::new(Box::from([]), Node::null_id().clone());
+
+        // Build a mergey history where commit N has parents N-1 and N-2
+        for i in 0..size {
+            let p1 = if i > 0 {
+                keys[i - 1].clone()
+            } else {
+                null_key.clone()
+            };
+            let p2 = if i > 1 {
+                keys[i - 2].clone()
+            } else {
+                null_key.clone()
+            };
+            ancestors.insert(
+                keys[i].clone(),
+                NodeInfo {
+                    parents: [p1, p2],
+                    linknode: Node::random(&mut rng),
+                },
+            );
+        }
+
+        let tip = keys[size - 1].clone();
+
+        let found_ancestors = AncestorIterator::new(
+            &tip,
+            |k, _seen| Ok(ancestors.get(&k).unwrap().clone()),
             AncestorTraversal::Complete,
         ).collect::<Result<Ancestors>>()
             .unwrap();
