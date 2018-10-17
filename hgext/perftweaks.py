@@ -70,16 +70,6 @@ def extsetup(ui):
 
     wrapfunction(namespaces.namespaces, "singlenode", _singlenode)
 
-    def wrapcheckcollisionaftersparse(loaded=False):
-        # wrap merge._checkcollision after sparse has had a chance to wrapped
-        # it, to ensure we don't do the extra work in sparse's version when
-        # this extension disabled the collision check.
-        # Note: this wrapping takes place even when sparse is not loaded at
-        # all, which is intentional.
-        wrapfunction(merge, "_checkcollision", _checkcollision)
-
-    extensions.afterloaded("sparse", wrapcheckcollisionaftersparse)
-
 
 def reposetup(ui, repo):
     if repo.local() is not None:
@@ -132,13 +122,6 @@ def _singlenode(orig, self, repo, name):
         return orig(self, repo, name)
     finally:
         self.names = namesbak
-
-
-def _checkcollision(orig, repo, wmf, actions):
-    """Disables case collision checking since it is known to be very slow."""
-    if repo.ui.configbool("perftweaks", "disablecasecheck"):
-        return
-    orig(repo, wmf, actions)
 
 
 def _branchmapupdate(orig, self, repo, revgen):

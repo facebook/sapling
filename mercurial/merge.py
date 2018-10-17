@@ -876,6 +876,11 @@ def _forgetremoved(wctx, mctx, branchmerge):
 
 
 def _checkcollision(repo, wmf, actions):
+    # The case collision check can be disabled because it can be very slow in
+    # large repos.
+    if repo.ui.configbool("perftweaks", "disablecasecheck"):
+        return
+
     # build provisional merged manifest up
     pmmf = set(wmf)
 

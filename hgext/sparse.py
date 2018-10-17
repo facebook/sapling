@@ -155,10 +155,18 @@ testedwith = "ships-with-fb-hgext"
 cwdrealtivepatkinds = ("glob", "relpath")
 
 
-configitem("sparse", "largecheckouthint", default=False,
-           alias=[("perftweaks", "largecheckouthint")])
-configitem("sparse", "largecheckoutcount", default=0,
-           alias=[("perftweaks", "largecheckoutcount")])
+configitem(
+    "sparse",
+    "largecheckouthint",
+    default=False,
+    alias=[("perftweaks", "largecheckouthint")],
+)
+configitem(
+    "sparse",
+    "largecheckoutcount",
+    default=0,
+    alias=[("perftweaks", "largecheckoutcount")],
+)
 
 
 def uisetup(ui):
@@ -349,6 +357,11 @@ def _setupupdates(ui):
     extensions.wrapfunction(mergemod, "update", _update)
 
     def _checkcollision(orig, repo, wmf, actions):
+        # If disablecasecheck is on, this should be a no-op. Run orig just to
+        # be safe.
+        if repo.ui.configbool("perftweaks", "disablecasecheck"):
+            return orig(repo, wmf, actions)
+
         if util.safehasattr(repo, "sparsematch"):
             # Only check for collisions on files and directories in the
             # sparse profile
