@@ -130,56 +130,64 @@ fn main() -> Result<()> {
         None => futures::future::ok(()).boxify(),
     };
 
-    let fut = fut.then(|_| create_poller(tailer, logger));
+    let fut = if matches.is_present("continuous") {
+        // Tail new commits and run hooks on them
+        let logger = logger.clone();
+        fut.then(|_| {
+            loop_fn(tailer, move |tailer| {
+                create_poller(tailer, logger.clone())
+                    .and_then(|tailer| {
+                        sleep(Duration::new(10, 0))
+                            .map(move |()| tailer)
+                            .map_err(|err| format_err!("Tokio timer error {:?}", err))
+                    })
+                    .and_then(move |tailer| Ok(Loop::Continue(tailer)))
+            })
+        }).left_future()
+    } else {
+        let logger = logger.clone();
+        fut.then(move |_| create_poller(tailer, logger))
+            .right_future()
+    };
 
-    tokio::run(fut);
+    tokio::run(fut.map(|_| ()).map_err(move |err| {
+        error!(logger, "Failed to run tailer {:?}", err);
+    }));
 
     Ok(())
 }
 
-fn create_poller(tailer: Tailer, logger: Logger) -> BoxFuture<(), ()> {
-    let logger2 = logger.clone();
-    let logger3 = logger.clone();
-    let lf = loop_fn(tailer, move |tailer| {
-        let logger4 = logger2.clone();
-        tailer
-            .run()
-            .map(move |res| {
-                res.into_iter().for_each(|(v_files, v_cs)| {
-                    info!(logger4, "==== File hooks results ====");
-                    v_files.into_iter().for_each(|(exec_id, exec)| {
-                        info!(
-                            logger4,
-                            "changeset:{} hook_name:{} path:{} result:{:?}",
-                            exec_id.cs_id,
-                            exec_id.hook_name,
-                            exec_id.file.path,
-                            exec
-                        );
-                    });
-                    info!(logger4, "==== Changeset hooks results ====");
-                    v_cs.into_iter().for_each(|(exec_id, exec)| {
-                        info!(
-                            logger4,
-                            "changeset:{} hook_name:{} result:{:?}",
-                            exec_id.cs_id,
-                            exec_id.hook_name,
-                            exec
-                        );
-                    });
+fn create_poller(tailer: Tailer, logger: Logger) -> BoxFuture<Tailer, Error> {
+    tailer
+        .run()
+        .map(move |res| {
+            res.into_iter().for_each(|(v_files, v_cs)| {
+                info!(logger, "==== File hooks results ====");
+                v_files.into_iter().for_each(|(exec_id, exec)| {
+                    info!(
+                        logger,
+                        "changeset:{} hook_name:{} path:{} result:{:?}",
+                        exec_id.cs_id,
+                        exec_id.hook_name,
+                        exec_id.file.path,
+                        exec
+                    );
                 });
-                ()
-            })
-            .and_then(|()| {
-                sleep(Duration::new(10, 0))
-                    .map_err(|err| format_err!("Tokio timer error {:?}", err))
-            })
-            .and_then(move |()| Ok(Loop::Continue(tailer)))
-    });
-    lf.map_err(move |err| {
-        error!(logger3, "Failed to run tailer {:?}", err);
-        ()
-    }).boxify()
+                info!(logger, "==== Changeset hooks results ====");
+                v_cs.into_iter().for_each(|(exec_id, exec)| {
+                    info!(
+                        logger,
+                        "changeset:{} hook_name:{} result:{:?}",
+                        exec_id.cs_id,
+                        exec_id.hook_name,
+                        exec
+                    );
+                });
+            });
+            ()
+        })
+        .map(move |()| tailer)
+        .boxify()
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -201,6 +209,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 
                           --init_revision [INIT_REVISION]        'the initial revision to start at'
 
+            --continuous                                         'continuously run hooks on new commits'
             -d, --debug                                          'print debug level output'
             -p, --myrouter-port=[PORT]                           'port for local myrouter instance'
         "#,
