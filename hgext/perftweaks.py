@@ -46,12 +46,6 @@ def extsetup(ui):
     wrapfunction(branchmap, "replacecache", _branchmapreplacecache)
     wrapfunction(branchmap, "updatecache", _branchmapupdatecache)
 
-    try:
-        rebase = extensions.find("rebase")
-        wrapfunction(rebase.rebaseruntime, "_preparenewrebase", _trackrebasesize)
-    except KeyError:
-        pass
-
     # noderev cache creation
     # The node rev cache is a cache of rev numbers that we are likely to do a
     # node->rev lookup for. Since looking up rev->node is cheaper than
@@ -300,31 +294,3 @@ def _savepreloadrevs(repo, name, revs):
         except EnvironmentError:
             # No permission to write? No big deal
             pass
-
-
-def _trackrebasesize(orig, self, destmap):
-    result = orig(self, destmap)
-    if not destmap:
-        return result
-
-    # The code assumes the rebase source is roughly a linear stack within a
-    # single feature branch, and there is only one destination. If that is not
-    # the case, the distance might be not accurate.
-    repo = self.repo
-    destrev = max(destmap.values())
-    rebaseset = destmap.keys()
-    commitcount = len(rebaseset)
-    distance = len(
-        repo.revs("(%ld %% %d) + (%d %% %ld)", rebaseset, destrev, destrev, rebaseset)
-    )
-    # 'distance' includes the commits being rebased, so subtract them to get the
-    # actual distance being traveled. Even though we log update_distance above,
-    # a rebase may run multiple updates, so that value might be not be accurate.
-    repo.ui.log(
-        "rebase_size",
-        "",
-        rebase_commitcount=commitcount,
-        rebase_distance=distance - commitcount,
-    )
-
-    return result

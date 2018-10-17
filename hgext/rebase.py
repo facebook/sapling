@@ -415,6 +415,36 @@ class rebaseruntime(object):
                 self.ui.status(_("reopening closed branch head %s\n") % dest)
 
         self.prepared = True
+        self._logrebasesize(destmap)
+
+    def _logrebasesize(self, destmap):
+        """Log metrics about the rebase size and distance"""
+        repo = self.repo
+
+        # internal config: rebase.logsizemetrics
+        if not repo.ui.configbool("rebase", "logsizemetrics", default=True):
+            return
+
+        # The code assumes the rebase source is roughly a linear stack within a
+        # single feature branch, and there is only one destination. If that is not
+        # the case, the distance might be not accurate.
+        destrev = max(destmap.values())
+        rebaseset = destmap.keys()
+        commitcount = len(rebaseset)
+        distance = len(
+            repo.revs(
+                "(%ld %% %d) + (%d %% %ld)", rebaseset, destrev, destrev, rebaseset
+            )
+        )
+        # 'distance' includes the commits being rebased, so subtract them to get the
+        # actual distance being traveled. Even though we log update_distance above,
+        # a rebase may run multiple updates, so that value might be not be accurate.
+        repo.ui.log(
+            "rebase_size",
+            "",
+            rebase_commitcount=commitcount,
+            rebase_distance=distance - commitcount,
+        )
 
     def _assignworkingcopy(self):
         if self.inmemory:
