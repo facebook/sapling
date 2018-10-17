@@ -46,9 +46,11 @@ class StartTest(testcase.EdenTestCase):
         self.assertFalse(self.eden.is_healthy())
         # `eden start --if-necessary` should start edenfs now
         if "SANDCASTLE" in os.environ:
-            output = self.eden.run_cmd("start", "--if-necessary", "--", "--allowRoot")
+            output = self.eden.run_cmd(
+                "start", "--if-necessary", "--", "--allowRoot", capture_stderr=True
+            )
         else:
-            output = self.eden.run_cmd("start", "--if-necessary")
+            output = self.eden.run_cmd("start", "--if-necessary", capture_stderr=True)
         self.assertIn("Started edenfs", output)
         self.assertTrue(self.eden.is_healthy())
 

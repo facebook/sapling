@@ -81,7 +81,13 @@ class EdenFS(object):
     def get_thrift_client(self) -> eden.thrift.EdenClient:
         return eden.thrift.create_thrift_client(self._eden_dir)
 
-    def run_cmd(self, command: str, *args: str, cwd: Optional[str] = None) -> str:
+    def run_cmd(
+        self,
+        command: str,
+        *args: str,
+        cwd: Optional[str] = None,
+        capture_stderr: bool = False,
+    ) -> str:
         """
         Run the specified eden command.
 
@@ -91,8 +97,9 @@ class EdenFS(object):
         """
         cmd = self._get_eden_args(command, *args)
         try:
+            stderr = subprocess.STDOUT if capture_stderr else subprocess.PIPE
             completed_process = subprocess.run(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, cwd=cwd
+                cmd, stdout=subprocess.PIPE, stderr=stderr, check=True, cwd=cwd
             )
         except subprocess.CalledProcessError as ex:
             # Re-raise our own exception type so we can include the error

@@ -50,7 +50,7 @@ class StartupLogger {
   template <typename... Args>
   void log(Args&&... args) {
     writeMessage(
-        origStdout_,
+        origStderr_,
         folly::LogLevel::DBG2,
         folly::to<std::string>(std::forward<Args>(args)...));
   }

@@ -33,12 +33,12 @@ namespace eden {
 
 void StartupLogger::success() {
   writeMessage(
-      origStdout_,
+      origStderr_,
       folly::LogLevel::INFO,
       folly::to<string>("Started edenfs (pid ", getpid(), ")"));
   if (!logPath_.empty()) {
     writeMessage(
-        origStdout_,
+        origStderr_,
         folly::LogLevel::INFO,
         folly::to<string>("Logs available at ", logPath_));
   }
