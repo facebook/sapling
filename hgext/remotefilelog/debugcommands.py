@@ -415,31 +415,32 @@ def dumpdeltachain(ui, deltachain, **opts):
         )
 
 
-def debughistorypack(ui, path):
-    if ".hist" in path:
-        path = path[: path.index(".hist")]
-    hpack = historypack.historypack(path)
+def debughistorypack(ui, paths):
+    for path in paths:
+        if ".hist" in path:
+            path = path[: path.index(".hist")]
+        hpack = historypack.historypack(path)
 
-    lastfilename = None
-    for entry in hpack.iterentries():
-        filename, node, p1node, p2node, linknode, copyfrom = entry
-        if filename != lastfilename:
-            ui.write("\n%s\n" % filename)
-            ui.write(
-                "%s%s%s%s%s\n"
-                % (
-                    "Node".ljust(14),
-                    "P1 Node".ljust(14),
-                    "P2 Node".ljust(14),
-                    "Link Node".ljust(14),
-                    "Copy From",
+        lastfilename = None
+        for entry in hpack.iterentries():
+            filename, node, p1node, p2node, linknode, copyfrom = entry
+            if filename != lastfilename:
+                ui.write("\n%s\n" % filename)
+                ui.write(
+                    "%s%s%s%s%s\n"
+                    % (
+                        "Node".ljust(14),
+                        "P1 Node".ljust(14),
+                        "P2 Node".ljust(14),
+                        "Link Node".ljust(14),
+                        "Copy From",
+                    )
                 )
+                lastfilename = filename
+            ui.write(
+                "%s  %s  %s  %s  %s\n"
+                % (short(node), short(p1node), short(p2node), short(linknode), copyfrom)
             )
-            lastfilename = filename
-        ui.write(
-            "%s  %s  %s  %s  %s\n"
-            % (short(node), short(p1node), short(p2node), short(linknode), copyfrom)
-        )
 
 
 def debugwaitonrepack(repo):

@@ -1120,8 +1120,8 @@ def debugdatapack(ui, *paths, **opts):
 
 
 @command("debughistorypack", [], _("hg debughistorypack <path>"), norepo=True)
-def debughistorypack(ui, path, **opts):
-    return debugcommands.debughistorypack(ui, path)
+def debughistorypack(ui, *paths, **opts):
+    return debugcommands.debughistorypack(ui, paths)
 
 
 @command("debugkeepset", [], _("hg debugkeepset"))
