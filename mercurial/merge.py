@@ -1905,6 +1905,23 @@ def recordupdates(repo, actions, branchmerge):
             prog.value += 1
 
 
+def _logupdatedistance(ui, repo, node, branchmerge):
+    """Logs the update distance, if configured"""
+    # internal config: merge.recordupdatedistance
+    if not ui.configbool("merge", "recordupdatedistance", default=True):
+        return
+
+    if branchmerge:
+        return
+
+    try:
+        distance = len(repo.revs("(%s %% .) + (. %% %s)", node, node))
+        repo.ui.log("update_size", "", update_distance=distance)
+    except Exception:
+        # error may happen like: RepoLookupError: unknown revision '-1'
+        pass
+
+
 @util.timefunction("mergeupdate", 0, "ui")
 def update(
     repo,
@@ -1991,6 +2008,9 @@ def update(
         partial = False
     else:
         partial = True
+
+    _logupdatedistance(repo.ui, repo, node, branchmerge)
+
     with repo.wlock():
         if wc is None:
             wc = repo[None]
@@ -2245,6 +2265,10 @@ def update(
 
     if not partial:
         repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+
+    # Log the number of files updated.
+    repo.ui.log("update_size", "", update_filecount=sum(stats))
+
     return stats
 
 

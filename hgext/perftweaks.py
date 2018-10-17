@@ -46,8 +46,6 @@ def extsetup(ui):
     wrapfunction(branchmap, "replacecache", _branchmapreplacecache)
     wrapfunction(branchmap, "updatecache", _branchmapupdatecache)
 
-    wrapfunction(merge, "update", _trackupdatesize)
-
     try:
         rebase = extensions.find("rebase")
         wrapfunction(rebase.rebaseruntime, "_preparenewrebase", _trackrebasesize)
@@ -302,20 +300,6 @@ def _savepreloadrevs(repo, name, revs):
         except EnvironmentError:
             # No permission to write? No big deal
             pass
-
-
-def _trackupdatesize(orig, repo, node, branchmerge, *args, **kwargs):
-    if not branchmerge:
-        try:
-            distance = len(repo.revs("(%s %% .) + (. %% %s)", node, node))
-            repo.ui.log("update_size", "", update_distance=distance)
-        except Exception:
-            # error may happen like: RepoLookupError: unknown revision '-1'
-            pass
-
-    stats = orig(repo, node, branchmerge, *args, **kwargs)
-    repo.ui.log("update_size", "", update_filecount=sum(stats))
-    return stats
 
 
 def _trackrebasesize(orig, self, destmap):
