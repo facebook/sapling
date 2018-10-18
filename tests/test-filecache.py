@@ -12,9 +12,6 @@ try:
 except NameError:
     xrange = range
 
-if subprocess.call(["python", "%s/hghave" % os.environ["TESTDIR"], "cacheable"]):
-    sys.exit(80)
-
 
 class fakerepo(object):
     def __init__(self):
@@ -123,28 +120,6 @@ def basic(repo):
     repo.cached
 
 
-def fakeuncacheable():
-    def wrapcacheable(orig, *args, **kwargs):
-        return False
-
-    def wrapinit(orig, *args, **kwargs):
-        pass
-
-    originit = extensions.wrapfunction(util.cachestat, "__init__", wrapinit)
-    origcacheable = extensions.wrapfunction(util.cachestat, "cacheable", wrapcacheable)
-
-    for fn in ["x", "y"]:
-        try:
-            os.remove(fn)
-        except OSError:
-            pass
-
-    basic(fakerepo())
-
-    util.cachestat.cacheable = origcacheable
-    util.cachestat.__init__ = originit
-
-
 def test_filecache_synced():
     # test old behavior that caused filecached properties to go out of sync
     os.system("hg init && echo a >> a && hg ci -qAm.")
@@ -245,9 +220,6 @@ print("basic:")
 print()
 basic(fakerepo())
 print()
-print("fakeuncacheable:")
-print()
-fakeuncacheable()
 test_filecache_synced()
 print()
 print("setbeforeget:")

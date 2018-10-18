@@ -994,42 +994,18 @@ class filecachesubentry(object):
     def __init__(self, path, stat):
         self.path = path
         self.cachestat = None
-        self._cacheable = None
 
         if stat:
-            self.cachestat = filecachesubentry.stat(self.path)
-
-            if self.cachestat:
-                self._cacheable = self.cachestat.cacheable()
-            else:
-                # None means we don't know yet
-                self._cacheable = None
+            path = self.path
+        else:
+            path = None
+        self.cachestat = filecachesubentry.stat(path)
 
     def refresh(self):
-        if self.cacheable():
-            self.cachestat = filecachesubentry.stat(self.path)
-
-    def cacheable(self):
-        if self._cacheable is not None:
-            return self._cacheable
-
-        # we don't know yet, assume it is for now
-        return True
+        self.cachestat = filecachesubentry.stat(self.path)
 
     def changed(self):
-        # no point in going further if we can't cache it
-        if not self.cacheable():
-            return True
-
         newstat = filecachesubentry.stat(self.path)
-
-        # we may not know if it's cacheable yet, check again now
-        if newstat and self._cacheable is None:
-            self._cacheable = newstat.cacheable()
-
-            # check again
-            if not self._cacheable:
-                return True
 
         if self.cachestat != newstat:
             self.cachestat = newstat
@@ -1039,11 +1015,7 @@ class filecachesubentry(object):
 
     @staticmethod
     def stat(path):
-        try:
-            return util.cachestat(path)
-        except OSError as e:
-            if e.errno != errno.ENOENT:
-                raise
+        return util.cachestat(path)
 
 
 class filecacheentry(object):

@@ -935,15 +935,23 @@ def hidewindow():
 
 class cachestat(object):
     def __init__(self, path):
-        self.stat = os.stat(path)
-
-    def cacheable(self):
-        return bool(self.stat.st_ino)
+        if path is None:
+            self.stat = None
+        else:
+            try:
+                self.stat = os.stat(path)
+            except OSError as ex:
+                if ex.errno == errno.ENOENT:
+                    self.stat = None
+                else:
+                    raise
 
     __hash__ = object.__hash__
 
     def __eq__(self, other):
         try:
+            if self.stat is None or other.stat is None:
+                return self.stat is None and other.stat is None
             # Only dev, ino, size, mtime and atime are likely to change. Out
             # of these, we shouldn't compare atime but should compare the
             # rest. However, one of the other fields changing indicates

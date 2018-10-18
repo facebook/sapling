@@ -275,18 +275,6 @@ def has_killdaemons():
     return True
 
 
-@check("cacheable", "cacheable filesystem")
-def has_cacheable_fs():
-    from mercurial import util
-
-    fd, path = tempfile.mkstemp(dir=".", prefix=tempprefix)
-    os.close(fd)
-    try:
-        return util.cachestat(path).cacheable()
-    finally:
-        os.remove(path)
-
-
 @check("lsprof", "python lsprof module")
 def has_lsprof():
     try:

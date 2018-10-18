@@ -62,13 +62,7 @@ manifest).
   >     ui.write_err('prepushrebase hook called. A = %r\n' % data)
   > EOF
 
-00manifest.i needs to exist so manifestlog is cacheable. Windows has a
-different filecache implemenation and is excluded.
-
-  $ cd $TESTTMP/serverrepo
-  $ touch .hg/store/00manifest.i
-  $ hg dbsh -c 'repo.manifestlog; print(repo._filecache["manifestlog"]._entries[0].cacheable())'
-  True
+Setup prepushrebase hooks.
 
   $ cat >> .hg/hgrc << EOF
   > [hgsql]
@@ -100,10 +94,6 @@ Do the push!
   remote:     dc0947a82db8  C
   remote: [hgsql] got lock after * seconds (read 1 rows) (glob)
   remote: rebasing stack from 426bada5c675 onto 426bada5c675
-  remote: transaction abort!
-  remote: rollback completed
-  remote: [hgsql] held lock for * seconds (read 4 rows; write 0 rows) (glob)
-  remote: IntegrityError: 1062 (23000): Duplicate entry 'master-00manifesttree.i-1-0' for key 'PRIMARY'
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
+  remote: [hgsql] held lock for * seconds (read 6 rows; write 8 rows) (glob)
+  updating bookmark master
 

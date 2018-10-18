@@ -857,7 +857,7 @@ class localrepository(object):
         # manifest creation.
         return manifest.manifestrevlog(self.svfs)
 
-    @storecache("00manifest.i")
+    @storecache("00manifest.i", "00manifesttree.i")
     def manifestlog(self):
         return manifest.manifestlog(self.svfs, self)
 

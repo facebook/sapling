@@ -238,8 +238,10 @@ def uisetup(ui):
     )
     extensions.wrapfunction(revlog.revlog, "checkhash", _checkhash)
 
-    wrappropertycache(localrepo.localrepository, "manifestlog", getmanifestlog)
-    wrappropertycache(bundlerepo.bundlerepository, "manifestlog", getbundlemanifestlog)
+    extensions.wrapfilecache(localrepo.localrepository, "manifestlog", getmanifestlog)
+    extensions.wrapfilecache(
+        bundlerepo.bundlerepository, "manifestlog", getbundlemanifestlog
+    )
 
     extensions.wrapfunction(manifest.memmanifestctx, "write", _writemanifestwrapper)
 
@@ -1731,26 +1733,6 @@ def _checkhash(orig, self, *args, **kwargs):
     if self.indexfile.endswith("00manifesttree.i"):
         return
     return orig(self, *args, **kwargs)
-
-
-def wrappropertycache(cls, propname, wrapper):
-    """Wraps a filecache property. These can't be wrapped using the normal
-    wrapfunction. This should eventually go into upstream Mercurial.
-    """
-    assert callable(wrapper)
-    for currcls in cls.__mro__:
-        if propname in currcls.__dict__:
-            origfn = currcls.__dict__[propname].func
-            assert callable(origfn)
-
-            def wrap(*args, **kwargs):
-                return wrapper(origfn, *args, **kwargs)
-
-            currcls.__dict__[propname].func = wrap
-            break
-
-    if currcls is object:
-        raise AttributeError(_("%s has no property '%s'") % (type(currcls), propname))
 
 
 # Wrapper around the 'prefetch' command which also allows for prefetching the

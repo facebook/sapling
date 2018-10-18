@@ -471,10 +471,16 @@ def isexec(f):
 
 class cachestat(object):
     def __init__(self, path):
-        self.fi = win32.getfileinfo(path)
-
-    def cacheable(self):
-        return True
+        if path is None:
+            self.fi = None
+        else:
+            try:
+                self.fi = win32.getfileinfo(path)
+            except OSError as ex:
+                if ex.errno == errno.ENOENT:
+                    self.fi = None
+                else:
+                    raise
 
     __hash__ = object.__hash__
 
@@ -482,6 +488,8 @@ class cachestat(object):
         try:
             lhs = self.fi
             rhs = other.fi
+            if lhs is None or rhs is None:
+                return lhs is None and rhs is None
             return (
                 lhs.dwFileAttributes == rhs.dwFileAttributes
                 and lhs.ftCreationTime.dwLowDateTime == rhs.ftCreationTime.dwLowDateTime
