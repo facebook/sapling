@@ -21,9 +21,13 @@ Config::
     syncinterval = -1
 
     # Enable faster "need sync or not" check. It could be 6x faster, and
-    # removes some time in the critial section.
+    # removes some time in the critical section.
     # (default: true)
     fastsynccheck = true
+
+    # Whether to do an initial "best-effort" pull from the database.
+    # (default: true)
+    initialsync = true
 """
 
 
@@ -91,6 +95,7 @@ configitem("hgsql", "bypass", default=False)
 configitem("hgsql", "enabled", default=False)
 configitem("hgsql", "engine", default="innodb")
 configitem("hgsql", "fastsynccheck", default=True)
+configitem("hgsql", "initialsync", default=True)
 configitem("hgsql", "locktimeout", default=60)
 configitem("hgsql", "maxcommitsize", default=52428800)
 configitem("hgsql", "maxinsertsize", default=1048576)
@@ -245,6 +250,10 @@ def extsetup(ui):
             )
         )
 
+    global initialsync
+    if not ui.configbool("hgsql", "initialsync"):
+        initialsync = INITIAL_SYNC_DISABLE
+
     # Directly examining argv seems like a terrible idea, but it seems
     # necessary unless we refactor mercurial dispatch code. This is because
     # the first place we have access to parsed options is in the same function
@@ -252,7 +261,6 @@ def extsetup(ui):
     # the sync operation in which the lock is elided unless we set this.
     if "--forcesync" in sys.argv:
         ui.debug("forcesync enabled\n")
-        global initialsync
         initialsync = INITIAL_SYNC_FORCE
 
 

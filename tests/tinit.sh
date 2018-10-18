@@ -58,7 +58,7 @@ drawdag() {
 # This is useful to match error messages without the traceback.
 shorttraceback() {
   enable errorredirect
-  setconfig errorredirect.script='printf "%s" "$TRACE" | tail -1'
+  setconfig errorredirect.script='printf "%s" "$TRACE" | tail -1 1>&2'
 }
 
 # Set config items like --config way, instead of using cat >> $HGRCPATH
