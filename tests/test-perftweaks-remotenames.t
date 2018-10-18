@@ -4,7 +4,6 @@
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
   > [extensions]
-  > perftweaks=
   > tweakdefaults=
   > remotenames=
   > rebase=

@@ -1,9 +1,3 @@
-
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > perftweaks=
-  > EOF
-
 Test disabling the tag cache
   $ hg init tagcache
   $ cd tagcache

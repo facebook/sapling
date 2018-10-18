@@ -156,7 +156,6 @@ Somehow problematic: With many extensions
   > myparent=
   > patchbomb=
   > patchrmdir=
-  > perftweaks=
   > phabdiff=
   > phabstatus=
   > phrevset=
