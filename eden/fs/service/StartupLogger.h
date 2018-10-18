@@ -28,21 +28,7 @@ namespace eden {
  */
 class StartupLogger {
  public:
-  StartupLogger() = default;
-
-  /**
-   * daemonize the current process.
-   *
-   * This method returns in a new process.  This method will never return in the
-   * parent process that originally called daemonize().  Instead the parent
-   * waits for the child process to either call StartupLogger::success() or
-   * StartupLogger::fail(), and exits with a status code based on which of these
-   * was called.
-   *
-   * If logPath is non-empty the child process will redirect its stdout and
-   * stderr file descriptors to the specified log file before returning.
-   */
-  void daemonize(folly::StringPiece logPath);
+  virtual ~StartupLogger();
 
   /**
    * Log an informational message.
@@ -75,7 +61,7 @@ class StartupLogger {
     writeMessage(
         folly::LogLevel::ERR,
         folly::to<std::string>(std::forward<Args>(args)...));
-    failAndExit(exitCode);
+    failAndExitImpl(exitCode);
   }
 
   /**
@@ -85,6 +71,40 @@ class StartupLogger {
    * process to exit successfully.
    */
   void success();
+
+ protected:
+  void writeMessage(folly::LogLevel level, folly::StringPiece message);
+
+  virtual void writeMessageImpl(
+      folly::LogLevel level,
+      folly::StringPiece message) = 0;
+  virtual void successImpl() = 0;
+  [[noreturn]] virtual void failAndExitImpl(uint8_t exitCode) = 0;
+};
+
+class DaemonStartupLogger : public StartupLogger {
+ public:
+  DaemonStartupLogger() = default;
+
+  /**
+   * daemonize the current process.
+   *
+   * This method returns in a new process.  This method will never return in the
+   * parent process that originally called daemonize().  Instead the parent
+   * waits for the child process to either call StartupLogger::success() or
+   * StartupLogger::fail(), and exits with a status code based on which of these
+   * was called.
+   *
+   * If logPath is non-empty the child process will redirect its stdout and
+   * stderr file descriptors to the specified log file before returning.
+   */
+  void daemonize(folly::StringPiece logPath);
+
+ protected:
+  void writeMessageImpl(folly::LogLevel level, folly::StringPiece message)
+      override;
+  void successImpl() override;
+  [[noreturn]] void failAndExitImpl(uint8_t exitCode) override;
 
  private:
   friend class DaemonStartupLoggerTest;
@@ -100,8 +120,6 @@ class StartupLogger {
     int exitCode;
     std::string errorMessage;
   };
-
-  [[noreturn]] void failAndExit(uint8_t exitCode);
 
   folly::Optional<std::pair<pid_t, folly::File>> daemonizeImpl(
       folly::StringPiece logPath);
@@ -128,9 +146,6 @@ class StartupLogger {
       folly::StringPiece logPath);
   ParentResult handleChildCrash(pid_t childPid);
 
-  void writeMessage(
-      folly::LogLevel level,
-      folly::StringPiece message);
   void sendResult(ResultType result);
 
   // If stderr has been redirected during process daemonization, origStderr_
@@ -148,6 +163,17 @@ class StartupLogger {
   // process.  We use this to inform the original process when we have fully
   // completed daemon startup.
   folly::File pipe_;
+};
+
+class ForegroundStartupLogger : public StartupLogger {
+ public:
+  ForegroundStartupLogger() = default;
+
+ protected:
+  void writeMessageImpl(folly::LogLevel level, folly::StringPiece message)
+      override;
+  void successImpl() override;
+  [[noreturn]] void failAndExitImpl(uint8_t exitCode) override;
 };
 
 } // namespace eden

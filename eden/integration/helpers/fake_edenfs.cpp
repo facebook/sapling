@@ -265,6 +265,17 @@ bool acquireLock(AbsolutePathPiece edenDir) {
   return true;
 }
 
+std::unique_ptr<StartupLogger> daemonizeIfRequested() {
+  if (FLAGS_foreground) {
+    auto startupLogger = std::make_unique<ForegroundStartupLogger>();
+    return startupLogger;
+  } else {
+    auto startupLogger = std::make_unique<DaemonStartupLogger>();
+    startupLogger->daemonize(FLAGS_logPath);
+    return startupLogger;
+  }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -280,22 +291,19 @@ int main(int argc, char** argv) {
   }
 #endif
 
-  StartupLogger startupLogger;
-  if (!FLAGS_foreground) {
-    startupLogger.daemonize(FLAGS_logPath);
-  }
+  auto startupLogger = daemonizeIfRequested();
 
   if (FLAGS_edenDir.empty()) {
-    startupLogger.exitUnsuccessfully(1, "the --edenDir flag is required");
+    startupLogger->exitUnsuccessfully(1, "the --edenDir flag is required");
   }
   auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
 
   // Acquire the lock file
   if (!acquireLock(edenDir)) {
-    startupLogger.exitUnsuccessfully(1, "Failed to acquire lock file");
+    startupLogger->exitUnsuccessfully(1, "Failed to acquire lock file");
   }
 
-  startupLogger.log("Starting fake edenfs daemon");
+  startupLogger->log("Starting fake edenfs daemon");
 
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir + "socket"_pc;
@@ -306,7 +314,7 @@ int main(int argc, char** argv) {
   int rc = unlink(thriftSocketPath.value().c_str());
   if (rc != 0 && errno != ENOENT) {
     int errnum = errno;
-    startupLogger.exitUnsuccessfully(
+    startupLogger->exitUnsuccessfully(
         1,
         "failed to remove eden socket at ",
         thriftSocketPath,
@@ -327,7 +335,7 @@ int main(int argc, char** argv) {
   server.setStopSleepDuration(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::duration<double>{FLAGS_sleepBeforeStop}));
-  server.run(thriftAddress, startupLogger);
+  server.run(thriftAddress, *startupLogger);
   return 0;
 }
 

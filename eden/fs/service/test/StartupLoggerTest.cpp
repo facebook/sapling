@@ -53,19 +53,19 @@ FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName);
 class DaemonStartupLoggerTest : public ::testing::Test {
  protected:
   /*
-   * Use StartupLogger::daemonizeImpl() to run the specified function in the
-   * child process.
+   * Use DaemonStartupLogger::daemonizeImpl() to run the specified function in
+   * the child process.
    *
    * Returns the ParentResult object in the parent process.
    */
   template <typename Fn>
-  StartupLogger::ParentResult runDaemonize(Fn&& fn) {
+  DaemonStartupLogger::ParentResult runDaemonize(Fn&& fn) {
     // Use the logFile_ path by default
     return runDaemonize(logPath(), std::forward<Fn>(fn));
   }
   template <typename Fn>
-  StartupLogger::ParentResult runDaemonize(StringPiece logPath, Fn&& fn) {
-    StartupLogger logger;
+  DaemonStartupLogger::ParentResult runDaemonize(StringPiece logPath, Fn&& fn) {
+    DaemonStartupLogger logger;
     auto parentInfo = logger.daemonizeImpl(logPath);
     if (parentInfo) {
       // parent
@@ -84,15 +84,16 @@ class DaemonStartupLoggerTest : public ::testing::Test {
     exit(0);
   }
 
-  // Wrappers simply to allow our tests to access private StartupLogger methods
-  File createPipe(StartupLogger& logger) {
+  // Wrappers simply to allow our tests to access private DaemonStartupLogger
+  // methods
+  File createPipe(DaemonStartupLogger& logger) {
     return logger.createPipe();
   }
-  void closePipe(StartupLogger& logger) {
+  void closePipe(DaemonStartupLogger& logger) {
     logger.pipe_.close();
   }
-  StartupLogger::ParentResult waitForChildStatus(
-      StartupLogger& logger,
+  DaemonStartupLogger::ParentResult waitForChildStatus(
+      DaemonStartupLogger& logger,
       File readPipe,
       pid_t childPid,
       StringPiece logPath) {
@@ -119,7 +120,7 @@ class DaemonStartupLoggerTest : public ::testing::Test {
 
 TEST_F(DaemonStartupLoggerTest, crashWithNoResult) {
   // Fork a child that just kills itself
-  auto result = runDaemonize([](StartupLogger&&) {
+  auto result = runDaemonize([](DaemonStartupLogger&&) {
     fprintf(stderr, "this message should go to the log\n");
     fflush(stderr);
     kill(getpid(), SIGKILL);
@@ -153,7 +154,7 @@ TEST_F(DaemonStartupLoggerTest, successWritesStartedMessageToStandardError) {
 
 void successWritesStartedMessageToStandardErrorDaemonChild() {
   auto logFile = TemporaryFile{"eden_test_log"};
-  auto logger = StartupLogger{};
+  auto logger = DaemonStartupLogger{};
   logger.daemonize(logFile.path().string());
   logger.success();
   exit(0);
@@ -161,7 +162,7 @@ void successWritesStartedMessageToStandardErrorDaemonChild() {
 
 TEST_F(DaemonStartupLoggerTest, exitWithNoResult) {
   // Fork a child that exits unsuccessfully
-  auto result = runDaemonize([](StartupLogger&&) { _exit(19); });
+  auto result = runDaemonize([](DaemonStartupLogger&&) { _exit(19); });
 
   EXPECT_EQ(19, result.exitCode);
   EXPECT_EQ(
@@ -175,7 +176,7 @@ TEST_F(DaemonStartupLoggerTest, exitWithNoResult) {
 
 TEST_F(DaemonStartupLoggerTest, exitSuccessfullyWithNoResult) {
   // Fork a child that exits successfully
-  auto result = runDaemonize([](StartupLogger&&) { _exit(0); });
+  auto result = runDaemonize([](DaemonStartupLogger&&) { _exit(0); });
 
   // The parent process should be EX_SOFTWARE in this case
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
@@ -189,8 +190,8 @@ TEST_F(DaemonStartupLoggerTest, exitSuccessfullyWithNoResult) {
 }
 
 TEST_F(DaemonStartupLoggerTest, closePipeWhileStillRunning) {
-  // Fork a child process that will destroy the StartupLogger and then wait
-  // until we tell it to exit.
+  // Fork a child process that will destroy the DaemonStartupLogger and then
+  // wait until we tell it to exit.
   std::array<int, 2> pipeFDs;
   auto rc = pipe2(pipeFDs.data(), O_CLOEXEC);
   checkUnixError(rc, "failed to create pipes");
@@ -198,12 +199,12 @@ TEST_F(DaemonStartupLoggerTest, closePipeWhileStillRunning) {
   folly::File writePipe(pipeFDs[1], /*ownsFd=*/true);
 
   auto result =
-      runDaemonize("", [&readPipe, &writePipe](StartupLogger&& logger) {
+      runDaemonize("", [&readPipe, &writePipe](DaemonStartupLogger&& logger) {
         writePipe.close();
 
-        // Destroy the StartupLogger object to force it to close its pipes
+        // Destroy the DaemonStartupLogger object to force it to close its pipes
         // without sending a result.
-        folly::Optional<StartupLogger> optLogger(std::move(logger));
+        folly::Optional<DaemonStartupLogger> optLogger(std::move(logger));
         optLogger.clear();
 
         // Wait for the parent process to signal us to exit.
@@ -228,7 +229,7 @@ TEST_F(DaemonStartupLoggerTest, closePipeWhileStillRunning) {
 TEST_F(DaemonStartupLoggerTest, closePipeWithWaitError) {
   // Call waitForChildStatus() with our own pid.
   // wait() will return an error trying to wait on ourself.
-  StartupLogger logger;
+  DaemonStartupLogger logger;
   auto readPipe = createPipe(logger);
   closePipe(logger);
   auto result = waitForChildStatus(
@@ -243,13 +244,14 @@ TEST_F(DaemonStartupLoggerTest, closePipeWithWaitError) {
 }
 
 TEST_F(DaemonStartupLoggerTest, success) {
-  auto result = runDaemonize([](StartupLogger&& logger) { logger.success(); });
+  auto result =
+      runDaemonize([](DaemonStartupLogger&& logger) { logger.success(); });
   EXPECT_EQ(0, result.exitCode);
   EXPECT_EQ("", result.errorMessage);
 }
 
 TEST_F(DaemonStartupLoggerTest, failure) {
-  auto result = runDaemonize([](StartupLogger&& logger) {
+  auto result = runDaemonize([](DaemonStartupLogger&& logger) {
     logger.exitUnsuccessfully(3, "example failure for tests");
   });
   EXPECT_EQ(3, result.exitCode);
@@ -265,7 +267,7 @@ TEST(ForegroundStartupLoggerTest, loggedMessagesAreWrittenToStandardError) {
 }
 
 void loggedMessagesAreWrittenToStandardErrorChild() {
-  auto logger = StartupLogger{};
+  auto logger = ForegroundStartupLogger{};
   logger.warn("warn message");
 }
 
@@ -276,7 +278,7 @@ TEST(ForegroundStartupLoggerTest, exitUnsuccessfullyMakesProcessExitWithCode) {
 }
 
 void exitUnsuccessfullyMakesProcessExitWithCodeChild() {
-  auto logger = StartupLogger{};
+  auto logger = ForegroundStartupLogger{};
   logger.exitUnsuccessfully(42, "intentionally exiting");
 }
 
@@ -287,7 +289,7 @@ TEST(ForegroundStartupLoggerTest, xlogsAfterSuccessAreWrittenToStandardError) {
 }
 
 void xlogsAfterSuccessAreWrittenToStandardErrorChild() {
-  auto logger = StartupLogger{};
+  auto logger = ForegroundStartupLogger{};
   logger.success();
   XLOG(ERR) << "test error message with xlog";
 }
@@ -301,7 +303,7 @@ TEST(ForegroundStartupLoggerTest, successWritesStartedMessageToStandardError) {
 }
 
 void successWritesStartedMessageToStandardErrorForegroundChild() {
-  auto logger = StartupLogger{};
+  auto logger = ForegroundStartupLogger{};
   logger.success();
 }
 

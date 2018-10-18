@@ -31,10 +31,22 @@ using std::string;
 namespace facebook {
 namespace eden {
 
+StartupLogger::~StartupLogger() = default;
+
 void StartupLogger::success() {
   writeMessage(
       folly::LogLevel::INFO,
       folly::to<string>("Started edenfs (pid ", getpid(), ")"));
+  successImpl();
+}
+
+void StartupLogger::writeMessage(folly::LogLevel level, StringPiece message) {
+  static folly::Logger logger("eden.fs.startup");
+  FB_LOG_RAW(logger, level, __FILE__, __LINE__, __func__) << message;
+  writeMessageImpl(level, message);
+}
+
+void DaemonStartupLogger::successImpl() {
   if (!logPath_.empty()) {
     writeMessage(
         folly::LogLevel::INFO,
@@ -43,20 +55,14 @@ void StartupLogger::success() {
   sendResult(0);
 }
 
-void StartupLogger::failAndExit(uint8_t exitCode) {
+void DaemonStartupLogger::failAndExitImpl(uint8_t exitCode) {
   sendResult(exitCode);
   exit(exitCode);
 }
 
-void StartupLogger::writeMessage(
+void DaemonStartupLogger::writeMessageImpl(
     folly::LogLevel level,
     StringPiece message) {
-  // Log the message
-  static folly::Logger logger("eden.fs.startup");
-  FB_LOG_RAW(logger, level, __FILE__, __LINE__, __func__) << message;
-
-  // If we also have a file where we should write the message directly,
-  // do so now.
   auto& file = origStderr_;
   if (file) {
     std::array<iovec, 2> iov;
@@ -72,7 +78,7 @@ void StartupLogger::writeMessage(
   }
 }
 
-void StartupLogger::sendResult(ResultType result) {
+void DaemonStartupLogger::sendResult(ResultType result) {
   if (pipe_) {
     auto bytesWritten = folly::writeFull(pipe_.fd(), &result, sizeof(result));
     if (bytesWritten < 0) {
@@ -92,7 +98,7 @@ void StartupLogger::sendResult(ResultType result) {
   setsid();
 }
 
-File StartupLogger::createPipe() {
+File DaemonStartupLogger::createPipe() {
   // Create the pipe for communication between the processes
   std::array<int, 2> pipeFDs;
   auto rc = pipe2(pipeFDs.data(), O_CLOEXEC);
@@ -102,7 +108,7 @@ File StartupLogger::createPipe() {
   return folly::File(pipeFDs[0], /*ownsFd=*/true);
 }
 
-void StartupLogger::daemonize(StringPiece logPath) {
+void DaemonStartupLogger::daemonize(StringPiece logPath) {
   auto parentInfo = daemonizeImpl(logPath);
   if (parentInfo) {
     auto pid = parentInfo->first;
@@ -111,7 +117,7 @@ void StartupLogger::daemonize(StringPiece logPath) {
   }
 }
 
-folly::Optional<std::pair<pid_t, File>> StartupLogger::daemonizeImpl(
+folly::Optional<std::pair<pid_t, File>> DaemonStartupLogger::daemonizeImpl(
     StringPiece logPath) {
   auto readPipe = createPipe();
   logPath_ = logPath.str();
@@ -134,7 +140,7 @@ folly::Optional<std::pair<pid_t, File>> StartupLogger::daemonizeImpl(
   return std::make_pair(pid, std::move(readPipe));
 }
 
-void StartupLogger::runParentProcess(
+void DaemonStartupLogger::runParentProcess(
     File readPipe,
     pid_t childPid,
     StringPiece logPath) {
@@ -159,14 +165,14 @@ void StartupLogger::runParentProcess(
   }
 }
 
-void StartupLogger::prepareChildProcess(StringPiece logPath) {
+void DaemonStartupLogger::prepareChildProcess(StringPiece logPath) {
   // Redirect stdout & stderr if desired
   if (!logPath.empty()) {
     redirectOutput(logPath);
   }
 }
 
-void StartupLogger::redirectOutput(StringPiece logPath) {
+void DaemonStartupLogger::redirectOutput(StringPiece logPath) {
   try {
     logPath_ = logPath.str();
 
@@ -188,7 +194,7 @@ void StartupLogger::redirectOutput(StringPiece logPath) {
   }
 }
 
-StartupLogger::ParentResult StartupLogger::waitForChildStatus(
+DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
     const File& pipe,
     pid_t childPid,
     StringPiece logPath) {
@@ -219,7 +225,8 @@ StartupLogger::ParentResult StartupLogger::waitForChildStatus(
   return ParentResult(status);
 }
 
-StartupLogger::ParentResult StartupLogger::handleChildCrash(pid_t childPid) {
+DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
+    pid_t childPid) {
   int status;
   auto waitedPid = waitpid(childPid, &status, WNOHANG);
   if (waitedPid == childPid) {
@@ -268,6 +275,14 @@ StartupLogger::ParentResult StartupLogger::handleChildCrash(pid_t childPid) {
         folly::errnoStr(errno));
   }
   return ParentResult(EX_SOFTWARE, msg);
+}
+
+void ForegroundStartupLogger::writeMessageImpl(folly::LogLevel, StringPiece) {}
+
+void ForegroundStartupLogger::successImpl() {}
+
+[[noreturn]] void ForegroundStartupLogger::failAndExitImpl(uint8_t exitCode) {
+  exit(exitCode);
 }
 
 } // namespace eden

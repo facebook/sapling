@@ -70,13 +70,14 @@ namespace {
 
 std::shared_ptr<StartupLogger> daemonizeIfRequested(
     folly::StringPiece logPath) {
-  auto startupLogger = std::make_shared<StartupLogger>();
   if (FLAGS_foreground) {
+    auto startupLogger = std::make_shared<ForegroundStartupLogger>();
+    return startupLogger;
+  } else {
+    auto startupLogger = std::make_shared<DaemonStartupLogger>();
+    startupLogger->daemonize(logPath);
     return startupLogger;
   }
-
-  startupLogger->daemonize(logPath);
-  return startupLogger;
 }
 
 std::string getLogPath(AbsolutePathPiece edenDir) {
