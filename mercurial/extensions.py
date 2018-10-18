@@ -21,6 +21,10 @@ _extensions = {}
 _disabledextensions = {}
 _aftercallbacks = {}
 _order = []
+
+# These extensions are never imported, even if the user tells us to.
+#
+# (If you permanently sunset an extension, add it here.)
 _ignoreextensions = {
     "bookmarks",
     "color",
@@ -30,6 +34,7 @@ _ignoreextensions = {
     "inotify",
     "interhg",
     "mq",
+    "perftweaks",
     "obsshelve",
     "parentrevspec",
     "progress",
