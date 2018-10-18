@@ -38,11 +38,6 @@ testedwith = "ships-with-fb-hgext"
 
 def extsetup(ui):
     wrapfunction(branchmap.branchcache, "update", _branchmapupdate)
-    wrapfunction(branchmap, "read", _branchmapread)
-    wrapfunction(branchmap, "replacecache", _branchmapreplacecache)
-    wrapfunction(branchmap, "updatecache", _branchmapupdatecache)
-
-    wrapfunction(branchmap.branchcache, "write", _branchmapwrite)
     wrapfunction(namespaces.namespaces, "singlenode", _singlenode)
 
 
@@ -123,42 +118,3 @@ def _branchmapupdate(orig, self, repo, revgen):
     self.tiprev = tiprev
     self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
     repo.ui.log("branchcache", "perftweaks updated %s branch cache\n", repo.filtername)
-
-
-def _branchmapread(orig, repo):
-    # developer config: perftweaks.disablebranchcache2
-    if not repo.ui.configbool("perftweaks", "disablebranchcache2"):
-        return orig(repo)
-    # Don't bother reading branchmap since branchcache.update() will be called
-    # anyway and that is O(changelog)
-
-
-def _branchmapreplacecache(orig, repo, bm):
-    if not repo.ui.configbool("perftweaks", "disablebranchcache2"):
-        return orig(repo, bm)
-    # Don't bother writing branchmap since we don't read it
-
-
-def _branchmapupdatecache(orig, repo):
-    if not repo.ui.configbool("perftweaks", "disablebranchcache2"):
-        return orig(repo)
-
-    # The original logic has unnecessary steps, ex. it calculates the "served"
-    # repoview as an attempt to build branchcache for "visible". And then
-    # calculates "immutable" for calculating "served", recursively.
-    #
-    # Just use a shortcut path that construct the branchcache directly.
-    partial = repo._branchcaches.get(repo.filtername)
-    if partial is None:
-        partial = branchmap.branchcache()
-    partial.update(repo, None)
-    repo._branchcaches[repo.filtername] = partial
-
-
-def _branchmapwrite(orig, self, repo):
-    if repo.ui.configbool("perftweaks", "disablebranchcache2"):
-        # Since we don't read the branchcache, don't bother writing it.
-        result = None
-    else:
-        result = orig(self, repo)
-    return result

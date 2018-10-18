@@ -27,6 +27,12 @@ def _filename(repo):
 
 
 def read(repo):
+    # developer config: perftweaks.disablebranchcache2
+    # Don't bother reading branchmap since branchcache.update() will be called
+    # anyway and that is O(changelog).
+    if repo.ui.configbool("perftweaks", "disablebranchcache2"):
+        return None
+
     try:
         f = repo.cachevfs(_filename(repo))
         lines = f.read().split("\n")
@@ -85,29 +91,40 @@ subsettable = {
 
 
 def updatecache(repo):
-    cl = repo.changelog
-    filtername = repo.filtername
-    partial = repo._branchcaches.get(filtername)
-
-    revs = []
-    if partial is None or not partial.validfor(repo):
-        partial = read(repo)
+    # Don't write the branchmap if it's disabled.
+    if repo.ui.configbool("perftweaks", "disablebranchcache2"):
+        # The original logic has unnecessary steps, ex. it calculates the "served"
+        # repoview as an attempt to build branchcache for "visible". And then
+        # calculates "immutable" for calculating "served", recursively.
+        #
+        # Just use a shortcut path that construct the branchcache directly.
+        partial = repo._branchcaches.get(repo.filtername)
         if partial is None:
-            subsetname = subsettable.get(filtername)
-            if subsetname is None:
-                partial = branchcache()
-            else:
-                subset = repo.filtered(subsetname)
-                partial = subset.branchmap().copy()
-                extrarevs = subset.changelog.filteredrevs - cl.filteredrevs
-                revs.extend(r for r in extrarevs if r <= partial.tiprev)
-    revs.extend(cl.revs(start=partial.tiprev + 1))
-    if revs:
-        partial.update(repo, revs)
-        partial.write(repo)
-
-    assert partial.validfor(repo), filtername
-    repo._branchcaches[repo.filtername] = partial
+            partial = branchcache()
+        partial.update(repo, None)
+        repo._branchcaches[repo.filtername] = partial
+    else:
+        cl = repo.changelog
+        filtername = repo.filtername
+        partial = repo._branchcaches.get(filtername)
+        revs = []
+        if partial is None or not partial.validfor(repo):
+            partial = read(repo)
+            if partial is None:
+                subsetname = subsettable.get(filtername)
+                if subsetname is None:
+                    partial = branchcache()
+                else:
+                    subset = repo.filtered(subsetname)
+                    partial = subset.branchmap().copy()
+                    extrarevs = subset.changelog.filteredrevs - cl.filteredrevs
+                    revs.extend(r for r in extrarevs if r <= partial.tiprev)
+        revs.extend(cl.revs(start=partial.tiprev + 1))
+        if revs:
+            partial.update(repo, revs)
+            partial.write(repo)
+        assert partial.validfor(repo), filtername
+        repo._branchcaches[repo.filtername] = partial
 
 
 def replacecache(repo, bm):
@@ -115,6 +132,9 @@ def replacecache(repo, bm):
 
     This is likely only called during clone with a branch map from a remote.
     """
+    # Don't write the branchmap if it's disabled.
+    if repo.ui.configbool("perftweaks", "disablebranchcache2"):
+        return
     rbheads = []
     closed = []
     for bheads in bm.itervalues():
@@ -231,6 +251,9 @@ class branchcache(dict):
         )
 
     def write(self, repo):
+        # Don't bother writing the branchcache if it's disabled.
+        if repo.ui.configbool("perftweaks", "disablebranchcache2"):
+            return None
         try:
             f = repo.cachevfs(_filename(repo), "w", atomictemp=True)
             cachekey = [hex(self.tipnode), "%d" % self.tiprev]
