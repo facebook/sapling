@@ -250,8 +250,6 @@ def extsetup(ui):
     if pipei_bufsize != 4096 and pycompat.iswindows:
         wrapfunction(util, "popen4", get_winpopen4(pipei_bufsize))
 
-    # Tweak Behavior
-    tweakbehaviors(ui)
     _fixpager(ui)
 
     # Change manifest template output
@@ -400,27 +398,6 @@ def pullrebaseffwd(orig, rebasefunc, ui, repo, source="default", **opts):
     if rebasing and rebasemodule:
         extensions.unwrapfunction(rebasemodule, "rebase", rebaseorfastforward)
     return ret
-
-
-def tweakbehaviors(ui):
-    """Tweak Behaviors
-
-    Right now this only tweaks the rebase behavior such that the default
-    exit status code for a noop rebase becomes 0 instead of 1.
-
-    In future we may add or modify other behaviours here.
-    """
-
-    # noop rebase returns 0
-    def _nothingtorebase(orig, *args, **kwargs):
-        return 0
-
-    if ui.configbool("tweakdefaults", "nooprebase"):
-        try:
-            rebase = extensions.find("rebase")
-            extensions.wrapfunction(rebase, "_nothingtorebase", _nothingtorebase)
-        except (KeyError, AttributeError):
-            pass
 
 
 def commitcmd(orig, ui, repo, *pats, **opts):

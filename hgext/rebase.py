@@ -76,8 +76,11 @@ testedwith = "ships-with-hg-core"
 colortable = {"rebase.manual.update": "yellow"}
 
 
-def _nothingtorebase():
-    return 1
+def _nothingtorebase(ui):
+    if ui.configbool("tweakdefaults", "nooprebase"):
+        return 0
+    else:
+        return 1
 
 
 def _savegraft(ctx, extra):
@@ -372,7 +375,7 @@ class rebaseruntime(object):
 
     def _preparenewrebase(self, destmap):
         if not destmap:
-            return _nothingtorebase()
+            return _nothingtorebase(self.ui)
 
         rebaseset = destmap.keys()
         allowunstable = obsolete.isenabled(self.repo, obsolete.allowunstableopt)
@@ -389,7 +392,7 @@ class rebaseruntime(object):
         if not result:
             # Empty state built, nothing to rebase
             self.ui.status(_("nothing to rebase\n"))
-            return _nothingtorebase()
+            return _nothingtorebase(self.ui)
 
         for root in self.repo.set("roots(%ld)", rebaseset):
             if not self.keepf and not root.mutable():
