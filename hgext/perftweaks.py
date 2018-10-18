@@ -37,36 +37,17 @@ testedwith = "ships-with-fb-hgext"
 
 
 def extsetup(ui):
-    # developer config: extensions.clindex
-    if ui.config("extensions", "clindex") == "":
-        # disable cachenoderevs if clindex is enabled.
-        ui.setconfig("perftweaks", "cachenoderevs", "false", "perftweaks")
     wrapfunction(branchmap.branchcache, "update", _branchmapupdate)
     wrapfunction(branchmap, "read", _branchmapread)
     wrapfunction(branchmap, "replacecache", _branchmapreplacecache)
     wrapfunction(branchmap, "updatecache", _branchmapupdatecache)
 
-    # noderev cache creation
-    # The node rev cache is a cache of rev numbers that we are likely to do a
-    # node->rev lookup for. Since looking up rev->node is cheaper than
-    # node->rev, we use this cache to prefill the changelog radix tree with
-    # mappings.
     wrapfunction(branchmap.branchcache, "write", _branchmapwrite)
-    wrapfunction(phases.phasecache, "advanceboundary", _editphases)
-    wrapfunction(phases.phasecache, "retractboundary", _editphases)
-    try:
-        remotenames = extensions.find("remotenames")
-        wrapfunction(remotenames, "saveremotenames", _saveremotenames)
-    except KeyError:
-        pass
-
     wrapfunction(namespaces.namespaces, "singlenode", _singlenode)
 
 
 def reposetup(ui, repo):
     if repo.local() is not None:
-        _preloadrevs(repo)
-
         # developer config: perftweaks.disableupdatebranchcacheoncommit
         if repo.ui.configbool("perftweaks", "disableupdatebranchcacheoncommit"):
 
@@ -180,117 +161,4 @@ def _branchmapwrite(orig, self, repo):
         result = None
     else:
         result = orig(self, repo)
-    if repo.ui.configbool("perftweaks", "cachenoderevs", True):
-        revs = set()
-        nodemap = repo.changelog.nodemap
-        for branch, heads in self.iteritems():
-            revs.update(nodemap[n] for n in heads)
-        name = "branchheads-%s" % repo.filtername
-        _savepreloadrevs(repo, name, revs)
     return result
-
-
-def _saveremotenames(orig, repo, remotepath, branches=None, bookmarks=None):
-    result = orig(repo, remotepath, branches=branches, bookmarks=bookmarks)
-    if repo.ui.configbool("perftweaks", "cachenoderevs", True):
-        revs = set()
-        nodemap = repo.changelog.nodemap
-        if bookmarks:
-            for b, n in bookmarks.iteritems():
-                n = bin(n)
-                # remotenames can pass bookmarks that don't exist in the
-                # changelog yet. It filters them internally, but we need to as
-                # well.
-                if n in nodemap:
-                    revs.add(nodemap[n])
-        if branches:
-            for branch, nodes in branches.iteritems():
-                for n in nodes:
-                    if n in nodemap:
-                        revs.add(nodemap[n])
-
-        name = "remotenames-%s" % remotepath
-        _savepreloadrevs(repo, name, revs)
-
-    return result
-
-
-def _editphases(orig, self, repo, tr, *args):
-    result = orig(self, repo, tr, *args)
-
-    def _write(fp):
-        revs = set()
-        nodemap = repo.changelog.nodemap
-        for phase, roots in enumerate(self.phaseroots):
-            for n in roots:
-                if n in nodemap:
-                    revs.add(nodemap[n])
-        _savepreloadrevs(repo, "phaseroots", revs)
-
-    # We don't actually use the transaction file generator. It's just a hook so
-    # we can write out at the same time as phases.
-    if tr:
-        tr.addfilegenerator("noderev-phaseroot", ("phaseroots-fake",), _write)
-    else:
-        # fp is not used anyway
-        _write(fp=None)
-
-    return result
-
-
-def _cachefilename(name):
-    return "noderevs/%s" % name
-
-
-def _preloadrevs(repo):
-    # Preloading the node-rev map for likely to be used revs saves 100ms on
-    # every command. This is because normally to look up a node, hg has to scan
-    # the changelog.i file backwards, potentially reading through hundreds of
-    # thousands of entries and building a cache of them.  Looking up a rev
-    # however is fast, because we know exactly what offset in the file to read.
-    # Reading old commits is common, since the branchmap needs to to convert old
-    # branch heads from node to rev.
-
-    if repo.ui.configbool("perftweaks", "cachenoderevs", True):
-        repo = repo.unfiltered()
-        revs = set()
-        cachedir = repo.localvfs.join("cache", "noderevs")
-        try:
-            for cachefile in os.listdir(cachedir):
-                filename = _cachefilename(cachefile)
-                revs.update(int(r) for r in repo.cachevfs(filename))
-
-            getnode = repo.changelog.node
-            nodemap = repo.changelog.nodemap
-            for r in revs:
-                try:
-                    node = getnode(r)
-                    nodemap[node] = r
-                except (IndexError, ValueError):
-                    # Rev no longer exists or rev is out of range
-                    pass
-        except EnvironmentError:
-            # No permission to read? No big deal
-            pass
-
-
-def _savepreloadrevs(repo, name, revs):
-    if repo.ui.configbool("perftweaks", "cachenoderevs", True):
-        cachedir = repo.localvfs.join("cache", "noderevs")
-        try:
-            repo.localvfs.mkdir(cachedir)
-        except OSError as ex:
-            # If we failed because the directory already exists,
-            # continue.  In all other cases (e.g., no permission to create the
-            # directory), just silently return without doing anything.
-            if ex.errno != errno.EEXIST:
-                return
-
-        try:
-            filename = _cachefilename(name)
-            f = repo.cachevfs.open(filename, mode="w+", atomictemp=True)
-            f.write("\n".join(str(r) for r in revs))
-            f.close()
-        except EnvironmentError:
-            # No permission to write? No big deal
-            pass

@@ -143,19 +143,3 @@ Test disabling updating branchcache during commit
   [1]
 
   $ cd ..
-
-Test file permissions
-  $ umask 002
-  $ cd ..
-  $ mkdir permcheck
-  $ chmod g+ws permcheck
-  $ cd permcheck
-  $ hg init repo
-  $ cd repo
-  $ touch a
-  $ hg commit -qAm a
-  $ ls -la .hg/cache/noderevs/
-  total * (glob)
-  drwxrw[sx]r-x.? [0-9]+ .* \. (re)
-  drwxrw[sx]r-x.? [0-9]+ .* \.\. (re)
-  -rw-rw-r--.? 1 .* branchheads-served (re)

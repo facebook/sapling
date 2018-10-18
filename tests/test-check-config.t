@@ -100,7 +100,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: infinitepushbackup.disableduntil (str)
   undocumented: morestatus.show (bool)
   undocumented: nointerrupt.interactiveonly (bool) [True]
-  undocumented: perftweaks.cachenoderevs (bool) [True]
   undocumented: perftweaks.disablebranchcache (bool)
   undocumented: perftweaks.disablecasecheck (bool)
   undocumented: perftweaks.disabletags (bool)

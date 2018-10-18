@@ -90,6 +90,7 @@ except NameError:
 
 
 def extsetup(ui):
+    # developer config: extensions.clindex
     if ui.config("extensions", "clindex") == "":
         # do nothing, if clindex is enabled
         return
