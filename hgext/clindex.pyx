@@ -424,6 +424,12 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
+    try:
+        # Record nodemap lag.
+        ui.log("nodemap_lag", "", nodemap_lag=repo.changelog.nodemap.lag)
+    except AttributeError:
+        pass
+
     unfilteredmethod = localrepo.unfilteredmethod
 
     class clindexrepo(repo.__class__):

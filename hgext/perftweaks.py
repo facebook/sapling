@@ -14,13 +14,3 @@
 """
 
 testedwith = "ships-with-fb-hgext"
-
-
-def reposetup(ui, repo):
-    if repo.local() is not None:
-        # record nodemap lag
-        try:
-            lag = repo.changelog.nodemap.lag
-            ui.log("nodemap_lag", "", nodemap_lag=lag)
-        except AttributeError:
-            pass
