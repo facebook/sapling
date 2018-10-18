@@ -48,13 +48,16 @@ configitem("automv", "similarity", default=95)
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, "commit", mvcheck)
     entry[1].append(("", "no-automv", None, _("disable automatic file move detection")))
+    entry[1].append(
+        ("", "no-move-detection", None, _("disable automatic file move detection"))
+    )
 
 
 def mvcheck(orig, ui, repo, *pats, **opts):
     """Hook to check for moves at commit time"""
     opts = pycompat.byteskwargs(opts)
     renames = None
-    disabled = opts.pop("no_automv", False)
+    disabled = opts.pop("no_automv", False) or opts.pop("no-move-detection", False)
     if not disabled:
         threshold = ui.configint("automv", "similarity")
         if not 0 <= threshold <= 100:
