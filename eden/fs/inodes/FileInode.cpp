@@ -787,44 +787,52 @@ Future<Hash> FileInode::getSha1() {
 }
 
 folly::Future<struct stat> FileInode::stat() {
-  return runWhileDataLoaded(
-      LockedState{this}, [self = inodePtrFromThis()](LockedState&& state) {
-        auto st = self->getMount()->initStatData();
-        st.st_nlink = 1;
-        st.st_ino = self->getNodeId().get();
+  auto st = getMount()->initStatData();
+  st.st_nlink = 1; // Eden does not support hard links yet.
+  st.st_ino = getNodeId().get();
+  // NOTE: we don't set rdev to anything special here because we
+  // don't support committing special device nodes.
 
-        if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-          // We are calling fstat only to get the size of the file.
-          struct stat overlayStat;
-          checkUnixError(fstat(state->file.fd(), &overlayStat));
+  auto state = LockedState{this};
 
-          if (overlayStat.st_size <
-              static_cast<off_t>(Overlay::kHeaderLength)) {
-            // Truncated overlay files can sometimes occur after a hard reboot
-            // where the overlay file data was not flushed to disk before the
-            // system powered off.
-            XLOG(ERR) << "overlay file for " << self->getNodeId()
-                      << " is too short for header: size="
-                      << overlayStat.st_size;
-            throw InodeError(EIO, self, "corrupt overlay file");
-          }
-          st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
-        } else {
-          // blob is guaranteed set because runWhileDataLoaded() guarantees that
-          // state->tag is either MATERIALIZED_IN_OVERLAY or BLOB_LOADED.
-          DCHECK_EQ(state->tag, State::BLOB_LOADED);
-          CHECK(state->blob);
-          st.st_size = state->blob->getSize();
+  getMetadataLocked(*state).applyToStat(st);
 
-          // NOTE: we don't set rdev to anything special here because we
-          // don't support committing special device nodes.
-        }
+  switch (state->tag) {
+    case State::NOT_LOADED:
+    case State::BLOB_LOADING:
+    case State::BLOB_LOADED:
+      CHECK(state->hash.has_value());
+      // While getBlobMetadata will sometimes need to fetch a blob to compute
+      // the size and SHA-1, if it's already known, use the cached metadata to
+      // look up the size. This is especially a win after restarting Eden -
+      // metadata can be loaded from the local cache more cheaply than
+      // deserializing an entire blob.
+      return getObjectStore()
+          ->getBlobMetadata(*state->hash)
+          .thenValue([st](const BlobMetadata& metadata) mutable {
+            st.st_size = metadata.size;
+            updateBlockCount(st);
+            return st;
+          });
 
-        self->getMetadataLocked(*state).applyToStat(st);
-        updateBlockCount(st);
+    case State::MATERIALIZED_IN_OVERLAY:
+      state.ensureFileOpen(this);
+      // We are calling fstat only to get the size of the file.
+      struct stat overlayStat;
+      checkUnixError(fstat(state->file.fd(), &overlayStat));
 
-        return st;
-      });
+      if (overlayStat.st_size < static_cast<off_t>(Overlay::kHeaderLength)) {
+        // Truncated overlay files can sometimes occur after a hard reboot
+        // where the overlay file data was not flushed to disk before the
+        // system powered off.
+        XLOG(ERR) << "overlay file for " << getNodeId()
+                  << " is too short for header: size=" << overlayStat.st_size;
+        throw InodeError(EIO, inodePtrFromThis(), "corrupt overlay file");
+      }
+      st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
+      updateBlockCount(st);
+      return st;
+  }
 }
 
 void FileInode::updateBlockCount(struct stat& st) {
