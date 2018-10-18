@@ -11,8 +11,6 @@ import os
 import pathlib
 import signal
 import sys
-import tempfile
-import typing
 import unittest
 
 import pexpect
@@ -22,6 +20,7 @@ from .lib import edenclient, testcase
 from .lib.fake_edenfs import fake_eden_daemon
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
+from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 class HealthTest(testcase.EdenTestCase):
@@ -37,13 +36,12 @@ class HealthTest(testcase.EdenTestCase):
             self.assertFalse(client.is_healthy())
 
 
-class HealthOfFakeEdenFSTest(unittest.TestCase, PexpectAssertionMixin):
+class HealthOfFakeEdenFSTest(
+    unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
+):
     def setUp(self):
         super().setUp()
-
-        temp_dir = tempfile.TemporaryDirectory(prefix="eden_test")  # noqa: P201
-        self.temp_dir = pathlib.Path(temp_dir.__enter__())
-        self.addCleanup(lambda: temp_dir.__exit__(None, None, None))
+        self.temp_dir = pathlib.Path(self.make_temporary_directory())
 
     def test_healthy_daemon_is_healthy(self):
         with fake_eden_daemon(self.temp_dir):
