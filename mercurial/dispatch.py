@@ -255,7 +255,6 @@ def _preimportmodules():
         "pager",
         "patchbomb",
         "patchrmdir",
-        "perftweaks",
         "phabdiff",
         "phabstatus",
         "phrevset",
