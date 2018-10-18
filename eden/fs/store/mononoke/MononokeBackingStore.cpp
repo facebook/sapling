@@ -281,7 +281,7 @@ folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
             auto selected = folly::Random::rand32(selection.hosts.size());
             auto host = selection.hosts[selected];
             auto addr =
-                folly::SocketAddress(host->getIpAddress(), host->getPort());
+                folly::SocketAddress(host->location().getIpAddress(), host->location().getPort());
             promise.setValue(addr);
           }),
       eventBase,
