@@ -122,12 +122,14 @@ class InodeBase {
   virtual folly::Future<Dispatcher::Attr> setattr(
       const fuse_setattr_in& attr) = 0;
 
-  virtual folly::Future<folly::Unit>
+  FOLLY_NODISCARD folly::Future<folly::Unit>
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
-  virtual folly::Future<std::string> getxattr(folly::StringPiece name);
-  virtual folly::Future<std::vector<std::string>> listxattr();
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> removexattr(
+  FOLLY_NODISCARD folly::Future<folly::Unit> removexattr(
       folly::StringPiece name);
+
+  virtual folly::Future<std::vector<std::string>> listxattr() = 0;
+  virtual folly::Future<std::string> getxattr(folly::StringPiece name) = 0;
+
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(int mask);
 
   /**

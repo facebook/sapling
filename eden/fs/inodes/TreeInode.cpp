@@ -46,6 +46,7 @@
 #include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+#include "eden/fs/utils/XAttr.h"
 
 using folly::ByteRange;
 using folly::Future;
@@ -3299,6 +3300,13 @@ folly::Future<Dispatcher::Attr> TreeInode::setattr(
   // Update Journal
   updateJournal();
   return result;
+}
+
+folly::Future<std::vector<std::string>> TreeInode::listxattr() {
+  return std::vector<std::string>{};
+}
+folly::Future<std::string> TreeInode::getxattr(folly::StringPiece /*name*/) {
+  return makeFuture<std::string>(InodeError(kENOATTR, inodePtrFromThis()));
 }
 
 } // namespace eden

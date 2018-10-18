@@ -112,22 +112,26 @@ InodeBase::~InodeBase() {
 folly::Future<Dispatcher::Attr> InodeBase::getattr() {
   FUSELL_NOT_IMPL();
 }
+
 folly::Future<folly::Unit> InodeBase::setxattr(
     folly::StringPiece /*name*/,
     folly::StringPiece /*value*/,
     int /*flags*/) {
+  // setxattr is not supported for any type of inode. This instructs the kernel
+  // to automatically fail all future setxattr() syscalls with EOPNOTSUPP.
   FUSELL_NOT_IMPL();
 }
-folly::Future<std::string> InodeBase::getxattr(folly::StringPiece /*name*/) {
-  FUSELL_NOT_IMPL();
-}
-folly::Future<std::vector<std::string>> InodeBase::listxattr() {
-  FUSELL_NOT_IMPL();
-}
+
 folly::Future<folly::Unit> InodeBase::removexattr(folly::StringPiece /*name*/) {
+  // removexattr is not supported for any type of inode. This instructs the
+  // kernel to automatically fail all future removexattr() syscalls with
+  // EOPNOTSUPP.
   FUSELL_NOT_IMPL();
 }
+
 folly::Future<folly::Unit> InodeBase::access(int /*mask*/) {
+  // Returning ENOSYS instructs FUSE that access() will always succeed, so does
+  // not need to call back into the FUSE daemon.
   FUSELL_NOT_IMPL();
 }
 

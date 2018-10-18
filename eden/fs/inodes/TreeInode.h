@@ -141,6 +141,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   folly::Future<Dispatcher::Attr> getattr() override;
   folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
+
+  folly::Future<std::vector<std::string>> listxattr() override;
+  folly::Future<std::string> getxattr(folly::StringPiece name) override;
+
   folly::Future<folly::Unit> prefetch() override;
   Dispatcher::Attr getAttrLocked(const DirContents& contents);
 

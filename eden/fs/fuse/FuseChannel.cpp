@@ -1597,8 +1597,11 @@ folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
           request.replyError(ERANGE);
         } else {
           std::string buf;
-          folly::join('\0', attrs, buf);
-          buf.push_back('\0');
+          buf.reserve(count);
+          for (const auto& attr : attrs) {
+            buf.append(attr);
+            buf.push_back(0);
+          }
           XLOG(DBG7) << "LISTXATTR: " << buf;
           request.sendReply(folly::StringPiece(buf));
         }
