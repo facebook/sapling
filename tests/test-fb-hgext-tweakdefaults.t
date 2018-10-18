@@ -9,6 +9,7 @@
   > [experimental]
   > updatecheck=noconflict
   > EOF
+  $ setconfig ui.suggesthgprev=True
 
 Setup repo
 

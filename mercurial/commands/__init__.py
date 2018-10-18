@@ -6439,6 +6439,11 @@ def update(
                 + '"hg rebase -d <destination>".',
             )
 
+    # Suggest `hg prev` as an alternative to 'hg update .^'.
+    # internal config: ui.suggesthgprev
+    if node == ".^" and ui.configbool("ui", "suggesthgprev", False):
+        hintutil.trigger("update-prev")
+
     updatecheck = None
     if check:
         updatecheck = "abort"

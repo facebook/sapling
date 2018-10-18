@@ -5,6 +5,7 @@
   > [experimental]
   > updatecheck=noconflict
   > EOF
+  $ setconfig ui.suggesthgprev=True
 
 Set up the repository.
   $ hg init repo

@@ -151,7 +151,6 @@ def uisetup(ui):
 
 
 def extsetup(ui):
-    entry = wrapcommand(commands.table, "update", update)
     wrapblame()
 
     entry = wrapcommand(commands.table, "commit", commitcmd)
@@ -405,17 +404,6 @@ def commitcmd(orig, ui, repo, *pats, **opts):
     ):
         opts["date"] = currentdate()
     return orig(ui, repo, *pats, **opts)
-
-
-def update(orig, ui, repo, node=None, rev=None, **kwargs):
-    result = orig(ui, repo, node=node, rev=rev, **kwargs)
-
-    # If the command succeed a message for 'hg update .^' will appear
-    # suggesting to use hg prev
-    if node == ".^":
-        hintutil.trigger("update-prev")
-
-    return result
 
 
 def wrapblame():
