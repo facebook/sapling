@@ -765,8 +765,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
                 futures.emplace_back(store->prefetchBlobs(batch));
               }
 
-              return folly::collect(futures).then(
-                  [glob = std::move(out)]() mutable {
+              return folly::collect(futures).thenValue(
+                  [glob = std::move(out)](auto&&) mutable {
                     return makeFuture(std::move(glob));
                   });
             }

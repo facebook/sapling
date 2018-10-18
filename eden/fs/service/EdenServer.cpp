@@ -197,10 +197,10 @@ Future<Unit> EdenServer::unmountAll() {
           makeFutureWith([this, &mountPath] {
             return serverState_->getPrivHelper()->fuseUnmount(mountPath);
           })
-              .then(
-                  [unmountFuture = info.unmountPromise.getFuture()]() mutable {
-                    return std::move(unmountFuture);
-                  })
+              .thenValue([unmountFuture =
+                              info.unmountPromise.getFuture()](auto&&) mutable {
+                return std::move(unmountFuture);
+              })
               .onError(
                   [path = entry.first.str()](folly::exception_wrapper&& ew) {
                     XLOG(ERR) << "Failed to perform unmount for \"" << path
@@ -461,8 +461,8 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
                 AbsolutePathPiece{info.stateDirectory});
             return mount(std::move(initialConfig), std::move(info));
           })
-              .then([logger, mountPath = info.mountPath](
-                        folly::Try<std::shared_ptr<EdenMount>>&& result) {
+              .thenTry([logger, mountPath = info.mountPath](
+                           folly::Try<std::shared_ptr<EdenMount>>&& result) {
                 if (result.hasValue()) {
                   logger->log("Successfully took over mount ", mountPath);
                   return makeFuture();
@@ -511,8 +511,8 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
                 AbsolutePathPiece{mountInfo.edenClientPath});
             return mount(std::move(initialConfig));
           })
-              .then([logger, mountPath = client.first.asString()](
-                        folly::Try<std::shared_ptr<EdenMount>>&& result) {
+              .thenTry([logger, mountPath = client.first.asString()](
+                           folly::Try<std::shared_ptr<EdenMount>>&& result) {
                 if (result.hasValue()) {
                   logger->log("Successfully remounted ", mountPath);
                   return makeFuture();
@@ -532,9 +532,8 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   // Return a future that will complete only when all mount points have started
   // and the thrift server is also running.
   return folly::collectAll(mountFutures)
-      .then([thriftFuture = std::move(thriftRunningFuture)]() mutable {
-        return std::move(thriftFuture);
-      });
+      .thenValue([thriftFuture = std::move(thriftRunningFuture)](
+                     auto&&) mutable { return std::move(thriftFuture); });
 }
 
 void EdenServer::run(void (*runThriftServer)(const EdenServer&)) {
@@ -766,10 +765,10 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               mountFinished(edenMount.get(), folly::none);
               return makeFuture<folly::Unit>(ew);
             })
-            .then([edenMount, doTakeover, this]() mutable {
+            .thenValue([edenMount, doTakeover, this](auto&&) mutable {
               // Now that we've started the workers, arrange to call
               // mountFinished once the pool is torn down.
-              auto finishFuture = edenMount->getFuseCompletionFuture().then(
+              auto finishFuture = edenMount->getFuseCompletionFuture().thenTry(
                   [this,
                    edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
                     folly::Optional<TakeoverData::MountInfo> optTakeover;
@@ -860,27 +859,28 @@ void EdenServer::mountFinished(
   // Shutdown the EdenMount, and fulfill the unmount promise
   // when the shutdown completes
   edenMount->shutdown(doTakeover)
-      .then([unmountPromise = std::move(unmountPromise),
-             takeoverPromise = std::move(takeoverPromise),
-             takeoverData = std::move(takeover)](
-                folly::Try<
-                    std::tuple<SerializedFileHandleMap, SerializedInodeMap>>&&
-                    result) mutable {
-        if (takeoverPromise) {
-          takeoverPromise.value().setWith([&]() mutable {
-            takeoverData.value().fileHandleMap =
-                std::move(std::get<0>(result.value()));
-            takeoverData.value().inodeMap =
-                std::move(std::get<1>(result.value()));
-            return std::move(takeoverData.value());
+      .thenTry(
+          [unmountPromise = std::move(unmountPromise),
+           takeoverPromise = std::move(takeoverPromise),
+           takeoverData = std::move(takeover)](
+              folly::Try<
+                  std::tuple<SerializedFileHandleMap, SerializedInodeMap>>&&
+                  result) mutable {
+            if (takeoverPromise) {
+              takeoverPromise.value().setWith([&]() mutable {
+                takeoverData.value().fileHandleMap =
+                    std::move(std::get<0>(result.value()));
+                takeoverData.value().inodeMap =
+                    std::move(std::get<1>(result.value()));
+                return std::move(takeoverData.value());
+              });
+            }
+            unmountPromise.setTry(
+                folly::makeTryWith([result = std::move(result)]() {
+                  result.throwIfFailed();
+                  return Unit{};
+                }));
           });
-        }
-        unmountPromise.setTry(
-            folly::makeTryWith([result = std::move(result)]() {
-              result.throwIfFailed();
-              return Unit{};
-            }));
-      });
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {
