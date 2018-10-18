@@ -44,7 +44,6 @@ use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, 
                  SqliteChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
-use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
 use file::fetch_file_envelope;
 use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
@@ -59,6 +58,7 @@ use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, Chan
                      MPathElement, MononokeId, hash::Blake2, hash::Sha256};
 use rocksblob::Rocksblob;
 use rocksdb;
+use sqlfilenodes::SqlFilenodes;
 
 use BlobManifest;
 use HgBlobChangeset;
@@ -245,10 +245,8 @@ impl BlobRepo {
     ) -> Result<Self> {
         let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
             .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
-        let filenodes = SqliteFilenodes::open_or_create(
-            path.join("filenodes").to_string_lossy(),
-            DEFAULT_INSERT_CHUNK_SIZE,
-        ).chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
+        let filenodes = SqlFilenodes::with_sqlite_path(path.join("filenodes"))
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let changesets = SqliteChangesets::open_or_create(
             path.join("changesets").to_string_lossy(),
         ).chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
@@ -278,7 +276,7 @@ impl BlobRepo {
             logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
             Arc::new(SqliteDbBookmarks::in_memory()?),
             blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
-            Arc::new(SqliteFilenodes::in_memory()
+            Arc::new(SqlFilenodes::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
             Arc::new(SqliteChangesets::in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?),
@@ -309,7 +307,7 @@ impl BlobRepo {
         logger: Logger,
         args: &ManifoldArgs,
         repoid: RepositoryId,
-        _myrouter_port: u16,
+        myrouter_port: u16,
     ) -> Result<Self> {
         // TODO(stash): T28429403 use local region first, fallback to master if not found
         let connection_params = get_connection_params(
@@ -333,8 +331,7 @@ impl BlobRepo {
             ))?);
         let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
 
-        let filenodes = MysqlFilenodes::open(&args.db_address, DEFAULT_INSERT_CHUNK_SIZE)
-            .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
+        let filenodes = SqlFilenodes::with_myrouter(&args.db_address, myrouter_port);
         let filenodes = CachingFilenodes::new(
             Arc::new(filenodes),
             cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
