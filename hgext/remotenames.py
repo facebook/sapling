@@ -97,7 +97,7 @@ def exbookcalcupdate(orig, ui, repo, checkout):
     check out and where to move the active bookmark from, if needed."""
     movemarkfrom = None
     if checkout is None:
-        activemark = bmactive(repo)
+        activemark = repo._activebookmark
         if not activemark:
             # if no active bookmark then keep using the old code path for now
             return orig(ui, repo, checkout)
@@ -712,7 +712,7 @@ def exrebasecmd(orig, ui, repo, *pats, **opts):
     cont = opts["continue"]
     abort = opts["abort"]
 
-    current = bmactive(repo)
+    current = repo._activebookmark
 
     if not (cont or abort or dest or source or revs or base) and current:
         tracking = _readtracking(repo)
@@ -1078,7 +1078,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
 def _getrebasedest(repo, opts):
     """opts is passed in for extensibility"""
     tracking = _readtracking(repo)
-    active = bmactive(repo)
+    active = repo._activebookmark
     return tracking.get(active)
 
 
@@ -1121,7 +1121,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     origdest = dest
     if not dest and not opargs["to"] and not revs and _tracking(ui):
-        current = bmactive(repo)
+        current = repo._activebookmark
         tracking = _readtracking(repo)
         # print "tracking on %s %s" % (current, tracking)
         if current and current in tracking:
@@ -1412,7 +1412,7 @@ def displaylocalbookmarks(ui, repo, opts, fm):
     nq = not ui.quiet
 
     for bmark, n in sorted(marks.iteritems()):
-        current = bmactive(repo)
+        current = repo._activebookmark
         if bmark == current:
             prefix, label = "*", "bookmarks.current bookmarks.active"
         else:
@@ -2030,13 +2030,3 @@ def remotenameskw(**args):
         remotenames += repo.names["remotebranches"].names(repo, ctx.node())
 
     return templatekw.showlist("remotename", remotenames, args, plural="remotenames")
-
-
-#############################
-# bookmarks api compatibility
-#############################
-def bmactive(repo):
-    try:
-        return repo._activebookmark
-    except AttributeError:
-        return repo._bookmarkcurrent

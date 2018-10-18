@@ -328,7 +328,7 @@ def pull(orig, ui, repo, *args, **opts):
         raise error.Abort(mess)
 
     if (isrebase or update) and not dest:
-        if isrebase and bmactive(repo):
+        if isrebase and repo._activebookmark:
             mess = ui.config("tweakdefaults", "bmnodestmsg")
             hint = ui.config("tweakdefaults", "bmnodesthint")
         elif isrebase:
@@ -371,7 +371,7 @@ def rebaseorfastforward(orig, ui, repo, dest, **args):
     common = destrev.ancestor(prev)
     if prev == common and destrev != prev:
         result = hg.update(repo, destrev.node())
-        if bmactive(repo):
+        if repo._activebookmark:
             with repo.wlock():
                 bookmarks.update(repo, [prev.node()], destrev.node())
         ui.status(_("nothing to rebase - fast-forwarded to %s\n") % dest)
@@ -928,7 +928,7 @@ def _rebase(orig, ui, repo, *pats, **opts):
         common = dest.ancestor(prev)
         if prev == common:
             result = hg.update(repo, dest.node())
-            if bmactive(repo):
+            if repo._activebookmark:
                 with repo.wlock():
                     bookmarks.update(repo, [prev.node()], dest.node())
             return result
@@ -1095,14 +1095,6 @@ def diffcmd(orig, ui, repo, *args, **opts):
         output[filename] = {"adds": adds, "removes": removes, "isbinary": isbinary}
     ui.write("%s\n" % (json.dumps(output, sort_keys=True)))
     return res
-
-
-### bookmarks api compatibility layer ###
-def bmactive(repo):
-    try:
-        return repo._activebookmark
-    except AttributeError:
-        return repo._bookmarkcurrent
 
 
 def _createmarkers(

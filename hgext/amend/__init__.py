@@ -561,7 +561,7 @@ def wraprebase(orig, ui, repo, *pats, **opts):
 
 def _preamendname(repo, node):
     suffix = ".preamend"
-    name = bmactive(repo)
+    name = repo._activebookmark
     if not name:
         name = hex(node)[:12]
     return name + suffix
@@ -584,18 +584,3 @@ def _fixbookmarks(repo, revs):
             for bm in repo.nodebookmarks(cl.node(rev)):
                 changes.append((bm, latest))
         repo._bookmarks.applychanges(repo, tr, changes)
-
-
-### bookmarks api compatibility layer ###
-def bmactivate(repo, mark):
-    try:
-        return bookmarks.activate(repo, mark)
-    except AttributeError:
-        return bookmarks.setcurrent(repo, mark)
-
-
-def bmactive(repo):
-    try:
-        return repo._activebookmark
-    except AttributeError:
-        return repo._bookmarkcurrent

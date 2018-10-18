@@ -453,7 +453,7 @@ def _push(orig, ui, repo, *args, **opts):
             # If it's a tracking bookmark, remotenames will push there,
             # so let's set that up as our --to.
             remotenames = extensions.find("remotenames")
-            active = remotenames.bmactive(repo)
+            active = repo._activebookmark
             tracking = remotenames._readtracking(repo)
             if active and active in tracking:
                 track = tracking[active]

@@ -77,7 +77,7 @@ def reset(ui, repo, *args, **opts):
     try:
         wlock = repo.wlock()
         # Ensure we have an active bookmark
-        bookmark = bmactive(repo)
+        bookmark = repo._activebookmark
         if not bookmark:
             ui.warn(_("resetting without an active bookmark\n"))
 
@@ -248,11 +248,3 @@ def _deleteunreachable(repo, ctx):
                 repair.strip(repo.ui, repo, [repo.changelog.node(r) for r in hiderevs])
         finally:
             lockmod.release(lock)
-
-
-### bookmarks api compatibility layer ###
-def bmactive(repo):
-    try:
-        return repo._activebookmark
-    except AttributeError:
-        return repo._bookmarkcurrent
