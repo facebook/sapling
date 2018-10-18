@@ -88,8 +88,9 @@ class InodeLoader {
         }
 
         folly::makeFutureWith([&] { return tree->getOrLoadChild(childName); })
-            .then([loader = std::move(childLoader)](
-                      folly::Try<InodePtr>&& inode) { loader->loaded(inode); });
+            .thenTry(
+                [loader = std::move(childLoader)](
+                    folly::Try<InodePtr>&& inode) { loader->loaded(inode); });
       }
     }
   }

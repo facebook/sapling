@@ -1934,12 +1934,12 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
         XLOG(WARN) << "error reading ignore file: " << folly::exceptionStr(ex);
         return std::string{};
       })
-      .then([self = inodePtrFromThis(),
-             context,
-             currentPath = RelativePath{currentPath}, // deep copy
-             tree,
-             parentIgnore,
-             isIgnored](std::string&& ignoreFileContents) mutable {
+      .thenValue([self = inodePtrFromThis(),
+                  context,
+                  currentPath = RelativePath{currentPath}, // deep copy
+                  tree,
+                  parentIgnore,
+                  isIgnored](std::string&& ignoreFileContents) mutable {
         return self->computeDiff(
             self->contents_.wlock(),
             context,
@@ -2970,7 +2970,7 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
   for (auto& future : inodeFutures) {
     results.emplace_back(
         recurse == Recurse::DEEP
-            ? std::move(future).then(recursivelyLoadMaterializedChildren)
+            ? std::move(future).thenValue(recursivelyLoadMaterializedChildren)
             : std::move(future).unit());
   }
 
