@@ -189,7 +189,7 @@ TEST_F(DaemonStartupLoggerTest, exitSuccessfullyWithNoResult) {
       result.errorMessage);
 }
 
-TEST_F(DaemonStartupLoggerTest, closePipeWhileStillRunning) {
+TEST_F(DaemonStartupLoggerTest, destroyLoggerWhileDaemonIsStillRunning) {
   // Fork a child process that will destroy the DaemonStartupLogger and then
   // wait until we tell it to exit.
   std::array<int, 2> pipeFDs;
