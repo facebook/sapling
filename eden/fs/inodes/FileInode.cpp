@@ -848,15 +848,6 @@ void FileInode::fsync(bool datasync) {
 #endif
                ::fsync(state->file.fd());
   checkUnixError(res);
-
-  // let's take this opportunity to update the sha1 attribute.
-  // TODO: A program that issues a series of write() and fsync() syscalls (for
-  // example, when logging to a file), would exhibit quadratic behavior here.
-  // This should either not recompute SHA-1 here or instead remember if the
-  // prior SHA-1 was actually used.
-  if (!state->sha1Valid) {
-    recomputeAndStoreSha1(state);
-  }
 }
 
 Future<string> FileInode::readAll() {
