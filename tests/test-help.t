@@ -246,7 +246,6 @@ Test extension help:
        children      command to display child changesets (DEPRECATED)
        conflictinfo
        debugshell    a python shell with repo, changelog & manifest objects
-       eden          accelerated hg functionality in Eden checkouts (eden !)
        errorredirect
                      redirect error message
        githelp       try mapping git commands to Mercurial commands
@@ -259,7 +258,6 @@ Test extension help:
       Disabled extensions:
   
        absorb        apply working directory changes to changesets
-       eden          accelerated hg functionality in Eden checkouts (eden !)
        amend         extends the existing commit amend functionality
        arcdiff       (no help text available)
        backups       display recently made backups to recover stripped
@@ -288,6 +286,7 @@ Test extension help:
        directaccess  This extension provides direct access
        dirsync
        drop          drop specified changeset from the stack
+       eden          accelerated hg functionality in Eden checkouts (eden !)
        edrecord      (no help text available)
        eol           automatically manage newlines in repository files
        extdiff       command to allow external programs to compare revisions
@@ -302,7 +301,6 @@ Test extension help:
                      extension that makes node prefix lookup faster
        fbconduit     (no help text available)
        fbhistedit    extends the existing histedit functionality
-
        fixcorrupt    (no help text available)
        generic_bisect
                      (no help text available)
@@ -381,6 +379,7 @@ Test extension help:
        whereami      (no help text available)
        win32mbcs     allow the use of MBCS paths with problematic encodings
        zeroconf      discover and advertise repositories on the local network
+
 
 Verify that extension keywords appear in help templates
 
