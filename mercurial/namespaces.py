@@ -127,6 +127,18 @@ class namespaces(object):
         Raises a KeyError if there is no such node.
         """
         for ns, v in self._names.iteritems():
+            # If branches are disabled, only resolve the 'default' branch.
+            #
+            # Loading 'branches' is O(len(changelog)) time complexity because
+            # it calls headrevs() which scans the entire changelog.
+            #
+            # developer config: perftweaks.disableresolvingbranches
+            if (
+                ns == "branches"
+                and name != "default"
+                and repo.ui.configbool("perftweaks", "disableresolvingbranches")
+            ):
+                continue
             n = v.namemap(repo, name)
             if n:
                 # return max revision number

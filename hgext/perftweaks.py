@@ -38,7 +38,6 @@ testedwith = "ships-with-fb-hgext"
 
 def extsetup(ui):
     wrapfunction(branchmap.branchcache, "update", _branchmapupdate)
-    wrapfunction(namespaces.namespaces, "singlenode", _singlenode)
 
 
 def reposetup(ui, repo):
@@ -71,25 +70,6 @@ def reposetup(ui, repo):
             ui.log("nodemap_lag", "", nodemap_lag=lag)
         except AttributeError:
             pass
-
-
-def _singlenode(orig, self, repo, name):
-    """Skips reading branches namespace if unnecessary"""
-    # developer config: perftweaks.disableresolvingbranches
-    if not repo.ui.configbool("perftweaks", "disableresolvingbranches"):
-        return orig(self, repo, name)
-
-    # If branches are disabled, only resolve the 'default' branch. Loading
-    # 'branches' is O(len(changelog)) time complexity because it calls
-    # headrevs() which scans the entire changelog.
-    names = self._names
-    namesbak = names.copy()
-    if name != "default" and "branches" in names:
-        del names["branches"]
-    try:
-        return orig(self, repo, name)
-    finally:
-        self.names = namesbak
 
 
 def _branchmapupdate(orig, self, repo, revgen):
