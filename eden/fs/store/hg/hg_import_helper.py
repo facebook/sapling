@@ -322,6 +322,10 @@ class HgServer(object):
                     self.repo.svfs.vfs.base, constants.TREEPACK_CATEGORY
                 ),
                 shallowutil.getcachepackpath(self.repo, constants.TREEPACK_CATEGORY),
+                shallowutil.getlocalpackpath(
+                    self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+                ),
+                shallowutil.getcachepackpath(self.repo, constants.FILEPACK_CATEGORY),
             ]
 
         if use_mononoke:

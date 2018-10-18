@@ -35,6 +35,7 @@
 
 using folly::ByteRange;
 using folly::Future;
+using folly::IOBuf;
 using folly::makeFuture;
 using folly::StringPiece;
 using std::make_unique;
@@ -136,14 +137,50 @@ class HgImporterTestExecutor : public folly::InlineExecutor {
 #if EDEN_HAVE_HG_TREEMANIFEST
 // A helper function to avoid repeating noisy casts/conversions when
 // loading data from a UnionDatapackStore instance.
-template <typename UnionStore>
-ConstantStringRef
-unionStoreGet(UnionStore&& unionStore, StringPiece name, const Hash& id) {
-  return unionStore->get(
+ConstantStringRef unionStoreGet(
+    UnionDatapackStore& unionStore,
+    StringPiece name,
+    const Hash& id) {
+  return unionStore.get(
       Key(name.data(),
           name.size(),
           (const char*)id.getBytes().data(),
           id.getBytes().size()));
+}
+
+// A helper function to avoid repeating noisy casts/conversions when
+// loading data from a UnionDatapackStore instance.  This variant will
+// ask the store to rescan and look for changed packs if it encounters
+// a missing key.
+ConstantStringRef unionStoreGetWithRefresh(
+    UnionDatapackStore& unionStore,
+    StringPiece name,
+    const Hash& id) {
+  try {
+    return unionStoreGet(unionStore, name, id);
+  } catch (const MissingKeyError& ex) {
+    unionStore.markForRefresh();
+    return unionStoreGet(unionStore, name, id);
+  }
+}
+
+std::unique_ptr<Blob> getBlobFromUnionStore(
+    UnionDatapackStore& unionStore,
+    const Hash& id,
+    const HgProxyHash& hgInfo) {
+  try {
+    auto content = unionStoreGetWithRefresh(
+        unionStore, hgInfo.path().stringPiece(), hgInfo.revHash());
+    if (content.content()) {
+      XLOG(DBG5) << "loaded datapack for " << hgInfo.path() << " hash "
+                 << hgInfo.revHash() << ", it has size " << content.size();
+      return make_unique<Blob>(
+          id, IOBuf(IOBuf::CopyBufferOp{}, content.content(), content.size()));
+    }
+  } catch (const MissingKeyError&) {
+    // Data for this blob was not present locally.
+  }
+  return nullptr;
 }
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 
@@ -314,24 +351,14 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
   ConstantStringRef content;
   try {
-    content =
-        unionStoreGet(unionStore_->wlock(), path.stringPiece(), manifestNode);
-  } catch (const MissingKeyError& ex) {
-    XLOG(DBG2) << "didn't find path \"" << path << "\" + manifest "
-               << manifestNode << ", mark store for refresh and look again";
-    unionStore_->wlock()->markForRefresh();
-
-    // Now try loading it again.
-    try {
-      content =
-          unionStoreGet(unionStore_->wlock(), path.stringPiece(), manifestNode);
-    } catch (const MissingKeyError&) {
-      // Data for this tree was not present locally.
-      // Fall through and fetch the data from the server below.
-      if (!FLAGS_hg_fetch_missing_trees) {
-        auto ew = folly::exception_wrapper(std::current_exception());
-        return folly::makeFuture<unique_ptr<Tree>>(ew);
-      }
+    content = unionStoreGetWithRefresh(
+        *unionStore_->wlock(), path.stringPiece(), manifestNode);
+  } catch (const MissingKeyError&) {
+    // Data for this tree was not present locally.
+    // Fall through and fetch the data from the server below.
+    if (!FLAGS_hg_fetch_missing_trees) {
+      auto ew = folly::exception_wrapper(std::current_exception());
+      return folly::makeFuture<unique_ptr<Tree>>(ew);
     }
   }
 
@@ -409,7 +436,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
           // Now try loading it again
           unionStore_->wlock()->markForRefresh();
           auto content = unionStoreGet(
-              unionStore_->wlock(), ownedPath.stringPiece(), node);
+              *unionStore_->wlock(), ownedPath.stringPiece(), node);
           return processTree(content, node, treeID, ownedPath, batch.get());
         } catch (const HgImportPyError& ex) {
           if (FLAGS_allow_flatmanifest_fallback) {
@@ -557,6 +584,13 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
 #if EDEN_HAVE_HG_TREEMANIFEST
+  if (unionStore_) {
+    auto content = getBlobFromUnionStore(*unionStore_->wlock(), id, hgInfo);
+    if (content) {
+      return makeFuture(std::move(content));
+    }
+  }
+
 #ifndef EDEN_WIN_NOMONONOKE
   if (mononoke_) {
     XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
