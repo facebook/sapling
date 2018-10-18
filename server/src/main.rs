@@ -45,6 +45,7 @@ use futures::Future;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
+use tokio::runtime::Runtime;
 
 use blobrepo::BlobRepo;
 use mercurial_types::RepositoryId;
@@ -110,7 +111,11 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
     )
 }
 
-fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
+fn get_config<'a>(
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+    runtime: &mut Runtime,
+) -> Result<RepoConfigs> {
     // TODO: This needs to cope with blob repos, too
     let crpath = PathBuf::from(matches.value_of("crpath").unwrap());
     let config_repo = BlobRepo::new_rocksdb(
@@ -119,13 +124,11 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         RepositoryId::new(0),
     )?;
 
-    let mut tokio_runtime = tokio::runtime::Runtime::new()?;
-
     let changesetid = match matches.value_of("crbook") {
         Some(book) => {
             let book = bookmarks::Bookmark::new(book).expect("book must be ascii");
             println!("Looking for bookmark {:?}", book);
-            tokio_runtime
+            runtime
                 .block_on(config_repo.get_bookmark(&book))?
                 .expect("bookmark not found")
         }
@@ -141,7 +144,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         "Config repository will be read from commit: {}", changesetid
     );
 
-    tokio_runtime.block_on(RepoConfigs::read_config_repo(config_repo, changesetid).from_err())
+    runtime.block_on(RepoConfigs::read_config_repo(config_repo, changesetid).from_err())
 }
 
 fn main() {
@@ -158,7 +161,9 @@ fn main() {
         let stats_aggregation = stats::schedule_stats_aggregation()
             .expect("failed to create stats aggregation scheduler");
 
-        let config = get_config(root_log, &matches)?;
+        let mut runtime = Runtime::new()?;
+
+        let config = get_config(root_log, &matches, &mut runtime)?;
         let cert = matches.value_of("cert").unwrap().to_string();
         let private_key = matches.value_of("private_key").unwrap().to_string();
         let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
@@ -194,12 +199,16 @@ fn main() {
             Some(handle) => Some(handle?),
         };
 
-        tokio::run(
+        runtime.spawn(
             repo_listeners
                 .join(stats_aggregation.from_err())
                 .map(|((), ())| ())
                 .map_err(|err| panic!("Unexpected error: {:#?}", err)),
         );
+        runtime
+            .shutdown_on_idle()
+            .wait()
+            .expect("This runtime should never be idle");
 
         if let Some(handle) = maybe_thrift {
             let thread_name = handle.thread().name().unwrap_or("unknown").to_owned();
