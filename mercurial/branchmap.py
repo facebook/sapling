@@ -288,6 +288,34 @@ class branchcache(dict):
         missing heads, and a generator of nodes that are strictly a superset of
         heads missing, this function updates self to be correct.
         """
+        # Behave differently if the cache is disabled.
+        if repo.ui.configbool("perftweaks", "disablebranchcache"):
+            cl = repo.changelog
+            tonode = cl.node
+
+            if self.tiprev == len(cl) - 1 and self.validfor(repo):
+                return
+
+            # Since we have no branches, the default branch heads are equal to
+            # cl.headrevs(). Note: cl.headrevs() is already sorted and it may return
+            # -1.
+            branchheads = [i for i in cl.headrevs() if i >= 0]
+
+            if not branchheads:
+                if "default" in self:
+                    del self["default"]
+                tiprev = -1
+            else:
+                self["default"] = [tonode(rev) for rev in branchheads]
+                tiprev = branchheads[-1]
+            self.tipnode = cl.node(tiprev)
+            self.tiprev = tiprev
+            self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
+            repo.ui.log(
+                "branchcache", "perftweaks updated %s branch cache\n", repo.filtername
+            )
+            return
+
         starttime = util.timer()
         cl = repo.changelog
         # collect new branch entries
