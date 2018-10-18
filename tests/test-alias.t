@@ -702,6 +702,7 @@ documented aliases
       Returns 0 if successful.
   
   defined by: * (glob)
+  [^ ].* (re) (?)
   
   Options:
   
