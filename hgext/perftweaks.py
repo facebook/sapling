@@ -42,28 +42,6 @@ def extsetup(ui):
 
 def reposetup(ui, repo):
     if repo.local() is not None:
-        # developer config: perftweaks.disableupdatebranchcacheoncommit
-        if repo.ui.configbool("perftweaks", "disableupdatebranchcacheoncommit"):
-
-            class perftweaksrepo(repo.__class__):
-                @localrepo.unfilteredmethod
-                def updatecaches(self, tr=None):
-                    # Disable "branchmap.updatecache(self.filtered('served'))"
-                    # code path guarded by "if tr.changes['revs']". First, we
-                    # don't have on-disk branchmap. Second, accessing
-                    # "repo.filtered('served')" alone is not very cheap.
-                    bakrevs = None
-                    if tr and "revs" in tr.changes:
-                        bakrevs = tr.changes["revs"]
-                        tr.changes["revs"] = frozenset()
-                    try:
-                        super(perftweaksrepo, self).updatecaches(tr)
-                    finally:
-                        if bakrevs:
-                            tr.changes["revs"] = bakrevs
-
-            repo.__class__ = perftweaksrepo
-
         # record nodemap lag
         try:
             lag = repo.changelog.nodemap.lag
