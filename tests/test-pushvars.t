@@ -16,11 +16,14 @@ Setup
   $ hg clone -q repo child
   $ cd child
 
-Test pushing vars to repo with pushvars.server not set
+Test pushing vars to repo with pushvars.server explicitly disabled
 
+  $ cd ../repo
+  $ setconfig push.pushvars.server=False
+  $ cd ../child
   $ echo b > a
   $ hg commit -Aqm a
-  $ hg push --pushvars "DEBUG=1" --pushvars "BYPASS_REVIEW=true"
+  $ hg push --pushvars "DEBUG=1" --pushvars "BYPASS_REVIEW=true" --config push.pushvars.server=False
   pushing to $TESTTMP/repo
   searching for changes
   adding changesets
@@ -30,8 +33,9 @@ Test pushing vars to repo with pushvars.server not set
 
 Setting pushvars.sever = true and then pushing.
 
-  $ echo [push] >> $HGRCPATH
-  $ echo "pushvars.server = true" >> $HGRCPATH
+  $ cd ../repo
+  $ setconfig push.pushvars.server=True
+  $ cd ../child
   $ echo b >> a
   $ hg commit -Aqm a
   $ hg push --pushvars "DEBUG=1" --pushvars "BYPASS_REVIEW=true"

@@ -396,7 +396,7 @@ coreconfigitem(
 coreconfigitem("progress", "refresh", default=0.1)
 coreconfigitem("progress", "renderer", default="classic")
 coreconfigitem("progress", "width", default=dynamicdefault)
-coreconfigitem("push", "pushvars.server", default=False)
+coreconfigitem("push", "pushvars.server", default=True)
 coreconfigitem("server", "bookmarks-pushkey-compat", default=True)
 coreconfigitem("server", "bundle1", default=True)
 coreconfigitem("server", "bundle1gd", default=None)

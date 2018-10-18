@@ -150,7 +150,7 @@ Uncommit with dirty state
   foo
   $ hg status
   M files
-  $ hg uncommit
+  $ hg uncommit --config experimental.uncommitondirtywdir=False
   abort: uncommitted changes
   [255]
   $ hg uncommit files
@@ -159,13 +159,13 @@ Uncommit with dirty state
   foo
   $ hg commit -m "files abcde + foo"
 
-Testing the 'experimental.uncommitondirtywdir' config
+Testing with 'experimental.uncommitondirtywdir' on and off
 
   $ echo "bar" >> files
-  $ hg uncommit
+  $ hg uncommit  --config experimental.uncommitondirtywdir=False
   abort: uncommitted changes
   [255]
-  $ hg uncommit --config experimental.uncommitondirtywdir=True
+  $ hg uncommit
   $ hg commit -m "files abcde + foo"
 
 Uncommit in the middle of a stack, does not move bookmark
@@ -349,11 +349,11 @@ Add and expect uncommit to fail on both merge working dir and merge changeset
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
-  $ hg uncommit
+  $ hg uncommit --config experimental.uncommitondirtywdir=False
   abort: outstanding uncommitted merge
   [255]
 
-  $ hg uncommit --config experimental.uncommitondirtywdir=True
+  $ hg uncommit
   abort: cannot uncommit while merging
   [255]
 

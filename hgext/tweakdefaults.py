@@ -258,10 +258,6 @@ def extsetup(ui):
 
 def reposetup(ui, repo):
     _fixpager(ui)
-    # Allow uncommit on dirty working directory
-    repo.ui.setconfig("experimental", "uncommitondirtywdir", True)
-    # Allow unbundling of pushvars on server
-    repo.ui.setconfig("push", "pushvars.server", True)
 
 
 def tweakorder():
