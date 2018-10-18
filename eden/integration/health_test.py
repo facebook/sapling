@@ -11,6 +11,7 @@ import os
 import pathlib
 import signal
 import sys
+import typing
 import unittest
 
 import pexpect
