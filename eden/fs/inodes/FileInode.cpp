@@ -835,17 +835,6 @@ void FileInode::updateBlockCount(struct stat& st) {
   st.st_blocks = ((st.st_size + kBlockSize - 1) / kBlockSize);
 }
 
-void FileInode::flush(uint64_t /* lock_owner */) {
-  // This is called by FUSE when a file handle is closed.
-  // https://github.com/libfuse/libfuse/wiki/FAQ#which-method-is-called-on-the-close-system-call
-  // We have no write buffers, so there is nothing for us to flush,
-  // but let's take this opportunity to update the sha1 attribute.
-  auto state = LockedState{this};
-  if (state->isFileOpen() && !state->sha1Valid) {
-    recomputeAndStoreSha1(state);
-  }
-}
-
 void FileInode::fsync(bool datasync) {
   auto state = LockedState{this};
   if (!state->isFileOpen()) {

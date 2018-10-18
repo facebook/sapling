@@ -262,7 +262,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   folly::Future<size_t> write(BufVec&& buf, off_t off);
   folly::Future<size_t> write(folly::StringPiece data, off_t off);
 
-  void flush(uint64_t lock_owner);
   void fsync(bool datasync);
 
  private:

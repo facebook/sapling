@@ -225,14 +225,6 @@ folly::Future<size_t> EdenDispatcher::write(
       });
 }
 
-folly::Future<folly::Unit> EdenDispatcher::flush(
-    InodeNumber ino,
-    uint64_t lockOwner) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "flush({})", ino);
-  return inodeMap_->lookupFileInode(ino).thenValue(
-      [lockOwner](FileInodePtr inode) { return inode->flush(lockOwner); });
-}
-
 folly::Future<folly::Unit> EdenDispatcher::fsync(
     InodeNumber ino,
     bool datasync) {
