@@ -43,8 +43,10 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 
+#if EDEN_HAVE_HG_TREEMANIFEST
 // Needed for MissingKeyError
 #include "hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 
 using folly::ByteRange;
 using folly::Endian;

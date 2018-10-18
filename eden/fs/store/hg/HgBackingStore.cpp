@@ -133,6 +133,7 @@ class HgImporterTestExecutor : public folly::InlineExecutor {
   }
 };
 
+#if EDEN_HAVE_HG_TREEMANIFEST
 // A helper function to avoid repeating noisy casts/conversions when
 // loading data from a UnionDatapackStore instance.
 template <typename UnionStore>
@@ -144,6 +145,7 @@ unionStoreGet(UnionStore&& unionStore, StringPiece name, const Hash& id) {
           (const char*)id.getBytes().data(),
           id.getBytes().size()));
 }
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 
 } // namespace
 
@@ -282,10 +284,11 @@ Future<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
     return tree;
   });
 #else
-  return Future<T>(make_exception_wrapper<std::domain_error>(folly::to<string>(
+  return Future<unique_ptr<Tree>>(folly::make_exception_wrapper<
+                                  std::domain_error>(folly::to<std::string>(
       "requested to import subtree ",
       id.toString(),
-      " but flatmanifest import should have already imported all subtrees"));
+      " but flatmanifest import should have already imported all subtrees")));
 #endif
 }
 
@@ -553,6 +556,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
+#if EDEN_HAVE_HG_TREEMANIFEST
 #ifndef EDEN_WIN_NOMONONOKE
   if (mononoke_) {
     XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
@@ -576,6 +580,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
         });
   }
 #endif // EDEN_WIN_NOMONONOKE
+#endif // EDEN_HAVE_HG_TREEMANIFEST
 
   return folly::via(
              importThreadPool_.get(),
