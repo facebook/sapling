@@ -150,7 +150,13 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 testedwith = "ships-with-fb-hgext"
-
+colortable = {
+    "sparse.profile.active": "brightyellow",
+    "sparse.profile.included": "yellow",
+    "sparse.profile.inactive": "brightblack",
+    "sparse.include": "brightgreen",
+    "sparse.exclude": "brightred",
+}
 
 cwdrealtivepatkinds = ("glob", "relpath")
 
@@ -1521,7 +1527,10 @@ def sparse(ui, repo, *pats, **opts):
 
 subcmd = sparse.subcommand(
     categories=[
-        ("Show information about sparse profiles", ["list", "explain", "files"]),
+        (
+            "Show information about sparse profiles",
+            ["show", "list", "explain", "files"],
+        ),
         ("Change which profiles are active", ["switch", "enable", "disable"]),
         (
             "Manage additional files to include or exclude",
@@ -1530,6 +1539,72 @@ subcmd = sparse.subcommand(
         ("Refresh the checkout and apply sparse profile changes", ["refresh"]),
     ]
 )
+
+
+@subcmd("show", commands.templateopts)
+def show(ui, repo, **opts):
+    """show the currently enabled sparse profile"""
+    _checksparse(repo)
+    if not repo.localvfs.exists("sparse"):
+        if not ui.plain():
+            ui.status(_("No sparse profile enabled\n"))
+        return
+
+    raw = repo.localvfs.read("sparse")
+    include, exclude, profiles = map(set, repo.readsparseconfig(raw))
+
+    def getprofileinfo(profile, depth):
+        """Returns a list of (depth, profilename, title) for this profile
+        and all its children."""
+        sc = repo.readsparseconfig(repo.getrawprofile(profile, "."))
+        profileinfo = [(depth, profile, sc.metadata.get("title"))]
+        for profile in sorted(sc.profiles):
+            profileinfo.extend(getprofileinfo(profile, depth + 1))
+        return profileinfo
+
+    ui.pager("sparse show")
+    with ui.formatter("sparse", opts) as fm:
+        if profiles:
+            profileinfo = []
+            fm.plain(_("Enabled Profiles:\n\n"))
+            profileinfo = sum((getprofileinfo(p, 0) for p in sorted(profiles)), [])
+            maxwidth = max(len(name) for depth, name, title in profileinfo)
+            maxdepth = max(depth for depth, name, title in profileinfo)
+
+            for depth, name, title in profileinfo:
+                fm.startitem()
+                fm.data(type="profile", depth=depth)
+                if depth > 0:
+                    label = "sparse.profile.included"
+                    fm.plain("  " * depth + "  ~ ", label=label)
+                else:
+                    label = "sparse.profile.active"
+                    fm.plain("  * ", label=label)
+                fm.write(
+                    "name",
+                    "%%-%ds" % (maxwidth + (maxdepth - depth) * 2),
+                    name,
+                    label=label,
+                )
+                if title:
+                    fm.write("title", "  %s", title, label=label + ".title")
+                fm.plain("\n")
+            if include or exclude:
+                fm.plain("\n")
+        if include:
+            fm.plain(_("Additional Included Paths:\n\n"))
+            for fname in sorted(include):
+                fm.startitem()
+                fm.data(type="include")
+                fm.write("name", "  %s\n", fname, label="sparse.include")
+            if exclude:
+                fm.plain("\n")
+        if exclude:
+            fm.plain(_("Additional Excluded Paths:\n\n"))
+            for fname in sorted(exclude):
+                fm.startitem()
+                fm.data(type="exclude")
+                fm.write("name", "  %s\n", fname, label="sparse.exclude")
 
 
 def _contains_files(load_matcher, profile, files):
@@ -1673,12 +1748,7 @@ def _listprofiles(ui, repo, *pats, **opts):
     }
     ui.pager("sparse list")
     with ui.formatter("sparse", opts) as fm:
-        if fm.isplain():
-            ui.write_err(
-                _("symbols: * = active profile, ~ = transitively " "included\n"),
-                label="sparse.profile.legend",
-            )
-
+        fm.plain("Available Profiles:\n\n")
         load_matcher = lambda p: repo.sparsematch(
             rev=rev,
             config=repo.readsparseconfig(
@@ -1699,11 +1769,11 @@ def _listprofiles(ui, repo, *pats, **opts):
         for info in filtered:
             fm.startitem()
             label = "sparse.profile." + labels[info.active]
-            fm.plain("%-1s " % chars[info.active], label=label)
+            fm.plain(" %-1s " % chars[info.active], label=label)
             fm.data(active=labels[info.active], metadata=dict(info))
             fm.write(b"path", "%-{}s".format(max_width), info.path, label=label)
             if "title" in info:
-                fm.plain(" - %s" % info.get("title", b""), label=label)
+                fm.plain("  %s" % info.get("title", b""), label=label + ".title")
             fm.plain("\n")
 
     if not (ui.verbose or "hidden" in filters["with"]):

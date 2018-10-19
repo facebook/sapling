@@ -27,6 +27,10 @@ test sparse
   > EOF
   $ hg ci -Aqm 'initial'
 
+Show with no sparse profile enabled
+  $ hg sparse show
+  No sparse profile enabled
+
   $ hg sparse include '*.sparse'
 
 Verify enabling a single profile works
@@ -351,9 +355,10 @@ Test profile discovery
   $ hg commit -qm 'created profiles and some data'
   $ hg sparse enableprofile profiles/foo/spam
   $ hg sparse list
-  symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs - Profile including the profiles directory
-  * profiles/foo/spam - Profile that only includes another
+  Available Profiles:
+  
+   ~ profiles/bar/eggs  Profile including the profiles directory
+   * profiles/foo/spam  Profile that only includes another
   $ hg sparse list -T json
   [
    {
@@ -374,11 +379,12 @@ Test profile discovery
   > caches=
   > EOF
   $ hg sparse list
-  symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs   - Profile including the profiles directory
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-  * profiles/foo/spam   - Profile that only includes another
+  Available Profiles:
+  
+   ~ profiles/bar/eggs    Profile including the profiles directory
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+   * profiles/foo/spam    Profile that only includes another
   hint[sparse-list-verbose]: 1 hidden profiles not shown; add '--verbose' to include these
   $ hg sparse list -T json
   [
@@ -404,17 +410,38 @@ Test profile discovery
    }
   ]
   hint[sparse-list-verbose]: 1 hidden profiles not shown; add '--verbose' to include these
+  $ hg sparse show
+  Enabled Profiles:
+  
+    * profiles/foo/spam    Profile that only includes another
+      ~ profiles/bar/eggs  Profile including the profiles directory
+  $ hg sparse show -Tjson
+  [
+   {
+    "depth": 0,
+    "name": "profiles/foo/spam",
+    "title": "Profile that only includes another",
+    "type": "profile"
+   },
+   {
+    "depth": 1,
+    "name": "profiles/bar/eggs",
+    "title": "Profile including the profiles directory",
+    "type": "profile"
+   }
+  ]
 
 The current working directory plays no role in listing profiles:
 
   $ mkdir otherdir
   $ cd otherdir
   $ hg sparse list
-  symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs   - Profile including the profiles directory
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-  * profiles/foo/spam   - Profile that only includes another
+  Available Profiles:
+  
+   ~ profiles/bar/eggs    Profile including the profiles directory
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+   * profiles/foo/spam    Profile that only includes another
   hint[sparse-list-verbose]: 1 hidden profiles not shown; add '--verbose' to include these
   $ cd ..
 
@@ -423,22 +450,33 @@ not hamper listing.
 
   $ hg sparse exclude profiles/bar
   $ hg sparse list
-  symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs   - Profile including the profiles directory
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-  * profiles/foo/spam   - Profile that only includes another
+  Available Profiles:
+  
+   ~ profiles/bar/eggs    Profile including the profiles directory
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+   * profiles/foo/spam    Profile that only includes another
   hint[sparse-list-verbose]: 1 hidden profiles not shown; add '--verbose' to include these
+  $ hg sparse show
+  Enabled Profiles:
+  
+    * profiles/foo/spam    Profile that only includes another
+      ~ profiles/bar/eggs  Profile including the profiles directory
+  
+  Additional Excluded Paths:
+  
+    profiles/bar
 
 Hidden profiles only show up when we use the --verbose switch:
 
   $ hg sparse list --verbose
-  symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs   - Profile including the profiles directory
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-    profiles/foo/monty 
-  * profiles/foo/spam   - Profile that only includes another
+  Available Profiles:
+  
+   ~ profiles/bar/eggs    Profile including the profiles directory
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+     profiles/foo/monty 
+   * profiles/foo/spam    Profile that only includes another
   $ cat >> .hg/hgrc << EOF  # enough hints now
   > [hint]
   > ack-sparse-list-verbose = true
@@ -449,28 +487,32 @@ switch is implemented. We can invert that test by filtering on the presence
 of the hidden field:
 
   $ hg sparse list --with-field hidden
-  symbols: * = active profile, ~ = transitively included
-    profiles/foo/monty
+  Available Profiles:
+  
+     profiles/foo/monty
 
 or we can filter on other fields, like missing description:
 
   $ hg sparse list --without-field description
-  symbols: * = active profile, ~ = transitively included
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-  * profiles/foo/spam   - Profile that only includes another
+  Available Profiles:
+  
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+   * profiles/foo/spam    Profile that only includes another
 
 multiple tests are cumulative, like a boolean AND operation; both for exclusion
 
   $ hg sparse list --without-field description --without-field title
-  symbols: * = active profile, ~ = transitively included
-    profiles/bar/python
+  Available Profiles:
+  
+     profiles/bar/python
 
 and inclusion
 
   $ hg sparse list --with-field description --with-field title
-  symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs - Profile including the profiles directory
+  Available Profiles:
+  
+   ~ profiles/bar/eggs  Profile including the profiles directory
 
 Naming the same field in without- and with- filters is an error:
 
@@ -481,16 +523,18 @@ Naming the same field in without- and with- filters is an error:
 We can filter on the contents of a field or the path, case-insensitively:
 
   $ hg sparse list --filter path:/bar/ --filter title:profile
-  symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs - Profile including the profiles directory
-    profiles/bar/ham  - An extended profile including some interesting files
+  Available Profiles:
+  
+   ~ profiles/bar/eggs  Profile including the profiles directory
+     profiles/bar/ham   An extended profile including some interesting files
 
 We can filter on specific files being included in a sparse profile:
 
   $ hg sparse list --contains-file interesting/sizeable
-  symbols: * = active profile, ~ = transitively included
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
+  Available Profiles:
+  
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
 
 You can specify a revision to list profiles for; in this case the current
 sparse configuration is ignored; no profile can be 'active' or 'included':
@@ -503,12 +547,13 @@ sparse configuration is ignored; no profile can be 'active' or 'included':
   $ hg up -r ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg sparse list -r tip
-  symbols: * = active profile, ~ = transitively included
-    profiles/bar/eggs                  - Profile including the profiles directory
-    profiles/bar/ham                   - An extended profile including some interesting files
-    profiles/bar/python               
-    profiles/foo/new_in_later_revision - this profile is only available in a later revision, not the current.
-    profiles/foo/spam                  - Profile that only includes another
+  Available Profiles:
+  
+     profiles/bar/eggs                   Profile including the profiles directory
+     profiles/bar/ham                    An extended profile including some interesting files
+     profiles/bar/python               
+     profiles/foo/new_in_later_revision  this profile is only available in a later revision, not the current.
+     profiles/foo/spam                   Profile that only includes another
   $ hg -q strip -r tip --no-backup
 
 The metadata section format can have errors, but those are only listed as
@@ -522,28 +567,30 @@ warnings:
   $ hg add -q profiles
   $ hg commit -qm 'Broken profile added'
   $ hg sparse list
-  symbols: * = active profile, ~ = transitively included
+  Available Profiles:
+  
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
-  ~ profiles/bar/eggs   - Profile including the profiles directory
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-    profiles/foo/errors
-  * profiles/foo/spam   - Profile that only includes another
+   ~ profiles/bar/eggs    Profile including the profiles directory
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+     profiles/foo/errors
+   * profiles/foo/spam    Profile that only includes another
 
 The .hg/sparse file could list non-existing profiles, these should be ignored
 when listing:
 
   $ hg sparse enableprofile nonesuch
   $ hg sparse list
-  symbols: * = active profile, ~ = transitively included
+  Available Profiles:
+  
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
-  ~ profiles/bar/eggs   - Profile including the profiles directory
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-    profiles/foo/errors
-  * profiles/foo/spam   - Profile that only includes another
+   ~ profiles/bar/eggs    Profile including the profiles directory
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+     profiles/foo/errors
+   * profiles/foo/spam    Profile that only includes another
   $ hg sparse disableprofile nonesuch
 
 Can switch between profiles
@@ -552,14 +599,15 @@ Can switch between profiles
   [1]
   $ hg sparse switchprofile profiles/bar/ham
   $ hg sparse list
-  symbols: * = active profile, ~ = transitively included
+  Available Profiles:
+  
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
-  ~ profiles/bar/eggs   - Profile including the profiles directory
-  * profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-    profiles/foo/errors
-    profiles/foo/spam   - Profile that only includes another
+   ~ profiles/bar/eggs    Profile including the profiles directory
+   * profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+     profiles/foo/errors
+     profiles/foo/spam    Profile that only includes another
   $ test -f interesting/sizeable
 
 We can look at invididual profiles:
@@ -732,19 +780,21 @@ current working copy:
   $ hg sparse explain profiles/bar/ham -T "{stats.filecount}\n" -r .
   10
   $ hg sparse list --contains-file interesting/later_revision -r ".^"
-  symbols: * = active profile, ~ = transitively included
+  Available Profiles:
+  
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-    profiles/foo/errors
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+     profiles/foo/errors
   $ hg sparse list --contains-file interesting/later_revision -r .
-  symbols: * = active profile, ~ = transitively included
+  Available Profiles:
+  
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
-    profiles/bar/ham    - An extended profile including some interesting files
-    profiles/bar/python
-    profiles/foo/errors
+     profiles/bar/ham     An extended profile including some interesting files
+     profiles/bar/python
+     profiles/foo/errors
   $ hg up -q ".^"
 
 We can list the files in a profile with the hg sparse files command:
