@@ -205,7 +205,8 @@ class GitHandler(object):
             map_hg = self._map_hg
             buf = hgutil.stringio()
             bwrite = buf.write
-            for hgsha, gitsha in map_hg.iteritems():
+            # Sort it for easy lookup later
+            for hgsha, gitsha in sorted(map_hg.iteritems(), key=lambda k: k[0]):
                 bwrite("%s %s\n" % (gitsha, hgsha))
             file.write(buf.getvalue())
             buf.close()

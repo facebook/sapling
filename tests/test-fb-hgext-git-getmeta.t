@@ -119,6 +119,8 @@ Make changes upstream and check that they get reflected in clones
   $ hg log -r . --template "{node}\n"
   d4a59f7c570a8794e6ec20865090e7b848395b92
   $ echo "1111111111111111111111111111111111111111 d4a59f7c570a8794e6ec20865090e7b848395b92" >> .hg/git-mapfile
+  $ sort -k 2 -o .hg/git-mapfile.bak .hg/git-mapfile
+  $ mv .hg/git-mapfile.bak .hg/git-mapfile
 
 Check local repo syncing
   $ cd ../repo2
@@ -159,12 +161,16 @@ Make more changes upstream
   $ hg log -r . --template "{node}\n"
   c411819f7fd6036d50b17a28d3edb7aa9121985a
   $ echo "2222222222222222222222222222222222222222 c411819f7fd6036d50b17a28d3edb7aa9121985a" >> .hg/git-mapfile
+  $ sort -k 2 -o .hg/git-mapfile.bak .hg/git-mapfile
+  $ mv .hg/git-mapfile.bak .hg/git-mapfile
   $ hg update -q -r "tip^"
   $ echo >> a
   $ hg ci -qm "creating new head with modified a"
   $ hg log -r . --template "{node}\n"
   8ea31c3efb6d2edb6d9fe608c29034e7e7ed5f91
   $ echo "3333333333333333333333333333333333333333 8ea31c3efb6d2edb6d9fe608c29034e7e7ed5f91" >> .hg/git-mapfile
+  $ sort -k 2 -o .hg/git-mapfile.bak .hg/git-mapfile
+  $ mv .hg/git-mapfile.bak .hg/git-mapfile
   $ echo "releases/foo1 foo1" >> .hg/git-named-branches
 
 Check remote repo syncing
@@ -265,6 +271,8 @@ Add a new head upstream
   $ hg log -r . --template "{node}\n"
   3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6
   $ echo "2222222222222222222222222222222222222222 3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6" >> .hg/git-mapfile
+  $ sort -k 2 -o .hg/git-mapfile.bak .hg/git-mapfile
+  $ mv .hg/git-mapfile.bak .hg/git-mapfile
 
 Check remote repo syncing
   $ cd ../repo3
@@ -350,6 +358,8 @@ Create unrelated history upstream and check that the syncing works
   $ hg log -r . --template "{node}\n"
   627ddeb6657d60a21b87c725b5c4e60d91b75f19
   $ echo "3333333333333333333333333333333333333333 627ddeb6657d60a21b87c725b5c4e60d91b75f19" >> .hg/git-mapfile
+  $ sort -k 2 -o .hg/git-mapfile.bak .hg/git-mapfile
+  $ mv .hg/git-mapfile.bak .hg/git-mapfile
 
 Check local repo syncing
   $ cd ../repo2
@@ -415,8 +425,12 @@ Now adding the map entries to both the repos to simulate corruption on the
 client side
   $ cd ../repo1
   $ echo "4444444444444444444444444444444444444444 1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" >> .hg/git-mapfile
+  $ sort -k 2 -o .hg/git-mapfile.bak .hg/git-mapfile
+  $ mv .hg/git-mapfile.bak .hg/git-mapfile
   $ cd ../repo2
   $ echo "4444444444444444444444444444444444444444 1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" >> .hg/git-mapfile
+  $ sort -k 2 -o .hg/git-mapfile.bak .hg/git-mapfile
+  $ mv .hg/git-mapfile.bak .hg/git-mapfile
   $ hg gitgetmeta -v
   getting git metadata from $TESTTMP/repo1
   warning: gitmeta: unexpected lines in .hg/git-mapfile
