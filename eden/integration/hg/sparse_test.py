@@ -29,7 +29,7 @@ class SparseTest(EdenHgTestCase):
             "enableprofile",
             "exclude",
             "explain",
-            "files",
+            "files someprofile",
             "importrules",
             "include",
             "list",
@@ -37,7 +37,7 @@ class SparseTest(EdenHgTestCase):
             "reset",
         ]:
             with self.assertRaises(hgrepo.HgError) as context:
-                self.hg("--config", "extensions.sparse=", "sparse", sub)
+                self.hg("--config", "extensions.sparse=", "sparse", *sub.split())
             self.assertIn(
                 "don't need sparse profiles",
                 context.exception.stderr.decode("utf-8", errors="replace"),
