@@ -817,6 +817,7 @@ class cmdalias(object):
             r"optionalrepo": False,
             r"inferrepo": False,
             r"subcommands": {},
+            r"subcommandcategories": [],
             r"subonly": False,
         }
         if name not in adefaults:

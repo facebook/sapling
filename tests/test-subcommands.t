@@ -6,7 +6,7 @@
   > def test(ui, repo):
   >     """test command"""
   >     ui.status("test command called (should not happen)\n")
-  > subcmd = test.subcommand()
+  > subcmd = test.subcommand(categories=[("First Category", ["one"])])
   > @subcmd(b'one', [])
   > def testone(ui, repo):
   >     """first test subcommand"""
@@ -52,12 +52,15 @@
   
   test command
   
-  subcommands:
+  First Category:
   
    one           first test subcommand
+  
+  Other Subcommands:
+  
    two           second test subcommand
   
-  (use 'hg help test [subcommand]' to show complete subcommand help)
+  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
   
   (some details hidden, use --verbose to show complete help)
   [255]
@@ -71,12 +74,15 @@
   
   test command
   
-  subcommands:
+  First Category:
   
    one           first test subcommand
+  
+  Other Subcommands:
+  
    two           second test subcommand
   
-  (use 'hg help test [subcommand]' to show complete subcommand help)
+  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
   
   (some details hidden, use --verbose to show complete help)
   [255]
@@ -94,12 +100,15 @@
   
   defined by: testcommandsext
   
-  subcommands:
+  First Category:
   
    one           first test subcommand
+  
+  Other Subcommands:
+  
    two           second test subcommand
   
-  (use 'hg help xt [subcommand]' to show complete subcommand help)
+  (use 'hg help xt SUBCOMMAND' to show complete subcommand help)
   
   (some details hidden, use --verbose to show complete help)
   [255]
@@ -121,11 +130,11 @@
   
   other test command
   
-  subcommands:
+  Subcommands:
   
    alpha         other test subcommand alpha
   
-  (use 'hg help othertest [subcommand]' to show complete subcommand help)
+  (use 'hg help othertest SUBCOMMAND' to show complete subcommand help)
   
   (use 'hg othertest -h' to show more help)
   [255]
@@ -137,11 +146,11 @@
   
   other test subcommand alpha
   
-  subcommands:
+  Subcommands:
   
    beta          other test subcommand alpha subcommand beta
   
-  (use 'hg help othertest alpha [subcommand]' to show complete subcommand help)
+  (use 'hg help othertest alpha SUBCOMMAND' to show complete subcommand help)
   
   (use 'hg othertest alpha -h' to show more help)
   [255]
@@ -155,11 +164,11 @@
   
   alias for: hg othertest
   
-  subcommands:
+  Subcommands:
   
    alpha         other test subcommand alpha
   
-  (use 'hg help yt [subcommand]' to show complete subcommand help)
+  (use 'hg help yt SUBCOMMAND' to show complete subcommand help)
   
   (use 'hg yt -h' to show more help)
   [255]
@@ -173,12 +182,15 @@
   
   test command
   
-  subcommands:
+  First Category:
   
    one           first test subcommand
+  
+  Other Subcommands:
+  
    two           second test subcommand
   
-  (use 'hg help test [subcommand]' to show complete subcommand help)
+  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
   
   (some details hidden, use --verbose to show complete help)
   $ hg help test --quiet
@@ -186,9 +198,12 @@
   
   test command
   
-  subcommands:
+  First Category:
   
    one           first test subcommand
+  
+  Other Subcommands:
+  
    two           second test subcommand
   $ hg help test one
   hg test one
@@ -267,11 +282,11 @@
       --pager TYPE          when to paginate (boolean, always, auto, or never)
                             (default: auto)
   
-  subcommands:
+  Subcommands:
   
    alpha, alfa   other test subcommand alpha
   
-  (use 'hg help othertest [subcommand]' to show complete subcommand help)
+  (use 'hg help othertest SUBCOMMAND' to show complete subcommand help)
 
   $ hg help xt
   hg xt SUBCOMMAND
@@ -282,12 +297,15 @@
   
   defined by: testcommandsext
   
-  subcommands:
+  First Category:
   
    one           first test subcommand
+  
+  Other Subcommands:
+  
    two           second test subcommand
   
-  (use 'hg help xt [subcommand]' to show complete subcommand help)
+  (use 'hg help xt SUBCOMMAND' to show complete subcommand help)
   
   (some details hidden, use --verbose to show complete help)
   $ hg help xt one

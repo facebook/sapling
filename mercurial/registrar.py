@@ -7,8 +7,6 @@
 
 from __future__ import absolute_import
 
-import functools
-
 from . import configitems, error, pycompat, util
 
 
@@ -175,11 +173,6 @@ class command(_funcregistrarbase):
 
     possiblecmdtypes = {unrecoverablewrite, recoverablewrite, readonly}
 
-    def __init__(self, table=None, parentcommand=None):
-        super(command, self).__init__(table)
-        if parentcommand is not None:
-            parentcommand.subcommands = self._table
-
     def _doregister(
         self,
         func,
@@ -193,6 +186,11 @@ class command(_funcregistrarbase):
         cmdtype=unrecoverablewrite,
         subonly=False,
     ):
+        def subcommand(table=None, categories=None):
+            c = command(table)
+            func.subcommands = c._table
+            func.subcommandcategories.extend(categories or [])
+            return c
 
         if cmdtype not in self.possiblecmdtypes:
             raise error.ProgrammingError(
@@ -203,8 +201,9 @@ class command(_funcregistrarbase):
         func.inferrepo = inferrepo
         func.cmdtemplate = cmdtemplate
         func.cmdtype = cmdtype
-        func.subcommand = functools.partial(command, parentcommand=func)
+        func.subcommand = subcommand
         func.subcommands = {}
+        func.subcommandcategories = []
         func.subonly = subonly
         if synopsis:
             self._table[name] = func, list(options), synopsis

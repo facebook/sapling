@@ -324,22 +324,56 @@ def makeitemsdoc(ui, topic, doc, marker, items, dedent=False):
     return doc.replace(marker, entries)
 
 
-def makesubcmdlist(cmd, subcommands, verbose, quiet):
-    cmdhelp = []
+def makesubcmdlist(cmd, categories, subcommands, verbose, quiet):
+    subcommandindex = {}
     for name, entry in subcommands.items():
-        aliases = cmdutil.parsealiases(name)
-        name = ", ".join(aliases) if verbose else aliases[0]
+        for alias in cmdutil.parsealiases(name):
+            subcommandindex[alias] = name
+
+    def getsubcommandrst(name, alias=None):
+        entry = subcommands[name]
         doc = pycompat.getdoc(entry[0]) or ""
-        doc, __, rest = doc.strip().partition("\n")
-        if verbose and rest.strip():
-            if len(entry) > 2:  # synopsis
-                name = "{} {}".format(name, entry[2])
-        cmdhelp.append(" :%s: %s\n" % (name, doc))
-    rst = ["\n%s:\n\n" % _("subcommands")]
-    rst.extend(sorted(cmdhelp))
+        doc = gettext(doc)
+        if not verbose and doc and any(w in doc for w in _exclkeywords):
+            return []
+        if doc:
+            doc = doc.splitlines()[0].rstrip()
+        if not doc:
+            doc = _("(no help text available)")
+        aliases = cmdutil.parsealiases(name)
+        if verbose:
+            name = ", ".join(aliases)
+            if len(entry) > 2:
+                name = "%s %s" % (name, entry[2])
+        else:
+            name = alias or aliases[0]
+        return [" :%s: %s\n" % (name, doc)]
+
+    rst = []
+    seen = set()
+    if categories:
+        for category, aliases in categories:
+            categoryrst = []
+            for alias in aliases:
+                name = subcommandindex.get(alias)
+                if name:
+                    seen.add(name)
+                    categoryrst.extend(getsubcommandrst(name, alias))
+            if categoryrst:
+                rst.append("\n%s:\n\n" % category)
+                rst.extend(categoryrst)
+
+    otherrst = []
+    for name in sorted(subcommands.keys()):
+        if name not in seen:
+            otherrst.extend(getsubcommandrst(name))
+    if otherrst:
+        rst.append("\n%s:\n\n" % (_("Other Subcommands") if seen else _("Subcommands")))
+        rst.extend(otherrst)
+
     if not quiet:
         rst.append(
-            _("\n(use 'hg help %s [subcommand]' to show complete subcommand help)\n")
+            _("\n(use 'hg help %s SUBCOMMAND' to show complete subcommand help)\n")
             % cmd
         )
     return rst
@@ -522,7 +556,11 @@ class _helpdispatch(object):
         if entry[0].subcommands:
             rst.extend(
                 makesubcmdlist(
-                    cmd, entry[0].subcommands, self.ui.verbose, self.ui.quiet
+                    cmd,
+                    entry[0].subcommandcategories,
+                    entry[0].subcommands,
+                    self.ui.verbose,
+                    self.ui.quiet,
                 )
             )
 
