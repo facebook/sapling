@@ -33,9 +33,17 @@ def _forwardoutput(ui, pipe):
 
     This is non blocking."""
     s = util.readpipe(pipe)
+    _writessherror(ui, s)
+
+
+def _writessherror(ui, s):
     if s and not ui.quiet:
         for l in s.splitlines():
-            ui.write_err(_("remote: "), l, "\n")
+            if l.startswith("ssh:"):
+                prefix = ""
+            else:
+                prefix = _("remote: ")
+            ui.write_err(prefix, l, "\n")
 
 
 class doublepipe(object):
