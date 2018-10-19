@@ -20,6 +20,7 @@ use heapsize::HeapSizeOf;
 
 use quickcheck::{Arbitrary, Gen};
 
+use bonsai_changeset::BonsaiChangeset;
 use errors::*;
 use thrift;
 
@@ -702,7 +703,7 @@ impl fmt::Debug for MPath {
     }
 }
 
-struct CaseConflictTrie {
+pub struct CaseConflictTrie {
     children: HashMap<MPathElement, CaseConflictTrie>,
     lowercase: HashSet<String>,
 }
@@ -713,6 +714,10 @@ impl CaseConflictTrie {
             children: HashMap::new(),
             lowercase: HashSet::new(),
         }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.children.is_empty()
     }
 
     /// Returns `true` if element was added successfully, or `false`
@@ -742,35 +747,101 @@ impl CaseConflictTrie {
             }
         }
     }
+
+    /// Remove path from a trie
+    ///
+    /// Returns `true` if path was removed, otherwise `false`.
+    fn remove<'p, P: IntoIterator<Item = &'p MPathElement>>(&mut self, path: P) -> bool {
+        let mut iter = path.into_iter();
+        match iter.next() {
+            None => true,
+            Some(element) => {
+                let (found, remove) = match self.children.get_mut(&element) {
+                    None => return false,
+                    Some(child) => (child.remove(iter), child.is_empty()),
+                };
+                if remove {
+                    self.children.remove(&element);
+                    if let Ok(ref element) = String::from_utf8(element.to_bytes()) {
+                        self.lowercase.remove(&element.to_lowercase());
+                    }
+                }
+                found
+            }
+        }
+    }
 }
 
-impl<P> FromIterator<P> for CaseConflictTrie
-where
-    P: ::std::borrow::Borrow<MPath>,
-{
-    fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
-        let mut trie = CaseConflictTrie::new();
-        for mpath in iter {
-            trie.add(mpath.borrow());
+pub trait CaseConflictTrieUpdate {
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<MPath>;
+}
+
+impl<'a> CaseConflictTrieUpdate for &'a MPath {
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<MPath> {
+        if !trie.add(self) {
+            return Some(self.clone());
+        } else {
+            None
         }
-        trie
+    }
+}
+
+impl CaseConflictTrieUpdate for MPath {
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<MPath> {
+        if !trie.add(&self) {
+            return Some(self);
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> CaseConflictTrieUpdate for &'a BonsaiChangeset {
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<MPath> {
+        // we need apply deletion first
+        for (path, change) in self.file_changes() {
+            if change.is_none() {
+                trie.remove(path);
+            }
+        }
+        for (path, change) in self.file_changes() {
+            if change.is_some() {
+                if !trie.add(path) {
+                    return Some(path.clone());
+                }
+            }
+        }
+        return None;
     }
 }
 
 /// Returns first path that would introduce a case-conflict, if any
 pub fn check_case_conflicts<P, I>(iter: I) -> Option<MPath>
 where
-    P: ::std::borrow::Borrow<MPath>,
+    P: CaseConflictTrieUpdate,
     I: IntoIterator<Item = P>,
 {
     let mut trie = CaseConflictTrie::new();
-    for path in iter {
-        let path = path.borrow();
-        if !trie.add(path) {
-            return Some(path.clone());
+    for update in iter {
+        let conflict = update.apply(&mut trie);
+        if conflict.is_some() {
+            return conflict;
         }
     }
     None
+}
+
+impl<P> FromIterator<P> for CaseConflictTrie
+where
+    P: CaseConflictTrieUpdate,
+{
+    fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
+        let mut trie = CaseConflictTrie::new();
+        for update in iter {
+            update.apply(&mut trie);
+        }
+        trie
+    }
 }
 
 #[cfg(test)]
@@ -960,6 +1031,8 @@ mod test {
         assert!(trie.add(&MPath::new("a/b/c").unwrap()));
         assert!(trie.add(&MPath::new("a/B/d").unwrap()) == false);
         assert!(trie.add(&MPath::new("a/b/C").unwrap()) == false);
+        assert!(trie.remove(&MPath::new("a/b/c").unwrap()));
+        assert!(trie.add(&MPath::new("a/B/c").unwrap()));
 
         let paths = vec![
             MPath::new("a/b/c").unwrap(),

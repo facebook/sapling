@@ -114,11 +114,21 @@ pub fn do_pushrebase(
             cloned!(repo);
             move |(head, root)| {
                 // Calculate client changed files only once, since they won't change
-                find_changed_files(&repo, root, head, /* reject_merges */ false).and_then(
-                    move |client_cf| {
-                        rebase_in_loop(repo, config, onto_bookmark, head, root, client_cf)
-                    },
-                )
+                (
+                    find_changed_files(&repo, root, head, /* reject_merges */ false),
+                    fetch_bonsai_range(&repo, root, head),
+                ).into_future()
+                    .and_then(move |(client_cf, client_bcs)| {
+                        rebase_in_loop(
+                            repo,
+                            config,
+                            onto_bookmark,
+                            head,
+                            root,
+                            client_cf,
+                            client_bcs,
+                        )
+                    })
             }
         })
 }
@@ -130,24 +140,35 @@ fn rebase_in_loop(
     head: ChangesetId,
     root: ChangesetId,
     client_cf: Vec<MPath>,
+    client_bcs: Vec<BonsaiChangeset>,
 ) -> BoxFuture<PushrebaseSuccessResult, PushrebaseError> {
     loop_fn(
         (root.clone(), 0),
         move |(latest_rebase_attempt, retry_num)| {
             get_bookmark_value(&repo, &onto_bookmark).and_then({
-                cloned!(client_cf, onto_bookmark, repo, config);
+                cloned!(client_cf, client_bcs, onto_bookmark, repo, config);
                 move |bookmark_val| {
-                    find_changed_files(
-                        &repo,
-                        latest_rebase_attempt.clone(),
-                        bookmark_val,
-                        /* reject_merges */ true,
-                    ).and_then(|server_cf| {
-                        match check_case_conflicts(server_cf.iter().chain(&client_cf)) {
-                            Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
-                            None => intersect_changed_files(server_cf, client_cf),
-                        }
-                    })
+                    fetch_bonsai_range(&repo, latest_rebase_attempt, bookmark_val)
+                        .and_then(move |server_bcs| {
+                            match check_case_conflicts(
+                                server_bcs.iter().rev().chain(client_bcs.iter().rev()),
+                            ) {
+                                Some(path) => Err(PushrebaseError::PotentialCaseConflict(path)),
+                                None => Ok(()),
+                            }
+                        })
+                        .and_then({
+                            cloned!(repo);
+                            move |()| {
+                                find_changed_files(
+                                    &repo,
+                                    latest_rebase_attempt.clone(),
+                                    bookmark_val,
+                                    /* reject_merges */ true,
+                                )
+                            }
+                        })
+                        .and_then(|server_cf| intersect_changed_files(server_cf, client_cf))
                         .and_then(move |()| {
                             do_rebase(
                                 repo,
@@ -312,6 +333,20 @@ fn find_changed_files_between_manfiests(
                 })
                 .collect()
         })
+        .from_err()
+}
+
+// from larger generation number to smaller
+fn fetch_bonsai_range(
+    repo: &Arc<BlobRepo>,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
+    cloned!(repo);
+    RangeNodeStream::new(&repo, ancestor, descendant)
+        .map(move |id| repo.get_bonsai_changeset(id))
+        .buffered(100)
+        .collect()
         .from_err()
 }
 
@@ -898,6 +933,96 @@ mod tests {
                 _ => panic!("push-rebase should have failed with conflict"),
             }
         });
+    }
+
+    #[test]
+    fn pushrebase_caseconflicting_rename() {
+        async_unit::tokio_unit_test(|| {
+            let repo = linear::getrepo(None);
+            let root = repo.get_bonsai_from_hg(&HgChangesetId::from_str(
+                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+            ).unwrap())
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            let bcs_id_1 = create_commit(
+                repo.clone(),
+                vec![root],
+                store_files(btreemap!{"FILE" => Some("file")}, repo.clone()),
+            );
+            let bcs_id_2 = create_commit(
+                repo.clone(),
+                vec![bcs_id_1],
+                store_files(btreemap!{"FILE" => None}, repo.clone()),
+            );
+            let bcs_id_3 = create_commit(
+                repo.clone(),
+                vec![bcs_id_2],
+                store_files(btreemap!{"file" => Some("file")}, repo.clone()),
+            );
+            let hgcss = vec![
+                repo.get_hg_from_bonsai_changeset(bcs_id_1).wait().unwrap(),
+                repo.get_hg_from_bonsai_changeset(bcs_id_2).wait().unwrap(),
+                repo.get_hg_from_bonsai_changeset(bcs_id_3).wait().unwrap(),
+            ];
+
+            let book = Bookmark::new("master").unwrap();
+            set_bookmark(
+                repo.clone(),
+                &book,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            );
+
+            do_pushrebase(Arc::new(repo), Default::default(), book, hgcss)
+                .wait()
+                .expect("push-rebase failed");
+        })
+    }
+
+    #[test]
+    fn pushrebase_caseconflicting_dirs() {
+        async_unit::tokio_unit_test(|| {
+            let repo = linear::getrepo(None);
+            let root = repo.get_bonsai_from_hg(&HgChangesetId::from_str(
+                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+            ).unwrap())
+                .wait()
+                .unwrap()
+                .unwrap();
+
+            let bcs_id_1 = create_commit(
+                repo.clone(),
+                vec![root],
+                store_files(
+                    btreemap!{"DIR/a" => Some("a"), "DIR/b" => Some("b")},
+                    repo.clone(),
+                ),
+            );
+            let bcs_id_2 = create_commit(
+                repo.clone(),
+                vec![bcs_id_1],
+                store_files(
+                    btreemap!{"dir/a" => Some("a"), "DIR/a" => None, "DIR/b" => None},
+                    repo.clone(),
+                ),
+            );
+            let hgcss = vec![
+                repo.get_hg_from_bonsai_changeset(bcs_id_1).wait().unwrap(),
+                repo.get_hg_from_bonsai_changeset(bcs_id_2).wait().unwrap(),
+            ];
+
+            let book = Bookmark::new("master").unwrap();
+            set_bookmark(
+                repo.clone(),
+                &book,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            );
+
+            do_pushrebase(Arc::new(repo), Default::default(), book, hgcss)
+                .wait()
+                .expect("push-rebase failed");
+        })
     }
 
     #[test]
