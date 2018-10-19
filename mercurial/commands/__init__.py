@@ -1263,11 +1263,6 @@ def branch(ui, repo, label=None, **opts):
 
     Returns 0 on success.
     """
-    if not ui.configbool("ui", "allowbranches", default=True):
-        raise error.Abort(
-            _("named branches are disabled in this repository"),
-            hint=ui.config("ui", "disallowedbrancheshint", _("use bookmarks instead")),
-        )
     opts = pycompat.byteskwargs(opts)
     if label:
         label = label.strip()
@@ -1275,6 +1270,12 @@ def branch(ui, repo, label=None, **opts):
     if not opts.get("clean") and not label:
         ui.write("%s\n" % repo.dirstate.branch())
         return
+
+    if not ui.configbool("ui", "allowbranches", default=True):
+        raise error.Abort(
+            _("named branches are disabled in this repository"),
+            hint=ui.config("ui", "disallowedbrancheshint", _("use bookmarks instead")),
+        )
 
     with repo.wlock():
         if opts.get("clean"):
