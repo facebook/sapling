@@ -116,3 +116,31 @@ Test bypass
   adding file changes
   added 1 changesets with 0 changes to 0 files
   server ignored bookmark master_bookmark update
+
+Test markers not on the first line
+  $ hg up -q 0
+  $ echo -e "ololo\nonemore\n\n>>>>>>> " > notfirstline
+  $ hg ci -Aqm notfirstline
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  searching for changes
+  remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
+  remote: conflict_markers: Conflict markers were found in file 'notfirstline', root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nconflict_markers: Conflict markers were found in file \'notfirstline\'"
+  remote: }, backtrace: , session_uuid: * (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+  $ hg up -q 0
+  $ echo -e "ololo\nonemore\n\n=======" > notfirstline
+  $ hg ci -Aqm notfirstline
+  $ hgmn push -r . --to master_bookmark
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  searching for changes
+  remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
+  remote: conflict_markers: Conflict markers were found in file 'notfirstline', root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nconflict_markers: Conflict markers were found in file \'notfirstline\'"
+  remote: }, backtrace: , session_uuid: * (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]

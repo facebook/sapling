@@ -15,12 +15,15 @@ hook = function (ctx)
   end
 
   local error_msg = ("Conflict markers were found in file '%s'"):format(ctx.file.path)
-  if content:match("^>>>>>>> ") then
-    return false, error_msg
-  elseif content:match("^<<<<<<< ") then
-    return false, error_msg
-  elseif content:match("^=======$") then
-    return false, error_msg
+
+  for line in content:gmatch("[^\n]+") do
+    if line:match("^>>>>>>> ") then
+      return false, error_msg
+    elseif line:match("^<<<<<<< ") then
+      return false, error_msg
+    elseif line:match("^=======$") then
+      return false, error_msg
+    end
   end
   return true
 end
