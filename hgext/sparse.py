@@ -2506,6 +2506,15 @@ class negatematcher(matchmod.basematcher):
     def __repr__(self):
         return "<negatematcher matcher=%r>" % self._matcher
 
+    def visitdir(self, dir):
+        orig = self._matcher.visitdir(dir)
+        if orig == "all":
+            return False
+        elif orig is False:
+            return "all"
+        else:
+            return True
+
     def hash(self):
         sha1 = hashlib.sha1()
         sha1.update("negate")
