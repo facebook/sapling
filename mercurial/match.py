@@ -445,7 +445,13 @@ class gitignorematcher(basematcher):
         return self._matcher.match_relative(f, True)
 
     def visitdir(self, dir):
-        return not self._matcher.match_relative(dir, True)
+        matched = self._matcher.match_relative(dir, True)
+        if matched:
+            # Everything in the directory is selected (ignored)
+            return "all"
+        else:
+            # Not sure
+            return True
 
     def __repr__(self):
         return "<gitignorematcher>"
