@@ -597,7 +597,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
                << hgInfo.revHash().toString() << " from mononoke";
     auto revHashCopy = hgInfo.revHash();
     return mononoke_->getBlob(revHashCopy)
-        .onError([this, id, path = hgInfo.path(), revHash = revHashCopy](
+        .onError([this, id, path = hgInfo.path().copy(), revHash = revHashCopy](
                      const folly::exception_wrapper& ex) {
           XLOG(ERR) << "Error while fetching file contents of '" << path
                     << "', " << revHash.toString()
