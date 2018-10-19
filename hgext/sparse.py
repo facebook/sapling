@@ -1534,7 +1534,7 @@ subcmd = sparse.subcommand(
         ("Change which profiles are active", ["switch", "enable", "disable"]),
         (
             "Manage additional files to include or exclude",
-            ["include", "exclude", "delete", "clear"],
+            ["include", "uninclude", "exclude", "unexclude", "clear"],
         ),
         ("Refresh the checkout and apply sparse profile changes", ["refresh"]),
     ]
@@ -1987,7 +1987,7 @@ def switchprofilesubcmd(ui, repo, *pats, **opts):
 
 @subcmd("delete", _common_config_opts, "[RULE]...")
 def deletesubcmd(ui, repo, *pats, **opts):
-    """delete an include or exclude rule"""
+    """delete an include or exclude rule (DEPRECATED)"""
     _config(ui, repo, pats, opts, force=opts.get("force"), delete=True)
 
 
@@ -1997,13 +1997,25 @@ def excludesubcmd(ui, repo, *pats, **opts):
     _config(ui, repo, pats, opts, force=opts.get("force"), exclude=True)
 
 
+@subcmd("unexclude", _common_config_opts, "[RULE]...")
+def unexcludesubcmd(ui, repo, *pats, **opts):
+    """stop excluding some additional files"""
+    _config(ui, repo, pats, opts, force=opts.get("force"), unexclude=True)
+
+
 @subcmd("include", _common_config_opts, "[RULE]...")
 def includesubcmd(ui, repo, *pats, **opts):
     """include some additional files"""
     _config(ui, repo, pats, opts, force=opts.get("force"), include=True)
 
 
-for c in deletesubcmd, excludesubcmd, includesubcmd:
+@subcmd("uninclude", _common_config_opts, "[RULE]...")
+def unincludesubcmd(ui, repo, *pats, **opts):
+    """stop including some additional files"""
+    _config(ui, repo, pats, opts, force=opts.get("force"), uninclude=True)
+
+
+for c in deletesubcmd, excludesubcmd, includesubcmd, unexcludesubcmd, unincludesubcmd:
     c.__doc__ += """\n
 The effects of adding or deleting an include or exclude rule are applied
 immediately. If applying the new rule would cause a file with pending
@@ -2073,6 +2085,8 @@ def _config(
     exclude=False,
     reset=False,
     delete=False,
+    uninclude=False,
+    unexclude=False,
     enableprofile=False,
     disableprofile=False,
     force=False,
@@ -2108,12 +2122,13 @@ def _config(
                 err = _("paths cannot be absolute")
                 raise error.Abort(err)
 
-            adjustpats = (include or exclude or delete) and not ui.configbool(
-                "sparse", "includereporootpaths", False
-            )
-            adjustpats |= (enableprofile or disableprofile) and not ui.configbool(
-                "sparse", "enablereporootpaths", True
-            )
+            adjustpats = False
+            if include or exclude or delete or uninclude or unexclude:
+                if not ui.configbool("sparse", "includereporootpaths", False):
+                    adjustpats = True
+            if enableprofile or disableprofile:
+                if not ui.configbool("sparse", "enablereporootpaths", True):
+                    adjustpats = True
             if adjustpats:
                 # supplied file patterns should be treated as relative
                 # to current working dir, so we need to convert them first
@@ -2130,13 +2145,19 @@ def _config(
 
             oldstatus = repo.status()
             if include:
+                newexclude.difference_update(pats)
                 newinclude.update(pats)
             elif exclude:
+                newinclude.difference_update(pats)
                 newexclude.update(pats)
             elif enableprofile:
                 newprofiles.update(pats)
             elif disableprofile:
                 newprofiles.difference_update(pats)
+            elif uninclude:
+                newinclude.difference_update(pats)
+            elif unexclude:
+                newexclude.difference_update(pats)
             elif delete:
                 newinclude.difference_update(pats)
                 newexclude.difference_update(pats)

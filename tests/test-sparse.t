@@ -18,30 +18,30 @@ test sparse
   $ echo xx > hide2
   $ hg ci -Aqm 'two'
 
-Verify basic --include
+Verify basic include
 
   $ hg up -q 0
-  $ hg sparse --include 'hide'
+  $ hg sparse include 'hide'
   $ ls
   hide
 
 Absolute paths outside the repo should just be rejected
 
-  $ hg sparse --include /foo/bar
+  $ hg sparse include /foo/bar
   abort: paths cannot be absolute
   [255]
-  $ hg sparse --include '$TESTTMP/myrepo/hide'
+  $ hg sparse include '$TESTTMP/myrepo/hide'
 
-  $ hg sparse --include '/root'
+  $ hg sparse include '/root'
   abort: paths cannot be absolute
   [255]
 
 Repo root-relaive vs. cwd-relative includes
   $ mkdir subdir
   $ cd subdir
-  $ hg sparse --config sparse.includereporootpaths=on --include notinsubdir/path
-  $ hg sparse --config sparse.includereporootpaths=off --include **/path
-  $ hg sparse --config sparse.includereporootpaths=off --include path:abspath
+  $ hg sparse include --config sparse.includereporootpaths=on notinsubdir/path
+  $ hg sparse include --config sparse.includereporootpaths=off **/path
+  $ hg sparse include --config sparse.includereporootpaths=off path:abspath
   $ hg sparse
   [include]
   $TESTTMP/myrepo/hide
@@ -105,7 +105,7 @@ Verify --reset brings files back
 Verify 'hg sparse' default output
 
   $ hg up -q null
-  $ hg sparse --include 'show*'
+  $ hg sparse include 'show*'
 
   $ hg sparse
   [include]
@@ -141,14 +141,14 @@ Adding an excluded file should fail
 
 Verify deleting sparseness while a file has changes fails
 
-  $ hg sparse --delete 'show*'
+  $ hg sparse uninclude 'show*'
   pending changes to 'hide'
   abort: cannot change sparseness due to pending changes (delete the files or use --force to bring them back dirty)
   [255]
 
 Verify deleting sparseness with --force brings back files
 
-  $ hg sparse --delete -f 'show*'
+  $ hg sparse uninclude -f 'show*'
   pending changes to 'hide'
   $ ls
   hide
@@ -163,14 +163,14 @@ Verify deleting sparseness with --force brings back files
 
 Verify editing sparseness fails if pending changes
 
-  $ hg sparse --include 'show*'
+  $ hg sparse include 'show*'
   pending changes to 'hide'
   abort: could not update sparseness due to pending changes
   [255]
 
 Verify adding sparseness hides files
 
-  $ hg sparse --exclude -f 'hide*'
+  $ hg sparse exclude -f 'hide*'
   pending changes to 'hide'
   $ ls
   hide
@@ -300,7 +300,7 @@ Test status on a file in a subdir
 Test that add -s adds dirs to sparse profile
 
   $ hg sparse --reset
-  $ hg sparse --include empty
+  $ hg sparse include empty
   $ hg sparse
   [include]
   empty
@@ -358,8 +358,13 @@ Test --cwd-list
   $ hg sparse --cwd-list
     bar
     foo
-  $ hg sparse -I foo
-  $ hg sparse --delete .
+  $ hg sparse include foo
+  $ hg sparse uninclude .
+  $ hg sparse show
+  Additional Included Paths:
+  
+    add/foo
+    empty
   $ hg sparse --cwd-list
   - bar
     foo

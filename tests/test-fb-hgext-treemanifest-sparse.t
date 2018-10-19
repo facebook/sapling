@@ -30,23 +30,23 @@ Setup the repository
   adding subdir/bar/ham/hide
   adding subdir/foo/spam/show
   $ hg commit -m 'Init'
-  $ hg sparse --include show
-  $ hg sparse --exclude hide
-  $ hg sparse --include subdir
-  $ hg sparse --exclude subdir/foo
+  $ hg sparse include show
+  $ hg sparse exclude hide
+  $ hg sparse include subdir
+  $ hg sparse exclude subdir/foo
 
-Test --cwd-list
+Test cwd
 
-  $ hg sparse --cwd-list
+  $ hg sparse cwd
   - hiddensub
   - hide
     show
     subdir
   $ cd subdir
-  $ hg sparse --cwd-list
+  $ hg sparse cwd
     bar
   - foo
-  $ hg sparse --include foo
-  $ hg sparse --cwd-list
+  $ hg sparse include foo
+  $ hg sparse cwd
     bar
-  - foo
+    foo
