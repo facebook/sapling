@@ -100,7 +100,7 @@ def _deletebookmark(repo, repomarks, bookmarks):
         ("d", "date", "", _("record the specified date in metadata"), _("DATE")),
         ("u", "user", "", _("record the specified user in metadata"), _("USER")),
     ],
-    _("[OPTION]... [-r] [REV]..."),
+    _("[OPTION]... [[-r] REV]..."),
 )
 # XXX -U  --noupdate option to prevent wc update and or bookmarks update ?
 def prune(ui, repo, *revs, **opts):

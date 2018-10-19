@@ -89,7 +89,7 @@ def findthingstopurge(repo, match, findfiles, finddirs, includeignored):
         ),
     ]
     + cmdutil.walkopts,
-    _("hg purge [OPTION]... [DIR]..."),
+    _("[OPTION]... [DIR]..."),
 )
 def purge(ui, repo, *dirs, **opts):
     """removes files not tracked by Mercurial

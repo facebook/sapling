@@ -1838,20 +1838,15 @@ def _explainprofile(ui, repo, *profiles, **opts):
     return exitcode
 
 
-@subcmd("files", commands.templateopts, _("[OPTION]..."))
-def _listfilessubcmd(ui, repo, *profiles, **opts):
-    """list all files included in a profiles
+@subcmd("files", commands.templateopts, _("[OPTION]... PROFILE [FILES]..."))
+def _listfilessubcmd(ui, repo, profile, *files, **opts):
+    """list all files included in a profile
 
     If files are given to match, this command only prints the names of the
     files in a profile that match those patterns.
 
     """
     _checksparse(repo)
-
-    if not profiles:
-        raise error.Abort(_("no profiles specified"))
-
-    profile, files = profiles[0], profiles[1:]
     try:
         raw = repo.getrawprofile(profile, ".")
     except KeyError:

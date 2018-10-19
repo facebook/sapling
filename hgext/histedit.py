@@ -985,7 +985,7 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
         ("r", "rev", [], _("first revision to be edited"), _("REV")),
     ]
     + cmdutil.formatteropts,
-    _("[OPTIONS] ([ANCESTOR] | --outgoing [URL])"),
+    _("[OPTION]... ([ANCESTOR] | --outgoing [URL])"),
 )
 def histedit(ui, repo, *freeargs, **opts):
     """interactively edit changeset history

@@ -30,7 +30,7 @@ command = registrar.command(cmdtable)
     + commands.commitopts
     + commands.commitopts2
     + cmdutil.formatteropts,
-    _("hg metaedit [OPTION]... [-r] [REV]"),
+    _("[OPTION]... [-r] [REV]"),
     cmdtemplate=True,
 )
 def metaedit(ui, repo, templ, *revs, **opts):

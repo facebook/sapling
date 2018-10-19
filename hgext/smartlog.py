@@ -659,7 +659,7 @@ def smartdate(context, mapping, args):
         ("", "commit-info", False, _("show changes in current changeset"), ""),
     ]
     + logopts,
-    _("hg smartlog|slog"),
+    _("[OPTION]... [[-r] REV]"),
 )
 def smartlog(ui, repo, *pats, **opts):
     """show a graph of the commits that are relevant to you

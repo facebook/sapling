@@ -36,7 +36,7 @@ hex = node.hex
         ("", "no-rebase", False, _("don't rebase descendants after split")),
     ]
     + (commands.commitopts + commands.commitopts2 + commands.formatteropts),
-    _("hg fold [OPTION]... [-r] REV"),
+    _("hg fold [OPTION]... (--from [-r] REV | --exact [-r] REV...)"),
 )
 def fold(ui, repo, *revs, **opts):
     """fold multiple revisions into a single one

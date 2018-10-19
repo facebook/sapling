@@ -550,7 +550,7 @@ testedwith = "ships-with-fb-hgext"
         ("k", "keep", False, _("don't strip old nodes after edit is complete")),
         ("r", "rev", [], _("first revision to be edited")),
     ],
-    _("ANCESTOR"),
+    _("[OPTION]... [ANCESTOR]"),
 )
 def chistedit(ui, repo, *freeargs, **opts):
     """Provides a ncurses interface to histedit. Press ? in chistedit mode

@@ -41,7 +41,7 @@ command = registrar.command(cmdtable)
     ]
     + commands.commitopts
     + commands.commitopts2,
-    _("hg split [OPTION]... [-r] [REV]"),
+    _("[OPTION]... [[-r] REV]"),
 )
 def split(ui, repo, *revs, **opts):
     """split a changeset into smaller changesets

@@ -40,6 +40,7 @@ command = registrar.command(cmdtable)
             _("cleanup obsolete commits (eg. marked as landed, amended, etc.)"),
         ),
     ],
+    _("[OPTION]... [-r] REV..."),
 )
 def hide(ui, repo, *revs, **opts):
     """hide changesets and their descendants
@@ -119,7 +120,11 @@ def hide(ui, repo, *revs, **opts):
         hintutil.trigger("undo")
 
 
-@command("^unhide", [("r", "rev", [], _("revisions to unhide"))])
+@command(
+    "^unhide",
+    [("r", "rev", [], _("revisions to unhide"))],
+    _("[OPTION]... [-r] REV..."),
+)
 def unhide(ui, repo, *revs, **opts):
     """unhide changesets and their ancestors
     """
