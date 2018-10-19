@@ -32,6 +32,7 @@ class SparseTest(EdenHgTestCase):
             "files someprofile",
             "importrules",
             "include",
+            "show",
             "list",
             "refresh",
             "reset",
