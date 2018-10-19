@@ -493,17 +493,30 @@ class includematcher(basematcher):
         self._pats, self.matchfn = _buildmatch(
             ctx, kindpats, "(?:/|$)", listsubrepos, root
         )
+        # prefix is True if all patterns are recursive, so certain fast paths
+        # can be enabled. Unfortunately, it's too easy to break it (ex. by
+        # using "glob:*.c", "re:...", etc).
         self._prefix = _prefix(kindpats)
         roots, dirs = _rootsanddirs(kindpats)
         # roots are directories which are recursively included.
+        # If self._prefix is True, then _roots can have a fast path for
+        # visitdir to return "all", marking things included unconditionally.
+        # If self._prefix is False, then that optimization is unsound because
+        # "roots" might contain entries that is not recursive (ex. roots will
+        # include "foo/bar" for pattern "glob:foo/bar/*.c").
         self._roots = set(roots)
         # dirs are directories which are non-recursively included.
+        # That is, files under that directory are included. But not
+        # subdirectories.
         self._dirs = set(dirs)
 
     def visitdir(self, dir):
         if self._prefix and dir in self._roots:
             return "all"
         return (
+            # "." is added by _buildmatch when there are "re:" patterns.
+            # Note: "re:" pattens also makes self._prefix False, effectively
+            # remove all fast paths.
             "." in self._roots
             or dir in self._roots
             or dir in self._dirs
