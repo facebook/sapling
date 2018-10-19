@@ -104,7 +104,13 @@ def cloud(ui, repo, **opts):
     pass
 
 
-subcmd = cloud.subcommand()
+subcmd = cloud.subcommand(
+    categories=[
+        ("Connect to a cloud workspace", ["authenticate", "join"]),
+        ("Synchronize with the cloud workspace", ["sync"]),
+        ("View other cloud workspaces", ["sl", "ssl"]),
+    ]
+)
 
 
 @subcmd("join|connect", [] + workspaceopts + pullopts + pushopts)

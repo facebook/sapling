@@ -1519,7 +1519,17 @@ def sparse(ui, repo, *pats, **opts):
         _cwdlist(repo)
 
 
-subcmd = sparse.subcommand()
+subcmd = sparse.subcommand(
+    categories=[
+        ("Show information about sparse profiles", ["list", "explain", "files"]),
+        ("Change which profiles are active", ["switch", "enable", "disable"]),
+        (
+            "Manage additional files to include or exclude",
+            ["include", "exclude", "delete", "clear"],
+        ),
+        ("Refresh the checkout and apply sparse profile changes", ["refresh"]),
+    ]
+)
 
 
 def _contains_files(load_matcher, profile, files):
@@ -1715,7 +1725,7 @@ def _listprofiles(ui, repo, *pats, **opts):
     _("[OPTION]... [PROFILE]..."),
 )
 def _explainprofile(ui, repo, *profiles, **opts):
-    """show information on individual profiles
+    """show information about a sparse profile
 
     If --verbose is given, calculates the file size impact of a profile (slow).
     """
@@ -1840,10 +1850,10 @@ def _explainprofile(ui, repo, *profiles, **opts):
 
 @subcmd("files", commands.templateopts, _("[OPTION]... PROFILE [FILES]..."))
 def _listfilessubcmd(ui, repo, profile, *files, **opts):
-    """list all files included in a profile
+    """list all files included in a sparse profile
 
-    If files are given to match, this command only prints the names of the
-    files in a profile that match those patterns.
+    If files are given to match, print the names of the files in the profile
+    that match those patterns.
 
     """
     _checksparse(repo)
@@ -1877,27 +1887,28 @@ _common_config_opts = [
 
 @subcmd("reset", _common_config_opts + commands.templateopts)
 def resetsubcmd(ui, repo, **opts):
-    """makes the repo full again"""
+    """disable all sparse profiles and convert to a full checkout"""
     _config(ui, repo, [], opts, force=opts.get("force"), reset=True)
 
 
-@subcmd("disableprofile", _common_config_opts, "[PROFILE]...")
+@subcmd("disable|disableprofile", _common_config_opts, "[PROFILE]...")
 def disableprofilesubcmd(ui, repo, *pats, **opts):
-    """disables the specified profile"""
+    """disable a sparse profile"""
     _config(ui, repo, pats, opts, force=opts.get("force"), disableprofile=True)
 
 
-@subcmd("enableprofile", _common_config_opts, "[PROFILE]...")
+@subcmd("enable|enableprofile", _common_config_opts, "[PROFILE]...")
 def enableprofilesubcmd(ui, repo, *pats, **opts):
-    """enables the specified profile"""
+    """enable a sparse profile"""
     _config(ui, repo, pats, opts, force=opts.get("force"), enableprofile=True)
 
 
-@subcmd("switchprofile", _common_config_opts, "[PROFILE]...")
+@subcmd("switch|switchprofile", _common_config_opts, "[PROFILE]...")
 def switchprofilesubcmd(ui, repo, *pats, **opts):
-    """switches to the specified profile
+    """switch to another sparse profile
 
-    Disables all other profiles and deletes all include/exclude rules.
+    Disables all other profiles and stops including and excluding any additional
+    files you have previously included or excluded.
     """
     _config(
         ui, repo, pats, opts, force=opts.get("force"), reset=True, enableprofile=True
@@ -1906,19 +1917,19 @@ def switchprofilesubcmd(ui, repo, *pats, **opts):
 
 @subcmd("delete", _common_config_opts, "[RULE]...")
 def deletesubcmd(ui, repo, *pats, **opts):
-    """delete an include/exclude rule"""
+    """delete an include or exclude rule"""
     _config(ui, repo, pats, opts, force=opts.get("force"), delete=True)
 
 
 @subcmd("exclude", _common_config_opts, "[RULE]...")
 def excludesubcmd(ui, repo, *pats, **opts):
-    """exclude files in the sparse checkout"""
+    """exclude some additional files"""
     _config(ui, repo, pats, opts, force=opts.get("force"), exclude=True)
 
 
 @subcmd("include", _common_config_opts, "[RULE]...")
 def includesubcmd(ui, repo, *pats, **opts):
-    """include files in the sparse checkout"""
+    """include some additional files"""
     _config(ui, repo, pats, opts, force=opts.get("force"), include=True)
 
 
@@ -1934,7 +1945,7 @@ be preserved).
 
 @subcmd("importrules", _common_config_opts, _("[OPTION]... [FILE]..."))
 def _importsubcmd(ui, repo, *pats, **opts):
-    """directly import sparse profile rules
+    """import sparse profile rules
 
     Accepts a path to a file containing rules in the .hgsparse format.
 
@@ -1948,10 +1959,10 @@ def _importsubcmd(ui, repo, *pats, **opts):
 
 @subcmd("clear", _common_config_opts, _("[OPTION]..."))
 def _clearsubcmd(ui, repo, *pats, **opts):
-    """clear local sparse rules
+    """clear all extra files included or excluded
 
-    Removes all local include and exclude rules, while leaving
-    any enabled profiles in place.
+    Removes all extra include and exclude rules, without changing which
+    profiles are enabled.
 
     """
     _clear(ui, repo, pats, force=opts.get("force"))
@@ -1959,10 +1970,9 @@ def _clearsubcmd(ui, repo, *pats, **opts):
 
 @subcmd("refresh", _common_config_opts, _("[OPTION]..."))
 def _refreshsubcmd(ui, repo, *pats, **opts):
-    """refreshes the files on disk based on the sparse rules
+    """refresh the files on disk based on the enabled sparse profiles
 
     This is only necessary if .hg/sparse was changed by hand.
-
     """
     _checksparse(repo)
 
