@@ -55,6 +55,6 @@ Test that fsmonitor ignore hash check updates when .hgignore changes
   $ hg up -q ".^"
   $ hg status
   ? dir1/file
+  ? ignoredir2/file
 
-BUG: treestate ignores ignore hash. So "? ignoredir2/file" did not show up.
 #endif

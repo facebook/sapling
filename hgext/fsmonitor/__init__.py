@@ -94,6 +94,16 @@ The path can contain %i that have to be replaced with user's unix username
 If ``detectrace`` is set to True, fsmonitor will spend extra effort detecting
 if there are file writes happening during a ``status`` call, and raises an
 exception if it finds anything. (default: false)
+
+::
+
+    [fsmonitor]
+    track-ignore-files = (boolean)
+
+If set to True, fsmonitor will track ignored files in treestate. This behaves
+more correctly if files get unignored, or added to the sparse profile. This
+config option is provided for slowrolling the feature. It will be eventually
+removed.  (default: true)
 """
 
 # Platforms Supported
@@ -163,11 +173,12 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("fsmonitor", "mode", default="on")
-configitem("fsmonitor", "walk_on_invalidate", default=False)
-configitem("fsmonitor", "timeout", default="2")
 configitem("fsmonitor", "blacklistusers", default=list)
 configitem("fsmonitor", "detectrace", default=False)
+configitem("fsmonitor", "mode", default="on")
+configitem("fsmonitor", "timeout", default="2")
+configitem("fsmonitor", "track-ignore-files", default=True)
+configitem("fsmonitor", "walk_on_invalidate", default=False)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
@@ -463,6 +474,8 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     # as being happens-after the exists=False entries due to the way that
     # Watchman tracks files.  We use this property to reconcile deletes
     # for name case changes.
+    ignorelist = []
+    ignorelistappend = ignorelist.append
     for entry in result["files"]:
         fname = entry["name"]
         if _fixencoding:
@@ -495,8 +508,12 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
             if fname in dmap:
                 if matchalways or matchfn(fname):
                     results[fname] = entry
-            elif (matchalways or matchfn(fname)) and not ignore(fname):
-                results[fname] = entry
+            else:
+                ignored = ignore(fname)
+                if ignored:
+                    ignorelistappend(fname)
+                if (matchalways or matchfn(fname)) and not ignored:
+                    results[fname] = entry
         elif fname in dmap and (matchalways or matchfn(fname)):
             results[fname] = None
 
@@ -567,8 +584,9 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
             entry = dmap.get(f, None)
             if entry and entry[0] == "?":
                 droplistappend(f)
-    # The droplist needs to match setlastclock()
+    # The droplist and ignorelist need to match setlastclock()
     state.setdroplist(droplist)
+    state.setignorelist(ignorelist)
 
     for s in subrepos:
         del results[s]

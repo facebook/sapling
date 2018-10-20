@@ -33,6 +33,7 @@ class state(object):
         self.timeout = float(self._ui.config("fsmonitor", "timeout"))
         self._repo = repo
         self._droplist = []
+        self._ignorelist = []
 
     @property
     def _usetreestate(self):
@@ -124,6 +125,11 @@ class state(object):
         """
         self._droplist = droplist
 
+    def setignorelist(self, ignorelist):
+        """set a list of files that are found ignored when processing notefiles"""
+        if self._ui.configbool("fsmonitor", "track-ignore-files"):
+            self._ignorelist = ignorelist
+
     def set(self, clock, ignorehash, notefiles):
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
             self._ui.log(
@@ -140,6 +146,9 @@ class state(object):
             self._droplist = []
             for path in notefiles:
                 changed |= ds.needcheck(path)
+            for path in self._ignorelist:
+                changed |= ds.needcheck(path)
+            self._ignorelist = []
             # Avoid updating dirstate frequently if nothing changed.
             # But do update dirstate if the clock is reset to None, or is
             # moving away from None.
