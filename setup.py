@@ -641,6 +641,12 @@ class hgbuildscripts(build_scripts):
             dest = os.path.join(self.build_dir, "chg")
             cc.link_executable(objs, dest)
 
+        if havefanotify:
+            cc = new_compiler()
+            objs = cc.compile(glob.glob("contrib/whochanges/*.c"), debug=True)
+            dest = os.path.join(self.build_dir, "whochanges")
+            cc.link_executable(objs, dest)
+
         return build_scripts.run(self)
 
     def copy_scripts(self):
@@ -1254,6 +1260,18 @@ for plat, macro, code in [
 ]:
     if re.search(plat, sys.platform) and cancompile(new_compiler(), code):
         osutil_cflags.append("-DHAVE_%s" % macro)
+
+if "linux" in sys.platform and cancompile(
+    new_compiler(),
+    """
+     #include <fcntl.h>
+     #include <sys/fanotify.h>
+     int main() { return fanotify_init(0, 0); }""",
+):
+    havefanotify = True
+else:
+    havefanotify = False
+
 
 if sys.platform == "darwin":
     osutil_ldflags += ["-framework", "ApplicationServices"]
