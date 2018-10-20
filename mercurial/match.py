@@ -284,6 +284,57 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
     return kindpats
 
 
+def _testrefastpath(repat):
+    """Test if a re pattern can use fast path.
+
+    That is, for every "$A/$B" path the pattern matches, "$A" must also be
+    matched,
+
+    Return True if we're sure it is. Return False otherwise.
+    """
+    # XXX: It's very hard to implement this. These are what need to be
+    # supported in production and tests. Very hacky. But we plan to get rid
+    # of re matchers eventually.
+
+    # Rules like "(?!experimental/)"
+    if repat.startswith("(?!") and repat.endswith(")") and repat.count(")") == 1:
+        return True
+
+    # Rules used in doctest
+    if repat == "(i|j)$":
+        return True
+
+    return False
+
+
+def _globpatsplit(pat):
+    """Split a glob pattern. Return a list.
+
+    A naive version is "path.split("/")". This function handles more cases, like
+    "{*,{a,b}*/*}".
+
+    >>> _globpatsplit("*/**/x/{a,b/c}")
+    ['*', '**', 'x', '{a,b/c}']
+    """
+    result = []
+    buf = ""
+    parentheses = 0
+    for ch in pat:
+        if ch == "{":
+            parentheses += 1
+        elif ch == "}":
+            parentheses -= 1
+        if parentheses == 0 and ch == "/":
+            if buf:
+                result.append(buf)
+                buf = ""
+        else:
+            buf += ch
+    if buf:
+        result.append(buf)
+    return result
+
+
 class _tree(dict):
     """A tree intended to answer "visitdir" questions with more efficient
     answers (ex. return "all" or False if possible).
@@ -294,28 +345,52 @@ class _tree(dict):
         # unconditionally.
         self.matchrecursive = False
         # If True, avoid entering subdirectories, and return "unsure" for
-        # everything. This is used when regexp or glob patterns (ex. *.c) are
-        # used.
+        # everything. This is set to True when complex re patterns (potentially
+        # including "/") are used.
         self.unsurerecursive = False
+        # Patterns for matching paths in this directory.
+        self._kindpats = []
+        # Glob patterns used to match parent directories of another glob
+        # pattern.
+        self._globdirpats = []
         super(_tree, self).__init__(*args, **kwargs)
 
-    def insert(self, path, matchrecursive=True, unsurerecursive=False):
+    def insert(self, path, matchrecursive=True, globpats=None, repats=None):
         """Insert a directory path to this tree.
 
         If matchrecursive is True, mark the directory as unconditionally
         include files and subdirs recursively.
 
-        If unsurerecursive is True, but matchrecursive is False, mark the
-        directory as dynamically matched by advanced patterns (ex. not just
-        static paths, but glob patterns including "*", or regex patterns).
+        If globpats or repats are specified, append them to the patterns being
+        applied at this directory. The tricky part is those patterns can match
+        "x/y/z" and visit("x"), visit("x/y") need to return True, while we
+        still want visit("x/a") to return False.
         """
         if path == "":
             self.matchrecursive |= matchrecursive
-            self.unsurerecursive |= unsurerecursive
-            return self
+            if globpats:
+                # Need to match parent directories too.
+                for pat in globpats:
+                    components = _globpatsplit(pat)
+                    parentpat = ""
+                    for comp in components[:-1]:
+                        if parentpat:
+                            parentpat += "/"
+                        parentpat += comp
+                        if "/" in comp:
+                            # Giving up - fallback to slow paths.
+                            self.unsurerecursive = True
+                        self._globdirpats.append(parentpat)
+                self._kindpats += [("glob", pat, "") for pat in globpats]
+            if repats:
+                if not all(map(_testrefastpath, repats)):
+                    # Giving up - fallback to slow paths.
+                    self.unsurerecursive = True
+                self._kindpats += [("re", pat, "") for pat in repats]
+            return
 
         subdir, rest = self._split(path)
-        self.setdefault(subdir, _tree()).insert(rest, matchrecursive, unsurerecursive)
+        self.setdefault(subdir, _tree()).insert(rest, matchrecursive, globpats, repats)
 
     def visitdir(self, path):
         """Similar to matcher.visitdir"""
@@ -328,12 +403,30 @@ class _tree(dict):
             # Some code paths passes "." here
             return True
 
+        if self._kindpats and self._compiledpats(path):
+            return True
+
+        if self._globdirpats and self._compileddirpats(path):
+            return True
+
         subdir, rest = self._split(path)
         subtree = self.get(subdir)
         if subtree is None:
             return False
         else:
             return subtree.visitdir(rest)
+
+    @util.propertycache
+    def _compiledpats(self):
+        pat, matchfunc = _buildregexmatch(self._kindpats, "")
+        return matchfunc
+
+    @util.propertycache
+    def _compileddirpats(self):
+        pat, matchfunc = _buildregexmatch(
+            [("glob", p, "") for p in self._globdirpats], "$"
+        )
+        return matchfunc
 
     def _split(self, path):
         if "/" in path:
@@ -343,6 +436,33 @@ class _tree(dict):
         if not subdir:
             raise error.ProgrammingError("path cannot be absolute")
         return subdir, rest
+
+
+def _remainingpats(pat, prefix):
+    """list of patterns with prefix stripped
+
+    >>> _remainingpats("a/b/c", "")
+    ['a/b/c']
+    >>> _remainingpats("a/b/c", "a")
+    ['b/c']
+    >>> _remainingpats("a/b/c", "a/b")
+    ['c']
+    >>> _remainingpats("a/b/c", "a/b/c")
+    []
+    >>> _remainingpats("", "")
+    []
+    """
+    if prefix:
+        if prefix == pat:
+            return []
+        else:
+            assert pat[len(prefix)] == "/"
+            return [pat[len(prefix) + 1 :]]
+    else:
+        if pat:
+            return [pat]
+        else:
+            return []
 
 
 def _buildvisitdir(kindpats):
@@ -359,6 +479,8 @@ def _buildvisitdir(kindpats):
     ...     ('glob', 'e/**/*.c', ''),
     ...     ('re', '^f/(?!g)', ''), # no "$", only match prefix
     ...     ('re', '^h/(i|j)$', ''),
+    ...     ('glob', 'i/a*/b*/c*', ''),
+    ...     ('glob', 'i/a5/b7/d', ''),
     ... ])
     >>> t('a')
     True
@@ -369,12 +491,14 @@ def _buildvisitdir(kindpats):
     >>> t('c')
     True
     >>> t('c/d')
-    True
+    False
     >>> t('c/rc.d')
     True
     >>> t('c/rc.d/foo')
     True
     >>> t('e')
+    True
+    >>> t('e/a')
     True
     >>> t('e/a/b.c')
     True
@@ -383,11 +507,11 @@ def _buildvisitdir(kindpats):
     >>> t('f')
     True
     >>> t('f/g')
-    True
+    False
     >>> t('f/g2')
-    True
+    False
     >>> t('f/g/a')
-    True
+    False
     >>> t('f/h')
     True
     >>> t('f/h/i')
@@ -395,9 +519,21 @@ def _buildvisitdir(kindpats):
     >>> t('h/i')
     True
     >>> t('h/i/k')
-    True
+    False
     >>> t('h/k')
+    False
+    >>> t('i')
     True
+    >>> t('i/a1')
+    True
+    >>> t('i/b2')
+    False
+    >>> t('i/a/b2/c3')
+    True
+    >>> t('i/a/b2/d4')
+    False
+    >>> t('i/a5/b7/d')
+    'all'
     >>> t('z')
     False
     """
@@ -411,9 +547,10 @@ def _buildvisitdir(kindpats):
                 components.append(p)
             prefix = "/".join(components)
             matchrecursive = prefix == pat
-            unsurerecursive = not matchrecursive
             tree.insert(
-                prefix, matchrecursive=matchrecursive, unsurerecursive=unsurerecursive
+                prefix,
+                matchrecursive=matchrecursive,
+                globpats=_remainingpats(pat, prefix),
             )
         elif kind == "re":
             # Still try to get a plain prefix from the regular expression so we
@@ -428,7 +565,9 @@ def _buildvisitdir(kindpats):
                     break
                 components.append(p)
             prefix = "/".join(components)
-            tree.insert(prefix, matchrecursive=False, unsurerecursive=True)
+            tree.insert(
+                prefix, matchrecursive=False, repats=_remainingpats(pat, prefix)
+            )
         else:
             # Unsupported kind
             return None
