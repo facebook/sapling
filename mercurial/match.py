@@ -404,7 +404,16 @@ class _tree(dict):
             return True
 
         if self._kindpats and self._compiledpats(path):
-            return True
+            # XXX: This is incorrect. But re patterns are already used in
+            # production. We should kill them!
+            # Need to test "if every string starting with 'path' matches".
+            # Obviously it's impossible to test *every* string with the
+            # standard regex API, therefore pick a random strange path to test
+            # it approximately.
+            if self._compiledpats("%s/*/_/-/0/*" % path):
+                return "all"
+            else:
+                return True
 
         if self._globdirpats and self._compileddirpats(path):
             return True
@@ -493,15 +502,15 @@ def _buildvisitdir(kindpats):
     >>> t('c/d')
     False
     >>> t('c/rc.d')
-    True
+    'all'
     >>> t('c/rc.d/foo')
-    True
+    'all'
     >>> t('e')
     True
     >>> t('e/a')
     True
     >>> t('e/a/b.c')
-    True
+    'all'
     >>> t('e/a/b.d')
     True
     >>> t('f')
@@ -513,9 +522,9 @@ def _buildvisitdir(kindpats):
     >>> t('f/g/a')
     False
     >>> t('f/h')
-    True
+    'all'
     >>> t('f/h/i')
-    True
+    'all'
     >>> t('h/i')
     True
     >>> t('h/i/k')
@@ -529,7 +538,7 @@ def _buildvisitdir(kindpats):
     >>> t('i/b2')
     False
     >>> t('i/a/b2/c3')
-    True
+    'all'
     >>> t('i/a/b2/d4')
     False
     >>> t('i/a5/b7/d')
