@@ -478,13 +478,44 @@ class treestatemap(object):
 
     @property
     def nonnormalset(self):
+        return self.nonnormalsetfiltered(None)
+
+    def nonnormalsetfiltered(self, dirfilter):
+        """Calculate nonnormalset with a directory filter applied to unknown
+        (untracked, "?") files.
+
+        The directory fitler is usually the ignore filter. Since treestate only
+        tracks "?" files with fsmonitor, dirfilter makes less sense for
+        non-fsmonitor usecases.
+        """
         # not normal: hg dirstate state != 'n', or mtime == -1 (NEED_CHECK)
         tree = self._tree
-        needcheck = tree.walk(treestate.NEED_CHECK, 0)
+        unknown = tree.walk(
+            treestate.NEED_CHECK,
+            treestate.EXIST_P1 | treestate.EXIST_P2 | treestate.EXIST_NEXT,
+            dirfilter,
+        )
+        normalneedcheck1 = tree.walk(
+            treestate.NEED_CHECK | treestate.EXIST_P1 | treestate.EXIST_NEXT,
+            treestate.EXIST_P2,
+        )
+        normalneedcheck2 = tree.walk(
+            treestate.NEED_CHECK | treestate.EXIST_P2 | treestate.EXIST_NEXT,
+            treestate.EXIST_P1,
+        )
         merged = tree.walk(treestate.EXIST_P1 | treestate.EXIST_P2, 0)
         added = tree.walk(treestate.EXIST_NEXT, treestate.EXIST_P1 | treestate.EXIST_P2)
-        removed = tree.walk(0, treestate.EXIST_NEXT)
-        return set(needcheck + merged + added + removed)
+        removed1 = tree.walk(treestate.EXIST_P1, treestate.EXIST_NEXT)
+        removed2 = tree.walk(treestate.EXIST_P2, treestate.EXIST_NEXT)
+        return set(
+            unknown
+            + normalneedcheck1
+            + normalneedcheck2
+            + merged
+            + added
+            + removed1
+            + removed2
+        )
 
     @property
     def otherparentset(self):

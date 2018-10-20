@@ -346,7 +346,17 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         # for better performance, directly access the inner dirstate map if the
         # standard dirstate implementation is in use.
         dmap = dmap._map
-    nonnormalset = self._map.nonnormalset
+    if "treestate" in self._repo.requirements:
+        # treestate has a fast path to filter out ignored directories.
+        ignorevisitdir = self._ignore.visitdir
+
+        def dirfilter(path):
+            result = ignorevisitdir(path)
+            return result == "all"
+
+        nonnormalset = self._map.nonnormalsetfiltered(dirfilter)
+    else:
+        nonnormalset = self._map.nonnormalset
     self._ui.log(
         "fsmonitor", "clock = %r len(nonnormal) = %d" % (clock, len(nonnormalset))
     )
