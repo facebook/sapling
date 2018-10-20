@@ -284,6 +284,157 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
     return kindpats
 
 
+class _tree(dict):
+    """A tree intended to answer "visitdir" questions with more efficient
+    answers (ex. return "all" or False if possible).
+    """
+
+    def __init__(self, *args, **kwargs):
+        # If True, avoid entering subdirectories, and match everything recursively,
+        # unconditionally.
+        self.matchrecursive = False
+        # If True, avoid entering subdirectories, and return "unsure" for
+        # everything. This is used when regexp or glob patterns (ex. *.c) are
+        # used.
+        self.unsurerecursive = False
+        super(_tree, self).__init__(*args, **kwargs)
+
+    def insert(self, path, matchrecursive=True, unsurerecursive=False):
+        """Insert a directory path to this tree.
+
+        If matchrecursive is True, mark the directory as unconditionally
+        include files and subdirs recursively.
+
+        If unsurerecursive is True, but matchrecursive is False, mark the
+        directory as dynamically matched by advanced patterns (ex. not just
+        static paths, but glob patterns including "*", or regex patterns).
+        """
+        if path == "":
+            self.matchrecursive |= matchrecursive
+            self.unsurerecursive |= unsurerecursive
+            return self
+
+        subdir, rest = self._split(path)
+        self.setdefault(subdir, _tree()).insert(rest, matchrecursive, unsurerecursive)
+
+    def visitdir(self, path):
+        """Similar to matcher.visitdir"""
+        if self.matchrecursive:
+            return "all"
+        elif self.unsurerecursive:
+            return True
+
+        if path in {"", "."}:
+            # Some code paths passes "." here
+            return True
+
+        subdir, rest = self._split(path)
+        subtree = self.get(subdir)
+        if subtree is None:
+            return False
+        else:
+            return subtree.visitdir(rest)
+
+    def _split(self, path):
+        if "/" in path:
+            subdir, rest = path.split("/", 1)
+        else:
+            subdir, rest = path, ""
+        if not subdir:
+            raise error.ProgrammingError("path cannot be absolute")
+        return subdir, rest
+
+
+def _buildvisitdir(kindpats):
+    """Try to build an efficient visitdir function
+
+    Return a visitdir function if it's built. Otherwise return None
+    if there are unsupported patterns.
+
+    >>> _buildvisitdir([('include', 'foo', '')])
+    >>> _buildvisitdir([('relglob', 'foo', '')])
+    >>> t = _buildvisitdir([
+    ...     ('glob', 'a/b', ''),
+    ...     ('glob', 'c/*.d', ''),
+    ...     ('glob', 'e/**/*.c', ''),
+    ...     ('re', '^f/(?!g)', ''), # no "$", only match prefix
+    ...     ('re', '^h/(i|j)$', ''),
+    ... ])
+    >>> t('a')
+    True
+    >>> t('a/b')
+    'all'
+    >>> t('a/b/c')
+    'all'
+    >>> t('c')
+    True
+    >>> t('c/d')
+    True
+    >>> t('c/rc.d')
+    True
+    >>> t('c/rc.d/foo')
+    True
+    >>> t('e')
+    True
+    >>> t('e/a/b.c')
+    True
+    >>> t('e/a/b.d')
+    True
+    >>> t('f')
+    True
+    >>> t('f/g')
+    True
+    >>> t('f/g2')
+    True
+    >>> t('f/g/a')
+    True
+    >>> t('f/h')
+    True
+    >>> t('f/h/i')
+    True
+    >>> t('h/i')
+    True
+    >>> t('h/i/k')
+    True
+    >>> t('h/k')
+    True
+    >>> t('z')
+    False
+    """
+    tree = _tree()
+    for kind, pat, _source in kindpats:
+        if kind == "glob":
+            components = []
+            for p in pat.split("/"):
+                if "[" in p or "{" in p or "*" in p or "?" in p:
+                    break
+                components.append(p)
+            prefix = "/".join(components)
+            matchrecursive = prefix == pat
+            unsurerecursive = not matchrecursive
+            tree.insert(
+                prefix, matchrecursive=matchrecursive, unsurerecursive=unsurerecursive
+            )
+        elif kind == "re":
+            # Still try to get a plain prefix from the regular expression so we
+            # can still have fast paths.
+            if pat.startswith("^"):
+                # "re" already matches from the beginning, unlike "relre"
+                pat = pat[1:]
+            components = []
+            for p in pat.split("/"):
+                if re.escape(p) != p:
+                    # contains special characters
+                    break
+                components.append(p)
+            prefix = "/".join(components)
+            tree.insert(prefix, matchrecursive=False, unsurerecursive=True)
+        else:
+            # Unsupported kind
+            return None
+    return tree.visitdir
+
+
 class basematcher(object):
     def __init__(self, root, cwd, badfn=None, relativeuipath=True):
         self._root = root
@@ -509,6 +660,10 @@ class includematcher(basematcher):
         # That is, files under that directory are included. But not
         # subdirectories.
         self._dirs = set(dirs)
+        # Try to use a more efficient visitdir implementation
+        visitdir = _buildvisitdir(kindpats)
+        if visitdir:
+            self.visitdir = visitdir
 
     def visitdir(self, dir):
         if self._prefix and dir in self._roots:
