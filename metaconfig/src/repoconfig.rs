@@ -11,7 +11,7 @@ use blobrepo::{BlobRepo, ManifoldArgs};
 use bookmarks::Bookmark;
 use bytes::Bytes;
 use errors::*;
-use failure::FutureFailureErrorExt;
+use failure::chain::ChainExt;
 use futures::{finished, future, Future};
 use futures::Stream;
 use futures_ext::FutureExt;
@@ -191,9 +191,11 @@ impl RepoConfigs {
                 .and_then(move |changeset| {
                     repo.get_manifest_by_nodeid(&changeset.manifestid().clone())
                 })
-                .context("failed to get manifest from changeset")
+                .chain_err("failed to get manifest from changeset")
                 .from_err()
-                .and_then(|manifest| Self::read_manifest(&manifest)),
+                .and_then(|manifest| Self::read_manifest(&manifest))
+                .chain_err("While reading config repo")
+                .from_err(),
         )
     }
 
