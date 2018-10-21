@@ -27,10 +27,6 @@ import re
 from mercurial import error, extensions, fancyopts, registrar, util
 from mercurial.i18n import _
 
-from . import pager
-
-
-pager.attended.append("githelp")
 
 cmdtable = {}
 command = registrar.command(cmdtable)

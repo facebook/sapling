@@ -17,7 +17,11 @@ Not if turned off:
 
   $ hg githelp --config extensions.githelp=! -- git reset HEAD
   hg: unknown command 'githelp'
-  (did you mean help?)
+  'githelp' is provided by the following extension:
+  
+      githelp       try mapping git commands to Mercurial commands
+  
+  (use 'hg help extensions' for information on enabling extensions)
   [255]
 
 Or overriden by a different path:

@@ -129,14 +129,6 @@ output:
   $ hg log -rnull -T '{get(peerurls, "insecure")}\n'
   http://foo:insecure@example.com/
 
-zeroconf wraps ui.configitems(), which shouldn't crash at least:
-
-  $ hg paths --config extensions.zeroconf=
-  dupe = $TESTTMP/b#tip
-  dupe:pushurl = https://example.com/dupe
-  expand = $TESTTMP/a/$SOMETHING/bar
-  insecure = http://foo:***@example.com/
-
   $ cd ..
 
 sub-options for an undeclared path are ignored

@@ -677,15 +677,6 @@ hide outer repo
 
   $ echo 'debugextension = !' >> $HGRCPATH
 
-Asking for help about a deprecated extension should do something useful:
-
-  $ hg help glog
-  'glog' is provided by the following extension:
-  
-      graphlog      command to view revision graphs from a shell (DEPRECATED)
-  
-  (use 'hg help extensions' for information on enabling extensions)
-
 Extension module help vs command help:
 
   $ echo 'extdiff =' >> $HGRCPATH

@@ -243,7 +243,6 @@ Test extension help:
   
       Enabled extensions:
   
-       children      command to display child changesets (DEPRECATED)
        conflictinfo
        debugshell    a python shell with repo, changelog & manifest objects
        errorredirect
@@ -260,12 +259,8 @@ Test extension help:
        absorb        apply working directory changes to changesets
        amend         extends the existing commit amend functionality
        arcdiff       (no help text available)
-       backups       display recently made backups to recover stripped
-                     changesets
        blackbox      log repository events to a blackbox for debugging
-       bundle2hooks  (no help text available)
        catnotate     (no help text available)
-       censor        erase file content at a given revision
        checkmessagehook
                      (no help text available)
        chistedit
@@ -292,13 +287,10 @@ Test extension help:
        extdiff       command to allow external programs to compare revisions
        extorder
        extutil       (no help text available)
-       factotum      http authentication with factotum
        fastannotate  yet another annotate implementation that might be faster
        fastlog
        fastmanifest  a treemanifest disk cache for speeding up manifest
                      comparison
-       fastpartialmatch
-                     extension that makes node prefix lookup faster
        fbconduit     (no help text available)
        fbhistedit    extends the existing histedit functionality
        fixcorrupt    (no help text available)
@@ -314,7 +306,6 @@ Test extension help:
        grpcheck      check if the user is in specified groups
        hgevents      publishes state-enter and state-leave events to Watchman
        hggit         push and pull from a Git server
-       hgk           browse the repository in a graphical way
        hgsql         sync hg repos with MySQL
        hgsubversion  integration with Subversion repositories
        hiddenerror   configurable error messages for accessing hidden changesets
@@ -338,8 +329,6 @@ Test extension help:
        p4fastimport  p4fastimport - A fast importer from Perforce to Mercurial
        patchbomb     command to send changesets as (a series of) patch emails
        perfsuite     (no help text available)
-       perftweaks    extension for tweaking Mercurial features to improve
-                     performance.
        phabdiff      (no help text available)
        phabstatus    (no help text available)
        phrevset      provides support for Phabricator revsets
@@ -350,10 +339,8 @@ Test extension help:
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
                      for help
-       relink        recreates hardlinks between repository clones
        remotefilelog
                      minimize and speed up large repositories
-       remoteid      (no help text available)
        remotenames   mercurial extension for improving client/server workflows
        repogenerator
                      (no help text available)
@@ -374,11 +361,8 @@ Test extension help:
        tweakdefaults
                      user friendly defaults
        undo          (no help text available)
-       upgradegeneraldelta
-                     upgrade manifests to generaldelta in-place
        whereami      (no help text available)
        win32mbcs     allow the use of MBCS paths with problematic encodings
-       zeroconf      discover and advertise repositories on the local network
 
 
 Verify that extension keywords appear in help templates
@@ -1500,14 +1484,14 @@ Test -e / -c / -k combinations
   Commands:
   $ hg help -e|egrep '^[A-Z].*:|^ debug'
   Extensions:
-   debugcommitmessage  (no help text available)
-   debugshell          a python shell with repo, changelog & manifest objects
+   debugcommitmessage (no help text available)
+   debugshell         a python shell with repo, changelog & manifest objects
   $ hg help -k|egrep '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
-   debugcommitmessage  (no help text available)
-   debugshell          a python shell with repo, changelog & manifest objects
+   debugcommitmessage (no help text available)
+   debugshell         a python shell with repo, changelog & manifest objects
   Extension Commands:
   $ hg help -c schemes
   abort: no such help topic: schemes
@@ -1558,7 +1542,6 @@ Test keyword search help
   
    clonebundles advertise pre-generated bundles to seed clones
    prefixedname matched against word "clone"
-   relink       recreates hardlinks between repository clones
 
 Test unfound topic
 

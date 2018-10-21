@@ -14,7 +14,6 @@ Setup the server
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=
   > treemanifest=
   > [treemanifest]
   > server=True

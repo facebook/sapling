@@ -26,18 +26,30 @@ _order = []
 #
 # (If you permanently sunset an extension, add it here.)
 _ignoreextensions = {
+    "backups",
     "bookmarks",
+    "bundle2hooks",
+    "censor",
+    "children",
     "color",
+    "factotum",
+    "fastpartialmatch",
     "fbsparse",
+    "graphlog",
     "hbisect",
     "hgcia",
+    "hgk",
     "inotify",
     "interhg",
     "mq",
     "obsshelve",
     "parentrevspec",
     "progress",
+    "releasenotes",
+    "relink",
+    "remoteid",
     "treedirstate",
+    "upgradegeneraldelta",
 }
 _blacklist = {"extlib"}
 
