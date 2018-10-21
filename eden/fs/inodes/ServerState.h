@@ -15,7 +15,11 @@
 
 #include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/fuse/EdenStats.h"
+#ifdef EDEN_WIN
+#include "eden/win/fs/utils/Stub.h" // @manual
+#else
 #include "eden/fs/fuse/privhelper/UserInfo.h"
+#endif
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
 #include "eden/fs/utils/PathFuncs.h"
 

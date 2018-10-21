@@ -16,6 +16,10 @@
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/utils/PathFuncs.h"
 
+#ifdef EDEN_WIN
+#include "eden/win/fs/utils/Stub.h" //@manual
+#endif
+
 namespace facebook {
 namespace eden {
 
@@ -62,6 +66,7 @@ class CachedParsedFileMonitor {
    * failed)
    */
   folly::Expected<T, int> getFileContents() {
+#ifndef EDEN_WIN
     fileChangeMonitor_.invokeIfUpdated(
         [this](folly::File&& f, int errorNum, AbsolutePathPiece filePath) {
           processUpdatedFile(std::move(f), errorNum, filePath);
@@ -70,6 +75,9 @@ class CachedParsedFileMonitor {
       return folly::makeUnexpected<int>((int)lastErrno_);
     }
     return parsedData_;
+#else
+    NOT_IMPLEMENTED();
+#endif // !EDEN_WIN
   }
 
   void processUpdatedFile(

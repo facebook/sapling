@@ -104,17 +104,17 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);EDEN_WIN;EDEN_WIN;-D_SCL_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;EDEN_WIN_NOMONONOKE;GLOG_NO_ABBREVIATED_SEVERITIES</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;EDEN_WIN;_SCL_SECURE_NO_WARNINGS;EDEN_WIN_NOMONONOKE;GLOG_NO_ABBREVIATED_SEVERITIES;_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <LanguageStandard>stdcpp14</LanguageStandard>
-      <AdditionalIncludeDirectories>D:\edenwin64\folly;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>-DEDEN_WIN</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>D:\edenwin64\stubs;$(SolutionDir)\build\thrift;D:\edenwin64\pklib\include;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>D:\edenwin64\folly\Release;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)build\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\edenwin64\pklib\lib;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)build\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;wangle.lib;mstch.lib;protocol.lib;thriftprotocol.lib;thrift.lib;thrift-core.lib;thriftcpp2.lib;thriftfrozen2.lib;concurrency.lib;transport.lib;security.lib;yarpl.lib;fizz.lib;async.lib;compiler_ast.lib;compiler_base.lib;compiler_generators.lib;compiler_lib.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -141,29 +141,48 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions);EDEN_WIN;-D_SCL_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;EDEN_WIN_NOMONONOKE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;EDEN_WIN;_SCL_SECURE_NO_WARNINGS;EDEN_WIN_NOMONONOKE;_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
-      <LanguageStandard>stdcpp14</LanguageStandard>
-      <AdditionalIncludeDirectories>D:\edenwin64\folly;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>-DEDEN_WIN</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>D:\edenwin64\stubs;$(SolutionDir)\build\thrift;D:\edenwin64\pklib\include;D:\edenwin64\vcpkg\installed\x64-windows\include;$(SolutionDir)\..\..\;$(SolutionDir)\..\..\scm\hg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>
+      </AdditionalOptions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>D:\edenwin64\folly\Release;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)build\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\edenwin64\pklib\lib;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)build\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;wangle.lib;mstch.lib;protocol.lib;thriftprotocol.lib;thrift.lib;thrift-core.lib;thriftcpp2.lib;thriftfrozen2.lib;concurrency.lib;transport.lib;security.lib;yarpl.lib;fizz.lib;async.lib;compiler_ast.lib;compiler_base.lib;compiler_generators.lib;compiler_lib.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\fs\config\ClientConfig.cpp" />
+    <ClCompile Include="..\..\fs\config\EdenConfig.cpp" />
+    <ClCompile Include="..\..\fs\config\FileChangeMonitor.cpp" />
+    <ClCompile Include="..\..\fs\fuse\EdenStats.cpp" />
+    <ClCompile Include="..\..\fs\inodes\ServerState.cpp" />
+    <ClCompile Include="..\..\fs\journal\Journal.cpp" />
+    <ClCompile Include="..\..\fs\journal\JournalDelta.cpp" />
+    <ClCompile Include="..\..\fs\journal\JournalDeltaPtr.cpp" />
     <ClCompile Include="..\..\fs\model\git\GitBlob.cpp" />
+    <ClCompile Include="..\..\fs\model\git\GitIgnore.cpp" />
+    <ClCompile Include="..\..\fs\model\git\GitIgnoreFileParser.cpp" />
+    <ClCompile Include="..\..\fs\model\git\GitIgnorePattern.cpp" />
+    <ClCompile Include="..\..\fs\model\git\GitIgnoreStack.cpp" />
     <ClCompile Include="..\..\fs\model\git\GitTree.cpp" />
+    <ClCompile Include="..\..\fs\model\git\GlobMatcher.cpp" />
     <ClCompile Include="..\..\fs\model\Hash.cpp" />
     <ClCompile Include="..\..\fs\model\ParentCommits.cpp" />
     <ClCompile Include="..\..\fs\model\Tree.cpp" />
     <ClCompile Include="..\..\fs\model\TreeEntry.cpp" />
     <ClCompile Include="..\..\fs\service\EdenCPUThreadPool.cpp" />
+    <ClCompile Include="..\..\fs\service\EdenError.cpp" />
+    <ClCompile Include="..\..\fs\service\EdenServer.cpp" />
+    <ClCompile Include="..\..\fs\service\EdenServiceHandler.cpp" />
+    <ClCompile Include="..\..\fs\service\oss\RunServer.cpp" />
+    <ClCompile Include="..\..\fs\service\StreamingSubscriber.cpp" />
     <ClCompile Include="..\..\fs\sqlite\Sqlite.cpp" />
     <ClCompile Include="..\..\fs\store\BackingStore.cpp" />
     <ClCompile Include="..\..\fs\store\EmptyBackingStore.cpp" />
@@ -181,19 +200,59 @@
     <ClCompile Include="..\..\fs\utils\PathFuncs.cpp" />
     <ClCompile Include="..\..\fs\utils\TimeUtil.cpp" />
     <ClCompile Include="..\..\fs\utils\UnboundedQueueExecutor.cpp" />
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.cpp" />
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.cpp" />
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_processmap_binary.cpp" />
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_processmap_compact.cpp" />
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_constants.cpp" />
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_data.cpp" />
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenServiceAsyncClient.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService_processmap_binary.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService_processmap_compact.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_constants.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_data.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenServiceAsyncClient.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_processmap_binary.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_processmap_compact.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_constants.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_data.cpp" />
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.cpp" />
+    <ClCompile Include="D:\edenwin64\stubs\common\stats\ServiceData.cpp" />
     <ClCompile Include="service\main.cpp" />
     <ClCompile Include="utils\Pipe.cpp" />
     <ClCompile Include="utils\Subprocess.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\fs\config\CachedParsedFileMonitor.h" />
+    <ClInclude Include="..\..\fs\config\ClientConfig.h" />
+    <ClInclude Include="..\..\fs\config\EdenConfig.h" />
+    <ClInclude Include="..\..\fs\config\filechangemonitor.h" />
+    <ClInclude Include="..\..\fs\fuse\EdenStats.h" />
+    <ClInclude Include="..\..\fs\inodes\ServerState.h" />
+    <ClInclude Include="..\..\fs\journal\Journal.h" />
+    <ClInclude Include="..\..\fs\journal\JournalDelta.h" />
+    <ClInclude Include="..\..\fs\journal\JournalDeltaPtr.h" />
     <ClInclude Include="..\..\fs\model\Blob.h" />
     <ClInclude Include="..\..\fs\model\git\GitBlob.h" />
+    <ClInclude Include="..\..\fs\model\git\GitIgnore.h" />
+    <ClInclude Include="..\..\fs\model\git\GitIgnoreFileParser.h" />
+    <ClInclude Include="..\..\fs\model\git\GitIgnorePattern.h" />
+    <ClInclude Include="..\..\fs\model\git\GitIgnoreStack.h" />
     <ClInclude Include="..\..\fs\model\git\GitTree.h" />
+    <ClInclude Include="..\..\fs\model\git\GlobMatcher.h" />
     <ClInclude Include="..\..\fs\model\Hash.h" />
     <ClInclude Include="..\..\fs\model\ParentCommits.h" />
     <ClInclude Include="..\..\fs\model\Tree.h" />
     <ClInclude Include="..\..\fs\model\TreeEntry.h" />
     <ClInclude Include="..\..\fs\service\EdenCPUThreadPool.h" />
+    <ClInclude Include="..\..\fs\service\EdenError.h" />
+    <ClInclude Include="..\..\fs\service\EdenServer.h" />
+    <ClInclude Include="..\..\fs\service\EdenServiceHandler.h" />
+    <ClInclude Include="..\..\fs\service\StreamingSubscriber.h" />
     <ClInclude Include="..\..\fs\sqlite\Sqlite.h" />
     <ClInclude Include="..\..\fs\store\BackingStore.h" />
     <ClInclude Include="..\..\fs\store\BlobMetadata.h" />
@@ -213,10 +272,44 @@
     <ClInclude Include="..\..\fs\utils\PathFuncs.h" />
     <ClInclude Include="..\..\fs\utils\TimeUtil.h" />
     <ClInclude Include="..\..\fs\utils\UnboundedQueueExecutor.h" />
-    <ClInclude Include="Edenwin.h" />
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.h" />
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.h" />
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_custom_protocol.h" />
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_constants.h" />
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_data.h" />
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types.h" />
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types_custom_protocol.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenServiceAsyncClient.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService_custom_protocol.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_constants.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_data.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types_custom_protocol.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenServiceAsyncClient.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_custom_protocol.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_constants.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_data.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.h" />
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types_custom_protocol.h" />
+    <ClInclude Include="D:\edenwin64\pklib\include\thrift\lib\cpp2\protocol\Cpp2Ops.h" />
+    <ClInclude Include="service\StartupLogger.h" />
+    <ClInclude Include="Stub.h" />
     <ClInclude Include="utils\Pipe.h" />
     <ClInclude Include="utils\StringConv.h" />
+    <ClInclude Include="utils\Stub.h" />
     <ClInclude Include="utils\Subprocess.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\fs\service\eden.thrift" />
+    <None Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.tcc" />
+    <None Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types.tcc" />
+    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService.tcc" />
+    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types.tcc" />
+    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.tcc" />
+    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.tcc" />
+    <None Include="D:\edenwin64\pklib\include\thrift\lib\cpp2\protocol\Cpp2Ops.tcc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

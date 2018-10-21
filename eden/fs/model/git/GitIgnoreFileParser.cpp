@@ -25,7 +25,7 @@ folly::Expected<GitIgnore, int> GitIgnoreFileParser::operator()(
   try {
     std::string fileContents;
     if (!folly::readFile(fileDescriptor, fileContents)) {
-      return folly::makeUnexpected<int>((int)errno);
+      return folly::makeUnexpected((int)errno);
     }
     if (folly::trimWhitespace(fileContents).size() > 0) {
       gitIgnore.loadFile(fileContents);
@@ -39,7 +39,7 @@ folly::Expected<GitIgnore, int> GitIgnoreFileParser::operator()(
       XLOG(WARNING) << "error reading file " << filePath
                     << folly::exceptionStr(ex);
     }
-    return folly::makeUnexpected<int>((int)errNum);
+    return folly::makeUnexpected((int)errNum);
   } catch (const std::exception& ex) {
     XLOG(WARNING) << "error reading file " << filePath
                   << folly::exceptionStr(ex);

@@ -29,7 +29,7 @@ EdenStats::EdenStats() {}
 EdenStats::Histogram EdenStats::createHistogram(const std::string& name) {
   return Histogram{this,
                    name,
-                   kBucketSize.count(),
+                   static_cast<size_t>(kBucketSize.count()),
                    kMinValue.count(),
                    kMaxValue.count(),
                    facebook::stats::COUNT,

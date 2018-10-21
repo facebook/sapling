@@ -12,6 +12,10 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/config/FileChangeMonitor.h"
+#ifdef EDEN_WIN
+#include "eden/win/fs/utils/Stub.h" // @manual
+#endif
+
 namespace facebook {
 namespace eden {
 
@@ -92,6 +96,7 @@ FileChangeMonitor::checkIfUpdated(bool noThrottle) {
 }
 
 bool FileChangeMonitor::isChanged() {
+#ifndef EDEN_WIN
   struct stat currentStat;
   int prevStatErrno{statErrno_};
 
@@ -133,6 +138,9 @@ bool FileChangeMonitor::isChanged() {
     return true;
   }
   return false;
+#else
+  NOT_IMPLEMENTED();
+#endif
 }
 
 } // namespace eden

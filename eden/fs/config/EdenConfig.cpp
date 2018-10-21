@@ -19,6 +19,10 @@
 #include <folly/logging/xlog.h>
 #include <array>
 
+#ifdef EDEN_WIN
+#include "eden/win/fs/utils/Stub.h" // @manual
+#endif
+
 using folly::ByteRange;
 using folly::IOBuf;
 using folly::Optional;
@@ -244,6 +248,7 @@ void EdenConfig::setUseMononoke(bool useMononoke, ConfigSource configSource) {
 bool hasConfigFileChanged(
     AbsolutePath configFileName,
     const struct stat* oldStat) {
+#ifndef EDEN_WIN
   bool fileChangeDetected{false};
   struct stat currentStat;
 
@@ -269,6 +274,9 @@ bool hasConfigFileChanged(
     fileChangeDetected = true;
   }
   return fileChangeDetected;
+#else
+  NOT_IMPLEMENTED();
+#endif
 }
 
 bool EdenConfig::hasUserConfigFileChanged() const {

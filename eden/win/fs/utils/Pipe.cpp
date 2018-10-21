@@ -10,6 +10,7 @@
 
 #include "Pipe.h"
 #include <folly/portability/IOVec.h>
+#include <folly/portability/Windows.h>
 #include <stdio.h>
 #include <strsafe.h>
 #include <iostream>

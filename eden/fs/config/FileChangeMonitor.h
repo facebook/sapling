@@ -14,6 +14,10 @@
 #include <chrono>
 #include <functional>
 
+#ifdef EDEN_WIN
+#include "eden/win/fs/utils/Stub.h" //@manual
+#endif
+
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -121,6 +125,7 @@ class FileChangeMonitor {
    * if the monitored file's path has changed.
    */
   void resetToForceChange() {
+#ifndef EDEN_WIN
     // Set values for stat to force changedSinceUpdate() to return TRUE.
     // We use a novel setting to force change to be detected
     memset(&fileStat_, 0, sizeof(struct stat));
@@ -131,6 +136,9 @@ class FileChangeMonitor {
     // Set lastCheck in past so throttle does not apply.
     lastCheck_ = std::chrono::steady_clock::now() - throttleDuration_ -
         std::chrono::seconds{1};
+#else
+    NOT_IMPLEMENTED();
+#endif
   }
 
   AbsolutePath filePath_;

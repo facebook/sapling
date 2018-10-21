@@ -11,9 +11,15 @@
 
 #include <folly/Optional.h>
 #include <folly/dynamic.h>
+#ifdef EDEN_WIN
+#include <folly/portability/SysStat.h>
+#include <folly/portability/SysTypes.h>
+#include <folly/portability/Unistd.h>
+#else
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#endif
 #include <bitset>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"

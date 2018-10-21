@@ -18,8 +18,14 @@
 #include <memory>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/service/EdenServer.h"
+#include "eden/win/fs/service/StartupLogger.h"
 #include "eden/win/fs/utils/StringConv.h"
 #include "folly/io/IOBuf.h"
+
+#ifndef EDEN_WIN
+#error This is a Windows only source file;
+#endif
 // DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 // DEFINE_string(edenDir, "", "The path to the .eden directory");
 // DEFINE_string(
@@ -73,9 +79,9 @@ constexpr StringPiece kSqlitePath{"storage\\sqlite.db"};
 
 std::shared_ptr<LocalStore> localStore_;
 std::shared_ptr<UnboundedQueueExecutor> threadPool_;
-AbsolutePath edenDir_;
-AbsolutePath etcEdenDir_;
-AbsolutePath configPath_;
+AbsolutePathPiece edenDir_ = "c:\\eden\\eden"_abspath;
+AbsolutePathPiece etcEdenDir_ = "c:\\eden\\etcedendir"_abspath;
+AbsolutePathPiece configPath_ = "c:\\eden\\configpath\\.edenrc"_abspath;
 
 shared_ptr<BackingStore> backingStore_;
 unique_ptr<ObjectStore> objectStore_;
@@ -102,12 +108,8 @@ shared_ptr<BackingStore> createBackingStore(
   }
 }
 
-void StartBackingStore() {
-  edenDir_ = facebook::eden::realpath("c:\\eden\\eden");
-  etcEdenDir_ = facebook::eden::realpath("c:\\eden\\etcedendir");
-  configPath_ = facebook::eden::realpath("c:\\eden\\configpath\\.edenrc");
-
-  printf("StartBackingStore\n");
+void startBackingStore() {
+  cout << "StartBackingStore" << endl;
   const auto path = edenDir_ + RelativePathPiece{kSqlitePath};
   XLOG(DBG2) << "opening local Sqlite store " << path;
   localStore_ = make_shared<SqliteLocalStore>(path);
@@ -115,7 +117,7 @@ void StartBackingStore() {
 
   threadPool_ = std::make_shared<EdenCPUThreadPool>();
 
-  printf("CreateBackingStore\n");
+  cout << "CreateBackingStore" << endl;
   backingStore_ = createBackingStore("hg", "c:\\open\\fbsource");
 
   objectStore_ = std::make_unique<ObjectStore>(localStore_, backingStore_);
@@ -124,16 +126,61 @@ void StartBackingStore() {
   // facebook::eden::Hash commitID("777362dde8e574bda92c42816b7df0de0e8aba39");
   facebook::eden::Hash commitID("67f1923706e05421e823effbb51e41770486a5e0");
   // facebook::eden::Hash commitID("240625dabfa3b0b442e4939147de860d5a916459");
-  Future<unique_ptr<const Tree>> futTree =
-      backingStore_->getTreeForCommit(commitID);
 
-  unique_ptr<const Tree> tree = futTree.get();
+  unique_ptr<const Tree> tree = backingStore_->getTreeForCommit(commitID).get();
   cout << "TREE ENTRIES";
 
   for (const auto& entry : tree->getTreeEntries()) {
     cout << entry.getName() << endl;
   }
 }
+
+constexpr folly::StringPiece kDefaultUserConfigFile{".edenrc"};
+constexpr folly::StringPiece kEdenfsConfigFile{"edenfs.rc"};
+
+namespace facebook {
+namespace eden {
+void runServer(const EdenServer& server);
+}
+} // namespace facebook
+
+void startServer() {
+  folly::Optional<EdenServer> server;
+  UserInfo identity;
+  auto privHelper = make_unique<PrivHelper>();
+
+  AbsolutePath userConfigPath =
+      identity.getHomeDirectory() + PathComponentPiece{kDefaultUserConfigFile};
+  AbsolutePath systemConfigDir =
+      facebook::eden::realpath("c:\\eden\\etcedendir");
+  const auto systemConfigPath =
+      systemConfigDir + PathComponentPiece{kEdenfsConfigFile};
+
+  auto edenConfig = std::make_unique<EdenConfig>(
+      identity.getUsername(),
+      identity.getHomeDirectory(),
+      userConfigPath,
+      systemConfigDir,
+      systemConfigPath);
+
+  auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
+  auto startupLogger = std::make_shared<StartupLogger>();
+
+  try {
+    server.emplace(
+        std::move(identity), std::move(privHelper), std::move(edenConfig));
+    prepareFuture = server->prepare(startupLogger);
+
+    // startupLogger->log("Starting Eden");
+  } catch (const std::exception& ex) {
+    cout << "Error: failed to start Eden : " << folly::exceptionStr(ex) << endl;
+    // startupLogger->exitUnsuccessfully(
+    //    EX_SOFTWARE, "error starting edenfs: ", folly::exceptionStr(ex));
+  }
+
+  server->run(runServer);
+}
+
 /////////////////////////////////
 
 int __cdecl main(int argc, char** argv) {
@@ -147,10 +194,11 @@ int __cdecl main(int argc, char** argv) {
   // std::wstring rootPath = argv[1];
   wstring rootPath = L"virtfs";
 
-  XLOG(INFO) << "Mounting the virtual FS at"
+  XLOG(INFO) << "Mounting the virtual FS at: "
              << StringConv::wstringToString(rootPath);
 
-  StartBackingStore();
+  startServer();
+  // startBackingStore();
   // StartFS(rootPath);
 
   return 0;

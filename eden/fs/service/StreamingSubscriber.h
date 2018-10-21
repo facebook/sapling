@@ -9,7 +9,11 @@
  */
 #pragma once
 #include <memory>
+#ifdef EDEN_WIN
+#include "eden/win/fs/EdenMount.h"
+#else
 #include "eden/fs/inodes/EdenMount.h"
+#endif
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 
 namespace facebook {

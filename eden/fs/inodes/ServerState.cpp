@@ -12,7 +12,9 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/config/EdenConfig.h"
+#ifndef EDEN_WIN
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
+#endif
 #include "eden/fs/inodes/TopLevelIgnores.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"

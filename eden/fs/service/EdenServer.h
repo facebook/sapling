@@ -26,10 +26,16 @@
 #include <vector>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/fuse/EdenStats.h"
+#ifdef EDEN_WIN
+#include "eden/win/fs/EdenMount.h"
+#include "eden/win/fs/utils/Stub.h" // @manual
+#else
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/takeover/TakeoverData.h"
+#endif
+
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "folly/experimental/FunctionScheduler.h"
@@ -58,8 +64,9 @@ class EdenServiceHandler;
 class LocalStore;
 class MountInfo;
 class StartupLogger;
+#ifndef EDEN_WIN
 class TakeoverServer;
-
+#endif
 /*
  * EdenServer contains logic for running the Eden main loop.
  *
@@ -368,12 +375,15 @@ class EdenServer : private TakeoverHandler {
 
   folly::Synchronized<MountMap> mountPoints_;
 
+#ifndef EDEN_WIN
   /**
    * A server that waits on a new edenfs process to attempt
    * a graceful restart, taking over our running mount points.
    */
   std::unique_ptr<TakeoverServer> takeoverServer_;
   folly::Promise<TakeoverData> takeoverPromise_;
+
+#endif // !EDEN_WIN
 
   enum class RunState {
     STARTING,

@@ -8,12 +8,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="Win\Lib">
-      <UniqueIdentifier>{bd877be5-c4dd-463b-ac99-b070fbb8f7bc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="gen-cpp2">
-      <UniqueIdentifier>{979c1658-1add-4f1b-8687-621f4cd2a737}</UniqueIdentifier>
-    </Filter>
     <Filter Include="fs">
       <UniqueIdentifier>{0235e41e-2349-4fc1-8da8-70b517abd7ff}</UniqueIdentifier>
     </Filter>
@@ -23,9 +17,8 @@
     <Filter Include="fs\Store">
       <UniqueIdentifier>{597acbd4-a36f-4d4b-916a-3d9370e72e6b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="fs\Store\hg">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="fs\Util">
+      <UniqueIdentifier>{b784f067-e8b9-42ba-9226-5bf9ea3cd828}</UniqueIdentifier>
     </Filter>
     <Filter Include="fs\Model\Git">
       <UniqueIdentifier>{f0165dbe-c908-44b9-9b11-8ec0ffec7d22}</UniqueIdentifier>
@@ -39,34 +32,62 @@
     <Filter Include="fs\Store\Mononoke">
       <UniqueIdentifier>{a35f52c6-bc5e-41b4-9b1d-cfcebc220f1a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Win\Stubs">
+      <UniqueIdentifier>{a003edd9-4d9c-4d7b-83bd-23ec6d5b1d50}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Other">
+      <UniqueIdentifier>{003fda81-816e-482e-b180-0c3887a3a9d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Fuse">
+      <UniqueIdentifier>{a8960569-2bb2-482c-82f2-bb6aa07026a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Config">
+      <UniqueIdentifier>{505aac1b-f4f7-436b-ace6-adb2b97d47fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Store\Git">
+      <UniqueIdentifier>{d87b6a8b-752d-448f-aeca-55f759b7c799}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Store\Hg">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="cpp2">
+      <UniqueIdentifier>{2bc6d501-a9bf-470e-b666-03e87f9e5761}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cpp2\Eden">
+      <UniqueIdentifier>{c9dd7b12-9af7-4d47-b731-4a8ae6e70939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cpp2\Fb303">
+      <UniqueIdentifier>{539d7f02-39ce-4948-863a-cfe6b6881fd9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\Journal">
+      <UniqueIdentifier>{38a5fa69-dc3a-44ca-b06a-ec895e8fa498}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Win\fs">
-      <UniqueIdentifier>{7d7a8023-0973-4d0b-acaf-4b9466055375}</UniqueIdentifier>
+      <UniqueIdentifier>{1c4528eb-cbef-47d8-a9bb-bd24565573c7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Win\fs\service">
-      <UniqueIdentifier>{db8b082b-a455-4f0d-9396-062d9a327742}</UniqueIdentifier>
+    <Filter Include="Win\fs\Utils">
+      <UniqueIdentifier>{bd877be5-c4dd-463b-ac99-b070fbb8f7bc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Win\fs\utils">
-      <UniqueIdentifier>{61acb7ce-8c87-4035-a52d-c1e99325daad}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="fs\Utils">
-      <UniqueIdentifier>{b784f067-e8b9-42ba-9226-5bf9ea3cd828}</UniqueIdentifier>
+    <Filter Include="Win\fs\Service">
+      <UniqueIdentifier>{e5ddd6cf-3c18-445c-a13c-05d39ff5011e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\fs\store\hg\HgBackingStore.cpp">
-      <Filter>fs\Store\hg</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\store\hg\HgImporter.cpp">
-      <Filter>fs\Store\hg</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\store\hg\HgImportPyError.cpp">
-      <Filter>fs\Store\hg</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\store\hg\HgManifestImporter.cpp">
-      <Filter>fs\Store\hg</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\store\hg\HgProxyHash.cpp">
-      <Filter>fs\Store\hg</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\model\Hash.cpp">
       <Filter>fs\Model</Filter>
@@ -99,7 +120,7 @@
       <Filter>fs\Store</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\utils\PathFuncs.cpp">
-      <Filter>fs\Utils</Filter>
+      <Filter>fs\Util</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\model\git\GitTree.cpp">
       <Filter>fs\Model\Git</Filter>
@@ -108,51 +129,168 @@
       <Filter>fs\Sqlite</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\utils\TimeUtil.cpp">
-      <Filter>fs\Utils</Filter>
+      <Filter>fs\Util</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\model\git\GitBlob.cpp">
       <Filter>fs\Model\Git</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\utils\Clock.cpp">
-      <Filter>fs\Utils</Filter>
+      <Filter>fs\Util</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\service\EdenCPUThreadPool.cpp">
       <Filter>fs\Service</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\utils\UnboundedQueueExecutor.cpp">
-      <Filter>fs\Utils</Filter>
+      <Filter>fs\Util</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\store\BackingStore.cpp">
       <Filter>fs\Store</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\service\EdenError.cpp">
+      <Filter>fs\Service</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\service\EdenServer.cpp">
+      <Filter>fs\Service</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\edenwin64\stubs\common\stats\ServiceData.cpp">
+      <Filter>Extern</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\inodes\ServerState.cpp">
+      <Filter>Other</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\git\GitIgnore.cpp">
+      <Filter>fs\Model\Git</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\git\GitIgnoreFileParser.cpp">
+      <Filter>fs\Model\Git</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\git\GitIgnorePattern.cpp">
+      <Filter>fs\Model\Git</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\git\GitIgnoreStack.cpp">
+      <Filter>fs\Model\Git</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\model\git\GlobMatcher.cpp">
+      <Filter>fs\Model\Git</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\fuse\EdenStats.cpp">
+      <Filter>fs\Fuse</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\config\ClientConfig.cpp">
+      <Filter>fs\Config</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\config\EdenConfig.cpp">
+      <Filter>fs\Config</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\config\FileChangeMonitor.cpp">
+      <Filter>fs\Config</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\service\EdenServiceHandler.cpp">
+      <Filter>fs\Service</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_constants.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_data.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService_processmap_binary.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService_processmap_compact.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenServiceAsyncClient.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_constants.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_data.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_processmap_binary.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_processmap_compact.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenServiceAsyncClient.cpp">
+      <Filter>cpp2\Eden</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.cpp">
+      <Filter>cpp2\Fb303</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_processmap_binary.cpp">
+      <Filter>cpp2\Fb303</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_processmap_compact.cpp">
+      <Filter>cpp2\Fb303</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.cpp">
+      <Filter>cpp2\Fb303</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_constants.cpp">
+      <Filter>cpp2\Fb303</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_data.cpp">
+      <Filter>cpp2\Fb303</Filter>
+    </ClCompile>
+    <ClCompile Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types.cpp">
+      <Filter>cpp2\Fb303</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\service\StreamingSubscriber.cpp">
+      <Filter>fs\Service</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\journal\Journal.cpp">
+      <Filter>fs\Journal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\journal\JournalDelta.cpp">
+      <Filter>fs\Journal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\journal\JournalDeltaPtr.cpp">
+      <Filter>fs\Journal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\service\oss\RunServer.cpp">
+      <Filter>fs\Service</Filter>
+    </ClCompile>
     <ClCompile Include="service\main.cpp">
-      <Filter>Win\fs\service</Filter>
+      <Filter>Win\fs\Service</Filter>
     </ClCompile>
     <ClCompile Include="utils\Pipe.cpp">
-      <Filter>Win\fs\utils</Filter>
+      <Filter>Win\fs\Utils</Filter>
     </ClCompile>
     <ClCompile Include="utils\Subprocess.cpp">
-      <Filter>Win\fs\utils</Filter>
+      <Filter>Win\fs\Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h">
-      <Filter>fs\Store\hg</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\store\hg\HgImporter.h">
-      <Filter>fs\Store\hg</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\store\hg\HgImportPyError.h">
-      <Filter>fs\Store\hg</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\store\hg\HgManifestImporter.h">
-      <Filter>fs\Store\hg</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\store\hg\HgProxyHash.h">
-      <Filter>fs\Store\hg</Filter>
-    </ClInclude>
-    <ClInclude Include="Edenwin.h">
-      <Filter>Win</Filter>
+      <Filter>fs\Store\Hg</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\model\Blob.h">
       <Filter>fs\Model</Filter>
@@ -197,7 +335,7 @@
       <Filter>fs\Store</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\PathFuncs.h">
-      <Filter>fs\Utils</Filter>
+      <Filter>fs\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\model\git\GitTree.h">
       <Filter>fs\Model\Git</Filter>
@@ -206,28 +344,183 @@
       <Filter>fs\Sqlite</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\TimeUtil.h">
-      <Filter>fs\Utils</Filter>
+      <Filter>fs\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\model\git\GitBlob.h">
       <Filter>fs\Model\Git</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\Clock.h">
-      <Filter>fs\Utils</Filter>
+      <Filter>fs\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\service\EdenCPUThreadPool.h">
       <Filter>fs\Service</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\UnboundedQueueExecutor.h">
-      <Filter>fs\Utils</Filter>
+      <Filter>fs\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\service\EdenError.h">
+      <Filter>fs\Service</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\service\EdenServer.h">
+      <Filter>fs\Service</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub.h">
+      <Filter>Win\Stubs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\inodes\ServerState.h">
+      <Filter>Other</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\git\GitIgnore.h">
+      <Filter>fs\Model\Git</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\git\GitIgnoreFileParser.h">
+      <Filter>fs\Model\Git</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\git\GitIgnorePattern.h">
+      <Filter>fs\Model\Git</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\git\GitIgnoreStack.h">
+      <Filter>fs\Model\Git</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\model\git\GlobMatcher.h">
+      <Filter>fs\Model\Git</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\fuse\EdenStats.h">
+      <Filter>fs\Fuse</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\config\CachedParsedFileMonitor.h">
+      <Filter>fs\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\config\ClientConfig.h">
+      <Filter>fs\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\config\EdenConfig.h">
+      <Filter>fs\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\config\filechangemonitor.h">
+      <Filter>fs\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\service\EdenServiceHandler.h">
+      <Filter>fs\Service</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_constants.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_data.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types_custom_protocol.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService_custom_protocol.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenServiceAsyncClient.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_constants.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_data.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types_custom_protocol.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService_custom_protocol.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenServiceAsyncClient.h">
+      <Filter>cpp2\Eden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.h">
+      <Filter>cpp2\Fb303</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService_custom_protocol.h">
+      <Filter>cpp2\Fb303</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookServiceAsyncClient.h">
+      <Filter>cpp2\Fb303</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_constants.h">
+      <Filter>cpp2\Fb303</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_data.h">
+      <Filter>cpp2\Fb303</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types.h">
+      <Filter>cpp2\Fb303</Filter>
+    </ClInclude>
+    <ClInclude Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types_custom_protocol.h">
+      <Filter>cpp2\Fb303</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\service\StreamingSubscriber.h">
+      <Filter>fs\Service</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\journal\Journal.h">
+      <Filter>fs\Journal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\journal\JournalDelta.h">
+      <Filter>fs\Journal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\journal\JournalDeltaPtr.h">
+      <Filter>fs\Journal</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\edenwin64\pklib\include\thrift\lib\cpp2\protocol\Cpp2Ops.h">
+      <Filter>cpp2\Fb303</Filter>
+    </ClInclude>
+    <ClInclude Include="service\StartupLogger.h">
+      <Filter>Win\fs\Service</Filter>
     </ClInclude>
     <ClInclude Include="utils\Pipe.h">
-      <Filter>Win\fs\utils</Filter>
+      <Filter>Win\fs\Utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\StringConv.h">
-      <Filter>Win\fs\utils</Filter>
+      <Filter>Win\fs\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\Stub.h">
+      <Filter>Win\fs\Utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\Subprocess.h">
-      <Filter>Win\fs\utils</Filter>
+      <Filter>Win\fs\Utils</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\eden_types.tcc">
+      <Filter>cpp2\Eden</Filter>
+    </None>
+    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\EdenService.tcc">
+      <Filter>cpp2\Eden</Filter>
+    </None>
+    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.tcc">
+      <Filter>cpp2\Eden</Filter>
+    </None>
+    <None Include="..\build\thrift\eden\fs\service\gen-cpp2\StreamingEdenService.tcc">
+      <Filter>cpp2\Eden</Filter>
+    </None>
+    <None Include="..\build\thrift\common\fb303\if\gen-cpp2\FacebookService.tcc">
+      <Filter>cpp2\Fb303</Filter>
+    </None>
+    <None Include="..\build\thrift\common\fb303\if\gen-cpp2\fb303_types.tcc">
+      <Filter>cpp2\Fb303</Filter>
+    </None>
+    <None Include="D:\edenwin64\pklib\include\thrift\lib\cpp2\protocol\Cpp2Ops.tcc">
+      <Filter>cpp2\Fb303</Filter>
+    </None>
+    <None Include="..\..\fs\service\eden.thrift">
+      <Filter>fs\Service</Filter>
+    </None>
   </ItemGroup>
 </Project>
