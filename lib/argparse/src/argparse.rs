@@ -1,5 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 
+#![deny(warnings)]
+
 //! Parse command line arguments.
 //! Why not use clap?  clap doesn't follow the way that the mercurial
 //! CLI parses its arguments, and doesn't make it easy to deal with
@@ -8,10 +10,20 @@
 //! of this telemetry utility.  In the future we will likely expand this
 //! to also handle alias expansion.
 
+use exitstatus::PortableExitStatus;
+use std::env;
+
+/// HandlerFunc is the type signature for a callback function for processing
+/// subcommand dispatch.  It receives a generic context type T as a mutable
+/// first argument as well as the complete argument vector as its second
+/// argument.  You may with to pass the ParsedArgs as the context, or wrap
+/// that up with other data in your own larger context type.
+pub type HandlerFunc<T> = fn(context: &mut T, args: &Vec<String>) -> Option<PortableExitStatus>;
+
 /// Define an argument to a command.
 /// The argument can have --long or -s short forms and may
 /// require a value.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Arg {
     /// The name of the argument.  This is the name that must match
     /// when recalling arguments via the ParsedArgs interface.
@@ -26,31 +38,25 @@ pub struct Arg {
     requires_value: bool,
 }
 
-#[derive(Copy, Clone)]
-pub enum HelpVisibility {
-    Always,
-    VerboseOnly,
-}
-
 /// Define a command or subcommand.
 /// A command may have a list of arguments and, for subcommands,
 /// be aliased to alternative names.
-pub struct Command {
+pub struct Command<T> {
     /// The list of known arguments
     args: Vec<Arg>,
     /// The list of aliases for this subcommand.  The 0th
     /// element is considered to be the canonical name.
     aliases: Vec<String>,
     /// The known subcommands of this command
-    subcommands: Vec<Command>,
+    subcommands: Vec<Command<T>>,
     /// boring commands are intended not to be logged
     boring: bool,
-    // We hide some commands in non-verbose help output
-    help_visibility: HelpVisibility,
+    /// A function that knows how to dispatch this command
+    handler: Option<HandlerFunc<T>>,
 }
 
 /// Holds the result of a successfully recognized argument
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct ParsedArgument {
     /// Corresponds to Arg::name for the matched argument
     pub name: String,
@@ -64,7 +70,7 @@ pub struct ParsedArgument {
 }
 
 /// Holds the result of parsing an argument list.
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ParsedArgs {
     /// Corresponds to Command::aliases[0] for the parsed Command
     pub name: String,
@@ -76,6 +82,10 @@ pub struct ParsedArgs {
     pub positional: Vec<String>,
     /// If we recognized a subcommand, the parsed results from that command.
     pub subcommand: Option<Box<ParsedArgs>>,
+    /// boring commands are intended not to be logged
+    pub boring: bool,
+    /// Whether $HGPLAIN is set.
+    pub hgplain: bool,
 }
 
 impl ParsedArgs {
@@ -182,16 +192,27 @@ impl Arg {
     }
 }
 
-impl Command {
+impl<T> Command<T> {
     /// Define a new named command
-    pub fn with_name(name: &str) -> Command {
-        Command {
+    pub fn with_name(name: &str) -> Self {
+        Self {
             aliases: vec![name.into()],
             args: Vec::new(),
             subcommands: Vec::new(),
             boring: false,
-            help_visibility: HelpVisibility::VerboseOnly,
+            handler: None,
         }
+    }
+
+    /// Set a handler function that knows how to dispatch this command
+    pub fn handler(mut self, handler: HandlerFunc<T>) -> Self {
+        self.handler = Some(handler);
+        self
+    }
+
+    /// Set a handler function that knows how to dispatch this command
+    pub fn set_handler(&mut self, handler: HandlerFunc<T>) {
+        self.handler = Some(handler);
     }
 
     /// Add an argument to the list of known arguments
@@ -207,13 +228,40 @@ impl Command {
     }
 
     /// Add a subcommand to the list of possible subcommands
-    pub fn subcommand(mut self, mut cmd: Command) -> Self {
+    pub fn subcommand(mut self, cmd: Command<T>) -> Self {
+        self.add_subcommand(cmd);
+        self
+    }
+
+    /// As an alternative to the builder pattern, if you have already constructed
+    /// a parser and wish to pass it to some number of functions to allow them
+    /// to register additional subcommands, you can use `add_subcommand`.
+    /// # Panics
+    /// If there is already a command with the same primary name, this will panic.
+    /// The data structures are not well suited for dynamic modification at the
+    /// moment.
+    pub fn add_subcommand(&mut self, mut cmd: Command<T>) {
+        assert!(
+            self.subcommand_mut(&cmd.aliases[0]).is_none(),
+            "you should use subcommand_mut() instead of add_subcommand() as {} is already registered"
+        );
         // For the sake of easier parsing later, copy the arguments
         // from the parent command into the child command.  This allows
         // global arguments to be visible in the subcommand.
         cmd.args.extend_from_slice(&self.args[..]);
         self.subcommands.push(cmd);
-        self
+    }
+
+    /// Return a mutable reference to a pre-existing subcommand
+    /// The intent is that this be used together with `set_handler` to assign a handler
+    /// to the "sketch" of arguments define in `hg_parser`.
+    pub fn subcommand_mut(&mut self, name: &str) -> Option<&mut Command<T>> {
+        for sub in &mut self.subcommands {
+            if sub.aliases[0] == name {
+                return Some(sub);
+            }
+        }
+        None
     }
 
     /// Set the boring flag for this command.
@@ -223,15 +271,16 @@ impl Command {
         self
     }
 
-    pub fn help_visibility(mut self, value: HelpVisibility) -> Self {
-        self.help_visibility = value;
-        self
-    }
-
     /// Given an argument slice, parse it and return the parsed state.
-    pub fn parse(&self, arguments: &[String]) -> ParsedArgs {
+    pub fn parse(&self, arguments: &[String]) -> (ParsedArgs, Option<HandlerFunc<T>>) {
         let mut parsed = ParsedArgs::default();
+        let mut handler = None;
         parsed.name = self.aliases[0].clone();
+        parsed.boring = self.boring;
+        // Admittedly, env::var() could also error because the environment variable is not valid
+        // unicode, though that seems unlikely.
+        parsed.hgplain = !env::var("HGPLAIN").is_err();
+
         let mut skip_next = false;
 
         for (n, arg) in arguments.iter().enumerate() {
@@ -430,7 +479,15 @@ impl Command {
                 }
 
                 if let Some((_, sub)) = best {
-                    parsed.subcommand = Some(Box::new(sub.parse(&arguments[n + 1..])));
+                    let (sub_arg, sub_handler) = sub.parse(&arguments[n + 1..]);
+                    // if the child parser returns a handler, use that,
+                    // otherwise use whichever handler may be present on
+                    // the current subcommand.
+                    handler = match sub_handler {
+                        Some(h) => Some(h),
+                        None => sub.handler,
+                    };
+                    parsed.subcommand = Some(Box::new(sub_arg));
                     // Parsing the subcommand consumes all remaining args,
                     // so we stop looping here.
                     break;
@@ -443,7 +500,7 @@ impl Command {
             parsed.positional.push(arg.clone());
         }
 
-        parsed
+        (parsed, handler)
     }
 
     /// Given arg_char, try to find an Arg whose short version uses that single character.
@@ -469,67 +526,57 @@ mod test {
 
     #[test]
     fn basic_args() {
-        let cmd = Command::with_name("frob").arg(Arg::with_name("help").short(b'h'));
+        let cmd = Command::<()>::with_name("frob").arg(Arg::with_name("help").short(b'h'));
 
-        let p = cmd.parse(&arglist(&["--help"]));
-        println!("parsed: {:?}", p);
+        let (p, handler) = cmd.parse(&arglist(&["--help"]));
         assert_eq!(p.name, "frob");
         assert_eq!(p.is_present("help"), true);
+        assert!(handler.is_none());
         assert!(p.value_of("help").is_none());
 
         // Short and long are both recognized
-        let p = cmd.parse(&arglist(&["--help", "-h"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--help", "-h"]));
         assert_eq!(p.is_present("help"), true);
         assert_eq!(p.all_values_of("help").len(), 2);
 
         // Short option on its own is recognized
-        let p = cmd.parse(&arglist(&["-h"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["-h"]));
         assert_eq!(p.is_present("help"), true);
 
         // Relative order of positional and switches doesn't matter
-        let p = cmd.parse(&arglist(&["--help", "hello"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--help", "hello"]));
         assert_eq!(p.is_present("help"), true);
         assert_eq!(p.positional, arglist(&["hello"]));
 
-        let p = cmd.parse(&arglist(&["hello", "--help"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["hello", "--help"]));
         assert_eq!(p.is_present("help"), true);
         assert_eq!(p.positional, arglist(&["hello"]));
 
         // Check that we can match a prefix
-        let p = cmd.parse(&arglist(&["--hel"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--hel"]));
         assert_eq!(p.is_present("help"), true);
 
-        let p = cmd.parse(&arglist(&["--he"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--he"]));
         assert_eq!(p.is_present("help"), true);
 
-        let p = cmd.parse(&arglist(&["--h"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--h"]));
         assert_eq!(p.is_present("help"), true);
     }
 
     #[test]
     fn switches_with_values() {
-        let cmd = Command::with_name("frob").arg(Arg::with_name("config").requires_value());
+        let cmd = Command::<()>::with_name("frob").arg(Arg::with_name("config").requires_value());
 
-        let p = cmd.parse(&arglist(&["--config"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--config"]));
         assert_eq!(p.is_present("config"), true);
         assert!(p.value_of("config").is_none());
 
-        let p = cmd.parse(&arglist(&["--config", "foo"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--config", "foo"]));
         assert_eq!(p.is_present("config"), true);
         assert_eq!(p.value_of("config").unwrap(), "foo");
 
         // value_of returns last specified value
-        let p = cmd.parse(&arglist(&["--config", "foo", "--config", "bar"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--config", "foo", "--config", "bar"]));
         assert_eq!(p.is_present("config"), true);
         assert_eq!(p.value_of("config").unwrap(), "bar");
         // all_values_of holds all the expected values
@@ -539,8 +586,7 @@ mod test {
         assert_eq!(all_values.len(), 2);
 
         // Incomplete final arg
-        let p = cmd.parse(&arglist(&["--config", "foo", "--config"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--config", "foo", "--config"]));
         assert_eq!(p.is_present("config"), true);
         // We see only the complete first arg in value_of()
         assert_eq!(p.value_of("config").unwrap(), "foo");
@@ -553,11 +599,10 @@ mod test {
 
     #[test]
     fn switch_with_alias() {
-        let cmd =
-            Command::with_name("frob").arg(Arg::with_name("config").long("set").requires_value());
+        let cmd = Command::<()>::with_name("frob")
+            .arg(Arg::with_name("config").long("set").requires_value());
 
-        let p = cmd.parse(&arglist(&["--config", "foo", "--set", "bar"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--config", "foo", "--set", "bar"]));
         assert_eq!(p.is_present("config"), true);
         assert_eq!(p.value_of("config").unwrap(), "bar");
         // all_values_of holds all the expected values
@@ -569,32 +614,28 @@ mod test {
 
     #[test]
     fn ambiguous_switches() {
-        let cmd = Command::with_name("frob")
+        let cmd = Command::<()>::with_name("frob")
             .arg(Arg::with_name("encoding").requires_value())
             .arg(Arg::with_name("encodingmode").requires_value());
 
-        let p = cmd.parse(&arglist(&["--encoding", "A", "--encodingmode", "B"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--encoding", "A", "--encodingmode", "B"]));
         assert_eq!(p.is_present("encoding"), true);
         assert_eq!(p.value_of("encoding").unwrap(), "A");
         assert_eq!(p.is_present("encodingmode"), true);
         assert_eq!(p.value_of("encodingmode").unwrap(), "B");
 
-        let p = cmd.parse(&arglist(&["--encodingm", "B"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--encodingm", "B"]));
         assert_eq!(p.is_present("encoding"), false);
         assert_eq!(p.is_present("encodingmode"), true);
         assert_eq!(p.value_of("encodingmode").unwrap(), "B");
 
-        let p = cmd.parse(&arglist(&["--encodin", "A"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--encodin", "A"]));
         assert_eq!(p.is_present("encodingmode"), false);
         assert_eq!(p.is_present("encoding"), true);
         assert_eq!(p.value_of("encoding").unwrap(), "A");
 
         // Name is longer than any valid switch
-        let p = cmd.parse(&arglist(&["--encodingmodel", "B"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--encodingmodel", "B"]));
         assert_eq!(p.is_present("encoding"), false);
         assert_eq!(p.is_present("encodingmode"), false);
         assert_eq!(p.unknown_args, arglist(&["--encodingmodel"]));
@@ -603,7 +644,7 @@ mod test {
 
     #[test]
     fn multiple_boolean_switches_in_single_arg() {
-        let cmd = Command::with_name("status")
+        let cmd = Command::<()>::with_name("status")
             .arg(Arg::with_name("modified").short(b'm'))
             .arg(Arg::with_name("added").short(b'a'))
             .arg(Arg::with_name("removed").short(b'r'))
@@ -612,8 +653,7 @@ mod test {
             .arg(Arg::with_name("unknown").short(b'u'))
             .arg(Arg::with_name("ignored").short(b'i'));
 
-        let p = cmd.parse(&arglist(&["-mardu"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["-mardu"]));
         assert_eq!(p.is_present("modified"), true);
         assert_eq!(p.is_present("added"), true);
         assert_eq!(p.is_present("removed"), true);
@@ -623,7 +663,7 @@ mod test {
         assert_eq!(p.is_present("ignored"), false);
 
         // One unrecognized switch (z) ruins it for everyone.
-        let p = cmd.parse(&arglist(&["-marduz"]));
+        let (p, _) = cmd.parse(&arglist(&["-marduz"]));
         assert_eq!(p.unknown_args, arglist(&["-marduz"]));
         assert_eq!(p.is_present("modified"), false);
         assert_eq!(p.is_present("added"), false);
@@ -636,27 +676,118 @@ mod test {
 
     #[test]
     fn subcommands_inherit_top_args() {
-        let cmd = Command::with_name("frob")
+        let cmd = Command::<()>::with_name("frob")
             .arg(Arg::with_name("config").requires_value())
             .subcommand(Command::with_name("foo"))
             .subcommand(Command::with_name("bar"));
 
-        let p = cmd.parse(&arglist(&["--config", "foo"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--config", "foo"]));
         assert_eq!(p.is_present("config"), true);
         assert_eq!(p.value_of("config").unwrap(), "foo");
 
-        let p = cmd.parse(&arglist(&["--config", "foo", "foo"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--config", "foo", "foo"]));
         assert_eq!(p.is_present("config"), true);
         assert_eq!(p.value_of("config").unwrap(), "foo");
         assert!(p.subcommand_matches("foo").is_some());
 
-        let p = cmd.parse(&arglist(&["--config", "foo", "foo", "--config", "bar"]));
-        println!("parsed: {:?}", p);
+        let (p, _) = cmd.parse(&arglist(&["--config", "foo", "foo", "--config", "bar"]));
         assert_eq!(p.is_present("config"), true);
         assert_eq!(p.value_of("config").unwrap(), "bar");
         assert!(p.subcommand_matches("foo").is_some());
     }
 
+    /// A simple test struct for holding handler context
+    #[derive(Default)]
+    struct Context {
+        did_foo: bool,
+        did_bar: bool,
+    }
+
+    /// Sets Context::did_foo
+    fn foo(ctx: &mut Context, _args: &Vec<String>) -> Option<PortableExitStatus> {
+        ctx.did_foo = true;
+        None
+    }
+
+    /// Sets Context::did_bar
+    fn bar(ctx: &mut Context, _args: &Vec<String>) -> Option<PortableExitStatus> {
+        ctx.did_bar = true;
+        None
+    }
+
+    /// Verify that we're dispatching handlers
+    #[test]
+    fn subcommand_handlers() {
+        let mut ctx = Context::default();
+
+        let cmd = Command::with_name("frob")
+            .subcommand(Command::with_name("foo").handler(foo))
+            .subcommand(Command::with_name("bar").handler(bar));
+
+        {
+            let args = arglist(&["bogus"]);
+            let (_p, h) = cmd.parse(&args);
+            assert!(h.is_none());
+        }
+
+        {
+            let args = arglist(&["foo"]);
+            let (_p, h) = cmd.parse(&args);
+            h.map(|func| func(&mut ctx, &args));
+            assert!(ctx.did_foo);
+            assert!(!ctx.did_bar);
+        }
+
+        {
+            let mut ctx = Context::default();
+            let args = arglist(&["bar"]);
+            let (_p, h) = cmd.parse(&args);
+            h.map(|func| func(&mut ctx, &args));
+            assert!(!ctx.did_foo);
+            assert!(ctx.did_bar);
+        }
+    }
+
+    /// Ensure that we propagate the handler when we recursively parse
+    #[test]
+    fn nested_subcommand_handlers() {
+        let mut ctx = Context::default();
+
+        let cmd = Command::with_name("frob")
+            .subcommand(
+                Command::with_name("nest").subcommand(Command::with_name("foo").handler(foo)),
+            )
+            .subcommand(Command::with_name("bar").handler(bar));
+
+        {
+            let args = arglist(&["nest", "foo"]);
+            let (_p, h) = cmd.parse(&args);
+            h.map(|func| func(&mut ctx, &args));
+            assert!(ctx.did_foo);
+            assert!(!ctx.did_bar);
+        }
+
+        {
+            let mut ctx = Context::default();
+            let args = arglist(&["bar"]);
+            let (_p, h) = cmd.parse(&args);
+            h.map(|func| func(&mut ctx, &args));
+            assert!(!ctx.did_foo);
+            assert!(ctx.did_bar);
+        }
+    }
+
+    /// Sanity check that commands registered after the main parser build function
+    #[test]
+    fn register_later() {
+        let mut cmd = Command::with_name("modular").subcommand(Command::with_name("builtin"));
+
+        cmd.add_subcommand(Command::with_name("later").handler(foo));
+
+        let args = arglist(&["later"]);
+        let (_p, h) = cmd.parse(&args);
+        let mut ctx = Context::default();
+        h.map(|func| func(&mut ctx, &args));
+        assert!(ctx.did_foo);
+    }
 }
