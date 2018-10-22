@@ -504,6 +504,15 @@ fn main() -> Result<()> {
                     HttpResponse::Ok().body("ok")
                 },
             )
+            .route(
+                "/health_check",
+                http::Method::GET,
+                |req: HttpRequest<HttpServerState>| {
+                    // removing ScubaSampleBuilder will disable scuba logging for this request.
+                    req.extensions_mut().remove::<ScubaSampleBuilder>();
+                    HttpResponse::Ok().body("I_AM_ALIVE")
+                },
+            )
             .scope("/{repo}", |repo| {
                 repo.resource("/raw/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_raw_file)

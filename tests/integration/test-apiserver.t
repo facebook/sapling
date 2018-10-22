@@ -83,6 +83,9 @@ test cat renamed file
   $ sslcurl $APISERVER/status
   ok (no-eol)
 
+  $ sslcurl $APISERVER/health_check
+  I_AM_ALIVE (no-eol)
+
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/0000000000000000000000000000000000000001/test | extract_json_error
   0000000000000000000000000000000000000001 is not found
   404
