@@ -240,7 +240,7 @@ Test rebasing treeonly commits
   $ hg rebase -d 5 -b 2
   rebasing 2:4b702090309e "hybrid flat+tree commit"
   merging subdir/x
-  warning: conflicts while merging subdir/x! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging subdir/x! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ printf "x\nx\nh\n" > subdir/x

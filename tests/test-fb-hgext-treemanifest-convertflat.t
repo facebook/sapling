@@ -272,6 +272,6 @@ manifest for commit 'f7febcf0f689'.
   fetching tree '' a6875e5fbf695d5fe67e03b8a5df2bab0e6dd045, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via f7febcf0f689
   fetching tree '' b7db2b1fa98f78057c528e8dad908e05ef80aeb4, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 3795bd66ca70
   merging subdir/x
-  warning: conflicts while merging subdir/x! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging subdir/x! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]

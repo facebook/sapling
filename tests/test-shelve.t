@@ -251,7 +251,7 @@ Force a conflicted merge to occur
   rebasing shelved changes
   rebasing 4:4893561a85b4 "shelve changes to: second"
   merging a/a
-  warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
 
@@ -322,7 +322,7 @@ Try to continue with no unshelve underway
 
 Redo the unshelve to get a conflict
   $ hg unshelve -q
-  warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
 
@@ -624,7 +624,7 @@ Unshelve should leave unknown files alone (issue4113)
   rebasing shelved changes
   rebasing 10:a0cc43106cdd "shelve changes to: commit stuff"
   merging f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ hg parents -T "{desc|firstline}\n" | sort
@@ -673,7 +673,7 @@ Unshelve should leave unknown files alone (issue4113)
   rebasing shelved changes
   rebasing 10:a0cc43106cdd "shelve changes to: commit stuff"
   merging f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ hg st
@@ -715,7 +715,7 @@ Recreate some conflict again
   rebasing shelved changes
   rebasing * "shelve changes to: second" (tip) (glob)
   merging a/a
-  warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ hg bookmark
@@ -1033,7 +1033,7 @@ Test .orig files go where the user wants them to
   $ hg shelve -q
   $ echo 'contADDent' > root
   $ hg unshelve -q --config 'ui.origbackuppath=.hg/origbackups'
-  warning: conflicts while merging root! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging root! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ ls .hg/origbackups
@@ -1058,7 +1058,7 @@ Try again but with a corrupted shelve state file
   $ hg shelve -q
   $ echo 'contADDent' > root
   $ hg unshelve -q
-  warning: conflicts while merging root! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging root! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ sed 's/ae8c668541e8/123456789012/' .hg/shelvedstate > ../corrupt-shelvedstate
@@ -1292,7 +1292,7 @@ will be preserved.
   rebasing shelved changes
   rebasing 1:955d9868d567 "shelve changes to: a"
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ echo "aaabbbccc" > a
@@ -1367,7 +1367,7 @@ shelve on new branch, conflict with previous shelvedstate
   rebasing shelved changes
   rebasing 1:955d9868d567 "shelve changes to: a"
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
 
@@ -1438,7 +1438,7 @@ Prepare unshelve with a corrupted shelvedstate
   rebasing shelved changes
   rebasing 0:a6a994ce5ac2 "(changes in empty repository)"
   merging file
-  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ echo somethingsomething > .hg/shelvedstate
@@ -1477,7 +1477,7 @@ Unshelve respects --keep even if user intervention is needed
   rebasing shelved changes
   rebasing 1:49351a7ca591 "shelve changes to: 1"
   merging file
-  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ hg resolve --mark file

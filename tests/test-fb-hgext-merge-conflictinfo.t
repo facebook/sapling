@@ -44,8 +44,8 @@
   $ hg merge a
   merging F1
   merging F2
-  warning: conflicts while merging F1! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging F2! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging F1! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging F2! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -145,7 +145,7 @@ tldr: Since we can premerge, the working copy is backed up to an origfile.
   $ echo "some local changes" > file
   $ hg merge 2 -f
   merging file
-  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -566,7 +566,7 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
   rebasing 1:b6e55a03a5dc "source"
   merging file
   warning: ([^\s]+) looks like a binary file. (re)
-  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat -v file # The local version should be left in the working copy
@@ -607,7 +607,7 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   rebasing 1:ec87889f5f90 "source"
   merging file
   warning: ([^\s]+) looks like a binary file. (re)
-  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat -v file
@@ -649,7 +649,7 @@ Test case 11: Source is a symlink, dest is a file (base is still a file)
   rebasing 1:06aece48b59f "source"
   merging file
   warning: internal :merge cannot merge symlinks for file
-  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat -v file
@@ -691,7 +691,7 @@ Test case 12: Source is a file, dest is a symlink (base is still a file)
   rebasing 1:ec87889f5f90 "source"
   merging file
   warning: internal :merge cannot merge symlinks for file
-  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ test -f file && echo "Exists" || echo "Does not exist"
@@ -736,7 +736,7 @@ mergestate (like shelve):
   rebasing shelved changes
   rebasing 3:b0582bede31d "shelve changes to: c" (tip)
   merging b
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ hg resolve --tool=internal:dumpjson --all

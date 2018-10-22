@@ -165,7 +165,7 @@ rebase --continue with bookmarks present (issue3802)
   $ hg rebase --dest 4
   rebasing 3:3d5fa227f4b5 "C" (Y Z)
   merging c
-  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ echo 'c' > c

@@ -68,7 +68,7 @@ running from a devel copy, not a temp installation
 
   $ PATH="$BINDIR:/usr/sbin" $PYTHON "$BINDIR"/hg merge -r 2
   merging f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -117,7 +117,7 @@ unexecutable file in $PATH shouldn't be found:
   $ hg up -qC 1
   $ PATH="`pwd`:$BINDIR:/usr/sbin" $PYTHON "$BINDIR"/hg merge -r 2
   merging f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -131,7 +131,7 @@ executable directory in $PATH shouldn't be found:
   $ hg up -qC 1
   $ PATH="`pwd`:$BINDIR:/usr/sbin" $PYTHON "$BINDIR"/hg merge -r 2
   merging f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -1261,7 +1261,7 @@ internal merge cannot handle symlinks and shouldn't try:
   $ hg merge -r 2 --tool internal:merge
   merging f
   warning: internal :merge cannot merge symlinks for f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

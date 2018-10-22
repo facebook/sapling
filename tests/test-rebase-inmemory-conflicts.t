@@ -52,7 +52,7 @@ Make conflicts halfway up the stack:
   hit merge conflicts (in c); switching to on-disk merge
   rebasing 5:e692c3b32196 "f"
   merging c
-  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg resolve --all --tool :other

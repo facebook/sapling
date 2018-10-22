@@ -383,7 +383,7 @@ Branchy history
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg --cwd b merge
   merging b
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   2 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

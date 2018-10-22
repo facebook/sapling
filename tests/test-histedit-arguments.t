@@ -466,7 +466,7 @@ in which case this test should be revisited.
   > EOF
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging foo
-  warning: conflicts while merging foo! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging foo! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 8cde254db839)
   (hg histedit --continue to resume)
   [1]
@@ -475,7 +475,7 @@ in which case this test should be revisited.
   continue: hg histedit --continue
   $ hg histedit --cont
   merging foo
-  warning: conflicts while merging foo! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging foo! (edit, then use 'hg resolve --mark')
   Editing (6f2f0241f119), you may commit or record as needed now.
   (hg histedit --continue to resume)
   [1]

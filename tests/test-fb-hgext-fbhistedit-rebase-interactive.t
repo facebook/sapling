@@ -92,7 +92,7 @@ Try to rebase with conflict (also check -d without -s)
 
   $ HGEDITOR=true hg rebase -i -d 9
   merging f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 8d0611d6e5f2)
   (hg histedit --continue to resume)
   [1]

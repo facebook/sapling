@@ -170,7 +170,7 @@ Restack could resume after resolving merge conflicts.
   $ hg rebase --restack
   rebasing 5:ed8545a5c22a "F" (F)
   merging C
-  warning: conflicts while merging C! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging C! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -183,7 +183,7 @@ Restack could resume after resolving merge conflicts.
   rebasing 5:ed8545a5c22a "F"
   rebasing 6:4d1ef7d890c5 "G" (tip)
   merging E
-  warning: conflicts while merging E! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging E! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 

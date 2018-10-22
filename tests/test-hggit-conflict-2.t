@@ -17,7 +17,7 @@ Load commonly used test logic
 
   $ hg merge -r1
   merging afile
-  warning: conflicts.* (re)
+  warning: 1 conflicts while merging afile! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

@@ -222,7 +222,7 @@ Graft out of order, skipping a merge and a duplicate
    e: versions differ -> m (merge)
   picked tool ':merge' for e (binary False symlink False changedelete False)
   my e@1905859650ec+ other e@9c233e8e184d ancestor e@4c60f11aa304
-  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue --log')
   [255]
@@ -281,7 +281,7 @@ Graft again:
   skipping revision 5:97f8bfe72746 (already grafted to 9:1905859650ec)
   grafting 4:9c233e8e184d "4"
   merging e
-  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]
@@ -484,7 +484,7 @@ Resolve conflicted graft
   [255]
   $ hg resolve --all
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
   $ cat a
   <<<<<<< local: aaa4406d4f0a - test: 9
@@ -810,7 +810,7 @@ graft --continue after --force
   [255]
   $ hg resolve --all
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
   $ echo abc > a
   $ hg resolve -m a

@@ -47,7 +47,7 @@ Requiring dest should not break continue or other rebase options
   $ hg rebase -d 2
   rebasing 3:0537f6b50def "dc" (tip)
   merging c
-  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ echo d > c

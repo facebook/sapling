@@ -35,7 +35,7 @@
 
   $ hg merge 1
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -88,7 +88,7 @@ Verify custom conflict markers
 
   $ hg merge 1
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -116,7 +116,7 @@ Verify line splitting of custom conflict marker which causes multiple lines
   > EOF
 
   $ hg -q merge 1
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
 
   $ cat a
@@ -155,7 +155,7 @@ Verify line trimming of custom conflict marker using multi-byte characters
   > EOF
 
   $ hg -q --encoding utf-8 merge 1
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
 
   $ cat a
@@ -179,7 +179,7 @@ Verify basic conflict markers
 
   $ hg merge 1
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -204,7 +204,7 @@ internal:merge3
 
   $ hg merge 1 --tool internal:merge3
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -251,7 +251,7 @@ Now test :merge-other and :merge-local
 
   $ hg merge
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

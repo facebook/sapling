@@ -47,7 +47,7 @@ now pull and merge from test-a
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg merge
   merging test.txt
-  warning: conflicts while merging test.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging test.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -96,7 +96,7 @@ pull and merge from test-a again
    test.txt: versions differ -> m (merge)
   picked tool ':merge' for test.txt (binary False symlink False changedelete False)
   my test.txt@50c3a7e29886+ other test.txt@40d11a4173a8 ancestor test.txt@96b70246a118
-  warning: conflicts while merging test.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging test.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

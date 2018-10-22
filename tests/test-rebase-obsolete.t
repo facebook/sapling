@@ -968,7 +968,7 @@ Create the changes that we will rebase
   $ hg rebase -r ".^^ + .^ + ." -d 18
   rebasing 19:b82fb57ea638 "willconflict second version"
   merging willconflict
-  warning: conflicts while merging willconflict! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging willconflict! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -1582,7 +1582,7 @@ rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
   $ hg rebase -s $B -d $D
   rebasing 1:2ec65233581b "B"
   merging D
-  warning: conflicts while merging D! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging D! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 

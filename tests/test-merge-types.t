@@ -41,7 +41,7 @@ Symlink is local parent, executable is other:
   merging a
   my a@521a1e40188f+ other a@3574f3e69b1c ancestor a@c334dc3be0da
   warning: internal :merge cannot merge symlinks for a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -74,7 +74,7 @@ Symlink is other parent, executable is local:
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
   warning: internal :union cannot merge symlinks for a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -97,7 +97,7 @@ Symlink is other parent, executable is local:
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
   warning: internal :merge3 cannot merge symlinks for a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -210,7 +210,7 @@ where that was what happened.
   $ hg merge
   merging f
   warning: internal :merge cannot merge symlinks for f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -222,7 +222,7 @@ where that was what happened.
   $ hg merge
   merging f
   warning: internal :merge cannot merge symlinks for f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -249,7 +249,7 @@ Test removed 'x' flag merged with change to symlink
   $ hg merge
   merging f
   warning: internal :merge cannot merge symlinks for f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -261,7 +261,7 @@ Test removed 'x' flag merged with change to symlink
   $ hg merge
   merging f
   warning: internal :merge cannot merge symlinks for f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -344,16 +344,16 @@ h: l vs l, different
   warning: cannot merge flags for c without common ancestor - keeping local flags
   merging d
   warning: internal :merge cannot merge symlinks for d
-  warning: conflicts while merging d! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging d! (edit, then use 'hg resolve --mark')
   merging f
   warning: internal :merge cannot merge symlinks for f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   merging h
   warning: internal :merge cannot merge symlinks for h
-  warning: conflicts while merging h! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging bx! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging h! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging bx! (edit, then use 'hg resolve --mark')
   3 files updated, 0 files merged, 0 files removed, 6 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -406,16 +406,16 @@ h: l vs l, different
   warning: cannot merge flags for c without common ancestor - keeping local flags
   merging d
   warning: internal :merge cannot merge symlinks for d
-  warning: conflicts while merging d! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging d! (edit, then use 'hg resolve --mark')
   merging f
   warning: internal :merge cannot merge symlinks for f
-  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   merging h
   warning: internal :merge cannot merge symlinks for h
-  warning: conflicts while merging h! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging bx! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging h! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging bx! (edit, then use 'hg resolve --mark')
   3 files updated, 0 files merged, 0 files removed, 6 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

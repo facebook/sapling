@@ -45,7 +45,7 @@ If the diff algorithm tries to group multiple hunks into one. It will cause a
 merge conflict in the middle.
 
   $ hg merge other -q -t :merge3
-  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   [1]
 
   $ cat A
@@ -112,7 +112,7 @@ and everything gets auto resolved reasonably.
   $ hg ci -m Local -q
 
   $ hg merge other -q -t :merge3
-  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   [1]
 
   $ cat A

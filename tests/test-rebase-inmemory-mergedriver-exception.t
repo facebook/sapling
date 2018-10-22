@@ -102,10 +102,10 @@ and it fails:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=0
   rebasing 3:ffa05d84855d "B" (B tip)
   in preprocess()
-  warning: conflicts while merging FILE! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()
   merging FILE
-  warning: conflicts while merging FILE! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat FILE
@@ -129,10 +129,10 @@ With IMM, it's *very* noisy, but we do eventually get to the same place:
   hit merge conflicts (in FILE); switching to on-disk merge
   rebasing 3:ffa05d84855d "B" (B tip)
   in preprocess()
-  warning: conflicts while merging FILE! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()
   merging FILE
-  warning: conflicts while merging FILE! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat FILE

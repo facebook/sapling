@@ -58,7 +58,7 @@ Test rebase
   $ cmd hg rebase -d 775bfdd --config "extensions.rebase="
   rebasing 2:4b6cc7d5194b "c3" (active tip)
   merging b
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   (775bfdd|REBASE)
   $ cmd hg book rebase
@@ -87,7 +87,7 @@ Test graft
   $ cmd hg graft 775bfdddc842
   grafting 1:775bfdddc842 "c2" (rebase)
   merging b
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   (4b6cc7d|GRAFT)
@@ -137,7 +137,7 @@ Test merge
   (4b6cc7d)
   $ cmd hg merge 775bfdddc842
   merging b
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   (4b6cc7d|MERGE)
@@ -207,7 +207,7 @@ Test branches with bookmarks and other stuff
   (active|blah)
   $ cmd hg merge 775bfdddc842
   merging b
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   (active|blah|MERGE)

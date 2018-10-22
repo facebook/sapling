@@ -242,7 +242,7 @@ Cases are run as shown in that table, row by row.
   $ echo dirty >> a
   $ hg co --tool :merge3 4
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -306,7 +306,7 @@ File conflict is not allowed
   [255]
   $ hg up -m 4
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]

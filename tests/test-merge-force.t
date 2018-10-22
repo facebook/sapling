@@ -207,16 +207,16 @@ Merge with remote
   merging missing_content2_content3_content4-tracked
   merging missing_content2_missing_content4-tracked
   merging missing_content2_missing_content4-untracked
-  warning: conflicts while merging content1_content2_content1_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging content1_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging content1_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging content1_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging content1_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_content1_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
   18 files updated, 3 files merged, 8 files removed, 35 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 
@@ -763,16 +763,16 @@ Re-resolve and check status
   merging missing_content2_content3_content4-tracked
   merging missing_content2_missing_content4-tracked
   merging missing_content2_missing_content4-untracked
-  warning: conflicts while merging content1_content2_content1_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging content1_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging content1_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging content1_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging content1_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_content1_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging content1_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
   [1]
   $ checkstatus > $TESTTMP/status2 2>&1
   $ cmp $TESTTMP/status1 $TESTTMP/status2 || diff -U8 $TESTTMP/status1 $TESTTMP/status2

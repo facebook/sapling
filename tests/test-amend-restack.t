@@ -137,7 +137,7 @@ Test conflict during rebasing.
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
   merging d
-  warning: conflicts while merging d! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging d! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --restack

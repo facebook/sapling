@@ -71,7 +71,7 @@ https://bz.mercurial-scm.org/show_bug.cgi?id=4476
   $ hg graft 1
   grafting 1:5974126fad84 "b1"
   merging b
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]

@@ -79,7 +79,7 @@ Test graft state
   $ echo 'ab' > a
   $ hg commit -q -m 'add content'
   $ hg graft -q 2977a57
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]
@@ -109,7 +109,7 @@ Test unshelve state
   $ hg shelve -q
   $ hg up -r 2977a57 -q
   $ hg unshelve -q
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
 
@@ -140,7 +140,7 @@ Test rebase state
   $ echo 'ab' > a
   $ hg commit -q -m 'add content'
   $ hg rebase -s 2977a57 -d . -q
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg status
@@ -190,7 +190,7 @@ Test rebase with an interrupted update:
 
 Test conflicted merge state
   $ hg merge -q
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
   $ hg status
   M a

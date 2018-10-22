@@ -24,7 +24,7 @@ Merging a conflict araises
 
   $ hg merge
   merging A
-  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -49,7 +49,7 @@ Test that if a file is removed but not marked resolved, the commit still fails
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge 2
   merging A
-  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

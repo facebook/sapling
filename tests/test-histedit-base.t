@@ -145,7 +145,7 @@ Abort
   > pick 591369deedfd X
   > EOF
   merging B
-  warning: conflicts while merging B! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging B! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 591369deedfd)
   (hg histedit --continue to resume)
   $ hg histedit --abort | fixbundle
@@ -174,7 +174,7 @@ Continue
   > pick 591369deedfd X
   > EOF
   merging B
-  warning: conflicts while merging B! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging B! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 591369deedfd)
   (hg histedit --continue to resume)
   $ echo b2 > B

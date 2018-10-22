@@ -814,7 +814,7 @@ running into merge conflict and invoking rebase --continue.
   $ hg rebase --collapse -m "a-default-dev" -d 1
   rebasing 2:b8d8db2b242d "a-dev" (tip)
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ rm a.orig

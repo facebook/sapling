@@ -261,7 +261,7 @@ amend.autorestack=always, and conflicting changes (expect restack)
   hit merge conflicts (in file); switching to on-disk merge
   rebasing 3:02cc3cc1d010 "D" (D)
   merging file
-  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort

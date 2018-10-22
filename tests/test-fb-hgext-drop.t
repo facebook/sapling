@@ -199,7 +199,7 @@ TEST: dropping a changeset with merge conflict
   Dropping changeset 2a8ed6: r1
   rebasing 2:3d69e4d36b46 "r2"
   merging of
-  warning: conflicts while merging of! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging of! (edit, then use 'hg resolve --mark')
   conflict occurred during drop: please fix it by running 'hg rebase --continue', and then re-run 'hg drop'
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]

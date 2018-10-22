@@ -57,7 +57,7 @@ Conflicting rebase:
   rebasing 3:3163e20567cc "L1"
   rebasing 4:46f0b057b5c0 "L2" (tip)
   merging common
-  warning: conflicts while merging common! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging common! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -132,7 +132,7 @@ earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
   rebasing 3:3163e20567cc "L1"
   rebasing 4:46f0b057b5c0 "L2" (tip)
   merging common
-  warning: conflicts while merging common! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging common! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -201,7 +201,7 @@ Rebase and abort without generating new changesets:
   note: rebase of 3:a6484957d6b9 created no changes to commit
   rebasing 4:145842775fec "C1" (tip)
   merging c
-  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -260,7 +260,7 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   $ hg rebase -d master -r foo
   rebasing 3:6c0f977a22d8 "C" (foo tip)
   merging c
-  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort
@@ -450,7 +450,7 @@ commit will cause merge conflict on rebase
 
   $ hg rebase -d 'public()' --tool :merge -q
   note: rebase of 3:0682fd3dabf5 created no changes to commit
-  warning: conflicts while merging root! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging root! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort

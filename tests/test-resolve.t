@@ -205,7 +205,7 @@ can not update or merge when there are unresolved conflicts
   $ echo quux >> file1
   $ hg up 1
   merging file1
-  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file1! (edit, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -253,8 +253,8 @@ resolve --all should re-merge all unresolved files
   $ hg resolve --all
   merging file1
   merging file2
-  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging file2! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file1! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file2! (edit, then use 'hg resolve --mark')
   [1]
   $ cat file1.orig
   foo
@@ -268,8 +268,8 @@ resolve --all should re-merge all unresolved files
   merging file1
   creating directory: $TESTTMP/repo/.hg/origbackups
   merging file2
-  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging file2! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file1! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file2! (edit, then use 'hg resolve --mark')
   [1]
   $ ls .hg/origbackups
   file1
@@ -280,7 +280,7 @@ resolve --all should re-merge all unresolved files
 resolve <file> should re-merge file
   $ echo resolved > file1
   $ hg resolve -q file1
-  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file1! (edit, then use 'hg resolve --mark')
   [1]
   $ grep '<<<' file1 > /dev/null
 

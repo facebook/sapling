@@ -136,8 +136,8 @@ Verify conflicting merge pulls in the conflicting changes
   temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
   merging data.py
-  warning: conflicts while merging backend.sparse! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging data.py! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging backend.sparse! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging data.py! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -202,8 +202,8 @@ Verify rebase conflicts pulls in the conflicting changes
   temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
   merging data.py
-  warning: conflicts while merging backend.sparse! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging data.py! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging backend.sparse! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging data.py! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ rm *.orig

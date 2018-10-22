@@ -54,7 +54,7 @@ Rebasing B onto E:
   rebasing 1:27547f69f254 "B"
   rebasing 2:965c486023db "C"
   merging A
-  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -91,7 +91,7 @@ Resume the rebasing:
   already rebased 1:27547f69f254 "B" as 45396c49d53b
   rebasing 2:965c486023db "C"
   merging A
-  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -150,7 +150,7 @@ Rebasing B onto E:
   rebasing 1:27547f69f254 "B"
   rebasing 2:965c486023db "C"
   merging A
-  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -222,7 +222,7 @@ Rebasing B onto E:
   rebasing 1:27547f69f254 "B"
   rebasing 2:965c486023db "C"
   merging A
-  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -442,7 +442,7 @@ Make sure merge state is cleaned up after a no-op rebase merge (issue5494)
   $ hg rebase -s 1 -d 2 --noninteractive
   rebasing 1:fdaca8533b86 "b"
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ echo a > a

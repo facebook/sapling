@@ -122,7 +122,7 @@ Test
   $ hg amend --to ce91eb673f02
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   merging testFile
-  warning: conflicts while merging testFile! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging testFile! (edit, then use 'hg resolve --mark')
   amend --to encountered an issue - use hg histedit to continue or abortFix up the change (roll 8a18ce6b4d69)
   (hg histedit --continue to resume)
   [1]

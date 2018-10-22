@@ -559,7 +559,7 @@ test the same case, this time with updating
   summary:     msg 6
   
   $ hg graft -q 15
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]

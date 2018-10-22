@@ -1141,7 +1141,7 @@ permanently delete a commit, we do not want to undo to this state.
   $ hg rebase -r 00617 -d 28dfc
   rebasing 28:00617a57f780 "bfile" (tip)
   merging afile
-  warning: conflicts while merging afile! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging afile! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg log -G -T compact -l6
@@ -1234,7 +1234,7 @@ permanently delete a commit, we do not want to undo to this state.
   $ hg rebase -r 00617 -d 28dfc
   rebasing 28:00617a57f780 "bfile"
   merging afile
-  warning: conflicts while merging afile! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging afile! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort

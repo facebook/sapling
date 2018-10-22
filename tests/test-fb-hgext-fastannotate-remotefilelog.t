@@ -314,7 +314,7 @@ Another complex case to test prefetch filtering
   $ hg commit -m 2 -A a -q
   $ hg update 1 -q
   $ hg merge 0 -q
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
   $ $RUNTESTDIR/seq.py 1 3 > a
   $ hg resolve -m a -q

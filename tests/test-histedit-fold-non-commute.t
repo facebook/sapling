@@ -96,7 +96,7 @@ edit the history
   $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change (fold 42abbb61bede)
   (hg histedit --continue to resume)
 
@@ -120,7 +120,7 @@ fix up
   HG: changed d
   HG: changed e
   merging e
-  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 7f3755409b00)
   (hg histedit --continue to resume)
 
@@ -251,7 +251,7 @@ edit the history
   $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change (roll 42abbb61bede)
   (hg histedit --continue to resume)
 
@@ -262,7 +262,7 @@ fix up
   continue: hg histedit --continue
   $ hg histedit --continue 2>&1 | fixbundle | grep -v '2 files removed'
   merging e
-  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 7f3755409b00)
   (hg histedit --continue to resume)
 

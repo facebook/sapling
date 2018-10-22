@@ -192,7 +192,7 @@ Verify rebase temporarily includes excluded files
   rebasing 2:b91df4f39e75 "edit hide" (tip)
   temporarily included 1 file(s) in the sparse checkout for merging
   merging hide
-  warning: conflicts while merging hide! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging hide! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -229,7 +229,7 @@ Verify merge fails if merging excluded files
   $ hg merge -r 2
   temporarily included 1 file(s) in the sparse checkout for merging
   merging hide
-  warning: conflicts while merging hide! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging hide! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

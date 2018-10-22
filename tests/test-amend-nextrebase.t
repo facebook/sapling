@@ -379,7 +379,7 @@ Test a situation where there is a conflict.
   $ hg next --rebase --top
   rebasing 2:4538525df7e2 "add c"
   merging c
-  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ showgraph

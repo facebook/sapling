@@ -60,7 +60,7 @@ Non-interactive merge:
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging file3
-  warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -127,7 +127,7 @@ Interactive merge:
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? d
   merging file3
-  warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 2 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -204,7 +204,7 @@ Interactive merge with bad input:
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
   merging file3
-  warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 1 files merged, 1 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -268,7 +268,7 @@ Interactive merge with not enough input:
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
   merging file3
-  warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 1 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -595,7 +595,7 @@ Choose to merge all files
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging file3
-  warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

@@ -70,7 +70,7 @@ edit the history
   > pick 652413bf663e f
   > EOF
   merging e
-  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change (pick e860deea161a)
   (hg histedit --continue to resume)
 

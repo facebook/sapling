@@ -204,7 +204,7 @@ Rerun with merge conflicts, demonstrating switching to on-disk merge:
   hit merge conflicts (in c); switching to on-disk merge
   rebasing 3:844a7de3e617 "c"
   merging c
-  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort

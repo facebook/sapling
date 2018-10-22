@@ -396,8 +396,8 @@ def _mergecheck(repo, mynode, orig, fcd, fco, fca, toolconf):
 def _describe_failure(r, repo, mynode, orig, fcd, fco, fca):
     """Describes a merge conflict, which is rendered as a warning to the user"""
     return _(
-        "warning: conflicts while merging %s! (edit, then use 'hg resolve --mark')\n"
-    ) % repo.pathto(fcd.path())
+        "warning: %d conflicts while merging %s! (edit, then use 'hg resolve --mark')\n"
+    ) % (r, repo.pathto(fcd.path()))
 
 
 def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):

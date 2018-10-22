@@ -36,8 +36,8 @@ basic merge driver: just lists out files and contents, doesn't resolve any files
   U foo.txt
   merging bar.txt
   merging foo.txt
-  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -119,7 +119,7 @@ mark a file driver-resolved, and leave others unresolved
   $ hg merge 1
   * preprocess called
   merging bar.txt
-  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -193,7 +193,7 @@ mark a file driver-resolved, and leave others unresolved (but skip merge driver)
   $ hg merge 1
   * preprocess called
   merging bar.txt
-  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -205,7 +205,7 @@ mark a file driver-resolved, and leave others unresolved (but skip merge driver)
   $ hg resolve --all --skip
   warning: skipping merge driver (you MUST regenerate artifacts afterwards)
   merging bar.txt
-  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   [1]
   $ hg resolve --list
   U bar.txt
@@ -341,8 +341,8 @@ XXX shouldn't output a warning
   warning: preprocess hook failed
   merging bar.txt
   merging foo.txt
-  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -527,8 +527,8 @@ this should proceed as if there's no merge driver
   loading preprocess hook failed:
   merging bar.txt
   merging foo.txt
-  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -542,8 +542,8 @@ ensure the right path to load the merge driver hook
   loading preprocess hook failed:
   merging repo1/bar.txt
   merging repo1/foo.txt
-  warning: conflicts while merging repo1/bar.txt! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging repo1/foo.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging repo1/bar.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging repo1/foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -708,7 +708,7 @@ graft with failing merge
   grafting 1:e0cfe070a2bb "b"
   * preprocess called
   merging bar.txt
-  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]
