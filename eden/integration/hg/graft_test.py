@@ -57,7 +57,7 @@ class GraftTest(EdenHgTestCase):
             self.hg("graft", commit2)
         self.assertIn(
             (
-                "warning: conflicts while merging first.txt!"
+                "warning: 1 conflicts while merging first.txt!"
                 " (edit, then use 'hg resolve --mark')\n"
                 "  abort: unresolved conflicts, can't continue\n"
             ),

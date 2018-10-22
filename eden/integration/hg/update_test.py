@@ -172,7 +172,7 @@ class UpdateTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("update", ".^", "--merge")
         self.assertIn(
-            b"conflicts while merging foo/bar.txt! "
+            b"1 conflicts while merging foo/bar.txt! "
             b"(edit, then use 'hg resolve --mark')",
             context.exception.stderr,
         )
@@ -269,7 +269,7 @@ class UpdateTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(commit, merge=True)
         self.assertIn(
-            b"warning: conflicts while merging some_new_file.txt! "
+            b"warning: 1 conflicts while merging some_new_file.txt! "
             b"(edit, then use 'hg resolve --mark')",
             context.exception.stderr,
         )
