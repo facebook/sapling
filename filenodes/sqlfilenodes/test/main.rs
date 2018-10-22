@@ -26,7 +26,7 @@ use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
 use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID,
                                       TWOS_FNID};
 use mercurial_types_mocks::repo::{REPO_ONE, REPO_ZERO};
-use sqlfilenodes::SqlFilenodes;
+use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 
 fn root_first_filenode() -> FilenodeInfo {
     FilenodeInfo {

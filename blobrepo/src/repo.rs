@@ -58,7 +58,7 @@ use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, Chan
                      MPathElement, MononokeId, hash::Blake2, hash::Sha256};
 use rocksblob::Rocksblob;
 use rocksdb;
-use sqlfilenodes::SqlFilenodes;
+use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 
 use BlobManifest;
 use HgBlobChangeset;

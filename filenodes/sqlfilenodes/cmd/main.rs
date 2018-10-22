@@ -26,7 +26,7 @@ use futures::future::{loop_fn, Future, Loop};
 use mercurial_types::{HgFileNodeId, HgNodeHash, RepoPath, RepositoryId};
 use slog::{Drain, Level};
 use slog_glog_fmt::default_drain as glog_drain;
-use sqlfilenodes::SqlFilenodes;
+use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::str::FromStr;
 use std::time::Instant;
 

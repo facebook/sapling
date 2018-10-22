@@ -24,20 +24,20 @@ extern crate tokio;
 extern crate filenodes;
 extern crate mercurial_types;
 extern crate mononoke_types;
+extern crate sql_ext;
 
 mod errors;
-
-use std::path::Path;
 
 use failure::prelude::*;
 use futures::{Future, IntoFuture, Stream, future::join_all};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
-use sql::{myrouter, Connection, rusqlite::Connection as SqliteConnection};
+use sql::Connection;
 use stats::Timeseries;
 
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath, RepositoryId};
 use mononoke_types::hash;
+pub use sql_ext::SqlConstructors;
 
 use errors::ErrorKind;
 
@@ -151,45 +151,17 @@ queries! {
     }
 }
 
-impl SqlFilenodes {
-    pub fn with_myrouter(tier: impl ToString, port: u16) -> Self {
-        let mut builder = Connection::myrouter_builder();
-        builder.tier(tier).port(port);
-
-        let read_connection = builder.build_read_only();
-
-        builder.service_type(myrouter::ServiceType::MASTER);
-        let read_master_connection = builder.build_read_only();
-        let write_connection = builder.build_read_write();
-
+impl SqlConstructors for SqlFilenodes {
+    fn from_connections(
+        write_connection: Connection,
+        read_connection: Connection,
+        read_master_connection: Connection,
+    ) -> Self {
         Self {
             write_connection,
             read_connection,
             read_master_connection,
         }
-    }
-
-    pub fn with_sqlite_in_memory() -> Result<Self> {
-        let con = SqliteConnection::open_in_memory()?;
-        con.execute_batch(Self::get_up_query())?;
-        Self::with_sqlite(con)
-    }
-
-    pub fn with_sqlite_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let con = SqliteConnection::open(path)?;
-        // When opening an sqlite database we might already have the proper tables in it, so ignore
-        // errors from table creation
-        let _ = con.execute_batch(Self::get_up_query());
-        Self::with_sqlite(con)
-    }
-
-    fn with_sqlite(con: SqliteConnection) -> Result<Self> {
-        let con = Connection::with_sqlite(con);
-        Ok(Self {
-            write_connection: con.clone(),
-            read_connection: con.clone(),
-            read_master_connection: con,
-        })
     }
 
     fn get_up_query() -> &'static str {
