@@ -1157,7 +1157,6 @@ packages = [
     "hgext.pushrebase",
     "hgext.remotefilelog",
     "hgext.treemanifest",
-    "hgext.zeroconf",
     "hgext3rd",
     "hgdemandimport",
 ]
