@@ -15,7 +15,10 @@ extensions = []
 templates_path = []
 
 # The suffix of source filenames.
-source_suffix = ".rst"
+source_suffix = [".rst", ".md"]
+
+# External Markdown support
+source_parsers = {".md": "recommonmark.parser.CommonMarkParser"}
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
