@@ -749,7 +749,11 @@ def getcmdanddefaultopts(cmdname, table):
     and correctly changes their name - replace '-'  with '_'.
     """
 
-    _aliases, cmdwithopts = findcmd(cmdname, table)
+    cmdname = cmdname.split()
+    for subcmd in cmdname:
+        _aliases, cmdwithopts = findcmd(subcmd, table)
+        table = cmdwithopts[0].subcommands
+
     cmd, optsdescription = cmdwithopts[:2]
 
     opts = {}
