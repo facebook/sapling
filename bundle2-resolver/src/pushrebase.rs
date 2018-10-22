@@ -477,24 +477,11 @@ fn get_bookmark_value(
     repo: &Arc<BlobRepo>,
     bookmark_name: &Bookmark,
 ) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
-    repo.get_bookmark(bookmark_name)
+    repo.get_bonsai_bookmark(bookmark_name)
         .and_then({
             cloned!(bookmark_name);
             move |bookmark| {
                 bookmark.ok_or(ErrorKind::PushrebaseBookmarkNotFound(bookmark_name).into())
-            }
-        })
-        .and_then({
-            cloned!(repo);
-            move |hg_bookmark_value| {
-                repo.get_bonsai_from_hg(&hg_bookmark_value).and_then({
-                    cloned!(hg_bookmark_value);
-                    move |bonsai| {
-                        bonsai.ok_or(
-                            ErrorKind::BonsaiNotFoundForHgChangeset(hg_bookmark_value).into(),
-                        )
-                    }
-                })
             }
         })
         .with_context(move |_| format!("While getting bookmark value"))
