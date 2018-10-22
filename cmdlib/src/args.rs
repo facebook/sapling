@@ -485,3 +485,14 @@ pub fn get_usize_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<usize> {
 pub fn get_usize<'a>(matches: &ArgMatches<'a>, key: &str, default: usize) -> usize {
     get_usize_opt(matches, key).unwrap_or(default)
 }
+
+#[inline]
+pub fn get_u64<'a>(matches: &ArgMatches<'a>, key: &str, default: u64) -> u64 {
+    matches
+        .value_of(key)
+        .map(|val| {
+            val.parse::<u64>()
+                .expect(&format!("{} must be integer", key))
+        })
+        .unwrap_or(default)
+}

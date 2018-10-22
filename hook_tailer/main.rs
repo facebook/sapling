@@ -47,8 +47,11 @@ use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
 use failure::Error;
 use failure::Result;
-use futures::future::{loop_fn, Future, Loop};
+use futures::Stream;
+use futures::future::Future;
+use futures::stream::repeat;
 use futures_ext::{BoxFuture, FutureExt};
+use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::{HgNodeHash, RepositoryId};
 use metaconfig::RepoConfigs;
@@ -65,6 +68,11 @@ use std::sync::Arc;
 use std::time::Duration;
 use tailer::Tailer;
 use tokio_timer::sleep;
+
+pub struct HookResults {
+    file_hooks_results: Vec<(FileHookExecutionID, HookExecution)>,
+    cs_hooks_result: Vec<(ChangesetHookExecutionID, HookExecution)>,
+}
 
 fn main() -> Result<()> {
     panichandler::set_panichandler(panichandler::Fate::Abort);
@@ -137,20 +145,21 @@ fn main() -> Result<()> {
         // Tail new commits and run hooks on them
         let logger = logger.clone();
         fut.then(|_| {
-            loop_fn(tailer, move |tailer| {
-                create_poller(tailer, logger.clone())
-                    .and_then(|tailer| {
-                        sleep(Duration::new(10, 0))
-                            .map(move |()| tailer)
-                            .map_err(|err| format_err!("Tokio timer error {:?}", err))
-                    })
-                    .and_then(move |tailer| Ok(Loop::Continue(tailer)))
+            repeat(()).for_each(move |()| {
+                let fut = tailer.run();
+                process_hook_results(fut, logger.clone()).and_then(|()| {
+                    sleep(Duration::new(10, 0))
+                        .map_err(|err| format_err!("Tokio timer error {:?}", err))
+                })
             })
         }).left_future()
     } else {
+        let limit = cmdlib::args::get_u64(&matches, "limit", 1000);
         let logger = logger.clone();
-        fut.then(move |_| create_poller(tailer, logger))
-            .right_future()
+        fut.then(move |_| {
+            let fut = tailer.run_with_limit(limit);
+            process_hook_results(fut, logger)
+        }).right_future()
     };
 
     tokio::run(fut.map(|_| ()).map_err(move |err| {
@@ -160,47 +169,47 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn create_poller(tailer: Tailer, logger: Logger) -> BoxFuture<Tailer, Error> {
-    tailer
-        .run()
-        .map(move |res| {
-            let mut file_hooks_stat = HookExecutionStat::new();
-            let mut cs_hooks_stat = HookExecutionStat::new();
+fn process_hook_results(
+    fut: BoxFuture<Vec<HookResults>, Error>,
+    logger: Logger,
+) -> BoxFuture<(), Error> {
+    fut.map(move |res| {
+        let mut file_hooks_stat = HookExecutionStat::new();
+        let mut cs_hooks_stat = HookExecutionStat::new();
 
-            res.into_iter().for_each(|(v_files, v_cs)| {
-                debug!(logger, "==== File hooks results ====");
-                v_files.into_iter().for_each(|(exec_id, exec)| {
-                    file_hooks_stat.record_hook_execution(&exec);
+        res.into_iter().for_each(|hook_results| {
+            let HookResults {
+                file_hooks_results,
+                cs_hooks_result,
+            } = hook_results;
+            debug!(logger, "==== File hooks results ====");
+            file_hooks_results.into_iter().for_each(|(exec_id, exec)| {
+                file_hooks_stat.record_hook_execution(&exec);
 
-                    debug!(
-                        logger,
-                        "changeset:{} hook_name:{} path:{} result:{:?}",
-                        exec_id.cs_id,
-                        exec_id.hook_name,
-                        exec_id.file.path,
-                        exec
-                    );
-                });
-                debug!(logger, "==== Changeset hooks results ====");
-                v_cs.into_iter().for_each(|(exec_id, exec)| {
-                    cs_hooks_stat.record_hook_execution(&exec);
-                    debug!(
-                        logger,
-                        "changeset:{} hook_name:{} result:{:?}",
-                        exec_id.cs_id,
-                        exec_id.hook_name,
-                        exec
-                    );
-                });
+                debug!(
+                    logger,
+                    "changeset:{} hook_name:{} path:{} result:{:?}",
+                    exec_id.cs_id,
+                    exec_id.hook_name,
+                    exec_id.file.path,
+                    exec
+                );
             });
+            debug!(logger, "==== Changeset hooks results ====");
+            cs_hooks_result.into_iter().for_each(|(exec_id, exec)| {
+                cs_hooks_stat.record_hook_execution(&exec);
+                debug!(
+                    logger,
+                    "changeset:{} hook_name:{} result:{:?}", exec_id.cs_id, exec_id.hook_name, exec
+                );
+            });
+        });
 
-            info!(logger, "==== File hooks stat: {} ====", file_hooks_stat);
-            info!(logger, "==== Changeset hooks stat: {} ====", cs_hooks_stat);
+        info!(logger, "==== File hooks stat: {} ====", file_hooks_stat);
+        info!(logger, "==== Changeset hooks stat: {} ====", cs_hooks_stat);
 
-            ()
-        })
-        .map(move |()| tailer)
-        .boxify()
+        ()
+    }).boxify()
 }
 
 struct HookExecutionStat {
@@ -230,7 +239,11 @@ impl HookExecutionStat {
 
 impl fmt::Display for HookExecutionStat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "accepted: {}, rejected: {}", self.accepted, self.rejected)
+        write!(
+            f,
+            "accepted: {}, rejected: {}",
+            self.accepted, self.rejected
+        )
     }
 }
 
@@ -254,6 +267,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                           --init_revision [INIT_REVISION]        'the initial revision to start at'
 
             --continuous                                         'continuously run hooks on new commits'
+            --limit=[LIMIT]                                      'limit number of commits to process (non-continuous only). Default: 1000'
             -d, --debug                                          'print debug level output'
             -p, --myrouter-port=[PORT]                           'port for local myrouter instance'
         "#,
