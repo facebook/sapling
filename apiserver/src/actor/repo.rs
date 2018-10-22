@@ -264,9 +264,17 @@ impl MononokeRepo {
         &self,
         repo_name: String,
         req: BatchRequest,
-        host_address: Url,
+        lfs_url: Option<Url>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        build_response(repo_name, req, host_address)
+        let lfs_address = try_boxfuture!(
+            lfs_url.ok_or(ErrorKind::InvalidInput(
+                "Lfs batch request is not allowed, as lfs-url is not configurated for server"
+                    .to_string(),
+                None
+            ))
+        );
+
+        build_response(repo_name, req, lfs_address)
             .map(|response| MononokeRepoResponse::LfsBatch { response })
             .into_future()
             .boxify()
@@ -290,8 +298,8 @@ impl MononokeRepo {
             LfsBatch {
                 repo_name,
                 req,
-                host_address,
-            } => self.lfs_batch(repo_name, req, host_address),
+                lfs_url,
+            } => self.lfs_batch(repo_name, req, lfs_url),
             UploadLargeFile { oid, body } => self.upload_large_file(oid, body),
         }
     }

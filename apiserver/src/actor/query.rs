@@ -43,7 +43,7 @@ pub enum MononokeRepoQuery {
     LfsBatch {
         repo_name: String,
         req: BatchRequest,
-        host_address: Url,
+        lfs_url: Option<Url>,
     },
     UploadLargeFile {
         oid: String,

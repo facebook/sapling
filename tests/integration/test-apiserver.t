@@ -48,7 +48,8 @@ import testing repo to mononoke
   $ blobimport rocksdb repo-hg/.hg repo
 
 starts api server
-  $ apiserver -H "127.0.0.1" -p $(get_free_socket)
+  $ APISERVER_PORT=$(get_free_socket)
+  $ apiserver -H "127.0.0.1" -p $APISERVER_PORT --lfs-url "https://127.0.0.1:"$APISERVER_PORT
   $ wait_for_apiserver
   $ alias sslcurl="sslcurl --silent"
 

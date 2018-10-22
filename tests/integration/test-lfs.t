@@ -62,7 +62,8 @@
   > EOF
 
 # 3. Setup Mononoke API server.
-  $ no_ssl_apiserver -H "127.0.0.1" -p $(get_free_socket)
+  $ APISERVER_PORT=$(get_free_socket)
+  $ no_ssl_apiserver --http-host "127.0.0.1" --http-port $APISERVER_PORT --lfs-url "http://127.0.0.1:"$APISERVER_PORT
   $ wait_for_apiserver --no-ssl
 
 # 4. Clone hg nolfs repo to lfs client hg repo. Setup small threshold for large file size.

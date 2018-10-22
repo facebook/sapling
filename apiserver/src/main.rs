@@ -74,7 +74,6 @@ use bookmarks::Bookmark;
 use clap::Arg;
 use failure::{err_msg, Result};
 use futures::Future;
-use http::uri::Scheme;
 use panichandler::Fate;
 use percent_encoding::percent_decode;
 use slog::{Drain, Level, Logger};
@@ -229,7 +228,7 @@ fn lfs_batch(
         kind: MononokeRepoQuery::LfsBatch {
             req: req_json.into_inner(),
             repo_name: info.repo.clone(),
-            host_address: state.clone().host_address,
+            lfs_url: state.clone().lfs_url,
         },
     })
 }
@@ -301,7 +300,7 @@ fn create_config<P: AsRef<Path>>(
 struct HttpServerState {
     mononoke: Arc<Mononoke>,
     logger: Logger,
-    host_address: Url,
+    lfs_url: Option<Url>,
 }
 
 fn main() -> Result<()> {
@@ -385,6 +384,12 @@ fn main() -> Result<()> {
                     .long("myrouter-port")
                     .value_name("PORT")
                     .help("port for local myrouter instance"),
+            )
+            .arg(
+                Arg::with_name("lfs-url")
+                    .long("lfs-url")
+                    .value_name("URL")
+                    .help("url for lfs requests, required to support lfs requests"),
             ),
         false, /* hide_advanced_args */
     ).get_matches();
@@ -471,15 +476,24 @@ fn main() -> Result<()> {
         thrift::make_thrift(thrift_logger, host.to_string(), port, mononoke.clone());
     }
 
-    let host_address = match use_ssl {
-        true => Url::parse(&format!("{}://{}:{}", Scheme::HTTPS.as_str(), host, port)),
-        false => Url::parse(&format!("{}://{}:{}", Scheme::HTTP.as_str(), host, port)),
-    }.expect("Expected valid http address");
+    let lfs_url = match matches.value_of("lfs-url") {
+        Some(url) => {
+            let lfs_url = Url::parse(url).expect("Expected valid lfs-url HTTP address");
+            Some(lfs_url)
+        }
+        None => {
+            info!(
+                root_logger,
+                "lfs-url is not set, lfs requests are not supported"
+            );
+            None
+        }
+    };
 
     let state = HttpServerState {
         mononoke,
         logger: actix_logger.clone(),
-        host_address: host_address,
+        lfs_url: lfs_url.clone(),
     };
 
     let server = server::new(move || {
@@ -514,7 +528,7 @@ fn main() -> Result<()> {
                 },
             )
             .scope("/{repo}", |repo| {
-                repo.resource("/raw/{changeset}/{path:.*}", |r| {
+                let apiserver_resources = repo.resource("/raw/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_raw_file)
                 }).resource(
                         "/is_ancestor/{proposed_ancestor}/{proposed_descendent}",
@@ -531,16 +545,21 @@ fn main() -> Result<()> {
                     })
                     .resource("/changeset/{hash}", |r| {
                         r.method(http::Method::GET).with_async(get_changeset)
-                    })
-                    .resource("/lfs/download/{oid}", |r| {
-                        r.method(http::Method::GET).with_async(download_large_file)
-                    })
-                    .resource("/objects/batch", |r| {
-                        r.method(http::Method::POST).with_async(lfs_batch)
-                    })
-                    .resource("/lfs/upload/{oid}", |r| {
-                        r.method(http::Method::PUT).with_async(upload_large_file)
-                    })
+                    });
+                if lfs_url.is_some() {
+                    apiserver_resources
+                        .resource("/lfs/download/{oid}", |r| {
+                            r.method(http::Method::GET).with_async(download_large_file)
+                        })
+                        .resource("/objects/batch", |r| {
+                            r.method(http::Method::POST).with_async(lfs_batch)
+                        })
+                        .resource("/lfs/upload/{oid}", |r| {
+                            r.method(http::Method::PUT).with_async(upload_large_file)
+                        })
+                } else {
+                    apiserver_resources
+                }
             })
     });
 
