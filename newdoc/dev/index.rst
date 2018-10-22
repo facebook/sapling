@@ -1,6 +1,10 @@
 FB Mercurial Developer Guide
 ============================
 
+.. warning::
+
+  This is a Work-In-Progress! Content below might be rewritten entirely.
+
 Contents:
 
 .. toctree::
