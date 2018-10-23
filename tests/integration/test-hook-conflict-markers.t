@@ -37,8 +37,8 @@ Positive testing
   pushing rev 17a746afd78e to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: conflict_markers: Conflict markers were found in file '1', root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nconflict_markers: Conflict markers were found in file \'1\'"
+  remote: conflict_markers for 17a746afd78ed3f7f06d1d5396fa89adf656ae51: Conflict markers were found in file '1', root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nconflict_markers for 17a746afd78ed3f7f06d1d5396fa89adf656ae51: Conflict markers were found in file \'1\'"
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -50,8 +50,8 @@ Positive testing
   pushing rev 948f2ceaf570 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: conflict_markers: Conflict markers were found in file '1', root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nconflict_markers: Conflict markers were found in file \'1\'"
+  remote: conflict_markers for 948f2ceaf570f89539966000cf65d4a56dc4ec37: Conflict markers were found in file '1', root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nconflict_markers for 948f2ceaf570f89539966000cf65d4a56dc4ec37: Conflict markers were found in file \'1\'"
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -63,8 +63,8 @@ Positive testing
   pushing rev 19aec9624bdb to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: conflict_markers: Conflict markers were found in file '1', root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nconflict_markers: Conflict markers were found in file \'1\'"
+  remote: conflict_markers for 19aec9624bdb0ee406f3638ca2d159cffdd843b5: Conflict markers were found in file '1', root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nconflict_markers for 19aec9624bdb0ee406f3638ca2d159cffdd843b5: Conflict markers were found in file \'1\'"
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -126,8 +126,8 @@ Test markers not on the first line
   pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: conflict_markers: Conflict markers were found in file 'notfirstline', root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nconflict_markers: Conflict markers were found in file \'notfirstline\'"
+  remote: conflict_markers for be491e50f4868f90970fb2267d7724d8580780af: Conflict markers were found in file 'notfirstline', root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nconflict_markers for be491e50f4868f90970fb2267d7724d8580780af: Conflict markers were found in file \'notfirstline\'"
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -139,8 +139,8 @@ Test markers not on the first line
   pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: conflict_markers: Conflict markers were found in file 'notfirstline', root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nconflict_markers: Conflict markers were found in file \'notfirstline\'"
+  remote: conflict_markers for 75082ee47890f6a00b55b04ca1c3f39ab9c598b3: Conflict markers were found in file 'notfirstline', root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nconflict_markers for 75082ee47890f6a00b55b04ca1c3f39ab9c598b3: Conflict markers were found in file \'notfirstline\'"
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

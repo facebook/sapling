@@ -39,8 +39,8 @@ bad top level dir, should fail
   pushing rev f626f2055ec3 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: block_cross_repo_commits: File badtopleveldir/foo is not in an allowed directory. , root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nblock_cross_repo_commits: File badtopleveldir/foo is not in an allowed directory. "
+  remote: block_cross_repo_commits for f626f2055ec36d74bef9de03183844f0d6656ef0: File badtopleveldir/foo is not in an allowed directory. , root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nblock_cross_repo_commits for f626f2055ec36d74bef9de03183844f0d6656ef0: File badtopleveldir/foo is not in an allowed directory. "
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -55,8 +55,8 @@ bad file in root, should fail
   pushing rev 0bcec3988e25 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: block_cross_repo_commits: File badtoplevelfile is not in an allowed directory. , root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nblock_cross_repo_commits: File badtoplevelfile is not in an allowed directory. "
+  remote: block_cross_repo_commits for 0bcec3988e25203e7ea29f20b44193e4db79051f: File badtoplevelfile is not in an allowed directory. , root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nblock_cross_repo_commits for 0bcec3988e25203e7ea29f20b44193e4db79051f: File badtoplevelfile is not in an allowed directory. "
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -72,8 +72,8 @@ commits to tupperware blacklist, should fail
   pushing rev c7901736b123 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: block_cross_repo_commits: File fbcode/tupperware/config/common/foo is not in an allowed directory. , root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nblock_cross_repo_commits: File fbcode/tupperware/config/common/foo is not in an allowed directory. "
+  remote: block_cross_repo_commits for c7901736b12390a1f5930c01889ceacf7019b6e3: File fbcode/tupperware/config/common/foo is not in an allowed directory. , root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nblock_cross_repo_commits for c7901736b12390a1f5930c01889ceacf7019b6e3: File fbcode/tupperware/config/common/foo is not in an allowed directory. "
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -87,8 +87,8 @@ commits to tupperware blacklist, should fail
   pushing rev a5f50efbcd3f to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: block_cross_repo_commits: File fbcode/tupperware/config/twcron/foo is not in an allowed directory. , root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nblock_cross_repo_commits: File fbcode/tupperware/config/twcron/foo is not in an allowed directory. "
+  remote: block_cross_repo_commits for a5f50efbcd3f4d03279b79f6b5191e97345a7095: File fbcode/tupperware/config/twcron/foo is not in an allowed directory. , root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nblock_cross_repo_commits for a5f50efbcd3f4d03279b79f6b5191e97345a7095: File fbcode/tupperware/config/twcron/foo is not in an allowed directory. "
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -102,8 +102,8 @@ commits to tupperware blacklist, should fail
   pushing rev 8cbc4aa6858f to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: block_cross_repo_commits: File fbcode/tupperware/config/managed_containers/foo is not in an allowed directory. , root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nblock_cross_repo_commits: File fbcode/tupperware/config/managed_containers/foo is not in an allowed directory. "
+  remote: block_cross_repo_commits for 8cbc4aa6858fd114c4151d42ca38c884926104b9: File fbcode/tupperware/config/managed_containers/foo is not in an allowed directory. , root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nblock_cross_repo_commits for 8cbc4aa6858fd114c4151d42ca38c884926104b9: File fbcode/tupperware/config/managed_containers/foo is not in an allowed directory. "
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -135,8 +135,8 @@ push to dataswarm pipelines dir should fail
   pushing rev 8cd3a1bebf72 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: block_cross_repo_commits: File fbcode/dataswarm-pipelines/foo is in fbcode/dataswarm-pipelines/, root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nblock_cross_repo_commits: File fbcode/dataswarm-pipelines/foo is in fbcode/dataswarm-pipelines/"
+  remote: block_cross_repo_commits for 8cd3a1bebf72906cdd65a687c3832a9afcecdf1f: File fbcode/dataswarm-pipelines/foo is in fbcode/dataswarm-pipelines/, root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nblock_cross_repo_commits for 8cd3a1bebf72906cdd65a687c3832a9afcecdf1f: File fbcode/dataswarm-pipelines/foo is in fbcode/dataswarm-pipelines/"
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -150,8 +150,8 @@ push to dataswarm pipelines dir should fail
   pushing rev 362f933fd9f6 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: block_cross_repo_commits: File fbcode/dataswarm-pipelines/somedir/foo is in fbcode/dataswarm-pipelines/, root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nblock_cross_repo_commits: File fbcode/dataswarm-pipelines/somedir/foo is in fbcode/dataswarm-pipelines/"
+  remote: block_cross_repo_commits for 362f933fd9f6d1fd600aac2b974265a76502dae6: File fbcode/dataswarm-pipelines/somedir/foo is in fbcode/dataswarm-pipelines/, root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nblock_cross_repo_commits for 362f933fd9f6d1fd600aac2b974265a76502dae6: File fbcode/dataswarm-pipelines/somedir/foo is in fbcode/dataswarm-pipelines/"
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

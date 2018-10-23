@@ -34,8 +34,8 @@ add non symlink - should fail
   pushing rev 566e4f57650f to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: tp2_symlinks_only: All projects committed to fbcode/third-party2/ must be symlinks, root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\ntp2_symlinks_only: All projects committed to fbcode/third-party2/ must be symlinks"
+  remote: tp2_symlinks_only for 566e4f57650f7358c94e7ed85e661957343ca6f7: All projects committed to fbcode/third-party2/ must be symlinks, root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\ntp2_symlinks_only for 566e4f57650f7358c94e7ed85e661957343ca6f7: All projects committed to fbcode/third-party2/ must be symlinks"
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

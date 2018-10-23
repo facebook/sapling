@@ -30,8 +30,8 @@ add .gitattributes file that matches regex - should fail
   pushing rev 15bff1dfbf94 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: gitattributes-textdirectives: No text directives are authorized in .gitattributes. This is known to break sandcastle and developers' local clones., root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\ngitattributes-textdirectives: No text directives are authorized in .gitattributes. This is known to break sandcastle and developers\' local clones."
+  remote: gitattributes-textdirectives for 15bff1dfbf942b0e37fedd9cb530b11bdf30a636: No text directives are authorized in .gitattributes. This is known to break sandcastle and developers' local clones., root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\ngitattributes-textdirectives for 15bff1dfbf942b0e37fedd9cb530b11bdf30a636: No text directives are authorized in .gitattributes. This is known to break sandcastle and developers\' local clones."
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -76,8 +76,8 @@ make sure . in "%.gitattributes$" regex is a literal dot and not a wildcard - sh
   pushing rev 952b5a8c12fa to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: gitattributes-textdirectives: No text directives are authorized in .gitattributes. This is known to break sandcastle and developers' local clones., root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\ngitattributes-textdirectives: No text directives are authorized in .gitattributes. This is known to break sandcastle and developers\' local clones."
+  remote: gitattributes-textdirectives for 952b5a8c12fa9aa4d78e6deed0594ac4fb6cd8a4: No text directives are authorized in .gitattributes. This is known to break sandcastle and developers' local clones., root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\ngitattributes-textdirectives for 952b5a8c12fa9aa4d78e6deed0594ac4fb6cd8a4: No text directives are authorized in .gitattributes. This is known to break sandcastle and developers\' local clones."
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

@@ -267,12 +267,12 @@ fn resolve_pushrebase(
                                 let mut err_msgs = vec![];
                                 for (exec_id, exec_info) in cs_hook_failures {
                                     if let HookExecution::Rejected(info) = exec_info {
-                                        err_msgs.push(format!("{}: {}", exec_id.hook_name, info.description));
+                                        err_msgs.push(format!("{} for {}: {}", exec_id.hook_name, exec_id.cs_id, info.description));
                                     }
                                 }
                                 for (exec_id, exec_info) in file_hook_failures {
                                     if let HookExecution::Rejected(info) = exec_info {
-                                        err_msgs.push(format!("{}: {}", exec_id.hook_name, info.description));
+                                        err_msgs.push(format!("{} for {}: {}", exec_id.hook_name, exec_id.cs_id, info.description));
                                     }
                                 }
                                 err_msg(format!("hooks failed:\n{}", err_msgs.join("\n")))

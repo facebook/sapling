@@ -42,8 +42,8 @@ buck-out directory is blacklisted in the root
   pushing rev f8301844633b to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: deny_files: Denied filename 'buck-out/file' matched name pattern '^buck%-out/'. Rename or remove this file and try again., root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\ndeny_files: Denied filename \'buck-out/file\' matched name pattern \'^buck%-out/\'. Rename or remove this file and try again."
+  remote: deny_files for f8301844633b60c2b4f8b990279394d831ab90c7: Denied filename 'buck-out/file' matched name pattern '^buck%-out/'. Rename or remove this file and try again., root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\ndeny_files for f8301844633b60c2b4f8b990279394d831ab90c7: Denied filename \'buck-out/file\' matched name pattern \'^buck%-out/\'. Rename or remove this file and try again."
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -58,8 +58,8 @@ buck-out directory is blacklisted in any subdir
   pushing rev 409273951981 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: deny_files: Denied filename 'dir/buck-out/file' matched name pattern '/buck%-out/'. Rename or remove this file and try again., root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\ndeny_files: Denied filename \'dir/buck-out/file\' matched name pattern \'/buck%-out/\'. Rename or remove this file and try again."
+  remote: deny_files for 40927395198136c0dc65978d4fec6a8bf8386d4d: Denied filename 'dir/buck-out/file' matched name pattern '/buck%-out/'. Rename or remove this file and try again., root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\ndeny_files for 40927395198136c0dc65978d4fec6a8bf8386d4d: Denied filename \'dir/buck-out/file\' matched name pattern \'/buck%-out/\'. Rename or remove this file and try again."
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -73,8 +73,8 @@ DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED does the needful
   pushing rev d1a6e60539c6 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: deny_files: Denied filename 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' matched name pattern 'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED'. Rename or remove this file and try again., root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\ndeny_files: Denied filename \'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt\' matched name pattern \'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED\'. Rename or remove this file and try again."
+  remote: deny_files for d1a6e60539c6d4cd8df0c1fd442dcba98ef76bdf: Denied filename 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' matched name pattern 'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED'. Rename or remove this file and try again., root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\ndeny_files for d1a6e60539c6d4cd8df0c1fd442dcba98ef76bdf: Denied filename \'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt\' matched name pattern \'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED\'. Rename or remove this file and try again."
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -89,8 +89,8 @@ Old fbmake leftovers cannot be committed
   pushing rev 10b8f7a92bd1 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: deny_files: Denied filename 'fbcode/_bin/file' matched name pattern '^fbcode/_bin/'. Rename or remove this file and try again., root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\ndeny_files: Denied filename \'fbcode/_bin/file\' matched name pattern \'^fbcode/_bin/\'. Rename or remove this file and try again."
+  remote: deny_files for 10b8f7a92bd16630481eac34cac5b832edb9cb71: Denied filename 'fbcode/_bin/file' matched name pattern '^fbcode/_bin/'. Rename or remove this file and try again., root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\ndeny_files for 10b8f7a92bd16630481eac34cac5b832edb9cb71: Denied filename \'fbcode/_bin/file\' matched name pattern \'^fbcode/_bin/\'. Rename or remove this file and try again."
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -107,11 +107,11 @@ Cannot nest project dirs badly
   pushing rev 5d971d690977 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: deny_files: Denied filename 'fbandroid/fbandroid/files' matched name pattern '^fbandroid/fbandroid/'. Rename or remove this file and try again.
-  remote: deny_files: Denied filename 'fbcode/fbcode/files' matched name pattern '^fbcode/fbcode/'. Rename or remove this file and try again.
-  remote: deny_files: Denied filename 'fbobjc/fbobjc/files' matched name pattern '^fbobjc/fbobjc/'. Rename or remove this file and try again.
-  remote: deny_files: Denied filename 'xplat/xplat/files' matched name pattern '^xplat/xplat/'. Rename or remove this file and try again., root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\ndeny_files: Denied filename \'fbandroid/fbandroid/files\' matched name pattern \'^fbandroid/fbandroid/\'. Rename or remove this file and try again.\ndeny_files: Denied filename \'fbcode/fbcode/files\' matched name pattern \'^fbcode/fbcode/\'. Rename or remove this file and try again.\ndeny_files: Denied filename \'fbobjc/fbobjc/files\' matched name pattern \'^fbobjc/fbobjc/\'. Rename or remove this file and try again.\ndeny_files: Denied filename \'xplat/xplat/files\' matched name pattern \'^xplat/xplat/\'. Rename or remove this file and try again."
+  remote: deny_files for 5d971d690977075710cf1270860e2ab65015eeec: Denied filename 'fbandroid/fbandroid/files' matched name pattern '^fbandroid/fbandroid/'. Rename or remove this file and try again.
+  remote: deny_files for 5d971d690977075710cf1270860e2ab65015eeec: Denied filename 'fbcode/fbcode/files' matched name pattern '^fbcode/fbcode/'. Rename or remove this file and try again.
+  remote: deny_files for 5d971d690977075710cf1270860e2ab65015eeec: Denied filename 'fbobjc/fbobjc/files' matched name pattern '^fbobjc/fbobjc/'. Rename or remove this file and try again.
+  remote: deny_files for 5d971d690977075710cf1270860e2ab65015eeec: Denied filename 'xplat/xplat/files' matched name pattern '^xplat/xplat/'. Rename or remove this file and try again., root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\ndeny_files for 5d971d690977075710cf1270860e2ab65015eeec: Denied filename \'fbandroid/fbandroid/files\' matched name pattern \'^fbandroid/fbandroid/\'. Rename or remove this file and try again.\ndeny_files for 5d971d690977075710cf1270860e2ab65015eeec: Denied filename \'fbcode/fbcode/files\' matched name pattern \'^fbcode/fbcode/\'. Rename or remove this file and try again.\ndeny_files for 5d971d690977075710cf1270860e2ab65015eeec: Denied filename \'fbobjc/fbobjc/files\' matched name pattern \'^fbobjc/fbobjc/\'. Rename or remove this file and try again.\ndeny_files for 5d971d690977075710cf1270860e2ab65015eeec: Denied filename \'xplat/xplat/files\' matched name pattern \'^xplat/xplat/\'. Rename or remove this file and try again."
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -128,10 +128,10 @@ Cannot put crud in xplat
   pushing rev 42bbe801bb55 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: deny_files: Denied filename 'xplat/fbandroid/files' matched name pattern '^xplat/fbandroid/'. Rename or remove this file and try again.
-  remote: deny_files: Denied filename 'xplat/fbcode/files' matched name pattern '^xplat/fbcode/'. Rename or remove this file and try again.
-  remote: deny_files: Denied filename 'xplat/fbobjc/files' matched name pattern '^xplat/fbobjc/'. Rename or remove this file and try again., root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\ndeny_files: Denied filename \'xplat/fbandroid/files\' matched name pattern \'^xplat/fbandroid/\'. Rename or remove this file and try again.\ndeny_files: Denied filename \'xplat/fbcode/files\' matched name pattern \'^xplat/fbcode/\'. Rename or remove this file and try again.\ndeny_files: Denied filename \'xplat/fbobjc/files\' matched name pattern \'^xplat/fbobjc/\'. Rename or remove this file and try again."
+  remote: deny_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Denied filename 'xplat/fbandroid/files' matched name pattern '^xplat/fbandroid/'. Rename or remove this file and try again.
+  remote: deny_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Denied filename 'xplat/fbcode/files' matched name pattern '^xplat/fbcode/'. Rename or remove this file and try again.
+  remote: deny_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Denied filename 'xplat/fbobjc/files' matched name pattern '^xplat/fbobjc/'. Rename or remove this file and try again., root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\ndeny_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Denied filename \'xplat/fbandroid/files\' matched name pattern \'^xplat/fbandroid/\'. Rename or remove this file and try again.\ndeny_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Denied filename \'xplat/fbcode/files\' matched name pattern \'^xplat/fbcode/\'. Rename or remove this file and try again.\ndeny_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Denied filename \'xplat/fbobjc/files\' matched name pattern \'^xplat/fbobjc/\'. Rename or remove this file and try again."
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
