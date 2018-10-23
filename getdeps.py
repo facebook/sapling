@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 
@@ -31,8 +32,6 @@ class BuildOptions(object):
             self.num_jobs = multiprocessing.cpu_count()
 
         self.external_dir = external_dir
-        if install_dir is None:
-            install_dir = os.path.join(self.external_dir, "install")
         self.install_dir = install_dir
 
     def project_dir(self, name, *paths):
@@ -375,6 +374,8 @@ def main():
     if args.external_dir is None:
         script_dir = os.path.abspath(os.path.dirname(__file__))
         args.external_dir = os.path.join(script_dir, "external")
+    if args.install_dir is None:
+        args.install_dir = os.path.join(args.external_dir, "install")
     if args.clean is None:
         args.clean = args.update
 
@@ -394,6 +395,7 @@ def main():
             project.ensure_checkedout()
 
     if args.clean:
+        shutil.rmtree(args.install_dir)
         for project in projects:
             project.clean()
 
