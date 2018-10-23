@@ -28,11 +28,6 @@ using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
 
-DEFINE_bool(
-    reverify_empty_files,
-    true,
-    "Perform extra verification of file contents for empty files.");
-
 namespace facebook {
 namespace eden {
 
@@ -89,17 +84,6 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
       [id, localStore = localStore_, backingStore = backingStore_](
           shared_ptr<const Blob> blob) {
         if (blob) {
-          if (FLAGS_reverify_empty_files && blob->getContents().empty()) {
-            return backingStore->verifyEmptyBlob(id).thenValue(
-                [id, localStore, origBlob = std::move(blob)](
-                    std::unique_ptr<Blob> updatedBlob) mutable {
-                  if (!updatedBlob) {
-                    return shared_ptr<const Blob>(std::move(origBlob));
-                  }
-                  localStore->putBlob(id, updatedBlob.get());
-                  return shared_ptr<const Blob>(std::move(updatedBlob));
-                });
-          }
           XLOG(DBG4) << "blob " << id << "  found in local store";
           return makeFuture(shared_ptr<const Blob>(std::move(blob)));
         }
@@ -160,18 +144,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
       [id, localStore = localStore_, backingStore = backingStore_](
           folly::Optional<BlobMetadata>&& localData) {
         if (localData.hasValue()) {
-          if (FLAGS_reverify_empty_files && localData.value().size == 0) {
-            return backingStore->verifyEmptyBlob(id).thenValue(
-                [id, metadata = localData.value(), localStore](
-                    std::unique_ptr<Blob> blob) {
-                  if (!blob) {
-                    return metadata;
-                  }
-                  return localStore->putBlob(id, blob.get());
-                });
-          } else {
-            return makeFuture(localData.value());
-          }
+          return makeFuture(localData.value());
         }
 
         // Load the blob from the BackingStore.

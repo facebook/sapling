@@ -70,8 +70,6 @@ class HgBackingStore : public BackingStore {
   FOLLY_NODISCARD folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const override;
 
-  folly::Future<std::unique_ptr<Blob>> verifyEmptyBlob(const Hash& id) override;
-
 #if EDEN_HAVE_HG_TREEMANIFEST
   /**
    * Import the manifest for the specified revision using mercurial

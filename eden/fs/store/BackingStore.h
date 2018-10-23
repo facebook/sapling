@@ -47,17 +47,6 @@ class BackingStore {
     return folly::unit;
   }
 
-  /**
-   * Attempt to re-verify the contents of a previously imported blob that was
-   * recorded as empty.  This is unfortunately necessary at the moment since
-   * we have seen bugs where some files were incorrectly recorded as empty in
-   * the LocalStore.
-   *
-   * This returns a null pointer if the Blob has been verified as empty, or a
-   * new Blob if the file is not empty.
-   */
-  virtual folly::Future<std::unique_ptr<Blob>> verifyEmptyBlob(const Hash& id);
-
  private:
   // Forbidden copy constructor and assignment operator
   BackingStore(BackingStore const&) = delete;
