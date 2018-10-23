@@ -13,6 +13,7 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
+#include <gflags/gflags.h>
 #include <sys/types.h>
 
 #ifdef EDEN_WIN
@@ -30,6 +31,24 @@ using std::string;
 
 namespace facebook {
 namespace eden {
+
+DEFINE_bool(
+    foreground,
+    false,
+    "Run edenfs in the foreground, rather than daemonizing "
+    "as a background process");
+
+std::unique_ptr<StartupLogger> daemonizeIfRequested(
+    folly::StringPiece logPath) {
+  if (FLAGS_foreground) {
+    auto startupLogger = std::make_unique<ForegroundStartupLogger>();
+    return startupLogger;
+  } else {
+    auto startupLogger = std::make_unique<DaemonStartupLogger>();
+    startupLogger->daemonize(logPath);
+    return startupLogger;
+  }
+}
 
 StartupLogger::~StartupLogger() = default;
 

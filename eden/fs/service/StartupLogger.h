@@ -13,10 +13,17 @@
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <folly/logging/LogLevel.h>
+#include <gflags/gflags_declare.h>
 #include <memory>
 
 namespace facebook {
 namespace eden {
+
+DECLARE_bool(foreground);
+
+class StartupLogger;
+
+std::unique_ptr<StartupLogger> daemonizeIfRequested(folly::StringPiece logPath);
 
 /**
  * StartupLogger provides an API for logging messages that should be displayed

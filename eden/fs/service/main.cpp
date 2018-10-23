@@ -33,11 +33,6 @@ DEFINE_bool(
     false,
     "EXPERIMENTAL: Run edenfs as if systemd controls its lifecycle");
 #endif
-DEFINE_bool(
-    foreground,
-    false,
-    "Run edenfs in the foreground, rather than daemonizing "
-    "as a background process");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(
     etcEdenDir,
@@ -67,18 +62,6 @@ void runServer(const EdenServer& server);
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
 namespace {
-
-std::shared_ptr<StartupLogger> daemonizeIfRequested(
-    folly::StringPiece logPath) {
-  if (FLAGS_foreground) {
-    auto startupLogger = std::make_shared<ForegroundStartupLogger>();
-    return startupLogger;
-  } else {
-    auto startupLogger = std::make_shared<DaemonStartupLogger>();
-    startupLogger->daemonize(logPath);
-    return startupLogger;
-  }
-}
 
 std::string getLogPath(AbsolutePathPiece edenDir) {
   // If a log path was explicitly specified as a command line argument use that
@@ -221,7 +204,8 @@ int main(int argc, char** argv) {
   }
 
   auto logPath = getLogPath(edenDir);
-  auto startupLogger = daemonizeIfRequested(logPath);
+  auto startupLogger =
+      std::shared_ptr<StartupLogger>{daemonizeIfRequested(logPath)};
   XLOG(DBG3) << edenConfig->toString();
   folly::Optional<EdenServer> server;
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();

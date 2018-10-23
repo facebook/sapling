@@ -24,7 +24,6 @@
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-using namespace facebook::eden;
 using namespace std::literals::chrono_literals;
 using apache::thrift::ThriftServer;
 using facebook::fb303::cpp2::fb_status;
@@ -44,7 +43,6 @@ DEFINE_bool(
     false,
     "EXPERIMENTAL: Run edenfs as if systemd controls its lifecycle");
 #endif
-DEFINE_bool(foreground, false, "Run edenfs in the foreground");
 DEFINE_bool(ignoreStop, false, "Ignore attempts to stop edenfs");
 DEFINE_double(
     sleepBeforeGetPid,
@@ -64,6 +62,8 @@ DEFINE_string(
     logPath,
     "",
     "If set, redirects stdout and stderr to the log file given.");
+
+using namespace facebook::eden;
 
 FOLLY_INIT_LOGGING_CONFIG(".=INFO,eden=DBG2");
 
@@ -265,17 +265,6 @@ bool acquireLock(AbsolutePathPiece edenDir) {
   return true;
 }
 
-std::unique_ptr<StartupLogger> daemonizeIfRequested() {
-  if (FLAGS_foreground) {
-    auto startupLogger = std::make_unique<ForegroundStartupLogger>();
-    return startupLogger;
-  } else {
-    auto startupLogger = std::make_unique<DaemonStartupLogger>();
-    startupLogger->daemonize(FLAGS_logPath);
-    return startupLogger;
-  }
-}
-
 } // namespace
 
 int main(int argc, char** argv) {
@@ -291,7 +280,7 @@ int main(int argc, char** argv) {
   }
 #endif
 
-  auto startupLogger = daemonizeIfRequested();
+  auto startupLogger = daemonizeIfRequested(FLAGS_logPath);
 
   if (FLAGS_edenDir.empty()) {
     startupLogger->exitUnsuccessfully(1, "the --edenDir flag is required");
