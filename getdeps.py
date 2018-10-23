@@ -169,7 +169,6 @@ class CMakeBuilder(BuilderBase):
         defines = {
             "CMAKE_INSTALL_PREFIX": project.opts.install_dir,
             "BUILD_SHARED_LIBS": "OFF",
-            "BUILD_TESTS": "OFF",
         }
         defines.update(self.defines)
         define_args = ["-D%s=%s" % (k, v) for (k, v) in defines.items()]
@@ -220,7 +219,7 @@ def get_projects(opts):
             "folly",
             opts,
             GitUpdater("https://github.com/facebook/folly.git"),
-            CMakeBuilder(),
+            CMakeBuilder(defines={"BUILD_TESTS": "OFF"}),
         ),
         Project(
             "libsodium",
@@ -238,7 +237,7 @@ def get_projects(opts):
             "wangle",
             opts,
             GitUpdater("https://github.com/facebook/wangle.git"),
-            CMakeBuilder(subdir="wangle"),
+            CMakeBuilder(subdir="wangle", defines={"BUILD_TESTS": "OFF"}),
         ),
         Project(
             "rsocket-cpp",
