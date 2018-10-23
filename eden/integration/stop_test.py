@@ -11,19 +11,17 @@ import contextlib
 import os
 import pathlib
 import signal
-import subprocess
 import sys
 import time
 import typing
-import unittest
 
 import pexpect
 from eden.cli.daemon import did_process_exit
 from eden.cli.util import poll_until
 
-from .lib.fake_edenfs import FakeEdenFS
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
+from .lib.service_test_case import ServiceTestCaseBase, service_test
 from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
@@ -33,12 +31,14 @@ SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 
-class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin):
+@service_test
+class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin):
     def setUp(self):
+        super().setUp()
         self.tmp_dir = self.make_temporary_directory()
 
     def test_stop_stops_running_daemon(self):
-        with FakeEdenFS.spawn(pathlib.Path(self.tmp_dir)) as daemon_pid:
+        with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
             stop_process = self.spawn_stop(["--timeout", "5"])
             stop_process.expect_exact("edenfs exited cleanly.")
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
@@ -47,32 +47,17 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
             )
 
     def test_stop_sigkill(self):
-        # Start eden, using the FAKE_EDENFS binary instead of the real edenfs.
-        # This binary behaves enough like edenfs to pass health checks, but it refuses
-        # to ever shut down gracefully.
-        start_cmd = [
-            FindExe.EDEN_CLI,
-            "--config-dir",
-            self.tmp_dir,
-            "start",
-            "--daemon-binary",
-            FindExe.FAKE_EDENFS,
-            "--",
-            "--ignoreStop",
-        ]
-        print("Starting eden: %r" % (start_cmd,))
-        subprocess.check_call(start_cmd)
-
-        # Ask the CLI to stop edenfs, with a 1 second timeout.
-        # It should have to kill the process with SIGKILL
-        stop_process = self.spawn_stop(["--timeout", "1"])
-        stop_process.expect_exact("Terminated edenfs with SIGKILL")
-        self.assert_process_exit_code(
-            stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
-        )
+        with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir), ["--ignoreStop"]):
+            # Ask the CLI to stop edenfs, with a 1 second timeout.
+            # It should have to kill the process with SIGKILL
+            stop_process = self.spawn_stop(["--timeout", "1"])
+            stop_process.expect_exact("Terminated edenfs with SIGKILL")
+            self.assert_process_exit_code(
+                stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
+            )
 
     def test_async_stop_stops_daemon_eventually(self):
-        with FakeEdenFS.spawn(pathlib.Path(self.tmp_dir)) as daemon_pid:
+        with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
             stop_process = self.spawn_stop(["--timeout", "0"])
             stop_process.expect_exact("Sent async shutdown request to edenfs.")
             self.assert_process_exit_code(
@@ -95,7 +80,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
         )
 
     def test_stopping_killed_daemon_reports_not_running(self):
-        daemon = FakeEdenFS.spawn(pathlib.Path(self.tmp_dir))
+        daemon = self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir))
         os.kill(daemon.process_id, signal.SIGKILL)
 
         stop_process = self.spawn_stop(["--timeout", "1"])
@@ -105,7 +90,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
         )
 
     def test_killing_hung_daemon_during_stop_makes_stop_finish(self):
-        with FakeEdenFS.spawn(pathlib.Path(self.tmp_dir)) as daemon_pid:
+        with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
             os.kill(daemon_pid, signal.SIGSTOP)
             try:
                 stop_process = self.spawn_stop(["--timeout", "5"])
@@ -127,7 +112,7 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
                     os.kill(daemon_pid, signal.SIGCONT)
 
     def test_stopping_daemon_stopped_by_sigstop_kills_daemon(self):
-        with FakeEdenFS.spawn(pathlib.Path(self.tmp_dir)) as daemon_pid:
+        with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
             os.kill(daemon_pid, signal.SIGSTOP)
             try:
                 stop_process = self.spawn_stop(["--timeout", "1"])
@@ -140,14 +125,16 @@ class StopTest(unittest.TestCase, PexpectAssertionMixin, TemporaryDirectoryMixin
                     os.kill(daemon_pid, signal.SIGCONT)
 
     def test_hanging_thrift_call_kills_daemon_with_sigkill(self):
-        with FakeEdenFS.spawn(pathlib.Path(self.tmp_dir), ["--sleepBeforeStop=5"]):
+        with self.spawn_fake_edenfs(
+            pathlib.Path(self.tmp_dir), ["--sleepBeforeStop=5"]
+        ):
             stop_process = self.spawn_stop(["--timeout", "1"])
             self.assert_process_exit_code(
                 stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
             )
 
     def test_stop_succeeds_if_thrift_call_abruptly_kills_daemon(self):
-        with FakeEdenFS.spawn(
+        with self.spawn_fake_edenfs(
             pathlib.Path(self.tmp_dir), ["--exitWithoutCleanupOnStop"]
         ):
             stop_process = self.spawn_stop(["--timeout", "10"])

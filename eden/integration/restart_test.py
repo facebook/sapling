@@ -11,18 +11,18 @@ import os
 import pathlib
 import subprocess
 import sys
-import unittest
 
 import eden.thrift
 import eden.thrift.client
 import pexpect
 
-from .lib.fake_edenfs import FakeEdenFS
 from .lib.find_executables import FindExe
+from .lib.service_test_case import ServiceTestCaseBase, service_test
 from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
-class RestartTest(unittest.TestCase, TemporaryDirectoryMixin):
+@service_test
+class RestartTest(ServiceTestCaseBase, TemporaryDirectoryMixin):
     def setUp(self) -> None:
         self.tmp_dir = self.make_temporary_directory()
 
@@ -49,7 +49,7 @@ class RestartTest(unittest.TestCase, TemporaryDirectoryMixin):
         )
 
     def _start_fake_edenfs(self) -> int:
-        daemon = FakeEdenFS.spawn_via_cli(eden_dir=pathlib.Path(self.tmp_dir))
+        daemon = self.spawn_fake_edenfs(eden_dir=pathlib.Path(self.tmp_dir))
         return daemon.process_id
 
     def test_restart_starts_edenfs_if_not_running(self) -> None:
