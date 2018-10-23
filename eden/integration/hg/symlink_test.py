@@ -19,8 +19,8 @@ class SymlinkTest(EdenHgTestCase):
         repo.commit("Initial commit.")
 
     def test_changed_symlink_shows_up_in_status(self):
-        self.assertEqual("", self.repo.status())
+        self.assert_status_empty()
 
         self.repo.symlink("symlink", "contents2")
 
-        self.assertEqual("M symlink\n", self.repo.status())
+        self.assert_status({"symlink": "M"})

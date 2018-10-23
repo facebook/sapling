@@ -208,10 +208,6 @@ class EdenHgTestCase(testcase.EdenTestCase):
         os.chmod(editor, 0o755)
         return editor
 
-    def status(self):
-        """Returns the output of `hg status` as a string."""
-        return self.repo.status()
-
     def assert_status(
         self,
         expected: Dict[str, str],
@@ -227,19 +223,7 @@ class EdenHgTestCase(testcase.EdenTestCase):
 
         'C' is not currently supported.
         """
-        args = ["status", "--print0"]
-        if check_ignored:
-            args.append("-mardui")
-
-        output = self.hg(*args)
-        actual_status = {}
-        for entry in output.split("\0"):
-            if not entry:
-                continue
-            flag = entry[0]
-            path = entry[2:]
-            actual_status[path] = flag
-
+        actual_status = self.repo.status(include_ignored=check_ignored)
         self.assertDictEqual(expected, actual_status, msg=msg)
         self.assert_unfinished_operation(op)
 

@@ -238,9 +238,25 @@ class HgRepository(repobase.Repository):
         output = self.hg("journal", "-T", "json")
         return json.loads(output)
 
-    def status(self) -> str:
-        """Returns the output of `hg status` as a string."""
-        return self.hg("status")
+    def status(self, include_ignored: bool = False) -> Dict[str, str]:
+        """Returns the output of `hg status` as a dictionary of {path: status char}.
+
+        The status characters are the same as the ones documented by `hg help status`
+        """
+        args = ["status", "--print0"]
+        if include_ignored:
+            args.append("-mardui")
+
+        output = self.hg(*args)
+        status = {}
+        for entry in output.split("\0"):
+            if not entry:
+                continue
+            flag = entry[0]
+            path = entry[2:]
+            status[path] = flag
+
+        return status
 
     def update(self, rev: str, clean: bool = False, merge: bool = False) -> None:
         args = ["update"]
