@@ -8,16 +8,16 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
-import shutil
+import pathlib
 import subprocess
 import sys
 import unittest
-from typing import Any
 
 import eden.thrift
 import eden.thrift.client
 import pexpect
 
+from .lib.fake_edenfs import FakeEdenFS
 from .lib.find_executables import FindExe
 from .lib.temporary_directory import TemporaryDirectoryMixin
 
@@ -49,16 +49,21 @@ class RestartTest(unittest.TestCase, TemporaryDirectoryMixin):
         )
 
     def _start_fake_edenfs(self) -> int:
-        # Run "eden restart".  It should start it without prompting since edenfs is not
-        # already running.
+        daemon = FakeEdenFS.spawn_via_cli(eden_dir=pathlib.Path(self.tmp_dir))
+        return daemon.process_id
+
+    def test_restart_starts_edenfs_if_not_running(self) -> None:
+        """
+        Run "eden restart".  It should start it without prompting since edenfs
+        is not already running.
+        """
         p = self._spawn_restart()
         p.expect_exact("Eden is not currently running.  Starting it...")
         p.expect_exact("Starting fake edenfs daemon")
         p.expect(r"Started edenfs \(pid ([0-9]+)\)")
-        pid = int(p.match.group(1))
+        int(p.match.group(1))
         p.wait()
         self.assertEqual(p.exitstatus, 0)
-        return pid
 
     def _get_thrift_client(self) -> eden.thrift.EdenClient:
         return eden.thrift.create_thrift_client(self.tmp_dir)

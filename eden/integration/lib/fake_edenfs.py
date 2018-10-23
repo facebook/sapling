@@ -20,13 +20,34 @@ from .find_executables import FindExe
 class FakeEdenFS(typing.ContextManager[int]):
     """A running fake_edenfs process."""
 
-    @staticmethod
+    @classmethod
     def spawn(
-        eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+        cls, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
     ) -> "FakeEdenFS":
         command = [FindExe.FAKE_EDENFS, "--edenDir", str(eden_dir)]
         command.extend(extra_arguments)
         subprocess.check_call(command)
+        return cls.from_existing_process(eden_dir=eden_dir)
+
+    @classmethod
+    def spawn_via_cli(
+        cls, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+    ) -> "FakeEdenFS":
+        command = [
+            FindExe.EDEN_CLI,
+            "--config-dir",
+            str(eden_dir),
+            "start",
+            "--daemon-binary",
+            FindExe.FAKE_EDENFS,
+            "--",
+        ]
+        command.extend(extra_arguments)
+        subprocess.check_call(command)
+        return cls.from_existing_process(eden_dir=eden_dir)
+
+    @staticmethod
+    def from_existing_process(eden_dir: pathlib.Path) -> "FakeEdenFS":
         edenfs_pid = int((eden_dir / "lock").read_text())
         return FakeEdenFS(process_id=edenfs_pid)
 
