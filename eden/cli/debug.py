@@ -33,6 +33,9 @@ from typing import (
 )
 
 import eden.dirstate
+import facebook.eden.ttypes as eden_ttypes
+import thrift.util.inspect
+from facebook.eden import EdenService
 from facebook.eden.overlay.ttypes import OverlayDir
 from facebook.eden.ttypes import (
     DebugGetRawJournalParams,
@@ -928,6 +931,115 @@ def print_raw_journal_deltas(
 
         entries.sort()
         print("\n".join(entries))
+
+
+@debug_cmd("thrift", "Invoke a thrift function")
+class DebugThriftCmd(Subcmd):
+    args_suffix = "_args"
+    result_suffix = "_result"
+
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "-l",
+            "--list",
+            action="store_true",
+            help="List the available thrift functions.",
+        )
+        parser.add_argument(
+            "--eval-all-args",
+            action="store_true",
+            help="Always pass all arguments through eval(), even for plain strings.",
+        )
+        parser.add_argument(
+            "function_name", nargs="?", help="The thrift function to call."
+        )
+        parser.add_argument(
+            "args", nargs="*", help="The arguments to the thrift function."
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        if args.list:
+            self._list_functions()
+            return 0
+
+        if not args.function_name:
+            print(f"Error: no function name specified", file=sys.stderr)
+            print(
+                "Use the --list argument to see a list of available functions, or "
+                "specify a function name",
+                file=sys.stderr,
+            )
+            return 1
+
+        # Look up the function information
+        try:
+            fn_info = thrift.util.inspect.get_function_info(
+                EdenService, args.function_name
+            )
+        except thrift.util.inspect.NoSuchFunctionError:
+            print(f"Error: unknown function {args.function_name!r}", file=sys.stderr)
+            print(
+                'Run "eden debug thrift --list" to see a list of available functions',
+                file=sys.stderr,
+            )
+            return 1
+
+        if len(args.args) != len(fn_info.arg_specs):
+            print(
+                f"Error: {args.function_name} requires {len(fn_info.arg_specs)} "
+                f"arguments, but {len(args.args)} were supplied>",
+                file=sys.stderr,
+            )
+            return 1
+
+        python_args = self._eval_args(
+            args.args, fn_info, eval_strings=args.eval_all_args
+        )
+
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client() as client:
+            fn = getattr(client, args.function_name)
+            result = fn(**python_args)
+            print(result)
+
+        return 0
+
+    def _eval_args(
+        self, args: List[str], fn_info: thrift.util.inspect.Function, eval_strings: bool
+    ) -> Dict[str, Any]:
+        from thrift.Thrift import TType
+
+        code_globals = {key: getattr(eden_ttypes, key) for key in dir(eden_ttypes)}
+        parsed_args = {}
+        for arg, arg_spec in zip(args, fn_info.arg_specs):
+            (
+                _field_id,
+                thrift_type,
+                arg_name,
+                _extra_spec,
+                _default,
+                _required,
+            ) = arg_spec
+            # If the argument is a string type, don't pass it through eval.
+            # This is purely to make it easier for humans to input strings.
+            if not eval_strings and thrift_type == TType.STRING:
+                parsed_arg = arg
+            else:
+                code = compile(arg, "<command_line>", "eval", 0, 1)
+                parsed_arg = eval(code, code_globals.copy())
+            parsed_args[arg_name] = parsed_arg
+
+        return parsed_args
+
+    def _list_functions(self) -> None:
+        # Report functions by module, from parent service downwards
+        modules = thrift.util.inspect.get_service_module_hierarchy(EdenService)
+        for module in reversed(modules):
+            module_functions = thrift.util.inspect.list_service_functions(module)
+            print(f"From {module.__name__}:")
+
+            for _fn_name, fn_info in sorted(module_functions.items()):
+                print(f"  {fn_info}")
 
 
 @subcmd_mod.subcmd("debug", "Internal commands for examining eden state")
