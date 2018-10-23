@@ -276,12 +276,14 @@ int main(int argc, char** argv) {
   }
 #endif
 
-  auto startupLogger = daemonizeIfRequested("");
-
   if (FLAGS_edenDir.empty()) {
-    startupLogger->exitUnsuccessfully(1, "the --edenDir flag is required");
+    XLOG(ERR) << "the --edenDir flag is required";
+    return 1;
   }
   auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
+
+  auto logPath = edenDir + "edenfs.log"_pc;
+  auto startupLogger = daemonizeIfRequested(logPath.value());
 
   // Acquire the lock file
   if (!acquireLock(edenDir)) {
