@@ -860,9 +860,6 @@ class TestBase(unittest.TestCase):
         """
         # Could be more elegant, but it works with stock hg
         _ui = testui()
-        _ui.setconfig("extensions", "graphlog", "")
-        extensions.loadall(_ui)
-        graphlog = extensions.find("graphlog")
         templ = """\
 changeset: {rev}:{node|short} (r{svnrev})
 branch:    {branches}
@@ -872,12 +869,7 @@ files:     {files}
 
 """
         _ui.pushbuffer()
-        try:
-            graphlog.graphlog(_ui, repo, rev=None, template=templ)
-        except AttributeError:
-            from mercurial import commands
-
-            commands.log(_ui, repo, rev=None, template=templ, graph=True)
+        commands.log(_ui, repo, rev=None, template=templ, graph=True)
         return _ui.popbuffer()
 
     def svnlog(self, repo=None):
