@@ -158,7 +158,7 @@ static std::atomic<uint16_t> mountGeneration{0};
 
 std::shared_ptr<EdenMount> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
-    std::unique_ptr<ObjectStore> objectStore,
+    std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<ServerState> serverState) {
   return std::shared_ptr<EdenMount>{
       new EdenMount{
@@ -168,7 +168,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
 
 EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
-    std::unique_ptr<ObjectStore> objectStore,
+    std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<ServerState> serverState)
     : config_(std::move(config)),
       serverState_(std::move(serverState)),

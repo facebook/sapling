@@ -100,7 +100,7 @@ class EdenMount {
    */
   static std::shared_ptr<EdenMount> create(
       std::unique_ptr<ClientConfig> config,
-      std::unique_ptr<ObjectStore> objectStore,
+      std::shared_ptr<ObjectStore> objectStore,
       std::shared_ptr<ServerState> serverState);
 
   /**
@@ -536,7 +536,7 @@ class EdenMount {
 
   EdenMount(
       std::unique_ptr<ClientConfig> config,
-      std::unique_ptr<ObjectStore> objectStore,
+      std::shared_ptr<ObjectStore> objectStore,
       std::shared_ptr<ServerState> serverState);
 
   // Forbidden copy constructor and assignment operator
@@ -597,7 +597,7 @@ class EdenMount {
 
   std::unique_ptr<InodeMap> inodeMap_;
   std::unique_ptr<EdenDispatcher> dispatcher_;
-  std::unique_ptr<ObjectStore> objectStore_;
+  std::shared_ptr<ObjectStore> objectStore_;
   std::unique_ptr<Overlay> overlay_;
   InodeNumber dotEdenInodeNumber_{};
 

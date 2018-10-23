@@ -128,8 +128,8 @@ void TestMount::initialize(
   setInitialCommit(initialCommitHash);
 
   // Create edenMount_
-  unique_ptr<ObjectStore> objectStore =
-      make_unique<ObjectStore>(localStore_, backingStore_);
+  shared_ptr<ObjectStore> objectStore =
+      ObjectStore::create(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
       std::move(config_), std::move(objectStore), serverState_);
   edenMount_->initialize().get();
@@ -141,8 +141,8 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
   setInitialCommit(commitHash, rootTreeHash);
 
   // Create edenMount_
-  unique_ptr<ObjectStore> objectStore =
-      make_unique<ObjectStore>(localStore_, backingStore_);
+  shared_ptr<ObjectStore> objectStore =
+      ObjectStore::create(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
       std::move(config_), std::move(objectStore), serverState_);
   edenMount_->initialize().get();
@@ -163,8 +163,7 @@ void TestMount::initialize(
   setInitialCommit(initialCommitHash, rootTree->get().getHash());
 
   // Create edenMount_
-  unique_ptr<ObjectStore> objectStore =
-      make_unique<ObjectStore>(localStore_, backingStore_);
+  auto objectStore = ObjectStore::create(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
       std::move(config_), std::move(objectStore), serverState_);
   edenMount_->initialize().get();
@@ -215,8 +214,7 @@ void TestMount::remount() {
   // Create a new copy of the ClientConfig
   auto config = make_unique<ClientConfig>(*edenMount_->getConfig());
   // Create a new ObjectStore pointing to our local store and backing store
-  unique_ptr<ObjectStore> objectStore =
-      make_unique<ObjectStore>(localStore_, backingStore_);
+  auto objectStore = ObjectStore::create(localStore_, backingStore_);
 
   // Reset the edenMount_ pointer.  This will destroy the old EdenMount
   // assuming that no-one else still has any references to it.
@@ -239,8 +237,7 @@ void TestMount::remountGracefully() {
   // Create a new copy of the ClientConfig
   auto config = make_unique<ClientConfig>(*edenMount_->getConfig());
   // Create a new ObjectStore pointing to our local store and backing store
-  unique_ptr<ObjectStore> objectStore =
-      make_unique<ObjectStore>(localStore_, backingStore_);
+  auto objectStore = ObjectStore::create(localStore_, backingStore_);
 
   auto takeoverData =
       edenMount_->shutdown(/*doTakeover=*/true, /*allowFuseNotStarted=*/true)

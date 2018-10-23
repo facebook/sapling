@@ -9,7 +9,11 @@
  */
 #pragma once
 
+#include <folly/Synchronized.h>
+#include <folly/container/EvictingCacheMap.h>
 #include <memory>
+#include "eden/fs/model/Hash.h"
+#include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/IObjectStore.h"
 
 namespace facebook {
@@ -17,7 +21,6 @@ namespace eden {
 
 class BackingStore;
 class Blob;
-class Hash;
 class LocalStore;
 class Tree;
 
@@ -31,9 +34,10 @@ class Tree;
  *   data.  The BackingStore is generally more expensive to query for object
  *   data, and may not be available during offline operation.
  */
-class ObjectStore : public IObjectStore {
+class ObjectStore : public IObjectStore,
+                    public std::enable_shared_from_this<ObjectStore> {
  public:
-  ObjectStore(
+  static std::shared_ptr<ObjectStore> create(
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore);
   ~ObjectStore() override;
@@ -99,9 +103,32 @@ class ObjectStore : public IObjectStore {
   }
 
  private:
+  // Forbidden constructor. Use create().
+  ObjectStore(
+      std::shared_ptr<LocalStore> localStore,
+      std::shared_ptr<BackingStore> backingStore);
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
+
+  static constexpr size_t kMetadataCacheSize = 1000000;
+
+  /**
+   * During status and checkout, it's common to look up the SHA-1 for a given
+   * blob ID. To avoid needing to hit RocksDB, keep a bounded in-memory cache of
+   * the sizes and SHA-1s of blobs we've seen. Each node is somewhere around 50
+   * bytes (20+28 + LRU overhead) and we store kMetadataCacheSize entries, which
+   * EvictingCacheMap divides in two for some reason. At the time of this
+   * comment, EvictingCacheMap does not store its nodes densely, so there may
+   * also be some jemalloc tracking overhead and some internal fragmentation
+   * depending on whether the node fits cleanly into one of jemalloc's size
+   * classes.
+   *
+   * TODO: It never makes sense to rlock an LRU cache, since cache hits mutate
+   * the data structure. Thus, should we use a more appropriate type of lock?
+   */
+  mutable folly::Synchronized<folly::EvictingCacheMap<Hash, BlobMetadata>>
+      metadataCache_;
 
   /*
    * The LocalStore.

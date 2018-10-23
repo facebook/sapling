@@ -810,8 +810,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 #ifndef EDEN_WIN
   auto backingStore = getBackingStore(
       initialConfig->getRepoType(), initialConfig->getRepoSource());
-  auto objectStore =
-      std::make_unique<ObjectStore>(getLocalStore(), backingStore);
+  auto objectStore = ObjectStore::create(getLocalStore(), backingStore);
   const bool doTakeover = optionalTakeover.hasValue();
 
   auto edenMount = EdenMount::create(

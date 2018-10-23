@@ -31,11 +31,19 @@ using std::unique_ptr;
 namespace facebook {
 namespace eden {
 
+std::shared_ptr<ObjectStore> ObjectStore::create(
+    shared_ptr<LocalStore> localStore,
+    shared_ptr<BackingStore> backingStore) {
+  return std::shared_ptr<ObjectStore>{
+      new ObjectStore{std::move(localStore), std::move(backingStore)}};
+}
+
 ObjectStore::ObjectStore(
     shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore)
-    : localStore_(std::move(localStore)),
-      backingStore_(std::move(backingStore)) {}
+    : metadataCache_{folly::in_place, kMetadataCacheSize},
+      localStore_{std::move(localStore)},
+      backingStore_{std::move(backingStore)} {}
 
 ObjectStore::~ObjectStore() {}
 
@@ -81,16 +89,20 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
 
 Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
   return localStore_->getBlob(id).thenValue(
-      [id, localStore = localStore_, backingStore = backingStore_](
-          shared_ptr<const Blob> blob) {
+      [id, self = shared_from_this()](shared_ptr<const Blob> blob) {
         if (blob) {
+          // Not computing the BlobMetadata here because if the blob was found
+          // in the local store, the LocalStore probably also has the metadata
+          // already, and the caller may not even need the SHA-1 here. (If the
+          // caller needed the SHA-1, they would have called getBlobMetadata
+          // instead.)
           XLOG(DBG4) << "blob " << id << "  found in local store";
           return makeFuture(shared_ptr<const Blob>(std::move(blob)));
         }
 
         // Look in the BackingStore
-        return backingStore->getBlob(id).thenValue(
-            [localStore, id](unique_ptr<const Blob> loadedBlob) {
+        return self->backingStore_->getBlob(id).thenValue(
+            [self, id](unique_ptr<const Blob> loadedBlob) {
               if (!loadedBlob) {
                 XLOG(DBG2) << "unable to find blob " << id;
                 // TODO: Perhaps we should do some short-term negative caching?
@@ -99,7 +111,8 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
               }
 
               XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
-              localStore->putBlob(id, loadedBlob.get());
+              auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
+              self->metadataCache_.wlock()->set(id, metadata);
               return shared_ptr<const Blob>(std::move(loadedBlob));
             });
       });
@@ -140,10 +153,20 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
 }
 
 Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
+  // First, check the in-memory cache.
+  {
+    auto metadataCache = metadataCache_.wlock();
+    auto cacheIter = metadataCache->find(id);
+    if (cacheIter != metadataCache->end()) {
+      return cacheIter->second;
+    }
+  }
+
   return localStore_->getBlobMetadata(id).thenValue(
-      [id, localStore = localStore_, backingStore = backingStore_](
-          folly::Optional<BlobMetadata>&& localData) {
+      [id,
+       self = shared_from_this()](folly::Optional<BlobMetadata>&& localData) {
         if (localData.hasValue()) {
+          self->metadataCache_.wlock()->set(id, localData.value());
           return makeFuture(localData.value());
         }
 
@@ -152,15 +175,20 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
         // TODO: It would be nice to add a smarter API to the BackingStore so
         // that we can query it just for the blob metadata if it supports
         // getting that without retrieving the full blob data.
-        return backingStore->getBlob(id).thenValue(
-            [localStore, id](std::unique_ptr<Blob> blob) {
+        //
+        // TODO: This should probably check the LocalStore for the blob first,
+        // especially when we begin to expire entries in RocksDB.
+        return self->backingStore_->getBlob(id).thenValue(
+            [self, id](std::unique_ptr<Blob> blob) {
               if (!blob) {
                 // TODO: Perhaps we should do some short-term negative caching?
                 throw std::domain_error(
                     folly::to<string>("blob ", id.toString(), " not found"));
               }
 
-              return localStore->putBlob(id, blob.get());
+              auto metadata = self->localStore_->putBlob(id, blob.get());
+              self->metadataCache_.wlock()->set(id, metadata);
+              return metadata;
             });
       });
 }

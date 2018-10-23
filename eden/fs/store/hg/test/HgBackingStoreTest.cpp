@@ -48,20 +48,21 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
   HgImporter importer{repo.path(), localStore.get()};
   std::shared_ptr<HgBackingStore> backingStore{
       std::make_shared<HgBackingStore>(&importer, localStore.get())};
-  ObjectStore objectStore{localStore, backingStore};
+  std::shared_ptr<ObjectStore> objectStore{
+      ObjectStore::create(localStore, backingStore)};
 };
 
 TEST_F(
     HgBackingStoreTest,
     getTreeForCommit_reimports_tree_if_it_was_deleted_after_import) {
-  auto tree1 = objectStore.getTreeForCommit(commit1).get(0ms);
+  auto tree1 = objectStore->getTreeForCommit(commit1).get(0ms);
   EXPECT_TRUE(tree1);
   ASSERT_THAT(
       tree1->getEntryNames(),
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 
   localStore->clearKeySpace(LocalStore::TreeFamily);
-  auto tree2 = objectStore.getTreeForCommit(commit1).get(0ms);
+  auto tree2 = objectStore->getTreeForCommit(commit1).get(0ms);
   EXPECT_TRUE(tree2);
   ASSERT_THAT(
       tree1->getEntryNames(),

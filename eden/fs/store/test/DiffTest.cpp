@@ -55,7 +55,7 @@ class DiffTest : public ::testing::Test {
   void SetUp() override {
     localStore_ = make_shared<MemoryLocalStore>();
     backingStore_ = make_shared<FakeBackingStore>(localStore_);
-    store_ = make_unique<ObjectStore>(localStore_, backingStore_);
+    store_ = ObjectStore::create(localStore_, backingStore_);
   }
 
   Future<ScmStatus> diffCommits(StringPiece commit1, StringPiece commit2) {
@@ -65,7 +65,7 @@ class DiffTest : public ::testing::Test {
 
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
-  std::unique_ptr<ObjectStore> store_;
+  std::shared_ptr<ObjectStore> store_;
 };
 
 TEST_F(DiffTest, unknownCommit) {
