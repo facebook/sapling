@@ -24,7 +24,7 @@ command = registrar.command(cmdtable)
 @command(
     "^metaedit",
     [
-        ("r", "rev", [], _("revision to split")),
+        ("r", "rev", [], _("revision to edit")),
         ("", "fold", False, _("fold specified revisions into one")),
     ]
     + commands.commitopts
