@@ -127,7 +127,7 @@ Add OWNERS file, then delete it. Make sure deletion is not allowed
 Bypass owners check
   $ cat >> .hg/hgrc <<CONFIG
   > [extensions]
-  > fbamend=
+  > amend=
   > CONFIG
   $ hg amend -m 'remove OWNERS\n@allow_delete_owners'
   saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/2d1a0bcf73ee-65b66be0-amend.hg (glob)
@@ -152,9 +152,8 @@ Add OWNERS2 file. This time bypass it with pushvars
   pushing rev 55334cb4e1e4 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * ERRO Command failed, remote: true, error: hooks failed: (glob)
-  remote: no_owners_file_deletes for 2d1a0bcf73ee48cde9073fd52b6bbb71e4459c9b: Deletion of OWNERS files is not allowed
-  remote: no_owners2_file_deletes_pushvars for 357add85936fd841d9c4578b9961e947cb5f301a: Deletion of OWNERS files is not allowed, root_cause: ErrorMessage {
-  remote:     msg: "hooks failed:\nno_owners_file_deletes for 2d1a0bcf73ee48cde9073fd52b6bbb71e4459c9b: Deletion of OWNERS files is not allowed\nno_owners2_file_deletes_pushvars for 357add85936fd841d9c4578b9961e947cb5f301a: Deletion of OWNERS files is not allowed"
+  remote: no_owners2_file_deletes_pushvars for 55334cb4e1e487f6de665629326eb1aaddccde53: Deletion of OWNERS files is not allowed, root_cause: ErrorMessage {
+  remote:     msg: "hooks failed:\nno_owners2_file_deletes_pushvars for 55334cb4e1e487f6de665629326eb1aaddccde53: Deletion of OWNERS files is not allowed"
   remote: }, backtrace: , session_uuid: * (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
