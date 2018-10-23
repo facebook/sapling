@@ -15,5 +15,6 @@ target_link_libraries(
     eden_fuse
     eden_journal
     eden_store
+    eden_config
     eden_utils
 )

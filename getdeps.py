@@ -145,7 +145,7 @@ class MakeBuilder(BuilderBase):
 
 class AutoconfBuilder(BuilderBase):
     def __init__(self, subdir=None, env=None, args=None):
-        super(BuilderBase, self).__init__(subdir=subdir, env=env)
+        super(AutoconfBuilder, self).__init__(subdir=subdir, env=env)
         self.args = args or []
 
     def _build(self, project):
@@ -154,7 +154,7 @@ class AutoconfBuilder(BuilderBase):
             self._run_cmd(["autoreconf", "--install"])
         configure_cmd = [
             configure_path,
-            "--prefix=" + project.ops.install_dir,
+            "--prefix=" + project.opts.install_dir,
         ] + self.args
         self._run_cmd(configure_cmd)
         self._run_cmd(["make", "-j%s" % project.opts.num_jobs])
@@ -230,10 +230,28 @@ def get_projects(opts):
             CMakeBuilder(),
         ),
         Project(
+            "libsodium",
+            opts,
+            GitUpdater("https://github.com/jedisct1/libsodium.git"),
+            AutoconfBuilder(),
+        ),
+        Project(
+            "fizz",
+            opts,
+            GitUpdater("https://github.com/facebookincubator/fizz.git"),
+            CMakeBuilder(subdir="fizz"),
+        ),
+        Project(
             "wangle",
             opts,
             GitUpdater("https://github.com/facebook/wangle.git"),
             CMakeBuilder(subdir="wangle"),
+        ),
+        Project(
+            "rsocket-cpp",
+            opts,
+            GitUpdater("https://github.com/rsocket/rsocket-cpp.git"),
+            CMakeBuilder(subdir="yarpl"),
         ),
         Project(
             "fbthrift",
@@ -291,6 +309,7 @@ def install_platform_deps():
             "libevent-dev flex bison libgoogle-glog-dev libkrb5-dev "
             "libsnappy-dev libsasl2-dev libnuma-dev libcurl4-gnutls-dev "
             "libpcap-dev libdb5.3-dev cmake libfuse-dev libgit2-dev mercurial "
+            "libsqlite3-dev "
         ).split()
         install_apt(ubuntu_pkgs)
     else:
@@ -313,7 +332,7 @@ def main():
         "--update",
         action="store_true",
         default=False,
-        help="Updates the external projects repositories before " "building them",
+        help="Updates the external projects repositories before building them",
     )
     ap.add_argument(
         "-C",

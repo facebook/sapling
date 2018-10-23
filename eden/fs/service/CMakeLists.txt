@@ -34,5 +34,6 @@ target_link_libraries(
     eden_store_hg
     eden_store_git
     eden_takeover
+    ${YARPL_LIBRARIES}
     Folly::folly
 )

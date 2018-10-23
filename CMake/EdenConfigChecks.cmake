@@ -1,8 +1,14 @@
 include(FindPkgConfig)
 
+set(CMAKE_THREAD_PREFER_PTHREAD ON)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 find_package(folly CONFIG REQUIRED)
+find_package(fizz CONFIG REQUIRED)
 find_package(wangle CONFIG REQUIRED)
 find_package(FBThrift CONFIG REQUIRED)
+find_package(Yarpl MODULE REQUIRED)
 find_package(GMock MODULE REQUIRED)
 
 find_package(SELinux)
