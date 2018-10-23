@@ -184,7 +184,6 @@
     <ClCompile Include="..\..\fs\service\oss\RunServer.cpp" />
     <ClCompile Include="..\..\fs\service\StreamingSubscriber.cpp" />
     <ClCompile Include="..\..\fs\sqlite\Sqlite.cpp" />
-    <ClCompile Include="..\..\fs\store\BackingStore.cpp" />
     <ClCompile Include="..\..\fs\store\EmptyBackingStore.cpp" />
     <ClCompile Include="..\..\fs\store\hg\HgBackingStore.cpp" />
     <ClCompile Include="..\..\fs\store\hg\HgImporter.cpp" />

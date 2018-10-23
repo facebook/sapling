@@ -143,9 +143,6 @@
     <ClCompile Include="..\..\fs\utils\UnboundedQueueExecutor.cpp">
       <Filter>fs\Util</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\fs\store\BackingStore.cpp">
-      <Filter>fs\Store</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\fs\service\EdenError.cpp">
       <Filter>fs\Service</Filter>
     </ClCompile>

@@ -84,7 +84,7 @@ AbsolutePathPiece etcEdenDir_ = "c:\\eden\\etcedendir"_abspath;
 AbsolutePathPiece configPath_ = "c:\\eden\\configpath\\.edenrc"_abspath;
 
 shared_ptr<BackingStore> backingStore_;
-unique_ptr<ObjectStore> objectStore_;
+shared_ptr<ObjectStore> objectStore_;
 
 shared_ptr<BackingStore> createBackingStore(
     StringPiece type,
@@ -120,7 +120,7 @@ void startBackingStore() {
   cout << "CreateBackingStore" << endl;
   backingStore_ = createBackingStore("hg", "c:\\open\\fbsource");
 
-  objectStore_ = std::make_unique<ObjectStore>(localStore_, backingStore_);
+  objectStore_ = ObjectStore::create(localStore_, backingStore_);
 
   // facebook::eden::Hash commitID("777362dde8e5");
   // facebook::eden::Hash commitID("777362dde8e574bda92c42816b7df0de0e8aba39");
