@@ -58,10 +58,6 @@ DEFINE_string(
     "/etc/eden",
     "The directory holding all system configuration files");
 DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
-DEFINE_string(
-    logPath,
-    "",
-    "If set, redirects stdout and stderr to the log file given.");
 
 using namespace facebook::eden;
 
@@ -280,7 +276,7 @@ int main(int argc, char** argv) {
   }
 #endif
 
-  auto startupLogger = daemonizeIfRequested(FLAGS_logPath);
+  auto startupLogger = daemonizeIfRequested("");
 
   if (FLAGS_edenDir.empty()) {
     startupLogger->exitUnsuccessfully(1, "the --edenDir flag is required");
