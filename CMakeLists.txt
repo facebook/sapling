@@ -22,7 +22,7 @@ include_directories(
   ${CMAKE_BINARY_DIR}
 )
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 include(CompilerSettingsUnix)
 include(EdenConfigChecks)
 include(ThriftCppLibrary)
