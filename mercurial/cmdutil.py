@@ -59,7 +59,7 @@ remoteopts = [
         "",
         "insecure",
         None,
-        _("do not verify server certificate (ignoring web.cacerts config)"),
+        _("do not verify server certificate (ignoring web.cacerts config) (ADVANCED)"),
     ),
 ]
 

@@ -714,8 +714,6 @@ documented aliases
    -B --bookmarks     show bookmarks
    -e --ssh CMD       specify ssh command to use
       --remotecmd CMD specify hg command to run on the remote side
-      --insecure      do not verify server certificate (ignoring web.cacerts
-                      config)
   
   (some details hidden, use --verbose to show complete help)
   $ hg help commands | grep documented

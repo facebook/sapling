@@ -13,10 +13,10 @@ from mercurial.i18n import _
 
 
 def restack(ui, repo, rebaseopts=None):
-    """Repair a situation in which one or more changesets in a stack
+    """Repair a situation in which one or more commits in a stack
        have been obsoleted (thereby leaving their descendants in the stack
-       unstable) by finding any such changesets and rebasing their descendants
-       onto the latest version of each respective changeset.
+       orphaned) by finding any such commits and rebasing their descendants
+       onto the latest version of each respective commit.
     """
     rebaseopts = (rebaseopts or {}).copy()
 

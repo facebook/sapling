@@ -4560,9 +4560,15 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
             _("update to new branch head if new descendants were pulled"),
         ),
         ("f", "force", None, _("run even when remote repository is unrelated")),
-        ("r", "rev", [], _("a remote changeset intended to be added"), _("REV")),
-        ("B", "bookmark", [], _("bookmark to pull"), _("BOOKMARK")),
-        ("b", "branch", [], _("a specific branch you would like to pull"), _("BRANCH")),
+        ("r", "rev", [], _("a remote commit to pull"), _("REV")),
+        ("B", "bookmark", [], _("a bookmark to pull"), _("BOOKMARK")),
+        (
+            "b",
+            "branch",
+            [],
+            _("a specific branch you want to pull (DEPRECATED)"),
+            _("BRANCH"),
+        ),
     ]
     + remoteopts,
     _("[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"),
@@ -4570,25 +4576,17 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source
 
-    Pull changes from a remote repository to a local one.
+    Pull changes from a remote repository to a local one. This command modifies
+    the commit graph, but doesn't affect local commits or files on disk.
 
-    This finds all changes from the repository at the specified path
-    or URL and adds them to a local repository (the current one unless
-    -R is specified). By default, this does not update the copy of the
-    project in the working directory.
-
-    Use :hg:`incoming` if you want to see what would have been added
-    by a pull at the time you issued this command. If you then decide
-    to add those changes to the repository, you should use :hg:`pull
-    -r X` where ``X`` is the last changeset listed by :hg:`incoming`.
-
-    If SOURCE is omitted, the 'default' path will be used.
+    If SOURCE is omitted, the default path is used.
     See :hg:`help urls` for more information.
 
-    Specifying bookmark as ``.`` is equivalent to specifying the active
-    bookmark's name.
+    .. container:: verbose
 
-    Returns 0 on success, 1 if an update had unresolved files.
+        You can use ``.`` for BOOKMARK to specify the active bookmark.
+
+    Returns 0 on success, 1 if ``--update`` was specified but the update had unresolved conflicts.
     """
     treestate.onpull(ui, repo)
 

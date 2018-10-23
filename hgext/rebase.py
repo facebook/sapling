@@ -869,126 +869,123 @@ class rebaseruntime(object):
 def rebase(ui, repo, templ=None, **opts):
     """move commits from one location to another
 
-    Rebase uses repeated merging to graft changesets from one part of
-    history (the source) onto another (the destination). This can be
-    useful for linearizing *local* changes relative to a master
-    development tree.
+    Rebase moves commits from one part of the commit graph to another. It
+    does this by creating a copy of the commit at the destination and hiding
+    the original commit.
 
-    Published commits cannot be rebased (see :hg:`help phases`).
-    To copy commits, see :hg:`help graft`.
+    To create copies of your commits instead of moving them, use ``--keep``
+    (``-k``) to keep the original commits rather than hiding them.
 
-    If you don't specify a destination changeset (``-d/--dest``), rebase
-    will use the same logic as :hg:`merge` to pick a destination.  if
-    the current branch contains exactly one other head, the other head
-    is merged with by default.  Otherwise, an explicit revision with
-    which to merge with must be provided.  (destination changeset is not
-    modified by rebasing, but new changesets are added as its
-    descendants.)
+    If the commits being rebased have bookmarks, rebase moves the bookmarks
+    onto the new versions of the commits. Bookmarks are moved even if ``--keep``
+    is specified.
 
-    Here are the ways to select changesets:
+    Public commits cannot be rebased unless you use the ``-k`` option to copy
+    them.
 
-      1. Explicitly select them using ``--rev``.
+    Use the following options to select the commits you want to rebase:
 
-      2. Use ``--source`` to select a root changeset and include all of its
-         descendants.
+      1. ``--rev`` to explicitly select commits
 
-      3. Use ``--base`` to select a changeset; rebase will find ancestors
-         and their descendants which are not also ancestors of the destination.
+      2. ``--source`` to select a root commit and include all of its
+         descendants
 
-      4. If you do not specify any of ``--rev``, ``source``, or ``--base``,
-         rebase will use ``--base .`` as above.
+      3. ``--base`` to select a commit and its ancestors and descendants
 
-    If ``--source`` or ``--rev`` is used, special names ``SRC`` and ``ALLSRC``
-    can be used in ``--dest``. Destination would be calculated per source
-    revision with ``SRC`` substituted by that single source revision and
-    ``ALLSRC`` substituted by all source revisions.
+    If no option is specified to select commits, ``-b .`` is used by default.
 
-    Rebase will destroy original changesets unless you use ``--keep``.
-    It will also move your bookmarks (even if you do).
+      .. container:: verbose
 
-    Some changesets may be dropped if they do not contribute changes
-    (e.g. merges from the destination branch).
+        If ``--source`` or ``--rev`` is used, special names ``SRC`` and ``ALLSRC``
+        can be used in ``--dest``. Destination would be calculated per source
+        revision with ``SRC`` substituted by that single source revision and
+        ``ALLSRC`` substituted by all source revisions.
 
-    Unlike ``merge``, rebase will do nothing if you are at the branch tip of
-    a named branch with two heads. You will need to explicitly specify source
-    and/or destination.
+    If commits that you are rebasing consist entirely of changes that are
+    already present in the destination, those commits are not moved (in
+    other words, they are rebased out).
 
-    If you need to use a tool to automate merge/conflict decisions, you
-    can specify one with ``--tool``, see :hg:`help merge-tools`.
-    As a caveat: the tool will not be used to mediate when a file was
-    deleted, there is no hook presently available for this.
+    Sometimes conflicts can occur when you rebase. When this happens, by
+    default, Mercurial launches an editor for every conflict. Conflict markers
+    are inserted into affected files, like::
 
-    If a rebase is interrupted to manually resolve a conflict, it can be
-    continued with --continue/-c or aborted with --abort/-a.
+        <<<<
+        dest
+        ====
+        source
+        >>>>
+
+    To fix the conflicts, for each file, remove the markers and replace the
+    whole block of code with the correctly merged code.
+
+    If you close the editor without resolving the conflict, the rebase is
+    interrupted and you are returned to the command line. At this point, you
+    can resolve conflicts in manual resolution mode. See :hg:`help resolve` for
+    details.
+
+    After manually resolving conflicts, resume the rebase with ``hg rebase
+    --continue`` (``-c``). If you are not able to successfully resolve all
+    conflicts, run ``hg rebase --abort`` (``-a``) to abort the
+    rebase.
+
+    Alternatively, you can use a custom merge tool to automate conflict
+    resolution. To specify a custom merge tool, use the ``--tool`` flag. See
+    :hg:`help merge-tools` for a list of available tools and for information
+    about configuring the default merge behavior.
 
     .. container:: verbose
 
       Examples:
 
-      - move "local changes" (current commit back to branching point)
-        to the current branch tip after a pull::
+      - Move a single commit to master::
 
-          hg rebase
+          hg rebase -r 5f493448 -d master
 
-      - move a single changeset to the stable branch::
-
-          hg rebase -r 5f493448 -d stable
-
-      - splice a commit and all its descendants onto another part of history::
+      - Move a commit and all its descendants to another part of the commit
+      graph::
 
           hg rebase --source c0c3 --dest 4cf9
 
-      - rebase everything on a branch marked by a bookmark onto the
-        default branch::
+      - Rebase everything on a local branch marked by a bookmark to master::
 
-          hg rebase --base myfeature --dest default
+          hg rebase --base myfeature --dest master
 
-      - collapse a sequence of changes into a single commit::
+      - Rebase orphaned commits onto the latest version of their parents::
 
-          hg rebase --collapse -r 1520:1525 -d .
+          hg rebase --restack
 
-      - move a named branch while preserving its name::
+      Configuration Options:
 
-          hg rebase -r "branch(featureX)" -d 1.3 --keepbranches
+      You can make rebase require a destination if you set the following config
+      option::
 
-      - stabilize orphaned changesets so history looks linear::
+        [commands]
+        rebase.requiredest = True
 
-          hg rebase -r 'orphan()-obsolete()'\
- -d 'first(max((successors(max(roots(ALLSRC) & ::SRC)^)-obsolete())::) +\
- max(::((roots(ALLSRC) & ::SRC)^)-obsolete()))'
+      By default, rebase will close the transaction after each commit. For
+      performance purposes, you can configure rebase to use a single transaction
+      across the entire rebase. WARNING: This setting introduces a significant
+      risk of losing the work you've done in a rebase if the rebase aborts
+      unexpectedly::
 
-    Configuration Options:
+        [rebase]
+        singletransaction = True
 
-    You can make rebase require a destination if you set the following config
-    option::
+      By default, rebase writes to the current checkout, but you can configure it
+      to run in-memory for for better performance, and to allow it to run if the
+      current checkout is dirty::
 
-      [commands]
-      rebase.requiredest = True
+        [rebase]
+        experimental.inmemory = True
 
-    By default, rebase will close the transaction after each commit. For
-    performance purposes, you can configure rebase to use a single transaction
-    across the entire rebase. WARNING: This setting introduces a significant
-    risk of losing the work you've done in a rebase if the rebase aborts
-    unexpectedly::
+      It will also print a configurable warning::
 
-      [rebase]
-      singletransaction = True
-
-    By default, rebase writes to the working copy, but you can configure it to
-    run in-memory for for better performance, and to allow it to run if the
-    working copy is dirty::
-
-      [rebase]
-      experimental.inmemory = True
-
-    It will also print a configurable warning::
-
-      [rebase]
-      experimental.inmemorywarning = Using experimental in-memory rebase
+        [rebase]
+        experimental.inmemorywarning = Using experimental in-memory rebase
 
     Return Values:
 
-    Returns 0 on success, 1 if nothing to rebase or there are
+    Returns 0 on success, 1 if nothing to rebase or if there are
     unresolved conflicts.
 
     """
@@ -2187,7 +2184,9 @@ def summaryhook(ui, repo):
 def uisetup(ui):
     # Replace pull with a decorator to provide --rebase option
     entry = extensions.wrapcommand(commands.table, "pull", pullrebase)
-    entry[1].append(("", "rebase", None, _("rebase working directory to branch head")))
+    entry[1].append(
+        ("", "rebase", None, _("rebase current commit or current stack onto master"))
+    )
     entry[1].append(("t", "tool", "", _("specify merge tool for rebase")))
     cmdutil.summaryhooks.add("rebase", summaryhook)
     cmdutil.unfinishedstates.append(

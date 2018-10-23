@@ -60,7 +60,12 @@ demandimport.ignore.extend(["svn", "svn.client", "svn.core", "svn.delta", "svn.r
 namespacepredicate = registrar.namespacepredicate()
 
 svnopts = [
-    ("", "stupid", None, "use slower, but more compatible, protocol for Subversion")
+    (
+        "",
+        "stupid",
+        None,
+        "use slower, but more compatible, protocol for Subversion (ADVANCED)",
+    )
 ]
 
 # generic means it picks up all options from svnopts
