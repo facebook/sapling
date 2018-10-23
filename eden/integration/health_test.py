@@ -18,7 +18,7 @@ import pexpect
 from eden.cli.daemon import wait_for_shutdown
 
 from .lib import edenclient, testcase
-from .lib.fake_edenfs import fake_eden_daemon
+from .lib.fake_edenfs import FakeEdenFS
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
 from .lib.temporary_directory import TemporaryDirectoryMixin
@@ -45,13 +45,13 @@ class HealthOfFakeEdenFSTest(
         self.temp_dir = pathlib.Path(self.make_temporary_directory())
 
     def test_healthy_daemon_is_healthy(self):
-        with fake_eden_daemon(self.temp_dir):
+        with FakeEdenFS.spawn(self.temp_dir):
             status_process = self.spawn_status([])
             status_process.expect_exact("eden running normally")
             self.assert_process_succeeds(status_process)
 
     def test_killed_daemon_is_not_running(self):
-        with fake_eden_daemon(self.temp_dir) as daemon_pid:
+        with FakeEdenFS.spawn(self.temp_dir) as daemon_pid:
             os.kill(daemon_pid, signal.SIGKILL)
             wait_for_shutdown(pid=daemon_pid, timeout=5)
 
@@ -60,7 +60,7 @@ class HealthOfFakeEdenFSTest(
             self.assert_process_fails(status_process, exit_code=1)
 
     def test_hanging_thrift_call_reports_daemon_is_unresponsive(self):
-        with fake_eden_daemon(self.temp_dir, ["--sleepBeforeGetPid=5"]):
+        with FakeEdenFS.spawn(self.temp_dir, ["--sleepBeforeGetPid=5"]):
             status_process = self.spawn_status(["--timeout", "1"])
             status_process.expect_exact(
                 "Eden's Thrift server does not appear to be running, but the "
@@ -69,7 +69,7 @@ class HealthOfFakeEdenFSTest(
             self.assert_process_fails(status_process, exit_code=1)
 
     def test_slow_thrift_call_reports_daemon_is_healthy(self):
-        with fake_eden_daemon(self.temp_dir, ["--sleepBeforeGetPid=2"]):
+        with FakeEdenFS.spawn(self.temp_dir, ["--sleepBeforeGetPid=2"]):
             status_process = self.spawn_status(["--timeout", "10"])
             status_process.logfile = sys.stderr
             status_process.expect_exact("eden running normally")

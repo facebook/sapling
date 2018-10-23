@@ -17,25 +17,27 @@ import typing
 from .find_executables import FindExe
 
 
-@contextlib.contextmanager
-def fake_eden_daemon(
-    eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
-) -> typing.Iterator[int]:
-    daemon_pid = spawn_fake_eden_daemon(
-        eden_dir=eden_dir, extra_arguments=extra_arguments
-    )
-    try:
-        yield daemon_pid
-    finally:
+class FakeEdenFS(typing.ContextManager[int]):
+    """A running fake_edenfs process."""
+
+    @staticmethod
+    def spawn(
+        eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+    ) -> "FakeEdenFS":
+        command = [FindExe.FAKE_EDENFS, "--edenDir", str(eden_dir)]
+        command.extend(extra_arguments)
+        subprocess.check_call(command)
+        edenfs_pid = int((eden_dir / "lock").read_text())
+        return FakeEdenFS(process_id=edenfs_pid)
+
+    def __init__(self, process_id: int) -> None:
+        super().__init__()
+        self.process_id = process_id
+
+    def __enter__(self) -> int:
+        return self.process_id
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
         with contextlib.suppress(ProcessLookupError):
-            os.kill(daemon_pid, signal.SIGTERM)
-
-
-def spawn_fake_eden_daemon(
-    eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
-) -> int:
-    command = [FindExe.FAKE_EDENFS, "--edenDir", str(eden_dir)]
-    command.extend(extra_arguments)
-    subprocess.check_call(command)
-    daemon_pid = int((eden_dir / "lock").read_text())
-    return daemon_pid
+            os.kill(self.process_id, signal.SIGTERM)
+        return None
