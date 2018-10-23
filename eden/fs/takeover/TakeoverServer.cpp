@@ -187,8 +187,8 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
              << msg.data.computeChainDataLength() << " bytes";
 
   return socket_.send(std::move(msg))
-      .then([promise = std::move(data.takeoverComplete)](
-                folly::Try<Unit>&& sendResult) mutable {
+      .thenTry([promise = std::move(data.takeoverComplete)](
+                   folly::Try<Unit>&& sendResult) mutable {
         promise.setTry(std::move(sendResult));
       });
 }

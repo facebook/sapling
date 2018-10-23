@@ -1349,7 +1349,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReadLink(
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_READLINK inode=" << header->nodeid;
   return dispatcher_->readlink(InodeNumber{header->nodeid})
-      .then([](std::string&& str) {
+      .thenValue([](std::string&& str) {
         RequestData::get().sendReply(folly::StringPiece(str));
       });
 }
@@ -1556,7 +1556,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
   const StringPiece attrName{nameStr};
   XLOG(DBG7) << "FUSE_GETXATTR";
   return dispatcher_->getxattr(InodeNumber{header->nodeid}, attrName)
-      .then([size = getxattr->size](std::string attr) {
+      .thenValue([size = getxattr->size](std::string attr) {
         auto& request = RequestData::get();
         if (size == 0) {
           fuse_getxattr_out out = {};
@@ -1741,7 +1741,7 @@ folly::Future<folly::Unit> FuseChannel::fuseBmap(
   XLOG(DBG7) << "FUSE_BMAP";
   return dispatcher_
       ->bmap(InodeNumber{header->nodeid}, bmap->blocksize, bmap->block)
-      .then([](uint64_t resultIdx) {
+      .thenValue([](uint64_t resultIdx) {
         fuse_bmap_out out;
         out.block = resultIdx;
         RequestData::get().sendReply(out);

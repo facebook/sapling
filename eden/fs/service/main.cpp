@@ -259,7 +259,7 @@ int main(int argc, char** argv) {
   }
 
   std::move(prepareFuture)
-      .then([startupLogger](folly::Try<folly::Unit>&& result) {
+      .thenTry([startupLogger](folly::Try<folly::Unit>&& result) {
         // If an error occurred this means that we failed to mount all of the
         // mount points.  However, we have still started and will continue
         // running, so we report successful startup here no matter what.

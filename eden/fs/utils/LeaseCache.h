@@ -66,7 +66,7 @@ class LeaseCache {
 
     auto future = entry->getFuture();
 
-    fetcher_(key).then(
+    fetcher_(key).thenTry(
         [entry](folly::Try<ValuePtr>&& t) { entry->setTry(std::move(t)); });
 
     return future;

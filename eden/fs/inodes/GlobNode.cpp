@@ -361,10 +361,11 @@ Future<vector<RelativePath>> GlobNode::evaluateImpl(
   for (auto& item : recurse) {
     auto candidateName = rootPath + item.first;
     futures.emplace_back(root.getOrLoadChildTree(item.first)
-                             .then([store,
-                                    candidateName,
-                                    node = item.second,
-                                    fileBlobsToPrefetch](TreeInodePtr dir) {
+                             .thenValue([store,
+                                         candidateName,
+                                         node = item.second,
+                                         fileBlobsToPrefetch](
+                                            TreeInodePtr dir) {
                                return node->evaluateImpl(
                                    store,
                                    candidateName,
@@ -372,7 +373,7 @@ Future<vector<RelativePath>> GlobNode::evaluateImpl(
                                    fileBlobsToPrefetch);
                              }));
   }
-  return folly::collect(futures).then(
+  return folly::collect(futures).thenValue(
       [shadowResults = std::move(results)](
           vector<vector<RelativePath>>&& matchVector) mutable {
         for (auto& matches : matchVector) {
@@ -495,8 +496,8 @@ Future<vector<RelativePath>> GlobNode::evaluateRecursiveComponentImpl(
   for (auto& candidateName : subDirNames) {
     futures.emplace_back(
         root.getOrLoadChildTree(candidateName.basename())
-            .then([candidateName, store, this, fileBlobsToPrefetch](
-                      TreeInodePtr dir) {
+            .thenValue([candidateName, store, this, fileBlobsToPrefetch](
+                           TreeInodePtr dir) {
               return evaluateRecursiveComponentImpl(
                   store,
                   candidateName,
@@ -505,7 +506,7 @@ Future<vector<RelativePath>> GlobNode::evaluateRecursiveComponentImpl(
             }));
   }
 
-  return folly::collect(futures).then(
+  return folly::collect(futures).thenValue(
       [shadowResults = std::move(results)](
           vector<vector<RelativePath>>&& matchVector) mutable {
         for (auto& matches : matchVector) {

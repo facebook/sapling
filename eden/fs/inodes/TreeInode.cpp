@@ -1000,9 +1000,10 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   // Now that we have the file handle, let's look up the attributes.
   //
   // TODO: We probably could compute this more efficiently without using an
-  // extra Future::then() call.  getattr() should always complete immediately
-  // in this case.  We should be able to avoid calling stat() on the underlying
-  // overlay file since we just created it and know it is an empty file.
+  // extra Future::thenValue() call.  getattr() should always complete
+  // immediately in this case.  We should be able to avoid calling stat() on
+  // the underlying overlay file since we just created it and know it is an
+  // empty file.
   return inode->getattr().thenValue(
       [=, handle = std::move(handle)](Dispatcher::Attr attr) mutable {
         CreateResult result(getMount());
@@ -1224,8 +1225,8 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   }
 
   // Note that we intentially create childFuture() in a separate
-  // statement before calling then() on it, since we std::move()
-  // the name into the lambda capture for then().
+  // statement before calling thenValue() on it, since we std::move()
+  // the name into the lambda capture for thenValue().
   //
   // Pre-C++17 this has undefined behavior if they are both in the same
   // statement: argument evaluation order is undefined, so we could
@@ -1908,12 +1909,12 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
                      << folly::exceptionStr(ex);
           return InodePtr{};
         })
-        .then([self = inodePtrFromThis(),
-               context,
-               currentPath = currentPath.copy(),
-               tree,
-               parentIgnore,
-               isIgnored](InodePtr pResolved) mutable {
+        .thenValue([self = inodePtrFromThis(),
+                    context,
+                    currentPath = currentPath.copy(),
+                    tree,
+                    parentIgnore,
+                    isIgnored](InodePtr pResolved) mutable {
           if (!pResolved) {
             return self->computeDiff(
                 self->contents_.wlock(),

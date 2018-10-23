@@ -259,9 +259,9 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       break;
   }
 
-  return std::move(future).then([self = inodePtrFromThis(),
-                                 fn = std::forward<Fn>(fn)](
-                                    FileHandlePtr /* handle */) mutable {
+  return std::move(future).thenValue([self = inodePtrFromThis(),
+                                      fn = std::forward<Fn>(fn)](
+                                         FileHandlePtr /* handle */) mutable {
     // Simply call runWhileDataLoaded() again when we we finish loading the blob
     // data.  The state should be BLOB_LOADED or MATERIALIZED_IN_OVERLAY this
     // time around.
@@ -318,7 +318,7 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       break;
   }
 
-  return std::move(future).then(
+  return std::move(future).thenValue(
       [self = inodePtrFromThis(),
        fn = std::forward<Fn>(fn)](FileHandlePtr /* handle */) mutable {
         // Simply call runWhileDataLoaded() again when we we finish loading the
@@ -1009,7 +1009,7 @@ Future<FileInode::FileHandlePtr> FileInode::startLoadingData(
 
   auto self = inodePtrFromThis(); // separate line for formatting
   std::move(blobFuture)
-      .then([self](folly::Try<std::shared_ptr<const Blob>> tryBlob) mutable {
+      .thenTry([self](folly::Try<std::shared_ptr<const Blob>> tryBlob) mutable {
         auto state = LockedState{self};
 
         switch (state->tag) {
@@ -1050,7 +1050,7 @@ Future<FileInode::FileHandlePtr> FileInode::startLoadingData(
                 << "Inode left in unexpected state after getBlob() completed";
         }
       })
-      .onError([](const std::exception&) {
+      .thenError([](folly::exception_wrapper&&) {
         // We get here if EDEN_BUG() didn't terminate the process, or if we
         // threw in the preceding block.  Both are bad because we won't
         // automatically propagate the exception to resultFuture and we
