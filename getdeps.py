@@ -205,12 +205,6 @@ def get_projects(opts):
             CMakeBuilder(),
         ),
         Project(
-            "zstd",
-            opts,
-            GitUpdater("https://github.com/facebook/zstd.git"),
-            MakeBuilder(),
-        ),
-        Project(
             "rocksdb",
             opts,
             GitUpdater("https://github.com/facebook/rocksdb.git"),
@@ -308,7 +302,7 @@ def install_platform_deps():
             "libevent-dev flex bison libgoogle-glog-dev libkrb5-dev "
             "libsnappy-dev libsasl2-dev libnuma-dev libcurl4-gnutls-dev "
             "libpcap-dev libdb5.3-dev cmake libfuse-dev libgit2-dev mercurial "
-            "libsqlite3-dev "
+            "libsqlite3-dev libzstd-dev"
         ).split()
         install_apt(ubuntu_pkgs)
     else:
