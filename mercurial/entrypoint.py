@@ -40,9 +40,9 @@ def run(binaryexecution):
         except NameError:
             pass
 
-    from mercurial import util
+    from mercurial import executionmodel
 
-    util.setbinaryexecution(binaryexecution)
+    executionmodel.setbinaryexecution(binaryexecution)
 
     if (
         sys.argv[1:5] == ["serve", "--cmdserver", "chgunix", "--address"]

@@ -619,11 +619,3 @@ def releaselock(_lockfd, pathname):
 
 def islocked(pathname):
     return os.path.exists(pathname)
-
-
-executedfrombinary = False
-
-
-def setbinaryexecution(isbinary=False):
-    global executedfrombinary
-    executedfrombinary = isbinary
