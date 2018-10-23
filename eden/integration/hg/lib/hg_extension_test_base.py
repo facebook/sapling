@@ -22,21 +22,6 @@ import toml
 from eden.integration.lib import find_executables, hgrepo, testcase
 
 
-def _find_post_clone() -> str:
-    post_clone = os.environ.get("EDENFS_POST_CLONE_PATH") or os.path.join(
-        find_executables.FindExe.BUCK_OUT, "gen/eden/hooks/hg/post-clone.par"
-    )
-    if not os.access(post_clone, os.X_OK):
-        msg = "unable to find post-clone script for integration testing: {!r}".format(
-            post_clone
-        )
-        raise Exception(msg)
-    return post_clone
-
-
-POST_CLONE = _find_post_clone()
-
-
 def get_default_hgrc() -> configparser.ConfigParser:
     """
     Get the default hgrc settings to use in the backing store repository.
@@ -131,7 +116,7 @@ class EdenHgTestCase(testcase.EdenTestCase):
         hooks_dir = os.path.join(self.tmp_dir, "the_hooks")
         os.mkdir(hooks_dir)
         post_clone_hook = os.path.join(hooks_dir, "post-clone")
-        os.symlink(POST_CLONE, post_clone_hook)
+        os.symlink(find_executables.FindExe.EDEN_POST_CLONE_HOOK, post_clone_hook)
 
         edenrc = os.path.join(os.environ["HOME"], ".edenrc")
         toml_config = toml.load(edenrc)
