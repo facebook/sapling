@@ -225,14 +225,14 @@ mod tests {
 
     #[test]
     fn test_mergey_ancestor_iterator() {
-        /// Tests for exponential time complexity in a merge ancestory. This doesn't won't fail,
-        /// but may take a long time if there is bad time complexity.
+        // Tests for exponential time complexity in a merge ancestory. This doesn't won't fail,
+        // but may take a long time if there is bad time complexity.
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
         let size = 5000;
         let mut ancestors = Ancestors::new();
         let mut keys = vec![];
-        for i in 0..size {
+        for _ in 0..size {
             keys.push(Key::new(Box::from([]), Node::random(&mut rng)));
         }
 

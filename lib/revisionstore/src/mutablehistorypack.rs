@@ -1,8 +1,9 @@
 use byteorder::WriteBytesExt;
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::Write;
+use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
@@ -124,7 +125,8 @@ impl MutableHistoryPack {
             count: node_map.len() as u32,
         }.write(writer)?;
 
-        // TODO: Topo-sort nodes
+        // Sort the nodes in topological order (ancestors first), as required by the histpack spec
+        let node_map = topo_sort(node_map)?;
 
         // Write nodes
         for (key, node_info) in node_map.iter() {
@@ -146,7 +148,7 @@ impl MutableHistoryPack {
             )?;
 
             node_locations.insert(
-                key.clone(),
+                (*key).clone(),
                 NodeLocation {
                     offset: node_offset as u64,
                 },
@@ -156,6 +158,71 @@ impl MutableHistoryPack {
         nodes.insert(file_name, node_locations);
         Ok(())
     }
+}
+
+fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Result<Vec<(&Key, &NodeInfo)>> {
+    // Sorts the given keys into newest-first topological order
+    let mut roots = Vec::<&Key>::new();
+
+    // Child map will be used to perform an oldest-first walk later.
+    let mut child_map = HashMap::<&Key, HashSet<&Key>>::with_capacity(node_map.len());
+    // Parent count will be used to keep track of when all a commit's parents have been processed.
+    let mut parent_counts = HashMap::with_capacity(node_map.len());
+
+    for (key, info) in node_map.iter() {
+        let mut parent_count = 0;
+        for i in 0..2 {
+            let parent = &info.parents[i];
+
+            // Only record the relationship if the parent is also in the provided node_map.
+            // This also filters out null parents.
+            if node_map.contains_key(parent) {
+                parent_count += 1;
+                let children = child_map.entry(parent).or_default();
+                children.insert(key);
+            }
+        }
+
+        if parent_count == 0 {
+            roots.push(key);
+        } else {
+            parent_counts.insert(key, parent_count);
+        }
+    }
+
+    // Sort the roots so things are deterministic.
+    roots.sort_unstable();
+
+    // Process roots, adding children to the queue once all their parents are processed.
+    let mut pending = VecDeque::<&Key>::from_iter(roots.iter().cloned());
+    let mut results = Vec::new();
+    while let Some(key) = pending.pop_front() {
+        results.push((key, node_map.get(key).unwrap()));
+
+        if let Some(children) = child_map.get(key) {
+            for child in children.iter() {
+                let mut parent_count = parent_counts
+                    .get(child)
+                    .ok_or_else(|| {
+                        MutableHistoryPackError(format!("missing {:?} during topo sort", child))
+                    })?
+                    .clone();
+                parent_count -= 1;
+                parent_counts.insert(child, parent_count);
+                if parent_count == 0 {
+                    // If a child has no more parents, its a root and is ready for processing.
+                    // Put it at the front so ancestor chains are processed contiguously.
+                    pending.push_front(child);
+                }
+            }
+        }
+    }
+
+    // We built the result in oldest first order, but we need it in newest first order.
+    results.reverse();
+
+    assert_eq!(results.len(), node_map.len());
+    Ok(results)
 }
 
 impl HistoryStore for MutableHistoryPack {
@@ -201,7 +268,77 @@ mod tests {
     use rand::chacha::ChaChaRng;
     use tempfile::tempdir;
 
+    use historypack::HistoryPack;
+    use repack::IterableStore;
     use types::node::Node;
+
+    #[test]
+    fn test_topo_order() {
+        // Tests for exponential time complexity in a merge ancestory. This doesn't won't fail,
+        // but may take a long time if there is bad time complexity.
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = tempdir().unwrap();
+        let mut muthistorypack =
+            MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+        let null_key = Key::new(Box::from([]), Node::null_id().clone());
+
+        let chain_count = 2;
+        let chain_len = 3;
+
+        let mut chains = HashMap::<Key, Vec<(Key, NodeInfo)>>::new();
+        let mut entries = Vec::<(Key, NodeInfo)>::new();
+        for _ in 0..chain_count {
+            let mut chain = Vec::<(Key, NodeInfo)>::new();
+            for i in 0..chain_len {
+                let p1 = if i > 0 {
+                    chain[i - 1].0.clone()
+                } else {
+                    null_key.clone()
+                };
+                let p2 = if i > 1 {
+                    chain[i - 2].0.clone()
+                } else {
+                    null_key.clone()
+                };
+
+                let key = Key::new(Box::from([]), Node::random(&mut rng));
+                let info = NodeInfo {
+                    parents: [p1, p2],
+                    linknode: Node::random(&mut rng),
+                };
+                entries.push((key.clone(), info.clone()));
+                chain.push((key.clone(), info.clone()));
+                if i == chain_len - 1 {
+                    // Reverse it so the newest key is first.
+                    chain.reverse();
+                    chains.insert(key, chain.clone());
+                }
+            }
+        }
+
+        // Add them in random order, so we can verify they get sorted correctly
+        rng.shuffle(&mut entries);
+        for (key, info) in entries.iter() {
+            muthistorypack.add(&key, &info).unwrap();
+        }
+        let path = muthistorypack.close().unwrap();
+        let pack = HistoryPack::new(&path).unwrap();
+
+        let actual_order = pack.iter().map(|x| x.unwrap()).collect::<Vec<Key>>();
+
+        // Compute the expected order
+        let mut chains = chains.iter().collect::<Vec<_>>();
+        chains.sort_unstable();
+        chains.reverse();
+        let mut expected_order = vec![];
+        for (_, chain) in chains.iter() {
+            for (key, _) in chain.iter() {
+                expected_order.push(key.clone());
+            }
+        }
+
+        assert_eq!(actual_order, expected_order);
+    }
 
     quickcheck! {
         fn test_get_ancestors(keys: Vec<(Key, bool)>) -> bool {
