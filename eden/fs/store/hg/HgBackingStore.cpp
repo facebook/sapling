@@ -192,7 +192,8 @@ HgBackingStore::HgBackingStore(
     UnboundedQueueExecutor* serverThreadPool,
     std::optional<AbsolutePath> clientCertificate,
     bool useMononoke,
-    folly::StringPiece mononokeTierName)
+    folly::StringPiece mononokeTierName,
+    bool useDatapackGetBlob)
     : localStore_(localStore),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
@@ -211,7 +212,8 @@ HgBackingStore::HgBackingStore(
           make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
           std::make_shared<HgImporterThreadFactory>(repository, localStore))),
-      serverThreadPool_(serverThreadPool) {
+      serverThreadPool_(serverThreadPool),
+      useDatapackGetBlob_(useDatapackGetBlob) {
 #if EDEN_HAVE_HG_TREEMANIFEST
   HgImporter importer(repository, localStore);
   const auto& options = importer.getOptions();
@@ -584,7 +586,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
 #if EDEN_HAVE_HG_TREEMANIFEST
-  if (unionStore_) {
+  if (useDatapackGetBlob_ && unionStore_) {
     auto content = getBlobFromUnionStore(*unionStore_->wlock(), id, hgInfo);
     if (content) {
       return makeFuture(std::move(content));

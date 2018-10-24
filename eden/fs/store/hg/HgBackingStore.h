@@ -53,7 +53,8 @@ class HgBackingStore : public BackingStore {
       UnboundedQueueExecutor* serverThreadPool,
       std::optional<AbsolutePath> clientCertificate = std::nullopt,
       bool useMononoke = false,
-      folly::StringPiece mononokeTierName = folly::StringPiece());
+      folly::StringPiece mononokeTierName = folly::StringPiece(),
+      bool useDatapackGetBlob = false);
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline
@@ -148,6 +149,7 @@ class HgBackingStore : public BackingStore {
   // UnionDatapackStore is alive.
   std::vector<std::unique_ptr<DatapackStore>> dataPackStores_;
   std::unique_ptr<folly::Synchronized<UnionDatapackStore>> unionStore_;
+  bool useDatapackGetBlob_{false};
 
 #ifndef EDEN_WIN_NOMONONOKE
   std::unique_ptr<MononokeBackingStore> mononoke_;
