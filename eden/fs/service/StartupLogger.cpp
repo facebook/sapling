@@ -138,6 +138,8 @@ void DaemonStartupLogger::daemonize(StringPiece logPath) {
 
 std::optional<std::pair<pid_t, File>> DaemonStartupLogger::daemonizeImpl(
     StringPiece logPath) {
+  DCHECK(!logPath.empty());
+
   auto readPipe = createPipe();
   logPath_ = logPath.str();
 
@@ -185,10 +187,8 @@ void DaemonStartupLogger::runParentProcess(
 }
 
 void DaemonStartupLogger::prepareChildProcess(StringPiece logPath) {
-  // Redirect stdout & stderr if desired
-  if (!logPath.empty()) {
-    redirectOutput(logPath);
-  }
+  // Redirect stdout & stderr
+  redirectOutput(logPath);
 }
 
 void DaemonStartupLogger::redirectOutput(StringPiece logPath) {
@@ -230,12 +230,8 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
     // This should only happen if edenfs crashed before writing its status.
     // Check to see if the child process has died.
     auto result = handleChildCrash(childPid);
-    if (!logPath.empty()) {
-      // If we have a log file path also report that more information can be
-      // found there.
-      result.errorMessage += folly::to<string>(
-          "\nCheck the edenfs log file at ", logPath, " for more details");
-    }
+    result.errorMessage += folly::to<string>(
+        "\nCheck the edenfs log file at ", logPath, " for more details");
     return result;
   }
 

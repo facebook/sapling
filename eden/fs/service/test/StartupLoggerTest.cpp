@@ -61,18 +61,13 @@ class DaemonStartupLoggerTest : public ::testing::Test {
    */
   template <typename Fn>
   DaemonStartupLogger::ParentResult runDaemonize(Fn&& fn) {
-    // Use the logFile_ path by default
-    return runDaemonize(logPath(), std::forward<Fn>(fn));
-  }
-  template <typename Fn>
-  DaemonStartupLogger::ParentResult runDaemonize(StringPiece logPath, Fn&& fn) {
     DaemonStartupLogger logger;
-    auto parentInfo = logger.daemonizeImpl(logPath);
+    auto parentInfo = logger.daemonizeImpl(logPath());
     if (parentInfo) {
       // parent
       auto pid = parentInfo->first;
       auto& readPipe = parentInfo->second;
-      return logger.waitForChildStatus(std::move(readPipe), pid, logPath);
+      return logger.waitForChildStatus(std::move(readPipe), pid, logPath());
     }
 
     // child
@@ -200,7 +195,7 @@ TEST_F(DaemonStartupLoggerTest, destroyLoggerWhileDaemonIsStillRunning) {
   folly::File writePipe(pipeFDs[1], /*ownsFd=*/true);
 
   auto result =
-      runDaemonize("", [&readPipe, &writePipe](DaemonStartupLogger&& logger) {
+      runDaemonize([&readPipe, &writePipe](DaemonStartupLogger&& logger) {
         writePipe.close();
 
         // Destroy the DaemonStartupLogger object to force it to close its pipes
@@ -219,8 +214,12 @@ TEST_F(DaemonStartupLoggerTest, destroyLoggerWhileDaemonIsStillRunning) {
 
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
   EXPECT_EQ(
-      "error: edenfs is still running but "
-      "did not report its initialization status",
+      folly::to<std::string>(
+          "error: edenfs is still running but "
+          "did not report its initialization status\n"
+          "Check the edenfs log file at ",
+          logPath(),
+          " for more details"),
       result.errorMessage);
 
   // Close the write end of the pipe so the child process will quit
