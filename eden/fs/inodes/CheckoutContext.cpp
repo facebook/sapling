@@ -95,7 +95,7 @@ void CheckoutContext::addConflict(
   // namespace.  Therefore parent->getPath() must always return non-none value
   // here.
   auto parentPath = parent->getPath();
-  CHECK(parentPath.hasValue());
+  CHECK(parentPath.has_value());
 
   addConflict(type, parentPath.value() + name);
 }
@@ -103,7 +103,7 @@ void CheckoutContext::addConflict(
 void CheckoutContext::addConflict(ConflictType type, InodeBase* inode) {
   // As above, the inode in question must have a path here.
   auto path = inode->getPath();
-  CHECK(path.hasValue());
+  CHECK(path.has_value());
   addConflict(type, path.value());
 }
 
@@ -113,7 +113,7 @@ void CheckoutContext::addError(
     const folly::exception_wrapper& ew) {
   // As above in addConflict(), the parent tree must have a valid path here.
   auto parentPath = parent->getPath();
-  CHECK(parentPath.hasValue());
+  CHECK(parentPath.has_value());
 
   auto path = parentPath.value() + name;
   CheckoutConflict conflict;

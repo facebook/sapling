@@ -46,7 +46,7 @@ const char* InodeError::what() const noexcept {
 
 std::string InodeError::computeMessage() const {
   std::string path;
-  if (child_.hasValue()) {
+  if (child_.has_value()) {
     if (inode_->getNodeId() == kRootNodeId) {
       path = child_.value().stringPiece().str();
     } else {

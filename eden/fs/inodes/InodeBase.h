@@ -13,6 +13,7 @@
 #include <folly/futures/Future.h>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <vector>
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseTypes.h"
@@ -36,9 +37,7 @@ class InodeBase {
    * Constructor for the root TreeInode of an EdenMount.
    * type is set to dtype_t::Dir
    */
-  InodeBase(
-      EdenMount* mount,
-      folly::Optional<InodeTimestamps> initialTimestamps);
+  InodeBase(EdenMount* mount, std::optional<InodeTimestamps> initialTimestamps);
 
   /**
    * Constructor for all non-root inodes.
@@ -46,7 +45,7 @@ class InodeBase {
   InodeBase(
       InodeNumber ino,
       mode_t initialMode,
-      folly::Optional<InodeTimestamps> initialTimestamps,
+      std::optional<InodeTimestamps> initialTimestamps,
       TreeInodePtr parent,
       PathComponentPiece name);
 
@@ -59,7 +58,7 @@ class InodeBase {
   InodeBase(
       InodeNumber ino,
       mode_t initialMode,
-      folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
+      folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
       TreeInodePtr parent,
       PathComponentPiece name);
 
@@ -160,14 +159,14 @@ class InodeBase {
   /**
    * Compute the path to this inode, from the root of the mount point.
    *
-   * This will return the path to the file, or folly::none if the file has
+   * This will return the path to the file, or std::nullopt if the file has
    * been unlinked.
    *
    * BEWARE: Unless you are holding the mount-point's global rename lock when
    * you call this function, the file may have been renamed or unlinked by the
    * time you actually use the return value.
    */
-  folly::Optional<RelativePath> getPath() const;
+  std::optional<RelativePath> getPath() const;
 
   /**
    * Get a string to use to refer to this file in a log message.

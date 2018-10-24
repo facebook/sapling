@@ -172,7 +172,7 @@ AbsolutePath canonicalPathImpl(
 } // namespace
 
 AbsolutePath canonicalPath(folly::StringPiece path) {
-  // Pass in folly::none.
+  // Pass in std::nullopt.
   // canonicalPathImpl() will only call getcwd() if it is actually necessary.
   return canonicalPathImpl(path, std::nullopt);
 }

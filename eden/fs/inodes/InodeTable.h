@@ -151,13 +151,13 @@ class InodeTable {
 
   /**
    * If the table has an entry for this inode, returns it.  Otherwise, returns
-   * folly::none.
+   * std::nullopt.
    */
-  folly::Optional<Record> getOptional(InodeNumber ino) {
-    return state_.withRLock([&](const auto& state) -> folly::Optional<Record> {
+  std::optional<Record> getOptional(InodeNumber ino) {
+    return state_.withRLock([&](const auto& state) -> std::optional<Record> {
       auto iter = state.indices.find(ino);
       if (iter == state.indices.end()) {
-        return folly::none;
+        return std::nullopt;
       } else {
         auto index = iter->second;
         CHECK_LT(index, state.storage.size());

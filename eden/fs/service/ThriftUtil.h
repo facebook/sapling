@@ -39,16 +39,6 @@ inline std::string thriftHash(const std::optional<Hash>& hash) {
 }
 
 /**
- * TODO: remove this
- */
-inline std::string thriftHash(const folly::Optional<Hash>& hash) {
-  if (hash.has_value()) {
-    return thriftHash(hash.value());
-  }
-  return std::string{};
-}
-
-/**
  * Convert thrift BinaryHash data type into a Hash object.
  *
  * This allows the input to be either a 20-byte binary string, or a 40-byte

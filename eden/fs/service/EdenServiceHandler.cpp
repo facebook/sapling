@@ -1104,7 +1104,7 @@ void EdenServiceHandler::debugGetInodePath(
   // Check if the inode is loaded
   info.loaded = inodeMap->lookupLoadedInode(inodeNum) != nullptr;
   // If getPathForInode returned none then the inode is unlinked
-  info.linked = relativePath != folly::none;
+  info.linked = relativePath != std::nullopt;
   info.path = relativePath ? relativePath->stringPiece().str() : "";
 #else
   NOT_IMPLEMENTED();

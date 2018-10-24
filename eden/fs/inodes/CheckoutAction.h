@@ -9,9 +9,9 @@
  */
 #pragma once
 
-#include <folly/Optional.h>
 #include <folly/futures/Future.h>
 #include <memory>
+#include <optional>
 #include <vector>
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -129,14 +129,14 @@ class CheckoutAction {
    *
    * This will be none if the entry did not exist in the old Tree.
    */
-  folly::Optional<TreeEntry> oldScmEntry_;
+  std::optional<TreeEntry> oldScmEntry_;
 
   /**
    * The TreeEntry in the new Tree that we are checking out.
    *
    * This will be none if the entry is deleted in the new Tree.
    */
-  folly::Optional<TreeEntry> newScmEntry_;
+  std::optional<TreeEntry> newScmEntry_;
 
   /**
    * A Future that will be invoked when the inode is loaded.

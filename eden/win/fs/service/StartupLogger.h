@@ -106,7 +106,7 @@ class StartupLogger {
 
   [[noreturn]] void failAndExit(uint8_t exitCode);
 
-  folly::Optional<std::pair<pid_t, folly::File>> daemonizeImpl(
+  std::optional<std::pair<pid_t, folly::File>> daemonizeImpl(
       folly::StringPiece logPath);
 
   /**

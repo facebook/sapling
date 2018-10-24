@@ -8,7 +8,6 @@
  *
  */
 #include <folly/Conv.h>
-#include <folly/Optional.h>
 #include <folly/chrono/Conv.h>
 #include <folly/container/Array.h>
 #include <folly/test/TestUtils.h>
@@ -33,9 +32,9 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 using folly::Future;
 using folly::makeFuture;
-using folly::Optional;
 using folly::StringPiece;
 using folly::Unit;
+using std::optional;
 using std::string;
 using std::chrono::system_clock;
 using testing::UnorderedElementsAre;
@@ -146,7 +145,7 @@ void loadInodes(
     TestMount& testMount,
     RelativePathPiece path,
     LoadBehavior loadType,
-    folly::Optional<folly::StringPiece> expectedContents,
+    std::optional<folly::StringPiece> expectedContents,
     mode_t expectedPerms) {
   switch (loadType) {
     case LoadBehavior::NONE:
@@ -169,7 +168,7 @@ void loadInodes(
       return;
     }
     case LoadBehavior::INODE: {
-      if (expectedContents.hasValue()) {
+      if (expectedContents.has_value()) {
         // The inode in question must be a file.  Load it and verify the
         // contents are what we expect.
         auto fileInode = testMount.getFileInode(path);
@@ -206,14 +205,14 @@ void loadInodes(
     TestMount& testMount,
     RelativePathPiece path,
     LoadBehavior loadType) {
-  loadInodes(testMount, path, loadType, folly::none, 0644);
+  loadInodes(testMount, path, loadType, std::nullopt, 0644);
 }
 
 void loadInodes(
     TestMount& testMount,
     folly::StringPiece path,
     LoadBehavior loadType) {
-  loadInodes(testMount, RelativePathPiece{path}, loadType, folly::none, 0644);
+  loadInodes(testMount, RelativePathPiece{path}, loadType, std::nullopt, 0644);
 }
 
 CheckoutConflict
@@ -352,7 +351,7 @@ void testModifyFile(
 
   loadInodes(testMount, path, loadType, contents1, perms1);
 
-  Optional<struct stat> preStat;
+  optional<struct stat> preStat;
   // If we were supposed to load this inode before the checkout,
   // also store its stat information so we can compare it after the checkout.
   if (loadType == LoadBehavior::INODE || loadType == LoadBehavior::ALL) {
@@ -380,7 +379,7 @@ void testModifyFile(
       folly::to<system_clock::time_point>(postStat.st_mtim), checkoutStart);
   EXPECT_GE(
       folly::to<system_clock::time_point>(postStat.st_ctim), checkoutStart);
-  if (preStat.hasValue()) {
+  if (preStat.has_value()) {
     EXPECT_GE(
         folly::to<system_clock::time_point>(postStat.st_atim),
         folly::to<system_clock::time_point>(preStat->st_atim));

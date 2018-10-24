@@ -8,7 +8,6 @@
  *
  */
 #include "eden/fs/inodes/Differ.h"
-#include <folly/Optional.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>

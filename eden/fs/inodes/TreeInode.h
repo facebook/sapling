@@ -9,9 +9,9 @@
  */
 #pragma once
 #include <folly/File.h>
-#include <folly/Optional.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
+#include <optional>
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 
@@ -39,14 +39,14 @@ constexpr folly::StringPiece kDotEdenName{".eden"};
  * The state of a TreeInode as held in memory.
  */
 struct TreeInodeState {
-  explicit TreeInodeState(DirContents&& dir, folly::Optional<Hash> hash)
+  explicit TreeInodeState(DirContents&& dir, std::optional<Hash> hash)
       : entries{std::forward<DirContents>(dir)}, treeHash{hash} {}
 
   bool isMaterialized() const {
-    return !treeHash.hasValue();
+    return !treeHash.has_value();
   }
   void setMaterialized() {
-    treeHash = folly::none;
+    treeHash = std::nullopt;
   }
 
   DirContents entries;
@@ -60,7 +60,7 @@ struct TreeInodeState {
    * control, and backed by the Overlay instead of a source control Tree),
    * treeHash will be none.
    */
-  folly::Optional<Hash> treeHash;
+  std::optional<Hash> treeHash;
 };
 
 /**
@@ -107,9 +107,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       TreeInodePtr parent,
       PathComponentPiece name,
       mode_t initialMode,
-      folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
+      folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
       DirContents&& dir,
-      folly::Optional<Hash> treeHash);
+      std::optional<Hash> treeHash);
 
   /**
    * Construct an inode that only has backing in the Overlay area.
@@ -119,9 +119,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       TreeInodePtr parent,
       PathComponentPiece name,
       mode_t initialMode,
-      folly::Optional<InodeTimestamps> initialTimestamps,
+      std::optional<InodeTimestamps> initialTimestamps,
       DirContents&& dir,
-      folly::Optional<Hash> treeHash);
+      std::optional<Hash> treeHash);
 
   /**
    * Construct the root TreeInode from a source control commit's root.
@@ -133,9 +133,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   TreeInode(
       EdenMount* mount,
-      folly::Optional<InodeTimestamps> initialTimestamps,
+      std::optional<InodeTimestamps> initialTimestamps,
       DirContents&& dir,
-      folly::Optional<Hash> treeHash);
+      std::optional<Hash> treeHash);
 
   ~TreeInode() override;
 
@@ -323,7 +323,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   void loadUnlinkedChildInode(
       PathComponentPiece name,
       InodeNumber number,
-      folly::Optional<Hash> hash,
+      std::optional<Hash> hash,
       mode_t mode);
 
   /**
@@ -390,7 +390,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     will be null if this entry does not exist or if it refers to a Blob in
    *     the source commit.
    * @param newScmEntry The desired source control state for the new entry,
-   *     or folly::none if the entry does not exist in the destination commit.
+   *     or std::nullopt if the entry does not exist in the destination commit.
    *     This entry will refer to a tree if and only if the newTree parameter
    *     is non-null.
    */
@@ -400,7 +400,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       InodePtr inode,
       std::shared_ptr<const Tree> oldTree,
       std::shared_ptr<const Tree> newTree,
-      const folly::Optional<TreeEntry>& newScmEntry);
+      const std::optional<TreeEntry>& newScmEntry);
 
   /**
    * Get debug data about this TreeInode and all of its children (recursively).
@@ -475,7 +475,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Loads a tree from the overlay given an inode number.
    */
-  folly::Optional<std::pair<DirContents, InodeTimestamps>> loadOverlayDir(
+  std::optional<std::pair<DirContents, InodeTimestamps>> loadOverlayDir(
       InodeNumber inodeNumber) const;
 
   /**
@@ -707,7 +707,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
  * An internal function which computes the difference between a Dir and a tree
  * as a set of strings starting with + and - followed by the entry name.
  */
-folly::Optional<std::vector<std::string>> findEntryDifferences(
+std::optional<std::vector<std::string>> findEntryDifferences(
     const DirContents& dir,
     const Tree& tree);
 

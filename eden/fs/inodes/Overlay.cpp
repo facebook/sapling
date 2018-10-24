@@ -33,8 +33,8 @@ using folly::fbvector;
 using folly::File;
 using folly::IOBuf;
 using folly::MutableStringPiece;
-using folly::Optional;
 using folly::StringPiece;
+using std::optional;
 using folly::literals::string_piece_literals::operator""_sp;
 using std::string;
 
@@ -339,12 +339,12 @@ InodeNumber Overlay::allocateInodeNumber() {
   return InodeNumber{previous};
 }
 
-Optional<std::pair<DirContents, InodeTimestamps>> Overlay::loadOverlayDir(
+optional<std::pair<DirContents, InodeTimestamps>> Overlay::loadOverlayDir(
     InodeNumber inodeNumber) {
   InodeTimestamps timestamps;
   auto dirData = deserializeOverlayDir(inodeNumber, timestamps);
-  if (!dirData.hasValue()) {
-    return folly::none;
+  if (!dirData.has_value()) {
+    return std::nullopt;
   }
   const auto& dir = dirData.value();
 
@@ -503,7 +503,7 @@ InodeNumber Overlay::scanForNextInodeNumber() {
     toProcess.pop_back();
 
     InodeTimestamps timeStamps;
-    auto dir = Optional<overlay::OverlayDir>{};
+    auto dir = optional<overlay::OverlayDir>{};
     try {
       dir = deserializeOverlayDir(dirInodeNumber, timeStamps);
     } catch (std::system_error& error) {
@@ -512,7 +512,7 @@ InodeNumber Overlay::scanForNextInodeNumber() {
           << ": " << error.what();
       encounteredBrokenDirectory = true;
     }
-    if (!dir.hasValue()) {
+    if (!dir.has_value()) {
       continue;
     }
 
@@ -565,17 +565,17 @@ Overlay::InodePath Overlay::getFilePath(InodeNumber inodeNumber) {
   return outPath;
 }
 
-Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
+optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
     InodeNumber inodeNumber,
     InodeTimestamps& timeStamps) const {
-  // Open the file.  Return folly::none if the file does not exist.
+  // Open the file.  Return std::nullopt if the file does not exist.
   auto path = getFilePath(inodeNumber);
   int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
   if (fd == -1) {
     int err = errno;
     if (err == ENOENT) {
       // There is no overlay here
-      return folly::none;
+      return std::nullopt;
     }
     folly::throwSystemErrorExplicit(
         err,
@@ -592,7 +592,7 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
     int err = errno;
     if (err == ENOENT) {
       // There is no overlay here
-      return folly::none;
+      return std::nullopt;
     }
     folly::throwSystemErrorExplicit(
         errno, "failed to read ", RelativePathPiece{path});
@@ -945,7 +945,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
     try {
       InodeTimestamps dummy;
       auto dirData = deserializeOverlayDir(ino, dummy);
-      if (!dirData.hasValue()) {
+      if (!dirData.has_value()) {
         XLOG(DBG3) << "no dir data for inode " << ino;
         continue;
       } else {

@@ -13,6 +13,7 @@
 #include <folly/futures/Future.h>
 #include <list>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 
 #include "eden/fs/fuse/FuseChannel.h"
@@ -212,9 +213,9 @@ class InodeMap {
    * queries the parent nodes).
    *
    * If there is an unlinked inode in the path, this function returns
-   * folly::none. If the inode is invalid, it throws EINVAL.
+   * std::nullopt. If the inode is invalid, it throws EINVAL.
    */
-  folly::Optional<RelativePath> getPathForInode(InodeNumber inodeNumber);
+  std::optional<RelativePath> getPathForInode(InodeNumber inodeNumber);
 
   /**
    * Decrement the number of outstanding FUSE references to an inode number.
@@ -404,14 +405,14 @@ class InodeMap {
         PathComponentPiece entryName,
         bool isUnlinked,
         mode_t mode,
-        folly::Optional<Hash> hash,
+        std::optional<Hash> hash,
         uint32_t fuseRefcount);
     UnloadedInode(
         TreeInode* inode,
         TreeInode* parent,
         PathComponentPiece entryName,
         bool isUnlinked,
-        folly::Optional<Hash> hash,
+        std::optional<Hash> hash,
         uint32_t fuseRefcount);
     UnloadedInode(
         FileInode* inode,
@@ -439,7 +440,7 @@ class InodeMap {
      *
      * If the entry is materialized, this field is not set.
      */
-    folly::Optional<Hash> const hash;
+    std::optional<Hash> const hash;
 
     /**
      * A list of promises waiting on this inode to be loaded.
@@ -521,14 +522,14 @@ class InodeMap {
      * A promise to fulfill once shutdown() completes.
      *
      * This is only initialized when shutdown() is called, and will be
-     * folly::none until we are shutting down.
+     * std::nullopt until we are shutting down.
      *
      * In the future we could update this to just use an empty promise to
      * indicate that we are not shutting down yet.  However, currently
      * folly::Promise does not have a simple API to check if it is empty or not,
-     * so we have to wrap it in a folly::Optional.
+     * so we have to wrap it in a std::optional.
      */
-    folly::Optional<folly::Promise<folly::Unit>> shutdownPromise;
+    std::optional<folly::Promise<folly::Unit>> shutdownPromise;
   };
 
   InodeMap(InodeMap const&) = delete;
@@ -541,14 +542,14 @@ class InodeMap {
       PathComponentPiece childName,
       bool isUnlinked,
       InodeNumber childInodeNumber,
-      folly::Optional<Hash> hash,
+      std::optional<Hash> hash,
       mode_t mode);
   void startChildLookup(
       const InodePtr& parent,
       PathComponentPiece childName,
       bool isUnlinked,
       InodeNumber childInodeNumber,
-      folly::Optional<Hash> hash,
+      std::optional<Hash> hash,
       mode_t mode);
 
   /**
@@ -560,7 +561,7 @@ class InodeMap {
    */
   PromiseVector extractPendingPromises(InodeNumber number);
 
-  folly::Optional<RelativePath> getPathForInodeHelper(
+  std::optional<RelativePath> getPathForInodeHelper(
       InodeNumber inodeNumber,
       const folly::Synchronized<Members>::ConstLockedPtr& data);
 
@@ -585,9 +586,9 @@ class InodeMap {
    * This is called as the first step of unloadInode().
    *
    * This returns an UnloadedInode if we need to remember this inode in the
-   * unloadedInodes_ map, or folly::none if we can forget about it completely.
+   * unloadedInodes_ map, or std::nullopt if we can forget about it completely.
    */
-  folly::Optional<UnloadedInode> updateOverlayForUnload(
+  std::optional<UnloadedInode> updateOverlayForUnload(
       InodeBase* inode,
       TreeInode* parent,
       PathComponentPiece name,

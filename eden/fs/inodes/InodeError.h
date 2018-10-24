@@ -10,9 +10,9 @@
 #pragma once
 
 #include <folly/Format.h>
-#include <folly/Optional.h>
 #include <folly/Synchronized.h>
 #include <memory>
+#include <optional>
 #include <system_error>
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -81,7 +81,7 @@ class InodeError : public std::system_error {
   std::string computeMessage() const;
 
   InodePtr inode_;
-  folly::Optional<PathComponent> child_;
+  std::optional<PathComponent> child_;
   std::string message_;
   mutable folly::Synchronized<std::string> fullMessage_;
 };

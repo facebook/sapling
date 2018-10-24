@@ -29,7 +29,7 @@ class GitIgnorePattern {
   /**
    * Parse a line from a gitignore file.
    *
-   * Returns a GitIgnorePattern, or folly::none if the line did not contain a
+   * Returns a GitIgnorePattern, or std::nullopt if the line did not contain a
    * pattern (e.g., if it was empty or a comment).
    */
   static std::optional<GitIgnorePattern> parseLine(folly::StringPiece line);

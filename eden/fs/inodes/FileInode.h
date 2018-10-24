@@ -9,11 +9,11 @@
  */
 #pragma once
 #include <folly/File.h>
-#include <folly/Optional.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/SharedPromise.h>
 #include <chrono>
+#include <optional>
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
 
@@ -60,7 +60,7 @@ struct FileInodeState {
     MATERIALIZED_IN_OVERLAY,
   };
 
-  explicit FileInodeState(const folly::Optional<Hash>& hash);
+  explicit FileInodeState(const std::optional<Hash>& hash);
   explicit FileInodeState();
   ~FileInodeState();
 
@@ -101,12 +101,12 @@ struct FileInodeState {
    * Set only in 'not loaded', 'loading', and 'loaded' states, none otherwise.
    * TODO: Perhaps we ought to simply leave this defined...
    */
-  folly::Optional<Hash> hash;
+  std::optional<Hash> hash;
 
   /**
    * Set if 'loading'.
    */
-  folly::Optional<folly::SharedPromise<FileHandlePtr>> blobLoadingPromise;
+  std::optional<folly::SharedPromise<FileHandlePtr>> blobLoadingPromise;
 
   /**
    * Set if 'loaded', references immutable data from the backing store.
@@ -162,8 +162,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t initialMode,
-      folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
-      const folly::Optional<Hash>& hash);
+      folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
+      const std::optional<Hash>& hash);
 
   /**
    * Construct an inode using a freshly created overlay file.
@@ -226,7 +226,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   /**
    * If this file is backed by a source control Blob, return the hash of the
-   * Blob, or return folly::none if this file is materialized in the overlay.
+   * Blob, or return std::nullopt if this file is materialized in the overlay.
    *
    * Beware that the file's materialization state may have changed by the time
    * you use the return value of this method.  This method is primarily
@@ -234,7 +234,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * generally cannot be trusted in situations where there may be concurrent
    * modifications by other threads.
    */
-  folly::Optional<Hash> getBlobHash() const;
+  std::optional<Hash> getBlobHash() const;
 
   /**
    * Read the entire file contents, and return them as a string.
@@ -388,13 +388,11 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * Helper function for isSameAs().
    *
    * This does the initial portion of the check which never requires a Future.
-   * Returns Optional<bool> if the check completes immediately, or
-   * folly::none if the contents need to be checked against sha1 of file
+   * Returns optional<bool> if the check completes immediately, or
+   * std::nullopt if the contents need to be checked against sha1 of file
    * contents.
    */
-  folly::Optional<bool> isSameAsFast(
-      const Hash& blobID,
-      TreeEntryType entryType);
+  std::optional<bool> isSameAsFast(const Hash& blobID, TreeEntryType entryType);
 
   /**
    * Recompute the SHA1 content hash of the open file.

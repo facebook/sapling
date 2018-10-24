@@ -355,7 +355,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
       // - If we successfully materialized the file and were in the
       //   BLOB_LOADING state, fulfill the blobLoadingPromise.
       std::shared_ptr<EdenFileHandle> handle;
-      folly::Optional<folly::SharedPromise<FileHandlePtr>> loadingPromise;
+      std::optional<folly::SharedPromise<FileHandlePtr>> loadingPromise;
       SCOPE_EXIT {
         if (loadingPromise) {
           loadingPromise->setValue(std::move(handle));
@@ -384,6 +384,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
         // Now that materializeAndTruncate() has succeeded, extract the
         // blobLoadingPromise so we can fulfill it as we exit.
         loadingPromise = std::move(innerState->blobLoadingPromise);
+        innerState->blobLoadingPromise.reset();
         // Also call materializeInParent() as we exit, before fulfilling the
         // blobLoadingPromise.
         SCOPE_EXIT {
@@ -413,7 +414,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
  * FileInode::State methods
  ********************************************************************/
 
-FileInodeState::FileInodeState(const folly::Optional<Hash>& h) : hash(h) {
+FileInodeState::FileInodeState(const std::optional<Hash>& h) : hash(h) {
   tag = hash ? NOT_LOADED : MATERIALIZED_IN_OVERLAY;
 
   checkInvariants();
@@ -527,8 +528,8 @@ FileInode::FileInode(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t initialMode,
-    folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
-    const folly::Optional<Hash>& hash)
+    folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
+    const std::optional<Hash>& hash)
     : Base(
           ino,
           initialMode,
@@ -629,7 +630,7 @@ void FileInode::fileHandleDidClose() {
   state->decOpenCount();
 }
 
-folly::Optional<bool> FileInode::isSameAsFast(
+std::optional<bool> FileInode::isSameAsFast(
     const Hash& blobID,
     TreeEntryType entryType) {
   auto state = state_.rlock();
@@ -637,7 +638,7 @@ folly::Optional<bool> FileInode::isSameAsFast(
     return false;
   }
 
-  if (state->hash.hasValue()) {
+  if (state->hash.has_value()) {
     // This file is not materialized, so we can compare blob hashes.
     // If the hashes are the same then assume the contents are the same.
     //
@@ -649,14 +650,14 @@ folly::Optional<bool> FileInode::isSameAsFast(
       return true;
     }
   }
-  return folly::none;
+  return std::nullopt;
 }
 
 folly::Future<bool> FileInode::isSameAs(
     const Blob& blob,
     TreeEntryType entryType) {
   auto result = isSameAsFast(blob.getHash(), entryType);
-  if (result.hasValue()) {
+  if (result.has_value()) {
     return result.value();
   }
 
@@ -669,7 +670,7 @@ folly::Future<bool> FileInode::isSameAs(
     const Hash& blobID,
     TreeEntryType entryType) {
   auto result = isSameAsFast(blobID, entryType);
-  if (result.hasValue()) {
+  if (result.has_value()) {
     return makeFuture(result.value());
   }
 
@@ -693,7 +694,7 @@ InodeMetadata FileInode::getMetadata() const {
   return getMetadataLocked(*lock);
 }
 
-folly::Optional<Hash> FileInode::getBlobHash() const {
+std::optional<Hash> FileInode::getBlobHash() const {
   return state_.rlock()->hash;
 }
 
@@ -950,7 +951,7 @@ size_t FileInode::writeImpl(
   state.unlock();
 
   auto myname = getPath();
-  if (myname.hasValue()) {
+  if (myname.has_value()) {
     getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
         std::move(myname.value()), JournalDelta::CHANGED));
   }
@@ -1021,7 +1022,7 @@ Future<FileInode::FileHandlePtr> FileInode::startLoadingData(
           // MATERIALIZED_IN_OVERLAY at this point.
           case State::BLOB_LOADING: {
             auto promise = std::move(*state->blobLoadingPromise);
-            state->blobLoadingPromise.clear();
+            state->blobLoadingPromise.reset();
 
             if (tryBlob.hasValue()) {
               // Transition to 'loaded' state.

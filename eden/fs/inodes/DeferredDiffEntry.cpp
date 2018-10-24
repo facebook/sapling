@@ -9,7 +9,6 @@
  */
 #include "eden/fs/inodes/DeferredDiffEntry.h"
 
-#include <folly/Optional.h>
 #include <folly/Unit.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>

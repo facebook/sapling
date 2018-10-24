@@ -185,7 +185,7 @@ EdenMount::EdenMount(
       clock_(serverState_->getClock()) {}
 
 folly::Future<folly::Unit> EdenMount::initialize(
-    const folly::Optional<SerializedInodeMap>& takeover) {
+    const std::optional<SerializedInodeMap>& takeover) {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
   parentInfo_.wlock()->parents.setParents(*parents);
 
@@ -234,7 +234,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
         this,
         rootOverlayDir->second,
         std::move(rootOverlayDir->first),
-        folly::none);
+        std::nullopt);
   }
   return objectStore_->getTreeForCommit(parentCommits.parent1())
       .thenValue([this](std::shared_ptr<const Tree> tree) {

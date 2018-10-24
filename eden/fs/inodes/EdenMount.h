@@ -19,6 +19,7 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <shared_mutex>
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseChannel.h"
@@ -109,7 +110,7 @@ class EdenMount {
    * If takeover data is specified, it is used to initialize the inode map.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
-      const folly::Optional<SerializedInodeMap>& takeover = folly::none);
+      const std::optional<SerializedInodeMap>& takeover = std::nullopt);
 
   /**
    * Destroy the EdenMount.

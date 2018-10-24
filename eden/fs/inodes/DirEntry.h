@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include <optional>
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/Hash.h"
@@ -81,11 +82,11 @@ class DirEntry {
     return hash_;
   }
 
-  folly::Optional<Hash> getOptionalHash() const {
+  std::optional<Hash> getOptionalHash() const {
     if (hasHash_) {
       return hash_;
     } else {
-      return folly::none;
+      return std::nullopt;
     }
   }
 

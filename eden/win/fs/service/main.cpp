@@ -145,7 +145,7 @@ void runServer(const EdenServer& server);
 } // namespace facebook
 
 void startServer() {
-  folly::Optional<EdenServer> server;
+  std::optional<EdenServer> server;
   UserInfo identity;
   auto privHelper = make_unique<PrivHelper>();
 

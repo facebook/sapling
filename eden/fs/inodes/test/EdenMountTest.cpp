@@ -26,7 +26,7 @@
 #include "eden/fs/testharness/TestUtil.h"
 
 using namespace std::chrono_literals;
-using folly::Optional;
+using std::optional;
 using namespace facebook::eden;
 
 TEST(EdenMount, initFailure) {

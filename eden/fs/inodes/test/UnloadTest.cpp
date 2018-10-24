@@ -17,7 +17,6 @@
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace std::chrono_literals;
-using folly::Optional;
 using namespace facebook::eden;
 
 namespace {

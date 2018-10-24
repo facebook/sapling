@@ -9,12 +9,12 @@
  */
 #pragma once
 #include <folly/File.h>
-#include <folly/Optional.h>
 #include <folly/Range.h>
 #include <folly/futures/Promise.h>
 #include <gtest/gtest_prod.h>
 #include <array>
 #include <condition_variable>
+#include <optional>
 #include <thread>
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
@@ -129,7 +129,7 @@ class Overlay {
       const DirContents& dir,
       const InodeTimestamps& timestamps);
 
-  folly::Optional<std::pair<DirContents, InodeTimestamps>> loadOverlayDir(
+  std::optional<std::pair<DirContents, InodeTimestamps>> loadOverlayDir(
       InodeNumber inodeNumber);
 
   void removeOverlayData(InodeNumber inodeNumber);
@@ -218,7 +218,7 @@ class Overlay {
 
     overlay::OverlayDir dir;
     // Iff set, this is a flush request.
-    folly::Optional<folly::Promise<folly::Unit>> flush;
+    std::optional<folly::Promise<folly::Unit>> flush;
   };
 
   struct GCQueue {
@@ -233,7 +233,7 @@ class Overlay {
   void initNewOverlay();
   void ensureTmpDirectoryIsCreated();
 
-  folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
+  std::optional<overlay::OverlayDir> deserializeOverlayDir(
       InodeNumber inodeNumber,
       InodeTimestamps& timeStamps) const;
 

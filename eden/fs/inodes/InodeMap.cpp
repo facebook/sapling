@@ -23,10 +23,10 @@
 #include "eden/fs/utils/Bug.h"
 
 using folly::Future;
-using folly::Optional;
 using folly::Promise;
 using folly::throwSystemErrorExplicit;
 using folly::Unit;
+using std::optional;
 using std::string;
 using namespace std::chrono_literals;
 
@@ -45,7 +45,7 @@ InodeMap::UnloadedInode::UnloadedInode(
     PathComponentPiece entryName,
     bool isUnlinked,
     mode_t mode,
-    folly::Optional<Hash> hash,
+    std::optional<Hash> hash,
     uint32_t fuseRefcount)
     : number(num),
       parent(parentNum),
@@ -60,7 +60,7 @@ InodeMap::UnloadedInode::UnloadedInode(
     TreeInode* parent,
     PathComponentPiece entryName,
     bool isUnlinked,
-    folly::Optional<Hash> hash,
+    std::optional<Hash> hash,
     uint32_t fuseRefcount)
     : number{inode->getNodeId()},
       parent{parent->getNodeId()},
@@ -145,8 +145,8 @@ void InodeMap::initializeFromTakeover(
         PathComponentPiece{entry.name},
         entry.isUnlinked,
         entry.mode,
-        entry.hash.empty() ? Optional<Hash>{folly::none}
-                           : Optional<Hash>{hashFromThrift(entry.hash)},
+        entry.hash.empty() ? std::nullopt
+                           : std::optional<Hash>{hashFromThrift(entry.hash)},
         entry.numFuseReferences);
 
     auto result = data->unloadedInodes_.emplace(
@@ -292,7 +292,7 @@ void InodeMap::setupParentLookupPromise(
     PathComponentPiece childName,
     bool isUnlinked,
     InodeNumber childInodeNumber,
-    folly::Optional<Hash> hash,
+    std::optional<Hash> hash,
     mode_t mode) {
   promise.getFuture()
       .thenValue([name = PathComponent(childName),
@@ -314,7 +314,7 @@ void InodeMap::startChildLookup(
     PathComponentPiece childName,
     bool isUnlinked,
     InodeNumber childInodeNumber,
-    folly::Optional<Hash> hash,
+    std::optional<Hash> hash,
     mode_t mode) {
   auto treeInode = parent.asTreePtrOrNull();
   if (!treeInode) {
@@ -432,13 +432,12 @@ FileInodePtr InodeMap::lookupLoadedFile(InodeNumber number) {
   return inode.asFilePtr();
 }
 
-folly::Optional<RelativePath> InodeMap::getPathForInode(
-    InodeNumber inodeNumber) {
+std::optional<RelativePath> InodeMap::getPathForInode(InodeNumber inodeNumber) {
   auto data = data_.rlock();
   return getPathForInodeHelper(inodeNumber, data);
 }
 
-folly::Optional<RelativePath> InodeMap::getPathForInodeHelper(
+std::optional<RelativePath> InodeMap::getPathForInodeHelper(
     InodeNumber inodeNumber,
     const folly::Synchronized<Members>::ConstLockedPtr& data) {
   auto loadedIt = data->loadedInodes_.find(inodeNumber);
@@ -449,7 +448,7 @@ folly::Optional<RelativePath> InodeMap::getPathForInodeHelper(
     auto unloadedIt = data->unloadedInodes_.find(inodeNumber);
     if (unloadedIt != data->unloadedInodes_.cend()) {
       if (unloadedIt->second.isUnlinked) {
-        return folly::none;
+        return std::nullopt;
       }
       // If the inode is not loaded, return its parent's path as long as it's
       // parent isn't the root
@@ -520,10 +519,10 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
   auto future = Future<folly::Unit>::makeEmpty();
   {
     auto data = data_.wlock();
-    CHECK(!data->shutdownPromise.hasValue())
+    CHECK(!data->shutdownPromise.has_value())
         << "shutdown() invoked more than once on InodeMap for "
         << mount_->getPath();
-    data->shutdownPromise.assign(Promise<Unit>{});
+    data->shutdownPromise.emplace(Promise<Unit>{});
     future = data->shutdownPromise->getFuture();
 
     XLOG(DBG3) << "starting InodeMap::shutdown: loadedCount="
@@ -662,7 +661,7 @@ void InodeMap::onInodeUnreferenced(
 
   // Decide if we should unload the inode now, or wait until later.
   bool unloadNow = false;
-  bool shuttingDown = data->shutdownPromise.hasValue();
+  bool shuttingDown = data->shutdownPromise.has_value();
   DCHECK(shuttingDown || inode != root_.get());
   if (shuttingDown) {
     // Check to see if this was the root inode that got unloaded.
@@ -750,7 +749,7 @@ void InodeMap::unloadInode(
                          << inode->getLogPath();
 }
 
-Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
+optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     InodeBase* inode,
     TreeInode* parent,
     PathComponentPiece name,
@@ -783,7 +782,7 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
   if (data->isUnmounted_) {
     XLOG(DBG5) << "forgetting unreferenced inode " << inode->getNodeId()
                << " after unmount: " << inode->getLogPath();
-    return folly::none;
+    return std::nullopt;
   }
 
   // If the tree is unlinked and no longer referenced we can delete it from
@@ -791,7 +790,7 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
   if (isUnlinked && fuseCount == 0) {
     XLOG(DBG5) << "forgetting unreferenced unlinked inode "
                << inode->getNodeId() << ": " << inode->getLogPath();
-    return folly::none;
+    return std::nullopt;
   }
 
   auto* asTree = dynamic_cast<TreeInode*>(inode);
@@ -840,7 +839,7 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
             fuseCount);
       }
     }
-    return folly::none;
+    return std::nullopt;
   } else {
     // We have to remember files only if their FUSE refcount is non-zero
     if (fuseCount > 0) {
@@ -852,7 +851,7 @@ Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     } else {
       XLOG(DBG5) << "forgetting unreferenced file inode " << inode->getNodeId()
                  << " : " << inode->getLogPath();
-      return folly::none;
+      return std::nullopt;
     }
   }
 }

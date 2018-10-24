@@ -271,13 +271,13 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
     loadOverlay();
   }
 
-  void recreate(folly::Optional<OverlayRestartMode> restartMode = folly::none) {
+  void recreate(std::optional<OverlayRestartMode> restartMode = std::nullopt) {
     unloadOverlay(restartMode);
     loadOverlay();
   }
 
   void unloadOverlay(
-      folly::Optional<OverlayRestartMode> restartMode = folly::none) {
+      std::optional<OverlayRestartMode> restartMode = std::nullopt) {
     overlay->close();
     overlay.reset();
     switch (restartMode.value_or(GetParam())) {

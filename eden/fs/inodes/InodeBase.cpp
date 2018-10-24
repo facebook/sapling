@@ -26,7 +26,7 @@ namespace eden {
 
 InodeBase::InodeBase(
     EdenMount* mount,
-    folly::Optional<InodeTimestamps> initialTimestamps)
+    std::optional<InodeTimestamps> initialTimestamps)
     : ino_{kRootNodeId},
       initialMode_{S_IFDIR | 0755},
       mount_{mount},
@@ -52,7 +52,7 @@ InodeBase::InodeBase(
 InodeBase::InodeBase(
     InodeNumber ino,
     mode_t initialMode,
-    folly::Optional<InodeTimestamps> initialTimestamps,
+    std::optional<InodeTimestamps> initialTimestamps,
     TreeInodePtr parent,
     PathComponentPiece name)
     : ino_{ino},
@@ -77,7 +77,7 @@ InodeBase::InodeBase(
 InodeBase::InodeBase(
     InodeNumber ino,
     mode_t initialMode,
-    folly::Function<folly::Optional<InodeTimestamps>()> initialTimestampsFn,
+    folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
     TreeInodePtr parent,
     PathComponentPiece name)
     : ino_{ino},
@@ -209,14 +209,14 @@ bool InodeBase::getPathHelper(
   }
 }
 
-folly::Optional<RelativePath> InodeBase::getPath() const {
+std::optional<RelativePath> InodeBase::getPath() const {
   if (ino_ == kRootNodeId) {
     return RelativePath();
   }
 
   std::vector<PathComponent> names;
   if (!getPathHelper(names, true)) {
-    return folly::none;
+    return std::nullopt;
   }
   return RelativePath(names);
 }
@@ -417,7 +417,7 @@ const Clock& InodeBase::getClock() const {
 // Helper function to update Journal used by FileInode and TreeInode.
 void InodeBase::updateJournal() {
   auto path = getPath();
-  if (path.hasValue()) {
+  if (path.has_value()) {
     getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
         std::move(path.value()), JournalDelta::CHANGED));
   }

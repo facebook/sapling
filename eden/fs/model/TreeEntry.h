@@ -40,7 +40,7 @@ mode_t modeFromTreeEntryType(TreeEntryType ft);
 
 /**
  * Converts an arbitrary mode_t to the appropriate TreeEntryType if the file
- * can be tracked by version control.  If not, returns folly::none.
+ * can be tracked by version control.  If not, returns std::nullopt.
  */
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 

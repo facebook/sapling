@@ -144,7 +144,7 @@ class LocalStore {
   /**
    * Get the size of a blob and the SHA-1 hash of its contents.
    *
-   * Returns folly::none if this key is not present in the store, or throws an
+   * Returns std::nullopt if this key is not present in the store, or throws an
    * exception on error.
    */
   folly::Future<std::optional<BlobMetadata>> getBlobMetadata(

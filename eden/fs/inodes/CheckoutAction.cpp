@@ -65,9 +65,9 @@ CheckoutAction::CheckoutAction(
 CheckoutAction::~CheckoutAction() {}
 
 PathComponentPiece CheckoutAction::getEntryName() const {
-  DCHECK(oldScmEntry_.hasValue() || newScmEntry_.hasValue());
-  return oldScmEntry_.hasValue() ? oldScmEntry_.value().getName()
-                                 : newScmEntry_.value().getName();
+  DCHECK(oldScmEntry_.has_value() || newScmEntry_.has_value());
+  return oldScmEntry_.has_value() ? oldScmEntry_.value().getName()
+                                  : newScmEntry_.value().getName();
 }
 
 class CheckoutAction::LoadingRefcount {
@@ -124,7 +124,7 @@ Future<Unit> CheckoutAction::run(
 
   try {
     // Load the Blob or Tree for the old TreeEntry.
-    if (oldScmEntry_.hasValue()) {
+    if (oldScmEntry_.has_value()) {
       if (oldScmEntry_.value().isTree()) {
         store->getTree(oldScmEntry_.value().getHash())
             .thenValue([rc = LoadingRefcount(this)](
@@ -147,7 +147,7 @@ Future<Unit> CheckoutAction::run(
     }
 
     // If we have a new TreeEntry, load the corresponding Blob or Tree
-    if (newScmEntry_.hasValue()) {
+    if (newScmEntry_.has_value()) {
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.isTree()) {
         store->getTree(newEntry.getHash())
@@ -261,12 +261,12 @@ bool CheckoutAction::ensureDataReady() noexcept {
   // Make sure we actually have all the data we need.
   // (Just in case something went wrong when wiring up the callbacks in such a
   // way that we also failed to call error().)
-  if (oldScmEntry_.hasValue() && (!oldTree_ && !oldBlob_)) {
+  if (oldScmEntry_.has_value() && (!oldTree_ && !oldBlob_)) {
     promise_.setException(
         std::runtime_error("failed to load data for old TreeEntry"));
     return false;
   }
-  if (newScmEntry_.hasValue() && (!newTree_ && !newBlob_)) {
+  if (newScmEntry_.has_value() && (!newTree_ && !newBlob_)) {
     promise_.setException(
         std::runtime_error("failed to load data for new TreeEntry"));
     return false;
