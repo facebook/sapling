@@ -11,7 +11,6 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
-#include <folly/Optional.h>
 #include <folly/Range.h>
 #include <folly/dynamic.h>
 #include <folly/experimental/TestUtil.h>
@@ -19,6 +18,7 @@
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <gtest/gtest.h>
+#include <optional>
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
@@ -34,11 +34,12 @@ using namespace facebook::eden::path_literals;
 using namespace std::chrono_literals;
 using folly::dynamic;
 using folly::File;
-using folly::Optional;
+using namespace folly::literals;
 using folly::StringPiece;
 using folly::test::TemporaryDirectory;
 using std::make_shared;
 using std::make_unique;
+using std::optional;
 using std::string;
 
 DEFINE_string(
@@ -163,11 +164,11 @@ class HgImportErrorTest : public ::testing::Test {
   template <typename ImporterType>
   void testBlobError(
       StringPiece errorType,
-      Optional<StringPiece> errorRegex = folly::none);
+      optional<StringPiece> errorRegex = std::nullopt);
 
   template <typename ImporterType>
   void testBlobError(StringPiece errorType, StringPiece errorRegex) {
-    testBlobError<ImporterType>(errorType, Optional<StringPiece>(errorRegex));
+    testBlobError<ImporterType>(errorType, optional<StringPiece>(errorRegex));
   }
 
   std::vector<BlobInfo> blobs_;
@@ -255,7 +256,7 @@ TEST_F(HgImportErrorTest, testNoErrors) {
 template <typename ImporterType>
 void HgImportErrorTest::testBlobError(
     StringPiece errorType,
-    Optional<StringPiece> errorMsg) {
+    optional<StringPiece> errorMsg) {
   defineBlob("foo/abc.c", makeTestHash("5678"), "abc.c v 5678");
   defineBlob("foo/bar.txt", makeTestHash("1234"), "bar.txt v 1234");
   defineManifest(
@@ -282,7 +283,7 @@ void HgImportErrorTest::testBlobError(
   try {
     bar = objectStore_->getBlob(barEntry->getHash()).get(kTimeout);
   } catch (const std::exception& ex) {
-    if (!errorMsg.hasValue()) {
+    if (!errorMsg.has_value()) {
       FAIL() << "unexpected error during blob import: "
              << folly::exceptionStr(ex);
     }
@@ -293,7 +294,7 @@ void HgImportErrorTest::testBlobError(
     }
     return;
   }
-  EXPECT_FALSE(errorMsg.hasValue())
+  EXPECT_FALSE(errorMsg.has_value())
       << "blob import succeeded unexpectedly: "
       << "expecting error message matching \"" << errorMsg.value() << "\"";
   EXPECT_BLOB_EQ(bar, "bar.txt v 1234");
@@ -301,9 +302,9 @@ void HgImportErrorTest::testBlobError(
 
 TEST_F(HgImportErrorTest, testBlobImportCrashOnce) {
   // Using HgImporter directly should fail if the CMD_CAT_FILE call fails
-  testBlobError<HgImporter>("exit_once", "received unexpected EOF");
+  testBlobError<HgImporter>("exit_once", "received unexpected EOF"_sp);
   testBlobError<HgImporter>(
-      "bad_txn_once", "received unexpected transaction ID");
+      "bad_txn_once", "received unexpected transaction ID"_sp);
 }
 
 TEST_F(HgImportErrorTest, testBlobImportManagerCrashOnce) {
@@ -315,7 +316,7 @@ TEST_F(HgImportErrorTest, testBlobImportManagerCrashOnce) {
 
 TEST_F(HgImportErrorTest, testBlobImportManagerPersistentCrash) {
   // Using HgImporterManager will fail if the import helper fails more than once
-  testBlobError<HgImporterManager>("exit", "received unexpected EOF");
+  testBlobError<HgImporterManager>("exit", "received unexpected EOF"_sp);
   testBlobError<HgImporterManager>(
-      "bad_txn", "received unexpected transaction ID");
+      "bad_txn", "received unexpected transaction ID"_sp);
 }

@@ -11,6 +11,7 @@
 
 #include <folly/Range.h>
 #include <memory>
+#include <optional>
 #ifndef EDEN_WIN
 #include "eden/fs/rocksdb/RocksHandles.h"
 #endif
@@ -146,7 +147,7 @@ class LocalStore {
    * Returns folly::none if this key is not present in the store, or throws an
    * exception on error.
    */
-  folly::Future<folly::Optional<BlobMetadata>> getBlobMetadata(
+  folly::Future<std::optional<BlobMetadata>> getBlobMetadata(
       const Hash& id) const;
 
   /**

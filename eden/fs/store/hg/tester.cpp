@@ -9,7 +9,6 @@
  */
 #include "eden/fs/model/Hash.h"
 
-#include <folly/Optional.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/futures/Future.h>
 #include <folly/init/Init.h>
@@ -20,6 +19,7 @@
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/options_util.h>
 #include <sysexits.h>
+#include <optional>
 
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
@@ -170,7 +170,7 @@ int main(int argc, char* argv[]) {
   }
   auto repoPath = realpath(argv[1]);
 
-  folly::Optional<TemporaryDirectory> tmpDir;
+  std::optional<TemporaryDirectory> tmpDir;
   AbsolutePath rocksPath;
   if (FLAGS_edenDir.empty()) {
     tmpDir = TemporaryDirectory("eden_hg_tester");

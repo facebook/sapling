@@ -10,7 +10,6 @@
 #include "ObjectStore.h"
 
 #include <folly/Conv.h>
-#include <folly/Optional.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
@@ -163,9 +162,8 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
   }
 
   return localStore_->getBlobMetadata(id).thenValue(
-      [id,
-       self = shared_from_this()](folly::Optional<BlobMetadata>&& localData) {
-        if (localData.hasValue()) {
+      [id, self = shared_from_this()](std::optional<BlobMetadata>&& localData) {
+        if (localData.has_value()) {
           self->metadataCache_.wlock()->set(id, localData.value());
           return makeFuture(localData.value());
         }

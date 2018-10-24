@@ -19,6 +19,7 @@
 #include <folly/logging/LoggerDB.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
+#include <optional>
 #include "common/stats/ServiceData.h"
 #include "eden/fs/config/ClientConfig.h"
 #ifdef EDEN_WIN
@@ -1025,7 +1026,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
-  Optional<BlobMetadata> metadata;
+  std::optional<BlobMetadata> metadata;
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
@@ -1034,7 +1035,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     metadata = store->getBlobMetadata(id).get();
   }
 
-  if (!metadata.hasValue()) {
+  if (!metadata.has_value()) {
     throw newEdenError("no blob metadata found for id ", *idStr);
   }
   result.size = metadata->size;

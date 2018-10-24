@@ -10,7 +10,6 @@
 #include "LocalStore.h"
 
 #include <folly/Format.h>
-#include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
@@ -28,9 +27,9 @@
 using facebook::eden::Hash;
 using folly::ByteRange;
 using folly::IOBuf;
-using folly::Optional;
 using folly::StringPiece;
 using folly::io::Cursor;
+using std::optional;
 using std::string;
 using std::unique_ptr;
 
@@ -189,12 +188,12 @@ folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(const Hash& id) const {
       });
 }
 
-folly::Future<Optional<BlobMetadata>> LocalStore::getBlobMetadata(
+folly::Future<optional<BlobMetadata>> LocalStore::getBlobMetadata(
     const Hash& id) const {
   return getFuture(KeySpace::BlobMetaDataFamily, id.getBytes())
-      .thenValue([id](StoreResult&& data) -> Optional<BlobMetadata> {
+      .thenValue([id](StoreResult&& data) -> optional<BlobMetadata> {
         if (!data.isValid()) {
-          return folly::none;
+          return std::nullopt;
         } else {
           return SerializedBlobMetadata::parse(id, data);
         }

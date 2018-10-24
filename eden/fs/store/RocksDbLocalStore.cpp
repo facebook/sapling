@@ -9,7 +9,6 @@
  */
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include <folly/Format.h>
-#include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
@@ -27,7 +26,6 @@
 using facebook::eden::Hash;
 using folly::ByteRange;
 using folly::IOBuf;
-using folly::Optional;
 using folly::StringPiece;
 using folly::io::Cursor;
 using rocksdb::ReadOptions;

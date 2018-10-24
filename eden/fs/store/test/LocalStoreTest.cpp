@@ -8,7 +8,6 @@
  *
  */
 #include "eden/fs/store/LocalStore.h"
-#include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/futures/Future.h>
@@ -84,7 +83,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
       contents, outBlob->getContents().clone()->moveToFbString().toStdString());
 
   auto retreivedMetadata = store_->getBlobMetadata(hash).get(10s);
-  ASSERT_TRUE(retreivedMetadata.hasValue());
+  ASSERT_TRUE(retreivedMetadata.has_value());
   EXPECT_EQ(sha1, retreivedMetadata.value().sha1);
   EXPECT_EQ(contents.size(), retreivedMetadata.value().size);
 }
@@ -93,7 +92,7 @@ TEST_P(LocalStoreTest, testReadNonexistent) {
   Hash hash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   EXPECT_TRUE(nullptr == store_->getBlob(hash).get(10s));
   auto retreivedMetadata = store_->getBlobMetadata(hash).get(10s);
-  EXPECT_FALSE(retreivedMetadata.hasValue());
+  EXPECT_FALSE(retreivedMetadata.has_value());
 }
 
 TEST_P(LocalStoreTest, testReadsAndWriteTree) {

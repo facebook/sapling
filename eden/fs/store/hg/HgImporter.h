@@ -10,6 +10,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <optional>
 #ifndef EDEN_WIN
 #include <folly/Subprocess.h>
 #else
@@ -135,7 +136,7 @@ class HgImporter : public Importer {
   HgImporter(
       AbsolutePathPiece repoPath,
       LocalStore* store,
-      folly::Optional<AbsolutePath> importHelperScript = folly::none);
+      std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   virtual ~HgImporter();
 
@@ -332,7 +333,7 @@ class HgImporterManager : public Importer {
   HgImporterManager(
       AbsolutePathPiece repoPath,
       LocalStore* store,
-      folly::Optional<AbsolutePath> importHelperScript = folly::none);
+      std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   Hash importFlatManifest(folly::StringPiece revName) override;
   Hash resolveManifestNode(folly::StringPiece revName) override;
@@ -353,7 +354,7 @@ class HgImporterManager : public Importer {
 
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};
-  const folly::Optional<AbsolutePath> importHelperScript_;
+  const std::optional<AbsolutePath> importHelperScript_;
 };
 
 } // namespace eden

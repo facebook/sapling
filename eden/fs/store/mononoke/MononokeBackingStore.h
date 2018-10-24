@@ -17,6 +17,7 @@
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/SSLOptions.h>
+#include <optional>
 
 namespace folly {
 class IOBuf;
@@ -74,7 +75,7 @@ class MononokeBackingStore : public BackingStore {
       folly::SocketAddress addr,
       const proxygen::URL& url);
 
-  folly::Optional<folly::SocketAddress> socketAddress_;
+  std::optional<folly::SocketAddress> socketAddress_;
   std::string tierName_;
   std::string repo_;
   std::chrono::milliseconds timeout_;

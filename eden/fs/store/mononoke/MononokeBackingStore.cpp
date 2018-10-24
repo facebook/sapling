@@ -199,7 +199,7 @@ MononokeBackingStore::MononokeBackingStore(
     const std::chrono::milliseconds& timeout,
     folly::Executor* executor,
     const std::shared_ptr<folly::SSLContext> sslContext)
-    : socketAddress_(folly::Optional<folly::SocketAddress>(socketAddress)),
+    : socketAddress_(std::optional<folly::SocketAddress>(socketAddress)),
       repo_(repo),
       timeout_(timeout),
       executor_(executor),
@@ -211,7 +211,7 @@ MononokeBackingStore::MononokeBackingStore(
     const std::chrono::milliseconds& timeout,
     folly::Executor* executor,
     const std::shared_ptr<folly::SSLContext> sslContext)
-    : socketAddress_(folly::none),
+    : socketAddress_(std::nullopt),
       tierName_(tierName.str()),
       repo_(repo),
       timeout_(timeout),
@@ -256,7 +256,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
 
 folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
     folly::EventBase* eventBase) {
-  if (socketAddress_.hasValue()) {
+  if (socketAddress_.has_value()) {
     return folly::makeFuture(socketAddress_.value());
   }
   auto promise = folly::Promise<folly::SocketAddress>();

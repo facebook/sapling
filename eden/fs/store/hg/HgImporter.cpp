@@ -188,10 +188,11 @@ namespace eden {
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    folly::Optional<AbsolutePath> importHelperScript)
+    std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath}, store_{store} {
-  auto importHelper = importHelperScript.hasValue() ? importHelperScript.value()
-                                                    : getImportHelperPath();
+  auto importHelper = importHelperScript.has_value()
+      ? importHelperScript.value()
+      : getImportHelperPath();
 
 #ifndef EDEN_WIN
   std::vector<string> cmd = {
@@ -829,7 +830,7 @@ const ImporterOptions& HgImporter::getOptions() const {
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
     LocalStore* store,
-    folly::Optional<AbsolutePath> importHelperScript)
+    std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       store_{store},
       importHelperScript_{importHelperScript} {}
