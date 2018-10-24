@@ -107,7 +107,7 @@ TEST(proc_util, procStatusSomeInvalidInput) {
       std::string(kVmRSSKey.data(), kVmRSSKey.size()),
       std::string(kKBytes.data(), kKBytes.size()));
 
-  EXPECT_EQ(rssBytes, folly::none);
+  EXPECT_EQ(rssBytes, std::nullopt);
 }
 
 TEST(proc_util, procStatusNoThrow) {
@@ -117,7 +117,7 @@ TEST(proc_util, procStatusNoThrow) {
       statMap,
       std::string(kVmRSSKey.data(), kVmRSSKey.size()),
       std::string(kKBytes.data(), kKBytes.size()));
-  EXPECT_EQ(rssBytes, folly::none);
+  EXPECT_EQ(rssBytes, std::nullopt);
 }
 
 TEST(proc_util, procSmapsPrivateBytes) {
@@ -140,7 +140,7 @@ TEST(proc_util, procSmapsUnknownFormat) {
       realpath("eden/fs/utils/test/test-data/ProcSmapsUnknownFormat.txt");
   auto smapsListOfMaps = proc_util::loadProcSmaps(procPath.c_str());
   auto privateBytes = proc_util::calculatePrivateBytes(smapsListOfMaps);
-  EXPECT_EQ(privateBytes, folly::none);
+  EXPECT_EQ(privateBytes, std::nullopt);
 }
 
 TEST(proc_util, noProcSmapsNoThrow) {

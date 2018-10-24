@@ -11,6 +11,7 @@
 
 #include <folly/Optional.h>
 #include <folly/Range.h>
+#include <optional>
 #include <string>
 
 #include "eden/fs/model/Hash.h"
@@ -28,11 +29,21 @@ inline std::string thriftHash(const Hash& hash) {
 }
 
 /**
- * Convert an folly::Optional<Hash> to a std::string to be returned via thrift
+ * Convert an optional<Hash> to a std::string to be returned via thrift
  * as a thrift BinaryHash data type.
  */
-inline std::string thriftHash(const folly::Optional<Hash> hash) {
-  if (hash.hasValue()) {
+inline std::string thriftHash(const std::optional<Hash>& hash) {
+  if (hash.has_value()) {
+    return thriftHash(hash.value());
+  }
+  return std::string{};
+}
+
+/**
+ * TODO: remove this
+ */
+inline std::string thriftHash(const folly::Optional<Hash>& hash) {
+  if (hash.has_value()) {
     return thriftHash(hash.value());
   }
   return std::string{};

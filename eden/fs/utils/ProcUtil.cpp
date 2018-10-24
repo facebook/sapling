@@ -64,11 +64,11 @@ std::unordered_map<std::string, std::string> loadProcStatus(
   return std::unordered_map<std::string, std::string>();
 }
 
-folly::Optional<uint64_t> getUnsignedLongLongValue(
+std::optional<uint64_t> getUnsignedLongLongValue(
     const std::unordered_map<std::string, std::string>& procStatMap,
     const std::string& key,
     const std::string& unitSuffix) {
-  folly::Optional<uint64_t> value;
+  std::optional<uint64_t> value;
   const auto& pos = procStatMap.find(key);
   if (pos != procStatMap.end()) {
     auto valString = pos->second;
@@ -79,11 +79,11 @@ folly::Optional<uint64_t> getUnsignedLongLongValue(
       } catch (const std::invalid_argument& ex) {
         XLOG(WARN) << "Failed to extract long from proc/status value ''"
                    << valString << "' error: " << ex.what();
-        return folly::none;
+        return std::nullopt;
       } catch (const std::out_of_range& ex) {
         XLOG(WARN) << "Failed to extract long from proc/status value ''"
                    << valString << "' error: " << ex.what();
-        return folly::none;
+        return std::nullopt;
       }
     }
   }
@@ -137,7 +137,7 @@ std::vector<std::unordered_map<std::string, std::string>> loadProcSmaps(
   return std::vector<std::unordered_map<std::string, std::string>>();
 }
 
-folly::Optional<uint64_t> calculatePrivateBytes(
+std::optional<uint64_t> calculatePrivateBytes(
     std::vector<std::unordered_map<std::string, std::string>> smapsListOfMaps) {
   uint64_t count{0};
   for (auto currentMap : smapsListOfMaps) {
@@ -151,29 +151,29 @@ folly::Optional<uint64_t> calculatePrivateBytes(
         } catch (const std::invalid_argument& ex) {
           XLOG(WARN) << "Failed to extract long from /proc/smaps value ''"
                      << countString << "' error: " << ex.what();
-          return folly::none;
+          return std::nullopt;
         } catch (const std::out_of_range& ex) {
           XLOG(WARN) << "Failed to extract long from proc/status value ''"
                      << countString << "' error: " << ex.what();
-          return folly::none;
+          return std::nullopt;
         }
       } else {
         XLOG(WARN) << "Failed to find Private_Dirty units in: "
                    << kLinuxProcSmapsPath;
-        return folly::none;
+        return std::nullopt;
       }
     }
   }
   return count;
 }
 
-folly::Optional<uint64_t> calculatePrivateBytes() {
+std::optional<uint64_t> calculatePrivateBytes() {
   try {
     std::ifstream input(kLinuxProcSmapsPath.data());
     return calculatePrivateBytes(parseProcSmaps(input));
   } catch (const std::exception& ex) {
     XLOG(WARN) << "Failed to parse file " << kLinuxProcSmapsPath << ex.what();
-    return folly::none;
+    return std::nullopt;
   }
 }
 } // namespace proc_util

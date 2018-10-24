@@ -8,9 +8,8 @@
  *
  */
 #pragma once
-
-#include <folly/Optional.h>
 #include <folly/Range.h>
+#include <optional>
 
 namespace facebook {
 namespace eden {
@@ -41,15 +40,15 @@ class ScopedEnvVar {
    * The environment variable name, or folly::none if this object has been
    * moved-away from.
    *
-   * We could just use a std::string instead of folly::Optional<std::string>,
+   * We could just use a std::string instead of std::optional<std::string>,
    * and used an empty string to indicate that this ScopedEnvVar has been
    * moved-away from.  However, then we would have to implement our own custom
    * move constructor and move assignment operator to clear the name in the
-   * moved-from object.  With folly::Optional the moved-from value is
+   * moved-from object.  With std::optional the moved-from value is
    * guaranteed to be cleared automatically, while this is not guaranteed with
    * std::string.
    */
-  folly::Optional<std::string> name_;
+  std::optional<std::string> name_;
 
   /**
    * The original value of this environment variable that we should restore it
@@ -57,7 +56,7 @@ class ScopedEnvVar {
    * environment variable was originally unset, and should be unset on
    * destruction.
    */
-  folly::Optional<std::string> origValue_;
+  std::optional<std::string> origValue_;
 };
 } // namespace eden
 } // namespace facebook

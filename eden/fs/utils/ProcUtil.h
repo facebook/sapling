@@ -8,8 +8,8 @@
  *
  */
 #pragma once
-#include <folly/Optional.h>
 #include <folly/Range.h>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -71,14 +71,14 @@ std::vector<std::unordered_map<std::string, std::string>> loadProcSmaps(
  * @return memory usage in bytes or 0 if the value could not be determined.
  * On non-linux platforms, 0 will be returned.
  */
-folly::Optional<uint64_t> calculatePrivateBytes();
+std::optional<uint64_t> calculatePrivateBytes();
 
 /**
  * Calculate the private byte count based on passed vector of maps.
  * Intended for use by calculatePrivateBytes().
  * @see parseProcSmaps to create the map.
  */
-folly::Optional<uint64_t> calculatePrivateBytes(
+std::optional<uint64_t> calculatePrivateBytes(
     std::vector<std::unordered_map<std::string, std::string>> smapsListOfMaps);
 
 /**
@@ -115,7 +115,7 @@ std::unordered_map<std::string, std::string> loadProcStatus(
  *  If the value does not exist or is invalid, 0 will be returned.
  *  @see loadProcStatMap for parsing the /proc/self/status file.
  */
-folly::Optional<uint64_t> getUnsignedLongLongValue(
+std::optional<uint64_t> getUnsignedLongLongValue(
     const std::unordered_map<std::string, std::string>& procStatMap,
     const std::string& key,
     const std::string& unitSuffix);

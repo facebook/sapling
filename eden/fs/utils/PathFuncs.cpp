@@ -12,8 +12,8 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <folly/Exception.h>
-#include <folly/Optional.h>
 #include <folly/portability/Stdlib.h>
+#include <optional>
 #ifdef EDEN_WIN
 #include <folly/portability/Unistd.h>
 #else
@@ -111,7 +111,7 @@ CanonicalData canonicalPathData(StringPiece path) {
 
 AbsolutePath canonicalPathImpl(
     StringPiece path,
-    folly::Optional<AbsolutePathPiece> base) {
+    std::optional<AbsolutePathPiece> base) {
   auto makeAbsolutePath = [](const std::vector<StringPiece>& parts) {
     if (parts.empty()) {
       return AbsolutePath{};
@@ -142,7 +142,7 @@ AbsolutePath canonicalPathImpl(
   // base path is guaranteed to already be in canonical form.
   CanonicalData baseCanon;
   AbsolutePath cwd;
-  if (!base.hasValue()) {
+  if (!base.has_value()) {
     // canonicalPathData() returns StringPieces pointing to the input,
     // so we have to store the cwd in a variable that will persist until the
     // end of this function.
@@ -174,11 +174,11 @@ AbsolutePath canonicalPathImpl(
 AbsolutePath canonicalPath(folly::StringPiece path) {
   // Pass in folly::none.
   // canonicalPathImpl() will only call getcwd() if it is actually necessary.
-  return canonicalPathImpl(path, folly::none);
+  return canonicalPathImpl(path, std::nullopt);
 }
 
 AbsolutePath canonicalPath(folly::StringPiece path, AbsolutePathPiece base) {
-  return canonicalPathImpl(path, folly::Optional<AbsolutePathPiece>{base});
+  return canonicalPathImpl(path, std::optional<AbsolutePathPiece>{base});
 }
 
 folly::Expected<RelativePath, int> joinAndNormalize(
@@ -238,7 +238,7 @@ AbsolutePath normalizeBestEffort(const char* path) {
     return result.value();
   }
 
-  return canonicalPathImpl(path, folly::none);
+  return canonicalPathImpl(path, std::nullopt);
 }
 
 AbsolutePath normalizeBestEffort(folly::StringPiece path) {

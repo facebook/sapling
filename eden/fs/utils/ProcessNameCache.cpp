@@ -57,13 +57,13 @@ void ProcessNameCache::add(pid_t pid) {
 
   tryRlockCheckBeforeUpdate<folly::Unit>(
       state_,
-      [&](const auto& state) -> folly::Optional<folly::Unit> {
+      [&](const auto& state) -> std::optional<folly::Unit> {
         auto entry = folly::get_ptr(state.names, pid);
         if (entry) {
           entry->lastAccess.store(now, std::memory_order_seq_cst);
           return folly::unit;
         }
-        return folly::none;
+        return std::nullopt;
       },
       [&](auto& wlock) -> folly::Unit {
         auto& state = *wlock;

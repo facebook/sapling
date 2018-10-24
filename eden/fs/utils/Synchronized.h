@@ -20,7 +20,7 @@ namespace eden {
  * the result of dereferencing it is returned. Otherwise, a wlock is acquired
  * and update is called.
  *
- * check should have type (const State&) -> folly::Optional<T>
+ * check should have type (const State&) -> std::optional<T>
  * update should have type (LockedPtr&) -> T
  */
 template <typename Return, typename State, typename CheckFn, typename UpdateFn>

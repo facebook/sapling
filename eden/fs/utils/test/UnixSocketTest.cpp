@@ -132,7 +132,7 @@ void testSendDataAndFiles(DataSize dataSize, size_t numFiles) {
         ADD_FAILURE() << "send error: " << ew.what();
       });
 
-  folly::Optional<UnixSocket::Message> receivedMessage;
+  std::optional<UnixSocket::Message> receivedMessage;
   socket2->receive(500ms)
       .thenValue([&receivedMessage](UnixSocket::Message&& msg) {
         receivedMessage = std::move(msg);
@@ -262,7 +262,7 @@ TEST(FutureUnixSocket, attachEventBase) {
         .onError([](const folly::exception_wrapper& ew) {
           ADD_FAILURE() << "send error: " << ew.what();
         });
-    folly::Optional<UnixSocket::Message> receivedMessage;
+    std::optional<UnixSocket::Message> receivedMessage;
     s2.receive(500ms)
         .thenValue([&receivedMessage](UnixSocket::Message&& msg) {
           receivedMessage = std::move(msg);
@@ -274,7 +274,7 @@ TEST(FutureUnixSocket, attachEventBase) {
 
     evb->loopForever();
 
-    EXPECT_TRUE(receivedMessage.hasValue());
+    EXPECT_TRUE(receivedMessage.has_value());
     EXPECT_EQ(msgData, receivedMessage->data.moveToFbString().toStdString());
   };
 
