@@ -115,10 +115,10 @@ using folly::File;
 using folly::Future;
 using folly::makeFuture;
 using folly::makeFutureWith;
-using folly::Optional;
 using folly::StringPiece;
 using folly::Unit;
 using std::make_shared;
+using std::optional;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
@@ -242,7 +242,7 @@ Future<Unit> EdenServer::unmountAll() {
 
 #ifndef EDEN_WIN
 Future<TakeoverData> EdenServer::stopMountsForTakeover() {
-  std::vector<Future<Optional<TakeoverData::MountInfo>>> futures;
+  std::vector<Future<optional<TakeoverData::MountInfo>>> futures;
   {
     const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
@@ -256,9 +256,9 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
         futures.emplace_back(std::move(future).thenValue(
             [self = this,
              edenMount = info.edenMount](TakeoverData::MountInfo takeover)
-                -> Future<Optional<TakeoverData::MountInfo>> {
+                -> Future<optional<TakeoverData::MountInfo>> {
               if (!takeover.fuseFD) {
-                return folly::none;
+                return std::nullopt;
               }
               return self->serverState_->getPrivHelper()
                   ->fuseTakeoverShutdown(edenMount->getPath().stringPiece())
@@ -269,7 +269,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
       } catch (const std::exception& ex) {
         XLOG(ERR) << "Error while stopping \"" << mountPath
                   << "\" for takeover: " << folly::exceptionStr(ex);
-        futures.push_back(makeFuture<Optional<TakeoverData::MountInfo>>(
+        futures.push_back(makeFuture<optional<TakeoverData::MountInfo>>(
             folly::exception_wrapper(std::current_exception(), ex)));
       }
     }
@@ -277,7 +277,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
   return folly::collectAllSemiFuture(futures).toUnsafeFuture().thenValue(
-      [](std::vector<folly::Try<Optional<TakeoverData::MountInfo>>> results) {
+      [](std::vector<folly::Try<optional<TakeoverData::MountInfo>>> results) {
         TakeoverData data;
         data.mountPoints.reserve(results.size());
         for (auto& result : results) {
@@ -294,7 +294,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
           // This could happen if the mount point was unmounted while we were
           // in the middle of stopping it for takeover.  Just skip this mount
           // in this case.
-          if (!result.value().hasValue()) {
+          if (!result.value().has_value()) {
             XLOG(WARN) << "mount point was unmounted during "
                           "takeover shutdown";
             continue;
@@ -806,12 +806,12 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
 
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<ClientConfig> initialConfig,
-    Optional<TakeoverData::MountInfo>&& optionalTakeover) {
+    optional<TakeoverData::MountInfo>&& optionalTakeover) {
 #ifndef EDEN_WIN
   auto backingStore = getBackingStore(
       initialConfig->getRepoType(), initialConfig->getRepoSource());
   auto objectStore = ObjectStore::create(getLocalStore(), backingStore);
-  const bool doTakeover = optionalTakeover.hasValue();
+  const bool doTakeover = optionalTakeover.has_value();
 
   auto edenMount = EdenMount::create(
       std::move(initialConfig), std::move(objectStore), serverState_);
@@ -834,7 +834,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
             // error here.  Once the pool is up and running, the finishFuture
             // will ensure that this happens.
             .onError([this, edenMount](folly::exception_wrapper ew) {
-              mountFinished(edenMount.get(), folly::none);
+              mountFinished(edenMount.get(), std::nullopt);
               return makeFuture<folly::Unit>(ew);
             })
             .thenValue([edenMount, doTakeover, this](auto&&) mutable {
@@ -843,7 +843,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               auto finishFuture = edenMount->getFuseCompletionFuture().thenTry(
                   [this,
                    edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
-                    folly::Optional<TakeoverData::MountInfo> optTakeover;
+                    std::optional<TakeoverData::MountInfo> optTakeover;
                     if (takeover.hasValue()) {
                       optTakeover = std::move(takeover.value());
                     }
@@ -916,7 +916,7 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
 
 void EdenServer::mountFinished(
     EdenMount* edenMount,
-    folly::Optional<TakeoverData::MountInfo> takeover) {
+    std::optional<TakeoverData::MountInfo> takeover) {
 #ifndef EDEN_WIN
   const auto mountPath = edenMount->getPath().stringPiece();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
@@ -924,7 +924,7 @@ void EdenServer::mountFinished(
 
   // Erase the EdenMount from our mountPoints_ map
   folly::SharedPromise<Unit> unmountPromise;
-  folly::Optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
+  std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
   {
     const auto mountPoints = mountPoints_.wlock();
     const auto it = mountPoints->find(mountPath);
@@ -934,7 +934,7 @@ void EdenServer::mountFinished(
     mountPoints->erase(it);
   }
 
-  const bool doTakeover = takeoverPromise.hasValue();
+  const bool doTakeover = takeoverPromise.has_value();
 
   // Shutdown the EdenMount, and fulfill the unmount promise
   // when the shutdown completes

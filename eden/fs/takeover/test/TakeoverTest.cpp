@@ -355,7 +355,7 @@ TEST(Takeover, computeCompatibleVersion) {
   // Check that computeCompatibleVersion is doing the right things.
   EXPECT_EQ(
       TakeoverData::computeCompatibleVersion(noVersions, oneVersion),
-      folly::none);
+      std::nullopt);
 
   EXPECT_EQ(
       TakeoverData::computeCompatibleVersion(oneVersion, oneVersion).value(),
@@ -376,7 +376,7 @@ TEST(Takeover, computeCompatibleVersion) {
 
   EXPECT_EQ(
       TakeoverData::computeCompatibleVersion(newVersion, newestVersion),
-      folly::none);
+      std::nullopt);
 
   EXPECT_EQ(
       TakeoverData::computeCompatibleVersion(newestVersion, laundryList)

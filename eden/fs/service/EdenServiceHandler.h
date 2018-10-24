@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <optional>
 #include "common/fb303/cpp/FacebookBase2.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -201,7 +202,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
    * If `filename` exists in the manifest as a file (not a directory), returns
    * the mode of the file as recorded in the manifest.
    */
-  folly::Optional<mode_t> isInManifestAsFile(
+  std::optional<mode_t> isInManifestAsFile(
       const EdenMount* mount,
       const RelativePathPiece filename);
 

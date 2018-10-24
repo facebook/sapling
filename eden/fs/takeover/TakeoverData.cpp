@@ -27,13 +27,13 @@ const std::set<int32_t> kSupportedTakeoverVersions{
     TakeoverData::kTakeoverProtocolVersionOne,
     TakeoverData::kTakeoverProtocolVersionThree};
 
-folly::Optional<int32_t> TakeoverData::computeCompatibleVersion(
+std::optional<int32_t> TakeoverData::computeCompatibleVersion(
     const std::set<int32_t>& versions,
     const std::set<int32_t>& supported) {
-  folly::Optional<int32_t> best;
+  std::optional<int32_t> best;
 
   for (auto& version : versions) {
-    if (best.hasValue() && best.value() > version) {
+    if (best.has_value() && best.value() > version) {
       // No better than the current best
       continue;
     }

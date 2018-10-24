@@ -136,7 +136,7 @@ void DaemonStartupLogger::daemonize(StringPiece logPath) {
   }
 }
 
-folly::Optional<std::pair<pid_t, File>> DaemonStartupLogger::daemonizeImpl(
+std::optional<std::pair<pid_t, File>> DaemonStartupLogger::daemonizeImpl(
     StringPiece logPath) {
   auto readPipe = createPipe();
   logPath_ = logPath.str();
@@ -151,7 +151,7 @@ folly::Optional<std::pair<pid_t, File>> DaemonStartupLogger::daemonizeImpl(
     // Child process.
     readPipe.close();
     prepareChildProcess(logPath);
-    return folly::none;
+    return std::nullopt;
   }
 
   // Parent process.

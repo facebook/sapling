@@ -21,6 +21,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -141,8 +142,7 @@ class EdenServer : private TakeoverHandler {
    */
   FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> mount(
       std::unique_ptr<ClientConfig> initialConfig,
-      folly::Optional<TakeoverData::MountInfo>&& optionalTakeover =
-          folly::none);
+      std::optional<TakeoverData::MountInfo>&& optionalTakeover = std::nullopt);
 
   /**
    * Takeover a mount from another eden instance
@@ -256,7 +256,7 @@ class EdenServer : private TakeoverHandler {
   struct EdenMountInfo {
     std::shared_ptr<EdenMount> edenMount;
     folly::SharedPromise<folly::Unit> unmountPromise;
-    folly::Optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
+    std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
 
     explicit EdenMountInfo(const std::shared_ptr<EdenMount>& mount)
         : edenMount(mount),
@@ -315,7 +315,7 @@ class EdenServer : private TakeoverHandler {
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(
       EdenMount* mountPoint,
-      folly::Optional<TakeoverData::MountInfo> takeover);
+      std::optional<TakeoverData::MountInfo> takeover);
 
   FOLLY_NODISCARD folly::Future<folly::Unit> performNormalShutdown();
   FOLLY_NODISCARD folly::Future<folly::Unit> performTakeoverShutdown(

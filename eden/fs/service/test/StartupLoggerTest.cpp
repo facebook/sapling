@@ -23,6 +23,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <optional>
 #include <string>
 #include <thread>
 
@@ -204,8 +205,8 @@ TEST_F(DaemonStartupLoggerTest, destroyLoggerWhileDaemonIsStillRunning) {
 
         // Destroy the DaemonStartupLogger object to force it to close its pipes
         // without sending a result.
-        folly::Optional<DaemonStartupLogger> optLogger(std::move(logger));
-        optLogger.clear();
+        std::optional<DaemonStartupLogger> optLogger(std::move(logger));
+        optLogger.reset();
 
         // Wait for the parent process to signal us to exit.
         // We do so by calling readFull(). It will return when the pipe has

@@ -121,7 +121,7 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
           auto supported =
               TakeoverData::computeCompatibleVersion(query.versions);
 
-          if (!supported.hasValue()) {
+          if (!supported.has_value()) {
             auto clientVersionList = folly::join(", ", query.versions);
             auto serverVersionList =
                 folly::join(", ", kSupportedTakeoverVersions);

@@ -12,6 +12,7 @@
 #include <folly/File.h>
 #include <folly/futures/Promise.h>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "eden/fs/fuse/FuseTypes.h"
@@ -67,7 +68,7 @@ class TakeoverData {
   // Given a set of versions provided by a client, find the largest
   // version that is also present in the provided set of supported
   // versions.
-  static folly::Optional<int32_t> computeCompatibleVersion(
+  static std::optional<int32_t> computeCompatibleVersion(
       const std::set<int32_t>& versions,
       const std::set<int32_t>& supported = kSupportedTakeoverVersions);
 

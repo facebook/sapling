@@ -56,7 +56,6 @@
 
 using folly::Future;
 using folly::makeFuture;
-using folly::Optional;
 using folly::SemiFuture;
 using folly::StringPiece;
 using folly::Try;
@@ -474,7 +473,7 @@ EdenServiceHandler::subscribeStreamTemporary(
   // We'll need to pass the subscriber id to both the disconnect
   // and change callbacks.  We can't know the id until after we've
   // created them both, so we need to share an optional id between them.
-  auto handle = std::make_shared<folly::Optional<Journal::SubscriberId>>();
+  auto handle = std::make_shared<std::optional<Journal::SubscriberId>>();
 
   // This is called when the subscription channel is torn down
   auto onDisconnect = [weakMount, handle] {
@@ -529,7 +528,7 @@ EdenServiceHandler::subscribeStreamTemporary(
 
   // Register onJournalChange with the journal subsystem, and assign
   // the subscriber id into the handle so that the callbacks can consume it.
-  handle->assign(
+  handle->emplace(
       edenMount->getJournal().registerSubscriber(std::move(onJournalChange)));
 
   return std::move(reader);
@@ -866,7 +865,7 @@ void EdenServiceHandler::getManifestEntry(
   auto mount = server_->getMount(*mountPoint);
   auto filename = RelativePathPiece{*relativePath};
   auto mode = isInManifestAsFile(mount.get(), filename);
-  if (mode.hasValue()) {
+  if (mode.has_value()) {
     out.mode = mode.value();
   } else {
     NoValueForKeyError error;
@@ -879,7 +878,7 @@ void EdenServiceHandler::getManifestEntry(
 }
 
 // TODO(mbolin): Make this a method of ObjectStore and make it Future-based.
-folly::Optional<mode_t> EdenServiceHandler::isInManifestAsFile(
+std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
     const EdenMount* mount,
     const RelativePathPiece filename) {
 #ifndef EDEN_WIN
@@ -891,7 +890,7 @@ folly::Optional<mode_t> EdenServiceHandler::isInManifestAsFile(
     if (entry != nullptr && entry->isTree()) {
       tree = objectStore->getTree(entry->getHash()).get();
     } else {
-      return folly::none;
+      return std::nullopt;
     }
   }
 
@@ -902,7 +901,7 @@ folly::Optional<mode_t> EdenServiceHandler::isInManifestAsFile(
     }
   }
 
-  return folly::none;
+  return std::nullopt;
 #else
   NOT_IMPLEMENTED();
 #endif // !EDEN_WIN
@@ -1101,13 +1100,11 @@ void EdenServiceHandler::debugGetInodePath(
   auto inodeNum = static_cast<InodeNumber>(inodeNumber);
   auto inodeMap = server_->getMount(*mountPoint)->getInodeMap();
 
-  folly::Optional<RelativePath> relativePath =
-      inodeMap->getPathForInode(inodeNum);
+  auto relativePath = inodeMap->getPathForInode(inodeNum);
   // Check if the inode is loaded
   info.loaded = inodeMap->lookupLoadedInode(inodeNum) != nullptr;
-  // If getPathForInode returned folly::none then the inode is unlinked
+  // If getPathForInode returned none then the inode is unlinked
   info.linked = relativePath != folly::none;
-
   info.path = relativePath ? relativePath->stringPiece().str() : "";
 #else
   NOT_IMPLEMENTED();

@@ -10,7 +10,6 @@
 
 #include <boost/filesystem.hpp>
 #include <folly/Conv.h>
-#include <folly/Optional.h>
 #include <folly/experimental/FunctionScheduler.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
@@ -19,6 +18,7 @@
 #include <pwd.h>
 #include <sysexits.h>
 #include <unistd.h>
+#include <optional>
 #include "EdenServer.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
   auto startupLogger =
       std::shared_ptr<StartupLogger>{daemonizeIfRequested(logPath)};
   XLOG(DBG3) << edenConfig->toString();
-  folly::Optional<EdenServer> server;
+  std::optional<EdenServer> server;
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
   try {
     // If stderr was redirected to a log file, inform the privhelper

@@ -9,7 +9,6 @@
  */
 #pragma once
 
-#include <folly/Optional.h>
 #include <folly/Range.h>
 #include <optional>
 #include <string>

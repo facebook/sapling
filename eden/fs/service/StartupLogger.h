@@ -15,6 +15,7 @@
 #include <folly/logging/LogLevel.h>
 #include <gflags/gflags_declare.h>
 #include <memory>
+#include <optional>
 
 namespace facebook {
 namespace eden {
@@ -128,7 +129,7 @@ class DaemonStartupLogger : public StartupLogger {
     std::string errorMessage;
   };
 
-  folly::Optional<std::pair<pid_t, folly::File>> daemonizeImpl(
+  std::optional<std::pair<pid_t, folly::File>> daemonizeImpl(
       folly::StringPiece logPath);
 
   /**
