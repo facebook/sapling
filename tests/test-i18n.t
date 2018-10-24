@@ -38,7 +38,6 @@ Test keyword search in translated help text:
   
   Befehle:
   
-   pull   Ruft \xc3\x84nderungen von der angegebenen Quelle ab (esc)
    update Aktualisiert das Arbeitsverzeichnis (oder wechselt die Version)
 
 #endif
