@@ -9,9 +9,9 @@ use types::node::Node;
 
 pub fn to_pyerr(py: Python, error: &Error) -> PyErr {
     if error.downcast_ref::<KeyError>().is_some() {
-        PyErr::new::<exc::KeyError, _>(py, format!("{}", error.cause()))
+        PyErr::new::<exc::KeyError, _>(py, format!("{}", error.as_fail()))
     } else {
-        PyErr::new::<exc::RuntimeError, _>(py, format!("{}", error.cause()))
+        PyErr::new::<exc::RuntimeError, _>(py, format!("{}", error.as_fail()))
     }
 }
 
