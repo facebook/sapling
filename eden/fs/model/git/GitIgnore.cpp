@@ -53,7 +53,7 @@ void GitIgnore::loadFile(StringPiece contents) {
 
     auto line = StringPiece(currentPos, nextNewline);
     auto pattern = GitIgnorePattern::parseLine(line);
-    if (pattern.hasValue()) {
+    if (pattern.has_value()) {
       // Create a GitIgnorePattern and add it to the rules vector.
       newRules.emplace_back(std::move(pattern).value());
     }

@@ -75,7 +75,7 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
   auto parents = config->getParentCommits();
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
-  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
+  EXPECT_EQ(std::nullopt, parents.parent2());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;
@@ -101,7 +101,7 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
   auto parents = config->getParentCommits();
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
-  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
+  EXPECT_EQ(std::nullopt, parents.parent2());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;
@@ -142,13 +142,13 @@ TEST_F(ClientConfigTest, testWriteSnapshot) {
   config->setParentCommits(hash1);
   auto parents = config->getParentCommits();
   EXPECT_EQ(hash1, parents.parent1());
-  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
+  EXPECT_EQ(std::nullopt, parents.parent2());
 
   // Change the parent
   config->setParentCommits(hash2);
   parents = config->getParentCommits();
   EXPECT_EQ(hash2, parents.parent1());
-  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
+  EXPECT_EQ(std::nullopt, parents.parent2());
 
   // Set multiple parents
   config->setParentCommits(hash1, hash2);
@@ -167,7 +167,7 @@ TEST_F(ClientConfigTest, testWriteSnapshot) {
   config->setParentCommits(hash1);
   parents = config->getParentCommits();
   EXPECT_EQ(hash1, parents.parent1());
-  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
+  EXPECT_EQ(std::nullopt, parents.parent2());
 }
 
 template <typename ExceptionType>

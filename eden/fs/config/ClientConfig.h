@@ -9,8 +9,8 @@
  */
 #pragma once
 
-#include <folly/Optional.h>
 #include <folly/dynamic.h>
+#include <optional>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -74,7 +74,7 @@ class ClientConfig {
   void setParentCommits(const ParentCommits& parents) const;
   void setParentCommits(
       Hash parent1,
-      folly::Optional<Hash> parent2 = folly::none) const;
+      std::optional<Hash> parent2 = std::nullopt) const;
 
   const AbsolutePath& getMountPath() const {
     return mountPath_;

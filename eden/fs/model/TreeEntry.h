@@ -14,6 +14,7 @@
 
 #include <folly/String.h>
 #include <iosfwd>
+#include <optional>
 
 namespace facebook {
 namespace eden {
@@ -41,7 +42,7 @@ mode_t modeFromTreeEntryType(TreeEntryType ft);
  * Converts an arbitrary mode_t to the appropriate TreeEntryType if the file
  * can be tracked by version control.  If not, returns folly::none.
  */
-folly::Optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
+std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
 class TreeEntry {
  public:

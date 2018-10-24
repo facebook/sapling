@@ -9,26 +9,26 @@
  */
 #include "GitIgnorePattern.h"
 
-using folly::Optional;
 using folly::StringPiece;
+using std::optional;
 using std::string;
 
 namespace facebook {
 namespace eden {
 
-Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
+optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
   uint32_t flags = 0;
 
   // Ignore empty lines
   if (line.empty()) {
-    return folly::none;
+    return std::nullopt;
   }
 
   // Lines that start with '#' are ignored as comments.
   // (Whitespace is still relevant though.  The line " #foo" is still parsed
   // and excludes files named " #foo".)
   if (line[0] == '#') {
-    return folly::none;
+    return std::nullopt;
   }
 
   // Lines starting with '!' negate the pattern, and cause the file to be
@@ -39,7 +39,7 @@ Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
     // Skip over the '!'
     line.advance(1);
     if (line.empty()) {
-      return folly::none;
+      return std::nullopt;
     }
   }
 
@@ -47,7 +47,7 @@ Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
   if (line.back() == '\r') {
     line.subtract(1);
     if (line.empty()) {
-      return folly::none;
+      return std::nullopt;
     }
   }
 
@@ -67,7 +67,7 @@ Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
   }
   line.assign(line.begin(), pos);
   if (line.empty()) {
-    return folly::none;
+    return std::nullopt;
   }
 
   // If the pattern ends with a trailing slash then it only matches
@@ -81,14 +81,14 @@ Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
     // ignores the pattern (as opposed to ignoring everything in the
     // directory).
     if (line.empty()) {
-      return folly::none;
+      return std::nullopt;
     }
 
     // If the pattern happens to end in multiple trailing slashes just ignore
     // it.  git only strips off a single trailing slash.  Patterns that end in
     // multiple trailing slashes can't ever match anything.
     if (line.back() == '/') {
-      return folly::none;
+      return std::nullopt;
     }
   }
 
@@ -110,13 +110,13 @@ Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
     if (line.empty()) {
       // This probably shouldn't happen since we would have handled it as a
       // trailing slash above.
-      return folly::none;
+      return std::nullopt;
     }
 
     // Patterns starting with two leading slashes can't ever match anything.
     // (git only strips off one slash before using the pattern)
     if (line[0] == '/') {
-      return folly::none;
+      return std::nullopt;
     }
   } else if (firstSlash == 2 && line[0] == '*' && line[1] == '*') {
     // As an optimization, if the pattern starts with "**/" and contains no
@@ -138,7 +138,7 @@ Optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
   // option.
   auto matcher = GlobMatcher::create(line, GlobOptions::DEFAULT);
   if (!matcher.hasValue()) {
-    return folly::none;
+    return std::nullopt;
   }
 
   return GitIgnorePattern(flags, std::move(matcher).value());

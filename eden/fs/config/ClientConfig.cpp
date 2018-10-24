@@ -131,7 +131,7 @@ void ClientConfig::setParentCommits(const ParentCommits& parents) const {
   // 20-byte commit ID: parent1
   cursor.push(parents.parent1().getBytes());
   // Optional 20-byte commit ID: parent2
-  if (parents.parent2().hasValue()) {
+  if (parents.parent2().has_value()) {
     cursor.push(parents.parent2()->getBytes());
     CHECK(cursor.isAtEnd());
   }
@@ -141,7 +141,7 @@ void ClientConfig::setParentCommits(const ParentCommits& parents) const {
   folly::writeFileAtomic(getSnapshotPath().stringPiece(), snapshotData);
 }
 
-void ClientConfig::setParentCommits(Hash parent1, folly::Optional<Hash> parent2)
+void ClientConfig::setParentCommits(Hash parent1, std::optional<Hash> parent2)
     const {
   return setParentCommits(ParentCommits{parent1, parent2});
 }

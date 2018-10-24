@@ -46,5 +46,5 @@ TEST(TreeEntry, modeAndLogString) {
       "(src, 0000000000000000000000000000000000000abc, d)",
       directory.toLogString());
 
-  EXPECT_EQ(folly::none, treeEntryTypeFromMode(S_IFSOCK | 0700));
+  EXPECT_EQ(std::nullopt, treeEntryTypeFromMode(S_IFSOCK | 0700));
 }

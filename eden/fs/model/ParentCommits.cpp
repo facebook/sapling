@@ -24,7 +24,7 @@ bool ParentCommits::operator!=(const ParentCommits& other) const {
 
 std::ostream& operator<<(std::ostream& os, const ParentCommits& parents) {
   os << "[" << parents.parent1();
-  if (parents.parent2().hasValue()) {
+  if (parents.parent2().has_value()) {
     os << ", " << parents.parent2().value();
   }
   os << "]";

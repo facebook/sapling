@@ -9,8 +9,8 @@
  */
 #pragma once
 
-#include <folly/Optional.h>
 #include <iosfwd>
+#include <optional>
 
 #include "eden/fs/model/Hash.h"
 
@@ -27,7 +27,7 @@ class ParentCommits {
  public:
   ParentCommits() = default;
   explicit ParentCommits(const Hash& p1) : parent1_{p1} {}
-  explicit ParentCommits(const Hash& p1, const folly::Optional<Hash>& p2)
+  explicit ParentCommits(const Hash& p1, const std::optional<Hash>& p2)
       : parent1_{p1}, parent2_{p2} {}
 
   Hash& parent1() {
@@ -37,18 +37,18 @@ class ParentCommits {
     return parent1_;
   }
 
-  folly::Optional<Hash>& parent2() {
+  std::optional<Hash>& parent2() {
     return parent2_;
   }
-  const folly::Optional<Hash>& parent2() const {
+  const std::optional<Hash>& parent2() const {
     return parent2_;
   }
 
   void setParents(const Hash& p1) {
     parent1_ = p1;
-    parent2_ = folly::none;
+    parent2_ = std::nullopt;
   }
-  void setParents(const Hash& p1, const folly::Optional<Hash>& p2) {
+  void setParents(const Hash& p1, const std::optional<Hash>& p2) {
     parent1_ = p1;
     parent2_ = p2;
   }
@@ -68,7 +68,7 @@ class ParentCommits {
 
  private:
   Hash parent1_;
-  folly::Optional<Hash> parent2_;
+  std::optional<Hash> parent2_;
 };
 
 /**

@@ -9,8 +9,8 @@
  */
 #pragma once
 
-#include <folly/Optional.h>
 #include <folly/Range.h>
+#include <optional>
 #include "eden/fs/model/git/GitIgnore.h"
 #include "eden/fs/model/git/GlobMatcher.h"
 
@@ -32,7 +32,7 @@ class GitIgnorePattern {
    * Returns a GitIgnorePattern, or folly::none if the line did not contain a
    * pattern (e.g., if it was empty or a comment).
    */
-  static folly::Optional<GitIgnorePattern> parseLine(folly::StringPiece line);
+  static std::optional<GitIgnorePattern> parseLine(folly::StringPiece line);
 
   virtual ~GitIgnorePattern();
   GitIgnorePattern(GitIgnorePattern&&) = default;
