@@ -9,7 +9,6 @@
  */
 #include "FakeObjectStore.h"
 
-#include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 

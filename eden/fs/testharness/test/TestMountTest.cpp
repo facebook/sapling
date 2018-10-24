@@ -44,7 +44,7 @@ TEST(TestMount, createSimpleTestMount) {
       << "Should be able to find FileInode for path1";
 
   auto blobHash = path1Inode->getBlobHash();
-  ASSERT_TRUE(blobHash.hasValue());
+  ASSERT_TRUE(blobHash.has_value());
   auto expectedSha1 = Hash::sha1(ByteRange(StringPiece("first!")));
   EXPECT_EQ(expectedSha1, blobHash.value())
       << "For simplicity, TestMount uses the SHA-1 of the contents as "
