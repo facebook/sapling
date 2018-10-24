@@ -9,7 +9,6 @@
  */
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 
-#include <folly/Optional.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 

@@ -1196,11 +1196,11 @@ void FuseChannel::processSession() {
         const auto opcode = header->opcode;
         tryRlockCheckBeforeUpdate<folly::Unit>(
             unhandledOpcodes_,
-            [&](const auto& unhandledOpcodes) -> folly::Optional<folly::Unit> {
+            [&](const auto& unhandledOpcodes) -> std::optional<folly::Unit> {
               if (unhandledOpcodes.find(opcode) != unhandledOpcodes.end()) {
                 return folly::unit;
               }
-              return folly::none;
+              return std::nullopt;
             },
             [&](auto& unhandledOpcodes) -> folly::Unit {
               XLOG(ERR) << "unhandled fuse opcode " << opcode << "("
@@ -1243,7 +1243,7 @@ void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
   // Build the StopData to return
   StopData data;
   data.reason = state->stopReason;
-  if (isFuseDeviceValid(data.reason) && connInfo_.hasValue()) {
+  if (isFuseDeviceValid(data.reason) && connInfo_.has_value()) {
     data.fuseDevice = std::move(fuseDevice_);
     data.fuseSettings = connInfo_.value();
   }

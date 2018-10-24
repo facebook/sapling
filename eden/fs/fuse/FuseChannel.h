@@ -18,6 +18,7 @@
 #include <iosfwd>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -524,7 +525,7 @@ class FuseChannel {
    * connInfo_ is modified during the initialization process,
    * but constant once initialization is complete.
    */
-  folly::Optional<fuse_init_out> connInfo_;
+  std::optional<fuse_init_out> connInfo_;
 
   /*
    * fuseDevice_ is constant while the worker threads are running.
