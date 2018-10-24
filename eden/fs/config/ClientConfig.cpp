@@ -19,8 +19,8 @@
 
 using folly::ByteRange;
 using folly::IOBuf;
-using folly::Optional;
 using folly::StringPiece;
+using std::optional;
 using std::string;
 
 namespace {

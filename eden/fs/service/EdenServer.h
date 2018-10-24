@@ -362,7 +362,7 @@ class EdenServer : private TakeoverHandler {
 
   AbsolutePath edenDir_;
   AbsolutePath configPath_;
-  folly::Optional<AbsolutePath> clientCertificate_;
+  std::optional<AbsolutePath> clientCertificate_;
   bool useMononoke_;
   std::string mononokeTierName_;
   folly::File lockFile_;

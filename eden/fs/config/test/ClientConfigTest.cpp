@@ -21,7 +21,6 @@ using facebook::eden::BindMount;
 using facebook::eden::ClientConfig;
 using facebook::eden::Hash;
 using facebook::eden::RelativePath;
-using folly::Optional;
 using folly::StringPiece;
 
 namespace {

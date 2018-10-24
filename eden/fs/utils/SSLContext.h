@@ -10,6 +10,7 @@
 #pragma once
 
 #include <folly/io/async/SSLContext.h>
+#include <optional>
 
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -19,6 +20,6 @@ namespace eden {
  * Create a folly::SSLcontext with client certificate
  */
 std::shared_ptr<folly::SSLContext> buildSSLContext(
-    folly::Optional<AbsolutePath> clientCertificate);
+    std::optional<AbsolutePath> clientCertificate);
 } // namespace eden
 } // namespace facebook

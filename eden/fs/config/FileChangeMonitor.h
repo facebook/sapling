@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <chrono>
 #include <functional>
+#include <optional>
 
 #ifdef EDEN_WIN
 #include "eden/win/fs/utils/Stub.h" //@manual
@@ -70,7 +71,7 @@ class FileChangeMonitor {
    * example, no call-back will be issued for a file that has changed but, open
    * still returns EACCES.
    */
-  folly::Optional<folly::Expected<folly::File, int>> checkIfUpdated(
+  std::optional<folly::Expected<folly::File, int>> checkIfUpdated(
       bool noThrottle = false);
 
   /**
@@ -84,7 +85,7 @@ class FileChangeMonitor {
   template <typename Fn>
   bool invokeIfUpdated(Fn&& fn, bool noThrottle = false) {
     auto result = checkIfUpdated(noThrottle);
-    if (!result.hasValue()) {
+    if (!result.has_value()) {
       return false;
     }
     if (result.value().hasValue()) {

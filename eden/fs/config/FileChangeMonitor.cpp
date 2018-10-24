@@ -34,9 +34,9 @@ bool FileChangeMonitor::throttle() {
   return (std::chrono::steady_clock::now() - lastCheck_) < throttleDuration_;
 }
 
-folly::Optional<folly::Expected<folly::File, int>>
+std::optional<folly::Expected<folly::File, int>>
 FileChangeMonitor::checkIfUpdated(bool noThrottle) {
-  folly::Optional<folly::Expected<folly::File, int>> rslt;
+  std::optional<folly::Expected<folly::File, int>> rslt;
 
   if (!noThrottle && throttle()) {
     return rslt;

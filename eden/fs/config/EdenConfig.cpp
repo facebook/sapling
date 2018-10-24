@@ -25,8 +25,8 @@
 
 using folly::ByteRange;
 using folly::IOBuf;
-using folly::Optional;
 using folly::StringPiece;
+using std::optional;
 using std::string;
 using namespace folly::string_piece_literals;
 
@@ -192,11 +192,11 @@ const AbsolutePath& EdenConfig::getUserIgnoreFile() const {
   return userIgnoreFile_.getValue();
 }
 
-const Optional<AbsolutePath> EdenConfig::getClientCertificate() const {
+const optional<AbsolutePath> EdenConfig::getClientCertificate() const {
   auto value = clientCertificate_.getValue();
 
   if (value == kUnspecifiedDefault) {
-    return folly::none;
+    return std::nullopt;
   }
   return value;
 }

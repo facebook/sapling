@@ -20,7 +20,7 @@
 namespace facebook {
 namespace eden {
 std::shared_ptr<folly::SSLContext> buildSSLContext(
-    folly::Optional<AbsolutePath> clientCertificate) {
+    std::optional<AbsolutePath> clientCertificate) {
   auto sslContext = std::make_shared<folly::SSLContext>();
   if (clientCertificate) {
     auto path = folly::to<std::string>(clientCertificate.value());

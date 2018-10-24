@@ -9,7 +9,6 @@
  */
 #pragma once
 
-#include <folly/Optional.h>
 #include <folly/dynamic.h>
 #ifdef EDEN_WIN
 #include <folly/portability/SysStat.h>
@@ -20,7 +19,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #endif
-#include <bitset>
+#include <optional>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -263,7 +262,7 @@ class ConfigSetting : public ConfigSettingBase {
    * ignored for ConfigSource.DEFAULT. */
   void clearValue(ConfigSource source) override {
     if (source != facebook::eden::DEFAULT &&
-        configValueArray_[source].hasValue()) {
+        configValueArray_[source].has_value()) {
       configValueArray_[source].reset();
     }
   }
@@ -275,7 +274,7 @@ class ConfigSetting : public ConfigSettingBase {
    * Stores the values, indexed by ConfigSource (as int). Optional is used to
    * allow unpopulated entries. Default values should always be present.
    */
-  std::array<folly::Optional<T>, kConfigSourceLastIndex + 1> configValueArray_;
+  std::array<std::optional<T>, kConfigSourceLastIndex + 1> configValueArray_;
   /**
    *  Get the index of the highest priority source that is populated.
    */
@@ -372,7 +371,7 @@ class EdenConfig : public ConfigSettingManager {
   const AbsolutePath& getUserIgnoreFile() const;
 
   /** Get the path to client certificate. */
-  const folly::Optional<AbsolutePath> getClientCertificate() const;
+  const std::optional<AbsolutePath> getClientCertificate() const;
 
   /** Get the use mononoke flag. Default false */
   bool getUseMononoke() const;

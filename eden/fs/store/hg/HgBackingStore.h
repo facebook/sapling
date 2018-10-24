@@ -18,6 +18,7 @@
 #include <folly/Executor.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
+#include <optional>
 
 #if EDEN_HAVE_HG_TREEMANIFEST
 /* forward declare support classes from mercurial */
@@ -50,7 +51,7 @@ class HgBackingStore : public BackingStore {
       AbsolutePathPiece repository,
       LocalStore* localStore,
       UnboundedQueueExecutor* serverThreadPool,
-      folly::Optional<AbsolutePath> clientCertificate = folly::none,
+      std::optional<AbsolutePath> clientCertificate = std::nullopt,
       bool useMononoke = false,
       folly::StringPiece mononokeTierName = folly::StringPiece());
 
@@ -101,7 +102,7 @@ class HgBackingStore : public BackingStore {
   void initializeMononoke(
       const ImporterOptions& options,
       bool useMononoke,
-      folly::Optional<AbsolutePath> clientCertificate,
+      std::optional<AbsolutePath> clientCertificate,
       folly::StringPiece tierName);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);

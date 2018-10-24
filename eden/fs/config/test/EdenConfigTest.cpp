@@ -19,8 +19,8 @@
 using facebook::eden::AbsolutePath;
 using facebook::eden::Hash;
 using facebook::eden::RelativePath;
-using folly::Optional;
 using folly::StringPiece;
+using std::optional;
 
 namespace {
 
@@ -42,7 +42,7 @@ class EdenConfigTest : public ::testing::Test {
   AbsolutePath defaultUserIgnoreFilePath_{"/home/bob/ignore"};
   AbsolutePath defaultSystemIgnoreFilePath_{"/etc/eden/ignore"};
   AbsolutePath defaultEdenDirPath_{"/home/bob/.eden"};
-  Optional<AbsolutePath> defaultClientCertificatePath_;
+  optional<AbsolutePath> defaultClientCertificatePath_;
   bool defaultUseMononoke_ = false;
 
   // Map of test names to system, user path

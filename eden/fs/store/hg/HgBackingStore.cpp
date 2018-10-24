@@ -190,7 +190,7 @@ HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     LocalStore* localStore,
     UnboundedQueueExecutor* serverThreadPool,
-    folly::Optional<AbsolutePath> clientCertificate,
+    std::optional<AbsolutePath> clientCertificate,
     bool useMononoke,
     folly::StringPiece mononokeTierName)
     : localStore_(localStore),
@@ -270,7 +270,7 @@ void HgBackingStore::initializeTreeManifestImport(
 void HgBackingStore::initializeMononoke(
     const ImporterOptions& options,
     bool useMononoke,
-    folly::Optional<AbsolutePath> clientCertificate,
+    std::optional<AbsolutePath> clientCertificate,
     folly::StringPiece tierName) {
 #ifndef EDEN_WIN_NOMONONOKE
 #if EDEN_HAVE_HG_TREEMANIFEST
