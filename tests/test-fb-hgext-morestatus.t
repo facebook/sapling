@@ -105,7 +105,6 @@ Test hg status is normal after graft abort
 Test unshelve state
   $ echo "shelve=" >> $HGRCPATH
   $ hg reset ".^" -q
-  resetting without an active bookmark
   $ hg shelve -q
   $ hg up -r 2977a57 -q
   $ hg unshelve -q

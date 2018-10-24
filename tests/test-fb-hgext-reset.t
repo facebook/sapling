@@ -106,7 +106,6 @@ Reset without a bookmark
   (leaving bookmark foo)
   $ hg book -d foo
   $ hg reset ".^"
-  resetting without an active bookmark
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
   $ hg book foo
 

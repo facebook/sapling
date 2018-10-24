@@ -76,11 +76,7 @@ def reset(ui, repo, *args, **opts):
     wlock = None
     try:
         wlock = repo.wlock()
-        # Ensure we have an active bookmark
         bookmark = repo._activebookmark
-        if not bookmark:
-            ui.warn(_("resetting without an active bookmark\n"))
-
         ctx = _revive(repo, rev)
         _moveto(repo, bookmark, ctx, clean=opts.get("clean"))
         if not opts.get("keep"):
