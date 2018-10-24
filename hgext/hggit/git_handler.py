@@ -115,6 +115,7 @@ class GitHandler(object):
 
         self._map_git_real = None
         self._map_hg_real = None
+        self._map_hg_modifications = set()
         self.load_tags()
         self._remote_refs = None
 
@@ -174,6 +175,7 @@ class GitHandler(object):
     def map_set(self, gitsha, hgsha):
         self._map_git[gitsha] = hgsha
         self._map_hg[hgsha] = gitsha
+        self._map_hg_modifications.add(hgsha)
 
     def map_hg_get(self, gitsha):
         return self._map_git.get(gitsha)
@@ -201,13 +203,15 @@ class GitHandler(object):
     def save_map(self, map_file):
         wlock = self.repo.wlock()
         try:
-            file = self.vfs(map_file, "w+", atomictemp=True)
+            file = self.vfs(map_file, "a+", atomictemp=True)
             map_hg = self._map_hg
             buf = hgutil.stringio()
             bwrite = buf.write
-            # Sort it for easy lookup later
-            for hgsha, gitsha in sorted(map_hg.iteritems(), key=lambda k: k[0]):
-                bwrite("%s %s\n" % (gitsha, hgsha))
+            # Append new entries to the end of the file so we can search
+            # backwards from the end for recently added entries.
+            for hgsha in self._map_hg_modifications:
+                bwrite("%s %s\n" % (map_hg[hgsha], hgsha))
+            self._map_hg_modifications.clear()
             file.write(buf.getvalue())
             buf.close()
             # If this complains, atomictempfile no longer has close

@@ -52,8 +52,6 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 
-from . import generic_bisect
-
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -182,48 +180,28 @@ def _getmissinglines(mapfile, missinghashes):
     if not missinghashes:
         return missinglines
 
-    buf = mapfile.read()
-    # If the file is missing a trailing newline, add it so bisect can work
-    if len(buf) % 82 == 81:
-        buf += "\n"
-    for missinghash in missinghashes:
-        line = _bisect(buf, missinghash, 41, 40, 82)
-        if line is None:
-            raise error.Abort(_("gitmeta: missing hashes in file %s") % mapfile.name)
-        missinglines.add(line)
+    linelen = 82
+    hashestofind = missinghashes.copy()
+    content = mapfile.read()
+    if len(content) % linelen != 0:
+        raise error.Abort(_("gitmeta: invalid mapfile length (%s)") % len(content))
 
-    return missinglines
+    # Walk backwards through the map file, since recent commits are added at the
+    # end.
+    count = len(content) / linelen
+    for i in xrange(count - 1, -1, -1):
+        offset = i * linelen
+        line = content[offset : offset + linelen]
+        hgsha = line[41:81]
+        if hgsha in hashestofind:
+            missinglines.add(line)
 
+            # Return the missing lines if we found all of them.
+            hashestofind.remove(hgsha)
+            if not hashestofind:
+                return missinglines
 
-def _bisect(buf, request, value_offset, value_len, entrylen):
-    """bisects a buffer of sorted entries, using a certain slice of the buffer
-    as the search key.
-
-    >>> b = "92a3 45c6 78w1 01w2 34z5 "
-    >>> _bisect(b, "a1", 2, 2, 5)
-    >>> _bisect(b, "a3", 2, 2, 5)
-    '92a3 '
-    >>> _bisect(b, "c6", 2, 2, 5)
-    '45c6 '
-    >>> _bisect(b, "w1", 2, 2, 5)
-    '78w1 '
-    >>> _bisect(b, "w2", 2, 2, 5)
-    '01w2 '
-    >>> _bisect(b, "z5", 2, 2, 5)
-    '34z5 '
-    >>> _bisect("", "z5", 2, 2, 5)
-    """
-
-    def compare(i, val):
-        start = (i * entrylen) + value_offset
-        return cmp(buf[start : start + value_len], val)
-
-    index = generic_bisect.bisect(0, len(buf) / entrylen, compare, request)
-    if index is None:
-        return None
-
-    start = index * entrylen
-    return buf[start : start + entrylen]
+    raise error.Abort(_("gitmeta: missing hashes in file %s") % mapfile.name)
 
 
 class _githgmappayload(object):
@@ -368,7 +346,6 @@ def bundle2getgithgmap(op, part):
                         _("gitmeta: could not read from .hg/%s") % filename
                     )
 
-            newlines = sorted(newlines, key=lambda l: l[41:81])
             _writefile(op, filename, "".join(newlines))
             _writefile(op, hgheadsfile, "\n".join(data.newheads))
 

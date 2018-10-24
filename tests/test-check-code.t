@@ -147,7 +147,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsubversion-urls.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-utility-commands.py it has no-che?k-code (glob)
   Skipping tests/test_hgsubversion_util.py it has no-che?k-code (glob)
-  hgext/gitlookup.py:*: cmp is not available in Python 3+ --> * (glob)
   tests/test-revset.t:*: warning: ^ must be quoted --> > . + (glob)
 
 @commands in debugcommands.py should be in alphabetical order.
