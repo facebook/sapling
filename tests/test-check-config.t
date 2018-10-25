@@ -67,6 +67,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fbhistedit.exec_in_user_shell (str)
   undocumented: format.usehgsql (bool)
   undocumented: git.public (list)
+  undocumented: grep.biggrepcorpus (str)
   undocumented: grep.command (str)
   undocumented: hggit.disallowinitbare (bool)
   undocumented: hggit.usephases (bool)

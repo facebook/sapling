@@ -619,7 +619,14 @@ def grep(ui, repo, pattern, *pats, **opts):
     # If true, we'll use the `bgr` tool to perform the grep against some
     # externally maintained index.  We don't provide an implementation
     # of that tool with this repo, just the optional client interface.
-    biggrep = ui.configbool("grep", "usebiggrep")
+    biggrep = ui.configbool("grep", "usebiggrep", None)
+    if biggrep is None:
+        if (
+            "eden" in repo.requirements
+            and ui.config("grep", "biggrepcorpus")
+            and os.path.exists("/usr/local/bin/bgr")
+        ):
+            biggrep = True
 
     # Ask big grep to strip out the corpus dir (stripdir) and to include
     # the corpus revision on the first line.
