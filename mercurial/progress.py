@@ -13,6 +13,7 @@ import time
 
 from . import encoding, util
 from .i18n import _
+from .rust import threading as rustthreading
 
 
 def spacejoin(*args):
@@ -402,8 +403,8 @@ def getrenderer(bar):
 
 
 class engine(object):
-    def __init__(self):
-        self._cond = threading.Condition()
+    def __init__(self, condtype):
+        self._cond = condtype()
         self._active = False
         self._refresh = None
         self._delay = None
@@ -544,7 +545,7 @@ class engine(object):
                 bar._updateestimation(now)
 
 
-_engine = engine()
+_engine = None
 
 
 def _suspendstart():
@@ -554,7 +555,7 @@ def _suspendstart():
     suspended.  In this case the caller must call _suspendfinish to release
     the suspension.
     """
-    havebars = bool(_engine._bars)
+    havebars = bool(_engine and _engine._bars)
     if havebars:
         _engine._cond.acquire()
         _engine._clear()
@@ -562,7 +563,7 @@ def _suspendstart():
 
 
 def _suspendfinish():
-    _engine._cond.release()
+    _engine and _engine._cond.release()
 
 
 class suspend(object):
@@ -730,3 +731,12 @@ def spinner(ui, topic):
 
 def resetstate():
     _engine.resetstate()
+
+
+def setup(ui):
+    global _engine
+    if ui.configbool("progress", "_rustthreading"):
+        condtype = rustthreading.Condition
+    else:
+        condtype = threading.Condition
+    _engine = engine(condtype)

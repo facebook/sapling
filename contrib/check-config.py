@@ -152,7 +152,9 @@ def main(args):
                 ctype, default = foundopts[name]
                 if default:
                     default = " [%s]" % default
-                print("undocumented: %s (%s)%s" % (name, ctype, default))
+                # config name starting with "_" are considered as internal.
+                if "._" not in name:
+                    print("undocumented: %s (%s)%s" % (name, ctype, default))
 
 
 if __name__ == "__main__":
