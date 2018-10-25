@@ -773,9 +773,12 @@ def acceptintervention(tr=None):
         tr.release()
 
 
-@contextlib.contextmanager
-def nullcontextmanager():
-    yield
+class nullcontextmanager(object):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exctype, excvalue, traceback):
+        pass
 
 
 @contextlib.contextmanager

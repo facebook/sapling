@@ -430,6 +430,8 @@ class engine(object):
             bar._enginerenderer = getrenderer(bar)
             self._bars.append(bar)
             self._recalculatedisplay(now)
+            global suspend
+            suspend = self.lock
             self._cond.notify_all()
 
     def unregister(self, bar):
@@ -446,6 +448,9 @@ class engine(object):
                         self._clear()
                 del self._bars[index:]
                 self._recalculatedisplay(time.time())
+                if not self._bars:
+                    global suspend
+                    suspend = util.nullcontextmanager
                 self._cond.notify_all()
             bar._enginerenderer = None
 
@@ -548,34 +553,7 @@ class engine(object):
 _engine = None
 
 
-def _suspendstart():
-    """suspend progress output
-
-    Returns True if there was an active progress bar, which has now been
-    suspended.  In this case the caller must call _suspendfinish to release
-    the suspension.
-    """
-    havebars = bool(_engine and _engine._bars)
-    if havebars:
-        _engine._cond.acquire()
-        _engine._clear()
-    return havebars
-
-
-def _suspendfinish():
-    _engine and _engine._cond.release()
-
-
-class suspend(object):
-    """context manager to suspend progress output"""
-
-    def __enter__(self):
-        self._suspended = _suspendstart()
-        return self
-
-    def __exit__(self, type, value, traceback):
-        if self._suspended:
-            _suspendfinish()
+suspend = util.nullcontextmanager
 
 
 def _progvalue(value):

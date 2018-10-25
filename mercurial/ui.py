@@ -831,18 +831,16 @@ class ui(object):
             self._write(*msgs, **opts)
 
     def _write(self, *msgs, **opts):
-        # opencode progress.suspend because this is a critical path
-        suspended = progress._suspendstart()
-        # opencode timeblockedsection because this is a critical path
-        starttime = util.timer()
-        try:
-            self.fout.write("".join(msgs))
-        except IOError as err:
-            raise error.StdioError(err)
-        finally:
-            self._measuredtimes["stdio_blocked"] += (util.timer() - starttime) * 1000
-            if suspended:
-                progress._suspendfinish()
+        with progress.suspend():
+            starttime = util.timer()
+            try:
+                self.fout.write("".join(msgs))
+            except IOError as err:
+                raise error.StdioError(err)
+            finally:
+                self._measuredtimes["stdio_blocked"] += (
+                    util.timer() - starttime
+                ) * 1000
 
     def write_err(self, *args, **opts):
         with progress.suspend():
