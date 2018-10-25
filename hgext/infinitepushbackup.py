@@ -117,6 +117,7 @@ _backuplockname = "infinitepushbackup.lock"
 def autobackupenabled(ui):
     # Backup is possibly disabled by user
     # but the disabling might have expired
+    # developer config: infinitepushbackup.disableduntil
     if ui.config("infinitepushbackup", "disableduntil", None) is not None:
         try:
             timestamp = int(ui.config("infinitepushbackup", "disableduntil"))
@@ -865,6 +866,11 @@ def _dobackgroundbackup(ui, repo, dest=None, command=None):
     if infinitepush_bgssh:
         background_cmd += ["--config", "ui.ssh=%s" % infinitepush_bgssh]
 
+    # developer config: infinitepushbackup.bgdebuglocks
+    if ui.configbool("infinitepushbackup", "bgdebuglocks"):
+        background_cmd += ["--config", "devel.debug-lockers=true"]
+
+    # developer config: infinitepushbackup.bgdebug
     if ui.configbool("infinitepushbackup", "bgdebug", False):
         background_cmd.append("--debug")
 

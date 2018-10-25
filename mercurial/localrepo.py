@@ -1896,6 +1896,11 @@ class localrepository(object):
             l.lock()
             return l
 
+        if self.ui.configbool("devel", "debug-lockers"):
+            util.debugstacktrace(
+                "acquiring store lock for %s" % self.root, skip=1, depth=5
+            )
+
         l = self._lock(
             self.svfs,
             "lock",
@@ -1925,6 +1930,9 @@ class localrepository(object):
         if l is not None and l.held:
             l.lock()
             return l
+
+        if self.ui.configbool("devel", "debug-lockers"):
+            util.debugstacktrace("acquiring wlock for %s" % self.root, skip=1, depth=5)
 
         # We do not need to check for non-waiting lock acquisition.  Such
         # acquisition would not cause dead-lock as they would just fail.

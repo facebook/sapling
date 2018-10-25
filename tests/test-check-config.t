@@ -97,8 +97,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: hgsubversion.username (str)
   undocumented: infinitepush.bgssh (str)
   undocumented: infinitepush.bundle-stream (bool)
-  undocumented: infinitepushbackup.bgdebug (bool)
-  undocumented: infinitepushbackup.disableduntil (str)
   undocumented: morestatus.show (bool)
   undocumented: nointerrupt.interactiveonly (bool) [True]
   undocumented: perftweaks.disablebranchcache (bool)
