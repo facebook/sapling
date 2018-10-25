@@ -192,3 +192,39 @@
   A lfs-largefile-renamed
     lfs-largefile-for-rename
   R lfs-largefile-for-rename
+
+# 8.1 Change "sha256:oid" to an another valid oid to check sha1 consisnency
+# Change "sha256:oid" to "sha256:f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b"
+  $ echo $LONG"inconsistent" > inconsistent_file
+  $ hg commit -Aqm "hash check"
+
+  $ FILENODE_TO_CORRUPT=".hg/store/data/181f21543edce858fdf3e7ddba53facb9ba2e2dd/6179aa960f78800a0b879d461ea56c5bb17f468c"
+  $ chmod 666 $FILENODE_TO_CORRUPT
+  $ sed -i s/sha256:b3b32a0272a17de060bd061eba7617bcd0816da95b2d9d796535cf626bc26ef9/sha256:f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b/ $FILENODE_TO_CORRUPT
+
+  $ hgmn push -r . --to master_bookmark -v
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  pushing rev df4af074ec72 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  lfs: uploading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.48 KB)
+  lfs: processed: f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
+  validated revset for rebase
+  1 changesets found
+  uncompressed size of bundle content:
+       201 (changelog)
+       286  inconsistent_file
+  remote: * ERRO Command failed, remote: true, error: Error while uploading data for changesets, hashes: [HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))], root_cause: SharedError { (glob)
+  remote:     error: Compat {
+  remote:         error: SharedError { error: Compat { error: InconsistentEntryHash(FilePath(MPath([105, 110, 99, 111, 110, 115, 105, 115, 116, 101, 110, 116, 95, 102, 105, 108, 101] "inconsistent_file")), HgNodeHash(Sha1(6179aa960f78800a0b879d461ea56c5bb17f468c)), HgNodeHash(Sha1(1c509d1a5c8ac7f7b8ac25dc417fca3acb882258))) } }
+  remote:          (re)
+  remote:         While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(1c03a06531d93ba681c1a01604921b1cb40361af)))
+  remote:          (re)
+  remote:         While uploading child entries
+  remote:          (re)
+  remote:         While processing entries
+  remote:          (re)
+  remote:         While creating Changeset Some(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))), uuid: * (glob)
+  remote:     }
+  remote: }, backtrace: , cause: While creating Changeset Some(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))), uuid: *, session_uuid: * (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]

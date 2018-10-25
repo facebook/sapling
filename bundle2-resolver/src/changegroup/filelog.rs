@@ -67,19 +67,14 @@ impl UploadableHgBlob for Filelog {
             other => bail_msg!("internal error: expected file path, got {}", other),
         };
 
-        // TODO(anastasiya): T34959977 Check real SHA1 of uploaded file. Believe to user for now.
-        let upload_node_id = if self.flags.contains(RevFlags::REVIDX_DEFAULT_FLAGS) {
-            UploadHgNodeHash::Supplied(node_key.hash)
-        } else {
-            UploadHgNodeHash::Checked(node_key.hash)
-        };
+        // If LFSMetaData
         let contents = match self.data {
             FilelogData::RawBytes(bytes) => UploadHgFileContents::RawBytes(bytes),
             FilelogData::LfsMetaData(meta) => UploadHgFileContents::ContentUploaded(meta),
         };
 
         let upload = UploadHgFileEntry {
-            upload_node_id,
+            upload_node_id: UploadHgNodeHash::Checked(node_key.hash),
             contents,
             // XXX should this really be Regular?
             file_type: FileType::Regular,
