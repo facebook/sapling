@@ -84,6 +84,11 @@ except (ImportError, AttributeError):
 
     shellquote = pipes.quote
 
+try:
+    from mercurial.rust.threading import Condition as RLock
+except ImportError:
+    RLock = threading.RLock
+
 if os.environ.get("RTUNICODEPEDANTRY", False):
     try:
         reload(sys)
@@ -2119,10 +2124,10 @@ class TTest(Test):
         return TTest.ESCAPESUB(TTest._escapef, s)
 
 
-firstlock = threading.RLock()
+firstlock = RLock()
 firsterror = False
 
-_iolock = threading.RLock()
+_iolock = RLock()
 
 
 class Progress(object):
