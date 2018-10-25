@@ -42,6 +42,7 @@ _ignoreextensions = {
     "inotify",
     "interhg",
     "mq",
+    "perftweaks",
     "obsshelve",
     "parentrevspec",
     "progress",
