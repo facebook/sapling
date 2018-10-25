@@ -393,11 +393,71 @@ def _mergecheck(repo, mynode, orig, fcd, fco, fca, toolconf):
     return True
 
 
-def _describe_failure(r, repo, mynode, orig, fcd, fco, fca):
+def _findconflictingcommits(repo, fcd, fca, maxcommits=10):
+    """Attempts to find all of the commits on the destination that might've
+    conflicted during the merge.
+
+    This is a first attempt that merely finds commits that touched the file
+    between the ancestor and destination commit.
+
+    In the future, a textual analysis using linelog, to filter that list
+    to changes that edited the conflicted area, would be better. This requires
+    fast remotefilelog fetches from the server so we can construct the linelog
+    relatively quickly -- today, SSH overhead makes this infeasible.
+
+    Returns changectx[], max_hit?
+    """
+    # (In a remotefilelog repo this will trigger a loose file download -- max
+    # one per call to _find_conflicting_commits)
+    # fcd is the workingfilectx, so call p1().
+    current = fcd.p1()
+    candidates = []
+    while True:
+        ctx = current.changectx()
+
+        # Stop once we go beyond the common ancestor.
+        if repo.changelog.isancestor(ctx.node(), fca.node()):
+            break
+
+        candidates.append(ctx)
+        if len(candidates) >= maxcommits:
+            break
+
+        if len(current.parents()) < 1:
+            break
+
+        # Ignoring p2 path for simplicity. Ideally, we also follow p2, and
+        # can draw the graph DAG to the user.
+        current = current.p1()
+
+    return candidates, len(candidates) >= maxcommits
+
+
+def _describefailure(r, repo, mynode, orig, fcd, fco, fca):
     """Describes a merge conflict, which is rendered as a warning to the user"""
-    return _(
+
+    relpath = repo.pathto(fcd.path())
+    msg = _(
         "warning: %d conflicts while merging %s! (edit, then use 'hg resolve --mark')\n"
-    ) % (r, repo.pathto(fcd.path()))
+    ) % (r, relpath)
+
+    # internal config: merge.printcandidatecommmits
+    if repo.ui.configbool("merge", "printcandidatecommmits", False):
+        candidates, hit_max = _findconflictingcommits(repo, fcd, fca)
+    else:
+        candidates, hit_max = [], False
+
+    if len(candidates):
+        msg += _(" %d commits might have introduced this conflict:\n") % (
+            len(candidates),
+        )
+        for ctx in candidates:
+            # TODO(phillco): Make this a configurable template
+            firstline = templatefilters.firstline(ctx.description())
+            msg += "  - [%s] %s\n" % (short(ctx.node()), firstline)
+        if hit_max:
+            msg += "  - (possibly more)\n"
+    return msg
 
 
 def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
@@ -412,7 +472,7 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     return True, r, False
 
 
-@internaltool("union", fullmerge, _describe_failure, precheck=_mergecheck)
+@internaltool("union", fullmerge, _describefailure, precheck=_mergecheck)
 def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -421,7 +481,7 @@ def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "union")
 
 
-@internaltool("merge", fullmerge, _describe_failure, precheck=_mergecheck)
+@internaltool("merge", fullmerge, _describefailure, precheck=_mergecheck)
 def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -431,7 +491,7 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "merge")
 
 
-@internaltool("merge3", fullmerge, _describe_failure, precheck=_mergecheck)
+@internaltool("merge3", fullmerge, _describefailure, precheck=_mergecheck)
 def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
