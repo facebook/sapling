@@ -10,6 +10,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   process/QuickStart
    process/WritingExtensions
    process/WritingTests
    process/DebuggingFeatures
