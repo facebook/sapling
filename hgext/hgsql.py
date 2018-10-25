@@ -103,6 +103,7 @@ configitem("hgsql", "maxrowsize", default=1048576)
 configitem("hgsql", "profileoutput", default="/tmp")
 configitem("hgsql", "profiler", default=None)
 configitem("hgsql", "rootpidnsonly", default=False)
+configitem("hgsql", "sqltimeout", default=120)
 configitem("hgsql", "syncinterval", default=-1)
 configitem("hgsql", "verbose", default=False)
 configitem("hgsql", "verifybatchsize", default=1000)
@@ -644,6 +645,7 @@ def wraprepo(repo):
                     time.sleep(0.2)
 
             waittimeout = self.ui.config("hgsql", "waittimeout")
+            sqltimeout = self.ui.configint("hgsql", "sqltimeout") * 1000
             waittimeout = self.sqlconn.converter.escape("%s" % waittimeout)
 
             self.engine = self.ui.config("hgsql", "engine")
@@ -671,6 +673,7 @@ def wraprepo(repo):
             wrapfunction(self.sqlcursor, "execute", _executeupdatewritecount)
 
             self.sqlcursor.execute("SET wait_timeout=%s" % waittimeout)
+            self.sqlcursor.execute("SET SESSION MAX_STATEMENT_TIME=%s" % sqltimeout)
 
             if self.engine == "rocksdb":
                 self.sqlcursor.execute(
