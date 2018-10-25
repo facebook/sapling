@@ -12,7 +12,10 @@
 extern crate abomonation;
 #[macro_use]
 extern crate abomonation_derive;
+extern crate bonsai_hg_mapping_entry_thrift;
 extern crate cachelib;
+#[macro_use]
+extern crate cloned;
 extern crate db_conn;
 #[macro_use]
 extern crate diesel;
@@ -22,6 +25,7 @@ extern crate futures;
 extern crate heapsize;
 #[macro_use]
 extern crate heapsize_derive;
+extern crate memcache;
 extern crate tokio;
 
 extern crate db;
@@ -30,6 +34,7 @@ extern crate futures_ext;
 extern crate lazy_static;
 extern crate mercurial_types;
 extern crate mononoke_types;
+extern crate rust_thrift;
 #[macro_use]
 extern crate stats;
 
@@ -42,17 +47,18 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 
-use cachelib::{get_cached_or_fill, LruCachePool};
 use futures::Future;
 use futures_ext::{asynchronize, BoxFuture, FutureExt};
-use mercurial_types::{HgChangesetId, RepositoryId};
+use mercurial_types::{HgChangesetId, HgNodeHash, RepositoryId};
 use mononoke_types::ChangesetId;
 use stats::Timeseries;
 
+mod caching;
 mod errors;
 mod models;
 mod schema;
 
+pub use caching::CachingBonsaiHgMapping;
 pub use errors::*;
 use models::BonsaiHgMappingRow;
 use schema::bonsai_hg_mapping;
@@ -69,6 +75,24 @@ pub struct BonsaiHgMappingEntry {
     pub repo_id: RepositoryId,
     pub hg_cs_id: HgChangesetId,
     pub bcs_id: ChangesetId,
+}
+
+impl BonsaiHgMappingEntry {
+    fn from_thrift(entry: bonsai_hg_mapping_entry_thrift::BonsaiHgMappingEntry) -> Result<Self> {
+        Ok(Self {
+            repo_id: RepositoryId::new(entry.repo_id.0),
+            hg_cs_id: HgChangesetId::new(HgNodeHash::from_thrift(entry.hg_cs_id)?),
+            bcs_id: ChangesetId::from_thrift(entry.bcs_id)?,
+        })
+    }
+
+    fn into_thrift(self) -> bonsai_hg_mapping_entry_thrift::BonsaiHgMappingEntry {
+        bonsai_hg_mapping_entry_thrift::BonsaiHgMappingEntry {
+            repo_id: bonsai_hg_mapping_entry_thrift::RepoId(self.repo_id.id()),
+            hg_cs_id: self.hg_cs_id.into_nodehash().into_thrift(),
+            bcs_id: self.bcs_id.into_thrift(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, HeapSizeOf)]
@@ -130,37 +154,6 @@ impl BonsaiHgMapping for Arc<BonsaiHgMapping> {
         cs_id: BonsaiOrHgChangesetId,
     ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
         (**self).get(repo_id, cs_id)
-    }
-}
-
-pub struct CachingBonsaiHgMapping {
-    mapping: Arc<BonsaiHgMapping>,
-    cache_pool: LruCachePool,
-}
-
-impl CachingBonsaiHgMapping {
-    pub fn new(mapping: Arc<BonsaiHgMapping>, cache_pool: LruCachePool) -> Self {
-        Self {
-            mapping,
-            cache_pool,
-        }
-    }
-}
-
-impl BonsaiHgMapping for CachingBonsaiHgMapping {
-    fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
-        self.mapping.add(entry)
-    }
-
-    fn get(
-        &self,
-        repo_id: RepositoryId,
-        cs: BonsaiOrHgChangesetId,
-    ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
-        let cache_key = format!("{}.{:?}", repo_id.prefix(), cs).to_string();
-        get_cached_or_fill(&self.cache_pool, cache_key, || {
-            self.mapping.get(repo_id, cs)
-        })
     }
 }
 
