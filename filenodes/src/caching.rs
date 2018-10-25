@@ -7,13 +7,12 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
-use std::usize;
 
 use cachelib::{get_cached_or_fill, LruCachePool};
 use failure::{Error, Result};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
-use memcache::{KeyGen, MemcacheClient};
+use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
 use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
 use rand::random;
 use rust_thrift::compact_protocol;
@@ -42,9 +41,6 @@ define_stats! {
     gaf_pointers_err: timeseries("get_all_filenodes.memcache.pointers_err"; RATE, SUM),
 }
 
-// Memcache max size for key + value + overhead is around 1MB, so we are leaving 1KB for key +
-// overhead
-const MEMCACHE_VALUE_MAX_SIZE: usize = 999_000;
 const TTL_SEC: u64 = 8 * 60 * 60;
 // Adding a random to TTL helps preventing eviction of all related keys at once
 const TTL_SEC_RAND: u64 = 30 * 60; // 30min

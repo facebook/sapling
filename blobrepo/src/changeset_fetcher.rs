@@ -6,7 +6,7 @@
 
 use blobstore::Blobstore;
 use cachelib;
-use changesets::{deserialize_cs_entries, get_cachelib_cache_key, ChangesetEntry, Changesets};
+use changesets::{deserialize_cs_entries, get_cache_key, ChangesetEntry, Changesets};
 use failure::{err_msg, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -161,7 +161,7 @@ impl CachingChangesetFetcher {
                         if let Some(bytes) = val {
                             let _ = deserialize_cs_entries(bytes.as_bytes()).map(|entries| {
                                 for entry in entries {
-                                    let cachelib_cache_key = get_cachelib_cache_key(
+                                    let cachelib_cache_key = get_cache_key(
                                         &entry.repo_id,
                                         &entry.cs_id
                                     );
@@ -187,7 +187,7 @@ impl CachingChangesetFetcher {
         &self,
         cs_id: ChangesetId,
     ) -> impl Future<Item = ChangesetEntry, Error = Error> {
-        let cache_key = get_cachelib_cache_key(&self.repo_id, &cs_id);
+        let cache_key = get_cache_key(&self.repo_id, &cs_id);
 
         cloned!(self.repo_id, self.cache_misses);
         cachelib::get_cached_or_fill(&self.cache_pool, cache_key, move || {

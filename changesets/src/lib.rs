@@ -14,6 +14,8 @@ extern crate abomonation;
 extern crate abomonation_derive;
 extern crate bytes;
 extern crate cachelib;
+#[macro_use]
+extern crate cloned;
 extern crate db_conn;
 #[macro_use]
 extern crate diesel;
@@ -23,6 +25,7 @@ extern crate futures;
 extern crate heapsize;
 #[macro_use]
 extern crate heapsize_derive;
+extern crate memcache;
 extern crate tokio;
 
 extern crate changeset_entry_thrift;
@@ -41,7 +44,7 @@ extern crate stats;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::result;
-use std::sync::{Arc, MutexGuard};
+use std::sync::MutexGuard;
 
 use bytes::Bytes;
 use db_conn::{MysqlConnInner, SqliteConnInner};
@@ -60,11 +63,13 @@ use mononoke_types::sql_types::ChangesetIdSql;
 use rust_thrift::compact_protocol;
 use stats::Timeseries;
 
+mod caching;
 mod errors;
 mod schema;
 mod models;
 mod wrappers;
 
+pub use caching::{get_cache_key, CachingChangests};
 pub use errors::*;
 use models::{ChangesetInsertRow, ChangesetParentRow, ChangesetRow};
 use schema::{changesets, csparents};
@@ -82,6 +87,32 @@ pub struct ChangesetEntry {
     pub cs_id: ChangesetId,
     pub parents: Vec<ChangesetId>,
     pub gen: u64,
+}
+
+impl ChangesetEntry {
+    fn from_thrift(thrift_entry: changeset_entry_thrift::ChangesetEntry) -> Result<Self> {
+        let parents: Result<Vec<_>> = thrift_entry
+            .parents
+            .into_iter()
+            .map(ChangesetId::from_thrift)
+            .collect();
+
+        Ok(Self {
+            repo_id: RepositoryId::new(thrift_entry.repo_id.0),
+            cs_id: ChangesetId::from_thrift(thrift_entry.cs_id)?,
+            parents: parents?,
+            gen: thrift_entry.gen.0 as u64,
+        })
+    }
+
+    fn into_thrift(self) -> changeset_entry_thrift::ChangesetEntry {
+        changeset_entry_thrift::ChangesetEntry {
+            repo_id: changeset_entry_thrift::RepoId(self.repo_id.id()),
+            cs_id: self.cs_id.into_thrift(),
+            parents: self.parents.into_iter().map(|p| p.into_thrift()).collect(),
+            gen: changeset_entry_thrift::GenerationNum(self.gen as i64),
+        }
+    }
 }
 
 pub fn serialize_cs_entries(cs_entries: Vec<ChangesetEntry>) -> Bytes {
@@ -142,42 +173,6 @@ pub trait Changesets: Send + Sync {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error>;
-}
-
-pub fn get_cachelib_cache_key(repo_id: &RepositoryId, cs_id: &ChangesetId) -> String {
-    format!("{}.{}", repo_id.prefix(), cs_id).to_string()
-}
-
-pub struct CachingChangests {
-    changesets: Arc<Changesets>,
-    cache_pool: cachelib::LruCachePool,
-}
-
-impl CachingChangests {
-    pub fn new(changesets: Arc<Changesets>, cache_pool: cachelib::LruCachePool) -> Self {
-        Self {
-            changesets,
-            cache_pool,
-        }
-    }
-}
-
-impl Changesets for CachingChangests {
-    fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
-        self.changesets.add(cs)
-    }
-
-    fn get(
-        &self,
-        repo_id: RepositoryId,
-        cs_id: ChangesetId,
-    ) -> BoxFuture<Option<ChangesetEntry>, Error> {
-        let cache_key = get_cachelib_cache_key(&repo_id, &cs_id);
-
-        cachelib::get_cached_or_fill(&self.cache_pool, cache_key, || {
-            self.changesets.get(repo_id, cs_id)
-        })
-    }
 }
 
 #[derive(Clone)]
