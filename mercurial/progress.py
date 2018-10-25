@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import contextlib
 import errno
 import threading
 import time
@@ -410,9 +411,26 @@ class engine(object):
         self._delay = None
         self._bars = []
         self._currentbarindex = None
+        if condtype is rustthreading.Condition:
+            self.lock = self._lockworkedaround
+        else:
+            self.lock = self._lockbuggy
 
-    def lock(self):
+    def _lockbuggy(self):
+        # Subject to https://bugs.python.org/issue29988. Could deadlock.
         return self._cond
+
+    @contextlib.contextmanager
+    def _lockworkedaround(self):
+        # Ugly hack for buggy Python (https://bugs.python.org/issue29988)
+        #
+        # Python can skip executing "__exit__" if a signal arrives at the
+        # "right" time. Workaround it by using N "__exit__"s. Skipping all of
+        # them would require N signals to be all sent at "right" time. Unlikely
+        # in practise.
+        b = rustthreading.bug29988wrapper(self._cond)
+        with b, b, b, b, b, b:
+            yield
 
     def resetstate(self):
         with self.lock():
