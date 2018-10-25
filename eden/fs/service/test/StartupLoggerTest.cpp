@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include <signal.h>
 #include <sysexits.h>
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -49,6 +50,11 @@ struct FunctionResult {
 };
 
 FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName);
+folly::ProcessReturnCode waitWithTimeout(
+    folly::Subprocess&,
+    std::chrono::milliseconds timeout);
+bool isReadablePipeBroken(int fd);
+bool isWritablePipeBroken(int fd);
 } // namespace
 
 class DaemonStartupLoggerTest : public ::testing::Test {
@@ -259,6 +265,53 @@ TEST_F(DaemonStartupLoggerTest, failure) {
   EXPECT_THAT(readLogContents(), HasSubstr("example failure for tests"));
 }
 
+TEST_F(DaemonStartupLoggerTest, daemonClosesStandardFileDescriptors) {
+  auto process = folly::Subprocess{
+      {{
+          folly::fs::executable_path().string(),
+          "daemonClosesStandardFileDescriptorsChild",
+      }},
+      folly::Subprocess::Options{}.pipeStdin().pipeStdout().pipeStderr(),
+  };
+  SCOPE_FAIL {
+    process.takeOwnershipOfPipes();
+    process.wait();
+  };
+  process.setAllNonBlocking();
+
+  // FIXME(strager): wait() could technically deadlock if the child is blocked
+  // on writing to stdout or stderr.
+  auto returnCode = waitWithTimeout(process, 10s);
+  EXPECT_EQ("exited with status 0", returnCode.str());
+
+  auto expectReadablePipeIsBroken = [](int fd, folly::StringPiece name) {
+    EXPECT_TRUE(isReadablePipeBroken(fd))
+        << "Daemon should have closed its " << name
+        << " file descriptor (parent fd " << fd << "), but it did not.";
+  };
+  auto expectWritablePipeIsBroken = [](int fd, folly::StringPiece name) {
+    EXPECT_TRUE(isWritablePipeBroken(fd))
+        << "Daemon should have closed its " << name
+        << " file descriptor (parent fd " << fd << "), but it did not.";
+  };
+
+  expectWritablePipeIsBroken(process.stdinFd(), "stdin");
+  expectReadablePipeIsBroken(process.stdoutFd(), "stdout");
+  expectReadablePipeIsBroken(process.stderrFd(), "stderr");
+
+  // NOTE(strager): The daemon process should eventually exit automatically, so
+  // we don't need to explicitly kill it.
+}
+
+void daemonClosesStandardFileDescriptorsChild() {
+  auto logFile = TemporaryFile{"eden_test_log"};
+  auto logger = DaemonStartupLogger{};
+  logger.daemonize(logFile.path().string());
+  logger.success();
+  std::this_thread::sleep_for(30s);
+  exit(1);
+}
+
 TEST(ForegroundStartupLoggerTest, loggedMessagesAreWrittenToStandardError) {
   auto result = runFunctionInSeparateProcess(
       "loggedMessagesAreWrittenToStandardErrorChild");
@@ -333,6 +386,7 @@ FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
     }
   };
 #define CHECK_FUNCTION(name) checkFunction(#name, name)
+  CHECK_FUNCTION(daemonClosesStandardFileDescriptorsChild);
   CHECK_FUNCTION(exitUnsuccessfullyMakesProcessExitWithCodeChild);
   CHECK_FUNCTION(loggedMessagesAreWrittenToStandardErrorChild);
   CHECK_FUNCTION(successWritesStartedMessageToStandardErrorDaemonChild);
@@ -344,6 +398,47 @@ FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
       "error: unknown function: %s\n",
       std::string{functionName}.c_str());
   std::exit(2);
+}
+
+folly::ProcessReturnCode waitWithTimeout(
+    folly::Subprocess& process,
+    std::chrono::milliseconds timeout) {
+  auto deadline = std::chrono::steady_clock::now() + timeout;
+  do {
+    auto returnCode = process.poll();
+    if (!returnCode.running()) {
+      return returnCode;
+    }
+    std::this_thread::sleep_for(1ms);
+  } while (std::chrono::steady_clock::now() < deadline);
+  return {};
+}
+
+bool isReadablePipeBroken(int fd) {
+drain_pipe:
+  char buffer[PIPE_BUF];
+  ssize_t readSize = folly::readNoInt(fd, buffer, sizeof(buffer));
+  if (readSize == -1 && errno == EAGAIN) {
+    return false;
+  }
+  checkUnixError(readSize);
+  if (readSize == 0) {
+    return true;
+  }
+  goto drain_pipe;
+}
+
+bool isWritablePipeBroken(int fd) {
+  const char buffer[1] = {0};
+  ssize_t writtenSize = folly::writeNoInt(fd, buffer, sizeof(buffer));
+  if (writtenSize == -1 && errno == EAGAIN) {
+    return false;
+  }
+  if (writtenSize == -1 && errno == EPIPE) {
+    return true;
+  }
+  checkUnixError(writtenSize);
+  return false;
 }
 
 } // namespace

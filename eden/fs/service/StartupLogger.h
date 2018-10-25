@@ -143,6 +143,7 @@ class DaemonStartupLogger : public StartupLogger {
       pid_t childPid,
       folly::StringPiece logPath);
   void prepareChildProcess(folly::StringPiece logPath);
+  void closeUndesiredInheritedFileDescriptors();
   void redirectOutput(folly::StringPiece logPath);
 
   /**

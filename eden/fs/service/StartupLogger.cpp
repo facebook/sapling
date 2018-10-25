@@ -187,8 +187,14 @@ void DaemonStartupLogger::runParentProcess(
 }
 
 void DaemonStartupLogger::prepareChildProcess(StringPiece logPath) {
+  closeUndesiredInheritedFileDescriptors();
   // Redirect stdout & stderr
   redirectOutput(logPath);
+}
+
+void DaemonStartupLogger::closeUndesiredInheritedFileDescriptors() {
+  auto devNull = File{"/dev/null", O_CLOEXEC | O_RDONLY};
+  checkUnixError(dup2(devNull.fd(), STDIN_FILENO));
 }
 
 void DaemonStartupLogger::redirectOutput(StringPiece logPath) {
