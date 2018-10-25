@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate cpython;
 
-use cpython::{exc, PyErr, PyObject, PyResult, PyType, PythonObject};
-use std::cell::RefCell;
+use cpython::{exc, ObjectProtocol, PyErr, PyObject, PyResult, PyType, PythonObject};
+use std::cell::{Cell, RefCell};
 use std::mem::{drop, forget, transmute, transmute_copy};
 use std::ptr;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
@@ -11,6 +11,7 @@ use std::time::Duration;
 
 py_module_initializer!(threading, initthreading, PyInit_threading, |py, m| {
     m.add_class::<Condition>(py)?;
+    m.add_class::<bug29988wrapper>(py)?;
     Ok(())
 });
 
@@ -273,5 +274,35 @@ py_class!(class Condition |py| {
             format!("<Condition (not owned)>")
         };
         Ok(msg)
+    }
+});
+
+// To workaround Python bug 29988 where "__exit__" can be skipped by Ctrl+C.
+// To use this, wrap a [Condition] in: `b = bug29988wrapper(cond)`, and use
+// nested `with`: `with b, b, b, b, b: ...` in the Python world.
+py_class!(class bug29988wrapper |py| {
+    data obj: Condition;
+    data entered: Cell<bool>;
+
+    def __new__(_cls, obj: Condition) -> PyResult<bug29988wrapper> {
+        bug29988wrapper::create_instance(py, obj, Cell::new(false))
+    }
+
+    def __enter__(&self) -> PyResult<PyObject> {
+        if !self.entered(py).get() {
+            let obj = self.obj(py);
+            let _result = obj.acquire(py, true)?;
+            self.entered(py).replace(true);
+        }
+        Ok(py.None())
+    }
+
+    def __exit__(&self, _ty: Option<PyType>, _value: PyObject, _traceback: PyObject) -> PyResult<bool> {
+        if self.entered(py).get() {
+            let obj = self.obj(py);
+            let result = obj.release(py)?;
+            self.entered(py).replace(false);
+        }
+        Ok(false)
     }
 });

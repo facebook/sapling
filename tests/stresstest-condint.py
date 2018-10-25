@@ -16,6 +16,15 @@ import threading
 import time
 
 
+def importrustthreading():
+    if not "TESTTMP" in os.environ:
+        # Make this directly runnable
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from mercurial.rust import threading as rustthreading
+
+    return rustthreading
+
+
 try:
     xrange
 except NameError:
@@ -36,7 +45,7 @@ def interrupt(thread, exc=ThreadInterrupt):
 stop = False
 
 
-def lockloop(cond):
+def lockloop(cond, workaround):
     try:
         while True:
             try:
@@ -53,7 +62,11 @@ def lockloop(cond):
                 #         #  without unlocking. Therefore no thread thinks
                 #         #  it owns the lock and they simply deadlock)
                 #         self.__block.release()
-                with cond:
+                if workaround:
+                    b = importrustthreading().bug29988wrapper(cond)
+                else:
+                    b = cond
+                with b, b, b, b:
                     # Some busy loops to make Python more easily to do context
                     # switches.
                     count = 0
@@ -90,7 +103,7 @@ def lockloop(cond):
         pass
 
 
-def mainloop(cond):
+def mainloop(cond, workaround):
     threads = []
     count = 1000
     maxthread = 10
@@ -100,7 +113,7 @@ def mainloop(cond):
             if stop:
                 break
             while len(threads) < maxthread:
-                t = threading.Thread(target=lockloop, args=(cond,))
+                t = threading.Thread(target=lockloop, args=(cond, workaround))
                 t.start()
                 threads.append(t)
             # Give new threads chance to take the lock
@@ -146,16 +159,17 @@ if __name__ == "__main__":
     if os.environ.get("COND") == "py":
         print("Using Python stdlib threading.Condition\n")
         cond = threading.Condition()
+        workaround = False
     else:
         print("Using Rust threading.Condition")
         print("Rerun with 'COND=py' to test Python native threading.Condition\n")
 
-        if not "TESTTMP" in os.environ:
-            # Make this directly runnable
-            sys.path.insert(
-                0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
-        from mercurial.rust import threading as rustthreading
+        cond = importrustthreading().Condition()
 
-        cond = rustthreading.Condition()
-    mainloop(cond)
+        workaround = os.environ.get("W") == "1"
+        if workaround:
+            print("Issue29988 workaround is in effect\n")
+        else:
+            print("Rerun with 'W=1' to apply the issue29988 workaround\n")
+
+    mainloop(cond, workaround)
