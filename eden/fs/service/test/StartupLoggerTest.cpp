@@ -162,6 +162,29 @@ void successWritesStartedMessageToStandardErrorDaemonChild() {
   exit(0);
 }
 
+TEST_F(
+    DaemonStartupLoggerTest,
+    programExitsUnsuccessfullyIfLogFileIsInaccessible) {
+  auto result = runFunctionInSeparateProcess(
+      "programExitsUnsuccessfullyIfLogFileIsInaccessibleChild");
+  EXPECT_THAT(
+      result.standardError,
+      ContainsRegex("error opening log file .*/file\\.txt"));
+  EXPECT_THAT(result.standardError, HasSubstr("Not a directory"));
+  EXPECT_EQ(
+      folly::to<std::string>("exited with status ", EX_IOERR),
+      result.returnCode.str());
+}
+
+void programExitsUnsuccessfullyIfLogFileIsInaccessibleChild() {
+  auto logFile = TemporaryFile{"eden_test_log"};
+  auto badLogFilePath = logFile.path() / "file.txt";
+  auto logger = DaemonStartupLogger{};
+  logger.daemonize(badLogFilePath.string());
+  logger.success();
+  exit(0);
+}
+
 TEST_F(DaemonStartupLoggerTest, exitWithNoResult) {
   // Fork a child that exits unsuccessfully
   auto result = runDaemonize([](DaemonStartupLogger&&) { _exit(19); });
@@ -389,6 +412,7 @@ FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
   CHECK_FUNCTION(daemonClosesStandardFileDescriptorsChild);
   CHECK_FUNCTION(exitUnsuccessfullyMakesProcessExitWithCodeChild);
   CHECK_FUNCTION(loggedMessagesAreWrittenToStandardErrorChild);
+  CHECK_FUNCTION(programExitsUnsuccessfullyIfLogFileIsInaccessibleChild);
   CHECK_FUNCTION(successWritesStartedMessageToStandardErrorDaemonChild);
   CHECK_FUNCTION(successWritesStartedMessageToStandardErrorForegroundChild);
   CHECK_FUNCTION(xlogsAfterSuccessAreWrittenToStandardErrorChild);
