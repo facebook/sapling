@@ -39,7 +39,7 @@ and ensure that the results are consistent.
     timeout = (float)
 
 A value, in seconds, that determines how long fsmonitor will wait for Watchman
-to return results. Defaults to `2.0`.
+to return results. Defaults to 10.0.
 
 ::
 
@@ -176,7 +176,7 @@ configitem = registrar.configitem(configtable)
 configitem("fsmonitor", "blacklistusers", default=list)
 configitem("fsmonitor", "detectrace", default=False)
 configitem("fsmonitor", "mode", default="on")
-configitem("fsmonitor", "timeout", default="2")
+configitem("fsmonitor", "timeout", default=10)
 configitem("fsmonitor", "track-ignore-files", default=True)
 configitem("fsmonitor", "walk_on_invalidate", default=False)
 
