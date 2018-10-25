@@ -142,7 +142,7 @@ Command aliases should have same behavior as main command
 
 Abbreviated command alias should also be paged
 
-  $ hg hist -l 1
+  $ hg history -l 1
   paged! 'changeset:   10:46106edeeb38\n'
   paged! 'tag:         tip\n'
   paged! 'user:        test\n'

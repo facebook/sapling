@@ -1829,7 +1829,7 @@ help/ shows help topics
         "topic": "graft"
       },
       {
-        "summary": "search revision history for a pattern in specified files",
+        "summary": "search for a pattern in tracked files in the working directory",
         "topic": "grep"
       },
       {
@@ -1843,6 +1843,10 @@ help/ shows help topics
       {
         "summary": "acknowledge hints",
         "topic": "hint"
+      },
+      {
+        "summary": "search revision history for a pattern in specified files",
+        "topic": "histgrep"
       },
       {
         "summary": "identify the working directory or specified revision",

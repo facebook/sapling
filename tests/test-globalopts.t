@@ -329,7 +329,7 @@ Testing -h/--help:
   Other commands:
   
    config        show combined config settings from all hgrc files
-   grep          search revision history for a pattern in specified files
+   grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
@@ -381,7 +381,7 @@ Testing -h/--help:
   Other commands:
   
    config        show combined config settings from all hgrc files
-   grep          search revision history for a pattern in specified files
+   grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   

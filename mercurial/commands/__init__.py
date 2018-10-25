@@ -11,6 +11,9 @@ import difflib
 import errno
 import os
 import re
+import shlex
+import stat
+import subprocess
 import sys
 
 from .. import (
@@ -2760,6 +2763,467 @@ def _dograft(ui, repo, *revs, **opts):
 @command(
     "grep",
     [
+        ("A", "after-context", "", "print NUM lines of trailing context", "NUM"),
+        ("B", "before-context", "", "print NUM lines of leading context", "NUM"),
+        ("C", "context", "", "print NUM lines of output context", "NUM"),
+        ("i", "ignore-case", None, "ignore case when matching"),
+        ("l", "files-with-matches", None, "print only filenames that match"),
+        ("n", "line-number", None, "print matching line numbers"),
+        ("V", "invert-match", None, "select non-matching lines"),
+        ("w", "word-regexp", None, "match whole words only"),
+        ("E", "extended-regexp", None, "use POSIX extended regexps"),
+        ("F", "fixed-strings", None, "interpret pattern as fixed string"),
+        ("P", "perl-regexp", None, "use Perl-compatible regexps"),
+        (
+            "I",
+            "include",
+            [],
+            _("include names matching the given patterns"),
+            _("PATTERN"),
+        ),
+        (
+            "X",
+            "exclude",
+            [],
+            _("exclude names matching the given patterns"),
+            _("PATTERN"),
+        ),
+    ],
+    "[OPTION]... PATTERN [FILE]...",
+    inferrepo=True,
+)
+def grep(ui, repo, pattern, *pats, **opts):
+    """search for a pattern in tracked files in the working directory
+
+    The default regexp style is POSIX basic regexps. If no FILE parameters are
+    passed in, the current directory and its subdirectories will be searched.
+
+    For the old 'hg grep', which searches through history, see 'histgrep'."""
+    # XXX: The current implementation heavily depends on external programs like
+    # grep, xargs and biggrep.  Command-line flag support is a bit messy.  It
+    # does not look like a source control command (ex. no --rev support).
+    # Ideally, `grep` is just `histgrep -r 'wdir()'` and they can be merged.
+    # Possible future work are:
+    # - For "searching many files in a single revision" use-case, utilize
+    #   ripgrep's logic. That "single revision" includes "wdir()". Get rid
+    #   of shelling out to grep or xargs.
+    # - For "searching few files in a range of revisions" use-case, maybe
+    #   try using fastannoate logic.
+    # - Find a cleaner way to integrate with FB-only biggrep and fallback
+    #   gracefully.
+    grepcommandstr = ui.config("grep", "command")
+    # Use shlex.split() to split up grepcommandstr into multiple arguments.
+    # this allows users to specify a command plus arguments (e.g., "grep -i").
+    # We don't use a real shell to execute this, which ensures we won't do
+    # bad stuff if their command includes redirects, semicolons, or other
+    # special characters etc.
+    cmd = (
+        ["xargs", "-0"]
+        + shlex.split(grepcommandstr)
+        + [
+            "--no-messages",
+            "--binary-files=without-match",
+            "--with-filename",
+            "--regexp=" + pattern,
+        ]
+    )
+
+    # If true, we'll use the `bgr` tool to perform the grep against some
+    # externally maintained index.  We don't provide an implementation
+    # of that tool with this repo, just the optional client interface.
+    biggrep = ui.configbool("grep", "usebiggrep", None)
+    if biggrep is None:
+        if (
+            "eden" in repo.requirements
+            and ui.config("grep", "biggrepcorpus")
+            and os.path.exists("/usr/local/bin/bgr")
+        ):
+            biggrep = True
+
+    # Ask big grep to strip out the corpus dir (stripdir) and to include
+    # the corpus revision on the first line.
+    biggrepcmd = ["bgr", "--stripdir", "-r", "--expression", pattern]
+
+    args = []
+
+    if opts.get("after_context"):
+        args.append("-A")
+        args.append(opts.get("after_context"))
+    if opts.get("before_context"):
+        args.append("-B")
+        args.append(opts.get("before_context"))
+    if opts.get("context"):
+        args.append("-C")
+        args.append(opts.get("context"))
+    if opts.get("ignore_case"):
+        args.append("-i")
+    if opts.get("files_with_matches"):
+        args.append("-l")
+    if opts.get("line_number"):
+        cmd.append("-n")
+    if opts.get("invert_match"):
+        if biggrep:
+            raise error.Abort("Cannot use invert_match option with big grep")
+        cmd.append("-v")
+    if opts.get("word_regexp"):
+        cmd.append("-w")
+        biggrepcmd[4] = "\\b%s\\b" % pattern
+    if opts.get("extended_regexp"):
+        cmd.append("-E")
+        # re2 is already mostly compatible by default, so there are no options
+        # to apply for this.
+    if opts.get("fixed_strings"):
+        cmd.append("-F")
+        # using bgs rather than bgr switches the engine to fixed string matches
+        biggrepcmd[0] = "bgs"
+    if opts.get("perl_regexp"):
+        cmd.append("-P")
+        # re2 is already mostly pcre compatible, so there are no options
+        # to apply for this.
+
+    biggrepcmd += args
+    cmd += args
+
+    # color support, using the color extension
+    colormode = getattr(ui, "_colormode", "")
+    if colormode == "ansi":
+        cmd.append("--color=always")
+        biggrepcmd.append("--color=on")
+
+    # Copy match specific options
+    match_opts = {}
+    for k in ("include", "exclude"):
+        if k in opts:
+            match_opts[k] = opts.get(k)
+
+    wctx = repo[None]
+    if not pats:
+        # Search everything in the current directory
+        m = scmutil.match(wctx, ["."], match_opts)
+    else:
+        # Search using the specified patterns
+        m = scmutil.match(wctx, pats, match_opts)
+
+    # Add '--' to make sure grep recognizes all remaining arguments
+    # (passed in by xargs) as filenames.
+    cmd.append("--")
+    ui.pager("grep")
+
+    if biggrep:
+        reporoot = os.path.dirname(repo.path)
+        p = subprocess.Popen(
+            biggrepcmd,
+            bufsize=-1,
+            close_fds=util.closefds,
+            stdout=subprocess.PIPE,
+            cwd=reporoot,
+        )
+        out, err = p.communicate()
+        lines = out.rstrip().split("\n")
+        # the first line has the revision for the corpus; parse it out
+        # the format is "#HASH:timestamp"
+        corpusrev, timestamp = lines[0][1:].split(":", 1)
+        lines = lines[1:]
+
+        resultsbyfile = {}
+        includelineno = opts.get("line_number")
+        fileswithmatches = opts.get("files_with_matches")
+
+        for line in lines:
+            try:
+                filename, lineno, colno, context = line.split(":", 3)
+            except Exception:
+                binaryfile = re.match("Binary file (.*) matches", line)
+                if binaryfile:
+                    filename = binaryfile.group(1)
+                    lineno = 0
+                    colno = 0
+                    context = None
+                elif fileswithmatches:
+                    filename = line
+                else:
+                    # If we couldn't parse the line, just pass it thru
+                    ui.write(line)
+                    ui.write("\n")
+                    continue
+
+            unescapedfilename = util.stripansiescapes(filename)
+
+            # filter to just the files that match the list supplied
+            # by the caller
+            if m(unescapedfilename):
+                # relativize the path to the CWD.  Note that `filename` will
+                # often have escape sequences, so we do a substring replacement
+                filename = filename.replace(unescapedfilename, m.rel(unescapedfilename))
+
+                if unescapedfilename not in resultsbyfile:
+                    resultsbyfile[unescapedfilename] = []
+
+                # re-assemble the output
+                if fileswithmatches:
+                    resultsbyfile[unescapedfilename].append("%s\n" % filename)
+                elif lineno == 0 and colno == 0 and context is None:
+                    # Take care with binary file matches!
+                    resultsbyfile[unescapedfilename].append(
+                        "Binary file %s matches\n" % filename
+                    )
+                elif includelineno:
+                    resultsbyfile[unescapedfilename].append(
+                        "%s:%s:%s\n" % (filename, lineno, context)
+                    )
+                else:
+                    resultsbyfile[unescapedfilename].append(
+                        "%s:%s\n" % (filename, context)
+                    )
+
+        # Now check to see what has changed since the corpusrev
+        # we're going to need to grep those and stitch the results together
+        try:
+            needbin = True
+            svnmeta = getattr(repo, "svnmeta", None)
+            if svnmeta:
+                meta = svnmeta(skiperrorcheck=True)
+                if meta.revmapexists:
+                    corpusbin = meta.revmap.get((int(corpusrev), None))
+                    # If None is returned, we don't have information about
+                    # that revision locally, so trigger the pull instructions.
+                    if corpusbin is None:
+                        raise error.RepoLookupError
+                    needbin = False
+
+            if needbin:
+                corpusbin = bin(corpusrev)
+
+            changes = repo.status(corpusbin, None, m)
+        except error.RepoLookupError:
+            # TODO: can we trigger a commit cloud fetch for this case?
+
+            # print the results we've gathered so far.  We're not sure
+            # how things differ, so we'll follow up with a warning.
+            for lines in resultsbyfile.values():
+                for line in lines:
+                    ui.write(line)
+
+            ui.warn(
+                _(
+                    "The results above are based on revision %s\n"
+                    "which is not available locally and thus may be inaccurate.\n"
+                    "To get accurate results, run `hg pull` and re-run "
+                    "your grep.\n"
+                )
+                % corpusrev
+            )
+            return
+
+        # which files we're going to search locally
+        filestogrep = set()
+
+        # files that have been changed or added need to be searched again
+        for f in changes.modified:
+            resultsbyfile.pop(f, None)
+            filestogrep.add(f)
+        for f in changes.added:
+            resultsbyfile.pop(f, None)
+            filestogrep.add(f)
+
+        # files that have been removed since the corpus rev cannot match
+        for f in changes.removed:
+            resultsbyfile.pop(f, None)
+        for f in changes.deleted:
+            resultsbyfile.pop(f, None)
+
+        # Having filtered out the changed files from the big grep results,
+        # we can now print those that remain.
+        for lines in resultsbyfile.values():
+            for line in lines:
+                ui.write(line)
+
+        # pass on any changed files to the local grep
+        if len(filestogrep) > 0:
+            # Ensure that the biggrep results are flushed before we
+            # start to intermingle with the local grep process output
+            ui.flush()
+            return _rungrep(cmd, filestogrep, m)
+
+        return 0
+
+    ds = repo.dirstate
+    getkind = stat.S_IFMT
+    lnkkind = stat.S_IFLNK
+    results = ds.walk(m, subrepos=[], unknown=False, ignored=False)
+
+    files = []
+    for f in sorted(results.keys()):
+        st = results[f]
+        # skip symlinks and removed files
+        if st is None or getkind(st.st_mode) == lnkkind:
+            continue
+        files.append(f)
+
+    return _rungrep(cmd, files, m)
+
+
+def _rungrep(cmd, files, match):
+    p = subprocess.Popen(
+        cmd, bufsize=-1, close_fds=util.closefds, stdin=subprocess.PIPE
+    )
+    write = p.stdin.write
+    for f in files:
+        write(match.rel(f) + "\0")
+
+    p.stdin.close()
+    return p.wait()
+
+
+@command(
+    "heads",
+    [
+        (
+            "r",
+            "rev",
+            "",
+            _("show only heads which are descendants of STARTREV"),
+            _("STARTREV"),
+        ),
+        ("t", "topo", False, _("show topological heads only")),
+        ("a", "active", False, _("show active branchheads only (DEPRECATED)")),
+        ("c", "closed", False, _("show normal and closed branch heads")),
+    ]
+    + templateopts,
+    _("[-ct] [-r STARTREV] [REV]..."),
+    cmdtype=readonly,
+)
+def heads(ui, repo, *branchrevs, **opts):
+    """show branch heads
+
+    With no arguments, show all open branch heads in the repository.
+    Branch heads are changesets that have no descendants on the
+    same branch. They are where development generally takes place and
+    are the usual targets for update and merge operations.
+
+    If one or more REVs are given, only open branch heads on the
+    branches associated with the specified changesets are shown. This
+    means that you can use :hg:`heads .` to see the heads on the
+    currently checked-out branch.
+
+    If -c/--closed is specified, also show branch heads marked closed
+    (see :hg:`commit --close-branch`).
+
+    If STARTREV is specified, only those heads that are descendants of
+    STARTREV will be displayed.
+
+    If -t/--topo is specified, named branch mechanics will be ignored and only
+    topological heads (changesets with no children) will be shown.
+
+    Returns 0 if matching heads are found, 1 if not.
+    """
+
+    opts = pycompat.byteskwargs(opts)
+    start = None
+    if "rev" in opts:
+        start = scmutil.revsingle(repo, opts["rev"], None).node()
+
+    if opts.get("topo"):
+        heads = [repo[h] for h in repo.heads(start)]
+    else:
+        heads = []
+        for branch in repo.branchmap():
+            heads += repo.branchheads(branch, start, opts.get("closed"))
+        heads = [repo[h] for h in heads]
+
+    if branchrevs:
+        branches = set(repo[br].branch() for br in branchrevs)
+        heads = [h for h in heads if h.branch() in branches]
+
+    if opts.get("active") and branchrevs:
+        dagheads = repo.heads(start)
+        heads = [h for h in heads if h.node() in dagheads]
+
+    if branchrevs:
+        haveheads = set(h.branch() for h in heads)
+        if branches - haveheads:
+            headless = ", ".join(b for b in branches - haveheads)
+            msg = _("no open branch heads found on branches %s")
+            if opts.get("rev"):
+                msg += _(" (started at %s)") % opts["rev"]
+            ui.warn((msg + "\n") % headless)
+
+    if not heads:
+        return 1
+
+    ui.pager("heads")
+    heads = sorted(heads, key=lambda x: -x.rev())
+    displayer = cmdutil.show_changeset(ui, repo, opts)
+    for ctx in heads:
+        displayer.show(ctx)
+    displayer.close()
+
+
+@command(
+    "help",
+    [
+        ("e", "extension", None, _("show help for extensions")),
+        ("c", "command", None, _("show help for commands")),
+        ("k", "keyword", None, _("show topics matching keyword")),
+        ("s", "system", [], _("show help for specific platform(s)")),
+    ],
+    _("[-ecks] [TOPIC]"),
+    norepo=True,
+    cmdtype=readonly,
+)
+def help_(ui, *names, **opts):
+    """show help for a given topic or a help overview
+
+    With no arguments, print a list of commands with short help messages.
+
+    Given a topic, extension, or command name, print help for that
+    topic.
+
+    Returns 0 if successful.
+    """
+
+    name = " ".join(names) if names and names != (None,) else None
+    keep = opts.get(r"system") or []
+    if len(keep) == 0:
+        if pycompat.sysplatform.startswith("win"):
+            keep.append("windows")
+        elif pycompat.sysplatform == "OpenVMS":
+            keep.append("vms")
+        elif pycompat.sysplatform == "plan9":
+            keep.append("plan9")
+        else:
+            keep.append("unix")
+            keep.append(pycompat.sysplatform.lower())
+    if ui.verbose:
+        keep.append("verbose")
+
+    commands = sys.modules[__name__]
+    formatted = help.formattedhelp(ui, commands, name, keep=keep, **opts)
+    ui.pager("help")
+    ui.write(formatted)
+
+
+@command(
+    "hint",
+    [("", "ack", False, _("acknowledge and silence hints"))],
+    _("[--ack] NAME ..."),
+    norepo=True,
+)
+def hint(ui, *names, **opts):
+    """acknowledge hints
+
+    ``hg hint --ack NAME`` modifies hgrc to silence hints starting with
+    ``hint[NAME]``.
+    """
+    if opts.get("ack") and names:
+        hintutil.silence(ui, names)
+        if not ui.quiet:
+            ui.write(_("hints about %s are silenced\n") % _(", ").join(names))
+
+
+@command(
+    "histgrep",
+    [
         ("0", "print0", None, _("end fields with NUL")),
         ("", "all", None, _("print all revisions that match")),
         ("a", "text", None, _("treat all files as text")),
@@ -2793,7 +3257,7 @@ def _dograft(ui, repo, *revs, **opts):
     inferrepo=True,
     cmdtype=readonly,
 )
-def grep(ui, repo, pattern, *pats, **opts):
+def histgrep(ui, repo, pattern, *pats, **opts):
     """search revision history for a pattern in specified files
 
     Search revision history for a regular expression in the specified
@@ -2812,8 +3276,18 @@ def grep(ui, repo, pattern, *pats, **opts):
     the repository are searched, including those that don't exist in the
     current branch or have been deleted in a prior changeset.
 
+    .. container:: verbose
+
+      ``histgrep.allowfullrepogrep`` controls whether the entire repo can be
+      queried without any patterns, which can be expensive in big repositories.
+
     Returns 0 if a match is found, 1 otherwise.
     """
+    if not pats and not ui.configbool("histgrep", "allowfullrepogrep"):
+        m = _("can't run histgrep on the whole repo, please provide filenames")
+        h = _("this is disabled to avoid very slow greps over the whole repo")
+        raise error.Abort(m, hint=h)
+
     opts = pycompat.byteskwargs(opts)
     reflags = re.M
     if opts.get("ignore_case"):
@@ -3031,152 +3505,6 @@ def grep(ui, repo, pattern, *pats, **opts):
     fm.end()
 
     return not found
-
-
-@command(
-    "heads",
-    [
-        (
-            "r",
-            "rev",
-            "",
-            _("show only heads which are descendants of STARTREV"),
-            _("STARTREV"),
-        ),
-        ("t", "topo", False, _("show topological heads only")),
-        ("a", "active", False, _("show active branchheads only (DEPRECATED)")),
-        ("c", "closed", False, _("show normal and closed branch heads")),
-    ]
-    + templateopts,
-    _("[-ct] [-r STARTREV] [REV]..."),
-    cmdtype=readonly,
-)
-def heads(ui, repo, *branchrevs, **opts):
-    """show branch heads
-
-    With no arguments, show all open branch heads in the repository.
-    Branch heads are changesets that have no descendants on the
-    same branch. They are where development generally takes place and
-    are the usual targets for update and merge operations.
-
-    If one or more REVs are given, only open branch heads on the
-    branches associated with the specified changesets are shown. This
-    means that you can use :hg:`heads .` to see the heads on the
-    currently checked-out branch.
-
-    If -c/--closed is specified, also show branch heads marked closed
-    (see :hg:`commit --close-branch`).
-
-    If STARTREV is specified, only those heads that are descendants of
-    STARTREV will be displayed.
-
-    If -t/--topo is specified, named branch mechanics will be ignored and only
-    topological heads (changesets with no children) will be shown.
-
-    Returns 0 if matching heads are found, 1 if not.
-    """
-
-    opts = pycompat.byteskwargs(opts)
-    start = None
-    if "rev" in opts:
-        start = scmutil.revsingle(repo, opts["rev"], None).node()
-
-    if opts.get("topo"):
-        heads = [repo[h] for h in repo.heads(start)]
-    else:
-        heads = []
-        for branch in repo.branchmap():
-            heads += repo.branchheads(branch, start, opts.get("closed"))
-        heads = [repo[h] for h in heads]
-
-    if branchrevs:
-        branches = set(repo[br].branch() for br in branchrevs)
-        heads = [h for h in heads if h.branch() in branches]
-
-    if opts.get("active") and branchrevs:
-        dagheads = repo.heads(start)
-        heads = [h for h in heads if h.node() in dagheads]
-
-    if branchrevs:
-        haveheads = set(h.branch() for h in heads)
-        if branches - haveheads:
-            headless = ", ".join(b for b in branches - haveheads)
-            msg = _("no open branch heads found on branches %s")
-            if opts.get("rev"):
-                msg += _(" (started at %s)") % opts["rev"]
-            ui.warn((msg + "\n") % headless)
-
-    if not heads:
-        return 1
-
-    ui.pager("heads")
-    heads = sorted(heads, key=lambda x: -x.rev())
-    displayer = cmdutil.show_changeset(ui, repo, opts)
-    for ctx in heads:
-        displayer.show(ctx)
-    displayer.close()
-
-
-@command(
-    "help",
-    [
-        ("e", "extension", None, _("show help for extensions")),
-        ("c", "command", None, _("show help for commands")),
-        ("k", "keyword", None, _("show topics matching keyword")),
-        ("s", "system", [], _("show help for specific platform(s)")),
-    ],
-    _("[-ecks] [TOPIC]"),
-    norepo=True,
-    cmdtype=readonly,
-)
-def help_(ui, *names, **opts):
-    """show help for a given topic or a help overview
-
-    With no arguments, print a list of commands with short help messages.
-
-    Given a topic, extension, or command name, print help for that
-    topic.
-
-    Returns 0 if successful.
-    """
-
-    name = " ".join(names) if names and names != (None,) else None
-    keep = opts.get(r"system") or []
-    if len(keep) == 0:
-        if pycompat.sysplatform.startswith("win"):
-            keep.append("windows")
-        elif pycompat.sysplatform == "OpenVMS":
-            keep.append("vms")
-        elif pycompat.sysplatform == "plan9":
-            keep.append("plan9")
-        else:
-            keep.append("unix")
-            keep.append(pycompat.sysplatform.lower())
-    if ui.verbose:
-        keep.append("verbose")
-
-    commands = sys.modules[__name__]
-    formatted = help.formattedhelp(ui, commands, name, keep=keep, **opts)
-    ui.pager("help")
-    ui.write(formatted)
-
-
-@command(
-    "hint",
-    [("", "ack", False, _("acknowledge and silence hints"))],
-    _("[--ack] NAME ..."),
-    norepo=True,
-)
-def hint(ui, *names, **opts):
-    """acknowledge hints
-
-    ``hg hint --ack NAME`` modifies hgrc to silence hints starting with
-    ``hint[NAME]``.
-    """
-    if opts.get("ack") and names:
-        hintutil.silence(ui, names)
-        if not ui.quiet:
-            ui.write(_("hints about %s are silenced\n") % _(", ").join(names))
 
 
 @command(

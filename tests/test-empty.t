@@ -6,7 +6,7 @@ Create an empty repo:
 Try some commands:
 
   $ hg log
-  $ hg grep wah
+  $ hg histgrep wah
   [1]
   $ hg manifest
   $ hg verify

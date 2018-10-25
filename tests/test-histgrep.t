@@ -17,24 +17,24 @@
 
 pattern error
 
-  $ hg grep '**test**'
+  $ hg histgrep '**test**'
   grep: invalid match pattern: nothing to repeat
   [1]
 
 simple
 
-  $ hg grep '.*'
+  $ hg histgrep '.*'
   port:4:export
   port:4:vaportight
   port:4:import/export
-  $ hg grep port port
+  $ hg histgrep port port
   port:4:export
   port:4:vaportight
   port:4:import/export
 
 simple with color
 
-  $ hg --config extensions.color= grep --config color.mode=ansi \
+  $ hg --config extensions.color= histgrep --config color.mode=ansi \
   >     --color=always port port
   \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mex\x1b[0;31;1mport\x1b[0m (esc)
   \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mva\x1b[0;31;1mport\x1b[0might (esc)
@@ -42,7 +42,7 @@ simple with color
 
 simple templated
 
-  $ hg grep port \
+  $ hg histgrep port \
   > -T '{file}:{rev}:{node|short}:{texts % "{if(matched, text|upper, text)}"}\n'
   port:4:914fa752cdea:exPORT
   port:4:914fa752cdea:vaPORTight
@@ -50,7 +50,7 @@ simple templated
 
 simple JSON (no "change" field)
 
-  $ hg grep -Tjson port
+  $ hg histgrep -Tjson port
   [
    {
     "date": [4.0, 0],
@@ -83,7 +83,7 @@ simple JSON (no "change" field)
 
 simple JSON without matching lines
 
-  $ hg grep -Tjson -l port
+  $ hg histgrep -Tjson -l port
   [
    {
     "date": [4.0, 0],
@@ -97,7 +97,7 @@ simple JSON without matching lines
 
 all
 
-  $ hg grep --traceback --all -nu port port
+  $ hg histgrep --traceback --all -nu port port
   port:4:4:-:spam:import/export
   port:3:4:+:eggs:import/export
   port:2:1:-:spam:import
@@ -110,7 +110,7 @@ all
 
 all JSON
 
-  $ hg grep --all -Tjson port port
+  $ hg histgrep --all -Tjson port port
   [
    {
     "change": "-",
@@ -206,9 +206,9 @@ all JSON
 
 other
 
-  $ hg grep -l port port
+  $ hg histgrep -l port port
   port:4
-  $ hg grep import port
+  $ hg histgrep import port
   port:4:import/export
 
   $ hg cp port port2
@@ -216,12 +216,12 @@ other
 
 follow
 
-  $ hg grep --traceback -f 'import\n\Z' port2
+  $ hg histgrep --traceback -f 'import\n\Z' port2
   port:0:import
   
   $ echo deport >> port2
   $ hg commit -m 5 -u eggs -d '6 0'
-  $ hg grep -f --all -nu port port2
+  $ hg histgrep -f --all -nu port port2
   port2:6:4:+:eggs:deport
   port:4:4:-:spam:import/export
   port:3:4:+:eggs:import/export
@@ -234,15 +234,15 @@ follow
   port:0:1:+:spam:import
 
   $ hg up -q null
-  $ hg grep -f port
+  $ hg histgrep -f port
   [1]
 
   $ cd ..
   $ hg init t2
   $ cd t2
-  $ hg grep foobar foo
+  $ hg histgrep foobar foo
   [1]
-  $ hg grep foobar
+  $ hg histgrep foobar
   [1]
   $ echo blue >> color
   $ echo black >> color
@@ -255,16 +255,16 @@ follow
   $ echo orange >> color
   $ echo blue >> color
   $ hg ci -m 3
-  $ hg grep orange
+  $ hg histgrep orange
   color:3:orange
-  $ hg grep --all orange
+  $ hg histgrep --all orange
   color:3:+:orange
   color:2:-:orange
   color:1:+:orange
 
 test substring match: '^' should only match at the beginning
 
-  $ hg grep '^.' --config extensions.color= --color debug
+  $ hg histgrep '^.' --config extensions.color= --color debug
   [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|b]lack
   [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|o]range
   [grep.filename|color][grep.sep|:][grep.rev|3][grep.sep|:][grep.match|b]lue
@@ -274,7 +274,7 @@ match in last "line" without newline
   $ $PYTHON -c 'fp = open("noeol", "wb"); fp.write("no infinite loop"); fp.close();'
   $ hg ci -Amnoeol
   adding noeol
-  $ hg grep loop
+  $ hg histgrep loop
   noeol:4:no infinite loop
 
   $ cd ..
@@ -291,13 +291,13 @@ revision with renamed files.
   adding color
   $ hg rename color colour
   $ hg ci -Am rename
-  $ hg grep octarine
+  $ hg histgrep octarine
   colour:1:octarine
   color:0:octarine
 
 Used to crash here
 
-  $ hg grep -r 1 octarine
+  $ hg histgrep -r 1 octarine
   colour:1:octarine
   $ cd ..
 
@@ -325,7 +325,7 @@ of just using revision numbers.
   $ echo blue > color
   $ hg commit -A -m "3 blue"
 
-  $ hg grep --all red
+  $ hg histgrep --all red
   color:3:-:red
   color:1:+:red
 
@@ -336,7 +336,7 @@ of just using revision numbers.
   $ cp "$TESTDIR/binfile.bin" .
   $ hg add binfile.bin
   $ hg ci -m 'add binfile.bin'
-  $ hg grep "MaCam" --all
+  $ hg histgrep "MaCam" --all
   binfile.bin:0:+: Binary file matches
 
   $ cd ..

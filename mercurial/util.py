@@ -4170,3 +4170,31 @@ def expanduserpath(path):
         return path
     username = getuser()
     return path.replace("%i", username).replace("${USER}", username)
+
+
+ansiregex = re.compile(
+    (
+        r"\x1b("
+        r"(\[\??\d+[hl])|"
+        r"([=<>a-kzNM78])|"
+        r"([\(\)][a-b0-2])|"
+        r"(\[\d{0,2}[ma-dgkjqi])|"
+        r"(\[\d+;\d+[hfy]?)|"
+        r"(\[;?[hf])|"
+        r"(#[3-68])|"
+        r"([01356]n)|"
+        r"(O[mlnp-z]?)|"
+        r"(/Z)|"
+        r"(\d+)|"
+        r"(\[\?\d;\d0c)|"
+        r"(\d;\dR))"
+    ),
+    flags=remod.IGNORECASE,
+)
+
+
+def stripansiescapes(s):
+    """Removes ANSI escape sequences from a string.
+    Borrowed from https://stackoverflow.com/a/45448194/149111
+    """
+    return ansiregex.sub("", s)

@@ -42,7 +42,7 @@ Short help:
   Other commands:
   
    config        show combined config settings from all hgrc files
-   grep          search revision history for a pattern in specified files
+   grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
@@ -92,7 +92,7 @@ Short help:
   Other commands:
   
    config        show combined config settings from all hgrc files
-   grep          search revision history for a pattern in specified files
+   grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
@@ -142,7 +142,7 @@ Short help:
   Other commands:
   
    config        show combined config settings from all hgrc files
-   grep          search revision history for a pattern in specified files
+   grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
@@ -192,7 +192,7 @@ Short help:
   Other commands:
   
    config        show combined config settings from all hgrc files
-   grep          search revision history for a pattern in specified files
+   grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
@@ -363,6 +363,7 @@ Test extension help:
        undo          (no help text available)
        whereami      (no help text available)
        win32mbcs     allow the use of MBCS paths with problematic encodings
+
 
 
 Verify that extension keywords appear in help templates
@@ -721,7 +722,7 @@ Test command without options
   Other commands:
   
    config        show combined config settings from all hgrc files
-   grep          search revision history for a pattern in specified files
+   grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
@@ -916,7 +917,7 @@ Test that default list of commands omits extension commands
   Other commands:
   
    config        show combined config settings from all hgrc files
-   grep          search revision history for a pattern in specified files
+   grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
@@ -2417,7 +2418,7 @@ Dish up an empty repo; serve it cold.
   grep
   </a>
   </td><td>
-  search revision history for a pattern in specified files
+  search for a pattern in tracked files in the working directory
   </td></tr>
   <tr><td>
   <a href="/help/heads">
@@ -2446,6 +2447,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   acknowledge hints
+  </td></tr>
+  <tr><td>
+  <a href="/help/histgrep">
+  histgrep
+  </a>
+  </td><td>
+  search revision history for a pattern in specified files
   </td></tr>
   <tr><td>
   <a href="/help/identify">
