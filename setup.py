@@ -1731,6 +1731,11 @@ rustextmodules = [
         manifest="hgext/extlib/pyrevisionstore/Cargo.toml",
     ),
     RustExtension(
+        "threading",
+        package="mercurial.rust",
+        manifest="mercurial/rust/threading/Cargo.toml",
+    ),
+    RustExtension(
         "treestate",
         package="mercurial.rust",
         manifest="mercurial/rust/treestate/Cargo.toml",
