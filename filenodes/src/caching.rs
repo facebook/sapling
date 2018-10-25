@@ -20,6 +20,7 @@ use rust_thrift::compact_protocol;
 use stats::{Histogram, Timeseries};
 use tokio;
 
+use super::thrift::{MC_CODEVER, MC_SITEVER};
 use {thrift, FilenodeInfo, Filenodes, blake2_path_hash};
 
 define_stats! {
@@ -28,6 +29,11 @@ define_stats! {
         "get_all_filenodes.thrift_compact.bytes";
         500, 0, 1_000_000, AVG, SUM, COUNT; P 50; P 95; P 99
     ),
+    point_filenode_hit: timeseries("point_filenode.memcache.hit"; RATE, SUM),
+    point_filenode_miss: timeseries("point_filenode.memcache.miss"; RATE, SUM),
+    point_filenode_internal_err: timeseries("point_filenode.memcache.internal_err"; RATE, SUM),
+    point_filenode_deserialize_err: timeseries("point_filenode.memcache.deserialize_err"; RATE, SUM),
+    point_filenode_pointers_err: timeseries("point_filenode.memcache.pointers_err"; RATE, SUM),
     gaf_hit: timeseries("get_all_filenodes.memcache.hit"; RATE, SUM),
     gaf_miss: timeseries("get_all_filenodes.memcache.miss"; RATE, SUM),
     gaf_pointers: timeseries("get_all_filenodes.memcache.pointers"; RATE, SUM),
@@ -39,8 +45,6 @@ define_stats! {
 // Memcache max size for key + value + overhead is around 1MB, so we are leaving 1KB for key +
 // overhead
 const MEMCACHE_VALUE_MAX_SIZE: usize = 999_000;
-const MC_CODEVER: u32 = 0;
-const MC_SITEVER: u32 = 0;
 const TTL_SEC: u64 = 8 * 60 * 60;
 // Adding a random to TTL helps preventing eviction of all related keys at once
 const TTL_SEC_RAND: u64 = 30 * 60; // 30min
@@ -73,7 +77,7 @@ impl CachingFilenodes {
             filenodes,
             cache_pool,
             memcache: MemcacheClient::new(),
-            keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
+            keygen: KeyGen::new(key_prefix, MC_CODEVER as u32, MC_SITEVER as u32),
         }
     }
 }
@@ -90,12 +94,48 @@ impl Filenodes for CachingFilenodes {
     fn get_filenode(
         &self,
         path: &RepoPath,
-        filenode: &HgFileNodeId,
+        filenode_id: &HgFileNodeId,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Option<FilenodeInfo>, Error> {
-        let cache_key = format!("{}.{}.{}", repo_id.prefix(), filenode, path).to_string();
+        let cache_key = format!("{}.{}.{}", repo_id.prefix(), filenode_id, path).to_string();
+        cloned!(self.filenodes, self.memcache, self.keygen);
+
+        let path_hash = PathHash({
+            let path = match path.mpath() {
+                Some(path) => path.to_vec(),
+                None => Vec::new(),
+            };
+            blake2_path_hash(&path).to_string()
+        });
         get_cached_or_fill(&self.cache_pool, cache_key, || {
-            self.filenodes.get_filenode(path, filenode, repo_id)
+            get_single_filenode_from_memcache(
+                self.memcache.clone(),
+                self.keygen.clone(),
+                repo_id,
+                filenode_id,
+                &path_hash,
+            ).then({
+                cloned!(filenode_id, path, repo_id);
+                move |res| match res {
+                    Ok(filenode) => future::ok(Some(filenode)).left_future(),
+                    Err(()) => filenodes
+                        .get_filenode(&path, &filenode_id, &repo_id)
+                        .inspect(move |maybefilenode| {
+                            if let Some(filenode) = maybefilenode {
+                                schedule_fill_single_filenode_memcache(
+                                    filenode.clone(),
+                                    memcache,
+                                    keygen,
+                                    repo_id,
+                                    filenode_id,
+                                    path_hash,
+                                )
+                            }
+                        })
+                        .right_future(),
+                }
+            })
+                .boxify()
         })
     }
 
@@ -141,7 +181,28 @@ impl Filenodes for CachingFilenodes {
     }
 }
 
-fn get_mc_key_for_filenodes(
+// Local error type to help with proper logging metrics
+enum ErrorKind {
+    // error came from calling memcache API
+    MemcacheInternal,
+    // value returned from memcache was None
+    Missing,
+    // deserialization of memcache data to Rust structures via thrift failed
+    Deserialization,
+    // any problem in pointers logic - deserialization or missing data
+    Pointers,
+}
+
+fn get_mc_key_for_single_filenode(
+    keygen: &KeyGen,
+    repo_id: &RepositoryId,
+    filenode: &HgFileNodeId,
+    path_hash: &PathHash,
+) -> String {
+    keygen.key(format!("{}.{}.{}", repo_id.id(), filenode, path_hash.0))
+}
+
+fn get_mc_key_for_filenodes_list(
     keygen: &KeyGen,
     repo_id: &RepositoryId,
     path_hash: &PathHash,
@@ -149,7 +210,7 @@ fn get_mc_key_for_filenodes(
     keygen.key(format!("{}.{}", repo_id.id(), path_hash.0))
 }
 
-fn get_mc_key_for_filenodes_pointer(
+fn get_mc_key_for_filenodes_list_pointer(
     keygen: &KeyGen,
     repo_id: &RepositoryId,
     path_hash: &PathHash,
@@ -158,24 +219,56 @@ fn get_mc_key_for_filenodes_pointer(
     keygen.key(format!("{}.{}.{}", repo_id.id(), path_hash.0, pointer))
 }
 
+fn get_single_filenode_from_memcache(
+    memcache: MemcacheClient,
+    keygen: KeyGen,
+    repo_id: &RepositoryId,
+    filenode: &HgFileNodeId,
+    path_hash: &PathHash,
+) -> impl Future<Item = FilenodeInfo, Error = ()> {
+    memcache
+        .get(get_mc_key_for_single_filenode(
+            &keygen,
+            repo_id,
+            filenode,
+            path_hash,
+        ))
+        .map_err(|()| ErrorKind::MemcacheInternal)
+        .and_then(|maybe_serialized| maybe_serialized.ok_or(ErrorKind::Missing))
+        .and_then(|serialized| {
+            let thrift_entry: ::std::result::Result<thrift::FilenodeInfo, ErrorKind> =
+                compact_protocol::deserialize(Vec::from(serialized))
+                    .map_err(|_| ErrorKind::Deserialization);
+
+            let thrift_entry = thrift_entry.and_then(|entry| {
+                FilenodeInfo::from_thrift(entry).map_err(|_| ErrorKind::Deserialization)
+            });
+            thrift_entry
+        })
+        .then(move |res| {
+            match res {
+                Ok(res) => {
+                    STATS::point_filenode_hit.add_value(1);
+                    return Ok(res);
+                }
+                Err(ErrorKind::MemcacheInternal) => STATS::point_filenode_internal_err.add_value(1),
+                Err(ErrorKind::Missing) => STATS::point_filenode_miss.add_value(1),
+                Err(ErrorKind::Deserialization) => {
+                    STATS::point_filenode_deserialize_err.add_value(1)
+                }
+                // Shouldn't happen for single filenode, but let's log just in case
+                Err(ErrorKind::Pointers) => STATS::point_filenode_pointers_err.add_value(1),
+            }
+            Err(())
+        })
+}
+
 fn get_all_filenodes_from_memcache(
     memcache: MemcacheClient,
     keygen: KeyGen,
     repo_id: RepositoryId,
     path_hash: PathHash,
 ) -> impl Future<Item = Vec<FilenodeInfo>, Error = ()> {
-    // Local error type to help with proper logging metrics
-    enum ErrorKind {
-        // error came from calling memcache API
-        MemcacheInternal,
-        // value returned from memcache was None
-        Missing,
-        // deserialization of memcache data to Rust structures via thrift failed
-        Deserialization,
-        // any problem in pointers logic - deserialization or missing data
-        Pointers,
-    }
-
     // helper function for deserializing list of thrift FilenodeInfo into rust structure with proper
     // error returned
     fn deserialize_list(
@@ -186,7 +279,7 @@ fn get_all_filenodes_from_memcache(
     }
 
     memcache
-        .get(get_mc_key_for_filenodes(&keygen, &repo_id, &path_hash))
+        .get(get_mc_key_for_filenodes_list(&keygen, &repo_id, &path_hash))
         .map_err(|()| ErrorKind::MemcacheInternal)
         .and_then(|maybe_serialized| maybe_serialized.ok_or(ErrorKind::Missing))
         .and_then(|serialized| {
@@ -205,7 +298,7 @@ fn get_all_filenodes_from_memcache(
 
                 let read_chunks_fut = list.into_iter().map(move |pointer| {
                     memcache
-                        .get(get_mc_key_for_filenodes_pointer(
+                        .get(get_mc_key_for_filenodes_list_pointer(
                             &keygen,
                             &repo_id,
                             &path_hash,
@@ -246,6 +339,26 @@ fn get_all_filenodes_from_memcache(
         })
 }
 
+fn schedule_fill_single_filenode_memcache(
+    filenode: FilenodeInfo,
+    memcache: MemcacheClient,
+    keygen: KeyGen,
+    repo_id: RepositoryId,
+    filenode_id: HgFileNodeId,
+    path_hash: PathHash,
+) {
+    let serialized = compact_protocol::serialize(&filenode.into_thrift());
+
+    // Quite unlikely that single filenode will be bigger than MEMCACHE_VALUE_MAX_SIZE
+    // It's probably not even worth logging it
+    if serialized.len() < MEMCACHE_VALUE_MAX_SIZE {
+        tokio::spawn(memcache.set(
+            get_mc_key_for_single_filenode(&keygen, &repo_id, &filenode_id, &path_hash),
+            serialized,
+        ));
+    }
+}
+
 fn schedule_fill_all_filenodes_memcache(
     all_filenodes: &Vec<FilenodeInfo>,
     memcache: MemcacheClient,
@@ -277,7 +390,7 @@ fn schedule_fill_all_filenodes_memcache(
                 move |(chunk, pointer)| {
                     memcache
                         .set_with_ttl(
-                            get_mc_key_for_filenodes_pointer(
+                            get_mc_key_for_filenodes_list_pointer(
                                 &keygen,
                                 &repo_id,
                                 &path_hash,
@@ -303,7 +416,7 @@ fn schedule_fill_all_filenodes_memcache(
     tokio::spawn(
         serialized_filenode_info_list_fut.and_then(move |serialized| {
             memcache.set_with_ttl(
-                get_mc_key_for_filenodes(&keygen, &repo_id, &path_hash),
+                get_mc_key_for_filenodes_list(&keygen, &repo_id, &path_hash),
                 serialized,
                 Duration::from_secs(TTL_SEC + random::<u64>() % TTL_SEC_RAND),
             )
