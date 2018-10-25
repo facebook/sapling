@@ -2524,6 +2524,23 @@ class OperatingSystemsCheckTest(DoctorTestBase):
         tmp_dir = self._create_tmp_dir()
         self.instance = FakeEdenInstance(tmp_dir, config=test_config)
 
+    def test_kernel_version_split(self):
+        test_versions = (
+            ("1", (1, 0, 0, 0)),
+            ("1.2", (1, 2, 0, 0)),
+            ("1.2.3", (1, 2, 3, 0)),
+            ("1.2.3.4", (1, 2, 3, 4)),
+            ("1.2.3-4", (1, 2, 3, 4)),
+            ("1.2.3.4-abc", (1, 2, 3, 4)),
+            ("1.2.3-4.abc", (1, 2, 3, 4)),
+            ("1.2.3.4-abc.def", (1, 2, 3, 4)),
+            ("1.2.3-4.abc-def", (1, 2, 3, 4)),
+        )
+        for test_version, expected in test_versions:
+            with self.subTest(test_version=test_version):
+                result = doctor._parse_os_kernel_version(test_version)
+                self.assertEquals(result, expected)
+
     def test_kernel_version_min(self):
         # Each of these are ((test_value, expected_result), ...)
         min_kernel_versions_tests = (

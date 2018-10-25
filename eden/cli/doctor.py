@@ -232,9 +232,9 @@ def _parse_os_kernel_version(version: str) -> Tuple[int, ...]:
     Example version string: 4.11.3-67_fbk17_4093_g2bf19e7a0b95
     Returns integer representations of the version, eg. (4, 11, 3, 67).
     """
-    version = version.split("_")[0]
-    version = version.replace("-", ".")
-    parsed_kernel_version = tuple(map(int, version.split(".")))
+    version = re.sub(r"[_-]", ".", version)
+    split_version = version.split(".")[:4]
+    parsed_kernel_version = tuple(map(int, split_version))
     if len(parsed_kernel_version) < 4:
         # right pad with zeros if the kernel version isn't 4 numbers
         parsed_kernel_version = (
