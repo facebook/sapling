@@ -21,16 +21,11 @@ Contents:
    internals/DirState
    internals/EncodingStrategy
    internals/FileFormats
-   internals/GeneralDelta
    internals/HandlingLargeFiles
-   internals/HttpCommandProtocol
    internals/Manifest
    internals/MercurialApi
-   internals/RepositoryLayoutRequirements
    internals/RequiresFile
    internals/RevlogNG
-   internals/Revlog
-   internals/SshCommandProtocol
    internals/UnlinkingFilesOnWindows
    internals/WhatGoesWhere
    internals/WireProtocol
