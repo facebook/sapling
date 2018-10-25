@@ -104,8 +104,32 @@ fn direncode(elem: &[u8]) -> Vec<u8> {
 
 // If this is not for fncache then path elements longer than 255 in this encoding will not use
 // UPPERCASE -> _lowercase encoding, as per D8527475
+// If this is not for fncache and previous encoding scheme result in longer then 255
+// _(underscore) -> :(semicolon), as per D9967059
 fn fnencode<E: AsRef<[u8]>>(elem: E, forfncache: bool) -> Vec<u8> {
-    fn fnencode_internal(elem: &[u8], encode_upper: bool) -> Vec<u8> {
+    enum UnderscoreEncoding {
+        EncodeTo(&'static [u8]),
+    }
+
+    enum UpperEncoding {
+        ToUnderscoreAndLower,
+        ToUpper,
+    }
+
+    fn upper_to_underscore_and_lower(ref mut ret: &mut Vec<u8>, e: u8) -> () {
+        ret.push(b'_');
+        ret.push(e - b'A' + b'a');
+    }
+
+    fn upper_to_upper(ref mut ret: &mut Vec<u8>, e: u8) -> () {
+        ret.push(e);
+    }
+
+    fn fnencode_internal(
+        elem: &[u8],
+        encode_upper: UpperEncoding,
+        encode_underscore: UnderscoreEncoding,
+    ) -> Vec<u8> {
         let mut ret = Vec::new();
 
         for e in elem {
@@ -113,15 +137,15 @@ fn fnencode<E: AsRef<[u8]>>(elem: E, forfncache: bool) -> Vec<u8> {
             match e {
                 0...31 | 126...255 => hexenc(e, &mut ret),
                 b'\\' | b':' | b'*' | b'?' | b'"' | b'<' | b'>' | b'|' => hexenc(e, &mut ret),
-                b'A'...b'Z' => {
-                    if encode_upper {
-                        ret.push(b'_');
-                        ret.push(e - b'A' + b'a');
-                    } else {
-                        ret.push(e);
+                b'A'...b'Z' => match encode_upper {
+                    UpperEncoding::ToUnderscoreAndLower => {
+                        upper_to_underscore_and_lower(&mut ret, e)
                     }
-                }
-                b'_' => ret.extend_from_slice(b"__"),
+                    UpperEncoding::ToUpper => upper_to_upper(&mut ret, e),
+                },
+                b'_' => match encode_underscore {
+                    UnderscoreEncoding::EncodeTo(slice) => ret.extend_from_slice(&slice),
+                },
                 _ => ret.push(e),
             }
         }
@@ -130,10 +154,27 @@ fn fnencode<E: AsRef<[u8]>>(elem: E, forfncache: bool) -> Vec<u8> {
     }
 
     let elem = elem.as_ref();
-    let ret = fnencode_internal(elem, true);
+    let ret = fnencode_internal(
+        elem,
+        UpperEncoding::ToUnderscoreAndLower,
+        UnderscoreEncoding::EncodeTo(b"__"),
+    );
 
     if !forfncache && ret.len() > 255 {
-        fnencode_internal(elem, false)
+        let encoded_upper = fnencode_internal(
+            elem,
+            UpperEncoding::ToUpper,
+            UnderscoreEncoding::EncodeTo(b"__"),
+        );
+        if encoded_upper.len() > 255 {
+            fnencode_internal(
+                elem,
+                UpperEncoding::ToUpper,
+                UnderscoreEncoding::EncodeTo(b":"),
+            )
+        } else {
+            encoded_upper
+        }
     } else {
         ret
     }
@@ -488,4 +529,39 @@ mod test {
 
         check_simple_fsencode(&toencode, expected);
     }
+
+    // Tested as in D9967059
+    #[test]
+    fn test_hg() {
+        let mut toencode = vec![b'X'; 253];
+        toencode.push(b'_');
+        let expected = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX__";
+        check_simple_fsencode(&toencode, expected);
+
+        let mut toencode = vec![b'X'; 254];
+        toencode.push(b'_');
+        let expected = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:";
+        check_simple_fsencode(&toencode, expected);
+
+        let x = vec![vec![b'X', b'_']; 85];
+        let mut x_flatten: Vec<u8> = x.iter().flat_map(|array| array.iter()).cloned().collect();
+        let y = vec![vec![b'Y', b'_']; 86];
+        let mut y_flatten: Vec<u8> = y.iter().flat_map(|array| array.iter()).cloned().collect();
+
+        let mut toencode = vec![b'Z', b'/'];
+        toencode.append(&mut x_flatten);
+        toencode.push(b'/');
+        toencode.append(&mut y_flatten);
+        let expected = "_z/X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__/Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:";
+        check_simple_fsencode(&toencode, expected);
+
+        let toencode: &[u8] = b"X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X";
+        let expected = "X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X:X";
+        check_simple_fsencode(toencode, expected);
+
+        let toencode: &[u8] = b"A/Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y__Y/ZZZ/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+        let expected = "_a/Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y::Y/_z_z_z/_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x";
+        check_simple_fsencode(toencode, expected);
+    }
+
 }
