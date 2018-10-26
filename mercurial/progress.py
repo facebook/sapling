@@ -726,7 +726,8 @@ def spinner(ui, topic):
 
 
 def resetstate():
-    _engine.resetstate()
+    if _engine:
+        _engine.resetstate()
 
 
 def setup(ui):
