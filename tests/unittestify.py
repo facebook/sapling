@@ -75,6 +75,7 @@ def prepareargsenv(runtestsdir, port=None):
 
 def gettestmethod(name, port):
     def runsingletest(self):
+        reportskips = os.getenv("HGTEST_REPORT_SKIPS")
         with chdir(self._runtests_dir):
             args, env = prepareargsenv(self._runtests_dir, port)
             args += os.getenv("HGTEST_RUNTESTS_ARGS", "").split()
@@ -85,6 +86,8 @@ def gettestmethod(name, port):
             out, err = p.communicate("")
             returncode = p.returncode
             if returncode == 80:
+                if not reportskips:
+                    return
                 # Extract skipped reason from output
                 match = re.search("Skipped [^:]*: (.*)", err + out)
                 if match:
