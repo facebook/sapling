@@ -72,6 +72,7 @@ def fullrepack(repo, options=None):
             packpath,
             constants.FILEPACK_CATEGORY,
             options=options,
+            shared=True,
         )
 
     if repo.ui.configbool("remotefilelog", "localdatarepack") and util.safehasattr(
@@ -91,6 +92,7 @@ def fullrepack(repo, options=None):
             packpath,
             constants.FILEPACK_CATEGORY,
             options=options,
+            shared=False,
         )
 
     if repo.ui.configbool("treemanifest", "server"):
@@ -113,6 +115,7 @@ def fullrepack(repo, options=None):
             spackpath,
             constants.TREEPACK_CATEGORY,
             options=options,
+            shared=True,
         )
 
         # Repack the local manifest store
@@ -127,6 +130,7 @@ def fullrepack(repo, options=None):
             lpackpath,
             constants.TREEPACK_CATEGORY,
             options=options,
+            shared=False,
         )
 
 
@@ -143,6 +147,7 @@ def incrementalrepack(repo, options=None):
             packpath,
             constants.FILEPACK_CATEGORY,
             options=options,
+            shared=True,
         )
 
     if repo.ui.configbool("treemanifest", "server"):
@@ -161,6 +166,7 @@ def incrementalrepack(repo, options=None):
             spackpath,
             constants.TREEPACK_CATEGORY,
             options=options,
+            shared=True,
         )
 
         # Repack the local manifest store
@@ -172,6 +178,7 @@ def incrementalrepack(repo, options=None):
             constants.TREEPACK_CATEGORY,
             allowincompletedata=True,
             options=options,
+            shared=False,
         )
 
 
@@ -240,6 +247,7 @@ def _incrementalrepack(
     category,
     allowincompletedata=False,
     options=None,
+    shared=False,
 ):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
@@ -281,6 +289,7 @@ def _incrementalrepack(
             *allhistorypacks, allowincomplete=True
         ),
         options=options,
+        shared=shared,
     )
 
 
@@ -403,7 +412,16 @@ def _computeincrementalpack(files, opts):
     return chosenpacks
 
 
-def _runrepack(repo, data, history, packpath, category, fullhistory=None, options=None):
+def _runrepack(
+    repo,
+    data,
+    history,
+    packpath,
+    category,
+    fullhistory=None,
+    options=None,
+    shared=False,
+):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     def isold(repo, filename, node):
@@ -432,6 +450,7 @@ def _runrepack(repo, data, history, packpath, category, fullhistory=None, option
         gc=garbagecollect,
         isold=isold,
         options=options,
+        shared=shared,
     )
 
     # internal config: remotefilelog.datapackversion
@@ -524,6 +543,7 @@ class repacker(object):
         gc=False,
         isold=None,
         options=None,
+        shared=False,
     ):
         self.repo = repo
         self.data = data
@@ -532,6 +552,7 @@ class repacker(object):
         self.unit = constants.getunits(category)
         self.garbagecollect = gc
         self.options = options
+        self.sharedstr = _("shared") if shared else _("local")
         if self.garbagecollect:
             if not isold:
                 raise ValueError("Function 'isold' is not properly specified")
@@ -551,7 +572,8 @@ class repacker(object):
 
             # Populate ledger from source
             with progress.spinner(
-                self.repo.ui, "scanning for things to repack"
+                self.repo.ui,
+                _("scanning for %s %s to repack") % (self.sharedstr, self.unit),
             ) as prog:
                 ledger.prog = prog
                 self.data.markledger(ledger, options=self.options)
@@ -617,7 +639,10 @@ class repacker(object):
                 byfile.setdefault(entry.filename, {})[entry.node] = entry
 
         with progress.bar(
-            ui, _("repacking data"), self.unit, total=len(byfile)
+            ui,
+            _("repacking data for %s %s") % (self.sharedstr, self.unit),
+            self.unit,
+            total=len(byfile),
         ) as prog:
             for filename, entries in sorted(byfile.iteritems()):
                 ancestors = {}
@@ -766,7 +791,12 @@ class repacker(object):
             if entry.historysource:
                 byfile.setdefault(entry.filename, {})[entry.node] = entry
 
-        with progress.bar(ui, _("repacking history"), self.unit, len(byfile)) as prog:
+        with progress.bar(
+            ui,
+            _("repacking history for %s %s") % (self.sharedstr, self.unit),
+            self.unit,
+            len(byfile),
+        ) as prog:
             for filename, entries in sorted(byfile.iteritems()):
                 ancestors = {}
                 nodes = list(node for node in entries.iterkeys())
