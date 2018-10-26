@@ -605,8 +605,10 @@ class GitHandler(object):
             commit.encoding = extra["encoding"]
 
         for obj, nodeid in exporter.update_changeset(ctx):
-            if obj.id not in self.git.object_store:
-                self.git.object_store.add_object(obj)
+            # In theory we should check if the object exists before adding it,
+            # but in practice it's unlikely to exist, and scanning all the packs
+            # to determine that is expensive.
+            self.git.object_store.add_object(obj)
 
         tree_sha = exporter.root_tree_sha
 
