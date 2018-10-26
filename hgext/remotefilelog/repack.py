@@ -150,6 +150,22 @@ def incrementalrepack(repo, options=None):
             shared=True,
         )
 
+    if repo.ui.configbool("remotefilelog", "localdatarepack") and util.safehasattr(
+        repo, "localdatastores"
+    ):
+        packpath = shallowutil.getlocalpackpath(
+            repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+        )
+        _incrementalrepack(
+            repo,
+            repo.localdatastores,
+            repo.localhistorystores,
+            packpath,
+            constants.FILEPACK_CATEGORY,
+            options=options,
+            shared=False,
+        )
+
     if repo.ui.configbool("treemanifest", "server"):
         treemfmod = extensions.find("treemanifest")
         treemfmod.serverrepack(repo, incremental=True)
@@ -252,7 +268,8 @@ def _incrementalrepack(
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     files = osutil.listdir(packpath, stat=True)
-    files = _deletebigpacks(repo, packpath, files)
+    if shared:
+        files = _deletebigpacks(repo, packpath, files)
     datapacks = _topacks(
         packpath, _computeincrementaldatapack(repo.ui, files), datapack.datapack
     )

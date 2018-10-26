@@ -543,6 +543,11 @@ Do a repack where the new pack reuses a delta from the old pack
   .hg/store/packs/fc124484524f1f3e064fc599060671ebe1da1f2d.dataidx
   .hg/store/packs/fc124484524f1f3e064fc599060671ebe1da1f2d.datapack
 
+# incremental repacking with a maxpacksize setting doesn't delete local data even if the pack files are large
+  $ hg repack --incremental --debug --config packs.maxpacksize=1
+  removing oversize packfile $TESTTMP/hgcache/master/packs/09b8bf49256b3fc2175977ba97d6402e91a9a604.datapack (301 bytes)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/09b8bf49256b3fc2175977ba97d6402e91a9a604.dataidx (1.17 KB)
+
 # check the commit data
   $ hg cat -r . new_file
   new commit

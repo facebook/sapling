@@ -165,6 +165,12 @@ being repacked
   .*3 (re)
   $ ls_l .hg/store/packs/manifests | grep datapack | grep 248
   -r--r--r--     248 *.datapack (glob)
+
+- incremental repacking with a maxpacksize setting doesn't delete local data even if the pack files are large
+  $ hg repack --incremental --debug --config packs.maxpacksize=1
+  removing oversize packfile $TESTTMP/hgcache/master/packs/manifests/56e8c6f0ca2a324b8b5ca1a2730323a1b4d0793a.datapack (339 bytes)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/manifests/56e8c6f0ca2a324b8b5ca1a2730323a1b4d0793a.dataidx (1.13 KB)
+
 - Clean up the pile of packs we made
   $ hg repack
 
