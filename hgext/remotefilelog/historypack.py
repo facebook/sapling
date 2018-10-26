@@ -286,8 +286,9 @@ class historypack(basepack.basepack):
         if options and options.get(constants.OPTION_LOOSEONLY):
             return
 
-        for filename, node in self:
-            ledger.markhistoryentry(self, filename, node)
+        with ledger.location(self._path):
+            for filename, node in self:
+                ledger.markhistoryentry(self, filename, node)
 
     def cleanup(self, ledger):
         entries = ledger.sources.get(self, [])

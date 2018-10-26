@@ -237,19 +237,22 @@ class basepackstore(object):
         if options and options.get(constants.OPTION_LOOSEONLY):
             return
 
-        for pack in self.packs:
-            try:
-                pack.markledger(ledger, options)
-            except Exception as ex:
-                if self.deletecorruptpacks:
-                    self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path())
-                    util.tryunlink(pack.path() + self.PACKSUFFIX)
-                    util.tryunlink(pack.path() + self.INDEXSUFFIX)
-                else:
-                    self.ui.warn(_("unable to load pack %s: %s\n") % (pack.path(), ex))
-                # Re-raise the exception anyway, since the ledger may have been
-                # tainted by the corrupt packs.
-                raise
+        with ledger.location(self.path):
+            for pack in self.packs:
+                try:
+                    pack.markledger(ledger, options)
+                except Exception as ex:
+                    if self.deletecorruptpacks:
+                        self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path())
+                        util.tryunlink(pack.path() + self.PACKSUFFIX)
+                        util.tryunlink(pack.path() + self.INDEXSUFFIX)
+                    else:
+                        self.ui.warn(
+                            _("unable to load pack %s: %s\n") % (pack.path(), ex)
+                        )
+                    # Re-raise the exception anyway, since the ledger may have been
+                    # tainted by the corrupt packs.
+                    raise
 
     def markforrefresh(self):
         """Tells the store that there may be new pack files, so the next time it

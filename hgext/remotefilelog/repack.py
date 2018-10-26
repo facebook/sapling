@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import os
 import time
+from contextlib import contextmanager
 
 from mercurial import (
     encoding,
@@ -549,9 +550,13 @@ class repacker(object):
             self.repo.hook("prerepack")
 
             # Populate ledger from source
-            with progress.spinner(self.repo.ui, "scanning for things to repack"):
+            with progress.spinner(
+                self.repo.ui, "scanning for things to repack"
+            ) as prog:
+                ledger.prog = prog
                 self.data.markledger(ledger, options=self.options)
                 self.history.markledger(ledger, options=self.options)
+                ledger.prog = None
 
             # Run repack
             self.repackdata(ledger, targetdata)
@@ -835,6 +840,7 @@ class repackledger(object):
         self.entries = {}
         self.sources = {}
         self.created = set()
+        self.prog = None
 
     def markdataentry(self, source, filename, node):
         """Mark the given filename+node revision as having a data rev in the
@@ -871,6 +877,19 @@ class repackledger(object):
 
     def addcreated(self, value):
         self.created.add(value)
+
+    def setlocation(self, location=None):
+        if self.prog is not None:
+            if location is not None:
+                self.prog.value = None, location
+            else:
+                self.prog.value = None
+
+    @contextmanager
+    def location(self, location):
+        self.setlocation(location)
+        yield
+        self.setlocation()
 
 
 class repackentry(object):

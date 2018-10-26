@@ -90,10 +90,11 @@ class basestore(object):
         if options and options.get(constants.OPTION_PACKSONLY):
             return
 
-        for filename, nodes in self._getfiles():
-            for node in nodes:
-                ledger.markdataentry(self, filename, node)
-                ledger.markhistoryentry(self, filename, node)
+        with ledger.location(self._path):
+            for filename, nodes in self._getfiles():
+                for node in nodes:
+                    ledger.markdataentry(self, filename, node)
+                    ledger.markhistoryentry(self, filename, node)
 
     def cleanup(self, ledger):
         entries = ledger.sources.get(self, [])
