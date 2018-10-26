@@ -2,12 +2,13 @@ from __future__ import absolute_import
 
 import errno
 import hashlib
+import itertools
 import os
 import shutil
 import stat
 import time
 
-from mercurial import error, progress, pycompat, revlog, util
+from mercurial import error, phases, progress, pycompat, revlog, util
 from mercurial.i18n import _
 from mercurial.node import bin, hex
 
@@ -18,6 +19,11 @@ try:
     xrange(0)
 except NameError:
     xrange = range
+
+
+# Cache of filename sha to filename, to prevent repeated search for the same
+# filename shas.
+filenamehashcache = {}
 
 
 class basestore(object):
@@ -167,24 +173,48 @@ class basestore(object):
         filenames = {}
         missingfilename = set(hashes)
 
-        # Start with a full manifest, since it'll cover the majority of files
-        for filename in self.repo["tip"].manifest():
-            sha = hashlib.sha1(filename).digest()
-            if sha in missingfilename:
-                filenames[filename] = sha
+        # Search the local cache in case we look for files we've already found
+        for sha in hashes:
+            if sha in filenamehashcache:
+                if filenamehashcache[sha] is not None:
+                    filenames[filenamehashcache[sha]] = sha
                 missingfilename.discard(sha)
 
-        # Scan the changelog until we've found every file name
-        cl = self.repo.unfiltered().changelog
-        for rev in xrange(len(cl), -1, -1):
-            if not missingfilename:
-                break
-            files = cl.readfiles(cl.node(rev))
-            for filename in files:
-                sha = hashlib.sha1(filename).digest()
-                if sha in missingfilename:
-                    filenames[filename] = sha
-                    missingfilename.discard(sha)
+        if not missingfilename:
+            return filenames
+
+        # Scan all draft commits and the last 250000 commits in the changelog
+        # looking for the files. If they're not there, we don't bother looking
+        # further.
+        # developer config: remotefilelog.resolvechangeloglimit
+        unfi = self.repo.unfiltered()
+        cl = unfi.changelog
+        revs = list(unfi.revs("not public()"))
+        scanlen = min(
+            len(cl), self.ui.configint("remotefilelog", "resolvechangeloglimit", 250000)
+        )
+        remainingstr = "%d remaining" % len(missingfilename)
+        with progress.bar(
+            self.ui, "resolving filenames", total=len(revs) + scanlen
+        ) as prog:
+            for i, rev in enumerate(
+                itertools.chain(revs, xrange(len(cl) - 1, len(cl) - scanlen, -1))
+            ):
+                files = cl.readfiles(cl.node(rev))
+                prog.value = i, remainingstr
+                for filename in files:
+                    sha = hashlib.sha1(filename).digest()
+                    if sha in missingfilename:
+                        filenames[filename] = sha
+                        filenamehashcache[sha] = filename
+                        missingfilename.discard(sha)
+                        remainingstr = "%d remaining" % len(missingfilename)
+                        if not missingfilename:
+                            break
+
+        # Record anything we didn't find in the cache so that we don't look
+        # for it again.
+        filenamehashcache.update((h, None) for h in missingfilename)
 
         return filenames
 
