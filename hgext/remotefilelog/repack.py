@@ -549,8 +549,9 @@ class repacker(object):
             self.repo.hook("prerepack")
 
             # Populate ledger from source
-            self.data.markledger(ledger, options=self.options)
-            self.history.markledger(ledger, options=self.options)
+            with progress.spinner(self.repo.ui, "scanning for things to repack"):
+                self.data.markledger(ledger, options=self.options)
+                self.history.markledger(ledger, options=self.options)
 
             # Run repack
             self.repackdata(ledger, targetdata)
