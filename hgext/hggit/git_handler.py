@@ -27,7 +27,7 @@ from mercurial import (
     vfs as vfsmod,
 )
 from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid
+from mercurial.node import bin, hex, nullid, nullrev
 from overlay import overlayrepo
 
 
@@ -480,9 +480,26 @@ class GitHandler(object):
         self.ui.note(_("finding hg commits to export\n"))
         repo = self.repo
         clnode = repo.changelog.node
+        clparents = repo.changelog.parentrevs
 
-        nodes = (clnode(n) for n in repo)
-        to_export = (repo[node] for node in nodes if not hex(node) in self._map_hg)
+        # Starting at the heads, walk back and find any commits that aren't in
+        # the git/hg mapping.
+        pending = []
+        if len(repo) > 0:
+            # repo.heads() returns the nullrev in an empty repo
+            pending = list(repo.changelog.headrevs())
+        exportrevs = set()
+        while pending:
+            rev = pending.pop()
+            node = clnode(rev)
+            if hex(node) not in self._map_hg:
+                exportrevs.add(rev)
+                for parentrev in clparents(rev):
+                    if parentrev != nullrev and parentrev not in exportrevs:
+                        pending.append(parentrev)
+        # Sorting here is important, because the below code expects to process
+        # these in topological order.
+        to_export = list(repo[r] for r in sorted(exportrevs))
 
         todo_total = len(repo) - len(self._map_hg)
         pos = 0
