@@ -601,9 +601,14 @@ class repacker(object):
             self.repackdata(ledger, targetdata)
             self.repackhistory(ledger, targethistory)
 
-            # Call cleanup on each source
+            # Call cleanup on each non-corrupt source
             for source in ledger.sources:
-                source.cleanup(ledger)
+                if source not in ledger.corruptsources:
+                    source.cleanup(ledger)
+
+            # Call other cleanup functions
+            for cleanup in ledger.cleanup:
+                cleanup(self.repo.ui)
 
     def _chainorphans(self, ui, filename, nodes, orphans, deltabases):
         """Reorderes ``orphans`` into a single chain inside ``nodes`` and
@@ -886,6 +891,8 @@ class repackledger(object):
     def __init__(self):
         self.entries = {}
         self.sources = {}
+        self.corruptsources = set()
+        self.cleanup = []
         self.created = set()
         self.prog = None
 
@@ -912,6 +919,12 @@ class repackledger(object):
             entries = set()
             self.sources[source] = entries
         entries.add(entry)
+
+    def markcorruptsource(self, source):
+        self.corruptsources.add(source)
+
+    def addcleanup(self, cleanup):
+        self.cleanup.append(cleanup)
 
     def _getorcreateentry(self, filename, node):
         key = (filename, node)

@@ -237,22 +237,45 @@ class basepackstore(object):
         if options and options.get(constants.OPTION_LOOSEONLY):
             return
 
+        # Stop deleting packs if they are corrupt.  If we discover corruption
+        # then we'll handle it via the ledger.
+        deletecorruptpacks = self.deletecorruptpacks
+        if deletecorruptpacks:
+            self.deletecorruptpacks = False
+
+            def cleanup(ui):
+                self.deletecorruptpacks = True
+
+            ledger.addcleanup(cleanup)
+
+        def makecleanupcorruption(path, packpath, indexpath):
+            def cleanup(ui):
+                ui.warn(_("cleaning up corrupt pack '%s'\n") % path)
+                if deletecorruptpacks:
+                    util.tryunlink(packpath)
+                    util.tryunlink(indexpath)
+                else:
+                    util.rename(packpath, packpath + ".corrupt")
+                    util.rename(indexpath, indexpath + ".corrupt")
+
+            return cleanup
+
         with ledger.location(self.path):
             for pack in self.packs:
                 try:
                     pack.markledger(ledger, options)
-                except Exception as ex:
-                    if self.deletecorruptpacks:
-                        self.ui.warn(_("deleting corrupt pack '%s'\n") % pack.path())
-                        util.tryunlink(pack.path() + self.PACKSUFFIX)
-                        util.tryunlink(pack.path() + self.INDEXSUFFIX)
-                    else:
-                        self.ui.warn(
-                            _("unable to load pack %s: %s\n") % (pack.path(), ex)
+                except Exception:
+                    self.ui.warn(_("detected corrupt pack '%s'\n") % pack.path())
+                    # Mark this pack as corrupt, which prevents cleanup being
+                    # called.  Add a separate cleanup function to handle the
+                    # corruption at the end of repack by either deleting or
+                    # renaming the file.
+                    ledger.markcorruptsource(pack)
+                    ledger.addcleanup(
+                        makecleanupcorruption(
+                            pack.path(), pack.packpath(), pack.indexpath()
                         )
-                    # Re-raise the exception anyway, since the ledger may have been
-                    # tainted by the corrupt packs.
-                    raise
+                    )
 
     def markforrefresh(self):
         """Tells the store that there may be new pack files, so the next time it
