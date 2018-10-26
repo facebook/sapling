@@ -72,6 +72,74 @@ def audit_git_path(ui, path):
         )
 
 
+class GitTreeDict(object):
+    """A mutable structure pretending to be a fullpath->tree dictionary of all the trees
+    in the given commit.
+
+    Trees are lazily loaded as needed, and any path that is set has its parents
+    automatically loaded/created as well.
+    """
+
+    def __init__(self, store, commit):
+        self.store = store
+        self.trees = {}
+        self.trees[""] = store[commit.tree] if commit is not None else dulobjs.Tree()
+
+    def __getitem__(self, path):
+        value = self.get(path)
+        if value is None:
+            raise KeyError("no path %s" % path)
+        return value
+
+    def get(self, path, default=None):
+        value = self.trees.get(path)
+        if value is None:
+            # It's not in our cache, so let's find the parent so we can add this
+            # entry.
+            if path == "":
+                raise KeyError("missing required '' root")
+            base, name = os.path.split(path)
+            parent = self.get(base)
+            if parent is None or name not in parent:
+                return default
+
+            # Load the missing child tree
+            child_mode, child_id = parent[name]
+            if child_mode != stat.S_IFDIR:
+                raise KeyError("trying to set non-tree child %s" % path)
+
+            value = self.store[child_id]
+            self.trees[path] = value
+
+        return value
+
+    def __setitem__(self, path, value):
+        base, name = os.path.split(path)
+        parent = self.get(base)
+        if parent is None:
+            # Empty trees will be filled during finalization (see comment below)
+            self[base] = dulobjs.Tree()
+        # In an ideal world we would assign the child to the parent here, but
+        # parents store a reference to the child's id which we don't have since
+        # the tree is still being mutated. Instead we create empty parents where
+        # needed, and later in _populate_tree_entries we attach all the children
+        # to parents bottom-up.
+        self.trees[path] = value
+
+    def __delitem__(self, path):
+        if path == "":
+            raise KeyError("cannot delete root path")
+        del self.trees[path]
+
+    def setdefault(self, path, default):
+        value = self.get(path)
+        if value is None:
+            value = default
+            self[path] = value
+
+        return value
+
+
 class IncrementalChangesetExporter(object):
     """Incrementally export Mercurial changesets to Git trees.
 
@@ -125,30 +193,11 @@ class IncrementalChangesetExporter(object):
         self._ctx = start_ctx
 
         # Path to dulwich.objects.Tree.
-        self._init_dirs(git_store, git_commit)
+        self._dirs = GitTreeDict(git_store, git_commit)
 
         # Mercurial file nodeid to Git blob SHA-1. Used to prevent redundant
         # blob calculation.
         self._blob_cache = {}
-
-    def _init_dirs(self, store, commit):
-        """Initialize self._dirs for a Git object store and commit."""
-        self._dirs = {}
-        if commit is None:
-            return
-        dirkind = stat.S_IFDIR
-        # depth-first order, chosen arbitrarily
-        todo = [("", store[commit.tree])]
-        while todo:
-            path, tree = todo.pop()
-            self._dirs[path] = tree
-            for entry in tree.iteritems():
-                if entry.mode == dirkind:
-                    if path == "":
-                        newpath = entry.path
-                    else:
-                        newpath = path + "/" + entry.path
-                    todo.append((newpath, store[entry.sha]))
 
     @property
     def root_tree_sha(self):
@@ -314,19 +363,6 @@ class IncrementalChangesetExporter(object):
 
     def _populate_tree_entries(self, dirty_trees):
         self._dirs.setdefault("", dulobjs.Tree())
-
-        # Fill in missing directories.
-        for path in self._dirs.keys():
-            parent = os.path.dirname(path)
-
-            while parent != "":
-                parent_tree = self._dirs.get(parent, None)
-
-                if parent_tree is not None:
-                    break
-
-                self._dirs[parent] = dulobjs.Tree()
-                parent = os.path.dirname(parent)
 
         for dirty in list(dirty_trees):
             parent = os.path.dirname(dirty)
