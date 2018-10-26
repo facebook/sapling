@@ -345,6 +345,9 @@ class fileserverclient(object):
         request = "get\n%d\n" % total
         idmap = {}
         reponame = repo.name
+        getfilenamepath = lambda name: None
+        if util.safehasattr(self.writedata, "_getfilenamepath"):
+            getfilenamepath = self.writedata._getfilenamepath
         for file, id in fileids:
             fullid = getcachekey(reponame, file, id)
             if self.cacheprocesspasspath:
@@ -381,6 +384,21 @@ class fileserverclient(object):
                     continue
 
                 missed.append(missingid)
+
+            # If the cacheprocess knew the filename, it should store it
+            # somewhere useful (e.g. in a pack file it generates).  Otherwise,
+            # we must write the filename out for it.
+            if not self.cacheprocesspasspath:
+                missedset = set(missed)
+                for fullid, file in idmap.iteritems():
+                    if fullid not in missedset:
+                        filenamepath = getfilenamepath(fullid)
+                        if (
+                            filenamepath is not None
+                            and os.path.isdir(os.path.dirname(filenamepath))
+                            and not os.path.exists(filenamepath)
+                        ):
+                            shallowutil.writefile(filenamepath, file, readonly=True)
 
             global fetchmisses
             fetchmisses += len(missed)

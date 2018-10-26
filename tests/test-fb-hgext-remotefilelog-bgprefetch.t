@@ -75,8 +75,11 @@
   $ hg debugwaitonprefetch >/dev/null 2>%1
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/ef95c5376f34698742fe34f315fd82136f8f68c0
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/076f5e2225b3ff0400b98c92aa6cdf403ee24cca
+  $TESTTMP/hgcache/master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/filename
   $TESTTMP/hgcache/master/af/f024fe4ab0fece4091de044c58c9ae4233383a/bb6ccd5dceaa5e9dc220e0dad65e051b94f69a2c
+  $TESTTMP/hgcache/master/af/f024fe4ab0fece4091de044c58c9ae4233383a/filename
   $TESTTMP/hgcache/repos
 
 # prefetch uses the current commit as the base
@@ -137,7 +140,9 @@
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/master/39/5df8f7c51f007019cb30201c49e884b46b92fa/69a1b67522704ec122181c0890bd16e9d3e7516a
+  $TESTTMP/hgcache/master/39/5df8f7c51f007019cb30201c49e884b46b92fa/filename
   $TESTTMP/hgcache/repos
 
   $ hg up -r 1

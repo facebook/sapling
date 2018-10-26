@@ -45,11 +45,13 @@
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 (glob)
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/repos (glob)
   $ hg gc
   finished: removed 1 of 2 files (0.00 GB to 0.00 GB)
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/repos
 
 # gc server cache
@@ -80,6 +82,7 @@
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 (glob)
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/repos (glob)
 
 # Test that if garbage collection on repack and repack on hg gc flags are set then incremental repack with garbage collector is run

@@ -66,6 +66,7 @@ Verify handling of corrupt server cache
   size: 2 bytes
   path: $TESTTMP/hgcache/master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/076f5e2225b3ff0400b98c92aa6cdf403ee24cca 
   key: 076f5e2225b3 
+  filename: y 
   
           node =>           p1            p2      linknode     copyfrom
   076f5e2225b3 => 000000000000  000000000000  f3d0bb0d1e48  

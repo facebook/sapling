@@ -116,6 +116,7 @@ class basestore(object):
 
         oldfiles = set()
         otherfiles = set()
+        havefilename = False
         # osutil.listdir returns stat information which saves some rmdir/listdir
         # syscalls.
         for name, mode in util.osutil.listdir(rootdir):
@@ -131,7 +132,9 @@ class basestore(object):
                     pass
 
             elif stat.S_ISREG(mode):
-                if name.endswith("_old"):
+                if name == "filename":
+                    havefilename = True
+                elif name.endswith("_old"):
                     oldfiles.add(name[:-4])
                 else:
                     otherfiles.add(name)
@@ -141,6 +144,12 @@ class basestore(object):
         # method for the generation/purpose of files with '_old' suffix.
         for filename in oldfiles - otherfiles:
             filepath = os.path.join(rootdir, filename + "_old")
+            util.tryunlink(filepath)
+
+        # If we've deleted all the files and have a "filename" left over, delete
+        # the filename, too.
+        if havefilename and not otherfiles:
+            filepath = os.path.join(rootdir, "filename")
             util.tryunlink(filepath)
 
     def _getfiles(self):
@@ -173,12 +182,35 @@ class basestore(object):
         filenames = {}
         missingfilename = set(hashes)
 
-        # Search the local cache in case we look for files we've already found
+        if self._shared:
+            getfilenamepath = lambda sha: os.path.join(
+                self._path, self._reponame, sha[:2], sha[2:], "filename"
+            )
+        else:
+            getfilenamepath = lambda sha: os.path.join(self._path, sha, "filename")
+
+        # Search the local cache and filename files in case we look for files
+        # we've already found
         for sha in hashes:
             if sha in filenamehashcache:
                 if filenamehashcache[sha] is not None:
                     filenames[filenamehashcache[sha]] = sha
                 missingfilename.discard(sha)
+            filenamepath = getfilenamepath(hex(sha))
+            if os.path.exists(filenamepath):
+                try:
+                    filename = shallowutil.readfile(filenamepath)
+                except Exception:
+                    pass
+                else:
+                    checksha = hashlib.sha1(filename).digest()
+                    if checksha == sha:
+                        filenames[filename] = sha
+                        filenamehashcache[sha] = filename
+                        missingfilename.discard(sha)
+                    else:
+                        # The filename file is invalid - delete it.
+                        util.tryunlink(filenamepath)
 
         if not missingfilename:
             return filenames
@@ -240,6 +272,10 @@ class basestore(object):
                 yield (bin(filenamehash), bin(node))
 
     def _getfilepath(self, name, node):
+        """
+        The path of the file used to store the content of the named file
+        with a particular node hash.
+        """
         node = hex(node)
         if self._shared:
             key = shallowutil.getcachekey(self._reponame, name, node)
@@ -248,10 +284,31 @@ class basestore(object):
 
         return os.path.join(self._path, key)
 
+    def _getfilenamepath(self, name):
+        """
+        The path of the file used to store the name of the named file.  This
+        allows reverse lookup from the hashed name back to the original name.
+
+        This is a file named ``filename`` inside the directory where the file
+        content is stored.
+        """
+        if self._shared:
+            key = shallowutil.getcachekey(self._reponame, name, "filename")
+        else:
+            key = shallowutil.getlocalkey(name, "filename")
+
+        return os.path.join(self._path, key)
+
     def _getdata(self, name, node):
         filepath = self._getfilepath(name, node)
+        filenamepath = self._getfilenamepath(name)
         try:
             data = shallowutil.readfile(filepath)
+            if not os.path.exists(filenamepath):
+                try:
+                    shallowutil.writefile(filenamepath, name, readonly=True)
+                except Exception:
+                    pass
             if self._validatecache and not self._validatedata(data, filepath):
                 if self._validatecachelog:
                     with util.posixfile(self._validatecachelog, "a+") as f:
@@ -312,6 +369,7 @@ class basestore(object):
 
     def addremotefilelognode(self, name, node, data):
         filepath = self._getfilepath(name, node)
+        filenamepath = self._getfilenamepath(name)
 
         oldumask = os.umask(0o002)
         try:
@@ -327,6 +385,8 @@ class basestore(object):
 
             shallowutil.mkstickygroupdir(self.ui, os.path.dirname(filepath))
             shallowutil.writefile(filepath, data, readonly=True)
+            if not os.path.exists(filenamepath):
+                shallowutil.writefile(filenamepath, name, readonly=True)
 
             if self._validatecache:
                 if not self._validatekey(filepath, "write"):
@@ -414,7 +474,7 @@ class basestore(object):
         with progress.bar(ui, _("removing unnecessary files"), _("files")) as prog:
             for root, dirs, files in os.walk(cachepath):
                 for file in files:
-                    if file == "repos":
+                    if file == "repos" or file == "filename":
                         continue
 
                     # Don't delete pack files

@@ -135,6 +135,7 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ findfilessorted $CACHEDIR
   $TESTTMP/hgcache/master/97/1c419dd609331343dee105fffd0f4608dc0bf2/ea096176809b81541cdb77bc9dcf6a43a7ea6bc7
+  $TESTTMP/hgcache/master/97/1c419dd609331343dee105fffd0f4608dc0bf2/filename
   $TESTTMP/hgcache/repos
 
 # don't need fetch anything if the pack files format is used

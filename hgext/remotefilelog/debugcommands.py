@@ -30,10 +30,17 @@ def debugremotefilelog(ui, path, **opts):
     decompress = opts.get("decompress")
 
     size, firstnode, mapping = parsefileblob(path, decompress)
+    filename = None
+    filenamepath = os.path.join(os.path.dirname(path), "filename")
+    if os.path.exists(filenamepath):
+        with open(filenamepath, "rb") as f:
+            filename = f.read()
 
     ui.status(_("size: %s bytes\n") % (size))
     ui.status(_("path: %s \n") % (path))
     ui.status(_("key: %s \n") % (short(firstnode)))
+    if filename is not None:
+        ui.status(_("filename: %s \n") % filename)
     ui.status(_("\n"))
     ui.status(
         _("%12s => %12s %13s %13s %12s\n")

@@ -129,6 +129,7 @@ the server supports our custom getfiles method.
   total * (glob)
   -r--r--r--* 69a1b67522704ec122181c0890bd16e9d3e7516a (glob)
   -r--r--r--* 69a1b67522704ec122181c0890bd16e9d3e7516a_old (glob)
+  -r--r--r--* filename (glob)
   $ cd ..
 
 # push from shallow to full

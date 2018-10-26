@@ -40,6 +40,7 @@
   $TESTTMP/hgcache/master/11
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/aee31534993a501858fb6dd96a065671922e7d51
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/repos
 
   $ hg repack
@@ -81,6 +82,7 @@
 
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
   $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.dataidx
@@ -135,6 +137,7 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1bb2e6237e035c8f8ef508e281f1ce075bc6db72
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/filename
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
   $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.dataidx
@@ -390,6 +393,7 @@ Test local remotefilelog blob is correct when based on a pack
   size: 9 bytes
   path: .hg/store/data/95cb0bfd2977c761298d9624e4b4d4c72a39974a/b70860edba4f8242a1d52f2a94679dd23cb76808 
   key: b70860edba4f 
+  filename: y 
   
           node =>           p1            p2      linknode     copyfrom
   b70860edba4f => 577959738234  000000000000  08d3fbc98c48  

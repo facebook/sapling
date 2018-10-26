@@ -162,6 +162,7 @@
   size: 6 bytes
   path: .hg/store/data/11f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216 
   key: d4a3ed9310e5 
+  filename: x 
   
           node =>           p1            p2      linknode     copyfrom
   d4a3ed9310e5 => aee31534993a  000000000000  c1254e70bad1  
@@ -188,6 +189,7 @@
   size: 6 bytes
   path: $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216 
   key: d4a3ed9310e5 
+  filename: x 
   
           node =>           p1            p2      linknode     copyfrom
   d4a3ed9310e5 => aee31534993a  000000000000  32e6611f6149  
