@@ -18,6 +18,7 @@ from . import (
     extensions,
     filemerge,
     fileset,
+    identity,
     minirst,
     pycompat,
     revset,
@@ -230,7 +231,11 @@ internalstable = sorted(
 
 def internalshelp(ui):
     """Generate the index for the "internals" topic."""
-    lines = ['To access a subtopic, use "hg help internals.{subtopic-name}"\n', "\n"]
+    lines = [
+        'To access a subtopic, use "%s help internals.{subtopic-name}"\n'
+        % identity.prog,
+        "\n",
+    ]
     for names, header, doc in internalstable:
         lines.append(" :%s: %s\n" % (names[0], header))
 
@@ -492,9 +497,9 @@ class _helpdispatch(object):
             if entry[2].startswith("hg"):
                 rst.append("%s\n" % entry[2])
             else:
-                rst.append("hg %s %s\n" % (cmd, entry[2]))
+                rst.append("%s %s %s\n" % (identity.prog, cmd, entry[2]))
         else:
-            rst.append("hg %s\n" % cmd)
+            rst.append("%s %s\n" % (identity.prog, cmd))
         # aliases
         if self.full and not self.ui.quiet and len(aliases) > 1:
             rst.append(_("\naliases: %s\n") % ", ".join(aliases[1:]))
@@ -629,7 +634,7 @@ class _helpdispatch(object):
 
     def helphome(self):
         rst = [
-            _("Mercurial Distributed SCM\n"),
+            _("@LongProduct@\n"),
             "\n",
             "hg COMMAND [OPTIONS]\n",
             "\n",
@@ -801,7 +806,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None, **opts
             raise error.Abort(msg, hint=hint)
     elif name == "commands":
         if not ui.quiet:
-            rst = [_("Mercurial Distributed SCM\n"), "\n"]
+            rst = [_("@LongProduct@\n"), "\n"]
         rst.extend(dispatch.helplist(None, None, **pycompat.strkwargs(opts)))
     elif name:
         rst = dispatch.dispatch(name)

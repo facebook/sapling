@@ -24,8 +24,8 @@ except ImportError:
                      "http://docutils.sourceforge.net/\n")
     sys.exit(-1)
 
-def role_hg(name, rawtext, text, lineno, inliner,
-            options={}, content=[]):
+def role_prog(name, rawtext, text, lineno, inliner,
+              options={}, content=[]):
     text = "hg " + utils.unescape(text)
     linktext = nodes.literal(rawtext, text)
     parts = text.split()
@@ -48,7 +48,8 @@ def role_hg(name, rawtext, text, lineno, inliner,
                            refuri=refuri)
     return [node], []
 
-roles.register_local_role("hg", role_hg)
+roles.register_local_role("prog", role_prog)
+roles.register_local_role("hg", role_prog)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

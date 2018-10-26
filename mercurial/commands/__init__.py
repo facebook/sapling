@@ -6838,7 +6838,7 @@ def version_(ui, **opts):
         ui.pager("version")
     fm = ui.formatter("version", opts)
     fm.startitem()
-    fm.write("ver", _("Mercurial Distributed SCM (version %s)\n"), util.version())
+    fm.write("ver", _("@LongProduct@ (version %s)\n"), util.version())
     license = _(
         "(see https://mercurial-scm.org for more information)\n"
         "\nCopyright (C) 2005-2017 Matt Mackall and others\n"

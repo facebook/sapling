@@ -1432,7 +1432,7 @@ def _exceptionwarning(ui):
     sysversion = sysversion.replace("\n", "")
     warning += (
         (_("** Python %s\n") % sysversion)
-        + (_("** Mercurial Distributed SCM (version %s)\n") % util.version())
+        + (_("** @LongProduct@ (version %s)\n") % util.version())
         + (
             _("** Extensions loaded: %s\n")
             % ", ".join([x[0] for x in extensions.extensions()])

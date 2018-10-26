@@ -22,7 +22,7 @@ from __future__ import absolute_import
 
 import re
 
-from . import encoding, pycompat, url, util
+from . import encoding, identity, pycompat, url, util
 from .i18n import _
 
 
@@ -406,7 +406,11 @@ def inlineliterals(blocks):
 
 
 def hgrole(blocks):
-    substs = [(":hg:`", "'hg "), ("`", "'")]
+    substs = [
+        (":hg:`", "'%s " % identity.prog),
+        (":prog:`", "'%s " % identity.prog),
+        ("`", "'"),
+    ]
     for b in blocks:
         if b["type"] in ("paragraph", "section"):
             # Turn :hg:`command` into "hg command". This also works

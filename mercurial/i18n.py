@@ -12,7 +12,7 @@ import locale
 import os
 import sys
 
-from . import encoding, pycompat
+from . import encoding, identity, pycompat
 
 
 # modelled after templater.templatepath:
@@ -76,7 +76,7 @@ def gettext(message):
     # If message is None, t.ugettext will return u'None' as the
     # translation whereas our callers expect us to return None.
     if message is None or not _ugettext:
-        return message
+        return identity.replace(message)
 
     cache = _msgcache.setdefault(encoding.encoding, {})
     if message not in cache:
@@ -95,10 +95,10 @@ def gettext(message):
             # the Python encoding defaults to 'ascii', this fails if the
             # translated string use non-ASCII characters.
             encodingstr = pycompat.sysstr(encoding.encoding)
-            cache[message] = u.encode(encodingstr, "replace")
+            cache[message] = identity.replace(u.encode(encodingstr, "replace"))
         except LookupError:
             # An unknown encoding results in a LookupError.
-            cache[message] = message
+            cache[message] = identity.replace(message)
     return cache[message]
 
 
@@ -114,7 +114,7 @@ def _getplain():
 
 def _(message):
     if _plain:
-        return message
+        return identity.replace(message)
     else:
         return gettext(message)
 
