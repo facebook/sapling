@@ -1,3 +1,8 @@
+# Copyright 2010 Mercurial Contributors
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 """automatically manage newlines in repository files
 
 This extension allows you to manage the type of line endings (CRLF or

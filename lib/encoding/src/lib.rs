@@ -1,3 +1,8 @@
+// Copyright 2018 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 /// Cross-platform local bytes and paths conversion.
 ///
 /// On POSIX, it's a cost-free conversion. No round-trips with UTF-8 strings.

@@ -1,3 +1,8 @@
+// Copyright 2018 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 //! Append-only log with indexing and integrity checks
 //!
 //! A `Log` is logically an append-only array with one or more user-defined indexes.

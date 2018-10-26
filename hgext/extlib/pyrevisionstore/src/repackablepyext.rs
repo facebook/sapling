@@ -1,3 +1,8 @@
+// Copyright 2018 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 use cpython::{ObjectProtocol, PyBytes, PyDict, PyErr, PyObject, PyResult, Python, ToPyObject};
 use std::collections::HashSet;
 use std::path::PathBuf;

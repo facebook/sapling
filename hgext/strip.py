@@ -1,3 +1,8 @@
+# Copyright 2013 Mercurial Contributors
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 """strip changesets and their descendants from history
 
 This extension allows you to strip changesets and all their descendants from the

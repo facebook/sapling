@@ -1,3 +1,8 @@
+# Copyright 2017 Facebook, Inc.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 # (c) 2017-present Facebook Inc.
 """p4fastimport - A fast importer from Perforce to Mercurial
 

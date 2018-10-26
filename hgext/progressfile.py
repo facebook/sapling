@@ -1,3 +1,8 @@
+# Copyright 2017 Facebook, Inc.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 """allows users to have JSON progress bar information written to a path
 
 Controlled by the `ui.progressfile` config. Mercurial will overwrite this file

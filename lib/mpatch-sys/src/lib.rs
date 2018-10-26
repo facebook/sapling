@@ -1,3 +1,8 @@
+// Copyright 2018 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 // Include the mpatch bindings
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]

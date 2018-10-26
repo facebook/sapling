@@ -1,3 +1,8 @@
+# Copyright 2010 Mercurial Contributors
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 """mercurial extension for improving client/server workflows
 
 The remotenames extension provides additional information to clients that is

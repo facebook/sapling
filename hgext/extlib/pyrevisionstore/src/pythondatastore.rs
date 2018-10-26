@@ -1,3 +1,8 @@
+// Copyright 2018 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 use cpython::{FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python,
               PythonObject};
 use pyerror::pyerr_to_error;

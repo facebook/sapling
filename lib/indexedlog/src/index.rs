@@ -1,3 +1,8 @@
+// Copyright 2018 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 //! [u8] -> [u64] mapping. Insertion only.
 //!
 //! The index could be backed by a combination of an on-disk file, and in-memory content. Changes
