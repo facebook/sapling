@@ -86,11 +86,11 @@ def reposetup(ui, repo):
 
 def _computehidden(repo):
     hidden = repoview.filterrevs(repo, "visible")
-    cl = repo.changelog
     dynamic = hidden & repo._explicitaccess
     if dynamic:
-        blocked = cl.ancestors(dynamic, inclusive=True)
-        hidden = frozenset(r for r in hidden if r not in blocked)
+        unfi = repo.unfiltered()
+        blocked = set(unfi.revs("(not public()) & ::%ld", dynamic))
+        hidden -= blocked
     return hidden
 
 
