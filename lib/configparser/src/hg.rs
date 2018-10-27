@@ -273,6 +273,233 @@ impl ConfigSetHgExt for ConfigSet {
     }
 }
 
+/// Parse a configuration value as a list of comma/space separated strings.
+/// It is ported from `mercurial.config.parselist`.
+///
+/// The function never complains about syntax and always returns some result.
+///
+/// Example:
+///
+/// ```
+/// use configparser::hg::parse_list;
+///
+/// assert_eq!(
+///     parse_list(b"this,is \"a small\" ,test"),
+///     vec![b"this".to_vec(), b"is".to_vec(), b"a small".to_vec(), b"test".to_vec()]
+/// );
+/// ```
+pub fn parse_list<B: AsRef<[u8]>>(value: B) -> Vec<Bytes> {
+    let mut value = value.as_ref();
+
+    // ```python
+    // if value is not None and isinstance(value, bytes):
+    //     result = _configlist(value.lstrip(' ,\n'))
+    // ```
+
+    while b" ,\n".iter().any(|b| value.starts_with(&[*b])) {
+        value = &value[1..]
+    }
+
+    parse_list_internal(value)
+        .into_iter()
+        .map(Bytes::from)
+        .collect()
+}
+
+fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
+    let mut value = value;
+
+    // ```python
+    // def _configlist(s):
+    //     s = s.rstrip(' ,')
+    //     if not s:
+    //         return []
+    //     parser, parts, offset = _parse_plain, [''], 0
+    //     while parser:
+    //         parser, parts, offset = parser(parts, s, offset)
+    //     return parts
+    // ```
+
+    while b" ,\n".iter().any(|b| value.ends_with(&[*b])) {
+        value = &value[..value.len() - 1]
+    }
+
+    if value.is_empty() {
+        return Vec::new();
+    }
+
+    #[derive(Copy, Clone)]
+    enum State {
+        Plain,
+        Quote,
+    };
+
+    let mut offset = 0;
+    let mut parts: Vec<Vec<u8>> = vec![Vec::new()];
+    let mut state = State::Plain;
+
+    loop {
+        match state {
+            // ```python
+            // def _parse_plain(parts, s, offset):
+            //     whitespace = False
+            //     while offset < len(s) and (s[offset:offset + 1].isspace()
+            //                                or s[offset:offset + 1] == ','):
+            //         whitespace = True
+            //         offset += 1
+            //     if offset >= len(s):
+            //         return None, parts, offset
+            //     if whitespace:
+            //         parts.append('')
+            //     if s[offset:offset + 1] == '"' and not parts[-1]:
+            //         return _parse_quote, parts, offset + 1
+            //     elif s[offset:offset + 1] == '"' and parts[-1][-1:] == '\\':
+            //         parts[-1] = parts[-1][:-1] + s[offset:offset + 1]
+            //         return _parse_plain, parts, offset + 1
+            //     parts[-1] += s[offset:offset + 1]
+            //     return _parse_plain, parts, offset + 1
+            // ```
+            State::Plain => {
+                let mut whitespace = false;
+                while offset < value.len() && b" \n\r\t,".contains(&value[offset]) {
+                    whitespace = true;
+                    offset += 1;
+                }
+                if offset >= value.len() {
+                    break;
+                }
+                if whitespace {
+                    parts.push(Vec::new());
+                }
+                if value[offset] == b'"' {
+                    let branch = {
+                        match parts.last() {
+                            None => 1,
+                            Some(last) => if last.is_empty() {
+                                1
+                            } else if last.ends_with(b"\\") {
+                                2
+                            } else {
+                                3
+                            },
+                        }
+                    }; // manual NLL, to drop reference on "parts".
+                    if branch == 1 {
+                        // last.is_empty()
+                        state = State::Quote;
+                        offset += 1;
+                        continue;
+                    } else if branch == 2 {
+                        // last.ends_with(b"\\")
+                        let mut last = parts.last_mut().unwrap();
+                        last.pop();
+                        last.push(value[offset]);
+                        offset += 1;
+                        continue;
+                    }
+                }
+                let mut last = parts.last_mut().unwrap();
+                last.push(value[offset]);
+                offset += 1;
+            }
+
+            // ```python
+            // def _parse_quote(parts, s, offset):
+            //     if offset < len(s) and s[offset:offset + 1] == '"': # ""
+            //         parts.append('')
+            //         offset += 1
+            //         while offset < len(s) and (s[offset:offset + 1].isspace() or
+            //                 s[offset:offset + 1] == ','):
+            //             offset += 1
+            //         return _parse_plain, parts, offset
+            //     while offset < len(s) and s[offset:offset + 1] != '"':
+            //         if (s[offset:offset + 1] == '\\' and offset + 1 < len(s)
+            //                 and s[offset + 1:offset + 2] == '"'):
+            //             offset += 1
+            //             parts[-1] += '"'
+            //         else:
+            //             parts[-1] += s[offset:offset + 1]
+            //         offset += 1
+            //     if offset >= len(s):
+            //         real_parts = _configlist(parts[-1])
+            //         if not real_parts:
+            //             parts[-1] = '"'
+            //         else:
+            //             real_parts[0] = '"' + real_parts[0]
+            //             parts = parts[:-1]
+            //             parts.extend(real_parts)
+            //         return None, parts, offset
+            //     offset += 1
+            //     while offset < len(s) and s[offset:offset + 1] in [' ', ',']:
+            //         offset += 1
+            //     if offset < len(s):
+            //         if offset + 1 == len(s) and s[offset:offset + 1] == '"':
+            //             parts[-1] += '"'
+            //             offset += 1
+            //         else:
+            //             parts.append('')
+            //     else:
+            //         return None, parts, offset
+            //     return _parse_plain, parts, offset
+            // ```
+            State::Quote => {
+                if offset < value.len() && value[offset] == b'"' {
+                    parts.push(Vec::new());
+                    offset += 1;
+                    while offset < value.len() && b" \n\r\t,".contains(&value[offset]) {
+                        offset += 1;
+                    }
+                    state = State::Plain;
+                    continue;
+                }
+                while offset < value.len() && value[offset] != b'"' {
+                    if value[offset] == b'\\' && offset + 1 < value.len()
+                        && value[offset + 1] == b'"'
+                    {
+                        offset += 1;
+                        parts.last_mut().unwrap().push(b'"');
+                    } else {
+                        parts.last_mut().unwrap().push(value[offset]);
+                    }
+                    offset += 1;
+                }
+                if offset >= value.len() {
+                    let mut real_parts: Vec<Vec<u8>> = parse_list_internal(parts.last().unwrap())
+                        .iter()
+                        .map(|b| b.to_vec())
+                        .collect();
+                    if real_parts.is_empty() {
+                        parts.pop();
+                        parts.push(vec![b'"']);
+                    } else {
+                        real_parts[0].insert(0, b'"');
+                        parts.pop();
+                        parts.append(&mut real_parts);
+                    }
+                    break;
+                }
+                offset += 1;
+                while offset < value.len() && b" ,".contains(&value[offset]) {
+                    offset += 1;
+                }
+                if offset < value.len() {
+                    if offset + 1 == value.len() && value[offset] == b'"' {
+                        parts.last_mut().unwrap().push(b'"');
+                        offset += 1;
+                    } else {
+                        parts.push(Vec::new());
+                    }
+                } else {
+                    break;
+                }
+                state = State::Plain;
+            }
+        }
+    }
+
+    parts
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -411,5 +638,91 @@ mod tests {
         assert_eq!(cfg.get("x", "a"), None);
         assert_eq!(cfg.get("y", "b"), None);
         assert_eq!(cfg.get("z", "c"), Some("3".into()));
+    }
+
+    #[test]
+    fn test_parse_list() {
+        fn b<B: AsRef<[u8]>>(bytes: B) -> Bytes {
+            Bytes::from(bytes.as_ref())
+        }
+
+        // From test-ui-config.py
+        assert_eq!(parse_list(b"foo"), vec![b("foo")]);
+        assert_eq!(
+            parse_list(b"foo bar baz"),
+            vec![b("foo"), b("bar"), b("baz")]
+        );
+        assert_eq!(parse_list(b"alice, bob"), vec![b("alice"), b("bob")]);
+        assert_eq!(
+            parse_list(b"foo bar baz alice, bob"),
+            vec![b("foo"), b("bar"), b("baz"), b("alice"), b("bob")]
+        );
+        assert_eq!(
+            parse_list(b"abc d\"ef\"g \"hij def\""),
+            vec![b("abc"), b("d\"ef\"g"), b("hij def")]
+        );
+        assert_eq!(
+            parse_list(b"\"hello world\", \"how are you?\""),
+            vec![b("hello world"), b("how are you?")]
+        );
+        assert_eq!(
+            parse_list(b"Do\"Not\"Separate"),
+            vec![b("Do\"Not\"Separate")]
+        );
+        assert_eq!(parse_list(b"\"Do\"Separate"), vec![b("Do"), b("Separate")]);
+        assert_eq!(
+            parse_list(b"\"Do\\\"NotSeparate\""),
+            vec![b("Do\"NotSeparate")]
+        );
+        assert_eq!(
+            parse_list(&b"string \"with extraneous\" quotation mark\""[..]),
+            vec![
+                b("string"),
+                b("with extraneous"),
+                b("quotation"),
+                b("mark\""),
+            ]
+        );
+        assert_eq!(parse_list(b"x, y"), vec![b("x"), b("y")]);
+        assert_eq!(parse_list(b"\"x\", \"y\""), vec![b("x"), b("y")]);
+        assert_eq!(
+            parse_list(b"\"\"\" key = \"x\", \"y\" \"\"\""),
+            vec![b(""), b(" key = "), b("x\""), b("y"), b(""), b("\"")]
+        );
+        assert_eq!(parse_list(b",,,,     "), Vec::<Bytes>::new());
+        assert_eq!(
+            parse_list(b"\" just with starting quotation"),
+            vec![b("\""), b("just"), b("with"), b("starting"), b("quotation")]
+        );
+        assert_eq!(
+            parse_list(&b"\"longer quotation\" with \"no ending quotation"[..]),
+            vec![
+                b("longer quotation"),
+                b("with"),
+                b("\"no"),
+                b("ending"),
+                b("quotation"),
+            ]
+        );
+        assert_eq!(
+            parse_list(&b"this is \\\" \"not a quotation mark\""[..]),
+            vec![b("this"), b("is"), b("\""), b("not a quotation mark")]
+        );
+        assert_eq!(parse_list(b"\n \n\nding\ndong"), vec![b("ding"), b("dong")]);
+
+        // Other manually written cases
+        assert_eq!(parse_list("a,b,,c"), vec![b("a"), b("b"), b("c")]);
+        assert_eq!(parse_list("a b  c"), vec![b("a"), b("b"), b("c")]);
+        assert_eq!(
+            parse_list(" , a , , b,  , c , "),
+            vec![b("a"), b("b"), b("c")]
+        );
+        assert_eq!(parse_list("a,\"b,c\" d"), vec![b("a"), b("b,c"), b("d")]);
+        assert_eq!(parse_list("a,\",c"), vec![b("a"), b("\""), b("c")]);
+        assert_eq!(parse_list("a,\" c\" \""), vec![b("a"), b(" c\"")]);
+        assert_eq!(
+            parse_list("a,\" c\" \" d"),
+            vec![b("a"), b(" c"), b("\""), b("d")]
+        );
     }
 }
