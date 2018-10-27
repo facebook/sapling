@@ -295,6 +295,7 @@ def _makerage(ui, repo, **opts):
         ("hg debugprocesstree", lambda: hgcmd("debugprocesstree")),
         ("hg config (local)", lambda: "\n".join(localconfig(ui))),
         ("hg sparse show", lambda: hgcmd("sparse show")),
+        ("hg debuginstall", lambda: hgcmd("debuginstall")),
         ("usechg", (usechginfo)),
         ("uptime", lambda: shcmd("uptime")),
         ("rpm info", (partial(rpminfo, ui))),
