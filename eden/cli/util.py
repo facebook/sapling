@@ -12,11 +12,13 @@ import errno
 import json
 import os
 import pwd
+import random
 import subprocess
 import sys
 import time
 import typing
-from typing import Any, Callable, List, Optional, TypeVar
+from pathlib import Path
+from typing import Any, Callable, List, Optional, TypeVar, Union
 
 import eden.thrift
 import thrift.transport
@@ -448,17 +450,30 @@ def read_all(path: bytes) -> str:
         return f.read()
 
 
+def readlink_retry_estale(path: Union[Path, str]) -> str:
+    attempts = 10
+    while True:
+        try:
+            return os.readlink(path)
+        except OSError as ex:
+            if attempts == 0 or ex.errno != errno.ESTALE:
+                raise
+            pass
+        attempts -= 1
+        time.sleep(random.uniform(0.001, 0.01))
+
+
 def get_eden_mount_name(path_arg: str) -> str:
     """
     Get the path to the Eden checkout containing the specified path
     """
     path = os.path.join(path_arg, ".eden", "root")
     try:
-        return os.readlink(path)
+        return readlink_retry_estale(path)
     except OSError as ex:
         if ex.errno == errno.ENOTDIR:
             path = os.path.join(os.path.dirname(path_arg), ".eden", "root")
-            return os.readlink(path)
+            return readlink_retry_estale(path)
         elif ex.errno == errno.ENOENT:
             raise NotAnEdenMountError(path_arg)
         raise

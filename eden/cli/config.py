@@ -31,7 +31,7 @@ import facebook.eden.ttypes as eden_ttypes
 import toml
 
 from . import configinterpolator, configutil, util
-from .util import EdenStartError, HealthStatus, print_stderr
+from .util import EdenStartError, HealthStatus, print_stderr, readlink_retry_estale
 
 
 # Use --etcEdenDir to change the value used for a given invocation
@@ -546,7 +546,7 @@ Do you want to run `eden mount %s` instead?"""
         # Check if it is already mounted.
         try:
             root = os.path.join(path, ".eden", "root")
-            target = os.readlink(root)
+            target = readlink_retry_estale(root)
             if target == path:
                 print_stderr(
                     "ERROR: Mount point in use! " "{} is already mounted by Eden.", path
@@ -790,7 +790,7 @@ Do you want to run `eden mount %s` instead?"""
     def get_client_config_for_path(self, path: str) -> Optional[ClientConfig]:
         client_link = os.path.join(path, ".eden", "client")
         try:
-            client_dir = os.readlink(client_link)
+            client_dir = readlink_retry_estale(client_link)
         except OSError:
             return None
 
@@ -1077,11 +1077,13 @@ def find_eden(
     checkout_root = None
     checkout_state_dir = None
     try:
-        eden_socket_path = os.readlink(path.joinpath(path, ".eden", "socket"))
+        eden_socket_path = readlink_retry_estale(path.joinpath(path, ".eden", "socket"))
         eden_state_dir = os.path.dirname(eden_socket_path)
 
-        checkout_root = Path(os.readlink(path.joinpath(".eden", "root")))
-        checkout_state_dir = Path(os.readlink(path.joinpath(".eden", "client")))
+        checkout_root = Path(readlink_retry_estale(path.joinpath(".eden", "root")))
+        checkout_state_dir = Path(
+            readlink_retry_estale(path.joinpath(".eden", "client"))
+        )
     except OSError:
         # We will get an OSError if any of these symlinks do not exist
         # Fall through and we will handle this below.

@@ -388,7 +388,7 @@ class EdenFS(object):
 
     def client_dir_for_mount(self, mount_path: pathlib.Path) -> pathlib.Path:
         client_link = mount_path / ".eden" / "client"
-        return pathlib.Path(os.readlink(str(client_link)))
+        return pathlib.Path(util.readlink_retry_estale(str(client_link)))
 
     def overlay_dir_for_mount(self, mount_path: pathlib.Path) -> pathlib.Path:
         return self.client_dir_for_mount(mount_path) / "local"
