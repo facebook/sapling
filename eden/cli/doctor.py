@@ -887,20 +887,27 @@ def check_snapshot_dirstate_consistency(
 
     p1_hex = binascii.hexlify(parents[0]).decode("utf-8")
     p2_hex = binascii.hexlify(parents[1]).decode("utf-8")
+    null_hash_hex = 40 * "0"
     is_p2_hex_valid = True
     try:
+        current_hex = snapshot_hex
         is_snapshot_hex_valid = is_commit_hash_valid(instance, path, snapshot_hex)
+        current_hex = p1_hex
         is_p1_hex_valid = is_commit_hash_valid(instance, path, p1_hex)
-        if p2_hex != (20 * b"\0"):
+        if p2_hex != null_hash_hex:
+            current_hex = p2_hex
             is_p2_hex_valid = is_commit_hash_valid(instance, path, p2_hex)
     except Exception as ex:
         tracker.add_problem(
-            Problem(f"Unable to get scm status for path {path}:\n {ex}")
+            Problem(
+                f"Failed to get scm status for mount {path} "
+                f"at revision {current_hex}:\n {ex}"
+            )
         )
         return
 
     if is_p2_hex_valid is not True:
-        p2_hex = "0000000000000000000000000000000000000000"
+        p2_hex = null_hash_hex
 
     if snapshot_hex != p1_hex:
         if is_p1_hex_valid:
