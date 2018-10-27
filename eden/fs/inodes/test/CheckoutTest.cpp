@@ -429,11 +429,18 @@ void runModifyFileTests(folly::StringPiece path) {
   }
 }
 
-TEST(Checkout, modifyFile) {
-  // Test with file names that will be at the beginning of the directory,
-  // in the middle of the directory, and at the end of the directory.
+// Test with file names that will be at the beginning of the directory,
+// in the middle of the directory, and at the end of the directory.
+
+TEST(Checkout, modifyFileBeginning) {
   runModifyFileTests("a/b/aaa.txt");
+}
+
+TEST(Checkout, modifyFileMiddle) {
   runModifyFileTests("a/b/mmm.txt");
+}
+
+TEST(Checkout, modifyFileEnd) {
   runModifyFileTests("a/b/zzz.txt");
 }
 
