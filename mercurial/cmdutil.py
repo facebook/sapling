@@ -835,7 +835,7 @@ def bailifchanged(repo, merge=True, hint=None):
         ctx.sub(s).bailifchanged(hint=hint)
 
 
-def logmessage(ui, opts):
+def logmessage(ui, opts, oldmessage=None):
     """ get the log message according to -m and -l option """
     message = opts.get("message")
     logfile = opts.get("logfile")
@@ -855,6 +855,14 @@ def logmessage(ui, opts):
                 _("can't read commit message '%s': %s")
                 % (logfile, encoding.strtolocal(inst.strerror))
             )
+    if message and not logfile and oldmessage is not None:
+        # only amend passes oldmessage
+        amendtemplate = ui.config("amend", "messagetemplate")
+        if amendtemplate:
+            message = rendertemplate(
+                ui, amendtemplate, {"oldmessage": oldmessage, "message": message}
+            )
+
     return message
 
 

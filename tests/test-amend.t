@@ -215,6 +215,42 @@ Amend a merge changeset
   o  A
   
 
+Amend commit messages can be customized with a template.
+
+This template replaces only the first paragraph of the old commit message, but
+only if the message specified on the command line has no newlines in it.
+
+  $ hg init $TESTTMP/repo4
+  $ cd $TESTTMP/repo4
+  $ cat >> .hg/hgrc << EOF
+  > [amend]
+  > messagetemplate = {ifcontains("\n", message, message, ifcontains("\n\n", oldmessage, sub("^.*?\n\n", "{message}\n\n", oldmessage), message))}
+  > EOF
+  $ echo data > file
+  $ hg commit -Aqm "initial commit
+  > 
+  > This commit has extra data in the message
+  > 
+  > The extra data should not be removed by a simple \`amend -m\`"
+  $ hg amend -m "change just the title"
+  saved backup bundle to $TESTTMP/repo4/.hg/strip-backup/ea1aadce4c7c-8945cd74-amend.hg (obsstore-off !)
+  $ hg log -r . -T '{desc}\n'
+  change just the title
+  
+  This commit has extra data in the message
+  
+  The extra data should not be removed by a simple `amend -m`
+  $ hg amend -m "change multiple lines
+  > replaces the whole message"
+  saved backup bundle to $TESTTMP/repo4/.hg/strip-backup/752c250a0c37-0226b2ab-amend.hg (obsstore-off !)
+  $ hg log -r . -T '{desc}\n'
+  change multiple lines
+  replaces the whole message
+  $ hg amend -m "no paragraphs in old message replaces the whole message"
+  saved backup bundle to $TESTTMP/repo4/.hg/strip-backup/a7f041e48b3b-4c7c422d-amend.hg (obsstore-off !)
+  $ hg log -r . -T '{desc}\n'
+  no paragraphs in old message replaces the whole message
+
 More complete test for status changes (issue5732)
 -------------------------------------------------
 
