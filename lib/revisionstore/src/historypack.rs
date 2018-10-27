@@ -209,11 +209,11 @@ impl HistoryPack {
     }
 
     fn read_file_section_header(&self, offset: u64) -> Result<FileSectionHeader> {
-        FileSectionHeader::read(&self.mmap.as_ref()[offset as usize..])
+        FileSectionHeader::read(&self.mmap.as_ref().get_err(offset as usize..)?)
     }
 
     fn read_history_entry(&self, offset: u64) -> Result<HistoryEntry> {
-        HistoryEntry::read(&self.mmap.as_ref()[offset as usize..])
+        HistoryEntry::read(&self.mmap.as_ref().get_err(offset as usize..)?)
     }
 
     fn read_node_info(&self, key: &Key, offset: u64) -> Result<NodeInfo> {
