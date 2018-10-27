@@ -14,7 +14,9 @@ Behaves identically if enabled manually:
   hg reset .
 
 Not if turned off:
+ (note: extension discovery only works for normal layout)
 
+#if normal-layout
   $ hg githelp --config extensions.githelp=! -- git reset HEAD
   hg: unknown command 'githelp'
   'githelp' is provided by the following extension:
@@ -23,6 +25,7 @@ Not if turned off:
   
   (use 'hg help extensions' for information on enabling extensions)
   [255]
+#endif
 
 Or overriden by a different path:
 
