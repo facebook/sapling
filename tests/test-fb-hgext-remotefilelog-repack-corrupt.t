@@ -72,7 +72,7 @@ Create some new data to pack into it
 
 Truncate the historypack file in the middle of the filename length for "y"
   $ chmod +w $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histpack
-  $ truncate --size 173 $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histpack
+  $ python $TESTDIR/truncate.py --size 173 $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histpack
 
 Repack
   $ hg repack
@@ -109,11 +109,11 @@ Create some local commits and pack them into a pack file
 
 Truncate the history in the middle of the filename length for "n"
   $ chmod +w .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histpack
-  $ truncate --size 173 .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histpack
+  $ python $TESTDIR/truncate.py --size 173 .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histpack
 
 Truncate the data in the middle of the filename length for "o"
   $ chmod +w .hg/store/packs/a6bc602042c5c7853bcc1bb89c5de05bb34fd862.datapack
-  $ truncate --size 290 .hg/store/packs/a6bc602042c5c7853bcc1bb89c5de05bb34fd862.datapack
+  $ python $TESTDIR/truncate.py --size 290 .hg/store/packs/a6bc602042c5c7853bcc1bb89c5de05bb34fd862.datapack
 
 Repack
   $ hg repack
