@@ -307,7 +307,7 @@ def install_platform_deps():
     else:
         # TODO: Handle distributions other than Ubuntu.
         raise Exception(
-            "installing OS dependencies on %s is not " "supported yet" % (os_name,)
+            "installing OS dependencies on %s is not supported yet" % (os_name,)
         )
 
 
@@ -356,10 +356,11 @@ def main():
         "installed (default=<external-dir>/install)",
     )
     ap.add_argument(
-        "--install-deps",
+        "--system-deps",
         action="store_true",
         default=False,
-        help="Install necessary system packages",
+        help="Also install necessary packages available from OS's package "
+        "distribution system",
     )
 
     args = ap.parse_args()
@@ -374,7 +375,7 @@ def main():
 
     opts = BuildOptions(args.num_jobs, args.external_dir, args.install_dir)
 
-    if args.install_deps:
+    if args.system_deps:
         install_platform_deps()
 
     if not os.path.isdir(opts.external_dir):
