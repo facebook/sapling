@@ -484,6 +484,8 @@ def _debugdisplaycolor(ui):
 
 def _debugdisplaystyle(ui):
     ui.write(_("available style:\n"))
+    if not ui._styles:
+        return
     width = max(len(s) for s in ui._styles)
     for label, effects in sorted(ui._styles.items()):
         ui.write("%s" % label, label=label)
