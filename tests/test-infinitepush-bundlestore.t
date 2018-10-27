@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
 Create an ondisk bundlestore in .hg/scratchbranches
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

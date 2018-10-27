@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
@@ -68,24 +70,24 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   $ hg clone -q -u . a a1
   $ cd a1
 
-  $ hg tglog
-  @  8: 'F' branch3
+  $ tglog
+  @  8: 4666b71e8e32 'F'  branch3
   |
-  o  7: 'branch3' branch3
+  o  7: 653b9feb4616 'branch3'  branch3
   |
-  | o  6: 'E' branch2
+  | o  6: 5097051d331d 'E'  branch2
   | |
-  | o  5: 'D' branch2
+  | o  5: 635859577d0b 'D'  branch2
   | |
-  | | o  4: 'C' branch2
+  | | o  4: e4fdb121d036 'C'  branch2
   | | |
-  +---o  3: 'branch2' branch2
+  +---o  3: a8b974275088 'branch2'  branch2
   | |
-  | o  2: 'B' branch1
+  | o  2: 0a03079c47fd 'B'  branch1
   | |
-  | o  1: 'branch1' branch1
+  | o  1: 63379ac49655 'branch1'  branch1
   |/
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
   $ hg branches
   branch3                        8:4666b71e8e32
@@ -117,24 +119,24 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   2: 'B' branch1
   0: 'A' 
 
-  $ hg tglog
-  o  8: 'E' branch3
+  $ tglog
+  o  8: 466cdfb14b62 'E'  branch3
   |
-  o  7: 'D' branch3
+  o  7: e203f2bb3085 'D'  branch3
   |
-  @  6: 'F' branch3
+  @  6: 4666b71e8e32 'F'  branch3
   |
-  o  5: 'branch3' branch3
+  o  5: 653b9feb4616 'branch3'  branch3
   |
-  | o  4: 'C' branch2
+  | o  4: e4fdb121d036 'C'  branch2
   | |
-  | o  3: 'branch2' branch2
+  | o  3: a8b974275088 'branch2'  branch2
   |/
-  | o  2: 'B' branch1
+  | o  2: 0a03079c47fd 'B'  branch1
   | |
-  | o  1: 'branch1' branch1
+  | o  1: 63379ac49655 'branch1'  branch1
   |/
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
   $ cd ..
 
@@ -144,24 +146,24 @@ Rebase head of branch3 (8) onto branch2 (6):
   $ hg clone -q -u . a a2
   $ cd a2
 
-  $ hg tglog
-  @  8: 'F' branch3
+  $ tglog
+  @  8: 4666b71e8e32 'F'  branch3
   |
-  o  7: 'branch3' branch3
+  o  7: 653b9feb4616 'branch3'  branch3
   |
-  | o  6: 'E' branch2
+  | o  6: 5097051d331d 'E'  branch2
   | |
-  | o  5: 'D' branch2
+  | o  5: 635859577d0b 'D'  branch2
   | |
-  | | o  4: 'C' branch2
+  | | o  4: e4fdb121d036 'C'  branch2
   | | |
-  +---o  3: 'branch2' branch2
+  +---o  3: a8b974275088 'branch2'  branch2
   | |
-  | o  2: 'B' branch1
+  | o  2: 0a03079c47fd 'B'  branch1
   | |
-  | o  1: 'branch1' branch1
+  | o  1: 63379ac49655 'branch1'  branch1
   |/
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
   $ hg rebase -s 8 -d 6
   rebasing 8:4666b71e8e32 "F" (tip)
@@ -180,24 +182,24 @@ Rebase head of branch3 (8) onto branch2 (6):
   2: 'B' branch1
   0: 'A' 
 
-  $ hg tglog
-  @  8: 'F' branch2
+  $ tglog
+  @  8: 6b4bdc1b5ac0 'F'  branch2
   |
-  | o  7: 'branch3' branch3
+  | o  7: 653b9feb4616 'branch3'  branch3
   | |
-  o |  6: 'E' branch2
+  o |  6: 5097051d331d 'E'  branch2
   | |
-  o |  5: 'D' branch2
+  o |  5: 635859577d0b 'D'  branch2
   | |
-  | | o  4: 'C' branch2
+  | | o  4: e4fdb121d036 'C'  branch2
   | | |
-  | | o  3: 'branch2' branch2
+  | | o  3: a8b974275088 'branch2'  branch2
   | |/
-  o |  2: 'B' branch1
+  o |  2: 0a03079c47fd 'B'  branch1
   | |
-  o |  1: 'branch1' branch1
+  o |  1: 63379ac49655 'branch1'  branch1
   |/
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
   $ hg verify -q
 
@@ -209,24 +211,24 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   $ hg clone -q -u . a a3
   $ cd a3
 
-  $ hg tglog
-  @  8: 'F' branch3
+  $ tglog
+  @  8: 4666b71e8e32 'F'  branch3
   |
-  o  7: 'branch3' branch3
+  o  7: 653b9feb4616 'branch3'  branch3
   |
-  | o  6: 'E' branch2
+  | o  6: 5097051d331d 'E'  branch2
   | |
-  | o  5: 'D' branch2
+  | o  5: 635859577d0b 'D'  branch2
   | |
-  | | o  4: 'C' branch2
+  | | o  4: e4fdb121d036 'C'  branch2
   | | |
-  +---o  3: 'branch2' branch2
+  +---o  3: a8b974275088 'branch2'  branch2
   | |
-  | o  2: 'B' branch1
+  | o  2: 0a03079c47fd 'B'  branch1
   | |
-  | o  1: 'branch1' branch1
+  | o  1: 63379ac49655 'branch1'  branch1
   |/
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
   $ hg rebase -s 7 -d 6
   rebasing 7:653b9feb4616 "branch3"
@@ -245,22 +247,22 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   2: 'B' branch1
   0: 'A' 
 
-  $ hg tglog
-  @  7: 'F' branch2
+  $ tglog
+  @  7: 6b4bdc1b5ac0 'F'  branch2
   |
-  o  6: 'E' branch2
+  o  6: 5097051d331d 'E'  branch2
   |
-  o  5: 'D' branch2
+  o  5: 635859577d0b 'D'  branch2
   |
-  | o  4: 'C' branch2
+  | o  4: e4fdb121d036 'C'  branch2
   | |
-  | o  3: 'branch2' branch2
+  | o  3: a8b974275088 'branch2'  branch2
   | |
-  o |  2: 'B' branch1
+  o |  2: 0a03079c47fd 'B'  branch1
   | |
-  o |  1: 'branch1' branch1
+  o |  1: 63379ac49655 'branch1'  branch1
   |/
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
   $ hg verify -q
 
@@ -271,14 +273,14 @@ update the branch cache.
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/0a03079c47fd-11b7c407-backup.hg
 
-  $ hg tglog
-  o  3: 'C' branch2
+  $ tglog
+  o  3: e4fdb121d036 'C'  branch2
   |
-  o  2: 'branch2' branch2
+  o  2: a8b974275088 'branch2'  branch2
   |
-  | @  1: 'branch1' branch1
+  | @  1: 63379ac49655 'branch1'  branch1
   |/
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
 
   $ hg branches
@@ -313,12 +315,12 @@ the same as branches remaining.
   $ hg ci -Am A
   adding A
 
-  $ hg tglog
-  @  2: 'A' branch1
+  $ tglog
+  @  2: a5b4b27ed7b4 'A'  branch1
   |
-  o  1: 'branch2' branch2
+  o  1: dbfbc2417f1f 'branch2'  branch2
   |
-  o  0: 'branch1' branch1
+  o  0: 04747c8023ae 'branch1'  branch1
   
 
   $ hg theads
@@ -358,16 +360,16 @@ Try both orders.
   $ hg ci -Am E
   adding e
 
-  $ hg tglog
-  @  4: 'E'
+  $ tglog
+  @  4: a0d6d83d9b7b 'E'
   |
-  o  3: 'D'
+  o  3: 67a385d4e6f2 'D'
   |
-  o  2: 'C'
+  o  2: 49cb3485fa0c 'C'
   |
-  o  1: 'B'
+  o  1: 6c81ed0049f8 'B'
   |
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
 
   $ hg strip 3 4

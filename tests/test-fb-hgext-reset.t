@@ -20,7 +20,7 @@ Soft reset should leave pending changes
   o  b292c1e3311f
   
   $ hg reset ".^"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
+  1 changesets pruned
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  b292c1e3311f foo
   
@@ -36,7 +36,7 @@ Clean reset should overwrite all changes
 
   $ hg commit -qAm y
   $ hg reset --clean ".^"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
+  1 changesets pruned
   $ hg diff
 
 Reset should recover from backup bundles (with correct phase)
@@ -46,12 +46,6 @@ Reset should recover from backup bundles (with correct phase)
   
   $ hg phase -p b292c1e3311f
   $ hg reset --clean 66ee28d0328c
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  new changesets 66ee28d0328c
   $ hg log -G -T '{node|short} {bookmarks} {phase}\n'
   @  66ee28d0328c foo draft
   |
@@ -106,32 +100,20 @@ Reset without a bookmark
   (leaving bookmark foo)
   $ hg book -d foo
   $ hg reset ".^"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
+  1 changesets pruned
   $ hg book foo
 
 Reset to bookmark with - in the name
 
   $ hg reset 66ee28d0328c
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  new changesets 66ee28d0328c
   $ hg book foo-bar -r ".^"
   $ hg reset foo-bar
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
+  1 changesets pruned
   $ hg book -d foo-bar
 
 Verify file status after reset
 
   $ hg reset -C 66ee28d0328c
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  new changesets 66ee28d0328c
   $ touch toberemoved
   $ hg commit -qAm 'add file for removal'
   $ echo z >> x
@@ -140,13 +122,13 @@ Verify file status after reset
   $ hg rm toberemoved
   $ hg commit -m 'to be reset'
   $ hg reset ".^"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d36bf00ac47e-375e6009-backup.hg (glob)
+  1 changesets pruned
   $ hg status
   M x
   ! toberemoved
   ? tobeadded
   $ hg reset -C 66ee28d0328c
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34fb347b2aae-c2a02721-backup.hg (glob)
+  1 changesets pruned
 
 Reset + Obsolete tests
 
@@ -189,10 +171,10 @@ Reset prunes commits
 Reset to the commit your on is a no-op
   $ hg status
   $ hg log -r . -T '{rev}\n'
-  2
+  4
   $ hg reset .
   $ hg log -r . -T '{rev}\n'
-  2
+  4
   $ hg debugdirstate
   n 644          0 * a (glob)
   n 644          0 * tobeadded (glob)

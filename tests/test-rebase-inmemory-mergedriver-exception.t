@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
 Test a mergedriver that raises exceptions in its preprocess() hook:
 
   $ newrepo

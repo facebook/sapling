@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
 #require rmcwd
 
 Ensure that dirsync does not cause an abort when cwd goes missing

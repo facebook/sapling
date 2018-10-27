@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
 Test a rebase that doesn't create a commit:
 
   $ enable amend rebase

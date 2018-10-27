@@ -158,13 +158,14 @@ blocking. There shouldn't be any "[client1 push]" output here.
   [client2 push] adding manifests
   [client2 push] adding file changes
   [client2 push] added 2 changesets with 1 changes to 2 files (+1 heads)
+  [client2 push] 1 new obsolescence markers
+  [client2 push] obsoleted 1 changesets
+  [client2 push] 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
-  o  c2 => yyy (second) [draft:d732e3c60e5e]
+  @  c2 => yyy (second) [public:d732e3c60e5e]
   |
-  o  srv => bar (first) [draft:2d83594e8405]
+  o  srv => bar (first) [public:2d83594e8405]
   |
-  | @  c2 => yyy (second) [draft:4ab7e28729f6]
-  |/
   o  [base] (zero'th) [public:a9156650d8dd]
   
 
@@ -195,32 +196,29 @@ Check that the first push is still running/blocked...
   [client1 push] adding manifests
   [client1 push] adding file changes
   [client1 push] added 4 changesets with 2 changes to 3 files (+1 heads)
+  [client1 push] 2 new obsolescence markers
+  [client1 push] obsoleted 2 changesets
+  [client1 push] 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Verify the proper commit order. (Note: The received commits here shouldn't be
 draft; see t16967599).
   $ cd ../client1 && log
-  o  c1 => baz (fourth) [draft:24b9fc6d79e7]
+  @  c1 => baz (fourth) [public:24b9fc6d79e7]
   |
-  o  c1 => xxx (third) [draft:074726aeb626]
+  o  c1 => xxx (third) [public:074726aeb626]
   |
-  o  c2 => yyy (second) [draft:d732e3c60e5e]
+  o  c2 => yyy (second) [public:d732e3c60e5e]
   |
-  o  srv => bar (first) [draft:2d83594e8405]
+  o  srv => bar (first) [public:2d83594e8405]
   |
-  | @  c1 => baz (fourth) [draft:1fe62957ca8a]
-  | |
-  | o  c1 => xxx (third) [draft:8cf3b846b3a4]
-  |/
   o  [base] (zero'th) [public:a9156650d8dd]
   
 client2 should only have its changesets because it won:
   $ cd ../client2 && log
-  o  c2 => yyy (second) [draft:d732e3c60e5e]
+  @  c2 => yyy (second) [public:d732e3c60e5e]
   |
-  o  srv => bar (first) [draft:2d83594e8405]
+  o  srv => bar (first) [public:2d83594e8405]
   |
-  | @  c2 => yyy (second) [draft:4ab7e28729f6]
-  |/
   o  [base] (zero'th) [public:a9156650d8dd]
   
 

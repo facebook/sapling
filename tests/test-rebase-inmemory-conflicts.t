@@ -32,25 +32,30 @@ Make conflicts halfway up the stack:
   |
   @  f
   |
+  | x  f
+  |/
   o  e
   |
   o  d
   |
   | o  c
   |/
-  o  b
-  |
+  | x  g
+  | |
+  o |  b
+  |/
   o  a
   
   $ cp -R . ../control
   $ hg rebase -d c
   rebasing in-memory!
-  rebasing 3:f4016ed9f5d0 "d" (d)
-  rebasing 4:881eb15e0fdf "e" (e)
-  rebasing 5:e692c3b32196 "f"
+  rebasing 4:f4016ed9f5d0 "d" (d)
+  rebasing 5:881eb15e0fdf "e" (e)
+  note: not rebasing 6:22d86c9ba040 "f" (f) and its descendants as this would cause divergence
+  rebasing 7:e692c3b32196 "f"
   merging c
   hit merge conflicts (in c); switching to on-disk merge
-  rebasing 5:e692c3b32196 "f"
+  rebasing 7:e692c3b32196 "f"
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -59,24 +64,32 @@ Make conflicts halfway up the stack:
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  already rebased 3:f4016ed9f5d0 "d" (d) as 32bb4413a7df
-  already rebased 4:881eb15e0fdf "e" (e) as d82c41319fdd
-  rebasing 5:e692c3b32196 "f"
-  rebasing 6:2a19607ff85c "g"
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/f4016ed9f5d0-8f1f8064-rebase.hg
+  already rebased 4:f4016ed9f5d0 "d" (d) as 32bb4413a7df
+  already rebased 5:881eb15e0fdf "e" (e) as d82c41319fdd
+  note: not rebasing 6:22d86c9ba040 "f" (f) and its descendants as this would cause divergence
+  rebasing 7:e692c3b32196 "f"
+  rebasing 8:2a19607ff85c "g"
   $ hg log -G -r 0:: -T '{desc} {rev} {node|short}'
-  o  g 6 24c12a3229e2
+  o  g 12 24c12a3229e2
   |
-  @  f 5 c33e7f678afd
+  @  f 11 c33e7f678afd
   |
-  o  e 4 d82c41319fdd
+  o  e 10 d82c41319fdd
   |
-  o  d 3 32bb4413a7df
+  o  d 9 32bb4413a7df
   |
-  o  c 2 a82ac2b38757
-  |
-  o  b 1 488e1b7e7341
-  |
+  | x  f 6 22d86c9ba040
+  | |
+  | x  e 5 881eb15e0fdf
+  | |
+  | x  d 4 f4016ed9f5d0
+  | |
+  o |  c 3 a82ac2b38757
+  |/
+  | x  g 2 cf64e78ac512
+  | |
+  o |  b 1 488e1b7e7341
+  |/
   o  a 0 b173517d0057
   
 
@@ -87,8 +100,8 @@ Try it with uncommitted changes, ensure it aborts nicely:
   $ echo "test" > a
   $ hg rebase -s d82c41319fdd -d a
   rebasing in-memory!
-  rebasing 4:d82c41319fdd "e"
-  rebasing 5:c33e7f678afd "f"
+  rebasing 10:d82c41319fdd "e"
+  rebasing 11:c33e7f678afd "f"
   transaction abort!
   rollback completed
   abort: must use on-disk merge for this rebase (hit merge conflicts in c), but you have working copy changes

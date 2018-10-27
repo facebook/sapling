@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=

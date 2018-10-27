@@ -217,7 +217,6 @@ the merge tool goes to /dev/null because we're more interested in the results of
   merging a
   custom merge tool
   custom merge tool end
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/* (glob)
 
 This hg status should be empty, whether or not fsmonitor is enabled (issue5581).
 

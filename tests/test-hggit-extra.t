@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
 Test that extra metadata (renames, copies, and other extra metadata) roundtrips
 across from hg to git
   $ . "$TESTDIR/hggit/testutil"

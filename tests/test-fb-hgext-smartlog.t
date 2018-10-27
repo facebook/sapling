@@ -72,9 +72,8 @@ Basic test
 
 With commit info
   $ echo "hello" >c2 && hg ci --amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/db92053d5c83-4ae2ba4a-amend.hg (glob)
   $ hg smartlog -T compact --commit-info
-  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   |   M c2
@@ -92,7 +91,7 @@ With commit info
 
 As a revset
   $ hg log -G -T compact -r 'smartlog()'
-  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -107,7 +106,7 @@ As a revset
 
 With --master
   $ hg smartlog -T compact --master 1
-  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -136,7 +135,7 @@ Specific revs
   |
 
   $ hg smartlog -T compact -r 'smartlog()' -r 0
-  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -158,7 +157,7 @@ Test master ordering
   o  2[feature1,master]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   | |    d
   | |
   | o  4   38d85b506754   1970-01-01 00:00 +0000   test
@@ -174,7 +173,7 @@ Test master ordering
 Test overriding master
   $ hg boo -f master -r 38d85b506754
   $ hg smartlog -T compact
-  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -191,7 +190,7 @@ Test overriding master
   o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   | |    d
   | |
   | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -208,7 +207,7 @@ Test overriding master
   o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   | |    d
   | |
   | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -225,7 +224,7 @@ Test overriding master
   o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   | |    d
   | |
   | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -242,7 +241,7 @@ Test with weird bookmark names
 
   $ hg book -r 2 foo-bar
   $ hg smartlog -r 'foo-bar + .' -T compact
-  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   .    d
   .
   | o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
@@ -255,7 +254,7 @@ Test with weird bookmark names
   o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | @  6[tip][feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   | |    d
   | |
   | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -279,13 +278,13 @@ Test with two unrelated histories
   $ touch u2 && hg add u2 && hg ci -mu2
 
   $ hg smartlog  -T compact
-  @  7[tip]   806aaef35296   1970-01-01 00:00 +0000   test
+  @  8[tip]   806aaef35296   1970-01-01 00:00 +0000   test
   |    u2
   |
-  o  6:-1   8749dc393678   1970-01-01 00:00 +0000   test
+  o  7:-1   8749dc393678   1970-01-01 00:00 +0000   test
        u1
   
-  o  5[feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  o  6[feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test

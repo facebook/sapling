@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
 Setup
 
   $ setconfig experimental.bundle2-exp=True

@@ -280,14 +280,13 @@ Verify rebase succeeds if all changed files are in sparse checkout
   $ hg commit -Aqm "add show2"
   $ hg rebase -d 1 --config extensions.rebase=
   rebasing 2:bdde55290160 "add show2" (tip)
-  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/bdde55290160-216ed9c6-rebase.hg (glob)
 
 Verify log --sparse only shows commits that affect the sparse checkout
 
   $ hg log -T '{rev} '
-  2 1 0  (no-eol)
+  3 1 0  (no-eol)
   $ hg log --sparse -T '{rev} '
-  2 0  (no-eol)
+  3 0  (no-eol)
 
 Test status on a file in a subdir
 

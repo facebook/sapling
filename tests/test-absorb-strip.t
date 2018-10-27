@@ -34,7 +34,6 @@ Do not strip innocent children. See https://bitbucket.org/facebook/hg-experiment
   2 changesets affected
   f585351 D
   1124789 B
-  saved backup bundle to * (glob)
   2 of 2 chunk(s) applied
 
   $ hg log -G -T '{desc}'
@@ -46,11 +45,15 @@ Do not strip innocent children. See https://bitbucket.org/facebook/hg-experiment
   |
   o  B
   |
-  | o  F
+  | x  E
   | |
-  | o  C
+  | | o  F
+  | | |
+  | x |  D
+  | |/
+  | x  C
   | |
-  | o  B
+  | x  B
   |/
   o  A
   

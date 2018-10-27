@@ -1,3 +1,6 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
+
   $ . "$TESTDIR/library.sh"
 
   $ cat >> $HGRCPATH << EOF

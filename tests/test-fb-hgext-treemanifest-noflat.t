@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
   $ . "$TESTDIR/library.sh"
 
 This file tests that normal mercurial operations almost never read the flat manifests

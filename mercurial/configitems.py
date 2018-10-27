@@ -240,7 +240,9 @@ coreconfigitem("experimental", "copytrace.movecandidateslimit", default=100)
 coreconfigitem("experimental", "copytrace.sourcecommitlimit", default=100)
 coreconfigitem("experimental", "crecordtest", default=None)
 coreconfigitem("experimental", "editortmpinhg", default=False)
-coreconfigitem("experimental", "evolution", default=list)
+coreconfigitem(
+    "experimental", "evolution", default="createmarkers allowunstable allowdivergence"
+)
 coreconfigitem(
     "experimental",
     "evolution.allowdivergence",

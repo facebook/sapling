@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
 Test the "--base" flag of the rebase command. (Tests unrelated to the "--base"
 flag should probably live in somewhere else)
 

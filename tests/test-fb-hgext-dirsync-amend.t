@@ -69,29 +69,7 @@ Include only changes to particular file
   dir2/subdir/b
   committing manifest
   committing changelog
-  1 changesets found
-  uncompressed size of bundle content:
-       227 (changelog)
-       326 (manifests)
-       132  dir1/a
-       132  dir1/b
-       139  dir2/subdir/a
-       139  dir2/subdir/b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/32bc2a06fd26-fb68e7cc-amend.hg (glob)
-  1 changesets found
-  uncompressed size of bundle content:
-       281 (changelog)
-       326 (manifests)
-       134  dir1/a
-       132  dir1/b
-       141  dir2/subdir/a
-       139  dir2/subdir/b
-  adding branch
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 4 changes to 4 files
-  committed changeset 0:e9cce3b53a7c
+  committed changeset 1:e9cce3b53a7c
 
   $ hg diff --git -r null -r .
   diff --git a/dir1/a b/dir1/a
@@ -132,29 +110,7 @@ Include only changes to particular file
   dir2/subdir/b
   committing manifest
   committing changelog
-  1 changesets found
-  uncompressed size of bundle content:
-       281 (changelog)
-       326 (manifests)
-       134  dir1/a
-       132  dir1/b
-       141  dir2/subdir/a
-       139  dir2/subdir/b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/e9cce3b53a7c-5d332711-amend.hg (glob)
-  1 changesets found
-  uncompressed size of bundle content:
-       281 (changelog)
-       326 (manifests)
-       134  dir1/a
-       134  dir1/b
-       141  dir2/subdir/a
-       141  dir2/subdir/b
-  adding branch
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 4 changes to 4 files
-  committed changeset 0:a70e8a6cacdd
+  committed changeset 2:a70e8a6cacdd
 
   $ hg diff --git -r null -r .
   diff --git a/dir1/a b/dir1/a
@@ -198,29 +154,7 @@ Exclude changes to particular file
   dir2/subdir/b
   committing manifest
   committing changelog
-  1 changesets found
-  uncompressed size of bundle content:
-       281 (changelog)
-       326 (manifests)
-       134  dir1/a
-       134  dir1/b
-       141  dir2/subdir/a
-       141  dir2/subdir/b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a70e8a6cacdd-136cbdc1-amend.hg (glob)
-  1 changesets found
-  uncompressed size of bundle content:
-       281 (changelog)
-       326 (manifests)
-       134  dir1/a
-       136  dir1/b
-       141  dir2/subdir/a
-       143  dir2/subdir/b
-  adding branch
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 4 changes to 4 files
-  committed changeset 0:4af805a433df
+  committed changeset 3:4af805a433df
   $ hg diff --git -r null -r .
   diff --git a/dir1/a b/dir1/a
   new file mode 100644
@@ -269,29 +203,7 @@ Check the addremove flag
   dir2/subdir/c
   committing manifest
   committing changelog
-  1 changesets found
-  uncompressed size of bundle content:
-       281 (changelog)
-       326 (manifests)
-       134  dir1/a
-       136  dir1/b
-       141  dir2/subdir/a
-       143  dir2/subdir/b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/4af805a433df-2246e36e-amend.hg (glob)
-  1 changesets found
-  uncompressed size of bundle content:
-       281 (changelog)
-       326 (manifests)
-       136  dir1/b
-       132  dir1/c
-       143  dir2/subdir/b
-       139  dir2/subdir/c
-  adding branch
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 4 changes to 4 files
-  committed changeset 0:55c6a18e7d57
+  committed changeset 4:55c6a18e7d57
 
   $ hg diff --git -r null -r .
   diff --git a/dir1/b b/dir1/b

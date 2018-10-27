@@ -207,25 +207,7 @@ Test amending a change where there has already been a sync before
   dir2/subdir/b
   committing manifest
   committing changelog
-  1 changesets found
-  uncompressed size of bundle content:
-       241 (changelog)
-       223 (manifests)
-       199  dir1/b
-       213  dir2/subdir/b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a6e4f018e982-44b76a2e-amend.hg (glob)
-  1 changesets found
-  uncompressed size of bundle content:
-       282 (changelog)
-       223 (manifests)
-       199  dir1/b
-       213  dir2/subdir/b
-  adding branch
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 2 changes to 2 files
-  committed changeset 6:a9fa97a5457f
+  committed changeset 7:a9fa97a5457f
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
@@ -325,7 +307,6 @@ Test that rebasing applies the same change to both
   $ hg rebase --config extensions.rebase= -d 1
   rebasing 2:70b4edc7f658 "edit dir1/a with sync on" (tip)
   mirrored changes in 'dir1/a' to 'dir2/a'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/70b4edc7f658-c81f5ea9-rebase.hg (glob)
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
@@ -376,12 +357,12 @@ Test committing part of the working copy
   $ echo a >> dir2/a
   $ hg commit --amend -m "add dir1/a" dir2/a
   mirrored changes in 'dir2/a' to 'dir1/a'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9eb46ceb8af3-c2e9da44-amend.hg (glob)
   $ hg status
   A dir1/b
   $ hg log -r . --stat
-  changeset:   0:50bf2325c501
+  changeset:   1:50bf2325c501
   tag:         tip
+  parent:      -1:000000000000
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a
@@ -399,11 +380,11 @@ Test committing part of the working copy
   $ hg commit --amend -m "add dir1/a"
   mirrored adding 'dir1/b' to 'dir2/b'
   mirrored changes in 'dir1/a' to 'dir2/a'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/50bf2325c501-d4070811-amend.hg (glob)
   $ hg status
   $ hg log -r . --stat
-  changeset:   0:5245011388b8
+  changeset:   2:5245011388b8
   tag:         tip
+  parent:      -1:000000000000
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a
@@ -431,7 +412,7 @@ Test quiet non-conflicting edits
   dir2/a
   committing manifest
   committing changelog
-  committed changeset 2:10f8197f7e02
+  committed changeset 4:10f8197f7e02
   $ echo aaa > dir1/a
   $ echo aaa > dir2/a
   $ hg commit -m "add non-conflicting changes" --config ui.verbose=False

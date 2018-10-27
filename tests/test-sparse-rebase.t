@@ -25,4 +25,3 @@
   rebasing 3:e7b3f00ed42e "D" (D tip)
   temporarily included 1 file(s) in the sparse checkout for merging
   cleaned up 1 temporarily added file(s) from the sparse checkout
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/dc0947a82db8-b8481714-rebase.hg (glob)

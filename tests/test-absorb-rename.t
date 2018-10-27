@@ -1,9 +1,11 @@
-
+TODO: enable obsstore
   $ cat >> $HGRCPATH << EOF
   > [diff]
   > git=1
   > [extensions]
   > absorb=
+  > [experimental]
+  > evolution=
   > EOF
 
   $ sedi() { # workaround check-code

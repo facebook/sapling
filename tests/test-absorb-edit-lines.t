@@ -45,17 +45,17 @@ Edit the file using --edit-lines:
   >     yyy : g
   > EOF
   $ HGEDITOR='cat editortext >' hg absorb -q --apply-changes --edit-lines a
-  $ hg cat -r 0 a
+  $ hg cat -r '.^^' a
   d  
   e
   f
   g
-  $ hg cat -r 1 a
+  $ hg cat -r '.^' a
    b
   c
   d  
   g
-  $ hg cat -r 2 a
+  $ hg cat -r . a
   a
    b
   e

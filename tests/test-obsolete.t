@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
   $ . helpers-usechg.sh
 
   $ cat >> $HGRCPATH << EOF

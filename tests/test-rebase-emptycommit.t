@@ -87,18 +87,25 @@ still introduced by an ancestor of changeset on B-NEW. In the below case,
   rebasing 4:69a34c08022a "E" (BOOK-E)
   note: rebase of 4:69a34c08022a created no changes to commit
   rebasing 5:6b2aeab91270 "F" (BOOK-F F)
-  saved backup bundle to $TESTTMP/non-merge/.hg/strip-backup/dc0947a82db8-52bb4973-rebase.hg
   $ hg log -G -T '{rev} {desc} {bookmarks}'
-  o  5 F BOOK-F
+  o  9 F BOOK-F
   |
-  o  4 C BOOK-C BOOK-D BOOK-E
+  o  8 C BOOK-C BOOK-D BOOK-E
   |
-  o  3 E
+  o  7 E
   |
-  o  2 D
+  o  6 D
   |
-  o  1 B
-  |
+  | x  5 F
+  | |
+  | x  4 E
+  | |
+  | x  3 D
+  | |
+  | x  2 C
+  | |
+  o |  1 B
+  |/
   o  0 A
   
 Merge and its ancestors all become empty
@@ -135,17 +142,22 @@ Merge and its ancestors all become empty
   note: rebase of 3:b18e25de2cf5 created no changes to commit
   rebasing 4:86a1f6686812 "E" (BOOK-E E)
   note: rebase of 4:86a1f6686812 created no changes to commit
-  saved backup bundle to $TESTTMP/merge1/.hg/strip-backup/b18e25de2cf5-1fd0a4ba-rebase.hg
 
   $ hg log -G -T '{rev} {desc} {bookmarks}'
-  o  4 H BOOK-C BOOK-D BOOK-E
+  o  7 H BOOK-C BOOK-D BOOK-E
   |
-  o  3 D
+  o  6 D
   |
-  o  2 C
+  o  5 C
   |
-  o  1 B
-  |
+  | x    4 E
+  | |\
+  | | x  3 D
+  | | |
+  | x |  2 C
+  | |/
+  o /  1 B
+  |/
   o  0 A
   
 Part of ancestors of a merge become empty
@@ -185,22 +197,31 @@ Part of ancestors of a merge become empty
   rebasing 5:ad6717a6a58e "F" (BOOK-F)
   note: rebase of 5:ad6717a6a58e created no changes to commit
   rebasing 6:c58e8bdac1f4 "G" (BOOK-G G)
-  saved backup bundle to $TESTTMP/merge2/.hg/strip-backup/b18e25de2cf5-2d487005-rebase.hg
 
   $ hg log -G -T '{rev} {desc} {bookmarks}'
-  o    7 G BOOK-G
+  o    12 G BOOK-G
   |\
-  | o  6 E BOOK-E
+  | o  11 E BOOK-E
   | |
-  o |  5 D BOOK-D BOOK-F
+  o |  10 D BOOK-D BOOK-F
   |/
-  o  4 H BOOK-C
+  o  9 H BOOK-C
   |
-  o  3 F
+  o  8 F
   |
-  o  2 C
+  o  7 C
   |
-  o  1 B
-  |
+  | x    6 G
+  | |\
+  | | x  5 F
+  | | |
+  | x |  4 E
+  | | |
+  | | x  3 D
+  | | |
+  | x |  2 C
+  | |/
+  o /  1 B
+  |/
   o  0 A
   

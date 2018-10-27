@@ -1,3 +1,5 @@
+TODO: Make this test work with obsstore
+  $ setconfig experimental.evolution=
   $ . "$TESTDIR/hgsql/library.sh"
 
   $ setconfig ui.ssh='python "$RUNTESTDIR/dummyssh"'

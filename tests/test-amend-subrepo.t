@@ -6,11 +6,11 @@
   > EOF
 
 #if obsstore-on
-  $ cat << EOF >> $HGRCPATH
-  > [experimental]
-  > evolution.createmarkers = True
-  > EOF
+  $ setconfig experimental.evolution=createmarkers
+#else
+  $ setconfig experimental.evolution=
 #endif
+
 
 Prepare parent repo
 -------------------

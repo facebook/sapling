@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
 Require a destination
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
@@ -124,7 +126,7 @@ Setup rebase with multiple destinations
   >   hg rebase "$@" > _rebasetmp
   >   r=$?
   >   grep -v 'saved backup bundle' _rebasetmp
-  >   [ $r -eq 0 ] && rm -f .hg/localtags && hg tglog
+  >   [ $r -eq 0 ] && rm -f .hg/localtags && tglog
   >   cd ..
   >   return $r
   > }
@@ -173,13 +175,13 @@ Rebase to null should work:
   already rebased 0:426bada5c675 "A" (A)
   already rebased 2:dc0947a82db8 "C" (C)
   rebasing 3:004dc1679908 "D" (D tip)
-  o  4: d8d8601abd5e D
+  o  4: d8d8601abd5e 'D'
   
-  o  2: dc0947a82db8 C
+  o  2: dc0947a82db8 'C'
   |
-  | o  1: fc2b737bb2e5 B
+  | o  1: fc2b737bb2e5 'B'
   |
-  o  0: 426bada5c675 A
+  o  0: 426bada5c675 'A'
   
 Destination resolves to multiple changesets:
 
@@ -218,17 +220,17 @@ Switch roots:
   rebasing 4:26805aba1e60 "C" (C)
   rebasing 3:cd488e83d208 "E" (E)
   rebasing 5:0069ba24938a "F" (F tip)
-  o  9: d150ff263fc8 F
+  o  9: d150ff263fc8 'F'
   |
-  o  8: 66f30a1a2eab E
+  o  8: 66f30a1a2eab 'E'
   |
-  | o  7: 93db94ffae0e C
+  | o  7: 93db94ffae0e 'C'
   | |
-  | o  6: d0071c3b0c88 B
+  | o  6: d0071c3b0c88 'B'
   | |
-  | o  1: 058c1e1fb10a D
+  | o  1: 058c1e1fb10a 'D'
   |
-  o  0: 426bada5c675 A
+  o  0: 426bada5c675 'A'
   
 Different destinations for merge changesets with a same root:
 
@@ -243,19 +245,19 @@ Different destinations for merge changesets with a same root:
   > EOS
   rebasing 3:a4256619d830 "B" (B)
   rebasing 6:8e139e245220 "C" (C tip)
-  o    8: 51e2ce92e06a C
+  o    8: 51e2ce92e06a 'C'
   |\
-  | o    7: 2ed0c8546285 B
+  | o    7: 2ed0c8546285 'B'
   | |\
-  o | |  5: 8fdb2c1feb20 G
+  o | |  5: 8fdb2c1feb20 'G'
   | | |
-  | | o  4: cd488e83d208 E
+  | | o  4: cd488e83d208 'E'
   | | |
-  o | |  2: a6661b868de9 F
+  o | |  2: a6661b868de9 'F'
    / /
-  | o  1: 058c1e1fb10a D
+  | o  1: 058c1e1fb10a 'D'
   |
-  o  0: 426bada5c675 A
+  o  0: 426bada5c675 'A'
   
 Move to a previous parent:
 
@@ -273,21 +275,21 @@ Move to a previous parent:
   rebasing 4:33441538d4aa "F" (F)
   rebasing 6:cf43ad9da869 "G" (G)
   rebasing 7:eef94f3b5f03 "H" (H tip)
-  o  10: b3d84c6666cf H
+  o  10: b3d84c6666cf 'H'
   |
-  | o  5: f585351a92f8 D
+  | o  9: f7c28a1a15e2 'G'
+  | |
+  | | o  8: 02aa697facf7 'F'
+  | | |
+  +-----o  5: f585351a92f8 'D'
+  | | |
+  o | |  3: 26805aba1e60 'C'
+  |/ /
+  | | o  2: 7fb047a69f22 'E'
+  | |/
+  o |  1: 112478962961 'B'
   |/
-  o  3: 26805aba1e60 C
-  |
-  | o  9: f7c28a1a15e2 G
-  |/
-  o  1: 112478962961 B
-  |
-  | o  8: 02aa697facf7 F
-  |/
-  | o  2: 7fb047a69f22 E
-  |/
-  o  0: 426bada5c675 A
+  o  0: 426bada5c675 'A'
   
 Source overlaps with destination:
 
@@ -298,13 +300,13 @@ Source overlaps with destination:
   > EOS
   rebasing 2:dc0947a82db8 "C" (C)
   rebasing 1:112478962961 "B" (B)
-  o  5: 5fe9935d5222 B
+  o  5: 5fe9935d5222 'B'
   |
-  o  4: 12d20731b9e0 C
+  o  4: 12d20731b9e0 'C'
   |
-  o  3: b18e25de2cf5 D
+  o  3: b18e25de2cf5 'D'
   |
-  o  0: 426bada5c675 A
+  o  0: 426bada5c675 'A'
   
 Detect cycles early:
 
@@ -344,17 +346,17 @@ Detect source is ancestor of dest in runtime:
   already rebased 3:b18e25de2cf5 "D" (D)
   already rebased 4:312782b8f06e "E" (E)
   already rebased 5:ad6717a6a58e "F" (F tip)
-  o  5: ad6717a6a58e F
+  o  5: ad6717a6a58e 'F'
   |
-  o  3: b18e25de2cf5 D
-  |
-  | o    4: 312782b8f06e E
+  | o    4: 312782b8f06e 'E'
   | |\
-  +---o  2: dc0947a82db8 C
+  o | |  3: b18e25de2cf5 'D'
+  | | |
+  +---o  2: dc0947a82db8 'C'
   | |
-  | o  1: 112478962961 B
+  | o  1: 112478962961 'B'
   |/
-  o  0: 426bada5c675 A
+  o  0: 426bada5c675 'A'
   
 Massively rewrite the DAG:
 
@@ -378,27 +380,27 @@ Massively rewrite the DAG:
   rebasing 10:ae41898d7875 "K" (K tip)
   rebasing 9:711f53bbef0b "G" (G)
   rebasing 6:64a8289d2492 "F" (F)
-  o  21: 3735afb3713a F
+  o  21: 3735afb3713a 'F'
   |
-  o  20: 07698142d7a7 G
+  o  20: 07698142d7a7 'G'
   |
-  o  19: 33aba52e7e72 K
+  o  19: 33aba52e7e72 'K'
   |
-  o  18: 9fdae89dc5a1 D
+  o  18: 9fdae89dc5a1 'D'
   |
-  o  17: 277dda9a65ee E
+  o  17: 277dda9a65ee 'E'
   |
-  o  16: 9c74fd8657ad B
+  o  16: 9c74fd8657ad 'B'
   |
-  o  15: 6527eb0688bb J
+  o  15: 6527eb0688bb 'J'
   |
-  o  14: e94d655b928d C
+  o  14: e94d655b928d 'C'
   |
-  o  13: 620d6d349459 H
+  o  13: 620d6d349459 'H'
   |
-  o  12: a569a116758f A
+  o  12: a569a116758f 'A'
   |
-  o  11: 2bf1302f5c18 I
+  o  11: 2bf1302f5c18 'I'
   
 Resolve instability:
 
@@ -425,27 +427,27 @@ Resolve instability:
   rebasing 10:ffebc37c5d0b "E3" (E3)
   rebasing 13:fb184bcfeee8 "F2" (F2)
   rebasing 11:dc838ab4c0da "G" (G)
-  o  22: 174f63d574a8 G
+  o  22: 174f63d574a8 'G'
   |
-  o  21: c9d9fbe76705 F2
+  o  21: c9d9fbe76705 'F2'
   |
-  o  20: 0a03c2ede755 E3
+  o  20: 0a03c2ede755 'E3'
   |
-  o  19: 228d9d2541b1 D
+  o  19: 228d9d2541b1 'D'
   |
-  o  18: cd856b400c95 C
+  o  18: cd856b400c95 'C'
   |
-  o  17: 9148200c858c J
+  o  17: 9148200c858c 'J'
   |
-  o  15: eb74780f5094 I2
+  o  15: eb74780f5094 'I2'
   |
-  o  12: 78309edd643f H
+  o  12: 78309edd643f 'H'
   |
-  o  5: 4b4531bd8e1d B2
+  o  5: 4b4531bd8e1d 'B2'
   |
-  o  4: 337c285c272b N
+  o  4: 337c285c272b 'N'
   |
-  o  2: 699bc4b6fa22 M
+  o  2: 699bc4b6fa22 'M'
   |
-  o  0: 426bada5c675 A
+  o  0: 426bada5c675 'A'
   

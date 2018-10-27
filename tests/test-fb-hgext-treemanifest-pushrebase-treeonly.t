@@ -48,10 +48,13 @@ Make server treeonly and push trees to it
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  2 new obsolescence markers
   updating bookmark foo
+  obsoleted 2 changesets
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ tglog --stat -l 2
-  o  5: d9ee86e3acc1 'D'   sub/C |  1 +
+  @  5: d9ee86e3acc1 'D'   sub/C |  1 +
   |   1 files changed, 1 insertions(+), 0 deletions(-)
   |
   o  4: 4197fbd39b1b 'C'   sub/C |  1 +

@@ -1,3 +1,5 @@
+TODO: Make this test compatibile with obsstore enabled.
+  $ setconfig experimental.evolution=
 Test rebase --continue with rebasestate written by legacy client
 
   $ cat >> $HGRCPATH <<EOF

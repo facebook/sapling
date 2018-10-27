@@ -2,6 +2,9 @@
   > [extensions]
   > rebase=
   > histedit=
+  > 
+  > [alias]
+  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF
 
 
@@ -53,12 +56,11 @@ Now b has one revision to be pulled from a:
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 77ae9631bcca
   rebasing 2:ff8d69a621f9 "L1"
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg
 
   $ tglog
-  @  3: d80cc2da061e 'L1'
+  @  4: d80cc2da061e 'L1'
   |
-  o  2: 77ae9631bcca 'R1'
+  o  3: 77ae9631bcca 'R1'
   |
   o  1: 783333faa078 'C2'
   |
@@ -210,13 +212,12 @@ pull --rebase works when a specific revision is pulled (issue3619)
   added 2 changesets with 2 changes to 2 files
   new changesets 31cd3a05214e:770a61882ace
   rebasing 3:ff8d69a621f9 "L1"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg
   $ tglog
-  @  5: 518d153c0ba3 'L1'
+  @  6: 518d153c0ba3 'L1'
   |
-  o  4: 770a61882ace 'R3'
+  o  5: 770a61882ace 'R3'
   |
-  o  3: 31cd3a05214e 'R2'
+  o  4: 31cd3a05214e 'R2'
   |
   o  2: 77ae9631bcca 'R1' norebase
   |
@@ -252,16 +253,15 @@ pull --rebase works with bundle2 turned on
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 00e3b7781125
-  rebasing 5:518d153c0ba3 "L1"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/518d153c0ba3-73407f14-rebase.hg
+  rebasing 6:518d153c0ba3 "L1"
   $ tglog
-  @  6: 0d0727eb7ce0 'L1'
+  @  8: 0d0727eb7ce0 'L1'
   |
-  o  5: 00e3b7781125 'R4'
+  o  7: 00e3b7781125 'R4'
   |
-  o  4: 770a61882ace 'R3'
+  o  5: 770a61882ace 'R3'
   |
-  o  3: 31cd3a05214e 'R2'
+  o  4: 31cd3a05214e 'R2'
   |
   o  2: 77ae9631bcca 'R1' norebase
   |
@@ -305,21 +305,20 @@ pull --rebase only update if there is nothing to rebase
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 88dd24261747
-  rebasing 6:0d0727eb7ce0 "L1"
-  rebasing 7:c1f58876e3bf "L2"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/0d0727eb7ce0-ef61ccb2-rebase.hg
+  rebasing 8:0d0727eb7ce0 "L1"
+  rebasing 9:c1f58876e3bf "L2"
   $ tglog
-  o  8: 6dc0ea5dcf55 'L2'
+  o  12: 6dc0ea5dcf55 'L2'
   |
-  @  7: 864e0a2d2614 'L1'
+  @  11: 864e0a2d2614 'L1'
   |
-  o  6: 88dd24261747 'R5'
+  o  10: 88dd24261747 'R5'
   |
-  o  5: 00e3b7781125 'R4'
+  o  7: 00e3b7781125 'R4'
   |
-  o  4: 770a61882ace 'R3'
+  o  5: 770a61882ace 'R3'
   |
-  o  3: 31cd3a05214e 'R2'
+  o  4: 31cd3a05214e 'R2'
   |
   o  2: 77ae9631bcca 'R1' norebase
   |
@@ -352,19 +351,19 @@ pull --rebase update (no rebase) use proper update:
   updated to "65bc164c1d9b: R6"
   1 other heads for branch "default"
   $ tglog
-  @  9: 65bc164c1d9b 'R6'
+  @  13: 65bc164c1d9b 'R6'
   |
-  | o  8: 6dc0ea5dcf55 'L2'
+  | o  12: 6dc0ea5dcf55 'L2'
   | |
-  | o  7: 864e0a2d2614 'L1'
+  | o  11: 864e0a2d2614 'L1'
   |/
-  o  6: 88dd24261747 'R5'
+  o  10: 88dd24261747 'R5'
   |
-  o  5: 00e3b7781125 'R4'
+  o  7: 00e3b7781125 'R4'
   |
-  o  4: 770a61882ace 'R3'
+  o  5: 770a61882ace 'R3'
   |
-  o  3: 31cd3a05214e 'R2'
+  o  4: 31cd3a05214e 'R2'
   |
   o  2: 77ae9631bcca 'R1' norebase
   |
@@ -424,29 +423,28 @@ The second local head should not confuse the `hg pull rebase`.
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets f7d3e42052f9
-  rebasing 7:864e0a2d2614 "L1"
-  rebasing 8:6dc0ea5dcf55 "L2"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/864e0a2d2614-2f72c89c-rebase.hg
+  rebasing 11:864e0a2d2614 "L1"
+  rebasing 12:6dc0ea5dcf55 "L2"
   $ tglog
-  @  12: 3603a865eea0 'L2'
+  @  18: 3603a865eea0 'L2'
   |
-  o  11: bcc8a9cd04bf 'L1'
+  o  17: bcc8a9cd04bf 'L1'
   |
-  o  10: f7d3e42052f9 'R7'
+  o  16: f7d3e42052f9 'R7'
   |
-  | o  9: 41fab4eef82f 'M1'
+  | o  15: 41fab4eef82f 'M1'
   |/
-  | o  8: 39c381359968 'B1'  unrelatedbranch
+  | o  14: 39c381359968 'B1'  unrelatedbranch
   |/
-  o  7: 65bc164c1d9b 'R6'
+  o  13: 65bc164c1d9b 'R6'
   |
-  o  6: 88dd24261747 'R5'
+  o  10: 88dd24261747 'R5'
   |
-  o  5: 00e3b7781125 'R4'
+  o  7: 00e3b7781125 'R4'
   |
-  o  4: 770a61882ace 'R3'
+  o  5: 770a61882ace 'R3'
   |
-  o  3: 31cd3a05214e 'R2'
+  o  4: 31cd3a05214e 'R2'
   |
   o  2: 77ae9631bcca 'R1' norebase
   |
