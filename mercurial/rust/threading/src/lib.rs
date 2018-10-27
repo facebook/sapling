@@ -6,11 +6,9 @@
 #[macro_use]
 extern crate cpython;
 
-use cpython::{exc, ObjectProtocol, PyErr, PyObject, PyResult, PyType, PythonObject};
-use std::cell::{Cell, RefCell};
-use std::mem::{drop, forget, transmute, transmute_copy};
-use std::ptr;
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use cpython::{exc, PyErr, PyObject, PyResult, PyType, PythonObject};
+use std::cell::Cell;
+use std::sync::{Condvar, Mutex};
 use std::thread::{self, ThreadId};
 use std::time::Duration;
 
@@ -20,25 +18,25 @@ py_module_initializer!(threading, initthreading, PyInit_threading, |py, m| {
     Ok(())
 });
 
-struct MutexOwner {
-    ptr: *mut MutexGuard<'static, ()>,
-    owner: ThreadId,
+#[derive(Copy, Clone)]
+struct Owner {
+    thread_id: ThreadId,
     count: usize,
 }
 
-// We do our own checking to make sure the guard is obtained
-// and released from a same thread. Therefore ignore Send/Sync
-// requirement.
-unsafe impl Send for MutexOwner {}
-unsafe impl Sync for MutexOwner {}
+// Used to pass MutexGuard into py.allow_threads closure.  "allow_threads"
+// requires "Send" to prevent the use of "py". We're not passing "py" and the
+// guard is owned by Rust, and the code runs in a same thread. So it is fine.
+struct ForceSend<T>(T);
+unsafe impl<T> Send for ForceSend<T> {}
 
 fn rust_thread_id() -> ThreadId {
     thread::current().id()
 }
 
-impl MutexOwner {
+impl Owner {
     fn is_none(&self) -> bool {
-        self.ptr.is_null()
+        self.count == 0
     }
 
     fn is_some(&self) -> bool {
@@ -46,106 +44,74 @@ impl MutexOwner {
     }
 
     fn is_owned(&self) -> bool {
-        self.is_some() && self.owner == rust_thread_id()
+        self.is_some() && self.thread_id == rust_thread_id()
     }
 
-    unsafe fn from_guard_count<'a>(guard: MutexGuard<'a, ()>, count: usize) -> Self {
-        // Extend lifetime and box
-        let boxed_extended = { Box::new(transmute(guard)) };
-        let ptr = Box::into_raw(boxed_extended);
-        let owner = rust_thread_id();
-        MutexOwner { ptr, owner, count }
-    }
-
-    unsafe fn into_guard_count(self) -> (MutexGuard<'static, ()>, usize) {
-        if !self.is_owned() {
-            panic!("into_guard called from wrong thread!");
-        }
-        let boxed = Box::from_raw(self.ptr);
-        (*boxed, self.count)
-    }
-
-    fn incref(&mut self) {
+    fn incref(self) -> Self {
         if !self.is_owned() {
             panic!("incref called from wrong thread!");
         }
-        self.count += 1;
+        Self {
+            thread_id: self.thread_id,
+            count: self.count + 1,
+        }
     }
 
-    fn decref(&mut self) -> bool {
-        // Return true if is_none() becomes true.
+    fn decref(self) -> Self {
         if !self.is_owned() {
             panic!("decref called from wrong thread!");
         }
-        if self.count > 1 {
-            self.count -= 1;
-            false
-        } else {
-            assert!(self.count == 1);
-            let boxed = unsafe { Box::from_raw(self.ptr) };
-            let guard = *boxed;
-            drop(guard);
-            self.ptr = ptr::null_mut();
-            self.count = 0;
-            true
+        assert!(self.count > 0);
+        Self {
+            thread_id: self.thread_id,
+            count: self.count - 1,
         }
     }
 
-    fn null() -> Self {
-        MutexOwner {
-            ptr: ptr::null_mut(),
-            owner: rust_thread_id(),
+    fn none() -> Self {
+        Self {
+            thread_id: rust_thread_id(),
             count: 0,
         }
     }
-}
 
-fn arc_incref(mutex: &Arc<Mutex<()>>) {
-    let cloned = Arc::clone(mutex);
-    forget(cloned);
-}
-
-unsafe fn arc_decref(mutex: &Arc<Mutex<()>>) {
-    let cloned: &Arc<Mutex<()>> = transmute_copy(mutex);
-    drop(cloned)
+    fn current_thread() -> Self {
+        Self {
+            thread_id: rust_thread_id(),
+            count: 1,
+        }
+    }
 }
 
 // The Condition class can be used as RLock too.
 py_class!(class Condition |py| {
     // The order of data fields matters. First declared, first dropped.
-    // Condvar needs to be dropped before Mutex.
-    data cond: Condvar;
 
-    // Rust expects MutexGuard to be dropped from the same thread creating it.
-    //
-    // However, Python might release "Condition" from any thread. To avoid
-    // issues, use pointers to prevent Rust from calling MutexGuard::drop
-    // automatically.
-    //
-    // That means, if the Python code forgets to call "condition.release()",
-    // the "MutexGuard" will be leaked and the lock is not released.
-    data owner: RefCell<MutexOwner>;
+    // Wait for "notify"
+    data cond_notify: Condvar;
 
-    // In case MutexGuard is not dropped, the mutex is still being used and
-    // should not be dropped by Rust automatically. If MutexGuard was dropped,
-    // the mutex should be dropped too.
-    //
-    // However, rust-cpython provides little interface to tp_dealloc for
-    // customized clean-up logic. Therefore, rely on "drop" to release the
-    // mutex.
-    //
-    // Here, we keep the Arc refcount in sync with MutexOwner. If there is
-    // no owner, the Arc refcount can drop to 0 and the Mutex can be released.
-    // Otherwise the Mutex will be leaked.
-    data mutex: Arc<Mutex<()>>;
+    // Wait for "release" (internal use)
+    data cond_release: Condvar;
+
+    // Used to protect the above Condvars
+    data mutex_notify: Mutex<()>;
+    data mutex_release: Mutex<()>;
+
+    // Thread owner metadata
+    data owner: Cell<Owner>;
+
 
     def __new__(_cls, lock: Option<PyObject> = None) -> PyResult<PyObject> {
         match lock {
             None => {
-                let cond = Condvar::new();
-                let owner = RefCell::new(MutexOwner::null());
-                let mutex = Arc::new(Mutex::new(()));
-                Condition::create_instance(py, cond, owner, mutex).map(|c| c.into_object())
+                Ok(Condition::create_instance(
+                    py,
+                    Condvar::new(),
+                    Condvar::new(),
+                    Mutex::new(()),
+                    Mutex::new(()),
+                    Cell::new(Owner::none()),
+                )?.into_object())
             },
             Some(lock) => {
                 // Do not support taking a customized "lock".
@@ -159,36 +125,49 @@ py_class!(class Condition |py| {
     // RLock APIs
 
     def acquire(&self, blocking: bool = true) -> PyResult<bool> {
-        if self._is_owned(py)? {
-            // Reentrant. No need to lock again.
-            let mut owner = self.owner(py).borrow_mut();
-            owner.incref();
+        let owner = self.owner(py).get();
+        if owner.is_none() {
+            self.owner(py).set(Owner::current_thread());
+            Ok(true)
+        } else if owner.is_owned() {
+            let owner = owner.incref();
+            self.owner(py).set(owner);
+            Ok(true)
         } else {
-            let mutex = self.mutex(py);
-            let guard = if blocking {
-                // Allow other threads to run "release" or "wait". Blocking.
-                py.allow_threads(|| { mutex.lock().unwrap() })
-            } else {
-                // Try to acquire the lock. No need to unblock other threads.
-                let result = mutex.try_lock();
-                match result {
-                    Ok(result) => result,
-                    Err(_) => return Ok(false),
+            if blocking {
+                let mutex_release = self.mutex_release(py);
+                let cond_release = self.cond_release(py);
+                // Blocking. Wait for other threads to "release", or "wait"
+                while self.owner(py).get().is_some() {
+                    let guard = ForceSend(mutex_release.lock().unwrap());
+                    py.allow_threads(|| {
+                        let _guard = cond_release.wait(guard.0).unwrap();
+                        // Drop _guard to release the lock before acquiring
+                        // Python GIL Otherwise this might deadlock with other
+                        // threads acquiring mutex_release.
+                    });
+                    // At this point we don't know whether the lock is free or
+                    // not. The above section does not prevent a Python thread
+                    // from acquiring the lock again. But we regained GIL so
+                    // check it in a loop.
                 }
-            };
-            let owner = unsafe { MutexOwner::from_guard_count(guard, 1) };
-            let old_owner = self.owner(py).replace(owner);
-            arc_incref(self.mutex(py));
-            assert!(old_owner.is_none());
+                let old_owner = self.owner(py).replace(Owner::current_thread());
+                assert!(old_owner.is_none());
+                Ok(true)
+            } else {
+                Ok(false)
+            }
         }
-        Ok(true)
     }
 
     def release(&self) -> PyResult<Option<bool>> {
         if self._is_owned(py)? {
-            let mut owner = self.owner(py).borrow_mut();
-            if owner.decref() {
-                unsafe { arc_decref(self.mutex(py)); }
+            let owner = self.owner(py).get().decref();
+            self.owner(py).set(owner);
+            if owner.is_none() {
+                let cond_release = self.cond_release(py);
+                let _guard = self.mutex_release(py).lock().unwrap();
+                cond_release.notify_one();
             }
             Ok(None)
         } else {
@@ -198,7 +177,7 @@ py_class!(class Condition |py| {
 
     // Required by RLockTests
     def _is_owned(&self) -> PyResult<bool> {
-        let owner = self.owner(py).borrow();
+        let owner = self.owner(py).get();
         Ok(owner.is_owned())
     }
 
@@ -220,27 +199,43 @@ py_class!(class Condition |py| {
             return Err(PyErr::new::<exc::RuntimeError, _>(py, "cannot wait on un-acquired lock"));
         }
 
-        // Temporarily swap owner with None so other threads can "acquire" when
-        // "cond.wait" releases the lock. 
-        let owner = self.owner(py).replace(MutexOwner::null());
-        let cond = self.cond(py);
+        let cond_notify = self.cond_notify(py);
+        let cond_release = self.cond_release(py);
+        let mutex_notify = self.mutex_notify(py);
+        let mutex_release = self.mutex_release(py);
 
-        let (new_guard, count) = py.allow_threads(|| {
-            // Allow other threads to run "notify", or "acquire". Blocking.
-            let (guard, count) = unsafe { owner.into_guard_count() };
-            let guard = match timeout {
-                None => cond.wait(guard).unwrap(),
-                Some(timeout) => {
-                    let duration = Duration::from_millis((timeout * 1000.0) as u64);
-                    cond.wait_timeout(guard, duration).unwrap().0
-                }
-            };
-            (guard, count)
-        });
+        // Temporarily release the lock so other threads can "acquire" and
+        // "notify". Simplified version of "release".
+        let owner = self.owner(py).replace(Owner::none());
+        {
+            let _guard = mutex_release.lock().unwrap();
+            cond_release.notify_one();
+        }
+
+        {
+            let guard = ForceSend(mutex_notify.lock().unwrap());
+            py.allow_threads(|| {
+                // Allow other threads to run "notify", or "acquire". Blocking.
+                let _guard = match timeout {
+                    None => cond_notify.wait(guard.0).unwrap(),
+                    Some(timeout) => {
+                        let duration = Duration::from_millis((timeout * 1000.0) as u64);
+                        cond_notify.wait_timeout(guard.0, duration).unwrap().0
+                    }
+                };
+            });
+        }
+
+        // Need to re-acquire the lock. A simplified version of "acquire".
+        while self.owner(py).get().is_some() {
+            let guard = ForceSend(mutex_release.lock().unwrap());
+            py.allow_threads(|| {
+                let _guard = cond_release.wait(guard.0).unwrap();
+            });
+        }
 
         // Restore owner
-        let new_owner = unsafe { MutexOwner::from_guard_count(new_guard, count) };
-        let old_owner = self.owner(py).replace(new_owner);
+        let old_owner = self.owner(py).replace(owner);
         assert!(old_owner.is_none());
 
         Ok(None)
@@ -250,9 +245,13 @@ py_class!(class Condition |py| {
         // Python API requires the lock to be acquired when using "notify",
         // although Rust does not have this restriction.
         if self._is_owned(py)? {
-            let cond = self.cond(py);
+            let cond_notify = self.cond_notify(py);
+            // Acquire the mutex. This makes sure "condvar.wait" has released
+            // it. Without this, there is a small window between "allow_threads"
+            // and "condvar.wait" at which time sending "notify" will be wrong.
+            let _guard = self.mutex_notify(py).lock().unwrap();
             for _ in 0..n {
-                cond.notify_one();
+                cond_notify.notify_one();
             }
             Ok(None)
         } else {
@@ -262,7 +261,8 @@ py_class!(class Condition |py| {
 
     def notify_all(&self) -> PyResult<Option<bool>> {
         if self._is_owned(py)? {
-            self.cond(py).notify_all();
+            let _guard = self.mutex_notify(py).lock().unwrap();
+            self.cond_notify(py).notify_all();
             Ok(None)
         } else {
             Err(PyErr::new::<exc::RuntimeError, _>(py, "cannot notify on un-acquired lock"))
@@ -272,9 +272,9 @@ py_class!(class Condition |py| {
     // Other stuff
 
     def __repr__(&self) -> PyResult<String> {
-        let owner = self.owner(py).borrow();
+        let owner = self.owner(py).get();
         let msg = if owner.is_some() {
-            format!("<Condition (owned by {:?}, refcount {})>", owner.owner, owner.count)
+            format!("<Condition (owned by {:?}, refcount {})>", owner.thread_id, owner.count)
         } else {
             format!("<Condition (not owned)>")
         };
@@ -305,7 +305,7 @@ py_class!(class bug29988wrapper |py| {
     def __exit__(&self, _ty: Option<PyType>, _value: PyObject, _traceback: PyObject) -> PyResult<bool> {
         if self.entered(py).get() {
             let obj = self.obj(py);
-            let result = obj.release(py)?;
+            obj.release(py)?;
             self.entered(py).replace(false);
         }
         Ok(false)
