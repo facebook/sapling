@@ -77,14 +77,14 @@ _defaultstyles = {
     "grep.filename": "magenta",
     "grep.user": "magenta",
     "grep.date": "magenta",
-    "blame.age.1hour": "color231:bold",
-    "blame.age.1day": "color230:bold",
-    "blame.age.7day": "color229:brightyellow",
-    "blame.age.30day": "color228:brightyellow",
-    "blame.age.60day": "color185:yellow",
-    "blame.age.180day": "color142:yellow",
-    "blame.age.360day": "color100:yellow",
-    "blame.age.old": "color58:brightblack:yellow",
+    "blame.age.1hour": "#ffe:color231:bold",
+    "blame.age.1day": "#eea:color230:bold",
+    "blame.age.7day": "#dd5:color229:brightyellow",
+    "blame.age.30day": "#cc3:color228:brightyellow",
+    "blame.age.60day": "#aa2:color185:yellow",
+    "blame.age.180day": "#881:color142:yellow",
+    "blame.age.360day": "#661:color100:yellow",
+    "blame.age.old": "#440:color58:brightblack:yellow",
     "bookmarks.active": "green",
     "branches.active": "none",
     "branches.closed": "black bold",
@@ -264,8 +264,34 @@ def normalizestyle(ui, style):
             return e
 
 
+class truecoloreffects(dict):
+    def makecolor(self, c):
+        n = 38
+        if c.endswith("_background"):
+            c = c[:-11]
+            n = 48
+        if len(c) == 4:
+            r, g, b = c[1] + c[1], c[2] + c[2], c[3] + c[3]
+        else:
+            r, g, b = c[1:3], c[3:5], c[5:7]
+        return ";".join(map(str, [n, 2, int(r, 16), int(g, 16), int(b, 16)]))
+
+    def get(self, key, default=None):
+        if _truecolorre.match(key):
+            return self.makecolor(key)
+        else:
+            return super(truecoloreffects, self).get(key, default)
+
+    def __getitem__(self, key):
+        if _truecolorre.match(key):
+            return self.makecolor(key)
+        else:
+            return super(truecoloreffects, self).__getitem__(key)
+
+
 def _extendcolors(colors):
     # see https://en.wikipedia.org/wiki/ANSI_escape_code
+    global _effects
     if colors >= 16:
         _effects.update(
             {
@@ -283,6 +309,8 @@ def _extendcolors(colors):
         for i in range(256):
             _effects["color%s" % i] = "38;5;%s" % i
             _effects["color%s_background" % i] = "48;5;%s" % i
+    if colors >= 16777216:
+        _effects = truecoloreffects(_effects)
 
 
 def configstyles(ui):
@@ -321,8 +349,13 @@ def _activeeffects(ui):
 
 def valideffect(ui, effect):
     "Determine if the effect is valid or not."
-    return (not ui._terminfoparams and effect in _activeeffects(ui)) or (
-        effect in ui._terminfoparams or effect[:-11] in ui._terminfoparams
+    return (
+        (
+            isinstance(_activeeffects(ui), truecoloreffects)
+            and _truecolorre.match(effect)
+        )
+        or (not ui._terminfoparams and effect in _activeeffects(ui))
+        or (effect in ui._terminfoparams or effect[:-11] in ui._terminfoparams)
     )
 
 
@@ -384,6 +417,7 @@ def _render_effects(ui, text, effects):
 
 
 _ansieffectre = re.compile(br"\x1b\[[0-9;]*m")
+_truecolorre = re.compile(br"#([0-9A-Fa-f]{3}){1,2}(_background)?")
 
 
 def stripeffects(text):
@@ -619,6 +653,9 @@ def supportedcolors():
     # also sets TMUX.
     elif env.get("TERM") == "screen" and "TMUX" not in env:
         realcolors = 16
+    # If COLORTERM is set to indicate a truecolor terminal, believe it.
+    elif env.get("COLORTERM") in ("truecolor", "24bit"):
+        realcolors = 16777216
     # Otherwise, pretend to support 256 colors.
     else:
         realcolors = 256
