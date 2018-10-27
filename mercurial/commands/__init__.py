@@ -15,6 +15,7 @@ import shlex
 import stat
 import subprocess
 import sys
+import time
 
 from .. import (
     archival,
@@ -382,6 +383,27 @@ def annotate(ui, repo, *pats, **opts):
         hexfn = rootfm.hexfunc
         formatrev = formathex = pycompat.bytestr
 
+    now = time.time()
+
+    def agebucket(d):
+        t, tz = d
+        if t > now - 3600:
+            return "1hour"
+        day = 86400
+        if t > now - day:
+            return "1day"
+        if t > now - 7 * day:
+            return "7day"
+        if t > now - 30 * day:
+            return "30day"
+        if t > now - 60 * day:
+            return "60day"
+        if t > now - 180 * day:
+            return "180day"
+        if t > now - 360 * day:
+            return "360day"
+        return "old"
+
     opmap = [
         ("user", " ", lambda x: x.fctx.user(), ui.shortuser),
         ("number", " ", lambda x: x.fctx.rev(), formatrev),
@@ -389,6 +411,7 @@ def annotate(ui, repo, *pats, **opts):
         ("date", " ", lambda x: x.fctx.date(), util.cachefunc(datefunc)),
         ("file", " ", lambda x: x.fctx.path(), str),
         ("line_number", ":", lambda x: x.lineno, str),
+        ("age_bucket", "", lambda x: agebucket(x.fctx.date()), lambda x: ""),
     ]
     fieldnamemap = {"number": "rev", "changeset": "node"}
 
@@ -399,6 +422,7 @@ def annotate(ui, repo, *pats, **opts):
         and not opts.get("file")
     ):
         opts["number"] = True
+    opts["agebucket"] = True
 
     linenumber = opts.get("line_number") is not None
     if linenumber and (not opts.get("changeset")) and (not opts.get("number")):
@@ -461,14 +485,13 @@ def annotate(ui, repo, *pats, **opts):
                 formats.append(["%s" for x in l])
             pieces.append(l)
 
-        for f, p, l in zip(zip(*formats), zip(*pieces), lines):
+        agebuckets = [agebucket(x.fctx.date()) for x, dummy in lines]
+
+        for f, p, l, a in zip(zip(*formats), zip(*pieces), lines, agebuckets):
             fm.startitem()
-            fm.write(fields, "".join(f), *p)
-            if l[0].skip:
-                fmt = "* %s"
-            else:
-                fmt = ": %s"
-            fm.write("line", fmt, l[1])
+            sep = "* " if l[0].skip else ": "
+            fm.write(fields, "".join(f) + sep, *p, label="blame.age." + a)
+            fm.write("line", "%s", l[1])
 
         if not lines[-1][1].endswith("\n"):
             fm.plain("\n")

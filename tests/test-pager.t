@@ -273,7 +273,7 @@ Pager should not override the exit code of other commands
   [42]
 
 A command that asks for paging using ui.pager() directly works:
-  $ hg blame a
+  $ hg blame --color=no a
   paged! ' 0: a\n'
   paged! ' 1: a 1\n'
   paged! ' 2: a 2\n'
@@ -299,7 +299,7 @@ but not with HGPLAIN
    9: a 9
   10: a 10
 explicit flags work too:
-  $ hg blame --pager=no a
+  $ hg blame --pager=no --color=no a
    0: a
    1: a 1
    2: a 2
@@ -326,7 +326,7 @@ Put annotate in the ignore list for pager:
   > [pager]
   > ignore = annotate
   > EOF
-  $ hg blame a
+  $ hg blame --color=no a
    0: a
    1: a 1
    2: a 2
