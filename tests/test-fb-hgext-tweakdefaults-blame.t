@@ -37,14 +37,14 @@ Test wrapped blame to be able to handle the usual command line attributes
   test 37b9ff139054 Thu Jan 01 00:00:00 1970 +0000:2: line two
   test 05d474df3f59 Thu Jan 01 00:00:00 1970 +0000:3: line three
   $ hg blame -p a
-  D111111 : line one
-  D111111 : line two
-  D222222 : line three
+    D111111: line one
+    D111111: line two
+    D222222: line three
   $ hg blame -p --date a
-  D111111  Thu, 01 Jan 1970 00:00:00 +0000: line one
-  D111111  Thu, 01 Jan 1970 00:00:00 +0000: line two
-  D222222  Thu, 01 Jan 1970 00:00:00 +0000: line three
+    D111111 Thu, 01 Jan 1970 00:00:00 +0000: line one
+    D111111 Thu, 01 Jan 1970 00:00:00 +0000: line two
+    D222222 Thu, 01 Jan 1970 00:00:00 +0000: line three
   $ hg blame -p --date --quiet a
-  D111111  1970-01-01: line one
-  D111111  1970-01-01: line two
-  D222222  1970-01-01: line three
+    D111111 1970-01-01: line one
+    D111111 1970-01-01: line two
+    D222222 1970-01-01: line three

@@ -438,7 +438,7 @@ def blame(orig, ui, repo, *pats, **opts):
     @templater.templatefunc("blame_phabdiffid")
     def phabdiff(context, mapping, args):
         """Fetch the Phab Diff Id from the node in mapping"""
-        res = " " * 8
+        res = ""
         try:
             d = repo[mapping["rev"]].description()
             pat = "https://.*/(D\d+)"
@@ -481,7 +481,7 @@ def blame(orig, ui, repo, *pats, **opts):
         append("{short(node)}")
     if opts.get("phabdiff"):
         opts["number"] = True  # makes mapping['rev'] available in phabdiff
-        append("{pad(blame_phabdiffid(), 8)}")
+        append("{pad(blame_phabdiffid(), 9, ' ', True)}")
     if opts.get("date"):
         if ui.quiet:
             append("{pad(date|shortdate, 10)}")
