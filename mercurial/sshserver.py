@@ -8,6 +8,8 @@
 
 from __future__ import absolute_import
 
+import os
+import socket
 import sys
 
 from . import encoding, error, hook, util, wireproto
@@ -119,17 +121,30 @@ class sshserver(wireproto.abstractserverproto):
 
     def serve_one(self):
         cmd = self.fin.readline()[:-1]
-        if cmd and cmd in wireproto.commands:
-            rsp = wireproto.dispatch(self.repo, self, cmd)
-            self.handlers[rsp.__class__](self, rsp)
-        elif cmd:
-            impl = getattr(self, "do_" + cmd, None)
-            if impl:
-                r = impl()
-                if r is not None:
-                    self.sendresponse(r)
+        if cmd:
+            if util.safehasattr(util, "setprocname"):
+                client = encoding.environ.get("SSH_CLIENT", "").split(" ")[0]
+                # Resolve IP to hostname
+                try:
+                    client = socket.gethostbyaddr(client)[0]
+                except (socket.error, IndexError):
+                    pass
+                reponame = os.path.basename(self.repo.root)
+                title = "hg serve (%s)" % " ".join(
+                    filter(None, [reponame, cmd, client])
+                )
+                util.setprocname(title)
+            if cmd in wireproto.commands:
+                rsp = wireproto.dispatch(self.repo, self, cmd)
+                self.handlers[rsp.__class__](self, rsp)
             else:
-                self.sendresponse("")
+                impl = getattr(self, "do_" + cmd, None)
+                if impl:
+                    r = impl()
+                    if r is not None:
+                        self.sendresponse(r)
+                else:
+                    self.sendresponse("")
         return cmd != ""
 
     def _client(self):
