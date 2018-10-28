@@ -284,8 +284,8 @@ fn create_config<P: AsRef<Path>>(
             runtime.block_on(config_repo.get_bookmark(&bookmark))
         })
         .and_then(|bookmark| bookmark.ok_or_else(|| err_msg("bookmark not found")))
-        .or_else(|_| {
-            hash.ok_or_else(|| err_msg("must provide either bookmark or hash"))
+        .or_else(|e| {
+            hash.ok_or_else(|| format_err!("must provide either bookmark or hash ({})", e))
                 .and_then(|r| HgChangesetId::from_str(r))
         })?;
 
