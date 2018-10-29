@@ -82,7 +82,7 @@ Verify we got the changes
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   6:bb1b66da4693
+  changeset:   7:bb1b66da4693
   tag:         tip
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
@@ -146,16 +146,17 @@ Verify we got the changes
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   6:bb1b66da4693
+  changeset:   7:bb1b66da4693
   parent:      4:a0cd5f904db6
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     @ignore-buck-managed-project-files
   
-  changeset:   7:9713957ca577
+  changeset:   9:9713957ca577
   tag:         tip
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
+  parent:      7:bb1b66da4693
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     @ignore-buck-managed-project-files

@@ -35,7 +35,6 @@ Large file
 
 Bypass
   $ hg commit --amend -m "@allow-large-files"
-  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/328ac95dcdf8-b2f27658-amend.hg (glob)
   $ hgmn push -r . --to master_bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev bac6b7a9e627 to destination ssh://user@dummy/repo bookmark master_bookmark
