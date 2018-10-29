@@ -20,7 +20,7 @@ pub trait RepackablePyExt {
 impl<T: Repackable> RepackablePyExt for T {
     fn mark_ledger(&self, py: Python, py_store: &PyObject, ledger: &PyObject) -> PyResult<()> {
         let path = encoding::path_to_local_bytes(self.id()).map_err(|e| to_pyerr(py, &e.into()))?;
-        ledger.call_method(py, "setlocation", (PyBytes::new(py, path),), None)?;
+        ledger.call_method(py, "setlocation", (PyBytes::new(py, &path),), None)?;
         for entry in self.repack_iter() {
             let (_path, kind, key) = entry.map_err(|e| to_pyerr(py, &e))?;
             let (name, node) = from_key(py, &key);
