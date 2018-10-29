@@ -156,7 +156,7 @@ queries! {
     write InsertMapping(values: (
         repo_id: RepositoryId,
         hg_cs_id: HgChangesetId,
-        bcs_id: ChangesetId
+        bcs_id: ChangesetId,
     )) {
         insert_or_ignore,
         "{insert} INTO bonsai_hg_mapping (repo_id, hg_cs_id, bcs_id) VALUES {values}"
@@ -181,7 +181,7 @@ queries! {
     read SelectAnyMapping(
         repo_id: RepositoryId,
         hg_cs_id: HgChangesetId,
-        bcs_id: ChangesetId
+        bcs_id: ChangesetId,
     ) -> (HgChangesetId, ChangesetId) {
         "SELECT hg_cs_id, bcs_id
          FROM bonsai_hg_mapping

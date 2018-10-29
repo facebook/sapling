@@ -71,7 +71,7 @@ queries! {
         linknode: HgChangesetId,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
-        has_copyinfo: i8
+        has_copyinfo: i8,
     )) {
         insert_or_ignore,
         "{insert} INTO filenodes (
@@ -92,7 +92,7 @@ queries! {
         tonode: HgFileNodeId,
         is_tree: i8,
         frompath_hash: Vec<u8>,
-        fromnode: HgFileNodeId
+        fromnode: HgFileNodeId,
     )) {
         insert_or_ignore,
         "{insert} INTO fixedcopyinfo (
@@ -136,7 +136,7 @@ queries! {
         repo_id: RepositoryId,
         topath_hash: Vec<u8>,
         tonode: HgFileNodeId,
-        is_tree: i8
+        is_tree: i8,
     ) -> (Vec<u8>, HgFileNodeId) {
         "SELECT paths.path, fromnode
          FROM fixedcopyinfo
