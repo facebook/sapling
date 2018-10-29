@@ -176,7 +176,8 @@ fn validate_content(
     mut scuba_logger: ScubaSampleBuilder,
 ) -> impl Future<Item = (), Error = Error> {
     let file_content = repo.get_file_content(&actual);
-    let filenode = repo.get_filenode(&RepoPath::FilePath(path.clone()), &actual);
+    let repopath = RepoPath::FilePath(path.clone());
+    let filenode = repo.get_filenode(&repopath, &actual);
 
     file_content
         .join(filenode)
@@ -204,8 +205,8 @@ fn validate_content(
                     path, expected, actual
                 );
                 scuba_logger.log_with_msg("Data corruption", Some(error_msg));
-                Err(ErrorKind::DataCorruptionFilenode {
-                    path,
+                Err(ErrorKind::DataCorruption {
+                    path: repopath,
                     expected,
                     actual,
                 }.into())

@@ -29,8 +29,8 @@ use bookmarks::Bookmark;
 use bundle2_resolver;
 use context::CoreContext;
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2Item};
-use mercurial_types::{percent_encode, Entry, HgChangesetId, HgManifestId, HgNodeHash, MPath,
-                      RepoPath, Type, NULL_HASH};
+use mercurial_types::{percent_encode, Entry, HgBlobNode, HgChangesetId, HgManifestId, HgNodeHash,
+                      MPath, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, CombinatorPruner,
                                       DeletedPruner, EntryStatus, FilePruner, Pruner,
                                       VisitedPruner};
@@ -360,6 +360,7 @@ impl RepoClient {
             }
         };
 
+        let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
         let changed_entries = changed_entries
             .filter({
                 let mut used_hashes = HashSet::new();
@@ -368,8 +369,16 @@ impl RepoClient {
             .map({
                 let blobrepo = self.repo.blobrepo().clone();
                 let trace = self.trace().clone();
+                let scuba_logger = self.scuba_logger(ops::GETTREEPACK, None);
                 move |(entry, basepath)| {
-                    fetch_treepack_part_input(&blobrepo, entry, basepath, trace.clone())
+                    fetch_treepack_part_input(
+                        &blobrepo,
+                        entry,
+                        basepath,
+                        trace.clone(),
+                        validate_hash,
+                        scuba_logger.clone(),
+                    )
                 }
             });
 
@@ -913,6 +922,8 @@ fn fetch_treepack_part_input(
     entry: Box<Entry + Sync>,
     basepath: Option<MPath>,
     trace: TraceContext,
+    validate_content: bool,
+    mut scuba_logger: ScubaSampleBuilder,
 ) -> BoxFuture<parts::TreepackPartInput, Error> {
     let path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
     let repo_path = match path {
@@ -960,9 +971,41 @@ fn fetch_treepack_part_input(
             ),
         );
 
+    let validate_content = if validate_content {
+        entry
+            .get_raw_content()
+            .join(entry.get_parents())
+            .and_then(move |(content, parents)| {
+                let (p1, p2) = parents.get_nodes();
+                let actual = node.into_nodehash();
+                // Do not do verification for a root node because it might be broken
+                // because of migration to tree manifest.
+                let expected = HgBlobNode::new(content, p1, p2).nodeid();
+                if path.is_root() || actual == expected {
+                    Ok(())
+                } else {
+                    let error_msg = format!(
+                        "gettreepack: {} expected: {} actual: {}",
+                        path, expected, actual
+                    );
+                    scuba_logger.log_with_msg("Data corruption", Some(error_msg));
+                    Err(ErrorKind::DataCorruption {
+                        path,
+                        expected,
+                        actual,
+                    }.into())
+                }
+            })
+            .left_future()
+    } else {
+        future::ok(()).right_future()
+    };
+
     parents
         .join(linknode_fut)
         .join(content_fut)
+        .join(validate_content)
+        .map(|(val, ())| val)
         .map(move |((parents, linknode), content)| {
             let (p1, p2) = parents.get_nodes();
             parts::TreepackPartInput {
