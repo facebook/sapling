@@ -47,6 +47,9 @@ Utility script to dump commit cloud metadata
   > import json
   > ccmd = json.load(open("commitcloudservicedb"))
   > print("version: %s" % ccmd["version"])
+  > print("bookmarks:")
+  > for bookmark, node in sorted(ccmd["bookmarks"].items()):
+  >    print("    %s => %s" % (bookmark, node))
   > print("heads:")
   > for head in sorted(ccmd["heads"]):
   >    print("    %s" % head)
@@ -165,6 +168,7 @@ workspace does not oscillate between the two views.
   #commitcloud commits synchronized
   $ python dumpcommitcloudmetadata.py
   version: 2
+  bookmarks:
   heads:
       27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
@@ -174,6 +178,7 @@ workspace does not oscillate between the two views.
   #commitcloud commits synchronized
   $ python dumpcommitcloudmetadata.py
   version: 2
+  bookmarks:
   heads:
       27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
@@ -183,6 +188,7 @@ workspace does not oscillate between the two views.
   #commitcloud commits synchronized
   $ python dumpcommitcloudmetadata.py
   version: 2
+  bookmarks:
   heads:
       27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
@@ -192,6 +198,7 @@ workspace does not oscillate between the two views.
   #commitcloud commits synchronized
   $ python dumpcommitcloudmetadata.py
   version: 2
+  bookmarks:
   heads:
       27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
@@ -235,3 +242,61 @@ Smartlogs match
   |
   @  0: df4f53cec30a public 'base'
   
+
+Make a new public commit
+  $ cd ../server
+  $ echo data >> base
+  $ hg commit -m 'next'
+  $ hg phase -p .
+
+Pull it into one client
+  $ cd ../client1
+  $ hg pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 5817a557f93f
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ tglogp
+  o  8: 5817a557f93f public 'next'
+  |
+  | o  7: 878302dcadc7 draft 'G'
+  | |
+  | | o  6: 27ad02806080 draft 'E'
+  | | |
+  | | | o  5: 65299708466c draft 'C'
+  | | | |
+  | o | |  4: 64b4d9634423 draft 'F'
+  | | | |
+  | | o |  3: 449486ddff7a draft 'D'
+  | |/ /
+  | | o  2: 14bec91a4bc5 draft 'B'
+  | |/
+  | o  1: 04b96a2be922 draft 'A'
+  |/
+  @  0: df4f53cec30a public 'base'
+  
+
+Put a bookmark on the new public commit
+  $ hg book foo -r tip
+  $ tglogp -r tip
+  o  8: 5817a557f93f public 'next' foo
+  |
+  ~
+  $ hg cloud sync -q
+
+  $ cd ../client2
+  $ hg cloud sync -q
+  5817a557f93f46ab290e8571c89624ff856130c0 not found, not creating foo bookmark
+
+  $ cd ../client1
+  $ hg cloud sync -q
+  $ tglogp -r tip
+  o  8: 5817a557f93f public 'next'
+  |
+  ~
+
+BUG: Bookmark has vanished!
