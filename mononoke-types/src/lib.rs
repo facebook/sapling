@@ -40,6 +40,7 @@ extern crate quickcheck;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate sql;
 
 extern crate rust_thrift;
 

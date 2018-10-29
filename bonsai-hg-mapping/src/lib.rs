@@ -5,20 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// FIXME T34253207, remove when https://github.com/diesel-rs/diesel/issues/1785 fixed
-#![allow(proc_macro_derive_resolution_fallback)]
-#![feature(try_from, never_type)]
 
 extern crate abomonation;
 #[macro_use]
 extern crate abomonation_derive;
 extern crate bonsai_hg_mapping_entry_thrift;
 extern crate cachelib;
-#[macro_use]
-extern crate cloned;
-extern crate db_conn;
-#[macro_use]
-extern crate diesel;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -28,7 +20,8 @@ extern crate heapsize_derive;
 extern crate memcache;
 extern crate tokio;
 
-extern crate db;
+#[macro_use]
+extern crate cloned;
 extern crate futures_ext;
 #[macro_use]
 extern crate lazy_static;
@@ -36,32 +29,27 @@ extern crate mercurial_types;
 extern crate mononoke_types;
 extern crate rust_thrift;
 #[macro_use]
+extern crate sql;
+extern crate sql_ext;
+#[macro_use]
 extern crate stats;
 
-use std::result;
-use std::sync::{Arc, MutexGuard};
+use std::sync::Arc;
 
-use db_conn::{MysqlConnInner, SqliteConnInner};
-use diesel::{insert_into, MysqlConnection, SqliteConnection};
-use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, PooledConnection};
-use diesel::result::{DatabaseErrorKind, Error as DieselError};
+use sql::Connection;
+pub use sql_ext::SqlConstructors;
 
-use futures::Future;
-use futures_ext::{asynchronize, BoxFuture, FutureExt};
+use futures::{Future, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{HgChangesetId, HgNodeHash, RepositoryId};
 use mononoke_types::ChangesetId;
 use stats::Timeseries;
 
 mod caching;
 mod errors;
-mod models;
-mod schema;
 
 pub use caching::CachingBonsaiHgMapping;
 pub use errors::*;
-use models::BonsaiHgMappingRow;
-use schema::bonsai_hg_mapping;
 
 define_stats! {
     prefix = "mononoke.bonsai-hg-mapping";
@@ -158,191 +146,157 @@ impl BonsaiHgMapping for Arc<BonsaiHgMapping> {
 }
 
 #[derive(Clone)]
-pub struct SqliteBonsaiHgMapping {
-    inner: SqliteConnInner,
+pub struct SqlBonsaiHgMapping {
+    write_connection: Connection,
+    read_connection: Connection,
+    read_master_connection: Connection,
 }
 
-impl SqliteBonsaiHgMapping {
-    fn from(inner: SqliteConnInner) -> Self {
-        Self { inner }
+queries! {
+    write InsertMapping(values: (
+        repo_id: RepositoryId,
+        hg_cs_id: HgChangesetId,
+        bcs_id: ChangesetId
+    )) {
+        insert_or_ignore,
+        "{insert} INTO bonsai_hg_mapping (repo_id, hg_cs_id, bcs_id) VALUES {values}"
+    }
+
+    read SelectMappingByBonsai(repo_id: RepositoryId, bcs_id: ChangesetId) -> (HgChangesetId) {
+        "SELECT hg_cs_id
+         FROM bonsai_hg_mapping
+         WHERE repo_id = {repo_id}
+           AND bcs_id = {bcs_id}
+         LIMIT 1"
+    }
+
+    read SelectMappingByHg(repo_id: RepositoryId, hg_cs_id: HgChangesetId) -> (ChangesetId) {
+        "SELECT bcs_id
+         FROM bonsai_hg_mapping
+         WHERE repo_id = {repo_id}
+           AND hg_cs_id = {hg_cs_id}
+         LIMIT 1"
+    }
+
+    read SelectAnyMapping(
+        repo_id: RepositoryId,
+        hg_cs_id: HgChangesetId,
+        bcs_id: ChangesetId
+    ) -> (HgChangesetId, ChangesetId) {
+        "SELECT hg_cs_id, bcs_id
+         FROM bonsai_hg_mapping
+         WHERE repo_id = {repo_id}
+           AND (hg_cs_id = {hg_cs_id} OR bcs_id = {bcs_id})
+         LIMIT 1"
+    }
+}
+
+impl SqlConstructors for SqlBonsaiHgMapping {
+    fn from_connections(
+        write_connection: Connection,
+        read_connection: Connection,
+        read_master_connection: Connection,
+    ) -> Self {
+        Self {
+            write_connection,
+            read_connection,
+            read_master_connection,
+        }
     }
 
     fn get_up_query() -> &'static str {
         include_str!("../schemas/sqlite-bonsai-hg-mapping.sql")
     }
+}
 
-    /// Create a new in-memory empty database. Great for tests.
-    pub fn in_memory() -> Result<Self> {
-        Ok(Self::from(SqliteConnInner::in_memory(
-            Self::get_up_query(),
-        )?))
+impl BonsaiHgMapping for SqlBonsaiHgMapping {
+    fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+        STATS::adds.add_value(1);
+        cloned!(self.read_master_connection);
+
+        let BonsaiHgMappingEntry {
+            repo_id,
+            hg_cs_id,
+            bcs_id,
+        } = entry.clone();
+
+        InsertMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)])
+            .and_then(move |result| {
+                if result.affected_rows() == 1 {
+                    Ok(true).into_future().left_future()
+                } else {
+                    SelectAnyMapping::query(&read_master_connection, &repo_id, &hg_cs_id, &bcs_id)
+                        .and_then(move |rows| match rows.into_iter().next() {
+                            Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(false),
+                            Some((hg_cs_id, bcs_id)) => Err(ErrorKind::ConflictingEntries(
+                                BonsaiHgMappingEntry {
+                                    repo_id,
+                                    hg_cs_id,
+                                    bcs_id,
+                                },
+                                entry,
+                            ).into()),
+                            None => Err(ErrorKind::RaceConditionWithDelete(entry).into()),
+                        })
+                        .right_future()
+                }
+            })
+            .boxify()
     }
 
-    pub fn open_or_create<P: AsRef<str>>(path: P) -> Result<Self> {
-        Ok(Self::from(SqliteConnInner::open_or_create(
-            path,
-            Self::get_up_query(),
-        )?))
-    }
+    fn get(
+        &self,
+        repo_id: RepositoryId,
+        cs: BonsaiOrHgChangesetId,
+    ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
+        STATS::gets.add_value(1);
+        cloned!(self.read_master_connection);
 
-    fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
-        self.inner.get_conn()
-    }
-    fn get_master_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
-        self.inner.get_master_conn()
+        select_mapping(&self.read_connection, &repo_id, &cs)
+            .and_then(move |maybe_mapping| match maybe_mapping {
+                Some(mapping) => Ok(Some(mapping)).into_future().boxify(),
+                None => {
+                    STATS::gets_master.add_value(1);
+                    select_mapping(&read_master_connection, &repo_id, &cs)
+                }
+            })
+            .boxify()
     }
 }
 
-#[derive(Clone)]
-pub struct MysqlBonsaiHgMapping {
-    inner: MysqlConnInner,
-}
+fn select_mapping(
+    connection: &Connection,
+    repo_id: &RepositoryId,
+    cs_id: &BonsaiOrHgChangesetId,
+) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
+    cloned!(repo_id, cs_id);
 
-impl MysqlBonsaiHgMapping {
-    fn from(inner: MysqlConnInner) -> Self {
-        Self { inner }
-    }
-
-    pub fn open(db_address: &str) -> Result<Self> {
-        Ok(Self::from(MysqlConnInner::open(db_address)?))
-    }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/mysql-bonsai-hg-mapping.sql")
-    }
-
-    pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
-        Ok(Self::from(MysqlConnInner::create_test_db(
-            prefix,
-            Self::get_up_query(),
-        )?))
-    }
-
-    fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.inner.get_conn()
-    }
-
-    fn get_master_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.inner.get_master_conn()
-    }
-}
-
-/// Using a macro here is unfortunate, but it appears to be the only way to share this code
-/// between SQLite and MySQL.
-/// See https://github.com/diesel-rs/diesel/issues/882#issuecomment-300257476
-macro_rules! impl_bonsai_hg_mapping {
-    ($struct:ty, $connection:ty) => {
-        impl BonsaiHgMapping for $struct {
-            fn get(
-                &self,
-                repo_id: RepositoryId,
-                cs_id: BonsaiOrHgChangesetId,
-            ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
-                STATS::gets.add_value(1);
-                let db = self.clone();
-
-                asynchronize(move || {
-                    let result = {
-                        let connection = db.get_conn()?;
-                        Self::actual_get(&connection, repo_id, cs_id)?
-                    };
-
-                    if result.is_none() {
-                        STATS::gets_master.add_value(1);
-                        let connection = db.get_master_conn()?;
-                        Self::actual_get(&connection, repo_id, cs_id)
-                    } else {
-                        Ok(result)
-                    }
-                })
-                .boxify()
-            }
-
-            fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
-                STATS::adds.add_value(1);
-                let db = self.clone();
-
-                asynchronize(move || {
-                    let connection = db.get_master_conn()?;
-                    let BonsaiHgMappingEntry {
-                        repo_id,
-                        hg_cs_id,
-                        bcs_id,
-                    } = entry.clone();
-                    let result = insert_into(bonsai_hg_mapping::table)
-                        .values(BonsaiHgMappingRow {
+    match cs_id {
+        BonsaiOrHgChangesetId::Bonsai(bcs_id) => {
+            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_id)
+                .map(move |rows| {
+                    rows.into_iter()
+                        .next()
+                        .map(move |(hg_cs_id,)| BonsaiHgMappingEntry {
                             repo_id,
                             hg_cs_id,
                             bcs_id,
                         })
-                        .execute(&*connection);
-                    match result {
-                        Ok(_) => Ok(true),
-                        Err(
-                            err @ DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _),
-                        ) => {
-                            let entry_by_bcs =
-                                Self::actual_get(&connection, repo_id, bcs_id.into())?;
-                            let entry_by_hgcs =
-                                Self::actual_get(&connection, repo_id, hg_cs_id.into())?;
-                            match entry_by_bcs.or(entry_by_hgcs) {
-                                Some(ref stored_entry) if stored_entry == &entry => Ok(false),
-                                Some(stored_entry) => {
-                                    Err(ErrorKind::ConflictingEntries(stored_entry.clone(), entry.clone())
-                                        .into())
-                                }
-                                _ => Err(err.into()),
-                            }
-                        }
-                        Err(err) => Err(err.into()),
-                    }
                 })
                 .boxify()
-            }
         }
-
-        impl $struct {
-            fn actual_get(
-                connection: &$connection,
-                repo_id: RepositoryId,
-                cs_id: BonsaiOrHgChangesetId,
-            ) -> Result<Option<BonsaiHgMappingEntry>> {
-                let query = match cs_id {
-                    BonsaiOrHgChangesetId::Bonsai(id) => bonsai_hg_mapping::table
-                        .filter(bonsai_hg_mapping::repo_id.eq(repo_id))
-                        .filter(bonsai_hg_mapping::bcs_id.eq(id))
-                        .limit(1)
-                        .into_boxed(),
-                    BonsaiOrHgChangesetId::Hg(id) => bonsai_hg_mapping::table
-                        .filter(bonsai_hg_mapping::repo_id.eq(repo_id))
-                        .filter(bonsai_hg_mapping::hg_cs_id.eq(id))
-                        .limit(1)
-                        .into_boxed(),
-                };
-
-                query
-                    .first::<BonsaiHgMappingRow>(connection)
-                    .optional()
-                    .map_err(failure::Error::from)
-                    .and_then(|row| match row {
-                        None => Ok(None),
-                        Some(row) => {
-                            let BonsaiHgMappingRow {
-                                repo_id,
-                                hg_cs_id,
-                                bcs_id,
-                            } = row;
-                            Ok(Some(BonsaiHgMappingEntry {
-                                repo_id,
-                                hg_cs_id,
-                                bcs_id,
-                            }))
-                        }
-                    })
-            }
+        BonsaiOrHgChangesetId::Hg(hg_cs_id) => {
+            SelectMappingByHg::query(&connection, &repo_id, &hg_cs_id)
+                .map(move |rows| {
+                    rows.into_iter()
+                        .next()
+                        .map(move |(bcs_id,)| BonsaiHgMappingEntry {
+                            repo_id,
+                            hg_cs_id,
+                            bcs_id,
+                        })
+                })
+                .boxify()
         }
-    };
+    }
 }
-
-impl_bonsai_hg_mapping!(MysqlBonsaiHgMapping, MysqlConnection);
-impl_bonsai_hg_mapping!(SqliteBonsaiHgMapping, SqliteConnection);

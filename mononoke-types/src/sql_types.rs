@@ -11,8 +11,12 @@ use diesel::deserialize::{self, FromSql};
 use diesel::serialize::{self, IsNull, Output, ToSql};
 use diesel::sql_types::Binary;
 use failure::ResultExt;
+use hash::Blake2;
+use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
 
 use typed_hash::ChangesetId;
+
+type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
 #[derive(QueryId, SqlType)]
 #[mysql_type = "Blob"]
@@ -35,4 +39,33 @@ where
         let raw_bytes: &[u8] = unsafe { &*raw_bytes };
         Ok(ChangesetId::from_bytes(raw_bytes).compat()?)
     }
+}
+
+impl From<ChangesetId> for Value {
+    fn from(id: ChangesetId) -> Self {
+        Value::Bytes(id.as_ref().into())
+    }
+}
+
+impl ConvIr<ChangesetId> for Blake2 {
+    fn new(v: Value) -> FromValueResult<Self> {
+        match v {
+            Value::Bytes(bytes) => {
+                Blake2::from_bytes(&bytes).map_err(move |_| FromValueError(Value::Bytes(bytes)))
+            }
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> ChangesetId {
+        ChangesetId::new(self)
+    }
+
+    fn rollback(self) -> Value {
+        Value::Bytes(self.as_ref().into())
+    }
+}
+
+impl FromValue for ChangesetId {
+    type Intermediate = Blake2;
 }

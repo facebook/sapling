@@ -12,4 +12,6 @@ pub enum ErrorKind {
     #[fail(display = "Connection error")] ConnectionError,
     #[fail(display = "Conflicting entries: stored:{:?} current:{:?}", _0, _1)]
     ConflictingEntries(BonsaiHgMappingEntry, BonsaiHgMappingEntry),
+    #[fail(display = "Conflict detected during insert, but no value was there for: {:?}", _0)]
+    RaceConditionWithDelete(BonsaiHgMappingEntry),
 }

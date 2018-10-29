@@ -37,7 +37,7 @@ use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, Eager
                 MemWritesBlobstore, PrefixBlobstore};
 use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, CachingBonsaiHgMapping,
-                        MysqlBonsaiHgMapping, SqliteBonsaiHgMapping};
+                        SqlBonsaiHgMapping};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use cachelib;
 use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, MysqlChangesets,
@@ -251,7 +251,7 @@ impl BlobRepo {
             path.join("changesets").to_string_lossy(),
         ).chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
         let bonsai_hg_mapping =
-            SqliteBonsaiHgMapping::open_or_create(path.join("bonsai_hg_mapping").to_string_lossy())
+            SqlBonsaiHgMapping::with_sqlite_path(path.join("bonsai_hg_mapping"))
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
 
         Ok(Self::new(
@@ -280,7 +280,7 @@ impl BlobRepo {
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
             Arc::new(SqliteChangesets::in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?),
-            Arc::new(SqliteBonsaiHgMapping::in_memory()
+            Arc::new(SqlBonsaiHgMapping::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?),
             RepositoryId::new(0),
             Arc::new(post_commit::Discard::new()),
@@ -349,8 +349,7 @@ impl BlobRepo {
         let changesets = CachingChangests::new(Arc::new(changesets), changesets_cache_pool.clone());
         let changesets = Arc::new(changesets);
 
-        let bonsai_hg_mapping = MysqlBonsaiHgMapping::open(&args.db_address)
-            .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
+        let bonsai_hg_mapping = SqlBonsaiHgMapping::with_myrouter(&args.db_address, myrouter_port);
         let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
             Arc::new(bonsai_hg_mapping),
             cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(

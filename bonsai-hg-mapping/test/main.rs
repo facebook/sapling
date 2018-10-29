@@ -18,12 +18,10 @@ extern crate bonsai_hg_mapping;
 extern crate mercurial_types_mocks;
 extern crate mononoke_types_mocks;
 
-use std::sync::Arc;
-
 use futures::Future;
 
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, ErrorKind, MysqlBonsaiHgMapping,
-                        SqliteBonsaiHgMapping};
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, ErrorKind, SqlBonsaiHgMapping,
+                        SqlConstructors};
 use mercurial_types_mocks::nodehash as hg;
 use mercurial_types_mocks::repo::REPO_ZERO;
 use mononoke_types_mocks::changesetid as bonsai;
@@ -102,67 +100,16 @@ fn missing<M: BonsaiHgMapping>(mapping: M) {
     assert_eq!(result, None);
 }
 
-macro_rules! bonsai_hg_mapping_test_impl {
-    ($mod_name:ident =>  { new: $new_cb:expr, }) => {
-        mod $mod_name {
-            use super::*;
-
-            #[test]
-            fn test_add_and_get() {
-                async_unit::tokio_unit_test(|| {
-                    add_and_get($new_cb());
-                });
-            }
-
-            #[test]
-            fn test_missing() {
-                async_unit::tokio_unit_test(|| {
-                    missing($new_cb());
-                });
-            }
-        }
-    };
+#[test]
+fn test_add_and_get() {
+    async_unit::tokio_unit_test(|| {
+        add_and_get(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
+    });
 }
 
-bonsai_hg_mapping_test_impl! {
-    sqlite_test => {
-        new: new_sqlite,
-    }
-}
-
-bonsai_hg_mapping_test_impl! {
-    sqlite_arced_test => {
-        new: new_sqlite_arced,
-    }
-}
-
-bonsai_hg_mapping_test_impl! {
-    mysql_test => {
-        new: new_mysql,
-    }
-}
-
-bonsai_hg_mapping_test_impl! {
-    mysql_arced_test => {
-        new: new_mysql_arced,
-    }
-}
-
-fn new_sqlite() -> SqliteBonsaiHgMapping {
-    let db =
-        SqliteBonsaiHgMapping::in_memory().expect("Creating an in-memory SQLite database failed");
-    db
-}
-
-fn new_sqlite_arced() -> Arc<BonsaiHgMapping> {
-    Arc::new(new_sqlite())
-}
-
-fn new_mysql() -> MysqlBonsaiHgMapping {
-    MysqlBonsaiHgMapping::create_test_db("bonsai_hg_mapping_test")
-        .expect("Failed to create test database")
-}
-
-fn new_mysql_arced() -> Arc<BonsaiHgMapping> {
-    Arc::new(new_mysql())
+#[test]
+fn test_missing() {
+    async_unit::tokio_unit_test(|| {
+        missing(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
+    });
 }
