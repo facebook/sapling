@@ -40,8 +40,7 @@ use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, CachingBonsaiHgMa
                         SqlBonsaiHgMapping};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use cachelib;
-use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, MysqlChangesets,
-                 SqliteChangesets};
+use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
 use delayblob::DelayBlob;
 use file::fetch_file_envelope;
@@ -247,9 +246,8 @@ impl BlobRepo {
             .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
         let filenodes = SqlFilenodes::with_sqlite_path(path.join("filenodes"))
             .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
-        let changesets = SqliteChangesets::open_or_create(
-            path.join("changesets").to_string_lossy(),
-        ).chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+        let changesets = SqlChangesets::with_sqlite_path(path.join("changesets"))
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
         let bonsai_hg_mapping =
             SqlBonsaiHgMapping::with_sqlite_path(path.join("bonsai_hg_mapping"))
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
@@ -278,7 +276,7 @@ impl BlobRepo {
             blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
             Arc::new(SqlFilenodes::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
-            Arc::new(SqliteChangesets::in_memory()
+            Arc::new(SqlChangesets::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?),
             Arc::new(SqlBonsaiHgMapping::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?),
@@ -341,8 +339,7 @@ impl BlobRepo {
             &args.db_address,
         );
 
-        let changesets = MysqlChangesets::open(&args.db_address)
-            .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+        let changesets = SqlChangesets::with_myrouter(&args.db_address, myrouter_port);
         let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
             ErrorKind::MissingCachePool("changesets".to_string()),
         ))?;

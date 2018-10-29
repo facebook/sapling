@@ -11,7 +11,6 @@
 #[macro_use]
 extern crate assert_matches;
 extern crate async_unit;
-extern crate diesel;
 extern crate failure_ext as failure;
 extern crate futures;
 
@@ -19,12 +18,10 @@ extern crate changesets;
 extern crate mercurial_types_mocks;
 extern crate mononoke_types_mocks;
 
-use std::sync::Arc;
-
 use futures::Future;
 
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, MysqlChangesets,
-                 SqliteChangesets};
+use changesets::{ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, SqlChangesets,
+                 SqlConstructors};
 use mercurial_types_mocks::repo::*;
 use mononoke_types_mocks::changesetid::*;
 
@@ -240,95 +237,44 @@ fn complex<C: Changesets>(changesets: C) {
     );
 }
 
-macro_rules! changesets_test_impl {
-    ($mod_name: ident => {
-        new: $new_cb: expr,
-    }) => {
-        mod $mod_name {
-            use super::*;
-
-            #[test]
-            fn test_add_and_get() {
-                async_unit::tokio_unit_test(|| {
-                    add_and_get($new_cb());
-                });
-            }
-
-            #[test]
-            fn test_add_missing_parents() {
-                async_unit::tokio_unit_test(|| {
-                    add_missing_parents($new_cb());
-                });
-            }
-
-            #[test]
-            fn test_missing() {
-                async_unit::tokio_unit_test(|| {
-                    missing($new_cb());
-                });
-            }
-
-            #[test]
-            fn test_duplicate() {
-                async_unit::tokio_unit_test(|| {
-                    duplicate($new_cb());
-                });
-            }
-
-            #[test]
-            fn test_broken_duplicate() {
-                async_unit::tokio_unit_test(|| {
-                    broken_duplicate($new_cb());
-                });
-            }
-
-            #[test]
-            fn test_complex() {
-                async_unit::tokio_unit_test(|| {
-                    complex($new_cb());
-                });
-            }
-        }
-    }
+#[test]
+fn test_add_and_get() {
+    async_unit::tokio_unit_test(|| {
+        add_and_get(SqlChangesets::with_sqlite_in_memory().unwrap());
+    });
 }
 
-changesets_test_impl! {
-    sqlite_test => {
-        new: new_sqlite,
-    }
+#[test]
+fn test_add_missing_parents() {
+    async_unit::tokio_unit_test(|| {
+        add_missing_parents(SqlChangesets::with_sqlite_in_memory().unwrap());
+    });
 }
 
-changesets_test_impl! {
-    sqlite_arced_test => {
-        new: new_sqlite_arced,
-    }
+#[test]
+fn test_missing() {
+    async_unit::tokio_unit_test(|| {
+        missing(SqlChangesets::with_sqlite_in_memory().unwrap());
+    });
 }
 
-changesets_test_impl! {
-    mysql_test => {
-        new: new_mysql,
-    }
+#[test]
+fn test_duplicate() {
+    async_unit::tokio_unit_test(|| {
+        duplicate(SqlChangesets::with_sqlite_in_memory().unwrap());
+    });
 }
 
-changesets_test_impl! {
-    mysql_arced_test => {
-        new: new_mysql_arced,
-    }
+#[test]
+fn test_broken_duplicate() {
+    async_unit::tokio_unit_test(|| {
+        broken_duplicate(SqlChangesets::with_sqlite_in_memory().unwrap());
+    });
 }
 
-fn new_sqlite() -> SqliteChangesets {
-    let db = SqliteChangesets::in_memory().expect("Creating an in-memory SQLite database failed");
-    db
-}
-
-fn new_sqlite_arced() -> Arc<Changesets> {
-    Arc::new(new_sqlite())
-}
-
-fn new_mysql() -> MysqlChangesets {
-    MysqlChangesets::create_test_db("changesets_test").expect("Failed to create test database")
-}
-
-fn new_mysql_arced() -> Arc<Changesets> {
-    Arc::new(new_mysql())
+#[test]
+fn test_complex() {
+    async_unit::tokio_unit_test(|| {
+        complex(SqlChangesets::with_sqlite_in_memory().unwrap());
+    });
 }

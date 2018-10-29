@@ -8,13 +8,9 @@ pub use failure::{Error, Result};
 
 use mononoke_types::ChangesetId;
 
-use models::ChangesetRow;
-
 #[derive(Debug, Eq, Fail, PartialEq)]
 pub enum ErrorKind {
-    #[fail(display = "Connection error")] ConnectionError,
     #[fail(display = "Duplicate changeset {} has different parents: {:?} vs {:?}", _0, _1, _2)]
-    DuplicateInsertionInconsistency(ChangesetId, Vec<ChangesetRow>, Vec<ChangesetRow>),
-    #[fail(display = "Invalid data in database")] InvalidStoredData,
+    DuplicateInsertionInconsistency(ChangesetId, Vec<ChangesetId>, Vec<ChangesetId>),
     #[fail(display = "Missing parents")] MissingParents(Vec<ChangesetId>),
 }

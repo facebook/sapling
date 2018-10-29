@@ -5,9 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// FIXME T34253207, remove when https://github.com/diesel-rs/diesel/issues/1785 fixed
-#![allow(proc_macro_derive_resolution_fallback)]
-#![feature(try_from, never_type)]
 
 extern crate abomonation;
 #[macro_use]
@@ -16,9 +13,6 @@ extern crate bytes;
 extern crate cachelib;
 #[macro_use]
 extern crate cloned;
-extern crate db_conn;
-#[macro_use]
-extern crate diesel;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -26,10 +20,13 @@ extern crate heapsize;
 #[macro_use]
 extern crate heapsize_derive;
 extern crate memcache;
+#[macro_use]
+extern crate sql;
+extern crate sql_ext;
 extern crate tokio;
 
 extern crate changeset_entry_thrift;
-extern crate db;
+#[macro_use]
 extern crate futures_ext;
 #[macro_use]
 extern crate lazy_static;
@@ -42,37 +39,27 @@ extern crate rust_thrift;
 extern crate stats;
 
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
 use std::result;
-use std::sync::MutexGuard;
 
 use bytes::Bytes;
-use db_conn::{MysqlConnInner, SqliteConnInner};
-use diesel::{insert_into, Connection, MysqlConnection, SqliteConnection};
-use diesel::backend::Backend;
-use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, PooledConnection};
-use diesel::result::{DatabaseErrorKind, Error as DieselError};
-use diesel::sql_types::HasSqlType;
-use failure::{ResultExt, SyncFailure, chain::*};
+use failure::SyncFailure;
 
-use futures_ext::{asynchronize, BoxFuture, FutureExt};
+use sql::{Connection, Transaction};
+pub use sql_ext::SqlConstructors;
+
+use futures::{Future, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::RepositoryId;
 use mononoke_types::ChangesetId;
-use mononoke_types::sql_types::ChangesetIdSql;
 use rust_thrift::compact_protocol;
 use stats::Timeseries;
 
 mod caching;
 mod errors;
-mod schema;
-mod models;
 mod wrappers;
 
 pub use caching::{get_cache_key, CachingChangests};
 pub use errors::*;
-use models::{ChangesetInsertRow, ChangesetParentRow, ChangesetRow};
-use schema::{changesets, csparents};
 
 define_stats! {
     prefix = "mononoke.changesets";
@@ -176,308 +163,132 @@ pub trait Changesets: Send + Sync {
 }
 
 #[derive(Clone)]
-pub struct SqliteChangesets {
-    inner: SqliteConnInner,
+pub struct SqlChangesets {
+    write_connection: Connection,
+    read_connection: Connection,
+    read_master_connection: Connection,
 }
 
-impl SqliteChangesets {
-    fn from(inner: SqliteConnInner) -> SqliteChangesets {
-        SqliteChangesets { inner } // one true constructor
+queries!{
+    write InsertChangeset(values: (repo_id: RepositoryId, cs_id: ChangesetId, gen: u64)) {
+        insert_or_ignore,
+        "{insert} INTO changesets (repo_id, cs_id, gen) VALUES {values}"
+    }
+
+    write InsertParents(values: (cs_id: u64, parent_id: u64, seq: i32)) {
+        insert,
+        "{insert} INTO csparents (cs_id, parent_id, seq) VALUES {values}"
+    }
+
+    read SelectChangeset(repo_id: RepositoryId, cs_id: ChangesetId) -> (u64, Option<ChangesetId>) {
+        "SELECT cs.gen, pcs.cs_id
+         FROM changesets cs
+         LEFT JOIN (csparents p, changesets pcs)
+         ON (cs.id = p.cs_id AND p.parent_id = pcs.id)
+         WHERE cs.repo_id = {repo_id}
+           AND cs.cs_id = {cs_id}
+         ORDER BY p.seq ASC"
+    }
+
+    read SelectChangesets(repo_id: RepositoryId, >list cs_id: ChangesetId) -> (u64, ChangesetId, u64) {
+        "SELECT id, cs_id, gen
+         FROM changesets
+         WHERE repo_id = {repo_id}
+           AND cs_id IN {cs_id}"
+    }
+}
+
+impl SqlConstructors for SqlChangesets {
+    fn from_connections(
+        write_connection: Connection,
+        read_connection: Connection,
+        read_master_connection: Connection,
+    ) -> Self {
+        Self {
+            write_connection,
+            read_connection,
+            read_master_connection,
+        }
     }
 
     fn get_up_query() -> &'static str {
         include_str!("../schemas/sqlite-changesets.sql")
     }
-
-    /// Create a new in-memory empty database. Great for tests.
-    pub fn in_memory() -> Result<Self> {
-        Ok(Self::from(SqliteConnInner::in_memory(
-            Self::get_up_query(),
-        )?))
-    }
-
-    pub fn open_or_create<P: AsRef<str>>(path: P) -> Result<Self> {
-        Ok(Self::from(SqliteConnInner::open_or_create(
-            path,
-            Self::get_up_query(),
-        )?))
-    }
-
-    fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
-        self.inner.get_conn()
-    }
-    fn get_master_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
-        self.inner.get_master_conn()
-    }
 }
 
-#[derive(Clone)]
-pub struct MysqlChangesets {
-    inner: MysqlConnInner,
-}
+impl Changesets for SqlChangesets {
+    fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
+        STATS::adds.add_value(1);
+        cloned!(self.write_connection);
 
-impl MysqlChangesets {
-    fn from(inner: MysqlConnInner) -> MysqlChangesets {
-        MysqlChangesets { inner } // one true constructor
-    }
-
-    pub fn open(db_address: &str) -> Result<Self> {
-        Ok(Self::from(MysqlConnInner::open(db_address)?))
-    }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/mysql-changesets.sql")
-    }
-
-    pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
-        Ok(Self::from(MysqlConnInner::create_test_db(
-            prefix,
-            Self::get_up_query(),
-        )?))
-    }
-
-    fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.inner.get_conn()
-    }
-
-    fn get_master_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
-        self.inner.get_master_conn()
-    }
-}
-
-/// Using a macro here is unfortunate, but it appears to be the only way to share this code
-/// between SQLite and MySQL.
-/// See https://github.com/diesel-rs/diesel/issues/882#issuecomment-300257476
-macro_rules! impl_changesets {
-    ($struct: ty, $connection: ty) => {
-        impl Changesets for $struct {
-            /// Retrieve the changeset specified by this commit.
-            fn get(
-                &self,
-                repo_id: RepositoryId,
-                cs_id: ChangesetId,
-            ) -> BoxFuture<Option<ChangesetEntry>, Error> {
-                STATS::gets.add_value(1);
-                let db = self.clone();
-
-                asynchronize(move || {
-                    let changeset = {
-                        let connection = db.get_conn()?;
-                        Self::actual_get(&connection, repo_id, cs_id)?
-                    };
-
-                    if changeset.is_none() {
-                        STATS::gets_master.add_value(1);
-                        let connection = db.get_master_conn()?;
-                        Self::actual_get(&connection, repo_id, cs_id)
+        SelectChangesets::query(
+            &write_connection,
+            &cs.repo_id,
+            &cs.parents.iter().collect::<Vec<_>>()[..],
+        ).and_then(move |parent_rows| {
+            try_boxfuture!(check_missing_rows(&cs.parents, &parent_rows));
+            let gen = parent_rows.iter().map(|row| row.2).max().unwrap_or(0) + 1;
+            write_connection
+                .start_transaction()
+                .and_then({
+                    cloned!(cs);
+                    move |transaction| {
+                        InsertChangeset::query_with_transaction(
+                            transaction,
+                            &[(&cs.repo_id, &cs.cs_id, &gen)],
+                        )
+                    }
+                })
+                .and_then(move |(transaction, result)| {
+                    if result.affected_rows() == 1 && result.last_insert_id().is_some() {
+                        insert_parents(
+                            transaction,
+                            result.last_insert_id().unwrap(),
+                            cs,
+                            parent_rows,
+                        ).map(|()| true)
+                            .left_future()
                     } else {
-                        Ok(changeset)
+                        transaction
+                            .rollback()
+                            .and_then(move |()| check_changeset_matches(&write_connection, cs))
+                            .map(|()| false)
+                            .right_future()
                     }
                 })
                 .boxify()
-            }
-
-            /// Insert a new changeset into this table. Checks that all parents are already in
-            /// storage.
-            fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
-                STATS::adds.add_value(1);
-                let db = self.clone();
-
-                asynchronize(move || {
-                    let parent_query = changesets::table
-                        .filter(changesets::repo_id.eq(cs.repo_id))
-                        .filter(changesets::cs_id.eq_any(&cs.parents));
-
-                    let connection = db.get_master_conn()?;
-
-                    // TODO: always hit master for this query?
-                    let parent_rows = parent_query.load::<ChangesetRow>(&*connection);
-
-                    parent_rows.map_err(failure::Error::from).and_then(|parent_rows| {
-                        check_missing_rows(&cs.parents, &parent_rows)?;
-
-                        // A changeset with no parents has generation number 1.
-                        // (The null commit has generation number 0.)
-                        let gen = parent_rows.iter().map(|row| row.gen).max().unwrap_or(0) + 1;
-                        let cs_insert = ChangesetInsertRow {
-                            repo_id: cs.repo_id,
-                            cs_id: cs.cs_id,
-                            gen,
-                        };
-
-                        connection.transaction::<_, Error, _>(|| {
-                            // TODO figure out how to make transactions async. Assuming for now that
-                            // the inside of a transaction can be synchronous.
-                            let result = insert_into(changesets::table)
-                                .values(&cs_insert)
-                                .execute(&*connection);
-
-                            if !map_add_result(result)? {
-                                let old_cs_row = changeset_query(cs.repo_id, cs.cs_id)
-                                    .first::<ChangesetRow>(&*connection)?;
-
-                                let parent_query = csparents::table
-                                    .filter(csparents::cs_id.eq(old_cs_row.id))
-                                    .order(csparents::seq.asc())
-                                    .inner_join(changesets::table);
-                                let old_parent_rows = parent_query
-                                    .load::<(ChangesetParentRow, ChangesetRow)>(&*connection)
-                                    .map_err(failure::Error::from)
-                                    .context(
-                                        "while fetching parents to check duplicate insertion")?;
-
-                                let mut old_parent_rows: Vec<_> =  old_parent_rows
-                                    .into_iter()
-                                    .map(|val| {
-                                        let mut val = val.1;
-                                        val.id = 0; // we don't want to compare the IDs
-                                        val
-                                    }).collect();
-                                old_parent_rows.sort();
-
-                                let mut parent_rows: Vec<_> =  parent_rows
-                                    .into_iter()
-                                    .map(|mut val| {
-                                        val.id = 0; // we don't want to compare the IDs
-                                        val
-                                    }).collect();
-                                parent_rows.sort();
-
-                                if old_parent_rows == parent_rows {
-                                    return Ok(false);
-                                } else {
-                                    return Err(
-                                        ErrorKind::DuplicateInsertionInconsistency(
-                                            cs.cs_id,
-                                            old_parent_rows,
-                                            parent_rows,
-                                        ).into()
-                                    );
-                                }
-                            }
-
-                            let cs_query = changeset_query(cs.repo_id, cs.cs_id);
-                            // MySQL and SQLite both have functions to expose "last insert ID", but
-                            // Diesel doesn't expose them. Using it isn't strictly necessary,
-                            // because inserts can be later queried from selects within the same
-                            // transaction.
-                            // But doing so would probably save a roundtrip.
-                            // TODO: (rain1) T26215642 expose last_insert_id in Diesel and use it.
-                            let new_cs_row = cs_query.first::<ChangesetRow>(&*connection)?;
-
-                            // parent_rows might not be in the same order as cs.parents.
-                            let parent_map: HashMap<_, _> = parent_rows
-                                .into_iter()
-                                .map(|row| (row.cs_id, row.id))
-                                .collect();
-
-                            // enumerate() would be OK here too, but involve conversions from usize
-                            // to i32 within the map function.
-                            let parent_inserts: Vec<_> = (0..(cs.parents.len() as i32))
-                                .zip(cs.parents.iter())
-                                .map(|(seq, parent)| {
-                                    // check_missing_rows should have ensured that all the IDs are
-                                    // present.
-                                    let parent_id = parent_map.get(&parent)
-                                        .expect("check_missing_rows check failed");
-
-                                    ChangesetParentRow {
-                                        cs_id: new_cs_row.id,
-                                        parent_id: *parent_id,
-                                        seq,
-                                    }
-                                })
-                                .collect();
-                            insert_into(csparents::table)
-                                .values(&parent_inserts)
-                                .execute(&*connection)?;
-                            Ok(true)
-                        })
-                    })
-                })
-                .boxify()
-            }
-        }
-
-
-        impl $struct {
-            fn actual_get(
-                connection: &$connection,
-                repo_id: RepositoryId,
-                cs_id: ChangesetId,
-            ) -> Result<Option<ChangesetEntry>> {
-                let query = changeset_query(repo_id, cs_id);
-
-                let changeset_row = query.first::<ChangesetRow>(connection).optional();
-                // This code is written in this style to allow easy porting to futures.
-                changeset_row.map_err(failure::Error::from).and_then(|row| {
-                    match row {
-                        None => Ok(None),
-                        Some(row) => {
-                            // Diesel can't express unsigned ints, so convert manually.
-                            // TODO: (rain1) T26215455 hide i64/u64 Diesel conversions behind an
-                            // interface
-                            let gen = u64::try_from(row.gen)
-                                .chain_err(ErrorKind::InvalidStoredData)?;
-
-                            let parent_query = csparents::table
-                                .filter(csparents::cs_id.eq(row.id))
-                                .order(csparents::seq.asc())
-                                .inner_join(changesets::table);
-                            let parent_rows = parent_query
-                                .load::<(ChangesetParentRow, ChangesetRow)>(connection);
-
-                            parent_rows.map(|parents| {
-                                Some(ChangesetEntry {
-                                    repo_id: row.repo_id,
-                                    cs_id: row.cs_id,
-                                    parents: parents.into_iter().map(|p| p.1.cs_id).collect(),
-                                    gen,
-                                })
-                            }).map_err(failure::Error::from)
-                        }
-                    }
-                })
-            }
-        }
+        })
+            .boxify()
     }
-}
 
-impl_changesets!(MysqlChangesets, MysqlConnection);
-impl_changesets!(SqliteChangesets, SqliteConnection);
+    fn get(
+        &self,
+        repo_id: RepositoryId,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Option<ChangesetEntry>, Error> {
+        STATS::gets.add_value(1);
+        cloned!(self.read_master_connection);
 
-fn changeset_query<DB>(
-    repo_id: RepositoryId,
-    cs_id: ChangesetId,
-) -> changesets::BoxedQuery<'static, DB>
-where
-    DB: Backend,
-    DB: HasSqlType<ChangesetIdSql>,
-{
-    changesets::table
-        .filter(changesets::repo_id.eq(repo_id))
-        .filter(changesets::cs_id.eq(cs_id))
-        .limit(1)
-        .into_boxed()
-}
-
-#[inline]
-fn map_add_result(result: result::Result<usize, DieselError>) -> Result<bool> {
-    match result {
-        Ok(_rows) => Ok(true),
-        Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => Ok(false),
-        Err(err) => Err(err.into()),
+        select_changeset(&self.read_connection, &repo_id, &cs_id)
+            .and_then(move |maybe_mapping| match maybe_mapping {
+                Some(mapping) => Ok(Some(mapping)).into_future().boxify(),
+                None => {
+                    STATS::gets_master.add_value(1);
+                    select_changeset(&read_master_connection, &repo_id, &cs_id)
+                }
+            })
+            .boxify()
     }
 }
 
 fn check_missing_rows(
     expected: &[ChangesetId],
-    actual: &[ChangesetRow],
+    actual: &[(u64, ChangesetId, u64)],
 ) -> result::Result<(), ErrorKind> {
     // Could just count the number here and report an error if any are missing, but the reporting
     // wouldn't be as nice.
     let expected_set: HashSet<_> = expected.iter().collect();
-    let actual_set: HashSet<_> = actual.iter().map(|row| &row.cs_id).collect();
+    let actual_set: HashSet<_> = actual.iter().map(|row| &row.1).collect();
     let diff = &expected_set - &actual_set;
     if diff.is_empty() {
         Ok(())
@@ -486,6 +297,81 @@ fn check_missing_rows(
             diff.into_iter().map(|cs_id| *cs_id).collect(),
         ))
     }
+}
+
+fn insert_parents(
+    transaction: Transaction,
+    new_cs_id: u64,
+    cs: ChangesetInsert,
+    parent_rows: Vec<(u64, ChangesetId, u64)>,
+) -> impl Future<Item = (), Error = Error> {
+    // parent_rows might not be in the same order as cs.parents.
+    let parent_map: HashMap<_, _> = parent_rows.into_iter().map(|row| (row.1, row.0)).collect();
+
+    // enumerate() would be OK here too, but involve conversions from usize
+    // to i32 within the map function.
+    let parent_inserts: Vec<_> = (0..(cs.parents.len() as i32))
+        .zip(cs.parents.iter())
+        .map(|(seq, parent)| {
+            // check_missing_rows should have ensured that all the IDs are
+            // present.
+            let parent_id = parent_map
+                .get(&parent)
+                .expect("check_missing_rows check failed");
+
+            (new_cs_id, *parent_id, seq)
+        })
+        .collect();
+
+    let ref_parent_inserts: Vec<_> = parent_inserts
+        .iter()
+        .map(|row| (&row.0, &row.1, &row.2))
+        .collect();
+
+    InsertParents::query_with_transaction(transaction, &ref_parent_inserts[..])
+        .and_then(|(transaction, _)| transaction.commit())
+}
+
+fn check_changeset_matches(
+    connection: &Connection,
+    cs: ChangesetInsert,
+) -> impl Future<Item = (), Error = Error> {
+    select_changeset(&connection, &cs.repo_id, &cs.cs_id).and_then(move |stored_cs| {
+        let stored_parents = stored_cs.map(|cs| cs.parents);
+        if Some(&cs.parents) == stored_parents.as_ref() {
+            Ok(())
+        } else {
+            Err(ErrorKind::DuplicateInsertionInconsistency(
+                cs.cs_id,
+                stored_parents.unwrap_or(Vec::new()),
+                cs.parents,
+            ).into())
+        }
+    })
+}
+
+fn select_changeset(
+    connection: &Connection,
+    repo_id: &RepositoryId,
+    cs_id: &ChangesetId,
+) -> BoxFuture<Option<ChangesetEntry>, Error> {
+    cloned!(repo_id, cs_id);
+
+    SelectChangeset::query(&connection, &repo_id, &cs_id)
+        .map(move |rows| {
+            if rows.is_empty() {
+                None
+            } else {
+                let gen = rows[0].0;
+                Some(ChangesetEntry {
+                    repo_id,
+                    cs_id,
+                    parents: rows.into_iter().filter_map(|row| row.1).collect(),
+                    gen,
+                })
+            }
+        })
+        .boxify()
 }
 
 #[cfg(test)]
