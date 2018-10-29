@@ -45,7 +45,7 @@ use self::streaming_clone::RevlogStreamingChunks;
 
 use errors::*;
 use hooks::HookManager;
-use mononoke_repo::{MononokeRepo, MysqlStreamingCloneConfig};
+use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 
 const MAX_NODES_TO_LOG: usize = 5;
 
@@ -666,7 +666,7 @@ impl HgCommands for RepoClient {
         info!(self.logger(), "stream_out_shallow");
         let changelog = match self.repo.streaming_clone() {
             None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
-            Some(MysqlStreamingCloneConfig {
+            Some(SqlStreamingCloneConfig {
                 blobstore,
                 fetcher,
                 repoid,

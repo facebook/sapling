@@ -5,18 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(try_from, never_type)]
-// FIXME T34253207, remove when https://github.com/diesel-rs/diesel/issues/1785 fixed
-#![allow(proc_macro_derive_resolution_fallback)]
 
 //! State for a single source control Repo
 
 extern crate bytes;
 #[macro_use]
 extern crate cloned;
-extern crate db_conn;
-#[macro_use]
-extern crate diesel;
 #[macro_use]
 extern crate failure_ext as failure;
 #[macro_use]
@@ -32,6 +26,8 @@ extern crate rand;
 extern crate scribe_cxx;
 #[macro_use]
 extern crate slog;
+#[macro_use]
+extern crate sql;
 #[macro_use]
 extern crate stats;
 extern crate time_ext;
@@ -60,5 +56,5 @@ mod errors;
 mod mononoke_repo;
 
 pub use client::RepoClient;
-pub use client::streaming_clone::MysqlStreamingChunksFetcher;
+pub use client::streaming_clone::SqlStreamingChunksFetcher;
 pub use mononoke_repo::{open_blobrepo, streaming_clone, MononokeRepo};

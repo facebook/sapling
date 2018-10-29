@@ -80,6 +80,7 @@ pub fn repo_handlers(
                 RepoType::BlobManifold(ref args) => Some(try_boxfuture!(streaming_clone(
                     blobrepo.clone(),
                     &args.db_address,
+                    myrouter_port.expect("myrouter_port not provided for BlobManifold repo"),
                     repoid
                 ))),
                 _ => None,

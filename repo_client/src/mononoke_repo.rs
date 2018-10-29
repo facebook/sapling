@@ -24,7 +24,7 @@ use metaconfig::repoconfig::RepoType;
 
 use errors::*;
 
-use client::streaming_clone::MysqlStreamingChunksFetcher;
+use client::streaming_clone::SqlStreamingChunksFetcher;
 
 struct LogNormalGenerator {
     rng: Isaac64Rng,
@@ -32,9 +32,9 @@ struct LogNormalGenerator {
 }
 
 #[derive(Clone)]
-pub struct MysqlStreamingCloneConfig {
+pub struct SqlStreamingCloneConfig {
     pub blobstore: PrefixBlobstore<Arc<Blobstore>>,
-    pub fetcher: MysqlStreamingChunksFetcher,
+    pub fetcher: SqlStreamingChunksFetcher,
     pub repoid: RepositoryId,
 }
 
@@ -43,7 +43,7 @@ pub struct MononokeRepo {
     blobrepo: BlobRepo,
     pushrebase_params: PushrebaseParams,
     hook_manager: Arc<HookManager>,
-    streaming_clone: Option<MysqlStreamingCloneConfig>,
+    streaming_clone: Option<SqlStreamingCloneConfig>,
     lfs_params: LfsParams,
 }
 
@@ -53,7 +53,7 @@ impl MononokeRepo {
         blobrepo: BlobRepo,
         pushrebase_params: &PushrebaseParams,
         hook_manager: Arc<HookManager>,
-        streaming_clone: Option<MysqlStreamingCloneConfig>,
+        streaming_clone: Option<SqlStreamingCloneConfig>,
         lfs_params: LfsParams,
     ) -> Self {
         MononokeRepo {
@@ -78,7 +78,7 @@ impl MononokeRepo {
         self.hook_manager.clone()
     }
 
-    pub fn streaming_clone(&self) -> &Option<MysqlStreamingCloneConfig> {
+    pub fn streaming_clone(&self) -> &Option<SqlStreamingCloneConfig> {
         &self.streaming_clone
     }
 
@@ -157,10 +157,11 @@ pub fn open_blobrepo(
 pub fn streaming_clone(
     blobrepo: BlobRepo,
     db_address: &str,
+    myrouter_port: u16,
     repoid: RepositoryId,
-) -> Result<MysqlStreamingCloneConfig> {
-    let fetcher = MysqlStreamingChunksFetcher::open(db_address)?;
-    let streaming_clone = MysqlStreamingCloneConfig {
+) -> Result<SqlStreamingCloneConfig> {
+    let fetcher = SqlStreamingChunksFetcher::with_myrouter(db_address, myrouter_port);
+    let streaming_clone = SqlStreamingCloneConfig {
         fetcher,
         blobstore: blobrepo.get_blobstore(),
         repoid,
