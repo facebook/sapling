@@ -259,6 +259,7 @@ static const std::unordered_map<int32_t, const char*> capsLabels = {
     {FUSE_PARALLEL_DIROPS, "PARALLEL_DIROPS"},
     {FUSE_HANDLE_KILLPRIV, "HANDLE_KILLPRIV"},
     {FUSE_POSIX_ACL, "POSIX_ACL"},
+    {FUSE_CACHE_SYMLINKS, "CACHE_SYMLINKS"},
 #ifdef __APPLE__
     {FUSE_ALLOCATE, "ALLOCATE"},
     {FUSE_EXCHANGE_DATA, "EXCHANGE_DATA"},
@@ -964,7 +965,7 @@ void FuseChannel::readInitPacket() {
   // seems to trigger a kernel/FUSE bug.  See
   // test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
   // in mmap_test.py. FUSE_ATOMIC_O_TRUNC |
-  want = capable & (FUSE_BIG_WRITES | FUSE_ASYNC_READ);
+  want = capable & (FUSE_BIG_WRITES | FUSE_ASYNC_READ | FUSE_CACHE_SYMLINKS);
 
   XLOG(INFO) << "Speaking fuse protocol kernel=" << init.init.major << "."
              << init.init.minor << " local=" << FUSE_KERNEL_VERSION << "."
