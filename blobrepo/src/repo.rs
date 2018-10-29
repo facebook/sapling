@@ -730,13 +730,7 @@ impl BlobRepo {
 
     pub fn get_bonsai_bookmark(&self, name: &Bookmark) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
-        self.bookmarks
-            .get(name, &self.repoid)
-            .timed(|stats, _| {
-                println!("blobrepo get_bookmark took {:?}", stats.completion_time);
-                Ok(())
-            })
-            .boxify()
+        self.bookmarks.get(name, &self.repoid)
     }
 
     // TODO(stash): rename to get_all_bookmarks()?
