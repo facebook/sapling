@@ -680,13 +680,19 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None
     except KeyError:
         remotenames = None
 
-    # Pull all the new heads
-    # so we need to filter cloudrefs before pull
-    # pull does't check if a rev is present locally
+    # Pull all the new heads and any bookmark hashes we don't have. We need to
+    # filter cloudrefs before pull as pull does't check if a rev is present
+    # locally.  Note that bookmarked public hashes can't use the
+    # directfetchingfn fastpath.
     unfi = repo.unfiltered()
-    newheads = filter(lambda rev: rev not in unfi, cloudrefs.heads)
+    newheads = [head for head in cloudrefs.heads if head not in unfi]
+    newbookmarked = [
+        node
+        for node in cloudrefs.bookmarks.values()
+        if node not in unfi and node not in newheads
+    ]
 
-    if newheads and not directfetchingfn:
+    if newheads and not directfetchingfn or newbookmarked:
         # Replace the exchange pullbookmarks function with one which updates the
         # user's synced bookmarks.  This also means we don't partially update a
         # subset of the remote bookmarks if they happen to be included in the
@@ -713,7 +719,7 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None
         def _pullremotenames(orig, repo, remote, bookmarks):
             pass
 
-        pullopts["rev"] = newheads
+        pullopts["rev"] = newheads + newbookmarked
         with extensions.wrappedfunction(
             exchange, "_pullobsolete", _pullobsolete
         ), extensions.wrappedfunction(

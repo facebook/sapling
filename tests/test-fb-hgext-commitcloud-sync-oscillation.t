@@ -290,13 +290,10 @@ Put a bookmark on the new public commit
 
   $ cd ../client2
   $ hg cloud sync -q
-  5817a557f93f46ab290e8571c89624ff856130c0 not found, not creating foo bookmark
 
   $ cd ../client1
   $ hg cloud sync -q
   $ tglogp -r tip
-  o  8: 5817a557f93f public 'next'
+  o  8: 5817a557f93f public 'next' foo
   |
   ~
-
-BUG: Bookmark has vanished!
