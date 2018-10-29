@@ -172,12 +172,12 @@ pub struct SqlChangesets {
 queries!{
     write InsertChangeset(values: (repo_id: RepositoryId, cs_id: ChangesetId, gen: u64)) {
         insert_or_ignore,
-        "{insert} INTO changesets (repo_id, cs_id, gen) VALUES {values}"
+        "{insert_or_ignore} INTO changesets (repo_id, cs_id, gen) VALUES {values}"
     }
 
     write InsertParents(values: (cs_id: u64, parent_id: u64, seq: i32)) {
-        insert,
-        "{insert} INTO csparents (cs_id, parent_id, seq) VALUES {values}"
+        none,
+        "INSERT INTO csparents (cs_id, parent_id, seq) VALUES {values}"
     }
 
     read SelectChangeset(repo_id: RepositoryId, cs_id: ChangesetId) -> (u64, Option<ChangesetId>) {

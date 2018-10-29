@@ -159,7 +159,7 @@ queries! {
         bcs_id: ChangesetId,
     )) {
         insert_or_ignore,
-        "{insert} INTO bonsai_hg_mapping (repo_id, hg_cs_id, bcs_id) VALUES {values}"
+        "{insert_or_ignore} INTO bonsai_hg_mapping (repo_id, hg_cs_id, bcs_id) VALUES {values}"
     }
 
     read SelectMappingByBonsai(repo_id: RepositoryId, bcs_id: ChangesetId) -> (HgChangesetId) {

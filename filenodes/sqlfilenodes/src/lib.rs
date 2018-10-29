@@ -60,7 +60,7 @@ define_stats! {
 queries! {
     write InsertPaths(values: (repo_id: RepositoryId, path: Vec<u8>, path_hash: Vec<u8>)) {
         insert_or_ignore,
-        "{insert} INTO paths (repo_id, path, path_hash) VALUES {values}"
+        "{insert_or_ignore} INTO paths (repo_id, path, path_hash) VALUES {values}"
     }
 
     write InsertFilenodes(values: (
@@ -74,7 +74,7 @@ queries! {
         has_copyinfo: i8,
     )) {
         insert_or_ignore,
-        "{insert} INTO filenodes (
+        "{insert_or_ignore} INTO filenodes (
             repo_id
             , path_hash
             , is_tree
@@ -95,7 +95,7 @@ queries! {
         fromnode: HgFileNodeId,
     )) {
         insert_or_ignore,
-        "{insert} INTO fixedcopyinfo (
+        "{insert_or_ignore} INTO fixedcopyinfo (
             repo_id
             , topath_hash
             , tonode
