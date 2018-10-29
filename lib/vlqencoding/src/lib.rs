@@ -124,7 +124,7 @@ pub trait VLQDecodeAt<T> {
 
 macro_rules! impl_unsigned_primitive {
     ($T: ident) => (
-        impl<W: Write> VLQEncode<$T> for W {
+        impl<W: Write + ?Sized> VLQEncode<$T> for W {
             fn write_vlq(&mut self, value: $T) -> io::Result<()> {
                 let mut buf = [0u8];
                 let mut value = value;
@@ -145,7 +145,7 @@ macro_rules! impl_unsigned_primitive {
             }
         }
 
-        impl<R: Read> VLQDecode<$T> for R {
+        impl<R: Read + ?Sized> VLQDecode<$T> for R {
             fn read_vlq(&mut self) -> io::Result<$T> {
                 let mut buf = [0u8];
                 let mut value = 0 as $T;
@@ -204,13 +204,13 @@ impl_unsigned_primitive!(u8);
 
 macro_rules! impl_signed_primitive {
     ($T: ty, $U: ty) => (
-        impl<W: Write> VLQEncode<$T> for W {
+        impl<W: Write + ?Sized> VLQEncode<$T> for W {
             fn write_vlq(&mut self, v: $T) -> io::Result<()> {
                 self.write_vlq(((v << 1) ^ (v >> (size_of::<$U>() * 8 - 1))) as $U)
             }
         }
 
-        impl<R: Read> VLQDecode<$T> for R {
+        impl<R: Read + ?Sized> VLQDecode<$T> for R {
             fn read_vlq(&mut self) -> io::Result<$T> {
                 (self.read_vlq() as Result<$U, _>).map (|n| {
                     ((n >> 1) as $T) ^ -((n & 1) as $T)

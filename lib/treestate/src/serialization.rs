@@ -26,7 +26,7 @@ where
 
 impl Serializable for FileState {
     /// Write a file entry to the store.
-    fn serialize(&self, mut w: &mut Write) -> Result<()> {
+    fn serialize(&self, w: &mut Write) -> Result<()> {
         w.write_u8(self.state)?;
         w.write_vlq(self.mode)?;
         w.write_vlq(self.size)?;
@@ -35,7 +35,7 @@ impl Serializable for FileState {
     }
 
     /// Read an entry from the store.
-    fn deserialize(mut r: &mut Read) -> Result<FileState> {
+    fn deserialize(r: &mut Read) -> Result<FileState> {
         let state = r.read_u8()?;
         let mode = r.read_vlq()?;
         let size = r.read_vlq()?;
@@ -50,14 +50,14 @@ impl Serializable for FileState {
 }
 
 impl Serializable for AggregatedState {
-    fn serialize(&self, mut w: &mut Write) -> Result<()> {
+    fn serialize(&self, w: &mut Write) -> Result<()> {
         w.write_vlq(self.union.to_bits())?;
         w.write_vlq(self.intersection.to_bits())?;
         Ok(())
     }
 
     /// Read an entry from the store.
-    fn deserialize(mut r: &mut Read) -> Result<AggregatedState> {
+    fn deserialize(r: &mut Read) -> Result<AggregatedState> {
         let state: u16 = r.read_vlq()?;
         let union = StateFlags::from_bits_truncate(state);
         let state: u16 = r.read_vlq()?;
@@ -70,14 +70,14 @@ impl Serializable for AggregatedState {
 }
 
 impl Serializable for Box<[u8]> {
-    fn serialize(&self, mut w: &mut Write) -> Result<()> {
+    fn serialize(&self, w: &mut Write) -> Result<()> {
         w.write_vlq(self.len())?;
         w.write_all(&self)?;
 
         Ok(())
     }
 
-    fn deserialize(mut r: &mut Read) -> Result<Self> {
+    fn deserialize(r: &mut Read) -> Result<Self> {
         let len: usize = r.read_vlq()?;
         let mut buf = vec![0; len];
         r.read_exact(&mut buf)?;
@@ -86,7 +86,7 @@ impl Serializable for Box<[u8]> {
 }
 
 impl Serializable for FileStateV2 {
-    fn serialize(&self, mut w: &mut Write) -> Result<()> {
+    fn serialize(&self, w: &mut Write) -> Result<()> {
         w.write_vlq(self.state.to_bits())?;
         w.write_vlq(self.mode)?;
         w.write_vlq(self.size)?;
@@ -102,7 +102,7 @@ impl Serializable for FileStateV2 {
         Ok(())
     }
 
-    fn deserialize(mut r: &mut Read) -> Result<FileStateV2> {
+    fn deserialize(r: &mut Read) -> Result<FileStateV2> {
         let state: u16 = r.read_vlq()?;
         let state = StateFlags::from_bits_truncate(state);
         let mode = r.read_vlq()?;
@@ -125,7 +125,7 @@ impl Serializable for FileStateV2 {
 }
 
 /// Deserialize a single entry in a node's entry map.  Returns the name and the entry.
-fn deserialize_node_entry<T>(mut r: &mut Read) -> Result<(Key, NodeEntry<T>)>
+fn deserialize_node_entry<T>(r: &mut Read) -> Result<(Key, NodeEntry<T>)>
 where
     T: Serializable + Clone,
 {
@@ -166,7 +166,6 @@ where
 
 impl<T: Serializable + Clone> Serializable for NodeEntryMap<T> {
     fn deserialize(r: &mut Read) -> Result<NodeEntryMap<T>> {
-        let mut r = r;
         let count = r.read_vlq()?;
         let mut entries = NodeEntryMap::with_capacity(count);
         for _i in 0..count {
@@ -177,7 +176,6 @@ impl<T: Serializable + Clone> Serializable for NodeEntryMap<T> {
     }
 
     fn serialize(&self, w: &mut Write) -> Result<()> {
-        let mut w = w;
         w.write_vlq(self.len())?;
         for (name, entry) in self.iter() {
             match entry {
@@ -281,12 +279,12 @@ impl Serializable for TreeStateRoot {
 }
 
 impl Serializable for StateFlags {
-    fn deserialize(mut r: &mut Read) -> Result<Self> {
+    fn deserialize(r: &mut Read) -> Result<Self> {
         let v = r.read_vlq()?;
         Ok(Self::from_bits_truncate(v))
     }
 
-    fn serialize(&self, mut w: &mut Write) -> Result<()> {
+    fn serialize(&self, w: &mut Write) -> Result<()> {
         Ok(w.write_vlq(self.to_bits())?)
     }
 }
