@@ -17,7 +17,6 @@ use bonsai_changeset::BonsaiChangeset;
 use errors::*;
 use file_contents::FileContents;
 use hash::{Blake2, Context};
-use sql_types::ChangesetIdSql;
 use thrift;
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
@@ -37,8 +36,7 @@ pub trait MononokeId: Copy + Send + 'static {
 
 /// An identifier for a changeset in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Abomonation, HeapSizeOf, FromSqlRow, AsExpression)]
-#[sql_type = "ChangesetIdSql"]
+#[derive(Abomonation, HeapSizeOf)]
 pub struct ChangesetId(Blake2);
 
 /// An identifier for file contents in Mononoke.

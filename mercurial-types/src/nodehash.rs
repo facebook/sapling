@@ -19,7 +19,6 @@ use thrift;
 use RepoPath;
 use errors::*;
 use hash::{self, Sha1};
-use sql_types::{HgChangesetIdSql, HgFileNodeIdSql, HgManifestIdSql};
 
 pub const NULL_HASH: HgNodeHash = HgNodeHash(hash::NULL);
 pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
@@ -190,8 +189,7 @@ impl Arbitrary for HgNodeHash {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, FromSqlRow, AsExpression, Abomonation)]
-#[sql_type = "HgChangesetIdSql"]
+#[derive(HeapSizeOf, Abomonation)]
 pub struct HgChangesetId(HgNodeHash);
 
 impl HgChangesetId {
@@ -268,16 +266,10 @@ impl Arbitrary for HgChangesetId {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, FromSqlRow, AsExpression)]
-#[sql_type = "HgManifestIdSql"]
+#[derive(HeapSizeOf)]
 pub struct HgManifestId(HgNodeHash);
 
 impl HgManifestId {
-    #[inline]
-    pub(crate) fn as_nodehash(&self) -> &HgNodeHash {
-        &self.0
-    }
-
     pub fn into_nodehash(self) -> HgNodeHash {
         self.0
     }
@@ -311,8 +303,7 @@ impl Arbitrary for HgManifestId {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Abomonation, HeapSizeOf, FromSqlRow, AsExpression)]
-#[sql_type = "HgFileNodeIdSql"]
+#[derive(Abomonation, HeapSizeOf)]
 pub struct HgFileNodeId(HgNodeHash);
 
 impl HgFileNodeId {

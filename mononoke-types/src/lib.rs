@@ -7,12 +7,9 @@
 //! Base types used throughout Mononoke.
 
 #![deny(warnings)]
-// FIXME T34253207, remove when https://github.com/diesel-rs/diesel/issues/1785 fixed
-#![allow(proc_macro_derive_resolution_fallback)]
 // The allow(dead_code) is temporary until Thrift serialization is done.
 #![allow(dead_code)]
-#![feature(try_from)]
-#![feature(const_fn)]
+#![feature(const_fn, try_from)]
 
 extern crate abomonation;
 #[macro_use]
@@ -23,8 +20,6 @@ extern crate bincode;
 extern crate blake2;
 extern crate bytes;
 extern crate chrono;
-#[macro_use]
-extern crate diesel;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate heapsize;

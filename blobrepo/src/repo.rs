@@ -326,7 +326,7 @@ impl BlobRepo {
             cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
                 "filenodes".to_string(),
             )))?,
-            "dieselfilenodes",
+            "sqlfilenodes",
             &args.db_address,
         );
 

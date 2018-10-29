@@ -7,7 +7,6 @@
 #![feature(duration_as_u128)]
 
 extern crate clap;
-extern crate db;
 extern crate failure_ext as failure;
 extern crate filenodes;
 extern crate futures;
