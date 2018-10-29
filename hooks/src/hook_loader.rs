@@ -71,49 +71,57 @@ mod test {
     use metaconfig::repoconfig::{BookmarkParams, HookParams, RepoType};
     use slog::{Discard, Drain};
 
+    fn default_repo_config() -> RepoConfig {
+        RepoConfig {
+            repotype: RepoType::Revlog("whatev".into()),
+            enabled: true,
+            generation_cache_size: 1,
+            repoid: 1,
+            scuba_table: None,
+            cache_warmup: None,
+            bookmarks: None,
+            hooks: None,
+            pushrebase: Default::default(),
+            lfs: Default::default(),
+            wireproto_scribe_category: None,
+        }
+    }
+
     #[test]
     fn test_load_hooks() {
         async_unit::tokio_unit_test(|| {
-            let config = RepoConfig {
-                repotype: RepoType::Revlog("whatev".into()),
-                enabled: true,
-                generation_cache_size: 1,
-                repoid: 1,
-                scuba_table: None,
-                cache_warmup: None,
-                bookmarks: Some(vec![
-                    BookmarkParams {
-                        bookmark: Bookmark::new("bm1").unwrap(),
-                        hooks: Some(vec!["hook1".into(), "hook2".into()]),
-                    },
-                    BookmarkParams {
-                        bookmark: Bookmark::new("bm2").unwrap(),
-                        hooks: Some(vec!["hook2".into(), "hook3".into()]),
-                    },
-                ]),
-                hooks: Some(vec![
-                    HookParams {
-                        name: "hook1".into(),
-                        code: "hook1 code".into(),
-                        hook_type: HookType::PerAddedOrModifiedFile,
-                        bypass: None,
-                    },
-                    HookParams {
-                        name: "hook2".into(),
-                        code: "hook2 code".into(),
-                        hook_type: HookType::PerAddedOrModifiedFile,
-                        bypass: None,
-                    },
-                    HookParams {
-                        name: "hook3".into(),
-                        code: "hook3 code".into(),
-                        hook_type: HookType::PerChangeset,
-                        bypass: None,
-                    },
-                ]),
-                pushrebase: Default::default(),
-                lfs: Default::default(),
-            };
+            let mut config = default_repo_config();
+            config.bookmarks = Some(vec![
+                BookmarkParams {
+                    bookmark: Bookmark::new("bm1").unwrap(),
+                    hooks: Some(vec!["hook1".into(), "hook2".into()]),
+                },
+                BookmarkParams {
+                    bookmark: Bookmark::new("bm2").unwrap(),
+                    hooks: Some(vec!["hook2".into(), "hook3".into()]),
+                },
+            ]);
+
+            config.hooks = Some(vec![
+                HookParams {
+                    name: "hook1".into(),
+                    code: "hook1 code".into(),
+                    hook_type: HookType::PerAddedOrModifiedFile,
+                    bypass: None,
+                },
+                HookParams {
+                    name: "hook2".into(),
+                    code: "hook2 code".into(),
+                    hook_type: HookType::PerAddedOrModifiedFile,
+                    bypass: None,
+                },
+                HookParams {
+                    name: "hook3".into(),
+                    code: "hook3 code".into(),
+                    hook_type: HookType::PerChangeset,
+                    bypass: None,
+                },
+            ]);
 
             let mut hm = hook_manager_blobrepo();
             match load_hooks(&mut hm, config) {
@@ -126,30 +134,22 @@ mod test {
     #[test]
     fn test_load_hooks_no_such_hook() {
         async_unit::tokio_unit_test(|| {
-            let config = RepoConfig {
-                repotype: RepoType::Revlog("whatev".into()),
-                enabled: true,
-                generation_cache_size: 1,
-                repoid: 1,
-                scuba_table: None,
-                cache_warmup: None,
-                bookmarks: Some(vec![
-                    BookmarkParams {
-                        bookmark: Bookmark::new("bm1").unwrap(),
-                        hooks: Some(vec!["hook1".into(), "hook2".into()]),
-                    },
-                ]),
-                hooks: Some(vec![
-                    HookParams {
-                        name: "hook1".into(),
-                        code: "hook1 code".into(),
-                        hook_type: HookType::PerAddedOrModifiedFile,
-                        bypass: None,
-                    },
-                ]),
-                pushrebase: Default::default(),
-                lfs: Default::default(),
-            };
+            let mut config = default_repo_config();
+            config.bookmarks = Some(vec![
+                BookmarkParams {
+                    bookmark: Bookmark::new("bm1").unwrap(),
+                    hooks: Some(vec!["hook1".into(), "hook2".into()]),
+                },
+            ]);
+
+            config.hooks = Some(vec![
+                HookParams {
+                    name: "hook1".into(),
+                    code: "hook1 code".into(),
+                    hook_type: HookType::PerAddedOrModifiedFile,
+                    bypass: None,
+                },
+            ]);
 
             let mut hm = hook_manager_blobrepo();
 

@@ -11,13 +11,13 @@ use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 use std::mem;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, stream::empty};
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_stats::{Timed, TimedStreamTrait};
+use futures_stats::{StreamStats, Timed, TimedStreamTrait};
 use itertools::Itertools;
 use slog::Logger;
 use stats::Histogram;
@@ -34,7 +34,9 @@ use mercurial_types::{percent_encode, Entry, HgChangesetId, HgManifestId, HgNode
 use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, CombinatorPruner,
                                       DeletedPruner, EntryStatus, FilePruner, Pruner,
                                       VisitedPruner};
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scribe::ScribeClient;
+use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
+use serde_json;
 use tracing::{TraceContext, Traced};
 
 use blobrepo::BlobRepo;
@@ -72,17 +74,15 @@ mod ops {
     pub static GETFILES: &str = "getfiles";
 }
 
-fn format_nodes_list(mut nodes: Vec<HgNodeHash>) -> String {
-    nodes.sort();
-    nodes.into_iter().map(|node| format!("{}", node)).join(" ")
+fn format_nodes_list(nodes: &Vec<HgNodeHash>) -> String {
+    nodes.iter().map(|node| format!("{}", node)).join(" ")
 }
 
-fn format_utf8_bytes_list(mut entries: Vec<Bytes>) -> String {
-    entries.sort();
+fn format_utf8_bytes_list<T: AsRef<[u8]>>(entries: &Vec<T>) -> String {
     entries
-        .into_iter()
-        .map(|entry| String::from_utf8_lossy(&entry).into_owned())
-        .join(" ")
+        .iter()
+        .map(|entry| String::from_utf8_lossy(entry.as_ref()).into_owned())
+        .join(",")
 }
 
 fn wireprotocaps() -> Vec<String> {
@@ -160,6 +160,81 @@ fn bundle2caps() -> String {
 pub struct RepoClient {
     repo: MononokeRepo,
     ctxt: CoreContext<Uuid>,
+}
+
+// Logs wireproto requests both to scuba and scribe.
+// Scuba logs are used for analysis of performance of both shadow and prod Mononoke tiers
+// Scribe logs are used for replaying prod wireproto requests on shadow tier. So
+// Scribe logging should be disabled on shadow tier.
+struct WireprotoLogger {
+    scuba_logger: ScubaSampleBuilder,
+    scribe_client: Arc<ScribeClientImplementation>,
+    // This scribe category main purpose is to tail the prod requests and replay them
+    // on shadow tier.
+    wireproto_scribe_category: Option<String>,
+    wireproto_command: &'static str,
+    args: Option<serde_json::Value>,
+}
+
+impl WireprotoLogger {
+    fn new(
+        scuba_logger: ScubaSampleBuilder,
+        wireproto_command: &'static str,
+        args: Option<serde_json::Value>,
+        wireproto_scribe_category: Option<String>,
+    ) -> Self {
+        let mut logger = Self {
+            scuba_logger,
+            scribe_client: Arc::new(ScribeClientImplementation::new()),
+            wireproto_scribe_category,
+            wireproto_command,
+            args: args.clone(),
+        };
+        logger.scuba_logger.add("command", logger.wireproto_command);
+
+        logger.args = args;
+        if let Some(ref args) = logger.args {
+            let args = args.to_string();
+            // Scuba does not support too long columns, we have to trim it
+            let limit = ::std::cmp::min(args.len(), 1000);
+            logger.scuba_logger.add("command_args", &args[..limit]);
+        }
+
+        logger.scuba_logger.log_with_msg("Start processing", None);
+        logger
+    }
+
+    fn set_args(&mut self, args: Option<serde_json::Value>) {
+        self.args = args;
+    }
+
+    fn finish_stream_wireproto_processing(&mut self, stats: &StreamStats) {
+        self.scuba_logger
+            .add_stream_stats(&stats)
+            .log_with_msg("Command processed", None);
+
+        if let Some(ref wireproto_scribe_category) = self.wireproto_scribe_category {
+            let mut builder = ScubaSampleBuilder::with_discard();
+            match self.args {
+                Some(ref args) => {
+                    builder.add("args", args.to_string());
+                }
+                None => {
+                    builder.add("args", "");
+                }
+            };
+            builder.add("source_control_server_type", "mononoke");
+            builder.add("command", self.wireproto_command);
+            builder.add("duration", stats.completion_time.as_millis_unchecked());
+
+            // We can't really do anything with the errors, so let's ignore it
+            let sample = builder.get_sample();
+            if let Ok(sample_json) = sample.to_json() {
+                let _ = self.scribe_client
+                    .offer(&wireproto_scribe_category, &sample_json.to_string());
+            }
+        }
+    }
 }
 
 impl RepoClient {
@@ -295,6 +370,19 @@ impl RepoClient {
             .map(move |part| create_bundle_stream(vec![part], compression))
             .flatten_stream()
             .boxify()
+    }
+
+    fn wireproto_logger(
+        &self,
+        wireproto_command: &'static str,
+        args: Option<serde_json::Value>,
+    ) -> WireprotoLogger {
+        WireprotoLogger::new(
+            self.ctxt.scuba().clone(),
+            wireproto_command,
+            args,
+            self.ctxt.wireproto_scribe_category().clone(),
+        )
     }
 }
 
@@ -495,7 +583,14 @@ impl HgCommands for RepoClient {
     fn getbundle(&self, args: GetbundleArgs) -> BoxStream<Bytes, Error> {
         info!(self.logger(), "Getbundle: {:?}", args);
 
-        let mut scuba_logger = self.scuba_logger(ops::GETBUNDLE, None);
+        let value = json!({
+            "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
+            "common": format_nodes_list(&args.common),
+            "heads": format_nodes_list(&args.heads),
+            "listkeys": format_utf8_bytes_list(&args.listkeys),
+        });
+        let value = json!(vec![value]);
+        let mut wireproto_logger = self.wireproto_logger(ops::GETBUNDLE, Some(value));
 
         match self.create_bundle(args) {
             Ok(res) => res.boxify(),
@@ -503,9 +598,7 @@ impl HgCommands for RepoClient {
         }.traced(self.trace(), ops::GETBUNDLE, trace_args!())
             .timed(move |stats, _| {
                 STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-                scuba_logger
-                    .add_stream_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                wireproto_logger.finish_stream_wireproto_processing(&stats);
                 Ok(())
             })
             .boxify()
@@ -601,23 +694,20 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
-        let args = format!(
-            "rootdir: {}, mfnodes: {}, basemfnodes: {}, directories: {}",
-            String::from_utf8_lossy(&params.rootdir),
-            format_nodes_list(params.mfnodes.clone()),
-            format_nodes_list(params.basemfnodes.clone()),
-            format_utf8_bytes_list(params.directories.clone()),
-        );
-
-        let mut scuba_logger = self.scuba_logger(ops::GETTREEPACK, Some(args));
+        let args = json!({
+            "rootdir": String::from_utf8_lossy(&params.rootdir),
+            "mfnodes": format_nodes_list(&params.mfnodes),
+            "basemfnodes": format_nodes_list(&params.basemfnodes),
+            "directories": format_utf8_bytes_list(&params.directories),
+        });
+        let args = json!(vec![args]);
+        let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK, Some(args));
 
         self.gettreepack_untimed(params)
             .traced(self.trace(), ops::GETTREEPACK, trace_args!())
             .timed(move |stats, _| {
                 STATS::gettreepack_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-                scuba_logger
-                    .add_stream_stats(&stats)
-                    .log_with_msg("Command processed", None);
+                wireproto_logger.finish_stream_wireproto_processing(&stats);
                 Ok(())
             })
             .boxify()
@@ -629,11 +719,26 @@ impl HgCommands for RepoClient {
         let trace = self.trace().clone();
         info!(logger, "getfiles");
 
+        let mut wireproto_logger = self.wireproto_logger(ops::GETFILES, None);
         let this = self.clone();
-        let getfiles_buffer_size = 100; // TODO(stash): make it configurable
+        // TODO(stash): make it configurable
+        let getfiles_buffer_size = 100;
+        // We buffer all parameters in memory so that we can log them.
+        // That shouldn't be a problem because requests are quite small
+        let getfiles_params = Arc::new(Mutex::new(vec![]));
+
         params
+            .map({
+                cloned!(getfiles_params);
+                move |param| {
+                    let mut getfiles_params = getfiles_params.lock().unwrap();
+                    getfiles_params.push(param.clone());
+                    param
+                }
+            })
             .map(move |(node, path)| {
                 let args = format!("node: {}, path: {}", node, path);
+                // Logs info about processing of a single file to scuba
                 let mut scuba_logger = this.scuba_logger(ops::GETFILES, Some(args));
 
                 let repo = this.repo.clone();
@@ -658,6 +763,19 @@ impl HgCommands for RepoClient {
                     })
             })
             .buffered(getfiles_buffer_size)
+            .timed(move |stats, _| {
+                let getfiles_params = getfiles_params.lock().unwrap();
+                let mut encoded_params = vec![];
+                for (node, path) in getfiles_params.iter() {
+                    encoded_params.push(vec![
+                        format!("{}", node),
+                        String::from_utf8_lossy(&path.to_vec()).to_string(),
+                    ]);
+                }
+                wireproto_logger.set_args(Some(json!{encoded_params}));
+                wireproto_logger.finish_stream_wireproto_processing(&stats);
+                Ok(())
+            })
             .boxify()
     }
 

@@ -48,6 +48,9 @@ pub struct RepoConfig {
     pub pushrebase: PushrebaseParams,
     /// LFS configuration options
     pub lfs: LfsParams,
+    /// Scribe category to log all wireproto requests with full arguments.
+    /// Used for replay on shadow tier.
+    pub wireproto_scribe_category: Option<String>,
 }
 
 impl RepoConfig {
@@ -396,6 +399,7 @@ impl RepoConfigs {
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
         let repoid = this.repoid;
         let scuba_table = this.scuba_table;
+        let wireproto_scribe_category = this.wireproto_scribe_category;
         let cache_warmup = this.cache_warmup.map(|cache_warmup| CacheWarmupParams {
             bookmark: Bookmark::new(cache_warmup.bookmark).expect("bookmark name must be ascii"),
             commit_limit: cache_warmup.commit_limit.unwrap_or(200000),
@@ -453,6 +457,7 @@ impl RepoConfigs {
             hooks: hooks_opt,
             pushrebase,
             lfs,
+            wireproto_scribe_category,
         })
     }
 }
@@ -476,6 +481,7 @@ struct RawRepoConfig {
     hooks: Option<Vec<RawHookConfig>>,
     pushrebase: Option<RawPushrebaseParams>,
     lfs: Option<RawLfsParams>,
+    wireproto_scribe_category: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -572,6 +578,7 @@ mod test {
             repotype="revlog"
             repoid=1
             scuba_table="scuba_table"
+            wireproto_scribe_category="category"
         "#;
 
         let paths = btreemap! {
@@ -629,6 +636,7 @@ mod test {
                 lfs: LfsParams {
                     threshold: Some(1000),
                 },
+                wireproto_scribe_category: None,
             },
         );
         repos.insert(
@@ -644,6 +652,7 @@ mod test {
                 hooks: None,
                 pushrebase: Default::default(),
                 lfs: Default::default(),
+                wireproto_scribe_category: Some("category".to_string()),
             },
         );
         assert_eq!(

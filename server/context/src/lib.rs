@@ -17,6 +17,9 @@ pub struct CoreContext<T> {
     pub session: T,
     pub logger: Logger,
     pub scuba: ScubaSampleBuilder,
+    // Logging some prod wireproto requests to scribe so that they can be later replayed on
+    // shadow tier.
+    pub wireproto_scribe_category: Option<String>,
     pub trace: TraceContext,
 }
 
@@ -29,6 +32,9 @@ impl<T> CoreContext<T> {
     }
     pub fn scuba(&self) -> &ScubaSampleBuilder {
         &self.scuba
+    }
+    pub fn wireproto_scribe_category(&self) -> &Option<String> {
+        &self.wireproto_scribe_category
     }
     pub fn trace(&self) -> &TraceContext {
         &self.trace

@@ -49,6 +49,7 @@ extern crate mercurial_types;
 extern crate metaconfig;
 extern crate ready_state;
 extern crate repo_client;
+extern crate scribe;
 extern crate scuba_ext;
 extern crate sshrelay;
 

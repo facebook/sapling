@@ -23,7 +23,10 @@ extern crate itertools;
 extern crate lazy_static;
 extern crate pylz4;
 extern crate rand;
+extern crate scribe;
 extern crate scribe_cxx;
+#[macro_use]
+extern crate serde_json;
 #[macro_use]
 extern crate slog;
 #[macro_use]

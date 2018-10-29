@@ -42,6 +42,7 @@ pub fn request_handler(
     RepoHandler {
         logger,
         scuba,
+        wireproto_scribe_category,
         repo,
     }: RepoHandler,
     stdio: Stdio,
@@ -122,6 +123,7 @@ pub fn request_handler(
         session: session_uuid,
         logger: conn_log.clone(),
         scuba: scuba_logger.clone(),
+        wireproto_scribe_category,
         trace: trace.clone(),
     };
 

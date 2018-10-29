@@ -25,6 +25,7 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 pub struct RepoHandler {
     pub logger: Logger,
     pub scuba: ScubaSampleBuilder,
+    pub wireproto_scribe_category: Option<String>,
     pub repo: MononokeRepo,
 }
 
@@ -97,6 +98,7 @@ pub fn repo_handlers(
             let listen_log = root_log.new(o!("repo" => reponame.clone()));
             let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
             scuba_logger.add_common_server_data();
+            let wireproto_scribe_category = config.wireproto_scribe_category.clone();
 
             // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
             let initial_warmup = ensure_myrouter_ready.and_then({
@@ -119,6 +121,7 @@ pub fn repo_handlers(
                             RepoHandler {
                                 logger: listen_log,
                                 scuba: scuba_logger,
+                                wireproto_scribe_category,
                                 repo: repo,
                             },
                         )
