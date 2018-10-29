@@ -34,6 +34,7 @@ use mercurial_types::{percent_encode, Entry, HgChangesetId, HgManifestId, HgNode
 use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, CombinatorPruner,
                                       DeletedPruner, EntryStatus, FilePruner, Pruner,
                                       VisitedPruner};
+use rand;
 use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde_json;
@@ -160,6 +161,9 @@ fn bundle2caps() -> String {
 pub struct RepoClient {
     repo: MononokeRepo,
     ctxt: CoreContext<Uuid>,
+    // Percent of returned entries (filelogs, manifests, changesets) which content
+    // will be hash validated
+    hash_validation_percentage: usize,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -238,8 +242,16 @@ impl WireprotoLogger {
 }
 
 impl RepoClient {
-    pub fn new(repo: MononokeRepo, ctxt: CoreContext<Uuid>) -> Self {
-        RepoClient { repo, ctxt }
+    pub fn new(
+        repo: MononokeRepo,
+        ctxt: CoreContext<Uuid>,
+        hash_validation_percentage: usize,
+    ) -> Self {
+        RepoClient {
+            repo,
+            ctxt,
+            hash_validation_percentage,
+        }
     }
 
     fn logger(&self) -> &Logger {
@@ -727,6 +739,7 @@ impl HgCommands for RepoClient {
         // That shouldn't be a problem because requests are quite small
         let getfiles_params = Arc::new(Mutex::new(vec![]));
 
+        let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
         params
             .map({
                 cloned!(getfiles_params);
@@ -748,6 +761,8 @@ impl HgCommands for RepoClient {
                     path.clone(),
                     trace.clone(),
                     repo.lfs_params().clone(),
+                    scuba_logger.clone(),
+                    validate_hash,
                 ).traced(
                     this.trace(),
                     ops::GETFILES,

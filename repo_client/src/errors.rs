@@ -6,11 +6,17 @@
 
 pub use failure::{Error, Result, ResultExt};
 
-use mercurial_types::RepoPath;
+use mercurial_types::{HgNodeHash, MPath, RepoPath};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "internal error: file {} copied from directory {}", _0, _1)]
     InconsistentCopyInfo(RepoPath, RepoPath),
     #[fail(display = "internal error: streaming blob {} missing", _0)] MissingStreamingBlob(String),
+    #[fail(display = "Data corruption for {}: expected {}, actual {}!", _0, _1, _2)]
+    DataCorruptionFilenode {
+        path: MPath,
+        expected: HgNodeHash,
+        actual: HgNodeHash,
+    },
 }

@@ -44,6 +44,7 @@ pub fn request_handler(
         scuba,
         wireproto_scribe_category,
         repo,
+        hash_validation_percentage,
     }: RepoHandler,
     stdio: Stdio,
     addr: SocketAddr,
@@ -130,7 +131,7 @@ pub fn request_handler(
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         stdin,
-        RepoClient::new(repo.clone(), ctxt),
+        RepoClient::new(repo.clone(), ctxt, hash_validation_percentage),
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
         &conn_log,

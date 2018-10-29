@@ -51,6 +51,8 @@ pub struct RepoConfig {
     /// Scribe category to log all wireproto requests with full arguments.
     /// Used for replay on shadow tier.
     pub wireproto_scribe_category: Option<String>,
+    /// What percent of read request verifies that returned content matches the hash
+    pub hash_validation_percentage: usize,
 }
 
 impl RepoConfig {
@@ -446,6 +448,8 @@ impl RepoConfigs {
             None => LfsParams { threshold: None },
         };
 
+        let hash_validation_percentage = this.hash_validation_percentage.unwrap_or(0);
+
         Ok(RepoConfig {
             enabled,
             repotype,
@@ -458,6 +462,7 @@ impl RepoConfigs {
             pushrebase,
             lfs,
             wireproto_scribe_category,
+            hash_validation_percentage,
         })
     }
 }
@@ -482,6 +487,7 @@ struct RawRepoConfig {
     pushrebase: Option<RawPushrebaseParams>,
     lfs: Option<RawLfsParams>,
     wireproto_scribe_category: Option<String>,
+    hash_validation_percentage: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -637,6 +643,7 @@ mod test {
                     threshold: Some(1000),
                 },
                 wireproto_scribe_category: None,
+                hash_validation_percentage: 0,
             },
         );
         repos.insert(
@@ -653,6 +660,7 @@ mod test {
                 pushrebase: Default::default(),
                 lfs: Default::default(),
                 wireproto_scribe_category: Some("category".to_string()),
+                hash_validation_percentage: 0,
             },
         );
         assert_eq!(

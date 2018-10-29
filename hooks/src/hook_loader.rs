@@ -84,6 +84,7 @@ mod test {
             pushrebase: Default::default(),
             lfs: Default::default(),
             wireproto_scribe_category: None,
+            hash_validation_percentage: 0,
         }
     }
 

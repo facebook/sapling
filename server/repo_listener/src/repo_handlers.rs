@@ -27,6 +27,7 @@ pub struct RepoHandler {
     pub scuba: ScubaSampleBuilder,
     pub wireproto_scribe_category: Option<String>,
     pub repo: MononokeRepo,
+    pub hash_validation_percentage: usize,
 }
 
 pub fn repo_handlers(
@@ -98,6 +99,7 @@ pub fn repo_handlers(
             let listen_log = root_log.new(o!("repo" => reponame.clone()));
             let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
             scuba_logger.add_common_server_data();
+            let hash_validation_percentage = config.hash_validation_percentage.clone();
             let wireproto_scribe_category = config.wireproto_scribe_category.clone();
 
             // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
@@ -123,6 +125,7 @@ pub fn repo_handlers(
                                 scuba: scuba_logger,
                                 wireproto_scribe_category,
                                 repo: repo,
+                                hash_validation_percentage,
                             },
                         )
                     }

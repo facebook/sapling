@@ -53,6 +53,7 @@ extern crate metaconfig;
 extern crate mononoke_types;
 extern crate revset;
 extern crate scuba_ext;
+extern crate tokio;
 
 mod client;
 mod errors;

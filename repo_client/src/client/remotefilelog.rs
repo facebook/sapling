@@ -8,18 +8,20 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Cursor, Write};
 use std::sync::Arc;
 
-use bytes::Bytes;
-use futures::{stream, Future, IntoFuture, Stream, future::Either};
+use bytes::{Bytes, BytesMut};
+use futures::{stream, Future, IntoFuture, Stream, future::{ok, Either}};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use pylz4;
 
 use blobrepo::BlobRepo;
 use filenodes::FilenodeInfo;
 
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath, RepoPath,
-                      RevFlags, NULL_HASH};
+use mercurial::file::File;
+use mercurial_types::{HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath,
+                      RepoPath, RevFlags, NULL_HASH};
 
 use metaconfig::LfsParams;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use tracing::{TraceContext, Traced};
 
 use errors::*;
@@ -35,6 +37,8 @@ pub fn create_remotefilelog_blob(
     path: MPath,
     trace: TraceContext,
     lfs_params: LfsParams,
+    scuba_logger: ScubaSampleBuilder,
+    validate_hash: bool,
 ) -> BoxFuture<Bytes, Error> {
     let trace_args = trace_args!("node" => node.to_string(), "path" => path.to_string());
 
@@ -101,7 +105,7 @@ pub fn create_remotefilelog_blob(
 
     let file_history_bytes = prefetched_filenodes
         .and_then({
-            cloned!(node, path, trace_args, trace);
+            cloned!(node, path, repo, trace_args, trace);
             move |prefetched_filenodes| {
                 get_file_history(repo, node, path, prefetched_filenodes)
                     .collect()
@@ -145,15 +149,68 @@ pub fn create_remotefilelog_blob(
         })
         .traced(&trace, "fetching file history", trace_args);
 
-    raw_content_bytes
-        .join(file_history_bytes)
-        .map(|(mut raw_content, file_history)| {
-            raw_content.extend(file_history);
-            raw_content
+    let validate_content = if validate_hash {
+        validate_content(repo.clone(), path, node, scuba_logger).left_future()
+    } else {
+        ok(()).right_future()
+    };
+
+    validate_content
+        .and_then(|()| {
+            raw_content_bytes
+                .join(file_history_bytes)
+                .map(|(mut raw_content, file_history)| {
+                    raw_content.extend(file_history);
+                    raw_content
+                })
+                .and_then(|content| pylz4::compress(&content))
+                .map(|bytes| Bytes::from(bytes))
         })
-        .and_then(|content| pylz4::compress(&content))
-        .map(|bytes| Bytes::from(bytes))
         .boxify()
+}
+
+fn validate_content(
+    repo: Arc<BlobRepo>,
+    path: MPath,
+    actual: HgNodeHash,
+    mut scuba_logger: ScubaSampleBuilder,
+) -> impl Future<Item = (), Error = Error> {
+    let file_content = repo.get_file_content(&actual);
+    let filenode = repo.get_filenode(&RepoPath::FilePath(path.clone()), &actual);
+
+    file_content
+        .join(filenode)
+        .and_then(move |(content, filenode)| {
+            let mut out: Vec<u8> = vec![];
+            File::generate_metadata(
+                filenode
+                    .copyfrom
+                    .map(|(path, node)| (path.into_mpath().unwrap(), node.into_nodehash()))
+                    .as_ref(),
+                &content,
+                &mut out,
+            )?;
+            let mut bytes = BytesMut::from(out);
+            bytes.extend_from_slice(&content.into_bytes());
+
+            let p1 = filenode.p1.map(|p| p.into_nodehash());
+            let p2 = filenode.p2.map(|p| p.into_nodehash());
+            let expected = HgBlobNode::new(bytes.freeze(), p1.as_ref(), p2.as_ref()).nodeid();
+            if actual == expected {
+                Ok(())
+            } else {
+                let error_msg = format!(
+                    "getfiles: {} expected: {} actual: {}",
+                    path, expected, actual
+                );
+                scuba_logger.log_with_msg("Data corruption", Some(error_msg));
+                Err(ErrorKind::DataCorruptionFilenode {
+                    path,
+                    expected,
+                    actual,
+                }.into())
+            }
+        })
 }
 
 fn get_file_history(
