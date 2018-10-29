@@ -17,7 +17,6 @@ extern crate tokio;
 extern crate bincode;
 extern crate bonsai_utils;
 extern crate bytes;
-extern crate db;
 #[macro_use]
 extern crate lazy_static;
 extern crate serde;

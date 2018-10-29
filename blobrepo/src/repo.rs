@@ -14,7 +14,6 @@ use std::time::Duration;
 use std::usize;
 
 use bytes::Bytes;
-use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
 use failure::{Error, FutureFailureErrorExt, FutureFailureExt, Result, prelude::*};
 use futures::{Async, IntoFuture, Poll};
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
@@ -41,7 +40,7 @@ use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, CachingBonsaiHgMa
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use cachelib;
 use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
-use dbbookmarks::{MysqlDbBookmarks, SqliteDbBookmarks};
+use dbbookmarks::SqlBookmarks;
 use delayblob::DelayBlob;
 use file::fetch_file_envelope;
 use fileblob::Fileblob;
@@ -242,7 +241,7 @@ impl BlobRepo {
         blobstore: Arc<Blobstore>,
         repoid: RepositoryId,
     ) -> Result<Self> {
-        let bookmarks = SqliteDbBookmarks::open_or_create(path.join("books").to_string_lossy())
+        let bookmarks = SqlBookmarks::with_sqlite_path(path.join("books"))
             .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
         let filenodes = SqlFilenodes::with_sqlite_path(path.join("filenodes"))
             .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
@@ -272,7 +271,7 @@ impl BlobRepo {
     ) -> Result<Self> {
         Ok(Self::new(
             logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
-            Arc::new(SqliteDbBookmarks::in_memory()?),
+            Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
             blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
             Arc::new(SqlFilenodes::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
@@ -307,15 +306,7 @@ impl BlobRepo {
         repoid: RepositoryId,
         myrouter_port: u16,
     ) -> Result<Self> {
-        // TODO(stash): T28429403 use local region first, fallback to master if not found
-        let connection_params = get_connection_params(
-            &args.db_address,
-            InstanceRequirement::Master,
-            None,
-            Some(ProxyRequirement::Forbidden),
-        )?;
-        let bookmarks = MysqlDbBookmarks::open(&connection_params)
-            .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+        let bookmarks = SqlBookmarks::with_myrouter(&args.db_address, myrouter_port);
 
         let blobstore = ThriftManifoldBlob::new(args.bucket.clone())?;
         let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", args.prefix));

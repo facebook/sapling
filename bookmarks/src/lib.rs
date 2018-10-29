@@ -12,6 +12,7 @@ extern crate failure_ext as failure;
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate mononoke_types;
+extern crate sql;
 
 use std::fmt;
 
@@ -20,6 +21,9 @@ use failure::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::RepositoryId;
 use mononoke_types::ChangesetId;
+use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
+
+type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Bookmark {
@@ -136,5 +140,40 @@ pub trait Transaction: Send + Sync + 'static {
     /// Commits the transaction. Future succeeds if transaction has been
     /// successful, or errors if transaction has failed. Logical failure is indicated by
     /// returning a successful `false` value; infrastructure failure is reported via an Error.
-    fn commit(&self) -> BoxFuture<bool, Error>;
+    fn commit(self: Box<Self>) -> BoxFuture<bool, Error>;
+}
+
+impl From<Bookmark> for Value {
+    fn from(bookmark: Bookmark) -> Self {
+        Value::Bytes(bookmark.bookmark.into())
+    }
+}
+
+impl ConvIr<Bookmark> for Bookmark {
+    fn new(v: Value) -> FromValueResult<Self> {
+        match v {
+            Value::Bytes(bytes) => AsciiString::from_ascii(bytes)
+                .map_err(|err| FromValueError(Value::Bytes(err.into_source())))
+                .map(Bookmark::new_ascii),
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> Bookmark {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for Bookmark {
+    type Intermediate = Bookmark;
+}
+
+impl From<BookmarkPrefix> for Value {
+    fn from(bookmark_prefix: BookmarkPrefix) -> Self {
+        Value::Bytes(bookmark_prefix.bookmark_prefix.into())
+    }
 }
