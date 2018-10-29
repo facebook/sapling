@@ -55,7 +55,7 @@ use blobrepo::{BlobRepo, HgBlobChangeset};
 use bookmarks::Bookmark;
 use bytes::Bytes;
 pub use errors::*;
-use failure::Error;
+use failure::{Error, FutureFailureErrorExt};
 use futures::{failed, finished, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, HgParents, MPath, manifest::get_empty_manifest,
@@ -261,7 +261,12 @@ impl HookManager {
     ) -> BoxFuture<(String, HookExecution), Error> {
         let hook_name = hook_context.hook_name.clone();
         hook.run(hook_context)
-            .map(move |he| (hook_name, he))
+            .map({
+                cloned!(hook_name);
+                move |he| (hook_name, he)
+            })
+            .with_context(move |_| format!("while executing hook {}", hook_name))
+            .from_err()
             .boxify()
     }
 
@@ -390,7 +395,13 @@ impl HookManager {
         logger: Logger,
     ) -> BoxFuture<(FileHookExecutionID, HookExecution), Error> {
         debug!(logger, "Running file hook {:?}", key);
-        cache.get(key.clone()).map(|he| (key, he)).boxify()
+        let hook_name = key.hook_name.clone();
+        cache
+            .get(key.clone())
+            .map(|he| (key, he))
+            .with_context(move |_| format!("while executing hook {}", hook_name))
+            .from_err()
+            .boxify()
     }
 
     fn get_hook_changeset(&self, changeset_id: HgChangesetId) -> BoxFuture<HookChangeset, Error> {
