@@ -147,22 +147,19 @@ The local data for n is still available
   n
 
 The history for n is lost
-  $ hg log -f n
-  remote: abort: data/n.i@c972a0820002: no match found!
+  $ hg log -qf n
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   abort: error downloading file contents:
   'connection closed early'
   [255]
 
 The local data and history for o is lost
-  $ hg cat o
-  remote: abort: data/o.i@fd94f81d01bf: no match found!
+  $ hg cat -q o
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   abort: error downloading file contents:
   'connection closed early'
   [255]
-  $ hg log -f o
-  remote: abort: data/o.i@fd94f81d01bf: no match found!
+  $ hg log -qf o
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   abort: error downloading file contents:
   'connection closed early'
