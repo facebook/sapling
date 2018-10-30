@@ -451,15 +451,9 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         self._ui.log("fsmonitor_status", "", fsmonitor_status="normal")
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
             filelist = [e["name"] for e in result["files"]]
-            limit = 20
-            if len(filelist) <= limit:
-                self._ui.log("fsmonitor_details", "watchman returned %r" % (filelist,))
-            else:
-                self._ui.log(
-                    "fsmonitor_details",
-                    "watchman returned %r and %s more entries"
-                    % (filelist[:limit], len(filelist) - limit),
-                )
+            self._ui.log(
+                "fsmonitor_details", "watchman returned %s" % _reprshort(filelist)
+            )
 
     # for file paths which require normalization and we encounter a case
     # collision, we store our own foldmap
@@ -1004,3 +998,11 @@ def debugrefreshwatchmanclock(ui, repo):
         ui.status(_("updating watchman clock from %r to %r\n") % (ds.getclock(), clock))
         ds.setclock(clock)
         ds.write(tr)
+
+
+def _reprshort(filelist, limit=20):
+    """Like repr(filelist). But truncate it if it is too long"""
+    if len(filelist) <= limit:
+        return repr(filelist)
+    else:
+        return "%r and %s more entries" % (filelist[:limit], len(filelist) - limit)

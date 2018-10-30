@@ -111,8 +111,11 @@ class state(object):
             file.close()
 
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
+            from . import _reprshort
+
             self._ui.log(
-                "fsmonitor_details", "clock, notefiles = %r, %r" % (clock, notefiles)
+                "fsmonitor_details",
+                "clock, notefiles = %r, %s" % (clock, _reprshort(notefiles)),
             )
 
         return clock, ignorehash, notefiles
@@ -132,9 +135,11 @@ class state(object):
 
     def set(self, clock, ignorehash, notefiles):
         if "fsmonitor_details" in getattr(self._ui, "track", ()):
+            from . import _reprshort
+
             self._ui.log(
                 "fsmonitor_details",
-                "set clock, notefiles = %r, %r" % (clock, notefiles),
+                "set clock, notefiles = %r, %s" % (clock, _reprshort(notefiles)),
             )
 
         if self._usetreestate:
