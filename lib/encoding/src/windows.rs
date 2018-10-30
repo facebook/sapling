@@ -5,6 +5,7 @@
 
 use kernel32;
 use std;
+use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
 use std::io;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
@@ -14,17 +15,17 @@ use winapi;
 const MB_ERR_INVALID_CHARS: winapi::DWORD = 0x00000008;
 const WC_COMPOSITECHECK: winapi::DWORD = 0x00000200;
 
-/// Convert local bytes into an `OsString`
-/// Since this is a Windows-specific version of this function,
-/// it uses the ANSI Code Page (ACP) to perform the conversion
-/// from `&[u8]` into `Vec<u16>`, which is then turned into
-/// an `OsString`
-/// Note that unlike the function in `local_encoding`, this
-/// function does not intermediately convert things to
-/// `String`, therefore it is "more native" from Windows perspective
-/// and is more performant.
+/// Convert bytes in the local encoding to an `OsStr`.
+///
+/// On Unix, this is a zero-copy operation and cannot fail.  The encoding of the `OsStr` matches
+/// that of the original local bytes.
+///
+/// On Windows, it uses the ANSI Code Page (ACP) to perform the conversion to UTF-16,
+/// which is then stored in an `OsString`.  Note that unlike the function in `local_encoding`,
+/// this function does not intermediately convert to a Unicode `String`, therefore it is
+/// "more native" from Windows' perspective and is more performant.
 #[inline]
-pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<OsString> {
+pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<Cow<OsStr>> {
     let codepage = winapi::CP_ACP;
     let len = unsafe {
         kernel32::MultiByteToWideChar(
@@ -52,38 +53,43 @@ pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<OsString> {
         )
     };
     if len as usize == wide.len() {
-        Ok(OsString::from_wide(&wide))
+        Ok(Cow::Owned(OsString::from_wide(&wide)))
     } else {
         Err(io::Error::last_os_error())
     }
 }
 
-/// Convert `Path` to local-encoded `bytes`.
+/// Convert bytes in the local encoding to a `Path`.
 ///
-/// This is what Mercurial stores. But new programs should probably normalize
-/// the path before storing it.
+/// On Unix, this is a zero-copy operation and cannot fail.
+///
+/// On Windows, this converts the local bytes to an `OsString` and then converts the
+/// `OsString` to a `PathBuf`, possibly returning the same errors as `local_bytes_to_osstring`.
+///
+/// Note that local bytes are what Mercurial stores in manifests, and are affected
+/// by the "Language for non-Unicode programs" setting on Windows at commit time.
+/// New programs should normalize paths to UTF-8 before storing them.
 #[inline]
-pub fn path_to_local_bytes(path: &Path) -> io::Result<Vec<u8>> {
-    osstring_to_local_bytes(&path.as_os_str())
+pub fn local_bytes_to_path(bytes: &[u8]) -> io::Result<Cow<Path>> {
+    Ok(Cow::Owned(PathBuf::from(
+        local_bytes_to_osstring(bytes)?.into_owned(),
+    )))
 }
 
-/// Convert (usually UTF-8 encoded) `bytes` to `Path`.
+/// Convert an `OsStr` to bytes in the local encoding.
 ///
-/// Zero-copy. Unix version cannot return errors. Windows version can.
-/// Note: `bytes` are what Mercurial stores in manifests, and are affected
-/// by "Language for non-Unicode programs" Windows setting at commit time.
-/// Newer APIs might want to normalize paths to UTF-8 before storing them.
+/// On Unix, this is a zero-copy operation and cannot fail.  The encoding of the local bytes
+/// matches that of the original `OsStr`.
+///
+/// On Windows, it uses the ANSI Code Page (ACP) to perform the conversion
+/// into bytes.  Note that unlike the function in `local_encoding`, this function
+/// does not intermediately convert to a Unicode `String`, therefore it is "more native"
+/// from Windows' perspective and is more performant.
 #[inline]
-pub fn local_bytes_to_path(bytes: &[u8]) -> io::Result<PathBuf> {
-    Ok(PathBuf::from(local_bytes_to_osstring(bytes)?))
-}
-
-#[inline]
-pub fn osstring_to_local_bytes<S: AsRef<OsStr>>(s: &S) -> io::Result<Vec<u8>> {
+pub fn osstring_to_local_bytes(s: &OsStr) -> io::Result<Cow<[u8]>> {
     let codepage = winapi::CP_ACP;
-    let s: &OsStr = s.as_ref();
     if s.len() == 0 {
-        return Ok(Vec::new());
+        return Ok(Cow::Owned(Vec::new()));
     }
     let wstr: Vec<u16> = s.encode_wide().collect();
     let len = unsafe {
@@ -116,8 +122,24 @@ pub fn osstring_to_local_bytes<S: AsRef<OsStr>>(s: &S) -> io::Result<Vec<u8>> {
         )
     };
     if len as usize == astr.len() {
-        Ok(astr)
+        Ok(Cow::Owned(astr))
     } else {
         Err(io::Error::last_os_error())
     }
+}
+
+/// Convert a `Path` to bytes in the local encoding.
+///
+/// On Unix, this is a zero-copy operation and cannot fail.
+///
+/// On Windows, this converts the path to an `OsString` and then converts the
+/// `OsString` to local bytes, possibly returning the same errors as
+/// `osstring_to_local_bytes`.
+///
+/// Note that local bytes are what Mercurial stores in manifests, and are affected
+/// by the "Language for non-Unicode programs" Windows setting at commit time.
+/// New programs should normalize paths to UTF-8 before storing them.
+#[inline]
+pub fn path_to_local_bytes(path: &Path) -> io::Result<Cow<[u8]>> {
+    osstring_to_local_bytes(&path.as_os_str())
 }
