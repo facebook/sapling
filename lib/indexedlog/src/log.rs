@@ -3,22 +3,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-//! Append-only log with indexing and integrity checks
+//! Append-only storage with indexes and integrity checks.
 //!
-//! A `Log` is logically an append-only array with one or more user-defined indexes.
-//!
-//! The array consists of an on-disk part and an in-memory part.
-//! The on-disk part of a `Log` is stored in a managed directory, with the following files:
-//!
-//! - log: The plain array. The source of truth of indexes.
-//! - index"i": The "i"-th index. See index.rs.
-//! - index"i".sum: Checksum of the "i"-th index. See checksum_table.rs.
-//! - meta: The metadata, containing the logical lengths of "log", and "index*".
-//!
-//! Writes to the `Log` only writes to memory, which is lock-free. Reading is always lock-free.
-//! Flushing the in-memory content to disk would require a file system lock.
-//!
-//! Both "log" and "index*" files have checksums. So filesystem corruption will be detected.
+//! See [Log] for the main structure. This module also provides surrounding
+//! types needed to construct the [Log], including [IndexDef] and some
+//! iterators.
 
 // Detailed file formats:
 //
@@ -61,6 +50,22 @@ const META_FILE: &str = "meta";
 const INDEX_FILE_PREFIX: &str = "index-";
 
 /// An append-only storage with indexes and integrity checks.
+///
+/// The [Log] is backed by a directory in the filesystem. The
+/// directory includes:
+///
+/// - An append-only "log" file. It can be seen as a serialization
+///   result of an append-only list of byte slices. Each byte slice
+///   has a checksum.
+/// - Multiple user-defined indexes. Each index has an append-only
+///   on-disk radix-tree representation and a small, separate,
+///   non-append-only checksum file.
+/// - A small "metadata" file which records the logic lengths (in bytes)
+///   for the log and index files.
+///
+/// Reading is lock-free because the log and indexes are append-only.
+/// Writes are buffered in memory. Flushing in-memory parts to
+/// disk requires taking a flock on the directory.
 pub struct Log {
     dir: PathBuf,
     disk_buf: Mmap,
@@ -75,46 +80,86 @@ pub struct Log {
     index_corrupted: bool,
 }
 
-/// Index definition.
+/// Definition of an index. It includes: name, function to extract index keys,
+/// and how much the index can lag on disk.
 pub struct IndexDef {
-    /// How to extract index keys from an entry.
+    /// Function to extract index keys from an entry.
+    ///
+    /// The input is bytes of an entry (ex. the data passed to [Log::append]).
+    /// The output is an array of index keys. An entry can have zero or more
+    /// than one index keys for a same index.
+    ///
+    /// The output can be an allocated slice of bytes, or a reference to offsets
+    /// in the input. See [IndexOutput] for details.
+    ///
+    /// The function should be pure and fast. i.e. It should not use inputs
+    /// from other things, like the network, filesystem, or an external random
+    /// generator.
+    ///
+    /// For example, if the [Log] is to store git commits, and the index is to
+    /// help finding child commits given parent commit hashes as index keys.
+    /// This function gets the commit metadata as input. It then parses the
+    /// input, and extract parent commit hashes as the output. A git commit can
+    /// have 0 or 1 or 2 or even more parents. Therefore the output is a [Vec].
     pub func: Box<Fn(&[u8]) -> Vec<IndexOutput>>,
 
-    /// Name of the index. Decides the file name. Change this when `func` changes.
-    /// Do not abuse this by using `..` or `/`.
+    /// Name of the index.
+    ///
+    /// The name will be used as part of the index file name. Therefore do not
+    /// use user-generated content here. And do not abuse this by using `..` or `/`.
+    ///
+    /// When adding new or changing index functions, make sure a different
+    /// `name` is used so the existing index won't be reused incorrectly.
     pub name: &'static str,
 
-    /// How many bytes (as counted in the primary log) could be left not indexed on-disk.
-    /// The index for them would be built on-demand in-memory. This avoids some I/Os and
-    /// saves some space.
+    /// How many bytes (as counted in the file backing [Log]) could be left not
+    /// indexed on-disk.
+    ///
+    /// This is related to [Index] implementation detail. Since it's append-only
+    /// and needs to write `O(log N)` data for updating a single entry. Allowing
+    /// lagged indexes reduces writes and saves disk space.
+    ///
+    /// The lagged part of the index will be built on-demand in-memory by
+    /// [Log::open].
+    ///
+    /// Practically, this correlates to how fast `func` is.
     pub lag_threshold: u64,
 }
 
-/// Output of an index function - to describe a key.
+/// Output of an index function. Bytes that can be used for lookups.
 pub enum IndexOutput {
-    /// The index key is a reference of a range of the data, relative to the input bytes.
+    /// The index key is a slice, relative to the data entry (ex. input of the
+    /// index function).
+    ///
+    /// Use this if possible. It generates smaller indexes.
     Reference(Range<u64>),
 
-    /// The index key is a separate sequence of bytes unrelated to the input bytes.
+    /// The index key is a separate sequence of bytes unrelated to the input
+    /// bytes.
+    ///
+    /// Use this if the index key is not in the entry. For example, if the entry
+    /// is compressed.
     Owned(Box<[u8]>),
 }
 
-/// Iterating through all entries in a `Log`.
+/// Iterator over all entries in a [Log].
 pub struct LogIter<'a> {
     next_offset: u64,
     errored: bool,
     log: &'a Log,
 }
 
-/// Iterating through entries returned by an index lookup.
-/// A wrapper around the index leaf value iterator.
+/// Iterator over [Log] entries selected by an index lookup.
+///
+/// It is a wrapper around [index::LeafValueIter].
 pub struct LogLookupIter<'a> {
     inner_iter: LeafValueIter<'a>,
     errored: bool,
     log: &'a Log,
 }
 
-/// Metadata about logical file lengths.
+/// Metadata about index names, logical [Log] and [Index] file lengths.
+/// Used internally.
 #[derive(PartialEq, Eq, Debug)]
 struct LogMetadata {
     /// Length of the primary log file.
@@ -131,9 +176,27 @@ struct LogMetadata {
 //   easier to verify correctness - just make sure `flush` is properly handled (ex. by locking).
 
 impl Log {
-    /// Open a log at given directory, with defined indexes. Create an empty log on demand.
-    /// If `index_defs` ever changes, the caller needs to make sure the `name` is changed
-    /// if `func` is changed.
+    /// Construct [Log] at given directory. Incrementally build up specified
+    /// indexes.
+    ///
+    /// If the directory does not exist, it will be created with essential files
+    /// populated. After that, an empty [Log] will be returned.
+    ///
+    /// See [IndexDef] for index definitions. Indexes can be added, removed, or
+    /// reordered, as long as a same `name` indicates a same index function.
+    /// That is, when an index function is changed, the caller is responsible
+    /// for changing the index name.
+    ///
+    /// Driven by the "immutable by default" idea, together with append-only
+    /// properties, this structure is different from some traditional *mutable*
+    /// databases backed by the filesystem:
+    /// - Data are kind of "snapshotted and frozen" at open time. Mutating
+    ///   files do not affect the view of instantiated [Log]s.
+    /// - Writes are buffered until [Log::flush] is called.
+    /// This maps to traditional "database transaction" concepts: a [Log] is
+    /// always bounded to a transaction. [Log::flush] is like committing the
+    /// transaction. Dropping the [Log] instance is like abandoning a
+    /// transaction.
     pub fn open<P: AsRef<Path>>(dir: P, index_defs: Vec<IndexDef>) -> io::Result<Self> {
         let dir = dir.as_ref();
         let meta = Self::load_or_create_meta(dir)?;
@@ -151,7 +214,12 @@ impl Log {
         Ok(log)
     }
 
-    /// Append an entry in-memory. To write it on disk, use `flush`.
+    /// Append an entry in-memory. Update related indexes in-memory.
+    ///
+    /// The memory part is not shared. Therefore other [Log] instances won't see
+    /// the change immediately.
+    ///
+    /// To write in-memory entries and indexes to disk, call [Log::flush].
     pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> io::Result<()> {
         let data = data.as_ref();
         let offset = self.meta.primary_len + self.mem_buf.len() as u64;
@@ -163,7 +231,18 @@ impl Log {
         Ok(())
     }
 
-    /// Write in-memory pending entries to disk.
+    /// Write in-memory entries to disk.
+    ///
+    /// Load the latest data from disk. Write in-memory entries to disk. Then
+    /// update on-disk indexes. These happen in a same critical section,
+    /// protected by a lock on the directory.
+    ///
+    /// Even if [Log::append] is never called, this function has a side effect
+    /// updating the [Log] to contain latest entries on disk.
+    ///
+    /// Other [Log] instances living in a same process or other processes won't
+    /// be notified about the change and they can only access the data
+    /// "snapshotted" at open time.
     pub fn flush(&mut self) -> io::Result<()> {
         // Take the lock so no other `flush` runs for this directory. Then reload meta, append
         // log, then update indexes.
@@ -226,8 +305,10 @@ impl Log {
         Ok(())
     }
 
-    /// Lookup an entry using the given index. Return an iterator of `Result<&[u8]>`.
-    /// `open` decides available `index_id`s.
+    /// Look up an entry using the given index. The `index_id` is the index of
+    /// `index_defs` passed to [Log::open].
+    ///
+    /// Return an iterator of `Result<&[u8]>`.
     pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> io::Result<LogLookupIter> {
         self.maybe_return_index_error()?;
         if let Some(index) = self.indexes.get(index_id) {
@@ -285,7 +366,7 @@ impl Log {
         Ok(())
     }
 
-    /// Build in-memory index so they cover all entries stored in self.disk_buf.
+    /// Build in-memory index so they cover all entries stored in `self.disk_buf`.
     fn update_indexes_for_on_disk_entries(&mut self) -> io::Result<()> {
         let result = self.update_indexes_for_on_disk_entries_unchecked();
         self.maybe_set_index_error(result)
@@ -356,7 +437,7 @@ impl Log {
         }
     }
 
-    /// Read (log.disk_buf, indexes) from the directory using the metadata.
+    /// Read `(log.disk_buf, indexes)` from the directory using the metadata.
     fn load_log_and_indexes(
         dir: &Path,
         meta: &LogMetadata,
@@ -462,7 +543,7 @@ impl Log {
     }
 }
 
-// Entry data used internally.
+/// "Pointer" to an entry. Used internally.
 struct EntryResult<'a> {
     data: &'a [u8],
     data_offset: u64,
