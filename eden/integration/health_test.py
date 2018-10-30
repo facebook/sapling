@@ -71,7 +71,6 @@ class HealthOfFakeEdenFSTest(
     def test_slow_thrift_call_reports_daemon_is_healthy(self):
         with self.spawn_fake_edenfs(self.temp_dir, ["--sleepBeforeGetPid=2"]):
             status_process = self.spawn_status(["--timeout", "10"])
-            status_process.logfile = sys.stderr
             status_process.expect_exact("eden running normally")
             self.assert_process_succeeds(status_process)
 
