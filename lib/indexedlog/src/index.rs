@@ -51,7 +51,7 @@ use std::fs::{self, File};
 use std::io::{self, Seek, SeekFrom, Write};
 use std::ops::Deref;
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use std::io::ErrorKind::InvalidData;
 
@@ -991,7 +991,7 @@ pub struct Index {
     checksum_chunk_size: u64,
 
     // Additional buffer for external keys.
-    key_buf: Rc<AsRef<[u8]>>,
+    key_buf: Arc<AsRef<[u8]> + Send + Sync>,
 }
 
 /// Key to insert. Used by [Index::insert_advanced].
@@ -1013,7 +1013,7 @@ pub struct OpenOptions {
     checksum_chunk_size: u64,
     len: Option<u64>,
     write: Option<bool>,
-    key_buf: Option<Rc<AsRef<[u8]>>>,
+    key_buf: Option<Arc<AsRef<[u8]> + Send + Sync>>,
 }
 
 impl OpenOptions {
@@ -1074,7 +1074,7 @@ impl OpenOptions {
     ///
     /// With an external key buffer, keys could be stored as references using
     /// `index.insert_advanced` to save space.
-    pub fn key_buf(&mut self, buf: Option<Rc<AsRef<[u8]>>>) -> &mut Self {
+    pub fn key_buf(&mut self, buf: Option<Arc<AsRef<[u8]> + Send + Sync>>) -> &mut Self {
         self.key_buf = buf;
         self
     }
@@ -1159,7 +1159,7 @@ impl OpenOptions {
             dirty_ext_keys: vec![],
             checksum,
             checksum_chunk_size,
-            key_buf: key_buf.unwrap_or(Rc::new(b"")),
+            key_buf: key_buf.unwrap_or(Arc::new(b"")),
             len,
         })
     }
@@ -2123,7 +2123,7 @@ mod tests {
 
     #[test]
     fn test_external_keys() {
-        let buf = Rc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
+        let buf = Arc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
         let dir = TempDir::new("index").expect("tempdir");
         let mut index = open_opts()
             .key_buf(Some(buf.clone()))

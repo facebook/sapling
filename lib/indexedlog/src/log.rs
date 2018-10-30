@@ -38,7 +38,7 @@ use std::fs::{self, File};
 use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::sync::Arc;
 use utils::{mmap_readonly, xxhash};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
@@ -101,7 +101,7 @@ pub struct IndexDef {
     /// This function gets the commit metadata as input. It then parses the
     /// input, and extract parent commit hashes as the output. A git commit can
     /// have 0 or 1 or 2 or even more parents. Therefore the output is a [Vec].
-    pub func: Box<Fn(&[u8]) -> Vec<IndexOutput>>,
+    pub func: Box<Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync>,
 
     /// Name of the index.
     ///
@@ -448,7 +448,7 @@ impl Log {
             .open(dir.join(PRIMARY_FILE))?;
 
         let primary_buf = mmap_readonly(&primary_file, meta.primary_len.into())?.0;
-        let key_buf = Rc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0);
+        let key_buf = Arc::new(mmap_readonly(&primary_file, meta.primary_len.into())?.0);
         let mut indexes = Vec::with_capacity(index_defs.len());
         for def in index_defs.iter() {
             let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
@@ -463,7 +463,12 @@ impl Log {
     }
 
     /// Load a single index.
-    fn load_index(dir: &Path, name: &str, len: u64, buf: Rc<AsRef<[u8]>>) -> io::Result<Index> {
+    fn load_index(
+        dir: &Path,
+        name: &str,
+        len: u64,
+        buf: Arc<AsRef<[u8]> + Send + Sync>,
+    ) -> io::Result<Index> {
         // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
         const INDEX_CHECKSUM_CHUNK_SIZE: u64 = 0x100000;
         let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
