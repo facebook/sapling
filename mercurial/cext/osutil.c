@@ -751,30 +751,46 @@ bail:
 
 #ifdef SETPROCNAME_USE_ARGVREWRITE
 
-/* Find the original argc and argv. Return 0 on success. */
-static int getargcargv(int* argc, char*** argv) {
+/* Find the start of argv buffer (argv[0]) and its size */
+static void getarg0size(char** argstart, size_t* argsize) {
 #ifdef __APPLE__
   /* osx: crt_externs keeps a copy of argc, argv */
-  *argv = *_NSGetArgv();
-  *argc = *_NSGetArgc();
-  return 0;
+  int argc = *_NSGetArgc();
+  char** argv = *_NSGetArgv();
+  char *argvend, *argvstart;
+  size_t argvsize = 0;
+  int i;
+  argvend = argvstart = argv[0];
+  for (i = 0; i < argc; ++i) {
+    if (argv[i] > argvend || argv[i] < argvstart)
+      break; /* not continuous */
+    size_t len = strlen(argv[i]);
+    argvend = argv[i] + len + 1 /* '\0' */;
+  }
+  if (argvend > argvstart) /* sanity check */
+    argvsize = argvend - argvstart;
+  *argstart = argvstart;
+  *argsize = argvsize;
 #else
-  /* linux: read backwards from environ and get argv */
-  extern char** environ;
-  char buf[1024];
-  FILE* fp = fopen("/proc/self/cmdline", "rb");
+  /* On Linux >= 3.5, the 48 and 49 column of "/proc/self/stat" is the argv
+     start and end pointers. See "man 5 proc". */
+  FILE* fp;
+  unsigned long start = 0, end = 0;
+  fp = fopen("/proc/self/stat", "r");
   if (fp) {
-    int nullcount = 0;
-    int ch = 0;
-    while ((ch = fgetc(fp)) != EOF) {
-      nullcount += (ch == 0);
+    /* Note: if "comm" name has rare chars like spaces, the fscanf will fail */
+    if (fscanf(
+            fp,
+            "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*lu %*lu %*lu %*lu %*lu %*lu %*ld"
+            " %*ld %*ld %*ld %*ld %*ld %*llu %*lu %*ld %*lu %*lu %*lu %*lu %*lu %*lu"
+            " %*lu %*lu %*lu %*lu %*lu %*lu %*lu %*d %*d %*u %*u %*llu %*lu %*ld %*lu"
+            " %*lu %*lu %lu %lu",
+            &start,
+            &end) == 2) {
+      *argstart = (char*)start;
+      *argsize = end - start;
     }
-    *argc = nullcount;
-    *argv = environ - nullcount - 1;
     fclose(fp);
-    return 0;
-  } else {
-    return -1;
   }
 #endif
 }
@@ -793,23 +809,9 @@ static PyObject* setprocname(PyObject* self, PyObject* args) {
   {
     static char* argvstart = NULL;
     static size_t argvsize = 0;
-    if (argvstart == NULL) {
-      int argc = 0, i;
-      char** argv = NULL;
-      char* argvend;
-      if (getargcargv(&argc, &argv) == 0) {
-        /* Check the memory we can use. Typically, argv[i] and
-         * argv[i + 1] are continuous. */
-        argvend = argvstart = argv[0];
-        for (i = 0; i < argc; ++i) {
-          if (argv[i] > argvend || argv[i] < argvstart)
-            break; /* not continuous */
-          size_t len = strlen(argv[i]);
-          argvend = argv[i] + len + 1 /* '\0' */;
-        }
-        if (argvend > argvstart) /* sanity check */
-          argvsize = argvend - argvstart;
-      }
+    if (argvstart == NULL && argvsize == 0) {
+      argvsize = 1; /* do not try to obtain arg0 again */
+      getarg0size(&argvstart, &argvsize);
     }
 
     if (argvstart && argvsize > 1) {
