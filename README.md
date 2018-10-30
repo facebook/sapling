@@ -1,25 +1,61 @@
-# Eden
+# EdenFS is a FUSE virtual filesystem for source control repositories.
 
-Eden is a project with several components, the most prominent of which is a virtual filesystem
-built using FUSE.
+EdenFS speeds up operations in large repositories by only populating working
+directory files on demand, as they are accessed.  This makes operations like
+`checkout` much faster, in exchange for a small performance hit when first
+accessing new files.  This is quite beneficial in large repositories where
+developers often only work with a small subset of the repository at a time.
 
-## Caveat Emptor
+EdenFS has similar performance advantages to using sparse checkouts, but a much
+better user experience.  Unlike with sparse checkouts, EdenFS does not require
+manually curating the list of files to check out, and users can transparently
+access any file without needing to update the profile.
 
-Eden is still in early stages of development. We are making it available now because we plan to
-start making references to it from our other open source projects, such as
-[Buck](https://github.com/facebook/buck), [Watchman](https://github.com/facebook/watchman), and
-[Nuclide](https://github.com/facebook/nuclide).
+EdenFS also keeps track of which files have been modified, allowing very
+efficient `status` queries that do not need to scan the working directory.
+The filesystem monitoring tool [Watchman](https://facebook.github.io/watchman/)
+also integrates with EdenFS, allowing it to more efficiently track updates to
+the filesystem.
 
-**The version that we provide on GitHub does not build yet**.
+# Building EdenFS
 
-This is because the code is exported verbatim from an internal repository at Facebook, and
-not all of the scaffolding from our internal repository can be easily extracted. The key areas
-where we need to shore things up are:
+EdenFS currently only builds on Linux.
+We have primarily tested building it on Ubuntu 18.04.
 
-* The reinterpretations of build macros in `DEFS`.
-* A process for including third-party dependencies (presumably via Git submodules) and wiring up the
-`external_deps` argument in the build macros to point to them.
-* Providing the toolchain needed to power the [undocumented] `thrift_library()` rule in Buck.
+## TL;DR
 
-The goal is to get Eden building on both Linux and OS X, though Linux support is expected to come
-first.
+```
+[eden]$ ./getdeps.py --system-deps
+[eden]$ mkdir _build && cd _build
+[eden/_build]$ cmake ..
+[eden/_build]$ make
+```
+
+## Dependencies
+
+EdenFS depends on several other third-party projects.  Some of these are
+commonly available as part of most Linux distributions, while others need to be
+downloaded and built from GitHub.
+
+The `getdeps.py` script can be used to help download and build EdenFS's
+dependencies.
+
+### Operating System Dependencies
+
+Running `getdeps.py`  with `--system-deps` will make it install third-party
+dependencies available from your operating system's package management system.
+Without this argument it assumes you already have correct OS dependencies
+installed, and it only updates and builds dependencies that must be compiled
+from source.
+
+### GitHub Dependencies
+
+By default `getdeps.py` will check out third-party dependencies into the
+`eden/external/` directory, then build and install them into
+`eden/external/install/`
+
+If repositories for some of the dependencies are already present in
+`eden/external/` `getdeps.py` does not automatically fetch the latest upstream
+changes from GitHub.  You can explicitly run `./getdeps.py --update` if you
+want it to fetch the latest updates for each dependency and rebuild them from
+scratch.
