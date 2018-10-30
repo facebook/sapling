@@ -93,11 +93,11 @@ class mergestate(object):
     statepathv2 = "merge/state2"
 
     @staticmethod
-    def clean(repo, node=None, other=None, labels=None):
+    def clean(repo, node=None, other=None, labels=None, ancestors=None):
         """Initialize a brand new merge state, removing any existing state on
         disk."""
         ms = mergestate(repo)
-        ms.reset(node, other, labels)
+        ms.reset(node=node, other=other, labels=labels, ancestors=ancestors)
         return ms
 
     @staticmethod
@@ -115,11 +115,12 @@ class mergestate(object):
         self._dirty = False
         self._labels = None
 
-    def reset(self, node=None, other=None, labels=None):
+    def reset(self, node=None, other=None, labels=None, ancestors=None):
         self._state = {}
         self._stateextras = {}
         self._local = None
         self._other = None
+        self._ancestors = None
         self._labels = labels
         for var in ("localctx", "otherctx"):
             if var in vars(self):
@@ -127,6 +128,8 @@ class mergestate(object):
         if node:
             self._local = node
             self._other = other
+        if ancestors:
+            self._ancestors = ancestors
         self._readmergedriver = None
         if self.mergedriver:
             self._mdstate = "s"
@@ -146,7 +149,14 @@ class mergestate(object):
         self._stateextras = {}
         self._local = None
         self._other = None
-        for var in ("localctx", "otherctx"):
+
+        # Note: _ancestors isn't written into the state file since the current
+        # state file predates it.
+        #
+        # It's only needed during `applyupdates` in the initial call to merge,
+        # so it's set transiently there. It isn't read during `hg resolve`.
+        self._ancestors = None
+        for var in ("localctx", "otherctx", "ancestorctxs"):
             if var in vars(self):
                 delattr(self, var)
         self._readmergedriver = None
@@ -336,6 +346,14 @@ class mergestate(object):
             msg = "otherctx accessed but self._other isn't set"
             raise error.ProgrammingError(msg)
         return self._repo[self._other]
+
+    @util.propertycache
+    def ancestorctxs(self):
+        if self._ancestors is None:
+            raise error.ProgrammingError(
+                "ancestorctxs accessed but " "self._ancestors aren't set"
+            )
+        return [self._repo[node] for node in self._ancestors]
 
     def active(self):
         """Whether mergestate is active.
@@ -1510,7 +1528,18 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     """
 
     updated, merged, removed = 0, 0, 0
-    ms = mergestate.clean(repo, wctx.p1().node(), mctx.node(), labels)
+
+    ms = mergestate.clean(
+        repo,
+        node=wctx.p1().node(),
+        other=mctx.node(),
+        # Ancestor can include the working copy, so we use this helper:
+        ancestors=[scmutil.contextnodesupportingwdir(c) for c in ancestors]
+        if ancestors
+        else None,
+        labels=labels,
+    )
+
     moves = []
     for m, l in actions.items():
         l.sort()

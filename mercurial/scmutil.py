@@ -1384,3 +1384,25 @@ def wrapconvertsink(sink):
     before it is used, whether or not the convert extension was formally loaded.
     """
     return sink
+
+
+def contextnodesupportingwdir(ctx):
+    """Returns `ctx`'s node, or `wdirid` if it is a `workingctx`.
+
+    Alas, `workingxtx.node()` normally returns None, necessitating this
+    convinience function for when you need to serialize the workingxctx.
+
+    `repo[wdirid]` works fine so there's no need the reverse function.
+    """
+    from mercurial import context
+
+    if isinstance(ctx, context.workingctx):
+        return wdirid
+
+    # Neither `None` nor `wdirid` feels right here:
+    if isinstance(ctx, context.overlayworkingctx):
+        raise error.ProgrammingError(
+            "contextnodesupportingwdir doesn't support " "overlayworkingctx"
+        )
+
+    return ctx.node()
