@@ -4172,7 +4172,7 @@ def expanduserpath(path):
     return path.replace("%i", username).replace("${USER}", username)
 
 
-ansiregex = re.compile(
+ansiregex = remod.compile(
     (
         r"\x1b("
         r"(\[\??\d+[hl])|"
