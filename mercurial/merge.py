@@ -1499,7 +1499,7 @@ def batchget(repo, mctx, wctx, actions):
 
 
 @util.timefunction("applyupdates", 0, "ui")
-def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
+def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None):
     """apply the merge action list to the working directory
 
     wctx is the working copy context
@@ -2246,7 +2246,9 @@ def update(
                 )
             )
 
-        stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
+        stats = applyupdates(
+            repo, actions, wc, p2, overwrite, labels=labels, ancestors=pas
+        )
 
         if not partial and not wc.isinmemory():
             with repo.dirstate.parentchange():
