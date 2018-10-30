@@ -3,51 +3,48 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-//! [u8] -> [u64] mapping. Insertion only.
+//! Index support for `log`.
 //!
-//! The index could be backed by a combination of an on-disk file, and in-memory content. Changes
-//! to the index will be buffered in memory forever until an explicit flush. Internally, the index
-//! uses base16 radix tree for keys and linked list of values, though it's possible to extend the
-//! format to support other kinds of trees and values.
-//!
-//! File format:
-//!
-//! ```plain,ignore
-//! INDEX       := HEADER + ENTRY_LIST
-//! HEADER      := '\0'  (takes offset 0, so 0 is not a valid offset for ENTRY)
-//! ENTRY_LIST  := RADIX | ENTRY_LIST + ENTRY
-//! ENTRY       := RADIX | LEAF | LINK | KEY | ROOT + REVERSED(VLQ(ROOT_LEN))
-//! RADIX       := '\2' + JUMP_TABLE (16 bytes) + PTR(LINK) + PTR(RADIX | LEAF) * N
-//! LEAF        := '\3' + PTR(KEY | EXT_KEY) + PTR(LINK)
-//! LINK        := '\4' + VLQ(VALUE) + PTR(NEXT_LINK | NULL)
-//! KEY         := '\5' + VLQ(KEY_LEN) + KEY_BYTES
-//! EXT_KEY     := '\6' + VLQ(KEY_START) + VLQ(KEY_LEN)
-//! ROOT        := '\1' + PTR(RADIX) + VLQ(META_LEN) + META
-//!
-//! PTR(ENTRY)  := VLQ(the offset of ENTRY)
-//! ```
-//!
-//! Some notes about the format:
-//!
-//! - A "RADIX" entry has 16 children. This is mainly for source control hex hashes. The "N"
-//!   in a radix entry could be less than 16 if some of the children are missing (ex. offset = 0).
-//!   The corresponding jump table bytes of missing children are 0s. If child i exists, then
-//!   `jumptable[i]` is the relative (to the beginning of radix entry) offset of PTR(child offset).
-//! - A "ROOT" entry its length recorded as the last byte. Normally the root entry is written
-//!   at the end. This makes it easier for the caller - it does not have to record the position
-//!   of the root entry. The caller could optionally provide a root location.
-//! - An entry has a 1 byte "type". This makes it possible to do a linear scan from the
-//!   beginning of the file, instead of having to go through a root. Potentially useful for
-//!   recovery purpose, or adding new entry types (ex. tree entries other than the 16-children
-//!   radix entry, value entries that are not u64 linked list, key entries that refers external
-//!   buffer).
-//! - The "JUMP_TABLE" in "RADIX" entry stores relative offsets to the actual value of
-//!   RADIX/LEAF offsets. It has redundant information. The more compact form is a 2-byte
-//!   (16-bit) bitmask but that hurts lookup performance.
-//! - The "EXT_KEY" type has a logically similar function with "KEY". But it refers to an external
-//!   buffer. This is useful to save spaces if the index is not a source of truth and keys are
-//!   long.
-//! - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
+//! See [Index] for the main structure.
+
+// File format:
+//
+// ```plain,ignore
+// INDEX       := HEADER + ENTRY_LIST
+// HEADER      := '\0'  (takes offset 0, so 0 is not a valid offset for ENTRY)
+// ENTRY_LIST  := RADIX | ENTRY_LIST + ENTRY
+// ENTRY       := RADIX | LEAF | LINK | KEY | ROOT + REVERSED(VLQ(ROOT_LEN))
+// RADIX       := '\2' + JUMP_TABLE (16 bytes) + PTR(LINK) + PTR(RADIX | LEAF) * N
+// LEAF        := '\3' + PTR(KEY | EXT_KEY) + PTR(LINK)
+// LINK        := '\4' + VLQ(VALUE) + PTR(NEXT_LINK | NULL)
+// KEY         := '\5' + VLQ(KEY_LEN) + KEY_BYTES
+// EXT_KEY     := '\6' + VLQ(KEY_START) + VLQ(KEY_LEN)
+// ROOT        := '\1' + PTR(RADIX) + VLQ(META_LEN) + META
+//
+// PTR(ENTRY)  := VLQ(the offset of ENTRY)
+// ```
+//
+// Some notes about the format:
+//
+// - A "RADIX" entry has 16 children. This is mainly for source control hex hashes. The "N"
+//   in a radix entry could be less than 16 if some of the children are missing (ex. offset = 0).
+//   The corresponding jump table bytes of missing children are 0s. If child i exists, then
+//   `jumptable[i]` is the relative (to the beginning of radix entry) offset of PTR(child offset).
+// - A "ROOT" entry its length recorded as the last byte. Normally the root entry is written
+//   at the end. This makes it easier for the caller - it does not have to record the position
+//   of the root entry. The caller could optionally provide a root location.
+// - An entry has a 1 byte "type". This makes it possible to do a linear scan from the
+//   beginning of the file, instead of having to go through a root. Potentially useful for
+//   recovery purpose, or adding new entry types (ex. tree entries other than the 16-children
+//   radix entry, value entries that are not u64 linked list, key entries that refers external
+//   buffer).
+// - The "JUMP_TABLE" in "RADIX" entry stores relative offsets to the actual value of
+//   RADIX/LEAF offsets. It has redundant information. The more compact form is a 2-byte
+//   (16-bit) bitmask but that hurts lookup performance.
+// - The "EXT_KEY" type has a logically similar function with "KEY". But it refers to an external
+//   buffer. This is useful to save spaces if the index is not a source of truth and keys are
+//   long.
+// - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
@@ -153,7 +150,7 @@ const TYPE_BITS: usize = 3;
 const TYPE_BYTES: usize = 1;
 const JUMPTABLE_BYTES: usize = 16;
 
-// Raw offset that has an unknown type.
+/// Offset to an entry. The type of the entry is yet to be resolved.
 #[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
 pub struct Offset(u64);
 
@@ -164,6 +161,10 @@ pub struct Offset(u64);
 struct RadixOffset(Offset);
 #[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
 struct LeafOffset(Offset);
+
+/// Offset to a linked list entry.
+///
+/// The entry stores a [u64] integer and optionally, the next [LinkOffset].
 #[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
 pub struct LinkOffset(Offset);
 #[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
@@ -957,6 +958,12 @@ impl OffsetMap {
 
 //// Main Index
 
+/// Insertion-only mapping from `bytes` to a list of [u64]s.
+///
+/// An [Index] is backed by an append-only file in the filesystem. Internally,
+/// it uses base16 radix trees for keys and linked list for [u64] values. The
+/// file format was designed to be able to support other types of indexes (ex.
+/// non-radix-trees). Though none of them are implemented.
 pub struct Index {
     // For locking and low-level access.
     file: File,
@@ -987,11 +994,20 @@ pub struct Index {
     key_buf: Rc<AsRef<[u8]>>,
 }
 
+/// Key to insert. Used by [Index::insert_advanced].
 pub enum InsertKey<'a> {
+    /// Embedded key.
     Embed(&'a [u8]),
+
+    /// Reference (`[start, end)`) to `key_buf`.
     Reference((u64, u64)),
 }
 
+/// Options used to configured how an [Index] is opened.
+///
+/// Similar to [std::fs::OpenOptions], to use this, first call `new`, then
+/// chain calls to methods to set each option, finally call `open` to get
+/// an [Index] structure.
 #[derive(Clone)]
 pub struct OpenOptions {
     checksum_chunk_size: u64,
@@ -1001,7 +1017,7 @@ pub struct OpenOptions {
 }
 
 impl OpenOptions {
-    /// Default options to open an index:
+    /// Create [OpenOptions] with default configuration:
     /// - no checksum
     /// - no external key buffer
     /// - read root entry from the end of the file
@@ -1016,21 +1032,23 @@ impl OpenOptions {
     }
 
     /// Set checksum behavior.
-    /// - 0: don't do checksums
-    /// - >0: size of a checksum chunk and do verify checksums
-    /// Checksum is useful for detecting data corruption due to OS crashes.
-    /// For application crashes, explicitly recording `logical_len` returned by `flush` in an
-    /// verified atomic-replaced file, and use that explicitly would avoid reading corrupted
-    /// data in case `flush` gets interrupted.
+    ///
+    /// If `checksum_chunk_size` is set to 0, do not use checksums. Otherwise,
+    /// it's the size of a chunk to be checksumed, in bytes. Rounded to `2 ** n`
+    /// for performance reasons.
+    ///
+    /// Disabling checksum can help with performance.
     pub fn checksum_chunk_size(&mut self, checksum_chunk_size: u64) -> &mut Self {
         self.checksum_chunk_size = checksum_chunk_size;
         self
     }
 
-    /// Whether writing is required:
-    /// - `None`: don't care, open as read-write but fallback to read-only. `flush()` may fail.
-    /// - `Some(false)`: open as read-only. `flush()` always fail.
-    /// - `Some(true)`: open as read-write. `open()` may fail. `flush()` will not fail.
+    /// Set whether writing is required:
+    ///
+    /// - `None`: open as read-write but fallback to read-only. `flush()` may fail.
+    /// - `Some(false)`: open as read-only. `flush()` will always fail.
+    /// - `Some(true)`: open as read-write. `open()` fails if read-write is not
+    ///   possible. `flush()` will not fail due to permission issues.
     ///
     /// Note:  The index is always mutable in-memory. Only `flush()` may fail.
     pub fn write(&mut self, value: Option<bool>) -> &mut Self {
@@ -1040,11 +1058,13 @@ impl OpenOptions {
 
     /// Specify the logical length of the file.
     ///
-    /// If it's `None`, use the actual file length. Otherwise, use the explicit length specified.
-    /// This is useful for lock-free reads, or accessing to multiple versions of the index at the
-    /// same time.
+    /// If `len` is `None`, use the actual file length. Otherwise, use the
+    /// length specified by `len`. Reading the file length requires locking.
     ///
-    /// To get a valid logical length, use the return value of `index.flush()`.
+    /// This is useful for lock-free reads, or accessing to multiple versions of
+    /// the index at the same time.
+    ///
+    /// To get a valid logical length, check the return value of [Index::flush].
     pub fn logical_len(&mut self, len: Option<u64>) -> &mut Self {
         self.len = len;
         self
@@ -1060,6 +1080,10 @@ impl OpenOptions {
     }
 
     /// Open the index file with given options.
+    ///
+    /// Driven by the "immutable by default" idea, together with append-only
+    /// properties, [OpenOptions::open] returns a "snapshotted" view of the
+    /// index. Changes to the filesystem won't change instantiated [Index]es.
     pub fn open<P: AsRef<Path>>(&self, path: P) -> io::Result<Index> {
         let open_result = if self.write == Some(false) {
             fs::OpenOptions::new().read(true).open(path.as_ref())
@@ -1142,7 +1166,7 @@ impl OpenOptions {
 }
 
 impl Index {
-    /// Clone the index.
+    /// Return a cloned [Index].
     pub fn clone(&self) -> io::Result<Index> {
         let file = self.file.duplicate()?;
         let mmap = mmap_readonly(&file, Some(self.len))?.0;
@@ -1167,22 +1191,42 @@ impl Index {
         })
     }
 
-    /// Get metadata attached to the root node.
+    /// Get metadata attached to the root node. This is what previously set by
+    /// [Index::set_meta].
     pub fn get_meta(&self) -> &[u8] {
         &self.root.meta
     }
 
-    /// Set metadata attached to the root node. Will be written at `flush` time.
+    /// Set metadata attached to the root node. Will be written at
+    /// [Index::flush] time.
     pub fn set_meta<B: AsRef<[u8]>>(&mut self, meta: B) {
         self.root.meta = meta.as_ref().to_vec().into_boxed_slice()
     }
 
-    /// Flush dirty parts to disk.
+    /// Flush changes to disk.
     ///
-    /// Return 0 if nothing needs to be written. Otherwise return the
-    /// new file length.
+    /// Take the file lock when writing.
     ///
-    /// Return `PermissionDenied` if the file is read-only.
+    /// Return 0 if nothing needs to be written. Otherwise return the new file
+    /// length on success. Return [io::ErrorKind::PermissionDenied] if the file
+    /// was marked read-only at open time.
+    ///
+    /// The new file length can be used to obtain the exact same view of the
+    /// index as it currently is. That means, other changes to the indexes won't
+    /// be "combined" during flush. For example, given the following events
+    /// happened in order:
+    /// - Open. Get Index X.
+    /// - Open using the same arguments. Get Index Y.
+    /// - Write key "p" to X.
+    /// - Write key "q" to Y.
+    /// - Flush X. Get new length LX.
+    /// - Flush Y. Get new length LY.
+    /// - Open using LY as `logical_len`. Get Index Z.
+    ///
+    /// Then key "p" does not exist in Z. This allows some advanced usecases.
+    /// On the other hand, if "merging changes" is the desired behavior, the
+    /// caller needs to take another lock, re-instantiate [Index] and re-insert
+    /// keys.
     pub fn flush(&mut self) -> io::Result<u64> {
         if self.read_only {
             return Err(io::ErrorKind::PermissionDenied.into());
@@ -1289,8 +1333,10 @@ impl Index {
         Ok(new_len)
     }
 
-    /// Lookup by key. Return the link offset (the head of the linked list), or 0
-    /// if the key does not exist. This is a low-level API.
+    /// Lookup by `key`. Return [LinkOffset].
+    ///
+    /// To test if the key exists or not, use [Offset::is_null].
+    /// To obtain all values, use [LinkOffset::values].
     pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> io::Result<LinkOffset> {
         let mut offset: Offset = self.root.radix_offset.into();
         let mut iter = Base16Iter::from_base256(key);
@@ -1327,17 +1373,21 @@ impl Index {
         Ok(LinkOffset::default())
     }
 
-    /// Insert a new value as a head of the linked list associated with `key`.
+    /// Insert a key-value pair. The value will be the head of the linked list.
+    /// That is, `get(key).values().first()` will return the newly inserted
+    /// value.
     pub fn insert<K: AsRef<[u8]>>(&mut self, key: &K, value: u64) -> io::Result<()> {
         self.insert_advanced(InsertKey::Embed(key.as_ref()), value.into(), None)
     }
 
     /// Update the linked list for a given key.
     ///
-    /// - If `link` is None, behave like `insert`.
-    /// - If `link` is not None, ignore the existing value `key` has, create a link entry that
-    ///   chains to the given `link` offset.
-    /// - `key` could be embedded, or a reference to `key_buf` passed to `open`.
+    /// If `link` is None, behave like `insert`. Otherwise, ignore the existing
+    /// values `key` mapped to, create a new link entry that chains to the given
+    /// [LinkOffset].
+    ///
+    /// `key` could be a reference, or an embedded value. See [InsertKey] for
+    /// details.
     ///
     /// This is a low-level API.
     pub fn insert_advanced(
