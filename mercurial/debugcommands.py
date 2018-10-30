@@ -3053,11 +3053,14 @@ def debugdrawdag(ui, repo, **opts):
         ("s", "spinner", False, _("use a progress spinner")),
         ("n", "nototal", False, _("don't include the total")),
         ("b", "bytes", False, _("use a bytes format function")),
+        ("", "with-output", False, _("also print output every 10%")),
     ],
     _("NUMBER"),
     norepo=True,
 )
-def debugprogress(ui, number, spinner=False, nototal=False, bytes=False):
+def debugprogress(
+    ui, number, spinner=False, nototal=False, bytes=False, with_output=False
+):
     """
     Initiate a progress bar and increment the progress NUMBER times.
 
@@ -3069,18 +3072,30 @@ def debugprogress(ui, number, spinner=False, nototal=False, bytes=False):
 
     formatfunc = util.bytecount if bytes else None
 
+    if with_output:
+        outputfreq = num // 10
+        if outputfreq == 0:
+            outputfreq = 1
+    else:
+        outputfreq = None
+
     if spinner:
         with progress.spinner(ui, _spinning):
             for i in xrange(num):
-                pass
+                if outputfreq and i % outputfreq == 0:
+                    ui.write(("processed %d items") % i)
     elif nototal:
         with progress.bar(ui, _spinning, formatfunc=formatfunc) as p:
             for i in xrange(num):
                 p.value = (i, "item %s" % i)
+                if outputfreq and i % outputfreq == 0:
+                    ui.write(("processed %d items") % i)
     else:
         with progress.bar(ui, _spinning, total=num, formatfunc=formatfunc) as p:
             for i in xrange(num):
                 p.value = (i, "item %s" % i)
+                if outputfreq and i % outputfreq == 0:
+                    ui.write(("processed %d items\n") % i)
 
 
 def _findtreemanifest(ctx):

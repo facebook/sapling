@@ -432,6 +432,14 @@ class engine(object):
         with b, b, b, b, b, b:
             yield
 
+    @contextlib.contextmanager
+    def _lockclear(self):
+        with self.lock():
+            bar = self._currentbar()
+            if bar is not None:
+                bar._enginerenderer.clear()
+            yield
+
     def resetstate(self):
         with self.lock():
             self._clear()
@@ -449,7 +457,7 @@ class engine(object):
             self._bars.append(bar)
             self._recalculatedisplay(now)
             global suspend
-            suspend = self.lock
+            suspend = self._lockclear
             self._cond.notify_all()
 
     def unregister(self, bar):

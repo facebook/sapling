@@ -306,7 +306,7 @@ Show all commands + options
   debugpathcomplete: full, normal, added, removed
   debugpickmergetool: rev, changedelete, include, exclude, tool
   debugprocesstree: 
-  debugprogress: spinner, nototal, bytes
+  debugprogress: spinner, nototal, bytes, with-output
   debugpushkey: 
   debugpvec: 
   debugrebuilddirstate: rev, minimal
