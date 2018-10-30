@@ -3,7 +3,26 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-//! Provides integrity check support for an append-only file.
+//! Integrity check support for `index`.
+//!
+//! See [ChecksumTable] for details.
+
+// Format details:
+//
+// ```plain,ignore
+// SUM_FILE := CHUNK_SIZE_LOG (u64, BE) + END_OFFSET (u64, BE) + CHECKSUM_LIST
+// CHECKSUM_LIST := "" | CHECKSUM_LIST + CHUNK_CHECKSUM (u64, BE)
+// ```
+//
+// The "atomic-replace" part could be a scaling issue if the checksum
+// table grows too large, or has frequent small updates. For those cases,
+// it's better to build the checksum-related logic inside the source of
+// truth file format directly.
+//
+// Inside `indexedlog` crate, `ChecksumTable` is mainly used for indexes,
+// which are relatively small comparing to their source of truth, and
+// infrequently updated, and are already complex that it's cleaner to not
+// embed checksum logic into them.
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
@@ -15,30 +34,19 @@ use std::io::{self, Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use utils::{mmap_readonly, xxhash};
 
-/// `ChecksumTable` provides integrity check for an append-only file.
+/// An table of checksums to verify another file.
 ///
-/// To use `ChecksumTable`, make sure:
-/// - Before reading, call `check_range` to verify a range.
-/// - After appending, call `update` to update the `ChecksumTable`.
-/// - Random writes are not supported by `ChecksumTable`.
+/// The table is backed by a file on disk, and can be updated incrementally
+/// for append-only files.
 ///
-/// It maintains checksum table in a separate file, when the append-only
-/// source of truth has changed, `ChecksumTable` recalculates the checksums
-/// for the changed (mostly appended) part and atomic replace the checksum
-/// table.  The checksum table file has a simple format:
+/// To use [ChecksumTable], make sure:
+/// - Before reading, call [ChecksumTable::check_range] to verify a range.
+/// - After appending to the source of truth, call [ChecksumTable::update].
 ///
-///   SUM_FILE := CHUNK_SIZE_LOG (u64, BE) + END_OFFSET (u64, BE) + CHECKSUM_LIST
-///   CHECKSUM_LIST := "" | CHECKSUM_LIST + CHUNK_CHECKSUM (u64, BE)
-///
-/// The "atomic-replace" part could be a scaling issue if the checksum
-/// table grows too large, or has frequent small updates. For those cases,
-/// it's better to build the checksum-related logic inside the source of
-/// truth file format directly.
-///
-/// Inside `indexedlog` crate, `ChecksumTable` is mainly used for indexes,
-/// which are relatively small comparing to their source of truth, and
-/// infrequently updated, and are already complex that it's cleaner to not
-/// embed checksum logic into them.
+/// [ChecksumTable] is only designed to support append-only files efficiently.
+/// However, it could also be used for non-append-only files in a less efficient
+/// way by always using [ChecksumTable::clear] to reset the existing table
+/// before updating.
 pub struct ChecksumTable {
     // The file to be checked. Maintain a separate mmap buffer so
     // the API is easier to use for the caller. It's expected for
@@ -81,12 +89,12 @@ const DEFAULT_CHUNK_SIZE_LOG: u32 = 20;
 const MAX_CHUNK_SIZE_LOG: u32 = 31;
 
 impl ChecksumTable {
-    /// Check given byte range.
+    /// Check given byte range. Return `true` if the byte range passes checksum,
+    /// `false` if it fails or unsure.
     ///
-    /// Return `true` if it passes checksum, `false` otherwise.
-    ///
-    /// Note: Returning `false` could also mean something outside the provided range, but within
-    /// a same checksum chunk is broken, or the range is outside what the checksum table covers.
+    /// Depending on `chunk_size_log`, `false` might be caused by something within a
+    /// same chunk, but outside the provided range being broken. `false` could also
+    /// mean the range is outside what the checksum table covers.
     pub fn check_range(&self, offset: u64, length: u64) -> bool {
         // Empty range is treated as good.
         if length == 0 {
@@ -124,11 +132,15 @@ impl ChecksumTable {
         }
     }
 
-    /// Construct a checksum table for the given file path.
+    /// Construct [ChecksumTable] for checking the given path.
     ///
-    /// The checksum table will be written to a separate `path + ".sum"` file.
+    /// The checksum table uses a separate file name: `path + ".sum"`. If
+    /// that file exists, load the table from it. Otherwise, the table
+    /// is empty and [ChecksumTable::check_range] will return `false`
+    /// for all non-empty range.
     ///
-    /// Return errors if the checksum table itself is broken.
+    /// Once the table is loaded from disk, changes on disk won't affect
+    /// the table in memory.
     pub fn new<P: AsRef<Path>>(path: &P) -> io::Result<Self> {
         // Read the source of truth file as a mmap buffer
         let file = OpenOptions::new().read(true).open(path)?;
@@ -195,24 +207,23 @@ impl ChecksumTable {
         })
     }
 
-    /// Update the checksum table.
+    /// Update the checksum table and write it back to disk.
     ///
     /// `chunk_size_log` decides the chunk size: `1 << chunk_size_log`.
     ///
-    /// If `chunk_size_log` is `None`, will reuse the existing `chunk_size_log` specified by the
-    /// checksum table, or a default value if the table is empty.
+    /// If `chunk_size_log` is `None`, will reuse the existing `chunk_size_log`
+    /// specified by the checksum table, or a default value if the table is
+    /// empty (ex. newly created via `new`).
     ///
-    /// If `chunk_size_log` differs from the existing one, the table will be rebuilt from scratch.
-    /// Otherwise it's updated incrementally.
+    /// If `chunk_size_log` differs from the existing one, the table will be
+    /// rebuilt from scratch.  Otherwise it's updated incrementally.
     ///
-    /// For any part in the old table that will be rewritten, checksum verification will be
-    /// preformed on them. Returns `InvalidData` error if that fails.
+    /// For any part in the old table that will be rewritten, checksum
+    /// verification will be preformed on them. Returns `InvalidData` error if
+    /// that verification fails.
     ///
-    /// Otherwise, update the checksum table in an atomic-replace way. Return write errors if
-    /// it fails.
-    ///
-    /// If multiple processes can write to a same file, the caller is responsible for taking
-    /// a lock which covers the appending and checksum updating.
+    /// Otherwise, update the in-memory checksum table. Then write it in an
+    /// atomic-replace way.  Return write errors if write fails.
     pub fn update(&mut self, chunk_size_log: Option<u32>) -> io::Result<()> {
         let (mmap, len) = mmap_readonly(&self.file, None)?;
         let chunk_size_log = chunk_size_log.unwrap_or(self.chunk_size_log);
@@ -281,7 +292,10 @@ impl ChecksumTable {
         Ok(())
     }
 
-    /// Reset the table as if it's recreated from an empty file. Do not write to disk immediately.
+    /// Reset the table as if it's recreated from an empty file. Do not write to
+    /// disk immediately.
+    ///
+    /// Usually this is followed by [ChecksumTable::update].
     pub fn clear(&mut self) {
         self.end = 0;
         self.checksums = vec![];
