@@ -32,12 +32,10 @@ Force the files to have NEED_CHECK bits
   * A EXIST_P1 EXIST_NEXT NEED_CHECK (glob)
   * B EXIST_P1 EXIST_NEXT NEED_CHECK (glob)
 
-Run status again
+Run status again. NEED_CHECK will disappear.
 
   $ hg status
 
   $ hg debugstate -v
-  * A EXIST_P1 EXIST_NEXT NEED_CHECK (glob)
-  * B EXIST_P1 EXIST_NEXT NEED_CHECK (glob)
-
-XXX: NEED_CHECK are not removed, although we know the files are clean.
+  * A EXIST_P1 EXIST_NEXT (glob)
+  * B EXIST_P1 EXIST_NEXT (glob)

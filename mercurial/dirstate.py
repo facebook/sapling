@@ -479,6 +479,12 @@ class dirstate(object):
         self._dirty |= changed
         return changed
 
+    def clearneedcheck(self, file):
+        if not self._istreestate:
+            raise error.ProgrammingError("needcheck is only supported by treestate")
+        changed = self._map.clearneedcheck(file)
+        self._dirty |= changed
+
     def setclock(self, clock):
         """Set fsmonitor clock"""
         if not self._istreestate:
@@ -1183,6 +1189,11 @@ class dirstate(object):
         checkexec = self._checkexec
         copymap = self._map.copymap
         lastnormaltime = self._lastnormaltime
+        cleanmarked = False
+        if self._istreestate:
+            markclean = self._map.clearneedcheck
+        else:
+            markclean = lambda path: False
 
         # We need to do full walks when either
         # - we're listing all clean files, or
@@ -1239,14 +1250,18 @@ class dirstate(object):
                     # This can happen if we quickly do multiple commits.
                     # Force lookup, so we don't miss such a racy file change.
                     ladd(fn)
-                elif listclean:
-                    cadd(fn)
+                else:
+                    cleanmarked |= markclean(fn)
+                    if listclean:
+                        cadd(fn)
             elif state == "m":
                 madd(fn)
             elif state == "a":
                 aadd(fn)
             elif state == "r":
                 radd(fn)
+        if cleanmarked:
+            self._dirty = True
 
         return (
             lookup,

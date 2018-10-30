@@ -1872,9 +1872,10 @@ class workingctx(committablectx):
         """update dirstate for files that are actually clean"""
         poststatusbefore = self._repo.postdsstatus(afterdirstatewrite=False)
         poststatusafter = self._repo.postdsstatus(afterdirstatewrite=True)
-        if fixup or poststatusbefore or poststatusafter:
+        dirstate = self._repo.dirstate
+        if fixup or poststatusbefore or poststatusafter or dirstate._dirty:
             try:
-                oldid = self._repo.dirstate.identity()
+                oldid = dirstate.identity()
 
                 # updating the dirstate is optional
                 # so we don't wait on the lock
@@ -1887,7 +1888,7 @@ class workingctx(committablectx):
                                 ps(self, status)
 
                         if fixup:
-                            normal = self._repo.dirstate.normal
+                            normal = dirstate.normal
                             for f in fixup:
                                 normal(f)
 
@@ -1898,7 +1899,7 @@ class workingctx(committablectx):
                         #
                         # This is a no-op if dirstate is not dirty.
                         tr = self._repo.currenttransaction()
-                        self._repo.dirstate.write(tr)
+                        dirstate.write(tr)
 
                         if poststatusafter:
                             for ps in poststatusafter:

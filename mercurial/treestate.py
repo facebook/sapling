@@ -575,6 +575,21 @@ class treestatemap(object):
         self._tree.insert(path, state, mode, size, mtime, copied)
         return True
 
+    def clearneedcheck(self, path):
+        """Mark a file as not NEED_CHECK, might remove it from 'nonnormalset'
+
+        Return True if the file was changed, False if the file does not have
+        NEED_CHECK.
+        """
+        existing = self._tree.get(path, None)
+        if existing:
+            state, mode, size, mtime, copied = existing
+            if treestate.NEED_CHECK & state:
+                state ^= treestate.NEED_CHECK
+                self._tree.insert(path, state, mode, size, mtime, copied)
+                return True
+        return False
+
     def copysource(self, path):
         """Return the copysource for path. Return None if it's not copied, or
         path does not exist.
