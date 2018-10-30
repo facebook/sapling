@@ -221,43 +221,50 @@ impl Changesets for SqlChangesets {
         STATS::adds.add_value(1);
         cloned!(self.write_connection);
 
-        SelectChangesets::query(
-            &write_connection,
-            &cs.repo_id,
-            &cs.parents.iter().collect::<Vec<_>>()[..],
-        ).and_then(move |parent_rows| {
-            try_boxfuture!(check_missing_rows(&cs.parents, &parent_rows));
-            let gen = parent_rows.iter().map(|row| row.2).max().unwrap_or(0) + 1;
-            write_connection
-                .start_transaction()
-                .and_then({
-                    cloned!(cs);
-                    move |transaction| {
-                        InsertChangeset::query_with_transaction(
-                            transaction,
-                            &[(&cs.repo_id, &cs.cs_id, &gen)],
-                        )
-                    }
-                })
-                .and_then(move |(transaction, result)| {
-                    if result.affected_rows() == 1 && result.last_insert_id().is_some() {
-                        insert_parents(
-                            transaction,
-                            result.last_insert_id().unwrap(),
-                            cs,
-                            parent_rows,
-                        ).map(|()| true)
-                            .left_future()
-                    } else {
-                        transaction
-                            .rollback()
-                            .and_then(move |()| check_changeset_matches(&write_connection, cs))
-                            .map(|()| false)
-                            .right_future()
-                    }
-                })
-                .boxify()
-        })
+        let parent_rows = {
+            let parents_ref: Vec<_> = cs.parents.iter().collect();
+
+            if parents_ref.is_empty() {
+                Ok(Vec::new()).into_future().boxify()
+            } else {
+                SelectChangesets::query(&write_connection, &cs.repo_id, &parents_ref[..]).boxify()
+            }
+        };
+
+        parent_rows
+            .and_then(move |parent_rows| {
+                try_boxfuture!(check_missing_rows(&cs.parents, &parent_rows));
+                let gen = parent_rows.iter().map(|row| row.2).max().unwrap_or(0) + 1;
+                write_connection
+                    .start_transaction()
+                    .and_then({
+                        cloned!(cs);
+                        move |transaction| {
+                            InsertChangeset::query_with_transaction(
+                                transaction,
+                                &[(&cs.repo_id, &cs.cs_id, &gen)],
+                            )
+                        }
+                    })
+                    .and_then(move |(transaction, result)| {
+                        if result.affected_rows() == 1 && result.last_insert_id().is_some() {
+                            insert_parents(
+                                transaction,
+                                result.last_insert_id().unwrap(),
+                                cs,
+                                parent_rows,
+                            ).map(|()| true)
+                                .left_future()
+                        } else {
+                            transaction
+                                .rollback()
+                                .and_then(move |()| check_changeset_matches(&write_connection, cs))
+                                .map(|()| false)
+                                .right_future()
+                        }
+                    })
+                    .boxify()
+            })
             .boxify()
     }
 
