@@ -210,9 +210,3 @@ def uncommit(ui, repo, *pats, **opts):
                 repo.dirstate.setparents(newid, node.nullid)
                 s = repo.status(old.p1(), old, match=match)
                 _fixdirstate(repo, old, repo[newid], s)
-
-
-def predecessormarkers(ctx):
-    """yields the obsolete markers marking the given changeset as a successor"""
-    for data in ctx.repo().obsstore.predecessors.get(ctx.node(), ()):
-        yield obsutil.marker(ctx.repo(), data)
