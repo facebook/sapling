@@ -1,4 +1,4 @@
-# uncommit - undo the actions of a commit
+# uncommit help functions
 #
 # Copyright 2011 Peter Arrenbrecht <peter.arrenbrecht@gmail.com>
 #                Logilab SA        <contact@logilab.fr>
@@ -19,39 +19,74 @@ added and removed in the working directory.
 
 from __future__ import absolute_import
 
-from mercurial import (
+from .. import (
     cmdutil,
-    commands,
     context,
     copies,
     error,
-    node,
-    obsutil,
     pycompat,
     registrar,
     rewriteutil,
     scmutil,
     treestate,
 )
-from mercurial.i18n import _
+from ..i18n import _
+from ..node import nullid
 
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
 
-configitem("experimental", "uncommitondirtywdir", default=True)
+@command(
+    "uncommit",
+    [("", "keep", False, _("allow an empty commit after uncommiting"))]
+    + cmdutil.walkopts,
+    _("[OPTION]... [FILE]..."),
+)
+def uncommit(ui, repo, *pats, **opts):
+    """uncommit part or all of the current commit
 
-# Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
-# extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
-# be specifying the version(s) of Mercurial they are tested with, or
-# leave the attribute unspecified.
-testedwith = "ships-with-hg-core"
+    This command undoes the effect of running commit, returning the affected
+    files to their uncommitted state. This means that files modified or
+    deleted in the changeset will be left unchanged, and so will remain
+    modified in the working directory.
+    """
+    opts = pycompat.byteskwargs(opts)
+
+    with repo.wlock(), repo.lock():
+
+        if not pats and not repo.ui.configbool("experimental", "uncommitondirtywdir"):
+            cmdutil.bailifchanged(repo)
+        old = repo["."]
+        rewriteutil.precheck(repo, [old.rev()], "uncommit")
+        if len(old.parents()) > 1:
+            raise error.Abort(_("cannot uncommit merge changeset"))
+
+        with repo.transaction("uncommit"):
+            match = scmutil.match(old, pats, opts)
+            newid = commitfilteredctx(repo, old, match, opts.get("keep"))
+            if newid is None:
+                ui.status(_("nothing to uncommit\n"))
+                return 1
+
+            mapping = {}
+            if newid != old.p1().node():
+                # Move local changes on filtered changeset
+                mapping[old.node()] = (newid,)
+            else:
+                # Fully removed the old commit
+                mapping[old.node()] = ()
+
+            scmutil.cleanupnodes(repo, mapping, "uncommit")
+
+            with repo.dirstate.parentchange():
+                repo.dirstate.setparents(newid, nullid)
+                s = repo.status(old.p1(), old, match=match)
+                fixdirstate(repo, old, repo[newid], s)
 
 
-def _commitfiltered(repo, ctx, match, allowempty):
+def commitfilteredctx(repo, ctx, match, allowempty):
     """Recommit ctx with changed files not in match. Return the new
     node identifier, or None if nothing changed.
     """
@@ -90,7 +125,7 @@ def _commitfiltered(repo, ctx, match, allowempty):
 
     new = context.memctx(
         repo,
-        parents=[base.node(), node.nullid],
+        parents=[base.node(), nullid],
         text=ctx.description(),
         files=files,
         filectxfn=filectxfn,
@@ -106,7 +141,7 @@ def _commitfiltered(repo, ctx, match, allowempty):
     return newid
 
 
-def _fixdirstate(repo, oldctx, newctx, status):
+def fixdirstate(repo, oldctx, newctx, status):
     """ fix the dirstate after switching the working directory from oldctx to
     newctx which can be result of either unamend or uncommit.
     """
@@ -162,51 +197,3 @@ def _fixdirstate(repo, oldctx, newctx, status):
         if src not in newctx or dst in newctx or ds[dst] != "a":
             src = None
         ds.copy(src, dst)
-
-
-@command(
-    "uncommit",
-    [("", "keep", False, _("allow an empty commit after uncommiting"))]
-    + commands.walkopts,
-    _("[OPTION]... [FILE]..."),
-)
-def uncommit(ui, repo, *pats, **opts):
-    """uncommit part or all of the current commit
-
-    This command undoes the effect of running commit, returning the affected
-    files to their uncommitted state. This means that files modified or
-    deleted in the changeset will be left unchanged, and so will remain
-    modified in the working directory.
-    """
-    opts = pycompat.byteskwargs(opts)
-
-    with repo.wlock(), repo.lock():
-
-        if not pats and not repo.ui.configbool("experimental", "uncommitondirtywdir"):
-            cmdutil.bailifchanged(repo)
-        old = repo["."]
-        rewriteutil.precheck(repo, [old.rev()], "uncommit")
-        if len(old.parents()) > 1:
-            raise error.Abort(_("cannot uncommit merge changeset"))
-
-        with repo.transaction("uncommit"):
-            match = scmutil.match(old, pats, opts)
-            newid = _commitfiltered(repo, old, match, opts.get("keep"))
-            if newid is None:
-                ui.status(_("nothing to uncommit\n"))
-                return 1
-
-            mapping = {}
-            if newid != old.p1().node():
-                # Move local changes on filtered changeset
-                mapping[old.node()] = (newid,)
-            else:
-                # Fully removed the old commit
-                mapping[old.node()] = ()
-
-            scmutil.cleanupnodes(repo, mapping, "uncommit")
-
-            with repo.dirstate.parentchange():
-                repo.dirstate.setparents(newid, node.nullid)
-                s = repo.status(old.p1(), old, match=match)
-                _fixdirstate(repo, old, repo[newid], s)

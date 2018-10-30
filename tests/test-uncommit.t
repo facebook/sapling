@@ -4,8 +4,6 @@ Test uncommit - set up the config
   > [experimental]
   > evolution.createmarkers=True
   > evolution.allowunstable=True
-  > [extensions]
-  > uncommit =
   > EOF
 
 Build up a repo
@@ -25,8 +23,6 @@ Help for uncommit
       files to their uncommitted state. This means that files modified or
       deleted in the changeset will be left unchanged, and so will remain
       modified in the working directory.
-  
-  (use 'hg help -e uncommit' to show help for the uncommit extension)
   
   Options ([+] can be repeated):
   

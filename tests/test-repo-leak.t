@@ -184,7 +184,6 @@ Somehow problematic: With many extensions
   > treedirstate=
   > treemanifest=
   > tweakdefaults=
-  > uncommit=
   > undo=
   > 
   > [phases]

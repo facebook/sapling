@@ -502,6 +502,10 @@ invalid global arguments for normal commands, aliases, and shell aliases
    rebase        move commits from one location to another
    graft         copy commits from a different location
   
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
+  
   Other commands:
   
    config        show combined config settings from all hgrc files
@@ -554,6 +558,10 @@ invalid global arguments for normal commands, aliases, and shell aliases
    rebase        move commits from one location to another
    graft         copy commits from a different location
   
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
+  
   Other commands:
   
    config        show combined config settings from all hgrc files
@@ -605,6 +613,10 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
    rebase        move commits from one location to another
    graft         copy commits from a different location
+  
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
   
   Other commands:
   

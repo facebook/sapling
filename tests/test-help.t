@@ -39,6 +39,10 @@ Short help:
   
    graft         copy commits from a different location
   
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
+  
   Other commands:
   
    config        show combined config settings from all hgrc files
@@ -88,6 +92,10 @@ Short help:
   Rearrange commits:
   
    graft         copy commits from a different location
+  
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
   
   Other commands:
   
@@ -139,6 +147,10 @@ Short help:
   
    graft         copy commits from a different location
   
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
+  
   Other commands:
   
    config        show combined config settings from all hgrc files
@@ -188,6 +200,10 @@ Short help:
   Rearrange commits:
   
    graft         copy commits from a different location
+  
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
   
   Other commands:
   
@@ -719,6 +735,10 @@ Test command without options
   
    graft         copy commits from a different location
   
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
+  
   Other commands:
   
    config        show combined config settings from all hgrc files
@@ -913,6 +933,10 @@ Test that default list of commands omits extension commands
   Rearrange commits:
   
    graft         copy commits from a different location
+  
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
   
   Other commands:
   
@@ -2573,6 +2597,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   apply one or more bundle files
+  </td></tr>
+  <tr><td>
+  <a href="/help/uncommit">
+  uncommit
+  </a>
+  </td><td>
+  uncommit part or all of the current commit
   </td></tr>
   <tr><td>
   <a href="/help/verify">

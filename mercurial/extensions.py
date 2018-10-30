@@ -50,6 +50,7 @@ _ignoreextensions = {
     "relink",
     "remoteid",
     "treedirstate",
+    "uncommit",
     "upgradegeneraldelta",
 }
 _blacklist = {"extlib"}

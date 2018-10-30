@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 
+from . import uncommit
 from .. import (
     archival,
     bookmarks,
@@ -69,6 +70,8 @@ table.update(debugcommandsmod.command._table)
 
 command = registrar.command(table)
 readonly = registrar.command.readonly
+
+table.update(uncommit.cmdtable)
 
 # common command options
 

@@ -1909,6 +1909,10 @@ help/ shows help topics
         "topic": "unbundle"
       },
       {
+        "summary": "uncommit part or all of the current commit",
+        "topic": "uncommit"
+      },
+      {
         "summary": "verify the integrity of the repository",
         "topic": "verify"
       },

@@ -58,6 +58,7 @@ Show all commands except debug commands
   tags
   tip
   unbundle
+  uncommit
   update
   verify
   version
@@ -351,6 +352,7 @@ Show all commands + options
   tags: template
   tip: patch, git, style, template
   unbundle: update
+  uncommit: keep, include, exclude
   verify: rev
   version: template
 

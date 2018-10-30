@@ -182,8 +182,6 @@ Having a bookmark on a commit, obsolete the commit, remove the bookmark
 Uncommit and hiddenoverride. This is uncommon but the last uncommit should make
 "A" invisible:
 
-  $ enable uncommit
-
   $ newrepo
   $ drawdag <<'EOS'
   >   B

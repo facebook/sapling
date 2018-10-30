@@ -51,6 +51,10 @@
   
    graft         copy commits from a different location
   
+  Undo changes:
+  
+   uncommit      uncommit part or all of the current commit
+  
   Other commands:
   
    config        show combined config settings from all hgrc files
