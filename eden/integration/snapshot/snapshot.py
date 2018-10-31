@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Optional, Type, TypeVar, Union
 
 from eden.integration.lib import edenclient, hgrepo, util
+from eden.integration.lib.temporary_directory import create_tmp_dir
 
 
 T = TypeVar("T", bound="BaseSnapshot")
@@ -231,21 +232,6 @@ def snapshot_class(
         return snapshot
 
     return wrapper
-
-
-@contextlib.contextmanager
-def create_tmp_dir() -> Iterator[Path]:
-    """A helper class to manage temporary directories for snapshots.
-
-    This is similar to the standard tempdir.TemporaryDirectory code,
-    but does a better job of cleaning up the directory if some of its contents are
-    read-only.
-    """
-    tmpdir = Path(tempfile.mkdtemp(prefix="eden_data."))
-    try:
-        yield tmpdir
-    finally:
-        util.cleanup_tmp_dir(tmpdir)
 
 
 @contextlib.contextmanager

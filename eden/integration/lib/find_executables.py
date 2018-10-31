@@ -116,6 +116,18 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def FORCE_SD_BOOTED(self) -> str:
+        return self._find_exe(
+            "force_sd_booted",
+            env="EDENFS_FORCE_SD_BOOTED_PATH",
+            candidates=[
+                os.path.join(
+                    self.BUCK_OUT, "gen/eden/integration/helpers/force_sd_booted"
+                )
+            ],
+        )
+
+    @cached_property
     def TAKEOVER_TOOL(self) -> str:
         return self._find_exe(
             "takeover_tool",

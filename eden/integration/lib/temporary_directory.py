@@ -8,12 +8,32 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import abc
+import contextlib
 import os
 import pathlib
 import tempfile
 import typing
 
 from .util import cleanup_tmp_dir
+
+
+# TODO(strager): Merge create_tmp_dir with
+# TemporaryDirectoryMixin.make_temporary_directory.
+
+
+@contextlib.contextmanager
+def create_tmp_dir() -> typing.Iterator[pathlib.Path]:
+    """A helper class to manage temporary directories for snapshots.
+
+    This is similar to the standard tempdir.TemporaryDirectory code,
+    but does a better job of cleaning up the directory if some of its contents are
+    read-only.
+    """
+    tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="eden_data."))
+    try:
+        yield tmpdir
+    finally:
+        cleanup_tmp_dir(tmpdir)
 
 
 class TemporaryDirectoryMixin(metaclass=abc.ABCMeta):
