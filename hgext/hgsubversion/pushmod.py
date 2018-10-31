@@ -223,8 +223,8 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
         ):
             raise hgutil.Abort(
                 "Outgoing changesets parent is not at "
-                "subversion HEAD\n"
-                "(pull again and rebase on a newer revision)"
+                "subversion HEAD (svn error %s)\n"
+                "(pull again and rebase on a newer revision)" % e.args[1]
             )
         elif len(e.args) > 0 and e.args[1] == svnwrap.ERR_REPOS_HOOK_FAILURE:
             # Special handling for svn hooks blocking error

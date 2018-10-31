@@ -759,7 +759,7 @@ class PushTests(test_hgsubversion_util.TestBase):
             self.assertEqual(
                 e.args[0],
                 "Outgoing changesets parent is not at subversion "
-                "HEAD\n"
+                "HEAD (svn error 160028)\n"
                 "(pull again and rebase on a newer revision)",
             )
             # verify that any pending transactions on the server got cleaned up
