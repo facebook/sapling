@@ -11,18 +11,22 @@ import os
 import pathlib
 import subprocess
 import sys
+import typing
 
 import eden.thrift
 import eden.thrift.client
 import pexpect
+from eden.cli.config import EdenInstance
+from eden.cli.util import HealthStatus
 
 from .lib.find_executables import FindExe
+from .lib.pexpect import PexpectAssertionMixin
 from .lib.service_test_case import ServiceTestCaseBase, service_test
 from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 @service_test
-class RestartTest(ServiceTestCaseBase, TemporaryDirectoryMixin):
+class RestartTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin):
     def setUp(self) -> None:
         self.tmp_dir = self.make_temporary_directory()
 
@@ -51,6 +55,10 @@ class RestartTest(ServiceTestCaseBase, TemporaryDirectoryMixin):
     def _start_fake_edenfs(self) -> int:
         daemon = self.spawn_fake_edenfs(eden_dir=pathlib.Path(self.tmp_dir))
         return daemon.process_id
+
+    def _check_edenfs_health(self) -> HealthStatus:
+        instance = EdenInstance(self.tmp_dir, etc_eden_dir=None, home_dir=None)
+        return instance.check_health()
 
     def test_restart_starts_edenfs_if_not_running(self) -> None:
         """
@@ -90,6 +98,27 @@ class RestartTest(ServiceTestCaseBase, TemporaryDirectoryMixin):
         )
         p.wait()
         self.assertEqual(p.exitstatus, 0)
+
+    def test_eden_restart_creates_new_edenfs_process(self) -> None:
+        old_pid = self._start_fake_edenfs()
+
+        p = self._spawn_restart("--force")
+        p.expect(r"Started edenfs \(pid (?P<pid>\d+)\)")
+        new_pid_from_restart: int = int(p.match.group("pid"))
+        new_pid_from_health_check: typing.Optional[
+            int
+        ] = self._check_edenfs_health().pid
+
+        self.assertIsNotNone(new_pid_from_health_check, "EdenFS should be alive")
+        self.assertNotEqual(
+            old_pid, new_pid_from_health_check, "EdenFS process ID should have changed"
+        )
+        self.assertEqual(
+            new_pid_from_restart,
+            new_pid_from_health_check,
+            "'eden restart' should have shown the process ID for the new "
+            "EdenFS process",
+        )
 
     def test_restart_sigkill(self) -> None:
         self._start_fake_edenfs()
@@ -209,3 +238,11 @@ class RestartTest(ServiceTestCaseBase, TemporaryDirectoryMixin):
         )
         p.wait()
         self.assertEqual(p.exitstatus, 0)
+
+    def test_eden_restart_fails_if_edenfs_crashes_on_start(self) -> None:
+        self._start_fake_edenfs()
+        restart_process = self._spawn_restart(
+            "--force", "--daemon-binary", "/bin/false"
+        )
+        restart_process.expect_exact("Failed to start edenfs")
+        self.assert_process_fails(restart_process, 1)

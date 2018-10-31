@@ -8,8 +8,20 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+import pathlib
+import sys
+import typing
+
+import pexpect
+from eden.cli.config import EdenInstance
+from eden.cli.util import HealthStatus
+from fb303.ttypes import fb_status
 
 from .lib import testcase
+from .lib.find_executables import FindExe
+from .lib.pexpect import PexpectAssertionMixin
+from .lib.service_test_case import ServiceTestCaseBase, service_test
+from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 class StartTest(testcase.EdenTestCase):
@@ -58,3 +70,83 @@ class StartTest(testcase.EdenTestCase):
         # so the self.eden class doesn't really know it is running and that
         # it needs to be shut down.
         self.eden.run_cmd("stop")
+
+
+@service_test
+class StartFakeEdenFSTest(
+    ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin
+):
+    def setUp(self):
+        super().setUp()
+        self.eden_dir = pathlib.Path(self.make_temporary_directory())
+
+    def test_eden_start_launches_separate_processes_for_separate_eden_dirs(
+        self
+    ) -> None:
+        eden_dir_1 = self.eden_dir
+        eden_dir_2 = pathlib.Path(self.make_temporary_directory())
+
+        start_1_process = self.spawn_start(eden_dir=eden_dir_1)
+        self.assert_process_succeeds(start_1_process)
+        start_2_process = self.spawn_start(eden_dir=eden_dir_2)
+        self.assert_process_succeeds(start_2_process)
+
+        instance_1_health: HealthStatus = EdenInstance(
+            str(eden_dir_1), etc_eden_dir=None, home_dir=None
+        ).check_health()
+        self.assertEqual(
+            instance_1_health.status,
+            fb_status.ALIVE,
+            f"First edenfs process should be healthy, but it isn't: "
+            f"{instance_1_health}",
+        )
+
+        instance_2_health: HealthStatus = EdenInstance(
+            str(eden_dir_2), etc_eden_dir=None, home_dir=None
+        ).check_health()
+        self.assertEqual(
+            instance_2_health.status,
+            fb_status.ALIVE,
+            f"Second edenfs process should be healthy, but it isn't: "
+            f"{instance_2_health}",
+        )
+
+        self.assertNotEqual(
+            instance_1_health.pid,
+            instance_2_health.pid,
+            f"The edenfs process should have separate process IDs",
+        )
+
+    def test_eden_start_fails_if_edenfs_is_already_running(self) -> None:
+        with self.spawn_fake_edenfs(self.eden_dir) as daemon_pid:
+            start_process = self.spawn_start()
+            start_process.expect_exact(f"edenfs is already running (pid {daemon_pid})")
+            self.assert_process_fails(start_process, 1)
+
+    def test_eden_start_fails_if_edenfs_fails_during_startup(self) -> None:
+        start_process = self.spawn_start(daemon_args=["--failDuringStartup"])
+        start_process.expect_exact(
+            "Started successfully, but reporting failure because "
+            "--failDuringStartup was specified"
+        )
+        self.assert_process_fails(start_process, 1)
+
+    def spawn_start(
+        self,
+        daemon_args: typing.Sequence[str] = (),
+        eden_dir: typing.Optional[pathlib.Path] = None,
+    ) -> "pexpect.spawn[str]":
+        if eden_dir is None:
+            eden_dir = self.eden_dir
+        args = [
+            "--config-dir",
+            str(eden_dir),
+            "start",
+            "--daemon-binary",
+            FindExe.FAKE_EDENFS,
+            "--",
+        ]
+        args.extend(daemon_args)
+        return pexpect.spawn(
+            FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
+        )

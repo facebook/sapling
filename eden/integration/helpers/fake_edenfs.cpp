@@ -16,6 +16,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <array>
 #include <chrono>
+#include <optional>
 #include <thread>
 
 #include "eden/fs/eden-config.h"
@@ -33,6 +34,10 @@ using std::make_shared;
 using std::string;
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
+DEFINE_string(
+    cleanShutdownFile,
+    "",
+    "If set, create the given file when shutting down cleanly");
 DEFINE_bool(
     exitWithoutCleanupOnStop,
     false,
@@ -43,6 +48,10 @@ DEFINE_bool(
     false,
     "EXPERIMENTAL: Run edenfs as if systemd controls its lifecycle");
 #endif
+DEFINE_bool(
+    failDuringStartup,
+    false,
+    "Instead of reporting success after starting up, report failure and exit");
 DEFINE_bool(ignoreStop, false, "Ignore attempts to stop edenfs");
 DEFINE_double(
     sleepBeforeGetPid,
@@ -128,13 +137,24 @@ class FakeEdenServer {
     stopSleepDuration_ = stopSleepDuration;
   }
 
+  void setCleanShutdownFile(AbsolutePath path) {
+    cleanShutdownFile_ = path;
+  }
+
  private:
+  void reportCleanShutdown() {
+    if (cleanShutdownFile_) {
+      folly::File{cleanShutdownFile_->c_str(), O_WRONLY | O_CREAT};
+    }
+  }
+
   EventBase* eventBase_{nullptr};
   ThriftServer server_;
   std::shared_ptr<FakeEdenServiceHandler> handler_;
   StopBehavior stopBehavior_{StopBehavior::TerminateEventLoop};
   std::chrono::milliseconds getPidSleepDuration_{0ms};
   std::chrono::milliseconds stopSleepDuration_{0ms};
+  std::optional<AbsolutePath> cleanShutdownFile_{};
 };
 
 class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
@@ -240,8 +260,15 @@ void FakeEdenServer::run(
 
   // Run the thrift server
   server_.setup();
+  if (FLAGS_failDuringStartup) {
+    startupLogger.exitUnsuccessfully(
+        1,
+        "Started successfully, but reporting failure because --failDuringStartup was specified");
+  }
   startupLogger.success();
   eventBase_->loopForever();
+
+  reportCleanShutdown();
 }
 
 bool acquireLock(AbsolutePathPiece edenDir) {
@@ -310,6 +337,9 @@ int main(int argc, char** argv) {
   }
 
   FakeEdenServer server;
+  if (!FLAGS_cleanShutdownFile.empty()) {
+    server.setCleanShutdownFile(AbsolutePath{FLAGS_cleanShutdownFile});
+  }
   if (FLAGS_ignoreStop) {
     server.setStopBehavior(StopBehavior::DoNothing);
   }

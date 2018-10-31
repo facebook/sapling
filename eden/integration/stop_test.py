@@ -20,7 +20,7 @@ from eden.cli.daemon import did_process_exit
 from eden.cli.util import poll_until
 
 from .lib.find_executables import FindExe
-from .lib.pexpect import PexpectAssertionMixin
+from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
 from .lib.service_test_case import ServiceTestCaseBase, service_test
 from .lib.temporary_directory import TemporaryDirectoryMixin
 
@@ -44,6 +44,26 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
             self.assertTrue(
                 did_process_exit(daemon_pid), f"Process {daemon_pid} should have died"
+            )
+
+    def test_eden_stop_shuts_down_edenfs_cleanly(self) -> None:
+        clean_shutdown_file = pathlib.Path(self.tmp_dir) / "clean_shutdown"
+        assert not clean_shutdown_file.exists()
+
+        with self.spawn_fake_edenfs(
+            pathlib.Path(self.tmp_dir),
+            ["--cleanShutdownFile", str(clean_shutdown_file)],
+        ):
+            self.assertFalse(
+                clean_shutdown_file.exists(),
+                f"{clean_shutdown_file} should not exist after starting EdenFS",
+            )
+
+            stop_process = self.spawn_stop([])
+            wait_for_pexpect_process(stop_process)
+            self.assertTrue(
+                clean_shutdown_file.exists(),
+                f"{clean_shutdown_file} should exist after EdenFS cleanly shuts down",
             )
 
     def test_stop_sigkill(self):
