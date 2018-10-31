@@ -193,6 +193,7 @@
     <ClCompile Include="..\..\fs\store\LocalStore.cpp" />
     <ClCompile Include="..\..\fs\store\MemoryLocalStore.cpp" />
     <ClCompile Include="..\..\fs\store\ObjectStore.cpp" />
+    <ClCompile Include="..\..\fs\store\SerializedBlobMetadata.cpp" />
     <ClCompile Include="..\..\fs\store\SqliteLocalStore.cpp" />
     <ClCompile Include="..\..\fs\store\StoreResult.cpp" />
     <ClCompile Include="..\..\fs\utils\Clock.cpp" />

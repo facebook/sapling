@@ -22,6 +22,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitBlob.h"
 #include "eden/fs/model/git/GitTree.h"
+#include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 
 using facebook::eden::Hash;
@@ -35,55 +36,6 @@ using std::unique_ptr;
 
 namespace {
 using namespace facebook::eden;
-class SerializedBlobMetadata {
- public:
-  explicit SerializedBlobMetadata(const BlobMetadata& metadata) {
-    serialize(metadata.sha1, metadata.size);
-  }
-  SerializedBlobMetadata(const Hash& contentsHash, uint64_t blobSize) {
-    serialize(contentsHash, blobSize);
-  }
-
-  ByteRange slice() const {
-    return ByteRange{data_};
-  }
-
-  static BlobMetadata parse(Hash blobID, const StoreResult& result) {
-    auto bytes = result.bytes();
-    if (bytes.size() != SIZE) {
-      throw std::invalid_argument(folly::sformat(
-          "Blob metadata for {} had unexpected size {}. Could not deserialize.",
-          blobID.toString(),
-          bytes.size()));
-    }
-
-    uint64_t blobSizeBE;
-    memcpy(&blobSizeBE, bytes.data(), sizeof(uint64_t));
-    bytes.advance(sizeof(uint64_t));
-    auto contentsHash = Hash{bytes};
-    return BlobMetadata{contentsHash, folly::Endian::big(blobSizeBE)};
-  }
-
- private:
-  void serialize(const Hash& contentsHash, uint64_t blobSize) {
-    uint64_t blobSizeBE = folly::Endian::big(blobSize);
-    memcpy(data_.data(), &blobSizeBE, sizeof(uint64_t));
-    memcpy(
-        data_.data() + sizeof(uint64_t),
-        contentsHash.getBytes().data(),
-        Hash::RAW_SIZE);
-  }
-
-  static constexpr size_t SIZE = sizeof(uint64_t) + Hash::RAW_SIZE;
-
-  /**
-   * The serialized data is stored as stored as:
-   * - size (8 bytes, big endian)
-   * - hash (20 bytes)
-   */
-  std::array<uint8_t, SIZE> data_;
-};
-
 enum class Persistence : bool {
   Ephemeral = false,
   Persistent = true,
