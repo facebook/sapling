@@ -300,15 +300,33 @@ void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
     return;
   }
 
-  auto tierName = edenConfig->getMononokeTierName();
   auto executor = folly::getIOExecutor();
-  mononoke_ = std::make_unique<MononokeBackingStore>(
-      tierName,
-      options.repoName,
-      std::chrono::milliseconds(FLAGS_mononoke_timeout),
-      executor.get(),
-      sslContext);
-  XLOG(DBG2) << "mononoke enabled for repository " << options.repoName;
+
+  auto hostName = edenConfig->getMononokeHostName();
+  if (hostName) {
+    auto port = edenConfig->getMononokePort();
+    mononoke_ = std::make_unique<MononokeBackingStore>(
+        folly::SocketAddress(hostName->c_str(), port),
+        options.repoName,
+        std::chrono::milliseconds(FLAGS_mononoke_timeout),
+        executor.get(),
+        sslContext);
+
+    XLOG(DBG2) << "mononoke enabled for repository " << options.repoName
+               << ", using host " << *hostName << ":" << port;
+  } else {
+    auto tierName = edenConfig->getMononokeTierName();
+    mononoke_ = std::make_unique<MononokeBackingStore>(
+        tierName,
+        options.repoName,
+        std::chrono::milliseconds(FLAGS_mononoke_timeout),
+        executor.get(),
+        sslContext);
+
+    XLOG(DBG2) << "mononoke enabled for repository " << options.repoName
+               << ", using tier " << tierName;
+  }
+
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 #endif // EDEN_WIN_NOMONONOKE
 }

@@ -209,6 +209,18 @@ const std::string& EdenConfig::getMononokeTierName() const {
   return mononokeTierName_.getValue();
 }
 
+std::optional<std::string> EdenConfig::getMononokeHostName() const {
+  auto value = mononokeHostName_.getValue();
+  if (value.empty()) {
+    return std::nullopt;
+  }
+  return value;
+}
+
+uint16_t EdenConfig::getMononokePort() const {
+  return mononokePort_.getValue();
+}
+
 void EdenConfig::setUserConfigPath(AbsolutePath userConfigPath) {
   userConfigPath_ = userConfigPath;
 }
@@ -504,6 +516,21 @@ folly::Expected<bool, std::string> FieldConverter<bool>::operator()(
   }
   return folly::makeUnexpected<string>(folly::to<std::string>(
       "Unexpected value: '", value, "'. Expected \"true\" or \"false\""));
+}
+
+folly::Expected<uint16_t, std::string> FieldConverter<uint16_t>::operator()(
+    folly::StringPiece value,
+    const std::map<std::string, std::string>& /* unused */) const {
+  auto aString = value.str();
+
+  try {
+    return folly::to<uint16_t>(aString);
+  } catch (const std::exception&) {
+    return folly::makeUnexpected<string>(folly::to<std::string>(
+        "Unexpected value: '",
+        value,
+        ". Expected a uint16_t compatible value"));
+  }
 }
 
 } // namespace eden

@@ -177,6 +177,20 @@ class FieldConverter<bool> {
       const std::map<std::string, std::string>& convData) const;
 };
 
+template <>
+class FieldConverter<uint16_t> {
+ public:
+  /**
+   * Convert the passed string piece to a uint16_t.
+   * @param convData is a map of conversion data that can be used by conversions
+   * method (for example $HOME value.)
+   * @return the converted value or an error message.
+   */
+  folly::Expected<uint16_t, std::string> operator()(
+      folly::StringPiece value,
+      const std::map<std::string, std::string>& convData) const;
+};
+
 /**
  * A Configuration setting is a piece of application configuration that can be
  * constructed by parsing a string. It retains values for various ConfigSources:
@@ -378,6 +392,8 @@ class EdenConfig : public ConfigSettingManager {
 
   /** Which tier to use when talking to mononoke */
   const std::string& getMononokeTierName() const;
+  std::optional<std::string> getMononokeHostName() const;
+  uint16_t getMononokePort() const;
 
   void setUserConfigPath(AbsolutePath userConfigPath);
 
@@ -474,6 +490,8 @@ class EdenConfig : public ConfigSettingManager {
   ConfigSetting<std::string> mononokeTierName_{"mononoke:tier",
                                                "mononoke-apiserver",
                                                this};
+  ConfigSetting<std::string> mononokeHostName_{"mononoke:hostname", "", this};
+  ConfigSetting<uint16_t> mononokePort_{"mononoke:port", 8000, this};
 
   struct stat systemConfigFileStat_ = {};
   struct stat userConfigFileStat_ = {};
