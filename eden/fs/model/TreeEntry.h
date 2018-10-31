@@ -52,6 +52,18 @@ class TreeEntry {
       TreeEntryType type)
       : type_(type), hash_(hash), name_(PathComponentPiece(name)) {}
 
+  explicit TreeEntry(
+      const Hash& hash,
+      folly::StringPiece name,
+      TreeEntryType type,
+      std::optional<uint64_t> size,
+      std::optional<Hash> contentSha1)
+      : type_(type),
+        hash_(hash),
+        name_(PathComponentPiece(name)),
+        size_(size),
+        contentSha1_(contentSha1) {}
+
   const Hash& getHash() const {
     return hash_;
   }
@@ -70,10 +82,20 @@ class TreeEntry {
 
   std::string toLogString() const;
 
+  const std::optional<uint64_t>& getSize() const {
+    return size_;
+  }
+
+  const std::optional<Hash>& getContentSha1() const {
+    return contentSha1_;
+  }
+
  private:
   TreeEntryType type_;
   Hash hash_;
   PathComponent name_;
+  std::optional<uint64_t> size_;
+  std::optional<Hash> contentSha1_;
 };
 
 std::ostream& operator<<(std::ostream& os, TreeEntryType type);
