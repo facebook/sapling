@@ -100,6 +100,11 @@ class HgBackingStore : public BackingStore {
    */
   void initializeMononoke(const ImporterOptions& options);
 
+#ifndef EDEN_WIN_NOMONONOKE
+  /** Returns true if we should use mononoke for a fetch */
+  bool useMononoke() const;
+#endif
+
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
 
   // Import the Tree from Hg and cache it in the LocalStore before returning it.

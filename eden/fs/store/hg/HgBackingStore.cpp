@@ -387,7 +387,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
   }
 
 #ifndef EDEN_WIN_NOMONONOKE
-  if (!content.content() && mononoke_) {
+  if (!content.content() && useMononoke()) {
     // ask Mononoke API Server
     XLOG(DBG4) << "importing tree \"" << manifestNode << "\" from mononoke";
 
@@ -436,6 +436,22 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
         processTree(content, manifestNode, edenTreeID, path, writeBatch.get()));
   }
 }
+
+#ifndef EDEN_WIN_NOMONONOKE
+bool HgBackingStore::useMononoke() const {
+  // Currently, useMononoke needs to be true at construction time in order
+  // to configure the mononoke client safely.  If that wasn't the case then
+  // we'll treat it as disabled even if the user has subsequently configured
+  // it correctly.
+  if (!mononoke_) {
+    return false;
+  }
+  DCHECK(config_) << "mononoke_ cannot be set without config_";
+
+  // Check to see if the user has disabled mononoke since starting the server.
+  return config_->getEdenConfig()->getUseMononoke();
+}
+#endif
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     Hash manifestNode,
@@ -616,7 +632,7 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   }
 
 #ifndef EDEN_WIN_NOMONONOKE
-  if (mononoke_) {
+  if (useMononoke()) {
     XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
                << hgInfo.revHash().toString() << " from mononoke";
     auto revHashCopy = hgInfo.revHash();
