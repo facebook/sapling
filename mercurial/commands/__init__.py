@@ -6778,7 +6778,7 @@ def update(
 
     Returns 0 on success, 1 if there are unresolved files.
     """
-    if rev and node:
+    if rev is not None and rev != "" and node is not None:
         raise error.Abort(_("please specify just one revision"))
 
     if ui.configbool("commands", "update.requiredest"):
@@ -6803,7 +6803,7 @@ def update(
     # can be disabled and replaced with an error.
     # internal config: ui.disallowemptyupdate
     if ui.configbool("ui", "disallowemptyupdate"):
-        if not node and not rev and not date:
+        if node is None and rev is None and not date:
             raise error.Abort(
                 "You must specify a destination to update to,"
                 + ' for example "hg update master".',

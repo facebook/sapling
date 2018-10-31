@@ -62,33 +62,34 @@ With positional argument.
 Overshoot bottom of repo.
   $ hg previous 5
   reached root changeset
-  abort: You must specify a destination to update to, for example "hg update master".
-  (If you're trying to move a bookmark forward, try "hg rebase -d <destination>".)
-  [255]
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [1ea734] r0
 
 Test --bottom flag.
   $ hg up top
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark top)
   $ hg previous --bottom
-  abort: You must specify a destination to update to, for example "hg update master".
-  (If you're trying to move a bookmark forward, try "hg rebase -d <destination>".)
-  [255]
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark top)
+  [1ea734] r0
 
 Test bookmark navigation.
   $ hg book -r 1ea734 root
   $ hg book -r 012414 bookmark
   $ hg up top
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark top)
   $ hg previous --bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark top)
   [012414] (bookmark) r2
   (activating bookmark bookmark)
   $ hg previous --bookmark
-  abort: You must specify a destination to update to, for example "hg update master".
-  (If you're trying to move a bookmark forward, try "hg rebase -d <destination>".)
-  [255]
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark bookmark)
+  [1ea734] (root) r0
+  (activating bookmark root)
 
 Test bookmark activation.
   $ hg up top
@@ -100,9 +101,9 @@ Test bookmark activation.
   [012414] (bookmark) r2
   (activating bookmark bookmark)
   $ hg previous 2 --no-activate-bookmark
-  abort: You must specify a destination to update to, for example "hg update master".
-  (If you're trying to move a bookmark forward, try "hg rebase -d <destination>".)
-  [255]
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark bookmark)
+  [1ea734] (root) r0
 
 Test dirty working copy and --merge.
   $ hg up top
