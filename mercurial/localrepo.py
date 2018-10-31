@@ -50,7 +50,6 @@ from . import (
     revset,
     revsetlang,
     scmutil,
-    sparse,
     store,
     subrepo,
     tags as tagsmod,
@@ -357,7 +356,6 @@ class localrepository(object):
         "shared",
         "relshared",
         "dotencode",
-        "exp-sparse",
         "treedirstate",
         "treestate",
         "storerequirements",
@@ -515,15 +513,6 @@ class localrepository(object):
                 raise
             self.sharedvfs = self.localvfs
 
-        if "exp-sparse" in self.requirements and not sparse.enabled:
-            raise error.RepoError(
-                _(
-                    "repository is using sparse feature but "
-                    "sparse is not enabled; enable the "
-                    '"sparse" extensions to access'
-                )
-            )
-
         self.store = store.store(
             self.requirements,
             self.sharedpath,
@@ -586,11 +575,6 @@ class localrepository(object):
 
         # generic mapping between names and nodes
         self.names = namespaces.namespaces(self)
-
-        # Key to signature value.
-        self._sparsesignaturecache = {}
-        # Signature to cached matcher instance.
-        self._sparsematchercache = {}
 
     @property
     def vfs(self):
@@ -863,7 +847,6 @@ class localrepository(object):
 
     @repofilecache(localpaths=["dirstate"])
     def dirstate(self):
-        sparsematchfn = lambda: sparse.matcher(self)
         istreestate = "treestate" in self.requirements
         istreedirstate = "treedirstate" in self.requirements
 
@@ -872,7 +855,6 @@ class localrepository(object):
             self.ui,
             self.root,
             self._dirstatevalidate,
-            sparsematchfn,
             istreestate=istreestate,
             istreedirstate=istreedirstate,
         )
@@ -1750,7 +1732,6 @@ class localrepository(object):
 
         self.unfiltered()._branchcaches.clear()
         self.invalidatevolatilesets()
-        self._sparsesignaturecache.clear()
 
     def invalidatevolatilesets(self):
         self.filteredrevcache.clear()

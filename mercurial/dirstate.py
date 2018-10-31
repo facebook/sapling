@@ -90,14 +90,7 @@ def _isgitignore(path):
 
 class dirstate(object):
     def __init__(
-        self,
-        opener,
-        ui,
-        root,
-        validate,
-        sparsematchfn,
-        istreestate=False,
-        istreedirstate=False,
+        self, opener, ui, root, validate, istreestate=False, istreedirstate=False
     ):
         """Create a new dirstate object.
 
@@ -108,7 +101,6 @@ class dirstate(object):
         self._opener = opener
         self._validate = validate
         self._root = root
-        self._sparsematchfn = sparsematchfn
         # ntpath.join(root, '') of Python 2.7.9 does not add sep if root is
         # UNC path pointing to root share (issue4557)
         self._rootdir = pathutil.normasprefix(root)
@@ -186,19 +178,6 @@ class dirstate(object):
         """Return the dirstate contents (see documentation for dirstatemap)."""
         self._map = self._mapcls(self._ui, self._opener, self._root)
         return self._map
-
-    @property
-    def _sparsematcher(self):
-        """The matcher for the sparse checkout.
-
-        The working directory may not include every file from a manifest. The
-        matcher obtained by this property will match a path if it is to be
-        included in the working directory.
-        """
-        # TODO there is potential to cache this property. For now, the matcher
-        # is resolved on every access. (But the called function does use a
-        # cache to keep the lookup fast.)
-        return self._sparsematchfn()
 
     @repocache("branch")
     def _branch(self):

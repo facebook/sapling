@@ -1317,8 +1317,6 @@ def calculateupdates(
     mergeforce=False,
 ):
     """Calculate the actions needed to merge mctx into wctx using ancestors"""
-    # Avoid cycle.
-    from . import sparse
 
     if len(ancestors) == 1:  # default
         actions, diverge, renamedelete = manifestmerge(
@@ -1435,9 +1433,7 @@ def calculateupdates(
         fractions = _forgetremoved(wctx, mctx, branchmerge)
         actions.update(fractions)
 
-    prunedactions = sparse.filterupdatesactions(repo, wctx, mctx, branchmerge, actions)
-
-    return prunedactions, diverge, renamedelete
+    return actions, diverge, renamedelete
 
 
 def batchremove(repo, wctx, actions):
@@ -2017,9 +2013,6 @@ def update(
 
     Return the same tuple as applyupdates().
     """
-    # Avoid cycle.
-    from . import sparse
-
     # This function used to find the default destination if node was None, but
     # that's now in destutil.py.
     assert node is not None
@@ -2288,11 +2281,6 @@ def update(
 
                 if not branchmerge:
                     repo.dirstate.setbranch(p2.branch())
-
-    # If we're updating to a location, clean up any stale temporary includes
-    # (ex: this happens during hg rebase --abort).
-    if not branchmerge:
-        sparse.prunetemporaryincludes(repo)
 
     if not partial:
         repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])

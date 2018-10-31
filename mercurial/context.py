@@ -27,7 +27,6 @@ from . import (
     repoview,
     revlog,
     scmutil,
-    sparse,
     subrepo,
     util,
 )
@@ -2026,8 +2025,6 @@ class workingctx(committablectx):
 
     def markcommitted(self, node):
         super(workingctx, self).markcommitted(node)
-
-        sparse.aftercommit(self._repo, node)
 
 
 class committablefilectx(basefilectx):
