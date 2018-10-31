@@ -49,7 +49,9 @@ enum ErrorKind {
     #[fail(display = "Aborting: command '{}' exited with exit status {}", _0, _1)]
     NonZeroExit(&'static str, i32),
     #[fail(display = "Aborting: RC bookmark is not a descendant of PROD bookmark. Please move RC or PROD bookmarks")]
-    InvalidConfigRepoBookmarks(),
+    RcNotDescendantOfProd(),
+    #[fail(display = "Aborting: RC should be at most 1 commit ahead of PROD bookmark. Please move RC or PROD bookmarks")]
+    RcTooFarAway(),
 }
 
 pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -377,15 +379,20 @@ fn check_hg_config_repo(hg_repo_path: PathBuf) -> BoxFuture<(), Error> {
         .arg("-r")
         .arg("PROD::RC")
         .arg("-T")
-        .arg("'{node}\n'")
+        .arg("{node}\n")
         .current_dir(&hg_repo_path)
         .output_async()
         .from_err()
         .and_then(|output| {
             let stdout = output.stdout.clone();
             check_status(output.status, "hg log -r 'PROD::RC' -T '{node}\\n'").and_then(move |()| {
+                // Single line is hash + '\n'
+                // Since PROD::RC range is inclusive, there should be at most 2 hash in the output
+                let single_line_size = 40 + 1;
                 if stdout.is_empty() {
-                    Err(ErrorKind::InvalidConfigRepoBookmarks().into())
+                    Err(ErrorKind::RcNotDescendantOfProd().into())
+                } else if stdout.len() > single_line_size * 2 {
+                    Err(ErrorKind::RcTooFarAway().into())
                 } else {
                     Ok(())
                 }
