@@ -28,6 +28,9 @@ Config::
     # Whether to do an initial "best-effort" pull from the database.
     # (default: true)
     initialsync = true
+
+    # Timeout (in seconds) set at the socket connection.
+    sockettimeout = 60
 """
 
 
@@ -103,6 +106,7 @@ configitem("hgsql", "maxrowsize", default=1048576)
 configitem("hgsql", "profileoutput", default="/tmp")
 configitem("hgsql", "profiler", default=None)
 configitem("hgsql", "rootpidnsonly", default=False)
+configitem("hgsql", "sockettimeout", default=60)
 configitem("hgsql", "sqltimeout", default=120)
 configitem("hgsql", "syncinterval", default=-1)
 configitem("hgsql", "verbose", default=False)
@@ -1562,6 +1566,7 @@ def wraprepo(repo):
     sqlargs["database"] = ui.config("hgsql", "database")
     sqlargs["user"] = ui.config("hgsql", "user")
     sqlargs["port"] = ui.configint("hgsql", "port")
+    sqlargs["connection_timeout"] = ui.configint("hgsql", "sockettimeout")
     password = ui.config("hgsql", "password")
     if password:
         sqlargs["password"] = password
