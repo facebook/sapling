@@ -97,7 +97,9 @@ Test --include and --exclude flags together
   subdir1/subfile1:1:foobar_subdir
 
 Test basic biggrep client
-  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py --config grep.usebiggrep=True --config grep.biggrepcorpus=fake foobar
+  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake foobar \
+  > | sort
   \x1b[35m\x1b[Kfakefile\x1b[m\x1b[K\x1b[36m\x1b[K:\x1b[m\x1b[Kfakeresult (esc)
   grepfile1:foobarbaz
   grepfile2:foobarboo
