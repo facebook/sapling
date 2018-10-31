@@ -22,6 +22,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
@@ -397,6 +398,17 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
             entries.emplace_back(
                 proxyHash, entryName.stringPiece(), entry.getType());
+
+            if (entry.getContentSha1() && entry.getSize()) {
+              BlobMetadata metadata{*entry.getContentSha1(), *entry.getSize()};
+
+              SerializedBlobMetadata metadataBytes(metadata);
+              auto hashSlice = proxyHash.getBytes();
+              writeBatch->put(
+                  KeySpace::BlobMetaDataFamily,
+                  hashSlice,
+                  metadataBytes.slice());
+            }
           }
 
           auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
