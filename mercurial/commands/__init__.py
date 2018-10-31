@@ -60,7 +60,7 @@ from .. import (
     util,
 )
 from ..i18n import _
-from ..node import hex, nullid, nullrev, short
+from ..node import bin, hex, nullid, nullrev, short
 
 
 release = lockmod.release
@@ -2854,21 +2854,39 @@ def grep(ui, repo, pattern, *pats, **opts):
         ]
     )
 
-    # If true, we'll use the `bgr` tool to perform the grep against some
+    biggrepclient = ui.config(
+        "grep",
+        "biggrepclient",
+        "/usr/local/fbprojects/packages/biggrep.client/stable/biggrep_client",
+    )
+    biggreptier = ui.config("grep", "biggreptier", "biggrep.master")
+    biggrepcorpus = ui.config("grep", "biggrepcorpus")
+
+    # If true, we'll use biggrepclient to perform the grep against some
     # externally maintained index.  We don't provide an implementation
     # of that tool with this repo, just the optional client interface.
     biggrep = ui.configbool("grep", "usebiggrep", None)
+
     if biggrep is None:
         if (
             "eden" in repo.requirements
-            and ui.config("grep", "biggrepcorpus")
-            and os.path.exists("/usr/local/bin/bgr")
+            and biggrepcorpus
+            and os.path.exists(biggrepclient)
         ):
             biggrep = True
 
     # Ask big grep to strip out the corpus dir (stripdir) and to include
     # the corpus revision on the first line.
-    biggrepcmd = ["bgr", "--stripdir", "-r", "--expression", pattern]
+    biggrepcmd = [
+        biggrepclient,
+        "--stripdir",
+        "-r",
+        "--expression",
+        pattern,
+        biggreptier,
+        biggrepcorpus,
+        "re2",
+    ]
 
     args = []
 
@@ -2948,7 +2966,8 @@ def grep(ui, repo, pattern, *pats, **opts):
         lines = out.rstrip().split("\n")
         # the first line has the revision for the corpus; parse it out
         # the format is "#HASH:timestamp"
-        corpusrev, timestamp = lines[0][1:].split(":", 1)
+        revisionline = lines[0][1:]
+        corpusrev, timestamp = revisionline.split(":", 1)
         lines = lines[1:]
 
         resultsbyfile = {}
