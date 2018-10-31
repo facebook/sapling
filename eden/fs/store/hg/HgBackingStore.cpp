@@ -17,6 +17,7 @@
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -190,6 +191,7 @@ HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     LocalStore* localStore,
     UnboundedQueueExecutor* serverThreadPool,
+    std::shared_ptr<ReloadableConfig> config,
     std::optional<AbsolutePath> clientCertificate,
     bool useMononoke,
     folly::StringPiece mononokeTierName,
@@ -212,6 +214,7 @@ HgBackingStore::HgBackingStore(
           make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
           std::make_shared<HgImporterThreadFactory>(repository, localStore))),
+      config_(config),
       serverThreadPool_(serverThreadPool),
       useDatapackGetBlob_(useDatapackGetBlob) {
 #if EDEN_HAVE_HG_TREEMANIFEST

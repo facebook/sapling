@@ -1027,6 +1027,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         repoPath,
         localStore_.get(),
         serverState_->getThreadPool().get(),
+        std::dynamic_pointer_cast<ReloadableConfig>(serverState_),
         clientCertificate_,
         useMononoke_,
         mononokeTierName_);

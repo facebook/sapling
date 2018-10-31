@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "eden/fs/config/CachedParsedFileMonitor.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/fuse/EdenStats.h"
 #ifdef EDEN_WIN
 #include "eden/win/fs/utils/Stub.h" // @manual
@@ -39,7 +40,7 @@ class UnboundedQueueExecutor;
  * This is normally owned by the main EdenServer object.  However unit tests
  * also create ServerState objects without an EdenServer.
  */
-class ServerState {
+class ServerState : public ReloadableConfig {
  public:
   ServerState(
       UserInfo userInfo,
@@ -82,7 +83,8 @@ class ServerState {
    * throttleSeconds to kEdenConfigMinPollSeconds. If 'skipUpdate' is set, no
    * update check is performed and the current EdenConfig is returned.
    */
-  std::shared_ptr<const EdenConfig> getEdenConfig(bool skipUpdate = false);
+  std::shared_ptr<const EdenConfig> getEdenConfig(
+      bool skipUpdate = false) override;
 
   /**
    * Get the TopLevelIgnores. It is based on the system and user git ignore

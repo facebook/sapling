@@ -127,7 +127,7 @@ int importTree(
     StringPiece revName,
     RelativePath subdir) {
   UnboundedQueueExecutor resultThreadPool(1, "ResultThread");
-  HgBackingStore backingStore(repoPath, store, &resultThreadPool);
+  HgBackingStore backingStore(repoPath, store, &resultThreadPool, nullptr);
 
   printf(
       "Importing revision \"%s\" using tree manifest\n", revName.str().c_str());

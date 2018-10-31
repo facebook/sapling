@@ -34,6 +34,7 @@ class Importer;
 class ImporterOptions;
 class LocalStore;
 class UnboundedQueueExecutor;
+class ReloadableConfig;
 
 /**
  * A BackingStore implementation that loads data out of a mercurial repository.
@@ -51,6 +52,7 @@ class HgBackingStore : public BackingStore {
       AbsolutePathPiece repository,
       LocalStore* localStore,
       UnboundedQueueExecutor* serverThreadPool,
+      std::shared_ptr<ReloadableConfig> config,
       std::optional<AbsolutePath> clientCertificate = std::nullopt,
       bool useMononoke = false,
       folly::StringPiece mononokeTierName = folly::StringPiece(),
@@ -137,6 +139,7 @@ class HgBackingStore : public BackingStore {
   LocalStore* localStore_{nullptr};
   // A set of threads owning HgImporter instances
   std::unique_ptr<folly::Executor> importThreadPool_;
+  std::shared_ptr<ReloadableConfig> config_;
   // The main server thread pool; we push the Futures back into
   // this pool to run their completion code to avoid clogging
   // the importer pool. Queuing in this pool can never block (which would risk

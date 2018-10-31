@@ -173,7 +173,8 @@ usecunionstore=True
 
   // Build an HgBackingStore for this repository
   UnboundedQueueExecutor resultThreadPool(1, "ResultThread");
-  HgBackingStore store(clientRepo.path(), &localStore, &resultThreadPool);
+  HgBackingStore store(
+      clientRepo.path(), &localStore, &resultThreadPool, nullptr);
 
   // Now test running prefetch
   // Build a list of file blob IDs to prefetch.

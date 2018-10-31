@@ -95,7 +95,7 @@ shared_ptr<BackingStore> createBackingStore(
   } else if (type == "hg") {
     const auto repoPath = realpath(name);
     return make_shared<HgBackingStore>(
-        repoPath, localStore_.get(), threadPool_.get());
+        repoPath, localStore_.get(), threadPool_.get(), nullptr);
     // Disabling git support in this test code.
     //} else if (type == "git") {
     //  throw std::domain_error(
