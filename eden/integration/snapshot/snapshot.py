@@ -9,23 +9,32 @@
 
 import abc
 import contextlib
+import datetime
 import json
 import logging
+import os
+import socket
+import stat
 import subprocess
 import tempfile
 import time
 import types
+import typing
 from pathlib import Path
-from typing import Callable, Dict, Iterator, List, Optional, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Type, TypeVar, Union
 
+import toml
 from eden.integration.lib import edenclient, hgrepo, util
+from eden.integration.lib.find_executables import FindExe
 from eden.integration.lib.temporary_directory import create_tmp_dir
+
+from . import verify as verify_mod
 
 
 T = TypeVar("T", bound="BaseSnapshot")
 
 
-class BaseSnapshot:
+class BaseSnapshot(metaclass=abc.ABCMeta):
     # The NAME and DESCRIPTION class fields are intended to be overridden on subclasses
     # by the @snapshot_class decorator.
     NAME = "Base Snapshot Class"
@@ -33,7 +42,22 @@ class BaseSnapshot:
 
     def __init__(self, base_dir: Path) -> None:
         self.base_dir = base_dir
-        self.eden: Optional[edenclient.EdenFS] = None
+        # All data inside self.data_dir will be saved as part of the snapshot
+        self.data_dir = self.base_dir / "data"
+        # Anything inside self.transient_dir will not be saved with the snapshot,
+        # and will always be regenerated from scratch when resuming a snapshot.
+        self.transient_dir = self.base_dir / "transient"
+
+        self.eden_state_dir = self.data_dir / "eden"
+
+        # We put the etc eden directory inside the transient directory.
+        # Whenever we resume a snapshot we want to use a current version of the edenfs
+        # daemon and its configuration, rather than an old copy of the edenfs
+        # configuration.
+        self.etc_eden_dir = self.transient_dir / "etc_eden"
+
+        # We put the home directory inside the transient directory as well.
+        self.home_dir = self.transient_dir / "home"
 
     def __enter__(self: T) -> T:
         return self
@@ -44,15 +68,7 @@ class BaseSnapshot:
         exc_value: Optional[BaseException],
         tb: Optional[types.TracebackType],
     ) -> None:
-        self.cleanup()
-
-    def cleanup(self) -> None:
-        if self.eden is not None:
-            try:
-                self.eden.kill()
-            except Exception as ex:
-                logging.exception("error stopping edenfs")
-            self.eden = None
+        pass
 
     def create_tarball(self, output_path: Path) -> None:
         """Create a tarball from the snapshot contents.
@@ -85,45 +101,208 @@ class BaseSnapshot:
         subprocess.check_call(cmd, cwd=self.base_dir)
 
     def generate(self) -> None:
-        self._setup_directories()
+        """Generate the snapshot data.
+
+        This method should normally be called after constructing the snapshot object
+        pointing to an empty directory.
+        """
+        self._create_directories()
         self._emit_metadata()
         self.gen_before_eden_running()
 
-        self.eden = edenclient.EdenFS(
+        with self.edenfs() as eden:
+            eden.start()
+            self.gen_eden_running(eden)
+
+        self.gen_after_eden_stopped()
+
+        # Rewrite the config state to point to "/tmp/dummy_snapshot_path"
+        # This isn't really strictly necessary, but just makes the state that
+        # gets saved slightly more deterministic.
+        self._relocate_to(Path("/tmp/dummy_snapshot_path"))
+
+    def verify(self, verifier: verify_mod.SnapshotVerifier) -> None:
+        """Verify that the snapshot data looks correct.
+
+        This is generally invoked by tests to confirm that an unpacked snapshot still
+        works properly with the current version of EdenFS.
+        """
+        with self.edenfs() as eden:
+            eden.start()
+            print("Verifing snapshot data:")
+            print("=" * 60)
+            self.verify_snapshot_data(verifier, eden)
+            print("=" * 60)
+
+    def edenfs(self) -> edenclient.EdenFS:
+        """Return an EdenFS object that can be used to run an edenfs daemon for this
+        snapshot.
+
+        The returned EdenFS object will not be started yet; the caller must explicitly
+        call start() on it.
+        """
+        return edenclient.EdenFS(
             eden_dir=str(self.eden_state_dir),
             etc_eden_dir=str(self.etc_eden_dir),
             home_dir=str(self.home_dir),
             storage_engine="rocksdb",
         )
-        try:
-            self.eden.start()
-            self.gen_eden_running()
-        finally:
-            self.eden.kill()
-            self.eden = None
 
-        self.gen_after_eden_stopped()
+    def resume(self) -> None:
+        """Prepare a snapshot to be resumed after unpacking it.
 
-    def _setup_directories(self) -> None:
-        self.data_dir = self.base_dir / "data"
+        This updates the snapshot data so it can be run from its new location,
+        and recreates any transient state needed for the snapshot.
+        """
+        self.create_transient_dir()
+        self._relocate_to(self.base_dir)
+        self.prep_resume()
+
+    def _create_directories(self) -> None:
         self.data_dir.mkdir()
+        self.create_transient_dir()
 
-        self.eden_state_dir = self.data_dir / "eden"
-        self.etc_eden_dir = self.data_dir / "etc_eden"
+    def create_transient_dir(self) -> None:
+        self.transient_dir.mkdir()
         self.etc_eden_dir.mkdir()
-        self.home_dir = self.data_dir / "home"
         self.home_dir.mkdir()
 
+        # Set up configuration and hooks inside the etc eden directory.
+        hooks_dir = self.etc_eden_dir / "hooks"
+        hooks_dir.mkdir()
+        os.symlink(FindExe.EDEN_POST_CLONE_HOOK, hooks_dir / "post-clone")
+        config_dir = self.etc_eden_dir / "config.d"
+        config_dir.mkdir()
+
+        # Set the hg.edenextension path to the empty string, so that
+        # we use the version of the eden extension built into hg.par
+        toml_config = {"hooks": {"hg.edenextension": ""}}
+        with (config_dir / "hooks").open("w") as f:
+            toml.dump(toml_config, f)
+
     def _emit_metadata(self) -> None:
+        now = time.time()
+
+        # In addition to recording the current time as a unix timestamp,
+        # we also store a tuple of (year, month, day).  This is primarily to help make
+        # it easier for future verification code if we ever need to alter the
+        # verification logic for older versions of the same snapshot type.
+        # This will allow more human-readable time comparisons in the code, and makes it
+        # easier to compare just based on a prefix of this tuple.
+        now_date = datetime.datetime.fromtimestamp(now)
+        date_tuple = (
+            now_date.year,
+            now_date.month,
+            now_date.day,
+            now_date.hour,
+            now_date.minute,
+            now_date.second,
+        )
+
         data = {
             "type": self.NAME,
             "description": self.DESCRIPTION,
-            "time_created": time.time(),
+            "time_created": int(now),
+            "date_created": date_tuple,
+            "base_dir": str(self.base_dir),
         }
+        self._write_metadata(data)
 
-        metadata_path = self.data_dir / "info.json"
-        with metadata_path.open("w") as f:
+    @property
+    def _metadata_path(self) -> Path:
+        return self.data_dir / "info.json"
+
+    def _write_metadata(self, data: Dict[str, Any]) -> None:
+        with self._metadata_path.open("w") as f:
             json.dump(data, f, indent=2, sort_keys=True)
+
+    def _read_metadata(self) -> Dict[str, Any]:
+        with self._metadata_path.open("r") as f:
+            return typing.cast(Dict[str, Any], json.load(f))
+
+    def _relocate_to(self, base_dir: Path) -> None:
+        """Rewrite data inside an unpacked snapshot directory to refer to the base
+        directory using the specified path.
+
+        This replaces absolute path names in various data files to refer to the new
+        location.  This is needed so that a snapshot originally created in one location
+        can be unpacked and used in another location.
+        """
+        info = self._read_metadata()
+        old_base_dir = Path(info["base_dir"])
+
+        # A few files in the RocksDB directory end up with the absolute path
+        # embedded in them.
+        rocks_db_path = self.eden_state_dir / "storage" / "rocks-db"
+        for entry in rocks_db_path.iterdir():
+            if entry.name.startswith("LOG") or entry.name.startswith("OPTIONS"):
+                self._replace_file_contents(entry, bytes(old_base_dir), bytes(base_dir))
+
+        # Parse eden's config.json to get the list of checkouts, and update each one.
+        eden_config_path = self.eden_state_dir / "config.json"
+        with eden_config_path.open("r+") as config_file:
+            eden_data = json.load(config_file)
+            new_config_data = {}
+            for _old_checkout_path, checkout_name in eden_data.items():
+                new_checkout_path = self.data_dir / checkout_name
+                new_config_data[str(new_checkout_path)] = checkout_name
+                checkout_state_dir = self.eden_state_dir / "clients" / checkout_name
+                self._relocate_checkout(checkout_state_dir, old_base_dir, base_dir)
+
+            config_file.seek(0)
+            config_file.truncate()
+            json.dump(new_config_data, config_file, indent=2, sort_keys=True)
+
+        # Update the info file with the new base path
+        info["base_dir"] = str(base_dir)
+        self._write_metadata(info)
+
+    def _relocate_checkout(
+        self, checkout_state_dir: Path, old_base_dir: Path, new_base_dir: Path
+    ) -> None:
+        self._replace_file_contents(
+            checkout_state_dir / "config.toml", bytes(old_base_dir), bytes(new_base_dir)
+        )
+        overlay_dir = checkout_state_dir / "local"
+        self._relocate_overlay_dir(
+            overlay_dir, bytes(old_base_dir), bytes(new_base_dir)
+        )
+
+    def _relocate_overlay_dir(
+        self, dir_path: Path, old_data: bytes, new_data: bytes
+    ) -> None:
+        # Recursively update the contents for every file in the overlay
+        # if it contains the old path.
+        #
+        # This approach is pretty dumb: we aren't processing the overlay file formats at
+        # all, just blindly replacing the contents if we happen to see something that
+        # looks like the old path.  For now this is the easiest thing to do, and the
+        # chance of other data looking like the source path should be very unlikely.
+        #
+        # In practice we normally need to update the overlay files for at least the
+        # following inodes:
+        #   .eden/root
+        #   .eden/client
+        #   .eden/socket
+        #   .hg/sharedpath
+        #
+        for path in dir_path.iterdir():
+            stat_info = path.lstat()
+            if stat.S_ISDIR(stat_info.st_mode):
+                self._relocate_overlay_dir(path, old_data, new_data)
+            else:
+                self._replace_file_contents(path, old_data, new_data)
+
+    def _replace_file_contents(
+        self, path: Path, old_data: bytes, new_data: bytes
+    ) -> None:
+        with path.open("rb+") as f:
+            file_contents = f.read()
+            new_contents = file_contents.replace(old_data, new_data)
+            if new_contents != file_contents:
+                f.seek(0)
+                f.truncate()
+                f.write(new_contents)
 
     def gen_before_eden_running(self) -> None:
         """gen_before_eden_running() will be called when generating a new snapshot after
@@ -133,7 +312,7 @@ class BaseSnapshot:
         """
         pass
 
-    def gen_eden_running(self) -> None:
+    def gen_eden_running(self, eden: edenclient.EdenFS) -> None:
         """gen_eden_running() will be called when generating a new snapshot once edenfs
         has been started.
 
@@ -149,37 +328,60 @@ class BaseSnapshot:
         """
         pass
 
+    def prep_resume(self) -> None:
+        """prep_resume() will be when preparing to resume a snapshot, before edenfs has
+        been started.
+
+        Subclasses of BaseSnapshot can perform any work they want here.
+        here.
+        """
+        pass
+
+    @abc.abstractmethod
+    def verify_snapshot_data(
+        self, verifier: verify_mod.SnapshotVerifier, eden: edenclient.EdenFS
+    ) -> None:
+        """Verify that the snapshot data looks correct.
+
+        This method should be overridden by subclasses.
+        """
+        pass
+
 
 class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
     """A helper parent class for BaseSnapshot implementations that creates a single
     checkout of a mercurial repository."""
 
-    def gen_before_eden_running(self) -> None:
-        # Prepare the system hgrc file
-        self.system_hgrc_path = self.data_dir / "system_hgrc"
+    def create_transient_dir(self) -> None:
+        super().create_transient_dir()
+
+        # Note that we put the system hgrc file in self.transient_dir rather than
+        # self.data_dir:
+        # This file is not saved with the snapshot, and is instead regenerated each time
+        # we unpack the snapshot.  This reflects the fact that we always run with the
+        # current system hgrc rather than an old snapshot of the system configs.
+        self.system_hgrc_path = self.transient_dir / "system_hgrc"
         self.system_hgrc_path.write_text(hgrepo.HgRepository.get_system_hgrc_contents())
 
+    def hg_repo(self, path: Path) -> hgrepo.HgRepository:
+        return hgrepo.HgRepository(str(path), system_hgrc=str(self.system_hgrc_path))
+
+    def gen_before_eden_running(self) -> None:
         logging.info("Creating backing repository...")
         # Create the repository
         backing_repo_path = self.data_dir / "repo"
         backing_repo_path.mkdir()
-        self.backing_repo = hgrepo.HgRepository(
-            str(backing_repo_path), system_hgrc=str(self.system_hgrc_path)
-        )
+        self.backing_repo = self.hg_repo(backing_repo_path)
         self.backing_repo.init()
 
         self.populate_backing_repo()
 
-    def gen_eden_running(self) -> None:
-        assert self.eden is not None
+    def gen_eden_running(self, eden: edenclient.EdenFS) -> None:
         logging.info("Preparing checkout...")
 
-        checkout_path = self.data_dir / "checkout"
-        self.eden.clone(self.backing_repo.path, str(checkout_path))
+        eden.clone(self.backing_repo.path, str(self.checkout_path))
 
-        self.checkout_repo = hgrepo.HgRepository(
-            str(checkout_path), system_hgrc=str(self.system_hgrc_path)
-        )
+        self.checkout_repo = self.hg_repo(self.checkout_path)
         self.populate_checkout()
 
     @abc.abstractmethod
@@ -190,31 +392,61 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
     def populate_checkout(self) -> None:
         pass
 
-    def checkout_path(self, *args: Union[Path, str]) -> Path:
-        """Compute a path inside the checkout."""
-        return Path(self.checkout_repo.path, *args)
+    @property
+    def checkout_path(self) -> Path:
+        """Return the path to the checkout root."""
+        return self.data_dir / "checkout"
 
     def read_file(self, path: Union[Path, str]) -> bytes:
         """Helper function to read a file in the checkout.
         This is primarily used to ensure that the file is loaded.
         """
-        file_path = self.checkout_path(path)
+        file_path = self.checkout_path / path
         with file_path.open("rb") as f:
             data: bytes = f.read()
         return data
 
-    def write_file(self, path: Union[Path, str], contents: bytes) -> None:
+    def write_file(
+        self, path: Union[Path, str], contents: bytes, mode: int = 0o644
+    ) -> None:
         """Helper function to write a file in the checkout."""
-        file_path = self.checkout_path(path)
+        file_path = self.checkout_path / path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         with file_path.open("wb") as f:
+            os.fchmod(f.fileno(), mode)
             f.write(contents)
+
+    def chmod(self, path: Union[Path, str], mode: int) -> None:
+        file_path = self.checkout_path / path
+        os.chmod(file_path, mode)
+
+    def mkdir(self, path: Union[Path, str], mode: int = 0o755) -> None:
+        dir_path = self.checkout_path / path
+        dir_path.mkdir(mode=mode, parents=True, exist_ok=False)
+        # Explicitly call chmod() to ignore any umask settings
+        dir_path.chmod(mode)
 
     def list_dir(self, path: Union[Path, str]) -> List[Path]:
         """List the contents of a directory in the checkout.
         This can be used to ensure the directory has been loaded by Eden.
         """
-        dir_path = self.checkout_path(path)
+        dir_path = self.checkout_path / path
         return list(dir_path.iterdir())
+
+    def make_socket(self, path: Union[Path, str], mode: int = 0o755) -> None:
+        socket_path = self.checkout_path / path
+        with socket.socket(socket.AF_UNIX) as sock:
+            # Call fchmod() before we create the socket to ensure that its initial
+            # permissions are not looser than requested.  The OS will still honor the
+            # umask when creating the socket.
+            os.fchmod(sock.fileno(), mode)
+            sock.bind(str(socket_path))
+            sock.listen(10)
+            # Call chmod() update the permissions ignoring the umask.
+            # Note that we unfortunately must use path.chmod() here rather than
+            # os.fchmod(): Linux appears to ignore fchmod() calls after the socket has
+            # already been bound.
+            socket_path.chmod(mode)
 
 
 snapshot_types: Dict[str, Type[BaseSnapshot]] = {}
@@ -243,9 +475,43 @@ def generate(snapshot_type: Type[T]) -> Iterator[T]:
     temporary directory that will be cleaned up when exiting the `with` context.
     """
     with create_tmp_dir() as tmpdir:
-        with snapshot_type(tmpdir) as snapshot:
-            snapshot.generate()
-            yield snapshot
+        snapshot = snapshot_type(tmpdir)
+        snapshot.generate()
+        yield snapshot
+
+
+class UnknownSnapshotTypeError(ValueError):
+    def __init__(self, type_name: str) -> None:
+        super().__init__(f"unknown snapshot type {type_name!r}")
+        self.type_name = type_name
+
+
+def unpack_into(snapshot_path: Path, output_path: Path) -> BaseSnapshot:
+    """Unpack a snapshot into the specified output directory.
+
+    Returns the appropriate BaseSnapshot subclass for this snapshot.
+    """
+    # GNU tar is smart enough to automatically figure out the correct
+    # decompression method.
+    untar_cmd = ["tar", "-xf", str(snapshot_path)]
+    subprocess.check_call(untar_cmd, cwd=output_path)
+
+    data_dir = output_path / "data"
+    try:
+        with (data_dir / "info.json").open("r") as info_file:
+            info = json.load(info_file)
+
+        type_name = info["type"]
+        snapshot_type = snapshot_types.get(type_name)
+        if snapshot_type is None:
+            raise UnknownSnapshotTypeError(type_name)
+
+        snapshot = snapshot_type(output_path)
+        snapshot.resume()
+        return snapshot
+    except Exception as ex:
+        util.cleanup_tmp_dir(data_dir)
+        raise
 
 
 def _import_snapshot_modules() -> None:
