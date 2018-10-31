@@ -48,6 +48,8 @@ enum ErrorKind {
     #[fail(display = "Aborting: command '{}' killed by a signal", _0)] KilledBySignal(&'static str),
     #[fail(display = "Aborting: command '{}' exited with exit status {}", _0, _1)]
     NonZeroExit(&'static str, i32),
+    #[fail(display = "Aborting: RC bookmark is not a descendant of PROD bookmark. Please move RC or PROD bookmarks")]
+    InvalidConfigRepoBookmarks(),
 }
 
 pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -229,7 +231,11 @@ fn handle_fbpkg<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Erro
     let import_dir = tmpdir.path().to_owned().join(IMPORT_DFLT_DIR);
     try_boxfuture!(fs::create_dir(&import_dir));
 
-    force_prod_bookmark(src.clone())
+    set_local_bookmark(src.clone(), "PROD")
+        .and_then({
+            cloned!(src);
+            move |()| set_local_bookmark(src.clone(), "RC")
+        })
         .and_then({
             cloned!(src, import_dir);
             move |()| import(logger, src.clone(), import_dir)
@@ -326,27 +332,65 @@ fn import(logger: Logger, src: PathBuf, dest: PathBuf) -> BoxFuture<(), Error> {
         RepositoryId::new(0),
     )));
 
-    Blobimport {
-        logger,
-        blobrepo,
-        revlogrepo_path: src.join(".hg"),
-        changeset: None,
-        skip: None,
-        commits_limit: None,
-        no_bookmark: false,
-    }.import()
+    check_hg_config_repo(src.clone())
+        .and_then(move |()| {
+            Blobimport {
+                logger,
+                blobrepo,
+                revlogrepo_path: src.join(".hg"),
+                changeset: None,
+                skip: None,
+                commits_limit: None,
+                no_bookmark: false,
+            }.import()
+        })
+        .boxify()
 }
 
-fn force_prod_bookmark(src: PathBuf) -> BoxFuture<(), Error> {
+// Blobimport can't read remote bookmarks, so this function sets local bookmark
+// with the same name
+fn set_local_bookmark(src: PathBuf, bookmark: &str) -> BoxFuture<(), Error> {
     Command::new("hg")
         .arg("bookmark")
         .arg("--force")
-        .arg("PROD")
+        .arg(bookmark)
+        .arg("-r")
+        .arg(format!("remote/{}", bookmark))
         .current_dir(&src)
         .status_async()
         .into_future()
         .flatten()
         .from_err()
         .and_then(|status| check_status(status, "hg bookmark --force PROD"))
+        .boxify()
+}
+
+// Verifies the consistency of the config repo
+fn check_hg_config_repo(hg_repo_path: PathBuf) -> BoxFuture<(), Error> {
+    // Config repo should have two bookmarks - PROD and RC.
+    // PROD is for production jobs, RC for shadow jobs.
+    // RC should be an descendant of a PROD i.e. configs of a shadow jobs are
+    // configs of a production job plus some changes on top
+    // PROD and RC can point to the same commit
+    Command::new("hg")
+        .arg("log")
+        .arg("-r")
+        .arg("PROD::RC")
+        .arg("-T")
+        .arg("'{node}\n'")
+        .current_dir(&hg_repo_path)
+        .output_async()
+        .from_err()
+        .and_then(|output| {
+            let stdout = output.stdout.clone();
+            check_status(output.status, "hg log -r 'PROD::RC' -T '{node}\\n'").and_then(move |()| {
+                if stdout.is_empty() {
+                    Err(ErrorKind::InvalidConfigRepoBookmarks().into())
+                } else {
+                    Ok(())
+                }
+            })
+        })
+        .map(|_| ())
         .boxify()
 }
