@@ -3088,7 +3088,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             # Ensure that the biggrep results are flushed before we
             # start to intermingle with the local grep process output
             ui.flush()
-            return _rungrep(cmd, filestogrep, m)
+            return _rungrep(cmd, sorted(filestogrep), m)
 
         return 0
 

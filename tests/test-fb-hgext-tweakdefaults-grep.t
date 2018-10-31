@@ -99,8 +99,8 @@ Test --include and --exclude flags together
 Test basic biggrep client
   $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py --config grep.usebiggrep=True --config grep.biggrepcorpus=fake foobar
   \x1b[35m\x1b[Kfakefile\x1b[m\x1b[K\x1b[36m\x1b[K:\x1b[m\x1b[Kfakeresult (esc)
+  grepfile1:foobarbaz
+  grepfile2:foobarboo
   subdir1/subfile1:foobar_subdir
   subdir2/subfile2:foobar_dirsub
-  grepfile2:foobarboo
-  grepfile1:foobarbaz
 
