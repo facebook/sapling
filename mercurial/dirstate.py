@@ -90,7 +90,14 @@ def _isgitignore(path):
 
 class dirstate(object):
     def __init__(
-        self, opener, ui, root, validate, istreestate=False, istreedirstate=False
+        self,
+        opener,
+        ui,
+        root,
+        validate,
+        sparsematchfn=None,
+        istreestate=False,
+        istreedirstate=False,
     ):
         """Create a new dirstate object.
 
