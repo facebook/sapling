@@ -327,8 +327,7 @@ impl RevlogEntry {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
         revlog
-            .and_then(|revlog| revlog.get_rev_by_nodeid(&nodeid))
-            .map(|node| *node.parents())
+            .and_then(|revlog| revlog.get_rev_parents_by_nodeid(&nodeid))
             .into_future()
             .boxify()
     }

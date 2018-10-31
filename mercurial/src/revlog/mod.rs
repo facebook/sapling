@@ -20,7 +20,7 @@ use failure;
 use memmap::Mmap;
 use nom::IResult;
 
-pub use mercurial_types::{delta, HgBlob, HgBlobNode, HgEntryId, HgNodeHash};
+pub use mercurial_types::{delta, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents};
 pub use mercurial_types::bdiff::{self, Delta};
 
 // Submodules
@@ -235,6 +235,10 @@ impl Revlog {
 
     pub fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<HgBlobNode> {
         self.inner.get_rev_by_nodeid(id)
+    }
+
+    pub fn get_rev_parents_by_nodeid(&self, id: &HgNodeHash) -> Result<HgParents> {
+        self.inner.get_rev_parents_by_nodeid(id)
     }
 
     /// Return the set of head revisions in a revlog
@@ -492,13 +496,18 @@ impl RevlogInner {
         delta::compat::apply_deltas(data.as_ref(), chain)
     }
 
-    fn make_node(&self, entry: &Entry, blob: HgBlob) -> Result<HgBlobNode> {
+    fn parse_parents(&self, entry: &Entry) -> Result<(Option<HgNodeHash>, Option<HgNodeHash>)> {
         let mut pnodeid = |p| {
             let pn = self.get_entry(p);
             pn.map(|n| n.nodeid)
         };
         let p1 = map_io(entry.p1, &mut pnodeid)?;
         let p2 = map_io(entry.p2, &mut pnodeid)?;
+        Ok((p1, p2))
+    }
+
+    fn make_node(&self, entry: &Entry, blob: HgBlob) -> Result<HgBlobNode> {
+        let (p1, p2) = self.parse_parents(entry)?;
 
         Ok(HgBlobNode::new(blob, p1.as_ref(), p2.as_ref()))
     }
@@ -519,10 +528,25 @@ impl RevlogInner {
         self.make_node(&entry, HgBlob::from(Bytes::from(data)))
     }
 
+    fn get_parents(&self, tgtidx: RevIdx) -> Result<HgParents> {
+        let entry = self.get_entry(tgtidx)?;
+        let (p1, p2) = self.parse_parents(&entry)?;
+
+        Ok(HgParents::new(p1.as_ref(), p2.as_ref()))
+    }
+
     fn get_rev_by_nodeid(&self, id: &HgNodeHash) -> Result<HgBlobNode> {
         self.get_idx_by_nodeid(&id).and_then(move |idx| {
             self.get_rev(idx)
                 .with_context(|_| format!("can't get rev for id {}", id))
+                .map_err(Error::from)
+        })
+    }
+
+    fn get_rev_parents_by_nodeid(&self, id: &HgNodeHash) -> Result<HgParents> {
+        self.get_idx_by_nodeid(&id).and_then(move |idx| {
+            self.get_parents(idx)
+                .with_context(|_| format!("can't get parents for id {}", id))
                 .map_err(Error::from)
         })
     }
