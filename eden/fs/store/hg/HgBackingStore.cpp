@@ -373,22 +373,12 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     return tree;
   }
 
-  ConstantStringRef content;
-  try {
-    content = unionStoreGetWithRefresh(
-        *unionStore_->wlock(), path.stringPiece(), manifestNode);
-  } catch (const MissingKeyError&) {
-    // Data for this tree was not present locally.
-    // Fall through and fetch the data from the server below.
-    if (!FLAGS_hg_fetch_missing_trees) {
-      auto ew = folly::exception_wrapper(std::current_exception());
-      return folly::makeFuture<unique_ptr<Tree>>(ew);
-    }
-  }
-
 #ifndef EDEN_WIN_NOMONONOKE
-  if (!content.content() && useMononoke()) {
-    // ask Mononoke API Server
+  if (useMononoke()) {
+    // ask Mononoke API Server first because it has more metadata available
+    // than we'd get from a local treepack.  Getting that data from mononoke
+    // can save us from materializing so many file contents later to compute
+    // size and hash information.
     XLOG(DBG4) << "importing tree \"" << manifestNode << "\" from mononoke";
 
     RelativePath ownedPath(path);
@@ -419,7 +409,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
                      const folly::exception_wrapper& ex) mutable {
           XLOG(WARN) << "got exception from MononokeBackingStore: "
                      << ex.what();
-          return fetchTreeFromImporter(
+          return fetchTreeFromHgCacheOrImporter(
               manifestNode,
               edenTreeID,
               std::move(ownedPath),
@@ -428,12 +418,30 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
   }
 #endif // !EDEN_WIN_NOMONONOKE
 
-  if (!content.content()) {
-    return fetchTreeFromImporter(
-        manifestNode, edenTreeID, RelativePath(path), std::move(writeBatch));
-  } else {
+  return fetchTreeFromHgCacheOrImporter(
+      manifestNode, edenTreeID, path.copy(), writeBatch);
+}
+
+folly::Future<std::unique_ptr<Tree>>
+HgBackingStore::fetchTreeFromHgCacheOrImporter(
+    Hash manifestNode,
+    Hash edenTreeID,
+    RelativePath path,
+    std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
+  try {
+    auto content = unionStoreGetWithRefresh(
+        *unionStore_->wlock(), path.stringPiece(), manifestNode);
     return folly::makeFuture(
         processTree(content, manifestNode, edenTreeID, path, writeBatch.get()));
+  } catch (const MissingKeyError&) {
+    // Data for this tree was not present locally.
+    // Fall through and fetch the data from the server below.
+    if (!FLAGS_hg_fetch_missing_trees) {
+      auto ew = folly::exception_wrapper(std::current_exception());
+      return folly::makeFuture<unique_ptr<Tree>>(ew);
+    }
+    return fetchTreeFromImporter(
+        manifestNode, edenTreeID, std::move(path), std::move(writeBatch));
   }
 }
 
