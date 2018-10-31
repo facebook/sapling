@@ -194,9 +194,6 @@ EdenServer::EdenServer(
           edenConfig)} {
   edenDir_ = edenConfig->getEdenDir();
   configPath_ = edenConfig->getUserConfigPath();
-  clientCertificate_ = edenConfig->getClientCertificate();
-  useMononoke_ = edenConfig->getUseMononoke();
-  mononokeTierName_ = edenConfig->getMononokeTierName();
 }
 
 EdenServer::~EdenServer() {}
@@ -1027,10 +1024,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         repoPath,
         localStore_.get(),
         serverState_->getThreadPool().get(),
-        std::dynamic_pointer_cast<ReloadableConfig>(serverState_),
-        clientCertificate_,
-        useMononoke_,
-        mononokeTierName_);
+        std::dynamic_pointer_cast<ReloadableConfig>(serverState_));
   } else if (type == "git") {
 #ifndef EDEN_WIN
     const auto repoPath = realpath(name);

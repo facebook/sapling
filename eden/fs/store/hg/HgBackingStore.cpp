@@ -191,11 +191,7 @@ HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     LocalStore* localStore,
     UnboundedQueueExecutor* serverThreadPool,
-    std::shared_ptr<ReloadableConfig> config,
-    std::optional<AbsolutePath> clientCertificate,
-    bool useMononoke,
-    folly::StringPiece mononokeTierName,
-    bool useDatapackGetBlob)
+    std::shared_ptr<ReloadableConfig> config)
     : localStore_(localStore),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
@@ -216,13 +212,13 @@ HgBackingStore::HgBackingStore(
           std::make_shared<HgImporterThreadFactory>(repository, localStore))),
       config_(config),
       serverThreadPool_(serverThreadPool),
-      useDatapackGetBlob_(useDatapackGetBlob) {
+      useDatapackGetBlob_(false) {
 #if EDEN_HAVE_HG_TREEMANIFEST
   HgImporter importer(repository, localStore);
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
 #ifndef EDEN_WIN_NOMONONOKE
-  initializeMononoke(options, useMononoke, clientCertificate, mononokeTierName);
+  initializeMononoke(options);
 #endif // EDEN_WIN_NOMONONOKE
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 }
@@ -272,11 +268,14 @@ void HgBackingStore::initializeTreeManifestImport(
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 }
 
-void HgBackingStore::initializeMononoke(
-    const ImporterOptions& options,
-    bool useMononoke,
-    std::optional<AbsolutePath> clientCertificate,
-    folly::StringPiece tierName) {
+void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
+  if (!config_) {
+    XLOG(DBG2)
+        << "mononoke is disabled because no config instance was provided to HgBackingStore";
+    return;
+  }
+
+  auto edenConfig = config_->getEdenConfig();
 #ifndef EDEN_WIN_NOMONONOKE
 #if EDEN_HAVE_HG_TREEMANIFEST
   if (options.repoName.empty()) {
@@ -284,15 +283,15 @@ void HgBackingStore::initializeMononoke(
     return;
   }
 
+  auto useMononoke = edenConfig->getUseMononoke();
   if (!useMononoke) {
     XLOG(DBG2) << "mononoke is disabled by config.";
     return;
   }
 
-  auto executor = folly::getIOExecutor();
-
   std::shared_ptr<folly::SSLContext> sslContext;
   try {
+    auto clientCertificate = edenConfig->getClientCertificate();
     sslContext = buildSSLContext(clientCertificate);
   } catch (std::runtime_error& ex) {
     XLOG(WARN) << "mononoke is disabled because of build failure when "
@@ -301,6 +300,8 @@ void HgBackingStore::initializeMononoke(
     return;
   }
 
+  auto tierName = edenConfig->getMononokeTierName();
+  auto executor = folly::getIOExecutor();
   mononoke_ = std::make_unique<MononokeBackingStore>(
       tierName,
       options.repoName,

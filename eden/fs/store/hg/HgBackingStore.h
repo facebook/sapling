@@ -52,11 +52,7 @@ class HgBackingStore : public BackingStore {
       AbsolutePathPiece repository,
       LocalStore* localStore,
       UnboundedQueueExecutor* serverThreadPool,
-      std::shared_ptr<ReloadableConfig> config,
-      std::optional<AbsolutePath> clientCertificate = std::nullopt,
-      bool useMononoke = false,
-      folly::StringPiece mononokeTierName = folly::StringPiece(),
-      bool useDatapackGetBlob = false);
+      std::shared_ptr<ReloadableConfig> config);
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline
@@ -102,11 +98,7 @@ class HgBackingStore : public BackingStore {
    *
    * This leaves mononoke_ null if mononoke does not support the repository.
    */
-  void initializeMononoke(
-      const ImporterOptions& options,
-      bool useMononoke,
-      std::optional<AbsolutePath> clientCertificate,
-      folly::StringPiece tierName);
+  void initializeMononoke(const ImporterOptions& options);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
 
