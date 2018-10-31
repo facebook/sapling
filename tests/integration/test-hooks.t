@@ -130,7 +130,6 @@ Bypass owners check
   > amend=
   > CONFIG
   $ hg amend -m 'remove OWNERS\n@allow_delete_owners'
-  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/2d1a0bcf73ee-65b66be0-amend.hg (glob)
   $ hgmn push -r . --to master_bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 67730b0d6122 to destination ssh://user@dummy/repo bookmark master_bookmark
@@ -184,7 +183,6 @@ Send large file
 
 Bypass large file hook
   $ hg amend -m '@allow_large_files'
-  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/3e0db158edcc-6025a9b3-amend.hg (glob)
   $ hgmn push -r . --to master_bookmark
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   pushing rev 51fea0e7527d to destination ssh://user@dummy/repo bookmark master_bookmark
