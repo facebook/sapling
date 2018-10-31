@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import abc
 import contextlib
 import errno
 import logging
@@ -23,6 +24,7 @@ import threading
 import typing
 
 from .find_executables import FindExe
+from .linux import LinuxCgroup, ProcessID
 from .temporary_directory import create_tmp_dir
 
 
@@ -57,12 +59,62 @@ class SystemdUserServiceManager:
         result.check_returncode()
         return False
 
+    def enable_runtime_unit_from_file(self, unit_file: pathlib.Path) -> None:
+        subprocess.check_call(
+            ["systemctl", "--user", "enable", "--runtime", "--", unit_file],
+            env=self.env,
+        )
+        subprocess.check_call(["systemctl", "--user", "daemon-reload"], env=self.env)
+        self.sanity_check_enabled_unit(unit_file=unit_file)
+
+    def sanity_check_enabled_unit(self, unit_file: pathlib.Path) -> None:
+        unit_name = unit_file.name
+        if "@" in unit_name:
+            unit_name = unit_name.replace("@", "@testinstance")
+        self.sanity_check_enabled_unit_fragment(
+            unit_name=unit_name, expected_unit_file=unit_file
+        )
+        self.sanity_check_enabled_unit_sources(
+            unit_name=unit_name, expected_unit_file=unit_file
+        )
+
+    def sanity_check_enabled_unit_fragment(
+        self, unit_name: SystemdUnitName, expected_unit_file: pathlib.Path
+    ) -> None:
+        service = SystemdService(unit_name=unit_name, systemd=self)
+        actual_unit_file = service.query_fragment_path()
+        if actual_unit_file != expected_unit_file:
+            raise Exception(
+                "Enabled unit's FragmentPath does not match unit file\n"
+                "Expected: {repr(expected_unit_file)}\n"
+                "Actual:   {repr(actual_unit_file)}"
+            )
+
+    def sanity_check_enabled_unit_sources(
+        self, unit_name: SystemdUnitName, expected_unit_file: pathlib.Path
+    ) -> None:
+        actual_unit_sources = subprocess.check_output(
+            ["systemctl", "--user", "cat", "--", unit_name], env=self.env
+        )
+
+        expected_unit_sources = b""
+        for file in [expected_unit_file]:
+            expected_unit_sources += b"# " + bytes(file) + b"\n"
+            expected_unit_sources += file.read_bytes()
+
+        if actual_unit_sources != expected_unit_sources:
+            raise Exception(
+                "Enabled unit does not match unit file\n"
+                "Expected: {repr(expected_unit_sources)}\n"
+                "Actual:   {repr(actual_unit_sources)}"
+            )
+
     def systemd_run(
         self,
         command: typing.Sequence[str],
         properties: typing.Mapping[str, str],
         extra_env: typing.Mapping[str, str],
-    ) -> SystemdUnitName:
+    ) -> "SystemdService":
         systemd_run_command = ["systemd-run", "--user"]
         for name, value in properties.items():
             systemd_run_command.extend(("--property", f"{name}={value}"))
@@ -81,7 +133,7 @@ class SystemdUserServiceManager:
         )
         if match is None:
             raise Exception("Failed to parse unit from command output")
-        return match.group("unit")
+        return self.get_service(match.group("unit"))
 
     def get_active_unit_names(self) -> typing.List[SystemdUnitName]:
         def parse_line(line: str) -> SystemdUnitName:
@@ -110,6 +162,9 @@ class SystemdUserServiceManager:
         )
         return [pathlib.Path(line) for line in stdout.decode("utf-8").splitlines()]
 
+    def get_service(self, unit_name: SystemdUnitName) -> "SystemdService":
+        return SystemdService(unit_name=unit_name, systemd=self)
+
     @property
     def env(self) -> typing.Dict[str, str]:
         env = dict(os.environ)
@@ -125,6 +180,98 @@ class SystemdUserServiceManager:
 
     def __str__(self) -> str:
         return f"systemd ({self.xdg_runtime_dir})"
+
+    def __repr__(self) -> str:
+        return (
+            f"SystemdUserServiceManager(xdg_runtime_dir={repr(self.xdg_runtime_dir)})"
+        )
+
+
+class SystemdService:
+    def __init__(
+        self, unit_name: SystemdUnitName, systemd: SystemdUserServiceManager
+    ) -> None:
+        super().__init__()
+        self.__systemd = systemd
+        self.__unit_name = unit_name
+
+    @property
+    def unit_name(self) -> SystemdUnitName:
+        return self.__unit_name
+
+    def start(self) -> None:
+        subprocess.check_call(
+            ["systemctl", "--user", "start", "--", self.unit_name], env=self.__env
+        )
+
+    def stop(self) -> None:
+        subprocess.check_call(
+            ["systemctl", "--user", "stop", "--", self.unit_name], env=self.__env
+        )
+
+    def restart(self) -> None:
+        subprocess.check_call(
+            ["systemctl", "--user", "restart", "--", self.unit_name], env=self.__env
+        )
+
+    def query_active_state(self) -> str:
+        return self.__query_property("ActiveState").decode("utf-8")
+
+    def query_cgroup(self) -> LinuxCgroup:
+        return LinuxCgroup(self.__query_property("ControlGroup"))
+
+    def query_process_ids(self) -> typing.Sequence[ProcessID]:
+        return self.query_cgroup().query_process_ids()
+
+    def query_fragment_path(self) -> pathlib.Path:
+        return pathlib.Path(os.fsdecode(self.__query_property("FragmentPath")))
+
+    def __query_property(self, property: str) -> bytes:
+        stdout = subprocess.check_output(
+            [
+                "systemctl",
+                "--user",
+                "show",
+                f"--property={property}",
+                "--",
+                self.unit_name,
+            ],
+            env=self.__env,
+        )
+        prefix = property.encode("utf-8") + b"="
+        if not stdout.startswith(prefix):
+            raise Exception(f"Failed to parse output of systemctl show: {stdout}")
+        return stdout[len(prefix) :].rstrip(b"\n")
+
+    @property
+    def __env(self) -> typing.Dict[str, str]:
+        return self.__systemd.env
+
+    def __str__(self) -> str:
+        return f"{self.unit_name} (XDG_RUNTIME_DIR={self.__systemd.xdg_runtime_dir})"
+
+    def __repr__(self) -> str:
+        return (
+            f"SystemdService(unit_name={repr(self.unit_name)}, "
+            f"systemd={repr(self.__systemd)})"
+        )
+
+
+class SystemdUserServiceManagerMixin(metaclass=abc.ABCMeta):
+    def make_temporary_systemd_user_service_manager(self) -> SystemdUserServiceManager:
+        context_manager = temporary_systemd_user_service_manager()
+        exit = context_manager.__exit__
+        systemd = context_manager.__enter__()
+        self.addCleanup(lambda: exit(None, None, None))
+        return systemd
+
+    def addCleanup(
+        self,
+        function: typing.Callable[..., typing.Any],
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> None:
+        raise NotImplementedError()
 
 
 @contextlib.contextmanager
@@ -183,10 +330,7 @@ def _transient_managed_systemd_user_service_manager(
         yield child_systemd
     finally:
         try:
-            subprocess.check_call(
-                ["systemctl", "--user", "stop", "--", child_systemd_service],
-                env=child_systemd.env,
-            )
+            child_systemd_service.stop()
         except Exception:
             logger.warning(
                 f"Failed to stop systemd user service manager ({child_systemd})",
