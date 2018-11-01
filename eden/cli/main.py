@@ -42,6 +42,7 @@ from . import (
     stats as stats_mod,
     subcmd as subcmd_mod,
     top as top_mod,
+    trace as trace_mod,
     util,
     version as version_mod,
 )
@@ -1129,7 +1130,13 @@ def create_parser() -> argparse.ArgumentParser:
 
     subcmd_mod.add_subcommands(
         parser,
-        subcmd.commands + [debug_mod.DebugCmd, subcmd_mod.HelpCmd, stats_mod.StatsCmd],
+        subcmd.commands
+        + [
+            debug_mod.DebugCmd,
+            subcmd_mod.HelpCmd,
+            stats_mod.StatsCmd,
+            trace_mod.TraceCmd,
+        ],
     )
 
     return parser
