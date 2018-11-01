@@ -43,7 +43,7 @@ pub struct SqlStreamingChunksFetcher {
 
 queries! {
     read SelectChunks(repo_id: RepositoryId) -> (Vec<u8>, i32, Vec<u8>, i32) {
-        "SELECT idx_blob_name, index_size, data_blob_key, data_size
+        "SELECT idx_blob_name, idx_size, data_blob_name, data_size
          FROM streaming_changelog_chunks
          WHERE repo_id = {repo_id}
          ORDER BY chunk_num ASC"
