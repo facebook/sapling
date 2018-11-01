@@ -52,6 +52,7 @@
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/tracing/Tracing.h"
 #include "eden/fs/utils/ProcUtil.h"
 
 using folly::Future;
@@ -346,6 +347,7 @@ void EdenServiceHandler::getSHA1(
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> paths) {
 #ifndef EDEN_WIN
+  TraceBlock block("getSHA1");
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, *mountPoint, "[" + folly::join(", ", *paths.get()) + "]");
 
