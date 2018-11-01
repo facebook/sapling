@@ -14,6 +14,9 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/mononoke/MononokeBackingStore.h"
 #include "eden/fs/utils/PathFuncs.h"
+#ifndef EDEN_WIN_NO_RUST_DATAPACK
+#include "scm/hg/lib/revisionstore/RevisionStore.h"
+#endif
 
 #include <folly/Executor.h>
 #include <folly/Range.h>
@@ -111,6 +114,7 @@ class HgBackingStore : public BackingStore {
   folly::Future<std::unique_ptr<Tree>> importTreeForCommit(Hash commitID);
 
 #if EDEN_HAVE_HG_TREEMANIFEST
+  void initializeDatapackImport(AbsolutePathPiece repository);
   folly::Future<std::unique_ptr<Tree>> importTreeImpl(
       const Hash& manifestNode,
       const Hash& edenTreeID,
@@ -159,6 +163,9 @@ class HgBackingStore : public BackingStore {
 #ifndef EDEN_WIN_NOMONONOKE
   std::unique_ptr<MononokeBackingStore> mononoke_;
 #endif // EDEN_WIN_NOMONONOKE
+#ifndef EDEN_WIN_NO_RUST_DATAPACK
+  std::optional<folly::Synchronized<DataPackUnion>> dataPackStore_;
+#endif
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 };
 } // namespace eden

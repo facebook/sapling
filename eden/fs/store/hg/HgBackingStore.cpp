@@ -33,6 +33,9 @@
 #if EDEN_HAVE_HG_TREEMANIFEST
 #include "hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
 #include "hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
+#ifndef EDEN_WIN_NO_RUST_DATAPACK
+#include "scm/hg/lib/configparser/ConfigParser.h"
+#endif
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 
 using folly::ByteRange;
@@ -184,8 +187,33 @@ std::unique_ptr<Blob> getBlobFromUnionStore(
   }
   return nullptr;
 }
-#endif // EDEN_HAVE_HG_TREEMANIFEST
 
+#ifndef EDEN_WIN_NO_RUST_DATAPACK
+std::unique_ptr<Blob> getBlobFromDataPackUnion(
+    DataPackUnion& store,
+    const Hash& id,
+    const HgProxyHash& hgInfo) {
+  try {
+    auto content =
+        store.get(hgInfo.path().stringPiece(), hgInfo.revHash().getBytes());
+    if (content) {
+      auto bytes = content->bytes();
+      return make_unique<Blob>(
+          id, IOBuf(IOBuf::CopyBufferOp{}, bytes.data(), bytes.size()));
+    }
+    // If we get here, it was a KeyError, meaning that the data wasn't
+    // present in the hgcache, rather than a more terminal problems such
+    // as an IOError of some kind.
+    // Regardless, we'll return nullptr and fallback to other sources.
+  } catch (const DataPackUnionGetError& exc) {
+    XLOG(ERR) << "Error getting " << hgInfo.path() << " " << hgInfo.revHash()
+              << " from dataPackStore_: " << exc.what()
+              << ", will fall back to other methods";
+  }
+  return nullptr;
+}
+#endif
+#endif
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -215,6 +243,9 @@ HgBackingStore::HgBackingStore(
       serverThreadPool_(serverThreadPool),
       useDatapackGetBlob_(false) {
 #if EDEN_HAVE_HG_TREEMANIFEST
+#ifndef EDEN_WIN_NO_RUST_DATAPACK
+  initializeDatapackImport(repository);
+#endif
   HgImporter importer(repository, localStore);
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
@@ -235,6 +266,63 @@ HgBackingStore::HgBackingStore(Importer* importer, LocalStore* localStore)
       serverThreadPool_{importThreadPool_.get()} {}
 
 HgBackingStore::~HgBackingStore() {}
+
+#ifndef EDEN_WIN_NO_RUST_DATAPACK
+namespace {
+folly::Synchronized<DataPackUnion> makeUnionStore(
+    AbsolutePathPiece repository,
+    folly::StringPiece repoName,
+    AbsolutePathPiece cachePath,
+    RelativePathPiece subdir) {
+  std::vector<AbsolutePath> paths;
+
+  paths.emplace_back(repository + ".hg/store"_relpath + subdir);
+  paths.emplace_back(cachePath + RelativePathPiece{repoName} + subdir);
+
+  std::vector<const char*> cStrings;
+  for (auto& path : paths) {
+    cStrings.emplace_back(path.c_str());
+  }
+  return folly::Synchronized<DataPackUnion>(
+      DataPackUnion(cStrings.data(), cStrings.size()));
+}
+} // namespace
+
+void HgBackingStore::initializeDatapackImport(AbsolutePathPiece repository) {
+  HgRcConfigSet config;
+
+  auto repoConfigPath = repository + ".hg/hgrc"_relpath;
+
+  try {
+    config.loadSystem();
+    config.loadUser();
+    config.loadPath(repoConfigPath.c_str());
+  } catch (const HgRcConfigError& exc) {
+    XLOG(ERR)
+        << "Disabling loading blobs from hgcache: Error(s) while loading '"
+        << repoConfigPath << "': " << exc.what();
+    return;
+  }
+
+  auto maybeRepoName = config.get("remotefilelog", "reponame");
+  auto maybeCachePath = config.get("remotefilelog", "cachepath");
+
+  if (maybeRepoName.hasValue() && maybeCachePath.hasValue()) {
+    folly::StringPiece repoName{maybeRepoName.value().bytes()};
+    AbsolutePathPiece cachePath{StringPiece{maybeCachePath.value().bytes()}};
+
+    dataPackStore_ =
+        makeUnionStore(repository, repoName, cachePath, "packs"_relpath);
+    // TODO: create a treePackStore here with `packs/manifests` as the subdir.
+    // That depends on some future work to port the manifest code from C++
+    // to Rust.
+  } else {
+    XLOG(DBG2)
+        << "Disabling loading blobs from hgcache: remotefilelog.reponame "
+           "and/or remotefilelog.cachepath are not configured";
+  }
+}
+#endif
 
 void HgBackingStore::initializeTreeManifestImport(
     const ImporterOptions& options,
@@ -644,6 +732,16 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
   HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
 #if EDEN_HAVE_HG_TREEMANIFEST
+#ifndef EDEN_WIN_NO_RUST_DATAPACK
+  if (useDatapackGetBlob_ && dataPackStore_) {
+    auto content =
+        getBlobFromDataPackUnion(*dataPackStore_.value().wlock(), id, hgInfo);
+    if (content) {
+      return makeFuture(std::move(content));
+    }
+  } else
+#endif
+  // Prefer using the above rust implementation over the C++ implementation
   if (useDatapackGetBlob_ && unionStore_) {
     auto content = getBlobFromUnionStore(*unionStore_->wlock(), id, hgInfo);
     if (content) {
