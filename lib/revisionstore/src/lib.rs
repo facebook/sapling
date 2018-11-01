@@ -24,6 +24,7 @@ mod fanouttable;
 mod sliceext;
 mod unionstore;
 
+pub mod c_api;
 pub mod datapack;
 pub mod datastore;
 pub mod error;

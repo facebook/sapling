@@ -82,6 +82,7 @@ pub mod config;
 pub mod error;
 pub mod hg;
 pub mod parser;
+pub mod c_api;
 
 pub use error::Error;
 
