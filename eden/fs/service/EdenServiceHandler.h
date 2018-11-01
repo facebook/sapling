@@ -175,6 +175,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void getStatInfo(InternalStats& result) override;
 
+  void enableTracing() override;
+  void disableTracing() override;
+  void getTracePoints(std::vector<TracePoint>& result) override;
+
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
    * EdenServer to shut down, as well.  We prefer that external

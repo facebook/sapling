@@ -426,6 +426,33 @@ struct GetAccessCountsResult {
   // 3: map<pid_t, AccessCount> thriftAccesses
 }
 
+enum TracePointEvent {
+  // Start of a new block
+  START = 0;
+  // End of a block
+  STOP = 1;
+}
+
+struct TracePoint {
+  // Holds nanoseconds since the epoch
+  1: i64 timestamp,
+  // Opaque identifier for the entire trace - used to associate this
+  // tracepoint with other tracepoints across an entire request
+  2: i64 traceId,
+  // Opaque identifier for this "block" where a block is some logical
+  // piece of work with a well-defined start and stop point
+  3: i64 blockId,
+  // Opaque identifer for the parent block from which the current
+  // block was constructed - used to create causal relationships
+  // between blocks
+  4: i64 parentBlockId,
+  // The name of the block, only set on the tracepoint starting the
+  // block, must point to a statically allocated cstring
+  5: string name = "",
+  // What event this trace point represents
+  6: TracePointEvent event,
+}
+
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
@@ -759,6 +786,10 @@ service EdenService extends fb303.FacebookService {
    * Gets the number of inodes unloaded by periodic job on an EdenMount.
    */
   InternalStats getStatInfo() throws (1: EdenError ex)
+
+  void enableTracing()
+  void disableTracing()
+  list<TracePoint> getTracePoints()
 
   /**
    * Ask the server to shutdown and provide it some context for its logs

@@ -1287,6 +1287,35 @@ void EdenServiceHandler::shutdown() {
   server_->stop();
 }
 
+void EdenServiceHandler::enableTracing() {
+  XLOG(INFO) << "Enabling tracing";
+  eden::enableTracing();
+}
+void EdenServiceHandler::disableTracing() {
+  XLOG(INFO) << "Disabling tracing";
+  eden::disableTracing();
+}
+
+void EdenServiceHandler::getTracePoints(std::vector<TracePoint>& result) {
+  auto compactTracePoints = getAllTracepoints();
+  for (auto& point : compactTracePoints) {
+    TracePoint tp;
+    tp.set_timestamp(point.timestamp.count());
+    tp.set_traceId(point.traceId);
+    tp.set_blockId(point.blockId);
+    tp.set_parentBlockId(point.parentBlockId);
+    if (point.name) {
+      tp.set_name(std::string(point.name));
+    }
+    if (point.start) {
+      tp.set_event(TracePointEvent::START);
+    } else if (point.stop) {
+      tp.set_event(TracePointEvent::STOP);
+    }
+    result.emplace_back(std::move(tp));
+  }
+}
+
 void EdenServiceHandler::initiateShutdown(std::unique_ptr<std::string> reason) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO);
   XLOG(INFO) << "initiateShutdown requested, reason: " << *reason;
