@@ -15,10 +15,11 @@
 namespace {
 /**
  * Allocating one unique ID per nanosecond would wrap around in over 500 years.
+ * Initialized to 1 so that consumers can assume 0 is not a valid id
  *
  * CachelinePadded may be excessive here.
  */
-folly::CachelinePadded<std::atomic<uint64_t>> globalCounter;
+folly::CachelinePadded<std::atomic<uint64_t>> globalCounter{1};
 
 struct LocalRange {
   uint64_t begin{0};
