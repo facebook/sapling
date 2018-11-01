@@ -45,9 +45,8 @@ class SystemdUserServiceManager:
         return self.__xdg_runtime_dir
 
     def is_alive(self) -> bool:
-        result = subprocess.run(
-            ["systemctl", "--user", "show-environment"],
-            env=self.env,
+        result = self._systemctl.run(
+            ["--user", "show-environment"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
@@ -60,11 +59,8 @@ class SystemdUserServiceManager:
         return False
 
     def enable_runtime_unit_from_file(self, unit_file: pathlib.Path) -> None:
-        subprocess.check_call(
-            ["systemctl", "--user", "enable", "--runtime", "--", unit_file],
-            env=self.env,
-        )
-        subprocess.check_call(["systemctl", "--user", "daemon-reload"], env=self.env)
+        self._systemctl.check_call(["enable", "--runtime", "--", unit_file])
+        self._systemctl.check_call(["daemon-reload"])
         self.sanity_check_enabled_unit(unit_file=unit_file)
 
     def sanity_check_enabled_unit(self, unit_file: pathlib.Path) -> None:
@@ -93,9 +89,7 @@ class SystemdUserServiceManager:
     def sanity_check_enabled_unit_sources(
         self, unit_name: SystemdUnitName, expected_unit_file: pathlib.Path
     ) -> None:
-        actual_unit_sources = subprocess.check_output(
-            ["systemctl", "--user", "cat", "--", unit_name], env=self.env
-        )
+        actual_unit_sources = self._systemctl.check_output(["cat", "--", unit_name])
 
         expected_unit_sources = b""
         for file in [expected_unit_file]:
@@ -140,10 +134,8 @@ class SystemdUserServiceManager:
             parts = re.split(r" +", line)
             return parts[0]
 
-        stdout = subprocess.check_output(
+        stdout = self._systemctl.check_output(
             [
-                "systemctl",
-                "--user",
                 "list-units",
                 "--all",
                 "--full",
@@ -151,8 +143,7 @@ class SystemdUserServiceManager:
                 "--no-pager",
                 "--plain",
                 "--state=active",
-            ],
-            env=self.env,
+            ]
         )
         return [parse_line(line) for line in stdout.decode("utf-8").splitlines()]
 
@@ -178,6 +169,10 @@ class SystemdUserServiceManager:
             "XDG_RUNTIME_DIR": str(self.xdg_runtime_dir),
         }
 
+    @property
+    def _systemctl(self) -> "_SystemctlCLI":
+        return _SystemctlCLI(env=self.env)
+
     def __str__(self) -> str:
         return f"systemd ({self.xdg_runtime_dir})"
 
@@ -200,19 +195,13 @@ class SystemdService:
         return self.__unit_name
 
     def start(self) -> None:
-        subprocess.check_call(
-            ["systemctl", "--user", "start", "--", self.unit_name], env=self.__env
-        )
+        self.__systemctl.check_call(["start", "--", self.unit_name])
 
     def stop(self) -> None:
-        subprocess.check_call(
-            ["systemctl", "--user", "stop", "--", self.unit_name], env=self.__env
-        )
+        self.__systemctl.check_call(["stop", "--", self.unit_name])
 
     def restart(self) -> None:
-        subprocess.check_call(
-            ["systemctl", "--user", "restart", "--", self.unit_name], env=self.__env
-        )
+        self.__systemctl.check_call(["restart", "--", self.unit_name])
 
     def query_active_state(self) -> str:
         return self.__query_property("ActiveState").decode("utf-8")
@@ -227,16 +216,8 @@ class SystemdService:
         return pathlib.Path(os.fsdecode(self.__query_property("FragmentPath")))
 
     def __query_property(self, property: str) -> bytes:
-        stdout = subprocess.check_output(
-            [
-                "systemctl",
-                "--user",
-                "show",
-                f"--property={property}",
-                "--",
-                self.unit_name,
-            ],
-            env=self.__env,
+        stdout = self.__systemctl.check_output(
+            ["show", f"--property={property}", "--", self.unit_name]
         )
         prefix = property.encode("utf-8") + b"="
         if not stdout.startswith(prefix):
@@ -244,8 +225,8 @@ class SystemdService:
         return stdout[len(prefix) :].rstrip(b"\n")
 
     @property
-    def __env(self) -> typing.Dict[str, str]:
-        return self.__systemd.env
+    def __systemctl(self) -> "_SystemctlCLI":
+        return self.__systemd._systemctl
 
     def __str__(self) -> str:
         return f"{self.unit_name} (XDG_RUNTIME_DIR={self.__systemd.xdg_runtime_dir})"
@@ -255,6 +236,56 @@ class SystemdService:
             f"SystemdService(unit_name={repr(self.unit_name)}, "
             f"systemd={repr(self.__systemd)})"
         )
+
+
+class _SystemctlCLI:
+    def __init__(self, env: typing.Dict[str, str]) -> None:
+        super().__init__()
+        self.__env = env
+
+    def check_call(
+        self, command_arguments: typing.Sequence[typing.Union[str, pathlib.Path]]
+    ) -> None:
+        """Run 'systemctl --user' with the given arguments.
+
+        See also subprocess.check_call.
+        """
+        subprocess.check_call(self.__command(command_arguments), env=self.__env)
+
+    def check_output(
+        self, command_arguments: typing.Sequence[typing.Union[str, pathlib.Path]]
+    ) -> bytes:
+        """Run 'systemctl --user' and return the command's output.
+
+        See also subprocess.check_output.
+        """
+        return subprocess.check_output(
+            self.__command(command_arguments), env=self.__env
+        )
+
+    def run(
+        self,
+        command_arguments: typing.Sequence[typing.Union[str, pathlib.Path]],
+        stdout: "subprocess._FILE" = None,
+        stderr: "subprocess._FILE" = None,
+    ) -> subprocess.CompletedProcess:
+        """Run 'systemctl --user' and return the command's output and exit status.
+
+        See also subprocess.run.
+        """
+        return subprocess.run(
+            self.__command(command_arguments),
+            env=self.__env,
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+    def __command(
+        self, command_arguments: typing.Sequence[typing.Union[str, pathlib.Path]]
+    ) -> typing.Sequence[str]:
+        command = ["systemctl", "--user"]
+        command.extend(str(arg) for arg in command_arguments)
+        return command
 
 
 class SystemdUserServiceManagerMixin(metaclass=abc.ABCMeta):
