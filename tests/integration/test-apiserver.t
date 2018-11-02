@@ -14,7 +14,7 @@ setup testing repo for mononoke
   $ SHA=$(sha256sum test | awk '{print $1;}')
   $ ln -s test link
   $ mkdir -p folder/subfolder
-  $ touch folder/subfolder/.keep
+  $ echo "hello" > folder/subfolder/.keep
   $ hg add test link folder/subfolder/.keep
   $ hg commit -ma
   $ COMMIT1=$(hg --debug id -i)
@@ -184,7 +184,7 @@ test folder list
       {
           "name": "subfolder",
           "type": "tree",
-          "hash": "9b5497965e634f261cca0247a7a48b709a7be2b9"
+          "hash": "732eacf2be3265bd6bc4d2c205434b280f446cbf"
       }
   ]
 
@@ -195,7 +195,7 @@ test folder list
       {
           "name": ".keep",
           "type": "file",
-          "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db"
+          "hash": "2c186c8c5bc0df5af5b951afe407d803f9e6b8c9"
       }
   ]
 
@@ -214,7 +214,7 @@ test get blob by hash
   $ diff output - <<< $TEST_CONTENT
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/$TREEHASH | extract_json_error
-  9b5497965e634f261cca0247a7a48b709a7be2b9 is not found
+  732eacf2be3265bd6bc4d2c205434b280f446cbf is not found
   404
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/blob/0000 | extract_json_error
@@ -231,7 +231,9 @@ test get tree
       {
           "name": ".keep",
           "type": "file",
-          "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db"
+          "hash": "2c186c8c5bc0df5af5b951afe407d803f9e6b8c9",
+          "size": 6,
+          "content_sha1": "f572d396fae9206628714fb2ce00f72e94f2258f"
       }
   ]
 

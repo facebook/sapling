@@ -10,6 +10,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use failure::{err_msg, Error};
 use futures::{Future, IntoFuture};
+use futures::future::join_all;
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
@@ -31,7 +32,7 @@ use from_string as FS;
 
 use super::{MononokeRepoQuery, MononokeRepoResponse};
 use super::lfs::{build_response, BatchRequest};
-use super::model::Entry;
+use super::model::{Entry, EntryWithSizeAndContentHash};
 
 pub struct MononokeRepo {
     repo: Arc<BlobRepo>,
@@ -201,12 +202,13 @@ impl MononokeRepo {
         self.repo
             .get_manifest_by_nodeid(&treemanifestid)
             .map(|tree| {
-                tree.list()
-                    .filter_map(|entry| -> Option<Entry> { entry.try_into().ok() })
+                join_all(
+                    tree.list()
+                        .map(|entry| EntryWithSizeAndContentHash::materialize_future(entry)),
+                )
             })
-            .map(|files| MononokeRepoResponse::GetTree {
-                files: Box::new(files),
-            })
+            .flatten()
+            .map(|files| MononokeRepoResponse::GetTree { files })
             .from_err()
             .boxify()
     }

@@ -10,10 +10,14 @@ use std::convert::TryFrom;
 use std::str;
 
 use chrono::{DateTime, FixedOffset};
-use failure::Error;
+use failure::{err_msg, Error};
 
 use blobrepo::HgBlobChangeset;
+use futures::prelude::*;
+use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, Type};
+use mercurial_types::hash::Sha1;
+use mercurial_types::manifest::Content;
 
 #[derive(Serialize)]
 pub enum FileType {
@@ -59,6 +63,55 @@ impl TryFrom<Box<HgEntry + Sync>> for Entry {
         let hash = entry.get_hash().to_string();
 
         Ok(Entry { name, ttype, hash })
+    }
+}
+
+#[derive(Serialize)]
+pub struct EntryWithSizeAndContentHash {
+    name: String,
+    #[serde(rename = "type")]
+    ttype: FileType,
+    hash: String,
+    size: Option<usize>,
+    content_sha1: Option<String>,
+}
+
+impl EntryWithSizeAndContentHash {
+    pub fn materialize_future(entry: Box<HgEntry + Sync>) -> BoxFuture<Self, Error> {
+        let name = try_boxfuture!(
+            entry
+                .get_name()
+                .map(|name| name.to_bytes())
+                .ok_or_else(|| err_msg("HgEntry has no name!?"))
+        );
+        // FIXME: json cannot represent non-UTF8 file names
+        let name = try_boxfuture!(String::from_utf8(name));
+        let ttype = entry.get_type().into();
+        let hash = entry.get_hash().to_string();
+
+        spawn_future(entry.get_content().and_then(move |content| {
+            let size = match &content {
+                Content::File(contents)
+                | Content::Executable(contents)
+                | Content::Symlink(contents) => Some(contents.size()),
+                Content::Tree(manifest) => Some(manifest.list().count()),
+            };
+            Ok(EntryWithSizeAndContentHash {
+                name,
+                ttype,
+                hash,
+                size,
+                content_sha1: match content {
+                    Content::File(contents)
+                    | Content::Executable(contents)
+                    | Content::Symlink(contents) => {
+                        let sha1 = Sha1::from(contents.as_bytes().as_ref());
+                        Some(sha1.to_hex().to_string())
+                    }
+                    Content::Tree(_) => None,
+                },
+            })
+        })).boxify()
     }
 }
 

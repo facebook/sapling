@@ -11,7 +11,7 @@ use actix_web::{Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
 
 use super::lfs::BatchResponse;
-use super::model::{Changeset, Entry};
+use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};
 
 pub enum MononokeRepoResponse {
     GetRawFile {
@@ -24,7 +24,7 @@ pub enum MononokeRepoResponse {
         files: Box<Iterator<Item = Entry> + Send>,
     },
     GetTree {
-        files: Box<Iterator<Item = Entry> + Send>,
+        files: Vec<EntryWithSizeAndContentHash>,
     },
     GetChangeset {
         changeset: Changeset,
@@ -56,8 +56,11 @@ impl Responder for MononokeRepoResponse {
 
         match self {
             GetRawFile { content } | GetBlobContent { content } => Ok(binary_response(content)),
-            ListDirectory { files } | GetTree { files } => {
+            ListDirectory { files } => {
                 Json(files.collect::<Vec<_>>()).respond_to(req)
+            }
+            GetTree{files}=> {
+                Json(files).respond_to(req)
             }
             GetChangeset { changeset } => Json(changeset).respond_to(req),
             IsAncestor { answer } => Ok(binary_response({
