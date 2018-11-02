@@ -72,11 +72,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   enum : int { WRONG_TYPE_ERRNO = ENOTDIR };
 
-  enum class Recurse {
-    SHALLOW,
-    DEEP,
-  };
-
   /** Holds the results of a create operation. */
   struct CreateResult {
     /// file attributes and cache ttls.
@@ -355,20 +350,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   size_t unloadChildrenLastAccessedBefore(const timespec& cutoff);
 
   /**
-   * Load all materialized children underneath this TreeInode.
-   *
-   * This recursively descends into children directories.
-   *
-   * This method is intended to be called during the mount point initialization
-   * to trigger loading of materialized inodes.  This allows other parts of the
-   * code to assume that materialized inodes are always loaded once the mount
-   * point has been initialized.
+   * Load materialized children underneath this TreeInode.
    *
    * Returns a Future that completes once all materialized inodes have been
    * loaded.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> loadMaterializedChildren(
-      Recurse recurse = Recurse::DEEP);
+  FOLLY_NODISCARD folly::Future<folly::Unit> loadMaterializedChildren();
 
   /*
    * Update a tree entry as part of a checkout operation.

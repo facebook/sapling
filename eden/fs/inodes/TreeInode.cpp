@@ -2904,18 +2904,6 @@ bool TreeInode::checkoutTryRemoveEmptyDir(CheckoutContext* ctx) {
   return (errnoValue == 0);
 }
 
-namespace {
-folly::Future<folly::Unit> recursivelyLoadMaterializedChildren(
-    const InodePtr& child) {
-  // If this child is a directory, call loadMaterializedChildren() on it.
-  TreeInodePtr treeChild = child.asTreePtrOrNull();
-  if (treeChild) {
-    return treeChild->loadMaterializedChildren();
-  }
-  return folly::makeFuture();
-}
-} // namespace
-
 folly::Future<InodePtr> TreeInode::loadChildLocked(
     DirContents& /* contents */,
     PathComponentPiece name,
@@ -2937,8 +2925,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
   return future;
 }
 
-folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
-    Recurse recurse) {
+folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
   std::vector<IncompleteInodeLoad> pendingLoads;
   std::vector<Future<InodePtr>> inodeFutures;
 
@@ -2977,10 +2964,7 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
   // children directories when each child inode becomes ready.
   std::vector<Future<folly::Unit>> results;
   for (auto& future : inodeFutures) {
-    results.emplace_back(
-        recurse == Recurse::DEEP
-            ? std::move(future).thenValue(recursivelyLoadMaterializedChildren)
-            : std::move(future).unit());
+    results.emplace_back(std::move(future).unit());
   }
 
   return folly::collectAll(results).unit();
@@ -3282,9 +3266,7 @@ InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {
 
 folly::Future<folly::Unit> TreeInode::prefetch() {
   return folly::via(getMount()->getThreadPool().get())
-      .thenValue([this](auto&&) {
-        return loadMaterializedChildren(Recurse::SHALLOW);
-      });
+      .thenValue([this](auto&&) { return loadMaterializedChildren(); });
 }
 
 folly::Future<Dispatcher::Attr> TreeInode::setattr(
