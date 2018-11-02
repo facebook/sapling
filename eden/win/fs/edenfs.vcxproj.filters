@@ -72,6 +72,9 @@
     <Filter Include="Win\fs\Service">
       <UniqueIdentifier>{e5ddd6cf-3c18-445c-a13c-05d39ff5011e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="fs\Tracing">
+      <UniqueIdentifier>{71ab52ce-cc25-4206-8738-c0323d53fbfb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\fs\store\hg\HgBackingStore.cpp">
@@ -271,6 +274,12 @@
     </ClCompile>
     <ClCompile Include="utils\Subprocess.cpp">
       <Filter>Win\fs\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\SerializedBlobMetadata.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\tracing\Tracing.cpp">
+      <Filter>fs\Tracing</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -492,6 +501,9 @@
     </ClInclude>
     <ClInclude Include="utils\Subprocess.h">
       <Filter>Win\fs\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\tracing\Tracing.h">
+      <Filter>fs\Tracing</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

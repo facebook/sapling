@@ -196,6 +196,7 @@
     <ClCompile Include="..\..\fs\store\SerializedBlobMetadata.cpp" />
     <ClCompile Include="..\..\fs\store\SqliteLocalStore.cpp" />
     <ClCompile Include="..\..\fs\store\StoreResult.cpp" />
+    <ClCompile Include="..\..\fs\tracing\Tracing.cpp" />
     <ClCompile Include="..\..\fs\utils\Clock.cpp" />
     <ClCompile Include="..\..\fs\utils\PathFuncs.cpp" />
     <ClCompile Include="..\..\fs\utils\TimeUtil.cpp" />
@@ -268,6 +269,7 @@
     <ClInclude Include="..\..\fs\store\ObjectStore.h" />
     <ClInclude Include="..\..\fs\store\SqliteLocalStore.h" />
     <ClInclude Include="..\..\fs\store\StoreResult.h" />
+    <ClInclude Include="..\..\fs\tracing\Tracing.h" />
     <ClInclude Include="..\..\fs\utils\Clock.h" />
     <ClInclude Include="..\..\fs\utils\PathFuncs.h" />
     <ClInclude Include="..\..\fs\utils\TimeUtil.h" />
