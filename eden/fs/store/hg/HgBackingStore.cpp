@@ -473,6 +473,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     RelativePath ownedPath(path);
     return mononoke_->getTree(manifestNode)
         .within(std::chrono::milliseconds(FLAGS_mononoke_timeout))
+        .via(serverThreadPool_)
         .thenTry([edenTreeID, ownedPath, writeBatch](
                      auto mononokeTreeTry) mutable {
           auto& mononokeTree = mononokeTreeTry.value();
