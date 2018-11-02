@@ -38,6 +38,7 @@ extern crate tokio;
 extern crate tokio_codec;
 extern crate tokio_io;
 extern crate tokio_openssl;
+extern crate tokio_timer;
 #[macro_use]
 extern crate tracing;
 extern crate uuid;
@@ -62,6 +63,7 @@ use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
+use std::sync::atomic::AtomicBool;
 
 use metaconfig::repoconfig::RepoConfig;
 
@@ -75,6 +77,7 @@ pub fn create_repo_listeners(
     root_log: &Logger,
     sockname: &str,
     tls_acceptor: SslAcceptor,
+    terminate_process: &'static AtomicBool,
 ) -> (BoxFuture<(), Error>, ready_state::ReadyState) {
     let sockname = String::from(sockname);
     let root_log = root_log.clone();
@@ -83,7 +86,7 @@ pub fn create_repo_listeners(
     (
         repo_handlers(repos, myrouter_port, &root_log, &mut ready)
             .and_then(move |handlers| {
-                connection_acceptor(sockname, root_log, handlers, tls_acceptor)
+                connection_acceptor(sockname, root_log, handlers, tls_acceptor, terminate_process)
             })
             .boxify(),
         ready.freeze(),

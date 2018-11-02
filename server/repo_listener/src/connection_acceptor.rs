@@ -7,13 +7,14 @@
 use std::collections::HashMap;
 use std::io;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, atomic::{AtomicBool, AtomicUsize, Ordering}};
+use std::time::Duration;
 
 use bytes::Bytes;
-use failure::SlogKVError;
-use futures::{future, stream, Future, IntoFuture, Stream};
+use failure::{err_msg, SlogKVError};
+use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures::sync::mpsc;
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
 use tokio;
@@ -21,6 +22,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio_codec::{FramedRead, FramedWrite};
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 use tokio_openssl::SslAcceptorExt;
+use tokio_timer;
 
 use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
@@ -30,6 +32,10 @@ use request_handler::request_handler;
 
 const CHUNK_SIZE: usize = 10000;
 
+lazy_static! {
+    static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
+}
+
 /// This function accepts connections, reads Preamble and routes request to a thread responsible for
 /// a particular repo
 pub fn connection_acceptor(
@@ -37,20 +43,36 @@ pub fn connection_acceptor(
     root_log: Logger,
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
+    terminate_process: &'static AtomicBool,
 ) -> BoxFuture<(), Error> {
     let repo_handlers = Arc::new(repo_handlers);
     let tls_acceptor = Arc::new(tls_acceptor);
-
-    listener(sockname)
+    let listener = listener(sockname)
         .expect("failed to create listener")
-        .map_err(Error::from)
+        .map_err(Error::from);
+
+    TakeUntilNotSet::new(listener.boxify(), terminate_process)
         .for_each(move |sock| {
             // Accept the request without blocking the listener
             cloned!(root_log, repo_handlers, tls_acceptor);
+            OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
             tokio::spawn(future::lazy(move || {
-                accept(sock, root_log, repo_handlers, tls_acceptor)
+                accept(sock, root_log, repo_handlers, tls_acceptor).then(|res| {
+                    OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
+                    res
+                })
             }));
             Ok(())
+        })
+        .and_then(|()| {
+            // A termination signal was sent to the server, and we give open
+            // connections time to finish. Note that some connections can be
+            // very long, so the best scenario is to send SIGTERM first, then
+            // wait for some time and send SIGKILL if server is still alive.
+            stream::repeat(())
+                .and_then(|()| tokio_timer::sleep(Duration::new(1, 0)).from_err())
+                .take_while(|()| Ok(OPEN_CONNECTIONS.load(Ordering::Relaxed) != 0))
+                .for_each(|()| Ok(()))
         })
         .boxify()
 }
@@ -212,4 +234,45 @@ fn split_bytes_in_chunk<E>(blob: Bytes, chunksize: usize) -> impl Stream<Item = 
             None
         }
     })
+}
+
+// Stream wrapper that stops when a flag is set
+// It does it by periodically checking the flag's value
+struct TakeUntilNotSet<T> {
+    periodic_checker: BoxStream<(), Error>,
+    input: BoxStream<T, Error>,
+    flag: &'static AtomicBool,
+}
+
+impl<T> TakeUntilNotSet<T> {
+    fn new(input: BoxStream<T, Error>, flag: &'static AtomicBool) -> Self {
+        Self {
+            periodic_checker: tokio_timer::Interval::new_interval(Duration::new(1, 0))
+                .map(|_| ())
+                .map_err(|e| err_msg(format!("{}", e)))
+                .boxify(),
+            input,
+            flag,
+        }
+    }
+}
+
+impl<T> Stream for TakeUntilNotSet<T> {
+    type Item = T;
+    type Error = Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        if self.flag.load(Ordering::Relaxed) {
+            return Ok(Async::Ready(None));
+        }
+
+        match self.periodic_checker.poll()? {
+            Async::NotReady | Async::Ready(Some(())) => {}
+            Async::Ready(None) => {
+                unreachable!("infinite loop finished?");
+            }
+        };
+
+        self.input.poll()
+    }
 }

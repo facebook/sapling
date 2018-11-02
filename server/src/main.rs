@@ -10,6 +10,8 @@
 extern crate clap;
 extern crate failure_ext as failure;
 extern crate futures;
+#[macro_use]
+extern crate lazy_static;
 extern crate openssl;
 extern crate secure_utils;
 extern crate services;
@@ -38,6 +40,7 @@ mod monitoring;
 use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use clap::{App, ArgMatches};
 use failure::SlogKVError;
@@ -55,6 +58,10 @@ mod errors {
     pub use failure::{Error, Result};
 }
 use errors::*;
+
+lazy_static! {
+    static ref TERMINATE_PROCESS: AtomicBool = AtomicBool::new(false);
+}
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     cmdlib::args::add_cachelib_args(App::new("mononoke server")
@@ -190,38 +197,29 @@ fn main() {
                 .value_of("listening-host-port")
                 .expect("listening path must be specified"),
             secure_utils::build_tls_acceptor(ssl).expect("failed to build tls acceptor"),
+            &TERMINATE_PROCESS,
         );
 
         tracing_fb303::register();
 
-        let maybe_thrift = match monitoring::start_thrift_service(&root_log, &matches, ready) {
-            None => None,
-            Some(handle) => Some(handle?),
-        };
+        let sigterm = 15;
+        unsafe {
+            signal(sigterm, handle_sig_term);
+        }
+
+        // Thread with a thrift service is now detached
+        monitoring::start_thrift_service(&root_log, &matches, ready);
 
         runtime.spawn(
             repo_listeners
-                .join(stats_aggregation.from_err())
-                .map(|((), ())| ())
-                .map_err(|err| panic!("Unexpected error: {:#?}", err)),
+                .select(stats_aggregation.from_err())
+                .map(|((), _)| ())
+                .map_err(|(err, _)| panic!("Unexpected error: {:#?}", err)),
         );
         runtime
             .shutdown_on_idle()
             .wait()
             .expect("This runtime should never be idle");
-
-        if let Some(handle) = maybe_thrift {
-            let thread_name = handle.thread().name().unwrap_or("unknown").to_owned();
-            match handle.join() {
-                Ok(_) => panic!("unexpected success"),
-                Err(panic) => crit!(
-                    root_log,
-                    "Thread {} panicked with: {:?}",
-                    thread_name,
-                    panic
-                ),
-            }
-        }
 
         info!(root_log, "No service to run, shutting down");
         std::process::exit(0);
@@ -234,4 +232,12 @@ fn main() {
             std::process::exit(1);
         }
     }
+}
+
+extern "C" {
+    fn signal(sig: u32, cb: extern "C" fn(u32)) -> extern "C" fn(u32);
+}
+
+extern "C" fn handle_sig_term(_: u32) {
+    TERMINATE_PROCESS.store(true, Ordering::Relaxed);
 }
