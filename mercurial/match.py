@@ -381,6 +381,9 @@ class _tree(dict):
                             # Giving up - fallback to slow paths.
                             self.unsurerecursive = True
                         self._globdirpats.append(parentpat)
+                if any("**" in p for p in globpats):
+                    # Giving up - "**" matches paths including "/"
+                    self.unsurerecursive = True
                 self._kindpats += [("glob", pat, "") for pat in globpats]
             if repats:
                 if not all(map(_testrefastpath, repats)):
@@ -490,6 +493,7 @@ def _buildvisitdir(kindpats):
     ...     ('re', '^h/(i|j)$', ''),
     ...     ('glob', 'i/a*/b*/c*', ''),
     ...     ('glob', 'i/a5/b7/d', ''),
+    ...     ('glob', 'j/**.c', ''),
     ... ])
     >>> t('a')
     True
@@ -510,7 +514,7 @@ def _buildvisitdir(kindpats):
     >>> t('e/a')
     True
     >>> t('e/a/b.c')
-    'all'
+    True
     >>> t('e/a/b.d')
     True
     >>> t('f')
@@ -543,6 +547,8 @@ def _buildvisitdir(kindpats):
     False
     >>> t('i/a5/b7/d')
     'all'
+    >>> t('j/x/y')
+    True
     >>> t('z')
     False
     """
