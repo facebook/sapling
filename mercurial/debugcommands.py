@@ -804,8 +804,6 @@ def debugdeltachain(ui, repo, file_=None, **opts):
 def debugstate(ui, repo, **opts):
     """show the contents of the current dirstate"""
 
-    from .rust import treestate
-
     nodates = opts.get(r"nodates")
     datesort = opts.get(r"datesort")
 
@@ -830,17 +828,8 @@ def debugstate(ui, repo, **opts):
             mode = "%3o" % (ent[1] & 0o777 & ~util.umask)
         msg = "%c %s %10d %s%s" % (ent[0], mode, ent[2], timestr, path)
         if ui.verbose and ds._istreestate:
-            state = dmap._tree.get(path, None)[0]
-            for name in (
-                "EXIST_P1",
-                "EXIST_P2",
-                "EXIST_NEXT",
-                "COPIED",
-                "NEED_CHECK",
-                "IGNORED",
-            ):
-                if state & getattr(treestate, name):
-                    msg += " %s" % name
+            flags = dmap._tree.get(path, None)[0]
+            msg += " %s" % treestate.reprflags(flags)
         ui.write("%s\n" % (msg,))
     for dst, src in ds.copies().items():
         ui.write(_("copy: %s -> %s\n") % (src, dst))
@@ -3180,7 +3169,7 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
 @command(
     "debugtreestate|debugtreedirstate",
     [],
-    "hg debugtreestate [on|off|status|repack|cleanup|v0|v1|v2]",
+    "hg debugtreestate [on|off|status|repack|cleanup|v0|v1|v2|list]",
 )
 def debugtreestate(ui, repo, cmd="status", **opts):
     """manage treestate
@@ -3218,5 +3207,21 @@ def debugtreestate(ui, repo, cmd="status", **opts):
             )
         else:
             ui.status(_("dirstate v0 (flat dirstate, %s files tracked)\n") % len(dmap))
+    elif cmd == "list":
+        if "treestate" not in repo.requirements:
+            raise error.Abort(_("list only supports treestate"))
+        dmap = repo.dirstate._map
+        tree = dmap._tree
+        tget = tree.get
+        for path in tree.walk(0, 0):
+            flags, mode, size, mtime, copied = tget(path, None)
+            flags = treestate.reprflags(flags)
+            if not ui.verbose:
+                if mtime >= 1:
+                    mtime = "+"
+            ui.write(
+                ("%s: 0%o %d %s %s %s\n")
+                % (path, mode, size, mtime, flags, copied or "")
+            )
     else:
         raise error.Abort("unrecognised command: %s" % cmd)

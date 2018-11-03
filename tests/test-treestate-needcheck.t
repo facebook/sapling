@@ -15,9 +15,9 @@ Write mtime to treestate
 
   $ hg status
 
-  $ hg debugstate -v
-  * A EXIST_P1 EXIST_NEXT (glob)
-  * B EXIST_P1 EXIST_NEXT (glob)
+  $ hg debugtree list
+  A: 0100644 1 + EXIST_P1 EXIST_NEXT 
+  B: 0100644 1 + EXIST_P1 EXIST_NEXT 
 
 Force the files to have NEED_CHECK bits
 
@@ -28,14 +28,14 @@ Force the files to have NEED_CHECK bits
   >     d.needcheck('B')
   >     d.write(tr)
   > "
-  $ hg debugstate -v
-  * A EXIST_P1 EXIST_NEXT NEED_CHECK (glob)
-  * B EXIST_P1 EXIST_NEXT NEED_CHECK (glob)
+  $ hg debugtree list
+  A: 0100644 1 + EXIST_P1 EXIST_NEXT NEED_CHECK 
+  B: 0100644 1 + EXIST_P1 EXIST_NEXT NEED_CHECK 
 
 Run status again. NEED_CHECK will disappear.
 
   $ hg status
 
-  $ hg debugstate -v
-  * A EXIST_P1 EXIST_NEXT (glob)
-  * B EXIST_P1 EXIST_NEXT (glob)
+  $ hg debugtree list
+  A: 0100644 1 + EXIST_P1 EXIST_NEXT 
+  B: 0100644 1 + EXIST_P1 EXIST_NEXT 

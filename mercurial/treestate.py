@@ -689,6 +689,15 @@ def repack(ui, repo):
         return
 
 
+def reprflags(flags):
+    """Turn flags into human-readable string"""
+    return " ".join(
+        name
+        for name in ("EXIST_P1", "EXIST_P2", "EXIST_NEXT", "COPIED", "NEED_CHECK")
+        if flags & getattr(treestate, name)
+    )
+
+
 def onpull(ui, repo):
     if "eden" in repo.requirements:
         return
