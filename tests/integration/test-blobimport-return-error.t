@@ -38,7 +38,5 @@ Init treemanifest and remotefilelog
   $ cd $TESTTMP
 
 blobimport with missing first commit, it should fail
-  $ blobimport rocksdb repo-hg/.hg repo --skip 1 --panic-fate=exit > out.txt
-  [101]
-  $ grep PANIC < out.txt
-  PANIC: import failed
+  $ blobimport rocksdb repo-hg/.hg repo --skip 1 --panic-fate=exit > /dev/null
+  [1]

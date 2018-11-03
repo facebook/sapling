@@ -97,7 +97,7 @@ fn main() -> Result<()> {
     }.import()
         .map_err(move |err| {
             error!(logger, "error while blobimporting"; SlogKVError(err));
-            panic!("import failed");
+            ::std::process::exit(1);
         });
 
     let mut runtime = tokio::runtime::Runtime::new()?;
