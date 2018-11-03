@@ -473,18 +473,27 @@ class dirstate(object):
 
     def setclock(self, clock):
         """Set fsmonitor clock"""
-        if not self._istreestate:
-            raise error.ProgrammingError("setclock is only supported by treestate")
-        clock = clock or ""
-        if clock != self._map._clock:
-            self._map._clock = clock
-            self._dirty = True
+        return self.setmeta("clock", clock)
 
     def getclock(self):
         """Get fsmonitor clock"""
+        return self.getmeta("clock")
+
+    def setmeta(self, name, value):
+        """Set metadata"""
         if not self._istreestate:
-            raise error.ProgrammingError("getclock is only supported by treestate")
-        return self._map._clock or None
+            raise error.ProgrammingError("setmeta is only supported by treestate")
+        value = value or None
+        if value != self.getmeta(name):
+            self._map.updatemetadata({name: value})
+            self._dirty = True
+
+    def getmeta(self, name):
+        """Get metadata"""
+        if not self._istreestate:
+            raise error.ProgrammingError("getmeta is only supported by treestate")
+        # Normalize "" to "None"
+        return self._map.getmetadata().get(name) or None
 
     def _addpath(self, f, state, mode, size, mtime):
         oldstate = self[f]

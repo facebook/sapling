@@ -1873,6 +1873,9 @@ class workingctx(committablectx):
         poststatusafter = self._repo.postdsstatus(afterdirstatewrite=True)
         dirstate = self._repo.dirstate
         if fixup or poststatusbefore or poststatusafter or dirstate._dirty:
+            # prevent infinite loop because fsmonitor postfixup might call
+            # wctx.status()
+            self._repo._insidepoststatusfixup = True
             try:
                 oldid = dirstate.identity()
 
@@ -1916,6 +1919,7 @@ class workingctx(committablectx):
             finally:
                 # Even if the wlock couldn't be grabbed, clear out the list.
                 self._repo.clearpostdsstatus()
+                self._repo._insidepoststatusfixup = False
 
     def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
         """Gets the status from the dirstate -- internal use only."""
@@ -1936,7 +1940,8 @@ class workingctx(committablectx):
             if fixup and clean:
                 s.clean.extend(fixup)
 
-        self._poststatusfixup(s, fixup)
+        if not getattr(self._repo, "_insidepoststatusfixup", False):
+            self._poststatusfixup(s, fixup)
 
         if match.always():
             # cache for performance

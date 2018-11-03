@@ -47,6 +47,8 @@ class _overlaydict(dict):
 def _packmetadata(dictobj):
     result = []
     for k, v in dictobj.iteritems():
+        if not v:
+            continue
         entry = "%s=%s" % (k, v)
         if "=" in k or "\0" in entry:
             raise error.ProgrammingError("illegal metadata entry: %r" % entry)
@@ -138,7 +140,6 @@ class treestatemap(object):
     def clear(self):
         self._threshold = 0
         self._rootid = 0
-        self._clock = ""
         self._parents = (node.nullid, node.nullid)
 
         # use a new file
@@ -374,10 +375,6 @@ class treestatemap(object):
                 raise error.Abort(
                     _("working directory state appears damaged (metadata mismatch)!")
                 )
-            clock = metadata.get("clock")
-        else:
-            clock = ""
-        self._clock = clock
         self._tree = tree
 
     def _setfilename(self, filename=None):
@@ -421,16 +418,8 @@ class treestatemap(object):
 
     def write(self, st, now):
         # write .hg/treestate/<uuid>
-        metadata = {}
-        if self._clock:
-            metadata.update(
-                {
-                    "clock": self._clock,
-                    # for debugging purpose
-                    "pid": os.getpid(),
-                    "now": now,
-                }
-            )
+        metadata = self.getmetadata()
+        metadata.update({"p1": None, "p2": None})
         if self._parents[0] != node.nullid:
             metadata["p1"] = node.hex(self._parents[0])
         if self._parents[1] != node.nullid:
@@ -553,6 +542,18 @@ class treestatemap(object):
             raise error.ProgrammingError("copy dest %r does not exist" % dest)
 
     # treestate specific methods
+
+    def getmetadata(self):
+        return _unpackmetadata(self._tree.getmetadata())
+
+    def updatemetadata(self, items):
+        metadata = _unpackmetadata(self._tree.getmetadata())
+        metadata.update(items)
+        self._tree.setmetadata(_packmetadata(metadata))
+
+    @property
+    def _clock(self):
+        return self.getmetadata().get("clock") or None
 
     def needcheck(self, path):
         """Mark a file as NEED_CHECK, so it will be included by 'nonnormalset'

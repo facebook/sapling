@@ -101,9 +101,10 @@ exception if it finds anything. (default: false)
     track-ignore-files = (boolean)
 
 If set to True, fsmonitor will track ignored files in treestate. This behaves
-more correctly if files get unignored, or added to the sparse profile. This
-config option is provided for slowrolling the feature. It will be eventually
-removed.  (default: true)
+more correctly if files get unignored, or added to the sparse profile, at the
+cost of slowing down status command. Turning it off would make things faster,
+at the cast of removing files from ignore patterns (or adding files to sparse
+profiles) won't be detected automatically. (default: True)
 """
 
 # Platforms Supported
@@ -762,8 +763,38 @@ def poststatustreestate(wctx, status):
     # should not affect "status" correctness, even if they are not the latest
     # state. Changing the clock to None would make the next "status" command
     # slower. Therefore avoid doing that.
+    repo = wctx.repo()
     if clock is not None:
-        wctx.repo()._fsmonitorstate.set(clock, hashignore, notefiles)
+        repo._fsmonitorstate.set(clock, hashignore, notefiles)
+
+    dirstate = repo.dirstate
+    oldtrackignored = (dirstate.getmeta("track-ignored") or "1") == "1"
+    newtrackignored = repo.ui.configbool("fsmonitor", "track-ignore-files")
+
+    if oldtrackignored != newtrackignored:
+        if newtrackignored:
+            # Add ignored files to treestate
+            ignored = wctx.status(listignored=True).ignored
+            repo.ui.debug("start tracking %d ignored files\n" % len(ignored))
+            for path in ignored:
+                dirstate.needcheck(path)
+        else:
+            # Remove ignored files from treestate
+            ignore = dirstate._ignore
+            from mercurial.rust.treestate import (
+                NEED_CHECK,
+                EXIST_P1,
+                EXIST_P2,
+                EXIST_NEXT,
+            )
+
+            repo.ui.debug("stop tracking ignored files\n")
+            for path in dirstate._map._tree.walk(
+                NEED_CHECK, EXIST_P1 | EXIST_P2 | EXIST_NEXT
+            ):
+                if ignore(path):
+                    dirstate.delete(path)
+        dirstate.setmeta("track-ignored", str(int(newtrackignored)))
 
 
 class poststatus(object):
