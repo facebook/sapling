@@ -163,6 +163,19 @@ def telemetry(reporef):
                 remotefilelog=str("remotefilelog" in repo.requirements).lower(),
             )
 
+        try:
+            (
+                lfsdownloadsize,
+                lfsdownloadtime,
+            ) = repo.svfs.lfsremoteblobstore.getlfsmetrics()
+            ui.log(
+                "command_metrics",
+                lfs_download_size=lfsdownloadsize,
+                lfs_download_time=lfsdownloadtime,
+            )
+        except Exception:
+            pass
+
         maxrss = util.getmaxrss()
 
         # Log maxrss from within the hg process. The wrapper logs its own

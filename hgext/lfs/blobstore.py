@@ -168,6 +168,9 @@ class memlocal(object):
 class _gitlfsremote(object):
     def __init__(self, ui, url):
         self.ui = ui
+        self._downloadsize = 0
+        self._downloadtime = 0
+        self._lastrecordtime = 0
         baseurl, authinfo = url.authinfo()
         self.baseurl = baseurl.rstrip("/")
         useragent = ui.config("experimental", "lfs.user-agent")
@@ -338,6 +341,7 @@ class _gitlfsremote(object):
                             continue
                         raise
 
+        starttime = util.timer()
         if action == "download":
             oids = worker.worker(
                 self.ui, 0.1, transfer, (), sorted(objects, key=lambda o: o.get("oid"))
@@ -350,10 +354,18 @@ class _gitlfsremote(object):
                 prog.value += sizes[oid]
                 if self.ui.verbose:
                     self.ui.write(_("lfs: processed: %s\n") % oid)
+        if action == "download":
+            self._downloadsize += total
+            currenttime = util.timer()
+            self._downloadtime += currenttime - max(self._lastrecordtime, starttime)
+            self._lastrecordtime = currenttime
 
     def checkblobs(self, pointers):
         response = self._batchrequest(pointers, "download")
         self._extractobjects(response, pointers, "download")
+
+    def getlfsmetrics(self):
+        return (self._downloadsize, self._downloadtime * 1000)
 
     def __del__(self):
         # copied from mercurial/httppeer.py
