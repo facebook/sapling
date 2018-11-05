@@ -302,18 +302,6 @@ echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
    aliases.
 
 
-``amend``
----------
-
-``messagetemplate``
-    String: a template used when amend is invoked with the ``--message``
-    option.   The old commit message is available as the ``oldmessage``
-    template keyword, and the new commit message is available as the
-    ``message`` template keyword.  If specified, this template allows
-    the new message to be constructed from both the old message and
-    the message specified on the command line.
-
-
 ``annotate``
 ------------
 

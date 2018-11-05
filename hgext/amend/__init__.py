@@ -339,7 +339,7 @@ def amend(ui, repo, *pats, **opts):
 
     haschildren = len(old.children()) > 0
 
-    opts["message"] = cmdutil.logmessage(ui, opts, oldmessage=old.description())
+    opts["message"] = cmdutil.logmessage(ui, opts)
     # Avoid further processing of any logfile. If such a file existed, its
     # contents have been copied into opts['message'] by logmessage
     opts["logfile"] = ""
