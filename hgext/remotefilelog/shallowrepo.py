@@ -227,6 +227,12 @@ def wraprepo(repo):
                 self.fileservice.prefetch(files)
             return super(shallowrepository, self).commitctx(ctx, error=error)
 
+        @localrepo.unfilteredmethod
+        def close(self):
+            if self.ui.configbool("remotefilelog", "packlocaldata"):
+                self.contentstore.commitpending()
+            return super(shallowrepository, self).close()
+
         def backgroundprefetch(
             self, revs, base=None, repack=False, pats=None, opts=None
         ):
@@ -333,6 +339,10 @@ def wraprepo(repo):
                 self.fileservice.prefetch(results)
 
         def invalidate(self, **kwargs):
+            if self.ui.configbool("remotefilelog", "packlocaldata"):
+                # Flush local data which might be uncommitted to disc
+                self.contentstore.commitpending()
+
             super(shallowrepository, self).invalidate(**kwargs)
             makeunionstores(self)
 

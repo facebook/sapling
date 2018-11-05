@@ -673,9 +673,6 @@ class localrepository(object):
         if "manifestlog" in self.__dict__:
             self.manifestlog.commitpending()
 
-        if self.ui.configbool("remotefilelog", "packlocaldata"):
-            self.contentstore.commitpending()
-
     def _loadextensions(self):
         extensions.loadall(self.ui)
 
@@ -1447,18 +1444,24 @@ class localrepository(object):
         # standard transaction mechanism.
         unfi = self.unfiltered()
 
+        isremotefilelogrepo = "remotefilelog" in self.requirements
+
         def commitnotransaction(tr):
             if "manifestlog" in unfi.__dict__:
                 self.manifestlog.commitpending()
 
-            if self.ui.configbool("remotefilelog", "packlocaldata"):
+            if isremotefilelogrepo and self.ui.configbool(
+                "remotefilelog", "packlocaldata"
+            ):
                 self.contentstore.commitpending()
 
         def abortnotransaction(tr):
             if "manifestlog" in unfi.__dict__:
                 self.manifestlog.abortpending()
 
-            if self.ui.configbool("remotefilelog", "packlocaldata"):
+            if isremotefilelogrepo and self.ui.configbool(
+                "remotefilelog", "packlocaldata"
+            ):
                 self.contentstore.abortpending()
 
         def writependingnotransaction(tr):
@@ -1788,10 +1791,6 @@ class localrepository(object):
                 delattr(unfiltered, k)
             except AttributeError:
                 pass
-
-        if self.ui.configbool("remotefilelog", "packlocaldata"):
-            # Flush local data which might be uncommitted to disc
-            self.contentstore.commitpending()
 
         self.invalidatecaches()
         if not self.currenttransaction():

@@ -149,3 +149,13 @@
   committed changeset 6:3462713eae99
   calling hook commit.prefetch: hgext.remotefilelog.wcpprefetch
   $ findfilessorted $CACHEDIR
+
+
+# Test that it doesn't break non-remotefilelog repos
+
+  $ cd ..
+  $ newrepo
+  $ setconfig remotefilelog.packlocaldata=True
+  $ echo 1 >> a
+  $ hg commit -Am "commit"
+  adding a
