@@ -214,9 +214,11 @@ havefb = os.path.exists("fb")
 
 iswindows = os.name == "nt"
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
+PIC = "" if iswindows else "-fPIC"
 PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
 SHA1_LIBRARY = "sha1detectcoll"
 SHA1LIB_DEFINE = "/DSHA1_USE_SHA1DC" if iswindows else "-DSHA1_USE_SHA1DC"
+STATIC_CHG = "" if iswindows else "-DCHG_STATIC_LIB"
 STDC99 = "" if iswindows else "-std=c99"
 STDCPP0X = "" if iswindows else "-std=c++0x"
 STDCPP11 = "" if iswindows else "-std=c++11"
@@ -1493,6 +1495,23 @@ libraries = [
     ),
 ]
 
+if not iswindows:
+    libraries.append(
+        (
+            "chg",
+            {
+                "sources": [
+                    "contrib/chg/chg.c",
+                    "contrib/chg/hgclient.c",
+                    "contrib/chg/procutil.c",
+                    "contrib/chg/util.c",
+                ],
+                "include_dirs": ["contrib/chg"] + include_dirs,
+                "extra_args": filter(None, cflags + [STDC99, WALL, STATIC_CHG, PIC]),
+            },
+        )
+    )
+
 # let's add EXTRA_LIBS to every buildable
 for extmodule in extmodules:
     extmodule.libraries.extend(extra_libs)
@@ -1750,13 +1769,26 @@ rustextmodules = [
     ),
 ]
 
+
+hgmainfeatures = (
+    " ".join(
+        filter(
+            None,
+            [
+                "hgdev" if os.environ.get("HGDEV") else None,
+                "with_chg" if not iswindows else None,
+            ],
+        )
+    ).strip()
+    or None
+)
 rustextbinaries = [
     RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
     RustBinary(
         "hgmain",
         manifest="exec/hgmain/Cargo.toml",
         rename="hg.rust",
-        features="hgdev" if os.environ.get("HGDEV") else None,
+        features=hgmainfeatures,
     ),
 ]
 

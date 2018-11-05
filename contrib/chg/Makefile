@@ -16,8 +16,14 @@ MANDIR = $(PREFIX)/share/man/man1
 .PHONY: all
 all: $(TARGET)
 
+.PHONY: static
+static:
+	$(CC) -c $(SRCS) $(CFLAGS) $(CPPFLAGS) -DCHG_STATIC_LIB -fPIC
+	ar rcs lib$(TARGET).a $(OBJS)
+
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+
 
 chg.o: hgclient.h procutil.h util.h
 hgclient.o: hgclient.h procutil.h util.h
@@ -34,6 +40,7 @@ install: $(TARGET)
 .PHONY: clean
 clean:
 	$(RM) $(OBJS)
+	$(RM) $(TARGET).a
 
 .PHONY: distclean
 distclean:

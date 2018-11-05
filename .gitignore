@@ -30,6 +30,7 @@ fb/tests/*.err
 tests/htmlcov
 tests/getdb.sh
 contrib/chg/chg
+contrib/chg/libchg.a
 contrib/hgsh/hgsh
 contrib/vagrant/.vagrant
 contrib/docker/debian-*

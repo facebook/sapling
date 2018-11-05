@@ -239,6 +239,7 @@ class BuildRustExt(distutils.core.Command):
 
         env = os.environ.copy()
         env["CARGO_TARGET_DIR"] = self.get_temp_path()
+        env["LIB_DIRS"] = os.path.abspath(self.build_temp)
         if "rustc" in paths:
             env["RUSTC"] = paths["rustc"]
         if "rustdoc" in paths:

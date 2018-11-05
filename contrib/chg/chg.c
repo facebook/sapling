@@ -329,7 +329,11 @@ static int configint(const char* name, int fallback) {
   return value;
 }
 
+#ifdef CHG_STATIC_LIB
+int chg_main(int argc, const char* argv[], const char* envp[]) {
+#else
 int main(int argc, const char* argv[], const char* envp[]) {
+#endif
   if (configint("CHGDEBUG", 0))
     enabledebugmsg();
 
