@@ -44,9 +44,9 @@ use errors::ErrorKind;
 const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
 
 pub struct SqlFilenodes {
-    write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+    write_connection: Vec<Connection>,
+    read_connection: Vec<Connection>,
+    read_master_connection: Vec<Connection>,
 }
 
 define_stats! {
@@ -158,9 +158,9 @@ impl SqlConstructors for SqlFilenodes {
         read_master_connection: Connection,
     ) -> Self {
         Self {
-            write_connection,
-            read_connection,
-            read_master_connection,
+            write_connection: vec![write_connection],
+            read_connection: vec![read_connection],
+            read_master_connection: vec![read_master_connection],
         }
     }
 
@@ -229,8 +229,12 @@ impl Filenodes for SqlFilenodes {
         cloned!(self.read_connection, path, repo_id);
         let pwh = PathWithHash::from_repo_path(&path);
 
-        SelectAllFilenodes::query(&read_connection, &repo_id, &pwh.hash, &pwh.is_tree)
-            .chain_err(ErrorKind::FailRangeFetch(path.clone()))
+        SelectAllFilenodes::query(
+            &read_connection[pwh.shard_number(read_connection.len())],
+            &repo_id,
+            &pwh.hash,
+            &pwh.is_tree,
+        ).chain_err(ErrorKind::FailRangeFetch(path.clone()))
             .from_err()
             .and_then(move |filenode_rows| {
                 let mut futs = vec![];
@@ -255,27 +259,38 @@ impl Filenodes for SqlFilenodes {
 }
 
 fn ensure_paths_exists(
-    connection: &Connection,
+    connections: &Vec<Connection>,
     repo_id: &RepositoryId,
     filenodes: &Vec<(FilenodeInfo, PathWithHash)>,
 ) -> impl Future<Item = (), Error = Error> {
-    let mut path_rows = vec![];
+    let mut path_rows: Vec<Vec<_>> = connections.iter().map(|_| Vec::new()).collect();
     for &(_, ref pwh) in filenodes {
-        path_rows.push((repo_id, &pwh.path_bytes, &pwh.hash));
+        path_rows[pwh.shard_number(connections.len())].push((repo_id, &pwh.path_bytes, &pwh.hash));
     }
 
-    InsertPaths::query(connection, &path_rows).map(|_| ())
+    let futures: Vec<_> = connections
+        .iter()
+        .enumerate()
+        .filter_map(|(shard, connection)| {
+            if path_rows[shard].len() != 0 {
+                Some(InsertPaths::query(&connection.clone(), &path_rows[shard]))
+            } else {
+                None
+            }
+        })
+        .collect();
+    join_all(futures).map(|_| ())
 }
 
 fn insert_filenodes(
-    connection: &Connection,
+    connections: &Vec<Connection>,
     repo_id: &RepositoryId,
     filenodes: &Vec<(FilenodeInfo, PathWithHash)>,
-) -> BoxFuture<(), Error> {
-    let mut filenode_rows = vec![];
-    let mut copydata_rows = vec![];
+) -> impl Future<Item = (), Error = Error> {
+    let mut filenode_rows: Vec<Vec<_>> = connections.iter().map(|_| Vec::new()).collect();
+    let mut copydata_rows: Vec<Vec<_>> = connections.iter().map(|_| Vec::new()).collect();
     for &(ref filenode, ref pwh) in filenodes {
-        filenode_rows.push((
+        filenode_rows[pwh.shard_number(connections.len())].push((
             repo_id,
             &pwh.hash,
             &pwh.is_tree,
@@ -296,9 +311,9 @@ fn insert_filenodes(
             if from_pwh.is_tree != pwh.is_tree {
                 return Err(ErrorKind::InvalidCopy(filenode.path.clone(), frompath.clone()).into())
                     .into_future()
-                    .boxify();
+                    .left_future();
             }
-            copydata_rows.push((
+            copydata_rows[pwh.shard_number(connections.len())].push((
                 repo_id,
                 &pwh.hash,
                 &filenode.filenode,
@@ -309,37 +324,72 @@ fn insert_filenodes(
         }
     }
 
-    let copydata_rows_refs: Vec<_> = copydata_rows
+    let copydata_rows: Vec<Vec<_>> = copydata_rows
         .iter()
-        .map(
-            |&(repo_id, tohash, tonode, is_tree, ref fromhash, fromnode)| {
-                (repo_id, tohash, tonode, is_tree, fromhash, fromnode)
-            },
-        )
+        .map(|shard| {
+            shard
+                .iter()
+                .map(
+                    |&(repo_id, tohash, tonode, is_tree, ref fromhash, fromnode)| {
+                        (repo_id, tohash, tonode, is_tree, fromhash, fromnode)
+                    },
+                )
+                .collect()
+        })
         .collect();
 
-    InsertFixedcopyinfo::query(connection, &copydata_rows_refs)
-        .join(InsertFilenodes::query(connection, &filenode_rows))
-        .map(|(..)| ())
-        .boxify()
+    let copyinfo_futures: Vec<_> = connections
+        .iter()
+        .enumerate()
+        .filter_map(|(shard, connection)| {
+            if copydata_rows[shard].len() != 0 {
+                Some(InsertFixedcopyinfo::query(
+                    &connection.clone(),
+                    &copydata_rows[shard],
+                ))
+            } else {
+                None
+            }
+        })
+        .collect();
+    let filenode_futures: Vec<_> = connections
+        .iter()
+        .enumerate()
+        .filter_map(|(shard, connection)| {
+            if filenode_rows[shard].len() != 0 {
+                Some(InsertFilenodes::query(
+                    &connection.clone(),
+                    &filenode_rows[shard],
+                ))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    join_all(filenode_futures)
+        .join(join_all(copyinfo_futures))
+        .map(|_| ())
+        .right_future()
 }
 
 fn select_filenode(
-    connection: &Connection,
+    connections: &Vec<Connection>,
     path: &RepoPath,
     filenode: &HgFileNodeId,
     pwh: &PathWithHash,
     repo_id: &RepositoryId,
 ) -> BoxFuture<Option<FilenodeInfo>, Error> {
-    cloned!(connection, path, filenode, pwh, repo_id);
+    let connection = &connections[pwh.shard_number(connections.len())];
+    cloned!(connections, path, filenode, pwh, repo_id);
 
-    SelectFilenode::query(&connection, &repo_id, &pwh.hash, &pwh.is_tree, &filenode)
+    SelectFilenode::query(connection, &repo_id, &pwh.hash, &pwh.is_tree, &filenode)
         .chain_err(ErrorKind::FailFetchFilenode(filenode.clone(), path.clone()))
         .from_err()
         .and_then({
             move |rows| match rows.into_iter().next() {
                 Some((linknode, p1, p2, has_copyinfo)) => convert_to_filenode_info(
-                    &connection,
+                    &connections,
                     path,
                     filenode,
                     &pwh,
@@ -357,12 +407,13 @@ fn select_filenode(
 }
 
 fn select_copydata(
-    connection: &Connection,
+    connections: &Vec<Connection>,
     path: &RepoPath,
     filenode: &HgFileNodeId,
     pwh: &PathWithHash,
     repo_id: &RepositoryId,
 ) -> BoxFuture<(RepoPath, HgFileNodeId), Error> {
+    let connection = &connections[pwh.shard_number(connections.len())];
     SelectCopyinfo::query(connection, repo_id, &pwh.hash, filenode, &pwh.is_tree)
         .and_then({
             cloned!(path, filenode);
@@ -383,7 +434,7 @@ fn select_copydata(
 }
 
 fn convert_to_filenode_info(
-    connection: &Connection,
+    connections: &Vec<Connection>,
     path: RepoPath,
     filenode: HgFileNodeId,
     pwh: &PathWithHash,
@@ -394,7 +445,7 @@ fn convert_to_filenode_info(
     has_copyinfo: i8,
 ) -> impl Future<Item = FilenodeInfo, Error = Error> {
     let copydata = if has_copyinfo != 0 {
-        select_copydata(connection, &path, &filenode, &pwh, &repo_id)
+        select_copydata(connections, &path, &filenode, &pwh, &repo_id)
             .map(Some)
             .boxify()
     } else {
@@ -449,5 +500,15 @@ impl PathWithHash {
             is_tree,
             hash,
         }
+    }
+
+    fn shard_number(&self, shard_count: usize) -> usize {
+        // We don't need crypto strength here - we're just turning a potentially large hash into
+        // a shard number.
+        let raw_shard_number = self.hash
+            .iter()
+            .fold(0usize, |hash, byte| hash.rotate_left(8) ^ (*byte as usize));
+
+        raw_shard_number % shard_count
     }
 }
