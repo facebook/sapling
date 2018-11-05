@@ -169,6 +169,32 @@ impl SqlConstructors for SqlFilenodes {
     }
 }
 
+impl SqlFilenodes {
+    pub fn with_sharded_myrouter(tier: impl ToString, port: u16, shard_count: usize) -> Self {
+        let new = Self {
+            write_connection: Vec::with_capacity(shard_count),
+            read_connection: Vec::with_capacity(shard_count),
+            read_master_connection: Vec::with_capacity(shard_count),
+        };
+        let shards = 1..=shard_count;
+
+        shards.fold(new, |mut new, shard_id| {
+            let mut builder = sql::myrouter::Builder::new();
+            builder
+                .tier(format!("{}.{}", tier.to_string(), shard_id))
+                .port(port);
+
+            new.read_connection.push(builder.build_read_only());
+
+            builder.service_type(sql::myrouter::ServiceType::MASTER);
+            new.read_master_connection.push(builder.build_read_only());
+            new.write_connection.push(builder.build_read_write());
+
+            new
+        })
+    }
+}
+
 impl Filenodes for SqlFilenodes {
     fn add_filenodes(
         &self,

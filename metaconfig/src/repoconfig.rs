@@ -388,6 +388,7 @@ impl RepoConfigs {
                     bucket: manifold_bucket,
                     prefix: this.manifold_prefix.unwrap_or("".into()),
                     db_address,
+                    filenode_shards: this.filenode_shards,
                 })
             }
             RawRepoType::TestBlobDelayRocks => RepoType::TestBlobDelayRocks(
@@ -477,6 +478,7 @@ struct RawRepoConfig {
     manifold_prefix: Option<String>,
     repoid: i32,
     db_address: Option<String>,
+    filenode_shards: Option<usize>,
     scuba_table: Option<String>,
     delay_mean: Option<u64>,
     delay_stddev: Option<u64>,

@@ -115,6 +115,8 @@ pub struct ManifoldArgs {
     pub prefix: String,
     /// Identifies the SQL database to connect to.
     pub db_address: String,
+    /// If present, the number of shards to spread filenodes across
+    pub filenode_shards: Option<usize>,
 }
 
 pub struct BlobRepo {
@@ -320,7 +322,12 @@ impl BlobRepo {
             ))?);
         let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
 
-        let filenodes = SqlFilenodes::with_myrouter(&args.db_address, myrouter_port);
+        let filenodes = match args.filenode_shards {
+            Some(shards) => {
+                SqlFilenodes::with_sharded_myrouter(&args.db_address, myrouter_port, shards)
+            }
+            None => SqlFilenodes::with_myrouter(&args.db_address, myrouter_port),
+        };
         let filenodes = CachingFilenodes::new(
             Arc::new(filenodes),
             cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(

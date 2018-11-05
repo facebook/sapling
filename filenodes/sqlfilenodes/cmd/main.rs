@@ -38,6 +38,7 @@ fn main() -> Result<()> {
             [filename]                  'filename'
             [filenode]                  'filenode'
             [xdb-tier]                  'xdb tier'
+            [shard-count]               'shard count'
             -p, --myrouter-port [PORT]  'port for local myrouter instance'
             --depth [DEPTH]             'how many ancestors to fetch, fetch all if not set'
             --directory                 'not a file but directory'
@@ -64,6 +65,11 @@ fn main() -> Result<()> {
     let depth: Option<usize> = matches
         .value_of("depth")
         .map(|depth| depth.parse().expect("depth must be a positive integer"));
+    let shard_count: Option<usize> = matches.value_of("shard-count").map(|shard_count| {
+        shard_count
+            .parse()
+            .expect("shard count must be a positive integer")
+    });
 
     let root_log = {
         let level = if matches.is_present("debug") {
@@ -86,7 +92,12 @@ fn main() -> Result<()> {
 
     let filenode_hash = HgNodeHash::from_str(filenode).expect("incorrect filenode: should be sha1");
     let filenode_hash = HgFileNodeId::new(filenode_hash);
-    let filenodes = SqlFilenodes::with_myrouter(xdb_tier.clone(), myrouter_port);
+    let filenodes = match shard_count {
+        None => SqlFilenodes::with_myrouter(xdb_tier.clone(), myrouter_port),
+        Some(shard_count) => {
+            SqlFilenodes::with_sharded_myrouter(xdb_tier.clone(), myrouter_port, shard_count)
+        }
+    };
 
     let mut runtime = tokio::runtime::Runtime::new().expect("failed to create Runtime");
 

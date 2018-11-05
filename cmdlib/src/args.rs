@@ -134,6 +134,10 @@ impl MononokeApp {
                     .value_name("ADDRESS")
                     .default_value("xdb.mononoke_production")
                     .help("database address"),
+            )
+            .arg(
+                Arg::with_name("filenode-shards")
+                .long("filenode-shards").value_name("SHARD_COUNT").help("number of shards to spread filenodes across")
             );
 
         app = add_cachelib_args(app, self.hide_advanced_args);
@@ -471,6 +475,11 @@ pub fn parse_manifold_args<'a>(matches: &ArgMatches<'a>) -> ManifoldArgs {
         bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
         prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
         db_address: matches.value_of("db-address").unwrap().to_string(),
+        filenode_shards: matches.value_of("filenode-shards").map(|shard_count| {
+            shard_count
+                .parse()
+                .expect("shard count must be a positive integer")
+        }),
     }
 }
 

@@ -39,7 +39,7 @@ extern crate fixtures;
 #[cfg(test)]
 extern crate tempdir;
 
-use blobrepo::{BlobRepo, ManifoldArgs};
+use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
 use failure::{Error, Result};
@@ -144,13 +144,7 @@ fn run_hook(
 }
 
 fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
-    let bucket = matches
-        .value_of("manifold-bucket")
-        .unwrap_or("mononoke_prod");
-    let prefix = matches.value_of("manifold-prefix").unwrap_or("");
-    let xdb_tier = matches
-        .value_of("xdb-tier")
-        .unwrap_or("xdb.mononoke_production");
+    let manifold_args = cmdlib::args::parse_manifold_args(matches);
     let myrouter_port = matches
         .value_of("myrouter-port")
         .expect("missing myrouter port")
@@ -158,11 +152,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
         .expect("myrouter port is not a valid u16");
     BlobRepo::new_manifold_no_postcommit(
         logger.clone(),
-        &ManifoldArgs {
-            bucket: bucket.to_string(),
-            prefix: prefix.to_string(),
-            db_address: xdb_tier.to_string(),
-        },
+        &manifold_args,
         RepositoryId::new(0),
         myrouter_port,
     ).expect("failed to create blobrepo instance")
