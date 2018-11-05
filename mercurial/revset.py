@@ -2234,7 +2234,7 @@ def _mapbynodefunc(repo, s, f):
 @predicate("allpredecessors(set[, depth])")
 def allpredecessors(repo, subset, x):
     """Changesets that are predecessors of changesets in set, excluding the
-    given changesets themselves.
+    given changesets themselves. (DEPRECATED)
 
     If depth is specified, the result only includes changesets up to
     the specified iteration.
@@ -2282,7 +2282,7 @@ def _predecessors(repo, subset, targetset, startdepth, stopdepth):
 @predicate("allsuccessors(set)")
 def allsuccessors(repo, subset, x):
     """Changesets that are successors of changesets in set, excluding the
-    given changesets themselves.
+    given changesets themselves. (DEPRECATED)
 
     If depth is specified, the result only includes changesets up to
     the specified iteration.

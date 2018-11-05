@@ -306,7 +306,11 @@ def makeitemsdoc(ui, topic, doc, marker, items, dedent=False):
     single documentation block and use it to overwrite the marker in doc.
     """
     entries = []
+    seen = set()
     for name in sorted(items):
+        if items[name] in seen:
+            continue
+        seen.add(items[name])
         text = (pycompat.getdoc(items[name]) or "").rstrip()
         if not text or not ui.verbose and any(w in text for w in _exclkeywords):
             continue
