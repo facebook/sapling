@@ -36,10 +36,16 @@ extern crate futures_ext;
 extern crate hlua;
 extern crate hlua_futures;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate maplit;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
+#[cfg(test)]
+#[macro_use]
+extern crate pretty_assertions;
+extern crate regex;
 #[macro_use]
 extern crate slog;
 #[cfg(test)]

@@ -19,6 +19,7 @@ use hlua::{AnyLuaString, AnyLuaValue, Lua, LuaError, LuaFunctionCallError, LuaTa
            TuplePushError, Void, function0, function1, function2};
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
 use mononoke_types::FileType;
+use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
 
 const HOOK_START_CODE_BASE: &str = include_str!("hook_start_base.lua");
@@ -41,6 +42,7 @@ __hook_start = function(info, arg)
 
         ctx.files = files
         ctx.file_content = function(path) return coroutine.yield(__file_content(path)) end
+        ctx.parse_commit_msg = function() return coroutine.yield(__parse_commit_msg()) end
     end)
 end
 ";
@@ -153,11 +155,29 @@ impl Hook<HookChangeset> for LuaHook {
         };
         let file_len = function1(file_len);
 
+        let parse_commit_msg = {
+            cloned!(context);
+            move || -> Result<AnyFuture, Error> {
+                let parsed_commit_msg = parse_commit_message(&context.data.comments)
+                    .into_iter()
+                    .map(|(key, val)| {
+                        (
+                            AnyLuaValue::LuaAnyString(AnyLuaString(key.as_bytes().to_vec())),
+                            val,
+                        )
+                    })
+                    .collect();
+                Ok(AnyFuture::new(ok(AnyLuaValue::LuaArray(parsed_commit_msg))))
+            }
+        };
+        let parse_commit_msg = function0(parse_commit_msg);
+
         let mut lua = Lua::new();
         lua.openlibs();
         lua.set("__contains_string", contains_string);
         lua.set("__file_len", file_len);
         lua.set("__file_content", file_content);
+        lua.set("__parse_commit_msg", parse_commit_msg);
         let res: Result<(), Error> = lua.execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
@@ -333,6 +353,129 @@ impl LuaHook {
     }
 }
 
+fn parse_commit_message(commit_msg: &str) -> HashMap<String, AnyLuaValue> {
+    #[derive(Clone)]
+    enum PhabricatorTagValueType {
+        String,
+        List,
+    }
+
+    impl PhabricatorTagValueType {
+        fn convert(&self, value: &str) -> AnyLuaValue {
+            match self {
+                &PhabricatorTagValueType::String => to_lua_string(value.trim()),
+                &PhabricatorTagValueType::List => {
+                    let reviewers = SPLIT_USERNAMES
+                        .split(value.trim())
+                        .filter(|s| !s.is_empty());
+
+                    to_lua_array(reviewers)
+                }
+            }
+        }
+    }
+
+    struct PhabricatorTag {
+        ty: PhabricatorTagValueType,
+        name: String,
+        value: String,
+    }
+
+    impl PhabricatorTag {
+        pub fn new(name: &str, ty: PhabricatorTagValueType) -> Self {
+            Self {
+                ty,
+                name: name.to_lowercase(),
+                value: String::new(),
+            }
+        }
+
+        pub fn append_line(&mut self, line: &str) {
+            self.value.push_str(line);
+            self.value.push('\n');
+        }
+
+        pub fn get_name(&self) -> String {
+            self.name.to_lowercase()
+        }
+
+        pub fn get_value(&self) -> AnyLuaValue {
+            self.ty.convert(&self.value)
+        }
+    }
+
+    lazy_static! {
+        static ref PHABRICATOR_TAGS: HashMap<&'static str, PhabricatorTagValueType> = hashmap!{
+            "cc" => PhabricatorTagValueType::List,
+            "subscribers" => PhabricatorTagValueType::List,
+            "differential revision" => PhabricatorTagValueType::String,
+            "revert plan" => PhabricatorTagValueType::String,
+            "reviewed by" => PhabricatorTagValueType::List,
+            "reviewers" => PhabricatorTagValueType::List,
+            "summary" => PhabricatorTagValueType::String,
+            "signature" => PhabricatorTagValueType::String,
+            "tasks" => PhabricatorTagValueType::List,
+            "test plan" => PhabricatorTagValueType::String,
+        };
+
+        // Phabricator tags starts with name of the tag (case insensitive, so both "test plan:"
+        // "Test Plan:" also works), which should be at the beginning of the line.
+        // Test plan ends either with another phabricator tag ("Reviewed by:", "CC:" etc")
+        // or with a end of a commit message
+
+        static ref SPLIT_USERNAMES: Regex = RegexBuilder::new("[\\s,]+")
+            .case_insensitive(true)
+            .build()
+            .unwrap();
+    }
+
+    let lines = commit_msg.lines();
+    let mut result = hashmap!{};
+
+    let mut current_tag = PhabricatorTag::new("title", PhabricatorTagValueType::String);
+
+    for line in lines {
+        let mut maybe_tag_name_and_value = line.splitn(2, ":");
+
+        let maybe_tag = maybe_tag_name_and_value
+            .next()
+            .map(|tag| tag.to_lowercase());
+        let maybe_value = maybe_tag_name_and_value.next();
+        match (maybe_tag, maybe_value) {
+            (Some(ref tag), Some(value)) if PHABRICATOR_TAGS.contains_key(tag.as_str()) => {
+                result.insert(current_tag.get_name(), current_tag.get_value());
+
+                let current_tag_type = PHABRICATOR_TAGS.get(tag.as_str()).unwrap().clone();
+                current_tag = PhabricatorTag::new(tag, current_tag_type);
+                current_tag.append_line(value);
+            }
+            _ => {
+                current_tag.append_line(line);
+            }
+        };
+    }
+    result.insert(current_tag.get_name(), current_tag.get_value());
+
+    result
+}
+
+fn to_lua_string(s: &str) -> AnyLuaValue {
+    AnyLuaValue::LuaAnyString(AnyLuaString(s.as_bytes().to_vec()))
+}
+
+fn to_lua_array<'a, T: IntoIterator<Item = &'a str>>(v: T) -> AnyLuaValue {
+    let v: Vec<_> = v.into_iter()
+        .enumerate()
+        .map(|(i, val)| {
+            (
+                AnyLuaValue::LuaNumber((i + 1) as f64),
+                AnyLuaValue::LuaString(val.to_string()),
+            )
+        })
+        .collect();
+    AnyLuaValue::LuaArray(v)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -347,6 +490,164 @@ mod test {
     use test::to_mpath;
 
     #[test]
+    fn test_parse_commit_msg() {
+        fn check_parse_commit(commit_msg: &str, expected: HashMap<String, AnyLuaValue>) {
+            assert_eq!(parse_commit_message(commit_msg), expected);
+        }
+
+        check_parse_commit(
+            "mononoke: fix bug\nSummary: fix\nTest Plan: testinprod",
+            hashmap!{
+                "title".to_string() => to_lua_string("mononoke: fix bug"),
+                "summary".to_string() => to_lua_string("fix"),
+                "test plan".to_string() => to_lua_string("testinprod"),
+            },
+        );
+
+        // multiline title
+        check_parse_commit(
+            "mononoke: fix bug\nsecondline\nSummary: fix\nTest Plan: testinprod",
+            hashmap!{
+                "title".to_string() => to_lua_string("mononoke: fix bug\nsecondline"),
+                "summary".to_string() => to_lua_string("fix"),
+                "test plan".to_string() => to_lua_string("testinprod"),
+            },
+        );
+
+        check_parse_commit(
+            "Summary: fix\nTest Plan: testinprod",
+            hashmap!{
+                "title".to_string() => to_lua_string(""),
+                "summary".to_string() => to_lua_string("fix"),
+                "test plan".to_string() => to_lua_string("testinprod"),
+            },
+        );
+
+        // Tag should start at beginning of the line
+        check_parse_commit(
+            "Summary: fix\n Test Plan: testinprod",
+            hashmap!{
+                "title".to_string() => to_lua_string(""),
+                "summary".to_string() => to_lua_string("fix\n Test Plan: testinprod"),
+            },
+        );
+
+        check_parse_commit(
+            "Summary: fix\nnot a tag: testinprod",
+            hashmap!{
+                "title".to_string() => to_lua_string(""),
+                "summary".to_string() => to_lua_string("fix\nnot a tag: testinprod"),
+            },
+        );
+
+        check_parse_commit(
+            "Summary: fix\nFixed\na\nbug",
+            hashmap!{
+                "title".to_string() => to_lua_string(""),
+                "summary".to_string() => to_lua_string("fix\nFixed\na\nbug"),
+            },
+        );
+
+        check_parse_commit(
+            "Summary: fix\nCC:",
+            hashmap!{
+                "title".to_string() => to_lua_string(""),
+                "summary".to_string() => to_lua_string("fix"),
+                "cc".to_string() => to_lua_array(vec![]),
+            },
+        );
+
+        check_parse_commit(
+            "CC: user1, user2, user3",
+            hashmap!{
+                "title".to_string() => to_lua_string(""),
+                "cc".to_string() => to_lua_array(vec!["user1", "user2", "user3"]),
+            },
+        );
+
+        check_parse_commit(
+            "Tasks: T1111, T2222, T3333",
+            hashmap!{
+                "title".to_string() => to_lua_string(""),
+                "tasks".to_string() => to_lua_array(vec!["T1111", "T2222", "T3333"]),
+            },
+        );
+
+        check_parse_commit(
+            "Summary: fix\nTest Plan: testinprod\n\nReviewed By: stash, luk, simonfar, tfox, anastasiyaz, aslpavel, jsgf",
+            hashmap!{
+                "title".to_string() => to_lua_string(""),
+                "summary".to_string() => to_lua_string("fix"),
+                "test plan".to_string() => to_lua_string("testinprod"),
+                "reviewed by".to_string() => to_lua_array(vec!["stash", "luk", "simonfar", "tfox", "anastasiyaz", "aslpavel", "jsgf"]),
+            },
+        );
+
+        check_parse_commit(
+            "mononoke: fix fixovich
+Summary:
+
+fix
+of a mononoke
+bug
+
+Test Plan: testinprod
+Reviewed By: stash
+Reviewers: #mononoke,
+CC: jsgf
+Tasks: T1234
+Differential Revision: https://url/D123
+",
+            hashmap!{
+                "title".to_string() => to_lua_string("mononoke: fix fixovich"),
+                "summary".to_string() => to_lua_string("fix\nof a mononoke\nbug"),
+                "test plan".to_string() => to_lua_string("testinprod"),
+                "reviewed by".to_string() => to_lua_array(vec!["stash"]),
+                "reviewers".to_string() => to_lua_array(vec!["#mononoke"]),
+                "cc".to_string() => to_lua_array(vec!["jsgf"]),
+                "tasks".to_string() => to_lua_array(vec!["T1234"]),
+                "differential revision".to_string() =>  to_lua_string("https://url/D123"),
+            },
+        );
+
+        // Parse (almost) a real commit message
+        check_parse_commit(
+            "mononoke: log error only once
+
+Summary:
+Previously `log_with_msg()` was logged twice if msg wasn't None - with and
+without the message. This diff fixes it.
+
+#accept2ship
+Test Plan: buck check
+
+Reviewers: simonfar, #mononoke
+
+Reviewed By: simonfar
+
+Subscribers: jsgf
+
+Differential Revision: https://phabricator.intern.facebook.com/D1111111
+
+Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
+            hashmap!{
+                                        "title".to_string() => to_lua_string("mononoke: log error only once"),
+                                        "summary".to_string() => to_lua_string(
+                                            "Previously `log_with_msg()` was logged twice if msg wasn't None - with and\n\
+            without the message. This diff fixes it.\n\
+            \n\
+            #accept2ship"),
+                                        "test plan".to_string() => to_lua_string("buck check"),
+                                        "reviewed by".to_string() => to_lua_array(vec!["simonfar"]),
+                                        "reviewers".to_string() => to_lua_array(vec!["simonfar", "#mononoke"]),
+                                        "subscribers".to_string() => to_lua_array(vec!["jsgf"]),
+                                        "differential revision".to_string() =>  to_lua_string("https://phabricator.intern.facebook.com/D1111111"),
+                                        "signature".to_string() =>  to_lua_string("111111111:1111111111:bbbbbbbbbbbbbbbb"),
+                                    },
+        );
+    }
+
+    #[test]
     fn test_cs_hook_simple_rejected() {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
@@ -359,6 +660,78 @@ mod test {
                 run_changeset_hook(code, changeset),
                 Ok(HookExecution::Rejected(_))
             );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_reviewers() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 local reviewers = ctx.parse_commit_msg()['reviewers']\n\
+                 return not reviewers\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+
+            let cs_id =
+                HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+            let content_store = InMemoryFileContentStore::new();
+            let hcs = HookChangeset::new(
+                "some-author".into(),
+                vec![],
+                "blah blah blah\nReviewed By: user1, user2".into(),
+                HookChangesetParents::One("p1-hash".into()),
+                cs_id,
+                Arc::new(content_store),
+            );
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 local reviewers = ctx.parse_commit_msg()['reviewed by']\n\
+                 return #reviewers == 2\n\
+                 end",
+            );
+            assert_matches!(run_changeset_hook(code, hcs), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_test_plan() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 local test_plan = ctx.parse_commit_msg()['test plan']\n\
+                 return not test_plan\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+
+            let cs_id =
+                HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+            let content_store = InMemoryFileContentStore::new();
+            let hcs = HookChangeset::new(
+                "some-author".into(),
+                vec![],
+                "blah blah blah\nTest Plan: testinprod".into(),
+                HookChangesetParents::One("p1-hash".into()),
+                cs_id,
+                Arc::new(content_store),
+            );
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 local test_plan = ctx.parse_commit_msg()['test plan']\n\
+                 return test_plan == 'testinprod'\n\
+                 end",
+            );
+            assert_matches!(run_changeset_hook(code, hcs), Ok(HookExecution::Accepted));
         });
     }
 
