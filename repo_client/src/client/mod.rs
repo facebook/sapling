@@ -98,6 +98,7 @@ fn wireprotocaps() -> Vec<String> {
         "stream-preferred".to_string(),
         "stream_option".to_string(),
         "streamreqs=generaldelta,lz4revlog,revlogv1".to_string(),
+        "treeonly".to_string(),
     ]
 }
 
