@@ -1115,6 +1115,7 @@ def verifyremotefilelog(ui, path, **opts):
     [
         ("", "long", None, _("print the long hashes")),
         ("", "node", "", _("dump the contents of node"), "NODE"),
+        ("", "node-delta", "", _("dump the delta chain info of node"), "NODE"),
     ],
     _("hg debugdatapack <paths>"),
     norepo=True,

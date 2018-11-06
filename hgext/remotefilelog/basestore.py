@@ -348,7 +348,13 @@ class basestore(object):
 
     def addremotefilelogpack(self, name, node, data, p1node, p2node, linknode, meta):
         dpack, hpack = self._getmutablepacks()
-        dpack.add(name, node, revlog.nullid, data, metadata=meta)
+
+        # Packs expect the data to contain the copy from prefix header
+        meta = meta or {}
+        hashtext = shallowutil.createrevlogtext(
+            data, meta.get("copy"), meta.get("copyrev")
+        )
+        dpack.add(name, node, revlog.nullid, hashtext, metadata=meta)
 
         copyfrom = ""
         realp1node = p1node

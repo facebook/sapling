@@ -22,6 +22,7 @@ from . import (
     shallowrepo,
     shallowutil,
 )
+from .contentstore import unioncontentstore
 from .lz4wrapper import lz4decompress
 from .repack import repacklockvfs
 
@@ -257,10 +258,16 @@ def debugdatapack(ui, *paths, **opts):
             path = path[: path.index(".data")]
         ui.write("%s:\n" % path)
         dpack = datapack.datapack(path)
+        nodedelta = opts.get("node_delta")
+        if nodedelta:
+            deltachain = dpack.getdeltachain("", bin(nodedelta))
+            dumpdeltachain(ui, deltachain, **opts)
+            return
         node = opts.get("node")
         if node:
-            deltachain = dpack.getdeltachain("", bin(node))
-            dumpdeltachain(ui, deltachain, **opts)
+            unionstore = unioncontentstore(dpack)
+            content = unionstore.get("", bin(node))
+            ui.write(("%s") % content)
             return
 
         if opts.get("long"):

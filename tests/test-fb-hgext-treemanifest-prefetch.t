@@ -149,7 +149,7 @@ Test prefetch
   Node          P1 Node       P2 Node       Link Node     Copy From
   ddb35f099a64  000000000000  000000000000  f15c65c6e9bd  
   $ hg debugdatapack --config extensions.remotefilelog= \
-  > --node ef362f8bbe8aa457b0cfc49f200cbeb7747984ed $CACHEDIR/master/packs/manifests/*.dataidx
+  > --node-delta ef362f8bbe8aa457b0cfc49f200cbeb7747984ed $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/8adc618d23082c0a5311a4bbf9ac08b9b9672471:
   
   

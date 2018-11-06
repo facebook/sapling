@@ -159,3 +159,16 @@
   $ echo 1 >> a
   $ hg commit -Am "commit"
   adding a
+
+# Test moving files get correctly written into the pack
+  $ cd ../shallow
+  $ hg mv x xx
+  $ hg commit -m "move x to xx"
+  $ hg debugdatapack --node ede4cf65837b184e3aea21fb13ba08bcc26f7988 .hg/store/packs/80f941e578d038b4e95ddb387a289fbb1b35e38c.dataidx
+  .hg/store/packs/80f941e578d038b4e95ddb387a289fbb1b35e38c:
+  \x01 (esc)
+  copy: x
+  copyrev: aee31534993a501858fb6dd96a065671922e7d51
+  \x01 (esc)
+  x
+  x
