@@ -14,6 +14,6 @@ path = "../../lib/encoding"
 path = "../../lib/hgpython"
 
 [features]
-default = ["with_chg"]
+default = []
 with_chg = []
 hgdev = ["hgpython/hgdev"]
