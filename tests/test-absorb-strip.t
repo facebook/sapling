@@ -34,7 +34,7 @@ Do not strip innocent children. See https://bitbucket.org/facebook/hg-experiment
   2 changesets affected
   f585351 D
   1124789 B
-  2 of 2 chunk(s) applied
+  2 of 2 chunks applied
 
   $ hg log -G -T '{desc}'
   @  E

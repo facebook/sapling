@@ -49,7 +49,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
+from mercurial.i18n import _, _n
 
 from ..extlib import linelog
 
@@ -735,17 +735,25 @@ class fixupstate(object):
             for path, stat in chunkstats.iteritems():
                 if stat[0]:
                     ui.write(
-                        _("%s: %d of %d chunk(s) applied\n") % (path, stat[0], stat[1])
+                        _n(
+                            "%s: %d of %d chunk applied\n",
+                            "%s: %d of %d chunks applied\n",
+                            stat[1],
+                        )
+                        % (path, stat[0], stat[1])
                     )
         elif not ui.quiet:
             # a summary for all files
             stats = chunkstats.values()
             applied, total = (sum(s[i] for s in stats) for i in (0, 1))
-            ui.write(_("%d of %d chunk(s) applied\n") % (applied, total))
+            ui.write(
+                _n("%d of %d chunk applied\n", "%d of %d chunks applied\n", total)
+                % (applied, total)
+            )
 
     def _commitstack(self):
         """make new commits. update self.finalnode, self.replacemap.
-        it is splitted from "commit" to avoid too much indentation.
+        it is split from "commit" to avoid too much indentation.
         """
         # last node (20-char) committed by us
         lastcommitted = None
@@ -755,7 +763,7 @@ class fixupstate(object):
         for ctx in self.stack:
             memworkingcopy = self._getnewfilecontents(ctx)
             if not memworkingcopy and not lastcommitted:
-                # nothing changed, nothing commited
+                # nothing changed, nothing committed
                 nextp1 = ctx
                 continue
             msg = ""
@@ -981,7 +989,12 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     state.diffwith(targetctx, matcher, fm)
     if fm is not None and state.ctxaffected:
         fm.startitem()
-        fm.write("count", _("\n%d changesets affected\n"), len(state.ctxaffected))
+        count = len(state.ctxaffected)
+        fm.write(
+            "count",
+            _n("\n%d changeset affected\n", "\n%d changesets affected\n", count),
+            count,
+        )
         fm.data(linetype="summary")
         for ctx in reversed(stack):
             if ctx not in state.ctxaffected:
