@@ -14,7 +14,7 @@ from typing import Dict
 from .lib import testcase
 
 
-def getallxattrs(abspath: bytes) -> Dict[str, bytes]:
+def getallxattrs(abspath: str) -> Dict[str, bytes]:
     result = {}
     for xattr in os.listxattr(abspath):
         result[xattr] = os.getxattr(abspath, xattr)

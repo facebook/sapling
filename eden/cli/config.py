@@ -750,7 +750,7 @@ Do you want to run `eden mount %s` instead?"""
             raise Exception(f"{config_toml} is missing [repository]")
 
         def get_field(key: str) -> str:
-            value = repository.get(key)
+            value = repository.get(key)  # type: ignore
             if not isinstance(value, str):
                 raise Exception(f"{config_toml} is missing {key} in " "[repository]")
             return value
