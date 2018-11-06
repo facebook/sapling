@@ -21,6 +21,7 @@ extern crate clap;
 #[macro_use]
 extern crate cloned;
 extern crate cmdlib;
+extern crate env_logger;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate fb303;
@@ -304,6 +305,7 @@ struct HttpServerState {
 }
 
 fn main() -> Result<()> {
+    env_logger::init();
     panichandler::set_panichandler(Fate::Abort);
 
     let matches = cmdlib::args::add_cachelib_args(
