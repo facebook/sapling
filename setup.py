@@ -464,6 +464,8 @@ if not isinstance(versionb, bytes):
 # connects to a compatible server.
 versionhash = struct.unpack(">Q", hashlib.sha1(versionb).digest()[:8])[0]
 
+chgcflags = ["-std=c99", "-D_GNU_SOURCE", "-DHGVERSIONHASH=%sULL" % versionhash]
+
 write_if_changed(
     "mercurial/__version__.py",
     b"".join(
@@ -630,11 +632,6 @@ class hgbuildscripts(build_scripts):
         # Build chg on non-Windows platform
         if not iswindows:
             cc = new_compiler()
-            chgcflags = [
-                "-std=c99",
-                "-D_GNU_SOURCE",
-                "-DHGVERSIONHASH=%sULL" % versionhash,
-            ]
             if hgname != "hg":
                 chgcflags.append('-DHGPATH="%s"' % hgname)
             objs = cc.compile(
@@ -1507,7 +1504,9 @@ if not iswindows:
                     "contrib/chg/util.c",
                 ],
                 "include_dirs": ["contrib/chg"] + include_dirs,
-                "extra_args": filter(None, cflags + [STDC99, WALL, STATIC_CHG, PIC]),
+                "extra_args": filter(
+                    None, cflags + chgcflags + [STDC99, WALL, STATIC_CHG, PIC]
+                ),
             },
         )
     )
