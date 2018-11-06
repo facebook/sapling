@@ -29,6 +29,31 @@ __hook_start = function(info, arg)
     return __hook_start_base(info, arg, function(arg, ctx)
         local files = {}
 
+        -- translation to lua from mercurial's util.shortuser()
+        local get_author_unixname = function(author)
+            local ind = author:find('@')
+            if ind then
+                author = author:sub(1, ind - 1)
+            end
+
+            ind = author:find('<')
+            if ind then
+                author = author:sub(ind + 1)
+            end
+
+            ind = author:find(' ')
+            if ind then
+                author = author:sub(0, ind)
+            end
+
+            ind = author:find('%.')
+            if ind then
+                author = author:sub(0, ind)
+            end
+
+            return author
+        end
+
         for _, file_data in ipairs(arg) do
             local file = __set_common_file_functions(file_data.path, file_data.type)
 
@@ -40,9 +65,11 @@ __hook_start = function(info, arg)
             files[#files+1] = file
         end
 
+        ctx.info.author_unixname = get_author_unixname(ctx.info.author)
         ctx.files = files
         ctx.file_content = function(path) return coroutine.yield(__file_content(path)) end
         ctx.parse_commit_msg = function() return coroutine.yield(__parse_commit_msg()) end
+        ctx.is_valid_reviewer = function(user) return coroutine.yield(__is_valid_reviewer(user)) end
     end)
 end
 ";
@@ -172,12 +199,25 @@ impl Hook<HookChangeset> for LuaHook {
         };
         let parse_commit_msg = function0(parse_commit_msg);
 
+        let is_valid_reviewer = {
+            move |user: String| -> Result<AnyFuture, Error> {
+                // TODO(stash): actual implementation that checks the permissions
+                if user == "invalidreviewer" {
+                    Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(false))))
+                } else {
+                    Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(true))))
+                }
+            }
+        };
+        let is_valid_reviewer = function1(is_valid_reviewer);
+
         let mut lua = Lua::new();
         lua.openlibs();
         lua.set("__contains_string", contains_string);
         lua.set("__file_len", file_len);
         lua.set("__file_content", file_content);
         lua.set("__parse_commit_msg", parse_commit_msg);
+        lua.set("__is_valid_reviewer", is_valid_reviewer);
         let res: Result<(), Error> = lua.execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
@@ -729,6 +769,40 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                 "hook = function (ctx)\n\
                  local test_plan = ctx.parse_commit_msg()['test plan']\n\
                  return test_plan == 'testinprod'\n\
+                 end",
+            );
+            assert_matches!(run_changeset_hook(code, hcs), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_author_unixname() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.info.author_unixname == 'some-author'\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+
+            let cs_id =
+                HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+            let content_store = InMemoryFileContentStore::new();
+            let hcs = HookChangeset::new(
+                "Stanislau Hlebik <stash@fb.com>".into(),
+                vec![],
+                "blah blah blah\nTest Plan: testinprod".into(),
+                HookChangesetParents::One("p1-hash".into()),
+                cs_id,
+                Arc::new(content_store),
+            );
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.info.author_unixname == 'stash'\n\
                  end",
             );
             assert_matches!(run_changeset_hook(code, hcs), Ok(HookExecution::Accepted));

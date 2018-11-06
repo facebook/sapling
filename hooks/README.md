@@ -95,6 +95,7 @@ the following fields:
 | `files` | (`table`) List of objects of type `file`, described above. |
 | `file_content(path)` | (`function`) Takes the relative path to a file in the repo and returns its contents. |
 | `parse_commit_msg()` | (`function`) Returns a table with phabricator tags parsed. |
+| `is_valid_reviewer(user)` | (`function`) Returns whether a user can review the commit. |
 
 
 `ctx.info` is a table with the following fields:
