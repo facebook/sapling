@@ -20,11 +20,13 @@ extern crate mononoke_types_mocks;
 
 use futures::Future;
 
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, ErrorKind, SqlBonsaiHgMapping,
-                        SqlConstructors};
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, ErrorKind,
+                        MemWritesBonsaiHgMapping, SqlBonsaiHgMapping, SqlConstructors};
 use mercurial_types_mocks::nodehash as hg;
 use mercurial_types_mocks::repo::REPO_ZERO;
 use mononoke_types_mocks::changesetid as bonsai;
+
+use std::sync::Arc;
 
 fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
     let entry = BonsaiHgMappingEntry {
@@ -100,6 +102,82 @@ fn missing<M: BonsaiHgMapping>(mapping: M) {
     assert_eq!(result, None);
 }
 
+fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
+    let entry = BonsaiHgMappingEntry {
+        repo_id: REPO_ZERO,
+        hg_cs_id: hg::ONES_CSID,
+        bcs_id: bonsai::ONES_CSID,
+    };
+    assert_eq!(
+        true,
+        mapping
+            .add(entry.clone())
+            .wait()
+            .expect("Adding new entry failed")
+    );
+
+    let mapping = Arc::new(mapping);
+    let mem_mapping = MemWritesBonsaiHgMapping::new(mapping);
+
+    assert_eq!(
+        false,
+        mem_mapping
+            .add(entry.clone())
+            .wait()
+            .expect("Adding same entry failed")
+    );
+
+    let first_entry = BonsaiHgMappingEntry {
+        repo_id: REPO_ZERO,
+        hg_cs_id: hg::TWOS_CSID,
+        bcs_id: bonsai::TWOS_CSID,
+    };
+    assert_eq!(
+        true,
+        mem_mapping
+            .add(first_entry.clone())
+            .wait()
+            .expect("Adding new entry failed")
+    );
+
+    let result = mem_mapping
+        .get_bonsai_from_hg(REPO_ZERO, hg::ONES_CSID)
+        .wait()
+        .expect("Failed to get bonsai changeset by its hg counterpart");
+    assert_eq!(result, Some(bonsai::ONES_CSID));
+
+    let result = mem_mapping
+        .get_bonsai_from_hg(REPO_ZERO, hg::TWOS_CSID)
+        .wait()
+        .expect("Failed to get bonsai changeset by its hg counterpart");
+    assert_eq!(result, Some(bonsai::TWOS_CSID));
+
+    let result = mem_mapping.get_ordered_inserts();
+    assert_eq!(result, vec![first_entry.clone()]);
+
+    let second_entry = BonsaiHgMappingEntry {
+        repo_id: REPO_ZERO,
+        hg_cs_id: hg::THREES_CSID,
+        bcs_id: bonsai::THREES_CSID,
+    };
+    assert_eq!(
+        true,
+        mem_mapping
+            .add(second_entry.clone())
+            .wait()
+            .expect("Adding new entry failed")
+    );
+    let result = mem_mapping.get_ordered_inserts();
+    assert_eq!(result, vec![first_entry, second_entry]);
+
+    let inner = mem_mapping.get_inner();
+    let result = inner
+        .get_bonsai_from_hg(REPO_ZERO, hg::TWOS_CSID)
+        .wait()
+        .expect("Failed to get bonsai changeset by its hg counterpart");
+    assert_eq!(result, None);
+}
+
 #[test]
 fn test_add_and_get() {
     async_unit::tokio_unit_test(|| {
@@ -111,5 +189,12 @@ fn test_add_and_get() {
 fn test_missing() {
     async_unit::tokio_unit_test(|| {
         missing(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
+    });
+}
+
+#[test]
+fn test_mem_writes() {
+    async_unit::tokio_unit_test(|| {
+        mem_writes(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
     });
 }

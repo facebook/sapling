@@ -47,9 +47,11 @@ use stats::Timeseries;
 
 mod caching;
 mod errors;
+mod mem_writes;
 
 pub use caching::CachingBonsaiHgMapping;
 pub use errors::*;
+pub use mem_writes::MemWritesBonsaiHgMapping;
 
 define_stats! {
     prefix = "mononoke.bonsai-hg-mapping";
@@ -79,6 +81,14 @@ impl BonsaiHgMappingEntry {
             repo_id: bonsai_hg_mapping_entry_thrift::RepoId(self.repo_id.id()),
             hg_cs_id: self.hg_cs_id.into_nodehash().into_thrift(),
             bcs_id: self.bcs_id.into_thrift(),
+        }
+    }
+
+    pub fn new(repo_id: RepositoryId, hg_cs_id: HgChangesetId, bcs_id: ChangesetId) -> Self {
+        BonsaiHgMappingEntry {
+            repo_id,
+            hg_cs_id,
+            bcs_id,
         }
     }
 }
