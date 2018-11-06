@@ -465,6 +465,7 @@ fn open_repo_internal<'a>(
         None,
         // TODO(anastasiya) T35014200, condiser non default value for LFS repos
         Default::default(),
+        "".to_string(),
     ))
 }
 

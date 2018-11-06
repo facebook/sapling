@@ -94,6 +94,7 @@ pub fn repo_handlers(
                 Arc::new(hook_manager),
                 streaming_clone,
                 config.lfs.clone(),
+                reponame.clone(),
             );
 
             let listen_log = root_log.new(o!("repo" => reponame.clone()));

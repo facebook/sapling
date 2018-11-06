@@ -178,6 +178,7 @@ struct WireprotoLogger {
     wireproto_scribe_category: Option<String>,
     wireproto_command: &'static str,
     args: Option<serde_json::Value>,
+    reponame: String,
 }
 
 impl WireprotoLogger {
@@ -186,6 +187,7 @@ impl WireprotoLogger {
         wireproto_command: &'static str,
         args: Option<serde_json::Value>,
         wireproto_scribe_category: Option<String>,
+        reponame: String,
     ) -> Self {
         let mut logger = Self {
             scuba_logger,
@@ -193,6 +195,7 @@ impl WireprotoLogger {
             wireproto_scribe_category,
             wireproto_command,
             args: args.clone(),
+            reponame,
         };
         logger.scuba_logger.add("command", logger.wireproto_command);
 
@@ -227,9 +230,10 @@ impl WireprotoLogger {
                     builder.add("args", "");
                 }
             };
-            builder.add("source_control_server_type", "mononoke");
             builder.add("command", self.wireproto_command);
             builder.add("duration", stats.completion_time.as_millis_unchecked());
+            builder.add("source_control_server_type", "mononoke");
+            builder.add("reponame", self.reponame.as_str());
 
             // We can't really do anything with the errors, so let's ignore it
             let sample = builder.get_sample();
@@ -403,6 +407,7 @@ impl RepoClient {
             wireproto_command,
             args,
             self.ctxt.wireproto_scribe_category().clone(),
+            self.repo.reponame().clone(),
         )
     }
 }

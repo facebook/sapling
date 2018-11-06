@@ -45,6 +45,7 @@ pub struct MononokeRepo {
     hook_manager: Arc<HookManager>,
     streaming_clone: Option<SqlStreamingCloneConfig>,
     lfs_params: LfsParams,
+    reponame: String,
 }
 
 impl MononokeRepo {
@@ -55,13 +56,15 @@ impl MononokeRepo {
         hook_manager: Arc<HookManager>,
         streaming_clone: Option<SqlStreamingCloneConfig>,
         lfs_params: LfsParams,
+        reponame: String,
     ) -> Self {
         MononokeRepo {
             blobrepo,
             pushrebase_params: pushrebase_params.clone(),
             hook_manager,
             streaming_clone,
-            lfs_params: lfs_params,
+            lfs_params,
+            reponame,
         }
     }
 
@@ -84,6 +87,10 @@ impl MononokeRepo {
 
     pub fn lfs_params(&self) -> &LfsParams {
         &self.lfs_params
+    }
+
+    pub fn reponame(&self) -> &String {
+        &self.reponame
     }
 }
 
