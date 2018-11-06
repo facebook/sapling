@@ -138,7 +138,7 @@ def nochangesfound(ui, repo, excluded=None):
     if excluded:
         for n in excluded:
             ctx = repo[n]
-            if ctx.phase() >= phases.secret and not ctx.extinct():
+            if ctx.phase() >= phases.secret:
                 secretlist.append(n)
 
     if secretlist:
