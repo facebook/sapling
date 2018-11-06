@@ -23,5 +23,13 @@ def _ugettext(orig, message):
     return message
 
 
+def _ungettext(orig, singular, plural, count):
+    if orig:
+        message = orig(singular, plural, count)
+    message = message.replace("changeset", "commit")
+    return message
+
+
 def uisetup(ui):
     extensions.wrapfunction(i18n, "_ugettext", _ugettext)
+    extensions.wrapfunction(i18n, "_ungettext", _ungettext)

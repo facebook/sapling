@@ -48,6 +48,7 @@ if (
         pass
 
 _ugettext = None
+_ungettext = None
 
 
 def setdatapath(datapath):
@@ -59,6 +60,11 @@ def setdatapath(datapath):
         _ugettext = t.ugettext
     except AttributeError:
         _ugettext = t.gettext
+    global _ungettext
+    try:
+        _ungettext = t.ungettext
+    except AttributeError:
+        _ungettext = t.ngettext
 
 
 _msgcache = {}  # encoding: {message: translation}
@@ -102,6 +108,28 @@ def gettext(message):
     return cache[message]
 
 
+def ngettext(singular, plural, count):
+    """Translate pluralized message.
+
+    The message is looked up in the catalog to get a Unicode string, pluralized
+    appropriately based on the value of count.  The Unicode string is encoded
+    in the local encoding before being returned.
+
+    Important: singular and plural are restricted to characters in the encoding
+    given by sys.getdefaultencoding() which is most likely 'ascii'.
+    """
+    # If singular or plural are None, t.ugettext will return u'None' as the
+    # translation whereas our callers expect us to return None.
+    if singular is None or plural is None or not _ungettext:
+        return identity.replace(singular if count == 1 else plural)
+
+    # Don't cache pluralized messages.  They are relatively rare, and the
+    # content depends on the count.
+    translated = _ungettext(singular, plural, count)
+    encodingstr = pycompat.sysstr(encoding.encoding)
+    return identity.replace(translated.encode(encodingstr, "replace"))
+
+
 _plain = True
 
 
@@ -117,6 +145,13 @@ def _(message):
         return identity.replace(message)
     else:
         return gettext(message)
+
+
+def _n(singular, plural, count):
+    if _plain:
+        return identity.replace(singular if count == 1 else plural)
+    else:
+        return ngettext(singular, plural, count)
 
 
 def limititems(items, maxitems=5):
