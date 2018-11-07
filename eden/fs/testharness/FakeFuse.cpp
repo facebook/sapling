@@ -136,6 +136,20 @@ FakeFuse::Response FakeFuse::recvResponse() {
   return response;
 }
 
+std::vector<FakeFuse::Response> FakeFuse::getAllResponses() {
+  std::vector<FakeFuse::Response> responses;
+  try {
+    while (true) {
+      responses.emplace_back(recvResponse());
+    }
+  } catch (const std::system_error& e) {
+    if (e.code().value() != EAGAIN) {
+      throw;
+    }
+  }
+  return responses;
+}
+
 uint32_t FakeFuse::sendInitRequest(
     uint32_t majorVersion,
     uint32_t minorVersion,

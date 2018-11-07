@@ -77,6 +77,11 @@ class FakeFuse {
   Response recvResponse();
 
   /**
+   * Get all the responses until the channel is empty
+   */
+  std::vector<Response> getAllResponses();
+
+  /**
    * Send an INIT request.
    *
    * Returns the unique request ID.

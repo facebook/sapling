@@ -514,6 +514,29 @@ class GcCmd(Subcmd):
         return 0
 
 
+@subcmd("chown", "Chown an entire eden repository")
+class ChownCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("path", metavar="path", help="The Eden checkout to chown")
+        parser.add_argument("uid", metavar="uid", help="The uid to chown to", type=int)
+        parser.add_argument("gid", metavar="gid", help="The gid to chown to", type=int)
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+        bindmounts: List[bytes] = []
+        with instance.get_thrift_client() as client:
+            print("Chowning Eden repository...", end="", flush=True)
+            client.chown(args.path, args.uid, args.gid)
+            print("done")
+            bindmounts = client.getBindMounts(args.path)
+        for bindmount in bindmounts:
+            mount = bindmount.decode("utf-8")
+            print(f"Chowning bindmount: {mount}...", end="", flush=True)
+            full_path = os.path.join(args.path, mount)
+            subprocess.run(["sudo", "chown", "-R", f"{args.uid}:{args.gid}", full_path])
+            print("done")
+
+
 @subcmd(
     "mount",
     "Remount an existing checkout (for instance, after it was manually unmounted)",

@@ -906,5 +906,28 @@ InodeMap::LoadedInodeCounts InodeMap::getLoadedInodeCounts() const {
   }
   return counts;
 }
+
+std::vector<InodeNumber> InodeMap::getReferencedInodes() const {
+  std::vector<InodeNumber> inodes;
+  {
+    auto data = data_.rlock();
+
+    for (auto& kv : data->loadedInodes_) {
+      auto& loadedInode = kv.second;
+
+      inodes.push_back(loadedInode->getNodeId());
+    }
+
+    for (auto& kv : data->unloadedInodes_) {
+      auto& unloadedInode = kv.second;
+
+      if (unloadedInode.numFuseReferences > 0) {
+        inodes.push_back(unloadedInode.number);
+      }
+    }
+  }
+
+  return inodes;
+}
 } // namespace eden
 } // namespace facebook

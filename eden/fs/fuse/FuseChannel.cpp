@@ -538,6 +538,19 @@ void FuseChannel::invalidateEntry(InodeNumber parent, PathComponentPiece name) {
   invalidationCV_.notify_one();
 }
 
+void FuseChannel::invalidateInodes(folly::Range<InodeNumber*> range) {
+  {
+    auto queue = invalidationQueue_.lock();
+    std::transform(
+        range.begin(),
+        range.end(),
+        std::back_insert_iterator(queue->queue),
+        [](const auto& inodeNum) { return InvalidationEntry(inodeNum, 0, 0); });
+  }
+  if (range.begin() != range.end()) {
+    invalidationCV_.notify_one();
+  }
+}
 folly::Future<folly::Unit> FuseChannel::flushInvalidations() {
   // Add a promise to the invalidation queue, which the invalidation thread
   // will fulfill once it reaches that element in the queue.
@@ -622,11 +635,11 @@ void FuseChannel::sendInvalidateInode(
     XLOG(DBG7) << "invalidateInode ino=" << ino << " off=" << off
                << " len=" << len << " OK!";
   } catch (const std::system_error& exc) {
-    XLOG(ERR) << "invalidateInode ino=" << ino << " off=" << off
-              << " len=" << len << " FAIL: " << exc.what();
     // Ignore ENOENT.  This can happen for inode numbers that we allocated on
     // our own and haven't actually told the kernel about yet.
     if (!isEnoent(exc)) {
+      XLOG(ERR) << "invalidateInode ino=" << ino << " off=" << off
+                << " len=" << len << " FAIL: " << exc.what();
       throwSystemErrorExplicit(
           exc.code().value(), "error invalidating FUSE inode ", ino);
     }

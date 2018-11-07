@@ -385,6 +385,12 @@ class InodeMap {
     return data_.rlock()->unloadedInodes_.size();
   }
 
+  /*
+   * Return all referenced inodes (loaded and unloaded inodes whose
+   * fuse references is greater than zero).
+   */
+  std::vector<InodeNumber> getReferencedInodes() const;
+
  private:
   friend class InodeMapLock;
 

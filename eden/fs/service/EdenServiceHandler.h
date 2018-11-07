@@ -91,6 +91,11 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   folly::Future<std::unique_ptr<Glob>> future_globFiles(
       std::unique_ptr<GlobParams> params) override;
 
+  folly::Future<folly::Unit> future_chown(
+      std::unique_ptr<std::string> mountPoint,
+      int32_t uid,
+      int32_t gid) override;
+
   void async_tm_subscribe(
       std::unique_ptr<apache::thrift::StreamingHandlerCallback<
           std::unique_ptr<JournalPosition>>> callback,

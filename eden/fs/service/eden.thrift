@@ -574,6 +574,11 @@ service EdenService extends fb303.FacebookService {
   ) throws (1: EdenError ex)
 
   /**
+   * Chowns all files in the requested mount to the requested uid and gid
+   */
+  void chown(1: PathString mountPoint, 2: i32 uid, 3: i32 gid)
+
+  /**
    * Get the status of the working directory against the specified commit.
    *
    * This may exclude special files according to the rules of the underlying

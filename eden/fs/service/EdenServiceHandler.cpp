@@ -12,6 +12,7 @@
 #include <folly/CppAttributes.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
+#include <folly/Subprocess.h>
 #include <folly/chrono/Conv.h>
 #include <folly/container/Access.h>
 #include <folly/futures/Future.h>
@@ -19,6 +20,7 @@
 #include <folly/logging/LoggerDB.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
+#include <folly/system/Shell.h>
 #include <optional>
 #include "common/stats/ServiceData.h"
 #include "eden/fs/config/ClientConfig.h"
@@ -35,6 +37,7 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/utils/ProcessNameCache.h"
@@ -853,6 +856,17 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
           .ensure([globRoot]() {
             // keep globRoot alive until the end
           }));
+#else
+  NOT_IMPLEMENTED();
+#endif // !EDEN_WIN
+}
+
+folly::Future<Unit> EdenServiceHandler::future_chown(
+    std::unique_ptr<std::string> mountPoint,
+    int32_t uid,
+    int32_t gid) {
+#ifndef EDEN_WIN
+  return server_->getMount(*mountPoint)->chown(uid, gid);
 #else
   NOT_IMPLEMENTED();
 #endif // !EDEN_WIN

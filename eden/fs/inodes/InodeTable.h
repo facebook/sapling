@@ -221,6 +221,23 @@ class InodeTable {
     });
   }
 
+  /**
+   * Iterate over all entries of the table and call fn with the inode
+   * and record
+   *
+   * `fn` has type (const InodeNumber&, Record&) -> void
+   */
+  template <typename ModifyFn>
+  void forEachModify(ModifyFn&& fn) {
+    auto state = state_.wlock();
+    for (auto& entry : state->indices) {
+      const auto& inode = entry.first;
+      auto index = entry.second;
+      auto& record = state->storage[index].record;
+      fn(inode, record);
+    }
+  }
+
  private:
   explicit InodeTable(MappedDiskVector<Entry>&& storage)
       : state_{folly::in_place, std::move(storage)} {}

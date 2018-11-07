@@ -16,10 +16,12 @@
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/InodeError.h"
+#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
+#include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -382,4 +384,124 @@ TEST(EdenMount, concurrentDeepEnsureDirectoryExists) {
   }
 
   EXPECT_NE(nullptr, testMount.getTreeInode(dirPath));
+}
+
+TEST(EdenMount, setOwnerChangesTakeEffect) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/file.txt", "contents");
+  TestMount testMount{builder};
+  auto edenMount = testMount.getEdenMount();
+
+  uid_t uid = 1024;
+  gid_t gid = 2048;
+  edenMount->setOwner(uid, gid);
+
+  auto fileInode = testMount.getFileInode("dir/file.txt");
+  auto attr = fileInode->getattr().get(0ms);
+  EXPECT_EQ(attr.st.st_uid, uid);
+  EXPECT_EQ(attr.st.st_gid, gid);
+}
+
+class ChownTest : public ::testing::Test {
+ protected:
+  const uid_t uid = 1024;
+  const gid_t gid = 2048;
+
+  void SetUp() override {
+    builder_.setFile("file.txt", "contents");
+    testMount_ = std::make_unique<TestMount>(builder_);
+    fuse_ = std::make_shared<FakeFuse>();
+    testMount_->registerFakeFuse(fuse_);
+    edenMount_ = testMount_->getEdenMount();
+    auto initFuture = edenMount_->startFuse();
+
+    struct fuse_init_in initArg;
+    initArg.major = FUSE_KERNEL_VERSION;
+    initArg.minor = FUSE_KERNEL_MINOR_VERSION;
+    initArg.max_readahead = 0;
+    initArg.flags = 0;
+    fuse_->sendRequest(FUSE_INIT, 1, initArg);
+    fuse_->recvResponse();
+    // Wait for the mount to complete
+    testMount_->drainServerExecutor();
+    std::move(initFuture).get(10s);
+  }
+
+  InodeNumber load() {
+    auto file = edenMount_->getInodeBlocking("file.txt"_relpath);
+    // Load the file into the inode map
+    file->incFuseRefcount();
+    file->getNodeId();
+    return file->getNodeId();
+  }
+
+  void expectChownSucceeded() {
+    auto attr = testMount_->getFileInode("file.txt")->getattr().get(0ms);
+    EXPECT_EQ(attr.st.st_uid, uid);
+    EXPECT_EQ(attr.st.st_gid, gid);
+  }
+
+  bool invalidatedFileInode(InodeNumber fileIno) {
+    auto responses = fuse_->getAllResponses();
+    bool invalidatedInode = false;
+    for (const auto& response : responses) {
+      EXPECT_EQ(response.header.error, FUSE_NOTIFY_INVAL_INODE);
+      auto out = reinterpret_cast<const fuse_notify_inval_inode_out*>(
+          response.body.data());
+      if (out->ino == fileIno.get()) {
+        invalidatedInode = true;
+      }
+    }
+    return invalidatedInode;
+  }
+
+  FakeTreeBuilder builder_;
+  std::unique_ptr<TestMount> testMount_;
+  std::shared_ptr<FakeFuse> fuse_;
+  std::shared_ptr<EdenMount> edenMount_;
+};
+
+TEST_F(ChownTest, UnloadedInodeWithZeroRefCount) {
+  auto inodeMap = edenMount_->getInodeMap();
+
+  auto fileIno = load();
+  EXPECT_TRUE(inodeMap->lookupInode(fileIno).get());
+  // now unload it with a zero ref count
+  inodeMap->decFuseRefcount(fileIno, 1);
+  edenMount_->getRootInode()->unloadChildrenNow();
+
+  auto chownFuture = edenMount_->chown(uid, gid);
+  EXPECT_FALSE(invalidatedFileInode(fileIno));
+  std::move(chownFuture).get(10s);
+
+  expectChownSucceeded();
+}
+
+TEST_F(ChownTest, UnloadedInodeWithPositiveRefCount) {
+  auto inodeMap = edenMount_->getInodeMap();
+
+  auto fileIno = load();
+  EXPECT_TRUE(inodeMap->lookupInode(fileIno).get());
+  // now unload it with a positive ref count
+  edenMount_->getRootInode()->unloadChildrenNow();
+
+  auto chownFuture = edenMount_->chown(uid, gid);
+  EXPECT_TRUE(invalidatedFileInode(fileIno));
+  std::move(chownFuture).get(10s);
+
+  expectChownSucceeded();
+}
+
+TEST_F(ChownTest, LoadedInode) {
+  auto inodeMap = edenMount_->getInodeMap();
+
+  auto fileIno = load();
+  EXPECT_TRUE(inodeMap->lookupInode(fileIno).get());
+  edenMount_->getRootInode()->unloadChildrenNow();
+
+  auto chownFuture = edenMount_->chown(uid, gid);
+  EXPECT_TRUE(invalidatedFileInode(fileIno));
+  std::move(chownFuture).get(10s);
+
+  expectChownSucceeded();
 }

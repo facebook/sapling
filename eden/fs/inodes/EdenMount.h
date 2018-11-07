@@ -80,6 +80,14 @@ enum class CounterName {
 };
 
 /**
+ * Contains the uid and gid of the owner of the files in the mount
+ */
+struct Owner {
+  uid_t uid;
+  gid_t gid;
+};
+
+/**
  * EdenMount contains all of the data about a specific eden mount point.
  *
  * This contains:
@@ -309,6 +317,11 @@ class EdenMount {
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 
   /**
+   * Chown the repository to the given uid and gid
+   */
+  folly::Future<folly::Unit> chown(uid_t uid, gid_t gid);
+
+  /**
    * This version of diff is primarily intended for testing.
    * Use diff(InodeDiffCallback* callback, bool listIgnored) instead.
    * The caller must ensure that the DiffContext object ctsPtr points to
@@ -420,12 +433,14 @@ class EdenMount {
   FOLLY_NODISCARD folly::Future<TakeoverData::MountInfo>
   getFuseCompletionFuture();
 
-  uid_t getUid() const {
-    return uid_;
+  Owner getOwner() const {
+    return *owner_.rlock();
   }
 
-  gid_t getGid() const {
-    return gid_;
+  void setOwner(uid_t uid, gid_t gid) {
+    auto owner = owner_.wlock();
+    owner->uid = uid;
+    owner->gid = gid;
   }
 
   /**
@@ -672,8 +687,7 @@ class EdenMount {
    * uid and gid that we'll set as the owners in the stat information
    * returned via initStatData().
    */
-  uid_t uid_;
-  gid_t gid_;
+  folly::Synchronized<Owner> owner_;
 
   /**
    * The associated fuse channel to the kernel.

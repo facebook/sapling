@@ -109,8 +109,8 @@ Dispatcher::Attr setFileAttr(
 void basicAttrChecks(const FileInodePtr& inode, const Dispatcher::Attr& attr) {
   EXPECT_EQ(inode->getNodeId().getRawValue(), attr.st.st_ino);
   EXPECT_EQ(1, attr.st.st_nlink);
-  EXPECT_EQ(inode->getMount()->getUid(), attr.st.st_uid);
-  EXPECT_EQ(inode->getMount()->getGid(), attr.st.st_gid);
+  EXPECT_EQ(inode->getMount()->getOwner().uid, attr.st.st_uid);
+  EXPECT_EQ(inode->getMount()->getOwner().gid, attr.st.st_gid);
   EXPECT_EQ(0, attr.st.st_rdev);
   EXPECT_GT(attr.st.st_atime, 0);
   EXPECT_GT(attr.st.st_mtime, 0);

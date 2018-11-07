@@ -180,8 +180,7 @@ EdenMount::EdenMount(
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       lastCheckoutTime_{serverState_->getClock()->getRealtime()},
-      uid_(getuid()),
-      gid_(getgid()),
+      owner_(Owner{getuid(), getgid()}),
       clock_(serverState_->getClock()) {}
 
 folly::Future<folly::Unit> EdenMount::initialize(
@@ -626,6 +625,31 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
       });
 }
 
+folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
+  // 1) Ensure that all future opens will by default provide this owner
+  setOwner(uid, gid);
+
+  // 2) Modify all uids/gids of files stored in the overlay
+  auto metadata = getInodeMetadataTable();
+  XDCHECK(metadata) << "Unexpected null Metadata Table";
+  metadata->forEachModify([&](auto& /* unusued */, auto& record) {
+    record.uid = uid;
+    record.gid = gid;
+  });
+
+  // Note that any files being created at this point are not
+  // guaranteed to have the requested uid/gid, but that racyness is
+  // consistent with the behavior of chown
+
+  // 3) Invalidate all inodes that the kernel holds a reference to
+  auto inodesToInvalidate = getInodeMap()->getReferencedInodes();
+  auto fuseChannel = getFuseChannel();
+  XDCHECK(fuseChannel) << "Unexpected null Fuse Channel";
+  fuseChannel->invalidateInodes(folly::range(inodesToInvalidate));
+
+  return fuseChannel->flushInvalidations();
+}
+
 std::unique_ptr<DiffContext> EdenMount::createDiffContext(
     InodeDiffCallback* callback,
     bool listIgnored) const {
@@ -806,8 +830,9 @@ void EdenMount::fuseInitSuccessful(
 struct stat EdenMount::initStatData() const {
   struct stat st = {};
 
-  st.st_uid = uid_;
-  st.st_gid = gid_;
+  auto owner = getOwner();
+  st.st_uid = owner.uid;
+  st.st_gid = owner.gid;
   // We don't really use the block size for anything.
   // 4096 is fairly standard for many file systems.
   st.st_blksize = 4096;
@@ -816,8 +841,9 @@ struct stat EdenMount::initStatData() const {
 }
 
 InodeMetadata EdenMount::getInitialInodeMetadata(mode_t mode) const {
+  auto owner = getOwner();
   return InodeMetadata{
-      mode, uid_, gid_, InodeTimestamps{getLastCheckoutTime()}};
+      mode, owner.uid, owner.gid, InodeTimestamps{getLastCheckoutTime()}};
 }
 
 namespace {

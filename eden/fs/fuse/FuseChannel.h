@@ -9,6 +9,7 @@
  */
 #pragma once
 #include <folly/File.h>
+#include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
@@ -195,6 +196,17 @@ class FuseChannel {
    * @param name file name
    */
   void invalidateEntry(InodeNumber parent, PathComponentPiece name);
+
+  /*
+   * Request that the kernel invalidate its cached data for the specified
+   * inodes.
+   *
+   * This operation is performed asynchronously.  flushInvalidations() can be
+   * called if you need to determine when this operation has completed.
+   *
+   * @param range a range of inodes
+   */
+  void invalidateInodes(folly::Range<InodeNumber*> range);
 
   /**
    * Wait for all currently scheduled invalidateInode() and invalidateEntry()
