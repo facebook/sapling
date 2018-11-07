@@ -4,7 +4,7 @@ version = "0.1.0"
 
 [dependencies]
 libc = "0.2.43" # keep it in sync with zstd-sys
-zstd-sys = "= 1.4.5+zstd.1.3.6" # pinned. zstd advanced API changes rapidly
+zstd-sys = "= 1.4.6+zstd.1.3.7" # pinned. zstd advanced API changes rapidly
 
 [dev-dependencies]
 quickcheck = "0.6"
