@@ -22,13 +22,6 @@ class NonEdenOperationTest(EdenHgTestCase):
     def test_hg_clone_non_eden_repo_within_eden_repo(self):
         """Regression test to ensure that running `hg` commands from an
         Eden-backed Hg repo on a non-Eden-backed Hg repo work as expected."""
-        if self.__class__.__name__.endswith("Treemanifest"):
-            raise unittest.SkipTest(
-                "Skip because the treemanifest extension erroneously assumes "
-                "that any repo it is dealing with also has the treemanifest "
-                "extension enabled."
-            )
-
         non_eden_hg_repo = os.path.join(self.tmp_dir, "non-eden-hg-repo")
         os.mkdir(non_eden_hg_repo)
 
