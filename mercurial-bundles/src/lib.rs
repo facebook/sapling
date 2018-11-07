@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(ascii_ctype)]
 
 extern crate ascii;
 #[macro_use]

@@ -7,7 +7,6 @@ use std::fmt;
 
 extern crate boxfnonce;
 pub extern crate failure;
-#[macro_use]
 extern crate failure_derive;
 extern crate futures;
 extern crate slog;
@@ -21,12 +20,12 @@ pub mod prelude {
     pub use chain::{self, Chain, ChainExt};
     pub use failure::{Error, Fail, ResultExt};
 
-    pub use super::{FutureFailureErrorExt, FutureFailureExt, Result, StreamFailureErrorExt,
-                    StreamFailureExt};
+    pub use super::{AsFail, FutureFailureErrorExt, FutureFailureExt, Result,
+                    StreamFailureErrorExt, StreamFailureExt};
 }
 
-pub use failure::{_core, err_msg, Backtrace, Causes, Compat, Context, Error, Fail, ResultExt,
-                  SyncFailure};
+pub use failure::{_core, err_msg, AsFail, Backtrace, Causes, Compat, Context, Error, Fail,
+                  ResultExt, SyncFailure};
 pub use failure_derive::*;
 
 #[macro_use]

@@ -13,7 +13,6 @@
 
 #![deny(warnings)]
 #![feature(try_from)]
-#![feature(iterator_flatten)]
 
 #[cfg(test)]
 #[macro_use]
