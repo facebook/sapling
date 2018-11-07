@@ -1,5 +1,5 @@
 import test_hgsubversion_util
-from mercurial import commands, hg, ui
+from mercurial import hg
 
 
 class _DbCommand(object):
@@ -77,24 +77,22 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
         return repo, svn_repo_path
 
     def _assert_globalrev(self, repo, expected_log, rev=None, showgraph=False):
-        class CapturingUI(ui.ui):
-            def __init__(self, *args, **kwds):
-                super(CapturingUI, self).__init__(*args, **kwds)
-                self._output = ""
+        cmd = ["log", "--quiet"]
 
-            def write(self, msg, *args, **kwds):
-                self._output += msg
+        if showgraph:
+            cmd.append("-G")
 
-        capturing_ui = CapturingUI()
-        defaults = {"date": None, "rev": rev, "user": None, "graph": showgraph}
-        commands.log(
-            capturing_ui,
-            repo,
-            template=("  svnrev:{svnrev} globalrev:{globalrev}\n"),
-            **defaults
-        )
+        if rev is not None:
+            cmd.append("-r")
+            cmd.append(rev)
 
-        self.assertEqual(capturing_ui._output.strip(), expected_log.strip())
+        cmd.append("-T")
+        cmd.append("svnrev:{svnrev} globalrev:{globalrev}\n")
+
+        ui = repo.ui
+        ui.pushbuffer()
+        test_hgsubversion_util.dispatch(cmd, ui, repo)
+        self.assertEqual(ui.popbuffer().strip(), expected_log.strip())
 
     def test_nochanges(self):
         repo, _ = self._loadupdate("single_rev.svndump")
@@ -104,8 +102,8 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
         self._assert_globalrev(
             repo,
             """
-  svnrev:2 globalrev:
-@
+@  svnrev:2 globalrev:
+
 """,
             showgraph=True,
         )
@@ -121,14 +119,11 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
         self._assert_globalrev(
             repo,
             """
-  svnrev:4 globalrev:5001
-o
+o  svnrev:4 globalrev:5001
 |
-  svnrev:3 globalrev:5000
-o
+o  svnrev:3 globalrev:5000
 |
-  svnrev:2 globalrev:
-@
+@  svnrev:2 globalrev:
 """,
             showgraph=True,
         )
@@ -144,14 +139,11 @@ o
         self._assert_globalrev(
             repo,
             """
-  svnrev:4 globalrev:5001
-@
+@  svnrev:4 globalrev:5001
 |
-  svnrev:3 globalrev:5000
-o
+o  svnrev:3 globalrev:5000
 |
-  svnrev:2 globalrev:
-o
+o  svnrev:2 globalrev:
 """,
             showgraph=True,
         )
