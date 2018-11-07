@@ -513,15 +513,6 @@ fn main() -> Result<()> {
                 }
             })
             .route(
-                "/status",
-                http::Method::GET,
-                |req: HttpRequest<HttpServerState>| {
-                    // removing ScubaSampleBuilder will disable scuba logging for this request.
-                    req.extensions_mut().remove::<ScubaSampleBuilder>();
-                    HttpResponse::Ok().body("ok")
-                },
-            )
-            .route(
                 "/health_check",
                 http::Method::GET,
                 |req: HttpRequest<HttpServerState>| {

@@ -54,11 +54,11 @@ starts api server
   $ alias sslcurl="sslcurl --silent"
 
 ping test
-  $ sslcurl -i $APISERVER/status | grep -iv "date"
+  $ sslcurl -i $APISERVER/health_check | grep -iv "date"
   HTTP/* 200 * (glob)
-  content-length: 2\r (esc)
+  content-length: 10\r (esc)
   \r (esc)
-  ok
+  I_AM_ALIVE
 
 test cat file
   $ sslcurl $APISERVER/repo/raw/$COMMIT1/test > output
@@ -80,9 +80,6 @@ test cat renamed file
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/$COMMIT2/test | extract_json_error
   test is not found
   404
-
-  $ sslcurl $APISERVER/status
-  ok (no-eol)
 
   $ sslcurl $APISERVER/health_check
   I_AM_ALIVE (no-eol)
