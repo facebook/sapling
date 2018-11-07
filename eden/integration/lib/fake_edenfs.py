@@ -62,3 +62,12 @@ class FakeEdenFS(typing.ContextManager[int]):
         with contextlib.suppress(ProcessLookupError):
             os.kill(self.process_id, signal.SIGTERM)
         return None
+
+
+def read_fake_edenfs_argv_file(argv_file: pathlib.Path) -> typing.List[str]:
+    try:
+        return list(argv_file.read_text().splitlines())
+    except FileNotFoundError as e:
+        raise Exception(
+            "fake_edenfs should have recognized the --commandArgumentsLogFile argument"
+        ) from e

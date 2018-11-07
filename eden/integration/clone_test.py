@@ -7,19 +7,25 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import errno
 import json
 import os
+import pathlib
 import stat
 import subprocess
+import sys
 from textwrap import dedent
-from typing import Optional, Set
+from typing import Optional, Sequence, Set
 
+import pexpect
 from eden.cli import util
 from eden.integration.lib.hgrepo import HgRepository
 
 from .lib import edenclient, testcase
+from .lib.fake_edenfs import read_fake_edenfs_argv_file
 from .lib.find_executables import FindExe
+from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
+from .lib.service_test_case import ServiceTestCaseBase, service_test
+from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 # This is the name of the default repository created by EdenRepoTestBase.
@@ -401,3 +407,60 @@ echo -n "$1" >> "{scratch_file}"
         self.eden.run_cmd("unmount", new_mount)
         self.assertFalse(os.path.exists(os.path.join(new_mount, "hello")))
         self.assertEqual(custom_readme_text, util.read_all(bytes(readme_path, "utf-8")))
+
+
+@service_test
+class CloneFakeEdenFSTest(
+    ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin
+):
+    def setUp(self):
+        super().setUp()
+        self.eden_dir = pathlib.Path(self.make_temporary_directory())
+
+    def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
+        argv_file = self.eden_dir / "argv"
+        assert not argv_file.exists()
+        repo = self.make_dummy_hg_repo()
+        mount_path = pathlib.Path(self.make_temporary_directory())
+
+        extra_daemon_args = ["--commandArgumentsLogFile", str(argv_file), "hello world"]
+        clone_process = self.spawn_clone(
+            repo_path=pathlib.Path(repo.path),
+            mount_path=mount_path,
+            extra_args=["--daemon-args"] + extra_daemon_args,
+        )
+        wait_for_pexpect_process(clone_process)
+
+        argv = read_fake_edenfs_argv_file(argv_file)
+        self.assertEquals(
+            argv[-len(extra_daemon_args) :],
+            extra_daemon_args,
+            f"fake_edenfs should have received arguments verbatim\nargv: {argv}",
+        )
+
+    def make_dummy_hg_repo(self) -> HgRepository:
+        repo = HgRepository(path=self.make_temporary_directory())
+        repo.init()
+        repo.write_file("hello", "")
+        repo.commit("Initial commit.")
+        return repo
+
+    def spawn_clone(
+        self,
+        repo_path: pathlib.Path,
+        mount_path: pathlib.Path,
+        extra_args: Sequence[str] = (),
+    ) -> "pexpect.spawn[str]":
+        args = [
+            "--config-dir",
+            str(self.eden_dir),
+            "clone",
+            "--daemon-binary",
+            FindExe.FAKE_EDENFS,
+            str(repo_path),
+            str(mount_path),
+        ]
+        args.extend(extra_args)
+        return pexpect.spawn(
+            FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
+        )

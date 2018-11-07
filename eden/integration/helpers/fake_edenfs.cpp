@@ -14,10 +14,15 @@
 #include <gflags/gflags.h>
 #include <signal.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
+#include <algorithm>
 #include <array>
 #include <chrono>
+#include <fstream>
+#include <iterator>
 #include <optional>
+#include <string>
 #include <thread>
+#include <vector>
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
@@ -38,6 +43,10 @@ DEFINE_string(
     cleanShutdownFile,
     "",
     "If set, create the given file when shutting down cleanly");
+DEFINE_string(
+    commandArgumentsLogFile,
+    "",
+    "If set, write argv to the given file before starting up");
 DEFINE_bool(
     exitWithoutCleanupOnStop,
     false,
@@ -80,6 +89,8 @@ template <class Rep, class Ratio>
 std::string prettyPrint(
     std::chrono::duration<Rep, Ratio> duration,
     bool addSpace = true);
+
+void writeCommandArgumentsToLogIfNecessary(const std::vector<std::string>&);
 
 enum class StopBehavior {
   DoNothing,
@@ -295,7 +306,12 @@ int main(int argc, char** argv) {
   auto identity = UserInfo::lookup();
   identity.dropPrivileges();
 
+  auto originalCommandArguments =
+      std::vector<std::string>{&argv[0], &argv[argc]};
+
   auto init = folly::Init(&argc, &argv);
+
+  writeCommandArgumentsToLogIfNecessary(originalCommandArguments);
 
 #if EDEN_HAVE_SYSTEMD
   if (FLAGS_experimentalSystemd) {
@@ -366,6 +382,21 @@ std::string prettyPrint(
       std::chrono::duration_cast<std::chrono::duration<double>>(duration);
   return folly::prettyPrint(
       durationInSeconds.count(), folly::PRETTY_TIME, addSpace);
+}
+
+void writeCommandArgumentsToLogIfNecessary(
+    const std::vector<std::string>& originalCommandArguments) {
+  const auto& path = FLAGS_commandArgumentsLogFile;
+  if (path.empty()) {
+    return;
+  }
+  auto file = std::ofstream{};
+  file.exceptions(std::ofstream::badbit | std::ofstream::failbit);
+  file.open(path);
+  std::copy(
+      originalCommandArguments.begin(),
+      originalCommandArguments.end(),
+      std::ostream_iterator<std::string>{file, "\n"});
 }
 
 } // namespace

@@ -195,8 +195,11 @@ def _get_daemon_args(
 
     # If the user put an "--" argument before the edenfs args, argparse passes
     # that through to us.  Strip it out.
-    if edenfs_args and edenfs_args[0] == "--":
-        edenfs_args = edenfs_args[1:]
+    if edenfs_args is not None:
+        try:
+            edenfs_args.remove("--")
+        except ValueError:
+            pass
 
     return instance.get_edenfs_start_cmd(
         valid_daemon_binary,

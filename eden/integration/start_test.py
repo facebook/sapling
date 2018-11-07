@@ -9,6 +9,7 @@
 
 import os
 import pathlib
+import subprocess
 import sys
 import typing
 
@@ -18,8 +19,9 @@ from eden.cli.util import HealthStatus
 from fb303.ttypes import fb_status
 
 from .lib import testcase
+from .lib.fake_edenfs import read_fake_edenfs_argv_file
 from .lib.find_executables import FindExe
-from .lib.pexpect import PexpectAssertionMixin
+from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
 from .lib.service_test_case import ServiceTestCaseBase, service_test
 from .lib.temporary_directory import TemporaryDirectoryMixin
 
@@ -117,6 +119,64 @@ class StartFakeEdenFSTest(
             f"The edenfs process should have separate process IDs",
         )
 
+    def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
+        argv_file = self.eden_dir / "argv"
+        assert not argv_file.exists()
+
+        extra_daemon_args = [
+            "--commandArgumentsLogFile",
+            str(argv_file),
+            "--",
+            "hello world",
+            "--ignoredOption",
+        ]
+        start_process = self.spawn_start(daemon_args=extra_daemon_args)
+        wait_for_pexpect_process(start_process)
+
+        argv = read_fake_edenfs_argv_file(argv_file)
+        self.assertEquals(
+            argv[-len(extra_daemon_args) :],
+            extra_daemon_args,
+            f"fake_edenfs should have received arguments verbatim\nargv: {argv}",
+        )
+
+    def test_daemon_command_arguments_should_forward_to_edenfs_without_leading_dashdash(
+        self
+    ) -> None:
+        argv_file = self.eden_dir / "argv"
+        assert not argv_file.exists()
+
+        subprocess.check_call(
+            [
+                FindExe.EDEN_CLI,
+                "--config-dir",
+                str(self.eden_dir),
+                "start",
+                "--daemon-binary",
+                FindExe.FAKE_EDENFS,
+                "hello world",
+                "another fake_edenfs argument",
+                "--",
+                "--commandArgumentsLogFile",
+                str(argv_file),
+                "arg_after_dashdash",
+            ]
+        )
+
+        expected_extra_daemon_args = [
+            "hello world",
+            "another fake_edenfs argument",
+            "--commandArgumentsLogFile",
+            str(argv_file),
+            "arg_after_dashdash",
+        ]
+        argv = read_fake_edenfs_argv_file(argv_file)
+        self.assertEquals(
+            argv[-len(expected_extra_daemon_args) :],
+            expected_extra_daemon_args,
+            f"fake_edenfs should have received extra arguments\nargv: {argv}",
+        )
+
     def test_eden_start_fails_if_edenfs_is_already_running(self) -> None:
         with self.spawn_fake_edenfs(self.eden_dir) as daemon_pid:
             start_process = self.spawn_start()
@@ -150,3 +210,10 @@ class StartFakeEdenFSTest(
         return pexpect.spawn(
             FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
         )
+
+    def __read_argv_file(self, argv_file: pathlib.Path) -> typing.List[str]:
+        self.assertTrue(
+            argv_file.exists(),
+            f"fake_edenfs should have recognized the --commandArgumentsLogFile argument",
+        )
+        return list(argv_file.read_text().splitlines())
