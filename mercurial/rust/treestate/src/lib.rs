@@ -12,7 +12,6 @@
 //! The directory state also stores files that are in the working copy parent manifest but have
 //! been marked as removed.
 
-#[macro_use]
 extern crate cpython;
 extern crate encoding;
 extern crate treestate;
