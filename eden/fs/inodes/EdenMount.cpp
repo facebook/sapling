@@ -65,6 +65,16 @@ DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 namespace facebook {
 namespace eden {
 
+namespace {
+// We used to play tricks and hard link the .eden directory
+// into every tree, but the linux kernel doesn't seem to like
+// hard linking directories.  Now we create a symlink that resolves
+// to the .eden directory inode in the root.
+// The name of that symlink is `this-dir`:
+// .eden/this-dir -> /abs/path/to/mount/.eden
+const PathComponentPiece kDotEdenSymlinkName{"this-dir"_pc};
+} // namespace
+
 /**
  * Helper for computing unclean paths when changing parents
  *
@@ -242,13 +252,32 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
 }
 
 folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
+  auto createDotEdenSymlink = [this](TreeInodePtr dotEdenInode) {
+    auto edenSymlink = dotEdenInode->symlink(
+        kDotEdenSymlinkName,
+        (config_->getMountPath() + PathComponentPiece{kDotEdenName})
+            .stringPiece());
+    dotEdenSymlinkInodeNumber_ = edenSymlink->getNodeId();
+  };
   // Set up the magic .eden dir
   return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName})
       .thenValue([=](TreeInodePtr dotEdenInode) {
-        // We could perhaps do something here to ensure that it reflects the
-        // current state of the world, but for the moment we trust that it
-        // still reflects how things were when we set it up.
-        dotEdenInodeNumber_ = dotEdenInode->getNodeId();
+        // We may be upgrading from an earlier build before we started
+        // to use dot-eden symlinks, so we need to resolve or create
+        // its inode here
+        return dotEdenInode->getOrLoadChild(kDotEdenSymlinkName)
+            .thenValue([=](const InodePtr& child) {
+              dotEdenSymlinkInodeNumber_ = child->getNodeId();
+            })
+            .onError([=](const InodeError& /*err*/) {
+              createDotEdenSymlink(dotEdenInode);
+            })
+            .ensure([=] {
+              // Assign this number after we've fixed up the directory
+              // contents, otherwise we'll lock ourselves out of
+              // populating more entries.
+              dotEdenInodeNumber_ = dotEdenInode->getNodeId();
+            });
       })
       .onError([=](const InodeError& /*err*/) {
         auto dotEdenInode =
@@ -258,6 +287,11 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
             "socket"_pc, serverState_->getSocketPath().stringPiece());
         dotEdenInode->symlink(
             "client"_pc, config_->getClientDirectory().stringPiece());
+
+        createDotEdenSymlink(dotEdenInode);
+
+        // We must assign this after we've built out the contents, otherwise
+        // we'll lock ourselves out of populating more entries
         dotEdenInodeNumber_ = dotEdenInode->getNodeId();
       });
 }
@@ -433,6 +467,10 @@ folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTreeFuture()
 
 InodeNumber EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;
+}
+
+InodeNumber EdenMount::getDotEdenSymlinkInodeNumber() const {
+  return dotEdenSymlinkInodeNumber_;
 }
 
 std::shared_ptr<const Tree> EdenMount::getRootTree() const {

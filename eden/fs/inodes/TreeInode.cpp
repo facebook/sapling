@@ -215,7 +215,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
                if (iter == contents.entries.end()) {
                  if (name == kDotEdenName && getNodeId() != kRootNodeId) {
                    return folly::make_optional(getInodeMap()->lookupInode(
-                       getMount()->getDotEdenInodeNumber()));
+                       getMount()->getDotEdenSymlinkInodeNumber()));
                  }
 
                  XLOG(DBG7) << "attempted to load non-existent entry \"" << name

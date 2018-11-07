@@ -93,6 +93,7 @@ class BasicSnapshot(HgSnapshot):
                 0o770,
             ),
             Symlink(".eden/socket", bytes(self.eden_state_dir / "socket"), 0o770),
+            Symlink(".eden/this-dir", bytes(self.checkout_path / ".eden"), 0o770),
             File("README.md", b"project docs", 0o644),
             File(".gitignore", b"ignored.txt\n", 0o644),
             File("main/loaded_dir/loaded_file.c", b"loaded", 0o644),

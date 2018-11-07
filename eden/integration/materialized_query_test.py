@@ -18,7 +18,7 @@ from facebook.eden.ttypes import FileInformationOrError
 from .lib import testcase
 
 
-INITIAL_SEQ = 5
+INITIAL_SEQ = 6
 
 
 @testcase.eden_repo_test
