@@ -71,7 +71,7 @@ from mercurial import (
     wireproto,
 )
 from mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
-from mercurial.i18n import _
+from mercurial.i18n import _, _n
 from mercurial.node import bin, hex, nullid, nullrev, short
 
 from . import recording, stackpush
@@ -976,10 +976,13 @@ def _addpushbackparts(op, replacements, markers, markerdate, clientobsmarkervers
         )
 
         if outgoing.missing:
-            plural = "s" if len(outgoing.missing) > 1 else ""
             op.repo.ui.warn(
-                _("%s new changeset%s from the server will be " "downloaded\n")
-                % (len(outgoing.missing), plural)
+                _n(
+                    "%s new changeset from the server will be downloaded\n",
+                    "%s new changesets from the server will be downloaded\n",
+                    len(outgoing.missing),
+                )
+                % len(outgoing.missing)
             )
             _addpushbackchangegroup(op.repo, op.reply, outgoing)
             _addpushbackobsolete(
@@ -1390,8 +1393,9 @@ def getontotarget(op, params, bundle):
 def getpushmessage(revs, getmessage):
     # Notify the user of what is being pushed
     io = util.stringio()
-    plural = "s" if len(revs) > 1 else ""
-    io.write(_("pushing %s changeset%s:\n") % (len(revs), plural))
+    io.write(
+        _n("pushing %s changeset:\n", "pushing %s changesets:\n", len(revs)) % len(revs)
+    )
     maxoutput = 10
     for i in range(0, min(len(revs), maxoutput)):
         io.write(("    %s\n") % (getmessage(revs[i])))
