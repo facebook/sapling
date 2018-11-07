@@ -103,15 +103,12 @@ def uisetup(ui):
             hgsqlmod = extensions.find("hgsql")
             extensions.wrapfunction(hgsqlmod, "wraprepo", _sqllocalrepowrapper)
 
-    def _wrapextensions():
-        extensions.afterloaded("hgsql", _hgsqlwrapper)
-
-    # We only wrap extensions for embedding strictly increasing global revision
-    # number in commits if the repository has `hgsql` enabled and it is also
-    # configured to write data to the commits. Therefore, do not wrap any
-    # extensions if that is not the case.
+    # We only wrap `hgsql` extension for embedding strictly increasing global
+    # revision number in commits if the repository has `hgsql` enabled and it is
+    # also configured to write data to the commits. Therefore, do not wrap the
+    # extension if that is not the case.
     if not ui.configbool("globalrevs", "readonly") and not ishgsqlbypassed(ui):
-        _wrapextensions()
+        extensions.afterloaded("hgsql", _hgsqlwrapper)
 
 
 def reposetup(ui, repo):
