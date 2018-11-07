@@ -76,7 +76,7 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
         repo = hg.repository(self.ui, hg_repo_path)
         return repo, svn_repo_path
 
-    def _assert_globalrev(self, repo, expected_log):
+    def _assert_globalrev(self, repo, expected_log, rev=None, showgraph=False):
         class CapturingUI(ui.ui):
             def __init__(self, *args, **kwds):
                 super(CapturingUI, self).__init__(*args, **kwds)
@@ -86,7 +86,7 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
                 self._output += msg
 
         capturing_ui = CapturingUI()
-        defaults = {"date": None, "rev": None, "user": None, "graph": True}
+        defaults = {"date": None, "rev": rev, "user": None, "graph": showgraph}
         commands.log(
             capturing_ui,
             repo,
@@ -107,6 +107,7 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
   svnrev:2 globalrev:
 @
 """,
+            showgraph=True,
         )
 
     def test_pull_noupdate(self):
@@ -129,6 +130,7 @@ o
   svnrev:2 globalrev:
 @
 """,
+            showgraph=True,
         )
 
     def test_pull_doupdate(self):
@@ -151,6 +153,7 @@ o
   svnrev:2 globalrev:
 o
 """,
+            showgraph=True,
         )
 
 
