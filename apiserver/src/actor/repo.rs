@@ -13,10 +13,10 @@ use futures::{Future, IntoFuture};
 use futures::future::join_all;
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, FutureExt};
+use http::uri::Uri;
 use slog::Logger;
 use sql::myrouter;
 use tokio::runtime::TaskExecutor;
-use url::Url;
 
 use api;
 use blobrepo::{BlobRepo, get_sha256_alias, get_sha256_alias_key};
@@ -266,18 +266,18 @@ impl MononokeRepo {
         &self,
         repo_name: String,
         req: BatchRequest,
-        lfs_url: Option<Url>,
+        lfs_url: Option<Uri>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let lfs_address = try_boxfuture!(
             lfs_url.ok_or(ErrorKind::InvalidInput(
-                "Lfs batch request is not allowed, as lfs-url is not configurated for server"
+                "Lfs batch request is not allowed, host address is missing in HttpRequest header"
                     .to_string(),
                 None
             ))
         );
 
-        build_response(repo_name, req, lfs_address)
-            .map(|response| MononokeRepoResponse::LfsBatch { response })
+        let response = build_response(repo_name, req, lfs_address);
+        Ok(MononokeRepoResponse::LfsBatch { response })
             .into_future()
             .boxify()
     }

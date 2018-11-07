@@ -49,7 +49,7 @@ import testing repo to mononoke
 
 starts api server
   $ APISERVER_PORT=$(get_free_socket)
-  $ apiserver -H "127.0.0.1" -p $APISERVER_PORT --lfs-url "https://127.0.0.1:"$APISERVER_PORT
+  $ apiserver -H "127.0.0.1" -p $APISERVER_PORT
   $ wait_for_apiserver
   $ alias sslcurl="sslcurl --silent"
 
@@ -305,10 +305,9 @@ Be careful, if you want to cat the result of your curl operation, or whatever, A
 127.0.0.1 -> $LOCALIP. Do not try to replace anything to $LOCALIP as a string.
 USE od (octal dump) if you stuck with the issue.
   $ EXPECTED_OUTPUT="{\"transfer\":\"basic\",\"objects\":[{\"oid\":\"12345678\",\"size\":23,\"actions\":{\"download\":{\"href\":\"$APISERVER/repo/lfs/download/12345678\",\"expires_at\":\"2030-11-10T15:29:07Z\"}}}]}"
-  $ sed s/localhost/127.0.0.1/ - <<< $EXPECTED_OUTPUT > expected_output_file
-  $ sslcurl -d '{"operation": "download","transfers":["basic"],"objects":[{"oid": "12345678","size": 23}]}' -H "Content-Type: application/json" -X POST $APISERVER/repo/objects/batch > output
+  $ sslcurl -d '{"operation": "download","transfers":["basic"],"objects":[{"oid": "12345678","size": 23}]}'  --http1.1 -H "Content-Type: application/json" -X POST $APISERVER/repo/objects/batch > output
   $ sed -i -e '$a\' output
-  $ diff -c output expected_output_file
+  $ diff -c output - <<< $EXPECTED_OUTPUT
 
 batch for unknown repo
   $ sslcurl -d '{"operation": "download","transfers":["basic"],"objects":[{"oid": "12345678","size": 23}]}' -H "Content-Type: application/json" -X POST $APISERVER/unknown_repo/objects/batch | jq '.message'

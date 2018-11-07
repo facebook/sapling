@@ -4,9 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use url::Url;
-
-use errors::ErrorKind;
+use http::uri::Uri;
 
 /* Request Example
 {
@@ -82,67 +80,44 @@ pub struct BatchResponse {
     objects: Vec<ResponseObject>,
 }
 
-fn get_upload_obj(repo: &str, oid: &str, address: &Url) -> Result<Action, ErrorKind> {
-    address
-        .join(&format!("{}/lfs/upload/{}", repo, oid))
-        .map(|full_address| {
-            let action_desc = ActionDesc {
-                href: full_address.as_str().to_string(),
-                // TODO(anastasiya): T34243344 Infinite expiration time of the link
-                expires_at: "2030-11-10T15:29:07Z".to_string(),
-            };
-            Action::Upload(action_desc)
-        })
-        .map_err(|e| {
-            ErrorKind::LFSNotFound(format!(
-                "Incorrect base address joining on upload request, {}.
-            Probably Apiserver has been started without flags
-            (or with invalid flags) --http-host, --http-port",
-                e.to_string()
-            ))
-        })
+fn get_upload_obj(repo: &str, oid: &str, address: &Uri) -> Action {
+    let full_address = format!("{:?}{}/lfs/upload/{}", address, repo, oid);
+
+    let action_desc = ActionDesc {
+        href: full_address.as_str().to_string(),
+        // TODO(anastasiya): T34243344 Infinite expiration time of the link
+        expires_at: "2030-11-10T15:29:07Z".to_string(),
+    };
+    Action::Upload(action_desc)
 }
 
-fn get_download_obj(repo: &str, oid: &str, address: &Url) -> Result<Action, ErrorKind> {
-    address
-        .join(&format!("{}/lfs/download/{}", repo, oid))
-        .map(|full_address| {
-            let action_desc = ActionDesc {
-                href: full_address.as_str().to_string(),
-                // TODO(anastasiya): T34243344 Infinite expiration time of the link
-                expires_at: "2030-11-10T15:29:07Z".to_string(),
-            };
-            Action::Download(action_desc)
-        })
-        .map_err(|e| {
-            ErrorKind::LFSNotFound(format!(
-                "Incorrect base address joining on download request, {}.
-            Probably Apiserver has been started without flags
-            (or with invalid flags) --http-host, --http-port",
-                e.to_string()
-            ))
-        })
+fn get_download_obj(repo: &str, oid: &str, address: &Uri) -> Action {
+    let full_address = format!("{:?}{}/lfs/download/{}", address, repo, oid);
+
+    let action_desc = ActionDesc {
+        href: full_address.as_str().to_string(),
+        // TODO(anastasiya): T34243344 Infinite expiration time of the link
+        expires_at: "2030-11-10T15:29:07Z".to_string(),
+    };
+    Action::Download(action_desc)
 }
 
 fn get_response_obj(
     repo: &String,
     file: &RequestObject,
-    address: &Url,
-    get_action_obj_func: &Fn(&str, &str, &Url) -> Result<Action, ErrorKind>,
-) -> Result<ResponseObject, ErrorKind> {
-    get_action_obj_func(&repo, &file.oid, address).map(|action_desc| ResponseObject {
+    address: &Uri,
+    get_action_obj_func: &Fn(&str, &str, &Uri) -> Action,
+) -> ResponseObject {
+    let action_desc = get_action_obj_func(&repo, &file.oid, address);
+    ResponseObject {
         oid: file.oid.clone(),
         size: file.size,
         actions: action_desc,
-    })
+    }
 }
 
-pub fn build_response(
-    repo: String,
-    req: BatchRequest,
-    address: Url,
-) -> Result<BatchResponse, ErrorKind> {
-    let response_objects: Result<Vec<ResponseObject>, ErrorKind> = req.objects
+pub fn build_response(repo: String, req: BatchRequest, address: Uri) -> BatchResponse {
+    let response_objects: Vec<ResponseObject> = req.objects
         .iter()
         .map(|file| match req.operation {
             OperationType::Upload => get_response_obj(&repo, file, &address, &get_upload_obj),
@@ -150,60 +125,65 @@ pub fn build_response(
         })
         .collect();
 
-    response_objects.map(|response_objects| BatchResponse {
+    BatchResponse {
         transfer: "basic".to_string(),
         objects: response_objects,
-    })
+    }
 }
 
-#[test]
-fn test_get_upload_link() {
-    let address = Url::parse("https://localhost:8000").unwrap();
-    let expected_action = Action::Upload(ActionDesc {
-        href: "https://localhost:8000/test_repo/lfs/upload/123".to_string(),
-        expires_at: "2030-11-10T15:29:07Z".to_string(),
-    });
-    assert_eq!(
-        get_upload_obj("test_repo", "123", &address).unwrap(),
-        expected_action
-    );
-}
+#[cfg(test)]
+mod test {
+    use super::*;
 
-#[test]
-fn test_get_upload_link_with_additional_slash() {
-    let address = Url::parse("https://localhost:8000/").unwrap();
-    let expected_action = Action::Upload(ActionDesc {
-        href: "https://localhost:8000/test_repo/lfs/upload/123".to_string(),
-        expires_at: "2030-11-10T15:29:07Z".to_string(),
-    });
-    assert_eq!(
-        get_upload_obj("test_repo", "123", &address).unwrap(),
-        expected_action
-    );
-}
+    #[test]
+    fn test_get_upload_link() {
+        let address = Uri::from_static("https://localhost:8000");
+        let expected_action = Action::Upload(ActionDesc {
+            href: "https://localhost:8000/test_repo/lfs/upload/123".to_string(),
+            expires_at: "2030-11-10T15:29:07Z".to_string(),
+        });
+        assert_eq!(
+            get_upload_obj("test_repo", "123", &address),
+            expected_action
+        );
+    }
 
-#[test]
-fn test_get_download_link() {
-    let address = Url::parse("https://localhost:8000").unwrap();
-    let expected_action = Action::Download(ActionDesc {
-        href: "https://localhost:8000/test_repo/lfs/download/123".to_string(),
-        expires_at: "2030-11-10T15:29:07Z".to_string(),
-    });
-    assert_eq!(
-        get_download_obj("test_repo", "123", &address).unwrap(),
-        expected_action
-    );
-}
+    #[test]
+    fn test_get_upload_link_with_additional_slash() {
+        let address = Uri::from_static("https://localhost:8000");
+        let expected_action = Action::Upload(ActionDesc {
+            href: "https://localhost:8000/test_repo/lfs/upload/123".to_string(),
+            expires_at: "2030-11-10T15:29:07Z".to_string(),
+        });
+        assert_eq!(
+            get_upload_obj("test_repo", "123", &address),
+            expected_action
+        );
+    }
 
-#[test]
-fn test_get_download_link_with_additional_slash() {
-    let address = Url::parse("https://localhost:8000/").unwrap();
-    let expected_action = Action::Download(ActionDesc {
-        href: "https://localhost:8000/test_repo/lfs/download/123".to_string(),
-        expires_at: "2030-11-10T15:29:07Z".to_string(),
-    });
-    assert_eq!(
-        get_download_obj("test_repo", "123", &address).unwrap(),
-        expected_action
-    );
+    #[test]
+    fn test_get_download_link() {
+        let address = Uri::from_static("https://localhost:8000");
+        let expected_action = Action::Download(ActionDesc {
+            href: "https://localhost:8000/test_repo/lfs/download/123".to_string(),
+            expires_at: "2030-11-10T15:29:07Z".to_string(),
+        });
+        assert_eq!(
+            get_download_obj("test_repo", "123", &address),
+            expected_action
+        );
+    }
+
+    #[test]
+    fn test_get_download_link_with_additional_slash() {
+        let address = Uri::from_static("https://localhost:8000");
+        let expected_action = Action::Download(ActionDesc {
+            href: "https://localhost:8000/test_repo/lfs/download/123".to_string(),
+            expires_at: "2030-11-10T15:29:07Z".to_string(),
+        });
+        assert_eq!(
+            get_download_obj("test_repo", "123", &address),
+            expected_action
+        );
+    }
 }

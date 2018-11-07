@@ -28,6 +28,7 @@ extern crate fb303;
 extern crate futures;
 #[macro_use]
 extern crate futures_ext;
+extern crate http;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_api as api;
@@ -55,7 +56,6 @@ extern crate srserver;
 extern crate time_ext;
 extern crate tokio;
 extern crate tokio_threadpool;
-extern crate url;
 
 mod actor;
 mod errors;
@@ -69,19 +69,19 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 
-use actix_web::{http, server, App, HttpRequest, HttpResponse, Json, State};
+use actix_web::{server, App, HttpRequest, HttpResponse, Json, State, http::header};
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::Arg;
 use failure::{err_msg, Result};
 use futures::Future;
+use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use panichandler::Fate;
 use percent_encoding::percent_decode;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use tokio::runtime::Runtime;
-use url::Url;
 
 use mercurial_types::RepositoryId;
 use mercurial_types::nodehash::HgChangesetId;
@@ -218,18 +218,39 @@ fn download_large_file(
 }
 
 fn lfs_batch(
-    (state, req_json, info): (
+    (state, req_json, info, req): (
         State<HttpServerState>,
         Json<BatchRequest>,
         actix_web::Path<LfsBatchInfo>,
+        HttpRequest<HttpServerState>,
     ),
 ) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    let host_url = req.headers().get(header::HOST);
+    let scheme = if state.use_ssl {
+        Scheme::HTTPS
+    } else {
+        Scheme::HTTP
+    };
+    let lfs_url = host_url
+        .and_then(|url_header_value| url_header_value.to_str().ok())
+        .and_then(|url| Authority::from_shared(Bytes::from(url)).ok())
+        .and_then(|url| {
+            let path_and_query = PathAndQuery::from_shared(Bytes::from("")).ok();
+
+            let mut parts = Parts::default();
+            parts.scheme = Some(scheme);
+            parts.authority = Some(url);
+            parts.path_and_query = path_and_query;
+
+            Uri::from_parts(parts).ok()
+        });
+
     state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::LfsBatch {
             req: req_json.into_inner(),
             repo_name: info.repo.clone(),
-            lfs_url: state.clone().lfs_url,
+            lfs_url,
         },
     })
 }
@@ -301,7 +322,7 @@ fn create_config<P: AsRef<Path>>(
 struct HttpServerState {
     mononoke: Arc<Mononoke>,
     logger: Logger,
-    lfs_url: Option<Url>,
+    use_ssl: bool,
 }
 
 fn main() -> Result<()> {
@@ -386,12 +407,6 @@ fn main() -> Result<()> {
                     .long("myrouter-port")
                     .value_name("PORT")
                     .help("port for local myrouter instance"),
-            )
-            .arg(
-                Arg::with_name("lfs-url")
-                    .long("lfs-url")
-                    .value_name("URL")
-                    .help("url for lfs requests, required to support lfs requests"),
             ),
         false, /* hide_advanced_args */
     ).get_matches();
@@ -478,24 +493,10 @@ fn main() -> Result<()> {
         thrift::make_thrift(thrift_logger, host.to_string(), port, mononoke.clone());
     }
 
-    let lfs_url = match matches.value_of("lfs-url") {
-        Some(url) => {
-            let lfs_url = Url::parse(url).expect("Expected valid lfs-url HTTP address");
-            Some(lfs_url)
-        }
-        None => {
-            info!(
-                root_logger,
-                "lfs-url is not set, lfs requests are not supported"
-            );
-            None
-        }
-    };
-
     let state = HttpServerState {
         mononoke,
         logger: actix_logger.clone(),
-        lfs_url: lfs_url.clone(),
+        use_ssl,
     };
 
     let server = server::new(move || {
@@ -530,7 +531,7 @@ fn main() -> Result<()> {
                 },
             )
             .scope("/{repo}", |repo| {
-                let apiserver_resources = repo.resource("/raw/{changeset}/{path:.*}", |r| {
+                repo.resource("/raw/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_raw_file)
                 }).resource(
                         "/is_ancestor/{proposed_ancestor}/{proposed_descendent}",
@@ -547,21 +548,16 @@ fn main() -> Result<()> {
                     })
                     .resource("/changeset/{hash}", |r| {
                         r.method(http::Method::GET).with_async(get_changeset)
-                    });
-                if lfs_url.is_some() {
-                    apiserver_resources
-                        .resource("/lfs/download/{oid}", |r| {
-                            r.method(http::Method::GET).with_async(download_large_file)
-                        })
-                        .resource("/objects/batch", |r| {
-                            r.method(http::Method::POST).with_async(lfs_batch)
-                        })
-                        .resource("/lfs/upload/{oid}", |r| {
-                            r.method(http::Method::PUT).with_async(upload_large_file)
-                        })
-                } else {
-                    apiserver_resources
-                }
+                    })
+                    .resource("/lfs/download/{oid}", |r| {
+                        r.method(http::Method::GET).with_async(download_large_file)
+                    })
+                    .resource("/objects/batch", |r| {
+                        r.method(http::Method::POST).with_async(lfs_batch)
+                    })
+                    .resource("/lfs/upload/{oid}", |r| {
+                        r.method(http::Method::PUT).with_async(upload_large_file)
+                    })
             })
     });
 
