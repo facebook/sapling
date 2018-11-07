@@ -39,6 +39,20 @@ template.
     # numbers. Therefore, relying on global revision numbers below this value is
     # undefined behaviour.
     startrev = 0
+
+    # If this configuration is true, the `globalrev` and `svnrev` based revsets
+    # would be interoperable. In particular, the commands
+    #
+    #   hg log -r "svnrev(<svnrev>/<globalrev>)"
+    #   hg log -r "globalrev(<svnrev>/<globalrev>)"
+    #   hg log -r "r<svnrev>/r<globalrev>"
+    #   hg log -r "m<svnrev>/m<globalrev>"
+    #
+    # would resolve to a commit with <svnrev> as the corresponding svn revision
+    # number and/or <globalrev> as the corresponding strictly increasing global
+    # revision number.
+    svnrevinteroperation = False
+
 """
 from __future__ import absolute_import
 
@@ -54,6 +68,7 @@ from mercurial import (
 from mercurial.i18n import _
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
+from .hgsubversion import util as svnutil
 from .pushrebase import isnonpushrebaseblocked
 
 
@@ -64,6 +79,7 @@ configitem("globalrevs", "onlypushrebase", default=True)
 configitem("globalrevs", "readonly", default=False)
 configitem("globalrevs", "reponame", default=None)
 configitem("globalrevs", "startrev", default=0)
+configitem("globalrevs", "svnrevinteroperation", default=False)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -102,6 +118,21 @@ def uisetup(ui):
         if loaded:
             hgsqlmod = extensions.find("hgsql")
             extensions.wrapfunction(hgsqlmod, "wraprepo", _sqllocalrepowrapper)
+
+    def _hgsubversionwrapper(loaded):
+        if loaded:
+            hgsubversionmod = extensions.find("hgsubversion")
+            extensions.wrapfunction(
+                hgsubversionmod.util, "lookuprev", _lookupsvnrevwrapper
+            )
+
+            globalrevsmod = extensions.find("globalrevs")
+            extensions.wrapfunction(
+                globalrevsmod, "_lookupglobalrev", _lookupglobalrevwrapper
+            )
+
+    if ui.configbool("globalrevs", "svnrevinteroperation"):
+        extensions.afterloaded("hgsubversion", _hgsubversionwrapper)
 
     # We only wrap `hgsql` extension for embedding strictly increasing global
     # revision number in commits if the repository has `hgsql` enabled and it is
@@ -227,6 +258,25 @@ def _sqllocalrepowrapper(orig, repo):
     )
     repo._nextrevisionnumber = None
     repo.__class__ = globalrevsrepo
+
+
+def _lookupsvnrevwrapper(orig, repo, rev):
+    return _lookuprev(orig, _lookupglobalrev, repo, rev)
+
+
+def _lookupglobalrevwrapper(orig, repo, rev):
+    return _lookuprev(svnutil.lookuprev, orig, repo, rev)
+
+
+def _lookuprev(svnrevlookupfunc, globalrevlookupfunc, repo, rev):
+    # If the revision number being looked up is before the supported starting
+    # global revision, try if it works as a svn revision number.
+    lookupfunc = (
+        svnrevlookupfunc
+        if (repo.ui.configint("globalrevs", "startrev") > rev)
+        else globalrevlookupfunc
+    )
+    return lookupfunc(repo, rev)
 
 
 def _lookupglobalrev(repo, grev):
