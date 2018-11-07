@@ -41,6 +41,8 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
             ui.setconfig("extensions", "hgsql", "")
             ui.setconfig("extensions", "pushrebase", "")
             ui.setconfig("globalrevs", "onlypushrebase", False)
+            ui.setconfig("globalrevs", "startrev", 5000)
+            ui.setconfig("globalrevs", "svnrevinteroperation", True)
             _set_hgsql_config(ui)
 
         def _set_hgsql_config(ui):
@@ -147,6 +149,28 @@ o  svnrev:2 globalrev:
 """,
             showgraph=True,
         )
+
+    def test_revsets_interoperability(self):
+        repo, repo_path = self._loadupdate("single_rev.svndump")
+        self.add_svn_rev(repo_path, {"trunk/alpha": "Changed"})
+        self.add_svn_rev(repo_path, {"trunk/alpha": "Changed Again"})
+        self.add_svn_rev(repo_path, {"trunk/alpha": "Changed Once Again"})
+        _pull(repo)
+        expected_out = """
+  svnrev:4 globalrev:5001
+"""
+
+        self._assert_globalrev(repo, expected_out, rev="r4")
+        self._assert_globalrev(repo, expected_out, rev="m4")
+
+        self._assert_globalrev(repo, expected_out, rev="m5001")
+        self._assert_globalrev(repo, expected_out, rev="r5001")
+
+        self._assert_globalrev(repo, expected_out, rev="svnrev(4)")
+        self._assert_globalrev(repo, expected_out, rev="svnrev(5001)")
+
+        self._assert_globalrev(repo, expected_out, rev="globalrev(5001)")
+        self._assert_globalrev(repo, expected_out, rev="globalrev(4)")
 
 
 if __name__ == "__main__":
