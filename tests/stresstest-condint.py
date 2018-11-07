@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# test-condint.py - test interrupting threading.Condition
+# stresstest-condint.py - test interrupting threading.Condition
 #
 # Copyright 2018 Facebook, Inc.
 #

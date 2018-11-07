@@ -439,11 +439,14 @@ def removedirs(name):
 
 
 def rename(src, dst):
-    """atomically rename file src to dst, replacing dst if it exists"""
+    """Atomically rename file src to dst, replacing dst if it exists
+
+    Note that this is only really atomic for files (not dirs) on the
+    same volume"""
     try:
-        os.rename(src, dst)
+        win32.movefileex(src, dst)
     except OSError as e:
-        if e.errno != errno.EEXIST:
+        if e.errno != errno.EEXIST or e.errno != errno.EACCES:
             raise
         unlink(dst)
         os.rename(src, dst)

@@ -354,6 +354,9 @@ _kernel32.PeekNamedPipe.argtypes = [
 ]
 _kernel32.PeekNamedPipe.restype = _BOOL
 
+_kernel32.MoveFileExA.argtypes = [_LPCSTR, _LPCSTR, _DWORD]
+_kernel32.MoveFileExA.restype = _BOOL
+
 
 def _raiseoserror(name):
     # Force the code to a signed int to avoid an 'int too large' error.
@@ -384,6 +387,16 @@ def getfileinfo(name):
         return fi
     finally:
         _kernel32.CloseHandle(fh)
+
+
+def movefileex(src, dst):
+    """Atomically rename file, while replacing the existing one
+
+    Note that this is not a contractual atomicity, but it is atomic
+    in practice if the rename happens within a volume."""
+    MOVEFILE_REPLACE_EXISTING = 0x1
+    if not _kernel32.MoveFileExA(src, dst, MOVEFILE_REPLACE_EXISTING):
+        _raiseoserror(dst)
 
 
 def getcurrentprocstarttime():
