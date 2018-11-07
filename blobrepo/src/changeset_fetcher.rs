@@ -13,8 +13,12 @@ use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::RepositoryId;
 use mononoke_types::{ChangesetId, Generation};
 
+use futures_stats::Timed;
+use std::any::Any;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex, atomic::AtomicUsize, atomic::Ordering};
+use std::time::Duration;
 
 /// Trait that knows how to fetch DAG info about commits. Primary user is revsets
 /// Concrete implementation may add more efficient caching logic to make request faster
@@ -22,6 +26,8 @@ pub trait ChangesetFetcher: Send + Sync {
     fn get_generation_number(&self, cs_id: ChangesetId) -> BoxFuture<Generation, Error>;
 
     fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error>;
+
+    fn get_stats(&self) -> HashMap<String, Box<Any>>;
 }
 
 /// Simplest ChangesetFetcher implementation which is just a wrapper around `Changesets` object
@@ -59,6 +65,10 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
             .map(|cs| cs.parents)
             .boxify()
     }
+
+    fn get_stats(&self) -> HashMap<String, Box<Any>> {
+        HashMap::new()
+    }
 }
 
 /// CachingChangesetFetcher is a special kind of ChangesetFetcher that more efficiently works
@@ -84,7 +94,10 @@ pub struct CachingChangesetFetcher {
     changesets: Arc<Changesets>,
     repo_id: RepositoryId,
     cache_pool: cachelib::LruCachePool,
+    cache_requests: Arc<AtomicUsize>,
     cache_misses: Arc<AtomicUsize>,
+    fetches_from_blobstore: Arc<AtomicUsize>,
+    max_request_latency: Arc<Mutex<Duration>>,
     blobstore: Arc<Blobstore>,
     already_fetched_blobs: Arc<Mutex<HashSet<String>>>,
     cache_misses_limit: usize,
@@ -102,7 +115,10 @@ impl CachingChangesetFetcher {
             changesets,
             repo_id,
             cache_pool,
+            cache_requests: Arc::new(AtomicUsize::new(0)),
             cache_misses: Arc::new(AtomicUsize::new(0)),
+            fetches_from_blobstore: Arc::new(AtomicUsize::new(0)),
+            max_request_latency: Arc::new(Mutex::new(Duration::new(0, 0))),
             blobstore,
             already_fetched_blobs: Arc::new(Mutex::new(HashSet::new())),
             cache_misses_limit: 10000,
@@ -123,7 +139,10 @@ impl CachingChangesetFetcher {
             changesets,
             repo_id,
             cache_pool,
+            cache_requests: Arc::new(AtomicUsize::new(0)),
             cache_misses: Arc::new(AtomicUsize::new(0)),
+            fetches_from_blobstore: Arc::new(AtomicUsize::new(0)),
+            max_request_latency: Arc::new(Mutex::new(Duration::new(0, 0))),
             blobstore,
             already_fetched_blobs: Arc::new(Mutex::new(HashSet::new())),
             cache_misses_limit,
@@ -152,6 +171,7 @@ impl CachingChangesetFetcher {
             .unwrap()
             .contains(&blobstore_cache_key)
         {
+            cloned!(self.fetches_from_blobstore);
             self.blobstore
                 .get(blobstore_cache_key.clone())
                 .map({
@@ -159,6 +179,7 @@ impl CachingChangesetFetcher {
                     move |val| {
                         cs_fetcher.already_fetched_blobs.lock().unwrap().insert(blobstore_cache_key);
                         if let Some(bytes) = val {
+                            fetches_from_blobstore.fetch_add(1, Ordering::Relaxed);
                             let _ = deserialize_cs_entries(bytes.as_bytes()).map(|entries| {
                                 for entry in entries {
                                     let cachelib_cache_key = get_cache_key(
@@ -189,9 +210,10 @@ impl CachingChangesetFetcher {
     ) -> impl Future<Item = ChangesetEntry, Error = Error> {
         let cache_key = get_cache_key(&self.repo_id, &cs_id);
 
-        cloned!(self.repo_id, self.cache_misses);
+        cloned!(self.repo_id, self.max_request_latency);
+        self.cache_requests.fetch_add(1, Ordering::Relaxed);
         cachelib::get_cached_or_fill(&self.cache_pool, cache_key, move || {
-            cache_misses.fetch_add(1, Ordering::Relaxed);
+            self.cache_misses.fetch_add(1, Ordering::Relaxed);
             self.changesets.get(repo_id, cs_id)
         }).and_then(move |maybe_cs| maybe_cs.ok_or_else(|| err_msg(format!("{} not found", cs_id))))
             .and_then({
@@ -203,6 +225,14 @@ impl CachingChangesetFetcher {
                         future::ok(cs).right_future()
                     }
                 }
+            })
+            .timed(move |stats, _| {
+                let mut maxlatency_value = max_request_latency.lock().expect("poisoned lock");
+                if stats.completion_time > *maxlatency_value {
+                    *maxlatency_value = stats.completion_time
+                }
+
+                Ok(())
             })
     }
 }
@@ -218,6 +248,31 @@ impl ChangesetFetcher for CachingChangesetFetcher {
         self.get_changeset_entry(cs_id.clone())
             .map(|cs| cs.parents)
             .boxify()
+    }
+
+    fn get_stats(&self) -> HashMap<String, Box<Any>> {
+        let mut stats: HashMap<String, Box<Any>> = HashMap::new();
+
+        let cache_misses = self.cache_misses.load(Ordering::Relaxed);
+        stats.insert(String::from("cache.misses"), Box::new(cache_misses));
+
+        let cache_requests = self.cache_requests.load(Ordering::Relaxed);
+        let cache_hits = cache_requests - cache_misses;
+        stats.insert(String::from("cache.hits"), Box::new(cache_hits));
+
+        let fetches_from_blobstore = self.fetches_from_blobstore.load(Ordering::Relaxed);
+        stats.insert(
+            String::from("fetches.from.blobstore"),
+            Box::new(fetches_from_blobstore),
+        );
+
+        let max_request_latency = self.max_request_latency.lock().expect("poisoned lock");
+        stats.insert(
+            String::from("max.request.latency"),
+            Box::new(*max_request_latency),
+        );
+
+        stats
     }
 }
 
@@ -415,6 +470,37 @@ mod tests {
             cs_fetcher.get_generation_number(FIVES_CSID).wait().unwrap();
             assert_eq!(blobstore_get_counter.load(Ordering::Relaxed), 1);
             assert_eq!(cs_get_counter.load(Ordering::Relaxed), 1);
+
+            let stats = cs_fetcher.get_stats();
+            let cache_misses = stats
+                .get("cache.misses")
+                .and_then({ |x| x.downcast_ref::<usize>() });
+            assert_eq!(cache_misses, Some(&1));
+
+            let cache_hits = stats
+                .get("cache.hits")
+                .and_then({ |x| x.downcast_ref::<usize>() });
+            assert_eq!(cache_hits, Some(&0));
+
+            let fetches_from_blobstore = stats
+                .get("fetches.from.blobstore")
+                .and_then({ |x| x.downcast_ref::<usize>() });
+            assert_eq!(fetches_from_blobstore, Some(&0));
+
+            let max_request_latency = stats
+                .get("max.request.latency")
+                .and_then({ |x| x.downcast_ref::<Duration>() })
+                .unwrap();
+            assert!(
+                *max_request_latency > Duration::from_nanos(0),
+                "Duration {:?} is not bigger than zero",
+                max_request_latency
+            );
+            assert!(
+                *max_request_latency < Duration::from_secs(100),
+                "Duration {:?} seems too large",
+                max_request_latency
+            );
         });
     }
 
@@ -456,6 +542,37 @@ mod tests {
             cs_fetcher.get_generation_number(FOURS_CSID).wait().unwrap();
             assert_eq!(blobstore_get_counter.load(Ordering::Relaxed), 1);
             assert_eq!(cs_get_counter.load(Ordering::Relaxed), 1);
+
+            let stats = cs_fetcher.get_stats();
+            let cache_misses = stats
+                .get("cache.misses")
+                .and_then({ |x| x.downcast_ref::<usize>() });
+            assert_eq!(cache_misses, Some(&1));
+
+            let cache_hits = stats
+                .get("cache.hits")
+                .and_then({ |x| x.downcast_ref::<usize>() });
+            assert_eq!(cache_hits, Some(&1));
+
+            let fetches_from_blobstore = stats
+                .get("fetches.from.blobstore")
+                .and_then({ |x| x.downcast_ref::<usize>() });
+            assert_eq!(fetches_from_blobstore, Some(&1));
+
+            let max_request_latency = stats
+                .get("max.request.latency")
+                .and_then({ |x| x.downcast_ref::<Duration>() })
+                .unwrap();
+            assert!(
+                *max_request_latency > Duration::from_nanos(0),
+                "Duration {:?} is not bigger than zero",
+                max_request_latency
+            );
+            assert!(
+                *max_request_latency < Duration::from_secs(100),
+                "Duration {:?} seems too large",
+                max_request_latency
+            );
         });
     }
 }

@@ -13,6 +13,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::{ChangesetId, Generation};
+use std::any::Any;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -48,6 +50,10 @@ impl ChangesetFetcher for TestChangesetFetcher {
 
     fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error> {
         self.repo.get_changeset_parents_by_bonsai(&cs_id).boxify()
+    }
+
+    fn get_stats(&self) -> HashMap<String, Box<Any>> {
+        HashMap::new()
     }
 }
 
