@@ -31,6 +31,14 @@ template.
     # database. If not specified, name specified through the configuration
     # `hqsql.reponame` will be used.
     reponame = customname
+
+    # The starting global revision for a repository. We will only consider the
+    # global revisions greater than equal to this value as valid global revision
+    # numbers. Note that this implies there maybe commits with global revision
+    # number less than this value but there is no guarantee associated those
+    # numbers. Therefore, relying on global revision numbers below this value is
+    # undefined behaviour.
+    startrev = 0
 """
 from __future__ import absolute_import
 
@@ -55,6 +63,7 @@ configitem("format", "useglobalrevs", default=False)
 configitem("globalrevs", "onlypushrebase", default=True)
 configitem("globalrevs", "readonly", default=False)
 configitem("globalrevs", "reponame", default=None)
+configitem("globalrevs", "startrev", default=0)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -65,7 +74,11 @@ templatekeyword = registrar.templatekeyword()
 
 @templatekeyword("globalrev")
 def _globalrevkw(repo, ctx, **args):
-    return ctx.extra().get("global_rev")
+    grev = ctx.extra().get("global_rev")
+    # If the revision number associated with the commit is before the supported
+    # starting revision, nothing to do.
+    if grev is not None and repo.ui.configint("globalrevs", "startrev") <= int(grev):
+        return grev
 
 
 cls = localrepo.localrepository
@@ -220,6 +233,11 @@ def _sqllocalrepowrapper(orig, repo):
 
 
 def _lookupglobalrev(repo, grev):
+    # If the revision number being looked up is before the supported starting
+    # global revision, nothing to do.
+    if repo.ui.configint("globalrevs", "startrev") > grev:
+        return []
+
     cl = repo.changelog
     changelogrevision = cl.changelogrevision
     tonode = cl.node

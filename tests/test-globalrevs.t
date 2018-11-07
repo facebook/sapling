@@ -600,3 +600,77 @@ Test bypassing hgsql extension on the first server.
 - Queries not involving the hgsql extension should still work.
 
   $ testlookup
+
+
+Test that the global revisions are only effective beyond the `startrev`
+configuration in the globalrevs extension.
+
+- Helper function to get the globalrev for the first globalrev based commit.
+
+  $ firstvalidglobalrevcommit()
+  > {
+  >   local -i startrev=$1
+  >   hg log -r 'all()' \
+  >   --config globalrevs.startrev="$startrev" \
+  >   -T '{globalrev}\n'  \
+  >   | sed '/^$/d' \
+  >   | head -1
+  > }
+
+
+- If the `startrev` is less than the first globalrev based commit i.e. 5000 then
+effectively all globalrevs based commits in the repository have valid global
+revision numbers.
+
+  $ firstvalidglobalrevcommit 4999
+  5000
+
+
+- If the `startrev` is equal to the first globalrev based commit i.e. 5000 then
+effectively all globalrevs based commits in the repository have valid global
+revision numbers.
+
+  $ firstvalidglobalrevcommit 5000
+  5000
+
+
+- If the `startrev` is greater than the first globalrev based commit i.e. 5000
+then effectively only the globalrevs based commit in the repository >=
+`startrev` are have valid global revision numbers.
+
+  $ firstvalidglobalrevcommit 5003
+  5003
+
+
+- If the `startrev` is greater than the last globalrev based commit i.e. 5009
+then there is no commit which has a valid global revision number in the
+repository.
+
+  $ firstvalidglobalrevcommit 5010
+
+
+- Configure the repository with `startrev` as 5005.
+
+  $ cat >> .hg/hgrc <<EOF
+  > [globalrevs]
+  > startrev = 5005
+  > EOF
+
+
+- Test that lookup works for commits with  globalrev >= `startrev`.
+
+  $ getglobalrev 'globalrev(5006)'
+  5006
+
+  $ getglobalrev 'm5005'
+  5005
+
+
+- Test that lookup fails for commits with globalrev < `startrev`.
+
+  $ getglobalrev 'globalrev(5003)'
+  
+
+  $ getglobalrev 'm5004'
+  abort: unknown revision 'm5004'!
+  
