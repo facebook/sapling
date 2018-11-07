@@ -90,7 +90,7 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
         commands.log(
             capturing_ui,
             repo,
-            template=("  rev:{rev} globalrev:{globalrev}\n"),
+            template=("  svnrev:{svnrev} globalrev:{globalrev}\n"),
             **defaults
         )
 
@@ -104,7 +104,7 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
         self._assert_globalrev(
             repo,
             """
-  rev:0 globalrev:
+  svnrev:2 globalrev:
 @
 """,
         )
@@ -120,13 +120,13 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
         self._assert_globalrev(
             repo,
             """
-  rev:2 globalrev:5001
+  svnrev:4 globalrev:5001
 o
 |
-  rev:1 globalrev:5000
+  svnrev:3 globalrev:5000
 o
 |
-  rev:0 globalrev:
+  svnrev:2 globalrev:
 @
 """,
         )
@@ -142,13 +142,13 @@ o
         self._assert_globalrev(
             repo,
             """
-  rev:2 globalrev:5001
+  svnrev:4 globalrev:5001
 @
 |
-  rev:1 globalrev:5000
+  svnrev:3 globalrev:5000
 o
 |
-  rev:0 globalrev:
+  svnrev:2 globalrev:
 o
 """,
         )
