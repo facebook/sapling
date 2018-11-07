@@ -226,7 +226,7 @@ Regular commits should go through without changing hash
   remote:     741fd2094512  b => quux
 
   $ log
-  @  b => quux [draft:741fd2094512]
+  @  b => quux [public:741fd2094512]
   |
   o  b => baz [public:4cfedb0dc25f]
   |
@@ -236,8 +236,6 @@ Regular commits should go through without changing hash
   |
   o  initial [public:2bb9d20e471c]
   
-BUG: quux should be public now - we've pushed it!
-
   $ cd ../server
   $ hg update default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

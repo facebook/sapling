@@ -469,27 +469,22 @@ def _push(orig, ui, repo, *args, **opts):
     }
     if onto:
         overrides[(experimental, "bundle2.pushback")] = True
-        wrapfunction(exchange, "_localphasemove", _phasemove)
-        wrapfunction(obsolete.obsstore, "mergemarkers", _mergemarkers)
+        tracker = replacementtracker()
+    else:
+        tracker = util.nullcontextmanager()
 
-    try:
-        with ui.configoverride(overrides, "pushrebase"):
-            result = orig(ui, repo, *args, **opts)
-    finally:
-        if onto:
-            unwrapfunction(exchange, "_localphasemove", _phasemove)
-            unwrapfunction(obsolete.obsstore, "mergemarkers", _mergemarkers)
+    with ui.configoverride(overrides, "pushrebase"), tracker:
+        result = orig(ui, repo, *args, **opts)
 
-    mapping = getattr(repo.obsstore, "_pushrebasereplaces", {})
-    if mapping:
+    if onto and tracker.replacementsreceived:
         with repo.wlock(), repo.lock(), repo.transaction("push") as tr:
             # move working copy parent
-            if wnode in mapping:
-                hg.update(repo, mapping[wnode])
+            if wnode in tracker.mapping:
+                hg.update(repo, tracker.mapping[wnode])
             # move bookmarks
             bmarks = repo._bookmarks
             bmarkchanges = []
-            for oldnode, newnode in mapping.items():
+            for oldnode, newnode in tracker.mapping.items():
                 bmarkchanges.extend(
                     (name, newnode) for name in repo.nodebookmarks(oldnode)
                 )
@@ -499,60 +494,79 @@ def _push(orig, ui, repo, *args, **opts):
     return result
 
 
-def _mergemarkers(orig, self, transaction, data):
-    """record new markers so we could know the correct nodes for _phasemove"""
-    version, markers = obsolete._readmarkers(data)
-    self._pushrebasereplaces = {}
-    if version == obsolete._fm1version:
-        # only support fm1 1:1 replacements for now, record prec -> sucs
-        for prec, sucs, flags, meta, date, parents in markers:
-            if len(sucs) == 1:
-                self._pushrebasereplaces[prec] = sucs[0]
-    return orig(self, transaction, data)
+class replacementtracker(object):
+    """track replacements of commits during pushrebase"""
 
+    def __init__(self):
+        self.replacementsreceived = False
+        self.mapping = {}
 
-def _phasemove(orig, pushop, nodes, phase=phasesmod.public):
-    """prevent original changesets from being marked public
+    def processchangegroup(self, orig, op, cg, tr, source, url, **kwargs):
+        self.replacementsreceived = True
+        return orig(op, cg, tr, source, url, **kwargs)
 
-    When marking changesets as public, we need to mark the replaced nodes
-    returned from the server instead. This is done by looking at the new
-    obsmarker we received during "_mergemarkers" and map old nodes to new ones.
+    def mergemarkers(self, orig, obsstore, transaction, data):
+        """record new markers so we could know the correct nodes for _phasemove"""
+        version, markers = obsolete._readmarkers(data)
+        if version == obsolete._fm1version:
+            # only support fm1 1:1 replacements for now, record prec -> sucs
+            for prec, sucs, flags, meta, date, parents in markers:
+                if len(sucs) == 1:
+                    self.mapping[prec] = sucs[0]
+        return orig(obsstore, transaction, data)
 
-    See exchange.push for the order of this and bundle2 pushback:
+    def phasemove(self, orig, pushop, nodes, phase=phasesmod.public):
+        """prevent replaced changesets from being marked public
 
-        _pushdiscovery(pushop)
-        _pushbundle2(pushop)
-            # bundle2 pushback is processed here, but the client receiving the
-            # pushback cannot affect pushop.*heads (which affects phasemove),
-            # because it only gets "repo", and creates a separate "op":
-            bundle2.processbundle(pushop.repo, reply, trgetter)
-        _pushchangeset(pushop)
-        _pushsyncphase(pushop)
-            _localphasemove(...) # this method always gets called
-        _pushobsolete(pushop)
-        _pushbookmark(pushop)
+        When marking changesets as public, we need to mark the replacement nodes
+        returned from the server instead. This is done by looking at the new
+        obsmarker we received during "_mergemarkers" and map old nodes to new
+        ones.
 
-    The least hacky way to get things "right" seem to be:
+        See exchange.push for the order of this and bundle2 pushback:
 
-        1. In core, allow bundle2 pushback handler to affect the original
-           "pushop" somehow (so original pushop's (common|future)heads could be
-           updated accordingly and phasemove logic is affected)
-        2. In pushrebase extension, add a new bundle2 part handler to receive
-           the new relationship, correct pushop.*headers, and write obsmarkers.
-        3. Migrate the obsmarker part to the new bundle2 part added in step 2,
-           i.e. the server won't send obsmarkers directly.
+            _pushdiscovery(pushop)
+            _pushbundle2(pushop)
+                # bundle2 pushback is processed here, but the client receiving
+                # the pushback cannot affect pushop.*heads (which affects
+                # phasemove), because it only gets "repo", and creates a
+                # separate "op":
+                bundle2.processbundle(pushop.repo, reply, trgetter)
+            _pushchangeset(pushop)
+            _pushsyncphase(pushop)
+                _localphasemove(...) # this method always gets called
+            _pushobsolete(pushop)
+            _pushbookmark(pushop)
 
-    For now, we don't have "1" so things are done in a bit hacky way.
-    """
-    # find replacements. note: _pushrebasereplaces could be empty if obsstore
-    # is not enabled locally.
-    mapping = getattr(pushop.repo.obsstore, "_pushrebasereplaces", {})
-    nodes = [mapping.get(n, n) for n in nodes]
-    if phase == phasesmod.public:
-        # only allow new nodes to become public
-        allowednodes = set(mapping.values())
-        nodes = [n for n in nodes if n in allowednodes]
-    orig(pushop, nodes, phase)
+        The least hacky way to get things "right" seem to be:
+
+            1. In core, allow bundle2 pushback handler to affect the original
+               "pushop" somehow (so original pushop's (common|future)heads could
+               be updated accordingly and phasemove logic is affected)
+            2. In pushrebase extension, add a new bundle2 part handler to
+               receive the new relationship, correct pushop.*headers, and write
+               obsmarkers.
+            3. Migrate the obsmarker part to the new bundle2 part added in step
+               2, i.e. the server won't send obsmarkers directly.
+
+        For now, we don't have "1" so things are done in a bit hacky way.
+        """
+        if self.replacementsreceived and phase == phasesmod.public:
+            # a rebase occurred, so only allow new nodes to become public
+            nodes = [self.mapping.get(n, n) for n in nodes]
+            allowednodes = set(self.mapping.values())
+            nodes = [n for n in nodes if n in allowednodes]
+        orig(pushop, nodes, phase)
+
+    def __enter__(self):
+        wrapfunction(bundle2, "_processchangegroup", self.processchangegroup)
+        wrapfunction(exchange, "_localphasemove", self.phasemove)
+        wrapfunction(obsolete.obsstore, "mergemarkers", self.mergemarkers)
+
+    def __exit__(self, exctype, excvalue, traceback):
+        unwrapfunction(bundle2, "_processchangegroup", self.processchangegroup)
+        unwrapfunction(exchange, "_localphasemove", self.phasemove)
+        unwrapfunction(obsolete.obsstore, "mergemarkers", self.mergemarkers)
 
 
 @exchange.b2partsgenerator(commonheadsparttype)

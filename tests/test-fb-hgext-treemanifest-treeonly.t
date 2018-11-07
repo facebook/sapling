@@ -713,6 +713,13 @@ Test pushing from a treeonly client to a treeonly server *with* pushrebase
   |   y |  1 +
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
   
+Strip the pushed commits + the recently made commit from the server
+  $ hg -R ../master strip -r '.:'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/7ec3c5c54734-3e715521-backup.hg
+
+Reset the phase of the local commits to draft
+  $ hg phase -fd 2::
 
 Test histedit with changing commits in the middle
   $ cat >> $TESTTMP/commands <<EOF
@@ -727,10 +734,6 @@ Test histedit with changing commits in the middle
 
 Reset the server back to hybrid mode
   $ cd ../master
-- Strip the pushed commits + the recently made commit
-  $ hg -R ../master strip -r '.:'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/7ec3c5c54734-3e715521-backup.hg
   $ mv .hg/hgrc.bak .hg/hgrc
   $ cd ..
 

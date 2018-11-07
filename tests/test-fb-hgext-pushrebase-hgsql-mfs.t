@@ -69,9 +69,9 @@ Make some non-conflicting commits in in the client repos.
   $ hg push -q -r tip --to master
   *FULL* manifest read for 8655e3409b0e (outside lock)
   $ log
-  @  second commit [draft:0a57cb610829] master
+  @  second commit [public:0a57cb610829] master
   |
-  o  first commit [draft:679b2ce82944]
+  o  first commit [public:679b2ce82944]
   |
   o  base [public:4ced94c0a443]
   
@@ -165,9 +165,9 @@ Push from client1 -> server1 and detach. The background job will wait for
   $ log
   @  race loser [draft:0ee934622ec8] master
   |
-  o  second commit [draft:0a57cb610829]
+  o  second commit [public:0a57cb610829]
   |
-  o  first commit [draft:679b2ce82944]
+  o  first commit [public:679b2ce82944]
   |
   o  base [public:4ced94c0a443]
   
