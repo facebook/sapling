@@ -112,26 +112,49 @@ https://en.wikipedia.org/wiki/Interleaved_deltas for its introduction.
     1. Interleaved insertions, or interleaved deletions.
        It can be rewritten to a non-interleaved tree structure.
 
-       ^AI/D x     ^AI/D x
-       ^AI/D y  -> ^AI/D y
-       ^AE x       ^AE y
-       ^AE y       ^AE x
+       Take insertions as example, deletions are similar:
+
+       ^AI x         ^AI x
+       a             a
+       ^AI x + 1  -> ^AI x + 1
+       b             b
+       ^AE x         ^AE x + 1
+       c             ^AE x
+       ^AE x + 1     ^AI x + 1
+                     c
+                     ^AE x + 1
 
     2. Nested insertions, where the inner one has a smaller revision number.
+       Or nested deletions, where the inner one has a larger revision number.
        It can be rewritten to a non-nested form.
 
-       ^AI x + 1     ^AI x + 1
-       ^AI x      -> ^AE x + 1
-       ^AE x         ^AI x
-       ^AE x + 1     ^AE x
+       Take insertions as example, deletions are similar:
 
-    3. Insertion or deletion inside another deletion, where the outer deletion
-       block has a smaller revision number.
+       ^AI x + 1     ^AI x + 1
+       a             a
+       ^AI x      -> ^AE x + 1
+       b             ^AI x
+       ^AE x         b
+       c             ^AE x
+       ^AE x + 1     ^AI x + 1
+                     c
+                     ^AE x + 1
+
+    3. Insertion inside deletion with a smaller revision number.
+
+       Rewrite by duplicating the content inserted:
 
        ^AD x          ^AD x
-       ^AI/D x + 1 -> ^AE x
-       ^AE x + 1      ^AI/D x + 1
-       ^AE x          ^AE x
+       a              a
+       ^AI x + 1  ->  b
+       b              c
+       ^AE x + 1      ^AE x
+       c              ^AI x + 1
+       ^AE x          b
+                      ^AE x + 1
+
+       Note: If "annotate" purely depends on "^AI" information, then the
+       duplication content will lose track of where "b" is originally from.
 
   Some of them may be valid in other implementations for special purposes. For
   example, to "revive" a previously deleted block in a newer revision.
@@ -249,3 +272,31 @@ https://en.wikipedia.org/wiki/Interleaved_deltas for its introduction.
 
   "c" makes "hg absorb" easier to implement and makes it possible to do
   "annotate --deleted".
+
+1.4 Malformed Cases Handling
+
+  The following "case 1", "case 2", and "case 3" refer to cases mentioned
+  in section 0.5.
+
+  Using the exposed API (replacelines), case 1 is impossible to generate,
+  although it's possible to generate it by constructing rawdata and load that
+  via linelog.fromdata.
+
+  Doing annotate(maxrev) before replacelines (aka. a1, a2 passed to
+  replacelines are related to the latest revision) eliminates the possibility
+  of case 3. That makes sense since usually you'd like to make edits on top of
+  the latest revision. Practically, both absorb and fastannotate do this.
+
+  Doing annotate(maxrev), plus replacelines(rev, ...) where rev >= maxrev
+  eliminates the possibility of case 2. That makes sense since usually the
+  edits belong to "new revisions", not "old revisions". Practically,
+  fastannotate does this. Absorb calls replacelines with rev < maxrev to edit
+  past revisions. So it needs some extra care to not generate case 2.
+
+  If case 1 occurs, that probably means linelog file corruption (assuming
+  linelog is edited via public APIs) the checkout or annotate result could
+  be less meaningful or even error out, but linelog wouldn't enter an infinite
+  loop.
+
+  If either case 2 or 3 occurs, linelog works as if the inner "^AI/D" and "^AE"
+  operations on the left side are silently ignored.
