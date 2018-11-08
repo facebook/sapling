@@ -95,6 +95,7 @@ pub fn repo_handlers(
                 streaming_clone,
                 config.lfs.clone(),
                 reponame.clone(),
+                config.readonly,
             );
 
             let listen_log = root_log.new(o!("repo" => reponame.clone()));

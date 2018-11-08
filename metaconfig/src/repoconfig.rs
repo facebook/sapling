@@ -53,6 +53,8 @@ pub struct RepoConfig {
     pub wireproto_scribe_category: Option<String>,
     /// What percent of read request verifies that returned content matches the hash
     pub hash_validation_percentage: usize,
+    /// Should this repo reject write attempts
+    pub readonly: RepoReadOnly,
 }
 
 impl RepoConfig {
@@ -63,6 +65,15 @@ impl RepoConfig {
             _ => None,
         }
     }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// Is the repo read-only?
+pub enum RepoReadOnly {
+    /// This repo is read-only and should not accept pushes or other writes
+    ReadOnly,
+    /// This repo should accept writes.
+    ReadWrite,
 }
 
 /// Configuration of warming up the Mononoke cache. This warmup happens on startup
@@ -451,6 +462,12 @@ impl RepoConfigs {
 
         let hash_validation_percentage = this.hash_validation_percentage.unwrap_or(0);
 
+        let readonly = if this.readonly.unwrap_or(false) {
+            RepoReadOnly::ReadOnly
+        } else {
+            RepoReadOnly::ReadWrite
+        };
+
         Ok(RepoConfig {
             enabled,
             repotype,
@@ -464,6 +481,7 @@ impl RepoConfigs {
             lfs,
             wireproto_scribe_category,
             hash_validation_percentage,
+            readonly,
         })
     }
 }
@@ -490,6 +508,7 @@ struct RawRepoConfig {
     lfs: Option<RawLfsParams>,
     wireproto_scribe_category: Option<String>,
     hash_validation_percentage: Option<usize>,
+    readonly: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -646,6 +665,7 @@ mod test {
                 },
                 wireproto_scribe_category: None,
                 hash_validation_percentage: 0,
+                readonly: RepoReadOnly::ReadWrite,
             },
         );
         repos.insert(
@@ -663,6 +683,7 @@ mod test {
                 lfs: Default::default(),
                 wireproto_scribe_category: Some("category".to_string()),
                 hash_validation_percentage: 0,
+                readonly: RepoReadOnly::ReadWrite,
             },
         );
         assert_eq!(

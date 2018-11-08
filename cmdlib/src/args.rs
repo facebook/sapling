@@ -26,7 +26,7 @@ use blobrepo::ManifoldArgs;
 use changesets::{SqlChangesets, SqlConstructors};
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
-use metaconfig::RepoType;
+use metaconfig::{RepoReadOnly, RepoType};
 use repo_client::{open_blobrepo, MononokeRepo};
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -471,6 +471,8 @@ fn open_repo_internal<'a>(
         // TODO(anastasiya) T35014200, condiser non default value for LFS repos
         Default::default(),
         "".to_string(),
+        // TODO(simonfar) T36381758 make repo readonly for services that don't need to write
+        RepoReadOnly::ReadWrite,
     ))
 }
 

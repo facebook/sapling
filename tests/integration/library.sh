@@ -114,7 +114,15 @@ path="$TESTTMP/repo"
 repotype="$REPOTYPE"
 repoid=0
 enabled=true
+CONFIG
 
+if [[ -v READ_ONLY_REPO ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
+readonly=true
+CONFIG
+fi
+
+  cat >> repos/repo/server.toml <<CONFIG
 [pushrebase]
 rewritedates=false
 CONFIG

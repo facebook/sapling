@@ -20,7 +20,7 @@ use blobstore::{Blobstore, PrefixBlobstore};
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
 use metaconfig::{LfsParams, PushrebaseParams};
-use metaconfig::repoconfig::RepoType;
+use metaconfig::repoconfig::{RepoReadOnly, RepoType};
 
 use errors::*;
 
@@ -46,6 +46,7 @@ pub struct MononokeRepo {
     streaming_clone: Option<SqlStreamingCloneConfig>,
     lfs_params: LfsParams,
     reponame: String,
+    readonly: RepoReadOnly,
 }
 
 impl MononokeRepo {
@@ -57,6 +58,7 @@ impl MononokeRepo {
         streaming_clone: Option<SqlStreamingCloneConfig>,
         lfs_params: LfsParams,
         reponame: String,
+        readonly: RepoReadOnly,
     ) -> Self {
         MononokeRepo {
             blobrepo,
@@ -65,6 +67,7 @@ impl MononokeRepo {
             streaming_clone,
             lfs_params,
             reponame,
+            readonly,
         }
     }
 
@@ -91,6 +94,10 @@ impl MononokeRepo {
 
     pub fn reponame(&self) -> &String {
         &self.reponame
+    }
+
+    pub fn readonly(&self) -> RepoReadOnly {
+        self.readonly
     }
 }
 

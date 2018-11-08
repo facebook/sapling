@@ -68,7 +68,7 @@ mod test {
     use super::super::*;
     use async_unit;
     use fixtures::many_files_dirs;
-    use metaconfig::repoconfig::{BookmarkParams, HookParams, RepoType};
+    use metaconfig::repoconfig::{BookmarkParams, HookParams, RepoReadOnly, RepoType};
     use slog::{Discard, Drain};
 
     fn default_repo_config() -> RepoConfig {
@@ -85,6 +85,7 @@ mod test {
             lfs: Default::default(),
             wireproto_scribe_category: None,
             hash_validation_percentage: 0,
+            readonly: RepoReadOnly::ReadWrite,
         }
     }
 
