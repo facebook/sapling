@@ -493,7 +493,7 @@ def unpack_into(snapshot_path: Path, output_path: Path) -> BaseSnapshot:
     """
     # GNU tar is smart enough to automatically figure out the correct
     # decompression method.
-    untar_cmd = ["tar", "-xf", str(snapshot_path)]
+    untar_cmd = ["tar", "-xf", str(snapshot_path.absolute())]
     subprocess.check_call(untar_cmd, cwd=output_path)
 
     data_dir = output_path / "data"
