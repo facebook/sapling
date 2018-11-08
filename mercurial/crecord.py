@@ -407,7 +407,7 @@ class uihunk(patchnode):
         if fromline != 0:
             if fromlen == 0:
                 fromline -= 1
-            if tolen == 0:
+            if tolen == 0 and toline > 0:
                 toline -= 1
 
         fromtoline = "@@ -%d,%d +%d,%d @@%s\n" % (
