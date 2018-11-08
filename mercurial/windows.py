@@ -446,7 +446,7 @@ def rename(src, dst):
     try:
         win32.movefileex(src, dst)
     except OSError as e:
-        if e.errno != errno.EEXIST or e.errno != errno.EACCES:
+        if e.errno != errno.EEXIST and e.errno != errno.EACCES:
             raise
         unlink(dst)
         os.rename(src, dst)
