@@ -34,7 +34,7 @@ command = registrar.command(cmdtable)
     cmdtemplate=True,
 )
 def metaedit(ui, repo, templ, *revs, **opts):
-    """edit commit information
+    """edit commit message and other metadata
 
     Edits the commit information for the specified revisions. By default, edits
     commit information for the working directory parent.

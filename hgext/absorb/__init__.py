@@ -1059,7 +1059,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     _("hg absorb [OPTION] [FILE]..."),
 )
 def absorbcmd(ui, repo, *pats, **opts):
-    """incorporate corrections into the stack of draft changesets
+    """apply pending corrections into a stack of commits
 
     absorb analyzes each change in your working directory and attempts to
     amend the changed lines into the changesets in your stack that first

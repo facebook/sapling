@@ -284,7 +284,7 @@ def commit(orig, ui, repo, *pats, **opts):
 
 
 def amend(ui, repo, *pats, **opts):
-    """amend the current changeset with more changes
+    """save pending changes to the current commit
     """
     # 'rebase' is a tristate option: None=auto, True=force, False=disable
     rebase = opts.get("rebase")

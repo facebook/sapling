@@ -249,14 +249,18 @@ helptable = sorted(
         (["config", "hgrc"], _("Configuration Files"), loaddoc("config")),
         (["dates"], _("Date Formats"), loaddoc("dates")),
         (["flags"], _("Command-line flags"), loaddoc("flags")),
-        (["patterns"], _("File Name Patterns"), loaddoc("patterns")),
+        (["patterns"], _("Specifying Files by File Name Pattern"), loaddoc("patterns")),
         (["environment", "env"], _("Environment Variables"), loaddoc("environment")),
         (
             ["revisions", "revs", "revsets", "revset", "multirevs", "mrevs"],
-            _("Specifying Revisions"),
+            _("Specifying Commits"),
             loaddoc("revisions"),
         ),
-        (["filesets", "fileset"], _("Specifying File Sets"), loaddoc("filesets")),
+        (
+            ["filesets", "fileset"],
+            _("Specifying Files by their Characteristics"),
+            loaddoc("filesets"),
+        ),
         (["diffs"], _("Diff Formats"), loaddoc("diffs")),
         (
             ["merge-tools", "mergetools", "mergetool"],
@@ -265,14 +269,14 @@ helptable = sorted(
         ),
         (
             ["templating", "templates", "template", "style"],
-            _("Template Usage"),
+            _("Customizing Output with Templates"),
             loaddoc("templates"),
         ),
         (["urls"], _("URL Paths"), loaddoc("urls")),
         (["extensions"], _("Using Additional Features"), extshelp),
         (["subrepos", "subrepo"], _("Subrepositories"), loaddoc("subrepos")),
         (["hgweb"], _("Configuring hgweb"), loaddoc("hgweb")),
-        (["glossary"], _("Glossary"), loaddoc("glossary")),
+        (["glossary"], _("Common Terms"), loaddoc("glossary")),
         (
             ["hgignore", "ignore"],
             _("Syntax for Mercurial Ignore Files"),
@@ -412,7 +416,7 @@ helphomecommands = [
     ("Check out a commit", ["checkout"]),
     (
         "Work with your checkout",
-        ["status", "add", "remove", "revert", "forget", "purge", "shelve"],
+        ["status", "add", "remove", "forget", "revert", "purge", "shelve"],
     ),
     ("Commit changes and modify commits", ["commit", "amend", "metaedit"]),
     ("Rearrange commits", ["rebase", "graft", "hide", "unhide"]),

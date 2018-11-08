@@ -39,7 +39,7 @@ hex = node.hex
     _("hg fold [OPTION]... (--from [-r] REV | --exact [-r] REV...)"),
 )
 def fold(ui, repo, *revs, **opts):
-    """fold multiple revisions into a single one
+    """combine multiple commits into a single commit
 
     With --from, folds all the revisions linearly between the current revision
     and the specified revision.

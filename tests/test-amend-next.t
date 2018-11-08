@@ -9,7 +9,7 @@ Check help text for new options and removal of unsupported options.
   $ hg next --help
   hg next [OPTIONS]... [STEPS]
   
-  checkout a child changeset
+  check out a child commit
   
   Options:
   

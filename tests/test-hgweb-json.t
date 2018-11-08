@@ -1695,7 +1695,7 @@ help/ shows help topics
   {
     "earlycommands": [
       {
-        "summary": "add the specified files on the next commit",
+        "summary": "start tracking the specified files",
         "topic": "add"
       },
       {
@@ -1707,7 +1707,7 @@ help/ shows help topics
         "topic": "clone"
       },
       {
-        "summary": "commit the specified files or all outstanding changes",
+        "summary": "save all pending changes or specified files in a new commit",
         "topic": "commit"
       },
       {
@@ -1719,7 +1719,7 @@ help/ shows help topics
         "topic": "export"
       },
       {
-        "summary": "forget the specified files on the next commit",
+        "summary": "stop tracking the specified files",
         "topic": "forget"
       },
       {
@@ -1751,7 +1751,7 @@ help/ shows help topics
         "topic": "record"
       },
       {
-        "summary": "remove the specified files on the next commit",
+        "summary": "delete the specified tracked files",
         "topic": "remove"
       },
       {
@@ -1763,7 +1763,7 @@ help/ shows help topics
         "topic": "show"
       },
       {
-        "summary": "show changed files in the working directory",
+        "summary": "list files with pending changes",
         "topic": "status"
       },
       {
@@ -1771,7 +1771,7 @@ help/ shows help topics
         "topic": "summary"
       },
       {
-        "summary": "checkout a specific commit",
+        "summary": "check out a specific commit",
         "topic": "update"
       }
     ],
@@ -1813,7 +1813,7 @@ help/ shows help topics
         "topic": "cat"
       },
       {
-        "summary": "show combined config settings from all hgrc files",
+        "summary": "show config settings",
         "topic": "config"
       },
       {
@@ -1845,7 +1845,7 @@ help/ shows help topics
         "topic": "hint"
       },
       {
-        "summary": "search revision history for a pattern in specified files",
+        "summary": "search backwards through history for a pattern in the specified files",
         "topic": "histgrep"
       },
       {
@@ -1889,7 +1889,7 @@ help/ shows help topics
         "topic": "resolve"
       },
       {
-        "summary": "restore files to their checkout state",
+        "summary": "change the specified files to match a commit",
         "topic": "revert"
       },
       {
@@ -1951,7 +1951,7 @@ help/ shows help topics
         "topic": "extensions"
       },
       {
-        "summary": "Specifying File Sets",
+        "summary": "Specifying Files by their Characteristics",
         "topic": "filesets"
       },
       {
@@ -1959,7 +1959,7 @@ help/ shows help topics
         "topic": "flags"
       },
       {
-        "summary": "Glossary",
+        "summary": "Common Terms",
         "topic": "glossary"
       },
       {
@@ -1983,7 +1983,7 @@ help/ shows help topics
         "topic": "pager"
       },
       {
-        "summary": "File Name Patterns",
+        "summary": "Specifying Files by File Name Pattern",
         "topic": "patterns"
       },
       {
@@ -1991,7 +1991,7 @@ help/ shows help topics
         "topic": "phases"
       },
       {
-        "summary": "Specifying Revisions",
+        "summary": "Specifying Commits",
         "topic": "revisions"
       },
       {
@@ -2003,7 +2003,7 @@ help/ shows help topics
         "topic": "subrepos"
       },
       {
-        "summary": "Template Usage",
+        "summary": "Customizing Output with Templates",
         "topic": "templating"
       },
       {

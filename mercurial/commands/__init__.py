@@ -165,7 +165,7 @@ except NameError:
     inferrepo=True,
 )
 def add(ui, repo, *pats, **opts):
-    """add the specified files on the next commit
+    """start tracking the specified files
 
     Schedule files to be version controlled and added to the
     repository.
@@ -1814,7 +1814,7 @@ def clone(ui, source, dest=None, **opts):
     inferrepo=True,
 )
 def commit(ui, repo, *pats, **opts):
-    """commit the specified files or all outstanding changes
+    """save all pending changes or specified files in a new commit
 
     Commit changes to the given files into the repository. Unlike a
     centralized SCM, this operation is a local operation. See
@@ -1998,7 +1998,7 @@ def _docommit(ui, repo, *pats, **opts):
     cmdtype=readonly,
 )
 def config(ui, repo, *values, **opts):
-    """show combined config settings from all hgrc files
+    """show config settings
 
     With no arguments, print names and values of all config items.
 
@@ -2455,7 +2455,7 @@ def files(ui, repo, *pats, **opts):
 
 @command("^forget", walkopts, _("[OPTION]... FILE..."), inferrepo=True)
 def forget(ui, repo, *pats, **opts):
-    """forget the specified files on the next commit
+    """stop tracking the specified files
 
     Mark the specified files so they will no longer be tracked
     after the next commit.
@@ -3313,7 +3313,7 @@ def hint(ui, *names, **opts):
     cmdtype=readonly,
 )
 def histgrep(ui, repo, pattern, *pats, **opts):
-    """search revision history for a pattern in specified files
+    """search backwards through history for a pattern in the specified files
 
     Search revision history for a regular expression in the specified
     files or the entire project.
@@ -5302,7 +5302,7 @@ def recover(ui, repo):
     inferrepo=True,
 )
 def remove(ui, repo, *pats, **opts):
-    """remove the specified files on the next commit
+    """delete the specified tracked files
 
     Schedule the indicated files for removal from the current branch.
 
@@ -5651,7 +5651,7 @@ def resolve(ui, repo, *pats, **opts):
     _("[OPTION]... [-r REV] [NAME]..."),
 )
 def revert(ui, repo, *pats, **opts):
-    """restore files to their checkout state
+    """change the specified files to match a commit
 
     .. note::
 
@@ -6009,7 +6009,7 @@ def show(ui, repo, *args, **opts):
     cmdtype=readonly,
 )
 def status(ui, repo, *pats, **opts):
-    """show changed files in the working directory
+    """list files with pending changes
 
     Show status of files in the repository. If names are given, only
     files that match are shown. Files that are clean or ignored or
@@ -6734,7 +6734,7 @@ def update(
     tool=None,
     inactive=None,
 ):
-    """checkout a specific commit
+    """check out a specific commit
 
     Update the repository's working directory to the specified
     changeset. If no changeset is specified, update to the tip of the

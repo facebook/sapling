@@ -988,7 +988,7 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
     _("[OPTION]... ([ANCESTOR] | --outgoing [URL])"),
 )
 def histedit(ui, repo, *freeargs, **opts):
-    """interactively edit changeset history
+    """interactively reorder, combine, or delete commits
 
     This command lets you edit a linear series of changesets (up to
     and including the working directory, which should be clean).

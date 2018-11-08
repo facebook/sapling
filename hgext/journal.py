@@ -475,7 +475,7 @@ _ignoreopts = ("no-merges", "graph")
     "[OPTION]... [BOOKMARKNAME]",
 )
 def journal(ui, repo, *args, **opts):
-    """show the previous position of bookmarks and the working copy
+    """show history of the checked out commit or a bookmark
 
     The journal is used to see the previous commits that bookmarks and the
     working copy pointed to. By default the previous locations for the working

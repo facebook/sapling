@@ -21,19 +21,19 @@ Short help:
   
   Check out a commit:
   
-   checkout      checkout a specific commit
+   checkout      check out a specific commit
   
   Work with your checkout:
   
-   status        show changed files in the working directory
-   add           add the specified files on the next commit
-   remove        remove the specified files on the next commit
-   revert        restore files to their checkout state
-   forget        forget the specified files on the next commit
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
   
   Commit changes and modify commits:
   
-   commit        commit the specified files or all outstanding changes
+   commit        save all pending changes or specified files in a new commit
   
   Rearrange commits:
   
@@ -45,16 +45,16 @@ Short help:
   
   Other commands:
   
-   config        show combined config settings from all hgrc files
+   config        show config settings
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
-   filesets      specifying file sets
-   glossary      glossary
-   patterns      file name patterns
-   revisions     specifying revisions
-   templating    template usage
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
 
   $ hg -q
   Mercurial Distributed SCM
@@ -75,19 +75,19 @@ Short help:
   
   Check out a commit:
   
-   checkout      checkout a specific commit
+   checkout      check out a specific commit
   
   Work with your checkout:
   
-   status        show changed files in the working directory
-   add           add the specified files on the next commit
-   remove        remove the specified files on the next commit
-   revert        restore files to their checkout state
-   forget        forget the specified files on the next commit
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
   
   Commit changes and modify commits:
   
-   commit        commit the specified files or all outstanding changes
+   commit        save all pending changes or specified files in a new commit
   
   Rearrange commits:
   
@@ -99,16 +99,16 @@ Short help:
   
   Other commands:
   
-   config        show combined config settings from all hgrc files
+   config        show config settings
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
-   filesets      specifying file sets
-   glossary      glossary
-   patterns      file name patterns
-   revisions     specifying revisions
-   templating    template usage
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
 
   $ hg help
   Mercurial Distributed SCM
@@ -129,19 +129,19 @@ Short help:
   
   Check out a commit:
   
-   checkout      checkout a specific commit
+   checkout      check out a specific commit
   
   Work with your checkout:
   
-   status        show changed files in the working directory
-   add           add the specified files on the next commit
-   remove        remove the specified files on the next commit
-   revert        restore files to their checkout state
-   forget        forget the specified files on the next commit
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
   
   Commit changes and modify commits:
   
-   commit        commit the specified files or all outstanding changes
+   commit        save all pending changes or specified files in a new commit
   
   Rearrange commits:
   
@@ -153,16 +153,16 @@ Short help:
   
   Other commands:
   
-   config        show combined config settings from all hgrc files
+   config        show config settings
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
-   filesets      specifying file sets
-   glossary      glossary
-   patterns      file name patterns
-   revisions     specifying revisions
-   templating    template usage
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
 
   $ hg -q help
   Mercurial Distributed SCM
@@ -183,19 +183,19 @@ Short help:
   
   Check out a commit:
   
-   checkout      checkout a specific commit
+   checkout      check out a specific commit
   
   Work with your checkout:
   
-   status        show changed files in the working directory
-   add           add the specified files on the next commit
-   remove        remove the specified files on the next commit
-   revert        restore files to their checkout state
-   forget        forget the specified files on the next commit
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
   
   Commit changes and modify commits:
   
-   commit        commit the specified files or all outstanding changes
+   commit        save all pending changes or specified files in a new commit
   
   Rearrange commits:
   
@@ -207,16 +207,16 @@ Short help:
   
   Other commands:
   
-   config        show combined config settings from all hgrc files
+   config        show config settings
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
-   filesets      specifying file sets
-   glossary      glossary
-   patterns      file name patterns
-   revisions     specifying revisions
-   templating    template usage
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
 
 Test extension help:
   $ hg help extensions --config extensions.rebase= --config extensions.children=
@@ -391,7 +391,7 @@ Normal help for add
   $ hg add -h
   hg add [OPTION]... [FILE]...
   
-  add the specified files on the next commit
+  start tracking the specified files
   
       Schedule files to be version controlled and added to the repository.
   
@@ -417,7 +417,7 @@ Verbose help for add
   $ hg add -hv
   hg add [OPTION]... [FILE]...
   
-  add the specified files on the next commit
+  start tracking the specified files
   
       Schedule files to be version controlled and added to the repository.
   
@@ -518,7 +518,7 @@ Test help option with version option
   hg add: option --skjdfks not recognized
   hg add [OPTION]... [FILE]...
   
-  add the specified files on the next commit
+  start tracking the specified files
   
   Options ([+] can be repeated):
   
@@ -535,7 +535,7 @@ Test ambiguous command help
   $ hg help ad
   Commands:
   
-   add           add the specified files on the next commit
+   add           start tracking the specified files
    addremove     add all new files, delete all missing files
 
 Test command without options
@@ -631,7 +631,7 @@ Test command without options
   
   aliases: st
   
-  show changed files in the working directory
+  list files with pending changes
   
       Show status of files in the repository. If names are given, only files
       that match are shown. Files that are clean or ignored or the source of a
@@ -690,7 +690,7 @@ Test command without options
   $ hg -q help status
   hg status [OPTION]... [FILE]...
   
-  show changed files in the working directory
+  list files with pending changes
 
   $ hg help foo
   abort: no such help topic: foo
@@ -717,19 +717,19 @@ Test command without options
   
   Check out a commit:
   
-   checkout      checkout a specific commit
+   checkout      check out a specific commit
   
   Work with your checkout:
   
-   status        show changed files in the working directory
-   add           add the specified files on the next commit
-   remove        remove the specified files on the next commit
-   revert        restore files to their checkout state
-   forget        forget the specified files on the next commit
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
   
   Commit changes and modify commits:
   
-   commit        commit the specified files or all outstanding changes
+   commit        save all pending changes or specified files in a new commit
   
   Rearrange commits:
   
@@ -741,16 +741,16 @@ Test command without options
   
   Other commands:
   
-   config        show combined config settings from all hgrc files
+   config        show config settings
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
-   filesets      specifying file sets
-   glossary      glossary
-   patterns      file name patterns
-   revisions     specifying revisions
-   templating    template usage
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
   [255]
 
 Typoed command gives suggestion
@@ -916,19 +916,19 @@ Test that default list of commands omits extension commands
   
   Check out a commit:
   
-   checkout      checkout a specific commit
+   checkout      check out a specific commit
   
   Work with your checkout:
   
-   status        show changed files in the working directory
-   add           add the specified files on the next commit
-   remove        remove the specified files on the next commit
-   revert        restore files to their checkout state
-   forget        forget the specified files on the next commit
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
   
   Commit changes and modify commits:
   
-   commit        commit the specified files or all outstanding changes
+   commit        save all pending changes or specified files in a new commit
   
   Rearrange commits:
   
@@ -940,16 +940,16 @@ Test that default list of commands omits extension commands
   
   Other commands:
   
-   config        show combined config settings from all hgrc files
+   config        show config settings
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
-   filesets      specifying file sets
-   glossary      glossary
-   patterns      file name patterns
-   revisions     specifying revisions
-   templating    template usage
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
 
 
 Test list of internal help commands
@@ -1319,11 +1319,11 @@ Test commands that collide with topics (issue4240)
   $ hg config -hq
   hg config [-u] [NAME]...
   
-  show combined config settings from all hgrc files
+  show config settings
   $ hg showconfig -hq
   hg config [-u] [NAME]...
   
-  show combined config settings from all hgrc files
+  show config settings
 
 Test a help topic
 
@@ -1551,7 +1551,7 @@ Test keyword search help
   
    config     Configuration Files
    extensions Using Additional Features
-   glossary   Glossary
+   glossary   Common Terms
    phases     Working with Phases
    subrepos   Subrepositories
    urls       URL Paths
@@ -1561,7 +1561,7 @@ Test keyword search help
    bookmarks create a new bookmark or list existing bookmarks
    clone     make a copy of an existing repository
    paths     show aliases for remote repositories
-   update    checkout a specific commit
+   update    check out a specific commit
   
   Extensions:
   
@@ -2090,7 +2090,7 @@ Dish up an empty repo; serve it cold.
   filesets
   </a>
   </td><td>
-  Specifying File Sets
+  Specifying Files by their Characteristics
   </td></tr>
   <tr><td>
   <a href="/help/flags">
@@ -2104,7 +2104,7 @@ Dish up an empty repo; serve it cold.
   glossary
   </a>
   </td><td>
-  Glossary
+  Common Terms
   </td></tr>
   <tr><td>
   <a href="/help/hgignore">
@@ -2146,7 +2146,7 @@ Dish up an empty repo; serve it cold.
   patterns
   </a>
   </td><td>
-  File Name Patterns
+  Specifying Files by File Name Pattern
   </td></tr>
   <tr><td>
   <a href="/help/phases">
@@ -2160,7 +2160,7 @@ Dish up an empty repo; serve it cold.
   revisions
   </a>
   </td><td>
-  Specifying Revisions
+  Specifying Commits
   </td></tr>
   <tr><td>
   <a href="/help/scripting">
@@ -2181,7 +2181,7 @@ Dish up an empty repo; serve it cold.
   templating
   </a>
   </td><td>
-  Template Usage
+  Customizing Output with Templates
   </td></tr>
   <tr><td>
   <a href="/help/urls">
@@ -2206,7 +2206,7 @@ Dish up an empty repo; serve it cold.
   add
   </a>
   </td><td>
-  add the specified files on the next commit
+  start tracking the specified files
   </td></tr>
   <tr><td>
   <a href="/help/annotate">
@@ -2227,7 +2227,7 @@ Dish up an empty repo; serve it cold.
   commit
   </a>
   </td><td>
-  commit the specified files or all outstanding changes
+  save all pending changes or specified files in a new commit
   </td></tr>
   <tr><td>
   <a href="/help/diff">
@@ -2248,7 +2248,7 @@ Dish up an empty repo; serve it cold.
   forget
   </a>
   </td><td>
-  forget the specified files on the next commit
+  stop tracking the specified files
   </td></tr>
   <tr><td>
   <a href="/help/githelp">
@@ -2304,7 +2304,7 @@ Dish up an empty repo; serve it cold.
   remove
   </a>
   </td><td>
-  remove the specified files on the next commit
+  delete the specified tracked files
   </td></tr>
   <tr><td>
   <a href="/help/serve">
@@ -2325,7 +2325,7 @@ Dish up an empty repo; serve it cold.
   status
   </a>
   </td><td>
-  show changed files in the working directory
+  list files with pending changes
   </td></tr>
   <tr><td>
   <a href="/help/summary">
@@ -2339,7 +2339,7 @@ Dish up an empty repo; serve it cold.
   update
   </a>
   </td><td>
-  checkout a specific commit
+  check out a specific commit
   </td></tr>
   
   
@@ -2414,7 +2414,7 @@ Dish up an empty repo; serve it cold.
   config
   </a>
   </td><td>
-  show combined config settings from all hgrc files
+  show config settings
   </td></tr>
   <tr><td>
   <a href="/help/copy">
@@ -2477,7 +2477,7 @@ Dish up an empty repo; serve it cold.
   histgrep
   </a>
   </td><td>
-  search revision history for a pattern in specified files
+  search backwards through history for a pattern in the specified files
   </td></tr>
   <tr><td>
   <a href="/help/identify">
@@ -2561,7 +2561,7 @@ Dish up an empty repo; serve it cold.
   revert
   </a>
   </td><td>
-  restore files to their checkout state
+  change the specified files to match a commit
   </td></tr>
   <tr><td>
   <a href="/help/root">
@@ -2679,7 +2679,7 @@ Dish up an empty repo; serve it cold.
   hg add [OPTION]... [FILE]...
   </p>
   <p>
-  add the specified files on the next commit
+  start tracking the specified files
   </p>
   <p>
   Schedule files to be version controlled and added to the
@@ -2865,7 +2865,7 @@ Dish up an empty repo; serve it cold.
   aliases: rm
   </p>
   <p>
-  remove the specified files on the next commit
+  delete the specified tracked files
   </p>
   <p>
   Schedule the indicated files for removal from the current branch.

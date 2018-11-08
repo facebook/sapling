@@ -92,7 +92,7 @@ def findthingstopurge(repo, match, findfiles, finddirs, includeignored):
     _("[OPTION]... [DIR]..."),
 )
 def purge(ui, repo, *dirs, **opts):
-    """removes files not tracked by Mercurial
+    """delete untracked files
 
     Delete files not known to Mercurial. This is useful to test local
     and uncommitted changes in an otherwise-clean source tree.

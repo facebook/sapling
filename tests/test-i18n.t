@@ -38,7 +38,7 @@ Test keyword search in translated help text:
   
   Befehle:
   
-   update Aktualisiert das Arbeitsverzeichnis (oder wechselt die Version)
+   update check out a specific commit
 
 #endif
 

@@ -1204,7 +1204,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
     _("hg shelve [OPTION]... [FILE]..."),
 )
 def shelvecmd(ui, repo, *pats, **opts):
-    """save and set aside changes from the working directory
+    """save pending changes and revert checkout to a clean state
 
     Shelving takes files that "hg status" reports as not clean, saves
     the modifications to a bundle (a shelved change), and reverts the

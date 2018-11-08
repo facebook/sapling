@@ -483,19 +483,19 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
   Check out a commit:
   
-   checkout      checkout a specific commit
+   checkout      check out a specific commit
   
   Work with your checkout:
   
-   status        show changed files in the working directory
-   add           add the specified files on the next commit
-   remove        remove the specified files on the next commit
-   revert        restore files to their checkout state
-   forget        forget the specified files on the next commit
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
   
   Commit changes and modify commits:
   
-   commit        commit the specified files or all outstanding changes
+   commit        save all pending changes or specified files in a new commit
   
   Rearrange commits:
   
@@ -508,16 +508,16 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
   Other commands:
   
-   config        show combined config settings from all hgrc files
+   config        show config settings
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
-   filesets      specifying file sets
-   glossary      glossary
-   patterns      file name patterns
-   revisions     specifying revisions
-   templating    template usage
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
   [255]
   $ hg --invalid mylog
   hg: option --invalid not recognized
@@ -539,19 +539,19 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
   Check out a commit:
   
-   checkout      checkout a specific commit
+   checkout      check out a specific commit
   
   Work with your checkout:
   
-   status        show changed files in the working directory
-   add           add the specified files on the next commit
-   remove        remove the specified files on the next commit
-   revert        restore files to their checkout state
-   forget        forget the specified files on the next commit
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
   
   Commit changes and modify commits:
   
-   commit        commit the specified files or all outstanding changes
+   commit        save all pending changes or specified files in a new commit
   
   Rearrange commits:
   
@@ -564,16 +564,16 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
   Other commands:
   
-   config        show combined config settings from all hgrc files
+   config        show config settings
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
-   filesets      specifying file sets
-   glossary      glossary
-   patterns      file name patterns
-   revisions     specifying revisions
-   templating    template usage
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
   [255]
   $ hg --invalid blank
   hg: option --invalid not recognized
@@ -595,19 +595,19 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
   Check out a commit:
   
-   checkout      checkout a specific commit
+   checkout      check out a specific commit
   
   Work with your checkout:
   
-   status        show changed files in the working directory
-   add           add the specified files on the next commit
-   remove        remove the specified files on the next commit
-   revert        restore files to their checkout state
-   forget        forget the specified files on the next commit
+   status        list files with pending changes
+   add           start tracking the specified files
+   remove        delete the specified tracked files
+   forget        stop tracking the specified files
+   revert        change the specified files to match a commit
   
   Commit changes and modify commits:
   
-   commit        commit the specified files or all outstanding changes
+   commit        save all pending changes or specified files in a new commit
   
   Rearrange commits:
   
@@ -620,16 +620,16 @@ invalid global arguments for normal commands, aliases, and shell aliases
   
   Other commands:
   
-   config        show combined config settings from all hgrc files
+   config        show config settings
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
   
-   filesets      specifying file sets
-   glossary      glossary
-   patterns      file name patterns
-   revisions     specifying revisions
-   templating    template usage
+   filesets      specifying files by their characteristics
+   glossary      common terms
+   patterns      specifying files by file name pattern
+   revisions     specifying commits
+   templating    customizing output with templates
   [255]
 
 environment variable changes in alias commands
