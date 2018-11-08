@@ -16,7 +16,6 @@ import os
 import socket
 import stat
 import subprocess
-import tempfile
 import time
 import types
 import typing
@@ -28,7 +27,7 @@ from eden.integration.lib import edenclient, hgrepo, util
 from eden.integration.lib.find_executables import FindExe
 from eden.integration.lib.temporary_directory import create_tmp_dir
 
-from . import verify as verify_mod
+from . import inode_metadata as inode_metadata_mod, verify as verify_mod
 
 
 T = TypeVar("T", bound="BaseSnapshot")
@@ -119,7 +118,10 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         # Rewrite the config state to point to "/tmp/dummy_snapshot_path"
         # This isn't really strictly necessary, but just makes the state that
         # gets saved slightly more deterministic.
-        self._relocate_to(Path("/tmp/dummy_snapshot_path"))
+        #
+        # Also update uid and gid information 99.
+        # This is commonly the UID & GID for "nobody" on many systems.
+        self._update_eden_state(Path("/tmp/dummy_snapshot_path"), uid=99, gid=99)
 
     def verify(self, verifier: verify_mod.SnapshotVerifier) -> None:
         """Verify that the snapshot data looks correct.
@@ -155,7 +157,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         and recreates any transient state needed for the snapshot.
         """
         self.create_transient_dir()
-        self._relocate_to(self.base_dir)
+        self._update_eden_state(self.base_dir, uid=os.getuid(), gid=os.getgid())
         self.prep_resume()
 
     def _create_directories(self) -> None:
@@ -220,13 +222,18 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         with self._metadata_path.open("r") as f:
             return typing.cast(Dict[str, Any], json.load(f))
 
-    def _relocate_to(self, base_dir: Path) -> None:
-        """Rewrite data inside an unpacked snapshot directory to refer to the base
-        directory using the specified path.
+    def _update_eden_state(self, base_dir: Path, uid: int, gid: int) -> None:
+        """Update Eden's stored state for the snapshot so it will work in a new
+        location.
 
-        This replaces absolute path names in various data files to refer to the new
-        location.  This is needed so that a snapshot originally created in one location
-        can be unpacked and used in another location.
+        - Replace absolute path names in various data files to refer to the new
+          location.  This is needed so that a snapshot originally created in one
+          location can be unpacked and used in another location.
+
+        - Update UID and GID values stored by Eden's to reflect the specified values.
+          This is needed so that unpacked snapshots can be used by the current user
+          without getting permissions errors when they try to access files inside the
+          Eden checkouts.
         """
         info = self._read_metadata()
         old_base_dir = Path(info["base_dir"])
@@ -248,6 +255,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
                 new_config_data[str(new_checkout_path)] = checkout_name
                 checkout_state_dir = self.eden_state_dir / "clients" / checkout_name
                 self._relocate_checkout(checkout_state_dir, old_base_dir, base_dir)
+                self._update_ownership(checkout_state_dir, uid, gid)
 
             config_file.seek(0)
             config_file.truncate()
@@ -256,6 +264,12 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         # Update the info file with the new base path
         info["base_dir"] = str(base_dir)
         self._write_metadata(info)
+
+    def _update_ownership(self, checkout_state_dir: Path, uid: int, gid: int) -> None:
+        """Update Eden's stored metadata about files to mark that files are owned by
+        the current user."""
+        metadata_path = checkout_state_dir / "local" / "metadata.table"
+        inode_metadata_mod.update_ownership(metadata_path, uid, gid)
 
     def _relocate_checkout(
         self, checkout_state_dir: Path, old_base_dir: Path, new_base_dir: Path
