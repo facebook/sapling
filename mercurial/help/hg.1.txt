@@ -30,8 +30,8 @@ Command Elements
 """"""""""""""""
 
 files...
-    indicates one or more filename or relative path filenames; see
-    `File Name Patterns`_ for information on pattern matching
+    indicates one or more filename or relative path filenames; see `Specifying
+    Files By File Name Pattern`_ for information on pattern matching
 
 path
     indicates a path on the local machine
