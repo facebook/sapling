@@ -12,7 +12,6 @@
 #include <folly/CppAttributes.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
-#include <folly/Subprocess.h>
 #include <folly/chrono/Conv.h>
 #include <folly/container/Access.h>
 #include <folly/futures/Future.h>
