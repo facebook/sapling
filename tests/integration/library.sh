@@ -398,3 +398,11 @@ threshold=$2
 usercache=$3
 EOF
 }
+
+function aliasverify() {
+  blobstore=$1
+  repo_folder=$2
+  mode=$3
+  shift 3
+  $MONONOKE_ALIAS_VERIFY --repo_id 0 --blobstore "$blobstore" --data-dir "$repo_folder" --mode "$mode" "$@"
+}

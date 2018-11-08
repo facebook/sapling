@@ -463,6 +463,13 @@ impl BlobRepo {
         fetch_file_content_from_blobstore(&self.blobstore, *key).boxify()
     }
 
+    pub fn get_file_content_by_content_id(
+        &self,
+        id: ContentId,
+    ) -> impl Future<Item = FileContents, Error = Error> {
+        fetch_file_contents(&self.blobstore, id)
+    }
+
     pub fn get_file_size(&self, key: &HgFileNodeId) -> impl Future<Item = u64, Error = Error> {
         fetch_file_size_from_blobstore(&self.blobstore, *key)
     }
@@ -888,6 +895,17 @@ impl BlobRepo {
         blobstore_key_operation
             .join(alias_key_operation)
             .map(move |((), ())| id)
+    }
+
+    pub fn upload_alias_to_file_content_id(
+        &self,
+        alias: Sha256,
+        content_id: ContentId,
+    ) -> impl Future<Item = (), Error = Error> + Send {
+        self.upload_blobstore_bytes(
+            get_sha256_alias_key(alias.to_hex().to_string()),
+            BlobstoreBytes::from_bytes(content_id.blobstore_key().as_bytes()),
+        )
     }
 
     // This is used by tests

@@ -69,7 +69,7 @@ extern crate fixtures;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
 
-mod alias;
+pub mod alias;
 mod bonsai_generation;
 mod changeset;
 mod changeset_fetcher;

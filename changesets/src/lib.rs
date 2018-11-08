@@ -47,8 +47,8 @@ use failure::SyncFailure;
 use sql::{Connection, Transaction};
 pub use sql_ext::SqlConstructors;
 
-use futures::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{stream, Future, IntoFuture};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial_types::RepositoryId;
 use mononoke_types::ChangesetId;
 use rust_thrift::compact_protocol;
@@ -196,6 +196,20 @@ queries!{
          WHERE repo_id = {repo_id}
            AND cs_id IN {cs_id}"
     }
+
+    read SelectAllChangesetsIdsInRange(repo_id: RepositoryId, min_id: u64, max_id: u64) -> (ChangesetId) {
+        "SELECT cs_id
+         FROM changesets
+         WHERE repo_id = {repo_id}
+           AND id BETWEEN {min_id} AND {max_id}"
+    }
+
+    read SelectChangesetsIdsBounds(repo_id: RepositoryId) -> (u64, u64) {
+        "SELECT min(id), max(id)
+         FROM changesets
+         WHERE repo_id = {repo_id}"
+    }
+
 }
 
 impl SqlConstructors for SqlChangesets {
@@ -282,6 +296,46 @@ impl Changesets for SqlChangesets {
                 None => {
                     STATS::gets_master.add_value(1);
                     select_changeset(&read_master_connection, &repo_id, &cs_id)
+                }
+            })
+            .boxify()
+    }
+}
+
+impl SqlChangesets {
+    pub fn get_list_bs_cs_id_in_range(
+        &self,
+        repo_id: RepositoryId,
+        min_id: u64,
+        max_id: u64,
+    ) -> BoxStream<ChangesetId, Error> {
+        // [min_id, max_id)
+        cloned!(self.read_master_connection);
+        // As SQL request is BETWEEN, both bounds including
+        let max_id = max_id - 1;
+
+        SelectAllChangesetsIdsInRange::query(&read_master_connection, &repo_id, &min_id, &max_id)
+            .map(move |rows| {
+                let changesets_ids = rows.into_iter().map(|row| row.0);
+                stream::iter_ok(changesets_ids).boxify()
+            })
+            .from_err()
+            .flatten_stream()
+            .boxify()
+    }
+
+    pub fn get_changesets_ids_bounds(
+        &self,
+        repo_id: RepositoryId,
+    ) -> BoxFuture<(Option<u64>, Option<u64>), Error> {
+        cloned!(self.read_master_connection);
+
+        SelectChangesetsIdsBounds::query(&read_master_connection, &repo_id)
+            .map(move |rows| {
+                if rows.is_empty() {
+                    (None, None)
+                } else {
+                    (Some(rows[0].0), Some(rows[0].1))
                 }
             })
             .boxify()

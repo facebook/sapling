@@ -7,6 +7,7 @@
 use std::cmp::min;
 use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -22,6 +23,7 @@ use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
 use blobrepo::ManifoldArgs;
+use changesets::{SqlChangesets, SqlConstructors};
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
 use metaconfig::RepoType;
@@ -212,6 +214,25 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {
         .parse::<u32>()
         .expect("expected repository ID to be a u32");
     RepositoryId::new(repo_id as i32)
+}
+
+pub fn open_sql_changesets(matches: &ArgMatches) -> Result<SqlChangesets> {
+    match matches.value_of("blobstore") {
+        Some("files") | Some("rocksdb") => {
+            let path = parse_data_dir(matches);
+            SqlChangesets::with_sqlite_path(path.join("changesets"))
+        }
+        None | Some("manifold") => {
+            let manifold_args = parse_manifold_args(matches);
+            let myrouter_port =
+                parse_myrouter_port(matches).expect("myrouter port provided is not an int");
+            Ok(SqlChangesets::with_myrouter(
+                &manifold_args.db_address,
+                myrouter_port,
+            ))
+        }
+        Some(bad) => panic!("unexpected blobstore type: {}", bad),
+    }
 }
 
 /// Create a new `MononokeRepo` -- for local instances, expect its contents to be empty.
@@ -410,12 +431,7 @@ fn open_repo_internal<'a>(
 
     let (logger, repo_type) = match matches.value_of("blobstore") {
         Some("files") => {
-            let data_dir = matches
-                .value_of("data-dir")
-                .expect("local data directory must be specified");
-            let data_dir = Path::new(data_dir)
-                .canonicalize()
-                .expect("Failed to read local directory path");
+            let data_dir = parse_data_dir(matches);
             setup_repo_dir(&data_dir, create).expect("Setting up file blobrepo failed");
 
             let logger =
@@ -424,12 +440,7 @@ fn open_repo_internal<'a>(
             (logger, repo_type)
         }
         Some("rocksdb") => {
-            let data_dir = matches
-                .value_of("data-dir")
-                .expect("local directory must be specified");
-            let data_dir = Path::new(data_dir)
-                .canonicalize()
-                .expect("Failed to read local directory path");
+            let data_dir = parse_data_dir(matches);
             setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
 
             let logger =
@@ -447,13 +458,7 @@ fn open_repo_internal<'a>(
         Some(bad) => panic!("unexpected blobstore type: {}", bad),
     };
 
-    let myrouter_port = match matches.value_of("myrouter-port") {
-        Some(port) => Some(
-            port.parse::<u16>()
-                .expect("Provided --myrouter-port is not u16"),
-        ),
-        None => None,
-    };
+    let myrouter_port = parse_myrouter_port(matches);
 
     let blobrepo = open_blobrepo(logger.clone(), repo_type.clone(), repo_id, myrouter_port)?;
     let hook_manager = HookManager::new_with_blobrepo(blobrepo.clone(), logger);
@@ -482,6 +487,25 @@ pub fn parse_manifold_args<'a>(matches: &ArgMatches<'a>) -> ManifoldArgs {
                 .expect("shard count must be a positive integer")
         }),
     }
+}
+
+pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {
+    match matches.value_of("myrouter-port") {
+        Some(port) => Some(
+            port.parse::<u16>()
+                .expect("Provided --myrouter-port is not u16"),
+        ),
+        None => None,
+    }
+}
+
+pub fn parse_data_dir<'a>(matches: &ArgMatches<'a>) -> PathBuf {
+    let data_dir = matches
+        .value_of("data-dir")
+        .expect("local data directory must be specified");
+    Path::new(data_dir)
+        .canonicalize()
+        .expect("Failed to read local directory path")
 }
 
 pub fn get_usize_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<usize> {
