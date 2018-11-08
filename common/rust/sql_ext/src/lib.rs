@@ -29,7 +29,13 @@ pub trait SqlConstructors: Sized {
         let read_connection = builder.build_read_only();
 
         builder.service_type(myrouter::ServiceType::MASTER);
-        let read_master_connection = builder.build_read_only();
+        // For reading from master we need to use less concurrent connections in order to protect
+        // the master from being overloaded. The `clone` here means that for write connection we
+        // still use the default number of concurrent connections.
+        let read_master_connection = builder
+            .clone()
+            .max_num_of_concurrent_connections(10)
+            .build_read_only();
         let write_connection = builder.build_read_write();
 
         Self::from_connections(write_connection, read_connection, read_master_connection)
