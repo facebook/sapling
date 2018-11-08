@@ -12,11 +12,12 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use failure::{err_msg, SlogKVError};
-use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
+use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures::sync::mpsc;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use openssl::ssl::SslAcceptor;
-use slog::Logger;
+use slog::{Drain, Level, Logger};
+use slog_kvfilter::KVFilter;
 use tokio;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_codec::{FramedRead, FramedWrite};
@@ -24,7 +25,7 @@ use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 use tokio_openssl::SslAcceptorExt;
 use tokio_timer;
 
-use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
+use sshrelay::{SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
 use errors::*;
 use repo_handlers::RepoHandler;
@@ -122,7 +123,22 @@ fn accept(
             repo_handlers
                 .get(&stdio.preamble.reponame)
                 .cloned()
-                .ok_or_else(|| error!(root_log, "Unknown repo: {}", stdio.preamble.reponame))
+                .ok_or_else(|| {
+                    error!(root_log, "Unknown repo: {}", stdio.preamble.reponame);
+                    let tmp_conn_logger = {
+                        let stderr_write = SenderBytesWrite {
+                            chan: stdio.stderr.clone().wait(),
+                        };
+                        let drain = slog_term::PlainSyncDecorator::new(stderr_write);
+                        let drain = slog_term::FullFormat::new(drain).build();
+                        let drain = KVFilter::new(drain, Level::Critical);
+                        Logger::root(drain.ignore_res(), o!())
+                    };
+                    error!(
+                        tmp_conn_logger,
+                        "Requested repo \"{}\" does not exist or disabled", stdio.preamble.reponame
+                    )
+                })
                 .into_future()
                 .and_then(move |handler| {
                     request_handler(handler.clone(), stdio, addr, handler.repo.hook_manager())
