@@ -12,6 +12,8 @@ import pathlib
 import subprocess
 import sys
 import typing
+import unittest
+from typing import List, Optional
 
 import pexpect
 from eden.cli.config import EdenInstance
@@ -72,6 +74,31 @@ class StartTest(testcase.EdenTestCase):
         # so the self.eden class doesn't really know it is running and that
         # it needs to be shut down.
         self.eden.run_cmd("stop")
+
+
+class DirectInvokeTest(unittest.TestCase):
+    def test_no_args(self) -> None:
+        """Directly invoking edenfs with no arguments should fail."""
+        self._check_error([])
+
+    def test_eden_cmd_arg(self) -> None:
+        """Directly invoking edenfs with an eden command should fail."""
+        self._check_error(["restart"])
+
+    def _check_error(self, args: List[str], err: Optional[str] = None) -> None:
+        cmd = [FindExe.EDEN_DAEMON]
+        cmd.extend(args)
+        out = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.assertEqual(os.EX_USAGE, out.returncode)
+        self.assertEqual(b"", out.stdout)
+
+        if err is None:
+            err = """\
+error: the edenfs daemon should not normally be invoked manually
+Did you mean to run "eden" instead of "edenfs"?
+"""
+        self.maxDiff = 5000
+        self.assertMultiLineEqual(err, out.stderr.decode("utf-8", errors="replace"))
 
 
 @service_test

@@ -24,7 +24,7 @@ class FakeEdenFS(typing.ContextManager[int]):
     def spawn(
         cls, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
     ) -> "FakeEdenFS":
-        command = [FindExe.FAKE_EDENFS, "--edenDir", str(eden_dir)]
+        command = [FindExe.FAKE_EDENFS, "--edenDir", str(eden_dir), "--edenfs"]
         command.extend(extra_arguments)
         subprocess.check_call(command)
         return cls.from_existing_process(eden_dir=eden_dir)

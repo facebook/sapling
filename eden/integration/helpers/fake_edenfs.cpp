@@ -38,6 +38,11 @@ using folly::StringPiece;
 using std::make_shared;
 using std::string;
 
+DEFINE_bool(
+    edenfs,
+    false,
+    "This argument must be supplied to confirm you intend to run "
+    "edenfs instead of eden");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 DEFINE_string(
     cleanShutdownFile,
@@ -319,6 +324,14 @@ int main(int argc, char** argv) {
   }
 #endif
 
+  if (argc != 1) {
+    fprintf(stderr, "error: unexpected trailing command line arguments\n");
+    return 1;
+  }
+  if (!FLAGS_edenfs) {
+    XLOG(ERR) << "the --edenfs flag is required";
+    return 1;
+  }
   if (FLAGS_edenDir.empty()) {
     XLOG(ERR) << "the --edenDir flag is required";
     return 1;

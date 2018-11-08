@@ -26,6 +26,11 @@
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/StartupLogger.h"
 
+DEFINE_bool(
+    edenfs,
+    false,
+    "This argument must be supplied to confirm you intend to run "
+    "edenfs instead of eden");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 #if EDEN_HAVE_SYSTEMD
 DEFINE_bool(
@@ -110,6 +115,23 @@ int main(int argc, char** argv) {
 
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
+
+  // Users should normally start edenfs through the eden CLI command rather than
+  // running it manually.  Sometimes users accidentally run "edenfs" when they
+  // meant to run the "eden" CLI tool.  To avoid this problem, always require a
+  // --edenfs command line flag to ensure the caller actually meant to run
+  // edenfs.
+  if (!FLAGS_edenfs) {
+    fprintf(
+        stderr,
+        "error: the edenfs daemon should not normally be invoked manually\n"
+        "Did you mean to run \"eden\" instead of \"edenfs\"?\n");
+    return EX_USAGE;
+  }
+  if (argc != 1) {
+    fprintf(stderr, "error: unexpected trailing command line arguments\n");
+    return EX_USAGE;
+  }
 
   // Fail if we were not started as root.  The privhelper needs root
   // privileges in order to perform mount and unmount operations.

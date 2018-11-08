@@ -650,6 +650,7 @@ Do you want to run `eden mount %s` instead?"""
         # Compute the command.
         cmd = [
             daemon_binary,
+            "--edenfs",
             "--edenDir",
             self._config_dir,
             "--etcEdenDir",
