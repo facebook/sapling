@@ -19,15 +19,15 @@ fn test_read_access_token_from_file_should_return_token() {
     writeln!(tmp, "user_token=token");
     let result = read_access_token(&Some(PathBuf::from(dir.path()))).unwrap();
     drop(tmp);
-    dir.close();
-    assert_eq!(result, "token");
+    dir.close().unwrap();
+    assert_eq!(result.token, "token");
 }
 
 #[cfg(target_os = "macos")]
 #[test]
 fn test_read_access_token_from_keychain_should_return_token() {
     let result = read_access_token(&None).unwrap();
-    assert!(!result.is_empty())
+    assert!(!result.token.is_empty())
 }
 
 #[cfg(unix)]
@@ -37,5 +37,5 @@ fn test_read_access_token_from_secrets_should_return_token() {
     // Use the secret "COMMITCLOUD_TEST" for testing purposes
     env::set_var("USER", "test");
     let result = read_access_token(&None).unwrap();
-    assert_eq!(result, "token");
+    assert_eq!(result.token, "token");
 }

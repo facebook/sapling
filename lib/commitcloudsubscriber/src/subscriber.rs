@@ -264,7 +264,7 @@ impl WorkspaceSubscriberService {
     /// It starts all the requested subscriptions by simply runing a separate thread for each one
     /// All threads keep checking the interrupt flag and join gracefully if it is restart or stop
 
-    fn run_subscriptions(&self, access_token: String) -> Result<Vec<thread::JoinHandle<()>>> {
+    fn run_subscriptions(&self, access_token: util::Token) -> Result<Vec<thread::JoinHandle<()>>> {
         util::read_subscriptions(&self.connected_subscribers_path)?
             .into_iter()
             .map(|(subscription, repo_roots)| {
@@ -277,7 +277,7 @@ impl WorkspaceSubscriberService {
 
     fn run_subscription(
         &self,
-        access_token: String,
+        access_token: util::Token,
         subscription: Subscription,
         repo_roots: Vec<PathBuf>,
     ) -> Result<thread::JoinHandle<()>> {
@@ -291,7 +291,8 @@ impl WorkspaceSubscriberService {
             .query_pairs_mut()
             .append_pair("workspace", &subscription.workspace)
             .append_pair("repo_name", &subscription.repo_name)
-            .append_pair("access_token", &access_token);
+            .append_pair("access_token", &access_token.token)
+            .append_pair("token_type", &access_token.token_type.to_string());
 
         let client = Client::new(notification_url);
 

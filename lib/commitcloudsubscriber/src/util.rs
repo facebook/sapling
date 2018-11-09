@@ -8,6 +8,7 @@ use ini::Ini;
 use std::{fs, io};
 use std::collections::HashMap;
 use std::env;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use subscriber::Subscription;
 
@@ -119,7 +120,28 @@ pub fn read_subscriptions(
 
 pub static TOKEN_FILENAME: &str = ".commitcloudrc";
 
-pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
+#[derive(Clone, PartialEq, Debug)]
+pub enum TokenType {
+    OAuth,
+    Cat,
+}
+
+impl fmt::Display for TokenType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TokenType::OAuth => write!(f, "oauth"),
+            TokenType::Cat => write!(f, "cat"),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Token {
+    pub(crate) token: String,
+    pub(crate) token_type: TokenType,
+}
+
+pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
     // try to read token from file
     let token = if let &Some(ref user_token_path) = user_token_path {
         let mut user_token_path = user_token_path.clone();
@@ -174,7 +196,10 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
                             error!("OAuth token is not found in the keychain");
                         } else {
                             info!("OAuth token is found in the keychain");
-                            return Ok(token);
+                            return Ok(Token {
+                                token,
+                                token_type: TokenType::OAuth,
+                            });
                         }
                     }
                 }
@@ -211,7 +236,10 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
                 } else {
                     // Will start using it later
                     info!("CAT token has been generated");
-                    // return Ok(str::from_utf8(&output.stdout)?.trim().to_string());
+                    return Ok(Token {
+                        token: str::from_utf8(&output.stdout)?.trim().to_string(),
+                        token_type: TokenType::Cat,
+                    });
                 },
             }
         }
@@ -238,7 +266,10 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
                             error!("OAuth token not found in secrets");
                         } else {
                             info!("OAuth token is found in secrets");
-                            return Ok(token);
+                            return Ok(Token {
+                                token,
+                                token_type: TokenType::OAuth,
+                            });
                         }
                     }
                 }
@@ -246,5 +277,9 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
         }
     }
     token
+        .map(|token| Token {
+            token,
+            token_type: TokenType::OAuth,
+        })
         .ok_or(ErrorKind::CommitCloudUnexpectedError("Token Lookup: token not found".into()).into())
 }
