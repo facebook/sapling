@@ -438,6 +438,11 @@ class EdenConfig : public ConfigSettingManager {
    */
   void registerConfiguration(ConfigSettingBase* configSetting) override;
 
+  /**
+   * Returns the user's home directory
+   */
+  AbsolutePathPiece getUserHomePath() const;
+
  private:
   /**
    * Utility method for converting ConfigSource to the filename (or cli).

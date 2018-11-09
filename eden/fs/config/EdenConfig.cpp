@@ -146,6 +146,10 @@ EdenConfig::EdenConfig(const EdenConfig& source) {
   doCopy(source);
 }
 
+AbsolutePathPiece EdenConfig::getUserHomePath() const {
+  return userHomePath_;
+}
+
 EdenConfig& EdenConfig::operator=(const EdenConfig& source) {
   doCopy(source);
   return *this;

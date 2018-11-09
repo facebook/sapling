@@ -712,6 +712,16 @@ TEST(PathFuncs, realpath) {
   EXPECT_EQ(tmpDir.pathStr, normalizeBestEffort(tmpDir.pathStr));
 }
 
+TEST(PathFuncs, expandUser) {
+  EXPECT_EQ("/foo/bar"_abspath, expandUser("/foo/bar"));
+  EXPECT_THROW(expandUser("~user/foo/bar"), std::runtime_error);
+  EXPECT_THROW(expandUser("~user/foo/bar", ""), std::runtime_error);
+  EXPECT_EQ("/home/bob/foo/bar"_abspath, expandUser("~/foo/bar", "/home/bob"));
+  EXPECT_EQ("/home/bob"_abspath, expandUser("~", "/home/bob"));
+  EXPECT_EQ(
+      "/home/bob/foo"_abspath, expandUser("~//foo/./bar/../", "/home/./bob/"));
+}
+
 template <typename StoredType, typename PieceType>
 void compareHelper(StringPiece str1, StringPiece str2) {
   EXPECT_TRUE(StoredType{str1} < StoredType{str2});

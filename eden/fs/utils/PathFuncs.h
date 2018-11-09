@@ -14,6 +14,7 @@
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/hash/Hash.h>
+#include <optional>
 #include <type_traits>
 
 namespace facebook {
@@ -1632,6 +1633,28 @@ typename std::enable_if<
 realpathExpected(const T& path) {
   return realpathExpected(path.c_str());
 }
+
+/**
+ * Return a new path with `~` replaced by the path to the current
+ * user's home directory.  This function does not support expanding
+ * the home dir of arbitrary users, and will throw an exception
+ * if the string starts with `~` but not `~/`.
+ *
+ * The replacement for `~` is taken from the homeDir parameter
+ * variable if set.  If `!homeDir.has_value()` an exception is thrown.
+ *
+ * On successful expansion of the tilde, the resultant path will
+ * be passed through canonicalPath() and returned.
+ *
+ * If path doesn't begin with `~` then it will be passed through
+ * canonicalPath() and returned.
+ *
+ * If the effective home dir value is the empty string, an
+ * exception is thrown.
+ */
+AbsolutePath expandUser(
+    folly::StringPiece path,
+    std::optional<folly::StringPiece> homeDir = std::nullopt);
 
 /**
  * Attempt to normalize a path.

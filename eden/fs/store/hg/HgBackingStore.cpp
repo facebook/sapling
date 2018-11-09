@@ -309,7 +309,13 @@ void HgBackingStore::initializeDatapackImport(AbsolutePathPiece repository) {
 
   if (maybeRepoName.hasValue() && maybeCachePath.hasValue()) {
     folly::StringPiece repoName{maybeRepoName.value().bytes()};
-    AbsolutePathPiece cachePath{StringPiece{maybeCachePath.value().bytes()}};
+
+    std::optional<StringPiece> homeDir = config_
+        ? std::make_optional(
+              config_->getEdenConfig()->getUserHomePath().stringPiece())
+        : std::nullopt;
+    auto cachePath =
+        expandUser(StringPiece{maybeCachePath.value().bytes()}, homeDir);
 
     dataPackStore_ =
         makeUnionStore(repository, repoName, cachePath, "packs"_relpath);

@@ -272,5 +272,45 @@ bool ensureDirectoryExists(AbsolutePathPiece path) {
       boost::filesystem::path(piece.begin(), piece.end()));
 }
 
+AbsolutePath expandUser(
+    folly::StringPiece path,
+    std::optional<folly::StringPiece> homeDir) {
+  if (!path.startsWith("~")) {
+    return canonicalPath(path);
+  }
+
+  if (path.size() > 1 && !path.startsWith("~/")) {
+    // path is not "~" and doesn't start with "~/".
+    // Most likely the input is something like "~user" which
+    // we don't support.
+    throw std::runtime_error(folly::to<std::string>(
+        "expandUser: can only ~-expand the current user. Input path was: `",
+        path,
+        "`"));
+  }
+
+  if (!homeDir) {
+    throw std::runtime_error(
+        "Unable to expand ~ in path because homeDir is not set");
+  }
+
+  if (homeDir->size() == 0) {
+    throw std::runtime_error(
+        "Unable to expand ~ in path because homeDir is the empty string");
+  }
+
+  if (path == "~") {
+    return canonicalPath(*homeDir);
+  }
+
+  // Otherwise: we know the path startsWith("~/") due to the
+  // checks made above, so we can skip the first 2 characters
+  // to build the expansion here.
+
+  auto expanded =
+      folly::to<std::string>(*homeDir, kDirSeparator, path.subpiece(2));
+  return canonicalPath(expanded);
+}
+
 } // namespace eden
 } // namespace facebook
