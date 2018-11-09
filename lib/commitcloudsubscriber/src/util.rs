@@ -125,7 +125,7 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
         let mut user_token_path = user_token_path.clone();
         user_token_path.push(TOKEN_FILENAME);
         info!(
-            "Reading commitcloud OAuth token from a file {}...",
+            "Token Lookup: reading commitcloud OAuth token from a file {}...",
             user_token_path.display()
         );
         match fs::OpenOptions::new().read(true).open(user_token_path) {
@@ -146,7 +146,7 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
     {
         if token.is_none() {
             // security find-generic-password -g -s commitcloud -a commitcloud -w
-            info!("Reading commitcloud OAuth token from keychain...");
+            info!("Token Lookup: reading commitcloud OAuth token from keychain...");
             let output = Command::new("security")
                 .args(vec![
                     "find-generic-password",
@@ -157,45 +157,94 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<String> {
                     "commitcloud",
                     "-w",
                 ])
-                .output()?;
-            if !output.status.success() {
-                error!("Process exited with: {}", output.status);
-                bail!("Failed to retrieve token from keychain")
-            }
-            let token = str::from_utf8(&output.stdout)?.trim().to_string();
-            if token.is_empty() {
-                error!("Token is not found in the keychain");
-                bail!("Token is not found in the keychain")
-            } else {
-                info!("Token is found in the keychain");
-                return Ok(token);
+                .output();
+            match output {
+                Err(e) => if let io::ErrorKind::NotFound = e.kind() {
+                    info!("`security` executable is not found");
+                },
+                Ok(output) => {
+                    if !output.status.success() {
+                        error!(
+                            "OAuth token: failed to retrieve from keychain, process exited with: {}",
+                            output.status
+                        );
+                    } else {
+                        let token = str::from_utf8(&output.stdout)?.trim().to_string();
+                        if token.is_empty() {
+                            error!("OAuth token is not found in the keychain");
+                        } else {
+                            info!("OAuth token is found in the keychain");
+                            return Ok(token);
+                        }
+                    }
+                }
             }
         }
     }
     #[cfg(unix)]
     {
+        // try to issue a cat token
+        if token.is_none() {
+            info!("Token Lookup: generating commitcloud CAT token via clicat...");
+            let day_seconds = 86400;
+            let output = Command::new("clicat")
+                .args(vec![
+                    "create",
+                    "--verifier_type",
+                    "SERVICE_IDENTITY",
+                    "--verifier_id",
+                    "commitcloud-service",
+                    "--token_timeout_seconds",
+                    &day_seconds.to_string(),
+                ])
+                .output();
+
+            match output {
+                Err(e) => if let io::ErrorKind::NotFound = e.kind() {
+                    info!("`clicat` executable is not found");
+                },
+                Ok(output) => if !output.status.success() {
+                    error!(
+                        "CAT token: failed to generate via clicat, process exited with {}",
+                        output.status
+                    );
+                } else {
+                    // Will start using it later
+                    info!("CAT token has been generated");
+                    // return Ok(str::from_utf8(&output.stdout)?.trim().to_string());
+                },
+            }
+        }
         // try to read token from secrets tool
         if token.is_none() {
             // try to read from secrets_tool
-            info!("Reading commitcloud OAuth token from secrets_tool...");
+            info!("Token Lookup: reading commitcloud OAuth token from secrets_tool...");
             let user = env::var("USER")?.to_uppercase();
             let key = format!("COMMITCLOUD_{}", user);
             let output = Command::new("secrets_tool")
                 .args(vec!["get", key.as_str()])
-                .output()?;
-            if !output.status.success() {
-                error!("Process exited with: {}", output.status);
-                bail!("Failed to retrieve token from secrets using key {}", key)
-            }
-            let token = str::from_utf8(&output.stdout)?.trim().to_string();
-            if token.is_empty() {
-                error!("Token not found in secrets");
-                bail!("Token not found in secrets");
-            } else {
-                info!("Token is found in secrets");
-                return Ok(token);
+                .output();
+
+            match output {
+                Err(e) => if let io::ErrorKind::NotFound = e.kind() {
+                    info!("`secrets_tool` executable is not found");
+                },
+                Ok(output) => {
+                    if !output.status.success() {
+                        error!("OAuth token: failed to retrieve from secrets using key {}, process exited with: {}", key, output.status);
+                    } else {
+                        let token = str::from_utf8(&output.stdout)?.trim().to_string();
+                        if token.is_empty() {
+                            error!("OAuth token not found in secrets");
+                        } else {
+                            info!("OAuth token is found in secrets");
+                            return Ok(token);
+                        }
+                    }
+                }
             }
         }
     }
-    token.ok_or(ErrorKind::CommitCloudUnexpectedError("token not found".into()).into())
+    token
+        .ok_or(ErrorKind::CommitCloudUnexpectedError("Token Lookup: token not found".into()).into())
 }
