@@ -404,24 +404,16 @@ def getrenderer(bar):
 
 
 class engine(object):
-    def __init__(self, condtype):
-        self._cond = condtype()
+    def __init__(self):
+        self._cond = rustthreading.Condition()
         self._active = False
         self._refresh = None
         self._delay = None
         self._bars = []
         self._currentbarindex = None
-        if condtype is rustthreading.Condition:
-            self.lock = self._lockworkedaround
-        else:
-            self.lock = self._lockbuggy
-
-    def _lockbuggy(self):
-        # Subject to https://bugs.python.org/issue29988. Could deadlock.
-        return self._cond
 
     @contextlib.contextmanager
-    def _lockworkedaround(self):
+    def lock(self):
         # Ugly hack for buggy Python (https://bugs.python.org/issue29988)
         #
         # Python can skip executing "__exit__" if a signal arrives at the
@@ -576,7 +568,7 @@ class engine(object):
                 bar._updateestimation(now)
 
 
-_engine = None
+_engine = engine()
 
 
 suspend = util.nullcontextmanager
@@ -734,14 +726,4 @@ def spinner(ui, topic):
 
 
 def resetstate():
-    if _engine:
-        _engine.resetstate()
-
-
-def setup(ui):
-    global _engine
-    if ui.configbool("progress", "_rustthreading"):
-        condtype = rustthreading.Condition
-    else:
-        condtype = threading.Condition
-    _engine = engine(condtype)
+    _engine.resetstate()

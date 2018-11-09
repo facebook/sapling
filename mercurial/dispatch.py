@@ -1174,10 +1174,6 @@ def _dispatch(req):
             ui_.setconfig("profiling", "enabled", "true", "--profile")
 
     with profiling.profile(lui) as profiler:
-        from . import progress
-
-        progress.setup(lui)
-
         # Configure extensions in phases: uisetup, extsetup, cmdtable, and
         # reposetup
         extensions.loadall(lui)
