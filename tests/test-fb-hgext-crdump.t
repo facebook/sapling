@@ -309,3 +309,44 @@ Test basic dump of two commits
   ######## old
   62000a
 
+#if jq
+Test crdump not dumping binaries
+
+  $ hg debugcrdump -U 1 -r ".^^::." | jq '.commits[].binary_files?'
+  [
+    {
+      "file_name": "bin1",
+      "new_file": "23c26c825bddcb198e701c6f7043a4e35dcb8b97",
+      "old_file": null
+    }
+  ]
+  [
+    {
+      "file_name": "bin1",
+      "new_file": "69403266b0b9ca9c9403df5097a07d01b74f3e23",
+      "old_file": "23c26c825bddcb198e701c6f7043a4e35dcb8b97"
+    },
+    {
+      "file_name": "bin2",
+      "new_file": "31f7b4d23cf93fd41972d0a879086e900cbf06c9",
+      "old_file": null
+    }
+  ]
+  [
+    {
+      "file_name": "bin1",
+      "new_file": "08f31c375398e39fe9c485a2a06a79dfc296580e",
+      "old_file": "69403266b0b9ca9c9403df5097a07d01b74f3e23"
+    },
+    {
+      "file_name": "bin2",
+      "new_file": null,
+      "old_file": "31f7b4d23cf93fd41972d0a879086e900cbf06c9"
+    }
+  ]
+
+  $ hg debugcrdump -U 1 -r ".^^::." --nobinary | jq '.commits[].binary_files?'
+  null
+  null
+  null
+#endif

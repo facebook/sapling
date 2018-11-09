@@ -35,6 +35,7 @@ command = registrar.command(cmdtable)
         ("U", "unified", 1 << 15, _("number of lines of context to show"), _("NUM")),
         ("l", "lfs", False, "Provide sha256 for lfs files instead of dumping"),
         ("", "obsolete", False, "add obsolete markers related to the given revisions"),
+        ("", "nobinary", False, "do not dump binary files"),
     ],
     _("hg debugcrdump [OPTION]... [-r] [REV]"),
 )
@@ -151,7 +152,8 @@ def crdump(ui, repo, *revs, **opts):
                 except KeyError:
                     pass
             rdata["patch_file"] = dumppatch(ui, repo, ctx, outdir, contextlines)
-            rdata["binary_files"] = dumpbinaryfiles(ui, repo, ctx, outdir, lfs)
+            if not opts["nobinary"]:
+                rdata["binary_files"] = dumpbinaryfiles(ui, repo, ctx, outdir, lfs)
             cdata.append(rdata)
 
         ui.write(

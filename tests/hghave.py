@@ -425,6 +425,11 @@ def has_p4():
     return matchoutput("p4 -V", br"Rev\. P4/") and matchoutput("p4d -V", br"Rev\. P4D/")
 
 
+@check("jq", "json processing tool")
+def has_jq():
+    return matchoutput("jq --help", br"Usage: jq .*")
+
+
 @check("symlink", "symbolic links")
 def has_symlink():
     if getattr(os, "symlink", None) is None:
