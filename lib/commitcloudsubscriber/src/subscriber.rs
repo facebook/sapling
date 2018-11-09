@@ -203,7 +203,7 @@ impl WorkspaceSubscriberService {
         Ok(thread::spawn(move || {
             info!("Starting CommitCloud WorkspaceSubscriberService");
             loop {
-                let command = self.channel.1.recv();
+                let command = self.channel.1.recv_timeout(Duration::from_secs(60));
                 match command {
                     Ok(CommitCloudCancelSubscriptions) => {
                         info!(
@@ -244,6 +244,12 @@ impl WorkspaceSubscriberService {
                             info!("User is not authenticated with Commit Cloud yet");
                             continue;
                         }
+                    }
+                    Err(mpsc::RecvTimeoutError::Timeout) => {
+                        if !util::read_subscriptions(&self.connected_subscribers_path)?.is_empty() {
+                            self.channel.0.send(CommitCloudStartSubscriptions)?;
+                        }
+                        continue;
                     }
                     Err(e) => {
                         error!("Receive from mpsc::channel failed with {}", e);
@@ -350,6 +356,11 @@ impl WorkspaceSubscriberService {
                     terror!(throttler_error, "{} {}. Continue...", sid, e);
                     throttler_alive.reset();
                     last_error = true;
+                    if format!("{}", e).contains("401 Unauthorized") {
+                        // interrupt execution earlier
+                        // all subscriptions have to be restarted from scratch
+                        interrupt.store(true, Ordering::Relaxed);
+                    }
                     continue;
                 }
 
