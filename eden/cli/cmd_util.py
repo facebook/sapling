@@ -23,7 +23,7 @@ def get_eden_instance(args: argparse.Namespace) -> EdenInstance:
 
 
 def find_checkout(
-    args: argparse.Namespace, path: Union[Path, str]
+    args: argparse.Namespace, path: Union[Path, str, None]
 ) -> Tuple[EdenInstance, Optional[EdenCheckout], Optional[Path]]:
     if path is None:
         path = os.getcwd()

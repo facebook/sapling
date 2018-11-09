@@ -1113,7 +1113,7 @@ def find_eden(
             except ValueError:
                 continue
 
-            checkout_state_dir = instance.state_dir.joinpath("clients", checkout_name)
+            checkout_state_dir = instance.state_dir.joinpath(CLIENTS_DIR, checkout_name)
             checkout = EdenCheckout(instance, checkout_path, checkout_state_dir)
             break
         else:
@@ -1125,7 +1125,9 @@ def find_eden(
         checkout_name_value = all_checkouts.get(str(checkout_root))
         if checkout_name_value is None:
             raise Exception(f"unknown checkout {checkout_root}")
-        checkout_state_dir = instance.state_dir.joinpath("clients", checkout_name_value)
+        checkout_state_dir = instance.state_dir.joinpath(
+            CLIENTS_DIR, checkout_name_value
+        )
         checkout = EdenCheckout(instance, checkout_root, checkout_state_dir)
         rel_path = checkout.get_relative_path(path, already_resolved=True)
     else:
