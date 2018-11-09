@@ -111,8 +111,10 @@ class SqliteWriteBatch : public LocalStore::WriteBatch {
 
 } // namespace
 
-SqliteLocalStore::SqliteLocalStore(AbsolutePathPiece pathToDb)
-    : db_(SqliteDatabase(pathToDb)) {
+SqliteLocalStore::SqliteLocalStore(
+    AbsolutePathPiece pathToDb,
+    std::shared_ptr<ReloadableConfig> config)
+    : LocalStore(std::move(config)), db_(SqliteDatabase(pathToDb)) {
   auto db = db_.lock();
 
   // Write ahead log for faster perf

@@ -15,12 +15,16 @@
 namespace facebook {
 namespace eden {
 
+class ReloadableConfig;
+
 /** An implementation of LocalStore that uses RocksDB for the underlying
  * storage.
  */
 class RocksDbLocalStore : public LocalStore {
  public:
-  explicit RocksDbLocalStore(AbsolutePathPiece pathToRocksDb);
+  explicit RocksDbLocalStore(
+      AbsolutePathPiece pathToRocksDb,
+      std::shared_ptr<ReloadableConfig> config = nullptr);
   ~RocksDbLocalStore();
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;

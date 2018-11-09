@@ -64,6 +64,9 @@ static constexpr struct KeySpaceRecord {
 namespace facebook {
 namespace eden {
 
+LocalStore::LocalStore(std::shared_ptr<ReloadableConfig> config) noexcept
+    : config_(std::move(config)) {}
+
 void LocalStore::clearCachesAndCompactAll() {
   for (auto ks : kKeySpaceRecords) {
     if (ks.persistence == Persistence::Ephemeral) {

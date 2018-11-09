@@ -58,7 +58,8 @@ class MemoryWriteBatch : public LocalStore::WriteBatch {
 };
 } // namespace
 
-MemoryLocalStore::MemoryLocalStore() {
+MemoryLocalStore::MemoryLocalStore(std::shared_ptr<ReloadableConfig> config)
+    : LocalStore(std::move(config)) {
   storage_->resize(KeySpace::End);
 }
 

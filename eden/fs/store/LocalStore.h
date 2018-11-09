@@ -30,6 +30,7 @@ namespace eden {
 
 class Blob;
 class Hash;
+class ReloadableConfig;
 class StoreResult;
 class Tree;
 
@@ -53,6 +54,8 @@ class Tree;
 class LocalStore {
  public:
   virtual ~LocalStore();
+  explicit LocalStore(
+      std::shared_ptr<ReloadableConfig> config = nullptr) noexcept;
 
   /**
    * Which key space (and thus column family for the RocksDbLocalStore)
@@ -262,6 +265,9 @@ class LocalStore {
    * destruction either.
    */
   virtual std::unique_ptr<WriteBatch> beginWrite(size_t bufSize = 0) = 0;
+
+ protected:
+  std::shared_ptr<ReloadableConfig> config_;
 };
 } // namespace eden
 } // namespace facebook

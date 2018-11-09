@@ -180,8 +180,11 @@ void RocksDbWriteBatch::put(
 namespace facebook {
 namespace eden {
 
-RocksDbLocalStore::RocksDbLocalStore(AbsolutePathPiece pathToRocksDb)
-    : dbHandles_(pathToRocksDb.stringPiece(), columnFamilies()),
+RocksDbLocalStore::RocksDbLocalStore(
+    AbsolutePathPiece pathToRocksDb,
+    std::shared_ptr<ReloadableConfig> config)
+    : LocalStore(std::move(config)),
+      dbHandles_(pathToRocksDb.stringPiece(), columnFamilies()),
       ioPool_(12, "RocksLocalStore") {}
 
 RocksDbLocalStore::~RocksDbLocalStore() {
