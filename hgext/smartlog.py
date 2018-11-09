@@ -70,9 +70,6 @@ testedwith = "ships-with-fb-hgext"
 commit_info = False
 hiddenchanges = 0
 
-# Remove unsupported --limit option.
-logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
-
 try:
     xrange(0)
 except NameError:
@@ -658,7 +655,7 @@ def smartdate(context, mapping, args):
         ("", "all", False, _("don't hide old local changesets"), ""),
         ("", "commit-info", False, _("show changes in current changeset"), ""),
     ]
-    + logopts,
+    + commands.templateopts,
     _("[OPTION]... [[-r] REV]"),
 )
 def smartlog(ui, repo, *pats, **opts):
@@ -666,14 +663,14 @@ def smartlog(ui, repo, *pats, **opts):
 
 Includes:
 
-- Your bookmarks
-- The @ or master bookmark (or tip if no bookmarks present).
-- Your local heads that don't have bookmarks.
+- Your local commits
+- The master bookmark for your repository
+- Any commits with local bookmarks
 
 Excludes:
 
-- All changesets under @/master/tip that aren't related to your changesets.
-- Your local heads that are older than 2 weeks."""
+- All commits under master that aren't related to your commits
+- Your local commits that are older than 2 weeks"""
     if ui.configbool("smartlog", "useancestorcache"):
         cachevfs = repo.cachevfs
 

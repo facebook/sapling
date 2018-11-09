@@ -2195,31 +2195,26 @@ def debugcomplete(ui, cmd="", **opts):
 def diff(ui, repo, *pats, **opts):
     """show differences between commits
 
-    Show differences between revisions for the specified files.
+    Show the differences between two commits. If only one commit is specified,
+    shows the differences between the specified commit and your pending
+    changes. If no commits are specified, shows your pending changes.
 
-    Differences between files are shown using the unified diff format.
+    Specify -c to see the changes in the specified commit relative to its
+    parent.
+
+    By default, this command skips binary files. To override this behavior,
+    specify -a to include binary files in the diff, probably with undesirable
+    results.
+
+    By default, diffs are shown using the unified diff format. Specify -g
+    to generate diffs in the git extended diff format. For more information,
+    read :hg:`help diffs`.
 
     .. note::
 
-       :hg:`diff` may generate unexpected results for merges, as it will
-       default to comparing against the working directory's first
-       parent changeset if no revisions are specified.
-
-    When two revision arguments are given, then changes are shown
-    between those revisions. If only one revision is specified then
-    that revision is compared to the working directory, and, when no
-    revisions are specified, the working directory files are compared
-    to its first parent.
-
-    Alternatively you can specify -c/--change with a revision to see
-    the changes in that changeset relative to its first parent.
-
-    Without the -a/--text option, diff will avoid generating diffs of
-    files it detects as binary. With -a, diff will generate a diff
-    anyway, probably with undesirable results.
-
-    Use the -g/--git option to generate diffs in the git extended diff
-    format. For more information, read :hg:`help diffs`.
+       :hg:`diff` might generate unexpected results during merges because it
+       defaults to comparing against your checkout's first parent commit
+       if no commits are specified.
 
     .. container:: verbose
 
@@ -5943,12 +5938,12 @@ def serve(ui, repo, **opts):
 def show(ui, repo, *args, **opts):
     """show commit in detail
 
+    Show the commit message and contents for the specified commit. If no commit
+    is specified, shows the current commit.
+
     This behaves similarly to :hg:`log -vp -r REV [OPTION]... [FILE]...`, or
     if called without a REV, :hg:`log -vp -r . [OPTION]...` Use
-    :hg:`log` for more powerful operations than supported by hg show
-
-    See :hg:`help templates` for more about pre-packaged styles and
-    specifying custom templates.
+    :hg:`log` for more powerful operations than supported by hg show.
 
     """
     ui.pager("show")

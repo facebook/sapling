@@ -440,12 +440,12 @@ Confirm that --help works (it didn't when we used an alias)
   
   show commit in detail
   
+      Show the commit message and contents for the specified commit. If no
+      commit is specified, shows the current commit.
+  
       This behaves similarly to 'hg log -vp -r REV [OPTION]... [FILE]...', or if
       called without a REV, 'hg log -vp -r . [OPTION]...' Use 'hg log' for more
-      powerful operations than supported by hg show
-  
-      See 'hg help templates' for more about pre-packaged styles and specifying
-      custom templates.
+      powerful operations than supported by hg show.
   
   Options ([+] can be repeated):
   
@@ -470,12 +470,12 @@ Confirm that --help works (it didn't when we used an alias)
   
   show commit in detail
   
+      Show the commit message and contents for the specified commit. If no
+      commit is specified, shows the current commit.
+  
       This behaves similarly to 'hg log -vp -r REV [OPTION]... [FILE]...', or if
       called without a REV, 'hg log -vp -r . [OPTION]...' Use 'hg log' for more
-      powerful operations than supported by hg show
-  
-      See 'hg help templates' for more about pre-packaged styles and specifying
-      custom templates.
+      powerful operations than supported by hg show.
   
   Options ([+] can be repeated):
   
