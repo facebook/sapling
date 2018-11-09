@@ -13,6 +13,7 @@
 #include <folly/Range.h>
 #include <folly/experimental/TestUtil.h>
 #include <sys/stat.h>
+#include <optional>
 #include <vector>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtr.h"
@@ -300,7 +301,7 @@ class TestMount {
    * first, and destroyed (and deleted from disk) after the EdenMount is
    * destroyed.
    */
-  std::unique_ptr<folly::test::TemporaryDirectory> testDir_;
+  std::optional<folly::test::TemporaryDirectory> testDir_;
 
   std::shared_ptr<EdenMount> edenMount_;
   std::shared_ptr<LocalStore> localStore_;

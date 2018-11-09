@@ -28,6 +28,7 @@
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
+#include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -59,7 +60,7 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // This test helps ensure that new edenfs versions can still successfully load
   // this overlay format even if we change how the overlay is saved in the
   // future.
-  TemporaryDirectory tmpdir("eden_test");
+  auto tmpdir = makeTempDir("eden_test");
   Subprocess tarProcess({"/bin/tar",
                          "-xzf",
                          "eden/test-data/overlay-v2.tgz",
@@ -267,7 +268,7 @@ enum class OverlayRestartMode {
 
 class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
  public:
-  RawOverlayTest() : testDir_{"eden_raw_overlay_test_"} {
+  RawOverlayTest() : testDir_{makeTempDir("eden_raw_overlay_test_")} {
     loadOverlay();
   }
 
@@ -604,7 +605,7 @@ TEST(OverlayInodePath, defaultInodePathIsEmpty) {
 class DebugDumpOverlayInodesTest : public ::testing::Test {
  public:
   DebugDumpOverlayInodesTest()
-      : testDir_{"eden_DebugDumpOverlayInodesTest"},
+      : testDir_{makeTempDir("eden_DebugDumpOverlayInodesTest")},
         overlay{AbsolutePathPiece{testDir_.path().string()}} {}
 
   folly::test::TemporaryDirectory testDir_;

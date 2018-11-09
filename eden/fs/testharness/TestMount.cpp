@@ -40,6 +40,7 @@
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
+#include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
@@ -49,8 +50,6 @@ using folly::Future;
 using folly::makeFuture;
 using folly::StringPiece;
 using folly::Unit;
-using folly::test::TemporaryDirectory;
-using folly::test::TemporaryFile;
 using namespace std::chrono_literals;
 using std::make_shared;
 using std::make_unique;
@@ -184,7 +183,7 @@ void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
 
 void TestMount::initTestDirectory() {
   // Create the temporary directory
-  testDir_ = make_unique<TemporaryDirectory>("eden_test");
+  testDir_ = makeTempDir();
 
   // Make the mount point and the eden client storage directories
   // inside the test directory.

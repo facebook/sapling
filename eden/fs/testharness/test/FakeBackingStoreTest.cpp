@@ -22,13 +22,11 @@
 
 using namespace facebook::eden;
 using folly::io::Cursor;
-using folly::test::TemporaryDirectory;
 
 namespace {
 class FakeBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
     localStore_ = std::make_shared<MemoryLocalStore>();
     store_ = std::make_unique<FakeBackingStore>(localStore_);
   }
@@ -36,10 +34,8 @@ class FakeBackingStoreTest : public ::testing::Test {
   void TearDown() override {
     store_.reset();
     localStore_.reset();
-    testDir_.reset();
   }
 
-  std::unique_ptr<TemporaryDirectory> testDir_;
   std::shared_ptr<LocalStore> localStore_;
   std::unique_ptr<FakeBackingStore> store_;
 };

@@ -22,6 +22,7 @@
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/testharness/TempFile.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -47,12 +48,12 @@ class LocalStoreTest : public ::testing::TestWithParam<StoreImpl> {
         store_ = std::make_unique<MemoryLocalStore>();
         break;
       case StoreImpl::RocksDB:
-        testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
+        testDir_ = makeTempDir();
         store_ = std::make_unique<RocksDbLocalStore>(
             AbsolutePathPiece{testDir_->path().string()});
         break;
       case StoreImpl::Sqlite:
-        testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
+        testDir_ = makeTempDir();
         store_ = std::make_unique<SqliteLocalStore>(
             AbsolutePathPiece{testDir_->path().string()} + "sqlite"_pc);
     }
@@ -63,7 +64,7 @@ class LocalStoreTest : public ::testing::TestWithParam<StoreImpl> {
     testDir_.reset();
   }
 
-  std::unique_ptr<TemporaryDirectory> testDir_;
+  std::optional<TemporaryDirectory> testDir_;
   std::unique_ptr<LocalStore> store_;
 };
 

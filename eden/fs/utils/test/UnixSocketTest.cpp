@@ -24,6 +24,8 @@
 #include <gtest/gtest.h>
 #include <random>
 
+#include "eden/fs/testharness/TempFile.h"
+
 using folly::ByteRange;
 using folly::checkUnixError;
 using folly::errnoStr;
@@ -76,7 +78,7 @@ void testSendDataAndFiles(DataSize dataSize, size_t numFiles) {
   auto socket1 = make_unique<FutureUnixSocket>(&evb, std::move(sockets.first));
   auto socket2 = make_unique<FutureUnixSocket>(&evb, std::move(sockets.second));
 
-  auto tmpFile = TemporaryFile("eden_test");
+  auto tmpFile = makeTempFile();
   struct stat tmpFileStat;
   if (fstat(tmpFile.fd(), &tmpFileStat) != 0) {
     ADD_FAILURE() << "fstat failed: " << errnoStr(errno);

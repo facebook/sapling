@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <sstream>
 
+#include "eden/fs/testharness/TempFile.h"
+
 using facebook::eden::basename;
 using facebook::eden::dirname;
 using folly::StringPiece;
@@ -556,7 +558,7 @@ class TmpWorkingDir {
   }
 
   AbsolutePath oldDir{getcwd()};
-  folly::test::TemporaryDirectory dir{"eden_test"};
+  folly::test::TemporaryDirectory dir = makeTempDir();
   std::string pathStr{dir.path().string()};
   AbsolutePathPiece path{pathStr};
 };
