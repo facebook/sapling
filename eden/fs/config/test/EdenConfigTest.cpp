@@ -85,7 +85,7 @@ class EdenConfigTest : public ::testing::Test {
         "[mononoke]\n"
         "use-mononoke=true\n"
         "[ssl]\n"
-        "client-certificate=\"/system_config_cert\"\n"};
+        "client-certificate=\"/system_config_cert/${USER}/foo/${USER}\"\n"};
     folly::writeFile(systemConfigFileData, systemConfigPath.c_str());
 
     testPathMap_[simpleOverRideTest_] = std::pair<AbsolutePath, AbsolutePath>(
@@ -329,7 +329,9 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/should_be_over_ridden");
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), "/etc/eden/systemCustomIgnore");
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
-  EXPECT_EQ(edenConfig->getClientCertificate(), "/system_config_cert");
+  EXPECT_EQ(
+      edenConfig->getClientCertificate()->stringPiece(),
+      "/system_config_cert/bob/foo/bob");
   EXPECT_EQ(edenConfig->getUseMononoke(), true);
 
   edenConfig->loadUserConfig();
@@ -337,7 +339,9 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
   EXPECT_EQ(edenConfig->getUserIgnoreFile(), "/home/bob/bob/userCustomIgnore");
   EXPECT_EQ(edenConfig->getSystemIgnoreFile(), "/etc/eden/systemCustomIgnore");
   EXPECT_EQ(edenConfig->getEdenDir(), defaultEdenDirPath_);
-  EXPECT_EQ(edenConfig->getClientCertificate(), "/system_config_cert");
+  EXPECT_EQ(
+      edenConfig->getClientCertificate()->stringPiece(),
+      "/system_config_cert/bob/foo/bob");
   EXPECT_EQ(edenConfig->getUseMononoke(), false);
 }
 

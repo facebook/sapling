@@ -478,8 +478,13 @@ operator()(
     auto it = convData.find(varName.str());
     if (it != convData.end()) {
       auto envVar = folly::to<std::string>("${", varName, "}");
-      auto idx = sString.find(envVar);
-      if (idx != std::string::npos) {
+      // There may be multiple ${USER} tokens to replace, so loop
+      // until we've processed all of them
+      while (true) {
+        auto idx = sString.find(envVar);
+        if (idx == std::string::npos) {
+          break;
+        }
         sString.replace(idx, envVar.size(), it->second);
       }
     }
