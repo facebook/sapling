@@ -241,16 +241,6 @@ class FilesystemChecker:
         self.errors.append(error)
 
     def scan_for_errors(self) -> None:
-        print(f"Checking overlay storage at {self.overlay.path}.")
-        print("This may take some time...")
-
-        if not self._overlay_locked:
-            print("Warning: unable to lock the overlay directory")
-            print(
-                "Will only scan for issues.  In order to fix problems you must "
-                "first unmount the checkout."
-            )
-
         print("Reading materialized inodes...")
         inodes = self._read_inodes()
 

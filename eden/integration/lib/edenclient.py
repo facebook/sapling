@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import tempfile
 from types import TracebackType
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 import eden.thrift
 from eden.cli import util
@@ -350,11 +350,13 @@ class EdenFS(object):
 
         return results
 
-    def clone(self, repo: str, path: str, allow_empty: bool = False) -> None:
+    def clone(
+        self, repo: str, path: Union[str, os.PathLike], allow_empty: bool = False
+    ) -> None:
         """
         Run "eden clone"
         """
-        params = ["clone", repo, path]
+        params = ["clone", repo, str(path)]
         if allow_empty:
             params.append("--allow-empty-repo")
         self.run_cmd(*params)

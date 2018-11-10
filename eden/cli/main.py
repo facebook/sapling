@@ -46,7 +46,7 @@ from . import (
     util,
     version as version_mod,
 )
-from .cmd_util import find_checkout, get_eden_instance
+from .cmd_util import get_eden_instance, require_checkout
 from .config import EdenInstance
 from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr
@@ -444,7 +444,20 @@ class TopCmd(Subcmd):
 
 @subcmd("fsck", "Perform a filesystem check for Eden")
 class FsckCmd(Subcmd):
+    EXIT_OK = 0
+    EXIT_SKIPPED = 1
+    EXIT_WARNINGS = 2
+    EXIT_ERRORS = 3
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            default=False,
+            help="Force fsck to scan for errors even on checkouts that appear to "
+            "currently be mounted.  It will not attempt to fix any problems, but will "
+            "only scan and report possible issues.",
+        )
         parser.add_argument(
             "-v",
             "--verbose",
@@ -453,35 +466,69 @@ class FsckCmd(Subcmd):
             help="Print more verbose information about issues found.",
         )
         parser.add_argument(
-            "-O",
-            "--overlay",
-            help="Explicitly specify the path to the overlay directory.",
-        )
-        parser.add_argument(
             "path",
             metavar="CHECKOUT_PATH",
+            nargs="*",
             help="The path to an Eden checkout to verify.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        instance, checkout, rel_path = find_checkout(args, args.path)
-        if checkout is None:
-            print(f"error: no Eden checkout found at {args.path}", file=sys.stderr)
-            return 1
-
-        # Get the path to the overlay directory for this mount point
-        if args.overlay is not None:
-            self._overlay_dir = Path(args.overlay)
+        if not args.path:
+            return_codes = self.check_all(args)
         else:
-            self._overlay_dir = checkout.state_dir.joinpath("local")
-        self._overlay = overlay_mod.Overlay(str(self._overlay_dir))
+            return_codes = self.check_explicit_paths(args)
 
-        with fsck_mod.FilesystemChecker(self._overlay, verbose=args.verbose) as checker:
+        return max(return_codes)
+
+    def check_explicit_paths(self, args: argparse.Namespace) -> List[int]:
+        return_codes: List[int] = []
+        for path in args.path:
+            # Check to see if this looks like an Eden checkout state directory.
+            # If this looks like an Eden checkout state directory,
+            if (Path(path) / "local" / "info").exists() and (
+                Path(path) / "config.toml"
+            ).exists():
+                result = self.check_one(args, Path(path), Path(path))
+            else:
+                instance, checkout, rel_path = require_checkout(args, path)
+                result = self.check_one(args, checkout.path, checkout.state_dir)
+            return_codes.append(result)
+
+        return return_codes
+
+    def check_all(self, args: argparse.Namespace) -> List[int]:
+        # Check all configured checkouts that are not currently mounted.
+        instance = get_eden_instance(args)
+        return_codes: List[int] = []
+        for checkout_path, rel_state_dir in instance._get_directory_map().items():
+            abs_state_dir = instance.state_dir / config_mod.CLIENTS_DIR / rel_state_dir
+            result = self.check_one(args, Path(checkout_path), abs_state_dir)
+            return_codes.append(result)
+
+        return return_codes
+
+    def check_one(
+        self, args: argparse.Namespace, checkout_path: Path, state_dir: Path
+    ) -> int:
+        overlay_dir = Path(state_dir) / "local"
+
+        overlay = overlay_mod.Overlay(str(overlay_dir))
+        with fsck_mod.FilesystemChecker(overlay, verbose=args.verbose) as checker:
+            if not checker._overlay_locked:
+                if args.force:
+                    print(
+                        f"warning: could not obtain lock on {checkout_path}, but "
+                        f"scanning anyway due to --force "
+                    )
+                else:
+                    print(f"Not checking {checkout_path}: mount is currently in use")
+                    return self.EXIT_SKIPPED
+
+            print(f"Checking {checkout_path}...")
             checker.scan_for_errors()
-            print("\nReport summary:")
             if not checker.errors:
                 print("  No issues found")
-                return 0
+                return self.EXIT_OK
 
             num_warnings = 0
             num_errors = 0
@@ -495,8 +542,8 @@ class FsckCmd(Subcmd):
                 print(f"  {num_warnings} warnings")
             print(f"  {num_errors} errors")
             if num_errors == 0:
-                return 2
-            return 1
+                return self.EXIT_WARNINGS
+            return self.EXIT_ERRORS
 
 
 @subcmd("gc", "Minimize disk and memory usage by freeing caches")
