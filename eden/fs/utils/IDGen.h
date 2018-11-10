@@ -18,10 +18,13 @@ namespace eden {
  * Very efficiently returns a new uint64_t unique to this process. Amortizes
  * the cost of synchronizing threads across many ID allocations.
  *
- * TODO: It could be beneficial to add a parameter to request more than one
- * unique ID at a time.
+ * All returned IDs are nonzero.
+ *
+ * TODO: It might be beneficial to add a parameter to request more than one
+ * unique ID at a time, though such an API would make it possible to exhaust
+ * the range of a 64-bit integer.
  */
-uint64_t generateUniqueID();
+uint64_t generateUniqueID() noexcept;
 
 } // namespace eden
 } // namespace facebook

@@ -9,13 +9,13 @@
  */
 #include "eden/fs/utils/IDGen.h"
 #include <folly/CachelinePadded.h>
-#include <folly/ThreadLocal.h>
+#include <folly/Likely.h>
 #include <atomic>
 
 namespace {
 /**
  * Allocating one unique ID per nanosecond would wrap around in over 500 years.
- * Initialized to 1 so that consumers can assume 0 is not a valid id
+ * Initialized to 1 so that consumers can assume 0 is not a valid id.
  *
  * CachelinePadded may be excessive here.
  */
@@ -25,8 +25,7 @@ struct LocalRange {
   uint64_t begin{0};
   uint64_t end{0};
 };
-
-folly::ThreadLocal<LocalRange> localRange;
+thread_local LocalRange localRange;
 
 /**
  * Number of unique IDs to hand out to a thread at a time. This avoids cache
@@ -44,15 +43,15 @@ constexpr uint64_t kRangeSize = 2000;
 namespace facebook {
 namespace eden {
 
-uint64_t generateUniqueID() {
-  auto range = localRange.get();
-  if (UNLIKELY(range->begin == range->end)) {
+uint64_t generateUniqueID() noexcept {
+  auto& range = localRange;
+  if (UNLIKELY(range.begin == range.end)) {
     auto begin =
         globalCounter->fetch_add(kRangeSize, std::memory_order_relaxed);
-    range->begin = begin;
-    range->end = begin + kRangeSize;
+    range.begin = begin;
+    range.end = begin + kRangeSize;
   }
-  return range->begin++;
+  return range.begin++;
 }
 
 } // namespace eden
