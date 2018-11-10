@@ -211,10 +211,9 @@ class HardLinkedInode(Error):
 
 
 class FilesystemChecker:
-    def __init__(self, overlay: overlay_mod.Overlay, verbose: bool = False) -> None:
+    def __init__(self, overlay: overlay_mod.Overlay) -> None:
         self.overlay = overlay
         self.errors: List[Error] = []
-        self.verbose = verbose
         self._overlay_locked: Optional[bool] = None
         self._overlay_lock: Optional[ContextManager[bool]] = None
         self._orphan_inodes: List[InodeInfo] = []
@@ -255,19 +254,6 @@ class FilesystemChecker:
             self._add_error(OrphanInodes(self._orphan_inodes))
 
         # TODO: Check that the stored max inode number is valid
-
-        self._report_errors()
-
-    def _report_errors(self):
-        for error in self.errors:
-            self._report_error(error)
-
-    def _report_error(self, error: Error):
-        print(f"{ErrorLevel.get_label(error.level)}: {error}")
-        if self.verbose:
-            details = error.detailed_description()
-            if details:
-                print("  " + "\n  ".join(details.splitlines()))
 
     def _read_inodes(self) -> Dict[int, InodeInfo]:
         inodes: Dict[int, InodeInfo] = {}

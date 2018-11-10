@@ -513,7 +513,7 @@ class FsckCmd(Subcmd):
         overlay_dir = Path(state_dir) / "local"
 
         overlay = overlay_mod.Overlay(str(overlay_dir))
-        with fsck_mod.FilesystemChecker(overlay, verbose=args.verbose) as checker:
+        with fsck_mod.FilesystemChecker(overlay) as checker:
             if not checker._overlay_locked:
                 if args.force:
                     print(
@@ -533,6 +533,7 @@ class FsckCmd(Subcmd):
             num_warnings = 0
             num_errors = 0
             for error in checker.errors:
+                self._report_error(args, error)
                 if error.level == fsck_mod.ErrorLevel.WARNING:
                     num_warnings += 1
                 else:
@@ -544,6 +545,13 @@ class FsckCmd(Subcmd):
             if num_errors == 0:
                 return self.EXIT_WARNINGS
             return self.EXIT_ERRORS
+
+    def _report_error(self, args: argparse.Namespace, error: fsck_mod.Error) -> None:
+        print(f"{fsck_mod.ErrorLevel.get_label(error.level)}: {error}")
+        if args.verbose:
+            details = error.detailed_description()
+            if details:
+                print("  " + "\n  ".join(details.splitlines()))
 
 
 @subcmd("gc", "Minimize disk and memory usage by freeing caches")
