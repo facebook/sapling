@@ -3,13 +3,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-//! Base16 iterator
-//!
-//! The main radix tree uses base16 to support hex string prefix lookups and
-//! make the space usage more efficient.
+//! Base16 iterator.
 
+/// Iterating through base16 bytes (0 to 15).
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct Base16Iter<'a, T: 'a>(&'a T, usize, usize);
+pub struct Base16Iter<'a, T: 'a>(&'a T, usize, usize);
 
 impl<'a, T: AsRef<[u8]>> Base16Iter<'a, T> {
     /// Convert base256 binary sequence to a base16 iterator.
@@ -19,7 +17,7 @@ impl<'a, T: AsRef<[u8]>> Base16Iter<'a, T> {
     }
 }
 
-/// Base16 iterator for [u8]
+/// Base16 iterator for `[u8]`
 impl<'a, T: AsRef<[u8]>> Iterator for Base16Iter<'a, T> {
     type Item = u8;
 
