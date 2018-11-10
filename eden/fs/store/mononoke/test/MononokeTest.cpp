@@ -18,6 +18,7 @@
 #include <proxygen/httpserver/HTTPServer.h>
 #include <proxygen/httpserver/RequestHandler.h>
 #include <proxygen/httpserver/ResponseBuilder.h>
+#include <proxygen/lib/http/HTTPCommonHeaders.h>
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
@@ -45,14 +46,23 @@ class Handler : public proxygen::RequestHandler {
 
   void onRequest(
       std::unique_ptr<proxygen::HTTPMessage> headers) noexcept override {
-    path_ = headers->getPath();
+    headers_ = std::move(headers);
   }
 
   void onBody(std::unique_ptr<folly::IOBuf> /* body */) noexcept override {}
 
   void onEOM() noexcept override {
+    if (headers_->getHeaders()
+            .getSingleOrEmpty(proxygen::HTTP_HEADER_HOST)
+            .empty()) {
+      ResponseBuilder(downstream_)
+          .status(400, "bad request: Host header is missing")
+          .body("Host header is missing")
+          .sendWithEOM();
+      return;
+    }
     boost::cmatch m;
-    auto match = boost::regex_match(path_.c_str(), m, regex_);
+    auto match = boost::regex_match(headers_->getPath().c_str(), m, regex_);
     if (match) {
       std::string content;
       if (blobs_.find(m[2]) != blobs_.end()) {
@@ -66,6 +76,7 @@ class Handler : public proxygen::RequestHandler {
             .status(404, "not found")
             .body("cannot find content")
             .sendWithEOM();
+        return;
       }
       // Split the data in two to make sure that client's onBody() callback
       // works fine
@@ -97,6 +108,7 @@ class Handler : public proxygen::RequestHandler {
   boost::regex regex_;
   std::string path_;
   BlobContents blobs_;
+  std::unique_ptr<HTTPMessage> headers_;
 };
 
 class HandlerFactory : public RequestHandlerFactory {
@@ -182,6 +194,7 @@ TEST_F(MononokeBackingStoreTest, testGetBlob) {
 
   server->start([&server, &blobs, this]() {
     MononokeBackingStore store(
+        "localhost",
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(400),
@@ -201,7 +214,12 @@ TEST_F(MononokeBackingStoreTest, testConnectFailed) {
   auto port = server->addresses()[0].address.getPort();
   auto sa = SocketAddress("localhost", port, true);
   MononokeBackingStore store(
-      sa, "repo", std::chrono::milliseconds(300), &mainEventBase, nullptr);
+      "localhost",
+      sa,
+      "repo",
+      std::chrono::milliseconds(300),
+      &mainEventBase,
+      nullptr);
   try {
     store.getBlob(kZeroHash).get();
     // Request should fail
@@ -216,6 +234,7 @@ TEST_F(MononokeBackingStoreTest, testEmptyBuffer) {
   auto emptyhash = this->emptyhash;
   server->start([&server, &blobs, emptyhash, this]() {
     MononokeBackingStore store(
+        "localhost",
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(300),
@@ -234,6 +253,7 @@ TEST_F(MononokeBackingStoreTest, testGetTree) {
   auto treehash = this->treehash;
   server->start([&server, treehash, this]() {
     MononokeBackingStore store(
+        "localhost",
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(300),
@@ -277,6 +297,7 @@ TEST_F(MononokeBackingStoreTest, testMalformedGetTree) {
   auto treehash = this->malformedhash;
   server->start([&server, treehash, this]() {
     MononokeBackingStore store(
+        "localhost",
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(300),
@@ -294,6 +315,7 @@ TEST_F(MononokeBackingStoreTest, testGetTreeForCommit) {
   auto treehash = this->treehash;
   server->start([&server, commithash, treehash, this]() {
     MononokeBackingStore store(
+        "localhost",
         server->addresses()[0].address,
         "repo",
         std::chrono::milliseconds(300),

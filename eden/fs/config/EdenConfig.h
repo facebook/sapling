@@ -496,7 +496,7 @@ class EdenConfig : public ConfigSettingManager {
                                                "mononoke-apiserver",
                                                this};
   ConfigSetting<std::string> mononokeHostName_{"mononoke:hostname", "", this};
-  ConfigSetting<uint16_t> mononokePort_{"mononoke:port", 8000, this};
+  ConfigSetting<uint16_t> mononokePort_{"mononoke:port", 443, this};
 
   struct stat systemConfigFileStat_ = {};
   struct stat userConfigFileStat_ = {};

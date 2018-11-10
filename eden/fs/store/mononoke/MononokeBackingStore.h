@@ -50,6 +50,7 @@ class MononokeBackingStore : public BackingStore {
 
   // This constructor should only be used in testing.
   MononokeBackingStore(
+      folly::StringPiece hostName,
       const folly::SocketAddress& socketAddress,
       const std::string& repo,
       const std::chrono::milliseconds& timeout,
@@ -70,12 +71,15 @@ class MononokeBackingStore : public BackingStore {
 
   folly::Future<folly::SocketAddress> getAddress(folly::EventBase*);
   folly::Future<std::unique_ptr<folly::IOBuf>> sendRequest(
-      const proxygen::URL& url);
+      folly::StringPiece endpoint,
+      const Hash& id);
   folly::Future<std::unique_ptr<folly::IOBuf>> sendRequestImpl(
       folly::SocketAddress addr,
-      const proxygen::URL& url);
+      folly::StringPiece endpoint,
+      const Hash& id);
 
   std::optional<folly::SocketAddress> socketAddress_;
+  std::string hostName_;
   std::string tierName_;
   std::string repo_;
   std::chrono::milliseconds timeout_;

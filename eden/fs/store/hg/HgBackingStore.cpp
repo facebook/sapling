@@ -401,7 +401,8 @@ void HgBackingStore::initializeMononoke(const ImporterOptions& options) {
   if (hostName) {
     auto port = edenConfig->getMononokePort();
     mononoke_ = std::make_unique<MononokeBackingStore>(
-        folly::SocketAddress(hostName->c_str(), port),
+        *hostName,
+        folly::SocketAddress(hostName->c_str(), port, /*allowNameLookup=*/true),
         options.repoName,
         std::chrono::milliseconds(FLAGS_mononoke_timeout),
         executor.get(),
@@ -478,7 +479,6 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
     RelativePath ownedPath(path);
     return mononoke_->getTree(manifestNode)
-        .within(std::chrono::milliseconds(FLAGS_mononoke_timeout))
         .via(serverThreadPool_)
         .thenTry([edenTreeID, ownedPath, writeBatch](
                      auto mononokeTreeTry) mutable {

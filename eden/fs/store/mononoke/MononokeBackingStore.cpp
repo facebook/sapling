@@ -54,6 +54,7 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
     HTTPMessage message;
     message.setMethod(proxygen::HTTPMethod::GET);
     message.setURL(url_.makeRelativeURL());
+    message.getHeaders().add("Host", url_.getHost());
     txn->sendHeaders(message);
     txn->sendEOM();
     session->closeWhenIdle();
@@ -82,10 +83,14 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
         promise_.setValue(std::move(body_));
       } else {
         auto error_msg = folly::to<std::string>(
-            "mononoke request failed: ",
-            status_code_,
-            ", ",
-            body_ ? body_->moveToFbString() : "");
+            "mononoke request ",
+            url_.getUrl(),
+            " failed: ",
+            status_code_->getStatusCode(),
+            " ",
+            status_code_->getStatusMessage(),
+            ". body size: ",
+            body_ ? body_->computeChainDataLength() : 0);
         promise_.setException(
             make_exception_wrapper<std::runtime_error>(error_msg));
       }
@@ -103,7 +108,7 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
   }
 
   void onHeadersComplete(std::unique_ptr<HTTPMessage> msg) noexcept override {
-    status_code_ = msg->getStatusCode();
+    status_code_ = std::move(msg);
   }
 
   void onBody(std::unique_ptr<folly::IOBuf> chain) noexcept override {
@@ -144,14 +149,14 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
  private:
   bool isSuccessfulStatusCode() {
     // 2xx are successful status codes
-    return (status_code_ / 100) == 2;
+    return (status_code_->getStatusCode() / 100) == 2;
   }
 
   IOBufPromise promise_;
   proxygen::URL url_;
   Hash hash_;
   std::string repo_;
-  uint16_t status_code_{0};
+  std::unique_ptr<HTTPMessage> status_code_;
   std::unique_ptr<folly::IOBuf> body_{nullptr};
   // Pointer to the last IOBuf in a chain
   folly::IOBuf* last_{nullptr};
@@ -207,12 +212,14 @@ std::unique_ptr<Tree> convertBufToTree(
 } // namespace
 
 MononokeBackingStore::MononokeBackingStore(
+    folly::StringPiece hostName,
     const folly::SocketAddress& socketAddress,
     const std::string& repo,
     const std::chrono::milliseconds& timeout,
     folly::Executor* executor,
     const std::shared_ptr<folly::SSLContext> sslContext)
     : socketAddress_(std::optional<folly::SocketAddress>(socketAddress)),
+      hostName_(hostName.str()),
       repo_(repo),
       timeout_(timeout),
       executor_(executor),
@@ -225,6 +232,7 @@ MononokeBackingStore::MononokeBackingStore(
     folly::Executor* executor,
     const std::shared_ptr<folly::SSLContext> sslContext)
     : socketAddress_(std::nullopt),
+      hostName_("localhost"),
       tierName_(tierName.str()),
       repo_(repo),
       timeout_(timeout),
@@ -235,10 +243,8 @@ MononokeBackingStore::~MononokeBackingStore() {}
 
 folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
     const Hash& id) {
-  URL url(folly::sformat("/{}/tree/{}", repo_, id.toString()));
-
   return folly::via(executor_)
-      .thenValue([this, url](auto&&) { return sendRequest(url); })
+      .thenValue([this, id](auto&&) { return sendRequest("tree", id); })
       .thenValue([id](std::unique_ptr<folly::IOBuf>&& buf) {
         return convertBufToTree(std::move(buf), id);
       });
@@ -246,9 +252,8 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
 
 folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
     const Hash& id) {
-  URL url(folly::sformat("/{}/blob/{}", repo_, id.toString()));
   return folly::via(executor_)
-      .thenValue([this, url](auto&&) { return sendRequest(url); })
+      .thenValue([this, id](auto&&) { return sendRequest("blob", id); })
       .thenValue([id](std::unique_ptr<folly::IOBuf>&& buf) {
         return std::make_unique<Blob>(id, *buf);
       });
@@ -256,9 +261,10 @@ folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
 
 folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
     const Hash& commitID) {
-  URL url(folly::sformat("/{}/changeset/{}", repo_, commitID.toString()));
   return folly::via(executor_)
-      .thenValue([this, url](auto&&) { return sendRequest(url); })
+      .thenValue([this, commitID](auto&&) {
+        return sendRequest("changeset", commitID);
+      })
       .thenValue([&](std::unique_ptr<folly::IOBuf>&& buf) {
         auto s = buf->moveToFbString();
         auto parsed = folly::parseJson(s);
@@ -305,16 +311,27 @@ folly::Future<folly::SocketAddress> MononokeBackingStore::getAddress(
 }
 
 folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
-    const URL& url) {
+    folly::StringPiece endpoint,
+    const Hash& id) {
   auto eventBase = folly::EventBaseManager::get()->getEventBase();
 
-  return getAddress(eventBase).thenValue(
-      [=](folly::SocketAddress addr) { return sendRequestImpl(addr, url); });
+  return getAddress(eventBase).thenValue([=](folly::SocketAddress addr) {
+    return sendRequestImpl(addr, endpoint, id);
+  });
 }
 
 folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequestImpl(
     folly::SocketAddress addr,
-    const URL& url) {
+    folly::StringPiece endpoint,
+    const Hash& id) {
+  URL url(folly::sformat(
+      "https://{}:{}/{}/{}/{}",
+      hostName_,
+      addr.getPort(),
+      repo_,
+      endpoint,
+      id.toString()));
+
   auto eventBase = folly::EventBaseManager::get()->getEventBase();
   IOBufPromise promise;
   auto future = promise.getFuture();
@@ -335,7 +352,14 @@ folly::Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequestImpl(
 
   if (sslContext_ != nullptr) {
     connector->connectSSL(
-        eventBase, addr, sslContext_, nullptr, timeout_, opts);
+        eventBase,
+        addr,
+        sslContext_,
+        nullptr,
+        timeout_,
+        opts,
+        folly::AsyncSocket::anyAddress(),
+        hostName_);
   } else {
     connector->connect(eventBase, addr, timeout_, opts);
   }
