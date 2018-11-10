@@ -1,5 +1,7 @@
 # no-check-code -- see T24862348
 
+import re as remod
+
 import svnexternals
 import svnwrap
 import util
@@ -221,6 +223,14 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
             svnwrap.ERR_FS_CONFLICT,
             svnwrap.ERR_FS_ALREADY_EXISTS,
         ):
+            paths = _extractconflictedfiles(e)
+            if paths is not None:
+                ui.log(
+                    "command_info",
+                    "conflicted files: %s\n" % ", ".join(paths),
+                    svn_conflicted_paths=paths,
+                )
+
             raise hgutil.Abort(
                 "Outgoing changesets parent is not at "
                 "subversion HEAD (svn error %s)\n"
@@ -231,3 +241,19 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
             raise hgutil.Abort(e.args[0])
         else:
             raise
+
+
+outofdatere = remod.compile("File '([^']+)' is out of date")
+
+
+def _extractconflictedfiles(e):
+    """Extracts conflicted files from an underlying SVN error message.
+
+    In practice, this might return only one file even if there are multiple
+    files.
+    """
+    try:
+        msg = e.args[0]
+        return outofdatere.findall(msg)
+    except Exception:
+        return None
