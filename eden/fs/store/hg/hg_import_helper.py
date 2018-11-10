@@ -185,6 +185,9 @@ class HgUI(mercurial.ui.ui):
         self.fout = sys.stderr
         self.ferr = sys.stderr
 
+    def plain(self, feature=None):
+        return True
+
     def interactive(self):
         return False
 
