@@ -324,7 +324,7 @@ int main(int argc, char** argv) {
   }
 #endif
 
-  if (argc != 1) {
+  if (argc != 1 && FLAGS_commandArgumentsLogFile.empty()) {
     fprintf(stderr, "error: unexpected trailing command line arguments\n");
     return 1;
   }
