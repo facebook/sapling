@@ -8,24 +8,21 @@
  *
  */
 #include "eden/fs/utils/IDGen.h"
-#include <folly/CachelinePadded.h>
 #include <folly/Likely.h>
+#include <folly/lang/Align.h>
 #include <atomic>
 
 namespace {
 /**
  * Allocating one unique ID per nanosecond would wrap around in over 500 years.
- * Initialized to 1 so that consumers can assume 0 is not a valid id.
  *
- * CachelinePadded may be excessive here.
+ * Allocated to its own cache line.
  */
-folly::CachelinePadded<std::atomic<uint64_t>> globalCounter{1};
+struct alignas(folly::hardware_destructive_interference_size) {
+  std::atomic<uint64_t> counter{0};
+} global;
 
-struct LocalRange {
-  uint64_t begin{0};
-  uint64_t end{0};
-};
-thread_local LocalRange localRange;
+thread_local uint64_t localCounter{0};
 
 /**
  * Number of unique IDs to hand out to a thread at a time. This avoids cache
@@ -37,21 +34,24 @@ thread_local LocalRange localRange;
  * I haven't measured, but I'd be surprised if a thread could be created in
  * 2000 nanoseconds.
  */
-constexpr uint64_t kRangeSize = 2000;
+constexpr uint64_t kRangeSize = 2048;
+
+static_assert(
+    (kRangeSize & (kRangeSize - 1)) == 0,
+    "kRangeSize must be a power of two");
 } // namespace
 
 namespace facebook {
 namespace eden {
 
 uint64_t generateUniqueID() noexcept {
-  auto& range = localRange;
-  if (UNLIKELY(range.begin == range.end)) {
-    auto begin =
-        globalCounter->fetch_add(kRangeSize, std::memory_order_relaxed);
-    range.begin = begin;
-    range.end = begin + kRangeSize;
+  uint64_t current = localCounter;
+  if (UNLIKELY(current % kRangeSize == 0)) {
+    current = global.counter.fetch_add(kRangeSize, std::memory_order_relaxed);
   }
-  return range.begin++;
+  ++current;
+  localCounter = current;
+  return current;
 }
 
 } // namespace eden
