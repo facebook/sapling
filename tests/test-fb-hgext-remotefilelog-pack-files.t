@@ -172,3 +172,36 @@
   \x01 (esc)
   x
   x
+
+# Test that pending pack writes can be read
+  $ cd ..
+  $ hgcloneshallow ssh://user@dummy/master pending_test -q
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  $ cd pending_test
+  $ setconfig rebase.singeltransaction=True remotefilelog.packlocaldata=True
+  $ drawdag <<'EOS'
+  > B # B/foo=x\nb\nc\nd\ne\n
+  > |
+  > | D # D/foo=a\nb\nc\nd\ne\nf\ng\n
+  > | |
+  > | C # C/foo=a\nb\nc\nd\ne\nf\n
+  > |/
+  > A # A/foo=a\nb\nc\nd\ne\n
+  > EOS
+
+- Rebase the stack of two onto the lone commit and force a file merge.
+- This means both commits will be applied in the same transaction and the second
+- commit will be required to read the new content of the first commit, which
+- hasn't been flushed to disk yet.
+# BUGBUG
+  $ hg rebase -s $C -d $B
+  rebasing 4:e6011cdb8530 "C"
+  merging foo
+  rebasing 5:f579bc04d2ae "D" (tip)
+  remote: abort: data/foo.i@6e131bc349b0: no match found!
+  transaction abort!
+  rollback completed
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  abort: error downloading file contents:
+  'connection closed early'
+  [255]
