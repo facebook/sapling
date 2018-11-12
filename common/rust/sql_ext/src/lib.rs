@@ -26,6 +26,7 @@ pub trait SqlConstructors: Sized {
         let mut builder = Connection::myrouter_builder();
         builder.tier(tier).port(port);
 
+        builder.tie_break(myrouter::TieBreak::SLAVE_FIRST);
         let read_connection = builder.build_read_only();
 
         builder.service_type(myrouter::ServiceType::MASTER);

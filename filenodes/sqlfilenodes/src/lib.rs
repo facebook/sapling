@@ -184,6 +184,7 @@ impl SqlFilenodes {
                 .tier(format!("{}.{}", tier.to_string(), shard_id))
                 .port(port);
 
+            builder.tie_break(sql::myrouter::TieBreak::SLAVE_FIRST);
             new.read_connection.push(builder.build_read_only());
 
             builder.service_type(sql::myrouter::ServiceType::MASTER);
