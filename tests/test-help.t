@@ -370,6 +370,7 @@ Test extension help:
        smartlog      command to display a relevant subgraph
        sparse        allow sparse checkouts of the working directory
        sshaskpass    ssh-askpass implementation that works with chg
+       stablerev     provide a way to expose the 'stable' commit via a revset
        stat          (no help text available)
        strip         strip changesets and their descendants from history
        transplant    command to transplant changesets from another branch
