@@ -110,79 +110,79 @@ move master bookmarks
   $ hg bookmark -f master_bookmark -r 'tip'
   $ hg bookmark -f master_bookmark2 -r 'f40c09205504'
 
-  $ hg sl --all -r "all()" --stat
-  @  changeset:   6:634de738bb0f
-  |  bookmark:    master_bookmark
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     g
-  |
-  |   a           |  1 -
-  |   a_dir/a     |  1 +
-  |   b_dir/a_bis |  1 +
-  |   b_dir/b     |  2 +-
-  |   c_dir/c     |  1 -
-  |   d_dir/d     |  1 -
-  |   e_dir/e     |  1 +
-  |   7 files changed, 4 insertions(+), 4 deletions(-)
-  |
-  o  changeset:   5:8315ea53ef41
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
-  |   a       |  2 +-
-  |   b_dir/b |  2 +-
-  |   c_dir/c |  1 +
-  |   d_dir/d |  2 +-
-  |   4 files changed, 4 insertions(+), 3 deletions(-)
-  |
-  o  changeset:   4:30da5bf63484
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
-  |   a       |  2 +-
-  |   b_dir/b |  2 +-
-  |   2 files changed, 2 insertions(+), 2 deletions(-)
-  |
-  o  changeset:   3:fbd6b221382e
-  |  parent:      1:bb0985934a0f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
-  |   b_dir/b |  2 +-
-  |   d_dir/d |  1 +
-  |   2 files changed, 2 insertions(+), 1 deletions(-)
-  |
-  | o  changeset:   2:f40c09205504
-  |/   bookmark:    master_bookmark2
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     c
-  |
-  |     b_dir/b |  2 +-
-  |     c_dir/c |  1 +
-  |     2 files changed, 2 insertions(+), 1 deletions(-)
-  |
-  o  changeset:   1:bb0985934a0f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
-  |   a       |  2 +-
-  |   b_dir/b |  1 +
-  |   2 files changed, 2 insertions(+), 1 deletions(-)
-  |
-  o  changeset:   0:0e7ec5675652
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
+  $ hg log -r "reverse(all())" --stat
+  changeset:   6:634de738bb0f
+  bookmark:    master_bookmark
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     g
    (re)
-      a |  1 +
-      1 files changed, 1 insertions(+), 0 deletions(-)
+   a           |  1 -
+   a_dir/a     |  1 +
+   b_dir/a_bis |  1 +
+   b_dir/b     |  2 +-
+   c_dir/c     |  1 -
+   d_dir/d     |  1 -
+   e_dir/e     |  1 +
+   7 files changed, 4 insertions(+), 4 deletions(-)
+  
+  changeset:   5:8315ea53ef41
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     f
+  
+   a       |  2 +-
+   b_dir/b |  2 +-
+   c_dir/c |  1 +
+   d_dir/d |  2 +-
+   4 files changed, 4 insertions(+), 3 deletions(-)
+  
+  changeset:   4:30da5bf63484
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     e
+  
+   a       |  2 +-
+   b_dir/b |  2 +-
+   2 files changed, 2 insertions(+), 2 deletions(-)
+  
+  changeset:   3:fbd6b221382e
+  parent:      1:bb0985934a0f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     d
+  
+   b_dir/b |  2 +-
+   d_dir/d |  1 +
+   2 files changed, 2 insertions(+), 1 deletions(-)
+  
+  changeset:   2:f40c09205504
+  bookmark:    master_bookmark2
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
+  
+   b_dir/b |  2 +-
+   c_dir/c |  1 +
+   2 files changed, 2 insertions(+), 1 deletions(-)
+  
+  changeset:   1:bb0985934a0f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     b
+  
+   a       |  2 +-
+   b_dir/b |  1 +
+   2 files changed, 2 insertions(+), 1 deletions(-)
+  
+  changeset:   0:0e7ec5675652
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
    (re)
 
   $ hgmn outgoing ssh://user@dummy/repo
@@ -275,18 +275,18 @@ push to Mononoke
 Now pull what was just pushed
 
   $ cd ../repo3
-  $ hgmn sl --all -r "all()" --stat
+  $ hgmn log -r "reverse(all())" --stat
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
-  @  changeset:   0:0e7ec5675652
-     bookmark:    master_bookmark
-     bookmark:    master_bookmark2
-     tag:         tip
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
+  changeset:   0:0e7ec5675652
+  bookmark:    master_bookmark
+  bookmark:    master_bookmark2
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
    (re)
-      a |  1 +
-      1 files changed, 1 insertions(+), 0 deletions(-)
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
    (re)
   $ hgmn pull -q
 
