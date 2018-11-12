@@ -50,6 +50,13 @@ class mutabledatahistorystore(object):
 
         return packs[DATA].getdeltachain(name, node)
 
+    def getmeta(self, name, node):
+        packs = self._packs()
+        if packs is None:
+            raise KeyError(name, hex(node))
+
+        return packs[DATA].getmeta(name, node)
+
     def getnodeinfo(self, name, node):
         packs = self._packs()
         if packs is None:
@@ -57,12 +64,12 @@ class mutabledatahistorystore(object):
 
         return packs[HISTORY].getnodeinfo(name, node)
 
-    def getancestors(self, name, node):
+    def getancestors(self, name, node, known=None):
         packs = self._packs()
         if packs is None:
             raise KeyError(name, hex(node))
 
-        return packs[HISTORY].getancestors(name, node)
+        return packs[HISTORY].getancestors(name, node, known=known)
 
     def getmetrics(self):
         return {}

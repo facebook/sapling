@@ -14,7 +14,7 @@ from mercurial import ancestor, error, filelog, mdiff, revlog, util
 from mercurial.i18n import _
 from mercurial.node import bin, nullid
 
-from . import constants, fileserverclient, shallowutil
+from . import constants, fileserverclient, mutablestores, shallowutil
 from .contentstore import (
     remotecontentstore,
     remotefilelogcontentstore,
@@ -213,10 +213,10 @@ class remotefilelog(object):
                 realp1node = bin(meta["copyrev"])
             hpack.add(self.filename, node, realp1node, p2, linknode, copyfrom)
         else:
-            localcontent, localmetadata = self.repo.fileslog.localfilewritestores
+            writestore = self.repo.fileslog.loosefilewritestore
             data = self._createfileblob(blobtext, meta, flags, p1, p2, node, linknode)
             # All loose file writes go through the localcontent store
-            localcontent.addremotefilelognode(self.filename, node, data)
+            writestore.addremotefilelognode(self.filename, node, data)
 
         return node
 
@@ -558,14 +558,26 @@ class remotefileslog(filelog.fileslog):
             cachecontent, cachemetadata
         )
 
+        mutablelocalstore = mutablestores.mutabledatahistorystore(self)
+
         # Instantiate union stores
         self.contentstore = unioncontentstore(
-            spackcontent, cachecontent, lpackcontent, localcontent, remotecontent
+            spackcontent,
+            cachecontent,
+            lpackcontent,
+            localcontent,
+            mutablelocalstore,
+            remotecontent,
         )
         self.metadatastore = unionmetadatastore(
-            spackmetadata, cachemetadata, lpackmetadata, localmetadata, remotemetadata
+            spackmetadata,
+            cachemetadata,
+            lpackmetadata,
+            localmetadata,
+            mutablelocalstore,
+            remotemetadata,
         )
-        self.localfilewritestores = (localcontent, localmetadata)
+        self.loosefilewritestore = localcontent
 
         fileservicedatawrite = cachecontent
         fileservicehistorywrite = cachemetadata
