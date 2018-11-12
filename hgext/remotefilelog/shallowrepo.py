@@ -104,13 +104,6 @@ def wraprepo(repo):
                 self.fileservice.prefetch(files)
             return super(shallowrepository, self).commitctx(ctx, error=error)
 
-        @localrepo.unfilteredmethod
-        def close(self):
-            if self.ui.configbool("remotefilelog", "packlocaldata"):
-                localcontent, localmetadata = self.localfilewritestores
-                localcontent.commitpending()
-            return super(shallowrepository, self).close()
-
         def backgroundprefetch(
             self, revs, base=None, repack=False, pats=None, opts=None
         ):
@@ -219,6 +212,7 @@ def wraprepo(repo):
     repo.__class__ = shallowrepository
 
     repo.shallowmatch = match.always(repo.root, "")
+    repo.fileservice = fileserverclient.fileserverclient(repo)
 
     # Force fileslog to be instantiated, so it populates all the stores on repo.
     # This is temporary until all paths that access file contents go through

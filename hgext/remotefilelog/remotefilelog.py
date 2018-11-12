@@ -54,7 +54,7 @@ class remotefilelog(object):
         self.opener = opener
         self.filename = path
         self.repo = repo
-        self.nodemap = remotefilelognodemap(self.filename, repo.contentstore)
+        self.nodemap = remotefilelognodemap(self.filename, repo.fileslog.contentstore)
 
         self.version = 1
 
@@ -197,7 +197,7 @@ class remotefilelog(object):
             meta, blobtext = shallowutil.parsemeta(rawtext, flags)
 
         if self.repo.ui.configbool("remotefilelog", "packlocaldata"):
-            localcontent, localmetadata = self.repo.localfilewritestores
+            localcontent, localmetadata = self.repo.fileslog.localfilewritestores
 
             dpack, hpack = localcontent._getmutablepacks()
 
@@ -215,7 +215,7 @@ class remotefilelog(object):
                 realp1node = bin(meta["copyrev"])
             hpack.add(self.filename, node, realp1node, p2, linknode, copyfrom)
         else:
-            localcontent, localmetadata = self.repo.localfilewritestores
+            localcontent, localmetadata = self.repo.fileslog.localfilewritestores
             data = self._createfileblob(blobtext, meta, flags, p1, p2, node, linknode)
             # All loose file writes go through the localcontent store
             localcontent.addremotefilelognode(self.filename, node, data)
@@ -223,7 +223,7 @@ class remotefilelog(object):
         return node
 
     def renamed(self, node):
-        ancestors = self.repo.metadatastore.getancestors(self.filename, node)
+        ancestors = self.repo.fileslog.metadatastore.getancestors(self.filename, node)
         p1, p2, linknode, copyfrom = ancestors[node]
         if copyfrom:
             return (copyfrom, p1)
@@ -283,14 +283,14 @@ class remotefilelog(object):
             )
         if node == nullid:
             return revlog.REVIDX_DEFAULT_FLAGS
-        store = self.repo.contentstore
+        store = self.repo.fileslog.contentstore
         return store.getmeta(self.filename, node).get(constants.METAKEYFLAG, 0)
 
     def parents(self, node):
         if node == nullid:
             return nullid, nullid
 
-        ancestormap = self.repo.metadatastore.getancestors(self.filename, node)
+        ancestormap = self.repo.fileslog.metadatastore.getancestors(self.filename, node)
         p1, p2, linknode, copyfrom = ancestormap[node]
         if copyfrom:
             p1 = nullid
@@ -298,7 +298,7 @@ class remotefilelog(object):
         return p1, p2
 
     def linknode(self, node):
-        ancestormap = self.repo.metadatastore.getancestors(self.filename, node)
+        ancestormap = self.repo.fileslog.metadatastore.getancestors(self.filename, node)
         p1, p2, linknode, copyfrom = ancestormap[node]
         return linknode
 
@@ -340,7 +340,7 @@ class remotefilelog(object):
         if len(node) != 20:
             raise error.LookupError(node, self.filename, _("invalid revision input"))
 
-        store = self.repo.contentstore
+        store = self.repo.fileslog.contentstore
         rawtext = store.get(self.filename, node)
         if raw:
             return rawtext
@@ -356,7 +356,7 @@ class remotefilelog(object):
         Return (chain, False), chain is a list of nodes. This is to be
         compatible with revlog API.
         """
-        store = self.repo.contentstore
+        store = self.repo.fileslog.contentstore
         chain = store.getdeltachain(self.filename, node)
         return ([x[1] for x in chain], False)
 
@@ -408,7 +408,7 @@ class remotefilelog(object):
         raise error.LookupError(id, self.filename, _("no node"))
 
     def ancestormap(self, node):
-        return self.repo.metadatastore.getancestors(self.filename, node)
+        return self.repo.fileslog.metadatastore.getancestors(self.filename, node)
 
     def ancestor(self, a, b):
         if a == nullid or b == nullid:
@@ -510,23 +510,23 @@ class remotefileslog(filelog.fileslog):
         """Used in alternative filelog implementations to commit pending
         additions."""
         if self.ui.configbool("remotefilelog", "packlocaldata"):
-            localcontent, localmetadata = self.repo.localfilewritestores
+            localcontent, localmetadata = self.localfilewritestores
             localcontent.commitpending()
 
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
         if self.ui.configbool("remotefilelog", "packlocaldata"):
-            localcontent, localmetadata = self.repo.localfilewritestores
+            localcontent, localmetadata = self.localfilewritestores
             localcontent.abortpending()
 
     def makeunionstores(self):
         """Union stores iterate the other stores and return the first result."""
         repo = self.repo
-        repo.shareddatastores = []
-        repo.sharedhistorystores = []
-        repo.localdatastores = []
-        repo.localhistorystores = []
+        self.shareddatastores = []
+        self.sharedhistorystores = []
+        self.localdatastores = []
+        self.localhistorystores = []
 
         spackcontent, spackmetadata, lpackcontent, lpackmetadata = self.makepackstores()
         cachecontent, cachemetadata = self.makecachestores()
@@ -536,13 +536,13 @@ class remotefileslog(filelog.fileslog):
         )
 
         # Instantiate union stores
-        repo.contentstore = unioncontentstore(
+        self.contentstore = unioncontentstore(
             spackcontent, cachecontent, lpackcontent, localcontent, remotecontent
         )
-        repo.metadatastore = unionmetadatastore(
+        self.metadatastore = unionmetadatastore(
             spackmetadata, cachemetadata, lpackmetadata, localmetadata, remotemetadata
         )
-        repo.localfilewritestores = (localcontent, localmetadata)
+        self.localfilewritestores = (localcontent, localmetadata)
 
         fileservicedatawrite = cachecontent
         fileservicehistorywrite = cachemetadata
@@ -550,8 +550,8 @@ class remotefileslog(filelog.fileslog):
             fileservicedatawrite = spackcontent
             fileservicehistorywrite = spackmetadata
         repo.fileservice.setstore(
-            repo.contentstore,
-            repo.metadatastore,
+            self.contentstore,
+            self.metadatastore,
             fileservicedatawrite,
             fileservicehistorywrite,
         )
@@ -590,8 +590,8 @@ class remotefileslog(filelog.fileslog):
         # Instantiate pack stores
         spackpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
         spackcontent, spackmetadata = makepackstore(
-            repo.shareddatastores,
-            repo.sharedhistorystores,
+            self.shareddatastores,
+            self.sharedhistorystores,
             spackpath,
             deletecorrupt=True,
         )
@@ -600,7 +600,7 @@ class remotefileslog(filelog.fileslog):
             repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
         )
         lpackcontent, lpackmetadata = makepackstore(
-            repo.localdatastores, repo.localhistorystores, lpackpath
+            self.localdatastores, self.localhistorystores, lpackpath
         )
 
         shallowutil.reportpackmetrics(
@@ -625,9 +625,9 @@ class remotefileslog(filelog.fileslog):
             repo, cachepath, repo.name, shared=True
         )
 
-        repo.sharedstore = cachecontent
-        repo.shareddatastores.append(cachecontent)
-        repo.sharedhistorystores.append(cachemetadata)
+        self.sharedstore = cachecontent
+        self.shareddatastores.append(cachecontent)
+        self.sharedhistorystores.append(cachemetadata)
 
         return cachecontent, cachemetadata
 
@@ -646,16 +646,15 @@ class remotefileslog(filelog.fileslog):
             repo, localpath, repo.name, shared=False
         )
 
-        repo.localdatastores.append(localcontent)
-        repo.localhistorystores.append(localmetadata)
+        self.localdatastores.append(localcontent)
+        self.localhistorystores.append(localmetadata)
 
         return localcontent, localmetadata
 
     def makeremotestores(self, cachecontent, cachemetadata):
         """These stores fetch data from a remote server."""
         repo = self.repo
-        # Instantiate remote stores
-        repo.fileservice = fileserverclient.fileserverclient(repo)
+
         remotecontent = remotecontentstore(repo.ui, repo.fileservice, cachecontent)
         remotemetadata = remotemetadatastore(repo.ui, repo.fileservice, cachemetadata)
         return remotecontent, remotemetadata

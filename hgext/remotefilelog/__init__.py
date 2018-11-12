@@ -902,7 +902,7 @@ def gcclient(ui, cachepath):
 
             reponame = repo.name
             if not sharedcache:
-                sharedcache = repo.sharedstore
+                sharedcache = repo.fileslog.sharedstore
 
             # Compute a keepset which is not garbage collected
             def keyfn(fname, fnode):

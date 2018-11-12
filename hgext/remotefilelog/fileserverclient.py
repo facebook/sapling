@@ -663,8 +663,8 @@ class fileserverclient(object):
         datastore = self.datastore
         historystore = self.historystore
         if force:
-            datastore = unioncontentstore(*repo.shareddatastores)
-            historystore = unionmetadatastore(*repo.sharedhistorystores)
+            datastore = unioncontentstore(*repo.fileslog.shareddatastores)
+            historystore = unionmetadatastore(*repo.fileslog.sharedhistorystores)
 
         missingids = set()
         if fetchdata:
