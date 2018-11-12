@@ -207,17 +207,23 @@ folly::Future<InodePtr> TreeInode::getChildByName(
 
 Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
   TraceBlock block("getOrLoadChild");
+
+  if (name == kDotEdenName && getNodeId() != kRootNodeId) {
+    // If they ask for `.eden` in any subdir, return the magical
+    // this-dir symlink inode that resolves to the path to the
+    // root/.eden path.  We do this outside of the block below
+    // because getInode() will call TreeInode::getOrLoadChild()
+    // recursively, and it is cleaner to break this logic out
+    // separately.
+    return getMount()->getInode(".eden/this-dir"_relpath);
+  }
+
   return tryRlockCheckBeforeUpdate<Future<InodePtr>>(
              contents_,
              [&](const auto& contents) -> folly::Optional<Future<InodePtr>> {
                // Check if the child is already loaded and return it if so
                auto iter = contents.entries.find(name);
                if (iter == contents.entries.end()) {
-                 if (name == kDotEdenName && getNodeId() != kRootNodeId) {
-                   return folly::make_optional(getInodeMap()->lookupInode(
-                       getMount()->getDotEdenSymlinkInodeNumber()));
-                 }
-
                  XLOG(DBG7) << "attempted to load non-existent entry \"" << name
                             << "\" in " << getLogPath();
                  return folly::make_optional(makeFuture<InodePtr>(

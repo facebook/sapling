@@ -257,7 +257,6 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         kDotEdenSymlinkName,
         (config_->getMountPath() + PathComponentPiece{kDotEdenName})
             .stringPiece());
-    dotEdenSymlinkInodeNumber_ = edenSymlink->getNodeId();
   };
   // Set up the magic .eden dir
   return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName})
@@ -267,7 +266,6 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         // its inode here
         return dotEdenInode->getOrLoadChild(kDotEdenSymlinkName)
             .thenValue([=](const InodePtr& child) {
-              dotEdenSymlinkInodeNumber_ = child->getNodeId();
             })
             .onError([=](const InodeError& /*err*/) {
               createDotEdenSymlink(dotEdenInode);
@@ -467,10 +465,6 @@ folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTreeFuture()
 
 InodeNumber EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;
-}
-
-InodeNumber EdenMount::getDotEdenSymlinkInodeNumber() const {
-  return dotEdenSymlinkInodeNumber_;
 }
 
 std::shared_ptr<const Tree> EdenMount::getRootTree() const {

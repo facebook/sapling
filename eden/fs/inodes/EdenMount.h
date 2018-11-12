@@ -248,11 +248,6 @@ class EdenMount {
    * prior to the .eden directory being set up.
    */
   InodeNumber getDotEdenInodeNumber() const;
-  /**
-   * Get the inode number for the .eden/dot-eden symlink.
-   * Returns an empty InodeNumber prior to the .eden directory being set up.
-   */
-  InodeNumber getDotEdenSymlinkInodeNumber() const;
 
   /** Convenience method for getting the Tree for the root of the mount. */
   std::shared_ptr<const Tree> getRootTree() const;
@@ -621,7 +616,6 @@ class EdenMount {
   std::shared_ptr<ObjectStore> objectStore_;
   std::unique_ptr<Overlay> overlay_;
   InodeNumber dotEdenInodeNumber_{};
-  InodeNumber dotEdenSymlinkInodeNumber_{};
 
   /**
    * A mutex around all name-changing operations in this mount point.
