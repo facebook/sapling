@@ -154,6 +154,7 @@ from mercurial.node import bin, hex, nullid, short
 from ..extlib import cstore
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
+    mutablestores,
     resolveprefetchopts,
     shallowbundle,
     shallowrepo,
@@ -211,10 +212,6 @@ RECEIVEDNODE_RECORD = "receivednodes"
 # When looking for a recent manifest to consider our base during tree
 # prefetches, this constant defines how far back we should search.
 BASENODESEARCHMAX = 25000
-
-# Offsets in the mutable pack tuple
-DATA = 0
-HISTORY = 1
 
 try:
     xrange(0)
@@ -465,7 +462,7 @@ def setuptreestores(repo, mfl):
     if ui.configbool("treemanifest", "server"):
         packpath = repo.localvfs.join("cache/packs/%s" % PACK_CATEGORY)
 
-        mutablelocalstore = mutablemanifeststore(mfl)
+        mutablelocalstore = mutablestores.mutabledatahistorystore(mfl)
         ondemandstore = ondemandtreedatastore(repo)
 
         # Data store
@@ -524,8 +521,8 @@ def setuptreestores(repo, mfl):
     remotestore = remotetreestore(repo)
     ondemandstore = ondemandtreedatastore(repo)
 
-    mutablelocalstore = mutablemanifeststore(mfl)
-    mutablesharedstore = mutablemanifeststore(mfl, shared=True)
+    mutablelocalstore = mutablestores.mutabledatahistorystore(mfl)
+    mutablesharedstore = mutablestores.mutabledatahistorystore(mfl, shared=True)
 
     # Data store
     # TODO: support cstore.uniondatapackstore here
@@ -587,68 +584,6 @@ def setuptreestores(repo, mfl):
 
     remotestore.setshared(mfl.datastore, mfl.historystore)
     ondemandstore.setshared(mfl.datastore, mfl.historystore)
-
-
-class mutablemanifeststore(object):
-    """A proxy class that gets added to the union store and knows how to
-    answer requests by inspecting the manifestlog's current mutable data
-    and history packs. We can't insert the mutable packs themselves into the
-    union store because they can be created and destroyed over time."""
-
-    def __init__(self, manifestlog, shared=False):
-        self.manifestlog = manifestlog
-        self.shared = shared
-
-    def _packs(self):
-        if self.shared:
-            return self.manifestlog._mutablesharedpacks
-        else:
-            return self.manifestlog._mutablelocalpacks
-
-    def getmissing(self, keys):
-        packs = self._packs()
-        if packs is None:
-            return keys
-
-        return packs[DATA].getmissing(keys)
-
-    def get(self, name, node):
-        packs = self._packs()
-        if packs is None:
-            raise KeyError(name, hex(node))
-
-        return packs[DATA].get(name, node)
-
-    def getdelta(self, name, node):
-        packs = self._packs()
-        if packs is None:
-            raise KeyError(name, hex(node))
-
-        return packs[DATA].getdelta(name, node)
-
-    def getdeltachain(self, name, node):
-        packs = self._packs()
-        if packs is None:
-            raise KeyError(name, hex(node))
-
-        return packs[DATA].getdeltachain(name, node)
-
-    def getnodeinfo(self, name, node):
-        packs = self._packs()
-        if packs is None:
-            raise KeyError(name, hex(node))
-
-        return packs[HISTORY].getnodeinfo(name, node)
-
-    def getancestors(self, name, node):
-        packs = self._packs()
-        if packs is None:
-            raise KeyError(name, hex(node))
-
-        return packs[HISTORY].getancestors(name, node)
-
-    def getmetrics(self):
-        return {}
 
 
 class basetreemanifestlog(object):
