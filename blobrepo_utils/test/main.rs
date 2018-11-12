@@ -17,6 +17,7 @@ extern crate blobrepo_utils;
 extern crate mercurial_types;
 
 extern crate fixtures;
+extern crate tokio;
 
 use fixtures::*;
 
@@ -47,9 +48,7 @@ mod test {
                         let repo = $repo::getrepo(Some(logger.clone()));
                         let heads = repo.get_heads()
                             .collect()
-                            .wait()
-                            .expect("getting all heads should work");
-                        let heads = heads.into_iter().map(HgChangesetId::new);
+                            .map(|heads| heads.into_iter().map(HgChangesetId::new));
 
                         let verify = BonsaiMFVerify {
                             logger,
@@ -59,42 +58,51 @@ mod test {
                             broken_merges_before: None,
                             debug_bonsai_diff: false,
                         };
-                        let verify_stream = verify.verify(heads);
-                        let results = verify_stream
-                            .collect()
-                            .wait()
-                            .expect("verifying should work");
-                        let diffs = results.into_iter().filter_map(|(res, meta)| {
-                            match res {
-                                BonsaiMFVerifyResult::Invalid(difference) => {
-                                    let changes = difference
-                                        .changes()
-                                        .collect()
-                                        .wait()
-                                        .expect("collecting diff for inconsistency should work");
-                                    Some((meta.changeset_id, changes))
-                                }
-                                _ => None,
-                            }
-                        });
 
-                        let mut failed = false;
-                        let mut desc = Vec::new();
-                        for (changeset_id, changes) in diffs {
-                            failed = true;
-                            desc.push(format!(
-                                "*** Inconsistent roundtrip for {}",
-                                changeset_id,
-                            ));
-                            for changed_entry in changes {
-                                desc.push(format!("  - Changed entry: {:?}", changed_entry));
-                            }
-                            desc.push("".to_string());
-                        }
-                        let desc = desc.join("\n");
-                        if failed {
-                            panic!("Inconsistencies detected, roundtrip test failed\n\n{}", desc);
-                        }
+                        let results = heads
+                            .map_err(|err| panic!("cannot get the heads {}", err))
+                            .and_then(|heads| verify.verify(heads).collect());
+                        tokio::spawn(
+                            results
+                                .and_then(|results| {
+                                    let diffs = results.into_iter().filter_map(|(res, meta)| {
+                                        match res {
+                                            BonsaiMFVerifyResult::Invalid(difference) => {
+                                                let cs_id = meta.changeset_id;
+                                                Some(difference
+                                                    .changes()
+                                                    .collect()
+                                                    .map(move |changes| (cs_id, changes)))
+                                            }
+                                            _ => None,
+                                        }
+                                    });
+
+                                    futures::future::join_all(diffs)
+                                })
+                                .map(|diffs| {
+                                    let mut failed = false;
+                                    let mut desc = Vec::new();
+                                    for (changeset_id, changes) in diffs {
+                                        failed = true;
+                                        desc.push(format!(
+                                            "*** Inconsistent roundtrip for {}",
+                                            changeset_id,
+                                        ));
+                                        for changed_entry in changes {
+                                            desc.push(format!("  - Changed entry: {:?}", changed_entry));
+                                        }
+                                        desc.push("".to_string());
+                                    }
+                                    let desc = desc.join("\n");
+                                    if failed {
+                                        panic!("Inconsistencies detected, roundtrip test failed\n\n{}", desc);
+                                    }
+                                })
+                                .map_err(|err| {
+                                    panic!("verify error {}", err);
+                                })
+                        );
                     })
                 }
             }
