@@ -23,6 +23,7 @@ extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
 extern crate sloggers;
+extern crate tokio;
 
 extern crate slog_glog_fmt;
 

@@ -59,7 +59,6 @@ impl Blobimport {
             skip,
             commits_limit,
         }.upload()
-            .buffer_unordered(100)
             .enumerate()
             .map({
                 let logger = logger.clone();

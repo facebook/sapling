@@ -13,8 +13,10 @@ use failure::prelude::*;
 use futures::{Future, IntoFuture};
 use futures::future::{self, SharedItem};
 use futures::stream::{self, Stream};
+use futures::sync::{mpsc, oneshot};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
+use tokio::executor::DefaultExecutor;
 
 use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobChangeset,
                HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
@@ -23,6 +25,9 @@ use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
                       NULL_HASH};
 use mononoke_types::BonsaiChangeset;
+
+const CONCURRENT_CHANGESETS: usize = 100;
+const CONCURRENT_BLOB_UPLOADS_PER_CHANGESET: usize = 100;
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
@@ -206,9 +211,7 @@ pub struct UploadChangesets {
 }
 
 impl UploadChangesets {
-    pub fn upload(
-        self,
-    ) -> BoxStream<BoxFuture<SharedItem<(BonsaiChangeset, HgBlobChangeset)>, Error>, Error> {
+    pub fn upload(self) -> BoxStream<SharedItem<(BonsaiChangeset, HgBlobChangeset)>, Error> {
         let Self {
             blobrepo,
             revlogrepo,
@@ -236,7 +239,7 @@ impl UploadChangesets {
         let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
 
         changesets
-            .map({
+            .and_then({
                 let revlogrepo = revlogrepo.clone();
                 let blobrepo = blobrepo.clone();
                 move |csid| {
@@ -285,9 +288,9 @@ impl UploadChangesets {
                         .map(move |(cs, rootmf, entries)| (csid, cs, rootmf, entries))
                 }
             })
-            .buffered(100)
             .map(move |(csid, cs, rootmf, entries)| {
-                let entries = stream::futures_unordered(entries).boxify();
+                // For each ongoing changeset, upload entries in a background task, and allow that task to run ahead
+                let entries = mpsc::spawn(stream::futures_unordered(entries), &DefaultExecutor::current(), CONCURRENT_BLOB_UPLOADS_PER_CHANGESET).boxify();
 
                 let (p1handle, p2handle) = {
                     let mut parents = cs.parents().into_iter().map(|p| {
@@ -330,12 +333,15 @@ impl UploadChangesets {
                 let cshandle =
                     create_changeset.create(&blobrepo, ScubaSampleBuilder::with_discard());
                 parent_changeset_handles.insert(csid, cshandle.clone());
-                cshandle
+                oneshot::spawn(cshandle
                     .get_completed_changeset()
                     .with_context(move |_| format!("While uploading changeset: {}", csid))
-                    .from_err()
+                    .from_err(), &DefaultExecutor::current())
                     .boxify()
             })
+            // This is the number of changesets to upload in parallel. Keep it small to keep the database
+            // load under control
+            .buffer_unordered(CONCURRENT_CHANGESETS)
             .boxify()
     }
 }
