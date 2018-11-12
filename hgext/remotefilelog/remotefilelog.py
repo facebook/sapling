@@ -15,6 +15,18 @@ from mercurial.i18n import _
 from mercurial.node import bin, nullid
 
 from . import constants, fileserverclient, shallowutil
+from .contentstore import (
+    remotecontentstore,
+    remotefilelogcontentstore,
+    unioncontentstore,
+)
+from .datapack import datapackstore
+from .historypack import historypackstore
+from .metadatastore import (
+    remotefilelogmetadatastore,
+    remotemetadatastore,
+    unionmetadatastore,
+)
 
 
 # corresponds to uncompressed length of revlog's indexformatng (2 gigs, 4-byte
@@ -492,6 +504,7 @@ class remotefileslog(filelog.fileslog):
 
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
+        self.makeunionstores()
 
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending
@@ -506,3 +519,143 @@ class remotefileslog(filelog.fileslog):
         if self.ui.configbool("remotefilelog", "packlocaldata"):
             localcontent, localmetadata = self.repo.localfilewritestores
             localcontent.abortpending()
+
+    def makeunionstores(self):
+        """Union stores iterate the other stores and return the first result."""
+        repo = self.repo
+        repo.shareddatastores = []
+        repo.sharedhistorystores = []
+        repo.localdatastores = []
+        repo.localhistorystores = []
+
+        spackcontent, spackmetadata, lpackcontent, lpackmetadata = self.makepackstores()
+        cachecontent, cachemetadata = self.makecachestores()
+        localcontent, localmetadata = self.makelocalstores()
+        remotecontent, remotemetadata = self.makeremotestores(
+            cachecontent, cachemetadata
+        )
+
+        # Instantiate union stores
+        repo.contentstore = unioncontentstore(
+            spackcontent, cachecontent, lpackcontent, localcontent, remotecontent
+        )
+        repo.metadatastore = unionmetadatastore(
+            spackmetadata, cachemetadata, lpackmetadata, localmetadata, remotemetadata
+        )
+        repo.localfilewritestores = (localcontent, localmetadata)
+
+        fileservicedatawrite = cachecontent
+        fileservicehistorywrite = cachemetadata
+        if repo.ui.configbool("remotefilelog", "fetchpacks"):
+            fileservicedatawrite = spackcontent
+            fileservicehistorywrite = spackmetadata
+        repo.fileservice.setstore(
+            repo.contentstore,
+            repo.metadatastore,
+            fileservicedatawrite,
+            fileservicehistorywrite,
+        )
+        shallowutil.reportpackmetrics(
+            repo.ui,
+            "filestore",
+            spackcontent,
+            spackmetadata,
+            lpackcontent,
+            lpackmetadata,
+        )
+
+    def makepackstores(self):
+        """Packs are more efficient (to read from) cache stores."""
+        repo = self.repo
+
+        def makepackstore(datastores, historystores, packpath, deletecorrupt=False):
+            packcontentstore = datapackstore(
+                repo.ui,
+                packpath,
+                usecdatapack=repo.ui.configbool("remotefilelog", "fastdatapack"),
+                userustdatapack=repo.ui.configbool("format", "userustdatapack"),
+                deletecorruptpacks=deletecorrupt,
+            )
+            packmetadatastore = historypackstore(
+                repo.ui,
+                packpath,
+                userusthistorypack=repo.ui.configbool("format", "userusthistorypack"),
+                deletecorruptpacks=deletecorrupt,
+            )
+            datastores.append(packcontentstore)
+            historystores.append(packmetadatastore)
+
+            return packcontentstore, packmetadatastore
+
+        # Instantiate pack stores
+        spackpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
+        spackcontent, spackmetadata = makepackstore(
+            repo.shareddatastores,
+            repo.sharedhistorystores,
+            spackpath,
+            deletecorrupt=True,
+        )
+
+        lpackpath = shallowutil.getlocalpackpath(
+            repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+        )
+        lpackcontent, lpackmetadata = makepackstore(
+            repo.localdatastores, repo.localhistorystores, lpackpath
+        )
+
+        shallowutil.reportpackmetrics(
+            repo.ui,
+            "filestore",
+            spackcontent,
+            spackmetadata,
+            lpackcontent,
+            lpackmetadata,
+        )
+        return (spackcontent, spackmetadata, lpackcontent, lpackmetadata)
+
+    def makecachestores(self):
+        """Typically machine-wide, cache of remote data; can be discarded."""
+        repo = self.repo
+        # Instantiate shared cache stores
+        cachepath = shallowutil.getcachepath(repo.ui)
+        cachecontent = remotefilelogcontentstore(
+            repo, cachepath, repo.name, shared=True
+        )
+        cachemetadata = remotefilelogmetadatastore(
+            repo, cachepath, repo.name, shared=True
+        )
+
+        repo.sharedstore = cachecontent
+        repo.shareddatastores.append(cachecontent)
+        repo.sharedhistorystores.append(cachemetadata)
+
+        return cachecontent, cachemetadata
+
+    def makelocalstores(self):
+        """In-repo stores, like .hg/store/data; can not be discarded."""
+        repo = self.repo
+        localpath = os.path.join(repo.svfs.vfs.base, "data")
+        if not os.path.exists(localpath):
+            os.makedirs(localpath)
+
+        # Instantiate local data stores
+        localcontent = remotefilelogcontentstore(
+            repo, localpath, repo.name, shared=False
+        )
+        localmetadata = remotefilelogmetadatastore(
+            repo, localpath, repo.name, shared=False
+        )
+
+        repo.localdatastores.append(localcontent)
+        repo.localhistorystores.append(localmetadata)
+
+        return localcontent, localmetadata
+
+    def makeremotestores(self, cachecontent, cachemetadata):
+        """These stores fetch data from a remote server."""
+        repo = self.repo
+        # Instantiate remote stores
+        repo.fileservice = fileserverclient.fileserverclient(repo)
+        remotecontent = remotecontentstore(repo.ui, repo.fileservice, cachecontent)
+        remotemetadata = remotemetadatastore(repo.ui, repo.fileservice, cachemetadata)
+        return remotecontent, remotemetadata
