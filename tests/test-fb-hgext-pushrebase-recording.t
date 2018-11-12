@@ -92,9 +92,9 @@ Non-conflicting commit should be accepted
   $ hg push -r . --to default -q
 
 Check that new entry was added to the db
-  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
-  repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
-  42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
+  repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
 
 Check that bundle was created, then try to send it from client2 to server2 using
 unbundle method to make sure that bundle is valid
@@ -149,10 +149,10 @@ Push conflicting changes
   remote: (pull and rebase your changes locally, then try again)
   abort: push failed on remote
   [255]
-  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
-  repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
-  42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
-  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
+  repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select timestamps from pushrebaserecording'
   timestamps
   {"46a2df24e27273bb06dbf28b085fcc2e911bf986": [0.0, 0]}
@@ -210,12 +210,12 @@ Disable trystackpush
   $ hg push -r . --to master -q
 
 Check that new entry was added to the db
-  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
-  repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
-  42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
-  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
-  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
-  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
+  repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	038f4259f9592754a8b7089b921e2df9d50bbf95	default	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
 
 
 Enable pretxnchangegroup hooks and make sure we record failed pushes in that case
@@ -240,13 +240,13 @@ Enable pretxnchangegroup hooks and make sure we record failed pushes in that cas
   remote: pretxnchangegroup hook exited with status 1
   abort: push failed on remote
   [255]
-  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
-  repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
-  42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
-  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
-  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
-  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
-  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	pretxnchangegroup hook exited with status 1
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
+  repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	038f4259f9592754a8b7089b921e2df9d50bbf95	default	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	pretxnchangegroup hook exited with status 1
 
 Enable prepushrebase hooks and make sure we record failed pushes in that case
   $ cd ../server
@@ -264,11 +264,11 @@ Enable prepushrebase hooks and make sure we record failed pushes in that case
   remote: prepushrebase hook exited with status 1
   abort: push failed on remote
   [255]
-  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
-  repo_id	ontorev	onto	bundlehandle	conflicts	pushrebase_errmsg
-  42	add0c792bfce89610d277fd5b1e32f5287994d1d	default	handle	NULL	NULL
-  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
-  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
-  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
-  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	pretxnchangegroup hook exited with status 1
-  42	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	prepushrebase hook exited with status 1
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
+  repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg
+  42	add0c792bfce89610d277fd5b1e32f5287994d1d	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	NULL	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	6a6d9484552c82e5f21b4ed4fce375930812f88c	default	handle	a\nb	NULL
+  42	6a6d9484552c82e5f21b4ed4fce375930812f88c	038f4259f9592754a8b7089b921e2df9d50bbf95	default	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	NULL
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	pretxnchangegroup hook exited with status 1
+  42	359a44f39821c5c43f4506f79511e91f42d8b7af	359a44f39821c5c43f4506f79511e91f42d8b7af	master	handle	NULL	prepushrebase hook exited with status 1

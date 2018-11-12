@@ -44,6 +44,7 @@ Configs:
 from __future__ import absolute_import
 
 import errno
+import json
 import mmap
 import os
 import tempfile
@@ -1233,6 +1234,34 @@ def bundle2rebase(op, part):
 
             markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
         finally:
+            pushrebaserecordingparams = getattr(
+                op.repo, "pushrebaserecordingparams", None
+            )
+            if pushrebaserecordingparams is not None:
+                rebasedctx = resolveonto(op.repo, ontoparam)
+                if rebasedctx:
+                    pushrebaserecordingparams["onto_rebased_rev"] = rebasedctx.hex()
+                pushrebaserecordingparams.update(
+                    {
+                        "replacements_revs": json.dumps(
+                            {
+                                hex(k): hex(v)
+                                for k, v in getattr(
+                                    op.repo, "pushrebasereplacements", {}
+                                ).items()
+                            }
+                        ),
+                        "ordered_added_revs": json.dumps(
+                            [
+                                hex(v)
+                                for v in getattr(
+                                    op.repo, "pushrebaseaddedchangesets", []
+                                )
+                            ]
+                        ),
+                    }
+                )
+
             try:
                 if bundlefile:
                     os.unlink(bundlefile)
