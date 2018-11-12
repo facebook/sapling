@@ -549,7 +549,7 @@ def setuptreestores(repo, mfl):
     if demandgenerate:
         datastores.append(ondemandstore)
 
-    mfl.datastore = unioncontentstore(*datastores, writestore=localdatastore)
+    mfl.datastore = unioncontentstore(*datastores)
 
     mfl.shareddatastores = [datastore]
     # Local stores are stores that contain data not on the main server
@@ -582,7 +582,7 @@ def setuptreestores(repo, mfl):
     if demandgenerate:
         histstores.append(ondemandstore)
 
-    mfl.historystore = unionmetadatastore(*histstores, writestore=localhistorystore)
+    mfl.historystore = unionmetadatastore(*histstores)
     shallowutil.reportpackmetrics(ui, "treestore", mfl.datastore, mfl.historystore)
 
     remotestore.setshared(mfl.datastore, mfl.historystore)

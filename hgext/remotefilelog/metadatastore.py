@@ -14,7 +14,6 @@ from . import basestore, shallowutil
 class unionmetadatastore(object):
     def __init__(self, *args, **kwargs):
         self.stores = list(args)
-        self.writestore = kwargs.get("writestore")
 
         # If allowincomplete==True then the union store can return partial
         # ancestor lists, otherwise it will throw a KeyError if a full

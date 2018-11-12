@@ -1453,7 +1453,8 @@ class localrepository(object):
             if isremotefilelogrepo and self.ui.configbool(
                 "remotefilelog", "packlocaldata"
             ):
-                self.contentstore.commitpending()
+                localcontent, localmetadata = self.localfilewritestores
+                localcontent.commitpending()
 
         def abortnotransaction(tr):
             if "manifestlog" in unfi.__dict__:
@@ -1462,7 +1463,8 @@ class localrepository(object):
             if isremotefilelogrepo and self.ui.configbool(
                 "remotefilelog", "packlocaldata"
             ):
-                self.contentstore.abortpending()
+                localcontent, localmetadata = self.localfilewritestores
+                localcontent.abortpending()
 
         def writependingnotransaction(tr):
             commitnotransaction(tr)

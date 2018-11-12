@@ -185,12 +185,28 @@ class remotefilelog(object):
             meta, blobtext = shallowutil.parsemeta(rawtext, flags)
 
         if self.repo.ui.configbool("remotefilelog", "packlocaldata"):
-            self.repo.contentstore.addremotefilelogpack(
-                self.filename, node, blobtext, p1, p2, linknode, meta
+            localcontent, localmetadata = self.repo.localfilewritestores
+
+            dpack, hpack = localcontent._getmutablepacks()
+
+            # Packs expect the data to contain the copy from prefix header
+            meta = meta or {}
+            hashtext = shallowutil.createrevlogtext(
+                blobtext, meta.get("copy"), meta.get("copyrev")
             )
+            dpack.add(self.filename, node, revlog.nullid, hashtext, metadata=meta)
+
+            copyfrom = ""
+            realp1node = p1
+            if meta and "copy" in meta:
+                copyfrom = meta["copy"]
+                realp1node = bin(meta["copyrev"])
+            hpack.add(self.filename, node, realp1node, p2, linknode, copyfrom)
         else:
+            localcontent, localmetadata = self.repo.localfilewritestores
             data = self._createfileblob(blobtext, meta, flags, p1, p2, node, linknode)
-            self.repo.contentstore.addremotefilelognode(self.filename, node, data)
+            # All loose file writes go through the localcontent store
+            localcontent.addremotefilelognode(self.filename, node, data)
 
         return node
 

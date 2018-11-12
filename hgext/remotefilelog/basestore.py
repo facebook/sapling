@@ -346,30 +346,13 @@ class basestore(object):
             )
         return self._mutablepacks
 
-    def addremotefilelogpack(self, name, node, data, p1node, p2node, linknode, meta):
-        dpack, hpack = self._getmutablepacks()
-
-        # Packs expect the data to contain the copy from prefix header
-        meta = meta or {}
-        hashtext = shallowutil.createrevlogtext(
-            data, meta.get("copy"), meta.get("copyrev")
-        )
-        dpack.add(name, node, revlog.nullid, hashtext, metadata=meta)
-
-        copyfrom = ""
-        realp1node = p1node
-        if meta and "copy" in meta:
-            copyfrom = meta["copy"]
-            realp1node = bin(meta["copyrev"])
-        hpack.add(name, node, realp1node, p2node, linknode, copyfrom)
-
     def commitpending(self):
         if self._mutablepacks is not None:
             dpack, hpack = self._mutablepacks
             dpack.close()
             hpack.close()
 
-            self._mutablelocalpacks = None
+            self._mutablepacks = None
 
     def abortpending(self):
         if self._mutablepacks is not None:

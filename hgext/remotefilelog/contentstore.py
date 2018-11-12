@@ -41,7 +41,6 @@ class ChainIndicies(object):
 class unioncontentstore(object):
     def __init__(self, *args, **kwargs):
         self.stores = list(args)
-        self.writestore = kwargs.get("writestore")
 
         # If allowincomplete==True then the union store can return partial
         # delta chains, otherwise it will throw a KeyError if a full
@@ -142,32 +141,6 @@ class unioncontentstore(object):
             if missing:
                 missing = store.getmissing(missing)
         return missing
-
-    def addremotefilelognode(self, name, node, data):
-        if self.writestore:
-            self.writestore.addremotefilelognode(name, node, data)
-        else:
-            raise RuntimeError("no writable store configured")
-
-    def addremotefilelogpack(self, name, node, data, p1node, p2node, linknode, meta):
-        if self.writestore:
-            self.writestore.addremotefilelogpack(
-                name, node, data, p1node, p2node, linknode, meta
-            )
-        else:
-            raise RuntimeError("no writable store configured")
-
-    def commitpending(self):
-        if self.writestore:
-            self.writestore.commitpending()
-        else:
-            raise RuntimeError("no writable store configured")
-
-    def abortpending(self):
-        if self.writestore:
-            self.writestore.abortpending()
-        else:
-            raise RuntimeError("no writable store configured")
 
     def markledger(self, ledger, options=None):
         for store in self.stores:

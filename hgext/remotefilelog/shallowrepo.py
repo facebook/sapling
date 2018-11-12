@@ -126,21 +126,12 @@ def makeunionstores(repo):
 
     # Instantiate union stores
     repo.contentstore = unioncontentstore(
-        spackcontent,
-        cachecontent,
-        lpackcontent,
-        localcontent,
-        remotecontent,
-        writestore=localcontent,
+        spackcontent, cachecontent, lpackcontent, localcontent, remotecontent
     )
     repo.metadatastore = unionmetadatastore(
-        spackmetadata,
-        cachemetadata,
-        lpackmetadata,
-        localmetadata,
-        remotemetadata,
-        writestore=localmetadata,
+        spackmetadata, cachemetadata, lpackmetadata, localmetadata, remotemetadata
     )
+    repo.localfilewritestores = (localcontent, localmetadata)
 
     fileservicedatawrite = cachecontent
     fileservicehistorywrite = cachemetadata
@@ -230,7 +221,8 @@ def wraprepo(repo):
         @localrepo.unfilteredmethod
         def close(self):
             if self.ui.configbool("remotefilelog", "packlocaldata"):
-                self.contentstore.commitpending()
+                localcontent, localmetadata = self.localfilewritestores
+                localcontent.commitpending()
             return super(shallowrepository, self).close()
 
         def backgroundprefetch(
@@ -341,7 +333,8 @@ def wraprepo(repo):
         def invalidate(self, **kwargs):
             if self.ui.configbool("remotefilelog", "packlocaldata"):
                 # Flush local data which might be uncommitted to disc
-                self.contentstore.commitpending()
+                localcontent, localmetadata = self.localfilewritestores
+                localcontent.commitpending()
 
             super(shallowrepository, self).invalidate(**kwargs)
             makeunionstores(self)
