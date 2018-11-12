@@ -136,3 +136,31 @@ class filelog(revlog.revlog):
         add = "\1\ncensored:"
         addlen = len(add)
         return newlen >= addlen and delta[hlen : hlen + addlen] == add
+
+
+class fileslog(object):
+    """Top level object representing all the file storage.
+
+    Eventually filelog content access should go through this, but for now it's
+    just used to handle remotefilelog writes.
+    """
+
+    def __init__(self, repo):
+        self.ui = repo.ui
+        self.repo = repo
+
+    def commitpending(self):
+        """Used in alternative filelog implementations to commit pending
+        additions."""
+        isremotefilelogrepo = "remotefilelog" in self.requirements
+        if isremotefilelogrepo and self.ui.configbool("remotefilelog", "packlocaldata"):
+            localcontent, localmetadata = self.repo.localfilewritestores
+            localcontent.commitpending()
+
+    def abortpending(self):
+        """Used in alternative filelog implementations to throw out pending
+        additions."""
+        isremotefilelogrepo = "remotefilelog" in self.requirements
+        if isremotefilelogrepo and self.ui.configbool("remotefilelog", "packlocaldata"):
+            localcontent, localmetadata = self.repo.localfilewritestores
+            localcontent.abortpending()

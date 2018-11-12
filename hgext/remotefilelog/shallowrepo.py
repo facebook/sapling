@@ -331,11 +331,6 @@ def wraprepo(repo):
                 self.fileservice.prefetch(results)
 
         def invalidate(self, **kwargs):
-            if self.ui.configbool("remotefilelog", "packlocaldata"):
-                # Flush local data which might be uncommitted to disc
-                localcontent, localmetadata = self.localfilewritestores
-                localcontent.commitpending()
-
             super(shallowrepository, self).invalidate(**kwargs)
             makeunionstores(self)
 

@@ -842,6 +842,10 @@ class localrepository(object):
     def manifestlog(self):
         return manifest.manifestlog(self.svfs, self)
 
+    @unfilteredpropertycache
+    def fileslog(self):
+        return filelog.fileslog(self)
+
     @repofilecache(localpaths=["dirstate"])
     def dirstate(self):
         istreestate = "treestate" in self.requirements
@@ -1444,27 +1448,19 @@ class localrepository(object):
         # standard transaction mechanism.
         unfi = self.unfiltered()
 
-        isremotefilelogrepo = "remotefilelog" in self.requirements
-
         def commitnotransaction(tr):
             if "manifestlog" in unfi.__dict__:
                 self.manifestlog.commitpending()
 
-            if isremotefilelogrepo and self.ui.configbool(
-                "remotefilelog", "packlocaldata"
-            ):
-                localcontent, localmetadata = self.localfilewritestores
-                localcontent.commitpending()
+            if "fileslog" in unfi.__dict__:
+                self.fileslog.commitpending()
 
         def abortnotransaction(tr):
             if "manifestlog" in unfi.__dict__:
                 self.manifestlog.abortpending()
 
-            if isremotefilelogrepo and self.ui.configbool(
-                "remotefilelog", "packlocaldata"
-            ):
-                localcontent, localmetadata = self.localfilewritestores
-                localcontent.abortpending()
+            if "fileslog" in unfi.__dict__:
+                self.fileslog.abortpending()
 
         def writependingnotransaction(tr):
             commitnotransaction(tr)
@@ -1793,6 +1789,12 @@ class localrepository(object):
                 delattr(unfiltered, k)
             except AttributeError:
                 pass
+
+        if "fileslog" in unfiltered.__dict__:
+            # The fileslog may have uncommitted additions, let's just
+            # flush them to disk so we don't lose them.
+            unfiltered.fileslog.commitpending()
+            del unfiltered.__dict__["fileslog"]
 
         self.invalidatecaches()
         if not self.currenttransaction():
