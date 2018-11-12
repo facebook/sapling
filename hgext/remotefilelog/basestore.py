@@ -113,6 +113,10 @@ class basestore(object):
         # Clean up the repo cache directory.
         self._cleanupdirectory(self._getrepocachepath())
 
+    def markforrefresh(self):
+        # This only applies to stores that keep a snapshot of whats on disk.
+        pass
+
     # BELOW THIS ARE NON-STANDARD APIS
 
     def _cleanupdirectory(self, rootdir):
@@ -327,40 +331,6 @@ class basestore(object):
             )
 
         return data
-
-    def _getmutablepacks(self):
-        """Returns a tuple containing a data pack and a history pack."""
-        if self._mutablepacks is None:
-            if self._shared:
-                packpath = shallowutil.getcachepackpath(
-                    self.repo, constants.FILEPACK_CATEGORY
-                )
-            else:
-                packpath = shallowutil.getlocalpackpath(
-                    self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
-                )
-
-            self._mutablepacks = (
-                datapack.mutabledatapack(self.ui, packpath),
-                historypack.mutablehistorypack(self.ui, packpath),
-            )
-        return self._mutablepacks
-
-    def commitpending(self):
-        if self._mutablepacks is not None:
-            dpack, hpack = self._mutablepacks
-            dpack.close()
-            hpack.close()
-
-            self._mutablepacks = None
-
-    def abortpending(self):
-        if self._mutablepacks is not None:
-            dpack, hpack = self._mutablepacks
-            dpack.abort()
-            hpack.abort()
-
-            self._mutablepacks = None
 
     def addremotefilelognode(self, name, node, data):
         filepath = self._getfilepath(name, node)

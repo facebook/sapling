@@ -20,8 +20,8 @@ from .contentstore import (
     remotefilelogcontentstore,
     unioncontentstore,
 )
-from .datapack import datapackstore
-from .historypack import historypackstore
+from .datapack import datapackstore, mutabledatapack
+from .historypack import historypackstore, mutablehistorypack
 from .metadatastore import (
     remotefilelogmetadatastore,
     remotemetadatastore,
@@ -197,9 +197,7 @@ class remotefilelog(object):
             meta, blobtext = shallowutil.parsemeta(rawtext, flags)
 
         if self.repo.ui.configbool("remotefilelog", "packlocaldata"):
-            localcontent, localmetadata = self.repo.fileslog.localfilewritestores
-
-            dpack, hpack = localcontent._getmutablepacks()
+            dpack, hpack = self.repo.fileslog.getmutablelocalpacks()
 
             # Packs expect the data to contain the copy from prefix header
             meta = meta or {}
@@ -505,20 +503,45 @@ class remotefileslog(filelog.fileslog):
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
         self.makeunionstores()
+        self._mutablelocalpacks = None
+
+    def getmutablelocalpacks(self):
+        if self._mutablelocalpacks is None:
+            packpath = shallowutil.getlocalpackpath(
+                self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+            )
+            self._mutablelocalpacks = (
+                mutabledatapack(self.ui, packpath),
+                mutablehistorypack(self.ui, packpath, repo=self.repo),
+            )
+        return self._mutablelocalpacks
 
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending
         additions."""
-        if self.ui.configbool("remotefilelog", "packlocaldata"):
-            localcontent, localmetadata = self.localfilewritestores
-            localcontent.commitpending()
+        if self._mutablelocalpacks is not None:
+            dpack, hpack = self._mutablelocalpacks
+
+            dpack.close()
+            hpack.close()
+
+            self._mutablelocalpacks = None
+
+            for store in self.localdatastores:
+                store.markforrefresh()
+            for store in self.localhistorystores:
+                store.markforrefresh()
 
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
-        if self.ui.configbool("remotefilelog", "packlocaldata"):
-            localcontent, localmetadata = self.localfilewritestores
-            localcontent.abortpending()
+        if self._mutablelocalpacks is not None:
+            dpack, hpack = self._mutablelocalpacks
+
+            dpack.abort()
+            hpack.abort()
+
+            self._mutablelocalpacks = None
 
     def makeunionstores(self):
         """Union stores iterate the other stores and return the first result."""
