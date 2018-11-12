@@ -673,6 +673,9 @@ class localrepository(object):
         if "manifestlog" in self.__dict__:
             self.manifestlog.commitpending()
 
+        if "fileslog" in self.__dict__:
+            self.fileslog.commitpending()
+
     def _loadextensions(self):
         extensions.loadall(self.ui)
 

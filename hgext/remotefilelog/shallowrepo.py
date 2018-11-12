@@ -172,6 +172,10 @@ def wraprepo(repo):
 
             return path
 
+        @localrepo.unfilteredpropertycache
+        def fileslog(self):
+            return remotefilelog.remotefileslog(self)
+
         def maybesparsematch(self, *revs, **kwargs):
             """
             A wrapper that allows the remotefilelog to invoke sparsematch() if

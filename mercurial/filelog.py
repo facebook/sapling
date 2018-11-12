@@ -152,15 +152,7 @@ class fileslog(object):
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending
         additions."""
-        isremotefilelogrepo = "remotefilelog" in self.requirements
-        if isremotefilelogrepo and self.ui.configbool("remotefilelog", "packlocaldata"):
-            localcontent, localmetadata = self.repo.localfilewritestores
-            localcontent.commitpending()
 
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
-        isremotefilelogrepo = "remotefilelog" in self.requirements
-        if isremotefilelogrepo and self.ui.configbool("remotefilelog", "packlocaldata"):
-            localcontent, localmetadata = self.repo.localfilewritestores
-            localcontent.abortpending()
