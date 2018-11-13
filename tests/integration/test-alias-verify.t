@@ -31,6 +31,7 @@
   blob-repo0000.alias.sha256.d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f
 
   $ aliasverify files $TESTTMP/repo verify
+  I1113 * Ignoring setSSLLockTypes after initialization (glob)
   * Process Changesets with ids: [1, 4) (glob)
   * Commit processed 0 (glob)
   * Alias Verification continues: 0 errors found (glob)
@@ -42,12 +43,14 @@
   0
 
   $ aliasverify files $TESTTMP/repo verify
+  I1113 * Ignoring setSSLLockTypes after initialization (glob)
   * Process Changesets with ids: [1, 4) (glob)
   * Commit processed 0 (glob)
   * Alias Verification continues: 3 errors found (glob)
   * Alias Verification finished: 3 errors found (glob)
 
   $ aliasverify files $TESTTMP/repo verify --debug
+  I1113 * Ignoring setSSLLockTypes after initialization (glob)
   * Process Changesets with ids: [1, 4) (glob)
   * Commit processed 0 (glob)
   * Missing alias blob: alias Sha256(d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f), content_id ContentId(Blake2(73f63d223a944d13b617aaefd255742e870cde0107d19c52d02d45b0d5ed690d)) (glob)
@@ -60,6 +63,7 @@
   0
 
   $ aliasverify files $TESTTMP/repo generate --debug
+  I1113 * Ignoring setSSLLockTypes after initialization (glob)
   * Process Changesets with ids: [1, 4) (glob)
   * Commit processed 0 (glob)
   * Missing alias blob: alias Sha256(d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f), content_id ContentId(Blake2(73f63d223a944d13b617aaefd255742e870cde0107d19c52d02d45b0d5ed690d)) (glob)
