@@ -245,7 +245,16 @@ def cloudauth(ui, repo, **opts):
 
 
 @subcmd(
-    "smartlog|sl", [("u", "user", "", _("short username to fetch smartlog view for"))]
+    "smartlog|sl",
+    [
+        (
+            "u",
+            "user",
+            "",
+            _("short username to fetch smartlog view for (default workspace)"),
+        )
+    ]
+    + workspaceopts,
 )
 def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     """get smartlog view for the default workspace of the given user
@@ -261,7 +270,10 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     if username:
         workspace = workspacemanager.getdefaultworkspacename(username)
     else:
-        workspace = workspacemanager.defaultworkspace
+        if opts.get("workspace"):
+            workspace = opts.get("workspace")
+        else:
+            workspace = workspacemanager.defaultworkspace
 
     highlightstatus(
         ui,
@@ -293,7 +305,15 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
 
 @subcmd(
     "supersmartlog|ssl",
-    [("u", "user", "", _("short username to fetch smartlog view for"))],
+    [
+        (
+            "u",
+            "user",
+            "",
+            _("short username to fetch smartlog view for (default workspace)"),
+        )
+    ]
+    + workspaceopts,
 )
 def cloudsupersmartlog(ui, repo, **opts):
     """get super smartlog view for the give workspace
