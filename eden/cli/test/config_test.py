@@ -16,6 +16,7 @@ import unittest
 from typing import Dict, List, Optional
 
 import toml
+import toml.decoder
 
 from .. import config as config_mod, configutil, util
 from ..config import EdenInstance
@@ -164,12 +165,12 @@ class ForceFileMockConfig(EdenInstance):
         super().__init__(config_dir, etc_eden_dir, home_dir, interpolate_dict)
         self._rc_file_list = rc_file_list
 
-    def get_rc_files(self):
+    def get_rc_files(self) -> List[str]:
         return self._rc_file_list
 
 
 class TomlConfigTest(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self._test_dir = tempfile.mkdtemp(prefix="eden_config_test.")
         self.addCleanup(shutil.rmtree, self._test_dir)
 
@@ -184,7 +185,7 @@ class TomlConfigTest(unittest.TestCase):
         util.mkdir_p(self._config_d)
         util.mkdir_p(self._home_dir)
 
-    def copy_config_files(self):
+    def copy_config_files(self) -> None:
         path = os.path.join(self._config_d, "_use_toml_configs_")
         with open(path, "w") as text_file:
             text_file.write("")
@@ -205,7 +206,7 @@ class TomlConfigTest(unittest.TestCase):
         with open(path, "w") as text_file:
             text_file.write(get_toml_test_file_user_rc())
 
-    def assert_core_config(self, cfg):
+    def assert_core_config(self, cfg: EdenInstance) -> None:
         self.assertEqual(
             cfg.get_config_value("rage.reporter"),
             'arc paste --title "eden rage from $(hostname)" --conduit-uri=https://phabricator.intern.facebook.com/api/',
@@ -221,16 +222,18 @@ class TomlConfigTest(unittest.TestCase):
             cfg.get_config_value("core.edenDirectory"), f"/home/{self._user}/.eden"
         )
 
-    def assert_git_repo_config(self, cfg):
+    def assert_git_repo_config(self, cfg: EdenInstance) -> None:
         cc = cfg.find_config_for_alias("git")
+        assert cc is not None
         self.assertEqual(cc.path, f"/home/{self._user}/src/git/.git")
         self.assertEqual(cc.scm_type, "git")
         self.assertEqual(cc.hooks_path, f"/home/{self._user}/my-git-hook")
         self.assertEqual(cc.bind_mounts, {})
         self.assertEqual(cc.default_revision, "master")
 
-    def assert_fbsource_repo_config(self, cfg):
+    def assert_fbsource_repo_config(self, cfg: EdenInstance) -> None:
         cc = cfg.find_config_for_alias("fbsource")
+        assert cc is not None
         self.assertEqual(cc.path, f"/data/users/{self._user}/fbsource-override")
         self.assertEqual(cc.scm_type, "hg")
         self.assertEqual(
@@ -239,7 +242,7 @@ class TomlConfigTest(unittest.TestCase):
         )
         self.assertEqual(cc.default_revision, "master")
 
-    def test_load_config(self):
+    def test_load_config(self) -> None:
         self.copy_config_files()
         cfg = EdenInstance(
             self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
@@ -261,7 +264,7 @@ class TomlConfigTest(unittest.TestCase):
         ]
         self.assertEqual(cfg.get_rc_files(), exp_rc_files)
 
-    def test_no_dot_edenrc(self):
+    def test_no_dot_edenrc(self) -> None:
         self.copy_config_files()
 
         os.remove(os.path.join(self._home_dir, ".edenrc"))
@@ -284,6 +287,7 @@ class TomlConfigTest(unittest.TestCase):
             cfg.get_config_value("core.systemIgnoreFile"), "/etc/eden/gitignore"
         )
         cc = cfg.find_config_for_alias("fbsource")
+        assert cc is not None
         self.assertEqual(cc.path, f"/data/users/{self._user}/fbsource")
         self.assertEqual(cc.scm_type, "hg")
         self.assertEqual(
@@ -292,7 +296,7 @@ class TomlConfigTest(unittest.TestCase):
         )
         self.assertEqual(cc.default_revision, "master")
 
-    def test_add_existing_repo(self):
+    def test_add_existing_repo(self) -> None:
         self.copy_config_files()
 
         cfg = EdenInstance(
@@ -306,7 +310,7 @@ class TomlConfigTest(unittest.TestCase):
         ):
             cfg.add_repository("fbsource", "hg", f"/data/users/{self._user}/fbsource")
 
-    def test_add_repo(self):
+    def test_add_repo(self) -> None:
         self.copy_config_files()
 
         cfg = EdenInstance(
@@ -327,13 +331,14 @@ class TomlConfigTest(unittest.TestCase):
 
         # Check the newly added repo
         cc = cfg.find_config_for_alias("fbandroid")
+        assert cc is not None
         self.assertEqual(cc.path, f"/data/users/{self._user}/fbandroid")
         self.assertEqual(cc.scm_type, "hg")
         self.assertEqual(cc.hooks_path, f"{self._etc_eden_dir}/hooks")
         self.assertEqual(cc.bind_mounts, {})
         self.assertEqual(cc.default_revision, "master")
 
-    def test_toml_error(self):
+    def test_toml_error(self) -> None:
         self.copy_config_files()
 
         path = os.path.join(self._home_dir, ".edenrc")

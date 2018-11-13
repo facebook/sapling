@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import binascii
+import collections
 import errno
 import io
 import os
@@ -876,7 +877,9 @@ Checking {edenfs_path1}
         self.assertEqual(0, exit_code)
 
     def test_remount_checkouts(self) -> None:
-        exit_code, out, mounts = self._test_remount_checkouts(dry_run=False)
+        exit_code, out, mounts = self._test_remount_checkouts(  # type: ignore
+            dry_run=False
+        )
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
@@ -891,7 +894,9 @@ Checking {mounts[0]}
         self.assertEqual(exit_code, 0)
 
     def test_remount_checkouts_dry_run(self) -> None:
-        exit_code, out, mounts = self._test_remount_checkouts(dry_run=True)
+        exit_code, out, mounts = self._test_remount_checkouts(  # type: ignore
+            dry_run=True
+        )
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
@@ -913,8 +918,8 @@ Checking {mounts[0]}
         """Test that `eden doctor` remounts configured mount points that are not
         currently mounted.
         """
-        self._tmp_dir = self._create_tmp_dir()
-        instance = FakeEdenInstance(self._tmp_dir)
+        tmp_dir = self._create_tmp_dir()
+        instance = FakeEdenInstance(tmp_dir)
 
         mounts = []
         mounts.append(instance.create_test_mount("path1"))
@@ -933,8 +938,8 @@ Checking {mounts[0]}
 
     @patch("eden.cli.doctor._call_watchman")
     def test_watchman_fails(self, mock_watchman):
-        self._tmp_dir = self._create_tmp_dir()
-        instance = FakeEdenInstance(self._tmp_dir)
+        tmp_dir = self._create_tmp_dir()
+        instance = FakeEdenInstance(tmp_dir)
 
         mount = instance.create_test_mount("path1", active=False)
 
@@ -1200,7 +1205,7 @@ kill -9 475204 475205 575204 575205
 class BindMountsCheckTest(DoctorTestBase):
     maxDiff = None
 
-    def setUp(self):
+    def setUp(self) -> None:
         tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
         self.addCleanup(shutil.rmtree, tmp_dir)
         self.instance = FakeEdenInstance(tmp_dir, is_healthy=True)
@@ -1243,7 +1248,7 @@ class BindMountsCheckTest(DoctorTestBase):
         doctor.check_bind_mounts(
             fixer,
             self.edenfs_path1,
-            self.instance,
+            typing.cast(EdenInstance, self.instance),
             self.instance.get_client_info(self.edenfs_path1),
             mount_table=mount_table,
             fs_util=fs_util,
@@ -2002,7 +2007,7 @@ Please remove the file at {self.fbsource_bind_mounts}/buck-out
 class StaleMountsCheckTest(DoctorTestBase):
     maxDiff = None
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.active_mounts: List[bytes] = [b"/mnt/active1", b"/mnt/active2"]
         self.mount_table = FakeMountTable()
         self.mount_table.add_mount("/mnt/active1")
@@ -2254,7 +2259,7 @@ class FakeEdenInstance:
         config: Optional[Dict[str, str]] = None,
     ) -> None:
         self._tmp_dir = tmp_dir
-        self._mount_paths: Dict[str, Dict[str, Any]] = {}
+        self._mount_paths: Dict[str, collections.OrderedDict] = {}
         self._is_healthy = is_healthy
         self._build_info = build_info if build_info else {}
         self._config = config if config else {}
@@ -2298,13 +2303,15 @@ class FakeEdenInstance:
         if client_dir is None:
             client_dir = "/" + path.replace("/", "_")
 
-        self._mount_paths[full_path] = {
-            "bind-mounts": bind_mounts,
-            "mount": full_path,
-            "scm_type": scm_type,
-            "snapshot": snapshot,
-            "client-dir": client_dir,
-        }
+        self._mount_paths[full_path] = collections.OrderedDict(
+            [
+                ("bind-mounts", bind_mounts),
+                ("mount", full_path),
+                ("scm_type", scm_type),
+                ("snapshot", snapshot),
+                ("client-dir", client_dir),
+            ]
+        )
 
         if self._is_healthy and active:
             # Report the mount in /proc/mounts
@@ -2367,7 +2374,7 @@ class FakeEdenInstance:
         status = fb_status.ALIVE if self._is_healthy else fb_status.STOPPED
         return HealthStatus(status, pid=None, detail="")
 
-    def get_client_info(self, mount_path: str) -> Dict[str, str]:
+    def get_client_info(self, mount_path: str) -> collections.OrderedDict:
         return self._mount_paths[mount_path]
 
     def get_server_build_info(self) -> Dict[str, str]:
@@ -2376,8 +2383,8 @@ class FakeEdenInstance:
     def get_thrift_client(self) -> FakeClient:
         return self._fake_client
 
-    def get_config_value(self, key: str):
-        return self._config.get(key)
+    def get_config_value(self, key: str) -> str:
+        return self._config[key]
 
 
 class FakeProcessFinder(process_finder.ProcessFinder):
@@ -2436,7 +2443,7 @@ class FakeMountTable(mtab.MountTable):
     def fail_access(self, path: str, errnum: int) -> None:
         self.stats[path] = OSError(errnum, os.strerror(errnum))
 
-    def _add_mount_info(self, path: str, device: str, vfstype: str):
+    def _add_mount_info(self, path: str, device: str, vfstype: str) -> None:
         self.mounts.append(
             mtab.MountInfo(
                 device=device.encode("utf-8"),
@@ -2445,10 +2452,10 @@ class FakeMountTable(mtab.MountTable):
             )
         )
 
-    def fail_unmount_lazy(self, *mounts: bytes):
+    def fail_unmount_lazy(self, *mounts: bytes) -> None:
         self.unmount_lazy_fails |= set(mounts)
 
-    def fail_unmount_force(self, *mounts: bytes):
+    def fail_unmount_force(self, *mounts: bytes) -> None:
         self.unmount_force_fails |= set(mounts)
 
     def read(self) -> List[mtab.MountInfo]:
@@ -2483,9 +2490,9 @@ class FakeMountTable(mtab.MountTable):
         if isinstance(result, BaseException):
             raise result
         else:
-            return result
+            return typing.cast(mtab.MTStat, result)
 
-    def _remove_mount(self, mount_point: bytes):
+    def _remove_mount(self, mount_point: bytes) -> None:
         self.mounts[:] = [
             mount_info
             for mount_info in self.mounts
@@ -2516,7 +2523,7 @@ class FakeFsUtil(filesystem.FsUtil):
 
 
 class OperatingSystemsCheckTest(DoctorTestBase):
-    def setUp(self):
+    def setUp(self) -> None:
         test_config = {
             "doctor.minimum-kernel-version": "4.11.3-67",
             "doctor.known-bad-kernel-versions": "^4.*_fbk13,TODO,TEST",
@@ -2524,7 +2531,7 @@ class OperatingSystemsCheckTest(DoctorTestBase):
         tmp_dir = self._create_tmp_dir()
         self.instance = FakeEdenInstance(tmp_dir, config=test_config)
 
-    def test_kernel_version_split(self):
+    def test_kernel_version_split(self) -> None:
         test_versions = (
             ("1", (1, 0, 0, 0)),
             ("1.2", (1, 2, 0, 0)),
@@ -2541,7 +2548,7 @@ class OperatingSystemsCheckTest(DoctorTestBase):
                 result = doctor._parse_os_kernel_version(test_version)
                 self.assertEquals(result, expected)
 
-    def test_kernel_version_min(self):
+    def test_kernel_version_min(self) -> None:
         # Each of these are ((test_value, expected_result), ...)
         min_kernel_versions_tests = (
             ("4.6.7-73_fbk21_3608_gb5941a6", True),
@@ -2555,13 +2562,15 @@ class OperatingSystemsCheckTest(DoctorTestBase):
         for fake_release, expected in min_kernel_versions_tests:
             with self.subTest(fake_release=fake_release):
                 result = doctor._os_is_kernel_version_too_old(
-                    self.instance, fake_release
+                    typing.cast(EdenInstance, self.instance), fake_release
                 )
                 self.assertIs(result, expected)
 
-    def test_bad_kernel_versions(self):
+    def test_bad_kernel_versions(self) -> None:
         bad_kernel_versions_tests = ("4.11.3-52_fbk13", "999.2.3-4_TEST", "777.1_TODO")
         for bad_release in bad_kernel_versions_tests:
             with self.subTest(bad_release=bad_release):
-                result = doctor._os_is_bad_release(self.instance, bad_release)
+                result = doctor._os_is_bad_release(
+                    typing.cast(EdenInstance, self.instance), bad_release
+                )
                 self.assertTrue(result)

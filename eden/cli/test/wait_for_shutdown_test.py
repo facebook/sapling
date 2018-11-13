@@ -15,8 +15,8 @@ import time
 import typing
 import unittest
 
-from ..daemon import is_zombie_process, wait_for_shutdown
-from ..util import poll_until
+from eden.cli.daemon import is_zombie_process, wait_for_shutdown
+from eden.cli.util import poll_until
 
 
 class WaitForShutdownTest(unittest.TestCase):
@@ -115,6 +115,7 @@ class AutoReapingChildProcess:
         with self.__condition:
             while self.__returncode is None:
                 self.__condition.wait()
+            assert self.__returncode is not None
             return self.__returncode
 
     def __wait_for_process_start(self) -> None:
