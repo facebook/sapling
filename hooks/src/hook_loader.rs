@@ -8,9 +8,10 @@
 
 #![deny(warnings)]
 
-use super::HookManager;
+use super::{Hook, HookChangeset, HookManager};
 use super::lua_hook::LuaHook;
 use bookmarks::Bookmark;
+use facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
 use facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use failure::Error;
 use metaconfig::repoconfig::{HookType, RepoConfig};
@@ -26,11 +27,12 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                 if name.starts_with("rust:") {
                     let rust_name = &name[5..];
                     let rust_name = rust_name.to_string();
-                    let rust_hook = match rust_name.as_ref() {
-                        "verify_integrity" => VerifyIntegrityHook::new(),
+                    let rust_hook: Arc<Hook<HookChangeset>> = match rust_name.as_ref() {
+                        "verify_integrity" => Arc::new(VerifyIntegrityHook::new()),
+                        "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new()),
                         _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
                     };
-                    hook_manager.register_changeset_hook(&name, Arc::new(rust_hook), hook.bypass)
+                    hook_manager.register_changeset_hook(&name, rust_hook, hook.bypass)
                 } else {
                     let lua_hook = LuaHook::new(name.clone(), hook.code.clone().unwrap());
                     match hook.hook_type {

@@ -50,6 +50,9 @@ extern crate regex;
 extern crate slog;
 extern crate tempdir;
 
+extern crate srclient;
+extern crate thrift;
+
 pub mod lua_hook;
 pub mod rust_hook;
 pub mod hook_loader;
