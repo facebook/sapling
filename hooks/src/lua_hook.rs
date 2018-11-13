@@ -11,6 +11,7 @@
 use super::{ChangedFileType, Hook, HookChangeset, HookChangesetParents, HookContext,
             HookExecution, HookFile, HookRejectionInfo};
 use super::errors::*;
+use aclchecker::Identity;
 use failure::Error;
 use futures::{failed, Future};
 use futures::future::ok;
@@ -199,14 +200,15 @@ impl Hook<HookChangeset> for LuaHook {
         };
         let parse_commit_msg = function0(parse_commit_msg);
 
+        let reviewers_acl_checker = context.data.reviewers_acl_checker.clone();
         let is_valid_reviewer = {
             move |user: String| -> Result<AnyFuture, Error> {
-                // TODO(stash): actual implementation that checks the permissions
-                if user == "invalidreviewer" {
-                    Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(false))))
-                } else {
-                    Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(true))))
-                }
+                let user = Identity::with_user(&user);
+                let valid = match *reviewers_acl_checker {
+                    Some(ref reviewers_acl_checker) => reviewers_acl_checker.is_member(&[&user]),
+                    None => false,
+                };
+                Ok(AnyFuture::new(ok(AnyLuaValue::LuaBoolean(valid))))
             }
         };
         let is_valid_reviewer = function1(is_valid_reviewer);
@@ -521,6 +523,7 @@ mod test {
     use super::*;
     use super::super::{ChangedFileType, HookChangeset, HookChangesetParents,
                        InMemoryFileContentStore};
+    use aclchecker::AclChecker;
     use async_unit;
     use bytes::Bytes;
     use futures::Future;
@@ -721,6 +724,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
             let cs_id =
                 HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
             let content_store = InMemoryFileContentStore::new();
+            let reviewers_acl_checker = acl_checker();
             let hcs = HookChangeset::new(
                 "some-author".into(),
                 vec![],
@@ -728,6 +732,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                 HookChangesetParents::One("p1-hash".into()),
                 cs_id,
                 Arc::new(content_store),
+                reviewers_acl_checker,
             );
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -757,6 +762,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
             let cs_id =
                 HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
             let content_store = InMemoryFileContentStore::new();
+            let reviewers_acl_checker = acl_checker();
             let hcs = HookChangeset::new(
                 "some-author".into(),
                 vec![],
@@ -764,6 +770,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                 HookChangesetParents::One("p1-hash".into()),
                 cs_id,
                 Arc::new(content_store),
+                reviewers_acl_checker,
             );
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -792,6 +799,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
             let cs_id =
                 HgChangesetId::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
             let content_store = InMemoryFileContentStore::new();
+            let reviewers_acl_checker = acl_checker();
             let hcs = HookChangeset::new(
                 "Stanislau Hlebik <stash@fb.com>".into(),
                 vec![],
@@ -799,6 +807,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                 HookChangesetParents::One("p1-hash".into()),
                 cs_id,
                 Arc::new(content_store),
+                reviewers_acl_checker,
             );
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -806,6 +815,38 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(run_changeset_hook(code, hcs), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_valid_reviewer() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.is_valid_reviewer('tfox')\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_not_valid_reviewer() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return not ctx.is_valid_reviewer('uyqdyqduygqwduygqwuydgqdfgbducbe2ubjweuhqwudh37')\n\
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
@@ -1552,7 +1593,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
         hook_files.extend(create_hook_files(added, ChangedFileType::Added));
         hook_files.extend(create_hook_files(deleted, ChangedFileType::Deleted));
         hook_files.extend(create_hook_files(modified, ChangedFileType::Modified));
-
+        let reviewers_acl_checker = acl_checker();
         HookChangeset::new(
             "some-author".into(),
             hook_files,
@@ -1560,6 +1601,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
             HookChangesetParents::One("p1-hash".into()),
             cs_id,
             content_store2,
+            reviewers_acl_checker,
         )
     }
 
@@ -1602,6 +1644,12 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
             cs_id,
             ChangedFileType::Deleted,
         )
+    }
+
+    fn acl_checker() -> Arc<Option<AclChecker>> {
+        let checker = AclChecker::new(&Identity::from_groupname("engineers"));
+        assert!(checker.do_wait_updated(10000));
+        Arc::new(Some(checker))
     }
 
 }

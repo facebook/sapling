@@ -14,6 +14,7 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
+extern crate aclchecker;
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
@@ -54,7 +55,9 @@ pub mod lua_hook;
 pub mod rust_hook;
 pub mod hook_loader;
 pub mod errors;
+mod facebook;
 
+use aclchecker::{AclChecker, Identity};
 use asyncmemo::{Asyncmemo, Filler, Weight};
 use blobrepo::{BlobRepo, HgBlobChangeset};
 use bookmarks::Bookmark;
@@ -91,6 +94,7 @@ pub struct HookManager {
     changeset_store: Box<ChangesetStore>,
     content_store: Arc<FileContentStore>,
     logger: Logger,
+    reviewers_acl_checker: Arc<Option<AclChecker>>,
 }
 
 impl HookManager {
@@ -110,7 +114,15 @@ impl HookManager {
             repo_name: repo_name.clone(),
         };
         let cache = Asyncmemo::with_limits("hooks", filler, entrylimit, weightlimit);
-
+        let reviewers_acl_checker =
+            AclChecker::new(&Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME));
+        // This can block, but not too big a deal as we create hook manager in server startup
+        let updated = reviewers_acl_checker.do_wait_updated(10000);
+        let reviewers_acl_checker = if updated {
+            Some(reviewers_acl_checker)
+        } else {
+            None
+        };
         HookManager {
             cache,
             changeset_hooks,
@@ -120,6 +132,7 @@ impl HookManager {
             changeset_store,
             content_store,
             logger,
+            reviewers_acl_checker: Arc::new(reviewers_acl_checker),
         }
     }
 
@@ -414,6 +427,7 @@ impl HookManager {
         let hg_changeset = self.changeset_store
             .get_changeset_by_changesetid(&changeset_id);
         let changed_files = self.changeset_store.get_changed_files(&changeset_id);
+        let reviewers_acl_checker = self.reviewers_acl_checker.clone();
         Box::new((hg_changeset, changed_files).into_future().and_then(
             move |(changeset, changed_files)| {
                 let author = str::from_utf8(changeset.user())?.into();
@@ -432,6 +446,7 @@ impl HookManager {
                     parents,
                     changeset_id,
                     content_store,
+                    reviewers_acl_checker,
                 ))
             },
         ))
@@ -499,6 +514,7 @@ pub struct HookChangeset {
     pub parents: HookChangesetParents,
     content_store: Arc<FileContentStore>,
     changeset_id: HgChangesetId,
+    reviewers_acl_checker: Arc<Option<AclChecker>>,
 }
 
 impl fmt::Debug for HookChangeset {
@@ -637,6 +653,7 @@ impl HookChangeset {
         parents: HookChangesetParents,
         changeset_id: HgChangesetId,
         content_store: Arc<FileContentStore>,
+        reviewers_acl_checker: Arc<Option<AclChecker>>,
     ) -> HookChangeset {
         HookChangeset {
             author,
@@ -645,6 +662,7 @@ impl HookChangeset {
             parents,
             content_store,
             changeset_id,
+            reviewers_acl_checker,
         }
     }
 
@@ -1419,6 +1437,7 @@ mod test {
                 .collect();
             let parents =
                 HookChangesetParents::One("2f866e7e549760934e31bf0420a873f65100ad63".into());
+            let reviewers_acl_checker = Arc::new(None);
             let data = HookChangeset::new(
                 "Stanislau Hlebik <stash@fb.com>".into(),
                 hook_files,
@@ -1426,6 +1445,7 @@ mod test {
                 parents,
                 cs_id,
                 content_store,
+                reviewers_acl_checker,
             );
             let expected_context = HookContext {
                 hook_name: "hook1".into(),
