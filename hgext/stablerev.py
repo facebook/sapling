@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""provide a way to expose the 'stable' commit via a revset
+"""provide a way to expose the "stable" commit via a revset
 
 In some repos, newly pushed commits undergo CI testing continuously. This means
 `master` is often in an unknown state until it's tested; an older public commit
