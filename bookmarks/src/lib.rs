@@ -93,6 +93,10 @@ impl BookmarkPrefix {
     pub fn to_string(&self) -> String {
         self.bookmark_prefix.clone().into()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.bookmark_prefix.is_empty()
+    }
 }
 
 pub trait Bookmarks: Send + Sync + 'static {

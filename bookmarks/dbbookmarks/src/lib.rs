@@ -91,6 +91,12 @@ queries! {
          LIMIT 1"
     }
 
+    read SelectAll(repo_id: RepositoryId) -> (Bookmark, ChangesetId) {
+        "SELECT name, changeset_id
+         FROM bookmarks
+         WHERE repo_id = {repo_id}"
+    }
+
     read SelectByPrefix(repo_id: RepositoryId, prefix: BookmarkPrefix) -> (Bookmark, ChangesetId) {
         mysql(
             "SELECT name, changeset_id
@@ -140,10 +146,17 @@ impl Bookmarks for SqlBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: &RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
-        SelectByPrefix::query(&self.read_master_connection, &repo_id, &prefix)
-            .map(|rows| stream::iter_ok(rows))
-            .flatten_stream()
-            .boxify()
+        if prefix.is_empty() {
+            SelectAll::query(&self.read_master_connection, &repo_id)
+                .map(|rows| stream::iter_ok(rows))
+                .flatten_stream()
+                .boxify()
+        } else {
+            SelectByPrefix::query(&self.read_master_connection, &repo_id, &prefix)
+                .map(|rows| stream::iter_ok(rows))
+                .flatten_stream()
+                .boxify()
+        }
     }
 
     fn create_transaction(&self, repoid: &RepositoryId) -> Box<Transaction> {
