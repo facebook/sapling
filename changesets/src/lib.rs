@@ -48,7 +48,7 @@ use sql::{Connection, Transaction};
 pub use sql_ext::SqlConstructors;
 
 use futures::{stream, Future, IntoFuture};
-use futures_ext::{spawn_future, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial_types::RepositoryId;
 use mononoke_types::ChangesetId;
 use rust_thrift::compact_protocol;
@@ -249,38 +249,35 @@ impl Changesets for SqlChangesets {
             .and_then(move |parent_rows| {
                 try_boxfuture!(check_missing_rows(&cs.parents, &parent_rows));
                 let gen = parent_rows.iter().map(|row| row.2).max().unwrap_or(0) + 1;
-                spawn_future(
-                    write_connection
-                        .start_transaction()
-                        .and_then({
-                            cloned!(cs);
-                            move |transaction| {
-                                InsertChangeset::query_with_transaction(
-                                    transaction,
-                                    &[(&cs.repo_id, &cs.cs_id, &gen)],
-                                )
-                            }
-                        })
-                        .and_then(move |(transaction, result)| {
-                            if result.affected_rows() == 1 && result.last_insert_id().is_some() {
-                                insert_parents(
-                                    transaction,
-                                    result.last_insert_id().unwrap(),
-                                    cs,
-                                    parent_rows,
-                                ).map(|()| true)
-                                    .left_future()
-                            } else {
-                                transaction
-                                    .rollback()
-                                    .and_then(move |()| {
-                                        check_changeset_matches(&write_connection, cs)
-                                    })
-                                    .map(|()| false)
-                                    .right_future()
-                            }
-                        }),
-                ).boxify()
+                write_connection
+                    .start_transaction()
+                    .and_then({
+                        cloned!(cs);
+                        move |transaction| {
+                            InsertChangeset::query_with_transaction(
+                                transaction,
+                                &[(&cs.repo_id, &cs.cs_id, &gen)],
+                            )
+                        }
+                    })
+                    .and_then(move |(transaction, result)| {
+                        if result.affected_rows() == 1 && result.last_insert_id().is_some() {
+                            insert_parents(
+                                transaction,
+                                result.last_insert_id().unwrap(),
+                                cs,
+                                parent_rows,
+                            ).map(|()| true)
+                                .left_future()
+                        } else {
+                            transaction
+                                .rollback()
+                                .and_then(move |()| check_changeset_matches(&write_connection, cs))
+                                .map(|()| false)
+                                .right_future()
+                        }
+                    })
+                    .boxify()
             })
             .boxify()
     }
