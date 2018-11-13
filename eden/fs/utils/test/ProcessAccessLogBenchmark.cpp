@@ -10,7 +10,7 @@
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 #include <folly/Benchmark.h>
-#include <folly/synchronization/Baton.h>
+#include "eden/fs/benchharness/Bench.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
@@ -27,7 +27,7 @@ BENCHMARK(ProcessAccessLog_repeatedly_add_self, iters) {
   ProcessAccessLog processAccessLog{processNameCache};
 
   std::vector<std::thread> threads;
-  std::array<folly::Baton<>, kThreadCount> batons;
+  StartingGate gate{kThreadCount};
 
   size_t remainingIterations = iters;
   size_t totalIterations = 0;
@@ -36,15 +36,13 @@ BENCHMARK(ProcessAccessLog_repeatedly_add_self, iters) {
     size_t assignedIterations = remainingIterations / remainingThreads;
     remainingIterations -= assignedIterations;
     totalIterations += assignedIterations;
-    threads.emplace_back([&processAccessLog,
-                          baton = &batons[i],
-                          assignedIterations,
-                          myPid = getpid()] {
-      baton->wait();
-      for (size_t j = 0; j < assignedIterations; ++j) {
-        processAccessLog.recordAccess(myPid);
-      }
-    });
+    threads.emplace_back(
+        [&processAccessLog, &gate, assignedIterations, myPid = getpid()] {
+          gate.wait();
+          for (size_t j = 0; j < assignedIterations; ++j) {
+            processAccessLog.recordAccess(myPid);
+          }
+        });
   }
 
   CHECK_EQ(totalIterations, iters);
@@ -52,9 +50,7 @@ BENCHMARK(ProcessAccessLog_repeatedly_add_self, iters) {
   suspender.dismiss();
 
   // Now wake the threads.
-  for (auto& baton : batons) {
-    baton.post();
-  }
+  gate.waitThenOpen();
 
   // Wait until they're done.
   for (auto& thread : threads) {

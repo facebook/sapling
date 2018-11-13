@@ -9,7 +9,7 @@
  */
 #include <folly/Benchmark.h>
 #include <folly/init/Init.h>
-#include <folly/synchronization/Baton.h>
+#include "eden/fs/benchharness/Bench.h"
 #include "eden/fs/tracing/Tracing.h"
 
 using namespace facebook::eden;
@@ -25,16 +25,16 @@ BENCHMARK(Tracer_repeatedly_create_trace_points, n) {
 }
 
 BENCHMARK(Tracer_repeatedly_create_trace_points_from_multiple_threads, n) {
+  constexpr unsigned threadCount = 8;
   std::vector<std::thread> threads;
+  StartingGate gate{threadCount};
   {
     folly::BenchmarkSuspender suspender;
     enableTracing();
-    auto threadCount = 8;
-    folly::Baton baton{};
 
-    for (auto i = 0; i < threadCount; ++i) {
-      threads.emplace_back([n, &baton] {
-        baton.wait();
+    for (unsigned i = 0; i < threadCount; ++i) {
+      threads.emplace_back([n, &gate] {
+        gate.wait();
         // We aren't measuring the time of these other threads, so
         // double the number of trace points to keep things busy
         // while the main thread creates the requested number of
@@ -44,7 +44,7 @@ BENCHMARK(Tracer_repeatedly_create_trace_points_from_multiple_threads, n) {
         }
       });
     }
-    baton.post();
+    gate.waitThenOpen();
   }
   for (unsigned i = 0; i < n; ++i) {
     TraceBlock block{"foo"};
