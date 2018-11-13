@@ -249,10 +249,7 @@ BENCHMARK_RELATIVE(fullpath_re2, numIters) {
   runBenchmark<RE2Impl>(numIters, ".*/[^/]io[^/]*o[^/]*", fullnameCorpus);
 }
 
-void initGlobBenchmark();
-
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
   folly::runBenchmarks();
-  return 0;
 }

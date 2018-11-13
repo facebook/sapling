@@ -10,7 +10,6 @@
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 #include <folly/Benchmark.h>
-#include <folly/init/Init.h>
 #include <folly/synchronization/Baton.h>
 #include "eden/fs/utils/ProcessNameCache.h"
 
