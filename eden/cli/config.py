@@ -24,7 +24,7 @@ import time
 import types
 import typing
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
 import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
@@ -170,7 +170,7 @@ class EdenInstance:
         setattr(parser, "optionxform", str)
         for f in self.get_rc_files():
             try:
-                toml_cfg = toml.load(f)
+                toml_cfg = _load_toml_config(f)
             except (FileNotFoundError) as exc:
                 # Ignore missing config files. Eg. user_config_path is optional
                 continue
@@ -293,11 +293,7 @@ class EdenInstance:
         return info
 
     def get_thrift_client(self) -> eden.thrift.EdenClient:
-        # TODO: Thrift doesn't generate type annotations for create_thrift_client
-        # yet.
-        return typing.cast(
-            eden.thrift.EdenClient, eden.thrift.create_thrift_client(self._config_dir)
-        )
+        return eden.thrift.create_thrift_client(self._config_dir)
 
     def get_client_info(self, path: str) -> collections.OrderedDict:
         path = os.path.realpath(path)
@@ -744,17 +740,18 @@ Do you want to run `eden mount %s` instead?"""
         under the client_dir is not properly formatted or does not exist.
         """
         config_toml = os.path.join(client_dir, MOUNT_CONFIG)
-        with open(config_toml, "r") as f:
-            config = toml.load(f)
-        repository = config.get("repository")
-        if not isinstance(repository, dict):
+        config = _load_toml_config(config_toml)
+        repo_field = config.get("repository")
+        if isinstance(repo_field, dict):
+            repository = repo_field
+        else:
             raise Exception(f"{config_toml} is missing [repository]")
 
         def get_field(key: str) -> str:
-            value = repository.get(key)  # type: ignore
-            if not isinstance(value, str):
-                raise Exception(f"{config_toml} is missing {key} in " "[repository]")
-            return value
+            value = repository.get(key)
+            if isinstance(value, str):
+                return value
+            raise Exception(f"{config_toml} is missing {key} in " "[repository]")
 
         scm_type = get_field("type")
         if scm_type not in SUPPORTED_REPOS:
@@ -886,7 +883,7 @@ class ConfigUpdater(object):
         # other eden CLI processes.)
         self._acquire_lock()
         try:
-            toml_cfg = toml.load(self.path)
+            toml_cfg = _load_toml_config(self.path)
             self.config.read_dict(toml_cfg)
         except (FileNotFoundError) as exc:
             pass
@@ -909,7 +906,7 @@ class ConfigUpdater(object):
     def sections(self) -> List[str]:
         return self.config.sections()
 
-    def __getitem__(self, key: str) -> typing.Mapping[str, Any]:
+    def __getitem__(self, key: str) -> Mapping[str, Any]:
         return self.config[key]
 
     def __setitem__(self, key: str, value: Dict[str, Any]) -> None:
@@ -917,7 +914,7 @@ class ConfigUpdater(object):
 
     def _acquire_lock(self) -> None:
         while True:
-            self._lock_file = open(self._lock_path, "w+")
+            self._lock_file = typing.cast(typing.TextIO, open(self._lock_path, "w+"))
             fcntl.flock(self._lock_file.fileno(), fcntl.LOCK_EX)
             # The original creator of the lock file will unlink it when
             # it is finished.  Make sure we grab the lock on the file still on
@@ -970,7 +967,7 @@ class ConfigUpdater(object):
         )
         try:
             toml_config = configutil.config_to_raw_dict(self.config)
-            toml_data = toml.dumps(toml_config)
+            toml_data = toml.dumps(typing.cast(Mapping[str, Any], toml_config))
             tmpf.write(toml_data)
             tmpf.close()
             os.chmod(tmpf.name, perms)
@@ -1034,12 +1031,13 @@ class EdenCheckout:
             # This is the checkout root
             return Path()
 
-        curdir = path.parent
+        curdir: Path = path.parent
         path_parts = [path.name]
         while True:
             stat = curdir.lstat()
             if (stat.st_dev, stat.st_ino) == (root_stat.st_dev, root_stat.st_ino):
-                return Path(*reversed(path_parts))
+                path_parts.reverse()
+                return Path(*path_parts)
 
             if curdir.parent == curdir:
                 raise Exception(
@@ -1048,7 +1046,7 @@ class EdenCheckout:
                 )
 
             path_parts.append(curdir.name)
-            curdir = curdir.parent
+            curdir = typing.cast(Path, curdir.parent)
 
 
 def find_eden(
@@ -1169,3 +1167,10 @@ def should_use_experimental_systemd_mode() -> bool:
     # TODO(T33122320): Delete this environment variable when systemd is properly
     # integrated.
     return os.getenv("EDEN_EXPERIMENTAL_SYSTEMD") == "1"
+
+
+_TomlConfigDict = Mapping[str, Mapping[str, Any]]
+
+
+def _load_toml_config(path: str) -> _TomlConfigDict:
+    return typing.cast(_TomlConfigDict, toml.load(path))

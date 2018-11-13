@@ -78,8 +78,8 @@ class LinuxProcessFinder(ProcessFinder):
         log.debug(f"List of processes per eden_dir output: {pid_config_dict}")
         # find the real PID we want to save
         for dir, pid_list in pid_config_dict.items():
+            lockfile = os.path.join(dir, b"lock")
             try:
-                lockfile = os.path.join(dir, b"lock")
                 lock_pid = ProcessID(util.read_all(lockfile).strip())
                 if lock_pid in pid_list:
                     pid_list.remove(ProcessID(lock_pid))
@@ -89,8 +89,8 @@ class LinuxProcessFinder(ProcessFinder):
                 continue
             except ValueError:
                 log.warning(
-                    f"lock file contains data that cannot be parsed for PID: \
-{lockfile}",
+                    f"lock file contains data that cannot be parsed for PID: "
+                    f"{lockfile}",
                     exc_info=True,
                 )
                 pid_list[:] = []

@@ -591,6 +591,8 @@ class ChownCmd(Subcmd):
             subprocess.run(["sudo", "chown", "-R", f"{args.uid}:{args.gid}", full_path])
             print("done")
 
+        return 0
+
 
 @subcmd(
     "mount",
@@ -633,7 +635,7 @@ class RemoveCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        configured_mounts = instance.get_mount_paths()
+        configured_mounts = list(instance.get_mount_paths())
 
         # First translate the list of paths into canonical checkout paths
         # We also track a bool indicating if this checkout is currently mounted
@@ -909,6 +911,8 @@ RESTART_MODE_FORCE = "force"
 
 @subcmd("restart", "Restart the edenfs daemon")
 class RestartCmd(Subcmd):
+    args: argparse.Namespace
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         mode_group = parser.add_mutually_exclusive_group()
         mode_group.add_argument(
@@ -1044,11 +1048,11 @@ re-open these files after Eden is restarted.
 
         return self._finish_restart(instance)
 
-    def _wait_for_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:
+    def _wait_for_stop(self, instance: EdenInstance, pid: int, timeout: float) -> None:
         # If --shutdown-timeout was specified on the command line that always takes
         # precedence over the default timeout passed in by our caller.
         if self.args.shutdown_timeout is not None:
-            timeout = self.args.shutdown_timeout
+            timeout = typing.cast(float, self.args.shutdown_timeout)
         daemon.wait_for_shutdown(pid, timeout=timeout)
 
     def _do_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:

@@ -15,10 +15,11 @@ import os
 import shutil
 import stat
 import struct
+import typing
 from pathlib import Path
 from typing import BinaryIO, Iterator, Optional, Tuple
 
-from facebook.eden.overlay.ttypes import OverlayDir
+from facebook.eden.overlay.ttypes import OverlayDir, OverlayEntry
 
 
 class InvalidOverlayFile(Exception):
@@ -180,7 +181,7 @@ class Overlay:
 
     def open_overlay_file(self, inode_number: int) -> BinaryIO:
         try:
-            return open(self.get_path(inode_number), "rb")
+            return typing.cast(BinaryIO, open(self.get_path(inode_number), "rb"))
         except OSError as ex:
             if ex.errno == errno.ENOENT:
                 raise NoSuchOverlayFile(inode_number)
@@ -269,10 +270,12 @@ class Overlay:
             index += 1
 
             entries = [] if parent_dir.entries is None else parent_dir.entries.items()
+            entry: Optional[OverlayEntry] = None
             for name, entry in entries:  # noqa: ignore=B007
                 if name == desired:
                     break
-            else:
+
+            if entry is None:
                 raise InodeLookupError(f"{path} does not exist", errno.ENOENT)
 
             if index >= len(path.parts):
@@ -307,7 +310,7 @@ class Overlay:
                 os.symlink(contents, bytes(output_path))
             elif file_type == stat.S_IFREG:
                 with output_path.open("wb") as outf:
-                    shutil.copyfileobj(inf, outf)
+                    shutil.copyfileobj(inf, outf)  # type: ignore
                     os.fchmod(outf.fileno(), mode & 0o7777)
             else:
                 # We don't copy out sockets, fifos, or other unusual file types.

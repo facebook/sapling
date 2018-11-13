@@ -452,6 +452,9 @@ def _print_inode_info(inode_info: TreeInodeDebugInfo, out: IO[bytes]) -> None:
 
 @debug_cmd("overlay", "Show data about the overlay")
 class OverlayCmd(Subcmd):
+    args: argparse.Namespace
+    overlay: overlay_mod.Overlay
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-n",
@@ -540,7 +543,7 @@ class OverlayCmd(Subcmd):
                 )
 
     def _print_file(self, f: BinaryIO) -> None:
-        shutil.copyfileobj(f, sys.stdout.buffer)
+        shutil.copyfileobj(f, sys.stdout.buffer)  # type: ignore
 
     def _process_overlay(self, inode_number: int, path: Path, level: int = 0) -> None:
         data = self.overlay.read_dir_inode(inode_number)
@@ -1044,6 +1047,8 @@ class DebugThriftCmd(Subcmd):
 
 @subcmd_mod.subcmd("debug", "Internal commands for examining eden state")
 class DebugCmd(Subcmd):
+    parser: argparse.ArgumentParser
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         # Save the parser so we can use it to print help in run() if we are
         # called with no arguments.

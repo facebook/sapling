@@ -145,7 +145,7 @@ class TerminalSettings:
         if bg:
             start += self._background[bg]
         if attr:
-            for attr_type in Attribute:
+            for attr_type in Attribute:  # type: ignore
                 if attr & int(attr_type):
                     start += self._attributes[attr_type]
 

@@ -26,6 +26,7 @@ class EnableTraceCmd(Subcmd):
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
             client.enableTracing()
+        return 0
 
 
 @trace_cmd("disable", "Disable tracing")
@@ -34,10 +35,13 @@ class DisableTraceCmd(Subcmd):
         instance = cmd_util.get_eden_instance(args)
         with instance.get_thrift_client() as client:
             client.disableTracing()
+        return 0
 
 
 @subcmd_mod.subcmd("trace", "Commands for managing eden tracing")
 class TraceCmd(Subcmd):
+    parser: argparse.ArgumentParser
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         self.parser = parser
         self.add_subcommands(parser, trace_cmd.commands)

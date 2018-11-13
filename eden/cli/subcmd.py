@@ -9,6 +9,7 @@
 
 import abc
 import argparse
+import typing
 from typing import Any, Callable, Dict, List, Optional, Type, cast
 
 from . import util
@@ -66,7 +67,7 @@ class Subcmd(abc.ABC):
     def add_subcommands(
         self, parser: argparse.ArgumentParser, cmds: List[Type["Subcmd"]]
     ) -> argparse._SubParsersAction:
-        return add_subcommands(parser, cmds)
+        return add_subcommands(parser, cmds)  # type: ignore
 
     @abc.abstractmethod
     def run(self, args: argparse.Namespace) -> int:
@@ -107,8 +108,8 @@ def subcmd(
             ALIASES = aliases
 
         if cmd_table is not None:
-            cmd_table.append(SubclassedCmd)
-        return SubclassedCmd
+            cmd_table.append(typing.cast(Type[Subcmd], SubclassedCmd))
+        return typing.cast(Type[Subcmd], SubclassedCmd)
 
     return wrapper
 

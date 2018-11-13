@@ -351,8 +351,9 @@ def run_normal_checks(
     watchman_roots = _get_watch_roots_for_watchman()
     nuclide_roots = _get_roots_for_nuclide()
 
-    configured_mounts = instance.get_mount_paths()
-    for mount_path in sorted(configured_mounts):
+    configured_mounts = list(instance.get_mount_paths())
+    configured_mounts.sort()
+    for mount_path in configured_mounts:
         if mount_path not in active_mount_points:
             tracker.add_problem(CheckoutNotMounted(instance, mount_path))
 
@@ -889,8 +890,8 @@ def check_snapshot_dirstate_consistency(
     p2_hex = binascii.hexlify(parents[1]).decode("utf-8")
     null_hash_hex = 40 * "0"
     is_p2_hex_valid = True
+    current_hex = snapshot_hex
     try:
-        current_hex = snapshot_hex
         is_snapshot_hex_valid = is_commit_hash_valid(instance, path, snapshot_hex)
         current_hex = p1_hex
         is_p1_hex_valid = is_commit_hash_valid(instance, path, p1_hex)
@@ -943,7 +944,7 @@ class DirStateInvalidError(FixableProblem):
         mount_path: str,
         invalid_commit_hash: str,
         hg_parents: Tuple[bytes, bytes],
-        tuples_dict: Dict[bytes, Tuple[str, int, bytes]],
+        tuples_dict: Dict[bytes, Tuple[str, int, int]],
         copymap: Dict[bytes, bytes],
     ) -> None:
         self._instance = instance
@@ -973,9 +974,7 @@ class DirStateInvalidError(FixableProblem):
 
     def perform_fix(self) -> None:
         with open(self.dirstate(), "wb") as f:
-            eden.dirstate.write(  # type: ignore
-                f, self._hg_parents, self._tuples_dict, self._copymap
-            )
+            eden.dirstate.write(f, self._hg_parents, self._tuples_dict, self._copymap)
 
         parents = eden_ttypes.WorkingDirectoryParents(parent1=self._hg_parents[0])
         if self._hg_parents[1] != (20 * b"\0"):
