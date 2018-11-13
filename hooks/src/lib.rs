@@ -48,7 +48,6 @@ extern crate pretty_assertions;
 extern crate regex;
 #[macro_use]
 extern crate slog;
-#[cfg(test)]
 extern crate tempdir;
 
 pub mod lua_hook;
@@ -114,8 +113,9 @@ impl HookManager {
             repo_name: repo_name.clone(),
         };
         let cache = Asyncmemo::with_limits("hooks", filler, entrylimit, weightlimit);
-        let reviewers_acl_checker =
-            AclChecker::new(&Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME));
+        let reviewers_acl_checker = AclChecker::new(&Identity::from_groupname(
+            facebook::REVIEWERS_ACL_GROUP_NAME,
+        ));
         // This can block, but not too big a deal as we create hook manager in server startup
         let updated = reviewers_acl_checker.do_wait_updated(10000);
         let reviewers_acl_checker = if updated {

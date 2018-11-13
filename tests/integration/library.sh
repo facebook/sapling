@@ -162,17 +162,16 @@ function commit_and_blobimport_config_repo {
 }
 
 function register_hook {
-  path="$1"
-  hook_type="$2"
+  hook_name="$1"
+  path="$2"
+  hook_type="$3"
 
-  shift 2
+  shift 3
   BYPASS=""
   if [[ $# -gt 0 ]]; then
     BYPASS="$1"
   fi
 
-  hook_basename=${path##*/}
-  hook_name="${hook_basename%.lua}"
   cat >> repos/repo/server.toml <<CONFIG
 [[bookmarks.hooks]]
 hook_name="$hook_name"
@@ -354,9 +353,13 @@ CONFIG
     BYPASS="$1"
   fi
 
-  mkdir -p common/hooks
-  cp "$HOOK_FILE" common/hooks/"$HOOK_NAME".lua
-  register_hook common/hooks/"$HOOK_NAME".lua "$HOOK_TYPE" "$BYPASS"
+  if [[ ! -z "$HOOK_FILE" ]] ; then
+    mkdir -p common/hooks
+    cp "$HOOK_FILE" common/hooks/"$HOOK_NAME".lua
+    register_hook "$HOOK_NAME" common/hooks/"$HOOK_NAME".lua "$HOOK_TYPE" "$BYPASS"
+  else
+    register_hook "$HOOK_NAME" "" "$HOOK_TYPE" "$BYPASS"
+  fi
 
   commit_and_blobimport_config_repo
   setup_common_hg_configs

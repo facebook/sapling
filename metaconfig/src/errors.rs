@@ -24,6 +24,9 @@ pub enum ErrorKind {
     /// Config is invalid
     #[fail(display = "invalid path: {}", _0)]
     InvalidPath(MPath),
+    /// Missing path for hook
+    #[fail(display = "missing path")]
+    MissingPath(),
     /// Invalid pushvar
     #[fail(display = "invalid pushvar, should be KEY=VALUE: {}", _0)]
     InvalidPushvar(String),

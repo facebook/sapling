@@ -12,7 +12,7 @@ use bookmarks::Bookmark;
 use bytes::Bytes;
 use errors::*;
 use failure::chain::ChainExt;
-use futures::{finished, future, Future};
+use futures::{failed, finished, future, Future};
 use futures::Stream;
 use futures_ext::FutureExt;
 use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
@@ -126,7 +126,7 @@ pub struct HookParams {
     /// The type of the hook
     pub hook_type: HookType,
     /// The code of the hook
-    pub code: String,
+    pub code: Option<String>,
     /// An optional way to bypass a hook
     pub bypass: Option<HookBypass>,
 }
@@ -283,60 +283,53 @@ impl RepoConfigs {
                 // Easier to deal with empty vector than Option
                 let hooks = hooks.unwrap_or(Vec::new());
                 future::join_all(hooks.into_iter().map(move |raw_hook_config| {
-                    let path = raw_hook_config.path.clone();
-                    let relative_prefix = "./";
-                    let is_relative = path.starts_with(relative_prefix);
-                    let path_node;
-                    let path_adjusted;
-                    if is_relative {
-                        path_node = repo_dir.clone().into_node();
-                        path_adjusted = path.chars().skip(relative_prefix.len()).collect();
-                    } else {
-                        path_node = root_node.clone();
-                        path_adjusted = path;
-                    }
-                    RepoConfigs::read_file(
-                        path_node,
-                        try_boxfuture!(MPath::new(path_adjusted.as_bytes().to_vec())),
-                    ).and_then(|bytes| {
-                        let code = str::from_utf8(&bytes)?;
-                        let code = code.to_string();
-
-                        let bypass_commit_message = raw_hook_config
-                            .bypass_commit_string
-                            .map(|s| HookBypass::CommitMessage(s));
-
-                        let bypass_pushvar = raw_hook_config.bypass_pushvar.and_then(|s| {
-                            let pushvar: Vec<_> = s.split('=').map(|val| val.to_string()).collect();
-                            if pushvar.len() != 2 {
-                                return Some(Err(ErrorKind::InvalidPushvar(s).into()));
-                            }
-                            Some(Ok((
-                                pushvar.get(0).unwrap().clone(),
-                                pushvar.get(1).unwrap().clone(),
-                            )))
-                        });
-                        let bypass_pushvar = match bypass_pushvar {
-                            Some(Err(err)) => {
-                                return Err(err);
-                            }
-                            Some(Ok((name, value))) => Some(HookBypass::Pushvar { name, value }),
-                            None => None,
-                        };
-
-                        if bypass_commit_message.is_some() && bypass_pushvar.is_some() {
-                            return Err(ErrorKind::TooManyBypassOptions(raw_hook_config.name).into());
+                    let bypass = RepoConfigs::get_bypass(raw_hook_config.clone());
+                    if raw_hook_config.name.starts_with("rust:") {
+                        // No need to load lua code for rust hook
+                        match bypass {
+                            Ok(bypass) => finished(HookParams {
+                                name: raw_hook_config.name,
+                                code: None,
+                                hook_type: raw_hook_config.hook_type,
+                                bypass,
+                            }).boxify(),
+                            Err(e) => failed(e).boxify(),
                         }
-                        let bypass = bypass_commit_message.or(bypass_pushvar);
-
-                        Ok(HookParams {
-                            name: raw_hook_config.name,
-                            code,
-                            hook_type: raw_hook_config.hook_type,
-                            bypass,
+                    } else {
+                        let path = raw_hook_config.path.clone();
+                        let path = match path {
+                            Some(path) => path,
+                            None => return failed(ErrorKind::MissingPath().into()).boxify(),
+                        };
+                        let relative_prefix = "./";
+                        let is_relative = path.starts_with(relative_prefix);
+                        let path_node;
+                        let path_adjusted;
+                        if is_relative {
+                            path_node = repo_dir.clone().into_node();
+                            path_adjusted = path.chars().skip(relative_prefix.len()).collect();
+                        } else {
+                            path_node = root_node.clone();
+                            path_adjusted = path;
+                        }
+                        RepoConfigs::read_file(
+                            path_node,
+                            try_boxfuture!(MPath::new(path_adjusted.as_bytes().to_vec())),
+                        ).and_then(|bytes| {
+                            let code = str::from_utf8(&bytes)?;
+                            let code = code.to_string();
+                            match bypass {
+                                Ok(bypass) => Ok(HookParams {
+                                    name: raw_hook_config.name,
+                                    code: Some(code),
+                                    hook_type: raw_hook_config.hook_type,
+                                    bypass,
+                                }),
+                                Err(e) => Err(e),
+                            }
                         })
-                    })
-                        .boxify()
+                            .boxify()
+                    }
                 })).map(|hook_params| (raw_config, hook_params))
                     .boxify()
             })
@@ -348,6 +341,37 @@ impl RepoConfigs {
                 Err(e) => Err(e),
             })
             .boxify()
+    }
+
+    fn get_bypass(raw_hook_config: RawHookConfig) -> Result<Option<HookBypass>> {
+        let bypass_commit_message = raw_hook_config
+            .bypass_commit_string
+            .map(|s| HookBypass::CommitMessage(s));
+
+        let bypass_pushvar = raw_hook_config.bypass_pushvar.and_then(|s| {
+            let pushvar: Vec<_> = s.split('=').map(|val| val.to_string()).collect();
+            if pushvar.len() != 2 {
+                return Some(Err(ErrorKind::InvalidPushvar(s).into()));
+            }
+            Some(Ok((
+                pushvar.get(0).unwrap().clone(),
+                pushvar.get(1).unwrap().clone(),
+            )))
+        });
+        let bypass_pushvar = match bypass_pushvar {
+            Some(Err(err)) => {
+                return Err(err);
+            }
+            Some(Ok((name, value))) => Some(HookBypass::Pushvar { name, value }),
+            None => None,
+        };
+
+        if bypass_commit_message.is_some() && bypass_pushvar.is_some() {
+            return Err(ErrorKind::TooManyBypassOptions(raw_hook_config.name).into());
+        }
+        let bypass = bypass_commit_message.or(bypass_pushvar);
+
+        Ok(bypass)
     }
 
     fn read_file(
@@ -531,7 +555,7 @@ struct RawBookmarkHook {
 #[derive(Debug, Deserialize, Clone)]
 struct RawHookConfig {
     name: String,
-    path: String,
+    path: Option<String>,
     hook_type: HookType,
     bypass_commit_string: Option<String>,
     bypass_pushvar: Option<String>,
@@ -584,6 +608,8 @@ mod test {
             hook_name="hook1"
             [[bookmarks.hooks]]
             hook_name="hook2"
+            [[bookmarks.hooks]]
+            hook_name="rust:rusthook"
             [[hooks]]
             name="hook1"
             path="common/hooks/hook1.lua"
@@ -594,6 +620,9 @@ mod test {
             path="./hooks/hook2.lua"
             hook_type="PerChangeset"
             bypass_pushvar="pushvar=pushval"
+            [[hooks]]
+            name="rust:rusthook"
+            hook_type="PerChangeset"
             [pushrebase]
             rewritedates = false
             recursion_limit = 1024
@@ -636,24 +665,30 @@ mod test {
                 bookmarks: Some(vec![
                     BookmarkParams {
                         bookmark: Bookmark::new("master").unwrap(),
-                        hooks: Some(vec!["hook1".to_string(), "hook2".to_string()]),
+                        hooks: Some(vec!["hook1".to_string(), "hook2".to_string(), "rust:rusthook".to_string()]),
                     },
                 ]),
                 hooks: Some(vec![
                     HookParams {
                         name: "hook1".to_string(),
-                        code: "this is hook1".to_string(),
+                        code: Some("this is hook1".to_string()),
                         hook_type: HookType::PerAddedOrModifiedFile,
                         bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),
                     },
                     HookParams {
                         name: "hook2".to_string(),
-                        code: "this is hook2".to_string(),
+                        code: Some("this is hook2".to_string()),
                         hook_type: HookType::PerChangeset,
                         bypass: Some(HookBypass::Pushvar {
                             name: "pushvar".into(),
                             value: "pushval".into(),
                         }),
+                    },
+                    HookParams {
+                        name: "rust:rusthook".to_string(),
+                        code: None,
+                        hook_type: HookType::PerChangeset,
+                        bypass: None,
                     },
                 ]),
                 pushrebase: PushrebaseParams {

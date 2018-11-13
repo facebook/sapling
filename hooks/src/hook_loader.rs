@@ -11,6 +11,7 @@
 use super::HookManager;
 use super::lua_hook::LuaHook;
 use bookmarks::Bookmark;
+use facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use failure::Error;
 use metaconfig::repoconfig::{HookType, RepoConfig};
 use std::collections::HashSet;
@@ -22,13 +23,25 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
             let mut hook_set = HashSet::new();
             for hook in hooks {
                 let name = hook.name;
-                let lua_hook = LuaHook::new(name.clone(), hook.code.clone());
-                match hook.hook_type {
-                    HookType::PerAddedOrModifiedFile => {
-                        hook_manager.register_file_hook(&name, Arc::new(lua_hook), hook.bypass)
-                    }
-                    HookType::PerChangeset => {
-                        hook_manager.register_changeset_hook(&name, Arc::new(lua_hook), hook.bypass)
+                if name.starts_with("rust:") {
+                    let rust_name = &name[5..];
+                    let rust_name = rust_name.to_string();
+                    let rust_hook = match rust_name.as_ref() {
+                        "verify_integrity" => VerifyIntegrityHook::new(),
+                        _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
+                    };
+                    hook_manager.register_changeset_hook(&name, Arc::new(rust_hook), hook.bypass)
+                } else {
+                    let lua_hook = LuaHook::new(name.clone(), hook.code.clone().unwrap());
+                    match hook.hook_type {
+                        HookType::PerAddedOrModifiedFile => {
+                            hook_manager.register_file_hook(&name, Arc::new(lua_hook), hook.bypass)
+                        }
+                        HookType::PerChangeset => hook_manager.register_changeset_hook(
+                            &name,
+                            Arc::new(lua_hook),
+                            hook.bypass,
+                        ),
                     }
                 }
                 hook_set.insert(name);
@@ -59,6 +72,8 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
 pub enum ErrorKind {
     #[fail(display = "Hook(s) referenced in bookmark {} do not exist", _0)]
     NoSuchBookmarkHook(Bookmark),
+
+    #[fail(display = "invalid rust hook: {}", _0)] InvalidRustHook(String),
 }
 
 #[cfg(test)]
@@ -100,26 +115,36 @@ mod test {
                 },
                 BookmarkParams {
                     bookmark: Bookmark::new("bm2").unwrap(),
-                    hooks: Some(vec!["hook2".into(), "hook3".into()]),
+                    hooks: Some(vec![
+                        "hook2".into(),
+                        "hook3".into(),
+                        "rust:verify_integrity".into(),
+                    ]),
                 },
             ]);
 
             config.hooks = Some(vec![
                 HookParams {
                     name: "hook1".into(),
-                    code: "hook1 code".into(),
+                    code: Some("hook1 code".into()),
                     hook_type: HookType::PerAddedOrModifiedFile,
                     bypass: None,
                 },
                 HookParams {
                     name: "hook2".into(),
-                    code: "hook2 code".into(),
+                    code: Some("hook2 code".into()),
                     hook_type: HookType::PerAddedOrModifiedFile,
                     bypass: None,
                 },
                 HookParams {
                     name: "hook3".into(),
-                    code: "hook3 code".into(),
+                    code: Some("hook3 code".into()),
+                    hook_type: HookType::PerChangeset,
+                    bypass: None,
+                },
+                HookParams {
+                    name: "rust:verify_integrity".into(),
+                    code: Some("whateva".into()),
                     hook_type: HookType::PerChangeset,
                     bypass: None,
                 },
@@ -147,7 +172,7 @@ mod test {
             config.hooks = Some(vec![
                 HookParams {
                     name: "hook1".into(),
-                    code: "hook1 code".into(),
+                    code: Some("hook1 code".into()),
                     hook_type: HookType::PerAddedOrModifiedFile,
                     bypass: None,
                 },
@@ -161,6 +186,40 @@ mod test {
             {
                 Ok(ErrorKind::NoSuchBookmarkHook(bookmark)) => {
                     assert_eq!(Bookmark::new("bm1").unwrap(), bookmark);
+                }
+                _ => assert!(false, "Unexpected err type"),
+            };
+        });
+    }
+
+    #[test]
+    fn test_load_hooks_bad_rust_hook() {
+        async_unit::tokio_unit_test(|| {
+            let mut config = default_repo_config();
+            config.bookmarks = Some(vec![
+                BookmarkParams {
+                    bookmark: Bookmark::new("bm1").unwrap(),
+                    hooks: Some(vec!["rust:hook1".into()]),
+                },
+            ]);
+
+            config.hooks = Some(vec![
+                HookParams {
+                    name: "rust:hook1".into(),
+                    code: Some("hook1 code".into()),
+                    hook_type: HookType::PerChangeset,
+                    bypass: None,
+                },
+            ]);
+
+            let mut hm = hook_manager_blobrepo();
+
+            match load_hooks(&mut hm, config)
+                .unwrap_err()
+                .downcast::<ErrorKind>()
+            {
+                Ok(ErrorKind::InvalidRustHook(hook_name)) => {
+                    assert_eq!(hook_name, "rust:hook1".to_string());
                 }
                 _ => assert!(false, "Unexpected err type"),
             };
