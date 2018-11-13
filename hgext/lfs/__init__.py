@@ -259,6 +259,31 @@ def debuglfsreceive(ui, oid, size, url=None):
 
 
 @command(
+    "debuglfsreceiveall|debuglfsrecvall",
+    [],
+    _("hg debuglfsreceiveall URL OID SIZE [OID SIZE]"),
+    norepo=True,
+)
+def debuglfsreceiveall(ui, url, *objs):
+    """receive a bunch of objects from LFS server, write them to stdout"""
+    local, remote = _adhocstores(ui, url)
+
+    if len(objs) == 0:
+        raise error.Abort(_("Empty LFS objects list"))
+    if len(objs) % 2 != 0:
+        raise error.Abort(_("Every LFS object should have 2 fields"))
+
+    lfsobjects = [("sha256:%s" % oid, size) for oid, size in zip(objs[::2], objs[1::2])]
+    pointers = [
+        pointer.gitlfspointer(oid=longoid, size=size) for longoid, size in lfsobjects
+    ]
+    remote.readbatch(pointers, local)
+
+    for oid in objs[::2]:
+        ui.write((local.read(oid)))
+
+
+@command(
     "debuglfsdownload",
     [
         ("r", "rev", [], _("revision"), _("REV")),

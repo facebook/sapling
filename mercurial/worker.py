@@ -67,7 +67,7 @@ def worthwhile(ui, costperop, nops):
     return benefit >= 0.15
 
 
-def worker(ui, costperarg, func, staticargs, args):
+def worker(ui, costperarg, func, staticargs, args, preferthreads=False):
     """run a function, possibly in parallel in multiple worker
     processes.
 
@@ -81,10 +81,16 @@ def worker(ui, costperarg, func, staticargs, args):
 
     args - arguments to split into chunks, to pass to individual
     workers
+
+    preferthreads - use threads instead of processes
     """
     enabled = ui.configbool("worker", "enabled")
+
     if enabled and worthwhile(ui, costperarg, len(args)):
-        return _platformworker(ui, func, staticargs, args)
+        if preferthreads:
+            return _windowsworker(ui, func, staticargs, args)
+        else:
+            return _platformworker(ui, func, staticargs, args)
     return func(*staticargs + (args,))
 
 

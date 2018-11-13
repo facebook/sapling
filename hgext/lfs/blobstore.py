@@ -344,7 +344,12 @@ class _gitlfsremote(object):
         starttime = util.timer()
         if action == "download":
             oids = worker.worker(
-                self.ui, 0.1, transfer, (), sorted(objects, key=lambda o: o.get("oid"))
+                self.ui,
+                0.1,
+                transfer,
+                (),
+                sorted(objects, key=lambda o: o.get("oid")),
+                preferthreads=True,
             )
         else:
             oids = transfer(objects)
