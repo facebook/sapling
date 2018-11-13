@@ -70,17 +70,11 @@ FILENAME_STRATEGY = st.text(
 set_hypothesis_home_dir(tempfile.mkdtemp(prefix="eden_hypothesis."))
 atexit.register(util.cleanup_tmp_dir, pathlib.Path(hypothesis_home_dir()))
 
-if not edenclient.can_run_eden():
-    # This is avoiding a reporting noise issue in our CI that files
-    # tasks about skipped tests.  Let's just skip defining most of them
-    # to avoid the noise if we know that they won't work anyway.
-    TestParents = (typing.cast(Type[unittest.TestCase], object),)
-else:
-    TestParents = (unittest.TestCase, EnvironmentVariableMixin, TemporaryDirectoryMixin)
-
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
-class EdenTestCase(*TestParents):
+class EdenTestCase(
+    unittest.TestCase, EnvironmentVariableMixin, TemporaryDirectoryMixin
+):
     """
     Base class for eden integration test cases.
 
