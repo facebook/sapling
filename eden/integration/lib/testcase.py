@@ -335,6 +335,13 @@ class EdenRepoTest(EdenTestCase):
             "@eden_repo_test"
         )
 
+    def get_thrift_client(self) -> eden.thrift.EdenClient:
+        # get_thrift_client() is also defined in our parent class, but for some reason
+        # mypy gets confused when get_thrift_client() is used in our subclasses unless
+        # we define it here.  (mypy knows that the method exists but cannot figure out
+        # its return type for some reason.)
+        return super().get_thrift_client()
+
 
 def _replicate_test(
     caller_scope: Dict[str, Any],
