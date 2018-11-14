@@ -90,16 +90,10 @@ Empty rebase fails
   rebasing 1:7b4cb4e1674c "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7b4cb4e1674c-f22b5b1e-rebase.hg (glob)
 
-Empty rebase with nooprebase=True (default) succeeds
+Empty rebase returns exit code 0:
 
   $ hg rebase -s tip -d "tip^1"
   nothing to rebase
-
-Empty rebase with nooprebase=False fails
-
-  $ hg rebase --config 'tweakdefaults.nooprebase=False' -s tip -d "tip^1"
-  nothing to rebase
-  [1]
 
 Rebase fast forwards bookmark
 

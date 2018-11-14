@@ -58,7 +58,6 @@ These fail:
 
   $ hg rebase -s 8 -d 7
   nothing to rebase
-  [1]
 
   $ hg rebase --continue --abort
   abort: cannot use both abort and continue
@@ -90,33 +89,26 @@ These fail:
 
   $ hg rebase --rev '1 & !1' --dest 8
   empty "rev" revision set - nothing to rebase
-  [1]
 
   $ hg rebase --source '1 & !1' --dest 8
   empty "source" revision set - nothing to rebase
-  [1]
 
   $ hg rebase --base '1 & !1' --dest 8
   empty "base" revision set - can't compute rebase set
-  [1]
 
   $ hg rebase --dest 8
   nothing to rebase - working directory parent is also destination
-  [1]
 
   $ hg rebase -b . --dest 8
   nothing to rebase - e7ec4e813ba6 is both "base" and destination
-  [1]
 
   $ hg up -q 7
 
   $ hg rebase --dest 8 --traceback
   nothing to rebase - working directory parent is already an ancestor of destination e7ec4e813ba6
-  [1]
 
   $ hg rebase --dest 8 -b.
   nothing to rebase - "base" 02de42196ebe is already an ancestor of destination e7ec4e813ba6
-  [1]
 
   $ hg rebase --dest '1 & !1'
   abort: empty revision set
@@ -501,5 +493,4 @@ No common ancestor
   $ hg commit -Aqm b
   $ hg rebase -d 0
   nothing to rebase from d7486e00c6f1 to 3903775176ed
-  [1]
   $ cd ..

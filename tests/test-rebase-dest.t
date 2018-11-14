@@ -141,7 +141,12 @@ Destination resolves to an empty set:
   > A
   > EOS
   nothing to rebase - empty destination
-  [1]
+  o  2: 26805aba1e60 'C'
+  |
+  o  1: 112478962961 'B'
+  |
+  o  0: 426bada5c675 'A'
+  
 
 Multiple destinations and --collapse are not compatible:
 

@@ -28,9 +28,6 @@ Config::
     rebasekeepdate = False
     histeditkeepdate = False
 
-    # change rebase exit from 1 to 0 if nothing is rebased
-    nooprebase = True
-
     # whether to show a warning or abort on some deprecated usages
     singlecolonwarn = False
     singlecolonabort = False
@@ -104,7 +101,6 @@ configitem(globaldata, createmarkersoperation, default=None)
 configitem("tweakdefaults", "singlecolonabort", default=False)
 configitem("tweakdefaults", "singlecolonwarn", default=False)
 configitem("tweakdefaults", "showupdated", default=False)
-configitem("tweakdefaults", "nooprebase", default=True)
 
 configitem("tweakdefaults", "amendkeepdate", default=False)
 configitem("tweakdefaults", "graftkeepdate", default=False)

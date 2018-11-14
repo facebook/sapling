@@ -146,7 +146,20 @@ The destination is one of the two branching points of a merge:
   >   A
   > EOS
   nothing to rebase
-  [1]
+  o    6: e7414f308889 'F'
+  |\
+  | o  5: 64aa4c30955e 'E'
+  | |
+  o |  4: f585351a92f8 'D'
+  | |
+  | o  3: 4f40d47d3d68 'Z'
+  | |
+  o |  2: 26805aba1e60 'C'
+  |/
+  o  1: 112478962961 'B'
+  |
+  o  0: 426bada5c675 'A'
+  
 
 Multiple branching points caused by multiple bases (issue5420):
 
@@ -307,7 +320,12 @@ Disconnected graph:
   > Z A
   > EOS
   nothing to rebase from 112478962961 to 48b9aae0607f
-  [1]
+  o  2: 112478962961 'B'
+  |
+  | o  1: 48b9aae0607f 'Z'
+  |
+  o  0: 426bada5c675 'A'
+  
 
 Multiple roots. Roots are ancestors of dest:
 
@@ -336,7 +354,16 @@ Multiple roots. One root is not an ancestor of dest:
   >   A C
   > EOF
   nothing to rebase from f675d5a1c6a4+b70f76719894 to 262e37e34f63
-  [1]
+  o  4: 262e37e34f63 'Z'
+  |
+  | o  3: b70f76719894 'D'
+  | |
+  +---o  2: f675d5a1c6a4 'B'
+  | |/
+  | o  1: 96cc3511f894 'C'
+  |
+  o  0: 426bada5c675 'A'
+  
 
 Multiple roots. One root is not an ancestor of dest. Select using a merge:
 
