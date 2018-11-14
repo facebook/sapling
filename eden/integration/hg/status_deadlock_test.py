@@ -29,6 +29,9 @@ class StatusDeadlockTest(EdenHgTestCase):
     make forward progress from this state.
     """
 
+    commit1: str
+    expected_status: Dict[str, str] = {}
+
     def edenfs_logging_settings(self) -> Dict[str, str]:
         levels = {"eden": "DBG2"}
         if logging.getLogger().getEffectiveLevel() <= logging.DEBUG:
@@ -44,7 +47,7 @@ class StatusDeadlockTest(EdenHgTestCase):
         # call at the end with all paths in a single command.
         new_files = []
 
-        self.fanouts = [4, 4, 4, 4]
+        fanouts = [4, 4, 4, 4]
 
         def populate_dir(path: str) -> None:
             logging.debug("populate %s", path)
@@ -57,7 +60,7 @@ class StatusDeadlockTest(EdenHgTestCase):
             repo.write_file(gitignore_path, gitignore_contents, add=False)
             new_files.append(gitignore_path)
 
-        gen_tree("src", self.fanouts, populate_dir, populate_dir)
+        gen_tree("src", fanouts, populate_dir, populate_dir)
 
         self._hg_add_many(repo, new_files)
 
@@ -65,7 +68,6 @@ class StatusDeadlockTest(EdenHgTestCase):
         logging.debug("== created initial commit")
 
         new_files = []
-        self.expected_status: Dict[str, str] = {}
 
         def create_new_file(path: str) -> None:
             logging.debug("add new file in %s", path)
@@ -74,7 +76,7 @@ class StatusDeadlockTest(EdenHgTestCase):
             new_files.append(new_path)
             self.expected_status[new_path] = "?"
 
-        gen_tree("src", self.fanouts, create_new_file)
+        gen_tree("src", fanouts, create_new_file)
         self._hg_add_many(repo, new_files)
 
         self.commit2 = repo.commit("Initial commit.")

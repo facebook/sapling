@@ -18,6 +18,12 @@ from .lib import testcase
 
 @testcase.eden_repo_test
 class TakeoverTest(testcase.EdenRepoTest):
+    pagesize: int
+    page1: str
+    page2: str
+    commit1: str
+    commit2: str
+
     def populate_repo(self) -> None:
         self.pagesize = resource.getpagesize()
         self.page1 = "1" * self.pagesize

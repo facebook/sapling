@@ -18,6 +18,10 @@ class MergeTest(EdenHgTestCase):
     https://www.mercurial-scm.org/repo/hg/help/merge-tools
     """
 
+    commit0: str
+    commit1: str
+    commit2: str
+
     def populate_backing_repo(self, repo: HgRepository) -> None:
         repo.write_file("foo", "original")
         self.commit0 = repo.commit("root commit")

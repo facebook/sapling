@@ -15,6 +15,8 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class UndoTest(EdenHgTestCase):
+    commit1: str
+
     def populate_backing_repo(self, repo):
         repo.write_file("src/common/foo/test.txt", "testing\n")
         self.commit1 = repo.commit("Initial commit.")

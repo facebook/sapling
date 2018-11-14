@@ -73,6 +73,11 @@ class StatusTest(EdenHgTestCase):
 # repository contents.
 @hg_test
 class StatusRevertTest(EdenHgTestCase):
+    commit1: str
+    commit2: str
+    commit3: str
+    commit4: str
+
     def populate_backing_repo(self, repo):
         repo.write_file("dir1/a.txt", "original contents of a\n")
         repo.write_file("dir1/b.txt", "b.txt\n")

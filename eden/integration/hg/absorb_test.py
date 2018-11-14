@@ -17,6 +17,8 @@ log = logging.getLogger("eden.test.absorb")
 
 @hg_test
 class AbsorbTest(EdenHgTestCase):
+    commit1: str
+
     def populate_backing_repo(self, repo):
         repo.write_file("readme.txt", "readme\n")
         repo.write_file(

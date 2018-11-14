@@ -82,6 +82,9 @@ class EdenTestCase(
     tearDown().
     """
 
+    mount: str
+    eden: edenclient.EdenFS
+
     def run(
         self, report: Optional[unittest.result.TestResult] = None
     ) -> unittest.result.TestResult:
@@ -300,6 +303,9 @@ class EdenRepoTest(EdenTestCase):
     when subclassing from EdenRepoTest.  @eden_repo_test will automatically run
     your tests once per supported repository type.
     """
+
+    repo: repobase.Repository
+    repo_name: str
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()

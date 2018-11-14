@@ -16,6 +16,8 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class CommitTest(EdenHgTestCase):
+    commit1: str
+
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.write_file("foo/bar.txt", "test\n")

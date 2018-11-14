@@ -16,6 +16,10 @@ from .lib.histedit_command import HisteditCommand
 
 @hg_test
 class HisteditTest(EdenHgTestCase):
+    _commit1: str
+    _commit2: str
+    _commit3: str
+
     def populate_backing_repo(self, repo):
         repo.write_file("first", "")
         self._commit1 = repo.commit("first commit")

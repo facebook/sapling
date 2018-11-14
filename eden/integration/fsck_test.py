@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 from typing import Tuple
 
-from .lib import overlay, repobase, testcase
+from .lib import overlay as overlay_mod, repobase, testcase
 
 
 FSCK_RETCODE_OK = 0
@@ -23,6 +23,8 @@ FSCK_RETCODE_ERRORS = 3
 
 
 class FsckTest(testcase.EdenRepoTest):
+    overlay: overlay_mod.OverlayStore
+
     def populate_repo(self) -> None:
         self.repo.write_file("README.md", "tbd\n")
         self.repo.write_file("proj/src/main.c", "int main() { return 0; }\n")
@@ -41,7 +43,7 @@ class FsckTest(testcase.EdenRepoTest):
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
-        self.overlay = overlay.OverlayStore(self.eden, self.mount_path)
+        self.overlay = overlay_mod.OverlayStore(self.eden, self.mount_path)
 
     def run_fsck(self, *args: str) -> Tuple[int, str]:
         """Run `eden fsck [args]` and return a tuple of the return code and
@@ -94,31 +96,31 @@ class FsckTest(testcase.EdenRepoTest):
         self.assertEqual(FSCK_RETCODE_ERRORS, returncode)
 
     def test_fsck_multiple_mounts(self) -> None:
-        self.mount2 = Path(self.mounts_dir) / "second_mount"
-        self.mount3 = Path(self.mounts_dir) / "third_mount"
-        self.mount4 = Path(self.mounts_dir) / "fourth_mount"
+        mount2 = Path(self.mounts_dir) / "second_mount"
+        mount3 = Path(self.mounts_dir) / "third_mount"
+        mount4 = Path(self.mounts_dir) / "fourth_mount"
 
-        self.eden.clone(self.repo_name, self.mount2)
-        self.eden.clone(self.repo_name, self.mount3)
-        self.eden.clone(self.repo_name, self.mount4)
+        self.eden.clone(self.repo_name, mount2)
+        self.eden.clone(self.repo_name, mount3)
+        self.eden.clone(self.repo_name, mount4)
 
         # Unmount all but mount3
         self.eden.unmount(Path(self.mount))
-        self.eden.unmount(self.mount2)
-        self.eden.unmount(self.mount4)
+        self.eden.unmount(mount2)
+        self.eden.unmount(mount4)
 
         # Running fsck should check all but mount3
         returncode, fsck_out = self.run_fsck()
         self.assertIn(f"Checking {self.mount}", fsck_out)
-        self.assertIn(f"Checking {self.mount2}", fsck_out)
-        self.assertIn(f"Not checking {self.mount3}", fsck_out)
-        self.assertIn(f"Checking {self.mount4}", fsck_out)
+        self.assertIn(f"Checking {mount2}", fsck_out)
+        self.assertIn(f"Not checking {mount3}", fsck_out)
+        self.assertIn(f"Checking {mount4}", fsck_out)
         self.assertEqual(FSCK_RETCODE_SKIPPED, returncode)
 
         # Running fsck with --force should check everything
         returncode, fsck_out = self.run_fsck("--force")
         self.assertIn(f"Checking {self.mount}", fsck_out)
-        self.assertIn(f"Checking {self.mount2}", fsck_out)
-        self.assertIn(f"Checking {self.mount3}", fsck_out)
-        self.assertIn(f"Checking {self.mount4}", fsck_out)
+        self.assertIn(f"Checking {mount2}", fsck_out)
+        self.assertIn(f"Checking {mount3}", fsck_out)
+        self.assertIn(f"Checking {mount4}", fsck_out)
         self.assertEqual(FSCK_RETCODE_OK, returncode)

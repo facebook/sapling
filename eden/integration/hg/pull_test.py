@@ -7,11 +7,16 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test("Flatmanifest", "Treemanifest", "TreeOnly")
 class PullTest(EdenHgTestCase):
+    server_repo: hgrepo.HgRepository
+    commit1: str
+
     def create_backing_repo(self):
         # Create a server repository first
         self.server_repo = self.create_server_repo()
@@ -62,27 +67,27 @@ class PullTest(EdenHgTestCase):
         self.server_repo.write_file(
             "foo/subdir/main.c", 'printf("hello world v2!\\n");\n'
         )
-        self.commit2 = self.server_repo.commit("Commit 2\n")
+        commit2 = self.server_repo.commit("Commit 2\n")
 
         self.server_repo.write_file("foo/test.txt", "updated test\n")
         self.server_repo.write_file(
             "foo/subdir/main.c", 'printf("hello world v3!\\n");\n'
         )
         self.server_repo.write_file("src/myproject/main.py", 'print("hello")\n')
-        self.commit3 = self.server_repo.commit("Commit 3\n")
+        commit3 = self.server_repo.commit("Commit 3\n")
 
         # Run "hg pull" inside the Eden checkout
         self.repo.hg("pull", stdout=None)
 
         # Update the Eden checkout to commit2
-        self.repo.hg("update", self.commit2)
+        self.repo.hg("update", commit2)
         self.assert_status_empty()
         self.assertEqual(
             'printf("hello world v2!\\n");\n', self.read_file("foo/subdir/main.c")
         )
 
         # Update the Eden checkout to commit3
-        self.repo.hg("update", self.commit3)
+        self.repo.hg("update", commit3)
         self.assert_status_empty()
         self.assertEqual(
             'printf("hello world v3!\\n");\n', self.read_file("foo/subdir/main.c")
@@ -90,14 +95,14 @@ class PullTest(EdenHgTestCase):
 
         # Create a 4th commit on the server
         self.server_repo.write_file("src/deep/a/b/c/xyz.txt", "xyz2\n")
-        self.commit4 = self.server_repo.commit("Commit 4\n")
+        commit4 = self.server_repo.commit("Commit 4\n")
 
         # Pull and update the Eden checkout to the 4th commit.
         # This tests that the hg_import_helper can correctly see new data on
         # the server that was created after it first established its connection
         # to the server.
         self.repo.hg("pull", stdout=None)
-        self.repo.hg("update", self.commit4)
+        self.repo.hg("update", commit4)
         self.assert_status_empty()
         self.assertEqual(
             'printf("hello world v3!\\n");\n', self.read_file("foo/subdir/main.c")

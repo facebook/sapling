@@ -15,6 +15,8 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class GraftTest(EdenHgTestCase):
+    commit1: str
+
     def populate_backing_repo(self, repo):
         repo.write_file("first.txt", "1")
         self.commit1 = repo.commit("Initial commit\n")

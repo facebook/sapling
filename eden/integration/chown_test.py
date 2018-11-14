@@ -15,6 +15,9 @@ from .lib import repobase, testcase
 
 
 class ChownTest(testcase.EdenRepoTest):
+    nobody_uid: int
+    nobody_gid: int
+
     def populate_repo(self) -> None:
         self.repo.write_file("README.md", "tbd\n")
         self.repo.write_file("proj/src/main.c", "int main() { return 0; }\n")

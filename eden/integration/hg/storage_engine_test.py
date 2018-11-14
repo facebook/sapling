@@ -15,6 +15,10 @@ from .lib.histedit_command import HisteditCommand
 
 
 class StorageEngineTest:
+    _commit1: str
+    _commit2: str
+    _commit3: str
+
     # These tests were originally copied from histedit_test.py. It doesn't
     # matter which tests are used as long as commits are created and checked out
     # and a realistic workflow is verified against each storage engine.

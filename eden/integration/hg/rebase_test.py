@@ -17,6 +17,18 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class RebaseTest(EdenHgTestCase):
+    _base_commit: str
+    _c11: str
+    _c12: str
+    _c13: str
+    _c14: str
+    _c15: str
+    _c21: str
+    _c22: str
+    _c23: str
+    _c24: str
+    _c25: str
+
     def populate_backing_repo(self, repo):
         repo.mkdir("numbers")
         repo.write_file("numbers/README", "this will have two directories")

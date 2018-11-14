@@ -16,6 +16,8 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 @hg_test
 class DebugClearLocalCachesTest(EdenHgTestCase):
+    commit1: str
+    commit2: str
 
     # These tests restart Eden and expect data to have persisted.
     def select_storage_engine(self) -> str:

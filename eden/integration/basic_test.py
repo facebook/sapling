@@ -11,6 +11,7 @@ import errno
 import os
 import stat
 import subprocess
+from typing import Set
 
 from .lib import testcase
 
@@ -24,6 +25,8 @@ class BasicTest(testcase.EdenRepoTest):
     about the sample git repo and that it is correct are all
     things that are appropriate to include in this test case.
     """
+
+    expected_mount_entries: Set[str]
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
