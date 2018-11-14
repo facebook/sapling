@@ -311,9 +311,25 @@ def temporary_systemd_user_service_manager() -> typing.Iterator[
 ]:
     """Create an isolated systemd instance for tests."""
 
+    def should_create_managed() -> bool:
+        forced_type_variable = "EDEN_TEST_FORCE_SYSTEMD_USER_SERVICE_MANAGER_TYPE"
+        forced_type = os.getenv(forced_type_variable)
+        if forced_type is not None and forced_type:
+            if forced_type == "managed":
+                return True
+            if forced_type == "unmanaged":
+                return False
+            raise ValueError(
+                f"Unsupported value for {forced_type_variable}: {forced_type!r}"
+            )
+
+        if not _is_system_booted_with_systemd():
+            return False
+        return True
+
     lifetime_duration = 30
     with create_tmp_dir() as xdg_runtime_dir:
-        if _is_system_booted_with_systemd():
+        if should_create_managed():
             parent_systemd = SystemdUserServiceManager(
                 xdg_runtime_dir=_get_current_xdg_runtime_dir()
             )
