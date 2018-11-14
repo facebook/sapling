@@ -140,7 +140,11 @@ class TakeoverTest(testcase.EdenRepoTest):
         # objects outside of the normal root inode tree, and this would cause
         # Eden to crash when shutting down afterwards.
         with self.get_thrift_client() as client:
-            client.getScmStatusBetweenRevisions(self.mount, self.commit1, self.commit2)
+            client.getScmStatusBetweenRevisions(
+                os.fsencode(self.mount),
+                self.commit1.encode("utf-8"),
+                self.commit2.encode("utf-8"),
+            )
 
         return self.do_takeover_test()
 

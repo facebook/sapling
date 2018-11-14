@@ -174,7 +174,7 @@ class ThriftTest(testcase.EdenRepoTest):
         # Convert the commit hashes to binary for the thrift call
         with self.get_thrift_client() as client:
             diff = client.getScmStatusBetweenRevisions(
-                self.mount,
+                os.fsencode(self.mount),
                 binascii.unhexlify(self.commit1),
                 binascii.unhexlify(self.commit2),
             )
@@ -190,11 +190,13 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     def test_diff_revisions_hex(self) -> None:
-        # Watchman currently clals getScmStatusBetweenRevisions()
+        # Watchman currently calls getScmStatusBetweenRevisions()
         # with 40-byte hexadecimal commit IDs, so make sure that works.
         with self.get_thrift_client() as client:
             diff = client.getScmStatusBetweenRevisions(
-                self.mount, self.commit1, self.commit2
+                os.fsencode(self.mount),
+                self.commit1.encode("utf-8"),
+                self.commit2.encode("utf-8"),
             )
 
         self.assertDictEqual(diff.errors, {})

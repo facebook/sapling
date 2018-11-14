@@ -586,7 +586,7 @@ Do you want to run `eden mount %s` instead?"""
             # For now at least time out here so the CLI commands do not hang in this
             # case.
             client._socket.setTimeout(15000)
-            client.unmount(path)
+            client.unmount(os.fsencode(path))
 
     def destroy_mount(self, path: str) -> None:
         """Delete the specified mount point from the configuration file and remove

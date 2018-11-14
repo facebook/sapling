@@ -104,7 +104,9 @@ class DebugGetPathTest(testcase.EdenRepoTest):
         while True:
             age = TimeSpec()  # zero
             with self.eden.get_thrift_client() as client:
-                count = client.unloadInodeForPath(self.mount, path, age)
+                count = client.unloadInodeForPath(
+                    os.fsencode(self.mount), os.fsencode(path), age
+                )
             if remaining_attempts == 1:
                 self.assertEqual(1, count)
             elif count == 1:

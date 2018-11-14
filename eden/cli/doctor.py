@@ -997,7 +997,9 @@ def is_commit_hash_valid(
 ) -> bool:
     try:
         with instance.get_thrift_client() as client:
-            client.getScmStatus(mount_path, False, commit_hash)
+            client.getScmStatus(
+                os.fsencode(mount_path), False, commit_hash.encode("utf-8")
+            )
             return True
     except TApplicationException as ex:
         if "RepoLookupError: unknown revision" in str(ex):
