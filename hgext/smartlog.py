@@ -70,6 +70,9 @@ testedwith = "ships-with-fb-hgext"
 commit_info = False
 hiddenchanges = 0
 
+# Remove unsupported --limit option.
+logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
+
 try:
     xrange(0)
 except NameError:
@@ -655,7 +658,7 @@ def smartdate(context, mapping, args):
         ("", "all", False, _("don't hide old local changesets"), ""),
         ("", "commit-info", False, _("show changes in current changeset"), ""),
     ]
-    + commands.templateopts,
+    + logopts,
     _("[OPTION]... [[-r] REV]"),
 )
 def smartlog(ui, repo, *pats, **opts):
