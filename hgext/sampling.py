@@ -164,15 +164,8 @@ def telemetry(reporef):
             )
 
         try:
-            (
-                lfsdownloadsize,
-                lfsdownloadtime,
-            ) = repo.svfs.lfsremoteblobstore.getlfsmetrics()
-            ui.log(
-                "command_metrics",
-                lfs_download_size=lfsdownloadsize,
-                lfs_download_time=lfsdownloadtime,
-            )
+            lfsmetrics = repo.svfs.lfsremoteblobstore.getlfsmetrics()
+            ui.log("command_metrics", **lfsmetrics)
         except Exception:
             pass
 

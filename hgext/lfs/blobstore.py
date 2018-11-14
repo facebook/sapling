@@ -168,9 +168,13 @@ class memlocal(object):
 class _gitlfsremote(object):
     def __init__(self, ui, url):
         self.ui = ui
-        self._downloadsize = 0
-        self._downloadtime = 0
-        self._lastrecordtime = 0
+        self._metrics = {
+            "lfs_download_size": 0,
+            "lfs_download_time": 0,
+            "lfs_upload_size": 0,
+            "lfs_upload_time": 0,
+        }
+        self._timestamp = {"latest_download_timestamp": 0, "latest_upload_timestamp": 0}
         baseurl, authinfo = url.authinfo()
         self.baseurl = baseurl.rstrip("/")
         useragent = ui.config("experimental", "lfs.user-agent")
@@ -341,7 +345,7 @@ class _gitlfsremote(object):
                             continue
                         raise
 
-        starttime = util.timer()
+        starttimestamp = util.timer()
         if action == "download":
             oids = worker.worker(
                 self.ui,
@@ -359,18 +363,21 @@ class _gitlfsremote(object):
                 prog.value += sizes[oid]
                 if self.ui.verbose:
                     self.ui.write(_("lfs: processed: %s\n") % oid)
-        if action == "download":
-            self._downloadsize += total
-            currenttime = util.timer()
-            self._downloadtime += currenttime - max(self._lastrecordtime, starttime)
-            self._lastrecordtime = currenttime
+
+        currenttimestamp = util.timer()
+        self._metrics["lfs_%s_size" % action] += total
+        self._metrics["lfs_%s_time" % action] += (
+            currenttimestamp
+            - max(self._timestamp["latest_%s_timestamp" % action], starttimestamp)
+        ) * 1000
+        self._timestamp["latest_%s_timestamp" % action] = currenttimestamp
 
     def checkblobs(self, pointers):
         response = self._batchrequest(pointers, "download")
         self._extractobjects(response, pointers, "download")
 
     def getlfsmetrics(self):
-        return (self._downloadsize, self._downloadtime * 1000)
+        return self._metrics
 
     def __del__(self):
         # copied from mercurial/httppeer.py
