@@ -8,7 +8,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-from typing import Any, Iterator, Optional, cast  # noqa: F401
+from typing import Any, Optional, cast  # noqa: F401
 
 from facebook.eden import EdenService
 from thrift.protocol.THeaderProtocol import THeaderProtocol
@@ -23,6 +23,7 @@ SOCKET_PATH = "socket"
 
 class EdenNotRunningError(Exception):
     def __init__(self, eden_dir):
+        # type: (str) -> None
         msg = "edenfs daemon does not appear to be running: tried %s" % eden_dir
         super(EdenNotRunningError, self).__init__(msg)
         self.eden_dir = eden_dir
@@ -32,6 +33,7 @@ class EdenNotRunningError(Exception):
 # error message.  By default it returns the same data as __repr__(), which is
 # ugly to show to users.
 def _eden_thrift_error_str(ex):
+    # type: (EdenService.EdenError) -> str
     return ex.message
 
 
@@ -50,6 +52,7 @@ class EdenClient(EdenService.Client):
     """
 
     def __init__(self, eden_dir=None, socket_path=None):
+        # type: (Optional[str], Optional[str]) -> None
         if socket_path is not None:
             self._socket_path = socket_path
         elif eden_dir is not None:
@@ -62,19 +65,25 @@ class EdenClient(EdenService.Client):
         # just leave the client with no timeout.
         # self.set_timeout(60)
         self.set_timeout(None)
-        self._transport = THeaderTransport(self._socket)
-        self._protocol = THeaderProtocol(self._transport)
+        transport = THeaderTransport(self._socket)
+        self._transport = transport  # type: Optional[THeaderTransport]
+        self._protocol = THeaderProtocol(transport)
         super(EdenClient, self).__init__(self._protocol)
 
     def __enter__(self):
+        # type: () -> EdenClient
         self.open()
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
+        # type: (Any, Any, Any) -> Optional[bool]
         self.close()
+        return False
 
     def open(self):
+        # type: () -> None
         try:
+            assert self._transport is not None
             self._transport.open()
         except TTransportException as ex:
             self.close()
@@ -83,6 +92,7 @@ class EdenClient(EdenService.Client):
             raise
 
     def close(self):
+        # type: () -> None
         if self._transport is not None:
             self._transport.close()
             self._transport = None
