@@ -751,10 +751,10 @@ class LoggingCmd(Subcmd):
             if args.config is not None:
                 if args.reset:
                     print(f"Resetting logging configuration to {args.config!r}")
-                    config_str = client.setOption("logging_full", args.config)
+                    client.setOption("logging_full", args.config)
                 else:
                     print(f"Updating logging configuration with {args.config!r}")
-                    config_str = client.setOption("logging", args.config)
+                    client.setOption("logging", args.config)
                 print("Updated configuration.  New config settings:")
             else:
                 print("Current logging configuration:")
