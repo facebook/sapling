@@ -125,7 +125,10 @@ StandardOutput=file:{message_file}
 ExecStart=/bin/false
 """,
         )
-        self.assertEqual(service.query_active_state(), "inactive")
+        self.assertEqual(
+            (service.query_active_state(), service.query_sub_state()),
+            ("inactive", "dead"),
+        )
 
     def test_running_simple_service_is_active(self) -> None:
         service = self.enable_service(
@@ -137,7 +140,10 @@ ExecStart=/bin/sleep 30
 """,
         )
         service.start()
-        self.assertEqual(service.query_active_state(), "active")
+        self.assertEqual(
+            (service.query_active_state(), service.query_sub_state()),
+            ("active", "running"),
+        )
 
     def test_service_exiting_with_code_1_is_failed(self) -> None:
         service = self.enable_service(
@@ -152,7 +158,10 @@ ExecStart=/bin/false
             service.start()
         except subprocess.CalledProcessError:
             pass
-        self.assertEqual(service.query_active_state(), "failed")
+        self.assertEqual(
+            (service.query_active_state(), service.query_sub_state()),
+            ("failed", "failed"),
+        )
 
     def test_processes_of_forking_service_includes_all_child_processes(self) -> None:
         service = self.enable_service(

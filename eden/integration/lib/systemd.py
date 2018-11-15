@@ -206,6 +206,9 @@ class SystemdService:
     def query_active_state(self) -> str:
         return self.__query_property("ActiveState").decode("utf-8")
 
+    def query_sub_state(self) -> str:
+        return self.__query_property("SubState").decode("utf-8")
+
     def query_cgroup(self) -> LinuxCgroup:
         return LinuxCgroup(self.__query_property("ControlGroup"))
 
