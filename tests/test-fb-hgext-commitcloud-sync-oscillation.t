@@ -45,13 +45,13 @@ Make shared part of config
 Utility script to dump commit cloud metadata
   $ cat > dumpcommitcloudmetadata.py <<EOF
   > import json
-  > ccmd = json.load(open("commitcloudservicedb"))
+  > ccmd = json.load(open("$TESTTMP/commitcloudservicedb"))
   > print("version: %s" % ccmd["version"])
   > print("bookmarks:")
   > for bookmark, node in sorted(ccmd["bookmarks"].items()):
   >    print("    %s => %s" % (bookmark, node))
   > print("heads:")
-  > for head in sorted(ccmd["heads"]):
+  > for head in ccmd["heads"]:
   >    print("    %s" % head)
   > EOF
 
@@ -170,8 +170,8 @@ workspace does not oscillate between the two views.
   version: 2
   bookmarks:
   heads:
-      27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
   $ hg -R client2 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
@@ -180,8 +180,8 @@ workspace does not oscillate between the two views.
   version: 2
   bookmarks:
   heads:
-      27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
   $ hg -R client1 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
@@ -190,8 +190,8 @@ workspace does not oscillate between the two views.
   version: 2
   bookmarks:
   heads:
-      27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
   $ hg -R client2 cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
@@ -200,8 +200,8 @@ workspace does not oscillate between the two views.
   version: 2
   bookmarks:
   heads:
-      27ad028060800678c2de95fea2e826bbd4bf2c21
       65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
       878302dcadc7a800f326d8e06a5e9beec77e5a1c
 
 Smartlogs match
@@ -287,9 +287,31 @@ Put a bookmark on the new public commit
   |
   ~
   $ hg cloud sync -q
+  $ python $TESTTMP/dumpcommitcloudmetadata.py
+  version: 3
+  bookmarks:
+      foo => 5817a557f93f46ab290e8571c89624ff856130c0
+  heads:
+      65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
+      878302dcadc7a800f326d8e06a5e9beec77e5a1c
 
   $ cd ../client2
   $ hg cloud sync -q
+  5817a557f93f46ab290e8571c89624ff856130c0 not found, omitting foo bookmark
+  $ tglogp -r tip
+  o  7: 878302dcadc7 draft 'G'
+  |
+  ~
+
+  $ python $TESTTMP/dumpcommitcloudmetadata.py
+  version: 4
+  bookmarks:
+      foo => 5817a557f93f46ab290e8571c89624ff856130c0
+  heads:
+      65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
+      878302dcadc7a800f326d8e06a5e9beec77e5a1c
 
   $ cd ../client1
   $ hg cloud sync -q
@@ -297,3 +319,29 @@ Put a bookmark on the new public commit
   o  8: 5817a557f93f public 'next' foo
   |
   ~
+
+  $ python $TESTTMP/dumpcommitcloudmetadata.py
+  version: 4
+  bookmarks:
+      foo => 5817a557f93f46ab290e8571c89624ff856130c0
+  heads:
+      65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
+      878302dcadc7a800f326d8e06a5e9beec77e5a1c
+
+  $ cd ../client2
+  $ hg pull -q
+  $ hg cloud sync -q
+  $ tglogp -r tip
+  o  8: 5817a557f93f public 'next' foo
+  |
+  ~
+
+  $ python $TESTTMP/dumpcommitcloudmetadata.py
+  version: 4
+  bookmarks:
+      foo => 5817a557f93f46ab290e8571c89624ff856130c0
+  heads:
+      65299708466caa8f13c05d82e76d611c183defee
+      27ad028060800678c2de95fea2e826bbd4bf2c21
+      878302dcadc7a800f326d8e06a5e9beec77e5a1c

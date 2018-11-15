@@ -41,16 +41,29 @@ class LocalService(baseservice.BaseService):
         with open(filename, "w") as f:
             json.dump(data, f)
 
-    """ filter the obmarkers since the baseversion,
-        this includes (baseversion, data[version]] obsmarkers
-    """
-
     def _filteredobsmarkers(self, data, baseversion):
+        """filter the obmarkers since the baseversion
+
+        This includes (baseversion, data[version]] obsmarkers
+        """
         versions = range(baseversion, data["version"])
         data["new_obsmarkers_data"] = sum(
             (data["obsmarkers"][str(n + 1)] for n in versions), []
         )
         del data["obsmarkers"]
+        return data
+
+    def _injectheaddates(self, data):
+        """inject a head_dates field into the data"""
+        data["head_dates"] = {}
+        heads = set(data["heads"])
+        filename = os.path.join(self.path, "nodedata")
+        if os.path.exists(filename):
+            with open(filename) as f:
+                nodes = json.load(f)
+                for node in nodes:
+                    if node["node"] in heads:
+                        data["head_dates"][node["node"]] = node["date"][0]
         return data
 
     def requiresauthentication(self):
@@ -67,14 +80,15 @@ class LocalService(baseservice.BaseService):
                 "commitcloud local service: "
                 "get_references for current version %s\n" % version
             )
-            return baseservice.References(version, None, None, None)
+            return baseservice.References(version, None, None, None, None)
         else:
             self._ui.debug(
                 "commitcloud local service: "
                 "get_references for versions from %s to %s\n" % (baseversion, version)
             )
-
-            return self._makereferences(self._filteredobsmarkers(data, baseversion))
+            data = self._filteredobsmarkers(data, baseversion)
+            data = self._injectheaddates(data)
+            return self._makereferences(data)
 
     def updatereferences(
         self,
@@ -102,7 +116,7 @@ class LocalService(baseservice.BaseService):
             % (newversion, len(data["heads"]), len(data["bookmarks"]))
         )
         self._save(data)
-        return True, baseservice.References(newversion, None, None, None)
+        return True, baseservice.References(newversion, None, None, None, None)
 
     def getsmartlog(self, reponame, workspace, repo):
         filename = os.path.join(self.path, "usersmartlogdata")

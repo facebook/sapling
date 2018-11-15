@@ -113,6 +113,9 @@ Configs::
 
     # Use direct infinitepush bundle fetching if the commands is specified
     use_direct_bundle_fetching = true
+
+    # Maximum age (in days) of commits to pull when syncing
+    max_sync_age = 14
 """
 
 from __future__ import absolute_import

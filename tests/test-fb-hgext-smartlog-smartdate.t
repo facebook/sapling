@@ -6,20 +6,6 @@
   > [extensions]
   > smartlog=
   > EOF
-  $ cat > $TESTTMP/fakedate.py <<EOF
-  > import datetime
-  > import time
-  > from mercurial import extensions
-  > def extsetup(ui):
-  >     class fakedatetime(datetime.datetime):
-  >         @staticmethod
-  >         def now(tz=None):
-  >             return datetime.datetime.fromtimestamp(826207201, tz) # 1996-03-07 14:00:01 UTC
-  >     datetime.datetime = fakedatetime
-  >     def faketime():
-  >         return 826207201
-  >     time.time = faketime
-  > EOF
   $ TZ=UTC
   $ export TZ
 
@@ -33,7 +19,7 @@ Create a repo with some commits at interesting dates.
   > done
 
 Test smartlog with smartdate.
-  $ hg smartlog -r 'all()' -T '{rev}: {smartdate(date, 5400, age(date), simpledate(date))} "{desc}"' --config extensions.fakedate=$TESTTMP/fakedate.py
+  $ hg smartlog -r 'all()' -T '{rev}: {smartdate(date, 5400, age(date), simpledate(date))} "{desc}"' --config extensions.fakedate=$TESTDIR/fakedate.py
   @  7: 1996-03-07 23:59 "1996-03-07T23:59"
   |
   o  6: 1 second ago "1996-03-07T14:00"
@@ -50,7 +36,7 @@ Test smartlog with smartdate.
   |
   o  0: 1970-01-01 00:00 "1970-01-01T00:00"
   
-  $ hg smartlog -r 'all()' -T '{rev}: {smartdate(date, 18000, age(date), simpledate(date))} "{desc}"' --config extensions.fakedate=$TESTTMP/fakedate.py
+  $ hg smartlog -r 'all()' -T '{rev}: {smartdate(date, 18000, age(date), simpledate(date))} "{desc}"' --config extensions.fakedate=$TESTDIR/fakedate.py
   @  7: 1996-03-07 23:59 "1996-03-07T23:59"
   |
   o  6: 1 second ago "1996-03-07T14:00"
@@ -67,7 +53,7 @@ Test smartlog with smartdate.
   |
   o  0: 1970-01-01 00:00 "1970-01-01T00:00"
   
-  $ TZ=America/Los_Angeles hg smartlog -r 'all()' -T '{rev}: {smartdate(date, 5400, age(date), simpledate(date))} "{desc}"' --config extensions.fakedate=$TESTTMP/fakedate.py
+  $ TZ=America/Los_Angeles hg smartlog -r 'all()' -T '{rev}: {smartdate(date, 5400, age(date), simpledate(date))} "{desc}"' --config extensions.fakedate=$TESTDIR/fakedate.py
   @  7: 1996-03-07 15:59 "1996-03-07T23:59"
   |
   o  6: 1 second ago "1996-03-07T14:00"
@@ -85,7 +71,7 @@ Test smartlog with smartdate.
   o  0: 1969-12-31 16:00 "1970-01-01T00:00"
   
 #if withpytz
-  $ hg smartlog -r 'all()' -T '{rev}: {smartdate(date, 5400, age(date), simpledate(date, "Australia/Sydney"))} "{desc}"' --config extensions.fakedate=$TESTTMP/fakedate.py
+  $ hg smartlog -r 'all()' -T '{rev}: {smartdate(date, 5400, age(date), simpledate(date, "Australia/Sydney"))} "{desc}"' --config extensions.fakedate=$TESTDIR/fakedate.py
   @  7: 1996-03-08 10:59 "1996-03-07T23:59"
   |
   o  6: 1 second ago "1996-03-07T14:00"

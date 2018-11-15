@@ -54,15 +54,31 @@ class SyncState(object):
                 self.bookmarks = {
                     n.encode("utf-8"): v.encode() for n, v in data["bookmarks"].items()
                 }
+                self.omittedheads = [h.encode() for h in data.get("omittedheads", ())]
+                self.omittedbookmarks = [
+                    n.encode("utf-8") for n in data.get("omittedbookmarks", ())
+                ]
         else:
             self.version = 0
             self.heads = []
             self.bookmarks = {}
+            self.omittedheads = []
+            self.omittedbookmarks = []
 
-    def update(self, newversion, newheads, newbookmarks):
-        data = {"version": newversion, "heads": newheads, "bookmarks": newbookmarks}
+    def update(
+        self, newversion, newheads, newbookmarks, newomittedheads, newomittedbookmarks
+    ):
+        data = {
+            "version": newversion,
+            "heads": newheads,
+            "bookmarks": newbookmarks,
+            "omittedheads": newomittedheads,
+            "omittedbookmarks": newomittedbookmarks,
+        }
         with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
             json.dump(data, f)
         self.version = newversion
         self.heads = newheads
         self.bookmarks = newbookmarks
+        self.omittedheads = newomittedheads
+        self.omittedbookmarks = newomittedbookmarks

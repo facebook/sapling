@@ -67,7 +67,15 @@ pullopts = [
             "try to use directly fetch mercurial bundles instead of pulling through the server "
             "(option requires commitcloud.get_command config) (ADVANCED)"
         ),
-    )
+    ),
+    (
+        "",
+        "full",
+        None,
+        _(
+            "pull all workspace commits into the local repository, don't omit old ones. (ADVANCED)"
+        ),
+    ),
 ]
 
 pushopts = [
@@ -520,11 +528,29 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
     pushfailures = set()
     while not synced:
         if cloudrefs.version != lastsyncstate.version:
-            _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, pullfn)
+            _applycloudchanges(
+                ui, repo, lastsyncstate, cloudrefs, pullfn, opts.get("full")
+            )
+
+        # Check if any omissions are now included in the repo
+        _checkomissions(ui, repo, lastsyncstate)
 
         localheads = _getheads(repo)
         localbookmarks = _getbookmarks(repo)
         obsmarkers = commitcloudutil.getsyncingobsmarkers(repo)
+
+        # Work out what we should have synced locally (and haven't deliberately
+        # omitted)
+        omittedheads = set(lastsyncstate.omittedheads)
+        omittedbookmarks = set(lastsyncstate.omittedbookmarks)
+        localsyncedheads = [
+            head for head in lastsyncstate.heads if head not in omittedheads
+        ]
+        localsyncedbookmarks = {
+            name: node
+            for name, node in lastsyncstate.bookmarks.items()
+            if name not in omittedbookmarks
+        }
 
         if not obsmarkers:
             # If the heads have changed, and we don't have any obsmakers to
@@ -532,7 +558,7 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             # commits that are visible in the cloud workspace that need to
             # be revived.
             cloudvisibleonly = repo.unfiltered().set(
-                "draft() & ::%ls & hidden()", lastsyncstate.heads
+                "draft() & ::%ls & hidden()", localsyncedheads
             )
             repo._commitcloudskippendingobsmarkers = True
             obsolete.revive(cloudvisibleonly)
@@ -575,10 +601,10 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
                 newheads = serv.filterpushedheads(reponame, newheads)
 
             # all pushed to the server except maybe obsmarkers
-            allspushed = (not newheads) and (localbookmarks == lastsyncstate.bookmarks)
+            allpushed = (not newheads) and (localbookmarks == localsyncedbookmarks)
 
             failedheads = []
-            if not allspushed:
+            if not allpushed:
                 newheads, failedheads = infinitepush.pushbackupbundlestacks(
                     ui, repo, getconnection, newheads
                 )
@@ -593,7 +619,7 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
                     for ctx in unfi.set(
                         "heads((draft() & ::%ls) + (draft() & ::%ls & not obsolete()))",
                         newheads,
-                        lastsyncstate.heads,
+                        localsyncedheads,
                     )
                 ]
                 failedcommits = {
@@ -614,10 +640,31 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             # Update the infinitepush backup bookmarks to point to the new
             # local heads and bookmarks.  This must be done after all
             # referenced commits have been pushed to the server.
-            if not allspushed:
+            if not allpushed:
                 pushbackupbookmarks(
                     ui, repo, getconnection, localheads, localbookmarks, **opts
                 )
+
+            # Work out the new cloud heads and bookmarks by merging in the
+            # omitted items.  We need to preserve the ordering of the cloud
+            # heads so that smartlogs generally match.
+            newcloudheads = [
+                head
+                for head in lastsyncstate.heads
+                if head in set(localheads) | set(lastsyncstate.omittedheads)
+            ]
+            newcloudheads.extend(
+                [head for head in localheads if head not in set(newcloudheads)]
+            )
+            newcloudbookmarks = {
+                name: localbookmarks.get(name, lastsyncstate.bookmarks.get(name))
+                for name in set(localbookmarks.keys())
+                | set(lastsyncstate.omittedbookmarks)
+            }
+            newomittedheads = list(set(newcloudheads) - set(localheads))
+            newomittedbookmarks = list(
+                set(newcloudbookmarks.keys()) - set(localbookmarks.keys())
+            )
 
             # Update the cloud heads, bookmarks and obsmarkers.
             synced, cloudrefs = serv.updatereferences(
@@ -625,13 +672,19 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
                 workspace,
                 lastsyncstate.version,
                 lastsyncstate.heads,
-                localheads,
+                newcloudheads,
                 lastsyncstate.bookmarks.keys(),
-                localbookmarks,
+                newcloudbookmarks,
                 obsmarkers,
             )
             if synced:
-                lastsyncstate.update(cloudrefs.version, localheads, localbookmarks)
+                lastsyncstate.update(
+                    cloudrefs.version,
+                    newcloudheads,
+                    newcloudbookmarks,
+                    newomittedheads,
+                    newomittedbookmarks,
+                )
                 if obsmarkers:
                     commitcloudutil.clearsyncingobsmarkers(repo)
 
@@ -692,7 +745,9 @@ def cloudrecover(ui, repo, **opts):
     cloudsync(ui, repo, checkbackedup=True, **opts)
 
 
-def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None):
+def _applycloudchanges(
+    ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None, full=False
+):
     pullcmd, pullopts = _getcommandandoptions("^pull")
 
     try:
@@ -706,13 +761,20 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None
     # directfetchingfn fastpath.
     unfi = repo.unfiltered()
     newheads = [head for head in cloudrefs.heads if head not in unfi]
-    newbookmarked = [
-        node
-        for node in cloudrefs.bookmarks.values()
-        if node not in unfi and node not in newheads
-    ]
+    maxage = ui.configint("commitcloud", "max_sync_age", None)
+    if not full and maxage is not None and maxage >= 0:
+        mindate = time.time() - maxage * 86400
+        omittedheads = [
+            head
+            for head in newheads
+            if head in cloudrefs.headdates and cloudrefs.headdates[head] < mindate
+        ]
+        newheads = [head for head in newheads if head not in omittedheads]
+    else:
+        omittedheads = []
+    omittedbookmarks = []
 
-    if newheads and not directfetchingfn or newbookmarked:
+    if newheads and not directfetchingfn:
         # Replace the exchange pullbookmarks function with one which updates the
         # user's synced bookmarks.  This also means we don't partially update a
         # subset of the remote bookmarks if they happen to be included in the
@@ -722,8 +784,8 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None
                 return
             pullop.stepsdone.add("bookmarks")
             tr = pullop.gettransaction()
-            _mergebookmarks(
-                pullop.repo, tr, cloudrefs.bookmarks, lastsyncstate.bookmarks
+            omittedbookmarks.extend(
+                _mergebookmarks(pullop.repo, tr, cloudrefs.bookmarks, lastsyncstate)
             )
 
         # Replace the exchange pullobsolete function with one which adds the
@@ -739,7 +801,7 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None
         def _pullremotenames(orig, repo, remote, bookmarks):
             pass
 
-        pullopts["rev"] = newheads + newbookmarked
+        pullopts["rev"] = newheads
         with extensions.wrappedfunction(
             exchange, "_pullobsolete", _pullobsolete
         ), extensions.wrappedfunction(
@@ -752,15 +814,58 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None
         if newheads and directfetchingfn:
             directfetchingfn(newheads)
         with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
-            _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate.bookmarks)
+            omittedbookmarks.extend(
+                _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
+            )
             _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
 
     # We have now synced the repo to the cloud version.  Store this.
-    lastsyncstate.update(cloudrefs.version, cloudrefs.heads, cloudrefs.bookmarks)
+    lastsyncstate.update(
+        cloudrefs.version,
+        cloudrefs.heads,
+        cloudrefs.bookmarks,
+        omittedheads,
+        omittedbookmarks,
+    )
 
     # Also update infinitepush state.  These new heads are already backed up,
     # otherwise the server wouldn't have told us about them.
     recordbackup(ui, repo, cloudrefs.heads)
+
+
+def _checkomissions(ui, repo, lastsyncstate):
+    """check omissions are still not available locally
+
+    Check that the commits that have been deliberately omitted are still not
+    available locally.  If they are now available (e.g. because the user pulled
+    them manually), then remove the tracking of those heads being omitted, and
+    restore any bookmarks that can now be restored.
+    """
+    lastomittedheads = set(lastsyncstate.omittedheads)
+    lastomittedbookmarks = set(lastsyncstate.omittedbookmarks)
+    omittedheads = set()
+    omittedbookmarks = set()
+    changes = []
+    for head in lastomittedheads:
+        if head not in repo:
+            omittedheads.add(head)
+    for name in lastomittedbookmarks:
+        node = lastsyncstate.bookmarks[name]
+        if node in repo:
+            changes.append((name, nodemod.bin(node)))
+        else:
+            omittedbookmarks.add(name)
+    if omittedheads != lastomittedheads or omittedbookmarks != lastomittedbookmarks:
+        lastsyncstate.update(
+            lastsyncstate.version,
+            lastsyncstate.heads,
+            lastsyncstate.bookmarks,
+            list(omittedheads),
+            list(omittedbookmarks),
+        )
+    if changes:
+        with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
+            repo._bookmarks.applychanges(repo, tr, changes)
 
 
 def _update(ui, repo, destination):
@@ -792,24 +897,44 @@ def _filterpushside(ui, repo, pushheads, localheads, lastsyncstateheads):
     return list(set(localheads) & (set(lastsyncstateheads) | set(pushheads)))
 
 
-def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncbookmarks):
+def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
+    """merge any changes to the cloud bookmarks with any changes to local ones
+
+    This performs a 3-way diff between the old cloud bookmark state, the new
+    cloud bookmark state, and the local bookmark state.  If either local or
+    cloud bookmarks have been modified, propagate those changes to the other.
+    If both have been modified then fork the bookmark by renaming the local one
+    and accepting the cloud bookmark's new value.
+
+    Some of the bookmark changes may not be possible to apply, as the bookmarked
+    commit has been omitted locally.  In that case the bookmark is omitted.
+
+    Returns a list of the omitted bookmark names.
+    """
     localbookmarks = _getbookmarks(repo)
+    omittedbookmarks = set(lastsyncstate.omittedbookmarks)
     changes = []
     allnames = set(localbookmarks.keys() + cloudbookmarks.keys())
     newnames = set()
     for name in allnames:
+        # We are doing a 3-way diff between the local bookmark and the cloud
+        # bookmark, using the previous cloud bookmark's value as the common
+        # ancestor.
         localnode = localbookmarks.get(name)
         cloudnode = cloudbookmarks.get(name)
-        lastnode = lastsyncbookmarks.get(name)
+        lastcloudnode = lastsyncstate.bookmarks.get(name)
         if cloudnode != localnode:
+            # The local and cloud bookmarks differ, so we must merge them.
+
+            # First, check if there is a conflict.
             if (
                 localnode is not None
                 and cloudnode is not None
-                and localnode != lastnode
-                and cloudnode != lastnode
+                and localnode != lastcloudnode
+                and cloudnode != lastcloudnode
             ):
-                # Changed both locally and remotely, fork the local
-                # bookmark
+                # The bookmark has changed both locally and remotely.  Fork the
+                # bookmark by renaming the local one.
                 forkname = _forkname(repo.ui, name, allnames | newnames)
                 newnames.add(forkname)
                 changes.append((forkname, nodemod.bin(localnode)))
@@ -821,23 +946,37 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncbookmarks):
                     % (name, forkname)
                 )
 
-            if cloudnode != lastnode:
+            # If the cloud bookmarks has changed, we must apply its changes
+            # locally.
+            if cloudnode != lastcloudnode:
                 if cloudnode is not None:
+                    # The cloud bookmark has been set to point to a new commit.
                     if cloudnode in repo:
+                        # The commit is available locally, so update the
+                        # bookmark.
                         changes.append((name, nodemod.bin(cloudnode)))
+                        omittedbookmarks.discard(name)
                     else:
+                        # The commit is not available locally.  Omit it.
                         repo.ui.warn(
-                            _("%s not found, not creating %s bookmark\n")
+                            _("%s not found, omitting %s bookmark\n")
                             % (cloudnode, name)
                         )
+                        omittedbookmarks.add(name)
                 else:
-                    if localnode is not None and localnode != lastnode:
-                        # Moved locally, deleted in the cloud, resurrect
-                        # at the new location
+                    # The bookmarks has been deleted in the cloud.
+                    if localnode is not None and localnode != lastcloudnode:
+                        # Although it has been deleted in the cloud, it has
+                        # been moved in the repo at the same time.  Allow the
+                        # local bookmark to persist - this will mean it is
+                        # resurrected at the new local location.
                         pass
                     else:
+                        # Remove the bookmark locally.
                         changes.append((name, None))
+
     repo._bookmarks.applychanges(repo, tr, changes)
+    return list(omittedbookmarks)
 
 
 def _mergeobsmarkers(repo, tr, obsmarkers):

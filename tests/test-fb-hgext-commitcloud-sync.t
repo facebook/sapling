@@ -270,10 +270,6 @@ Sync the amended commit to the other client
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 1 files
   obsoleted 2 changesets
   new changesets a7bb357e7299:48610b1a7ec0
   (run 'hg heads' to see heads, 'hg merge' to merge)

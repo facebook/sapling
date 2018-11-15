@@ -243,7 +243,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 )
                 % workspace,
             )
-            return baseservice.References(version, None, None, None)
+            return baseservice.References(version, None, None, None, None)
 
         if version == baseversion:
             highlightdebug(
@@ -251,7 +251,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 "'get_references' "
                 "confirms the current version %s is the latest\n" % version,
             )
-            return baseservice.References(version, None, None, None)
+            return baseservice.References(version, None, None, None, None)
 
         highlightdebug(
             self.ui,
@@ -322,7 +322,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
             % (version, newversion),
         )
 
-        return True, baseservice.References(newversion, None, None, None)
+        return True, baseservice.References(newversion, None, None, None, None)
 
     def getsmartlog(self, reponame, workspace, repo):
 

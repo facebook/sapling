@@ -15,7 +15,9 @@ from mercurial.graphmod import CHANGESET, GRANDPARENT, MISSINGPARENT, PARENT
 
 
 abstractmethod = abc.abstractmethod
-References = collections.namedtuple("References", "version heads bookmarks obsmarkers")
+References = collections.namedtuple(
+    "References", "version heads bookmarks obsmarkers headdates"
+)
 NodeInfo = collections.namedtuple(
     "NodeInfo", "node bookmarks parents author date message phase"
 )
@@ -121,8 +123,11 @@ class BaseService(object):
             )
             for m in data["new_obsmarkers_data"]
         ]
+        headdates = {
+            h.encode("ascii"): d for h, d in data.get("head_dates", {}).items()
+        }
 
-        return References(version, newheads, newbookmarks, newobsmarkers)
+        return References(version, newheads, newbookmarks, newobsmarkers, headdates)
 
     def _encodedmarkers(self, obsmarkers):
         # pred, succs, flags, metadata, date, parents = marker
