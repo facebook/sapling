@@ -12,7 +12,7 @@ import os
 import shutil
 import types
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Tuple, Type
+from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 
 def gen_tree(
@@ -60,8 +60,8 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
     # If we encounter an EPERM or EACCESS error removing a file try making its parent
     # directory writable and then retry the removal.
     def _remove_readonly(
-        func: Callable[[str], Any],
-        path: str,
+        func: Callable[[Union[os.PathLike, str]], Any],
+        path: Union[os.PathLike, str],
         exc_info: Tuple[Type, BaseException, types.TracebackType],
     ) -> None:
         _ex_type, ex, _traceback = exc_info
