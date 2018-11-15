@@ -19,6 +19,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate smc;
 extern crate twox_hash;
 
 use std::fmt;
@@ -64,6 +65,44 @@ pub struct Glusterblob {
 }
 
 impl Glusterblob {
+    pub fn with_smc(
+        tier: impl Into<String>,
+        export: impl Into<String>,
+        basepath: impl Into<PathBuf>,
+    ) -> impl Future<Item = Self, Error = Error> + Send + 'static {
+        let tier = tier.into();
+        let export = export.into();
+        let basepath = basepath.into();
+
+        smc::get_available_services(&tier, false)
+            .map(|services| {
+                // Get all hosts for services
+                let services: Vec<_> = services.iter().collect();
+                services
+                    .iter()
+                    .filter(|svc| svc.is_production())
+                    .map(|svc| svc.hostname.to_string())
+                    .collect::<Vec<_>>()
+            })
+            .into_future()
+            .and_then({
+                cloned!(basepath, export);
+                move |hosts| {
+                    if hosts.is_empty() {
+                        Err(format_err!(
+                            "No available hosts in SMC for tier {}, {}:{}",
+                            tier,
+                            export,
+                            basepath.display()
+                        ))
+                    } else {
+                        Ok(hosts)
+                    }
+                }
+            })
+            .and_then(move |hosts| Self::with_hosts(hosts, export, basepath))
+    }
+
     pub fn with_hosts(
         hosts: impl IntoIterator<Item = impl Into<String>>,
         export: impl Into<String>,
