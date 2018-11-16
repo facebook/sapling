@@ -23,9 +23,10 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Type, TypeVar, Union
 
 import toml
-from eden.integration.lib import edenclient, hgrepo, util
+from eden.integration.lib import edenclient, hgrepo
 from eden.integration.lib.find_executables import FindExe
 from eden.integration.lib.temporary_directory import create_tmp_dir
+from eden.test_support.temporary_directory import cleanup_tmp_dir
 
 from . import inode_metadata as inode_metadata_mod, verify as verify_mod
 
@@ -524,7 +525,7 @@ def unpack_into(snapshot_path: Path, output_path: Path) -> BaseSnapshot:
         snapshot.resume()
         return snapshot
     except Exception as ex:
-        util.cleanup_tmp_dir(data_dir)
+        cleanup_tmp_dir(data_dir)
         raise
 
 

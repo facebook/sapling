@@ -11,6 +11,7 @@ import os
 import stat
 
 import hypothesis
+from eden.test_support.hypothesis import FILENAME_STRATEGY
 
 from .lib import testcase
 
@@ -25,7 +26,7 @@ class HypothesisSimpleTest(testcase.EdenRepoTest):
         self.repo.symlink("slink", "hello")
         self.repo.commit("Initial commit.")
 
-    @hypothesis.given(testcase.FILENAME_STRATEGY)
+    @hypothesis.given(FILENAME_STRATEGY)
     def test_create(self, basename):
         filename = os.path.join(self.mount, basename)
 
