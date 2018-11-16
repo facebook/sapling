@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import types
 import typing
 
 from .find_executables import FindExe
@@ -343,7 +344,7 @@ def temporary_systemd_user_service_manager() -> typing.Iterator[
             ) as child_systemd:
                 yield child_systemd
         else:
-            with _transient_unmanaged_systemd_user_service_manager(
+            with _TransientUnmanagedSystemdUserServiceManager(
                 xdg_runtime_dir=xdg_runtime_dir, lifetime_duration=lifetime_duration
             ) as systemd:
                 yield systemd
@@ -389,30 +390,37 @@ def _transient_managed_systemd_user_service_manager(
             # Ignore the exception.
 
 
-@contextlib.contextmanager
-def _transient_unmanaged_systemd_user_service_manager(
-    xdg_runtime_dir: pathlib.Path, lifetime_duration: int
-) -> typing.Iterator[SystemdUserServiceManager]:
+class _TransientUnmanagedSystemdUserServiceManager:
     """Create an isolated systemd instance as child process.
 
-    This function does not work if a user systemd instance is already running.
+    This class does not work if a user systemd instance is already running.
     """
 
-    parent_pty_fd: int
-    systemd_process: subprocess.Popen
+    __child_systemd: SystemdUserServiceManager
+    __cleanups: contextlib.ExitStack
+    __lifetime_duration: int
+    __parent_pty_fd: int
+    __systemd_process: subprocess.Popen
+    __xdg_runtime_dir: pathlib.Path
 
-    def start_systemd_process(output_fd: int) -> subprocess.Popen:
+    def __init__(self, xdg_runtime_dir: pathlib.Path, lifetime_duration: int) -> None:
+        super().__init__()
+        self.__xdg_runtime_dir = xdg_runtime_dir
+        self.__lifetime_duration = lifetime_duration
+        self.__cleanups = contextlib.ExitStack()
+
+    def start_systemd_process(self, output_fd: int) -> None:
         env = dict(os.environ)
-        env["XDG_RUNTIME_DIR"] = str(xdg_runtime_dir)
+        env["XDG_RUNTIME_DIR"] = str(self.__xdg_runtime_dir)
         # HACK(strager): Work around 'systemd --user' refusing to start if the
         # system is not managed by systemd.
         env["LD_PRELOAD"] = str(
             pathlib.Path(FindExe.FORCE_SD_BOOTED).resolve(strict=True)
         )
-        systemd_process = subprocess.Popen(
+        self.__systemd_process = subprocess.Popen(
             [
                 "timeout",
-                f"{lifetime_duration}s",
+                f"{self.__lifetime_duration}s",
                 "/usr/lib/systemd/systemd",
                 "--user",
                 "--unit=basic.target",
@@ -422,56 +430,66 @@ def _transient_unmanaged_systemd_user_service_manager(
             stderr=output_fd,
             env=env,
         )
+        self.__cleanups.callback(lambda: self.stop_systemd_process())
         os.close(output_fd)
-        return systemd_process
 
-    def stop_systemd_process() -> None:
-        systemd_process.terminate()
+    def stop_systemd_process(self) -> None:
+        self.__systemd_process.terminate()
         try:
-            systemd_process.wait(timeout=3)
+            self.__systemd_process.wait(timeout=3)
         except subprocess.TimeoutExpired:
             logger.warning(
                 "Failed to terminate systemd user service manager", exc_info=True
             )
             # Ignore the exception.
 
-    def wait_until_systemd_is_alive() -> None:
+    def wait_until_systemd_is_alive(self) -> None:
         while True:
-            systemd_did_exit = systemd_process.poll() is not None
+            systemd_did_exit = self.__systemd_process.poll() is not None
             if systemd_did_exit:
-                forward_process_output(timeout=1)
+                self.forward_process_output(timeout=1)
                 raise Exception("systemd failed to start")
-            if child_systemd.is_alive():
+            if self.__child_systemd.is_alive():
                 return
-            forward_process_output(timeout=0.1)
+            self.forward_process_output(timeout=0.1)
 
-    def forward_process_output(timeout: typing.Optional[float]) -> None:
+    def forward_process_output(self, timeout: typing.Optional[float]) -> None:
         _copy_stream(
-            source_fd=parent_pty_fd, destination=sys.stderr.buffer, timeout=timeout
+            source_fd=self.__parent_pty_fd,
+            destination=sys.stderr.buffer,
+            timeout=timeout,
         )
 
-    def forward_process_output_in_background_thread() -> None:
+    def forward_process_output_in_background_thread(self) -> None:
         threading.Thread(
-            target=lambda: forward_process_output(timeout=None), daemon=True
+            target=lambda: self.forward_process_output(timeout=None), daemon=True
         ).start()
 
-    # HACK(strager): The TestPilot test runner hangs if we pass any of our
-    # standard file descriptors to systemd. Additionally, systemd doesn't write
-    # anything to stderr if stderr is a pipe. Create a pseudoterminal and
-    # manually forward systemd's logs to our stderr.
-    (parent_pty_fd, child_pty_fd) = pty.openpty()
+    def __enter__(self) -> SystemdUserServiceManager:
+        # HACK(strager): The TestPilot test runner hangs if we pass any of our
+        # standard file descriptors to systemd. Additionally, systemd doesn't write
+        # anything to stderr if stderr is a pipe. Create a pseudoterminal and
+        # manually forward systemd's logs to our stderr.
+        (self.__parent_pty_fd, child_pty_fd) = pty.openpty()
 
-    systemd_process = start_systemd_process(child_pty_fd)
-    try:
-        child_systemd = SystemdUserServiceManager(xdg_runtime_dir=xdg_runtime_dir)
-        wait_until_systemd_is_alive()
-        forward_process_output_in_background_thread()
-        yield child_systemd
-    finally:
-        stop_systemd_process()
+        self.start_systemd_process(output_fd=child_pty_fd)
+        self.__child_systemd = SystemdUserServiceManager(
+            xdg_runtime_dir=self.__xdg_runtime_dir
+        )
+        self.wait_until_systemd_is_alive()
+        self.forward_process_output_in_background_thread()
+        return self.__child_systemd
 
-    # HACK(strager): Leak parent_pty_fd. It might be in use by
-    # forward_process_output in a background thread.
+    def __exit__(
+        self,
+        exc_type: typing.Optional[typing.Type[BaseException]],
+        exc_value: typing.Optional[BaseException],
+        traceback: typing.Optional[types.TracebackType],
+    ) -> typing.Optional[bool]:
+        self.__cleanups.close()
+        # HACK(strager): Leak self.__parent_pty_fd. It might be in use by
+        # self.forward_process_output in a background thread.
+        return None
 
 
 def _get_current_xdg_runtime_dir() -> pathlib.Path:
