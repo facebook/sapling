@@ -55,8 +55,6 @@ def fixcopyrightheader(path):
     ):
         return
 
-    print("Fixing %s" % path)
-
     if path.endswith(".rs"):
         comment = "//"
     else:
@@ -78,9 +76,7 @@ def fixcopyrightheader(path):
         header = "%s\n\n%s" % (firstline, header)
         content = rest
 
-    with open(path, "w") as f:
-        f.write(header)
-        f.write(content)
+    write(path, header + content)
 
 
 def fixcargotoml(path):
@@ -109,9 +105,7 @@ def fixcargotoml(path):
             newcontent += line
 
     if content != newcontent:
-        print("Fixing %s" % path)
-        with open(path, "w") as f:
-            f.write(newcontent)
+        write(path, newcontent)
 
 
 def ispathskipped(path):
@@ -186,4 +180,18 @@ def crateversion(crate):
 
 
 if __name__ == "__main__":
-    fixpaths(sys.argv[1:])
+    if sys.argv[1] == "--dry-run":
+
+        def write(path, content):
+            print("Need fix: %s" % path)
+
+        paths = sys.argv[2:]
+    else:
+
+        def write(path, content):
+            print("Fixing: %s" % path)
+            with open(path, "w") as f:
+                f.write(content)
+
+        paths = sys.argv[1:]
+    fixpaths(paths)

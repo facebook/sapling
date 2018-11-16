@@ -1,3 +1,8 @@
+// Copyright 2018 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 //! This module exports some concrete implementations of the revisionstore
 //! API for use from C++ code.  The exports in this file match up to the C++
 //! header file RevisionStore.h in the top level of this crate.
