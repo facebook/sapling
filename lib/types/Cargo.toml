@@ -7,11 +7,11 @@ default = []
 for-tests = ["rand", "quickcheck"]
 
 [dependencies]
-failure = "*"
-failure_derive = "*"
-rand = { version = "*", optional = true }
-quickcheck = { version = "*", optional = true }
+failure = "0.1.3"
+failure_derive = "0.1.3"
+rand = { version = "0.5.5", optional = true }
+quickcheck = { version = "0.6.2", optional = true }
 
 [dev-dependencies]
-rand = "*"
-quickcheck = "*"
+rand = "0.5.5"
+quickcheck = "0.6.2"

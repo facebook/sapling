@@ -6,4 +6,4 @@ version = "0.1.0"
 ignore = "0.4"
 
 [dev-dependencies]
-tempdir = "*"
+tempdir = "0.3.7"

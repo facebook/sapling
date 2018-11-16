@@ -4,14 +4,14 @@ version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 
 [dependencies]
-bitflags = "*"
-byteorder = "*"
+bitflags = "1.0.4"
+byteorder = "1.2.7"
 error-chain = "*"
 twox-hash = "*"
-vlqencoding = { version = "*", path = "../vlqencoding" }
+vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
-itertools = "*"
+itertools = "0.7.8"
 quickcheck = "0.6"
 rand = "0.5"
-tempdir = "*"
+tempdir = "0.3.7"

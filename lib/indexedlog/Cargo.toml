@@ -3,10 +3,10 @@ name = "indexedlog"
 version = "0.1.0"
 
 [dependencies]
-atomicwrites = "*"
-byteorder = "*"
-fs2 = "*"
-memmap = "*"
+atomicwrites = "0.2.2"
+byteorder = "1.2.7"
+fs2 = "0.4.3"
+memmap = "0.7.0"
 twox-hash = "*"
 vlqencoding = { path = "../vlqencoding" }
 
@@ -14,7 +14,7 @@ vlqencoding = { path = "../vlqencoding" }
 minibench = { path = "../minibench" }
 quickcheck = "0.6"
 rand = "0.4"
-tempdir = "*"
+tempdir = "0.3.7"
 
 [[bench]]
 name = "index"

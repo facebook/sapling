@@ -4,9 +4,9 @@ version = "0.1.0"
 authors = ["harveyhunt"]
 
 [dependencies]
-atomicwrites = "*"
+atomicwrites = "0.2.2"
 error-chain = "*"
 types = { path = "../types" }
 
 [dev-dependencies]
-tempfile = "*"
+tempfile = "3.0.4"
