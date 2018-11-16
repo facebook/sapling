@@ -22,6 +22,10 @@ def is_sandcastle() -> bool:
     return "SANDCASTLE" in os.environ
 
 
+def fast_hypothesis_test():
+    return settings(max_examples=1000, suppress_health_check=[])
+
+
 def set_up_hypothesis() -> None:
     default_settings = settings(
         # Turn off the health checks because setUp/tearDown are too slow
