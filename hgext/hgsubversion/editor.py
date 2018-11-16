@@ -9,7 +9,8 @@ import tempfile
 import svnexternals
 import svnwrap
 import util
-from mercurial import node, revlog, util as hgutil
+from ..extlib import cstore
+from mercurial import match as matchmod, node, revlog, util as hgutil
 
 
 class EditingError(Exception):
@@ -281,17 +282,23 @@ class HgEditor(svnwrap.Editor):
 
     def get_files_in_dir(self, ctx, dir):
         assert dir == "" or dir.endswith("/")
-        if self._manifestfiles is None:
-            self._manifestfiles = ctx.manifest().text().splitlines()
+        mf = ctx.manifest()
+        if isinstance(mf, cstore.treemanifest):
+            matcher = matchmod.match("", "/", patterns=[dir])
+            for x in mf.walk(matcher):
+                yield x
+        else:
+            if self._manifestfiles is None:
+                self._manifestfiles = mf.text().splitlines()
 
-        files = self._manifestfiles
-        import bisect
+            files = self._manifestfiles
+            import bisect
 
-        cur = bisect.bisect_left(files, dir)
+            cur = bisect.bisect_left(files, dir)
 
-        while cur < len(files) and files[cur].startswith(dir):
-            yield files[cur].split("\0")[0]
-            cur += 1
+            while cur < len(files) and files[cur].startswith(dir):
+                yield files[cur].split("\0")[0]
+                cur += 1
 
     @svnwrap.ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
