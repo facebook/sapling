@@ -33,11 +33,11 @@ SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 @service_test
 class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin):
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.tmp_dir = self.make_temporary_directory()
 
-    def test_stop_stops_running_daemon(self):
+    def test_stop_stops_running_daemon(self) -> None:
         with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
             stop_process = self.spawn_stop(["--timeout", "5"])
             stop_process.expect_exact("edenfs exited cleanly.")
@@ -66,7 +66,7 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
                 f"{clean_shutdown_file} should exist after EdenFS cleanly shuts down",
             )
 
-    def test_stop_sigkill(self):
+    def test_stop_sigkill(self) -> None:
         with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir), ["--ignoreStop"]):
             # Ask the CLI to stop edenfs, with a 1 second timeout.
             # It should have to kill the process with SIGKILL
@@ -76,7 +76,7 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
                 stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
             )
 
-    def test_async_stop_stops_daemon_eventually(self):
+    def test_async_stop_stops_daemon_eventually(self) -> None:
         with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
             stop_process = self.spawn_stop(["--timeout", "0"])
             stop_process.expect_exact("Sent async shutdown request to edenfs.")
@@ -92,14 +92,14 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
 
             poll_until(daemon_exited, timeout=10)
 
-    def test_stop_not_running(self):
+    def test_stop_not_running(self) -> None:
         stop_process = self.spawn_stop(["--timeout", "1"])
         stop_process.expect_exact("edenfs is not running")
         self.assert_process_exit_code(
             stop_process, SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
         )
 
-    def test_stopping_killed_daemon_reports_not_running(self):
+    def test_stopping_killed_daemon_reports_not_running(self) -> None:
         daemon = self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir))
         os.kill(daemon.process_id, signal.SIGKILL)
 
@@ -109,7 +109,7 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
             stop_process, SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
         )
 
-    def test_killing_hung_daemon_during_stop_makes_stop_finish(self):
+    def test_killing_hung_daemon_during_stop_makes_stop_finish(self) -> None:
         with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
             os.kill(daemon_pid, signal.SIGSTOP)
             try:
@@ -131,7 +131,7 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
                 with contextlib.suppress(ProcessLookupError):
                     os.kill(daemon_pid, signal.SIGCONT)
 
-    def test_stopping_daemon_stopped_by_sigstop_kills_daemon(self):
+    def test_stopping_daemon_stopped_by_sigstop_kills_daemon(self) -> None:
         with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
             os.kill(daemon_pid, signal.SIGSTOP)
             try:
@@ -144,7 +144,7 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
                 with contextlib.suppress(ProcessLookupError):
                     os.kill(daemon_pid, signal.SIGCONT)
 
-    def test_hanging_thrift_call_kills_daemon_with_sigkill(self):
+    def test_hanging_thrift_call_kills_daemon_with_sigkill(self) -> None:
         with self.spawn_fake_edenfs(
             pathlib.Path(self.tmp_dir), ["--sleepBeforeStop=5"]
         ):
@@ -153,7 +153,7 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
                 stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
             )
 
-    def test_stop_succeeds_if_thrift_call_abruptly_kills_daemon(self):
+    def test_stop_succeeds_if_thrift_call_abruptly_kills_daemon(self) -> None:
         with self.spawn_fake_edenfs(
             pathlib.Path(self.tmp_dir), ["--exitWithoutCleanupOnStop"]
         ):

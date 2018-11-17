@@ -21,7 +21,7 @@ from .lib.temporary_directory import TemporaryDirectoryMixin
 class SystemdTest(unittest.TestCase, EnvironmentVariableMixin, TemporaryDirectoryMixin):
     """Test Eden's systemd service for Linux."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
 
         self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")

@@ -9,16 +9,18 @@
 
 from textwrap import dedent
 
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class CopyTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.commit("Initial commit.\n")
 
-    def test_copy_file_within_directory(self):
+    def test_copy_file_within_directory(self) -> None:
         self.hg("copy", "hello.txt", "goodbye.txt")
         self.assert_status({"goodbye.txt": "A"})
         extended_status = self.hg("status", "--copies")
@@ -37,7 +39,7 @@ class CopyTest(EdenHgTestCase):
         self.assert_status_empty()
         self.assert_copy_map({})
 
-    def test_copy_file_then_revert_it(self):
+    def test_copy_file_then_revert_it(self) -> None:
         self.hg("copy", "hello.txt", "goodbye.txt")
         self.assert_status({"goodbye.txt": "A"})
         self.assert_copy_map({"goodbye.txt": "hello.txt"})

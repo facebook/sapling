@@ -9,17 +9,19 @@
 
 from textwrap import dedent
 
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class DebugHgGetDirstateTupleTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello", "hola\n")
         repo.write_file("dir/file", "blah\n")
         repo.commit("Initial commit.")
 
-    def test_get_dirstate_tuple_normal_file(self):
+    def test_get_dirstate_tuple_normal_file(self) -> None:
         output = self.eden.run_cmd(
             "debug", "hg_get_dirstate_tuple", self.get_path("hello")
         )

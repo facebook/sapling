@@ -9,7 +9,8 @@
 
 import os
 
-from ..lib import hgrepo
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from .lib.histedit_command import HisteditCommand
 
@@ -20,7 +21,7 @@ class HisteditTest(EdenHgTestCase):
     _commit2: str
     _commit3: str
 
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("first", "")
         self._commit1 = repo.commit("first commit")
 
@@ -30,7 +31,7 @@ class HisteditTest(EdenHgTestCase):
         repo.write_file("third", "")
         self._commit3 = repo.commit("third commit")
 
-    def test_stop_at_earlier_commit_in_the_stack_without_reordering(self):
+    def test_stop_at_earlier_commit_in_the_stack_without_reordering(self) -> None:
         commits = self.repo.log()
         self.assertEqual([self._commit1, self._commit2, self._commit3], commits)
 
@@ -73,7 +74,7 @@ class HisteditTest(EdenHgTestCase):
             set(os.listdir(self.repo.get_canonical_root())),
         )
 
-    def test_reordering_commits_without_merge_conflicts(self):
+    def test_reordering_commits_without_merge_conflicts(self) -> None:
         self.assertEqual(
             ["first commit", "second commit", "third commit"], self.repo.log("{desc}")
         )
@@ -94,7 +95,7 @@ class HisteditTest(EdenHgTestCase):
             set(os.listdir(self.repo.get_canonical_root())),
         )
 
-    def test_drop_commit_without_merge_conflicts(self):
+    def test_drop_commit_without_merge_conflicts(self) -> None:
         self.assertEqual(
             ["first commit", "second commit", "third commit"], self.repo.log("{desc}")
         )
@@ -113,7 +114,7 @@ class HisteditTest(EdenHgTestCase):
             set(os.listdir(self.repo.get_canonical_root())),
         )
 
-    def test_roll_two_commits_into_parent(self):
+    def test_roll_two_commits_into_parent(self) -> None:
         self.assertEqual(
             ["first commit", "second commit", "third commit"], self.repo.log("{desc}")
         )
@@ -132,7 +133,7 @@ class HisteditTest(EdenHgTestCase):
             set(os.listdir(self.repo.get_canonical_root())),
         )
 
-    def test_abort_after_merge_conflict(self):
+    def test_abort_after_merge_conflict(self) -> None:
         self.write_file("will_have_confict.txt", "original\n")
         self.hg("add", "will_have_confict.txt")
         commit4 = self.repo.commit("commit4")

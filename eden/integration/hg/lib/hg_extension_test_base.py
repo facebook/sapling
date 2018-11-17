@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import abc
 import configparser
 import itertools
 import json
@@ -62,7 +63,7 @@ def get_default_hgrc() -> configparser.ConfigParser:
     return hgrc
 
 
-class EdenHgTestCase(testcase.EdenTestCase):
+class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
     """
     A test case class for integration tests that exercise mercurial commands
     inside an eden client.
@@ -79,7 +80,12 @@ class EdenHgTestCase(testcase.EdenTestCase):
       where most mercurial commands are actually being tested.
     """
 
-    def setup_eden_test(self):
+    repo: hgrepo.HgRepository
+    backing_repo: hgrepo.HgRepository
+    backing_repo_name: str
+    config_variant_name: str  # set by the @hg_test decorator
+
+    def setup_eden_test(self) -> None:
         super().setup_eden_test()
 
         # Create the backing repository
@@ -95,23 +101,28 @@ class EdenHgTestCase(testcase.EdenTestCase):
         # Now create the repository object that refers to the eden client
         self.repo = hgrepo.HgRepository(self.mount, system_hgrc=self.system_hgrc)
 
-    def create_backing_repo(self):
+    def create_backing_repo(self) -> hgrepo.HgRepository:
         hgrc = self.get_hgrc()
         repo = self.create_hg_repo("main", hgrc=hgrc)
         self.populate_backing_repo(repo)
         return repo
 
-    def get_hgrc(self):
+    def get_hgrc(self) -> configparser.ConfigParser:
         hgrc = get_default_hgrc()
         self.apply_hg_config_variant(hgrc)
         return hgrc
 
-    def populate_backing_repo(self, repo):
+    @abc.abstractmethod
+    def apply_hg_config_variant(self, hgrc: configparser.ConfigParser) -> None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         raise NotImplementedError(
             "individual test classes must implement " "populate_backing_repo()"
         )
 
-    def amend_edenrc_before_clone(self):
+    def amend_edenrc_before_clone(self) -> None:
         # This is a poor man's version of the generate-hooks-dir script.
         hooks_dir = os.path.join(self.tmp_dir, "the_hooks")
         os.mkdir(hooks_dir)

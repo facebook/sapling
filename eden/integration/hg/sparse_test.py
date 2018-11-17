@@ -7,17 +7,18 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from ..lib import hgrepo
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class SparseTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("a_file.txt", "")
         repo.commit("first commit")
 
-    def test_sparse(self):
+    def test_sparse(self) -> None:
         """Verify that we show a reasonable error if someone has managed
         to load the sparse extension, rather than an ugly stack trace"""
 

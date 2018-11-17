@@ -413,7 +413,7 @@ echo -n "$1" >> "{scratch_file}"
 class CloneFakeEdenFSTest(
     ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin
 ):
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.eden_dir = pathlib.Path(self.make_temporary_directory())
 

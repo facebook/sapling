@@ -10,16 +10,18 @@
 import os
 from textwrap import dedent
 
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class MoveTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.commit("Initial commit.\n")
 
-    def test_move_file_without_modification(self):
+    def test_move_file_without_modification(self) -> None:
         self.hg("move", "hello.txt", "goodbye.txt")
         self.assert_status({"goodbye.txt": "A", "hello.txt": "R"})
         extended_status = self.hg("status", "--copies")
@@ -41,7 +43,7 @@ class MoveTest(EdenHgTestCase):
         self.assert_status_empty()
         self.assert_copy_map({})
 
-    def test_move_file_then_revert_it(self):
+    def test_move_file_then_revert_it(self) -> None:
         self.hg("move", "hello.txt", "goodbye.txt")
         self.assert_status({"goodbye.txt": "A", "hello.txt": "R"})
         self.assert_copy_map({"goodbye.txt": "hello.txt"})
@@ -65,7 +67,7 @@ class MoveTest(EdenHgTestCase):
             extended_status,
         )
 
-    def test_replace_after_move_file_then_revert_it(self):
+    def test_replace_after_move_file_then_revert_it(self) -> None:
         self.hg("move", "hello.txt", "goodbye.txt")
         self.assert_status({"goodbye.txt": "A", "hello.txt": "R"})
         self.assert_copy_map({"goodbye.txt": "hello.txt"})

@@ -7,16 +7,18 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class RevertTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.commit("Initial commit.\n")
 
-    def test_make_local_change_and_attempt_revert(self):
+    def test_make_local_change_and_attempt_revert(self) -> None:
         self.write_file("hello.txt", "hello")
         self.assert_status({"hello.txt": "M"})
         self.hg("revert", "--no-backup", "hello.txt")

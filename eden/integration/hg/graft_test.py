@@ -9,7 +9,8 @@
 
 import os
 
-from ..lib import hgrepo
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
@@ -17,11 +18,11 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 class GraftTest(EdenHgTestCase):
     commit1: str
 
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("first.txt", "1")
         self.commit1 = repo.commit("Initial commit\n")
 
-    def test_graft_conflict_free_commit(self):
+    def test_graft_conflict_free_commit(self) -> None:
         # Create a new head.
         self.write_file("second.txt", "2")
         self.repo.add_file("second.txt")
@@ -44,7 +45,7 @@ class GraftTest(EdenHgTestCase):
         self.assertEqual([self.commit1, commit3], commits[:2])
         self.assertTrue(os.path.exists(self.get_path("second.txt")))
 
-    def test_graft_commit_with_conflict(self):
+    def test_graft_commit_with_conflict(self) -> None:
         # Create a new head.
         self.write_file("first.txt", "2")
         commit2 = self.repo.commit("Updated first.txt.\n")
@@ -77,7 +78,7 @@ class GraftTest(EdenHgTestCase):
         self.assertEqual(3, len(commits))
         self.assertEqual([self.commit1, commit3], commits[:2])
 
-    def test_graft_that_removes_a_file(self):
+    def test_graft_that_removes_a_file(self) -> None:
         # Create a new head that adds second.txt and removes first.txt.
         self.write_file("second.txt", "2")
         self.repo.add_file("second.txt")

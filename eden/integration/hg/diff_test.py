@@ -7,21 +7,25 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+from typing import List
+
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class DiffTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("rootfile.txt", "")
         repo.write_file("dir1/a.txt", "original contents\n")
         repo.commit("Initial commit.")
 
-    def check_output(self, output, expected_lines):
+    def check_output(self, output: str, expected_lines: List[str]):
         output_lines = output.splitlines()
         self.assertListEqual(output_lines, expected_lines)
 
-    def test_modify_file(self):
+    def test_modify_file(self) -> None:
         self.write_file("dir1/a.txt", "new line\noriginal contents\n")
         diff_output = self.hg("diff")
         expected_lines = [
@@ -34,7 +38,7 @@ class DiffTest(EdenHgTestCase):
         ]
         self.check_output(diff_output, expected_lines)
 
-    def test_add_file(self):
+    def test_add_file(self) -> None:
         self.write_file("dir1/b.txt", "new file\n1234\n5678\n")
         self.hg("add", "dir1/b.txt")
         diff_output = self.hg("diff")

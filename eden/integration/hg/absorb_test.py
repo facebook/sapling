@@ -9,6 +9,8 @@
 
 import logging
 
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
@@ -19,7 +21,7 @@ log = logging.getLogger("eden.test.absorb")
 class AbsorbTest(EdenHgTestCase):
     commit1: str
 
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("readme.txt", "readme\n")
         repo.write_file(
             "src/test.c",
@@ -35,7 +37,7 @@ end of the file
         repo.hg("phase", "--public", self.commit1)
         log.debug("commit1: %s", self.commit1)
 
-    def test_absorb(self):
+    def test_absorb(self) -> None:
         self.assert_status_empty()
 
         # Update src/test.c in our first draft commit

@@ -9,16 +9,18 @@
 
 import os
 
+from eden.integration.lib.hgrepo import HgRepository
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test("Flatmanifest", "Treemanifest", "TreeOnly")
 class StatusTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.commit("Initial commit.")
 
-    def test_status(self):
+    def test_status(self) -> None:
         """Test various `hg status` states in the root of an Eden mount."""
         self.assert_status_empty()
 
@@ -53,7 +55,7 @@ class StatusTest(EdenHgTestCase):
         self.assert_status({"hello.txt": "R", "world.txt": "A"})
         self.assertFalse(os.path.exists(self.get_path("hello.txt")))
 
-    def test_manual_revert(self):
+    def test_manual_revert(self) -> None:
         self.assert_status_empty()
         self.write_file("dir1/a.txt", "original contents\n")
         self.hg("add", "dir1/a.txt")
@@ -78,7 +80,7 @@ class StatusRevertTest(EdenHgTestCase):
     commit3: str
     commit4: str
 
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: HgRepository) -> None:
         repo.write_file("dir1/a.txt", "original contents of a\n")
         repo.write_file("dir1/b.txt", "b.txt\n")
         repo.write_file("dir1/c.txt", "c.txt\n")
@@ -95,7 +97,7 @@ class StatusRevertTest(EdenHgTestCase):
         repo.write_file("dir1/a.txt", "original contents of a\n")
         self.commit4 = repo.commit("commit 4")
 
-    def test_reverted_contents(self):
+    def test_reverted_contents(self) -> None:
         self.assert_status_empty()
         # Read dir1/a.txt so it is loaded by edenfs
         self.read_file("dir1/a.txt")

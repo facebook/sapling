@@ -17,7 +17,7 @@ class PullTest(EdenHgTestCase):
     server_repo: hgrepo.HgRepository
     commit1: str
 
-    def create_backing_repo(self):
+    def create_backing_repo(self) -> hgrepo.HgRepository:
         # Create a server repository first
         self.server_repo = self.create_server_repo()
 
@@ -27,12 +27,12 @@ class PullTest(EdenHgTestCase):
         self.populate_backing_repo(repo)
         return repo
 
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         print("creating backing repo")
         repo.hg("pull")
         repo.hg("update", self.commit1)
 
-    def create_server_repo(self):
+    def create_server_repo(self) -> hgrepo.HgRepository:
         print("creating server repo")
         # Create a server repository.
         hgrc = self.get_hgrc()
@@ -59,7 +59,7 @@ class PullTest(EdenHgTestCase):
 
         return repo
 
-    def test_pull(self):
+    def test_pull(self) -> None:
         self.assert_status_empty()
         self.assertEqual("test\n", self.read_file("foo/subdir/test.txt"))
 

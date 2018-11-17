@@ -7,16 +7,18 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class BranchTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("a_file.txt", "")
         repo.commit("first commit")
 
-    def test_set_branch(self):
+    def test_set_branch(self) -> None:
         original_branch = self.hg("branch")
         self.assertEqual("default", original_branch.rstrip())
 

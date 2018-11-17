@@ -23,7 +23,7 @@ class StaleTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     """
 
     def setup_eden_test(self) -> None:
-        super().setup_eden_test()
+        super().setup_eden_test()  # type: ignore (pyre does not follow MRO correctly)
 
         # Change into the mount point directory.
         # We have to do this before unmounting the mount point--the chdir() call itself
@@ -50,13 +50,13 @@ class StaleTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         cmd = ["sudo", "/bin/umount", "-lf", self.mount]
         subprocess.call(cmd)
 
-    def _expected_to_fail(self):
+    def _expected_to_fail(self) -> bool:
         # xar files are able to start correctly even when the current working
         # directory is not working, but unfortunately lpar files aren't.
         # Some core python library code fails early on during import bootstrapping.
         return __manifest__.fbmake["par_style"] == "live"
 
-    def test_list(self):
+    def test_list(self) -> None:
         cmd_result = self.eden.run_unchecked("list", stdout=subprocess.PIPE)
         if not self._expected_to_fail():
             self.assertIn(
@@ -64,7 +64,7 @@ class StaleTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             )
             self.assertEqual(0, cmd_result.returncode)
 
-    def test_doctor(self):
+    def test_doctor(self) -> None:
         cmd_result = self.eden.run_unchecked("doctor", "-n", stdout=subprocess.PIPE)
         if not self._expected_to_fail():
             # We don't check for the exact number of stale mounts:

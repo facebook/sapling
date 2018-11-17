@@ -9,6 +9,9 @@
 
 import logging
 import os
+from typing import Dict, Optional
+
+from eden.integration.lib import hgrepo
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
@@ -17,11 +20,11 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 class UndoTest(EdenHgTestCase):
     commit1: str
 
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("src/common/foo/test.txt", "testing\n")
         self.commit1 = repo.commit("Initial commit.")
 
-    def edenfs_logging_settings(self):
+    def edenfs_logging_settings(self) -> Optional[Dict[str, str]]:
         edenfs_log_levels = {}
 
         log = logging.getLogger("eden.test.undo")
@@ -30,7 +33,7 @@ class UndoTest(EdenHgTestCase):
 
         return edenfs_log_levels
 
-    def test_undo_commit_with_new_dir(self):
+    def test_undo_commit_with_new_dir(self) -> None:
         log = logging.getLogger("eden.test.undo")
 
         # Add a new file in a new directory

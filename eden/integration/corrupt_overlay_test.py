@@ -21,7 +21,7 @@ class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     """Test file operations when Eden's overlay is corrupted."""
 
     def setUp(self) -> None:
-        super().setUp()
+        super().setUp()  # type: ignore (pyre does not follow python MRO properly)
         self.overlay = overlay_mod.OverlayStore(self.eden, self.mount_path)
 
     def populate_repo(self) -> None:

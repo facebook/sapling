@@ -9,16 +9,18 @@
 
 from textwrap import dedent
 
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class DebugHgDirstateTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("rootfile.txt", "")
         repo.commit("Initial commit.")
 
-    def test_empty_hg_dirstate(self):
+    def test_empty_hg_dirstate(self) -> None:
         output = self.eden.run_cmd("debug", "hg_dirstate", cwd=self.mount)
         expected = dedent(
             """\
@@ -28,7 +30,7 @@ class DebugHgDirstateTest(EdenHgTestCase):
         )
         self.assertEqual(expected, output)
 
-    def test_hg_dirstate_with_modified_files(self):
+    def test_hg_dirstate_with_modified_files(self) -> None:
         self.write_file("a.txt", "")
         self.write_file("b.txt", "")
         self.write_file("c.txt", "")
@@ -65,7 +67,7 @@ class DebugHgDirstateTest(EdenHgTestCase):
         )
         self.assertEqual(expected, output)
 
-    def test_hg_dirstate_with_copies(self):
+    def test_hg_dirstate_with_copies(self) -> None:
         self.hg("copy", "rootfile.txt", "root1.txt")
         self.hg("copy", "rootfile.txt", "root2.txt")
 

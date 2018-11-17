@@ -9,6 +9,8 @@
 
 import os
 
+from eden.integration.lib import hgrepo
+
 from .hg_extension_test_base import EdenHgTestCase, hg_test
 
 
@@ -18,11 +20,11 @@ class HgExtensionTestBaseTest(EdenHgTestCase):
     properly configured with the Hg extension.
     """
 
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.commit("Initial commit.")
 
-    def test_setup(self):
+    def test_setup(self) -> None:
         hg_dir = os.path.join(self.mount, ".hg")
         self.assertTrue(os.path.isdir(hg_dir))
 

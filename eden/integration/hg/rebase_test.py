@@ -29,7 +29,7 @@ class RebaseTest(EdenHgTestCase):
     _c24: str
     _c25: str
 
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.mkdir("numbers")
         repo.write_file("numbers/README", "this will have two directories")
         self._base_commit = repo.commit("commit")
@@ -61,7 +61,7 @@ class RebaseTest(EdenHgTestCase):
 
         repo.update(self._base_commit)
 
-    def test_rebase_commit_with_independent_folder(self):
+    def test_rebase_commit_with_independent_folder(self) -> None:
         stdout = self.hg("--debug", "rebase", "-s", self._c11, "-d", self._c25)
         self.assertIn(f'rebasing 1:{self._c11[:12]} "c11"\n', stdout)
         self.assertIn(f'rebasing 2:{self._c12[:12]} "c12"\n', stdout)
@@ -116,7 +116,7 @@ class RebaseTest(EdenHgTestCase):
             ),
         )
 
-    def test_rebasing_a_commit_that_removes_a_file(self):
+    def test_rebasing_a_commit_that_removes_a_file(self) -> None:
         # Rebase a commit that removes the numbers/README file.
         self.hg("rm", "numbers/README")
         removal_commit = self.repo.commit("removing README")
@@ -127,7 +127,7 @@ class RebaseTest(EdenHgTestCase):
         self.assertFalse(os.path.exists(self.get_path("numbers/README")))
         self.assertEqual(7, len(self.repo.log()))
 
-    def test_rebase_stack_with_conflicts(self):
+    def test_rebase_stack_with_conflicts(self) -> None:
         """Create a stack of commits that has conflicts with the stack onto
         which we rebase and verify that if we merge the expected conflicts along
         the way, then we end up in the expected state."""
@@ -238,7 +238,7 @@ class RebaseTest(EdenHgTestCase):
 
     def assert_update_logic(
         self, stdout: str, num_fast_path: int = 0, num_slow_path: int = 0
-    ):
+    ) -> None:
         """Helper function to examine the stdout of an `hg --debug update` call
         and verify the number of times our Hg extension exercised the "fast
         path" for Eden when doing an update versus the number of times it
@@ -261,7 +261,7 @@ class RebaseTest(EdenHgTestCase):
             ),
         )
 
-    def test_rebase_with_concurrent_status(self):
+    def test_rebase_with_concurrent_status(self) -> None:
         """
         Test using `hg rebase` to rebase a stack while simultaneously running
         `hg status`

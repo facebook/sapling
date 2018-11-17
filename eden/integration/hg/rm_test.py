@@ -9,24 +9,25 @@
 
 import os
 
-from ..lib import hgrepo
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class RmTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("apple", "")
         repo.write_file("banana", "")
         repo.commit("first commit")
 
-    def test_rm_file(self):
+    def test_rm_file(self) -> None:
         self.hg("rm", "apple")
         self.assert_status({"apple": "R"})
         self.assertFalse(os.path.isfile(self.get_path("apple")))
         self.assertTrue(os.path.isfile(self.get_path("banana")))
 
-    def test_rm_modified_file(self):
+    def test_rm_modified_file(self) -> None:
         self.write_file("apple", "new contents")
 
         with self.assertRaises(hgrepo.HgError) as context:
@@ -42,7 +43,7 @@ class RmTest(EdenHgTestCase):
         self.assertFalse(os.path.isfile(self.get_path("apple")))
         self.assertTrue(os.path.isfile(self.get_path("banana")))
 
-    def test_rm_modified_file_permissions(self):
+    def test_rm_modified_file_permissions(self) -> None:
         os.chmod(self.get_path("apple"), 0o755)
 
         with self.assertRaises(hgrepo.HgError) as context:
@@ -58,7 +59,7 @@ class RmTest(EdenHgTestCase):
         self.assertFalse(os.path.isfile(self.get_path("apple")))
         self.assertTrue(os.path.isfile(self.get_path("banana")))
 
-    def test_rm_directory(self):
+    def test_rm_directory(self) -> None:
         self.mkdir("dir")
         self.touch("dir/1")
         self.touch("dir/2")
@@ -70,7 +71,7 @@ class RmTest(EdenHgTestCase):
         self.assert_status({"dir/1": "R", "dir/2": "R", "dir/3": "R"})
         self.assertFalse(os.path.exists(self.get_path("dir")))
 
-    def test_rm_directory_with_modification(self):
+    def test_rm_directory_with_modification(self) -> None:
         self.mkdir("dir")
         self.touch("dir/1")
         self.touch("dir/2")

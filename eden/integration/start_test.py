@@ -105,7 +105,7 @@ Did you mean to run "eden" instead of "edenfs"?
 class StartFakeEdenFSTest(
     ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin
 ):
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.eden_dir = pathlib.Path(self.make_temporary_directory())
 

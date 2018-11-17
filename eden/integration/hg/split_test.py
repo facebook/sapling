@@ -7,18 +7,19 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from ..lib import hgrepo
+from eden.integration.lib import hgrepo
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
 class SplitTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("letters", "a\nb\nc\n")
         repo.write_file("numbers", "1\n2\n3\n")
         repo.commit("Initial commit.")
 
-    def test_split_one_commit_into_two(self):
+    def test_split_one_commit_into_two(self) -> None:
         """Split one commit with two files into two commits of one file each."""
         commits = self.repo.log(template="{desc}")
         self.assertEqual(["Initial commit."], commits)
@@ -53,7 +54,7 @@ class SplitTest(EdenHgTestCase):
         files = self.repo.log(template="{files}")
         self.assertEqual(["letters", "numbers"], files)
 
-    def test_abort_split_with_pending_add(self):
+    def test_abort_split_with_pending_add(self) -> None:
         self.write_file("letters", "abcd\n")
         self.write_file("new.txt", "new!\n")
         self.hg("add", "new.txt")
