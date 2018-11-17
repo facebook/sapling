@@ -31,7 +31,7 @@ class GitRepository(repobase.Repository):
 
     def git(
         self, *args: str, encoding: str = "utf-8", env: Optional[Dict[str, str]] = None
-    ) -> Optional[str]:
+    ) -> str:
         """
         Invoke a git command inside the repository.
 
@@ -66,10 +66,7 @@ class GitRepository(repobase.Repository):
             )
         except subprocess.CalledProcessError as ex:
             raise GitError(ex) from ex
-        if completed_process.stdout is not None:
-            return typing.cast(str, completed_process.stdout.decode(encoding))
-        else:
-            return None
+        return typing.cast(str, completed_process.stdout.decode(encoding))
 
     def init(self) -> None:
         self.git("init")

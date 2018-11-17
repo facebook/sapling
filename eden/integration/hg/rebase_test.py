@@ -270,7 +270,7 @@ class RebaseTest(EdenHgTestCase):
 
         def status_thread():
             while not stop.is_set():
-                self.hg("status", stdout=None, stderr=None)
+                self.repo.run_hg("status", stdout=None, stderr=None)
 
         # Spawn several threads to run "hg status" in parallel with the rebase
         num_threads = 6
@@ -282,7 +282,7 @@ class RebaseTest(EdenHgTestCase):
 
         # Run the rebase.  Explicitly disable inmemory rebase so that eden
         # will need to update the working directory state as tehe rebase progresses
-        self.hg(
+        self.repo.run_hg(
             "--debug",
             "--config",
             "rebase.experimental.inmemory=False",

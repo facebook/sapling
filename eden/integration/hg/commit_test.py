@@ -97,7 +97,7 @@ class CommitTest(EdenHgTestCase):
             "y\n"  # record changes from foo/new.txt
             "n\n"  # examine hello.txt
         )
-        self.hg(
+        self.repo.run_hg(
             "commit",
             "-i",
             "-m",
@@ -127,7 +127,9 @@ class CommitTest(EdenHgTestCase):
         self.hg("add", "foo/new.txt")
         self.assert_status({"foo/new.txt": "A", "hello.txt": "M"})
 
-        self.hg("commit", "-m", "test", "foo/new.txt", stdout=None, stderr=None)
+        self.repo.run_hg(
+            "commit", "-m", "test", "foo/new.txt", stdout=None, stderr=None
+        )
         self.assert_status({"hello.txt": "M"})
         self.assert_dirstate_empty()
 
@@ -140,7 +142,9 @@ class CommitTest(EdenHgTestCase):
         self.assert_status({"foo/bar.txt": "M", "hello.txt": "M"})
         self.assert_dirstate_empty()
 
-        self.hg("commit", "-m", "test", "foo/bar.txt", stdout=None, stderr=None)
+        self.repo.run_hg(
+            "commit", "-m", "test", "foo/bar.txt", stdout=None, stderr=None
+        )
         self.assert_status({"hello.txt": "M"})
         self.assert_dirstate_empty()
 
@@ -154,6 +158,6 @@ class CommitTest(EdenHgTestCase):
         self.hg("add", "foo/new.txt")
         self.assert_status({"foo/new.txt": "A", "foo/bar.txt": "M", "hello.txt": "M"})
 
-        self.hg("commit", "-m", "test", "foo", stdout=None, stderr=None)
+        self.repo.run_hg("commit", "-m", "test", "foo", stdout=None, stderr=None)
         self.assert_status({"hello.txt": "M"})
         self.assert_dirstate_empty()

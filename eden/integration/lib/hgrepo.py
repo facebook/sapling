@@ -108,27 +108,20 @@ class HgRepository(repobase.Repository):
         self,
         *args: str,
         encoding: str = "utf-8",
-        stdout: Any = subprocess.PIPE,
-        stderr: Any = subprocess.PIPE,
         input: Optional[str] = None,
         hgeditor: Optional[str] = None,
         cwd: Optional[str] = None,
         check: bool = True
-    ) -> Optional[str]:
+    ) -> str:
         completed_process = self.run_hg(
             *args,
             encoding=encoding,
-            stdout=stdout,
-            stderr=stderr,
             input=input,
             hgeditor=hgeditor,
             cwd=cwd,
             check=check
         )
-        if completed_process.stdout is not None:
-            return typing.cast(str, completed_process.stdout.decode(encoding))
-        else:
-            return None
+        return typing.cast(str, completed_process.stdout.decode(encoding))
 
     def init(self, hgrc: Optional[configparser.ConfigParser] = None) -> None:
         """
@@ -214,7 +207,7 @@ class HgRepository(repobase.Repository):
 
             # Do not capture stdout or stderr when running "hg commit"
             # This allows its output to show up in the test logs.
-            self.hg(*args, stdout=None, stderr=None)
+            self.run_hg(*args, stdout=None, stderr=None)
 
         # Get the commit ID and return it
         return self.hg("log", "-T{node}", "-r.")
@@ -272,4 +265,4 @@ class HgRepository(repobase.Repository):
             args = ["reset", "--keep", rev]
         else:
             args = ["reset", rev]
-        self.hg(*args, stdout=None, stderr=None)
+        self.run_hg(*args, stdout=None, stderr=None)

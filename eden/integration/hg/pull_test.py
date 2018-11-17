@@ -77,7 +77,7 @@ class PullTest(EdenHgTestCase):
         commit3 = self.server_repo.commit("Commit 3\n")
 
         # Run "hg pull" inside the Eden checkout
-        self.repo.hg("pull", stdout=None)
+        self.repo.run_hg("pull", stdout=None, stderr=None)
 
         # Update the Eden checkout to commit2
         self.repo.hg("update", commit2)
@@ -101,7 +101,7 @@ class PullTest(EdenHgTestCase):
         # This tests that the hg_import_helper can correctly see new data on
         # the server that was created after it first established its connection
         # to the server.
-        self.repo.hg("pull", stdout=None)
+        self.repo.run_hg("pull", stdout=None, stderr=None)
         self.repo.hg("update", commit4)
         self.assert_status_empty()
         self.assertEqual(
