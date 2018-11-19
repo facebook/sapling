@@ -1096,7 +1096,8 @@ def autosyncenabled(ui, _repo):
 
 def backuplockcheck(ui, repo):
     try:
-        lockmod.trylock(ui, repo.sharedvfs, _backuplockname, 0, 0)
+        with lockmod.trylock(ui, repo.sharedvfs, _backuplockname, 0, 0):
+            pass
     except error.LockHeld as e:
         if e.lockinfo.isrunning():
             lockinfo = e.lockinfo
