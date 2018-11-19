@@ -1443,6 +1443,8 @@ class Test(unittest.TestCase):
         env["HGEMITWARNINGS"] = "1"
         env["TESTTMP"] = self._testtmp
         env["HOME"] = self._testtmp
+        if not self._usechg:
+            env["CHGDISABLE"] = "1"
         # This number should match portneeded in _getport
         for port in xrange(3):
             # This list should be parallel to _portmap in _getreplacements
