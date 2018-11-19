@@ -347,8 +347,13 @@ int main(int argc, const char* argv[], const char* envp[]) {
         "wrapper to chg. Alternatively, set $CHGHG to the "
         "path of real hg.");
 
-  if (isunsupported(argc - 1, argv + 1))
+  if (isunsupported(argc - 1, argv + 1)) {
+    // For cases when chg and original hg are the same binary,
+    // we need to tell the original hg that we've already made
+    // a decision to not use chg logic
+    setenv("CHGDISABLE", "1", 1);
     execoriginalhg(argv);
+  }
 
   struct cmdserveropts opts;
   initcmdserveropts(&opts);
