@@ -18,7 +18,7 @@ from .lib import testcase
 
 @testcase.eden_repo_test
 class HypothesisSimpleTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("adir/file", "foo!\n")
         self.repo.write_file("bdir/test.sh", "#!/bin/bash\necho test\n", mode=0o755)
@@ -27,7 +27,7 @@ class HypothesisSimpleTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     @hypothesis.given(FILENAME_STRATEGY)
-    def test_create(self, basename):
+    def test_create(self, basename: str) -> None:
         filename = os.path.join(self.mount, basename)
 
         # Ensure that we don't proceed if hypothesis has selected a name that

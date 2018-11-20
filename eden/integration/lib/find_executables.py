@@ -39,19 +39,24 @@ class cached_property(object):
 
 
 class FindExeClass(object):
+    _BUCK_OUT: Optional[str] = None
+    _REPO_ROOT: Optional[str] = None
+
     def __init__(self) -> None:
         self._cache: Dict[str, str] = {}
 
     @property
     def BUCK_OUT(self) -> str:
-        if not hasattr(self, "_BUCK_OUT"):
+        if self._BUCK_OUT is None:
             self._find_repo_root_and_buck_out()
+            assert self._BUCK_OUT is not None
         return self._BUCK_OUT
 
     @property
     def REPO_ROOT(self) -> str:
-        if not hasattr(self, "_REPO_ROOT"):
+        if self._REPO_ROOT is None:
             self._find_repo_root_and_buck_out()
+            assert self._REPO_ROOT is not None
         return self._REPO_ROOT
 
     @cached_property

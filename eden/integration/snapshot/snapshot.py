@@ -78,7 +78,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         state.
         """
         # Make sure the output directory exists
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.parent.mkdir(parents=True, exist_ok=True)  # pyre-ignore (T36816872)
 
         cmd = [
             "gtar",
@@ -367,6 +367,9 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
     """A helper parent class for BaseSnapshot implementations that creates a single
     checkout of a mercurial repository."""
 
+    system_hgrc_path: Path
+    backing_repo: hgrepo.HgRepository
+
     def create_transient_dir(self) -> None:
         super().create_transient_dir()
 
@@ -426,7 +429,7 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
     ) -> None:
         """Helper function to write a file in the checkout."""
         file_path = self.checkout_path / path
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.parent.mkdir(parents=True, exist_ok=True)  # pyre-ignore (T36816872)
         with file_path.open("wb") as f:
             os.fchmod(f.fileno(), mode)
             f.write(contents)
@@ -534,7 +537,7 @@ def _import_snapshot_modules() -> None:
 
     # Find and import all modules in our "types" sub-package.
     # Each module will register its snapshot types when imported.
-    package_prefix = f"{__package__}.types."
+    package_prefix = f"{__package__}.types."  # type: ignore
     for module in __manifest__.modules:  # type: ignore
         if module.startswith(package_prefix):
             __import__(module)

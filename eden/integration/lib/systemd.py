@@ -297,7 +297,7 @@ class SystemdUserServiceManagerMixin(metaclass=abc.ABCMeta):
         context_manager = temporary_systemd_user_service_manager()
         exit = context_manager.__exit__
         systemd = context_manager.__enter__()
-        self.addCleanup(lambda: exit(None, None, None))
+        self.addCleanup(lambda: exit(None, None, None))  # pyre-ignore (T36820067)
         return systemd
 
     def addCleanup(

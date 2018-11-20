@@ -95,10 +95,10 @@ class GitRepository(repobase.Repository):
         author_name: Optional[str] = None,
         author_email: Optional[str] = None,
         date: Optional[datetime.datetime] = None,
+        amend: bool = False,
         committer_name: Optional[str] = None,
         committer_email: Optional[str] = None,
         committer_date: Optional[datetime.datetime] = None,
-        amend: bool = False,
     ) -> str:
         if author_name is None:
             author_name = self.author_name

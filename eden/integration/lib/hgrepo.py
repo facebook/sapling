@@ -229,7 +229,8 @@ class HgRepository(repobase.Repository):
 
     def journal(self) -> List[Dict[str, Any]]:
         output = self.hg("journal", "-T", "json")
-        return json.loads(output)
+        json_data = json.loads(output)
+        return typing.cast(List[Dict[str, Any]], json_data)
 
     def status(self, include_ignored: bool = False) -> Dict[str, str]:
         """Returns the output of `hg status` as a dictionary of {path: status char}.

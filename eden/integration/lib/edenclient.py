@@ -26,6 +26,8 @@ from .find_executables import FindExe
 class EdenFS(object):
     """Manages an instance of the eden fuse server."""
 
+    _eden_dir: str
+
     def __init__(
         self,
         eden_dir: Optional[str] = None,
@@ -70,7 +72,7 @@ class EdenFS(object):
 
     def cleanup_dirs(self) -> None:
         """Remove any temporary dirs we have created."""
-        shutil.rmtree(self._eden_dir, ignore_errors=True)
+        shutil.rmtree(os.fsencode(self._eden_dir), ignore_errors=True)
 
     def kill(self) -> None:
         """Stops and unmounts this instance."""
@@ -155,6 +157,7 @@ class EdenFS(object):
         takeover = takeover_from is not None
         self._spawn(gdb=use_gdb, takeover=takeover)
 
+        assert self._process is not None
         util.wait_for_daemon_healthy(
             proc=self._process,
             config_dir=self._eden_dir,

@@ -24,7 +24,7 @@ class FlatmanifestFallbackUpdateTest(EdenHgTestCase):
     commit3: str
     commit4: str
 
-    def apply_hg_config_variant(self, config: configparser.ConfigParser) -> None:
+    def apply_hg_config_variant(self, hgrc: configparser.ConfigParser) -> None:
         # Do nothing here for now.
         # Keep treemanifest disabled initially during populate_backing_repo()
         pass

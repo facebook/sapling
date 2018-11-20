@@ -40,7 +40,7 @@ class SystemdEnvironmentFile:
             output.extend(b"=")
             output.extend(cls.__escape_value(value))
             output.extend(b"\n")
-        return output
+        return bytes(output)
 
     @staticmethod
     def __escape_value(value: bytes) -> bytes:

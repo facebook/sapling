@@ -7,9 +7,11 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import os
 from typing import Iterable
 
 import eden.thrift
+from facebook.eden.ttypes import TimeSpec
 
 from . import edenclient
 
@@ -32,7 +34,9 @@ class EdenServerInspector(object):
     def unload_inode_for_path(self, path: str = "") -> None:
         """path: relative path to a directory under the mount."""
         with self.create_thrift_client() as client:
-            client.unloadInodeForPath(self._mount_point, path)
+            client.unloadInodeForPath(
+                os.fsencode(self._mount_point), os.fsencode(path), age=TimeSpec(0, 0)
+            )
 
     def get_inode_count(self, path: str = "") -> int:
         """path: relative path to a directory under the mount.
@@ -41,7 +45,9 @@ class EdenServerInspector(object):
         the root .hg and .eden entries.
         """
         with self.create_thrift_client() as client:
-            debug_info = client.debugInodeStatus(self._mount_point, path)
+            debug_info = client.debugInodeStatus(
+                os.fsencode(self._mount_point), os.fsencode(path)
+            )
         count = 0
         for tree_inode_debug_info in debug_info:
             count += sum(1 for entry in tree_inode_debug_info.entries if entry.loaded)
@@ -50,7 +56,9 @@ class EdenServerInspector(object):
     def get_paths_for_inodes(self, path: str = "") -> Iterable[str]:
         """path: relative path to a directory under the mount."""
         with self.create_thrift_client() as client:
-            debug_info = client.debugInodeStatus(self._mount_point, path)
+            debug_info = client.debugInodeStatus(
+                os.fsencode(self._mount_point), os.fsencode(path)
+            )
         for tree_inode_debug_info in debug_info:
             parent_dir = tree_inode_debug_info.path.decode("utf-8")
             for entry in tree_inode_debug_info.entries:
