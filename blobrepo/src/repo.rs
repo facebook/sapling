@@ -523,9 +523,8 @@ impl BlobRepo {
             .and_then(move |content_key_bytes| {
                 let content_key = content_key_bytes.as_bytes().as_ref();
 
-                // TODO(anastasiyaz): T34097933 - remove hardcoded content prefix
                 // check expected prefix
-                let content_prefix = "content.blake2.";
+                let content_prefix = ContentId::blobstore_key_prefix();
                 let prefix_len = content_prefix.len();
 
                 if prefix_len > content_key.len()

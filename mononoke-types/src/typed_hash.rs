@@ -30,6 +30,9 @@ pub trait MononokeId: Copy + Send + 'static {
     /// Return a key suitable for blobstore use.
     fn blobstore_key(&self) -> String;
 
+    /// Return a prefix before hash used in blobstore
+    fn blobstore_key_prefix() -> String;
+
     /// Compute this Id for some data.
     fn from_data<T: AsRef<[u8]>>(data: T) -> Self;
 }
@@ -154,6 +157,11 @@ macro_rules! impl_typed_hash {
             #[inline]
             fn blobstore_key(&self) -> String {
                 format!(concat!($key, ".blake2.{}"), self.0)
+            }
+
+            #[inline]
+            fn blobstore_key_prefix() -> String {
+                concat!($key, ".blake2.").to_string()
             }
 
             fn from_data<T: AsRef<[u8]>>(data: T) -> Self {
