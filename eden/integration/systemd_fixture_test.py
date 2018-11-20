@@ -15,7 +15,7 @@ import time
 import typing
 import unittest
 
-from .lib.linux import ProcessID
+from .lib.linux import ProcessID, is_cgroup_v2_mounted
 from .lib.systemd import (
     SystemdService,
     SystemdUnitName,
@@ -163,6 +163,10 @@ ExecStart=/bin/false
             ("failed", "failed"),
         )
 
+    @unittest.skipIf(
+        not is_cgroup_v2_mounted(),
+        "T36934106: Fix EdenFS systemd integration tests for cgroups v1",
+    )
     def test_processes_of_forking_service_includes_all_child_processes(self) -> None:
         service = self.enable_service(
             "test-SystemdServiceTest.service",
