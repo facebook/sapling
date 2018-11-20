@@ -298,6 +298,8 @@ static PyObject* newtreeiter_iternext(py_newtreeiter* self) {
           p2Node,
           (Py_ssize_t)BIN_NODE_SIZE);
     }
+  } catch (const pyexception&) {
+    return NULL;
   } catch (const std::exception& ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return NULL;
