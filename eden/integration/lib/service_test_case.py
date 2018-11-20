@@ -58,13 +58,16 @@ class ManagedFakeEdenFSMixin:
 def _replicate_service_test(
     test_class: typing.Type[ServiceTestCaseBase]
 ) -> typing.Iterable[typing.Tuple[str, typing.Type[ServiceTestCaseBase]]]:
-    class ManagedTest(ManagedFakeEdenFSMixin, test_class):
+    class ManagedTest(ManagedFakeEdenFSMixin, test_class):  # type: ignore
         pass
 
-    class AdHocTest(AdHocFakeEdenFSMixin, test_class):
+    class AdHocTest(AdHocFakeEdenFSMixin, test_class):  # type: ignore
         pass
 
-    return [("Managed", ManagedTest), ("AdHoc", AdHocTest)]
+    return [
+        ("Managed", typing.cast(typing.Type[ServiceTestCaseBase], ManagedTest)),
+        ("AdHoc", typing.cast(typing.Type[ServiceTestCaseBase], AdHocTest)),
+    ]
 
 
 # A decorator function used to create ServiceTestCaseBase subclasses from a

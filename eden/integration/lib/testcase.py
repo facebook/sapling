@@ -18,8 +18,8 @@ import typing
 import unittest
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type
 
-import eden.thrift
 from eden.test_support.hypothesis import set_up_hypothesis
+from eden.thrift import EdenClient
 from hypothesis.internal.detection import is_hypothesis_test
 
 from . import edenclient, gitrepo, hgrepo, repobase, util
@@ -43,10 +43,13 @@ class EdenTestCase(
 
     mount: str
     eden: edenclient.EdenFS
+    start: float
+    last_event: float
 
-    def run(
-        self, report: Optional[unittest.result.TestResult] = None
-    ) -> unittest.result.TestResult:
+    # The current typeshed library claims unittest.TestCase.run() returns a TestCase,
+    # but it really returns Optional[TestResult].
+    # We declare it to return Any here just to make the type checkers happy.
+    def run(self, result: Optional[unittest.TestResult] = None) -> Any:
         """ Some slightly awful magic here to arrange for setUp and
             tearDown to be called at the appropriate times when hypothesis
             is enabled for a test case.
@@ -56,18 +59,20 @@ class EdenTestCase(
             try:
                 old_setUp = self.setUp
                 old_tearDown = self.tearDown
-                self.setUp = lambda: None
-                self.tearDown = lambda: None
+                self.setUp = lambda: None  # type: ignore # (mypy issue 2427)
+                self.tearDown = lambda: None  # type: ignore # (mypy issue 2427)
                 self.setup_example = old_setUp
-                self.teardown_example = lambda _: old_tearDown()
-                return super(EdenTestCase, self).run(report)
+                self.teardown_example = (
+                    lambda _: old_tearDown()  # pyre-ignore (T36820067)
+                )
+                return super(EdenTestCase, self).run(result)
             finally:
-                self.setUp = old_setUp
-                self.tearDown = old_tearDown
+                self.setUp = old_setUp  # type: ignore # (mypy issue 2427)
+                self.tearDown = old_tearDown  # type: ignore # (mypy issue 2427)
                 del self.setup_example
                 del self.teardown_example
         else:
-            return super(EdenTestCase, self).run(report)
+            return super(EdenTestCase, self).run(result)
 
     def report_time(self, event: str) -> None:
         """
@@ -149,7 +154,7 @@ class EdenTestCase(
     def mount_path_bytes(self) -> bytes:
         return bytes(self.mount_path)
 
-    def get_thrift_client(self) -> eden.thrift.EdenClient:
+    def get_thrift_client(self) -> EdenClient:
         """
         Get a thrift client to the edenfs daemon.
         """
@@ -300,7 +305,7 @@ class EdenRepoTest(EdenTestCase):
             "@eden_repo_test"
         )
 
-    def get_thrift_client(self) -> eden.thrift.EdenClient:
+    def get_thrift_client(self) -> EdenClient:
         # get_thrift_client() is also defined in our parent class, but for some reason
         # mypy gets confused when get_thrift_client() is used in our subclasses unless
         # we define it here.  (mypy knows that the method exists but cannot figure out
@@ -310,8 +315,8 @@ class EdenRepoTest(EdenTestCase):
 
 def _replicate_test(
     caller_scope: Dict[str, Any],
-    replicate: Callable[..., Iterable[Tuple[str, Type[EdenRepoTest]]]],
-    test_class: Type[EdenRepoTest],
+    replicate: Callable[..., Iterable[Tuple[str, Type[unittest.TestCase]]]],
+    test_class: Type[unittest.TestCase],
     args: Sequence[Any],
     kwargs: Dict[str, Any],
 ) -> None:
@@ -327,7 +332,7 @@ def _replicate_test(
 
 
 def test_replicator(
-    replicate: Callable[..., Iterable[Tuple[str, Type[EdenRepoTest]]]]
+    replicate: Callable[..., Iterable[Tuple[str, Type[unittest.TestCase]]]]
 ) -> Callable[..., Any]:
     """
     A helper function for implementing decorators that replicate TestCase
@@ -339,7 +344,7 @@ def test_replicator(
 
     def decorator(
         *args: Any, **kwargs: Any
-    ) -> Optional[Callable[[Type[EdenRepoTest]], None]]:
+    ) -> Optional[Callable[[Type[unittest.TestCase]], None]]:
         # We do some rather hacky things here to define new test class types
         # in our caller's scope.  This is needed so that the unittest TestLoader
         # will find the subclasses we define.
@@ -357,7 +362,7 @@ def test_replicator(
             return None
         else:
 
-            def inner_decorator(test_class: Type[EdenRepoTest]) -> None:
+            def inner_decorator(test_class: Type[unittest.TestCase]) -> None:
                 _replicate_test(caller_scope, replicate, test_class, args, kwargs)
 
             return inner_decorator
@@ -368,13 +373,16 @@ def test_replicator(
 def _replicate_eden_repo_test(
     test_class: Type[EdenRepoTest]
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
-    class HgRepoTest(HgRepoTestMixin, test_class):
+    class HgRepoTest(HgRepoTestMixin, test_class):  # type: ignore
         pass
 
-    class GitRepoTest(GitRepoTestMixin, test_class):
+    class GitRepoTest(GitRepoTestMixin, test_class):  # type: ignore
         pass
 
-    return [("Hg", HgRepoTest), ("Git", GitRepoTest)]
+    return [
+        ("Hg", typing.cast(Type[EdenRepoTest], HgRepoTest)),
+        ("Git", typing.cast(Type[EdenRepoTest], GitRepoTest)),
+    ]
 
 
 # A decorator function used to create EdenHgTest and EdenGitTest
@@ -388,9 +396,14 @@ eden_repo_test = test_replicator(_replicate_eden_repo_test)
 
 class HgRepoTestMixin:
     def create_repo(self, name: str) -> repobase.Repository:
-        return self.create_hg_repo(name)
+        # HgRepoTestMixin is always used in classes that derive from EdenRepoTest,
+        # but it is difficult to make the type checkers aware of that.  We can't
+        # add an abstract create_hg_repo() method to this class since the MRO would find
+        # it before the real create_hg_repo() name.  We can't change the MRO without
+        # breaking resolution of create_repo().
+        return self.create_hg_repo(name)  # type: ignore
 
 
 class GitRepoTestMixin:
     def create_repo(self, name: str) -> repobase.Repository:
-        return self.create_git_repo(name)
+        return self.create_git_repo(name)  # type: ignore
