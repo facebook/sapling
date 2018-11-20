@@ -84,6 +84,7 @@ extern crate mononoke_types_thrift;
 extern crate storage_types;
 
 pub mod bdiff;
+pub mod delta_apply;
 pub mod delta;
 pub mod errors;
 pub mod fsencode;

@@ -9,6 +9,8 @@ use quickcheck::rand::distributions::{IndependentSample, LogNormal};
 
 use errors::*;
 
+use super::delta_apply::{mpatch_fold, wrap_deltas};
+
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, HeapSizeOf)]
 pub struct Delta {
     // Fragments should be in sorted order by start offset and should not overlap.
@@ -38,6 +40,10 @@ impl Delta {
 
     pub fn fragments(&self) -> &[Fragment] {
         self.frags.as_slice()
+    }
+
+    pub fn push(&mut self, frag: Fragment) {
+        self.frags.push(frag);
     }
 
     /// If this delta might be a fulltext, return the fulltext. Note that we can only tell with
@@ -127,6 +133,11 @@ impl Fragment {
     /// Return the end offset of this Fragment's content, after application.
     pub fn post_end(&self) -> usize {
         self.start + self.content.len()
+    }
+
+    // Return the length of the content
+    pub fn content_length(&self) -> usize {
+        self.content.len()
     }
 
     /// Return the change in text length this Fragment will cause when applied.
@@ -241,12 +252,25 @@ pub fn apply(text: &[u8], delta: &Delta) -> Result<Vec<u8>> {
 }
 
 /// Apply a chain of Deltas to an input text, returning the result.
+/// Pack all deltas into one delta, and apply a pack to input text.
 pub fn apply_chain<I: IntoIterator<Item = Delta>>(text: &[u8], deltas: I) -> Result<Vec<u8>> {
     let mut res = Vec::from(text);
-    for delta in deltas {
-        res = apply(&res, &delta)?;
+
+    let (wrapped_deltas, data) = wrap_deltas(deltas);
+
+    if wrapped_deltas.len() == 0 {
+        Ok(res)
+    } else {
+        // fold all deltas into one delta using logarithmic algorithm
+        let folded_wrapped_delta = mpatch_fold(&wrapped_deltas, 0, wrapped_deltas.len());
+
+        // convert into Revlog Delta
+        let folded_delta = folded_wrapped_delta.into_delta(data)?;
+
+        // apply folded delta
+        res = apply(&res, &folded_delta)?;
+        Ok(res)
     }
-    Ok(res)
 }
 
 /// XXX: Compatibility functions for the old bdiff module for testing purposes. The delta
@@ -508,4 +532,115 @@ mod tests {
             Ok(res) => panic!("Unexpected success: {:?}", res),
         }
     }
+
+    #[test]
+    fn test_apply_chain_logarithmic1() {
+        let frags1 = vec![
+            Fragment {
+                start: 0,
+                end: 1,
+                content: (&b"xx"[..]).into(),
+            },
+            Fragment {
+                start: 1,
+                end: 2,
+                content: (&b"xx"[..]).into(),
+            },
+        ];
+        let delta1 = Delta::new(frags1).unwrap();
+
+        let frags2 = vec![
+            Fragment {
+                start: 1,
+                end: 3,
+                content: (&b"bb"[..]).into(),
+            },
+        ];
+        let delta2 = Delta::new(frags2).unwrap();
+
+        let deltas = vec![delta1, delta2];
+        let text = b"aaaaaa";
+
+        let res = apply_chain(text, deltas).unwrap();
+        assert_eq!(&res[..], b"xbbxaaaa");
+    }
+
+    #[test]
+    fn test_apply_chain_logarithmic2() {
+        let frags1 = vec![
+            Fragment {
+                start: 1,
+                end: 2,
+                content: (&b"xx"[..]).into(),
+            },
+        ];
+        let delta1 = Delta::new(frags1).unwrap();
+
+        let deltas = vec![delta1];
+        let text = b"aaaaaa";
+
+        let res = apply_chain(text, deltas).unwrap();
+        assert_eq!(&res[..], b"axxaaaa");
+    }
+
+    #[test]
+    fn test_apply_chain_logarithmic3() {
+        let frags1 = vec![
+            Fragment {
+                start: 5,
+                end: 10,
+                content: (&b"xxx"[..]).into(),
+            },
+            Fragment {
+                start: 10,
+                end: 12,
+                content: (&b"yyyyy"[..]).into(),
+            },
+        ];
+        let delta1 = Delta::new(frags1).unwrap();
+
+        let frags2 = vec![
+            Fragment {
+                start: 6,
+                end: 7,
+                content: (&b"zzzzzzz"[..]).into(),
+            },
+        ];
+        let delta2 = Delta::new(frags2).unwrap();
+
+        let deltas = vec![delta1, delta2];
+        let text = b"aaaaabbbbbccccc";
+
+        let res = apply_chain(text, deltas).unwrap();
+        assert_eq!(&res[..], b"aaaaaxzzzzzzzxyyyyyccc");
+    }
+
+    #[test]
+    fn test_apply_chain_logarithmic_append() {
+        let frags1 = vec![
+            Fragment {
+                start: 1,
+                end: 1,
+                content: (&b"xxx"[..]).into(),
+            },
+        ];
+        let delta1 = Delta::new(frags1).unwrap();
+
+        let frags2 = vec![
+            Fragment {
+                start: 4,
+                end: 4,
+                content: (&b"zzz"[..]).into(),
+            },
+        ];
+        let delta2 = Delta::new(frags2).unwrap();
+
+        let deltas = vec![delta1, delta2];
+        let text = b"a";
+
+        let res = apply_chain(text, deltas).unwrap();
+
+        assert_eq!(&res[..], b"axxxzzz");
+    }
+
 }

@@ -16,6 +16,17 @@ EOF
   python "$TESTTMP/get_free_socket.py"
 }
 
+# return random value from [1, max_value]
+function random_int() {
+  max_value=$1
+
+  VAL=$RANDOM
+  (( VAL %= $max_value ))
+  (( VAL += 1 ))
+
+  echo $VAL
+}
+
 function sslcurl {
   curl --cert "$TESTDIR/testcert.crt" --cacert "$TESTDIR/testcert.crt" --key "$TESTDIR/testcert.key" "$@"
 }
