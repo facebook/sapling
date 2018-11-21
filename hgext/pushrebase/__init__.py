@@ -1177,7 +1177,6 @@ def bundle2rebase(op, part):
                 added, replacements = pushrequest.pushonto(ontoctx)
             else:
                 # Old code path - use a bundlerepo
-                bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
 
                 # Create a cache of rename sources while we don't have the lock.
                 renamesrccache = {
@@ -1195,8 +1194,6 @@ def bundle2rebase(op, part):
                 # (but grab a copy of the cache first)
                 bundle.close()
                 bundle = _createbundlerepo(op, bundlepath)
-
-                prefillcaches(op, bundle, bundlerepocache)
 
                 onto = getontotarget(op, params, bundle)
 
@@ -1218,9 +1215,6 @@ def bundle2rebase(op, part):
                 # means reading the new onto's manifest will likely have a much shorter
                 # delta chain to traverse.
                 log(_("rebasing onto %s\n") % (short(onto.node()),))
-                if preontocache:
-                    op.repo.manifestlog._revlog._cache = preontocache
-                    onto.manifest()
 
                 # Perform the rebase + commit to the main repo
                 added, replacements = runrebase(op, revs, oldonto, onto)
@@ -1349,58 +1343,6 @@ def syncifneeded(repo):
         # internal config: pushrebase.runhgsqlsync.debug
         if repo.ui.configbool("pushrebase", "runhgsqlsync.debug", False):
             repo.ui.write_err(msg)
-
-
-def prefetchcaches(op, params, bundle):
-    bundlerepocache = {}
-    # No need to cache trees from the bundle since they are already fast
-    if not op.records[treepackrecords]:
-        # We will need the bundle revs after the lock is taken, so let's
-        # precache all the bundle rev manifests.
-        bundlectxs = list(bundle.set("bundle()"))
-        manifestcachesize = op.repo.ui.configint("format", "manifestcachesize") or 10
-        if len(bundlectxs) < manifestcachesize:
-            for ctx in bundlectxs:
-                bundlerepocache[ctx.manifestnode()] = ctx.manifestctx().read()
-
-    preonto = resolveonto(bundle, params.get("onto", donotrebasemarker))
-    preontocache = None
-    if preonto:
-        cache = bundle.manifestlog._revlog._cache
-        if cache:
-            cachenode, cacherev, cachetext = cache
-            if cachenode == preonto.node():
-                preontocache = cache
-        if not preontocache:
-            # TODO: skip if tree-only bundle revision
-            cachenode = preonto.manifestnode()
-            cacherev = bundle.manifestlog._revlog.rev(cachenode)
-            cachetext = bundle.manifestlog[cachenode].read().text()
-            preontocache = (cachenode, cacherev, cachetext)
-
-    return bundlerepocache, preontocache
-
-
-def prefillcaches(op, bundle, bundlerepocache):
-    # Preload the caches with data we already have. We need to make copies
-    # here so that original repo caches don't get tainted with bundle
-    # specific data.
-    newdirmancache = bundle.manifestlog._dirmancache
-    for dir, dircache in op.repo.manifestlog._dirmancache.iteritems():
-        for mfnode in dircache:
-            mfctx = dircache[mfnode]
-            newmfctx = manifest.manifestctx(bundle.manifestlog, mfnode)
-            if util.safehasattr(mfctx, "_data") and util.safehasattr(newmfctx, "_data"):
-                newmfctx._data = mfctx._data
-                newdirmancache[dir][mfnode] = newmfctx
-
-    for mfnode, mfdict in bundlerepocache.iteritems():
-        newmfctx = manifest.manifestctx(bundle.manifestlog, mfnode)
-        newmfctx._data = mfdict
-        newdirmancache[""][mfnode] = newmfctx
-
-    newfulltextcache = op.repo.manifestlog._revlog._fulltextcache.copy()
-    bundle.manifestlog._revlog._fulltextcache = newfulltextcache
 
 
 def getontotarget(op, params, bundle):

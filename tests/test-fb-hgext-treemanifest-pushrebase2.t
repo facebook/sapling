@@ -11,6 +11,7 @@ Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
   $ echo remotefilelog >> .hg/requires
   $ enable treemanifest remotefilelog pushrebase remotenames
   $ setconfig treemanifest.sendtrees=True treemanifest.treeonly=True
+  $ setconfig paths.default=ssh://user@dummy/server
   $ drawdag <<'EOS'
   > D
   > |\
@@ -92,5 +93,19 @@ Push treeonly merge commit to a treeonly server
   $ hg commit -Aqm "Edit file2"
   $ hg merge -q 5
   $ hg commit -m "Merge 2"
-  $ hg push --to foo ssh://user@dummy/server 2>&1 | grep mpatchError
-  remote: mercurial.cext.mpatch.mpatchError: invalid patch
+  $ hg push --to foo ssh://user@dummy/server 2>&1
+  pushing rev b634a5228cef to destination ssh://user@dummy/server bookmark foo
+  searching for changes
+  remote: pushing 3 changesets:
+  remote:     a1d68bae23ee  Edit file
+  remote:     54deb28e5abb  Edit file2
+  remote:     b634a5228cef  Merge 2
+  remote: 4 new changesets from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 9 changes to 9 files (+1 heads)
+  3 new obsolescence markers
+  updating bookmark foo
+  obsoleted 3 changesets
+  7 files updated, 0 files merged, 0 files removed, 0 files unresolved
