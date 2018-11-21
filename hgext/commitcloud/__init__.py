@@ -123,6 +123,7 @@ from __future__ import absolute_import
 from mercurial import (
     error,
     extensions,
+    hintutil,
     localrepo,
     node as nodemod,
     registrar,
@@ -170,12 +171,13 @@ def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None):
         return orig(ui, repo, dest, command)
 
 
-def _smartlogbackuphealthcheckmsg(orig, ui, repo):
+def _smartlogbackuphealthcheckmsg(orig, ui, repo, **opts):
     if commitcloudutil.getworkspacename(repo):
         commitcloudutil.SubscriptionManager(repo).checksubscription()
         commitcloudcommands.backuplockcheck(ui, repo)
+        hintutil.trigger("commitcloud-old-commits", repo)
     else:
-        return orig(ui, repo)
+        return orig(ui, repo, **opts)
 
 
 def _smartlogbackupsuggestion(orig, ui, repo):
@@ -191,6 +193,19 @@ def _smartlogbackupsuggestion(orig, ui, repo):
         )
     else:
         orig(ui, repo)
+
+
+@hint("commitcloud-old-commits")
+def _smartlogomittedcommitsmsg(repo):
+    workspace = commitcloudutil.getworkspacename(repo)
+    lastsyncstate = state.SyncState(repo, workspace)
+    if lastsyncstate.omittedheads or lastsyncstate.omittedbookmarks:
+        return _(
+            "some older commits or bookmarks have not been synced to this repo\n"
+            "(run `hg cloud sl` to see all of the commits in your workspace)\n"
+            "(run `hg pull -r HASH` to fetch commits by hash)\n"
+            "(run `hg cloud sync --full` to fetch everything - this may be slow)\n"
+        )
 
 
 def extsetup(ui):

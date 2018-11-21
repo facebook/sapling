@@ -1,4 +1,5 @@
 #require jq
+  $ enable smartlog
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
@@ -13,6 +14,8 @@
   > ssh = python "$TESTDIR/dummyssh"
   > [infinitepush]
   > branchpattern = re:scratch/.*
+  > [infinitepushbackup]
+  > enablestatus = true
   > [commitcloud]
   > hostname = testhost
   > max_sync_age = 14
@@ -440,23 +443,43 @@ Connect to commit cloud
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
 
-  $ tglogp
-  o  7: d51d4ebefb99 draft 'oldstack-feb28'
+  $ hg smartlog -T '{rev}: {node|short} {desc}' --config infinitepushbackup.autobackup=true
+  o  5: 1f9ebd6d1390 oldstack-feb1
   |
-  o  6: d16408588b2d draft 'oldstack-feb4'
-  |
-  o  5: 1f9ebd6d1390 draft 'oldstack-feb1' oldbook
-  |
-  | o  4: 46f8775ee5d4 draft 'newstack-feb28'
-  | |
-  | o  3: 7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  2: 56a352317b67 draft 'newstack-feb13' newbook
+  | o  2: 56a352317b67 newstack-feb13
   |/
-  | o  1: ff52de2f760c draft 'client2-feb28'
-  |/
-  @  0: df4f53cec30a public 'base'
+  @  0: df4f53cec30a base
   
+  note: hiding 3 old heads without bookmarks
+  (use --all to see them)
+  hint[commitcloud-old-commits]: some older commits or bookmarks have not been synced to this repo
+  (run `hg cloud sl` to see all of the commits in your workspace)
+  (run `hg pull -r HASH` to fetch commits by hash)
+  (run `hg cloud sync --full` to fetch everything - this may be slow)
+  hint[hint-ack]: use 'hg hint --ack commitcloud-old-commits' to silence these hints
+
+  $ hg smartlog -T '{rev}: {node|short} {desc}' --all --config infinitepushbackup.autobackup=true
+  o  7: d51d4ebefb99 oldstack-feb28
+  |
+  o  6: d16408588b2d oldstack-feb4
+  |
+  o  5: 1f9ebd6d1390 oldstack-feb1
+  |
+  | o  4: 46f8775ee5d4 newstack-feb28
+  | |
+  | o  3: 7f958333fe84 newstack-feb15
+  | |
+  | o  2: 56a352317b67 newstack-feb13
+  |/
+  | o  1: ff52de2f760c client2-feb28
+  |/
+  @  0: df4f53cec30a base
+  
+  hint[commitcloud-old-commits]: some older commits or bookmarks have not been synced to this repo
+  (run `hg cloud sl` to see all of the commits in your workspace)
+  (run `hg pull -r HASH` to fetch commits by hash)
+  (run `hg cloud sync --full` to fetch everything - this may be slow)
+  hint[hint-ack]: use 'hg hint --ack commitcloud-old-commits' to silence these hints
 
 Move one of these bookmarks in the first client.
 

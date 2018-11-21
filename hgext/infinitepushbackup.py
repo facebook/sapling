@@ -166,7 +166,7 @@ def extsetup(ui):
 
 def _smartlog(orig, ui, repo, **opts):
     res = orig(ui, repo, **opts)
-    smartlogsummary(ui, repo)
+    smartlogsummary(ui, repo, **opts)
     return res
 
 
@@ -618,7 +618,7 @@ def _smartlogbackupmessagemap(ui, repo):
     }
 
 
-def _smartlogbackuphealthcheckmsg(ui, repo):
+def _smartlogbackuphealthcheckmsg(ui, repo, **opts):
     return
 
 
@@ -634,7 +634,7 @@ def backupstatusmsg(context, mapping, args):
     return wordmap[status]
 
 
-def smartlogsummary(ui, repo):
+def smartlogsummary(ui, repo, **opts):
     if not ui.configbool("infinitepushbackup", "enablestatus"):
         return
 
@@ -661,7 +661,7 @@ def smartlogsummary(ui, repo):
             )
             ui.write(_("so your commits are not being backed up.\n"))
     else:
-        _smartlogbackuphealthcheckmsg(ui, repo)
+        _smartlogbackuphealthcheckmsg(ui, repo, **opts)
 
     # Don't output the summary if a backup is currently in progress.
     if _islocked(repo):
