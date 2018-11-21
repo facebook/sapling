@@ -152,6 +152,32 @@ class HttpsCommitCloudService(baseservice.BaseService):
 
         # exponential backoff here on failure, 1s, 2s, 4s, 8s, 16s etc
         sl = 1
+
+        def _tlserror(e):
+            # build tls error with all configuration details
+            details = []
+            if self.ca_certs:
+                details.append(
+                    _(
+                        "* certificate authority (CA) file used '%s' (config option commitcloud.tls.ca_certs)"
+                    )
+                    % self.ca_certs
+                )
+            if self.client_certs:
+                details.append(
+                    _(
+                        "* client cert file used '%s' (config option commitcloud.tls.client_certs)"
+                    )
+                    % self.client_certs
+                )
+            if self.check_hostname:
+                details.append(
+                    _(
+                        "* tls hostname validation is enabled (config option commitcloud.tls.check_hostname)"
+                    )
+                )
+            return commitcloudcommon.TLSAccessError(self.ui, str(e), details)
+
         for attempt in xrange(MAX_CONNECT_RETRIES):
             try:
                 self.connection.request("POST", path, rdata, self.headers)
@@ -178,22 +204,11 @@ class HttpsCommitCloudService(baseservice.BaseService):
                     _("network error: %s") % e, hint=_("check your network connection")
                 )
             except socket.error as e:
+                if "SSL" in str(e):
+                    raise _tlserror(e)
                 raise commitcloudcommon.ServiceError(self.ui, str(e))
             except ssl.CertificateError as e:
-                details = []
-                if self.ca_certs:
-                    details.append(
-                        _("certificate authority (CA) file used '%s'") % self.ca_certs
-                    )
-                if self.client_certs:
-                    details.append(_("client cert file used '%s'") % self.ca_certs)
-                if self.check_hostname:
-                    details.append(
-                        _(
-                            "tls hostname validation is enabled, to disable set config 'commitcloud.tls.check_hostname=false'"
-                        )
-                    )
-                raise commitcloudcommon.TLSAccessError(self.ui, str(e), details)
+                raise _tlserror(e)
             time.sleep(sl)
             sl *= 2
         if e:
