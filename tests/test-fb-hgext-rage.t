@@ -29,7 +29,7 @@ Create fake infinitepush backup state to be collected by rage
 
   $ echo '{ "fakestate": "something" }' > repo/.hg/infinitepushbackupstate
   $ cd repo2
-  $ hg rage --preview | grep fakestate
+  $ hg rage --preview | grep [f]akestate
       "fakestate": "something"
 
   $ cd ..
@@ -38,5 +38,5 @@ Create fake commit cloud  state to be collected by rage
 
   $ echo '{ "commit_cloud_workspace": "something" }' > repo/.hg/store/commitcloudstate.someamazingworkspace.json
   $ cd repo2
-  $ hg rage --preview | grep commit_cloud_workspace
+  $ hg rage --preview | grep [c]ommit_cloud_workspace
       "commit_cloud_workspace": "something"
