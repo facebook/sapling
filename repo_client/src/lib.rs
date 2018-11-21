@@ -23,6 +23,7 @@ extern crate itertools;
 extern crate lazy_static;
 extern crate pylz4;
 extern crate rand;
+extern crate rand_hc;
 extern crate scribe;
 extern crate scribe_cxx;
 #[macro_use]

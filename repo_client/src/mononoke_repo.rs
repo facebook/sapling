@@ -9,8 +9,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use failure::err_msg;
-use rand::Isaac64Rng;
 use rand::distributions::{Distribution, LogNormal};
+use rand::prelude::*;
+use rand_hc::Hc128Rng;
 use slog::Logger;
 
 use scribe_cxx::ScribeCxxClient;
@@ -27,7 +28,7 @@ use errors::*;
 use client::streaming_clone::SqlStreamingChunksFetcher;
 
 struct LogNormalGenerator {
-    rng: Isaac64Rng,
+    rng: Hc128Rng,
     distribution: LogNormal,
 }
 
@@ -137,7 +138,7 @@ pub fn open_blobrepo(
 
             let mut delay_gen = LogNormalGenerator {
                 // This is a deterministic RNG if not seeded
-                rng: Isaac64Rng::new_from_u64(0),
+                rng: Hc128Rng::from_seed([0; 32]),
                 distribution: LogNormal::new(mu, sigma),
             };
             let delay_gen = move |()| {
