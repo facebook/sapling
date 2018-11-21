@@ -219,7 +219,10 @@ class Overlay:
         from thrift.util import Serializer
         from thrift.protocol import TCompactProtocol
 
-        tree_data = OverlayDir()
+        # Initialize entries to the empty dictionary.
+        # This value will be used if the serialized data does not have any value
+        # for this field.
+        tree_data = OverlayDir(entries={})
         protocol_factory = TCompactProtocol.TCompactProtocolFactory()
         Serializer.deserialize(protocol_factory, data, tree_data)
         return tree_data
