@@ -61,7 +61,10 @@ pub struct HgPython {
 
 impl HgPython {
     pub fn new() -> HgPython {
-        let exe_path = std::env::current_exe().expect("failed to call current_exe");
+        let exe_path = std::env::current_exe()
+            .expect("failed to call current_exe")
+            .canonicalize()
+            .expect("failed to canonicalize current_exe");
         let installation_root = exe_path.parent().unwrap();
         let env = BuildEnv::new();
         let entry_point = Self::find_hg_py_entry_point(&installation_root);
