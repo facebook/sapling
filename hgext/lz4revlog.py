@@ -103,7 +103,9 @@ def requirements(orig, repo):
     return reqs
 
 
-if usable:
+def uisetup(ui):
+    if not usable:
+        return
     if util.safehasattr(localrepo, "newreporequirements"):
         extensions.wrapfunction(localrepo, "newreporequirements", requirements)
     else:
