@@ -14,9 +14,7 @@ import logging
 import os
 import os.path
 import pathlib
-import pty
 import re
-import select
 import subprocess
 import sys
 import tempfile
@@ -399,7 +397,6 @@ class _TransientUnmanagedSystemdUserServiceManager:
     __child_systemd: SystemdUserServiceManager
     __cleanups: contextlib.ExitStack
     __lifetime_duration: int
-    __parent_pty_fd: int
     __systemd_process: subprocess.Popen
     __xdg_runtime_dir: pathlib.Path
 
@@ -409,7 +406,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
         self.__lifetime_duration = lifetime_duration
         self.__cleanups = contextlib.ExitStack()
 
-    def start_systemd_process(self, output_fd: int) -> None:
+    def start_systemd_process(self) -> None:
         env = dict(os.environ)
         env["XDG_RUNTIME_DIR"] = str(self.__xdg_runtime_dir)
         # HACK(strager): Work around 'systemd --user' refusing to start if the
@@ -424,14 +421,12 @@ class _TransientUnmanagedSystemdUserServiceManager:
                 "/usr/lib/systemd/systemd",
                 "--user",
                 "--unit=basic.target",
+                "--log-target=console",
             ],
             stdin=subprocess.DEVNULL,
-            stdout=output_fd,
-            stderr=output_fd,
             env=env,
         )
         self.__cleanups.callback(lambda: self.stop_systemd_process())
-        os.close(output_fd)
 
     def stop_systemd_process(self) -> None:
         self.__systemd_process.terminate()
@@ -447,37 +442,16 @@ class _TransientUnmanagedSystemdUserServiceManager:
         while True:
             systemd_did_exit = self.__systemd_process.poll() is not None
             if systemd_did_exit:
-                self.forward_process_output(timeout=1)
                 raise Exception("systemd failed to start")
             if self.__child_systemd.is_alive():
                 return
-            self.forward_process_output(timeout=0.1)
-
-    def forward_process_output(self, timeout: typing.Optional[float]) -> None:
-        _copy_stream(
-            source_fd=self.__parent_pty_fd,
-            destination=sys.stderr.buffer,
-            timeout=timeout,
-        )
-
-    def forward_process_output_in_background_thread(self) -> None:
-        threading.Thread(
-            target=lambda: self.forward_process_output(timeout=None), daemon=True
-        ).start()
 
     def __enter__(self) -> SystemdUserServiceManager:
-        # HACK(strager): The TestPilot test runner hangs if we pass any of our
-        # standard file descriptors to systemd. Additionally, systemd doesn't write
-        # anything to stderr if stderr is a pipe. Create a pseudoterminal and
-        # manually forward systemd's logs to our stderr.
-        (self.__parent_pty_fd, child_pty_fd) = pty.openpty()
-
-        self.start_systemd_process(output_fd=child_pty_fd)
+        self.start_systemd_process()
         self.__child_systemd = SystemdUserServiceManager(
             xdg_runtime_dir=self.__xdg_runtime_dir
         )
         self.wait_until_systemd_is_alive()
-        self.forward_process_output_in_background_thread()
         return self.__child_systemd
 
     def __exit__(
@@ -487,8 +461,6 @@ class _TransientUnmanagedSystemdUserServiceManager:
         traceback: typing.Optional[types.TracebackType],
     ) -> typing.Optional[bool]:
         self.__cleanups.close()
-        # HACK(strager): Leak self.__parent_pty_fd. It might be in use by
-        # self.forward_process_output in a background thread.
         return None
 
 
@@ -516,23 +488,3 @@ def _get_current_xdg_runtime_dir() -> pathlib.Path:
             "Could not determine XDG_RUNTIME_DIR: " + ", and ".join(problems)
         )
     return path
-
-
-def _copy_stream(
-    source_fd: int, destination: typing.IO[bytes], timeout: typing.Optional[float]
-) -> None:
-    while True:
-        (read_ready, _write_ready, _x_ready) = select.select(
-            [source_fd], [], [], timeout
-        )
-        if source_fd not in read_ready:
-            break
-        try:
-            data = os.read(source_fd, 1024)
-        except OSError as e:
-            if e.errno == errno.EIO:
-                break
-            raise e
-        if not data:
-            break
-        destination.write(data)
