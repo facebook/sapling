@@ -23,7 +23,8 @@ switchrepo() {
 # Enable extensions or features
 enable() {
   local rcpath
-  if [ -f .hg/hgrc ]; then
+  # .hg/hgrc may not exist yet, so just check for requires
+  if [ -f .hg/requires ]; then
     rcpath=.hg/hgrc
   else
     rcpath="$HGRCPATH"
