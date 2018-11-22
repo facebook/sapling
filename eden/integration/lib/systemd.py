@@ -394,10 +394,8 @@ class _TransientUnmanagedSystemdUserServiceManager:
     This class does not work if a user systemd instance is already running.
     """
 
-    __child_systemd: SystemdUserServiceManager
     __cleanups: contextlib.ExitStack
     __lifetime_duration: int
-    __systemd_process: subprocess.Popen
     __xdg_runtime_dir: pathlib.Path
 
     def __init__(self, xdg_runtime_dir: pathlib.Path, lifetime_duration: int) -> None:
@@ -406,7 +404,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
         self.__lifetime_duration = lifetime_duration
         self.__cleanups = contextlib.ExitStack()
 
-    def start_systemd_process(self) -> None:
+    def start_systemd_process(self) -> subprocess.Popen:
         env = dict(os.environ)
         env["XDG_RUNTIME_DIR"] = str(self.__xdg_runtime_dir)
         # HACK(strager): Work around 'systemd --user' refusing to start if the
@@ -414,7 +412,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
         env["LD_PRELOAD"] = str(
             pathlib.Path(FindExe.FORCE_SD_BOOTED).resolve(strict=True)
         )
-        self.__systemd_process = subprocess.Popen(
+        process = subprocess.Popen(
             [
                 "timeout",
                 f"{self.__lifetime_duration}s",
@@ -426,33 +424,38 @@ class _TransientUnmanagedSystemdUserServiceManager:
             stdin=subprocess.DEVNULL,
             env=env,
         )
-        self.__cleanups.callback(lambda: self.stop_systemd_process())
+        self.__cleanups.callback(lambda: self.stop_systemd_process(process))
+        return process
 
-    def stop_systemd_process(self) -> None:
-        self.__systemd_process.terminate()
+    def stop_systemd_process(self, systemd_process: subprocess.Popen) -> None:
+        systemd_process.terminate()
         try:
-            self.__systemd_process.wait(timeout=3)
+            systemd_process.wait(timeout=3)
         except subprocess.TimeoutExpired:
             logger.warning(
                 "Failed to terminate systemd user service manager", exc_info=True
             )
             # Ignore the exception.
 
-    def wait_until_systemd_is_alive(self) -> None:
+    def wait_until_systemd_is_alive(
+        self,
+        systemd_process: subprocess.Popen,
+        child_systemd: SystemdUserServiceManager,
+    ) -> None:
         while True:
-            systemd_did_exit = self.__systemd_process.poll() is not None
+            systemd_did_exit = systemd_process.poll() is not None
             if systemd_did_exit:
                 raise Exception("systemd failed to start")
-            if self.__child_systemd.is_alive():
+            if child_systemd.is_alive():
                 return
 
     def __enter__(self) -> SystemdUserServiceManager:
-        self.start_systemd_process()
-        self.__child_systemd = SystemdUserServiceManager(
+        systemd_process = self.start_systemd_process()
+        child_systemd = SystemdUserServiceManager(
             xdg_runtime_dir=self.__xdg_runtime_dir
         )
-        self.wait_until_systemd_is_alive()
-        return self.__child_systemd
+        self.wait_until_systemd_is_alive(systemd_process, child_systemd)
+        return child_systemd
 
     def __exit__(
         self,
