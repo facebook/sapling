@@ -265,8 +265,7 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         // to use dot-eden symlinks, so we need to resolve or create
         // its inode here
         return dotEdenInode->getOrLoadChild(kDotEdenSymlinkName)
-            .thenValue([=](const InodePtr& child) {
-            })
+            .thenValue([=](const InodePtr& child) {})
             .onError([=](const InodeError& /*err*/) {
               createDotEdenSymlink(dotEdenInode);
             })
@@ -518,9 +517,9 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
     return makeFuture<InodePtr>(bug.toException());
   }
 
-  return fileInode->readlink().thenValue(
-      [this, pInode, path = std::move(path), depth](
-          std::string&& pointsTo) mutable {
+  return fileInode->readlink(CacheHint::LikelyNeededAgain)
+      .thenValue([this, pInode, path = std::move(path), depth](
+                     std::string&& pointsTo) mutable {
         // normalized path to symlink target
         auto joinedExpected = joinAndNormalize(path.dirname(), pointsTo);
         if (joinedExpected.hasError()) {

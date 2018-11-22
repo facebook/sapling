@@ -151,8 +151,12 @@ class Dispatcher {
    * Read symbolic link
    *
    * @param ino the inode number
+   * @param kernelCachesReadlink whether the kernel supports caching readlink
+   * calls.
    */
-  virtual folly::Future<std::string> readlink(InodeNumber ino);
+  virtual folly::Future<std::string> readlink(
+      InodeNumber ino,
+      bool kernelCachesReadlink);
 
   /**
    * Create file node

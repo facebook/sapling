@@ -14,6 +14,7 @@
 #include <folly/futures/SharedPromise.h>
 #include <chrono>
 #include <optional>
+#include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
 
@@ -181,7 +182,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
 
   /// Throws InodeError EINVAL if inode is not a symbolic node.
-  folly::Future<std::string> readlink();
+  folly::Future<std::string> readlink(
+      CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
   folly::Future<std::shared_ptr<FileHandle>> open(int flags);
 
@@ -241,7 +243,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    *
    * Note that this API generally should only be used for fairly small files.
    */
-  FOLLY_NODISCARD folly::Future<std::string> readAll();
+  FOLLY_NODISCARD folly::Future<std::string> readAll(
+      CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
   /**
    * Read up to size bytes from the file at the specified offset.

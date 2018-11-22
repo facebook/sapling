@@ -1362,7 +1362,10 @@ folly::Future<folly::Unit> FuseChannel::fuseReadLink(
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_READLINK inode=" << header->nodeid;
-  return dispatcher_->readlink(InodeNumber{header->nodeid})
+  return dispatcher_
+      ->readlink(
+          InodeNumber{header->nodeid},
+          /*kernelCachesReadlink=*/connInfo_->flags & FUSE_CACHE_SYMLINKS)
       .thenValue([](std::string&& str) {
         RequestData::get().sendReply(folly::StringPiece(str));
       });

@@ -1944,7 +1944,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
         });
   }
 
-  return fileInode->readAll()
+  return fileInode->readAll(CacheHint::LikelyNeededAgain)
       .onError([](const folly::exception_wrapper& ex) {
         XLOG(WARN) << "error reading ignore file: " << folly::exceptionStr(ex);
         return std::string{};

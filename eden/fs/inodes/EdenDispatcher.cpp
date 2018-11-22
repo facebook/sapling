@@ -233,10 +233,18 @@ folly::Future<folly::Unit> EdenDispatcher::fsync(
       [datasync](FileInodePtr inode) { return inode->fsync(datasync); });
 };
 
-folly::Future<std::string> EdenDispatcher::readlink(InodeNumber ino) {
+folly::Future<std::string> EdenDispatcher::readlink(
+    InodeNumber ino,
+    bool kernelCachesReadlink) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "readlink({})", ino);
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [](const FileInodePtr& inode) { return inode->readlink(); });
+      [kernelCachesReadlink](const FileInodePtr& inode) {
+        // Only release the symlink blob after it's loaded if we can assume the
+        // FUSE will cache the result in the kernel's page cache.
+        return inode->readlink(
+            kernelCachesReadlink ? CacheHint::NotNeededAgain
+                                 : CacheHint::LikelyNeededAgain);
+      });
 }
 
 folly::Future<fuse_entry_out> EdenDispatcher::mknod(

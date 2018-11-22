@@ -615,14 +615,14 @@ folly::Future<Dispatcher::Attr> FileInode::setattr(
   }
 }
 
-folly::Future<std::string> FileInode::readlink() {
+folly::Future<std::string> FileInode::readlink(CacheHint cacheHint) {
   if (dtype_t::Symlink != getType()) {
     // man 2 readlink says:  EINVAL The named file is not a symbolic link.
     throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
   }
 
   // The symlink contents are simply the file contents!
-  return readAll();
+  return readAll(cacheHint);
 }
 
 void FileInode::fileHandleDidClose() {
@@ -859,7 +859,7 @@ void FileInode::fsync(bool datasync) {
   checkUnixError(res);
 }
 
-Future<string> FileInode::readAll() {
+Future<string> FileInode::readAll(CacheHint /*cacheHint*/) {
   return runWhileDataLoaded(
       LockedState{this},
       [self = inodePtrFromThis()](LockedState&& state) -> Future<string> {

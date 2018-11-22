@@ -97,7 +97,9 @@ folly::Future<Dispatcher::Attr> Dispatcher::setattr(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<std::string> Dispatcher::readlink(InodeNumber /*ino*/) {
+folly::Future<std::string> Dispatcher::readlink(
+    InodeNumber /*ino*/,
+    bool /*kernelCachesReadlink*/) {
   FUSELL_NOT_IMPL();
 }
 

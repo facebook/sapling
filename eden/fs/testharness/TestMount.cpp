@@ -350,7 +350,7 @@ void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
 }
 
 std::string TestMount::readFile(folly::StringPiece path) {
-  return getFileInode(path)->readAll().get();
+  return getFileInode(path)->readAll(CacheHint::LikelyNeededAgain).get();
 }
 
 bool TestMount::hasFileAt(folly::StringPiece path) {
