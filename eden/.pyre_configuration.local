@@ -1,0 +1,6 @@
+{
+  "targets": ["//eden/..."],
+  "coverage": true,
+  "push_blocking": true,
+  "differential": true
+}
