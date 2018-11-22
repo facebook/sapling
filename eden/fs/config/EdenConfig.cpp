@@ -18,6 +18,7 @@
 #include <folly/json.h>
 #include <folly/logging/xlog.h>
 #include <array>
+#include "FileChangeMonitor.h"
 
 #ifdef EDEN_WIN
 #include "eden/win/fs/utils/Stub.h" // @manual
@@ -264,7 +265,6 @@ void EdenConfig::setUseMononoke(bool useMononoke, ConfigSource configSource) {
 bool hasConfigFileChanged(
     AbsolutePath configFileName,
     const struct stat* oldStat) {
-#ifndef EDEN_WIN
   bool fileChangeDetected{false};
   struct stat currentStat;
 
@@ -282,17 +282,10 @@ bool hasConfigFileChanged(
     // We use all 0's to check if a file is created/deleted
     memset(&currentStat, 0, sizeof(currentStat));
   }
-  if (currentStat.st_dev != oldStat->st_dev ||
-      currentStat.st_ino != oldStat->st_ino ||
-      currentStat.st_size != oldStat->st_size ||
-      currentStat.st_mtim.tv_sec != oldStat->st_mtim.tv_sec ||
-      currentStat.st_mtim.tv_nsec != oldStat->st_mtim.tv_nsec) {
+  if (!equalStats(currentStat, *oldStat)) {
     fileChangeDetected = true;
   }
   return fileChangeDetected;
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
 
 bool EdenConfig::hasUserConfigFileChanged() const {

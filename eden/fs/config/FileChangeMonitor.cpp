@@ -19,6 +19,19 @@
 namespace facebook {
 namespace eden {
 
+bool equalStats(const struct stat& stat1, const struct stat& stat2) noexcept {
+  return (
+      stat1.st_dev == stat2.st_dev && stat1.st_size == stat2.st_size &&
+      stat1.st_ino == stat2.st_ino && stat1.st_mode == stat2.st_mode &&
+#ifdef EDEN_WIN
+      stat1.st_ctime == stat2.st_ctime && stat1.st_mtime == stat2.st_mtime);
+#else
+      stat1.st_ctim.tv_sec == stat2.st_ctim.tv_sec &&
+      stat1.st_ctim.tv_nsec == stat2.st_ctim.tv_nsec &&
+      stat1.st_mtim.tv_sec == stat2.st_mtim.tv_sec &&
+      stat1.st_mtim.tv_nsec == stat2.st_mtim.tv_nsec);
+#endif
+}
 AbsolutePath FileChangeMonitor::getFilePath() {
   return filePath_;
 }
@@ -96,7 +109,6 @@ FileChangeMonitor::checkIfUpdated(bool noThrottle) {
 }
 
 bool FileChangeMonitor::isChanged() {
-#ifndef EDEN_WIN
   struct stat currentStat;
   int prevStatErrno{statErrno_};
 
@@ -127,20 +139,10 @@ bool FileChangeMonitor::isChanged() {
     return false;
   }
 
-  if (currentStat.st_dev != fileStat_.st_dev ||
-      currentStat.st_size != fileStat_.st_size ||
-      currentStat.st_ino != fileStat_.st_ino ||
-      currentStat.st_mode != fileStat_.st_mode ||
-      currentStat.st_ctim.tv_sec != fileStat_.st_ctim.tv_sec ||
-      currentStat.st_ctim.tv_nsec != fileStat_.st_ctim.tv_nsec ||
-      currentStat.st_mtim.tv_sec != fileStat_.st_mtim.tv_sec ||
-      currentStat.st_mtim.tv_nsec != fileStat_.st_mtim.tv_nsec) {
+  if (!equalStats(currentStat, fileStat_)) {
     return true;
   }
   return false;
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
 
 } // namespace eden

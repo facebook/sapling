@@ -25,6 +25,11 @@ namespace facebook {
 namespace eden {
 
 /**
+ * Function to check if the passed stats are equal or not.
+ */
+bool equalStats(const struct stat& stat1, const struct stat& stat2) noexcept;
+
+/**
  * FileChangeMonitor monitors a file for changes. The "invokeIfUpdated()"
  * method initiates a check and, if the file has changed, will run the
  * provided call-back method. Typical usage:
@@ -126,20 +131,20 @@ class FileChangeMonitor {
    * if the monitored file's path has changed.
    */
   void resetToForceChange() {
-#ifndef EDEN_WIN
     // Set values for stat to force changedSinceUpdate() to return TRUE.
     // We use a novel setting to force change to be detected
     memset(&fileStat_, 0, sizeof(struct stat));
+#ifdef EDEN_WIN
+    fileStat_.st_mtime = 1;
+#else
     fileStat_.st_mtim.tv_sec = 1;
     fileStat_.st_mtim.tv_nsec = 1;
+#endif
     statErrno_ = 0;
     openErrno_ = 0;
     // Set lastCheck in past so throttle does not apply.
     lastCheck_ = std::chrono::steady_clock::now() - throttleDuration_ -
         std::chrono::seconds{1};
-#else
-    NOT_IMPLEMENTED();
-#endif
   }
 
   AbsolutePath filePath_;
