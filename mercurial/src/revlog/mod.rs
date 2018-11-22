@@ -31,7 +31,7 @@ mod lz4;
 #[cfg(test)]
 mod test;
 
-use self::parser::{Header, Version};
+use self::parser::{Header, IdxFlags, Version};
 pub use self::parser::Entry;
 pub use self::revidx::RevIdx;
 
@@ -208,6 +208,11 @@ impl Revlog {
         self.inner.get_entry(idx)
     }
 
+    /// Return an `Entry` entry from the `RevIdx`.
+    pub fn is_ext_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<bool> {
+        self.inner.is_ext_by_nodeid(nodeid)
+    }
+
     /// Return the ordinal index of an entry with the given nodeid.
     pub fn get_idx_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<RevIdx> {
         self.inner.get_idx_by_nodeid(nodeid)
@@ -311,6 +316,12 @@ impl RevlogInner {
         } else {
             Err(ErrorKind::Revlog(format!("rev {:?} not found", idx)).into())
         }
+    }
+
+    // Return an `Entry` entry from the `RevIdx`.
+    fn is_ext_by_nodeid(&self, nodeid: &HgNodeHash) -> Result<bool> {
+        self.get_entry_by_nodeid(nodeid)
+            .map(|entry| entry.flags.contains(IdxFlags::EXTSTORED))
     }
 
     /// Return the ordinal index of an entry with the given nodeid.

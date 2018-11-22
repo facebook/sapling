@@ -49,6 +49,7 @@ pub enum Required {
     HgSql,
     TreeDirstate,
     TreeState,
+    LFS,
 }
 
 impl Display for Required {
@@ -71,6 +72,7 @@ impl Display for Required {
             &HgSql => "hgsql",
             &TreeDirstate => "treedirstate",
             &TreeState => "treestate",
+            &LFS => "lfs",
         };
         write!(fmt, "{}", s)
     }
@@ -98,6 +100,7 @@ impl FromStr for Required {
             "hgsql" => Ok(HgSql),
             "treedirstate" => Ok(TreeDirstate),
             "treestate" => Ok(TreeState),
+            "lfs" => Ok(LFS),
             unk => Err(ErrorKind::UnknownReq(unk.into()).into()),
         }
     }

@@ -51,6 +51,7 @@ bitflags! {
 /// Per-revision flags
 bitflags! {
     pub struct IdxFlags: u16 {
+        const EXTSTORED     = 1 << 13;
         const CENSORED      = 1 << 15;
     }
 }

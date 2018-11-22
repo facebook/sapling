@@ -350,6 +350,17 @@ impl RevlogEntry {
             .boxify()
     }
 
+    pub fn is_ext(&self) -> BoxFuture<bool, Error> {
+        let revlog = self.repo.get_path_revlog(self.get_path());
+        let nodeid = self.get_hash().into_nodehash();
+
+        revlog
+            .and_then(|revlog| revlog.is_ext_by_nodeid(&nodeid))
+            .map_err(Error::from)
+            .into_future()
+            .boxify()
+    }
+
     pub fn get_content(&self) -> BoxFuture<EntryContent, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
