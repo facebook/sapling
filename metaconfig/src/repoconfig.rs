@@ -55,6 +55,8 @@ pub struct RepoConfig {
     pub hash_validation_percentage: usize,
     /// Should this repo reject write attempts
     pub readonly: RepoReadOnly,
+    /// Params for the hook manager
+    pub hook_manager_params: Option<HookManagerParams>,
 }
 
 impl RepoConfig {
@@ -84,6 +86,25 @@ pub struct CacheWarmupParams {
     /// Max number to fetch during commit warmup. If not set in the config, then set to a default
     /// value.
     pub commit_limit: usize,
+}
+
+/// Configuration for the hook manager
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
+pub struct HookManagerParams {
+    /// Entry limit for the hook manager result cache
+    pub entrylimit: usize,
+
+    /// Weight limit for the hook manager result cache
+    pub weightlimit: usize,
+}
+
+impl Default for HookManagerParams {
+    fn default() -> Self {
+        Self {
+            entrylimit: 1024 * 1024,
+            weightlimit: 100 * 1024 * 1024, // 100Mb
+        }
+    }
 }
 
 /// Configuration for a bookmark
@@ -442,6 +463,10 @@ impl RepoConfigs {
             bookmark: Bookmark::new(cache_warmup.bookmark).expect("bookmark name must be ascii"),
             commit_limit: cache_warmup.commit_limit.unwrap_or(200000),
         });
+        let hook_manager_params = this.hook_manager_params.map(|params| HookManagerParams {
+            entrylimit: params.entrylimit,
+            weightlimit: params.weightlimit,
+        });
         let bookmarks = match this.bookmarks {
             Some(bookmarks) => Some(
                 bookmarks
@@ -499,6 +524,7 @@ impl RepoConfigs {
             repoid,
             scuba_table,
             cache_warmup,
+            hook_manager_params,
             bookmarks,
             hooks: hooks_opt,
             pushrebase,
@@ -533,12 +559,19 @@ struct RawRepoConfig {
     wireproto_scribe_category: Option<String>,
     hash_validation_percentage: Option<usize>,
     readonly: Option<bool>,
+    hook_manager_params: Option<HookManagerParams>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 struct RawCacheWarmupConfig {
     bookmark: String,
     commit_limit: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct RawHookManagerParams {
+    entrylimit: usize,
+    weightlimit: usize,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -602,6 +635,9 @@ mod test {
             [cache_warmup]
             bookmark="master"
             commit_limit=100
+            [hook_manager_params]
+            entrylimit=1234
+            weightlimit=4321
             [[bookmarks]]
             name="master"
             [[bookmarks.hooks]]
@@ -662,10 +698,18 @@ mod test {
                     bookmark: Bookmark::new("master").unwrap(),
                     commit_limit: 100,
                 }),
+                hook_manager_params: Some(HookManagerParams {
+                    entrylimit: 1234,
+                    weightlimit: 4321,
+                }),
                 bookmarks: Some(vec![
                     BookmarkParams {
                         bookmark: Bookmark::new("master").unwrap(),
-                        hooks: Some(vec!["hook1".to_string(), "hook2".to_string(), "rust:rusthook".to_string()]),
+                        hooks: Some(vec![
+                            "hook1".to_string(),
+                            "hook2".to_string(),
+                            "rust:rusthook".to_string(),
+                        ]),
                     },
                 ]),
                 hooks: Some(vec![
@@ -712,6 +756,7 @@ mod test {
                 repoid: 1,
                 scuba_table: Some("scuba_table".to_string()),
                 cache_warmup: None,
+                hook_manager_params: None,
                 bookmarks: None,
                 hooks: None,
                 pushrebase: Default::default(),

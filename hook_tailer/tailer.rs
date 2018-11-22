@@ -47,8 +47,7 @@ impl Tailer {
             repo_name,
             Box::new(changeset_store),
             Arc::new(content_store),
-            1024 * 1024, // TODO make configurable T34438181
-            1024 * 1024 * 1024,
+            Default::default(),
             logger.clone(),
         );
 

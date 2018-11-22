@@ -70,7 +70,7 @@ use futures::{failed, finished, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, HgParents, MPath, manifest::get_empty_manifest,
                       manifest_utils::{self, EntryStatus}};
-use metaconfig::repoconfig::HookBypass;
+use metaconfig::repoconfig::{HookBypass, HookManagerParams};
 use mononoke_types::{FileContents, FileType};
 use slog::Logger;
 use std::collections::{HashMap, HashSet};
@@ -104,8 +104,7 @@ impl HookManager {
         repo_name: String,
         changeset_store: Box<ChangesetStore>,
         content_store: Arc<FileContentStore>,
-        entrylimit: usize,
-        weightlimit: usize,
+        hook_manager_params: HookManagerParams,
         logger: Logger,
     ) -> HookManager {
         let changeset_hooks = HashMap::new();
@@ -115,7 +114,12 @@ impl HookManager {
             file_hooks: file_hooks.clone(),
             repo_name: repo_name.clone(),
         };
-        let cache = Asyncmemo::with_limits("hooks", filler, entrylimit, weightlimit);
+        let cache = Asyncmemo::with_limits(
+            "hooks",
+            filler,
+            hook_manager_params.entrylimit,
+            hook_manager_params.weightlimit,
+        );
         let reviewers_acl_checker = AclChecker::new(&Identity::from_groupname(
             facebook::REVIEWERS_ACL_GROUP_NAME,
         ));
@@ -139,13 +143,16 @@ impl HookManager {
         }
     }
 
-    pub fn new_with_blobrepo(blobrepo: BlobRepo, logger: Logger) -> HookManager {
+    pub fn new_with_blobrepo(
+        hook_manager_params: HookManagerParams,
+        blobrepo: BlobRepo,
+        logger: Logger,
+    ) -> HookManager {
         HookManager::new(
             format!("repo-{:?}", blobrepo.get_repoid()),
             Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
             Arc::new(BlobRepoFileContentStore::new(blobrepo.clone())),
-            1024 * 1024, // TODO make configurable T34438181
-            1024 * 1024 * 1024,
+            hook_manager_params,
             logger,
         )
     }
@@ -1989,8 +1996,7 @@ mod test {
             "some_repo".into(),
             Box::new(changeset_store),
             Arc::new(content_store),
-            1024,
-            1024 * 1024,
+            Default::default(),
             logger,
         )
     }
@@ -2020,8 +2026,7 @@ mod test {
             "some_repo".into(),
             Box::new(changeset_store),
             Arc::new(content_store),
-            1024,
-            1024 * 1024,
+            Default::default(),
             logger,
         )
     }

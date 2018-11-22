@@ -96,6 +96,7 @@ mod test {
             repoid: 1,
             scuba_table: None,
             cache_warmup: None,
+            hook_manager_params: None,
             bookmarks: None,
             hooks: None,
             pushrebase: Default::default(),
@@ -231,7 +232,7 @@ mod test {
     fn hook_manager_blobrepo() -> HookManager {
         let repo = many_files_dirs::getrepo(None);
         let logger = Logger::root(Discard {}.ignore_res(), o!());
-        HookManager::new_with_blobrepo(repo, logger)
+        HookManager::new_with_blobrepo(Default::default(), repo, logger)
     }
 
 }

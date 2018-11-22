@@ -109,7 +109,7 @@ fn run_hook(
     println!("Hook file is {} revision is {:?}", hook_file, revstr);
     println!("Hook code is {}", code);
     println!("==============================");
-    let mut hook_manager = HookManager::new_with_blobrepo(repo.clone(), logger);
+    let mut hook_manager = HookManager::new_with_blobrepo(Default::default(), repo.clone(), logger);
     let hook = LuaHook {
         name: String::from("testhook"),
         code,

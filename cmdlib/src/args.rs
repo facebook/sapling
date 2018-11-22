@@ -461,7 +461,7 @@ fn open_repo_internal<'a>(
     let myrouter_port = parse_myrouter_port(matches);
 
     let blobrepo = open_blobrepo(logger.clone(), repo_type.clone(), repo_id, myrouter_port)?;
-    let hook_manager = HookManager::new_with_blobrepo(blobrepo.clone(), logger);
+    let hook_manager = HookManager::new_with_blobrepo(Default::default(), blobrepo.clone(), logger);
     // TODO fixup imports
     Ok(MononokeRepo::new(
         blobrepo,

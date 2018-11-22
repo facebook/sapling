@@ -73,7 +73,12 @@ pub fn repo_handlers(
                 myrouter_port,
             ));
 
-            let mut hook_manager = HookManager::new_with_blobrepo(blobrepo.clone(), logger);
+            let hook_manager_params = match config.hook_manager_params.clone() {
+                Some(hook_manager_params) => hook_manager_params,
+                None => Default::default()
+            };
+
+            let mut hook_manager = HookManager::new_with_blobrepo(hook_manager_params, blobrepo.clone(), logger);
 
             info!(root_log, "Loading hooks");
             try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
