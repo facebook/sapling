@@ -59,8 +59,13 @@ pub fn create_remotefilelog_blob(
                         Ok(RevFlags::REVIDX_DEFAULT_FLAGS).into_future(),
                     )
                 } else {
+                    // pass content id to prevent envelope fetching
+                    cloned!(repo);
                     (
-                        repo.generate_lfs_file(&HgFileNodeId::new(node), file_size)
+                        repo.get_file_content_id(&HgFileNodeId::new(node))
+                            .and_then(move |content_id| {
+                                repo.generate_lfs_file(content_id, file_size)
+                            })
                             .right_future(),
                         Ok(RevFlags::REVIDX_EXTSTORED).into_future(),
                     )

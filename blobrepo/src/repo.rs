@@ -28,7 +28,7 @@ use stats::Timeseries;
 use time_ext::DurationExt;
 use uuid::Uuid;
 
-use super::alias::{get_sha256_alias, get_sha256_alias_key};
+use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
 use super::changeset::HgChangesetContent;
 use super::changeset_fetcher::{CachingChangesetFetcher, ChangesetFetcher, SimpleChangesetFetcher};
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
@@ -61,9 +61,9 @@ use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use BlobManifest;
 use HgBlobChangeset;
 use errors::*;
-use file::{fetch_file_content_from_blobstore, fetch_file_contents, fetch_file_size_from_blobstore,
-           fetch_raw_filenode_bytes, fetch_rename_from_blobstore, HgBlobEntry,
-           fetch_file_sha256_from_blobstore};
+use file::{fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
+           fetch_file_contents, fetch_file_size_from_blobstore, fetch_raw_filenode_bytes,
+           fetch_rename_from_blobstore, HgBlobEntry, fetch_file_content_sha256_from_blobstore};
 use memory_manifest::MemoryRootManifest;
 use post_commit::{self, PostCommitQueue};
 use repo_commit::*;
@@ -474,8 +474,60 @@ impl BlobRepo {
         fetch_file_size_from_blobstore(&self.blobstore, *key)
     }
 
-    pub fn get_file_sha256(&self, key: &HgFileNodeId) -> impl Future<Item = Sha256, Error = Error> {
-        fetch_file_sha256_from_blobstore(&self.blobstore, *key)
+    pub fn get_file_content_id(
+        &self,
+        key: &HgFileNodeId,
+    ) -> impl Future<Item = ContentId, Error = Error> {
+        fetch_file_content_id_from_blobstore(&self.blobstore, *key)
+    }
+
+    pub fn get_file_sha256(
+        &self,
+        content_id: ContentId,
+    ) -> impl Future<Item = Sha256, Error = Error> {
+        let blobrepo = self.clone();
+        cloned!(content_id, self.blobstore);
+
+        // try to get sha256 from blobstore from a blob to avoid calculation
+        self.get_alias_content_id_to_sha256(content_id)
+            .and_then(move |res| match res {
+                Some(file_content_sha256) => Ok(file_content_sha256).into_future().left_future(),
+                None => fetch_file_content_sha256_from_blobstore(&blobstore, content_id)
+                    .and_then(move |alias| {
+                        blobrepo
+                            .put_alias_content_id_to_sha256(content_id, alias)
+                            .map(move |()| alias)
+                    })
+                    .right_future(),
+            })
+    }
+
+    fn put_alias_content_id_to_sha256(
+        &self,
+        content_id: ContentId,
+        alias_content: Sha256,
+    ) -> impl Future<Item = (), Error = Error> {
+        let alias_key = get_content_id_alias_key(content_id);
+        // Contents = alias.sha256.SHA256HASH (BlobstoreBytes)
+        let contents = BlobstoreBytes::from_bytes(Bytes::from(alias_content.as_ref()));
+
+        self.upload_blobstore_bytes(alias_key, contents).map(|_| ())
+    }
+
+    fn get_alias_content_id_to_sha256(
+        &self,
+        content_id: ContentId,
+    ) -> impl Future<Item = Option<Sha256>, Error = Error> {
+        // Ok: Some(value) - found alias blob, None - alias blob nor found (lazy upload)
+        // Invalid alias blob content is considered as "Not found"
+        // Err: Error from server, does not proceed the opertion further
+        let alias_content_id = get_content_id_alias_key(content_id);
+
+        self.blobstore
+            .get(alias_content_id.clone())
+            .map(|content_key_bytes| {
+                content_key_bytes.and_then(|bytes| Sha256::from_bytes(bytes.as_bytes()).ok())
+            })
     }
 
     pub fn upload_file_content_by_alias(
@@ -550,10 +602,10 @@ impl BlobRepo {
 
     pub fn generate_lfs_file(
         &self,
-        key: &HgFileNodeId,
+        content_id: ContentId,
         file_size: u64,
     ) -> impl Future<Item = FileContents, Error = Error> {
-        self.get_file_sha256(key)
+        self.get_file_sha256(content_id)
             .and_then(move |alias| File::generate_lfs_file(alias, file_size))
             .map(|bytes| FileContents::Bytes(bytes))
     }

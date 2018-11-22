@@ -9,8 +9,10 @@ use bytes::Bytes;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
-use mononoke_types::hash;
+use mononoke_types::{hash, ContentId, MononokeId};
 
+/// Format: alias.sha256.SHA256HASH
+/// Used to make a mapping {alias.sha256.SHA256HASH: content.blake2.BLAKE2HASH}
 pub fn get_sha256_alias_key(key: String) -> String {
     format!("alias.sha256.{}", key)
 }
@@ -26,4 +28,10 @@ pub fn get_sha256(contents: &Bytes) -> hash::Sha256 {
     let mut hash_buffer: [u8; 32] = [0; 32];
     hasher.result(&mut hash_buffer);
     hash::Sha256::from_byte_array(hash_buffer)
+}
+
+/// Format: alias.content.blake2.BLAKE2HASH
+/// Used to make a mapping {alias.content.blake2.BLAKE2HASH: alias.sha256.SHA256HASH}
+pub fn get_content_id_alias_key(key: ContentId) -> String {
+    format!("alias.{}", key.blobstore_key())
 }

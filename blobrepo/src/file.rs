@@ -96,11 +96,19 @@ pub fn fetch_file_size_from_blobstore(
         .map({ |envelope| envelope.content_size() })
 }
 
-pub fn fetch_file_sha256_from_blobstore(
+pub fn fetch_file_content_id_from_blobstore(
     blobstore: &RepoBlobstore,
     node_id: HgFileNodeId,
+) -> impl Future<Item = ContentId, Error = Error> {
+    fetch_file_envelope(blobstore, node_id.into_nodehash())
+        .map({ |envelope| *envelope.content_id() })
+}
+
+pub fn fetch_file_content_sha256_from_blobstore(
+    blobstore: &RepoBlobstore,
+    content_id: ContentId,
 ) -> impl Future<Item = Sha256, Error = Error> {
-    fetch_file_content_from_blobstore(blobstore, node_id.into_nodehash())
+    fetch_file_contents(blobstore, content_id)
         .map(|file_content| get_sha256(&file_content.into_bytes()))
 }
 

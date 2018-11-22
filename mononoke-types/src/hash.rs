@@ -197,7 +197,21 @@ pub struct Sha256([u8; 32]);
 
 impl Sha256 {
     /// Construct a `Sha256` from an array of 32 bytes containing a
-    /// SHA256 hash (ie, *not* a hash of the bytes).
+    /// Sha256 hash (ie, *not* a hash of the bytes).
+    pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Self> {
+        let bytes = bytes.as_ref();
+        if bytes.len() != 32 {
+            bail_err!(ErrorKind::InvalidSha256Input(
+                "need exactly 32 bytes".into()
+            ));
+        } else {
+            let mut ret = Sha256([0; 32]);
+            &mut ret.0[..].copy_from_slice(bytes);
+            Ok(ret)
+        }
+    }
+
+    /// Construct a `Sha256` from an array of 32 bytes.
     #[inline]
     pub const fn from_byte_array(arr: [u8; 32]) -> Self {
         Sha256(arr)

@@ -217,6 +217,13 @@ function bonsai_verify {
   $MONONOKE_BONSAI_VERIFY --repo_id 0 --blobstore rocksdb --data-dir "$repo" "$@"
 }
 
+function setup_no_ssl_apiserver {
+  APISERVER_PORT=$(get_free_socket)
+  no_ssl_apiserver --http-host "127.0.0.1" --http-port "$APISERVER_PORT"
+  wait_for_apiserver --no-ssl
+}
+
+
 function apiserver {
   $MONONOKE_APISERVER "$@" --config-path "$TESTTMP/mononoke-config-rocks" \
     --config-bookmark "local_master" \
