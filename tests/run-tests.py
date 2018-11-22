@@ -3349,6 +3349,7 @@ class TestRunner(object):
             if kws is not None and PYTHON3:
                 kws = kws.encode("utf-8")
 
+            vlog("# Running TestSuite with %d jobs" % self.options.jobs)
             suite = TestSuite(
                 self._testdir,
                 jobs=self.options.jobs,
