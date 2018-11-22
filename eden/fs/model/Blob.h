@@ -28,6 +28,15 @@ class Blob {
         contents_{contents},
         size_{contents_.computeChainDataLength()} {}
 
+  /**
+   * Convenience constructor for unit tests. Always copies the given
+   * StringPiece.
+   */
+  Blob(const Hash& hash, folly::StringPiece contents)
+      : hash_{hash},
+        contents_{folly::IOBuf::COPY_BUFFER, contents.data(), contents.size()},
+        size_{contents.size()} {}
+
   const Hash& getHash() const {
     return hash_;
   }
