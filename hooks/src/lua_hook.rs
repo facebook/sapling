@@ -14,14 +14,16 @@ use super::errors::*;
 use aclchecker::Identity;
 use failure::Error;
 use futures::{failed, Future};
-use futures::future::ok;
+use futures::future::{ok, result};
 use futures_ext::{BoxFuture, FutureExt};
 use hlua::{AnyLuaString, AnyLuaValue, Lua, LuaError, LuaFunctionCallError, LuaTable, PushGuard,
            TuplePushError, Void, function0, function1, function2};
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
+use linked_hash_map::LinkedHashMap;
 use mononoke_types::FileType;
 use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 const HOOK_START_CODE_BASE: &str = include_str!("hook_start_base.lua");
 
@@ -62,6 +64,7 @@ __hook_start = function(info, arg)
                 file.contains_string = function(s) return coroutine.yield(__contains_string(file.path, s)) end
                 file.len = function() return coroutine.yield(__file_len(file.path)) end
                 file.content = function() return coroutine.yield(__file_content(file.path)) end
+                file.path_regex_match = function(p) return coroutine.yield(__regex_match(p, file.path)) end
             end
             files[#files+1] = file
         end
@@ -71,6 +74,7 @@ __hook_start = function(info, arg)
         ctx.file_content = function(path) return coroutine.yield(__file_content(path)) end
         ctx.parse_commit_msg = function() return coroutine.yield(__parse_commit_msg()) end
         ctx.is_valid_reviewer = function(user) return coroutine.yield(__is_valid_reviewer(user)) end
+        ctx.regex_match = function(pattern, s) return coroutine.yield(__regex_match(pattern, s)) end
     end)
 end
 ";
@@ -85,8 +89,10 @@ __hook_start = function(info, arg)
             file.len = function() return coroutine.yield(__file_len()) end
             file.content = function() return coroutine.yield(__file_content()) end
             file.is_symlink = function() return coroutine.yield(__is_symlink()) end
+            file.path_regex_match = function(p) return coroutine.yield(__regex_match(p, file.path)) end
         end
         ctx.file = file
+        ctx.regex_match = function(pattern, s) return coroutine.yield(__regex_match(pattern, s)) end
     end)
 end
 ";
@@ -182,6 +188,16 @@ impl Hook<HookChangeset> for LuaHook {
             }
         };
         let file_len = function1(file_len);
+        let regex_match = {
+            move |pattern: String, string: String| -> Result<AnyFuture, Error> {
+                let future = cached_regex_match(pattern, string)
+                    .map_err(|err| LuaError::ExecutionError(format!("invalid regex: {}", err)))
+                    .map(|matched| AnyLuaValue::LuaBoolean(matched));
+
+                Ok(AnyFuture::new(future))
+            }
+        };
+        let regex_match = function2(regex_match);
 
         let parse_commit_msg = {
             cloned!(context);
@@ -220,6 +236,7 @@ impl Hook<HookChangeset> for LuaHook {
         lua.set("__file_content", file_content);
         lua.set("__parse_commit_msg", parse_commit_msg);
         lua.set("__is_valid_reviewer", is_valid_reviewer);
+        lua.set("__regex_match", regex_match);
         let res: Result<(), Error> = lua.execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
@@ -323,12 +340,25 @@ impl Hook<HookFile> for LuaHook {
             }
         };
         let file_len = function0(file_len);
+
+        let regex_match = {
+            move |pattern: String, string: String| -> Result<AnyFuture, Error> {
+                let future = cached_regex_match(pattern, string)
+                    .map_err(|err| LuaError::ExecutionError(format!("invalid regex: {}", err)))
+                    .map(|matched| AnyLuaValue::LuaBoolean(matched));
+
+                Ok(AnyFuture::new(future))
+            }
+        };
+        let regex_match = function2(regex_match);
+
         let mut lua = Lua::new();
         lua.openlibs();
         lua.set("__contains_string", contains_string);
         lua.set("__file_len", file_len);
         lua.set("__file_content", file_content);
         lua.set("__is_symlink", is_symlink);
+        lua.set("__regex_match", regex_match);
         let res: Result<(), Error> = lua.execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
@@ -393,6 +423,37 @@ impl LuaHook {
             .flatten()
             .boxify()
     }
+}
+
+fn cached_regex_match(
+    pattern: String,
+    string: String,
+) -> impl Future<Item = bool, Error = regex::Error> {
+    const REGEX_SIZE_LIMIT: usize = 10 * 1024;
+    const REGEX_CACHE_SIZE: usize = 128;
+
+    lazy_static! {
+        static ref hook_regex_cache: Arc<RwLock<LinkedHashMap<String, Regex>>> = Arc::new(RwLock::new(LinkedHashMap::with_capacity(REGEX_CACHE_SIZE)));
+    }
+
+    let future = if let Some(r) = hook_regex_cache.read().unwrap().get(&pattern) {
+        ok(r.is_match(&string)).left_future()
+    } else {
+        result(
+            RegexBuilder::new(&pattern)
+                .size_limit(REGEX_SIZE_LIMIT)
+                .build(),
+        ).and_then(move |r| {
+            if hook_regex_cache.read().unwrap().len() > REGEX_CACHE_SIZE {
+                hook_regex_cache.write().unwrap().pop_front();
+            }
+            hook_regex_cache.write().unwrap().insert(pattern, r.clone());
+            ok(r.is_match(&string))
+        })
+            .right_future()
+    };
+
+    future
 }
 
 fn parse_commit_message(commit_msg: &str) -> HashMap<String, AnyLuaValue> {
@@ -922,6 +983,42 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     }
 
     #[test]
+    fn test_cs_hook_path_regex_match() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.files[1].path_regex_match(\"file[0-9]\") and\n
+                 ctx.files[2].path_regex_match(\"f*2\") and\n
+                 ctx.files[3].path_regex_match(\"fil.3\")\n
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
+    fn test_cs_hook_regex_match() {
+        async_unit::tokio_unit_test(|| {
+            let changeset = default_changeset();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.regex_match(\"file[0-9]\", ctx.files[1].path) and\n
+                 ctx.regex_match(\"f*2\", ctx.files[2].path) and\n
+                 ctx.regex_match(\"fil.3\", ctx.files[3].path)\n
+                 end",
+            );
+            assert_matches!(
+                run_changeset_hook(code, changeset),
+                Ok(HookExecution::Accepted)
+            );
+        });
+    }
+
+    #[test]
     fn test_cs_hook_file_content_match() {
         async_unit::tokio_unit_test(|| {
             let changeset = default_changeset();
@@ -1316,6 +1413,98 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                 run_file_hook(code, hook_file),
                 Ok(HookExecution::Rejected(_))
             );
+        });
+    }
+
+    #[test]
+    fn test_file_hook_path_regex_match_no_matches() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_added_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.path_regex_match(\"a[0-9]bcde\")\n\
+                 end",
+            );
+            assert_matches!(
+                run_file_hook(code, hook_file),
+                Ok(HookExecution::Rejected(_))
+            );
+        });
+    }
+
+    #[test]
+    fn test_file_hook_regex_match_no_matches() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_added_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.regex_match(\"a[0-9]bcde\", ctx.file.path)\n\
+                 end",
+            );
+            assert_matches!(
+                run_file_hook(code, hook_file),
+                Ok(HookExecution::Rejected(_))
+            );
+        });
+    }
+
+    #[test]
+    fn test_file_hook_path_regex_match_matches() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_added_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.path_regex_match(\"a*.txt\")\n\
+                 end",
+            );
+            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_file_hook_regex_match_matches() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_added_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.regex_match(\"a*.txt\", ctx.file.path)\n\
+                 end",
+            );
+            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+        });
+    }
+
+    #[test]
+    fn test_file_hook_path_regex_match_invalid_regex() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_added_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.file.path_regex_match(\"[0-\")\n\
+                 end",
+            );
+            assert_matches!(
+                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("invalid regex")
+             );
+        });
+    }
+
+    #[test]
+    fn test_file_hook_regex_match_invalid_regex() {
+        async_unit::tokio_unit_test(|| {
+            let hook_file = default_hook_added_file();
+            let code = String::from(
+                "hook = function (ctx)\n\
+                 return ctx.regex_match(\"[0-\", ctx.file.path)\n\
+                 end",
+            );
+            assert_matches!(
+                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                    if err_msg.contains("invalid regex")
+             );
         });
     }
 

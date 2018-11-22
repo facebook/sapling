@@ -83,6 +83,7 @@ Here are some common types:
 | `contains_string(needle)` | Returns a `boolean` indicating whether the specified string `needle` is present in this file. (Only present if `is_deleted()` returns `false`.) |
 | `len()` | Returns a `number` that is the length of the file in bytes. (Only present if `is_deleted()` returns `false`.) |
 | `content()` | Returns a `string` containing the contents of the file. (Only present if `is_deleted()` returns `false`.) |
+| `path_regex_match(regex)` | Returns a `boolean` indicating whether the file's path matches the supplied regex |
 
 ### PerChangeset
 
@@ -96,6 +97,7 @@ the following fields:
 | `file_content(path)` | (`function`) Takes the relative path to a file in the repo and returns its contents. |
 | `parse_commit_msg()` | (`function`) Returns a table with phabricator tags parsed. |
 | `is_valid_reviewer(user)` | (`function`) Returns whether a user can review the commit. |
+| `regex_match(regex, string)` | (`function`) Returns a `boolean` indicating whether the string matches the supplied regex |
 
 
 `ctx.info` is a table with the following fields:
@@ -117,6 +119,7 @@ the following fields:
 | --------- | ----------- |
 | `info` | (`table`) Described below. |
 | `file` | (`table`) Object of type `file`, described above. (Note `is_deleted()` will return `false`.) |
+| `regex_match(regex, string)` | (`function`) Returns a `boolean` indicating whether the string matches the supplied regex |
 
 `ctx.info` is a table with the following fields:
 

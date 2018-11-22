@@ -37,6 +37,7 @@ extern crate hlua;
 extern crate hlua_futures;
 #[macro_use]
 extern crate lazy_static;
+extern crate linked_hash_map;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;
