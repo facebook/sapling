@@ -101,7 +101,9 @@ impl HgPython {
     }
 
     fn entry_point_in_installation<P: AsRef<Path>>(installation: P) -> PathBuf {
-        installation.as_ref().join(ENTRYPOINT_IN_INSTALLATION)
+        installation
+            .as_ref()
+            .join(ENTRYPOINT_IN_INSTALLATION.replace("/", "\\"))
     }
 
     fn zip_in_installation<P: AsRef<Path>>(installation: P) -> PathBuf {
