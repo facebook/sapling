@@ -108,11 +108,9 @@ pub fn open_blobrepo(
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
 ) -> Result<BlobRepo> {
-    use hgproto::ErrorKind;
     use metaconfig::repoconfig::RepoType::*;
 
     let blobrepo = match repotype {
-        Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
         BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
         BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
         BlobManifold(ref args) => BlobRepo::new_manifold_scribe_commits(

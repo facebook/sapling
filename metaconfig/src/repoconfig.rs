@@ -186,8 +186,6 @@ impl Default for LfsParams {
 /// Types of repositories supported
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RepoType {
-    /// Revlog repository with path pointing to on-disk checkout of repository
-    Revlog(PathBuf),
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     ///
     ///
@@ -432,7 +430,6 @@ impl RepoConfigs {
         }
 
         let repotype = match this.repotype {
-            RawRepoType::Revlog => RepoType::Revlog(get_path(&this)?),
             RawRepoType::Files => RepoType::BlobFiles(get_path(&this)?),
             RawRepoType::BlobRocks => RepoType::BlobRocks(get_path(&this)?),
             RawRepoType::TestBlobManifold => {
@@ -597,7 +594,6 @@ struct RawHookConfig {
 /// Types of repositories supported
 #[derive(Clone, Debug, Deserialize)]
 enum RawRepoType {
-    #[serde(rename = "revlog")] Revlog,
     #[serde(rename = "blob:files")] Files,
     #[serde(rename = "blob:rocks")] BlobRocks,
     #[serde(rename = "blob:testmanifold")] TestBlobManifold,
@@ -667,7 +663,7 @@ mod test {
         "#;
         let www_content = r#"
             path="/tmp/www"
-            repotype="revlog"
+            repotype="blob:files"
             repoid=1
             scuba_table="scuba_table"
             wireproto_scribe_category="category"
@@ -751,7 +747,7 @@ mod test {
             "www".to_string(),
             RepoConfig {
                 enabled: true,
-                repotype: RepoType::Revlog("/tmp/www".into()),
+                repotype: RepoType::BlobFiles("/tmp/www".into()),
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: 1,
                 scuba_table: Some("scuba_table".to_string()),

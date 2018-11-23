@@ -90,7 +90,7 @@ mod test {
 
     fn default_repo_config() -> RepoConfig {
         RepoConfig {
-            repotype: RepoType::Revlog("whatev".into()),
+            repotype: RepoType::BlobFiles("whatev".into()),
             enabled: true,
             generation_cache_size: 1,
             repoid: 1,
