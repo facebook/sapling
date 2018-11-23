@@ -36,6 +36,7 @@ use mononoke_types::ChangesetId;
 #[derive(Clone)]
 pub struct SqlBookmarks {
     write_connection: Connection,
+    read_connection: Connection,
     read_master_connection: Connection,
 }
 
@@ -116,17 +117,39 @@ queries! {
 impl SqlConstructors for SqlBookmarks {
     fn from_connections(
         write_connection: Connection,
-        _read_connection: Connection,
+        read_connection: Connection,
         read_master_connection: Connection,
     ) -> Self {
         Self {
             write_connection,
+            read_connection,
             read_master_connection,
         }
     }
 
     fn get_up_query() -> &'static str {
         include_str!("../schemas/sqlite-bookmarks.sql")
+    }
+}
+
+impl SqlBookmarks {
+    fn list_by_prefix_impl(
+        &self,
+        prefix: &BookmarkPrefix,
+        repo_id: &RepositoryId,
+        conn: &Connection,
+    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        if prefix.is_empty() {
+            SelectAll::query(&conn, &repo_id)
+                .map(|rows| stream::iter_ok(rows))
+                .flatten_stream()
+                .boxify()
+        } else {
+            SelectByPrefix::query(&conn, &repo_id, &prefix)
+                .map(|rows| stream::iter_ok(rows))
+                .flatten_stream()
+                .boxify()
+        }
     }
 }
 
@@ -146,17 +169,15 @@ impl Bookmarks for SqlBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: &RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
-        if prefix.is_empty() {
-            SelectAll::query(&self.read_master_connection, &repo_id)
-                .map(|rows| stream::iter_ok(rows))
-                .flatten_stream()
-                .boxify()
-        } else {
-            SelectByPrefix::query(&self.read_master_connection, &repo_id, &prefix)
-                .map(|rows| stream::iter_ok(rows))
-                .flatten_stream()
-                .boxify()
-        }
+        self.list_by_prefix_impl(prefix, repo_id, &self.read_master_connection)
+    }
+
+    fn list_by_prefix_maybe_stale(
+        &self,
+        prefix: &BookmarkPrefix,
+        repo_id: &RepositoryId,
+    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        self.list_by_prefix_impl(prefix, repo_id, &self.read_connection)
     }
 
     fn create_transaction(&self, repoid: &RepositoryId) -> Box<Transaction> {

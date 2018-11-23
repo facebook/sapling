@@ -113,6 +113,18 @@ pub trait Bookmarks: Send + Sync + 'static {
         repoid: &RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error>;
 
+    /// Lists the bookmarks that match the prefix with bookmark's values but the bookmarks may not
+    /// be the most up-to-date i.e. they may be read from a replica that's behind master.
+    /// There are no guarantees on how big is the replica delay.
+    /// Unless it's absolutely crucial to have the most up-to-date bookmarks using this method
+    /// should be preferred over list_by_prefix.
+    /// Empty prefix means list all of the available bookmarks
+    fn list_by_prefix_maybe_stale(
+        &self,
+        prefix: &BookmarkPrefix,
+        repoid: &RepositoryId,
+    ) -> BoxStream<(Bookmark, ChangesetId), Error>;
+
     /// Creates a transaction that will be used for write operations.
     fn create_transaction(&self, repoid: &RepositoryId) -> Box<Transaction>;
 }

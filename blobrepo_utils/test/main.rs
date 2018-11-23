@@ -46,7 +46,7 @@ mod test {
                         let logger = Logger::root(drain, o![]);
 
                         let repo = $repo::getrepo(Some(logger.clone()));
-                        let heads = repo.get_heads()
+                        let heads = repo.get_heads_maybe_stale()
                             .collect()
                             .map(|heads| heads.into_iter().map(HgChangesetId::new));
 

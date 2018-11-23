@@ -74,7 +74,7 @@ define_stats! {
     get_file_content: timeseries(RATE, SUM),
     get_raw_hg_content: timeseries(RATE, SUM),
     get_changesets: timeseries(RATE, SUM),
-    get_heads: timeseries(RATE, SUM),
+    get_heads_maybe_stale: timeseries(RATE, SUM),
     changeset_exists: timeseries(RATE, SUM),
     get_changeset_parents: timeseries(RATE, SUM),
     get_changeset_parents_by_bonsai: timeseries(RATE, SUM),
@@ -84,7 +84,7 @@ define_stats! {
     get_manifest_by_nodeid: timeseries(RATE, SUM),
     get_root_entry: timeseries(RATE, SUM),
     get_bookmark: timeseries(RATE, SUM),
-    get_bookmarks: timeseries(RATE, SUM),
+    get_bookmarks_maybe_stale: timeseries(RATE, SUM),
     get_bonsai_from_hg: timeseries(RATE, SUM),
     update_bookmark_transaction: timeseries(RATE, SUM),
     get_linknode: timeseries(RATE, SUM),
@@ -637,15 +637,16 @@ impl BlobRepo {
         HgBlobChangesetStream {
             repo: self.clone(),
             state: BCState::Idle,
-            heads: self.get_heads().boxify(),
+            heads: self.get_heads_maybe_stale().boxify(),
             seen: HashSet::new(),
         }.boxify()
     }
 
-    pub fn get_heads(&self) -> impl Stream<Item = HgNodeHash, Error = Error> {
-        STATS::get_heads.add_value(1);
+    /// Heads maybe read from replica, so they may be out of date
+    pub fn get_heads_maybe_stale(&self) -> impl Stream<Item = HgNodeHash, Error = Error> {
+        STATS::get_heads_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix_maybe_stale(&BookmarkPrefix::empty(), &self.repoid)
             .and_then({
                 let repo = self.clone();
                 move |(_, cs)| {
@@ -785,11 +786,12 @@ impl BlobRepo {
         self.bookmarks.get(name, &self.repoid)
     }
 
-    // TODO(stash): rename to get_all_bookmarks()?
-    pub fn get_bookmarks(&self) -> BoxStream<(Bookmark, HgChangesetId), Error> {
-        STATS::get_bookmarks.add_value(1);
+    /// Heads maybe read from replica, so they may be out of date. Prefer to use this method
+    /// over `get_bookmarks` unless you need the most up-to-date bookmarks
+    pub fn get_bookmarks_maybe_stale(&self) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+        STATS::get_bookmarks_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix_maybe_stale(&BookmarkPrefix::empty(), &self.repoid)
             .and_then({
                 let repo = self.clone();
                 move |(bm, cs)| {

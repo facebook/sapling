@@ -303,7 +303,7 @@ impl RepoClient {
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
-            let items = blobrepo.get_bookmarks().map(|(name, cs)| {
+            let items = blobrepo.get_bookmarks_maybe_stale().map(|(name, cs)| {
                 let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                 (name.to_string(), hash)
             });
@@ -503,7 +503,7 @@ impl HgCommands for RepoClient {
 
         self.repo
             .blobrepo()
-            .get_heads()
+            .get_heads_maybe_stale()
             .collect()
             .map(|v| v.into_iter().collect())
             .from_err()
@@ -661,7 +661,7 @@ impl HgCommands for RepoClient {
 
             self.repo
                 .blobrepo()
-                .get_bookmarks()
+                .get_bookmarks_maybe_stale()
                 .map(|(name, cs)| {
                     let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                     (name, hash)
