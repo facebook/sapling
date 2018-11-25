@@ -281,6 +281,9 @@
     <ClCompile Include="..\..\fs\tracing\Tracing.cpp">
       <Filter>fs\Tracing</Filter>
     </ClCompile>
+    <ClCompile Include="utils\WinError.cpp">
+      <Filter>Win\fs\Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h">
@@ -504,6 +507,9 @@
     </ClInclude>
     <ClInclude Include="..\..\fs\tracing\Tracing.h">
       <Filter>fs\Tracing</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\WinError.h">
+      <Filter>Win\fs\Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
