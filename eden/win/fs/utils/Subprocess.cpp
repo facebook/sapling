@@ -18,7 +18,8 @@
 #include "Pipe.h"
 #include "eden/win/fs/Edenwin.h"
 
-using namespace facebook::edenwin;
+namespace facebook {
+namespace eden {
 using namespace std;
 
 Subprocess::Subprocess() {}
@@ -71,3 +72,5 @@ void Subprocess::createSubprocess(
     CloseHandle(procInfo.hThread);
   }
 }
+} // namespace eden
+} // namespace facebook

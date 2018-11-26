@@ -29,6 +29,7 @@
 #else
 #include "eden/win/fs/utils/Pipe.h" // @manual
 #include "eden/win/fs/utils/Subprocess.h" // @manual
+#include "eden/win/fs/utils/WinError.h" // @manual
 #endif
 
 #include <mutex>
@@ -55,8 +56,8 @@ using folly::StringPiece;
 #ifndef EDEN_WIN
 using folly::Subprocess;
 #else
-using facebook::edenwin::Pipe;
-using facebook::edenwin::Subprocess;
+using facebook::eden::Pipe;
+using facebook::eden::Subprocess;
 #endif
 using folly::io::Appender;
 using folly::io::Cursor;
@@ -746,13 +747,12 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
 
 void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
   size_t bytesRead;
+
 #ifdef EDEN_WIN
-  DWORD winBytesRead;
-  int result = 0;
   try {
-    facebook::edenwin::Pipe::read(helperOut_, buf, size, &winBytesRead);
+    bytesRead = Pipe::read(helperOut_, buf, size);
   } catch (const std::exception& ex) {
-    // The Pipe::read() code can throw std::system_error.  Translate this to
+    // The Pipe::read() code can throw std::system_error. Translate this to
     // HgImporterError so that the higher-level code will retry on this error.
     HgImporterError importErr(
         "error reading ",
@@ -762,7 +762,6 @@ void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
     XLOG(ERR) << importErr.what();
     throw importErr;
   }
-  bytesRead = winBytesRead;
 #else
   auto result = folly::readFull(helperOut_, buf, size);
   if (result < 0) {
@@ -781,7 +780,7 @@ void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
     // This generally means that it exited.
     HgImporterError err(
         "received unexpected EOF from hg_import_helper.py after ",
-        result,
+        bytesRead,
         " bytes while reading ",
         context);
     XLOG(ERR) << err.what();
@@ -795,7 +794,7 @@ void HgImporter::writeToHelper(
     StringPiece context) {
 #ifdef EDEN_WIN
   try {
-    facebook::edenwin::Pipe::writeiov(helperIn_, iov, numIov);
+    auto result = Pipe::writeiov(helperIn_, iov, numIov);
   } catch (const std::exception& ex) {
     // The Pipe::read() code can throw std::system_error.  Translate this to
     // HgImporterError so that the higher-level code will retry on this error.

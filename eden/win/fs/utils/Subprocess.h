@@ -14,7 +14,7 @@
 #include <vector>
 
 namespace facebook {
-namespace edenwin {
+namespace eden {
 
 class Pipe;
 
@@ -36,5 +36,5 @@ class Subprocess {
   const int bufferSize_ = 4096;
 };
 
-} // namespace edenwin
+} // namespace eden
 } // namespace facebook

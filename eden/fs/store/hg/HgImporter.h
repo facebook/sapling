@@ -291,7 +291,7 @@ class HgImporter : public Importer {
 #ifndef EDEN_WIN
   folly::Subprocess helper_;
 #else
-  facebook::edenwin::Subprocess helper_;
+  facebook::eden::Subprocess helper_;
 #endif
   const AbsolutePath repoPath_;
   LocalStore* const store_{nullptr};

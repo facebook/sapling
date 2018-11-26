@@ -12,7 +12,7 @@
 #include <folly/portability/Windows.h>
 
 namespace facebook {
-namespace edenwin {
+namespace eden {
 
 class Pipe {
  public:
@@ -22,20 +22,18 @@ class Pipe {
   Pipe(PSECURITY_ATTRIBUTES securityAttr, bool inherit);
   ~Pipe();
 
-  void read(void* buffer, DWORD BytesToRead, LPDWORD BytesRead = nullptr);
-  void write(void* buffer, DWORD BytesToWrite, LPDWORD BytesWritten = nullptr);
+  //
+  // Following read/write pipe functions return the number of bytes read or <0
+  // on error
+  //
 
-  static void read(
-      HANDLE handle,
-      void* buffer,
-      DWORD BytesToRead,
-      LPDWORD BytesRead = nullptr);
-  static void write(
-      HANDLE handle,
-      void* buffer,
-      DWORD BytesToWrite,
-      LPDWORD BytesWritten = nullptr);
+  size_t read(void* buffer, DWORD BytesToRead);
+  size_t write(void* buffer, DWORD BytesToWrite);
+
+  static size_t read(HANDLE handle, void* buffer, DWORD BytesToRead);
+
+  static size_t write(HANDLE handle, void* buffer, DWORD BytesToWrite);
   static size_t writeiov(HANDLE handle, iovec* iov, int count);
 };
-} // namespace edenwin
+} // namespace eden
 } // namespace facebook
