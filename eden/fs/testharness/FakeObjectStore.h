@@ -43,11 +43,14 @@ class FakeObjectStore : public IObjectStore {
   folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids) const override;
 
+  size_t getAccessCount(const Hash& hash) const;
+
  private:
   std::unordered_map<Hash, Tree> trees_;
   std::unordered_map<Hash, Blob> blobs_;
   std::unordered_map<Hash, Tree> commits_;
   std::unordered_map<Hash, BlobMetadata> blobMetadata_;
+  mutable std::unordered_map<Hash, size_t> accessCounts_;
 };
 } // namespace eden
 } // namespace facebook

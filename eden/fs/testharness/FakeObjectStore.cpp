@@ -56,6 +56,7 @@ void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
 
 Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
     const Hash& id) const {
+  ++accessCounts_[id];
   auto iter = trees_.find(id);
   if (iter == trees_.end()) {
     return makeFuture<shared_ptr<const Tree>>(
@@ -66,6 +67,7 @@ Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
 
 Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
     const Hash& id) const {
+  ++accessCounts_[id];
   auto iter = blobs_.find(id);
   if (iter == blobs_.end()) {
     return makeFuture<shared_ptr<const Blob>>(
@@ -76,6 +78,7 @@ Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
 
 Future<shared_ptr<const Tree>> FakeObjectStore::getTreeForCommit(
     const Hash& commitID) const {
+  ++accessCounts_[commitID];
   auto iter = commits_.find(commitID);
   if (iter == commits_.end()) {
     return makeFuture<shared_ptr<const Tree>>(std::domain_error(
@@ -85,6 +88,9 @@ Future<shared_ptr<const Tree>> FakeObjectStore::getTreeForCommit(
 }
 
 Future<BlobMetadata> FakeObjectStore::getBlobMetadata(const Hash& id) const {
+  // Might be nice in the future to differentiate between blob and metadata
+  // accesses, since the latter can be cheaper.
+  ++accessCounts_[id];
   auto iter = blobMetadata_.find(id);
   if (iter == blobMetadata_.end()) {
     return makeFuture<BlobMetadata>(
@@ -92,9 +98,18 @@ Future<BlobMetadata> FakeObjectStore::getBlobMetadata(const Hash& id) const {
   }
   return makeFuture(iter->second);
 }
+
 folly::Future<folly::Unit> FakeObjectStore::prefetchBlobs(
     const std::vector<Hash>&) const {
   return folly::unit;
+}
+
+size_t FakeObjectStore::getAccessCount(const Hash& hash) const {
+  if (auto* item = folly::get_ptr(accessCounts_, hash)) {
+    return *item;
+  } else {
+    return 0;
+  }
 }
 } // namespace eden
 } // namespace facebook
