@@ -17,7 +17,6 @@
 #include <optional>
 #include <thread>
 #include "eden/fs/fuse/FuseTypes.h"
-#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -126,8 +125,7 @@ class Overlay {
 
   void saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir);
 
-  std::optional<std::pair<DirContents, InodeTimestamps>> loadOverlayDir(
-      InodeNumber inodeNumber);
+  std::optional<DirContents> loadOverlayDir(InodeNumber inodeNumber);
 
   void removeOverlayData(InodeNumber inodeNumber);
 
@@ -149,13 +147,9 @@ class Overlay {
 
   /**
    * Helper function that opens an existing overlay file,
-   * checks if the file has valid header
-   * populates st_atim, st_mtim, st_ctim and returns the file.
+   * checks if the file has valid header, and returns the file.
    */
-  folly::File openFile(
-      InodeNumber inodeNumber,
-      folly::StringPiece headerId,
-      InodeTimestamps& timestamps);
+  folly::File openFile(InodeNumber inodeNumber, folly::StringPiece headerId);
 
   /**
    * Open an existing overlay file without verifying the header.
@@ -229,8 +223,7 @@ class Overlay {
   void ensureTmpDirectoryIsCreated();
 
   std::optional<overlay::OverlayDir> deserializeOverlayDir(
-      InodeNumber inodeNumber,
-      InodeTimestamps& timeStamps) const;
+      InodeNumber inodeNumber) const;
 
   /**
    * Creates header for the files stored in Overlay
@@ -254,8 +247,7 @@ class Overlay {
    */
   static void parseHeader(
       folly::StringPiece header,
-      folly::StringPiece headerId,
-      InodeTimestamps& timeStamps);
+      folly::StringPiece headerId);
 
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);

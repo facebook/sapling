@@ -377,37 +377,19 @@ void TreeInode::loadUnlinkedChildInode(
           inodePtrFromThis(),
           name,
           mode,
-          [&]() -> std::optional<InodeTimestamps> {
-            // If this inode does not have timestamps in the metadata table but
-            // does in the overlay, migrate.
-            if (hash) {
-              return std::nullopt;
-            } else {
-              InodeTimestamps fromOverlay;
-              (void)getMount()->getOverlay()->openFile(
-                  number, Overlay::kHeaderIdentifierFile, fromOverlay);
-              return fromOverlay;
-            }
-          },
+          [&]() -> std::optional<InodeTimestamps> { return std::nullopt; },
           hash);
       promises = getInodeMap()->inodeLoadComplete(file.get());
       inodePtr = InodePtr::takeOwnership(std::move(file));
     } else {
-      DirContents dir;
-      std::optional<InodeTimestamps> fromOverlay;
-
       auto overlayContents = getOverlay()->loadOverlayDir(number);
-      if (overlayContents) {
-        dir = std::move(overlayContents.value().first);
-        fromOverlay = overlayContents->second;
-      }
-
       if (!hash) {
+        // If the inode is materialized, the overlay must have an entry
+        // for the directory.
         // Note that the .value() call will throw if we couldn't
         // load the dir data; we'll catch and propagate that in
         // the containing try/catch block.
-        dir = std::move(overlayContents.value().first);
-        if (!dir.empty()) {
+        if (!overlayContents.value().empty()) {
           // Should be impossible, but worth checking for
           // defensive purposes!
           throw new std::runtime_error(
@@ -420,8 +402,8 @@ void TreeInode::loadUnlinkedChildInode(
           inodePtrFromThis(),
           name,
           mode,
-          fromOverlay,
-          std::move(dir),
+          std::nullopt,
+          std::move(overlayContents).value_or(DirContents{}),
           hash);
       promises = getInodeMap()->inodeLoadComplete(tree.get());
       inodePtr = InodePtr::takeOwnership(std::move(tree));
@@ -619,20 +601,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         inodePtrFromThis(),
         name,
         entry.getInitialMode(),
-        [&]() -> std::optional<InodeTimestamps> {
-          // If this inode doesn't have timestamps in the inode metadata table
-          // but does in the overlay, use them.
-          if (entry.getOptionalHash()) {
-            // Only materialized files exist in the overlay.
-            return std::nullopt;
-          }
-          InodeTimestamps fromOverlay;
-          (void)getMount()->getOverlay()->openFile(
-              entry.getInodeNumber(),
-              Overlay::kHeaderIdentifierFile,
-              fromOverlay);
-          return fromOverlay;
-        },
+        [&]() -> std::optional<InodeTimestamps> { return std::nullopt; },
         entry.getOptionalHash());
   }
 
@@ -654,7 +623,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                 // Compare the Tree and the Dir from the overlay.  If they
                 // differ, something is wrong, so log the difference.
                 if (auto differences =
-                        findEntryDifferences(overlayDir->first, *tree)) {
+                        findEntryDifferences(*overlayDir, *tree)) {
                   std::string diffString;
                   for (const auto& diff : *differences) {
                     diffString += diff;
@@ -675,8 +644,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     std::move(self),
                     childName,
                     entryMode,
-                    overlayDir->second,
-                    std::move(overlayDir->first),
+                    std::nullopt,
+                    std::move(*overlayDir),
                     treeHash);
               }
 
@@ -697,8 +666,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       inodePtrFromThis(),
       name,
       entry.getInitialMode(),
-      overlayDir->second,
-      std::move(overlayDir->first),
+      std::nullopt,
+      std::move(*overlayDir),
       std::nullopt);
 } // namespace eden
 
@@ -846,8 +815,8 @@ Overlay* TreeInode::getOverlay() const {
   return getMount()->getOverlay();
 }
 
-std::optional<std::pair<DirContents, InodeTimestamps>>
-TreeInode::loadOverlayDir(InodeNumber inodeNumber) const {
+std::optional<DirContents> TreeInode::loadOverlayDir(
+    InodeNumber inodeNumber) const {
   return getOverlay()->loadOverlayDir(inodeNumber);
 }
 

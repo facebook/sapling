@@ -462,8 +462,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Loads a tree from the overlay given an inode number.
    */
-  std::optional<std::pair<DirContents, InodeTimestamps>> loadOverlayDir(
-      InodeNumber inodeNumber) const;
+  std::optional<DirContents> loadOverlayDir(InodeNumber inodeNumber) const;
 
   /**
    * Saves the entries of this inode to the overlay.

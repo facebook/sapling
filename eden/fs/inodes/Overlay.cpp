@@ -339,10 +339,8 @@ InodeNumber Overlay::allocateInodeNumber() {
   return InodeNumber{previous};
 }
 
-optional<std::pair<DirContents, InodeTimestamps>> Overlay::loadOverlayDir(
-    InodeNumber inodeNumber) {
-  InodeTimestamps timestamps;
-  auto dirData = deserializeOverlayDir(inodeNumber, timestamps);
+optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
+  auto dirData = deserializeOverlayDir(inodeNumber);
   if (!dirData.has_value()) {
     return std::nullopt;
   }
@@ -376,7 +374,7 @@ optional<std::pair<DirContents, InodeTimestamps>> Overlay::loadOverlayDir(
     saveOverlayDir(inodeNumber, result);
   }
 
-  return std::pair<DirContents, InodeTimestamps>{std::move(result), timestamps};
+  return std::move(result);
 }
 
 void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
@@ -440,8 +438,7 @@ void Overlay::removeOverlayData(InodeNumber inodeNumber) {
 }
 
 void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
-  InodeTimestamps dummy;
-  auto dirData = deserializeOverlayDir(inodeNumber, dummy);
+  auto dirData = deserializeOverlayDir(inodeNumber);
   // This inode's data must be removed from the overlay before
   // recursivelyRemoveOverlayData returns to avoid a race condition if
   // recursivelyRemoveOverlayData(I) is called immediately prior to
@@ -499,10 +496,9 @@ InodeNumber Overlay::scanForNextInodeNumber() {
     auto dirInodeNumber = toProcess.back();
     toProcess.pop_back();
 
-    InodeTimestamps timeStamps;
     auto dir = optional<overlay::OverlayDir>{};
     try {
-      dir = deserializeOverlayDir(dirInodeNumber, timeStamps);
+      dir = deserializeOverlayDir(dirInodeNumber);
     } catch (std::system_error& error) {
       XLOG_IF(WARN, !encounteredBrokenDirectory)
           << "Ignoring failure to load directory inode " << dirInodeNumber
@@ -563,8 +559,7 @@ Overlay::InodePath Overlay::getFilePath(InodeNumber inodeNumber) {
 }
 
 optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
-    InodeNumber inodeNumber,
-    InodeTimestamps& timeStamps) const {
+    InodeNumber inodeNumber) const {
   // Open the file.  Return std::nullopt if the file does not exist.
   auto path = getFilePath(inodeNumber);
   int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
@@ -608,7 +603,7 @@ optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
 
   StringPiece header{serializedData, 0, kHeaderLength};
   // validate header and get the timestamps
-  parseHeader(header, kHeaderIdentifierDir, timeStamps);
+  parseHeader(header, kHeaderIdentifierDir);
 
   StringPiece contents{serializedData};
   contents.advance(kHeaderLength);
@@ -646,8 +641,7 @@ std::array<uint8_t, Overlay::kHeaderLength> Overlay::createHeader(
 // get file pointer of an overlay file
 folly::File Overlay::openFile(
     InodeNumber inodeNumber,
-    folly::StringPiece headerId,
-    InodeTimestamps& timeStamps) {
+    folly::StringPiece headerId) {
   // Open the overlay file
   auto file = openFileNoVerify(inodeNumber);
 
@@ -663,7 +657,7 @@ folly::File Overlay::openFile(
   }
 
   StringPiece header{contents};
-  parseHeader(header, headerId, timeStamps);
+  parseHeader(header, headerId);
   return file;
 }
 
@@ -826,8 +820,7 @@ folly::File Overlay::createOverlayFile(
 
 void Overlay::parseHeader(
     folly::StringPiece header,
-    folly::StringPiece headerId,
-    InodeTimestamps& timestamps) {
+    folly::StringPiece headerId) {
   IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{header});
   folly::io::Cursor cursor(&buf);
 
@@ -846,16 +839,15 @@ void Overlay::parseHeader(
   if (version != kHeaderVersion) {
     folly::throwSystemError(EIO, "Unexpected overlay version :", version);
   }
-  timespec atime, ctime, mtime;
-  atime.tv_sec = cursor.readBE<uint64_t>();
-  atime.tv_nsec = cursor.readBE<uint64_t>();
-  ctime.tv_sec = cursor.readBE<uint64_t>();
-  ctime.tv_nsec = cursor.readBE<uint64_t>();
-  mtime.tv_sec = cursor.readBE<uint64_t>();
-  mtime.tv_nsec = cursor.readBE<uint64_t>();
-  timestamps.atime = atime;
-  timestamps.ctime = ctime;
-  timestamps.mtime = mtime;
+
+  // Eden used to store timestamps in the Overlay entry's header, but they're
+  // no longer used. Read them anyway and throw an exception on error.
+  cursor.readBE<uint64_t>();  // atime.tv_sec
+  cursor.readBE<uint64_t>();  // atime.tv_nsec
+  cursor.readBE<uint64_t>();  // ctime.tv_sec
+  cursor.readBE<uint64_t>();  // ctime.tv_nsec
+  cursor.readBE<uint64_t>();  // mtime.tv_sec
+  cursor.readBE<uint64_t>();  // mtime.tv_nsec
 }
 
 void Overlay::gcThread() noexcept {
@@ -936,8 +928,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
 
     overlay::OverlayDir dir;
     try {
-      InodeTimestamps dummy;
-      auto dirData = deserializeOverlayDir(ino, dummy);
+      auto dirData = deserializeOverlayDir(ino);
       if (!dirData.has_value()) {
         XLOG(DBG3) << "no dir data for inode " << ino;
         continue;
