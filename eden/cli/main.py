@@ -459,6 +459,13 @@ class FsckCmd(Subcmd):
             "only scan and report possible issues.",
         )
         parser.add_argument(
+            "-n",
+            "--check-only",
+            action="store_true",
+            default=False,
+            help="Only report errors, and do not attempt to fix any problems found.",
+        )
+        parser.add_argument(
             "-v",
             "--verbose",
             action="store_true",
@@ -510,10 +517,7 @@ class FsckCmd(Subcmd):
     def check_one(
         self, args: argparse.Namespace, checkout_path: Path, state_dir: Path
     ) -> int:
-        overlay_dir = Path(state_dir) / "local"
-
-        overlay = overlay_mod.Overlay(str(overlay_dir))
-        with fsck_mod.FilesystemChecker(overlay) as checker:
+        with fsck_mod.FilesystemChecker(state_dir) as checker:
             if not checker._overlay_locked:
                 if args.force:
                     print(
@@ -542,6 +546,14 @@ class FsckCmd(Subcmd):
             if num_warnings > 0:
                 print(f"  {num_warnings} warnings")
             print(f"  {num_errors} errors")
+
+            if args.check_only:
+                print("Not fixing errors: --check-only was specified")
+            elif not checker._overlay_locked:
+                print("Not fixing errors: checkout is currently in use")
+            else:
+                checker.fix_errors()
+
             if num_errors == 0:
                 return self.EXIT_WARNINGS
             return self.EXIT_ERRORS

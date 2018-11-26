@@ -10,10 +10,13 @@
 import binascii
 import contextlib
 import enum
+import logging
 import os
 import stat
+import sys
 import time
 import types
+from pathlib import Path
 from typing import ContextManager, Dict, List, NamedTuple, Optional, Tuple, Type
 
 from . import overlay as overlay_mod
@@ -93,6 +96,12 @@ class Error:
 
     def detailed_description(self) -> Optional[str]:
         return None
+
+    def repair(
+        self, log: logging.Logger, overlay: overlay_mod.Overlay, fsck_dir: Path
+    ) -> bool:
+        log.info("no automatic remediation available for this error")
+        return False
 
 
 class UnexpectedOverlayFile(Error):
@@ -211,8 +220,9 @@ class HardLinkedInode(Error):
 
 
 class FilesystemChecker:
-    def __init__(self, overlay: overlay_mod.Overlay) -> None:
-        self.overlay = overlay
+    def __init__(self, checkout_state_dir: Path) -> None:
+        self._state_dir = checkout_state_dir
+        self.overlay = overlay_mod.Overlay(str(checkout_state_dir / "local"))
         self.errors: List[Error] = []
         self._overlay_locked: Optional[bool] = None
         self._overlay_lock: Optional[ContextManager[bool]] = None
@@ -363,8 +373,90 @@ class FilesystemChecker:
             mtime = stat_info.st_mtime
         return InodeInfo(inode_number, type, children, mtime, error)
 
+    def fix_errors(self, fsck_dir: Optional[Path] = None) -> None:
+        if not self._overlay_locked:
+            raise Exception("cannot repair errors without holding the overlay lock")
+
+        # Create a directory to store logs and any data backups we may
+        # create while trying to perform repairs
+        if not fsck_dir:
+            fsck_dir = _create_fsck_dir(self._state_dir)
+
+        print(f"Beginning repairs.  Putting logs and backup data in {fsck_dir}")
+
+        # Create a log file
+        log_path = fsck_dir / "fsck.log"
+        log = logging.getLogger("eden.fsck.repair_log")
+        log.propagate = False
+        log.setLevel(logging.DEBUG)
+        log_file_handler = logging.FileHandler(log_path)
+        log_file_handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+
+        # ui_log logs both to the log file and to stdout
+        ui_log = logging.getLogger("eden.fsck.repair_log.ui")
+        ui_handler = logging.StreamHandler(sys.stdout)
+        ui_handler.setFormatter(logging.Formatter("%(message)s"))
+
+        log.addHandler(log_file_handler)
+        ui_log.addHandler(ui_handler)
+        try:
+            num_fixed = 0
+            try:
+                log.info("Beginning fsck repair run")
+                log.info(f"{len(self.errors)} issues were detected")
+
+                for error in self.errors:
+                    if self._fix_error(fsck_dir, ui_log, error):
+                        num_fixed += 1
+            except Exception as ex:
+                log.exception(f"unhandled error: {ex}")
+                raise
+
+            ui_log.info(f"Fixed {num_fixed} of {len(self.errors)} issues")
+        finally:
+            # Remove the log handlers we added.
+            # Logger objects are global, so otherwise the handlers will persist and
+            # continue to be used for subsequent calls to fix_errors(), even if it is on
+            # a different FilesystemChecker object.  This is mainly just an issue for
+            # the fsck tests, which can call fix_errors() multiple times.
+            ui_log.removeHandler(ui_handler)
+            log.removeHandler(log_file_handler)
+            log_file_handler.close()
+
+    def _fix_error(self, fsck_dir: Path, log: logging.Logger, error: Error) -> bool:
+        log.info(f"Processing error: {error}")
+        detail = error.detailed_description()
+        if detail:
+            log.debug(detail)
+        return error.repair(log=log, overlay=self.overlay, fsck_dir=fsck_dir)
+
 
 def _get_mtime_str(mtime: Optional[float]) -> str:
     if mtime is None:
         return ""
     return f", with mtime {time.ctime(mtime)}"
+
+
+def _create_fsck_dir(state_dir: Path) -> Path:
+    fsck_base_dir = state_dir / "fsck"
+    fsck_base_dir.mkdir(exist_ok=True)
+    timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+
+    # There probably shouldn't be multiple directories for the same second
+    # normally, but just in case support adding a numeric suffix number to make the
+    # path unique.
+    for n in range(20):
+        if n == 0:
+            fsck_run_dir = fsck_base_dir / timestamp_str
+        else:
+            fsck_run_dir = fsck_base_dir / f"{timestamp_str}.{n}"
+        try:
+            fsck_run_dir.mkdir()
+            return fsck_run_dir
+        except FileExistsError:
+            continue
+
+    # We set a limit on the above loop just to guard against infinite loops if we
+    # have any sort of programming bug.
+    # This code path probably shouldn't be hit in normal circumstances.
+    raise Exception("too many fsck run directories for the current time")

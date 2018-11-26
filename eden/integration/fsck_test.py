@@ -57,7 +57,10 @@ class FsckTest(testcase.EdenRepoTest):
         fsck_out = cmd_result.stdout.decode("utf-8", errors="replace")
         return (cmd_result.returncode, fsck_out)
 
-    def test_fsck_force(self) -> None:
+    def test_fsck_force_and_check_only(self) -> None:
+        """Test the behavior of the --force and --check-only fsck flags."""
+        foo_overlay_path = self.overlay.materialize_file(pathlib.Path("doc/foo.txt"))
+
         # Running fsck with the mount still mounted should fail
         returncode, fsck_out = self.run_fsck(self.mount)
         self.assertIn(f"Not checking {self.mount}", fsck_out)
@@ -78,14 +81,23 @@ class FsckTest(testcase.EdenRepoTest):
         self.assertIn("No issues found", fsck_out)
         self.assertEqual(FSCK_RETCODE_OK, returncode)
 
-    def test_fsck_empty_overlay_file(self) -> None:
-        overlay_path = self.overlay.materialize_file(pathlib.Path("doc/foo.txt"))
-        self.eden.run_cmd("unmount", self.mount)
-
-        # Truncate the file to 0 length
-        with overlay_path.open("wb"):
+        # Truncate the overlay file for doc/foo.txt to 0 length
+        with foo_overlay_path.open("wb"):
             pass
 
+        # Running fsck with --check-only should report the error but not try to fix it.
+        returncode, fsck_out = self.run_fsck("--check-only")
+        self.assertIn(f"Checking {self.mount}", fsck_out)
+        self.assertRegex(
+            fsck_out,
+            r"invalid overlay file for materialized file .* \(doc/foo.txt\).*: "
+            r"zero-sized overlay file",
+        )
+        self.assertRegex(fsck_out, r"\b1 errors")
+        self.assertRegex(fsck_out, "Not fixing errors: --check-only was specified")
+        self.assertEqual(FSCK_RETCODE_ERRORS, returncode)
+
+        # Running fsck with no arguments should attempt to fix the errors
         returncode, fsck_out = self.run_fsck()
         self.assertRegex(
             fsck_out,
@@ -93,6 +105,10 @@ class FsckTest(testcase.EdenRepoTest):
             r"zero-sized overlay file",
         )
         self.assertRegex(fsck_out, r"\b1 errors")
+        # fsck doesn't actually fix this problem yet
+        self.assertRegex(fsck_out, "Beginning repairs")
+        self.assertRegex(fsck_out, "no automatic remediation available for this error")
+        self.assertRegex(fsck_out, "Fixed 0 of 1 issues")
         self.assertEqual(FSCK_RETCODE_ERRORS, returncode)
 
     def test_fsck_multiple_mounts(self) -> None:

@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from eden.cli import fsck as fsck_mod, overlay as overlay_mod
+from eden.cli import fsck as fsck_mod
 from eden.integration.lib.temporary_directory import TemporaryDirectoryMixin
 from eden.integration.snapshot import snapshot as snapshot_mod
 
@@ -82,8 +82,11 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
         self.tmp_dir = Path(self.make_temporary_directory())
         self.snapshot = snapshot_mod.unpack_into(snapshot_path, self.tmp_dir)
 
+    def _checkout_state_dir(self) -> Path:
+        return self.snapshot.eden_state_dir / "clients" / "checkout"
+
     def _overlay_path(self) -> Path:
-        return self.snapshot.eden_state_dir / "clients" / "checkout" / "local"
+        return self._checkout_state_dir() / "local"
 
     def _replace_overlay_inode(self, inode_number: int, data: Optional[bytes]) -> None:
         inode_path = (
@@ -96,8 +99,7 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
     def _run_fsck(
         self, expected_errors: Sequence[ExpectedError]
     ) -> fsck_mod.FilesystemChecker:
-        overlay = overlay_mod.Overlay(str(self._overlay_path()))
-        fsck = fsck_mod.FilesystemChecker(overlay)
+        fsck = fsck_mod.FilesystemChecker(self._checkout_state_dir())
         fsck.scan_for_errors()
 
         remaining_expected = list(expected_errors)
