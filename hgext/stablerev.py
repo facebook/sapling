@@ -94,6 +94,10 @@ def _validaterevspec(ui, node):
 
 def _executeandparse(ui, repo, target=None):
     stdout, stderr = _execute(ui, repo, target)
+
+    # The stderr can optionally provide useful context, so print it.
+    ui.write_err(stderr)
+
     try:
         # Prefer JSON output first.
         data = json.loads(stdout)
