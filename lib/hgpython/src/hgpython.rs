@@ -7,7 +7,7 @@ use python::{py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_no
 
 use std;
 use std::ffi::{CString, OsStr, OsString};
-use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 
 /// A default name of the python script that this Rust binary will try to
 /// load when it decides to pass control to Python
@@ -103,7 +103,7 @@ impl HgPython {
     fn entry_point_in_installation<P: AsRef<Path>>(installation: P) -> PathBuf {
         installation
             .as_ref()
-            .join(ENTRYPOINT_IN_INSTALLATION.replace("/", "\\"))
+            .join(ENTRYPOINT_IN_INSTALLATION.replace("/", &MAIN_SEPARATOR.to_string()))
     }
 
     fn zip_in_installation<P: AsRef<Path>>(installation: P) -> PathBuf {
