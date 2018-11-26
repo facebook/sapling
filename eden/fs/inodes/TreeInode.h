@@ -471,19 +471,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   void saveOverlayDir(const DirContents& contents) const;
 
   /**
-   * Saves the entries of this inode to the overlay.
-   */
-  void saveOverlayDir(
-      const DirContents& contents,
-      const InodeTimestamps& timestamps) const;
-
-  /**
    * Saves the entries for a specified inode number.
    */
-  void saveOverlayDir(
-      InodeNumber inodeNumber,
-      const DirContents& contents,
-      const InodeTimestamps& timestamps) const;
+  void saveOverlayDir(InodeNumber inodeNumber, const DirContents& contents)
+      const;
 
   /**
    * Converts a Tree to a Dir and saves it to the Overlay under the given inode

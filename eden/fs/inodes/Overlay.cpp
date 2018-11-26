@@ -373,16 +373,13 @@ optional<std::pair<DirContents, InodeTimestamps>> Overlay::loadOverlayDir(
   }
 
   if (shouldMigrateToNewFormat) {
-    saveOverlayDir(inodeNumber, result, timestamps);
+    saveOverlayDir(inodeNumber, result);
   }
 
   return std::pair<DirContents, InodeTimestamps>{std::move(result), timestamps};
 }
 
-void Overlay::saveOverlayDir(
-    InodeNumber inodeNumber,
-    const DirContents& dir,
-    const InodeTimestamps& timestamps) {
+void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
   auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
   CHECK_LT(inodeNumber.get(), nextInodeNumber)
       << "saveOverlayDir called with unallocated inode number";
@@ -418,7 +415,7 @@ void Overlay::saveOverlayDir(
   auto serializedData = CompactSerializer::serialize<std::string>(odir);
 
   // Add header to the overlay directory.
-  auto header = createHeader(kHeaderIdentifierDir, kHeaderVersion, timestamps);
+  auto header = createHeader(kHeaderIdentifierDir, kHeaderVersion);
 
   std::array<struct iovec, 2> iov;
   iov[0].iov_base = header.data();
@@ -621,8 +618,7 @@ optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
 
 std::array<uint8_t, Overlay::kHeaderLength> Overlay::createHeader(
     folly::StringPiece identifier,
-    uint32_t version,
-    const InodeTimestamps& timestamps) {
+    uint32_t version) {
   std::array<uint8_t, kHeaderLength> headerStorage;
   IOBuf header{IOBuf::WRAP_BUFFER, folly::MutableByteRange{headerStorage}};
   header.clear();
@@ -630,15 +626,14 @@ std::array<uint8_t, Overlay::kHeaderLength> Overlay::createHeader(
 
   appender.push(identifier);
   appender.writeBE(version);
-  auto atime = timestamps.atime.toTimespec();
-  auto ctime = timestamps.ctime.toTimespec();
-  auto mtime = timestamps.mtime.toTimespec();
-  appender.writeBE<uint64_t>(atime.tv_sec);
-  appender.writeBE<uint64_t>(atime.tv_nsec);
-  appender.writeBE<uint64_t>(ctime.tv_sec);
-  appender.writeBE<uint64_t>(ctime.tv_nsec);
-  appender.writeBE<uint64_t>(mtime.tv_sec);
-  appender.writeBE<uint64_t>(mtime.tv_nsec);
+  // The overlay header used to store timestamps for inodes but that has since
+  // been moved to the InodeMetadataTable. Write zeroes instead.
+  appender.writeBE<uint64_t>(0);  // atime.tv_sec
+  appender.writeBE<uint64_t>(0);  // atime.tv_nsec
+  appender.writeBE<uint64_t>(0);  // ctime.tv_sec
+  appender.writeBE<uint64_t>(0);  // ctime.tv_nsec
+  appender.writeBE<uint64_t>(0);  // mtime.tv_sec
+  appender.writeBE<uint64_t>(0);  // mtime.tv_nsec
   auto paddingSize = kHeaderLength - header.length();
   appender.ensure(paddingSize);
   memset(appender.writableData(), 0, paddingSize);
@@ -796,9 +791,8 @@ folly::File Overlay::createOverlayFileImpl(
 
 folly::File Overlay::createOverlayFile(
     InodeNumber inodeNumber,
-    const InodeTimestamps& timestamps,
     ByteRange contents) {
-  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion, timestamps);
+  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion);
 
   std::array<struct iovec, 2> iov;
   iov[0].iov_base = header.data();
@@ -810,17 +804,16 @@ folly::File Overlay::createOverlayFile(
 
 folly::File Overlay::createOverlayFile(
     InodeNumber inodeNumber,
-    const InodeTimestamps& timestamps,
     const IOBuf& contents) {
   // In the common case where there is just one element in the chain, use the
   // ByteRange version of createOverlayFile() to avoid having to allocate the
   // iovec array on the heap.
   if (contents.next() == &contents) {
     return createOverlayFile(
-        inodeNumber, timestamps, ByteRange{contents.data(), contents.length()});
+        inodeNumber, ByteRange{contents.data(), contents.length()});
   }
 
-  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion, timestamps);
+  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion);
 
   fbvector<struct iovec> iov;
   iov.resize(1);

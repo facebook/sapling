@@ -852,21 +852,13 @@ TreeInode::loadOverlayDir(InodeNumber inodeNumber) const {
 }
 
 void TreeInode::saveOverlayDir(const DirContents& contents) const {
-  return saveOverlayDir(
-      getNodeId(), contents, getMetadataLocked(contents).timestamps);
-}
-
-void TreeInode::saveOverlayDir(
-    const DirContents& contents,
-    const InodeTimestamps& timestamps) const {
-  return saveOverlayDir(getNodeId(), contents, timestamps);
+  return saveOverlayDir(getNodeId(), contents);
 }
 
 void TreeInode::saveOverlayDir(
     InodeNumber inodeNumber,
-    const DirContents& contents,
-    const InodeTimestamps& timestamps) const {
-  return getOverlay()->saveOverlayDir(inodeNumber, contents, timestamps);
+    const DirContents& contents) const {
+  return getOverlay()->saveOverlayDir(inodeNumber, contents);
 }
 
 DirContents TreeInode::saveDirFromTree(
@@ -876,8 +868,7 @@ DirContents TreeInode::saveDirFromTree(
   auto overlay = mount->getOverlay();
   auto dir = buildDirFromTree(tree, overlay);
   // buildDirFromTree just allocated inode numbers; they should be saved.
-  overlay->saveOverlayDir(
-      inodeNumber, dir, InodeTimestamps{mount->getLastCheckoutTime()});
+  overlay->saveOverlayDir(inodeNumber, dir);
   return dir;
 }
 
@@ -947,9 +938,11 @@ FileInodePtr TreeInode::createImpl(
     auto childNumber = getOverlay()->allocateInodeNumber();
 
     // Create the overlay file before we insert the file into our entries map.
-    auto currentTime = getNow();
-    folly::File file = getOverlay()->createOverlayFile(
-        childNumber, InodeTimestamps{currentTime}, fileContents);
+    folly::File file =
+        getOverlay()->createOverlayFile(childNumber, fileContents);
+
+    auto now = getNow();
+    auto inodeTimestamps = InodeTimestamps{now};
 
     // Record the new entry
     auto insertion = contents->entries.emplace(name, mode, childNumber);
@@ -963,7 +956,7 @@ FileInodePtr TreeInode::createImpl(
           this->inodePtrFromThis(),
           name,
           mode,
-          InodeTimestamps{currentTime},
+          inodeTimestamps,
           std::move(file));
     } else {
       inode = FileInodePtr::makeNew(
@@ -971,14 +964,14 @@ FileInodePtr TreeInode::createImpl(
           this->inodePtrFromThis(),
           name,
           entry.getInitialMode(),
-          InodeTimestamps{currentTime});
+          inodeTimestamps);
     }
 
     entry.setInode(inode.get());
     getInodeMap()->inodeCreated(inode);
 
-    auto timestamps = updateMtimeAndCtimeLocked(contents->entries, getNow());
-    saveOverlayDir(contents->entries, timestamps);
+    updateMtimeAndCtimeLocked(contents->entries, now);
+    saveOverlayDir(contents->entries);
     contents.unlock();
   }
 
@@ -1115,10 +1108,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 
     // Store the overlay entry for this dir
     DirContents emptyDir;
-    // Update timeStamps of newly created directory and current directory.
-    auto now = getNow();
-    InodeTimestamps childTimestamps{now};
-    saveOverlayDir(childNumber, emptyDir, childTimestamps);
+    saveOverlayDir(childNumber, emptyDir);
 
     // Add a new entry to contents_.entries
     auto emplaceResult = contents->entries.emplace(name, mode, childNumber);
@@ -1126,21 +1116,22 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
         << "directory contents should not have changed since the check above";
     auto& entry = emplaceResult.first->second;
 
-    // Create the TreeInode
+    // Update timeStamps of newly created directory and current directory.
+    auto now = getNow();
     newChild = TreeInodePtr::makeNew(
         childNumber,
         this->inodePtrFromThis(),
         name,
         mode,
-        childTimestamps,
+        InodeTimestamps{now},
         std::move(emptyDir),
         std::nullopt);
     entry.setInode(newChild.get());
     getInodeMap()->inodeCreated(newChild);
 
     // Save our updated overlay data
-    auto timestamps = updateMtimeAndCtimeLocked(contents->entries, now);
-    saveOverlayDir(contents->entries, timestamps);
+    updateMtimeAndCtimeLocked(contents->entries, now);
+    saveOverlayDir(contents->entries);
   }
 
   invalidateFuseCacheIfRequired(name);
@@ -1315,8 +1306,8 @@ int TreeInode::tryRemoveChild(
 
     // We want to update mtime and ctime of parent directory after removing the
     // child.
-    auto timestamps = updateMtimeAndCtimeLocked(contents->entries, getNow());
-    saveOverlayDir(contents->entries, timestamps);
+    updateMtimeAndCtimeLocked(contents->entries, getNow());
+    saveOverlayDir(contents->entries);
   }
   deletedInode.reset();
 
@@ -1651,10 +1642,7 @@ Future<Unit> TreeInode::doRename(
   // Save the overlay data
   saveOverlayDir(*locks.srcContents());
   if (destParent.get() != this) {
-    saveOverlayDir(
-        destParent->getNodeId(),
-        *locks.destContents(),
-        destParent->getMetadataLocked(*locks.destContents()).timestamps);
+    saveOverlayDir(destParent->getNodeId(), *locks.destContents());
   }
 
   // Release the TreeInode locks before we write a journal entry.

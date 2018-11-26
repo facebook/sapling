@@ -56,15 +56,12 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
 
   DirContents emptyDir;
 
-  InodeTimestamps timestamps;
-  overlay.saveOverlayDir(kRootNodeId, root, timestamps);
-  overlay.saveOverlayDir(subdirInode, subdir, timestamps);
-  overlay.saveOverlayDir(emptyDirInode, emptyDir, timestamps);
+  overlay.saveOverlayDir(kRootNodeId, root);
+  overlay.saveOverlayDir(subdirInode, subdir);
+  overlay.saveOverlayDir(emptyDirInode, emptyDir);
 
-  overlay.createOverlayFile(
-      fileInode, timestamps, folly::ByteRange{"contents"_sp});
-  overlay.createOverlayFile(
-      helloInode, timestamps, folly::ByteRange{"world"_sp});
+  overlay.createOverlayFile(fileInode, folly::ByteRange{"contents"_sp});
+  overlay.createOverlayFile(helloInode, folly::ByteRange{"world"_sp});
 }
 
 int main(int argc, char* argv[]) {

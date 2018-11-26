@@ -45,7 +45,6 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
       S_IFDIR | 0755,
       overlay.allocateInodeNumber(),
       hash2);
-  InodeTimestamps timestamps;
 
   uint64_t N = 500000;
 
@@ -53,7 +52,7 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
 
   for (uint64_t i = 1; i <= N; i++) {
     auto ino = overlay.allocateInodeNumber();
-    overlay.saveOverlayDir(ino, contents, timestamps);
+    overlay.saveOverlayDir(ino, contents);
   }
 
   auto elapsed = timer.elapsed();

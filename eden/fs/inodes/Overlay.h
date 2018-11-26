@@ -124,10 +124,7 @@ class Overlay {
     return inodeMetadataTable_.get();
   }
 
-  void saveOverlayDir(
-      InodeNumber inodeNumber,
-      const DirContents& dir,
-      const InodeTimestamps& timestamps);
+  void saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir);
 
   std::optional<std::pair<DirContents, InodeTimestamps>> loadOverlayDir(
       InodeNumber inodeNumber);
@@ -170,7 +167,6 @@ class Overlay {
    */
   folly::File createOverlayFile(
       InodeNumber inodeNumber,
-      const InodeTimestamps& timestamps,
       folly::ByteRange contents);
 
   /**
@@ -179,7 +175,6 @@ class Overlay {
    */
   folly::File createOverlayFile(
       InodeNumber inodeNumber,
-      const InodeTimestamps& timestamps,
       const folly::IOBuf& contents);
 
   /**
@@ -242,8 +237,7 @@ class Overlay {
    */
   static std::array<uint8_t, kHeaderLength> createHeader(
       folly::StringPiece identifier,
-      uint32_t version,
-      const InodeTimestamps& timestamps);
+      uint32_t version);
 
   folly::File
   createOverlayFileImpl(InodeNumber inodeNumber, iovec* iov, size_t iovCount);

@@ -229,7 +229,7 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   dir.emplace("one"_pc, S_IFREG | 0644, ino2, hash);
   dir.emplace("two"_pc, S_IFDIR | 0755, ino3);
 
-  overlay->saveOverlayDir(ino1, dir, InodeTimestamps{});
+  overlay->saveOverlayDir(ino1, dir);
 
   auto result = overlay->loadOverlayDir(ino1);
   ASSERT_TRUE(result);
@@ -343,7 +343,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
   EXPECT_EQ(2_ino, ino2);
 
   DirContents dir;
-  overlay->saveOverlayDir(ino2, dir, InodeTimestamps{});
+  overlay->saveOverlayDir(ino2, dir);
 
   recreate();
 
@@ -359,7 +359,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
   DirContents dir;
   dir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
   dir.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
-  overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
+  overlay->saveOverlayDir(kRootNodeId, dir);
 
   recreate();
 
@@ -375,8 +375,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_file) {
   // When materializing, overlay data is written leaf-to-root.
 
   // The File is written first.
-  overlay->createOverlayFile(
-      ino3, InodeTimestamps{}, folly::ByteRange{"contents"_sp});
+  overlay->createOverlayFile(ino3, folly::ByteRange{"contents"_sp});
 
   recreate();
 
@@ -392,9 +391,9 @@ TEST_P(
 
   DirContents root;
   root.emplace("subdirectory"_pc, S_IFDIR | 0755, subdirectoryIno);
-  overlay->saveOverlayDir(rootIno, root, InodeTimestamps{});
+  overlay->saveOverlayDir(rootIno, root);
 
-  overlay->saveOverlayDir(subdirectoryIno, DirContents{}, InodeTimestamps{});
+  overlay->saveOverlayDir(subdirectoryIno, DirContents{});
 
   unloadOverlay();
   corruptOverlayFile(subdirectoryIno);
@@ -434,18 +433,16 @@ TEST_P(
         S_IFDIR | 0755,
         corruptedByTruncationIno);
     root.emplace(pathNames.tempName, S_IFDIR | 0755, tempDirIno);
-    overlay->saveOverlayDir(rootIno, root, InodeTimestamps{});
+    overlay->saveOverlayDir(rootIno, root);
 
-    overlay->saveOverlayDir(
-        corruptedByTruncationIno, DirContents{}, InodeTimestamps{});
+    overlay->saveOverlayDir(corruptedByTruncationIno, DirContents{});
 
     DirContents tempDir;
     tempDir.emplace(
         "corrupted_by_deletion"_pc, S_IFDIR | 0755, corruptedByDeletionIno);
-    overlay->saveOverlayDir(tempDirIno, tempDir, InodeTimestamps{});
+    overlay->saveOverlayDir(tempDirIno, tempDir);
 
-    overlay->saveOverlayDir(
-        corruptedByDeletionIno, DirContents{}, InodeTimestamps{});
+    overlay->saveOverlayDir(corruptedByDeletionIno, DirContents{});
   };
 
   const PathNames pathNamesToTest[] = {
@@ -498,9 +495,9 @@ TEST_P(RawOverlayTest, inode_number_scan_logs_corrupt_directories_once) {
         PathComponent{folly::to<std::string>("subdir_", subdirIno)};
     root.emplace(subdirName, S_IFDIR | 0755, subdirIno);
   }
-  overlay->saveOverlayDir(kRootNodeId, root, InodeTimestamps{});
+  overlay->saveOverlayDir(kRootNodeId, root);
   for (auto subdirIno : subdirInos) {
-    overlay->saveOverlayDir(subdirIno, DirContents{}, InodeTimestamps{});
+    overlay->saveOverlayDir(subdirIno, DirContents{});
   }
 
   unloadOverlay();
@@ -534,13 +531,12 @@ TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
   // When materializing, overlay data is written leaf-to-root.
 
   // The File is written first.
-  overlay->createOverlayFile(
-      ino5, InodeTimestamps{}, folly::ByteRange{"contents"_sp});
+  overlay->createOverlayFile(ino5, folly::ByteRange{"contents"_sp});
 
   // The subdir is written next.
   DirContents subdir;
   subdir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
-  overlay->saveOverlayDir(ino4, subdir, InodeTimestamps{});
+  overlay->saveOverlayDir(ino4, subdir);
 
   // Crashed before root was written.
 
@@ -561,13 +557,13 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
   // Write a subdir.
   DirContents subdir;
   subdir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
-  overlay->saveOverlayDir(ino4, subdir, InodeTimestamps{});
+  overlay->saveOverlayDir(ino4, subdir);
 
   // Write the root.
   DirContents dir;
   dir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
   dir.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
-  overlay->saveOverlayDir(kRootNodeId, dir, InodeTimestamps{});
+  overlay->saveOverlayDir(kRootNodeId, dir);
 
   recreate();
 
@@ -577,7 +573,7 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
 
   DirContents newroot;
   newroot.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
-  overlay->saveOverlayDir(kRootNodeId, newroot, InodeTimestamps{});
+  overlay->saveOverlayDir(kRootNodeId, newroot);
 
   recreate(OverlayRestartMode::CLEAN);
 
@@ -616,7 +612,7 @@ TEST_F(DebugDumpOverlayInodesTest, dump_empty_directory) {
   auto ino = kRootNodeId;
   EXPECT_EQ(1_ino, ino);
 
-  overlay.saveOverlayDir(ino, DirContents{}, InodeTimestamps{});
+  overlay.saveOverlayDir(ino, DirContents{});
   EXPECT_EQ(
       "/\n"
       "  Inode number: 1\n"
@@ -638,14 +634,11 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_3_regular_files) {
   root.emplace("file_a"_pc, S_IFREG | 0644, fileAIno);
   root.emplace("file_b"_pc, S_IFREG | 0644, fileBIno);
   root.emplace("file_c"_pc, S_IFREG | 0644, fileCIno);
-  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+  overlay.saveOverlayDir(rootIno, root);
 
-  overlay.createOverlayFile(
-      fileAIno, InodeTimestamps{}, folly::ByteRange{""_sp});
-  overlay.createOverlayFile(
-      fileBIno, InodeTimestamps{}, folly::ByteRange{""_sp});
-  overlay.createOverlayFile(
-      fileCIno, InodeTimestamps{}, folly::ByteRange{""_sp});
+  overlay.createOverlayFile(fileAIno, folly::ByteRange{""_sp});
+  overlay.createOverlayFile(fileBIno, folly::ByteRange{""_sp});
+  overlay.createOverlayFile(fileCIno, folly::ByteRange{""_sp});
 
   EXPECT_EQ(
       "/\n"
@@ -665,9 +658,9 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_an_empty_subdirectory) {
 
   DirContents root;
   root.emplace("subdir"_pc, S_IFDIR | 0755, subdirIno);
-  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+  overlay.saveOverlayDir(rootIno, root);
 
-  overlay.saveOverlayDir(subdirIno, DirContents{}, InodeTimestamps{});
+  overlay.saveOverlayDir(subdirIno, DirContents{});
 
   EXPECT_EQ(
       "/\n"
@@ -689,7 +682,7 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_subdirectory) {
   DirContents root;
   root.emplace(
       "directory_does_not_exist"_pc, S_IFDIR | 0755, directoryDoesNotExistIno);
-  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+  overlay.saveOverlayDir(rootIno, root);
 
   EXPECT_EQ(
       "/\n"
@@ -712,7 +705,7 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_regular_file) {
       "regular_file_does_not_exist"_pc,
       S_IFREG | 0644,
       regularFileDoesNotExistIno);
-  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+  overlay.saveOverlayDir(rootIno, root);
 
   EXPECT_EQ(
       "/\n"
@@ -739,20 +732,20 @@ TEST_F(DebugDumpOverlayInodesTest, directories_are_dumped_depth_first) {
   DirContents root;
   root.emplace("subdir_a"_pc, S_IFDIR | 0755, subdirAIno);
   root.emplace("subdir_b"_pc, S_IFDIR | 0755, subdirBIno);
-  overlay.saveOverlayDir(rootIno, root, InodeTimestamps{});
+  overlay.saveOverlayDir(rootIno, root);
 
   DirContents subdirA;
   subdirA.emplace("x"_pc, S_IFDIR | 0755, subdirAXIno);
   subdirA.emplace("y"_pc, S_IFDIR | 0755, subdirAYIno);
-  overlay.saveOverlayDir(subdirAIno, subdirA, InodeTimestamps{});
+  overlay.saveOverlayDir(subdirAIno, subdirA);
 
   DirContents subdirB;
   subdirB.emplace("x"_pc, S_IFDIR | 0755, subdirBXIno);
-  overlay.saveOverlayDir(subdirBIno, subdirB, InodeTimestamps{});
+  overlay.saveOverlayDir(subdirBIno, subdirB);
 
-  overlay.saveOverlayDir(subdirAXIno, DirContents{}, InodeTimestamps{});
-  overlay.saveOverlayDir(subdirAYIno, DirContents{}, InodeTimestamps{});
-  overlay.saveOverlayDir(subdirBXIno, DirContents{}, InodeTimestamps{});
+  overlay.saveOverlayDir(subdirAXIno, DirContents{});
+  overlay.saveOverlayDir(subdirAYIno, DirContents{});
+  overlay.saveOverlayDir(subdirBXIno, DirContents{});
 
   EXPECT_EQ(
       "/\n"

@@ -1074,10 +1074,8 @@ void FileInode::materializeNow(LockedState& state) {
   // state.setMaterialized()
   auto blobSha1 = getObjectStore()->getSha1(state->hash.value());
 
-  auto timestamps = getMetadataLocked(*state).timestamps;
-
   auto file = getMount()->getOverlay()->createOverlayFile(
-      getNodeId(), timestamps, state->blob->getContents());
+      getNodeId(), state->blob->getContents());
   state.setMaterialized(std::move(file));
 
   // If we have a SHA-1 from the metadata, apply it to the new file.  This
@@ -1097,9 +1095,8 @@ void FileInode::materializeNow(LockedState& state) {
 
 void FileInode::materializeAndTruncate(LockedState& state) {
   CHECK_NE(state->tag, State::MATERIALIZED_IN_OVERLAY);
-  auto timestamps = getMetadataLocked(*state).timestamps;
-  auto file = getMount()->getOverlay()->createOverlayFile(
-      getNodeId(), timestamps, ByteRange{});
+  auto file =
+      getMount()->getOverlay()->createOverlayFile(getNodeId(), ByteRange{});
   state.setMaterialized(std::move(file));
   storeSha1(state, Hash::sha1(ByteRange{}));
 }
