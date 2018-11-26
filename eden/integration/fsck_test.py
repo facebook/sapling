@@ -105,11 +105,18 @@ class FsckTest(testcase.EdenRepoTest):
             r"zero-sized overlay file",
         )
         self.assertRegex(fsck_out, r"\b1 errors")
-        # fsck doesn't actually fix this problem yet
         self.assertRegex(fsck_out, "Beginning repairs")
-        self.assertRegex(fsck_out, "no automatic remediation available for this error")
-        self.assertRegex(fsck_out, "Fixed 0 of 1 issues")
+        self.assertRegex(
+            fsck_out, "replacing corrupt file inode 'doc/foo.txt' with an empty file"
+        )
+        self.assertRegex(fsck_out, "Fixed 1 of 1 issues")
         self.assertEqual(FSCK_RETCODE_ERRORS, returncode)
+
+        # There should be no more errors if we run fsck again
+        returncode, fsck_out = self.run_fsck()
+        self.assertIn(f"Checking {self.mount}", fsck_out)
+        self.assertIn("No issues found", fsck_out)
+        self.assertEqual(FSCK_RETCODE_OK, returncode)
 
     def test_fsck_multiple_mounts(self) -> None:
         mount2 = Path(self.mounts_dir) / "second_mount"

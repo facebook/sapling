@@ -132,10 +132,34 @@ class MissingMaterializedInode(Error):
             file_type = "file"
         return (
             f"missing overlay file for materialized {file_type} inode "
-            f"{self.child.inode_number} "
-            f"({self.inode.compute_path()}/{self.child.name}) "
+            f"{self.child.inode_number} ({self.compute_path()}) "
             f"with file mode {self.child.mode:#o}"
         )
+
+    def compute_path(self) -> str:
+        parent_path = self.inode.compute_path()
+        if parent_path == "/":
+            return self.child.name
+        return f"{parent_path}/{self.child.name}"
+
+    def repair(
+        self, log: logging.Logger, overlay: overlay_mod.Overlay, fsck_dir: Path
+    ) -> bool:
+        # TODO: It would be nice to try and get the contents of the
+        # file/directory at this location in the current commit, rather than
+        # just writing out an empty file or directory
+        if stat.S_ISDIR(self.child.mode):
+            log.info(
+                f"replacing missing directory {self.compute_path()!r} with an "
+                "empty directory"
+            )
+            overlay.write_empty_dir(self.child.inode_number)
+        else:
+            log.info(
+                f"replacing missing file {self.compute_path()!r} with an empty file"
+            )
+            overlay.write_empty_file(self.child.inode_number)
+        return True
 
 
 class InvalidMaterializedInode(Error):
@@ -167,9 +191,41 @@ class InvalidMaterializedInode(Error):
         mtime_str = _get_mtime_str(self.inode.mtime)
         return (
             f"invalid overlay file for materialized {type_str} "
-            f"{self.inode.inode_number} ({self.inode.compute_path()}){mtime_str}: "
+            f"{self.inode.inode_number} ({self.compute_path()}){mtime_str}: "
             f"{self.inode.error}"
         )
+
+    def compute_path(self) -> str:
+        return self.inode.compute_path()
+
+    def repair(
+        self, log: logging.Logger, overlay: overlay_mod.Overlay, fsck_dir: Path
+    ) -> bool:
+        # TODO: It would be nice to try and get the contents of the
+        # file/directory at this location in the current commit, rather than
+        # just writing out an empty file or directory
+
+        backup_dir = fsck_dir / "broken_inodes"
+        backup_dir.mkdir(exist_ok=True)
+        inode_data_path = Path(overlay.get_path(self.inode.inode_number))
+        inode_backup_path = backup_dir / str(self.inode.inode_number)
+
+        if self.expected_type == InodeType.DIR:
+            log.info(
+                f"replacing corrupt directory inode {self.compute_path()!r} with an "
+                "empty directory"
+            )
+            os.rename(inode_data_path, inode_backup_path)
+            overlay.write_empty_dir(self.inode.inode_number)
+        else:
+            log.info(
+                f"replacing corrupt file inode {self.compute_path()!r} with an "
+                "empty file"
+            )
+            os.rename(inode_data_path, inode_backup_path)
+            overlay.write_empty_file(self.inode.inode_number)
+
+        return True
 
 
 class OrphanInodes(Error):

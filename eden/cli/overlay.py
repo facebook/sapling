@@ -15,6 +15,7 @@ import os
 import shutil
 import stat
 import struct
+import time
 import typing
 from pathlib import Path
 from typing import BinaryIO, Iterator, Optional, Tuple
@@ -342,3 +343,32 @@ class Overlay:
                 self.extract_dir(entry.inodeNumber, entry_output_path)
             else:
                 self.extract_file(entry.inodeNumber, entry_output_path, entry.mode)
+
+    def write_empty_file(self, inode_number: int) -> None:
+        self._write_inode(inode_number, OverlayHeader.TYPE_FILE, b"")
+
+    def write_empty_dir(self, inode_number: int) -> None:
+        from thrift.util import Serializer
+        from thrift.protocol import TCompactProtocol
+
+        empty_tree = OverlayDir()
+        protocol_factory = TCompactProtocol.TCompactProtocolFactory()
+        contents = typing.cast(
+            bytes, Serializer.serialize(protocol_factory, empty_tree)
+        )
+
+        self._write_inode(inode_number, OverlayHeader.TYPE_DIR, contents)
+
+    def _write_inode(self, inode_number: int, header_type: bytes, body: bytes) -> None:
+        now_sec = int(time.time())
+        header = OverlayHeader(
+            type=header_type,
+            version=OverlayHeader.VERSION_1,
+            atime_sec=now_sec,
+            mtime_sec=now_sec,
+            ctime_sec=now_sec,
+        )
+
+        header_data = header.serialize()
+        path = Path(self.get_path(inode_number))
+        path.write_bytes(header_data + body)
