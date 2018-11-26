@@ -46,7 +46,7 @@
 #endif // EDEN_WIN
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenServiceHandler.h"
-
+#include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
@@ -108,6 +108,15 @@ DEFINE_int64(
     unload_age_minutes,
     6 * 60,
     "Minimum age of the inodes to be unloaded in background");
+
+DEFINE_uint64(
+    maximumBlobCacheSize,
+    40 * 1024 * 1024,
+    "How many bytes worth of blobs to keep in memory, at most");
+DEFINE_uint64(
+    minimumBlobCacheEntryCount,
+    16,
+    "The minimum number of recent blobs to keep cached. Trumps maximumBlobCacheSize");
 
 using apache::thrift::ThriftServer;
 using facebook::eden::FuseChannelData;
@@ -185,16 +194,18 @@ EdenServer::EdenServer(
     UserInfo userInfo,
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig)
-    : serverState_{make_shared<ServerState>(
+    : edenDir_{edenConfig->getEdenDir()},
+      configPath_{edenConfig->getUserConfigPath()},
+      blobCache_{BlobCache::create(
+          FLAGS_maximumBlobCacheSize,
+          FLAGS_minimumBlobCacheEntryCount)},
+      serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessNameCache>(),
-          edenConfig)} {
-  edenDir_ = edenConfig->getEdenDir();
-  configPath_ = edenConfig->getUserConfigPath();
-}
+          edenConfig)} {}
 
 EdenServer::~EdenServer() {}
 
@@ -811,7 +822,10 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   const bool doTakeover = optionalTakeover.has_value();
 
   auto edenMount = EdenMount::create(
-      std::move(initialConfig), std::move(objectStore), serverState_);
+      std::move(initialConfig),
+      std::move(objectStore),
+      blobCache_,
+      serverState_);
 
   auto initFuture = edenMount->initialize(
       optionalTakeover ? std::make_optional(optionalTakeover->inodeMap)

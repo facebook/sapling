@@ -60,6 +60,7 @@ namespace facebook {
 namespace eden {
 
 class BackingStore;
+class BlobCache;
 class Dirstate;
 class EdenServiceHandler;
 class LocalStore;
@@ -369,6 +370,7 @@ class EdenServer : private TakeoverHandler {
 
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;
+  const std::shared_ptr<BlobCache> blobCache_;
 
   folly::Synchronized<MountMap> mountPoints_;
 
@@ -401,7 +403,7 @@ class EdenServer : private TakeoverHandler {
   /**
    * Common state shared by all of the EdenMount objects.
    */
-  std::shared_ptr<ServerState> serverState_;
+  const std::shared_ptr<ServerState> serverState_;
 
   /**
    * The EventBase driving the main thread loop.

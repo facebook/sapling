@@ -31,6 +31,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -63,6 +64,11 @@ DEFINE_int32(
     2,
     "the number of eden CPU worker threads to create during unit tests");
 
+namespace {
+constexpr size_t kBlobCacheMaximumSize = 1000; // bytes
+constexpr size_t kBlobCacheMinimumEntries = 0;
+} // namespace
+
 namespace facebook {
 namespace eden {
 
@@ -72,7 +78,9 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
 }
 
 TestMount::TestMount()
-    : privHelper_{make_shared<FakePrivHelper>()},
+    : blobCache_(
+          BlobCache::create(kBlobCacheMaximumSize, kBlobCacheMinimumEntries)),
+      privHelper_{make_shared<FakePrivHelper>()},
       serverExecutor_{make_shared<folly::ManualExecutor>()} {
   // Initialize the temporary directory.
   // This sets both testDir_, config_, localStore_, and backingStore_
@@ -130,7 +138,7 @@ void TestMount::initialize(
   shared_ptr<ObjectStore> objectStore =
       ObjectStore::create(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
-      std::move(config_), std::move(objectStore), serverState_);
+      std::move(config_), std::move(objectStore), blobCache_, serverState_);
   edenMount_->initialize().get();
   edenMount_->setLastCheckoutTime(lastCheckoutTime);
 }
@@ -143,7 +151,7 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
   shared_ptr<ObjectStore> objectStore =
       ObjectStore::create(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
-      std::move(config_), std::move(objectStore), serverState_);
+      std::move(config_), std::move(objectStore), blobCache_, serverState_);
   edenMount_->initialize().get();
 }
 
@@ -164,7 +172,7 @@ void TestMount::initialize(
   // Create edenMount_
   auto objectStore = ObjectStore::create(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
-      std::move(config_), std::move(objectStore), serverState_);
+      std::move(config_), std::move(objectStore), blobCache_, serverState_);
   edenMount_->initialize().get();
 }
 
@@ -228,7 +236,7 @@ void TestMount::remount() {
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
-      std::move(config), std::move(objectStore), serverState_);
+      std::move(config), std::move(objectStore), blobCache_, serverState_);
   edenMount_->initialize().get();
 }
 
@@ -258,7 +266,7 @@ void TestMount::remountGracefully() {
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
-      std::move(config), std::move(objectStore), serverState_);
+      std::move(config), std::move(objectStore), blobCache_, serverState_);
   edenMount_->initialize(std::get<1>(takeoverData)).get();
 }
 

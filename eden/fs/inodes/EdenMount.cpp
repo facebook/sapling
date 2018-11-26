@@ -42,6 +42,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
+#include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
@@ -169,22 +170,27 @@ static std::atomic<uint16_t> mountGeneration{0};
 std::shared_ptr<EdenMount> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
+    std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState) {
-  return std::shared_ptr<EdenMount>{
-      new EdenMount{
-          std::move(config), std::move(objectStore), std::move(serverState)},
-      EdenMountDeleter{}};
+  return std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
+                                                  std::move(objectStore),
+                                                  std::move(blobCache),
+                                                  std::move(serverState)},
+                                    EdenMountDeleter{}};
 }
 
 EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
+    std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState)
     : config_(std::move(config)),
       serverState_(std::move(serverState)),
       inodeMap_{new InodeMap(this)},
       dispatcher_{new EdenDispatcher(this)},
-      objectStore_(std::move(objectStore)),
+      objectStore_{std::move(objectStore)},
+      blobCache_{std::move(blobCache)},
+      blobAccess_{std::make_unique<BlobAccess>(objectStore_, blobCache_)},
       overlay_(std::make_unique<Overlay>(config_->getOverlayPath())),
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),

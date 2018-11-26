@@ -43,6 +43,8 @@ namespace facebook {
 namespace eden {
 
 class BindMount;
+class BlobAccess;
+class BlobCache;
 class CheckoutConflict;
 class ClientConfig;
 class Clock;
@@ -110,6 +112,7 @@ class EdenMount {
   static std::shared_ptr<EdenMount> create(
       std::unique_ptr<ClientConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
+      std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState);
 
   /**
@@ -191,6 +194,24 @@ class EdenMount {
    */
   ObjectStore* getObjectStore() const {
     return objectStore_.get();
+  }
+
+  /**
+   * Return Eden's blob cache.
+   *
+   * It is guaranteed to be valid for the lifetime of the EdenMount.
+   */
+  BlobCache* getBlobCache() const {
+    return blobCache_.get();
+  }
+
+  /**
+   * Return the BlobAccess used by this mount point.
+   *
+   * The BlobAccess is guaranteed to be valid for the lifetime of the EdenMount.
+   */
+  BlobAccess* getBlobAccess() const {
+    return blobAccess_.get();
   }
 
   /**
@@ -553,6 +574,7 @@ class EdenMount {
   EdenMount(
       std::unique_ptr<ClientConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
+      std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState);
 
   // Forbidden copy constructor and assignment operator
@@ -614,6 +636,8 @@ class EdenMount {
   std::unique_ptr<InodeMap> inodeMap_;
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::shared_ptr<ObjectStore> objectStore_;
+  std::shared_ptr<BlobCache> blobCache_;
+  std::unique_ptr<BlobAccess> blobAccess_;
   std::unique_ptr<Overlay> overlay_;
   InodeNumber dotEdenInodeNumber_{};
 

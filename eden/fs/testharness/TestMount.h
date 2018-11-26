@@ -32,6 +32,7 @@ class ManualExecutor;
 
 namespace facebook {
 namespace eden {
+class BlobCache;
 class ClientConfig;
 class FakeBackingStore;
 class FakeFuse;
@@ -306,6 +307,8 @@ class TestMount {
   std::shared_ptr<EdenMount> edenMount_;
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
+  std::shared_ptr<BlobCache> blobCache_;
+
   /*
    * config_ is only set before edenMount_ has been initialized.
    * When edenMount_ is created we pass ownership of the config to edenMount_.
