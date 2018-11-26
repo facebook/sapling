@@ -499,6 +499,7 @@ impl HgCommands for RepoClient {
     fn heads(&self) -> HgCommandRes<HashSet<HgNodeHash>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
+        info!(self.logger(), "heads");
         let mut scuba_logger = self.scuba_logger(ops::HEADS, None);
 
         self.repo
@@ -656,6 +657,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('listkeys', 'namespace')
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
+        info!(self.logger(), "listkeys: {}", namespace);
         if namespace == "bookmarks" {
             let mut scuba_logger = self.scuba_logger(ops::LISTKEYS, None);
 
