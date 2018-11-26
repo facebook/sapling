@@ -284,6 +284,9 @@
     <ClCompile Include="utils\WinError.cpp">
       <Filter>Win\fs\Utils</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\store\BlobCache.cpp">
+      <Filter>fs\Store</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\fs\store\hg\HgBackingStore.h">
@@ -510,6 +513,9 @@
     </ClInclude>
     <ClInclude Include="utils\WinError.h">
       <Filter>Win\fs\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\store\BlobCache.h">
+      <Filter>fs\Store</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
