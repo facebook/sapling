@@ -7,20 +7,26 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+# pyre-strict
+
 import abc
+import collections.abc
 import os
 import stat as stat_mod
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Iterator, List, TypeVar, Union
 
 from eden.integration.lib import hgrepo
 
 
+_AnyPath = Union[Path, str]
+
+
 class ExpectedFileBase(metaclass=abc.ABCMeta):
-    def __init__(self, path: str, perms: int, file_type: int) -> None:
-        self.path = Path(path)
-        self.permissions = perms
-        self.file_type = file_type
+    def __init__(self, path: _AnyPath, perms: int, file_type: int) -> None:
+        self.path: Path = Path(path)
+        self.permissions: int = perms
+        self.file_type: int = file_type
 
     def verify(
         self, verifier: "SnapshotVerifier", path: Path, stat_info: os.stat_result
@@ -49,7 +55,7 @@ class ExpectedFileBase(metaclass=abc.ABCMeta):
 
 
 class ExpectedFile(ExpectedFileBase):
-    def __init__(self, path: str, contents: bytes, perms: int = 0o644) -> None:
+    def __init__(self, path: _AnyPath, contents: bytes, perms: int = 0o644) -> None:
         super().__init__(path, perms, stat_mod.S_IFREG)
         self.contents = contents
 
@@ -65,7 +71,7 @@ class ExpectedFile(ExpectedFileBase):
 
 
 class ExpectedSymlink(ExpectedFileBase):
-    def __init__(self, path: str, contents: bytes, perms: int = 0o777) -> None:
+    def __init__(self, path: _AnyPath, contents: bytes, perms: int = 0o777) -> None:
         super().__init__(path, perms, stat_mod.S_IFLNK)
         self.contents = contents
 
@@ -80,24 +86,95 @@ class ExpectedSymlink(ExpectedFileBase):
 
 
 class ExpectedSocket(ExpectedFileBase):
-    def __init__(self, path: str, perms: int = 0o755) -> None:
+    def __init__(self, path: _AnyPath, perms: int = 0o755) -> None:
         super().__init__(path, perms, stat_mod.S_IFSOCK)
 
     def _verify_contents(self, verifier: "SnapshotVerifier", path: Path) -> None:
         pass
 
 
+_ExpectedFile = TypeVar("_ExpectedFile", bound=ExpectedFileBase)
+
+
+class ExpectedFileSet(collections.abc.Mapping):
+    """
+    ExpectedFileSet is basically a container of ExpectedFileBase objects,
+    but also provides some helper methods for accessing and updating entries by path.
+    """
+
+    def __init__(self) -> None:
+        self._entries: Dict[Path, ExpectedFileBase] = {}
+
+    def __len__(self) -> int:
+        return len(self._entries)
+
+    def __iter__(self) -> Iterator[ExpectedFileBase]:
+        return iter(self._entries.values())
+
+    def __getitem__(self, path: _AnyPath) -> ExpectedFileBase:
+        key = Path(path)
+        return self._entries[key]
+
+    def __delitem__(self, path: _AnyPath) -> None:
+        key = Path(path)
+        del self._entries[key]
+
+    def __contains__(self, path: object) -> bool:
+        if isinstance(path, str):
+            key = Path(path)
+        elif isinstance(path, Path):
+            key = path
+        else:
+            return False
+        return key in self._entries
+
+    def add_file(
+        self, path: _AnyPath, contents: bytes, perms: int = 0o644
+    ) -> ExpectedFile:
+        return self.add(ExpectedFile(path=path, contents=contents, perms=perms))
+
+    def add_symlink(
+        self, path: _AnyPath, contents: bytes, perms: int = 0o777
+    ) -> ExpectedSymlink:
+        return self.add(ExpectedSymlink(path=path, contents=contents, perms=perms))
+
+    def add_socket(self, path: _AnyPath, perms: int = 0o755) -> ExpectedSocket:
+        return self.add(ExpectedSocket(path=path, perms=perms))
+
+    def add(self, entry: _ExpectedFile) -> _ExpectedFile:
+        assert entry.path not in self
+        self._entries[entry.path] = entry
+        return entry
+
+    def set_file(
+        self, path: _AnyPath, contents: bytes, perms: int = 0o644
+    ) -> ExpectedFile:
+        return self.set(ExpectedFile(path=path, contents=contents, perms=perms))
+
+    def set_symlink(
+        self, path: _AnyPath, contents: bytes, perms: int = 0o777
+    ) -> ExpectedSymlink:
+        return self.set(ExpectedSymlink(path=path, contents=contents, perms=perms))
+
+    def set_socket(self, path: _AnyPath, perms: int = 0o755) -> ExpectedSocket:
+        return self.set(ExpectedSocket(path=path, perms=perms))
+
+    def set(self, entry: _ExpectedFile) -> _ExpectedFile:
+        self._entries[entry.path] = entry
+        return entry
+
+
 class SnapshotVerifier:
     def __init__(self) -> None:
         self.errors: List[str] = []
-        self.quiet = False
+        self.quiet: bool = False
 
     def error(self, message: str) -> None:
         self.errors.append(message)
         if not self.quiet:
             print(f"==ERROR== {message}")
 
-    def verify_directory(self, path: Path, expected: List[ExpectedFileBase]) -> None:
+    def verify_directory(self, path: Path, expected: ExpectedFileSet) -> None:
         """Confirm that the contents of a directory match the expected file state."""
         found_files = enumerate_directory(path)
         for expected_entry in expected:
@@ -167,8 +244,8 @@ def _enumerate_directory_helper(
     for entry in os.scandir(root_path / rel_path):
         # Current versions of typeshed don't know about the follow_symlinks argument,
         # so ignore type errors on the next line.
-        stat_info = entry.stat(follow_symlinks=False)  # type: ignore
-        entry_path = rel_path / entry.name
+        stat_info: os.stat_result = entry.stat(follow_symlinks=False)  # type: ignore
+        entry_path: Path = rel_path / entry.name
         results[entry_path] = stat_info
         if stat_mod.S_ISDIR(stat_info.st_mode):
             _enumerate_directory_helper(root_path, entry_path, results)

@@ -51,21 +51,16 @@ class InfraTests(unittest.TestCase):
         self.assertGreater(self.NUM_SNAPSHOTS, 0)
 
     def test_verify_directory(self) -> None:
-        File = verify_mod.ExpectedFile
-        Socket = verify_mod.ExpectedSocket
-        Symlink = verify_mod.ExpectedSymlink
-
-        expected = [
-            File("a/b/normal.txt", b"abc\n", 0o644),
-            File("a/b/normal_exe.exe", b"abc\n", 0o755),
-            File("a/b/missing.txt", b"abc\n", 0o644),
-            File("a/b/wrong_perms.txt", b"abc\n", 0o644),
-            File("a/b/wrong_file_type.txt", b"abc\n", 0o644),
-            Socket("a/normal.sock", 0o644),
-            Socket("a/exe.sock", 0o755),
-            Symlink("a/normal.link", b"symlink contents", 0o777),
-            Symlink("a/missing.link", b"missing symlink", 0o777),
-        ]
+        expected = verify_mod.ExpectedFileSet()
+        expected.add_file("a/b/normal.txt", b"abc\n", 0o644)
+        expected.add_file("a/b/normal_exe.exe", b"abc\n", 0o755)
+        expected.add_file("a/b/missing.txt", b"abc\n", 0o644)
+        expected.add_file("a/b/wrong_perms.txt", b"abc\n", 0o644)
+        expected.add_file("a/b/wrong_file_type.txt", b"abc\n", 0o644)
+        expected.add_socket("a/normal.sock", 0o644)
+        expected.add_socket("a/exe.sock", 0o755)
+        expected.add_symlink("a/normal.link", b"symlink contents", 0o777)
+        expected.add_symlink("a/missing.link", b"missing symlink", 0o777)
 
         # Define a subclass of HgSnapshot.  We use define this solely so we can use its
         # helper write_file(), make_socket(), and mkdir() methods

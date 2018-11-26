@@ -74,54 +74,59 @@ class BasicSnapshot(HgSnapshot):
         self.write_file("main/ignored.txt", b"new ignored file")
         self.write_file("main/untracked_dir/foo.txt", b"foobar")
 
+    def get_expected_files(self) -> verify_mod.ExpectedFileSet:
+        # Confirm that the files look like what we expect
+        files = verify_mod.ExpectedFileSet()
+
+        # TODO: These symlink permissions should ideally be 0o777
+        files.add_symlink(".eden/root", bytes(self.checkout_path), 0o770)
+        files.add_symlink(
+            ".eden/client", bytes(self.eden_state_dir / "clients" / "checkout"), 0o770
+        )
+        files.add_symlink(".eden/socket", bytes(self.eden_state_dir / "socket"), 0o770)
+        files.add_symlink(".eden/this-dir", bytes(self.checkout_path / ".eden"), 0o770)
+        files.add_file("README.md", b"project docs", 0o644)
+        files.add_file(".gitignore", b"ignored.txt\n", 0o644)
+        files.add_file("main/loaded_dir/loaded_file.c", b"loaded", 0o644)
+        files.add_file("main/loaded_dir/not_loaded_file.c", b"not loaded", 0o644)
+        files.add_file("main/loaded_dir/not_loaded_exe.sh", b"not loaded", 0o755)
+        files.add_file(
+            "main/materialized_subdir/script.sh", b"new script contents", 0o755
+        )
+        files.add_file("main/materialized_subdir/test.c", b"new test contents", 0o644)
+        files.add_file(
+            "main/materialized_subdir/unmodified.txt", b"original contents", 0o644
+        )
+        files.add_file(
+            "main/mode_changes/normal_to_exe.txt", b"will change mode", 0o755
+        )
+        files.add_file(
+            "main/mode_changes/exe_to_normal.txt", b"will change mode", 0o644
+        )
+        files.add_file(
+            "main/mode_changes/normal_to_readonly.txt", b"will be readonly", 0o400
+        )
+        files.add_file("main/untracked.txt", b"new new untracked file", 0o644)
+        files.add_file("main/ignored.txt", b"new ignored file", 0o644)
+        files.add_file("main/untracked_dir/foo.txt", b"foobar", 0o644)
+        files.add_file("never_accessed/foo/bar/baz.txt", b"baz\n", 0o644)
+        files.add_file("never_accessed/foo/bar/xyz.txt", b"xyz\n", 0o644)
+        files.add_file("never_accessed/foo/file.txt", b"data\n", 0o644)
+        files.add_file("untracked/new/normal.txt", b"new src contents", 0o644)
+        files.add_file("untracked/new/normal2.txt", b"extra src contents", 0o644)
+        files.add_file("untracked/new/readonly.txt", b"new readonly contents", 0o400)
+        files.add_file("untracked/executable.exe", b"do stuff", 0o755)
+        files.add_socket("untracked/everybody.sock", 0o666)
+        files.add_socket("untracked/owner_only.sock", 0o600)
+        return files
+
     def verify_snapshot_data(
         self, verifier: verify_mod.SnapshotVerifier, eden: edenclient.EdenFS
     ) -> None:
         # Confirm that `hg status` reports the correct information
         self.verify_hg_status(verifier)
 
-        # Confirm that the files look like what we expect
-        File = verify_mod.ExpectedFile
-        Socket = verify_mod.ExpectedSocket
-        Symlink = verify_mod.ExpectedSymlink
-        expected_files = [
-            # TODO: These symlink permissions should ideally be 0o777
-            Symlink(".eden/root", bytes(self.checkout_path), 0o770),
-            Symlink(
-                ".eden/client",
-                bytes(self.eden_state_dir / "clients" / "checkout"),
-                0o770,
-            ),
-            Symlink(".eden/socket", bytes(self.eden_state_dir / "socket"), 0o770),
-            Symlink(".eden/this-dir", bytes(self.checkout_path / ".eden"), 0o770),
-            File("README.md", b"project docs", 0o644),
-            File(".gitignore", b"ignored.txt\n", 0o644),
-            File("main/loaded_dir/loaded_file.c", b"loaded", 0o644),
-            File("main/loaded_dir/not_loaded_file.c", b"not loaded", 0o644),
-            File("main/loaded_dir/not_loaded_exe.sh", b"not loaded", 0o755),
-            File("main/materialized_subdir/script.sh", b"new script contents", 0o755),
-            File("main/materialized_subdir/test.c", b"new test contents", 0o644),
-            File(
-                "main/materialized_subdir/unmodified.txt", b"original contents", 0o644
-            ),
-            File("main/mode_changes/normal_to_exe.txt", b"will change mode", 0o755),
-            File("main/mode_changes/exe_to_normal.txt", b"will change mode", 0o644),
-            File(
-                "main/mode_changes/normal_to_readonly.txt", b"will be readonly", 0o400
-            ),
-            File("main/untracked.txt", b"new new untracked file", 0o644),
-            File("main/ignored.txt", b"new ignored file", 0o644),
-            File("main/untracked_dir/foo.txt", b"foobar", 0o644),
-            File("never_accessed/foo/bar/baz.txt", b"baz\n", 0o644),
-            File("never_accessed/foo/bar/xyz.txt", b"xyz\n", 0o644),
-            File("never_accessed/foo/file.txt", b"data\n", 0o644),
-            File("untracked/new/normal.txt", b"new src contents", 0o644),
-            File("untracked/new/normal2.txt", b"extra src contents", 0o644),
-            File("untracked/new/readonly.txt", b"new readonly contents", 0o400),
-            File("untracked/executable.exe", b"do stuff", 0o755),
-            Socket("untracked/everybody.sock", 0o666),
-            Socket("untracked/owner_only.sock", 0o600),
-        ]
+        expected_files = self.get_expected_files()
         verifier.verify_directory(self.checkout_path, expected_files)
 
     def verify_hg_status(self, verifier: verify_mod.SnapshotVerifier) -> None:
