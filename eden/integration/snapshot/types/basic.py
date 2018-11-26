@@ -26,6 +26,10 @@ class BasicSnapshot(HgSnapshot):
         repo.write_file("main/loaded_dir/loaded_file.c", "loaded")
         repo.write_file("main/loaded_dir/not_loaded_file.c", "not loaded")
         repo.write_file("main/loaded_dir/not_loaded_exe.sh", "not loaded", mode=0o755)
+        repo.write_file("main/loaded_dir/not_loaded_subdir/a.txt", "some contents\n")
+        repo.write_file(
+            "main/loaded_dir/not_loaded_subdir/b.exe", "other contents", mode=0o755
+        )
 
         repo.write_file(
             "main/materialized_subdir/script.sh", "original script contents", mode=0o755
@@ -65,6 +69,8 @@ class BasicSnapshot(HgSnapshot):
         self.write_file("untracked/new/normal.txt", b"new src contents")
         self.write_file("untracked/new/normal2.txt", b"extra src contents")
         self.write_file("untracked/new/readonly.txt", b"new readonly contents", 0o400)
+        self.write_file("untracked/new/subdir/abc.txt", b"abc")
+        self.write_file("untracked/new/subdir/xyz.txt", b"xyz")
         self.write_file("untracked/executable.exe", b"do stuff", mode=0o755)
         self.make_socket("untracked/everybody.sock", mode=0o666)
         self.make_socket("untracked/owner_only.sock", mode=0o600)
@@ -91,6 +97,12 @@ class BasicSnapshot(HgSnapshot):
         files.add_file("main/loaded_dir/not_loaded_file.c", b"not loaded", 0o644)
         files.add_file("main/loaded_dir/not_loaded_exe.sh", b"not loaded", 0o755)
         files.add_file(
+            "main/loaded_dir/not_loaded_subdir/a.txt", b"some contents\n", 0o644
+        )
+        files.add_file(
+            "main/loaded_dir/not_loaded_subdir/b.exe", b"other contents", 0o755
+        )
+        files.add_file(
             "main/materialized_subdir/script.sh", b"new script contents", 0o755
         )
         files.add_file("main/materialized_subdir/test.c", b"new test contents", 0o644)
@@ -115,6 +127,8 @@ class BasicSnapshot(HgSnapshot):
         files.add_file("untracked/new/normal.txt", b"new src contents", 0o644)
         files.add_file("untracked/new/normal2.txt", b"extra src contents", 0o644)
         files.add_file("untracked/new/readonly.txt", b"new readonly contents", 0o400)
+        files.add_file("untracked/new/subdir/abc.txt", b"abc", 0o644)
+        files.add_file("untracked/new/subdir/xyz.txt", b"xyz", 0o644)
         files.add_file("untracked/executable.exe", b"do stuff", 0o755)
         files.add_socket("untracked/everybody.sock", 0o666)
         files.add_socket("untracked/owner_only.sock", 0o600)
@@ -140,6 +154,8 @@ class BasicSnapshot(HgSnapshot):
             "untracked/new/normal.txt": "?",
             "untracked/new/normal2.txt": "?",
             "untracked/new/readonly.txt": "?",
+            "untracked/new/subdir/abc.txt": "?",
+            "untracked/new/subdir/xyz.txt": "?",
             "untracked/executable.exe": "?",
             "untracked/everybody.sock": "?",
             "untracked/owner_only.sock": "?",
