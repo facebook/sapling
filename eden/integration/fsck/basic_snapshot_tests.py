@@ -95,12 +95,12 @@ class OrphanInodes(ExpectedError):
 
 
 class Test(unittest.TestCase, TemporaryDirectoryMixin):
-    """Tests for fsck that extract the basic-20181120 snapshot, corrupt it in various
+    """Tests for fsck that extract the basic-20181121 snapshot, corrupt it in various
     ways, and then run fsck to try and repair it.
     """
 
     def setUp(self) -> None:
-        snapshot_path = Path("eden/test-data/snapshots/basic-20181120.tar.xz")
+        snapshot_path = Path("eden/test-data/snapshots/basic-20181121.tar.xz")
 
         self.tmp_dir = Path(self.make_temporary_directory())
         snapshot = snapshot_mod.unpack_into(snapshot_path, self.tmp_dir)
@@ -131,6 +131,11 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
         with self.snapshot.edenfs() as eden:
             eden.start()
             verifier.verify_directory(self.snapshot.checkout_path, expected_files)
+
+        if verifier.errors:
+            self.fail(
+                f"found errors when checking checkout contents: {verifier.errors}"
+            )
 
     def _check_expected_errors(
         self, fsck: fsck_mod.FilesystemChecker, expected_errors: Sequence[ExpectedError]
@@ -172,7 +177,7 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
             Type[MissingMaterializedInode], Type[InvalidMaterializedInode]
         ],
     ) -> None:
-        inode_number = 35  # untracked/new/normal2.txt
+        inode_number = 45  # untracked/new/normal2.txt
         self._replace_overlay_inode(inode_number, data)
 
         error = error_type(inode_number, "untracked/new/normal2.txt")
@@ -217,7 +222,7 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
             Type[MissingMaterializedInode], Type[InvalidMaterializedInode]
         ],
     ) -> None:
-        inode_number = 32  # untracked/
+        inode_number = 42  # untracked/
         self._replace_overlay_inode(inode_number, data)
 
         main_error = error_type(inode_number, "untracked")
@@ -228,12 +233,14 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
         del repaired_files["untracked/new/normal.txt"]
         del repaired_files["untracked/new/normal2.txt"]
         del repaired_files["untracked/new/readonly.txt"]
+        del repaired_files["untracked/new/subdir/abc.txt"]
+        del repaired_files["untracked/new/subdir/xyz.txt"]
         orphan_errors = OrphanInodes(
             [
-                33,  # new
-                40,  # executable.exe
-                41,  # everybody.sock
-                42,  # owner_only.sock
+                43,  # new
+                50,  # executable.exe
+                51,  # everybody.sock
+                52,  # owner_only.sock
             ]
         )
         expected_errors = [main_error, orphan_errors]
@@ -250,9 +257,16 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
         del repaired_files["main/loaded_dir/loaded_file.c"]
         del repaired_files["main/loaded_dir/not_loaded_exe.sh"]
         del repaired_files["main/loaded_dir/not_loaded_file.c"]
+        del repaired_files["main/loaded_dir/not_loaded_subdir/a.txt"]
+        del repaired_files["main/loaded_dir/not_loaded_subdir/b.exe"]
+        del repaired_files["main/loaded_dir/loaded_subdir/dir1/file1.txt"]
+        del repaired_files["main/loaded_dir/loaded_subdir/dir2/file2.txt"]
         del repaired_files["main/materialized_subdir/script.sh"]
         del repaired_files["main/materialized_subdir/test.c"]
         del repaired_files["main/materialized_subdir/unmodified.txt"]
+        del repaired_files["main/materialized_subdir/modified_symlink.lnk"]
+        del repaired_files["main/materialized_subdir/new_symlink.lnk"]
+        del repaired_files["main/materialized_subdir/test/socket.sock"]
         del repaired_files["main/mode_changes/exe_to_normal.txt"]
         del repaired_files["main/mode_changes/normal_to_exe.txt"]
         del repaired_files["main/mode_changes/normal_to_readonly.txt"]
@@ -263,9 +277,9 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
                 19,  # loaded_dir
                 20,  # materialized_subdir
                 21,  # mode_changes
-                43,  # untracked.txt
-                44,  # ignored.txt
-                45,  # untracked_dir
+                53,  # untracked.txt
+                54,  # ignored.txt
+                55,  # untracked_dir
             ]
         )
         expected_errors = [InvalidMaterializedInode(4, "main"), orphan_errors]

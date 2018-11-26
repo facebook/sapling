@@ -30,12 +30,15 @@ class BasicSnapshot(HgSnapshot):
         repo.write_file(
             "main/loaded_dir/not_loaded_subdir/b.exe", "other contents", mode=0o755
         )
+        repo.write_file("main/loaded_dir/loaded_subdir/dir1/file1.txt", "text\n")
+        repo.write_file("main/loaded_dir/loaded_subdir/dir2/file2.txt", "more text\n")
 
         repo.write_file(
             "main/materialized_subdir/script.sh", "original script contents", mode=0o755
         )
         repo.write_file("main/materialized_subdir/test.c", "original test contents")
         repo.write_file("main/materialized_subdir/unmodified.txt", "original contents")
+        repo.symlink("main/materialized_subdir/modified_symlink.lnk", "original link")
         repo.write_file("main/mode_changes/normal_to_exe.txt", "will change mode")
         repo.write_file(
             "main/mode_changes/exe_to_normal.txt", "will change mode", mode=0o755
@@ -45,20 +48,28 @@ class BasicSnapshot(HgSnapshot):
         repo.write_file("never_accessed/foo/bar/baz.txt", "baz\n")
         repo.write_file("never_accessed/foo/bar/xyz.txt", "xyz\n")
         repo.write_file("never_accessed/foo/file.txt", "data\n")
+        repo.symlink("never_accessed/foo/some.lnk", "link destination")
         repo.commit("Initial commit.")
 
     def populate_checkout(self) -> None:
-        # Load the main/loaded_dir directory and the main/loaded_dir/lib.c file
-        # This currently allocates inode numbers for everything in main/loaded_dir/ and
-        # causes main/loaded_dir/ to be tracked in the overlay
+        # Load the main/loaded_dir directory and some of its children.
+        # Listing directories will allocate inode numbers for its children which causes
+        # it to be tracked in the overlay, even if it has not been modified.
         self.list_dir("main/loaded_dir")
+        self.list_dir("main/loaded_dir/loaded_subdir/dir1")
+        self.list_dir("main/loaded_dir/loaded_subdir/dir2")
         self.read_file("main/loaded_dir/loaded_file.c")
+        self.read_file("main/loaded_dir/loaded_subdir/dir1/file1.txt")
+        self.read_file("main/loaded_dir/loaded_subdir/dir2/file2.txt")
 
         # Modify some files in main/materialized_subdir to force them to be materialized
         self.write_file(
             "main/materialized_subdir/script.sh", b"new script contents", 0o755
         )
         self.write_file("main/materialized_subdir/test.c", b"new test contents")
+        self.symlink("main/materialized_subdir/modified_symlink.lnk", b"new link")
+        self.symlink("main/materialized_subdir/new_symlink.lnk", b"new link")
+        self.make_socket("main/materialized_subdir/test/socket.sock", mode=0o600)
 
         # Test materializing some files by changing their mode
         self.chmod("main/mode_changes/normal_to_exe.txt", 0o755)
@@ -96,6 +107,10 @@ class BasicSnapshot(HgSnapshot):
         files.add_file("main/loaded_dir/loaded_file.c", b"loaded", 0o644)
         files.add_file("main/loaded_dir/not_loaded_file.c", b"not loaded", 0o644)
         files.add_file("main/loaded_dir/not_loaded_exe.sh", b"not loaded", 0o755)
+        files.add_file("main/loaded_dir/loaded_subdir/dir1/file1.txt", b"text\n", 0o644)
+        files.add_file(
+            "main/loaded_dir/loaded_subdir/dir2/file2.txt", b"more text\n", 0o644
+        )
         files.add_file(
             "main/loaded_dir/not_loaded_subdir/a.txt", b"some contents\n", 0o644
         )
@@ -109,6 +124,13 @@ class BasicSnapshot(HgSnapshot):
         files.add_file(
             "main/materialized_subdir/unmodified.txt", b"original contents", 0o644
         )
+        files.add_symlink(
+            "main/materialized_subdir/modified_symlink.lnk", b"new link", 0o770
+        )
+        files.add_symlink(
+            "main/materialized_subdir/new_symlink.lnk", b"new link", 0o770
+        )
+        files.add_socket("main/materialized_subdir/test/socket.sock", 0o600)
         files.add_file(
             "main/mode_changes/normal_to_exe.txt", b"will change mode", 0o755
         )
@@ -124,6 +146,7 @@ class BasicSnapshot(HgSnapshot):
         files.add_file("never_accessed/foo/bar/baz.txt", b"baz\n", 0o644)
         files.add_file("never_accessed/foo/bar/xyz.txt", b"xyz\n", 0o644)
         files.add_file("never_accessed/foo/file.txt", b"data\n", 0o644)
+        files.add_symlink("never_accessed/foo/some.lnk", b"link destination", 0o755)
         files.add_file("untracked/new/normal.txt", b"new src contents", 0o644)
         files.add_file("untracked/new/normal2.txt", b"extra src contents", 0o644)
         files.add_file("untracked/new/readonly.txt", b"new readonly contents", 0o400)
@@ -147,6 +170,9 @@ class BasicSnapshot(HgSnapshot):
         expected_status = {
             "main/materialized_subdir/script.sh": "M",
             "main/materialized_subdir/test.c": "M",
+            "main/materialized_subdir/modified_symlink.lnk": "M",
+            "main/materialized_subdir/new_symlink.lnk": "?",
+            "main/materialized_subdir/test/socket.sock": "?",
             "main/mode_changes/normal_to_exe.txt": "M",
             "main/mode_changes/exe_to_normal.txt": "M",
             # We changed the mode on main/mode_changes/normal_to_readonly.txt,

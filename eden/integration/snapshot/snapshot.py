@@ -434,6 +434,17 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
             os.fchmod(f.fileno(), mode)
             f.write(contents)
 
+    def symlink(self, path: Union[Path, str], contents: bytes) -> None:
+        """Helper function to create or update a symlink in the checkout."""
+        file_path = self.checkout_path / path
+        try:
+            file_path.unlink()
+        except FileNotFoundError:
+            file_path.parent.mkdir(  # pyre-ignore (T36816872)
+                parents=True, exist_ok=True
+            )
+        os.symlink(contents, bytes(file_path))
+
     def chmod(self, path: Union[Path, str], mode: int) -> None:
         file_path = self.checkout_path / path
         os.chmod(file_path, mode)
@@ -453,6 +464,7 @@ class HgSnapshot(BaseSnapshot, metaclass=abc.ABCMeta):
 
     def make_socket(self, path: Union[Path, str], mode: int = 0o755) -> None:
         socket_path = self.checkout_path / path
+        socket_path.parent.mkdir(parents=True, exist_ok=True)  # pyre-ignore (T36816872)
         with socket.socket(socket.AF_UNIX) as sock:
             # Call fchmod() before we create the socket to ensure that its initial
             # permissions are not looser than requested.  The OS will still honor the
