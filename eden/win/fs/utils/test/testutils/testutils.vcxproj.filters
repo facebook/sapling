@@ -21,5 +21,8 @@
     <ClCompile Include="..\..\WinError.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="StringConvTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

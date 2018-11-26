@@ -38,8 +38,7 @@
 //    logPath,
 //    "if set, redirects stdout and stderr to the log file given.");
 
-using namespace facebook::edenwin;
-// using namespace facebook::eden;
+using namespace facebook::eden;
 using namespace std;
 using namespace folly;
 
@@ -194,8 +193,7 @@ int __cdecl main(int argc, char** argv) {
   // std::wstring rootPath = argv[1];
   wstring rootPath = L"virtfs";
 
-  XLOG(INFO) << "Mounting the virtual FS at: "
-             << StringConv::wstringToString(rootPath);
+  XLOG(INFO) << "Mounting the virtual FS at: " << wstringToString(rootPath);
 
   startServer();
   // startBackingStore();

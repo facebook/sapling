@@ -153,6 +153,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\WinError.cpp" />
+    <ClCompile Include="StringConvTest.cpp" />
     <ClCompile Include="SystemErrorTest.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

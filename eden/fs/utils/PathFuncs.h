@@ -35,13 +35,9 @@ folly::StringPiece dirname(folly::StringPiece path);
  * and don't want an actual symbol emitted by the compiler.)
  */
 
-#ifdef EDEN_WIN
-enum : char { kDirSeparator = '\\' };
-constexpr folly::StringPiece kDirSeparatorStr{"\\"};
-#else
 enum : char { kDirSeparator = '/' };
 constexpr folly::StringPiece kDirSeparatorStr{"/"};
-#endif
+
 /**
  * FUSE supports components up to 1024 (FUSE_NAME_MAX) by default. For
  * compatibility with other filesystems, Eden will limit to 255.
