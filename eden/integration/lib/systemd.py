@@ -430,12 +430,16 @@ class _TransientUnmanagedSystemdUserServiceManager:
     def stop_systemd_process(self, systemd_process: subprocess.Popen) -> None:
         systemd_process.terminate()
         try:
-            systemd_process.wait(timeout=3)
+            systemd_process.wait(timeout=15)
+            return
         except subprocess.TimeoutExpired:
-            logger.warning(
-                "Failed to terminate systemd user service manager", exc_info=True
-            )
-            # Ignore the exception.
+            pass
+
+        logger.warning(
+            "Failed to terminate systemd user service manager.  Attempting to kill."
+        )
+        systemd_process.kill()
+        systemd_process.wait(timeout=3)
 
     def wait_until_systemd_is_alive(
         self,
