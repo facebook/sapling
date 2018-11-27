@@ -343,17 +343,17 @@ First client add a new commit to the old stack
   $ hg up 2
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
 
-  $ touch oldstack-feb28
-  $ hg commit -Aqm oldstack-feb28 --config devel.default-date="1990-02-28T03:00Z"
+  $ touch oldstack-mar4
+  $ hg commit -Aqm oldstack-mar4 --config devel.default-date="1990-03-04T03:00Z"
   $ (cat $TESTTMP/nodedata ; hg log -r . -Tjson) | jq -s add > $TESTTMP/nodedata.new
   $ mv $TESTTMP/nodedata.new $TESTTMP/nodedata
-  $ hgfakedate 1990-02-28T03:02Z cloud sync
+  $ hgfakedate 1990-03-04T03:02Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 1f9ebd6d1390
   remote: pushing 3 commits:
   remote:     1f9ebd6d1390  oldstack-feb1
   remote:     d16408588b2d  oldstack-feb4
-  remote:     d51d4ebefb99  oldstack-feb28
+  remote:     2b8dce7bd745  oldstack-mar4
   #commitcloud commits synchronized
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
@@ -366,11 +366,11 @@ First client add a new commit to the old stack
       d133b886da6874fe25998d26ae1b2b8528b07c59
       ff52de2f760c67fa6f89273ca7f770396a3c81c4
       46f8775ee5d479eed945b5186929bd046f116176
-      d51d4ebefb99104b72ecbdf85d4ed218f4a2d3ef
+      2b8dce7bd745e54f2cea9d8c630d97264537cbad
 
 Second client syncs the old stack in, and now has the bookmark
   $ cd ../client2
-  $ hgfakedate 1990-02-28T03:03Z cloud sync
+  $ hgfakedate 1990-03-04T03:03Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
   searching for changes
@@ -378,11 +378,11 @@ Second client syncs the old stack in, and now has the bookmark
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+1 heads)
-  new changesets 1f9ebd6d1390:d51d4ebefb99
+  new changesets 1f9ebd6d1390:2b8dce7bd745
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
   $ tglogp
-  o  9: d51d4ebefb99 draft 'oldstack-feb28'
+  o  9: 2b8dce7bd745 draft 'oldstack-mar4'
   |
   o  8: d16408588b2d draft 'oldstack-feb4'
   |
@@ -412,7 +412,7 @@ Second client syncs the old stack in, and now has the bookmark
       d133b886da6874fe25998d26ae1b2b8528b07c59
       ff52de2f760c67fa6f89273ca7f770396a3c81c4
       46f8775ee5d479eed945b5186929bd046f116176
-      d51d4ebefb99104b72ecbdf85d4ed218f4a2d3ef
+      2b8dce7bd745e54f2cea9d8c630d97264537cbad
 
 Create a new client that isn't connected yet
   $ cd ..
@@ -421,7 +421,7 @@ Create a new client that isn't connected yet
 
 Connect to commit cloud
   $ cd client3
-  $ hgfakedate 1990-03-01T12:00Z cloud join
+  $ hgfakedate 1990-03-05T12:00Z cloud join
   #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   #commitcloud synchronizing 'server' with 'user/test/default'
   pulling from ssh://user@dummy/server
@@ -439,37 +439,22 @@ Connect to commit cloud
   adding file changes
   added 3 changesets with 3 changes to 3 files (+1 heads)
   1c1b7955142cd8a3beec705c9cca9d775ecb0fa8 not found, omitting midbook bookmark
-  new changesets ff52de2f760c:d51d4ebefb99
+  new changesets ff52de2f760c:2b8dce7bd745
   (run 'hg heads' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
 
-  $ hg smartlog -T '{rev}: {node|short} {desc}' --config infinitepushbackup.autobackup=true
-  o  5: 1f9ebd6d1390 oldstack-feb1
-  |
-  | o  2: 56a352317b67 newstack-feb13
-  |/
-  @  0: df4f53cec30a base
-  
-  note: hiding 3 old heads without bookmarks
-  (use --all to see them)
-  hint[commitcloud-old-commits]: some older commits or bookmarks have not been synced to this repo
-  (run `hg cloud sl` to see all of the commits in your workspace)
-  (run `hg pull -r HASH` to fetch commits by hash)
-  (run `hg cloud sync --full` to fetch everything - this may be slow)
-  hint[hint-ack]: use 'hg hint --ack commitcloud-old-commits' to silence these hints
-
-  $ hg smartlog -T '{rev}: {node|short} {desc}' --all --config infinitepushbackup.autobackup=true
-  o  7: d51d4ebefb99 oldstack-feb28
+  $ hgfakedate 1990-03-05T12:00Z smartlog -T '{rev}: {node|short} {desc} {bookmarks}' --config infinitepushbackup.autobackup=true
+  o  7: 2b8dce7bd745 oldstack-mar4
   |
   o  6: d16408588b2d oldstack-feb4
   |
-  o  5: 1f9ebd6d1390 oldstack-feb1
+  o  5: 1f9ebd6d1390 oldstack-feb1 oldbook
   |
   | o  4: 46f8775ee5d4 newstack-feb28
   | |
   | o  3: 7f958333fe84 newstack-feb15
   | |
-  | o  2: 56a352317b67 newstack-feb13
+  | o  2: 56a352317b67 newstack-feb13 newbook
   |/
   | o  1: ff52de2f760c client2-feb28
   |/
@@ -485,19 +470,19 @@ Move one of these bookmarks in the first client.
 
   $ cd ../client1
   $ hg book -f -r 4 oldbook
-  $ hgfakedate 1990-03-01T12:01Z cloud sync
+  $ hgfakedate 1990-03-05T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
 
 Do a sync in the new client - the bookmark is left where it was
 
   $ cd ../client3
-  $ hgfakedate 1990-03-01T12:01Z cloud sync
+  $ hgfakedate 1990-03-05T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   d133b886da6874fe25998d26ae1b2b8528b07c59 not found, omitting oldbook bookmark
   #commitcloud commits synchronized
   $ tglogp
-  o  7: d51d4ebefb99 draft 'oldstack-feb28'
+  o  7: 2b8dce7bd745 draft 'oldstack-mar4'
   |
   o  6: d16408588b2d draft 'oldstack-feb4'
   |
@@ -517,7 +502,7 @@ Move the bookmark locally - this still gets synced ok.
 
   $ hg book -f -r 3 oldbook
   $ tglogp
-  o  7: d51d4ebefb99 draft 'oldstack-feb28'
+  o  7: 2b8dce7bd745 draft 'oldstack-mar4'
   |
   o  6: d16408588b2d draft 'oldstack-feb4'
   |
@@ -533,16 +518,16 @@ Move the bookmark locally - this still gets synced ok.
   |/
   @  0: df4f53cec30a public 'base'
   
-  $ hgfakedate 1990-03-01T12:01Z cloud sync
+  $ hgfakedate 1990-03-05T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
 
   $ cd ../client1
-  $ hgfakedate 1990-03-01T12:01Z cloud sync
+  $ hgfakedate 1990-03-05T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
   $ tglogp
-  @  9: d51d4ebefb99 draft 'oldstack-feb28'
+  @  9: 2b8dce7bd745 draft 'oldstack-mar4'
   |
   | o  8: 46f8775ee5d4 draft 'newstack-feb28'
   | |
@@ -563,19 +548,31 @@ Move the bookmark locally - this still gets synced ok.
   o  0: df4f53cec30a public 'base'
   
 
-A full sync puls the old commits in
+A full sync pulls the old commits in
   $ cd ../client3
-  $ hgfakedate 1990-03-01T12:01Z cloud sync --full
+  $ hgfakedate 1990-03-05T12:01Z cloud sync --full
   #commitcloud synchronizing 'server' with 'user/test/default'
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  new changesets 1c1b7955142c:d133b886da68
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
   #commitcloud commits synchronized
 
   $ tglogp
-  o  7: d51d4ebefb99 draft 'oldstack-feb28'
+  o  9: d133b886da68 draft 'midstack-feb9'
   |
-  o  6: d16408588b2d draft 'oldstack-feb4'
+  o  8: 1c1b7955142c draft 'midstack-feb7' midbook
   |
-  o  5: 1f9ebd6d1390 draft 'oldstack-feb1'
-  |
+  | o  7: 2b8dce7bd745 draft 'oldstack-mar4'
+  | |
+  | o  6: d16408588b2d draft 'oldstack-feb4'
+  | |
+  | o  5: 1f9ebd6d1390 draft 'oldstack-feb1'
+  |/
   | o  4: 46f8775ee5d4 draft 'newstack-feb28'
   | |
   | o  3: 7f958333fe84 draft 'newstack-feb15' oldbook
@@ -591,7 +588,7 @@ Create a new client that isn't connected yet
   $ hg clone ssh://user@dummy/server client4 -q
   $ cat shared.rc >> client4/.hg/hgrc
 
-A part sync omitting most of the things
+A part sync omitting everything
   $ cd ./client4
   $ hgfakedate 1990-04-01T12:01Z cloud join
   #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
@@ -616,4 +613,60 @@ Check that it doesn't break cloud sync
   $ hgfakedate 1990-04-01T12:01Z cloud sync
   #commitcloud synchronizing 'server' with 'user/test/default'
   #commitcloud commits synchronized
+
+Pull in some of the commits by setting max age manually
+  $ hgfakedate 1990-04-01T12:01Z cloud sync --config commitcloud.max_sync_age=30
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 3 files
+  new changesets 1f9ebd6d1390:2b8dce7bd745
+  (run 'hg update' to get a working copy)
+  #commitcloud commits synchronized
+  $ tglogp
+  o  3: 2b8dce7bd745 draft 'oldstack-mar4'
+  |
+  o  2: d16408588b2d draft 'oldstack-feb4'
+  |
+  o  1: 1f9ebd6d1390 draft 'oldstack-feb1'
+  |
+  @  0: df4f53cec30a public 'base'
+  
+
+Create a bookmark with the same name as an omitted bookmark
+  $ hg book -r tip midbook
+  $ hgfakedate 1990-04-01T12:01Z cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized
+
+Sync these changes to client3 - the deleted bookmarks are removed and the
+other bookmark is treated like a move.
+  $ cd ../client3
+  $ hgfakedate 1990-04-01T12:01Z cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized
+  $ tglogp
+  o  9: d133b886da68 draft 'midstack-feb9'
+  |
+  o  8: 1c1b7955142c draft 'midstack-feb7'
+  |
+  | o  7: 2b8dce7bd745 draft 'oldstack-mar4' midbook
+  | |
+  | o  6: d16408588b2d draft 'oldstack-feb4'
+  | |
+  | o  5: 1f9ebd6d1390 draft 'oldstack-feb1'
+  |/
+  | o  4: 46f8775ee5d4 draft 'newstack-feb28'
+  | |
+  | o  3: 7f958333fe84 draft 'newstack-feb15'
+  | |
+  | o  2: 56a352317b67 draft 'newstack-feb13'
+  |/
+  | o  1: ff52de2f760c draft 'client2-feb28'
+  |/
+  @  0: df4f53cec30a public 'base'
+  
 

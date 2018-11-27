@@ -519,18 +519,26 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
         highlightstatus(ui, _("this version has been already synchronized\n"))
         return 0
 
+    if opts.get("full"):
+        maxage = None
+    else:
+        maxage = ui.configint("commitcloud", "max_sync_age", None)
+    fetchversion = lastsyncstate.version
+
     # cloudrefs are passed in cloud rejoin
     if cloudrefs is None:
-        cloudrefs = serv.getreferences(reponame, workspace, lastsyncstate.version)
+        # if we are doing a full sync, or maxage has changed since the last
+        # sync, use 0 as the last version to get a fresh copy of the full state.
+        if maxage != lastsyncstate.maxage:
+            fetchversion = 0
+        cloudrefs = serv.getreferences(reponame, workspace, fetchversion)
 
     pushrevspec = calcpushrevfilter(ui, repo, workspace, opts)
     synced = False
     pushfailures = set()
     while not synced:
-        if cloudrefs.version != lastsyncstate.version:
-            _applycloudchanges(
-                ui, repo, lastsyncstate, cloudrefs, pullfn, opts.get("full")
-            )
+        if cloudrefs.version != fetchversion:
+            _applycloudchanges(ui, repo, lastsyncstate, cloudrefs, pullfn, maxage)
 
         # Check if any omissions are now included in the repo
         _checkomissions(ui, repo, lastsyncstate)
@@ -684,6 +692,7 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
                     newcloudbookmarks,
                     newomittedheads,
                     newomittedbookmarks,
+                    maxage,
                 )
                 if obsmarkers:
                     commitcloudutil.clearsyncingobsmarkers(repo)
@@ -746,7 +755,7 @@ def cloudrecover(ui, repo, **opts):
 
 
 def _applycloudchanges(
-    ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None, full=False
+    ui, repo, lastsyncstate, cloudrefs, directfetchingfn=None, maxage=None
 ):
     pullcmd, pullopts = _getcommandandoptions("^pull")
 
@@ -761,8 +770,7 @@ def _applycloudchanges(
     # directfetchingfn fastpath.
     unfi = repo.unfiltered()
     newheads = [head for head in cloudrefs.heads if head not in unfi]
-    maxage = ui.configint("commitcloud", "max_sync_age", None)
-    if not full and maxage is not None and maxage >= 0:
+    if maxage is not None and maxage >= 0:
         mindate = time.time() - maxage * 86400
         omittedheads = [
             head
@@ -826,6 +834,7 @@ def _applycloudchanges(
         cloudrefs.bookmarks,
         omittedheads,
         omittedbookmarks,
+        maxage,
     )
 
     # Also update infinitepush state.  These new heads are already backed up,
@@ -865,6 +874,7 @@ def _checkomissions(ui, repo, lastsyncstate):
             lastsyncstate.bookmarks,
             list(omittedheads),
             list(omittedbookmarks),
+            lastsyncstate.maxage,
         )
     if changes:
         with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
