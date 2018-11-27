@@ -116,6 +116,9 @@ Configs::
 
     # Maximum age (in days) of commits to pull when syncing
     max_sync_age = 14
+
+    # Migrate repository from older pushbackup system to Commit Cloud Sync
+    autocloudjoin = True
 """
 
 from __future__ import absolute_import
@@ -151,6 +154,7 @@ configitem("commitcloud", "remote_port", default=443)
 configitem("commitcloud", "tls.check_hostname", default=True)
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
 configitem("commitcloud", "nocheckbackeduplimit", default=4)
+configitem("commitcloud", "autocloudjoin", default=False)
 
 
 def _smartlogbackupmessagemap(orig, ui, repo):
@@ -168,6 +172,8 @@ def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None):
     if commitcloudutil.getworkspacename(repo) is not None:
         return orig(ui, repo, dest, ["hg", "cloud", "sync"])
     else:
+        if ui.configbool("commitcloud", "autocloudjoin"):
+            return orig(ui, repo, dest, ["hg", "cloud", "join"])
         return orig(ui, repo, dest, command)
 
 
