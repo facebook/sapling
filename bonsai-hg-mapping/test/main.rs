@@ -13,20 +13,27 @@ extern crate assert_matches;
 extern crate async_unit;
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate futures_ext;
 
 extern crate bonsai_hg_mapping;
+extern crate mercurial_types;
 extern crate mercurial_types_mocks;
+extern crate mononoke_types;
 extern crate mononoke_types_mocks;
 
+use failure::Error;
 use futures::Future;
 
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, ErrorKind,
-                        MemWritesBonsaiHgMapping, SqlBonsaiHgMapping, SqlConstructors};
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds,
+                        CachingBonsaiHgMapping, ErrorKind, MemWritesBonsaiHgMapping,
+                        SqlBonsaiHgMapping, SqlConstructors};
+use futures_ext::BoxFuture;
+use mercurial_types::RepositoryId;
 use mercurial_types_mocks::nodehash as hg;
 use mercurial_types_mocks::repo::REPO_ZERO;
 use mononoke_types_mocks::changesetid as bonsai;
 
-use std::sync::Arc;
+use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
 
 fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
     let entry = BonsaiHgMappingEntry {
@@ -53,7 +60,7 @@ fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
         .get(REPO_ZERO, hg::ONES_CSID.into())
         .wait()
         .expect("Get failed");
-    assert_eq!(result, Some(entry.clone()));
+    assert_eq!(result, vec![entry.clone()]);
     let result = mapping
         .get_hg_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
         .wait()
@@ -99,7 +106,7 @@ fn missing<M: BonsaiHgMapping>(mapping: M) {
         .get(REPO_ZERO, bonsai::ONES_CSID.into())
         .wait()
         .expect("Failed to fetch missing changeset (should succeed with None instead)");
-    assert_eq!(result, None);
+    assert_eq!(result, vec![]);
 }
 
 fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
@@ -178,6 +185,79 @@ fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
     assert_eq!(result, None);
 }
 
+struct CountedBonsaiHgMapping {
+    mapping: Arc<BonsaiHgMapping>,
+    gets: Arc<AtomicUsize>,
+    adds: Arc<AtomicUsize>,
+}
+
+impl CountedBonsaiHgMapping {
+    fn new(mapping: Arc<BonsaiHgMapping>, gets: Arc<AtomicUsize>, adds: Arc<AtomicUsize>) -> Self {
+        Self {
+            mapping,
+            gets,
+            adds,
+        }
+    }
+}
+
+impl BonsaiHgMapping for CountedBonsaiHgMapping {
+    fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+        self.adds.fetch_add(1, Ordering::Relaxed);
+        self.mapping.add(entry)
+    }
+
+    fn get(
+        &self,
+        repo_id: RepositoryId,
+        cs_id: BonsaiOrHgChangesetIds,
+    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
+        self.gets.fetch_add(1, Ordering::Relaxed);
+        self.mapping.get(repo_id, cs_id)
+    }
+}
+
+fn caching<M: BonsaiHgMapping + 'static>(mapping: M) {
+    let gets = Arc::new(AtomicUsize::new(0));
+    let adds = Arc::new(AtomicUsize::new(0));
+    let mapping = CountedBonsaiHgMapping::new(Arc::new(mapping), gets.clone(), adds.clone());
+    let mapping = CachingBonsaiHgMapping::new_test(Arc::new(mapping));
+
+    let entry = BonsaiHgMappingEntry {
+        repo_id: REPO_ZERO,
+        hg_cs_id: hg::ONES_CSID,
+        bcs_id: bonsai::ONES_CSID,
+    };
+    assert_eq!(
+        true,
+        mapping
+            .add(entry.clone())
+            .wait()
+            .expect("Adding new entry failed")
+    );
+
+    let result = mapping
+        .get_bonsai_from_hg(REPO_ZERO, hg::ONES_CSID)
+        .wait()
+        .expect("Failed to get bonsai changeset by its hg counterpart");
+    assert_eq!(result, Some(bonsai::ONES_CSID));
+    assert_eq!(gets.load(Ordering::Relaxed), 1);
+
+    let result = mapping
+        .get_bonsai_from_hg(REPO_ZERO, hg::ONES_CSID)
+        .wait()
+        .expect("Failed to get bonsai changeset by its hg counterpart");
+    assert_eq!(result, Some(bonsai::ONES_CSID));
+    assert_eq!(gets.load(Ordering::Relaxed), 1);
+
+    let result = mapping
+        .get_bonsai_from_hg(REPO_ZERO, hg::TWOS_CSID)
+        .wait()
+        .expect("Failed to get bonsai changeset by its hg counterpart");
+    assert_eq!(result, None);
+    assert_eq!(gets.load(Ordering::Relaxed), 2);
+}
+
 #[test]
 fn test_add_and_get() {
     async_unit::tokio_unit_test(|| {
@@ -196,5 +276,12 @@ fn test_missing() {
 fn test_mem_writes() {
     async_unit::tokio_unit_test(|| {
         mem_writes(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
+    });
+}
+
+#[test]
+fn test_caching() {
+    async_unit::tokio_unit_test(|| {
+        caching(SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
     });
 }

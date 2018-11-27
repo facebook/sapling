@@ -10,13 +10,16 @@ extern crate abomonation;
 #[macro_use]
 extern crate abomonation_derive;
 extern crate bonsai_hg_mapping_entry_thrift;
+extern crate bytes;
 extern crate cachelib;
+extern crate caching_ext;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate heapsize;
 #[macro_use]
 extern crate heapsize_derive;
+extern crate iobuf;
 extern crate memcache;
 extern crate tokio;
 
@@ -34,6 +37,7 @@ extern crate sql_ext;
 #[macro_use]
 extern crate stats;
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use sql::Connection;
@@ -93,21 +97,30 @@ impl BonsaiHgMappingEntry {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, HeapSizeOf)]
-pub enum BonsaiOrHgChangesetId {
-    Bonsai(ChangesetId),
-    Hg(HgChangesetId),
+#[derive(Debug, Clone, Eq, PartialEq, Hash, HeapSizeOf)]
+pub enum BonsaiOrHgChangesetIds {
+    Bonsai(Vec<ChangesetId>),
+    Hg(Vec<HgChangesetId>),
 }
 
-impl From<ChangesetId> for BonsaiOrHgChangesetId {
-    fn from(cs_id: ChangesetId) -> Self {
-        BonsaiOrHgChangesetId::Bonsai(cs_id)
+impl BonsaiOrHgChangesetIds {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            BonsaiOrHgChangesetIds::Bonsai(v) => v.is_empty(),
+            BonsaiOrHgChangesetIds::Hg(v) => v.is_empty(),
+        }
     }
 }
 
-impl From<HgChangesetId> for BonsaiOrHgChangesetId {
+impl From<ChangesetId> for BonsaiOrHgChangesetIds {
+    fn from(cs_id: ChangesetId) -> Self {
+        BonsaiOrHgChangesetIds::Bonsai(vec![cs_id])
+    }
+}
+
+impl From<HgChangesetId> for BonsaiOrHgChangesetIds {
     fn from(cs_id: HgChangesetId) -> Self {
-        BonsaiOrHgChangesetId::Hg(cs_id)
+        BonsaiOrHgChangesetIds::Hg(vec![cs_id])
     }
 }
 
@@ -117,8 +130,8 @@ pub trait BonsaiHgMapping: Send + Sync {
     fn get(
         &self,
         repo_id: RepositoryId,
-        cs_id: BonsaiOrHgChangesetId,
-    ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error>;
+        cs_id: BonsaiOrHgChangesetIds,
+    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error>;
 
     fn get_hg_from_bonsai(
         &self,
@@ -126,7 +139,7 @@ pub trait BonsaiHgMapping: Send + Sync {
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<HgChangesetId>, Error> {
         self.get(repo_id, cs_id.into())
-            .map(|result| result.map(|entry| entry.hg_cs_id))
+            .map(|result| result.into_iter().next().map(|entry| entry.hg_cs_id))
             .boxify()
     }
 
@@ -136,7 +149,7 @@ pub trait BonsaiHgMapping: Send + Sync {
         cs_id: HgChangesetId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         self.get(repo_id, cs_id.into())
-            .map(|result| result.map(|entry| entry.bcs_id))
+            .map(|result| result.into_iter().next().map(|entry| entry.bcs_id))
             .boxify()
     }
 }
@@ -149,8 +162,8 @@ impl BonsaiHgMapping for Arc<BonsaiHgMapping> {
     fn get(
         &self,
         repo_id: RepositoryId,
-        cs_id: BonsaiOrHgChangesetId,
-    ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
+        cs_id: BonsaiOrHgChangesetIds,
+    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
         (**self).get(repo_id, cs_id)
     }
 }
@@ -172,20 +185,24 @@ queries! {
         "{insert_or_ignore} INTO bonsai_hg_mapping (repo_id, hg_cs_id, bcs_id) VALUES {values}"
     }
 
-    read SelectMappingByBonsai(repo_id: RepositoryId, bcs_id: ChangesetId) -> (HgChangesetId) {
-        "SELECT hg_cs_id
+    read SelectMappingByBonsai(
+        repo_id: RepositoryId,
+        >list bcs_id: ChangesetId
+    ) -> (HgChangesetId, ChangesetId) {
+        "SELECT hg_cs_id, bcs_id
          FROM bonsai_hg_mapping
          WHERE repo_id = {repo_id}
-           AND bcs_id = {bcs_id}
-         LIMIT 1"
+           AND bcs_id IN {bcs_id}"
     }
 
-    read SelectMappingByHg(repo_id: RepositoryId, hg_cs_id: HgChangesetId) -> (ChangesetId) {
-        "SELECT bcs_id
+    read SelectMappingByHg(
+        repo_id: RepositoryId,
+        >list hg_cs_id: HgChangesetId
+    ) -> (HgChangesetId, ChangesetId) {
+        "SELECT hg_cs_id, bcs_id
          FROM bonsai_hg_mapping
          WHERE repo_id = {repo_id}
-           AND hg_cs_id = {hg_cs_id}
-         LIMIT 1"
+           AND hg_cs_id IN {hg_cs_id}"
     }
 
     read SelectAnyMapping(
@@ -257,56 +274,98 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
     fn get(
         &self,
         repo_id: RepositoryId,
-        cs: BonsaiOrHgChangesetId,
-    ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
+        ids: BonsaiOrHgChangesetIds,
+    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
         STATS::gets.add_value(1);
         cloned!(self.read_master_connection);
 
-        select_mapping(&self.read_connection, &repo_id, &cs)
-            .and_then(move |maybe_mapping| match maybe_mapping {
-                Some(mapping) => Ok(Some(mapping)).into_future().boxify(),
-                None => {
+        select_mapping(&self.read_connection, &repo_id, &ids)
+            .and_then(move |mut mappings| {
+                let left_to_fetch = filter_fetched_ids(ids, &mappings[..]);
+
+                if left_to_fetch.is_empty() {
+                    Ok(mappings).into_future().left_future()
+                } else {
                     STATS::gets_master.add_value(1);
-                    select_mapping(&read_master_connection, &repo_id, &cs)
+                    select_mapping(&read_master_connection, &repo_id, &left_to_fetch)
+                        .map(move |mut master_mappings| {
+                            mappings.append(&mut master_mappings);
+                            mappings
+                        })
+                        .right_future()
                 }
             })
             .boxify()
     }
 }
 
+fn filter_fetched_ids(
+    cs: BonsaiOrHgChangesetIds,
+    mappings: &[BonsaiHgMappingEntry],
+) -> BonsaiOrHgChangesetIds {
+    match cs {
+        BonsaiOrHgChangesetIds::Bonsai(cs_ids) => {
+            let bcs_fetched: HashSet<_> = mappings.iter().map(|m| &m.bcs_id).collect();
+
+            BonsaiOrHgChangesetIds::Bonsai(
+                cs_ids
+                    .iter()
+                    .filter_map(|cs| {
+                        if !bcs_fetched.contains(cs) {
+                            Some(*cs)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect(),
+            )
+        }
+        BonsaiOrHgChangesetIds::Hg(cs_ids) => {
+            let hg_fetched: HashSet<_> = mappings.iter().map(|m| &m.hg_cs_id).collect();
+
+            BonsaiOrHgChangesetIds::Hg(
+                cs_ids
+                    .iter()
+                    .filter_map(|cs| {
+                        if !hg_fetched.contains(cs) {
+                            Some(*cs)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect(),
+            )
+        }
+    }
+}
+
 fn select_mapping(
     connection: &Connection,
     repo_id: &RepositoryId,
-    cs_id: &BonsaiOrHgChangesetId,
-) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
+    cs_id: &BonsaiOrHgChangesetIds,
+) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
     cloned!(repo_id, cs_id);
 
-    match cs_id {
-        BonsaiOrHgChangesetId::Bonsai(bcs_id) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_id)
-                .map(move |rows| {
-                    rows.into_iter()
-                        .next()
-                        .map(move |(hg_cs_id,)| BonsaiHgMappingEntry {
-                            repo_id,
-                            hg_cs_id,
-                            bcs_id,
-                        })
-                })
-                .boxify()
+    let rows_fut = match cs_id {
+        BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
+            let ref_ids: Vec<_> = bcs_ids.iter().collect();
+            SelectMappingByBonsai::query(&connection, &repo_id, &ref_ids[..]).boxify()
         }
-        BonsaiOrHgChangesetId::Hg(hg_cs_id) => {
-            SelectMappingByHg::query(&connection, &repo_id, &hg_cs_id)
-                .map(move |rows| {
-                    rows.into_iter()
-                        .next()
-                        .map(move |(bcs_id,)| BonsaiHgMappingEntry {
-                            repo_id,
-                            hg_cs_id,
-                            bcs_id,
-                        })
-                })
-                .boxify()
+        BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => {
+            let ref_ids: Vec<_> = hg_cs_ids.iter().collect();
+            SelectMappingByHg::query(&connection, &repo_id, &ref_ids[..]).boxify()
         }
-    }
+    };
+
+    rows_fut
+        .map(move |rows| {
+            rows.into_iter()
+                .map(move |(hg_cs_id, bcs_id)| BonsaiHgMappingEntry {
+                    repo_id,
+                    hg_cs_id,
+                    bcs_id,
+                })
+                .collect()
+        })
+        .boxify()
 }

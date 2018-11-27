@@ -5,17 +5,22 @@
 // GNU General Public License version 2 or any later version.
 
 use super::{bonsai_hg_mapping_entry_thrift as thrift, BonsaiHgMapping, BonsaiHgMappingEntry,
-            BonsaiOrHgChangesetId};
-use cachelib::{get_cached_or_fill, LruCachePool};
+            BonsaiOrHgChangesetIds};
+use bytes::Bytes;
+use cachelib::LruCachePool;
+use caching_ext::{CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind, McResult,
+                  MemcacheHandler};
 use errors::Error;
-use futures::{future, Future};
+use futures::{Future, future::ok};
 use futures_ext::{BoxFuture, FutureExt};
-use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
-use mercurial_types::RepositoryId;
+use iobuf::IOBuf;
+use memcache::{KeyGen, MemcacheClient};
+use mercurial_types::{HgChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
 use rust_thrift::compact_protocol;
 use stats::Timeseries;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use tokio;
 
 define_stats! {
     prefix = "mononoke.bonsai_hg_mapping";
@@ -25,28 +30,71 @@ define_stats! {
     memcache_deserialize_err: timeseries("memcache.deserialize_err"; RATE, SUM),
 }
 
+/// Used for cache key generation
+#[derive(Debug, Clone, Eq, PartialEq, Hash, HeapSizeOf)]
+enum BonsaiOrHgChangesetId {
+    Bonsai(ChangesetId),
+    Hg(HgChangesetId),
+}
+
+impl From<ChangesetId> for BonsaiOrHgChangesetId {
+    fn from(cs_id: ChangesetId) -> Self {
+        BonsaiOrHgChangesetId::Bonsai(cs_id)
+    }
+}
+
+impl From<HgChangesetId> for BonsaiOrHgChangesetId {
+    fn from(cs_id: HgChangesetId) -> Self {
+        BonsaiOrHgChangesetId::Hg(cs_id)
+    }
+}
+
 pub struct CachingBonsaiHgMapping {
     mapping: Arc<BonsaiHgMapping>,
-    cache_pool: LruCachePool,
-    memcache: MemcacheClient,
+    cache_pool: CachelibHandler<BonsaiHgMappingEntry>,
+    memcache: MemcacheHandler,
     keygen: KeyGen,
 }
 
 impl CachingBonsaiHgMapping {
     pub fn new(mapping: Arc<BonsaiHgMapping>, cache_pool: LruCachePool) -> Self {
-        let key_prefix = "scm.mononoke.bonsai_hg_mapping";
-
         Self {
             mapping,
-            cache_pool,
-            memcache: MemcacheClient::new(),
-            keygen: KeyGen::new(
-                key_prefix,
-                thrift::MC_CODEVER as u32,
-                thrift::MC_SITEVER as u32,
-            ),
+            cache_pool: cache_pool.into(),
+            memcache: MemcacheClient::new().into(),
+            keygen: CachingBonsaiHgMapping::create_key_gen(),
         }
     }
+
+    pub fn new_test(mapping: Arc<BonsaiHgMapping>) -> Self {
+        Self {
+            mapping,
+            cache_pool: CachelibHandler::create_mock(),
+            memcache: MemcacheHandler::create_mock(),
+            keygen: CachingBonsaiHgMapping::create_key_gen(),
+        }
+    }
+
+    fn create_key_gen() -> KeyGen {
+        let key_prefix = "scm.mononoke.bonsai_hg_mapping";
+
+        KeyGen::new(
+            key_prefix,
+            thrift::MC_CODEVER as u32,
+            thrift::MC_SITEVER as u32,
+        )
+    }
+}
+
+fn memcache_deserialize(buf: IOBuf) -> ::std::result::Result<BonsaiHgMappingEntry, ()> {
+    let bytes: Bytes = buf.into();
+
+    let thrift_entry = compact_protocol::deserialize(bytes).map_err(|_| ());
+    thrift_entry.and_then(|entry| BonsaiHgMappingEntry::from_thrift(entry).map_err(|_| ()))
+}
+
+fn memcache_serialize(entry: &BonsaiHgMappingEntry) -> Bytes {
+    compact_protocol::serialize(&entry.clone().into_thrift())
 }
 
 impl BonsaiHgMapping for CachingBonsaiHgMapping {
@@ -57,109 +105,93 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
     fn get(
         &self,
         repo_id: RepositoryId,
-        cs: BonsaiOrHgChangesetId,
-    ) -> BoxFuture<Option<BonsaiHgMappingEntry>, Error> {
-        let cache_key = get_cache_key(&repo_id, &cs);
-        get_cached_or_fill(&self.cache_pool, cache_key, || {
-            cloned!(self.keygen, self.mapping, self.memcache);
-            get_mapping_from_memcache(&memcache, &keygen, &repo_id, &cs)
-                .then(move |res| match res {
-                    Ok(res) => {
-                        return future::ok(Some(res)).left_future();
+        cs: BonsaiOrHgChangesetIds,
+    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
+        let from_bonsai;
+        let keys: HashSet<_> = match cs {
+            BonsaiOrHgChangesetIds::Bonsai(cs) => {
+                from_bonsai = true;
+                cs.into_iter().map(BonsaiOrHgChangesetId::Bonsai).collect()
+            }
+            BonsaiOrHgChangesetIds::Hg(cs) => {
+                from_bonsai = false;
+                cs.into_iter().map(BonsaiOrHgChangesetId::Hg).collect()
+            }
+        };
+
+        let report_mc_result = |res: McResult<()>| {
+            match res {
+                Ok(_) => STATS::memcache_hit.add_value(1),
+                Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
+                Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
+                Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
+            };
+        };
+        cloned!(self.mapping);
+        let get_from_db = move |keys: HashSet<BonsaiOrHgChangesetId>| -> BoxFuture<
+            HashMap<BonsaiOrHgChangesetId, BonsaiHgMappingEntry>,
+            Error,
+        > {
+            if keys.is_empty() {
+                return ok(HashMap::new()).boxify();
+            }
+            let mut bcs_ids = vec![];
+            let mut hg_cs_ids = vec![];
+            for key in keys {
+                match key {
+                    BonsaiOrHgChangesetId::Bonsai(bcs_id) => {
+                        bcs_ids.push(bcs_id);
                     }
-                    Err(()) => mapping
-                        .get(repo_id, cs)
-                        .inspect(move |res| {
-                            if let Some(cs_entry) = res {
-                                schedule_fill_mapping_memcache(
-                                    memcache,
-                                    keygen,
-                                    repo_id,
-                                    &cs,
-                                    cs_entry.clone(),
-                                )
+                    BonsaiOrHgChangesetId::Hg(hg_cs_id) => {
+                        hg_cs_ids.push(hg_cs_id);
+                    }
+                }
+            }
+
+            let bonsai_or_hg_csids = if from_bonsai {
+                assert!(hg_cs_ids.is_empty());
+                BonsaiOrHgChangesetIds::Bonsai(bcs_ids)
+            } else {
+                assert!(bcs_ids.is_empty());
+                BonsaiOrHgChangesetIds::Hg(hg_cs_ids)
+            };
+
+            mapping
+                .get(repo_id, bonsai_or_hg_csids)
+                .map(move |mapping_entries| {
+                    mapping_entries
+                        .into_iter()
+                        .map(|entry| {
+                            if from_bonsai {
+                                (BonsaiOrHgChangesetId::Bonsai(entry.bcs_id), entry)
+                            } else {
+                                (BonsaiOrHgChangesetId::Hg(entry.hg_cs_id), entry)
                             }
                         })
-                        .right_future(),
+                        .collect()
                 })
                 .boxify()
-        })
+        };
+
+        let params = GetOrFillMultipleFromCacheLayers {
+            repo_id,
+            get_cache_key: Arc::new(get_cache_key),
+            cachelib: self.cache_pool.clone().into(),
+            keygen: self.keygen.clone(),
+            memcache: self.memcache.clone(),
+            deserialize: Arc::new(memcache_deserialize),
+            serialize: Arc::new(memcache_serialize),
+            report_mc_result: Arc::new(report_mc_result),
+            get_from_db: Arc::new(get_from_db),
+        };
+
+        params
+            .run(keys)
+            .map(|map| map.into_iter().map(|(_, val)| val).collect())
+            .boxify()
     }
 }
 
-// Local error type to help with proper logging metrics
-enum ErrorKind {
-    // error came from calling memcache API
-    MemcacheInternal,
-    // value returned from memcache was None
-    Missing,
-    // deserialization of memcache data to Rust structures via thrift failed
-    Deserialization,
-}
-
-fn get_cache_key(repo_id: &RepositoryId, cs: &BonsaiOrHgChangesetId) -> String {
+fn get_cache_key(repo_id: RepositoryId, cs: &BonsaiOrHgChangesetId) -> String {
     format!("{}.{:?}", repo_id.prefix(), cs).to_string()
-}
-
-fn get_mc_key_for_mapping(
-    keygen: &KeyGen,
-    repo_id: &RepositoryId,
-    bonsai_or_hg: &BonsaiOrHgChangesetId,
-) -> String {
-    keygen.key(get_cache_key(repo_id, bonsai_or_hg))
-}
-
-fn get_mapping_from_memcache(
-    memcache: &MemcacheClient,
-    keygen: &KeyGen,
-    repo_id: &RepositoryId,
-    bonsai_or_hg: &BonsaiOrHgChangesetId,
-) -> impl Future<Item = BonsaiHgMappingEntry, Error = ()> {
-    memcache
-        .get(get_mc_key_for_mapping(keygen, repo_id, bonsai_or_hg))
-        .map_err(|()| ErrorKind::MemcacheInternal)
-        .and_then(|maybe_serialized| maybe_serialized.ok_or(ErrorKind::Missing))
-        .and_then(|serialized| {
-            let thrift_entry: ::std::result::Result<
-                thrift::BonsaiHgMappingEntry,
-                ErrorKind,
-            > = compact_protocol::deserialize(Vec::from(serialized))
-                .map_err(|_| ErrorKind::Deserialization);
-
-            let thrift_entry = thrift_entry.and_then(|entry| {
-                BonsaiHgMappingEntry::from_thrift(entry).map_err(|_| ErrorKind::Deserialization)
-            });
-            thrift_entry
-        })
-        .then(move |res| {
-            match res {
-                Ok(res) => {
-                    STATS::memcache_hit.add_value(1);
-                    return Ok(res);
-                }
-                Err(ErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
-                Err(ErrorKind::Missing) => STATS::memcache_miss.add_value(1),
-                Err(ErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
-            }
-            Err(())
-        })
-}
-
-fn schedule_fill_mapping_memcache(
-    memcache: MemcacheClient,
-    keygen: KeyGen,
-    repo_id: RepositoryId,
-    bonsai_or_hg: &BonsaiOrHgChangesetId,
-    mapping_entry: BonsaiHgMappingEntry,
-) {
-    let serialized = compact_protocol::serialize(&mapping_entry.into_thrift());
-
-    // Quite unlikely that single changeset id will be bigger than MEMCACHE_VALUE_MAX_SIZE
-    // It's probably not even worth logging it
-    if serialized.len() < MEMCACHE_VALUE_MAX_SIZE {
-        tokio::spawn(memcache.set(
-            get_mc_key_for_mapping(&keygen, &repo_id, &bonsai_or_hg),
-            serialized,
-        ));
-    }
 }
