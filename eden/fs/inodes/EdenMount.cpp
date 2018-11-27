@@ -268,7 +268,7 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         // to use dot-eden symlinks, so we need to resolve or create
         // its inode here
         return dotEdenInode->getOrLoadChild(kDotEdenSymlinkName)
-            .thenValue([=](const InodePtr& child) {})
+            .unit()
             .onError([=](const InodeError& /*err*/) {
               createDotEdenSymlink(dotEdenInode);
             })
