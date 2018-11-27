@@ -66,7 +66,7 @@ class InodeInfo:
         if not self.parents:
             if self.inode_number == overlay_mod.Overlay.ROOT_INODE_NUMBER:
                 return "/"
-            return "[unlinked]"
+            return f"[unlinked({self.inode_number})]"
 
         parent, child_entry = self.parents[0]
         if parent.inode_number == overlay_mod.Overlay.ROOT_INODE_NUMBER:
@@ -262,11 +262,36 @@ class OrphanInodes(Error):
             if not inode_list:
                 continue
             entries.append(f"Orphan {type} inodes")
-            for inode in self.orphan_directories:
+            for inode in inode_list:
                 mtime_str = _get_mtime_str(inode.mtime)
                 entries.append(f"  {inode.inode_number}{mtime_str}")
 
         return "\n".join(entries)
+
+    def repair(
+        self, log: logging.Logger, overlay: overlay_mod.Overlay, fsck_dir: Path
+    ) -> bool:
+        lost_n_found = fsck_dir / "lost+found"
+        lost_n_found.mkdir(exist_ok=True)
+        log.info(f"moving orphan inodes to {lost_n_found}")
+
+        for inode in self.orphan_directories:
+            log.info(
+                f"moving contents of orphan directory {inode.inode_number} "
+                f"to lost+found"
+            )
+            inode_lnf_path = lost_n_found / str(inode.inode_number)
+            overlay.extract_dir(inode.inode_number, inode_lnf_path, remove=True)
+
+        file_mode = stat.S_IFREG | 0o644
+        for inode in self.orphan_files:
+            log.info(f"moving orphan file {inode.inode_number} to lost+found")
+            inode_lnf_path = lost_n_found / str(inode.inode_number)
+            overlay.extract_file(
+                inode.inode_number, inode_lnf_path, file_mode, remove=True
+            )
+
+        return True
 
 
 class HardLinkedInode(Error):
@@ -429,9 +454,19 @@ class FilesystemChecker:
             mtime = stat_info.st_mtime
         return InodeInfo(inode_number, type, children, mtime, error)
 
-    def fix_errors(self, fsck_dir: Optional[Path] = None) -> None:
+    def fix_errors(self, fsck_dir: Optional[Path] = None) -> Optional[Path]:
+        """Fix errors found by a previous call to scan_for_errors().
+
+        Returns the path to the directory containing the fsck log and backups of
+        corrupted & orphan inodes.
+
+        Returns None if there were no errors to fix.
+        """
         if not self._overlay_locked:
             raise Exception("cannot repair errors without holding the overlay lock")
+
+        if not self.errors:
+            return None
 
         # Create a directory to store logs and any data backups we may
         # create while trying to perform repairs
@@ -478,6 +513,8 @@ class FilesystemChecker:
             ui_log.removeHandler(ui_handler)
             log.removeHandler(log_file_handler)
             log_file_handler.close()
+
+        return fsck_dir
 
     def _fix_error(self, fsck_dir: Path, log: logging.Logger, error: Error) -> bool:
         log.info(f"Processing error: {error}")

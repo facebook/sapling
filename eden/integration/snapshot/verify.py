@@ -13,8 +13,9 @@ import abc
 import collections.abc
 import os
 import stat as stat_mod
+import typing
 from pathlib import Path
-from typing import Dict, Iterator, List, TypeVar, Union
+from typing import Dict, Iterator, List, Optional, TypeVar, Union
 
 from eden.integration.lib import hgrepo
 
@@ -22,9 +23,19 @@ from eden.integration.lib import hgrepo
 _AnyPath = Union[Path, str]
 
 
+class _DefaultObject:
+    pass
+
+
+_DEFAULT_OBJECT: _DefaultObject = _DefaultObject()
+
+
 class ExpectedFileBase(metaclass=abc.ABCMeta):
-    def __init__(self, path: _AnyPath, perms: int, file_type: int) -> None:
+    def __init__(
+        self, path: _AnyPath, contents: bytes, perms: int, file_type: int
+    ) -> None:
         self.path: Path = Path(path)
+        self.contents: bytes = contents
         self.permissions: int = perms
         self.file_type: int = file_type
 
@@ -44,10 +55,10 @@ class ExpectedFileBase(metaclass=abc.ABCMeta):
                 f"found {found_file_type:#o}"
             )
         else:
-            self._verify_contents(verifier, path)
+            self.verify_contents(verifier, path)
 
     @abc.abstractmethod
-    def _verify_contents(self, verifier: "SnapshotVerifier", path: Path) -> None:
+    def verify_contents(self, verifier: "SnapshotVerifier", path: Path) -> None:
         pass
 
     def _error(self, msg: str) -> None:
@@ -56,10 +67,9 @@ class ExpectedFileBase(metaclass=abc.ABCMeta):
 
 class ExpectedFile(ExpectedFileBase):
     def __init__(self, path: _AnyPath, contents: bytes, perms: int = 0o644) -> None:
-        super().__init__(path, perms, stat_mod.S_IFREG)
-        self.contents = contents
+        super().__init__(path, contents, perms, stat_mod.S_IFREG)
 
-    def _verify_contents(self, verifier: "SnapshotVerifier", path: Path) -> None:
+    def verify_contents(self, verifier: "SnapshotVerifier", path: Path) -> None:
         with path.open("rb") as f:
             actual_contents = f.read()
         if actual_contents != self.contents:
@@ -72,10 +82,9 @@ class ExpectedFile(ExpectedFileBase):
 
 class ExpectedSymlink(ExpectedFileBase):
     def __init__(self, path: _AnyPath, contents: bytes, perms: int = 0o777) -> None:
-        super().__init__(path, perms, stat_mod.S_IFLNK)
-        self.contents = contents
+        super().__init__(path, contents, perms, stat_mod.S_IFLNK)
 
-    def _verify_contents(self, verifier: "SnapshotVerifier", path: Path) -> None:
+    def verify_contents(self, verifier: "SnapshotVerifier", path: Path) -> None:
         actual_contents = os.readlink(bytes(path))
         if actual_contents != self.contents:
             verifier.error(
@@ -87,9 +96,9 @@ class ExpectedSymlink(ExpectedFileBase):
 
 class ExpectedSocket(ExpectedFileBase):
     def __init__(self, path: _AnyPath, perms: int = 0o755) -> None:
-        super().__init__(path, perms, stat_mod.S_IFSOCK)
+        super().__init__(path, b"", perms, stat_mod.S_IFSOCK)
 
-    def _verify_contents(self, verifier: "SnapshotVerifier", path: Path) -> None:
+    def verify_contents(self, verifier: "SnapshotVerifier", path: Path) -> None:
         pass
 
 
@@ -127,6 +136,30 @@ class ExpectedFileSet(collections.abc.Mapping):
         else:
             return False
         return key in self._entries
+
+    @typing.overload
+    def pop(self, path: _AnyPath) -> ExpectedFileBase:
+        ...
+
+    @typing.overload  # noqa: F811
+    def pop(self, path: _AnyPath, default: ExpectedFileBase) -> ExpectedFileBase:
+        ...
+
+    @typing.overload  # noqa: F811
+    def pop(self, path: _AnyPath, default: None) -> Optional[ExpectedFileBase]:
+        ...
+
+    def pop(  # noqa: F811
+        self,
+        path: _AnyPath,
+        default: Union[ExpectedFileBase, None, _DefaultObject] = _DEFAULT_OBJECT,
+    ) -> Optional[ExpectedFileBase]:
+        key = Path(path)
+        if default is _DEFAULT_OBJECT:
+            return self._entries.pop(key)
+        else:
+            tmp = typing.cast(Optional[ExpectedFileBase], default)
+            return self._entries.pop(key, tmp)
 
     def add_file(
         self, path: _AnyPath, contents: bytes, perms: int = 0o644

@@ -297,8 +297,13 @@ class Overlay:
 
             parent_inode_number = entry.inodeNumber
 
-    def extract_file(self, inode_number: int, output_path: Path, mode: int) -> None:
+    def extract_file(
+        self, inode_number: int, output_path: Path, mode: int, remove: bool = False
+    ) -> None:
         """Copy the specified file inode out of the overlay.
+
+        If remove=True the data for this inode will be removed from the overlay after it
+        has been extracted.
         """
         with self.open_overlay_file(inode_number) as inf:
             header = self.read_header(inf)
@@ -308,6 +313,9 @@ class Overlay:
                     f"found unexpected type {header.type!r}"
                 )
 
+            output_path.parent.mkdir(  # pyre-ignore (T36816872)
+                parents=True, exist_ok=True
+            )
             file_type = stat.S_IFMT(mode)
             if file_type == stat.S_IFLNK:
                 contents = inf.read()
@@ -315,7 +323,11 @@ class Overlay:
             elif file_type == stat.S_IFREG:
                 with output_path.open("wb") as outf:
                     shutil.copyfileobj(inf, outf)  # type: ignore
-                    os.fchmod(outf.fileno(), mode & 0o7777)
+                    # Note: the file permissions bits are now stored in the inode table
+                    # rather than the overlay.  The mode bits in the overlay will
+                    # reflect the correct file type only.  Always extract orphan inodes
+                    # with permissions 0o600 (read+write to owner only).
+                    os.fchmod(outf.fileno(), 0o600)
             else:
                 # We don't copy out sockets, fifos, or other unusual file types.
                 # These shouldn't have any actual file contents anyway.
@@ -324,25 +336,54 @@ class Overlay:
                     f"unsupported file type {file_type:#o}"
                 )
 
-    def extract_dir(self, inode_number: int, output_path: Path) -> None:
+        path = Path(self.get_path(inode_number))
+        path.unlink()
+
+    def extract_dir(
+        self, inode_number: int, output_path: Path, remove: bool = False
+    ) -> None:
         """Recursively copy the specified directory inode out of the overlay.
 
         All of its materialized children will be copied out.  Children that still have
         the same contents as a committed source control object will not be copied out.
+
+        If remove=True the data for the extracted inodes will be removed from the
+        overlay after they have been extracted.
         """
         data = self.read_dir_inode(inode_number)
-        output_path.mkdir()
         for name, entry in data.entries.items():
-            if entry.hash:
-                # Skip non-materialized entries
+            overlay_path = Path(self.get_path(entry.inodeNumber))
+            if not overlay_path.exists():
+                # Skip children that do not exist in the overlay.
+                # Note that we explicitly check for existence of the child even if
+                # entry.hash is set (i.e., if the inode is not materialized):
+                #
+                # - Non-materialized directories can have data in the overlay if they
+                #   contain allocated inode numbers.  We still recurse into the
+                #   directory in this case.  This makes sure we remove the overlay files
+                #   when remove=True, and also ensures that we will find any
+                #   materialized file data inside this subdirectory if Eden crashed in
+                #   the middle of trying to materialize a file but before it marked the
+                #   parent directories materialized.
+                # - Even for files we can have the same race on crash: eden may have
+                #   crashed while materializing a file before it could mark the parent
+                #   directories materialized.  (In theory the file contents should still
+                #   be the same as the source control state in this case, but it seems
+                #   better to err on the safe side and extract it anyway.)
                 continue
 
             entry_output_path = output_path.joinpath(name)
             file_type = stat.S_IFMT(entry.mode)
             if file_type == stat.S_IFDIR:
-                self.extract_dir(entry.inodeNumber, entry_output_path)
+                self.extract_dir(entry.inodeNumber, entry_output_path, remove=remove)
             else:
-                self.extract_file(entry.inodeNumber, entry_output_path, entry.mode)
+                self.extract_file(
+                    entry.inodeNumber, entry_output_path, entry.mode, remove=remove
+                )
+
+        if remove:
+            path = Path(self.get_path(inode_number))
+            path.unlink()
 
     def write_empty_file(self, inode_number: int) -> None:
         self._write_inode(inode_number, OverlayHeader.TYPE_FILE, b"")
