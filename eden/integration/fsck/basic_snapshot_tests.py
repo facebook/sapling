@@ -12,6 +12,7 @@ import binascii
 import itertools
 import os
 import stat as stat_mod
+import struct
 import typing
 import unittest
 from pathlib import Path
@@ -131,6 +132,62 @@ class OrphanInodes(ExpectedError):
             return False
 
         return True
+
+
+class MissingNextInodeNumber(ExpectedError):
+    def __init__(self, next_inode_number: int) -> None:
+        super().__init__()
+        self.next_inode_number = next_inode_number
+
+    def __str__(self) -> str:
+        return f"MissingNextInodeNumber({self.next_inode_number})"
+
+    def is_match(self, error: fsck_mod.Error) -> bool:
+        if not isinstance(error, fsck_mod.MissingNextInodeNumber):
+            return False
+
+        return error.next_inode_number == self.next_inode_number
+
+
+class BadNextInodeNumber(ExpectedError):
+    def __init__(
+        self, read_next_inode_number: int, correct_next_inode_number: int
+    ) -> None:
+        super().__init__()
+        self.read_next_inode_number = read_next_inode_number
+        self.correct_next_inode_number = correct_next_inode_number
+
+    def __str__(self) -> str:
+        return (
+            "BadNextInodeNumber("
+            f"{self.read_next_inode_number}, "
+            f"{self.correct_next_inode_number}"
+            ")"
+        )
+
+    def is_match(self, error: fsck_mod.Error) -> bool:
+        if not isinstance(error, fsck_mod.BadNextInodeNumber):
+            return False
+
+        return (
+            error.read_next_inode_number == self.read_next_inode_number
+            and error.next_inode_number == self.correct_next_inode_number
+        )
+
+
+class CorruptNextInodeNumber(ExpectedError):
+    def __init__(self, next_inode_number: int) -> None:
+        super().__init__()
+        self.next_inode_number = next_inode_number
+
+    def __str__(self) -> str:
+        return f"CorruptNextInodeNumber({self.next_inode_number})"
+
+    def is_match(self, error: fsck_mod.Error) -> bool:
+        if not isinstance(error, fsck_mod.CorruptNextInodeNumber):
+            return False
+
+        return error.next_inode_number == self.next_inode_number
 
 
 class Test(unittest.TestCase, TemporaryDirectoryMixin):
@@ -400,6 +457,72 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
         self._run_fsck([])
         self._verify_contents(repaired_files)
         self._verify_orphans_extracted(log_dir, orphan_errors)
+
+    # The correct next inode number for this snapshot.
+    _next_inode_number = 58
+
+    def _compute_next_inode_data(self, inode_number: int) -> bytes:
+        return struct.pack("<Q", inode_number)
+
+    def test_missing_next_inode_number(self) -> None:
+        self._test_bad_next_inode_number(
+            None, MissingNextInodeNumber(self._next_inode_number)
+        )
+
+        # Start eden and verify the checkout looks correct.
+        # This is relatively slow, compared to running fsck itself, so we only do
+        # this on one of the next-inode-number test variants.
+        expected_files = self.snapshot.get_expected_files()
+        self._verify_contents(expected_files)
+
+    def test_incorrect_next_inode_number(self) -> None:
+        # Test replacing the next inode number file with a value too small by 0
+        self._test_bad_next_inode_number(
+            self._compute_next_inode_data(self._next_inode_number - 1),
+            BadNextInodeNumber(self._next_inode_number - 1, self._next_inode_number),
+        )
+
+        # Test replacing the next inode number file with a much smaller value
+        self._test_bad_next_inode_number(
+            self._compute_next_inode_data(10),
+            BadNextInodeNumber(10, self._next_inode_number),
+        )
+
+        # Replacing the next inode number file with a larger value should not
+        # be reported as an error.
+        next_inode_path = self._overlay_path() / "next-inode-number"
+        next_inode_path.write_bytes(self._compute_next_inode_data(12_345_678))
+        self._run_fsck([])
+
+    def test_corrupt_next_inode_number(self) -> None:
+        self._test_bad_next_inode_number(
+            b"abc", CorruptNextInodeNumber(self._next_inode_number)
+        )
+        self._test_bad_next_inode_number(
+            b"asdfasdfasdfasdfasdfasdfasdf",
+            CorruptNextInodeNumber(self._next_inode_number),
+        )
+
+    def _test_bad_next_inode_number(
+        self, next_inode_data: Optional[bytes], expected_error: ExpectedError
+    ) -> None:
+        next_inode_path = self._overlay_path() / "next-inode-number"
+
+        if next_inode_data is None:
+            next_inode_path.unlink()
+        else:
+            next_inode_path.write_bytes(next_inode_data)
+
+        log_dir = self._run_fsck([expected_error])
+        assert log_dir is not None
+
+        # Verify the contents of the next-inode-number file now
+        new_data = next_inode_path.read_bytes()
+        expected_data = self._compute_next_inode_data(self._next_inode_number)
+        self.assertEqual(new_data, expected_data)
+
+        # Verify that there are no more errors reported
+        self._run_fsck([])
 
     # TODO: replace untracked dir with file
     # TODO: replace untracked file with dir

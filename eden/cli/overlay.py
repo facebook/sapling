@@ -15,6 +15,7 @@ import os
 import shutil
 import stat
 import struct
+import tempfile
 import time
 import typing
 from pathlib import Path
@@ -154,6 +155,7 @@ class OverlayHeader:
 
 class Overlay:
     ROOT_INODE_NUMBER = 1
+    NEXT_INODE_NUMBER_PATH = "next-inode-number"
 
     def __init__(self, path: str) -> None:
         self.path = path
@@ -413,3 +415,37 @@ class Overlay:
         header_data = header.serialize()
         path = Path(self.get_path(inode_number))
         path.write_bytes(header_data + body)
+
+    def read_next_inode_number(self) -> Optional[int]:
+        file_path = os.path.join(self.path, self.NEXT_INODE_NUMBER_PATH)
+        try:
+            with open(file_path, "rb") as f:
+                data = f.read()
+        except FileNotFoundError:
+            return None
+
+        if len(data) != 8:
+            raise Exception(
+                f"invalid data in {self.NEXT_INODE_NUMBER_PATH} file: "
+                f"expected file to contain 8 bytes, but is {len(data)} "
+                f"bytes"
+            )
+        return struct.unpack("@Q", data)[0]
+
+    def write_next_inode_number(self, next_inode: int) -> None:
+        contents = struct.pack("@Q", next_inode)
+        file_path = os.path.join(self.path, self.NEXT_INODE_NUMBER_PATH)
+        fd, tmp_path = tempfile.mkstemp(
+            prefix=self.NEXT_INODE_NUMBER_PATH, dir=self.path
+        )
+        try:
+            os.write(fd, contents)
+            os.fdatasync(fd)
+            os.fchmod(fd, 0o644)
+            os.rename(tmp_path, file_path)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+            raise

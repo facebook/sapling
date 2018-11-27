@@ -300,6 +300,62 @@ class HardLinkedInode(Error):
         self.inode = inode
 
 
+class MissingNextInodeNumber(Error):
+    def __init__(self, next_inode_number: int) -> None:
+        super().__init__(ErrorLevel.WARNING)
+        self.next_inode_number = next_inode_number
+
+    def __str__(self) -> str:
+        # Eden deletes the next-inode-number while the checkout is mounted,
+        # so if it is missing it just means that the checkout wasn't cleanly unmounted.
+        # This is pretty common in situations where the user is running fsck...
+        return f"edenfs appears to have been shut down uncleanly"
+
+    def repair(
+        self, log: logging.Logger, overlay: overlay_mod.Overlay, fsck_dir: Path
+    ) -> bool:
+        log.info(f"setting max inode number data to {self.next_inode_number}")
+        overlay.write_next_inode_number(self.next_inode_number)
+        return True
+
+
+class BadNextInodeNumber(Error):
+    def __init__(self, read_next_inode_number: int, next_inode_number: int) -> None:
+        super().__init__(ErrorLevel.ERROR)
+        self.read_next_inode_number = read_next_inode_number
+        self.next_inode_number = next_inode_number
+
+    def __str__(self) -> str:
+        return (
+            f"bad stored next inode number: read {self.read_next_inode_number} "
+            f"but should be at least {self.next_inode_number}"
+        )
+
+    def repair(
+        self, log: logging.Logger, overlay: overlay_mod.Overlay, fsck_dir: Path
+    ) -> bool:
+        log.info(f"replacing max inode number data with {self.next_inode_number}")
+        overlay.write_next_inode_number(self.next_inode_number)
+        return True
+
+
+class CorruptNextInodeNumber(Error):
+    def __init__(self, ex: Exception, next_inode_number: int) -> None:
+        super().__init__(ErrorLevel.WARNING)
+        self.error = ex
+        self.next_inode_number = next_inode_number
+
+    def __str__(self) -> str:
+        return f"stored next-inode-number file is corrupt: {self.error}"
+
+    def repair(
+        self, log: logging.Logger, overlay: overlay_mod.Overlay, fsck_dir: Path
+    ) -> bool:
+        log.info(f"replacing max inode number data with {self.next_inode_number}")
+        overlay.write_next_inode_number(self.next_inode_number)
+        return True
+
+
 class FilesystemChecker:
     def __init__(self, checkout_state_dir: Path) -> None:
         self._state_dir = checkout_state_dir
@@ -308,6 +364,7 @@ class FilesystemChecker:
         self._overlay_locked: Optional[bool] = None
         self._overlay_lock: Optional[ContextManager[bool]] = None
         self._orphan_inodes: List[InodeInfo] = []
+        self._max_inode_number = 0
 
     def __enter__(self) -> "FilesystemChecker":
         self._overlay_lock = self.overlay.try_lock()
@@ -344,7 +401,25 @@ class FilesystemChecker:
         if self._orphan_inodes:
             self._add_error(OrphanInodes(self._orphan_inodes))
 
-        # TODO: Check that the stored max inode number is valid
+        expected_next_inode_number = self._max_inode_number + 1
+        try:
+            read_next_inode_number = self.overlay.read_next_inode_number()
+            if read_next_inode_number is None:
+                if self._overlay_locked:
+                    self._add_error(MissingNextInodeNumber(expected_next_inode_number))
+                else:
+                    # If we couldn't get the overlay lock then Eden is probably still
+                    # running, so it's normal that the max inode number file does not
+                    # exist.
+                    pass
+            elif read_next_inode_number < expected_next_inode_number:
+                self._add_error(
+                    BadNextInodeNumber(
+                        read_next_inode_number, expected_next_inode_number
+                    )
+                )
+        except Exception as ex:
+            self._add_error(CorruptNextInodeNumber(ex, expected_next_inode_number))
 
     def _read_inodes(self) -> Dict[int, InodeInfo]:
         inodes: Dict[int, InodeInfo] = {}
@@ -407,7 +482,12 @@ class FilesystemChecker:
             elif num_parents > 1:
                 self._add_error(HardLinkedInode(inode))
 
+    def _update_max_inode_number(self, inode_number: int) -> None:
+        if inode_number > self._max_inode_number:
+            self._max_inode_number = inode_number
+
     def _load_inode_info(self, inode_number: int) -> InodeInfo:
+        self._update_max_inode_number(inode_number)
         dir_data = None
         stat_info = None
         error = None
@@ -440,6 +520,8 @@ class FilesystemChecker:
 
         if dir_entries is not None:
             for name, entry in dir_entries.items():
+                if entry.inodeNumber:
+                    self._update_max_inode_number(entry.inodeNumber)
                 children.append(
                     ChildInfo(
                         inode_number=entry.inodeNumber or 0,
