@@ -850,6 +850,9 @@ def _checkomissions(ui, repo, lastsyncstate):
         if head not in repo:
             omittedheads.add(head)
     for name in lastomittedbookmarks:
+        # bookmark might be removed from cloud workspace by someone else
+        if name not in lastsyncstate.bookmarks:
+            continue
         node = lastsyncstate.bookmarks[name]
         if node in repo:
             changes.append((name, nodemod.bin(node)))

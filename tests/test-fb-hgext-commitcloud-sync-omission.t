@@ -586,3 +586,34 @@ A full sync puls the old commits in
   |/
   @  0: df4f53cec30a public 'base'
   
+Create a new client that isn't connected yet
+  $ cd ..
+  $ hg clone ssh://user@dummy/server client4 -q
+  $ cat shared.rc >> client4/.hg/hgrc
+
+A part sync omitting most of the things
+  $ cd ./client4
+  $ hgfakedate 1990-04-01T12:01Z cloud join
+  #commitcloud this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  * not found, omitting * bookmark (glob)
+  * not found, omitting * bookmark (glob)
+  * not found, omitting * bookmark (glob)
+  #commitcloud commits synchronized
+  $ tglogp
+  @  0: df4f53cec30a public 'base'
+  
+Remove some of the bookmarks
+  $ cd ../client1
+  $ hg book --delete newbook
+  $ hg book --delete oldbook
+  $ hg cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized
+
+Check that it doesn't break cloud sync
+  $ cd ../client4
+  $ hgfakedate 1990-04-01T12:01Z cloud sync
+  #commitcloud synchronizing 'server' with 'user/test/default'
+  #commitcloud commits synchronized
+
