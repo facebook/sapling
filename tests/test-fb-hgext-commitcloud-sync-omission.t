@@ -258,7 +258,7 @@ Second client can still sync
   
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
-  version: 5
+  version: 3
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
@@ -286,7 +286,7 @@ Add a new commit to a stack on the first client
   #commitcloud commits synchronized
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
-  version: 6
+  version: 4
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
@@ -327,7 +327,7 @@ Second client syncs that in, but still leaves the old commits missing
   
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
-  version: 7
+  version: 4
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
@@ -357,7 +357,7 @@ First client add a new commit to the old stack
   #commitcloud commits synchronized
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
-  version: 8
+  version: 5
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
@@ -403,7 +403,7 @@ Second client syncs the old stack in, and now has the bookmark
   o  0: df4f53cec30a public 'base'
   
   $ python $TESTTMP/dumpcommitcloudmetadata.py
-  version: 8
+  version: 5
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97

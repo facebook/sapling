@@ -575,8 +575,8 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             )
 
         if (
-            set(localheads) == set(lastsyncstate.heads)
-            and localbookmarks == lastsyncstate.bookmarks
+            set(localheads) == set(localsyncedheads)
+            and localbookmarks == localsyncedbookmarks
             and lastsyncstate.version != 0
             and not obsmarkers
         ):

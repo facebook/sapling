@@ -305,7 +305,7 @@ Put a bookmark on the new public commit
   ~
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
-  version: 4
+  version: 3
   bookmarks:
       foo => 5817a557f93f46ab290e8571c89624ff856130c0
   heads:
@@ -321,7 +321,7 @@ Put a bookmark on the new public commit
   ~
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
-  version: 4
+  version: 3
   bookmarks:
       foo => 5817a557f93f46ab290e8571c89624ff856130c0
   heads:
@@ -338,7 +338,7 @@ Put a bookmark on the new public commit
   ~
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
-  version: 4
+  version: 3
   bookmarks:
       foo => 5817a557f93f46ab290e8571c89624ff856130c0
   heads:
