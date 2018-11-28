@@ -246,7 +246,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
   if (rootOverlayDir) {
     // No hash is necessary because the root is always materialized.
     return TreeInodePtr::makeNew(
-        this, std::nullopt, std::move(*rootOverlayDir), std::nullopt);
+        this, std::move(*rootOverlayDir), std::nullopt);
   }
   return objectStore_->getTreeForCommit(parentCommits.parent1())
       .thenValue([this](std::shared_ptr<const Tree> tree) {

@@ -8,7 +8,6 @@
  *
  */
 #pragma once
-#include <folly/Function.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <atomic>
@@ -35,9 +34,9 @@ class InodeBase {
  public:
   /**
    * Constructor for the root TreeInode of an EdenMount.
-   * type is set to dtype_t::Dir
+   * type is set to dtype_t::Dir.
    */
-  InodeBase(EdenMount* mount, std::optional<InodeTimestamps> initialTimestamps);
+  explicit InodeBase(EdenMount* mount);
 
   /**
    * Constructor for all non-root inodes.
@@ -45,20 +44,7 @@ class InodeBase {
   InodeBase(
       InodeNumber ino,
       mode_t initialMode,
-      std::optional<InodeTimestamps> initialTimestamps,
-      TreeInodePtr parent,
-      PathComponentPiece name);
-
-  /**
-   * Constructor for all non-root inodes.
-   *
-   * initialTimestampsFn is called when the InodeMetadataTable's lock is held.
-   * Don't access the InodeMetadataTable from it.
-   */
-  InodeBase(
-      InodeNumber ino,
-      mode_t initialMode,
-      folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
+      const std::optional<InodeTimestamps>& initialTimestamps,
       TreeInodePtr parent,
       PathComponentPiece name);
 

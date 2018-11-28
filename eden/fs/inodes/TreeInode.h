@@ -102,19 +102,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       TreeInodePtr parent,
       PathComponentPiece name,
       mode_t initialMode,
-      folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
-      DirContents&& dir,
-      std::optional<Hash> treeHash);
-
-  /**
-   * Construct an inode that only has backing in the Overlay area.
-   */
-  TreeInode(
-      InodeNumber ino,
-      TreeInodePtr parent,
-      PathComponentPiece name,
-      mode_t initialMode,
-      std::optional<InodeTimestamps> initialTimestamps,
+      const std::optional<InodeTimestamps>& initialTimestamps,
       DirContents&& dir,
       std::optional<Hash> treeHash);
 
@@ -126,11 +114,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Construct the root inode from data saved in the overlay.
    */
-  TreeInode(
-      EdenMount* mount,
-      std::optional<InodeTimestamps> initialTimestamps,
-      DirContents&& dir,
-      std::optional<Hash> treeHash);
+  TreeInode(EdenMount* mount, DirContents&& dir, std::optional<Hash> treeHash);
 
   ~TreeInode() override;
 

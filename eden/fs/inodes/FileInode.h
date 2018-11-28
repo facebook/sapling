@@ -150,7 +150,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t initialMode,
-      InodeTimestamps initialTimestamps,
+      const InodeTimestamps& initialTimestamps,
       folly::File&& file);
 
   /**
@@ -163,7 +163,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t initialMode,
-      folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
+      const std::optional<InodeTimestamps>& initialTimestamps,
       const std::optional<Hash>& hash);
 
   /**
@@ -176,7 +176,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t initialMode,
-      InodeTimestamps initialTimestamps);
+      const InodeTimestamps& initialTimestamps);
 
   folly::Future<Dispatcher::Attr> getattr() override;
   folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;

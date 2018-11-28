@@ -146,20 +146,7 @@ TreeInode::TreeInode(
     TreeInodePtr parent,
     PathComponentPiece name,
     mode_t initialMode,
-    folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
-    DirContents&& dir,
-    std::optional<Hash> treeHash)
-    : Base(ino, initialMode, std::move(initialTimestampsFn), parent, name),
-      contents_(folly::in_place, std::move(dir), treeHash) {
-  DCHECK_NE(ino, kRootNodeId);
-}
-
-TreeInode::TreeInode(
-    InodeNumber ino,
-    TreeInodePtr parent,
-    PathComponentPiece name,
-    mode_t initialMode,
-    std::optional<InodeTimestamps> initialTimestamps,
+    const std::optional<InodeTimestamps>& initialTimestamps,
     DirContents&& dir,
     std::optional<Hash> treeHash)
     : Base(ino, initialMode, initialTimestamps, parent, name),
@@ -170,17 +157,14 @@ TreeInode::TreeInode(
 TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
     : TreeInode(
           mount,
-          std::nullopt,
           saveDirFromTree(kRootNodeId, tree.get(), mount),
           tree->getHash()) {}
 
 TreeInode::TreeInode(
     EdenMount* mount,
-    std::optional<InodeTimestamps> initialTimestamps,
     DirContents&& dir,
     std::optional<Hash> treeHash)
-    : Base(mount, initialTimestamps),
-      contents_(folly::in_place, std::move(dir), treeHash) {}
+    : Base(mount), contents_(folly::in_place, std::move(dir), treeHash) {}
 
 TreeInode::~TreeInode() {}
 
@@ -373,12 +357,7 @@ void TreeInode::loadUnlinkedChildInode(
 
     if (!S_ISDIR(mode)) {
       auto file = std::make_unique<FileInode>(
-          number,
-          inodePtrFromThis(),
-          name,
-          mode,
-          [&]() -> std::optional<InodeTimestamps> { return std::nullopt; },
-          hash);
+          number, inodePtrFromThis(), name, mode, std::nullopt, hash);
       promises = getInodeMap()->inodeLoadComplete(file.get());
       inodePtr = InodePtr::takeOwnership(std::move(file));
     } else {
@@ -601,7 +580,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         inodePtrFromThis(),
         name,
         entry.getInitialMode(),
-        [&]() -> std::optional<InodeTimestamps> { return std::nullopt; },
+        std::nullopt,
         entry.getOptionalHash());
   }
 

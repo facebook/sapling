@@ -508,7 +508,7 @@ std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t mode,
-    InodeTimestamps initialTimestamps,
+    const InodeTimestamps& initialTimestamps,
     folly::File&& file) {
   // The FileInode is in MATERIALIZED_IN_OVERLAY state.
   auto inode =
@@ -528,14 +528,9 @@ FileInode::FileInode(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t initialMode,
-    folly::Function<std::optional<InodeTimestamps>()> initialTimestampsFn,
+    const std::optional<InodeTimestamps>& initialTimestamps,
     const std::optional<Hash>& hash)
-    : Base(
-          ino,
-          initialMode,
-          std::move(initialTimestampsFn),
-          std::move(parentInode),
-          name),
+    : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
       state_(folly::in_place, hash) {}
 
 // The FileInode is in MATERIALIZED_IN_OVERLAY state.
@@ -544,7 +539,7 @@ FileInode::FileInode(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t initialMode,
-    InodeTimestamps initialTimestamps)
+    const InodeTimestamps& initialTimestamps)
     : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
       state_(folly::in_place) {}
 
