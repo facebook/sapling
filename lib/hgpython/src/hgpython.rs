@@ -7,16 +7,23 @@ use python::{py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_no
 
 use std;
 use std::ffi::{CString, OsStr, OsString};
-use std::path::{Path, PathBuf, MAIN_SEPARATOR};
+use std::path::{Path, PathBuf};
 
 /// A default name of the python script that this Rust binary will try to
 /// load when it decides to pass control to Python
 const HGPYENTRYPOINT_MOD: &str = "entrypoint";
 /// A path to the entrypoint module in the installation of Python/Mercurial
+#[cfg(target_family = "unix")]
 const ENTRYPOINT_IN_INSTALLATION: &str = "mercurial/entrypoint.py";
+#[cfg(target_family = "windows")]
+const ENTRYPOINT_IN_INSTALLATION: &str = "mercurial\\entrypoint.py";
+
 /// A default path to the zipped Python/Mercurial library for the
 /// embedded case
+#[cfg(target_family = "unix")]
 const EMBEDDED_LIBRARY: &str = "lib/library.zip";
+#[cfg(target_family = "windows")]
+const EMBEDDED_LIBRARY: &str = "lib\\library.zip";
 
 /// Embedded/wrapped Python struct
 /// # Rationale
@@ -101,9 +108,7 @@ impl HgPython {
     }
 
     fn entry_point_in_installation<P: AsRef<Path>>(installation: P) -> PathBuf {
-        installation
-            .as_ref()
-            .join(ENTRYPOINT_IN_INSTALLATION.replace("/", &MAIN_SEPARATOR.to_string()))
+        installation.as_ref().join(ENTRYPOINT_IN_INSTALLATION)
     }
 
     fn zip_in_installation<P: AsRef<Path>>(installation: P) -> PathBuf {
