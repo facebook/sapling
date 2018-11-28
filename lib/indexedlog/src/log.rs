@@ -308,7 +308,7 @@ impl Log {
     /// Look up an entry using the given index. The `index_id` is the index of
     /// `index_defs` passed to [Log::open].
     ///
-    /// Return an iterator of `Result<&[u8]>`.
+    /// Return an iterator of `Result<&[u8]>`, in reverse insertion order.
     pub fn lookup<K: AsRef<[u8]>>(&self, index_id: usize, key: K) -> io::Result<LogLookupIter> {
         self.maybe_return_index_error()?;
         if let Some(index) = self.indexes.get(index_id) {

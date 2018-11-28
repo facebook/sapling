@@ -29,34 +29,31 @@ py_module_initializer!(
 py_class!(class bookmarkstore |py| {
     data bm_store: RefCell<BookmarkStore>;
 
-    def __new__(_cls, path: Option<&PyBytes> = None) -> PyResult<bookmarkstore> {
-        let bm_store = match path {
-            Some(p) => {
-                let path = local_bytes_to_path(p.data(py)).map_err(|_| encoding_error(py, p))?;
+    def __new__(_cls, path: &PyBytes) -> PyResult<bookmarkstore> {
+        let bm_store = {
+            let path = local_bytes_to_path(path.data(py)).map_err(|_| encoding_error(py, path))?;
 
-                BookmarkStore::from_file(&path)
-                    .map_err(|e| PyErr::new::<exc::IOError, _>(py, format!("{}", e)))?
-            }
-            None => BookmarkStore::new(),
+            BookmarkStore::new(&path)
+                .map_err(|e| PyErr::new::<exc::IOError, _>(py, format!("{}", e)))?
         };
         bookmarkstore::create_instance(py, RefCell::new(bm_store))
     }
 
-    def add_bookmark(&self, bookmark: &str, node: PyBytes) -> PyResult<PyObject> {
+    def update(&self, bookmark: &str, node: PyBytes) -> PyResult<PyObject> {
         let mut bm_store = self.bm_store(py).borrow_mut();
         let node = Node::from_slice(node.data(py))
             .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
 
-        bm_store.add_bookmark(bookmark, node);
+        bm_store.update(bookmark, node)
+            .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
 
         Ok(py.None())
     }
 
-    def remove_bookmark(&self, bookmark: &str) -> PyResult<PyObject> {
+    def remove(&self, bookmark: &str) -> PyResult<PyObject> {
         let mut bm_store = self.bm_store(py).borrow_mut();
 
-        bm_store
-            .remove_bookmark(bookmark)
+        bm_store.remove(bookmark)
             .map_err(|e| PyErr::new::<exc::KeyError, _>(py, format!("{}", e)))?;
         Ok(py.None())
     }
@@ -75,7 +72,7 @@ py_class!(class bookmarkstore |py| {
         let node = Node::from_slice(node.data(py))
             .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
 
-        match bm_store.lookup_node(node) {
+        match bm_store.lookup_node(&node) {
             Some(bms) => {
                 let bms: Vec<_> = bms.iter()
                     .map(|bm| PyString::new(py, bm).into_object())
@@ -86,12 +83,10 @@ py_class!(class bookmarkstore |py| {
         }
     }
 
-    def flush(&self, path: &PyBytes) -> PyResult<PyObject> {
+    def flush(&self) -> PyResult<PyObject> {
         let mut bm_store = self.bm_store(py).borrow_mut();
-        let path = local_bytes_to_path(path.data(py)).map_err(|_| encoding_error(py, path))?;
-
         bm_store
-            .flush(&path)
+            .flush()
             .map_err(|e| PyErr::new::<exc::IOError, _>(py, format!("{}", e)))?;
         Ok(py.None())
     }

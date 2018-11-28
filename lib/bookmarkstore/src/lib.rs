@@ -9,151 +9,206 @@
 extern crate atomicwrites;
 #[macro_use]
 extern crate error_chain;
+extern crate indexedlog;
 #[cfg(test)]
 extern crate tempfile;
 extern crate types;
 
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::Path;
+use std::str;
 
-use atomicwrites::{AllowOverwrite, AtomicFile};
+use indexedlog::log::{IndexDef, IndexOutput, Log};
 use types::node::Node;
 
 pub mod errors;
 pub use errors::{Error, ErrorKind, Result};
 
-#[derive(Clone, Debug)]
 pub struct BookmarkStore {
-    bookmarks: HashMap<String, Node>,
-    nodes: HashMap<Node, Vec<String>>,
+    log: Log,
 }
 
 impl BookmarkStore {
-    pub fn new() -> Self {
-        Self {
-            bookmarks: HashMap::new(),
-            nodes: HashMap::new(),
-        }
+    pub fn new(dir_path: &Path) -> Result<Self> {
+        // Log entry encoding:
+        //   LOG := UPDATE | REMOVAL
+        //   UPDATE := 'U' + NODE_ID + BOOKMARK_NAME
+        //   REMOVAL := 'R' + BOOKMARK_NAME
+        //   NODE_ID := fixed-length 20-byte node id
+        //   BOOKMARK_NAME := variable-length bookmark name
+        // On update or deletion, a new entry is appended.
+        // * To lookup a bookmark, find the last entry with the bookmark.
+        // * To lookup a node, find all entries with the node id. This gives a list of candidate
+        //   bookmarks. For each candidate bookmark, lookup the bookmark (following the procedure
+        //   of the previous bullet point) and check whether it is currently associated with
+        //   the node.
+
+        let lag_threshold = 100;
+        Ok(Self {
+            log: Log::open(
+                dir_path,
+                vec![
+                    IndexDef {
+                        func: Box::new(|data: &[u8]| match data[0] {
+                            b'R' => vec![IndexOutput::Reference(1u64..data.len() as u64)],
+                            b'U' => vec![
+                                IndexOutput::Reference((Node::len() + 1) as u64..data.len() as u64),
+                            ],
+                            c => panic!("invalid BookmarkEntry type '{}'", c),
+                        }),
+                        name: "bookmark",
+                        lag_threshold,
+                    },
+                    IndexDef {
+                        func: Box::new(|data: &[u8]| match data[0] {
+                            b'R' => vec![],
+                            b'U' => vec![IndexOutput::Reference(1u64..(Node::len() + 1) as u64)],
+                            c => panic!("invalid BookmarkEntry type '{}'", c),
+                        }),
+                        name: "node",
+                        lag_threshold,
+                    },
+                ],
+            )?,
+        })
     }
 
-    pub fn from_file(file_path: &Path) -> Result<Self> {
-        let mut bs = Self::new();
-        bs.load_bookmarks(file_path)?;
-        Ok(bs)
+    pub fn lookup_bookmark(&self, bookmark: &str) -> Option<Node> {
+        let mut iter = self.log.lookup(0, bookmark).unwrap();
+        iter.next().and_then(|data| {
+            let data = data.unwrap();
+            match BookmarkEntry::unpack(data) {
+                BookmarkEntry::Remove {
+                    bookmark: found_bookmark,
+                } => {
+                    assert_eq!(found_bookmark, bookmark);
+                    None
+                }
+                BookmarkEntry::Update {
+                    bookmark: found_bookmark,
+                    node,
+                } => {
+                    assert_eq!(found_bookmark, bookmark);
+                    Some(node)
+                }
+            }
+        })
     }
 
-    fn load_bookmarks(&mut self, file_path: &Path) -> Result<()> {
-        let mut bookmark_file = File::open(file_path)?;
-        let mut file_contents = String::new();
-        let mut line_num = 0;
+    pub fn lookup_node(&self, node: &Node) -> Option<Vec<String>> {
+        let iter = self.log.lookup(1, &node).unwrap();
+        let result = iter.filter_map(|data| {
+            let data = data.unwrap();
 
-        bookmark_file.read_to_string(&mut file_contents)?;
-
-        for line in file_contents.lines() {
-            let line_chunks: Vec<_> = line.splitn(2, ' ').collect();
-            line_num += 1;
-
-            if line_chunks.len() == 2 {
-                let bookmark = line_chunks[1].to_string();
-
-                match Node::from_str(line_chunks[0]) {
-                    Ok(node) => {
-                        self.bookmarks.insert(bookmark.clone(), node);
-                        self.nodes
-                            .entry(node)
-                            .and_modify(|v| v.push(bookmark.clone()))
-                            .or_insert_with(|| vec![bookmark.clone()]);
-                    }
-                    Err(_) => {
-                        bail!(ErrorKind::MalformedBookmarkFile(line_num, line.to_string()));
+            match BookmarkEntry::unpack(data) {
+                BookmarkEntry::Remove { bookmark: _ } => {
+                    panic!("unreachable code");
+                }
+                BookmarkEntry::Update {
+                    bookmark,
+                    node: found_node,
+                } => {
+                    assert_eq!(&found_node, node);
+                    let latest_node = self.lookup_bookmark(bookmark);
+                    match latest_node {
+                        Some(latest_node) if &latest_node == node => Some(String::from(bookmark)),
+                        Some(_) => None, // bookmark still present, but points to another node
+                        None => None,    // bookmark has been removed
                     }
                 }
-            } else {
-                bail!(ErrorKind::MalformedBookmarkFile(line_num, line.to_string()));
+            }
+        }).collect::<Vec<_>>();
+        if result.is_empty() {
+            None
+        } else {
+            Some(result)
+        }
+    }
+
+    pub fn update(&mut self, bookmark: &str, node: Node) -> Result<()> {
+        Ok(self.log
+            .append(BookmarkEntry::pack(&BookmarkEntry::Update {
+                bookmark,
+                node,
+            }))?)
+    }
+
+    pub fn remove(&mut self, bookmark: &str) -> Result<()> {
+        if self.lookup_bookmark(bookmark).is_none() {
+            bail!(ErrorKind::BookmarkNotFound(bookmark.to_string()));
+        }
+        Ok(self.log
+            .append(BookmarkEntry::pack(&BookmarkEntry::Remove { bookmark }))?)
+    }
+
+    pub fn flush(&mut self) -> Result<()> {
+        Ok(self.log.flush()?)
+    }
+}
+
+enum BookmarkEntry<'a> {
+    Update { bookmark: &'a str, node: Node },
+    Remove { bookmark: &'a str },
+}
+
+impl<'a> BookmarkEntry<'a> {
+    fn pack(bookmark_entry: &BookmarkEntry) -> Vec<u8> {
+        let mut result = Vec::new();
+        match bookmark_entry {
+            BookmarkEntry::Remove { bookmark } => {
+                result.write_all(&['R' as u8]).unwrap();
+                result.write_all(bookmark.as_bytes()).unwrap();
+            }
+            BookmarkEntry::Update { bookmark, node } => {
+                result.write_all(&['U' as u8]).unwrap();
+                result.write_all(node.as_ref()).unwrap();
+                result.write_all(bookmark.as_bytes()).unwrap();
             }
         }
-
-        Ok(())
+        result
     }
 
-    pub fn lookup_bookmark<S: AsRef<str>>(&self, bookmark: S) -> Option<&Node> {
-        self.bookmarks.get(bookmark.as_ref())
-    }
-
-    pub fn lookup_node(&self, node: Node) -> Option<&Vec<String>> {
-        self.nodes.get(&node)
-    }
-
-    pub fn add_bookmark<S: AsRef<str>>(&mut self, bookmark: S, node: Node) {
-        let bookmark = bookmark.as_ref();
-
-        if let Some(node) = self.bookmarks.get(bookmark).cloned() {
-            self.remove_node_to_bookmark_mapping(bookmark, &node);
-        };
-
-        self.bookmarks.insert(bookmark.to_string(), node);
-        self.nodes
-            .entry(node)
-            .and_modify(|v| v.push(bookmark.to_string()))
-            .or_insert_with(|| vec![bookmark.to_string()]);
-    }
-
-    fn remove_node_to_bookmark_mapping<S: AsRef<str>>(&mut self, bookmark: S, node: &Node) {
-        let num_bookmarks = {
-            let bm_vec = self.nodes.get_mut(node).unwrap();
-            bm_vec.retain(|b| b != bookmark.as_ref());
-            bm_vec.len()
-        };
-
-        if num_bookmarks == 0 {
-            self.nodes.remove(node);
+    fn unpack(data: &[u8]) -> BookmarkEntry {
+        match data[0] {
+            b'R' => {
+                let bookmark = str::from_utf8(&data[1..]).unwrap();
+                BookmarkEntry::Remove { bookmark }
+            }
+            b'U' => {
+                let bookmark = str::from_utf8(&data[Node::len() + 1..]).unwrap();
+                let node = Node::from_slice(&data[1..Node::len() + 1]).unwrap();
+                BookmarkEntry::Update { bookmark, node }
+            }
+            c => panic!("invalid BookmarkEntry type '{}'", c),
         }
-    }
-
-    pub fn remove_bookmark<S: AsRef<str>>(&mut self, bookmark: S) -> Result<()> {
-        let node = match self.lookup_bookmark(bookmark.as_ref()) {
-            Some(node) => node.clone(),
-            None => bail!(ErrorKind::BookmarkNotFound(bookmark.as_ref().to_string())),
-        };
-
-        self.bookmarks.remove(bookmark.as_ref());
-        self.remove_node_to_bookmark_mapping(bookmark.as_ref(), &node);
-
-        Ok(())
-    }
-
-    pub fn flush(&mut self, file_path: &Path) -> Result<()> {
-        let lines: Vec<_> = self.bookmarks
-            .iter()
-            .map(|(b, n)| format!("{} {}", n, b))
-            .collect();
-
-        AtomicFile::new(file_path, AllowOverwrite)
-            .write(|f| f.write_all(lines.join("\n").as_bytes()))?;
-
-        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
+    use std::collections::HashSet;
+    use std::iter::FromIterator;
+    use tempfile::TempDir;
+
+    fn new_indexed_log_bookmark_store() -> (BookmarkStore, TempDir) {
+        let dir = TempDir::new().expect("tempdir");
+        let bm_store = BookmarkStore::new(dir.path()).unwrap();
+        (bm_store, dir)
+    }
 
     #[test]
-    fn test_add_bookmark() {
+    fn test_update() {
         let bookmark = "test";
-        let node = Node::default();
+        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
 
-        let mut bm_store = BookmarkStore::new();
+        let (mut bm_store, _) = new_indexed_log_bookmark_store();
 
-        bm_store.add_bookmark(&bookmark, node);
-        assert_eq!(bm_store.lookup_bookmark(&bookmark).unwrap(), &node);
+        bm_store.update(&bookmark, node).unwrap();
+        assert_eq!(bm_store.lookup_bookmark(&bookmark).unwrap(), node);
         assert_eq!(
-            bm_store.lookup_node(node),
-            Some(&vec![bookmark.to_string()])
+            bm_store.lookup_node(&node),
+            Some(vec![bookmark.to_string()])
         );
     }
 
@@ -162,38 +217,44 @@ mod tests {
         let bookmark = "test";
         let bookmark2 = "test2";
         let bookmark3 = "test3";
-        let node = Node::default();
+        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
 
-        let mut bm_store = BookmarkStore::new();
+        let (mut bm_store, _) = new_indexed_log_bookmark_store();
 
-        bm_store.add_bookmark(bookmark, node);
-        bm_store.add_bookmark(bookmark2, node);
-        bm_store.add_bookmark(bookmark3, node);
+        bm_store.update(bookmark, node).unwrap();
+        bm_store.update(bookmark2, node).unwrap();
+        bm_store.update(bookmark3, node).unwrap();
 
-        assert_eq!(bm_store.lookup_bookmark(bookmark), Some(&node));
-        assert_eq!(bm_store.lookup_bookmark(bookmark2), Some(&node));
-        assert_eq!(bm_store.lookup_bookmark(bookmark3), Some(&node));
-        assert_eq!(bm_store.lookup_node(node).unwrap().len(), 3);
+        assert_eq!(bm_store.lookup_bookmark(bookmark), Some(node));
+        assert_eq!(bm_store.lookup_bookmark(bookmark2), Some(node));
+        assert_eq!(bm_store.lookup_bookmark(bookmark3), Some(node));
+        let actual: HashSet<_> = HashSet::from_iter(bm_store.lookup_node(&node).unwrap());
+        let expected = HashSet::from_iter(vec![
+            String::from(bookmark),
+            String::from(bookmark2),
+            String::from(bookmark3),
+        ]);
+        assert_eq!(actual, expected);
     }
 
     #[test]
-    fn test_remove_bookmark() {
+    fn test_remove() {
         let bookmark = "test";
-        let node = Node::default();
+        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
 
-        let mut bm_store = BookmarkStore::new();
+        let (mut bm_store, _) = new_indexed_log_bookmark_store();
 
-        bm_store.add_bookmark(bookmark, node);
-        bm_store.remove_bookmark(bookmark).unwrap();
+        bm_store.update(bookmark, node).unwrap();
+        bm_store.remove(bookmark).unwrap();
         assert_eq!(bm_store.lookup_bookmark(bookmark), None);
-        assert_eq!(bm_store.lookup_node(node), None);
+        assert_eq!(bm_store.lookup_node(&node), None);
     }
 
     #[test]
     fn test_remove_non_existent_bookmark() {
-        let mut bm_store = BookmarkStore::new();
+        let (mut bm_store, _) = new_indexed_log_bookmark_store();
 
-        let ret = bm_store.remove_bookmark("missing");
+        let ret = bm_store.remove("missing");
         assert_eq!(
             format!("{}", ret.unwrap_err()),
             "bookmark not found: missing"
@@ -203,76 +264,31 @@ mod tests {
     #[test]
     fn test_update_bookmark() {
         let bookmark = "test";
-        let node = Node::default();
+        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
         let node2 = Node::from(&[1u8; 20]);
 
-        let mut bm_store = BookmarkStore::new();
+        let (mut bm_store, _) = new_indexed_log_bookmark_store();
 
-        bm_store.add_bookmark(bookmark, node);
-        bm_store.add_bookmark(bookmark, node2);
+        bm_store.update(bookmark, node).unwrap();
+        bm_store.update(bookmark, node2).unwrap();
 
-        assert_eq!(bm_store.lookup_bookmark(bookmark), Some(&node2));
-    }
-
-    #[test]
-    fn test_load_malformed_bookmark_file() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(b"malformed test-bookmark malformed")
-            .unwrap();
-        let path = file.path();
-
-        let bm_store = BookmarkStore::from_file(path);
-        assert_eq!(
-            format!("{}", bm_store.unwrap_err()),
-            "malformed bookmark file at line 1: malformed test-bookmark malformed"
-        );
-    }
-
-    #[test]
-    fn test_load_bookmarks_from_file() {
-        let mut file = NamedTempFile::new().unwrap();
-        let bm_str_prefix = "123456781234567812345678123456781234";
-        let mut contents = String::new();
-        contents.push_str(&format!("{}0000 test-bookmark\n", bm_str_prefix));
-        contents.push_str(&format!("{}0000 test-dupl\n", bm_str_prefix));
-        contents.push_str(&format!("{}1111 test bookmark spaces\n", bm_str_prefix));
-
-        file.write_all(contents.as_bytes()).unwrap();
-        let path = file.path();
-
-        let bm_store = BookmarkStore::from_file(path).unwrap();
-        assert_eq!(
-            bm_store.lookup_bookmark("test-dupl"),
-            Some(&Node::from_str(&format!("{}0000", bm_str_prefix)).unwrap())
-        );
-        assert_eq!(
-            bm_store.lookup_bookmark("test-bookmark"),
-            Some(&Node::from_str(&format!("{}0000", bm_str_prefix)).unwrap())
-        );
-        assert_eq!(
-            bm_store.lookup_bookmark("test bookmark spaces"),
-            Some(&Node::from_str(&format!("{}1111", bm_str_prefix)).unwrap())
-        );
+        assert_eq!(bm_store.lookup_bookmark(bookmark), Some(node2));
     }
 
     #[test]
     fn test_write_bookmarks_to_file() {
-        let file = NamedTempFile::new().unwrap();
-        let bookmark = "test";
-        let node = Node::default();
-        let mut s = String::new();
-        let output = "0000000000000000000000000000000000000000 test";
+        let bookmark = "testbookmark";
+        let node = Node::from_str("0123456789012345678901234567890123456789").unwrap();
 
-        let mut bm_store = BookmarkStore::from_file(file.path()).unwrap();
-        bm_store.add_bookmark(bookmark, node);
+        let (mut original_bm_store, dir) = new_indexed_log_bookmark_store();
+        original_bm_store.update(bookmark, node).unwrap();
+        original_bm_store.flush().unwrap();
 
-        bm_store.flush(file.path()).unwrap();
-        // As the file is replaced atomically, we need to open a new handle to the file.
-        File::open(file.path())
-            .unwrap()
-            .read_to_string(&mut s)
-            .unwrap();
-
-        assert_eq!(s, output);
+        let bm_store = BookmarkStore::new(dir.path()).unwrap();
+        assert_eq!(
+            bm_store.lookup_node(&node),
+            Some(vec![String::from(bookmark)])
+        );
+        assert_eq!(bm_store.lookup_bookmark(bookmark), Some(node));
     }
 }

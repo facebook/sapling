@@ -1,12 +1,13 @@
 [package]
 name = "bookmarkstore"
 version = "0.1.0"
-authors = ["harveyhunt"]
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 
 [dependencies]
 atomicwrites = "0.2.2"
 error-chain = "*"
 types = { path = "../types" }
+indexedlog = { path = "../indexedlog" }
 
 [dev-dependencies]
 tempfile = "3.0.4"
