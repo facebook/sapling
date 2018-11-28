@@ -57,6 +57,54 @@ class TemporarySystemdUserServiceManagerTest(
         )
 
 
+class TemporarySystemdUserServiceManagerIsolationTest(
+    unittest.TestCase, SystemdUserServiceManagerMixin
+):
+    def test_services_with_same_name_by_different_managers_are_independent(
+        self
+    ) -> None:
+        systemd_1 = self.make_temporary_systemd_user_service_manager()
+        systemd_2 = self.make_temporary_systemd_user_service_manager()
+        unit_name = "isolation_test.service"
+        service_1 = systemd_1.systemd_run(
+            command=["/bin/sleep", "10"],
+            properties={"RemainAfterExit": "yes"},
+            extra_env={},
+            unit_name=unit_name,
+        )
+        service_2 = systemd_2.systemd_run(
+            command=["/bin/sleep", "10"],
+            properties={"RemainAfterExit": "yes"},
+            extra_env={},
+            unit_name=unit_name,
+        )
+        service_1.stop()
+        self.assertEqual(
+            (service_2.query_active_state(), service_2.query_sub_state()),
+            ("active", "running"),
+            "Stopping systemd_1's service should not stop systemd_2's service",
+        )
+
+    def test_manager_cannot_see_services_of_different_manager(self) -> None:
+        systemd_1 = self.make_temporary_systemd_user_service_manager()
+        systemd_2 = self.make_temporary_systemd_user_service_manager()
+        service = systemd_1.systemd_run(
+            command=["/bin/sleep", "10"],
+            properties={"RemainAfterExit": "yes"},
+            extra_env={},
+        )
+        self.assertIn(
+            service.unit_name,
+            systemd_1.get_active_unit_names(),
+            "systemd_1 should see its own unit",
+        )
+        self.assertNotIn(
+            service.unit_name,
+            systemd_2.get_active_unit_names(),
+            "systemd_2 should not see systemd_1's unit",
+        )
+
+
 class SystemdServiceTest(
     unittest.TestCase, TemporaryDirectoryMixin, SystemdUserServiceManagerMixin
 ):

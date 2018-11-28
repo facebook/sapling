@@ -107,12 +107,15 @@ class SystemdUserServiceManager:
         command: typing.Sequence[str],
         properties: typing.Mapping[str, str],
         extra_env: typing.Mapping[str, str],
+        unit_name: typing.Optional[SystemdUnitName] = None,
     ) -> "SystemdService":
         systemd_run_command = ["systemd-run", "--user"]
         for name, value in properties.items():
             systemd_run_command.extend(("--property", f"{name}={value}"))
         for name, value in extra_env.items():
             systemd_run_command.extend(("--setenv", f"{name}={value}"))
+        if unit_name is not None:
+            systemd_run_command.extend(("--unit", unit_name))
         systemd_run_command.append("--")
         systemd_run_command.extend(command)
 
@@ -405,6 +408,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
         self.__cleanups = contextlib.ExitStack()
 
     def start_systemd_process(self) -> subprocess.Popen:
+        cgroup = self.create_cgroup()
         env = dict(os.environ)
         env["XDG_RUNTIME_DIR"] = str(self.__xdg_runtime_dir)
         # HACK(strager): Work around 'systemd --user' refusing to start if the
@@ -423,6 +427,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
             ],
             stdin=subprocess.DEVNULL,
             env=env,
+            preexec_fn=lambda: cgroup.add_current_process(),
         )
         self.__cleanups.callback(lambda: self.stop_systemd_process(process))
         return process
@@ -440,6 +445,15 @@ class _TransientUnmanagedSystemdUserServiceManager:
         )
         systemd_process.kill()
         systemd_process.wait(timeout=3)
+
+    def create_cgroup(self) -> LinuxCgroup:
+        parent_cgroup = LinuxCgroup.from_current_process()
+        path = tempfile.mkdtemp(
+            prefix="edenfs_test.", dir=str(parent_cgroup.sys_fs_cgroup_path)
+        )
+        cgroup = LinuxCgroup.from_sys_fs_cgroup_path(pathlib.PosixPath(path))
+        self.__cleanups.callback(lambda: cgroup.delete_recursive())
+        return cgroup
 
     def wait_until_systemd_is_alive(
         self,
