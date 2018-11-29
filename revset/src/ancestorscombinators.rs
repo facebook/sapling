@@ -36,7 +36,7 @@ use futures_ext::{BoxFuture, FutureExt, SelectAll, StreamExt};
 use blobrepo::ChangesetFetcher;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier, SkiplistIndex};
+use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier};
 
 use BonsaiNodeStream;
 use UniqueHeap;
@@ -141,20 +141,23 @@ fn make_pending(
 impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new(
         changeset_fetcher: &Arc<ChangesetFetcher>,
+        lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
         hash: ChangesetId,
     ) -> Box<BonsaiNodeStream> {
-        Self::new_with_excludes(changeset_fetcher, vec![hash], vec![])
+        Self::new_with_excludes(changeset_fetcher, lca_hint_index, vec![hash], vec![])
     }
 
     pub fn new_union(
         changeset_fetcher: &Arc<ChangesetFetcher>,
+        lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
         hashes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
-        Self::new_with_excludes(changeset_fetcher, hashes, vec![])
+        Self::new_with_excludes(changeset_fetcher, lca_hint_index, hashes, vec![])
     }
 
     pub fn new_with_excludes(
         changeset_fetcher: &Arc<ChangesetFetcher>,
+        lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
         hashes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
@@ -189,7 +192,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
                     Self {
                         changeset_fetcher: changeset_fetcher.clone(),
-                        lca_hint_index: Arc::new(SkiplistIndex::new()),
+                        lca_hint_index,
                         next_generation,
                         // Start with a fake state - maximum generation number and no entries
                         // for it (see drain below)
@@ -341,6 +344,7 @@ mod test {
     use async_unit;
     use fixtures::linear;
     use fixtures::merge_uneven;
+    use reachabilityindex::SkiplistIndex;
     use tests::{assert_changesets_sequence, string_to_bonsai, TestChangesetFetcher};
 
     #[test]
@@ -350,9 +354,11 @@ mod test {
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let stream =
-                DifferenceOfUnionsOfAncestorsNodeStream::new_union(&changeset_fetcher, vec![])
-                    .boxify();
+            let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
+                &changeset_fetcher,
+                Arc::new(SkiplistIndex::new()),
+                vec![],
+            ).boxify();
 
             assert_changesets_sequence(&repo, vec![], stream);
 
@@ -362,6 +368,7 @@ mod test {
 
             let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &changeset_fetcher,
+                Arc::new(SkiplistIndex::new()),
                 vec![],
                 excludes,
             ).boxify();
@@ -379,6 +386,7 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &changeset_fetcher,
+                Arc::new(SkiplistIndex::new()),
                 vec![
                     string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 ],
@@ -406,6 +414,7 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &changeset_fetcher,
+                Arc::new(SkiplistIndex::new()),
                 vec![
                     string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
                 ],
@@ -427,6 +436,7 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
                 &changeset_fetcher,
+                Arc::new(SkiplistIndex::new()),
                 vec![
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
                     string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
@@ -460,6 +470,7 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &changeset_fetcher,
+                Arc::new(SkiplistIndex::new()),
                 vec![
                     string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                 ],
@@ -490,6 +501,7 @@ mod test {
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 &changeset_fetcher,
+                Arc::new(SkiplistIndex::new()),
                 vec![
                     string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                 ],

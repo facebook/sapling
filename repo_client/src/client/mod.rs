@@ -35,6 +35,7 @@ use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, Combinat
                                       DeletedPruner, EntryStatus, FilePruner, Pruner,
                                       VisitedPruner};
 use rand;
+use reachabilityindex::LeastCommonAncestorsHint;
 use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde_json;
@@ -166,6 +167,7 @@ pub struct RepoClient {
     // Percent of returned entries (filelogs, manifests, changesets) which content
     // will be hash validated
     hash_validation_percentage: usize,
+    lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -252,11 +254,13 @@ impl RepoClient {
         repo: MononokeRepo,
         ctxt: CoreContext<Uuid>,
         hash_validation_percentage: usize,
+        lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
     ) -> Self {
         RepoClient {
             repo,
             ctxt,
             hash_validation_percentage,
+            lca_hint,
         }
     }
 
@@ -294,6 +298,7 @@ impl RepoClient {
                 .into_iter()
                 .map(|head| HgChangesetId::new(head))
                 .collect(),
+            self.lca_hint.clone(),
         )?;
         bundle2_parts.push(cg_part_builder);
 
@@ -721,6 +726,7 @@ impl HgCommands for RepoClient {
             heads,
             stream,
             hook_manager,
+            self.lca_hint.clone(),
         );
 
         res.traced(self.trace(), ops::UNBUNDLE, trace_args!())

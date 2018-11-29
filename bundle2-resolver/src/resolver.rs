@@ -29,6 +29,7 @@ use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath,
 use metaconfig::PushrebaseParams;
 use mononoke_types::ChangesetId;
 use pushrebase;
+use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use stats::*;
@@ -57,6 +58,7 @@ pub fn resolve(
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
     hook_manager: Arc<HookManager>,
+    lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
 ) -> BoxFuture<Bytes, Error> {
     let resolver = Bundle2Resolver::new(repo, logger, scuba_logger, pushrebase, hook_manager);
 
@@ -65,7 +67,7 @@ pub fn resolve(
     resolver
         .maybe_resolve_commonheads(bundle2)
         .and_then(move |(commonheads, bundle2)| match commonheads {
-            Some(commonheads) => resolve_pushrebase(commonheads, resolver, bundle2),
+            Some(commonheads) => resolve_pushrebase(commonheads, resolver, bundle2, lca_hint),
             None => resolve_push(resolver, bundle2),
         })
         .boxify()
@@ -190,13 +192,17 @@ fn resolve_pushrebase(
     commonheads: CommonHeads,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
+    lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
         .maybe_resolve_pushvars(bundle2)
         .and_then({
             cloned!(resolver);
-            move |(maybe_pushvars, bundle2)| resolver.resolve_b2xtreegroup2(bundle2)
-                .map(move |(manifests, bundle2)| (manifests, maybe_pushvars, bundle2))
+            move |(maybe_pushvars, bundle2)| {
+                resolver
+                    .resolve_b2xtreegroup2(bundle2)
+                    .map(move |(manifests, bundle2)| (manifests, maybe_pushvars, bundle2))
+            }
         })
         .and_then({
             cloned!(resolver);
@@ -212,8 +218,8 @@ fn resolve_pushrebase(
                 .into_future()
                 .map(move |cg_push| (cg_push, manifests, maybe_pushvars, bundle2))
         })
-        .and_then(
-            |(cg_push, manifests, maybe_pushvars, bundle2)| match cg_push.mparams.get("onto").cloned() {
+        .and_then(|(cg_push, manifests, maybe_pushvars, bundle2)| {
+            match cg_push.mparams.get("onto").cloned() {
                 Some(onto_bookmark) => {
                     let v = Vec::from(onto_bookmark.as_ref());
                     let onto_bookmark = String::from_utf8(v)?;
@@ -222,8 +228,8 @@ fn resolve_pushrebase(
                     Ok((onto_bookmark, cg_push, manifests, maybe_pushvars, bundle2))
                 }
                 None => Err(err_msg("onto is not specified")),
-            },
-        )
+            }
+        })
         .and_then({
             cloned!(resolver);
             move |(onto, cg_push, manifests, maybe_pushvars, bundle2)| {
@@ -261,27 +267,28 @@ fn resolve_pushrebase(
             move |(changesets, bookmark_pushes, maybe_pushvars, onto)| {
                 resolver
                     .run_hooks(changesets.clone(), maybe_pushvars, &onto)
-                    .map_err(|err| {
-                        match err {
-                            RunHooksError::Failures((cs_hook_failures, file_hook_failures)) => {
-                                let mut err_msgs = vec![];
-                                for (exec_id, exec_info) in cs_hook_failures {
-                                    if let HookExecution::Rejected(info) = exec_info {
-                                        err_msgs.push(format!("{} for {}: {}", exec_id.hook_name, exec_id.cs_id, info.description));
-                                    }
+                    .map_err(|err| match err {
+                        RunHooksError::Failures((cs_hook_failures, file_hook_failures)) => {
+                            let mut err_msgs = vec![];
+                            for (exec_id, exec_info) in cs_hook_failures {
+                                if let HookExecution::Rejected(info) = exec_info {
+                                    err_msgs.push(format!(
+                                        "{} for {}: {}",
+                                        exec_id.hook_name, exec_id.cs_id, info.description
+                                    ));
                                 }
-                                for (exec_id, exec_info) in file_hook_failures {
-                                    if let HookExecution::Rejected(info) = exec_info {
-                                        err_msgs.push(format!("{} for {}: {}", exec_id.hook_name, exec_id.cs_id, info.description));
-                                    }
+                            }
+                            for (exec_id, exec_info) in file_hook_failures {
+                                if let HookExecution::Rejected(info) = exec_info {
+                                    err_msgs.push(format!(
+                                        "{} for {}: {}",
+                                        exec_id.hook_name, exec_id.cs_id, info.description
+                                    ));
                                 }
-                                err_msg(format!("hooks failed:\n{}", err_msgs.join("\n")))
                             }
-                            RunHooksError::Error(err) => {
-                                err
-                            }
+                            err_msg(format!("hooks failed:\n{}", err_msgs.join("\n")))
                         }
-
+                        RunHooksError::Error(err) => err,
                     })
                     .and_then(move |()| {
                         resolver
@@ -293,7 +300,7 @@ fn resolve_pushrebase(
         .and_then({
             cloned!(resolver);
             move |(pushrebased_rev, onto)| {
-                resolver.prepare_pushrebase_response(commonheads, pushrebased_rev, onto)
+                resolver.prepare_pushrebase_response(commonheads, pushrebased_rev, onto, lca_hint)
             }
         })
         .boxify()
@@ -796,6 +803,7 @@ impl Bundle2Resolver {
         commonheads: CommonHeads,
         pushrebased_rev: ChangesetId,
         onto: Bookmark,
+        lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
     ) -> impl Future<Item = Bytes, Error = Error> {
         // Send to the client both pushrebased commit and current "onto" bookmark. Normally they
         // should be the same, however they might be different if bookmark
@@ -815,7 +823,7 @@ impl Bundle2Resolver {
                     heads.push(onto_head);
                 }
                 heads.push(pushrebased_rev);
-                getbundle_response::create_getbundle_response(repo, common, heads)
+                getbundle_response::create_getbundle_response(repo, common, heads, lca_hint)
             })
             .and_then(|cg_part_builder| {
                 let compression = None;

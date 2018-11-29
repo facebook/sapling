@@ -9,6 +9,7 @@
 extern crate ascii;
 #[cfg(test)]
 extern crate async_unit;
+extern crate blobstore;
 extern crate bytes;
 #[macro_use]
 extern crate cloned;
@@ -33,6 +34,7 @@ extern crate quickcheck;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
+extern crate reachabilityindex;
 extern crate revset;
 extern crate scuba_ext;
 #[macro_use]

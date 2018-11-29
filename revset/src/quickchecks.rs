@@ -8,9 +8,9 @@ use super::tests::TestChangesetFetcher;
 
 use async_unit;
 use failure::Error;
-use futures::{stream, Future, Stream};
+use futures::{stream, Future, Stream, future::{join_all, ok}};
 use futures::executor::spawn;
-use futures_ext::{BoxStream, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, StreamExt};
 use quickcheck::{quickcheck, Arbitrary, Gen};
 use quickcheck::rand::{thread_rng, Rng, distributions::{Sample, range::Range}};
 use std::collections::HashSet;
@@ -20,6 +20,7 @@ use std::sync::Arc;
 use blobrepo::{BlobRepo, ChangesetFetcher};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::ChangesetId;
+use reachabilityindex::SkiplistIndex;
 
 use fixtures::branch_even;
 use fixtures::branch_uneven;
@@ -404,12 +405,20 @@ macro_rules! ancestors_check {
                 let iter = IncludeExcludeDiscardCombinationsIterator::new(all_changesets);
                 for (include, exclude) in iter {
                     let difference_stream =
-                        DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                            &changeset_fetcher,
-                            hg_to_bonsai_changesetid(&repo, include.clone()),
-                            hg_to_bonsai_changesetid(&repo, exclude.clone()),
-                        )
-                        .boxify();
+                        create_skiplist(&repo)
+                            .map({
+                                cloned!(changeset_fetcher, exclude, include, repo);
+                                move |skiplist| {
+                                    DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                                        &changeset_fetcher,
+                                        skiplist,
+                                        hg_to_bonsai_changesetid(&repo, include.clone()),
+                                        hg_to_bonsai_changesetid(&repo, exclude.clone()),
+                                    )
+                                }
+                            })
+                            .flatten_stream()
+                            .boxify();
 
                     let actual = ValidateNodeStream::new(
                         bonsai_nodestream_to_nodestream(&repo, difference_stream),
@@ -452,12 +461,60 @@ macro_rules! ancestors_check {
         }
     }
 }
+mod empty_skiplist_tests {
+    use super::*;
+    use futures_ext::FutureExt;
 
-ancestors_check!(ancestors_check_branch_even, branch_even);
-ancestors_check!(ancestors_check_branch_uneven, branch_uneven);
-ancestors_check!(ancestors_check_branch_wide, branch_wide);
-ancestors_check!(ancestors_check_linear, linear);
-ancestors_check!(ancestors_check_merge_even, merge_even);
-ancestors_check!(ancestors_check_merge_uneven, merge_uneven);
-ancestors_check!(ancestors_check_unshared_merge_even, unshared_merge_even);
-ancestors_check!(ancestors_check_unshared_merge_uneven, unshared_merge_uneven);
+    fn create_skiplist(_repo: &Arc<BlobRepo>) -> BoxFuture<Arc<SkiplistIndex>, Error> {
+        ok(Arc::new(SkiplistIndex::new())).boxify()
+    }
+
+    ancestors_check!(ancestors_check_branch_even, branch_even);
+    ancestors_check!(ancestors_check_branch_uneven, branch_uneven);
+    ancestors_check!(ancestors_check_branch_wide, branch_wide);
+    ancestors_check!(ancestors_check_linear, linear);
+    ancestors_check!(ancestors_check_merge_even, merge_even);
+    ancestors_check!(ancestors_check_merge_uneven, merge_uneven);
+    ancestors_check!(ancestors_check_unshared_merge_even, unshared_merge_even);
+    ancestors_check!(ancestors_check_unshared_merge_uneven, unshared_merge_uneven);
+}
+
+mod full_skiplist_tests {
+    use super::*;
+    use futures_ext::FutureExt;
+
+    fn create_skiplist(repo: &Arc<BlobRepo>) -> BoxFuture<Arc<SkiplistIndex>, Error> {
+        let changeset_fetcher = repo.get_changeset_fetcher();
+        let skiplist_index = SkiplistIndex::new();
+        let max_index_depth = 100;
+
+        repo.get_bonsai_heads_maybe_stale()
+            .collect()
+            .and_then({
+                cloned!(skiplist_index);
+                move |heads| {
+                    join_all(heads.into_iter().map({
+                        cloned!(skiplist_index);
+                        move |head| {
+                            skiplist_index.add_node(
+                                changeset_fetcher.clone(),
+                                head,
+                                max_index_depth,
+                            )
+                        }
+                    }))
+                }
+            })
+            .map(move |_| Arc::new(skiplist_index))
+            .boxify()
+    }
+
+    ancestors_check!(ancestors_check_branch_even, branch_even);
+    ancestors_check!(ancestors_check_branch_uneven, branch_uneven);
+    ancestors_check!(ancestors_check_branch_wide, branch_wide);
+    ancestors_check!(ancestors_check_linear, linear);
+    ancestors_check!(ancestors_check_merge_even, merge_even);
+    ancestors_check!(ancestors_check_merge_uneven, merge_uneven);
+    ancestors_check!(ancestors_check_unshared_merge_even, unshared_merge_even);
+    ancestors_check!(ancestors_check_unshared_merge_uneven, unshared_merge_uneven);
+}

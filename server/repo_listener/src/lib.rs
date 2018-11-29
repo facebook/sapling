@@ -10,6 +10,7 @@
 #![feature(never_type)]
 #![feature(try_from)]
 
+extern crate blobstore;
 extern crate bytes;
 #[macro_use]
 extern crate cloned;
@@ -48,6 +49,7 @@ extern crate hgproto;
 extern crate hooks;
 extern crate mercurial_types;
 extern crate metaconfig;
+extern crate reachabilityindex;
 extern crate ready_state;
 extern crate repo_client;
 extern crate scribe;

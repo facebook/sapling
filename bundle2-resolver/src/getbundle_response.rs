@@ -16,6 +16,7 @@ use futures::{stream, Future, Stream};
 use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{parts, part_encode::PartEncodeBuilder};
 use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, NULL_CSID};
+use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 
 use mononoke_types::ChangesetId;
@@ -24,6 +25,7 @@ pub fn create_getbundle_response(
     blobrepo: BlobRepo,
     common: Vec<HgChangesetId>,
     heads: Vec<HgChangesetId>,
+    lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
 ) -> Result<PartEncodeBuilder> {
     if common.is_empty() {
         return Err(err_msg("no 'common' heads specified. Pull will be very inefficient. Please use hg clone instead"));
@@ -58,6 +60,7 @@ pub fn create_getbundle_response(
             move |(heads, excludes)| {
                 DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                     &changeset_fetcher,
+                    lca_hint,
                     heads,
                     excludes,
                 )

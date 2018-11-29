@@ -104,6 +104,7 @@ mod test {
             wireproto_scribe_category: None,
             hash_validation_percentage: 0,
             readonly: RepoReadOnly::ReadWrite,
+            skiplist_index_blobstore_key: None,
         }
     }
 

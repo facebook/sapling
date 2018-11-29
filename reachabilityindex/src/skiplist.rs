@@ -177,6 +177,7 @@ fn compute_skip_edges(
     skip_edges
 }
 /// Structure for indexing skip list edges for reachability queries.
+#[derive(Clone)]
 pub struct SkiplistIndex {
     // Each hash that the structure knows about is mapped to a  collection
     // of (Gen, Hash) pairs, wrapped in an enum. The semantics behind this are:

@@ -57,6 +57,8 @@ pub struct RepoConfig {
     pub readonly: RepoReadOnly,
     /// Params for the hook manager
     pub hook_manager_params: Option<HookManagerParams>,
+    /// Skiplist blobstore key (used to make revset faster)
+    pub skiplist_index_blobstore_key: Option<String>,
 }
 
 impl RepoConfig {
@@ -514,6 +516,7 @@ impl RepoConfigs {
             RepoReadOnly::ReadWrite
         };
 
+        let skiplist_index_blobstore_key = this.skiplist_index_blobstore_key;
         Ok(RepoConfig {
             enabled,
             repotype,
@@ -529,6 +532,7 @@ impl RepoConfigs {
             wireproto_scribe_category,
             hash_validation_percentage,
             readonly,
+            skiplist_index_blobstore_key,
         })
     }
 }
@@ -557,6 +561,7 @@ struct RawRepoConfig {
     hash_validation_percentage: Option<usize>,
     readonly: Option<bool>,
     hook_manager_params: Option<HookManagerParams>,
+    skiplist_index_blobstore_key: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -628,6 +633,7 @@ mod test {
             generation_cache_size=1048576
             repoid=0
             scuba_table="scuba_table"
+            skiplist_index_blobstore_key="skiplist_key"
             [cache_warmup]
             bookmark="master"
             commit_limit=100
@@ -741,6 +747,7 @@ mod test {
                 wireproto_scribe_category: None,
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
+                skiplist_index_blobstore_key: Some("skiplist_key".into()),
             },
         );
         repos.insert(
@@ -760,6 +767,7 @@ mod test {
                 wireproto_scribe_category: Some("category".to_string()),
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
+                skiplist_index_blobstore_key: None,
             },
         );
         assert_eq!(
