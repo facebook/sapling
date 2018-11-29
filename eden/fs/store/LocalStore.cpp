@@ -164,7 +164,7 @@ std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(const Tree* tree) {
 
   auto id = tree->getHash();
   if (id == Hash()) {
-    id = Hash::sha1(&treeBuf);
+    id = Hash::sha1(treeBuf);
   }
   return std::make_pair(id, treeBuf);
 }
@@ -220,7 +220,7 @@ void LocalStore::WriteBatch::put(
 BlobMetadata LocalStore::WriteBatch::putBlob(const Hash& id, const Blob* blob) {
   const IOBuf& contents = blob->getContents();
 
-  BlobMetadata metadata{Hash::sha1(&contents),
+  BlobMetadata metadata{Hash::sha1(contents),
                         contents.computeChainDataLength()};
 
   SerializedBlobMetadata metadataBytes(metadata);

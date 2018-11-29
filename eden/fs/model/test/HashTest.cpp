@@ -14,7 +14,7 @@
 #include <folly/io/Cursor.h>
 #include <gtest/gtest.h>
 
-using facebook::eden::Hash;
+using namespace facebook::eden;
 using folly::ByteRange;
 using folly::IOBuf;
 using folly::StringPiece;
@@ -34,6 +34,10 @@ Hash testHash(testHashHex);
 
 TEST(Hash, testDefaultConstructor) {
   EXPECT_EQ("0000000000000000000000000000000000000000", Hash().toString());
+}
+
+TEST(Hash, emptySha1) {
+  EXPECT_EQ(kEmptySha1, Hash::sha1(IOBuf{}));
 }
 
 TEST(Hash, testByteArrayConstructor) {
@@ -154,7 +158,7 @@ TEST(Hash, sha1IOBuf) {
   buf1->appendChain(std::move(buf2));
 
   EXPECT_EQ(
-      Hash("5d105d15efb8b07a624be530ef2b62dab3bc2f8b"), Hash::sha1(buf1.get()));
+      Hash("5d105d15efb8b07a624be530ef2b62dab3bc2f8b"), Hash::sha1(*buf1));
 }
 
 TEST(Hash, sha1ByteRange) {

@@ -61,7 +61,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   // Test getBlobMetadata() and getSha1ForBlob().
   auto buf2 = IOBuf();
   Blob blob2(blobHash, buf2);
-  auto expectedSha1 = Hash::sha1(&buf1);
+  auto expectedSha1 = Hash::sha1(buf1);
   auto metadataFuture = store.getBlobMetadata(blob2.getHash());
   ASSERT_TRUE(metadataFuture.isReady());
   auto metadata = std::move(metadataFuture).get();

@@ -34,7 +34,7 @@ void FakeObjectStore::addTree(Tree&& tree) {
 
 void FakeObjectStore::addBlob(Blob&& blob) {
   // Compute the blob metadata
-  auto sha1 = Hash::sha1(&blob.getContents());
+  auto sha1 = Hash::sha1(blob.getContents());
   auto metadata =
       BlobMetadata{sha1, blob.getContents().computeChainDataLength()};
 

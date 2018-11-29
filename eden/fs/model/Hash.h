@@ -33,9 +33,9 @@ class Hash : boost::totally_ordered<Hash> {
   /**
    * Create a 0-initialized hash
    */
-  Hash();
+  constexpr Hash() : bytes_{} {}
 
-  explicit Hash(Storage bytes);
+  explicit constexpr Hash(const Storage& bytes) : bytes_{bytes} {}
 
   explicit Hash(folly::ByteRange bytes);
 
@@ -47,7 +47,7 @@ class Hash : boost::totally_ordered<Hash> {
   /**
    * Compute the SHA1 hash of an IOBuf chain.
    */
-  static Hash sha1(const folly::IOBuf* buf);
+  static Hash sha1(const folly::IOBuf& buf);
 
   /**
    * Compute the SHA1 hash of a ByteRange
@@ -71,6 +71,9 @@ class Hash : boost::totally_ordered<Hash> {
 
 /** A hash object initialized to all zeroes */
 extern const Hash kZeroHash;
+
+/** A hash object initialized to the SHA-1 of zero bytes */
+extern const Hash kEmptySha1;
 
 /**
  * Output stream operator for Hash.

@@ -656,7 +656,7 @@ folly::Future<bool> FileInode::isSameAs(
     return result.value();
   }
 
-  auto blobSha1 = Hash::sha1(&blob.getContents());
+  auto blobSha1 = Hash::sha1(blob.getContents());
   return getSha1().thenValue(
       [blobSha1](const Hash& sha1) { return sha1 == blobSha1; });
 }

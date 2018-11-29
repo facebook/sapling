@@ -241,7 +241,7 @@ TEST(GitTree, serializeTree) {
   auto buf = serializer.finalize();
 
   // Make sure the tree hash is what we expect
-  auto treeHash = Hash::sha1(&buf);
+  auto treeHash = Hash::sha1(buf);
   EXPECT_EQ(Hash("dc2c3be02dd3753c64c8f196a33522905c88c435"), treeHash);
 
   // Make sure we can deserialize it and get back the expected entries.
@@ -275,7 +275,7 @@ TEST(GitTree, moveSerializer) {
 
   // Make sure the tree hash is what we expect
   auto buf = serializer2.finalize();
-  auto treeHash = Hash::sha1(&buf);
+  auto treeHash = Hash::sha1(buf);
   EXPECT_EQ(Hash("daa1785514e56d64549d8169ec7dc26803d2f7df"), treeHash);
 }
 

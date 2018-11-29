@@ -73,7 +73,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
 
   StringPiece contents("{\n  \"breakConfig\": true\n}\n");
   auto buf = IOBuf{IOBuf::WRAP_BUFFER, folly::ByteRange{contents}};
-  auto sha1 = Hash::sha1(&buf);
+  auto sha1 = Hash::sha1(buf);
 
   auto inBlob = Blob{hash, std::move(buf)};
   store_->putBlob(hash, &inBlob);
