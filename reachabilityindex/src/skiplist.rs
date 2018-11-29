@@ -8,6 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::sync::Arc;
 
+use bytes::Bytes;
 use chashmap::CHashMap;
 use failure::Error;
 use futures::Stream;
@@ -22,18 +23,57 @@ use mononoke_types::{ChangesetId, Generation};
 use helpers::{advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists,
               fetch_generation_and_join, get_parents};
 use index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
+use skiplist_thrift;
+
+use rust_thrift::compact_protocol;
 
 const DEFAULT_EDGE_COUNT: u32 = 10;
 
 // Each indexed node fits into one of two categories:
 // - It has skiplist edges
 // - It only has edges to its parents.
-enum SkiplistNodeType {
+#[derive(Clone)]
+pub enum SkiplistNodeType {
     // A list of skip edges which keep doubling
     // in distance from their root node.
     // The ith skip edge is at most 2^i commits away.
     SkipEdges(Vec<(ChangesetId, Generation)>),
     ParentEdges(Vec<(ChangesetId, Generation)>),
+}
+
+impl SkiplistNodeType {
+    pub fn to_thrift(&self) -> skiplist_thrift::SkiplistNodeType {
+        fn encode_vec_to_thrift(
+            cs_gen: Vec<(ChangesetId, Generation)>,
+        ) -> Vec<skiplist_thrift::CommitAndGenerationNumber> {
+            cs_gen
+                .into_iter()
+                .map(|(cs_id, gen_num)| {
+                    let cs_id = cs_id.into_thrift();
+                    let gen = skiplist_thrift::GenerationNum(gen_num.value() as i64);
+                    skiplist_thrift::CommitAndGenerationNumber { cs_id, gen }
+                })
+                .collect()
+        }
+
+        match self {
+            SkiplistNodeType::SkipEdges(edges) => {
+                let edges = encode_vec_to_thrift(edges.clone());
+                let skip_edges = skiplist_thrift::SkipEdges { edges };
+                skiplist_thrift::SkiplistNodeType::SkipEdges(skip_edges)
+            }
+            SkiplistNodeType::ParentEdges(parent_edges) => {
+                let edges = encode_vec_to_thrift(parent_edges.clone());
+                let parent_edges = skiplist_thrift::ParentEdges { edges };
+                skiplist_thrift::SkiplistNodeType::ParentEdges(parent_edges)
+            }
+        }
+    }
+
+    pub fn serialize(&self) -> Bytes {
+        let thrift_skiplist_node_type = self.to_thrift();
+        compact_protocol::serialize(&thrift_skiplist_node_type)
+    }
 }
 
 struct SkiplistEdgeMapping {

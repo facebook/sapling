@@ -32,6 +32,10 @@ impl Generation {
         Generation(u64::MAX)
     }
 
+    pub fn value(&self) -> u64 {
+        self.0
+    }
+
     /// The difference from this generation to the other as the difference in their
     /// generation numbers.
     /// If this Generation is smaller than the other, return None.

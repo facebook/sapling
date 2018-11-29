@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+extern crate bytes;
 extern crate chashmap;
 #[macro_use]
 extern crate cloned;
@@ -16,6 +17,9 @@ extern crate futures_ext;
 extern crate blobrepo;
 extern crate mercurial_types;
 extern crate mononoke_types;
+
+extern crate rust_thrift;
+extern crate skiplist_thrift;
 
 mod helpers;
 
@@ -29,7 +33,7 @@ mod genbfs;
 pub use genbfs::GenerationNumberBFS;
 
 mod skiplist;
-pub use skiplist::SkiplistIndex;
+pub use skiplist::{SkiplistIndex, SkiplistNodeType};
 #[cfg(test)]
 pub extern crate async_unit;
 #[cfg(test)]
