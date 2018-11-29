@@ -13,9 +13,7 @@ use futures::stream::{iter_ok, Stream};
 use futures_ext::FutureExt;
 
 use blobrepo::{self, BlobRepo};
-use mercurial_types::HgNodeHash;
-use mercurial_types::nodehash::HgChangesetId;
-use mononoke_types::Generation;
+use mononoke_types::{ChangesetId, Generation};
 
 use errors::*;
 
@@ -23,9 +21,9 @@ use errors::*;
 /// of the node if the node exists, else fails with ErrorKind::NodeNotFound.
 pub fn fetch_generation(
     repo: Arc<BlobRepo>,
-    node: HgNodeHash,
+    node: ChangesetId,
 ) -> impl Future<Item = Generation, Error = Error> {
-    repo.get_generation_number(&HgChangesetId::new(node.clone()))
+    repo.get_generation_number_by_bonsai(&node.clone())
         .map_err(|err| {
             ErrorKind::GenerationFetchFailed(BlobRepoErrorCause::new(
                 err.downcast::<blobrepo::ErrorKind>().ok(),
@@ -38,17 +36,17 @@ pub fn fetch_generation(
 
 pub fn fetch_generation_and_join(
     repo: Arc<BlobRepo>,
-    node: HgNodeHash,
-) -> impl Future<Item = (HgNodeHash, Generation), Error = Error> {
+    node: ChangesetId,
+) -> impl Future<Item = (ChangesetId, Generation), Error = Error> {
     fetch_generation(repo, node).map(move |gen| (node, gen))
 }
 /// Confirm whether or not a node with the given hash exists in the repo.
 /// Succeeds with the void value () if the node exists, else fails with ErrorKind::NodeNotFound.
 pub fn check_if_node_exists(
     repo: Arc<BlobRepo>,
-    node: HgNodeHash,
+    node: ChangesetId,
 ) -> impl Future<Item = (), Error = Error> {
-    repo.changeset_exists(&HgChangesetId::new(node.clone()))
+    repo.changeset_exists_by_bonsai(&node.clone())
         .map_err(move |err| {
             ErrorKind::CheckExistenceFailed(
                 format!("{}", node),
@@ -64,23 +62,11 @@ pub fn check_if_node_exists(
         })
 }
 
-/// Convert a collection of HgChangesetId to a collection of (HgNodeHash, Generation)
-pub fn changeset_to_nodehashes_with_generation_numbers(
+/// Convert a collection of ChangesetId to a collection of (ChangesetId, Generation)
+pub fn changesets_with_generation_numbers(
     repo: Arc<BlobRepo>,
-    nodes: Vec<HgChangesetId>,
-) -> impl Future<Item = Vec<(HgNodeHash, Generation)>, Error = Error> {
-    let node_hashes: Vec<_> = nodes
-        .into_iter()
-        .map(|node_cs| *node_cs.as_nodehash())
-        .collect();
-    nodehashes_with_generation_numbers(repo, node_hashes)
-}
-
-/// Convert a collection of HgNodeHash to a collection of (HgNodeHash, Generation)
-pub fn nodehashes_with_generation_numbers(
-    repo: Arc<BlobRepo>,
-    nodes: Vec<HgNodeHash>,
-) -> impl Future<Item = Vec<(HgNodeHash, Generation)>, Error = Error> {
+    nodes: Vec<ChangesetId>,
+) -> impl Future<Item = Vec<(ChangesetId, Generation)>, Error = Error> {
     join_all(nodes.into_iter().map({
         cloned!(repo);
         move |hash| fetch_generation_and_join(repo.clone(), hash)
@@ -89,16 +75,15 @@ pub fn nodehashes_with_generation_numbers(
 
 /// Attempt to get the changeset parents of a hash node,
 /// and cast into the appropriate ErrorKind if it fails
-pub fn get_parents_from_nodehash(
+pub fn get_parents(
     repo: Arc<BlobRepo>,
-    node: HgNodeHash,
-) -> impl Future<Item = Vec<HgChangesetId>, Error = Error> {
-    repo.get_changeset_parents(&HgChangesetId::new(node))
-        .map_err(|err| {
-            ErrorKind::ParentsFetchFailed(BlobRepoErrorCause::new(
-                err.downcast::<blobrepo::ErrorKind>().ok(),
-            )).into()
-        })
+    node: ChangesetId,
+) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
+    repo.get_changeset_parents_by_bonsai(&node).map_err(|err| {
+        ErrorKind::ParentsFetchFailed(BlobRepoErrorCause::new(
+            err.downcast::<blobrepo::ErrorKind>().ok(),
+        )).into()
+    })
 }
 
 // Take ownership of two sets, the current 'layer' of the bfs, and all nodes seen until then.
@@ -109,12 +94,12 @@ pub fn get_parents_from_nodehash(
 // - return the parents as the next bfs layer, and the updated seen as the new seen set
 pub fn advance_bfs_layer(
     repo: Arc<BlobRepo>,
-    curr_layer: HashSet<(HgNodeHash, Generation)>,
-    mut curr_seen: HashSet<(HgNodeHash, Generation)>,
+    curr_layer: HashSet<(ChangesetId, Generation)>,
+    mut curr_seen: HashSet<(ChangesetId, Generation)>,
 ) -> impl Future<
     Item = (
-        HashSet<(HgNodeHash, Generation)>,
-        HashSet<(HgNodeHash, Generation)>,
+        HashSet<(ChangesetId, Generation)>,
+        HashSet<(ChangesetId, Generation)>,
     ),
     Error = Error,
 > {
@@ -126,7 +111,7 @@ pub fn advance_bfs_layer(
     iter_ok::<_, Error>(curr_layer)
         .map(move |(hash, _gen)| {
             new_repo_changesets
-                .get_changeset_parents(&HgChangesetId::new(hash))
+                .get_changeset_parents_by_bonsai(&hash)
                 .map_err(|err| {
                     ErrorKind::ParentsFetchFailed(BlobRepoErrorCause::new(
                         err.downcast::<blobrepo::ErrorKind>().ok(),
@@ -137,7 +122,7 @@ pub fn advance_bfs_layer(
         .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
         .flatten()
         .collect()
-        .and_then(|all_parents| changeset_to_nodehashes_with_generation_numbers(repo, all_parents))
+        .and_then(|all_parents| changesets_with_generation_numbers(repo, all_parents))
         .map(move |flattened_node_generation_pairs| {
             let mut next_layer = HashSet::new();
             for hash_gen_pair in flattened_node_generation_pairs.into_iter() {
@@ -160,21 +145,21 @@ mod test {
     use mononoke_types::Generation;
 
     use helpers::fetch_generation_and_join;
-    use tests::string_to_nodehash;
+    use tests::string_to_bonsai;
 
     #[test]
     fn test_helpers() {
         async_unit::tokio_unit_test(move || {
             let repo = Arc::new(linear::getrepo(None));
             let mut ordered_hashes_oldest_to_newest = vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
             ordered_hashes_oldest_to_newest.reverse();
 

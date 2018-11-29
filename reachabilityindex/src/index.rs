@@ -11,16 +11,15 @@ use failure::Error;
 use futures_ext::BoxFuture;
 
 use blobrepo::BlobRepo;
-use mercurial_types::HgNodeHash;
-use mononoke_types::Generation;
+use mononoke_types::{ChangesetId, Generation};
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct NodeFrontier {
-    pub gen_map: HashMap<Generation, HashSet<HgNodeHash>>,
+    pub gen_map: HashMap<Generation, HashSet<ChangesetId>>,
 }
 
 impl NodeFrontier {
-    pub fn new(gen_map: HashMap<Generation, HashSet<HgNodeHash>>) -> Self {
+    pub fn new(gen_map: HashMap<Generation, HashSet<ChangesetId>>) -> Self {
         NodeFrontier { gen_map }
     }
 }
@@ -31,8 +30,8 @@ pub trait ReachabilityIndex {
     fn query_reachability(
         &self,
         repo: Arc<BlobRepo>,
-        src: HgNodeHash,
-        dst: HgNodeHash,
+        src: ChangesetId,
+        dst: ChangesetId,
     ) -> BoxFuture<bool, Error>;
 }
 

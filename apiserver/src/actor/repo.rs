@@ -119,22 +119,38 @@ impl MononokeRepo {
         proposed_descendent: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let genbfs = GenerationNumberBFS::new();
-        let src_hash_maybe = FS::get_nodehash(&proposed_descendent);
-        let dst_hash_maybe = FS::get_nodehash(&proposed_ancestor);
+        let src_hash_maybe = FS::get_changeset_id(proposed_descendent.clone());
+        let dst_hash_maybe = FS::get_changeset_id(proposed_ancestor.clone());
         let src_hash_future = src_hash_maybe.into_future().or_else({
-            cloned!(self.repo);
-            move |_| {
-                FS::string_to_bookmark_changeset_id(proposed_descendent, repo)
-                    .map(|node_cs| *node_cs.as_nodehash())
-            }
+            cloned!(self.repo, proposed_descendent);
+            move |_| FS::string_to_bookmark_changeset_id(proposed_descendent, repo)
         });
+
+        let src_hash_future = src_hash_future
+            .and_then({
+                cloned!(self.repo);
+                move |hg_cs_id| repo.get_bonsai_from_hg(&hg_cs_id).from_err()
+            })
+            .and_then(move |maybenode| {
+                maybenode.ok_or(ErrorKind::NotFound(
+                    format!("{}", proposed_descendent),
+                    None,
+                ))
+            });
+
         let dst_hash_future = dst_hash_maybe.into_future().or_else({
-            cloned!(self.repo);
-            move |_| {
-                FS::string_to_bookmark_changeset_id(proposed_ancestor, repo)
-                    .map(|node_cs| *node_cs.as_nodehash())
-            }
+            cloned!(self.repo, proposed_ancestor);
+            move |_| FS::string_to_bookmark_changeset_id(proposed_ancestor, repo)
         });
+
+        let dst_hash_future = dst_hash_future
+            .and_then({
+                cloned!(self.repo);
+                move |hg_cs_id| repo.get_bonsai_from_hg(&hg_cs_id).from_err()
+            })
+            .and_then(move |maybenode| {
+                maybenode.ok_or(ErrorKind::NotFound(format!("{}", proposed_ancestor), None))
+            });
 
         let (tx, rx) = oneshot::channel::<Result<bool, ErrorKind>>();
 

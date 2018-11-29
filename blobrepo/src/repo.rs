@@ -77,6 +77,7 @@ define_stats! {
     get_changesets: timeseries(RATE, SUM),
     get_heads_maybe_stale: timeseries(RATE, SUM),
     changeset_exists: timeseries(RATE, SUM),
+    changeset_exists_by_bonsai: timeseries(RATE, SUM),
     many_changesets_exists: timeseries(RATE, SUM),
     get_changeset_parents: timeseries(RATE, SUM),
     get_changeset_parents_by_bonsai: timeseries(RATE, SUM),
@@ -686,6 +687,18 @@ impl BlobRepo {
         self.bonsai_hg_mapping.get(self.repoid, param)
             .map(|entries| entries.into_iter().map(|entry| entry.hg_cs_id).collect())
             // TODO(stash, luk): T37303879 also need to check that entries exist in changeset table
+            .boxify()
+    }
+
+    pub fn changeset_exists_by_bonsai(&self, changesetid: &ChangesetId) -> BoxFuture<bool, Error> {
+        STATS::changeset_exists_by_bonsai.add_value(1);
+        let changesetid = changesetid.clone();
+        let repo = self.clone();
+        let repoid = self.repoid.clone();
+
+        repo.changesets
+            .get(repoid, changesetid)
+            .map(|res| res.is_some())
             .boxify()
     }
 

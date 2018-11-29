@@ -17,11 +17,10 @@ use futures::stream::iter_ok;
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::BlobRepo;
-use mercurial_types::HgNodeHash;
-use mononoke_types::Generation;
+use mononoke_types::{ChangesetId, Generation};
 
-use helpers::{advance_bfs_layer, changeset_to_nodehashes_with_generation_numbers,
-              check_if_node_exists, fetch_generation_and_join, get_parents_from_nodehash};
+use helpers::{advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists,
+              fetch_generation_and_join, get_parents};
 use index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
 
 const DEFAULT_EDGE_COUNT: u32 = 10;
@@ -33,12 +32,12 @@ enum SkiplistNodeType {
     // A list of skip edges which keep doubling
     // in distance from their root node.
     // The ith skip edge is at most 2^i commits away.
-    SkipEdges(Vec<(HgNodeHash, Generation)>),
-    ParentEdges(Vec<(HgNodeHash, Generation)>),
+    SkipEdges(Vec<(ChangesetId, Generation)>),
+    ParentEdges(Vec<(ChangesetId, Generation)>),
 }
 
 struct SkiplistEdgeMapping {
-    pub mapping: CHashMap<HgNodeHash, SkiplistNodeType>,
+    pub mapping: CHashMap<ChangesetId, SkiplistNodeType>,
     pub skip_edges_per_node: u32,
 }
 
@@ -69,9 +68,9 @@ fn nth_node_or_last<T: Clone>(v: &Vec<T>, i: usize) -> Option<T> {
 /// it is the first node that we'll consider as a candidate for a skip list edge.
 /// hence it should always be the parent of the node we are creating edges for.
 fn compute_skip_edges(
-    start_node: (HgNodeHash, Generation),
+    start_node: (ChangesetId, Generation),
     skip_edge_mapping: Arc<SkiplistEdgeMapping>,
-) -> Vec<(HgNodeHash, Generation)> {
+) -> Vec<(ChangesetId, Generation)> {
     let mut curr = start_node;
 
     let max_skip_edge_count = skip_edge_mapping.skip_edges_per_node as usize;
@@ -116,9 +115,9 @@ pub struct SkiplistIndex {
 fn find_nodes_to_index(
     repo: Arc<BlobRepo>,
     skip_list_edges: Arc<SkiplistEdgeMapping>,
-    (start_node, start_gen): (HgNodeHash, Generation),
+    (start_node, start_gen): (ChangesetId, Generation),
     depth: u64,
-) -> BoxFuture<Vec<(HgNodeHash, Generation)>, Error> {
+) -> BoxFuture<Vec<(ChangesetId, Generation)>, Error> {
     let start_bfs_layer: HashSet<_> = vec![(start_node, start_gen)].into_iter().collect();
     let start_seen: HashSet<_> = HashSet::new();
     let ancestors_to_depth =
@@ -158,7 +157,7 @@ fn find_nodes_to_index(
 fn lazy_index_node(
     repo: Arc<BlobRepo>,
     skip_edge_mapping: Arc<SkiplistEdgeMapping>,
-    node: HgNodeHash,
+    node: ChangesetId,
     max_depth: u64,
 ) -> BoxFuture<(), Error> {
     // if this node is indexed or we've passed the max depth, return
@@ -177,15 +176,10 @@ fn lazy_index_node(
                     join_all(node_gen_pairs.into_iter().map({
                         cloned!(repo);
                         move |(hash, _gen)| {
-                            get_parents_from_nodehash(repo.clone(), hash.clone())
+                            get_parents(repo.clone(), hash.clone())
                                 .and_then({
                                     cloned!(repo);
-                                    |parents| {
-                                        changeset_to_nodehashes_with_generation_numbers(
-                                            repo,
-                                            parents,
-                                        )
-                                    }
+                                    |parents| changesets_with_generation_numbers(repo, parents)
                                 })
                                 .map(move |parent_gen_pairs| (hash, parent_gen_pairs))
                         }
@@ -225,8 +219,8 @@ fn lazy_index_node(
 fn query_reachability_with_generation_hints(
     repo: Arc<BlobRepo>,
     skip_list_edges: Arc<SkiplistEdgeMapping>,
-    src_hash_gen: (HgNodeHash, Generation),
-    dst_hash_gen: (HgNodeHash, Generation),
+    src_hash_gen: (ChangesetId, Generation),
+    dst_hash_gen: (ChangesetId, Generation),
 ) -> BoxFuture<bool, Error> {
     if src_hash_gen.0 == dst_hash_gen.0 {
         ok(true).boxify()
@@ -258,14 +252,11 @@ fn query_reachability_with_generation_hints(
                         // TODO: Add some kind of logging here,
                         // since if the logic reaches this point something is wrong
                         cloned!(skip_list_edges);
-                        get_parents_from_nodehash(repo.clone(), src_hash_gen.0)
+                        get_parents(repo.clone(), src_hash_gen.0)
                             .and_then({
                                 cloned!(repo);
                                 |parent_changesets| {
-                                    changeset_to_nodehashes_with_generation_numbers(
-                                        repo,
-                                        parent_changesets,
-                                    )
+                                    changesets_with_generation_numbers(repo, parent_changesets)
                                 }
                             })
                             .and_then(move |parent_edges| {
@@ -328,8 +319,8 @@ fn query_reachability_with_generation_hints(
 fn query_reachability(
     repo: Arc<BlobRepo>,
     skip_list_edges: Arc<SkiplistEdgeMapping>,
-    src_hash: HgNodeHash,
-    dst_hash: HgNodeHash,
+    src_hash: ChangesetId,
+    dst_hash: ChangesetId,
 ) -> BoxFuture<bool, Error> {
     fetch_generation_and_join(repo.clone(), src_hash)
         .join(fetch_generation_and_join(repo.clone(), dst_hash))
@@ -366,7 +357,7 @@ impl SkiplistIndex {
     pub fn add_node(
         &self,
         repo: Arc<BlobRepo>,
-        node: HgNodeHash,
+        node: ChangesetId,
         max_index_depth: u64,
     ) -> BoxFuture<(), Error> {
         lazy_index_node(repo, self.skip_list_edges.clone(), node, max_index_depth)
@@ -375,7 +366,7 @@ impl SkiplistIndex {
     /// get skiplist edges originating from a particular node hash
     /// returns Some(edges) if this node was indexed with skip edges
     /// returns None if this node was unindexed, or was indexed with parent edges only.
-    pub fn get_skip_edges(&self, node: HgNodeHash) -> Option<Vec<(HgNodeHash, Generation)>> {
+    pub fn get_skip_edges(&self, node: ChangesetId) -> Option<Vec<(ChangesetId, Generation)>> {
         if let Some(read_guard) = self.skip_list_edges.mapping.get(&node) {
             if let SkiplistNodeType::SkipEdges(edges) = read_guard.deref() {
                 Some(edges.clone())
@@ -387,7 +378,7 @@ impl SkiplistIndex {
         }
     }
 
-    pub fn is_node_indexed(&self, node: HgNodeHash) -> bool {
+    pub fn is_node_indexed(&self, node: ChangesetId) -> bool {
         self.skip_list_edges.mapping.contains_key(&node)
     }
 
@@ -400,8 +391,8 @@ impl ReachabilityIndex for SkiplistIndex {
     fn query_reachability(
         &self,
         repo: Arc<BlobRepo>,
-        src: HgNodeHash,
-        dst: HgNodeHash,
+        src: ChangesetId,
+        dst: ChangesetId,
     ) -> BoxFuture<bool, Error> {
         query_reachability(repo, self.skip_list_edges.clone(), src, dst)
     }
@@ -428,7 +419,7 @@ fn union_frontiers(frontiers: Vec<NodeFrontier>) -> NodeFrontier {
 fn advance_node_forward(
     repo: Arc<BlobRepo>,
     skip_list_edges: Arc<SkiplistEdgeMapping>,
-    (node, gen): (HgNodeHash, Generation),
+    (node, gen): (ChangesetId, Generation),
     max_gen: Generation,
 ) -> BoxFuture<NodeFrontier, Error> {
     if max_gen >= gen {
@@ -567,7 +558,7 @@ mod test {
     use fixtures::linear;
     use fixtures::merge_uneven;
     use fixtures::unshared_merge_even;
-    use tests::string_to_nodehash;
+    use tests::string_to_bonsai;
     use tests::test_branch_wide_reachability;
     use tests::test_linear_reachability;
     use tests::test_merge_uneven_reachability;
@@ -588,8 +579,8 @@ mod test {
         fn is_sync<T: Sync>() {}
         fn is_send<T: Send>() {}
 
-        is_sync::<Arc<CHashMap<HgNodeHash, SkiplistNodeType>>>();
-        is_send::<Arc<CHashMap<HgNodeHash, SkiplistNodeType>>>();
+        is_sync::<Arc<CHashMap<ChangesetId, SkiplistNodeType>>>();
+        is_send::<Arc<CHashMap<ChangesetId, SkiplistNodeType>>>();
     }
 
     #[test]
@@ -597,17 +588,17 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
-            let master_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            sli.add_node(repo, master_node, 100).wait().unwrap();
+            let master_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
+            sli.add_node(repo.clone(), master_node, 100).wait().unwrap();
             let ordered_hashes = vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
             assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
             for node in ordered_hashes.into_iter() {
@@ -621,28 +612,29 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
-            let master_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            sli.add_node(repo, master_node, 100).wait().unwrap();
+            let master_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
+            sli.add_node(repo.clone(), master_node, 100).wait().unwrap();
             let ordered_hashes = vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
             assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
             for node in ordered_hashes.into_iter() {
                 assert!(sli.is_node_indexed(node));
-                if node != string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536") {
-                    let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(node)
+                if node != string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536") {
+                    let skip_edges: Vec<_> = sli.get_skip_edges(node)
                         .unwrap()
                         .into_iter()
                         .map(|(node, _)| node)
                         .collect();
-                    assert!(skip_edges.contains(&string_to_nodehash(
+                    assert!(skip_edges.contains(&string_to_bonsai(
+                        &repo,
                         "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"
                     )));
                 }
@@ -655,8 +647,8 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
-            let master_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            sli.add_node(repo, master_node, 100).wait().unwrap();
+            let master_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
+            sli.add_node(repo.clone(), master_node, 100).wait().unwrap();
             // hashes in order from newest to oldest are:
             // a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
             // 0ed509bf086fadcb8a8a5384dc3b550729b0fc17
@@ -673,16 +665,16 @@ mod test {
             // - d0a3
             // - 2d7d
 
-            let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(master_node)
+            let skip_edges: Vec<_> = sli.get_skip_edges(master_node)
                 .unwrap()
                 .into_iter()
                 .map(|(node, _)| node)
                 .collect();
             let expected_hashes = vec![
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
             assert_eq!(skip_edges, expected_hashes);
         });
@@ -692,32 +684,32 @@ mod test {
     fn test_skip_edges_reach_end_in_merge() {
         async_unit::tokio_unit_test(move || {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let root_node = string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
+            let root_node = string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
 
             // order is oldest to newest
             let branch_1 = vec![
-                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
             ];
 
             // order is oldest to newest
             let branch_2 = vec![
-                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                string_to_nodehash("795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
-                string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+                string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+                string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+                string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
             ];
 
-            let merge_node = string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055");
+            let merge_node = string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055");
             let sli = SkiplistIndex::new();
             sli.add_node(repo, merge_node, 100).wait().unwrap();
             for node in branch_1.into_iter() {
-                let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli.get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -725,7 +717,7 @@ mod test {
                 assert!(skip_edges.contains(&root_node));
             }
             for node in branch_2.into_iter() {
-                let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli.get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -742,31 +734,31 @@ mod test {
     fn test_partial_index_in_merge() {
         async_unit::tokio_unit_test(move || {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let root_node = string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
+            let root_node = string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
 
             // order is oldest to newest
             let branch_1 = vec![
-                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
             ];
 
-            let branch_1_head = string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68");
+            let branch_1_head = string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68");
 
             // order is oldest to newest
             let branch_2 = vec![
-                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                string_to_nodehash("795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
-                string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+                string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+                string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+                string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
             ];
-            let branch_2_head = string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc");
+            let branch_2_head = string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc");
 
-            let _merge_node = string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055");
+            let _merge_node = string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055");
             let sli = SkiplistIndex::new();
 
             // index just one branch first
@@ -774,7 +766,7 @@ mod test {
                 .wait()
                 .unwrap();
             for node in branch_1.into_iter() {
-                let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli.get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -787,7 +779,7 @@ mod test {
             // index second branch
             sli.add_node(repo, branch_2_head, 100).wait().unwrap();
             for node in branch_2.into_iter() {
-                let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli.get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -802,14 +794,14 @@ mod test {
         async_unit::tokio_unit_test(move || {
             // this repo has no merges but many branches
             let repo = Arc::new(branch_wide::getrepo(None));
-            let root_node = string_to_nodehash("ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
+            let root_node = string_to_bonsai(&repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
 
-            let b1 = string_to_nodehash("9e8521affb7f9d10e9551a99c526e69909042b20");
-            let b2 = string_to_nodehash("4685e9e62e4885d477ead6964a7600c750e39b03");
-            let b1_1 = string_to_nodehash("b6a8169454af58b4b72b3665f9aa0d25529755ff");
-            let b1_2 = string_to_nodehash("c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
-            let b2_1 = string_to_nodehash("04decbb0d1a65789728250ddea2fe8d00248e01c");
-            let b2_2 = string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449");
+            let b1 = string_to_bonsai(&repo, "9e8521affb7f9d10e9551a99c526e69909042b20");
+            let b2 = string_to_bonsai(&repo, "4685e9e62e4885d477ead6964a7600c750e39b03");
+            let b1_1 = string_to_bonsai(&repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff");
+            let b1_2 = string_to_bonsai(&repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
+            let b2_1 = string_to_bonsai(&repo, "04decbb0d1a65789728250ddea2fe8d00248e01c");
+            let b2_2 = string_to_bonsai(&repo, "49f53ab171171b3180e125b918bd1cf0af7e5449");
 
             let sli = SkiplistIndex::new();
             iter_ok::<_, Error>(vec![b1_1, b1_2, b2_1, b2_2])
@@ -823,7 +815,7 @@ mod test {
             assert!(sli.is_node_indexed(b2));
 
             for node in vec![b1, b2, b1_1, b1_2, b2_1, b2_2].into_iter() {
-                let skip_edges: Vec<HgNodeHash> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli.get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -857,14 +849,14 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
             let mut ordered_hashes_oldest_to_newest = vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
             ordered_hashes_oldest_to_newest.reverse();
             // indexing doesn't even take place if the query can conclude true or false right away
@@ -888,14 +880,14 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
             let mut ordered_hashes_oldest_to_newest = vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
             ordered_hashes_oldest_to_newest.reverse();
 
@@ -922,8 +914,8 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
 
-            let src_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            let dst_node = string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
+            let src_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
+            let dst_node = string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
             // performing this query should index all the nodes inbetween
             assert!(
                 query_reachability_with_generation_hints(
@@ -935,14 +927,14 @@ mod test {
                     .unwrap()
             );
             let ordered_hashes = vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
             assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
             for node in ordered_hashes.into_iter() {
@@ -957,8 +949,8 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
 
-            let src_node = string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            let dst_node = string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0");
+            let src_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
+            let dst_node = string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0");
             // performing this query should index all the nodes inbetween
             assert!(
                 query_reachability_with_generation_hints(
@@ -970,16 +962,16 @@ mod test {
                     .unwrap()
             );
             let indexed_hashes = vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
             ];
             let unindexed_hashes = vec![
-                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
             assert_eq!(sli.indexed_node_count(), indexed_hashes.len());
             for node in indexed_hashes.clone().into_iter() {
@@ -990,8 +982,8 @@ mod test {
             }
 
             // perform a query from the middle of the indexed hashes to the end of the graph
-            let src_node = string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372");
-            let dst_node = string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
+            let src_node = string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372");
+            let dst_node = string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
             // performing this query should index all the nodes inbetween
             assert!(
                 query_reachability_with_generation_hints(
@@ -1018,24 +1010,25 @@ mod test {
             let repo = Arc::new(unshared_merge_even::getrepo(None));
             let sli = SkiplistIndex::new();
             let branch_1 = vec![
-                string_to_nodehash("1700524113b1a3b1806560341009684b4378660b"),
-                string_to_nodehash("36ff88dd69c9966c9fad9d6d0457c52153039dde"),
-                string_to_nodehash("f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
-                string_to_nodehash("0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
-                string_to_nodehash("2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
-                string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
+                string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b"),
+                string_to_bonsai(&repo, "36ff88dd69c9966c9fad9d6d0457c52153039dde"),
+                string_to_bonsai(&repo, "f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
+                string_to_bonsai(&repo, "0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
+                string_to_bonsai(&repo, "2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
+                string_to_bonsai(&repo, "03b0589d9788870817d03ce7b87516648ed5b33a"),
             ];
             let branch_2 = vec![
-                string_to_nodehash("9d374b7e8180f933e3043ad1ffab0a9f95e2bac6"),
-                string_to_nodehash("3775a86c64cceeaf68ffe3f012fc90774c42002b"),
-                string_to_nodehash("eee492dcdeaae18f91822c4359dd516992e0dbcd"),
-                string_to_nodehash("163adc0d0f5d2eb0695ca123addcb92bab202096"),
-                string_to_nodehash("f01e186c165a2fbe931fd1bf4454235398c591c9"),
-                string_to_nodehash("33fb49d8a47b29290f5163e30b294339c89505a2"),
+                string_to_bonsai(&repo, "9d374b7e8180f933e3043ad1ffab0a9f95e2bac6"),
+                string_to_bonsai(&repo, "3775a86c64cceeaf68ffe3f012fc90774c42002b"),
+                string_to_bonsai(&repo, "eee492dcdeaae18f91822c4359dd516992e0dbcd"),
+                string_to_bonsai(&repo, "163adc0d0f5d2eb0695ca123addcb92bab202096"),
+                string_to_bonsai(&repo, "f01e186c165a2fbe931fd1bf4454235398c591c9"),
+                string_to_bonsai(&repo, "33fb49d8a47b29290f5163e30b294339c89505a2"),
             ];
 
-            let merge_node = string_to_nodehash("d592490c4386cdb3373dd93af04d563de199b2fb");
-            let commit_after_merge = string_to_nodehash("7fe9947f101acb4acf7d945e69f0d6ce76a81113");
+            let merge_node = string_to_bonsai(&repo, "d592490c4386cdb3373dd93af04d563de199b2fb");
+            let commit_after_merge =
+                string_to_bonsai(&repo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113");
             // performing this query should index just the tip and the merge node
             assert!(
                 query_reachability_with_generation_hints(
@@ -1057,7 +1050,7 @@ mod test {
             }
 
             // perform a query from the merge to the start of branch 1
-            let dst_node = string_to_nodehash("1700524113b1a3b1806560341009684b4378660b");
+            let dst_node = string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b");
             // performing this query should index all the nodes inbetween
             assert!(
                 query_reachability_with_generation_hints(
@@ -1081,7 +1074,7 @@ mod test {
             }
 
             // perform a query from the merge to the start of branch 2
-            let dst_node = string_to_nodehash("1700524113b1a3b1806560341009684b4378660b");
+            let dst_node = string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b");
             assert!(
                 query_reachability_with_generation_hints(
                     repo.clone(),
@@ -1103,10 +1096,18 @@ mod test {
     fn test_union_frontiers() {
         // the actual hash and generation values are unimportant
         // so we dont need to use values that are consistent with some repo.
-        let n1_g1 = string_to_nodehash("1700524113b1a3b1806560341009684b4378660b");
-        let n2_g2 = string_to_nodehash("36ff88dd69c9966c9fad9d6d0457c52153039dde");
-        let n3_g2 = string_to_nodehash("f61fdc0ddafd63503dcd8eed8994ec685bfc8941");
-        let n4_g3 = string_to_nodehash("0b94a2881dda90f0d64db5fae3ee5695a38e7c8f");
+        let n1_g1 = ChangesetId::from_str(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        ).unwrap();
+        let n2_g2 = ChangesetId::from_str(
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        ).unwrap();
+        let n3_g2 = ChangesetId::from_str(
+            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        ).unwrap();
+        let n4_g3 = ChangesetId::from_str(
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        ).unwrap();
         let mut f1_map = HashMap::new();
         f1_map.insert(Generation::new(1), HashSet::from_iter(vec![n1_g1]));
         f1_map.insert(Generation::new(2), HashSet::from_iter(vec![n2_g2]));
@@ -1130,14 +1131,14 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
             let mut ordered_hashes_oldest_to_newest = vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_nodehash("607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_nodehash("3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_nodehash("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
             ordered_hashes_oldest_to_newest.reverse();
 
@@ -1199,27 +1200,27 @@ mod test {
     fn test_advance_node_uneven_merge() {
         async_unit::tokio_unit_test(move || {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let root_node = string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
+            let root_node = string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
 
             // order is oldest to newest
             let branch_1 = vec![
-                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
             ];
 
             // order is oldest to newest
             let branch_2 = vec![
-                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                string_to_nodehash("795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
-                string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+                string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+                string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+                string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
             ];
-            let merge_node = string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055");
+            let merge_node = string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055");
             let sli = SkiplistIndex::new();
 
             // This test tries to advance the merge node forward.
@@ -1304,28 +1305,28 @@ mod test {
     fn test_advance_node_on_partial_index() {
         async_unit::tokio_unit_test(move || {
             let repo = Arc::new(merge_uneven::getrepo(None));
-            let root_node = string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
+            let root_node = string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
 
             // order is oldest to newest
             let branch_1 = vec![
-                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
             ];
 
             // order is oldest to newest
             let branch_2 = vec![
-                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                string_to_nodehash("795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
-                string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+                string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+                string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+                string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
             ];
 
-            let merge_node = string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055");
+            let merge_node = string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055");
             let sli = SkiplistIndex::new();
 
             // This test partially indexes the top few of the graph.
@@ -1415,14 +1416,14 @@ mod test {
         async_unit::tokio_unit_test(move || {
             // this repo has no merges but many branches
             let repo = Arc::new(branch_wide::getrepo(None));
-            let root_node = string_to_nodehash("ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
+            let root_node = string_to_bonsai(&repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
 
-            let _b1 = string_to_nodehash("9e8521affb7f9d10e9551a99c526e69909042b20");
-            let _b2 = string_to_nodehash("4685e9e62e4885d477ead6964a7600c750e39b03");
-            let b1_1 = string_to_nodehash("b6a8169454af58b4b72b3665f9aa0d25529755ff");
-            let b1_2 = string_to_nodehash("c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
-            let b2_1 = string_to_nodehash("04decbb0d1a65789728250ddea2fe8d00248e01c");
-            let b2_2 = string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449");
+            let _b1 = string_to_bonsai(&repo, "9e8521affb7f9d10e9551a99c526e69909042b20");
+            let _b2 = string_to_bonsai(&repo, "4685e9e62e4885d477ead6964a7600c750e39b03");
+            let b1_1 = string_to_bonsai(&repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff");
+            let b1_2 = string_to_bonsai(&repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
+            let b2_1 = string_to_bonsai(&repo, "04decbb0d1a65789728250ddea2fe8d00248e01c");
+            let b2_2 = string_to_bonsai(&repo, "49f53ab171171b3180e125b918bd1cf0af7e5449");
 
             let sli = SkiplistIndex::new();
             let advance_to_root_futures =
@@ -1451,14 +1452,14 @@ mod test {
         async_unit::tokio_unit_test(move || {
             // this repo has no merges but many branches
             let repo = Arc::new(branch_wide::getrepo(None));
-            let root_node = string_to_nodehash("ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
+            let root_node = string_to_bonsai(&repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
 
-            let b1 = string_to_nodehash("9e8521affb7f9d10e9551a99c526e69909042b20");
-            let b2 = string_to_nodehash("4685e9e62e4885d477ead6964a7600c750e39b03");
-            let b1_1 = string_to_nodehash("b6a8169454af58b4b72b3665f9aa0d25529755ff");
-            let b1_2 = string_to_nodehash("c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
-            let b2_1 = string_to_nodehash("04decbb0d1a65789728250ddea2fe8d00248e01c");
-            let b2_2 = string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449");
+            let b1 = string_to_bonsai(&repo, "9e8521affb7f9d10e9551a99c526e69909042b20");
+            let b2 = string_to_bonsai(&repo, "4685e9e62e4885d477ead6964a7600c750e39b03");
+            let b1_1 = string_to_bonsai(&repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff");
+            let b1_2 = string_to_bonsai(&repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
+            let b2_1 = string_to_bonsai(&repo, "04decbb0d1a65789728250ddea2fe8d00248e01c");
+            let b2_2 = string_to_bonsai(&repo, "49f53ab171171b3180e125b918bd1cf0af7e5449");
 
             let sli = SkiplistIndex::new();
             let mut starting_frontier_map = HashMap::new();

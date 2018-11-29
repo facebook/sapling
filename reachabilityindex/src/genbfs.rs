@@ -13,9 +13,7 @@ use futures::stream::{iter_ok, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::{self, BlobRepo};
-use mercurial_types::HgNodeHash;
-use mercurial_types::nodehash::HgChangesetId;
-use mononoke_types::Generation;
+use mononoke_types::{ChangesetId, Generation};
 
 use errors::*;
 use helpers::*;
@@ -38,10 +36,10 @@ impl GenerationNumberBFS {
 // - return the parents as the next bfs layer, and the updated seen as the new seen set
 fn process_bfs_layer(
     repo: Arc<BlobRepo>,
-    curr_layer: HashSet<HgNodeHash>,
-    mut curr_seen: HashSet<HgNodeHash>,
+    curr_layer: HashSet<ChangesetId>,
+    mut curr_seen: HashSet<ChangesetId>,
     dst_gen: Generation,
-) -> BoxFuture<(HashSet<HgNodeHash>, HashSet<HgNodeHash>), Error> {
+) -> BoxFuture<(HashSet<ChangesetId>, HashSet<ChangesetId>), Error> {
     let new_repo_changesets = repo.clone();
     for next_node in curr_layer.iter() {
         curr_seen.insert(next_node.clone());
@@ -50,7 +48,7 @@ fn process_bfs_layer(
     iter_ok::<_, Error>(curr_layer)
         .and_then(move |hash| {
             new_repo_changesets
-                .get_changeset_parents(&HgChangesetId::new(hash))
+                .get_changeset_parents_by_bonsai(&hash)
                 .map_err(|err| {
                     ErrorKind::ParentsFetchFailed(BlobRepoErrorCause::new(
                         err.downcast::<blobrepo::ErrorKind>().ok(),
@@ -60,7 +58,7 @@ fn process_bfs_layer(
         .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
         .flatten()
         .collect()
-        .and_then(|all_parents| changeset_to_nodehashes_with_generation_numbers(repo, all_parents))
+        .and_then(|all_parents| changesets_with_generation_numbers(repo, all_parents))
         .map(move |flattened_node_generation_pairs| {
             let mut next_layer = HashSet::new();
             for (parent_hash, parent_gen) in flattened_node_generation_pairs.into_iter() {
@@ -77,8 +75,8 @@ impl ReachabilityIndex for GenerationNumberBFS {
     fn query_reachability(
         &self,
         repo: Arc<BlobRepo>,
-        src: HgNodeHash,
-        dst: HgNodeHash,
+        src: ChangesetId,
+        dst: ChangesetId,
     ) -> BoxFuture<bool, Error> {
         let start_bfs_layer: HashSet<_> = vec![src].into_iter().collect();
         let start_seen: HashSet<_> = HashSet::new();
