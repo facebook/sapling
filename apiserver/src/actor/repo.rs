@@ -159,7 +159,7 @@ impl MononokeRepo {
                 .and_then(|src| dst_hash_future.map(move |dst| (src, dst)))
                 .and_then({
                     cloned!(self.repo);
-                    move |(src, dst)| genbfs.query_reachability(repo, src, dst).from_err()
+                    move |(src, dst)| genbfs.query_reachability(repo.get_changeset_fetcher(), src, dst).from_err()
                 })
                 .then(|r| tx.send(r).map_err(|_| ())),
         );

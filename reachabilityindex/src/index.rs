@@ -10,7 +10,7 @@ use std::sync::Arc;
 use failure::Error;
 use futures_ext::BoxFuture;
 
-use blobrepo::BlobRepo;
+use blobrepo::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -29,7 +29,7 @@ pub trait ReachabilityIndex {
     /// Return a Future for whether the src node can reach the dst node
     fn query_reachability(
         &self,
-        repo: Arc<BlobRepo>,
+        repo: Arc<ChangesetFetcher>,
         src: ChangesetId,
         dst: ChangesetId,
     ) -> BoxFuture<bool, Error>;
@@ -44,7 +44,7 @@ pub trait LeastCommonAncestorsHint {
     /// - Any ancestor of "nodes" with generation <= gen is also an ancestor of "C"
     fn lca_hint(
         &self,
-        repo: Arc<BlobRepo>,
+        repo: Arc<ChangesetFetcher>,
         node_frontier: NodeFrontier,
         gen: Generation,
     ) -> BoxFuture<NodeFrontier, Error>;

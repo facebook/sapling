@@ -27,7 +27,9 @@ pub trait ChangesetFetcher: Send + Sync {
 
     fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error>;
 
-    fn get_stats(&self) -> HashMap<String, Box<Any>>;
+    fn get_stats(&self) -> HashMap<String, Box<Any>> {
+        HashMap::new()
+    }
 }
 
 /// Simplest ChangesetFetcher implementation which is just a wrapper around `Changesets` object
@@ -64,10 +66,6 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
             })
             .map(|cs| cs.parents)
             .boxify()
-    }
-
-    fn get_stats(&self) -> HashMap<String, Box<Any>> {
-        HashMap::new()
     }
 }
 

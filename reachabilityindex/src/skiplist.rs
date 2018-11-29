@@ -16,7 +16,7 @@ use futures::future::{loop_fn, Loop};
 use futures::stream::iter_ok;
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::BlobRepo;
+use blobrepo::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 
 use helpers::{advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists,
@@ -113,15 +113,15 @@ pub struct SkiplistIndex {
 // collecting all nodes which are not currently present in the index.
 // Then it orders them topologically using their generation numbers and returns them.
 fn find_nodes_to_index(
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     skip_list_edges: Arc<SkiplistEdgeMapping>,
     (start_node, start_gen): (ChangesetId, Generation),
     depth: u64,
 ) -> BoxFuture<Vec<(ChangesetId, Generation)>, Error> {
     let start_bfs_layer: HashSet<_> = vec![(start_node, start_gen)].into_iter().collect();
     let start_seen: HashSet<_> = HashSet::new();
-    let ancestors_to_depth =
-        check_if_node_exists(repo.clone(), start_node.clone()).and_then(move |_| {
+    let ancestors_to_depth = check_if_node_exists(changeset_fetcher.clone(), start_node.clone())
+        .and_then(move |_| {
             loop_fn(
                 (start_bfs_layer, start_seen, depth),
                 move |(curr_layer_unfiltered, curr_seen, curr_depth)| {
@@ -133,7 +133,7 @@ fn find_nodes_to_index(
                     if curr_depth == 0 || curr_layer.is_empty() {
                         ok(Loop::Break(curr_seen)).boxify()
                     } else {
-                        advance_bfs_layer(repo.clone(), curr_layer, curr_seen)
+                        advance_bfs_layer(changeset_fetcher.clone(), curr_layer, curr_seen)
                             .map(move |(next_layer, next_seen)| {
                                 Loop::Continue((next_layer, next_seen, curr_depth - 1))
                             })
@@ -155,7 +155,7 @@ fn find_nodes_to_index(
 /// From a starting node, index all nodes that are reachable within a given distance.
 /// If a previously indexed node is reached, indexing will stop there.
 fn lazy_index_node(
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     skip_edge_mapping: Arc<SkiplistEdgeMapping>,
     node: ChangesetId,
     max_depth: u64,
@@ -164,22 +164,32 @@ fn lazy_index_node(
     if max_depth == 0 || skip_edge_mapping.mapping.contains_key(&node) {
         ok(()).boxify()
     } else {
-        fetch_generation_and_join(repo.clone(), node)
+        fetch_generation_and_join(changeset_fetcher.clone(), node)
             .and_then({
-                cloned!(repo, skip_edge_mapping);
+                cloned!(changeset_fetcher, skip_edge_mapping);
                 move |node_gen_pair| {
-                    find_nodes_to_index(repo, skip_edge_mapping, node_gen_pair, max_depth)
+                    find_nodes_to_index(
+                        changeset_fetcher,
+                        skip_edge_mapping,
+                        node_gen_pair,
+                        max_depth,
+                    )
                 }
             })
             .and_then({
                 move |node_gen_pairs| {
                     join_all(node_gen_pairs.into_iter().map({
-                        cloned!(repo);
+                        cloned!(changeset_fetcher);
                         move |(hash, _gen)| {
-                            get_parents(repo.clone(), hash.clone())
+                            get_parents(changeset_fetcher.clone(), hash.clone())
                                 .and_then({
-                                    cloned!(repo);
-                                    |parents| changesets_with_generation_numbers(repo, parents)
+                                    cloned!(changeset_fetcher);
+                                    |parents| {
+                                        changesets_with_generation_numbers(
+                                            changeset_fetcher,
+                                            parents,
+                                        )
+                                    }
                                 })
                                 .map(move |parent_gen_pairs| (hash, parent_gen_pairs))
                         }
@@ -217,7 +227,7 @@ fn lazy_index_node(
 /// Assumes that the nodes exist in the repo if their generation numbers have been successfully
 /// computed ahead of time.
 fn query_reachability_with_generation_hints(
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     skip_list_edges: Arc<SkiplistEdgeMapping>,
     src_hash_gen: (ChangesetId, Generation),
     dst_hash_gen: (ChangesetId, Generation),
@@ -239,7 +249,7 @@ fn query_reachability_with_generation_hints(
                     Some(edge_pair) => {
                         // best skip list edge that doesnt go past the dst
                         query_reachability_with_generation_hints(
-                            repo.clone(),
+                            changeset_fetcher.clone(),
                             skip_list_edges.clone(),
                             edge_pair,
                             dst_hash_gen,
@@ -252,18 +262,21 @@ fn query_reachability_with_generation_hints(
                         // TODO: Add some kind of logging here,
                         // since if the logic reaches this point something is wrong
                         cloned!(skip_list_edges);
-                        get_parents(repo.clone(), src_hash_gen.0)
+                        get_parents(changeset_fetcher.clone(), src_hash_gen.0)
                             .and_then({
-                                cloned!(repo);
+                                cloned!(changeset_fetcher);
                                 |parent_changesets| {
-                                    changesets_with_generation_numbers(repo, parent_changesets)
+                                    changesets_with_generation_numbers(
+                                        changeset_fetcher,
+                                        parent_changesets,
+                                    )
                                 }
                             })
                             .and_then(move |parent_edges| {
                                 join_all(parent_edges.into_iter().map({
                                     move |parent_gen_pair| {
                                         query_reachability_with_generation_hints(
-                                            repo.clone(),
+                                            changeset_fetcher.clone(),
                                             skip_list_edges.clone(),
                                             parent_gen_pair,
                                             dst_hash_gen,
@@ -281,7 +294,7 @@ fn query_reachability_with_generation_hints(
                     cloned!(skip_list_edges);
                     move |parent_gen_pair| {
                         query_reachability_with_generation_hints(
-                            repo.clone(),
+                            changeset_fetcher.clone(),
                             skip_list_edges.clone(),
                             parent_gen_pair,
                             dst_hash_gen,
@@ -294,7 +307,7 @@ fn query_reachability_with_generation_hints(
     } else {
         if let Some(distance) = (src_hash_gen.1).difference_from(dst_hash_gen.1) {
             lazy_index_node(
-                repo.clone(),
+                changeset_fetcher.clone(),
                 skip_list_edges.clone(),
                 src_hash_gen.0,
                 distance + 1,
@@ -302,7 +315,7 @@ fn query_reachability_with_generation_hints(
                 cloned!(skip_list_edges);
                 move |_| {
                     query_reachability_with_generation_hints(
-                        repo.clone(),
+                        changeset_fetcher.clone(),
                         skip_list_edges.clone(),
                         src_hash_gen,
                         dst_hash_gen,
@@ -317,16 +330,19 @@ fn query_reachability_with_generation_hints(
 }
 
 fn query_reachability(
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     skip_list_edges: Arc<SkiplistEdgeMapping>,
     src_hash: ChangesetId,
     dst_hash: ChangesetId,
 ) -> BoxFuture<bool, Error> {
-    fetch_generation_and_join(repo.clone(), src_hash)
-        .join(fetch_generation_and_join(repo.clone(), dst_hash))
+    fetch_generation_and_join(changeset_fetcher.clone(), src_hash)
+        .join(fetch_generation_and_join(
+            changeset_fetcher.clone(),
+            dst_hash,
+        ))
         .and_then(|(src_hash_gen, dst_hash_gen)| {
             query_reachability_with_generation_hints(
-                repo,
+                changeset_fetcher,
                 skip_list_edges,
                 src_hash_gen,
                 dst_hash_gen,
@@ -356,11 +372,16 @@ impl SkiplistIndex {
 
     pub fn add_node(
         &self,
-        repo: Arc<BlobRepo>,
+        changeset_fetcher: Arc<ChangesetFetcher>,
         node: ChangesetId,
         max_index_depth: u64,
     ) -> BoxFuture<(), Error> {
-        lazy_index_node(repo, self.skip_list_edges.clone(), node, max_index_depth)
+        lazy_index_node(
+            changeset_fetcher,
+            self.skip_list_edges.clone(),
+            node,
+            max_index_depth,
+        )
     }
 
     /// get skiplist edges originating from a particular node hash
@@ -390,11 +411,11 @@ impl SkiplistIndex {
 impl ReachabilityIndex for SkiplistIndex {
     fn query_reachability(
         &self,
-        repo: Arc<BlobRepo>,
+        changeset_fetcher: Arc<ChangesetFetcher>,
         src: ChangesetId,
         dst: ChangesetId,
     ) -> BoxFuture<bool, Error> {
-        query_reachability(repo, self.skip_list_edges.clone(), src, dst)
+        query_reachability(changeset_fetcher, self.skip_list_edges.clone(), src, dst)
     }
 }
 
@@ -417,7 +438,7 @@ fn union_frontiers(frontiers: Vec<NodeFrontier>) -> NodeFrontier {
 // such that all ancestors of node with generation <= gen
 // are also ancestors of the output.
 fn advance_node_forward(
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     skip_list_edges: Arc<SkiplistEdgeMapping>,
     (node, gen): (ChangesetId, Generation),
     max_gen: Generation,
@@ -441,7 +462,7 @@ fn advance_node_forward(
                     Some(edge_pair) => {
                         // best skip list edge that doesnt go past the dst
                         advance_node_forward(
-                            repo.clone(),
+                            changeset_fetcher.clone(),
                             skip_list_edges.clone(),
                             edge_pair,
                             max_gen,
@@ -458,7 +479,7 @@ fn advance_node_forward(
                         // which is the first skip edge.
                         if let Some(parent_edge) = edges.iter().next() {
                             advance_node_forward(
-                                repo.clone(),
+                                changeset_fetcher.clone(),
                                 skip_list_edges.clone(),
                                 *parent_edge,
                                 max_gen,
@@ -476,7 +497,7 @@ fn advance_node_forward(
                     cloned!(skip_list_edges);
                     move |parent_gen_pair| {
                         advance_node_forward(
-                            repo.clone(),
+                            changeset_fetcher.clone(),
                             skip_list_edges.clone(),
                             parent_gen_pair,
                             max_gen,
@@ -490,18 +511,22 @@ fn advance_node_forward(
         // Node unindexed
         // Index deep enough to reach max_gen
         if let Some(distance) = gen.difference_from(max_gen) {
-            lazy_index_node(repo.clone(), skip_list_edges.clone(), node, distance + 1)
-                .and_then({
-                    cloned!(skip_list_edges);
-                    move |_| {
-                        advance_node_forward(
-                            repo.clone(),
-                            skip_list_edges.clone(),
-                            (node, gen),
-                            max_gen,
-                        )
-                    }
-                })
+            lazy_index_node(
+                changeset_fetcher.clone(),
+                skip_list_edges.clone(),
+                node,
+                distance + 1,
+            ).and_then({
+                cloned!(skip_list_edges);
+                move |_| {
+                    advance_node_forward(
+                        changeset_fetcher.clone(),
+                        skip_list_edges.clone(),
+                        (node, gen),
+                        max_gen,
+                    )
+                }
+            })
                 .boxify()
         } else {
             // Shouldn't reach here, since we already checked the difference at the start
@@ -512,7 +537,7 @@ fn advance_node_forward(
 }
 
 fn process_frontier(
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     skip_edges: Arc<SkiplistEdgeMapping>,
     nodes: NodeFrontier,
     max_gen: Generation,
@@ -525,7 +550,12 @@ fn process_frontier(
     }
     iter_ok::<_, Error>(to_process.into_iter())
         .map(move |(node, node_gen)| {
-            advance_node_forward(repo.clone(), skip_edges.clone(), (node, node_gen), max_gen)
+            advance_node_forward(
+                changeset_fetcher.clone(),
+                skip_edges.clone(),
+                (node, node_gen),
+                max_gen,
+            )
         })
         .buffered(100)
         .collect()
@@ -535,11 +565,16 @@ fn process_frontier(
 impl LeastCommonAncestorsHint for SkiplistIndex {
     fn lca_hint(
         &self,
-        repo: Arc<BlobRepo>,
+        changeset_fetcher: Arc<ChangesetFetcher>,
         node_frontier: NodeFrontier,
         gen: Generation,
     ) -> BoxFuture<NodeFrontier, Error> {
-        process_frontier(repo, self.skip_list_edges.clone(), node_frontier, gen).boxify()
+        process_frontier(
+            changeset_fetcher,
+            self.skip_list_edges.clone(),
+            node_frontier,
+            gen,
+        ).boxify()
     }
 }
 
@@ -589,7 +624,9 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
             let master_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            sli.add_node(repo.clone(), master_node, 100).wait().unwrap();
+            sli.add_node(repo.get_changeset_fetcher(), master_node, 100)
+                .wait()
+                .unwrap();
             let ordered_hashes = vec![
                 string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
@@ -613,7 +650,9 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
             let master_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            sli.add_node(repo.clone(), master_node, 100).wait().unwrap();
+            sli.add_node(repo.get_changeset_fetcher(), master_node, 100)
+                .wait()
+                .unwrap();
             let ordered_hashes = vec![
                 string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
@@ -648,7 +687,9 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
             let master_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            sli.add_node(repo.clone(), master_node, 100).wait().unwrap();
+            sli.add_node(repo.get_changeset_fetcher(), master_node, 100)
+                .wait()
+                .unwrap();
             // hashes in order from newest to oldest are:
             // a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
             // 0ed509bf086fadcb8a8a5384dc3b550729b0fc17
@@ -707,7 +748,9 @@ mod test {
 
             let merge_node = string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055");
             let sli = SkiplistIndex::new();
-            sli.add_node(repo, merge_node, 100).wait().unwrap();
+            sli.add_node(repo.get_changeset_fetcher(), merge_node, 100)
+                .wait()
+                .unwrap();
             for node in branch_1.into_iter() {
                 let skip_edges: Vec<_> = sli.get_skip_edges(node)
                     .unwrap()
@@ -762,7 +805,7 @@ mod test {
             let sli = SkiplistIndex::new();
 
             // index just one branch first
-            sli.add_node(repo.clone(), branch_1_head, 100)
+            sli.add_node(repo.get_changeset_fetcher(), branch_1_head, 100)
                 .wait()
                 .unwrap();
             for node in branch_1.into_iter() {
@@ -777,7 +820,9 @@ mod test {
                 assert!(!sli.is_node_indexed(node));
             }
             // index second branch
-            sli.add_node(repo, branch_2_head, 100).wait().unwrap();
+            sli.add_node(repo.get_changeset_fetcher(), branch_2_head, 100)
+                .wait()
+                .unwrap();
             for node in branch_2.into_iter() {
                 let skip_edges: Vec<_> = sli.get_skip_edges(node)
                     .unwrap()
@@ -805,7 +850,7 @@ mod test {
 
             let sli = SkiplistIndex::new();
             iter_ok::<_, Error>(vec![b1_1, b1_2, b2_1, b2_2])
-                .map(|branch_tip| sli.add_node(repo.clone(), branch_tip, 100))
+                .map(|branch_tip| sli.add_node(repo.get_changeset_fetcher(), branch_tip, 100))
                 .buffered(4)
                 .for_each(|_| ok(()))
                 .wait()
@@ -863,7 +908,7 @@ mod test {
             for (i, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
                 assert!(
                     query_reachability_with_generation_hints(
-                        repo.clone(),
+                        repo.get_changeset_fetcher(),
                         sli.skip_list_edges.clone(),
                         (node, Generation::new(i as u64 + 1)),
                         (node, Generation::new(i as u64 + 1))
@@ -897,7 +942,7 @@ mod test {
                 for j in i + 1..ordered_hashes_oldest_to_newest.len() {
                     let dst_node = ordered_hashes_oldest_to_newest.get(j).unwrap();
                     assert!(!query_reachability_with_generation_hints(
-                        repo.clone(),
+                        repo.get_changeset_fetcher(),
                         sli.skip_list_edges.clone(),
                         (*src_node, Generation::new(i as u64 + 1)),
                         (*dst_node, Generation::new(j as u64 + 1))
@@ -919,7 +964,7 @@ mod test {
             // performing this query should index all the nodes inbetween
             assert!(
                 query_reachability_with_generation_hints(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     (src_node, Generation::new(8)),
                     (dst_node, Generation::new(1))
@@ -954,7 +999,7 @@ mod test {
             // performing this query should index all the nodes inbetween
             assert!(
                 query_reachability_with_generation_hints(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     (src_node, Generation::new(8)),
                     (dst_node, Generation::new(4))
@@ -987,7 +1032,7 @@ mod test {
             // performing this query should index all the nodes inbetween
             assert!(
                 query_reachability_with_generation_hints(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     (src_node, Generation::new(5)),
                     (dst_node, Generation::new(1))
@@ -1032,7 +1077,7 @@ mod test {
             // performing this query should index just the tip and the merge node
             assert!(
                 query_reachability_with_generation_hints(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     (commit_after_merge, Generation::new(8)),
                     (merge_node, Generation::new(7))
@@ -1054,7 +1099,7 @@ mod test {
             // performing this query should index all the nodes inbetween
             assert!(
                 query_reachability_with_generation_hints(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     (merge_node, Generation::new(7)),
                     (dst_node, Generation::new(1))
@@ -1077,7 +1122,7 @@ mod test {
             let dst_node = string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b");
             assert!(
                 query_reachability_with_generation_hints(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     (merge_node, Generation::new(7)),
                     (dst_node, Generation::new(1))
@@ -1158,7 +1203,7 @@ mod test {
                     );
                     assert_eq!(
                         advance_node_forward(
-                            repo.clone(),
+                            repo.get_changeset_fetcher(),
                             sli.skip_list_edges.clone(),
                             (node, Generation::new(gen as u64 + 1)),
                             Generation::new(gen_earlier as u64 + 1)
@@ -1183,7 +1228,7 @@ mod test {
                     );
                     assert_eq!(
                         advance_node_forward(
-                            repo.clone(),
+                            repo.get_changeset_fetcher(),
                             sli.skip_list_edges.clone(),
                             (node, Generation::new(gen as u64 + 1)),
                             Generation::new(gen_later as u64 + 1)
@@ -1242,7 +1287,7 @@ mod test {
                 );
                 assert_eq!(
                     advance_node_forward(
-                        repo.clone(),
+                        repo.get_changeset_fetcher(),
                         sli.skip_list_edges.clone(),
                         (merge_node, Generation::new(10)),
                         frontier_generation
@@ -1274,7 +1319,7 @@ mod test {
                 );
                 assert_eq!(
                     advance_node_forward(
-                        repo.clone(),
+                        repo.get_changeset_fetcher(),
                         sli.skip_list_edges.clone(),
                         (merge_node, Generation::new(10)),
                         frontier_generation
@@ -1290,7 +1335,7 @@ mod test {
                 .insert(Generation::new(1), vec![root_node].into_iter().collect());
             assert_eq!(
                 advance_node_forward(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     (merge_node, Generation::new(10)),
                     Generation::new(1)
@@ -1331,7 +1376,7 @@ mod test {
 
             // This test partially indexes the top few of the graph.
             // Then it does a query that traverses from indexed to unindexed nodes.
-            sli.add_node(repo.clone(), merge_node, 2);
+            sli.add_node(repo.get_changeset_fetcher(), merge_node, 2);
 
             // Generation 1
             // This call should index the rest of the graph,
@@ -1343,7 +1388,7 @@ mod test {
                 .insert(Generation::new(1), vec![root_node].into_iter().collect());
             assert_eq!(
                 advance_node_forward(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     (merge_node, Generation::new(10)),
                     Generation::new(1)
@@ -1367,7 +1412,7 @@ mod test {
                 );
                 assert_eq!(
                     advance_node_forward(
-                        repo.clone(),
+                        repo.get_changeset_fetcher(),
                         sli.skip_list_edges.clone(),
                         (merge_node, Generation::new(10)),
                         frontier_generation
@@ -1399,7 +1444,7 @@ mod test {
                 );
                 assert_eq!(
                     advance_node_forward(
-                        repo.clone(),
+                        repo.get_changeset_fetcher(),
                         sli.skip_list_edges.clone(),
                         (merge_node, Generation::new(10)),
                         frontier_generation
@@ -1429,7 +1474,7 @@ mod test {
             let advance_to_root_futures =
                 vec![b1_1, b1_2, b2_1, b2_2].into_iter().map(|branch_tip| {
                     advance_node_forward(
-                        repo.clone(),
+                        repo.get_changeset_fetcher(),
                         sli.skip_list_edges.clone(),
                         (branch_tip, Generation::new(3)),
                         Generation::new(1),
@@ -1473,7 +1518,7 @@ mod test {
                 .insert(Generation::new(2), vec![b1, b2].into_iter().collect());
             assert_eq!(
                 process_frontier(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     NodeFrontier::new(starting_frontier_map.clone()),
                     Generation::new(2)
@@ -1487,7 +1532,7 @@ mod test {
                 .insert(Generation::new(1), vec![root_node].into_iter().collect());
             assert_eq!(
                 process_frontier(
-                    repo.clone(),
+                    repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
                     NodeFrontier::new(starting_frontier_map),
                     Generation::new(1)

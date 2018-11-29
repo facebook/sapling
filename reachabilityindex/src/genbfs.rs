@@ -12,10 +12,9 @@ use futures::future::{loop_fn, ok, Future, Loop};
 use futures::stream::{iter_ok, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::{self, BlobRepo};
+use blobrepo::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 
-use errors::*;
 use helpers::*;
 use index::ReachabilityIndex;
 
@@ -35,30 +34,22 @@ impl GenerationNumberBFS {
 // - filter out nodes whose generation number is too large
 // - return the parents as the next bfs layer, and the updated seen as the new seen set
 fn process_bfs_layer(
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     curr_layer: HashSet<ChangesetId>,
     mut curr_seen: HashSet<ChangesetId>,
     dst_gen: Generation,
 ) -> BoxFuture<(HashSet<ChangesetId>, HashSet<ChangesetId>), Error> {
-    let new_repo_changesets = repo.clone();
+    let new_changeset_fetcher = changeset_fetcher.clone();
     for next_node in curr_layer.iter() {
         curr_seen.insert(next_node.clone());
     }
 
     iter_ok::<_, Error>(curr_layer)
-        .and_then(move |hash| {
-            new_repo_changesets
-                .get_changeset_parents_by_bonsai(&hash)
-                .map_err(|err| {
-                    ErrorKind::ParentsFetchFailed(BlobRepoErrorCause::new(
-                        err.downcast::<blobrepo::ErrorKind>().ok(),
-                    )).into()
-                })
-        })
+        .and_then(move |hash| new_changeset_fetcher.get_parents(hash))
         .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
         .flatten()
         .collect()
-        .and_then(|all_parents| changesets_with_generation_numbers(repo, all_parents))
+        .and_then(|all_parents| changesets_with_generation_numbers(changeset_fetcher, all_parents))
         .map(move |flattened_node_generation_pairs| {
             let mut next_layer = HashSet::new();
             for (parent_hash, parent_gen) in flattened_node_generation_pairs.into_iter() {
@@ -74,15 +65,15 @@ fn process_bfs_layer(
 impl ReachabilityIndex for GenerationNumberBFS {
     fn query_reachability(
         &self,
-        repo: Arc<BlobRepo>,
+        changeset_fetcher: Arc<ChangesetFetcher>,
         src: ChangesetId,
         dst: ChangesetId,
     ) -> BoxFuture<bool, Error> {
         let start_bfs_layer: HashSet<_> = vec![src].into_iter().collect();
         let start_seen: HashSet<_> = HashSet::new();
-        check_if_node_exists(repo.clone(), src.clone())
+        check_if_node_exists(changeset_fetcher.clone(), src.clone())
             .and_then(move |_| {
-                fetch_generation(repo.clone(), dst.clone()).and_then(move |dst_gen| {
+                fetch_generation(changeset_fetcher.clone(), dst.clone()).and_then(move |dst_gen| {
                     loop_fn(
                         (start_bfs_layer, start_seen),
                         move |(curr_layer, curr_seen)| {
@@ -91,10 +82,14 @@ impl ReachabilityIndex for GenerationNumberBFS {
                             } else if curr_layer.is_empty() {
                                 ok(Loop::Break(false)).boxify()
                             } else {
-                                process_bfs_layer(repo.clone(), curr_layer, curr_seen, dst_gen)
-                                    .map(move |(next_layer, next_seen)| {
-                                        Loop::Continue((next_layer, next_seen))
-                                    })
+                                process_bfs_layer(
+                                    changeset_fetcher.clone(),
+                                    curr_layer,
+                                    curr_seen,
+                                    dst_gen,
+                                ).map(move |(next_layer, next_seen)| {
+                                    Loop::Continue((next_layer, next_seen))
+                                })
                                     .boxify()
                             }
                         },
