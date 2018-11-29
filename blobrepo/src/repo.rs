@@ -72,6 +72,7 @@ use repo_commit::*;
 define_stats! {
     prefix = "mononoke.blobrepo";
     get_bonsai_changeset: timeseries(RATE, SUM),
+    get_bonsai_heads_maybe_stale: timeseries(RATE, SUM),
     get_file_content: timeseries(RATE, SUM),
     get_raw_hg_content: timeseries(RATE, SUM),
     get_changesets: timeseries(RATE, SUM),
@@ -657,6 +658,13 @@ impl BlobRepo {
                         .map(|cs| cs.into_nodehash())
                 }
             })
+    }
+
+    pub fn get_bonsai_heads_maybe_stale(&self) -> impl Stream<Item = ChangesetId, Error = Error> {
+        STATS::get_bonsai_heads_maybe_stale.add_value(1);
+        self.bookmarks
+            .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
+            .map(|(_, cs_id)| cs_id)
     }
 
     // TODO(stash): make it accept ChangesetId

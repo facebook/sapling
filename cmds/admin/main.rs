@@ -29,7 +29,9 @@ extern crate futures_ext;
 extern crate manifoldblob;
 extern crate mercurial_types;
 extern crate mononoke_types;
+extern crate reachabilityindex;
 extern crate revset;
+extern crate rust_thrift;
 #[macro_use]
 extern crate slog;
 extern crate tempdir;
@@ -39,7 +41,7 @@ mod config_repo;
 mod bookmarks_manager;
 
 use std::borrow::Borrow;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use std::fmt;
 use std::io;
@@ -48,7 +50,7 @@ use std::sync::Arc;
 
 use clap::{App, Arg, SubCommand};
 use failure::{err_msg, Error, Result};
-use futures::future;
+use futures::future::{self, loop_fn, ok, Loop};
 use futures::prelude::*;
 use futures::stream::iter_ok;
 
@@ -63,7 +65,9 @@ use mercurial_types::{Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvel
                       HgManifestEnvelope, HgManifestId, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
 use mononoke_types::{BlobstoreBytes, BlobstoreValue, BonsaiChangeset, FileContents};
+use reachabilityindex::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 use revset::RangeNodeStream;
+use rust_thrift::compact_protocol;
 use slog::Logger;
 
 const BLOBSTORE_FETCH: &'static str = "blobstore-fetch";
@@ -71,10 +75,13 @@ const BONSAI_FETCH: &'static str = "bonsai-fetch";
 const CONTENT_FETCH: &'static str = "content-fetch";
 const CONFIG_REPO: &'static str = "config";
 const BOOKMARKS: &'static str = "bookmarks";
+const SKIPLIST: &'static str = "skiplist";
 
 const HG_CHANGESET: &'static str = "hg-changeset";
 const HG_CHANGESET_DIFF: &'static str = "diff";
 const HG_CHANGESET_RANGE: &'static str = "range";
+const SKIPLIST_BUILD: &'static str = "build";
+const SKIPLIST_READ: &'static str = "read";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let blobstore_fetch = SubCommand::with_name(BLOBSTORE_FETCH)
@@ -137,6 +144,23 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 ),
         );
 
+    let skiplist = SubCommand::with_name(SKIPLIST)
+        .about("commands to build or read skiplist indexes")
+        .subcommand(
+            SubCommand::with_name(SKIPLIST_BUILD)
+                .about("build skiplist index")
+                .args_from_usage(
+                    "<BLOBSTORE_KEY>  'Blobstore key where to store the built skiplist'",
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(SKIPLIST_READ)
+                .about("read skiplist index")
+                .args_from_usage(
+                    "<BLOBSTORE_KEY>  'Blobstore key from where to read the skiplist'",
+                ),
+        );
+
     let app = args::MononokeApp {
         safe_writes: false,
         hide_advanced_args: true,
@@ -156,6 +180,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             BOOKMARKS,
         )))
         .subcommand(hg_changeset)
+        .subcommand(skiplist)
 }
 
 fn fetch_content_from_manifest(
@@ -393,6 +418,89 @@ fn hg_changeset_diff(
         })
 }
 
+fn build_skiplist_index<S: ToString>(
+    repo: BlobRepo,
+    key: S,
+    logger: Logger,
+) -> BoxFuture<(), Error> {
+    let blobstore = repo.get_blobstore();
+    let skiplist_depth = 16;
+    let max_index_depth = 2000000000;
+    let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
+    let cs_fetcher = repo.get_changeset_fetcher();
+    let key = key.to_string();
+
+    repo.get_bonsai_heads_maybe_stale()
+        .collect()
+        .and_then(move |heads| {
+            loop_fn(
+                (heads.into_iter(), skiplist_index),
+                move |(mut heads, skiplist_index)| match heads.next() {
+                    Some(head) => {
+                        let f = skiplist_index.add_node(cs_fetcher.clone(), head, max_index_depth);
+
+                        f.map(move |()| Loop::Continue((heads, skiplist_index)))
+                            .boxify()
+                    }
+                    None => ok(Loop::Break(skiplist_index)).boxify(),
+                },
+            )
+        })
+        .inspect(|skiplist_index| {
+            println!(
+                "build {} skiplist nodes",
+                skiplist_index.indexed_node_count()
+            );
+        })
+        .map(|skiplist_index| {
+            // We store only latest skip entry (i.e. entry with the longest jump)
+            // This saves us storage space
+            let mut thrift_merge_graph = HashMap::new();
+            for (cs_id, skiplist_node_type) in skiplist_index.get_all_skip_edges() {
+                let skiplist_node_type = if let SkiplistNodeType::SkipEdges(skip_edges) =
+                    skiplist_node_type
+                {
+                    SkiplistNodeType::SkipEdges(skip_edges.last().cloned().into_iter().collect())
+                } else {
+                    skiplist_node_type
+                };
+
+                thrift_merge_graph.insert(cs_id.into_thrift(), skiplist_node_type.to_thrift());
+            }
+
+            compact_protocol::serialize(&thrift_merge_graph)
+        })
+        .and_then(move |bytes| {
+            debug!(logger, "storing {} bytes", bytes.len());
+            blobstore.put(key, BlobstoreBytes::from_bytes(bytes))
+        })
+        .boxify()
+}
+
+fn read_skiplist_index<S: ToString>(
+    repo: BlobRepo,
+    key: S,
+    logger: Logger,
+) -> BoxFuture<(), Error> {
+    repo.get_blobstore()
+        .get(key.to_string())
+        .and_then(move |maybebytes| {
+            match maybebytes {
+                Some(bytes) => {
+                    debug!(logger, "received {} bytes from blobstore", bytes.len());
+                    let bytes = bytes.into_bytes();
+                    let skiplist_map = try_boxfuture!(deserialize_skiplist_map(bytes));
+                    info!(logger, "skiplist graph has {} entries", skiplist_map.len());
+                }
+                None => {
+                    println!("not found map");
+                }
+            };
+            ok(()).boxify()
+        })
+        .boxify()
+}
+
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
@@ -599,6 +707,30 @@ fn main() -> Result<()> {
                             .map_err(Error::from)
                     })
                     .boxify()
+            }
+            _ => {
+                println!("{}", sub_m.usage());
+                ::std::process::exit(1);
+            }
+        },
+        (SKIPLIST, Some(sub_m)) => match sub_m.subcommand() {
+            (SKIPLIST_BUILD, Some(sub_m)) => {
+                args::init_cachelib(&matches);
+                let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
+
+                build_skiplist_index(repo, sub_m.value_of("BLOBSTORE_KEY").unwrap(), logger)
+            }
+            (SKIPLIST_READ, Some(sub_m)) => {
+                args::init_cachelib(&matches);
+                let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
+
+                read_skiplist_index(
+                    repo,
+                    sub_m
+                        .value_of("BLOBSTORE_KEY")
+                        .expect("blobstore key is not specified"),
+                    logger,
+                )
             }
             _ => {
                 println!("{}", sub_m.usage());

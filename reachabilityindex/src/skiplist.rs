@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use chashmap::CHashMap;
-use failure::Error;
+use failure::{Error, Result, SyncFailure};
 use futures::Stream;
 use futures::future::{join_all, ok, Future};
 use futures::future::{loop_fn, Loop};
@@ -26,6 +26,8 @@ use index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
 use skiplist_thrift;
 
 use rust_thrift::compact_protocol;
+
+use errors::*;
 
 const DEFAULT_EDGE_COUNT: u32 = 10;
 
@@ -70,10 +72,52 @@ impl SkiplistNodeType {
         }
     }
 
+    pub fn from_thrift(skiplist_node: skiplist_thrift::SkiplistNodeType) -> Result<Self> {
+        fn decode_vec_to_thrift(
+            edges: Vec<skiplist_thrift::CommitAndGenerationNumber>,
+        ) -> Result<Vec<(ChangesetId, Generation)>> {
+            edges
+                .into_iter()
+                .map(|commit_gen_num| {
+                    let cs_id = commit_gen_num.cs_id;
+                    let gen_num = commit_gen_num.gen;
+                    ChangesetId::from_thrift(cs_id)
+                        .map(|cs_id| (cs_id, Generation::new(gen_num.0 as u64)))
+                })
+                .collect()
+        }
+
+        match skiplist_node {
+            skiplist_thrift::SkiplistNodeType::SkipEdges(thrift_edges) => {
+                decode_vec_to_thrift(thrift_edges.edges).map(SkiplistNodeType::SkipEdges)
+            }
+            skiplist_thrift::SkiplistNodeType::ParentEdges(thrift_edges) => {
+                decode_vec_to_thrift(thrift_edges.edges).map(SkiplistNodeType::ParentEdges)
+            }
+            _ => Err(ErrorKind::UknownSkiplistThriftEncoding.into()),
+        }
+    }
+
     pub fn serialize(&self) -> Bytes {
         let thrift_skiplist_node_type = self.to_thrift();
         compact_protocol::serialize(&thrift_skiplist_node_type)
     }
+}
+
+pub fn deserialize_skiplist_map(bytes: Bytes) -> Result<HashMap<ChangesetId, SkiplistNodeType>> {
+    let map: HashMap<_, skiplist_thrift::SkiplistNodeType> =
+        compact_protocol::deserialize(&bytes).map_err(SyncFailure::new)?;
+
+    let v: Result<Vec<_>> = map.into_iter()
+        .map(|(cs_id, skiplist_thrift)| {
+            ChangesetId::from_thrift(cs_id).map(|cs_id| {
+                SkiplistNodeType::from_thrift(skiplist_thrift)
+                    .map(move |skiplist| (cs_id, skiplist))
+            })
+        })
+        .collect();
+
+    v?.into_iter().collect()
 }
 
 struct SkiplistEdgeMapping {
@@ -306,37 +350,34 @@ fn query_reachability_with_generation_hints(
                                 dst_hash_gen,
                             )
                         }
-                    }))
-                    .map(|parent_results| parent_results.into_iter().any(|x| x))
-                    .boxify();
+                    })).map(|parent_results| parent_results.into_iter().any(|x| x))
+                        .boxify();
                 }
             }
         }
 
-        changeset_fetcher.get_parents(src_hash_gen.0)
+        changeset_fetcher
+            .get_parents(src_hash_gen.0)
             .and_then({
                 cloned!(changeset_fetcher);
                 |parent_changesets| {
-                    changesets_with_generation_numbers(
-                        changeset_fetcher,
-                        parent_changesets,
-                    )
+                    changesets_with_generation_numbers(changeset_fetcher, parent_changesets)
                 }
             })
-        .and_then(move |parent_edges| {
-            join_all(parent_edges.into_iter().map({
-                move |parent_gen_pair| {
-                    query_reachability_with_generation_hints(
-                        changeset_fetcher.clone(),
-                        skip_list_edges.clone(),
-                        parent_gen_pair,
-                        dst_hash_gen,
-                    )
-                }
-            }))
-        })
-        .map(|parent_results| parent_results.into_iter().any(|x| x))
-        .boxify()
+            .and_then(move |parent_edges| {
+                join_all(parent_edges.into_iter().map({
+                    move |parent_gen_pair| {
+                        query_reachability_with_generation_hints(
+                            changeset_fetcher.clone(),
+                            skip_list_edges.clone(),
+                            parent_gen_pair,
+                            dst_hash_gen,
+                        )
+                    }
+                }))
+            })
+            .map(|parent_results| parent_results.into_iter().any(|x| x))
+            .boxify()
     }
 }
 
@@ -369,7 +410,7 @@ impl SkiplistIndex {
         }
     }
 
-    pub fn with_skip_edge_count(self, skip_edges_per_node: u32) -> Self {
+    pub fn with_skip_edge_count(skip_edges_per_node: u32) -> Self {
         SkiplistIndex {
             skip_list_edges: Arc::new(
                 SkiplistEdgeMapping::new().with_skip_edge_count(skip_edges_per_node),
@@ -408,6 +449,10 @@ impl SkiplistIndex {
         } else {
             None
         }
+    }
+
+    pub fn get_all_skip_edges(&self) -> HashMap<ChangesetId, SkiplistNodeType> {
+        self.skip_list_edges.mapping.clone().into_iter().collect()
     }
 
     pub fn is_node_indexed(&self, node: ChangesetId) -> bool {
@@ -588,7 +633,7 @@ mod test {
             let sli = SkiplistIndex::new();
             assert_eq!(sli.skip_edge_count(), DEFAULT_EDGE_COUNT);
 
-            let sli_with_20 = SkiplistIndex::new().with_skip_edge_count(20);
+            let sli_with_20 = SkiplistIndex::with_skip_edge_count(20);
             assert_eq!(sli_with_20.skip_edge_count(), 20);
         });
     }

@@ -52,4 +52,5 @@ pub enum ErrorKind {
     ParentsFetchFailed(#[cause] BlobRepoErrorCause),
     #[fail(display = "checking existence failed")]
     CheckExistenceFailed(String, #[cause] BlobRepoErrorCause),
+    #[fail(display = "Unknown field in thrift encoding")] UknownSkiplistThriftEncoding,
 }

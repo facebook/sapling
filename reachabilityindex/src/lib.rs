@@ -33,7 +33,7 @@ mod genbfs;
 pub use genbfs::GenerationNumberBFS;
 
 mod skiplist;
-pub use skiplist::{SkiplistIndex, SkiplistNodeType};
+pub use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 #[cfg(test)]
 pub extern crate async_unit;
 #[cfg(test)]

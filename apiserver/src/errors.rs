@@ -186,7 +186,7 @@ impl From<ReachabilityIndexError> for ErrorKind {
             CheckExistenceFailed(s, t) => {
                 ErrorKind::NotFound(s.clone(), Some(CheckExistenceFailed(s, t).into()))
             }
-            e @ GenerationFetchFailed(_) | e @ ParentsFetchFailed(_) => {
+            e @ GenerationFetchFailed(_) | e @ ParentsFetchFailed(_) | e @ UknownSkiplistThriftEncoding => {
                 ErrorKind::InternalError(e.into())
             }
         }
