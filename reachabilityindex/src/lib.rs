@@ -27,7 +27,7 @@ pub mod errors;
 pub use errors::ErrorKind;
 
 mod index;
-pub use index::ReachabilityIndex;
+pub use index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex, SimpleLcaHint};
 
 mod genbfs;
 pub use genbfs::GenerationNumberBFS;

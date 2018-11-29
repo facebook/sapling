@@ -29,13 +29,14 @@ use std::sync::Arc;
 
 use failure::prelude::*;
 use futures::{Async, IntoFuture, Poll};
-use futures::future::Future;
-use futures::stream::{self, empty, iter_ok, Peekable, Stream};
-use futures_ext::{SelectAll, StreamExt};
+use futures::future::{ok, Future};
+use futures::stream::{self, iter_ok, Stream};
+use futures_ext::{BoxFuture, FutureExt, SelectAll, StreamExt};
 
 use blobrepo::ChangesetFetcher;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
+use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier, SimpleLcaHint};
 
 use BonsaiNodeStream;
 use UniqueHeap;
@@ -80,6 +81,13 @@ use setcommon::*;
 pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     changeset_fetcher: Arc<ChangesetFetcher>,
 
+    // Given a set "nodes", and a maximum generation "gen",
+    // return a set of nodes "C" which satisfies:
+    // - Max generation number in "C" is <= gen
+    // - Any ancestor of "nodes" with generation <= gen is also an ancestor of "C"
+    // It's used to move `exclude` NodeFrontier
+    lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
+
     // Nodes that we know about, grouped by generation.
     next_generation: BTreeMap<Generation, HashSet<ChangesetId>>,
 
@@ -92,13 +100,14 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
         SelectAll<Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send>>,
 
     // Stream of (Hashset, Generation) that needs to be excluded
-    exclude_ancestors: Peekable<stream::Fuse<GroupedByGenenerationStream>>,
+    exclude_ancestors_future: BoxFuture<NodeFrontier, Error>,
+    current_exclude_generation: Option<Generation>,
 
     // Nodes which generation is equal to `current_generation`. They will be returned from the
     // stream unless excluded.
     drain: iter::Peekable<IntoIter<ChangesetId>>,
 
-    // max heap of all relevant unique generation numbers
+    // max heap of all relevant unique generation numbers  for include nodes
     sorted_unique_generations: UniqueHeap<Generation>,
 }
 
@@ -149,20 +158,25 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
         hashes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
-        let excludes = if !excludes.is_empty() {
-            Self::new_union(changeset_fetcher, excludes)
-        } else {
-            empty().boxify()
-        };
-
         add_generations_by_bonsai(
-            stream::iter_ok(hashes.into_iter()).boxify(),
+            stream::iter_ok(excludes.into_iter()).boxify(),
             changeset_fetcher.clone(),
         ).collect()
+            .join(
+                add_generations_by_bonsai(
+                    stream::iter_ok(hashes.into_iter()).boxify(),
+                    changeset_fetcher.clone(),
+                ).collect(),
+            )
             .map({
                 let changeset_fetcher = changeset_fetcher.clone();
-                move |hashes_generations| {
+                move |(exclude_generations, hashes_generations)| {
                     let mut next_generation = BTreeMap::new();
+                    let current_exclude_generation = exclude_generations
+                        .iter()
+                        .map(|(_node, gen)| gen)
+                        .max()
+                        .cloned();
                     let mut sorted_unique_generations = UniqueHeap::new();
                     for (hash, generation) in hashes_generations {
                         next_generation
@@ -173,17 +187,17 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                         sorted_unique_generations.push(generation);
                     }
 
-                    let excludes = add_generations_by_bonsai(excludes, changeset_fetcher.clone());
                     Self {
                         changeset_fetcher: changeset_fetcher.clone(),
+                        lca_hint_index: Arc::new(SimpleLcaHint {}),
                         next_generation,
                         // Start with a fake state - maximum generation number and no entries
                         // for it (see drain below)
                         current_generation: Generation::max_gen(),
                         pending_changesets: SelectAll::new(),
-                        exclude_ancestors: GroupedByGenenerationStream::new(excludes)
-                            .fuse()
-                            .peekable(),
+                        exclude_ancestors_future: ok(NodeFrontier::from_pairs(exclude_generations))
+                            .boxify(),
+                        current_exclude_generation,
                         drain: hashset!{}.into_iter().peekable(),
                         sorted_unique_generations,
                     }.boxify()
@@ -195,28 +209,67 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
             .boxify()
     }
 
+    // Poll if a particular node should be excluded from the output.
     fn exclude_node(
         &mut self,
         node: ChangesetId,
         current_generation: Generation,
     ) -> Poll<bool, Error> {
         loop {
-            match try_ready!(self.exclude_ancestors.peek()) {
-                Some(entry) => {
-                    if entry.1 == current_generation {
-                        return Ok(Async::Ready(entry.0.contains(&node)));
-                    } else if entry.1 < current_generation {
+            // Poll the exclude_ancestors frontier future
+            let curr_exclude_ancestors = try_ready!(self.exclude_ancestors_future.poll());
+
+            if curr_exclude_ancestors.is_empty() {
+                // No exclude nodes to worry about
+                self.exclude_ancestors_future = ok(curr_exclude_ancestors).boxify();
+                return Ok(Async::Ready(false));
+            }
+
+            if self.current_exclude_generation == None {
+                // Recompute the current exclude generation
+                self.current_exclude_generation = curr_exclude_ancestors.max_gen();
+            }
+
+            // Attempt to extract the max generation of the frontier
+            if let Some(exclude_gen) = self.current_exclude_generation {
+                {
+                    if exclude_gen < current_generation {
+                        self.exclude_ancestors_future = ok(curr_exclude_ancestors).boxify();
                         return Ok(Async::Ready(false));
+                    } else if exclude_gen == current_generation {
+                        let mut should_exclude: Option<bool> = None;
+                        {
+                            if let Some(ref nodes) =
+                                curr_exclude_ancestors.gen_map.get(&current_generation)
+                            {
+                                should_exclude = Some(nodes.contains(&node));
+                            }
+                        }
+                        if let Some(should_exclude) = should_exclude {
+                            self.exclude_ancestors_future = ok(curr_exclude_ancestors).boxify();
+                            return Ok(Async::Ready(should_exclude));
+                        }
                     }
                 }
-                None => {
-                    return Ok(Async::Ready(false));
-                }
-            };
 
-            // Current generation in `exclude_ancestors` is bigger than `current_generation`.
-            // We need to skip
-            try_ready!(self.exclude_ancestors.poll());
+                // Current generation in `exclude_ancestors` is bigger
+                // than `current_generation`.
+                // We need to skip.
+
+                // Replace the exclude with a new future
+                // And indicate the current exclude gen needs to be recalculated.
+                self.current_exclude_generation = None;
+                self.exclude_ancestors_future = self.lca_hint_index.lca_hint(
+                    self.changeset_fetcher.clone(),
+                    curr_exclude_ancestors,
+                    current_generation,
+                );
+            } else {
+                // the max frontier is still "None".
+                // So there are no nodes in our exclude frontier.
+                self.exclude_ancestors_future = ok(curr_exclude_ancestors).boxify();
+                return Ok(Async::Ready(false));
+            }
         }
     }
 
@@ -282,71 +335,6 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
     }
 }
 
-/// Stream that transforms any input stream and returns pairs of generation number and
-/// a set with all of the nodes for this generation number. For example, for a stream like
-///
-///     o A
-///    / \
-/// B o   o C
-///   |   |
-/// D o   o E
-///    \ /
-///     o F
-///
-/// GroupedByGenenerationStream will return (4, {A}), (3, {B, C}), (2, {D, E}), (1, {F})
-struct GroupedByGenenerationStream {
-    input: stream::Fuse<BonsaiInputStream>,
-    current_generation: Option<Generation>,
-    hashes: HashSet<ChangesetId>,
-}
-
-impl GroupedByGenenerationStream {
-    pub fn new(input: BonsaiInputStream) -> Self {
-        Self {
-            input: input.fuse(),
-            current_generation: None,
-            hashes: hashset!{},
-        }
-    }
-}
-
-impl Stream for GroupedByGenenerationStream {
-    type Item = (HashSet<ChangesetId>, Generation);
-    type Error = Error;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        loop {
-            match try_ready!(self.input.poll()) {
-                Some(item) => {
-                    if self.current_generation.is_none() {
-                        self.current_generation = Some(item.1);
-                    }
-
-                    if self.current_generation == Some(item.1) {
-                        self.hashes.insert(item.0);
-                    } else if self.current_generation > Some(item.1) {
-                        let res = (self.hashes.clone(), self.current_generation.take().unwrap());
-                        self.hashes = hashset!{item.0};
-                        self.current_generation = Some(item.1);
-                        return Ok(Async::Ready(Some(res)));
-                    } else {
-                        panic!("unexpected current_generation");
-                    }
-                }
-                None => {
-                    if self.current_generation.is_none() {
-                        return Ok(Async::Ready(None));
-                    } else {
-                        let res = (self.hashes.clone(), self.current_generation.take().unwrap());
-                        self.hashes = hashset!{};
-                        return Ok(Async::Ready(Some(res)));
-                    }
-                }
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -355,137 +343,6 @@ mod test {
     use fixtures::merge_uneven;
     use futures::executor::spawn;
     use tests::{assert_changesets_sequence, string_to_bonsai, TestChangesetFetcher};
-
-    #[test]
-    fn grouped_by_generation_simple() {
-        async_unit::tokio_unit_test(|| {
-            let repo = Arc::new(linear::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
-
-            let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
-                &changeset_fetcher,
-                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-            ).boxify();
-            let inputstream = add_generations_by_bonsai(nodestream, changeset_fetcher.clone());
-
-            let res = spawn(GroupedByGenenerationStream::new(inputstream).collect())
-                .wait_future()
-                .expect("failed to finish groupped stream");
-
-            assert_eq!(
-                res,
-                vec![
-                    (
-                        hashset!{string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157")},
-                        Generation::new(8),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17")},
-                        Generation::new(7),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b")},
-                        Generation::new(6),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372")},
-                        Generation::new(5),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0")},
-                        Generation::new(4),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281")},
-                        Generation::new(3),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f")},
-                        Generation::new(2),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")},
-                        Generation::new(1),
-                    ),
-                ],
-            );
-        });
-    }
-
-    #[test]
-    fn grouped_by_generation_merge_uneven() {
-        async_unit::tokio_unit_test(|| {
-            let repo = Arc::new(merge_uneven::getrepo(None));
-            let changeset_fetcher: Arc<ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
-
-            let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new(
-                &changeset_fetcher,
-                string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
-            ).boxify();
-            let inputstream = add_generations_by_bonsai(nodestream, changeset_fetcher);
-
-            let res = spawn(GroupedByGenenerationStream::new(inputstream).collect())
-                .wait_future()
-                .expect("failed to finish groupped stream");
-
-            assert_eq!(
-                res,
-                vec![
-                    (
-                        hashset!{string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055")},
-                        Generation::new(10),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc")},
-                        Generation::new(9),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c")},
-                        Generation::new(8),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca")},
-                        Generation::new(7),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33")},
-                        Generation::new(6),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f")},
-                        Generation::new(5),
-                    ),
-                    (
-                        hashset!{
-                            string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                            string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
-                        },
-                        Generation::new(4),
-                    ),
-                    (
-                        hashset!{
-                            string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                            string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                        },
-                        Generation::new(3),
-                    ),
-                    (
-                        hashset!{
-                            string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                            string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                        },
-                        Generation::new(2),
-                    ),
-                    (
-                        hashset!{string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c")},
-                        Generation::new(1),
-                    ),
-                ],
-            );
-        });
-    }
 
     #[test]
     fn empty_ancestors_combinators() {
