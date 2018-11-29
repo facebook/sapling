@@ -15,11 +15,16 @@ extern crate futures;
 extern crate futures_ext;
 
 extern crate blobrepo;
+#[cfg(test)]
+#[macro_use]
+extern crate maplit;
 extern crate mercurial_types;
 extern crate mononoke_types;
 
 extern crate rust_thrift;
 extern crate skiplist_thrift;
+#[cfg(test)]
+extern crate tokio;
 
 mod helpers;
 
@@ -27,7 +32,7 @@ pub mod errors;
 pub use errors::ErrorKind;
 
 mod index;
-pub use index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex, SimpleLcaHint};
+pub use index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
 
 mod genbfs;
 pub use genbfs::GenerationNumberBFS;

@@ -5,16 +5,13 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::{HashMap, HashSet};
-use std::ops::Deref;
 use std::sync::Arc;
 
 use bytes::Bytes;
 use chashmap::CHashMap;
 use failure::{Error, Result, SyncFailure};
-use futures::Stream;
 use futures::future::{join_all, ok, Future};
 use futures::future::{loop_fn, Loop};
-use futures::stream::iter_ok;
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::ChangesetFetcher;
@@ -162,7 +159,7 @@ fn compute_skip_edges(
     let mut i: usize = 0;
 
     while let Some(read_locked_entry) = skip_edge_mapping.mapping.get(&curr.0) {
-        if let SkiplistNodeType::SkipEdges(edges) = read_locked_entry.deref() {
+        if let SkiplistNodeType::SkipEdges(edges) = &*read_locked_entry {
             if let Some(next_node) = nth_node_or_last(edges, i) {
                 curr = next_node;
                 skip_edges.push(curr);
@@ -322,7 +319,7 @@ fn query_reachability_with_generation_hints(
         ok(false).boxify()
     } else {
         if let Some(skip_node_guard) = skip_list_edges.mapping.get(&src_hash_gen.0) {
-            let skip_node = skip_node_guard.deref();
+            let skip_node = &*skip_node_guard;
             match skip_node {
                 SkiplistNodeType::SkipEdges(edges) => {
                     let best_edge = edges
@@ -410,6 +407,14 @@ impl SkiplistIndex {
         }
     }
 
+    pub fn new_with_skiplist_graph(skiplist_graph: HashMap<ChangesetId, SkiplistNodeType>) -> Self {
+        let s = Self::new();
+        for (key, value) in skiplist_graph {
+            s.skip_list_edges.mapping.insert(key, value);
+        }
+        s
+    }
+
     pub fn with_skip_edge_count(skip_edges_per_node: u32) -> Self {
         SkiplistIndex {
             skip_list_edges: Arc::new(
@@ -441,7 +446,7 @@ impl SkiplistIndex {
     /// returns None if this node was unindexed, or was indexed with parent edges only.
     pub fn get_skip_edges(&self, node: ChangesetId) -> Option<Vec<(ChangesetId, Generation)>> {
         if let Some(read_guard) = self.skip_list_edges.mapping.get(&node) {
-            if let SkiplistNodeType::SkipEdges(edges) = read_guard.deref() {
+            if let SkiplistNodeType::SkipEdges(edges) = &*read_guard {
                 Some(edges.clone())
             } else {
                 None
@@ -475,120 +480,102 @@ impl ReachabilityIndex for SkiplistIndex {
     }
 }
 
-/// Union a collection of frontiers together.
-/// Frontiers represent sets of node hashes grouped together by generation number.
-/// this combines a collection of them into one frontier.
-fn union_frontiers(frontiers: Vec<NodeFrontier>) -> NodeFrontier {
-    let mut result = HashMap::new();
-    for frontier in frontiers {
-        for (gen, set) in frontier.gen_map.into_iter() {
-            for node in set.into_iter() {
-                result.entry(gen).or_insert(HashSet::new()).insert(node);
-            }
-        }
-    }
-    NodeFrontier::new(result)
-}
+// Take all changesets from `all_cs_ids` that have skiplist edges in `skip_edges` and moves them.
+// Returns changesets that wasn't moved and a NodeFrontier of moved nodes
+fn move_skippable_nodes(
+    skip_edges: Arc<SkiplistEdgeMapping>,
+    all_cs_ids: Vec<ChangesetId>,
+    gen: Generation,
+) -> (Vec<ChangesetId>, NodeFrontier) {
+    let mut no_skiplist_edges = vec![];
+    let mut node_frontier = NodeFrontier::default();
 
-// Find ancestors of node with generation <= gen,
-// such that all ancestors of node with generation <= gen
-// are also ancestors of the output.
-fn advance_node_forward(
-    changeset_fetcher: Arc<ChangesetFetcher>,
-    skip_list_edges: Arc<SkiplistEdgeMapping>,
-    (node, gen): (ChangesetId, Generation),
-    max_gen: Generation,
-) -> BoxFuture<NodeFrontier, Error> {
-    if max_gen >= gen {
-        // Can't advance this node any farther.
-        // Return a frontier with just this node
-        let mut result = HashMap::new();
-        result.insert(gen, vec![node].into_iter().collect());
-        ok(NodeFrontier::new(result)).boxify()
-    } else {
-        if let Some(skip_node_guard) = skip_list_edges.mapping.get(&node) {
-            let skip_node = skip_node_guard.deref();
-            match skip_node {
+    for cs_id in all_cs_ids {
+        if let Some(read_locked_entry) = skip_edges.mapping.get(&cs_id) {
+            match &*read_locked_entry {
                 SkiplistNodeType::SkipEdges(edges) => {
                     let best_edge = edges
                         .iter()
-                        .take_while(|edge_pair| edge_pair.1 >= max_gen)
+                        .take_while(|edge_pair| edge_pair.1 >= gen)
                         .last()
                         .cloned();
                     if let Some(edge_pair) = best_edge {
-                        return advance_node_forward(
-                            changeset_fetcher,
-                            skip_list_edges.clone(),
-                            edge_pair,
-                            max_gen,
-                        );
+                        node_frontier.insert(edge_pair);
+                    } else {
+                        no_skiplist_edges.push(cs_id);
                     }
                 }
-                SkiplistNodeType::ParentEdges(parent_edges) => {
-                    cloned!(changeset_fetcher, skip_list_edges);
-                    return join_all(parent_edges.clone().into_iter().map({
-                        move |parent_gen_pair| {
-                            advance_node_forward(
-                                changeset_fetcher.clone(),
-                                skip_list_edges.clone(),
-                                parent_gen_pair,
-                                max_gen,
-                            )
-                        }
-                    })).map(|parent_results| union_frontiers(parent_results))
-                        .boxify();
-                }
+                SkiplistNodeType::ParentEdges(edges) => for edge_pair in edges {
+                    node_frontier.insert(*edge_pair);
+                },
             }
+        } else {
+            no_skiplist_edges.push(cs_id);
         }
-
-        changeset_fetcher
-            .get_parents(node)
-            .and_then({
-                cloned!(changeset_fetcher);
-                |parent_changesets| {
-                    changesets_with_generation_numbers(changeset_fetcher, parent_changesets)
-                }
-            })
-            .and_then(move |parent_edges| {
-                join_all(parent_edges.clone().into_iter().map({
-                    move |parent_gen_pair| {
-                        advance_node_forward(
-                            changeset_fetcher.clone(),
-                            skip_list_edges.clone(),
-                            parent_gen_pair,
-                            max_gen,
-                        )
-                    }
-                })).map(|parent_results| union_frontiers(parent_results))
-            })
-            .boxify()
     }
+
+    (no_skiplist_edges, node_frontier)
 }
 
+// Returns a frontier "C" that satisfy the following condition:
+/// - Max generation number in "C" is <= gen
+/// - Any ancestor of "node_frontier" with generation <= gen is also an ancestor of "C"
 fn process_frontier(
     changeset_fetcher: Arc<ChangesetFetcher>,
     skip_edges: Arc<SkiplistEdgeMapping>,
-    nodes: NodeFrontier,
+    node_frontier: NodeFrontier,
     max_gen: Generation,
 ) -> impl Future<Item = NodeFrontier, Error = Error> {
-    let mut to_process = vec![];
-    for (node_gen, node_set) in nodes.gen_map.into_iter() {
-        for node in node_set.into_iter() {
-            to_process.push((node, node_gen));
-        }
-    }
-    iter_ok::<_, Error>(to_process.into_iter())
-        .map(move |(node, node_gen)| {
-            advance_node_forward(
-                changeset_fetcher.clone(),
-                skip_edges.clone(),
-                (node, node_gen),
-                max_gen,
-            )
-        })
-        .buffered(100)
-        .collect()
-        .map(|all_node_sets| union_frontiers(all_node_sets))
+    loop_fn(
+        node_frontier,
+        move |mut node_frontier: NodeFrontier| match node_frontier.max_gen() {
+            Some(val) if val > max_gen => {
+                let all_cs_ids = node_frontier.gen_map.remove(&val).unwrap();
+                let (no_skiplist_edges, skipped_frontier) = move_skippable_nodes(
+                    skip_edges.clone(),
+                    all_cs_ids.into_iter().collect(),
+                    max_gen,
+                );
+
+                let parents_futs = no_skiplist_edges.into_iter().map({
+                    cloned!(changeset_fetcher);
+                    move |cs_id| {
+                        changeset_fetcher
+                            .get_parents(cs_id)
+                            .map(IntoIterator::into_iter)
+                    }
+                });
+
+                join_all(parents_futs)
+                    .map(|all_parents| all_parents.into_iter().flatten())
+                    .and_then({
+                        cloned!(changeset_fetcher);
+                        move |parents| {
+                            let mut gen_futs = vec![];
+                            for p in parents {
+                                let f = changeset_fetcher
+                                    .get_generation_number(p)
+                                    .map(move |gen_num| (p, gen_num));
+                                gen_futs.push(f);
+                            }
+                            join_all(gen_futs)
+                        }
+                    })
+                    .map(move |gen_cs| {
+                        node_frontier.insert_iter(gen_cs.into_iter());
+
+                        for (gen, s) in skipped_frontier.gen_map {
+                            for entry in s {
+                                node_frontier.insert((entry, gen));
+                            }
+                        }
+                        Loop::Continue(node_frontier)
+                    })
+                    .left_future()
+            }
+            _ => ok(Loop::Break(node_frontier)).right_future(),
+        },
+    )
 }
 
 impl LeastCommonAncestorsHint for SkiplistIndex {
@@ -609,10 +596,10 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
 
 #[cfg(test)]
 mod test {
-    use std::iter::FromIterator;
     use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
 
     use async_unit;
+    use blobrepo::BlobRepo;
     use chashmap::CHashMap;
     use futures::stream::Stream;
     use futures::stream::iter_ok;
@@ -626,6 +613,7 @@ mod test {
     use tests::test_branch_wide_reachability;
     use tests::test_linear_reachability;
     use tests::test_merge_uneven_reachability;
+    use tokio;
 
     #[test]
     fn simple_init() {
@@ -940,660 +928,615 @@ mod test {
     impl ChangesetFetcher for CountingChangesetFetcher {
         fn get_generation_number(&self, cs_id: ChangesetId) -> BoxFuture<Generation, Error> {
             self.get_gen_number_count.fetch_add(1, Ordering::Relaxed);
-            println!("get parents");
             self.cs_fetcher.get_generation_number(cs_id)
         }
 
         fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error> {
             self.get_parents_count.fetch_add(1, Ordering::Relaxed);
-            println!("get parents");
             self.cs_fetcher.get_parents(cs_id)
         }
     }
 
-    #[test]
-    fn test_query_reachability_hint_on_self_is_true() {
-        async_unit::tokio_unit_test(|| {
-            let repo = Arc::new(linear::getrepo(None));
-            let sli = SkiplistIndex::new();
-            let mut ordered_hashes_oldest_to_newest = vec![
-                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
-            ];
-            ordered_hashes_oldest_to_newest.reverse();
-            // indexing doesn't even take place if the query can conclude true or false right away
-
-            for (i, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
-                assert!(
-                    query_reachability_with_generation_hints(
-                        repo.get_changeset_fetcher(),
-                        sli.skip_list_edges.clone(),
-                        (node, Generation::new(i as u64 + 1)),
-                        (node, Generation::new(i as u64 + 1))
-                    ).wait()
-                        .unwrap()
-                );
-            }
-        });
+    fn run_future<F, I>(runtime: &mut tokio::runtime::Runtime, future: F) -> Result<I>
+    where
+        F: Future<Item = I, Error = Error> + Send + 'static,
+        I: Send + 'static,
+    {
+        runtime.block_on(future)
     }
 
-    #[test]
-    fn test_query_reachability_to_higher_gen_is_false() {
-        async_unit::tokio_unit_test(|| {
-            let repo = Arc::new(linear::getrepo(None));
-            let sli = SkiplistIndex::new();
-            let mut ordered_hashes_oldest_to_newest = vec![
-                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
-            ];
-            ordered_hashes_oldest_to_newest.reverse();
+    fn query_reachability_hint_on_self_is_true(
+        runtime: &mut tokio::runtime::Runtime,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        let mut ordered_hashes_oldest_to_newest = vec![
+            string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+            string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+            string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+            string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+            string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+            string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+            string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+            string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+        ];
+        ordered_hashes_oldest_to_newest.reverse();
+        // indexing doesn't even take place if the query can conclude true or false right away
 
-            // indexing doesn't even take place if the query can conclude true or false right away
-            for i in 0..ordered_hashes_oldest_to_newest.len() {
-                let src_node = ordered_hashes_oldest_to_newest.get(i).unwrap();
-                for j in i + 1..ordered_hashes_oldest_to_newest.len() {
-                    let dst_node = ordered_hashes_oldest_to_newest.get(j).unwrap();
-                    assert!(!query_reachability_with_generation_hints(
-                        repo.get_changeset_fetcher(),
-                        sli.skip_list_edges.clone(),
-                        (*src_node, Generation::new(i as u64 + 1)),
-                        (*dst_node, Generation::new(j as u64 + 1))
-                    ).wait()
-                        .unwrap());
+        for (i, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
+            let f = query_reachability_with_generation_hints(
+                repo.get_changeset_fetcher(),
+                sli.skip_list_edges.clone(),
+                (node, Generation::new(i as u64 + 1)),
+                (node, Generation::new(i as u64 + 1)),
+            );
+            assert!(run_future(runtime, f).unwrap());
+        }
+    }
+
+    macro_rules! skiplist_test {
+        ($test_name:ident, $repo:ident) => {
+            mod $test_name {
+                use super::*;
+                #[test]
+                fn no_index() {
+                    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+                    let repo = Arc::new($repo::getrepo(None));
+                    let sli = SkiplistIndex::new();
+                    $test_name(&mut runtime, repo, sli)
+                }
+
+                #[test]
+                fn all_indexed() {
+
+                    let repo = Arc::new($repo::getrepo(None));
+                    let sli = SkiplistIndex::new();
+                    {
+                        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+                        let heads = repo.get_bonsai_heads_maybe_stale().collect();
+                        let heads = run_future(&mut runtime, heads).unwrap();
+                        for head in heads {
+                            let f = sli.add_node(repo.get_changeset_fetcher(), head, 100);
+                            run_future(&mut runtime, f).unwrap();
+                        }
+                    }
+                    let mut runtime = tokio::runtime::Runtime::new().unwrap();
+                    $test_name(&mut runtime, repo, sli);
                 }
             }
-        });
+        }
+    }
+
+    fn query_reachability_to_higher_gen_is_false(
+        runtime: &mut tokio::runtime::Runtime,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        let mut ordered_hashes_oldest_to_newest = vec![
+            string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+            string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+            string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+            string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+            string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+            string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+            string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+            string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+        ];
+        ordered_hashes_oldest_to_newest.reverse();
+
+        // indexing doesn't even take place if the query can conclude true or false right away
+        for i in 0..ordered_hashes_oldest_to_newest.len() {
+            let src_node = ordered_hashes_oldest_to_newest.get(i).unwrap();
+            for j in i + 1..ordered_hashes_oldest_to_newest.len() {
+                let dst_node = ordered_hashes_oldest_to_newest.get(j).unwrap();
+                let f = query_reachability_with_generation_hints(
+                    repo.get_changeset_fetcher(),
+                    sli.skip_list_edges.clone(),
+                    (*src_node, Generation::new(i as u64 + 1)),
+                    (*dst_node, Generation::new(j as u64 + 1)),
+                );
+                assert!(!run_future(runtime, f).unwrap());
+            }
+        }
     }
 
     #[test]
     fn test_query_reachability_from_unindexed_node() {
-        async_unit::tokio_unit_test(|| {
-            let repo = Arc::new(linear::getrepo(None));
-            let sli = SkiplistIndex::new();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let repo = Arc::new(linear::getrepo(None));
+        let sli = SkiplistIndex::new();
+        let get_parents_count = Arc::new(AtomicUsize::new(0));
+        let get_gen_number_count = Arc::new(AtomicUsize::new(0));
+        let cs_fetcher = Arc::new(CountingChangesetFetcher::new(
+            repo.get_changeset_fetcher(),
+            get_parents_count.clone(),
+            get_gen_number_count,
+        ));
 
-            let get_parents_count = Arc::new(AtomicUsize::new(0));
-            let get_gen_number_count = Arc::new(AtomicUsize::new(0));
-            let cs_fetcher = Arc::new(CountingChangesetFetcher::new(
+        let src_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
+        let dst_node = string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
+        let f = query_reachability_with_generation_hints(
+            cs_fetcher.clone(),
+            sli.skip_list_edges.clone(),
+            (src_node, Generation::new(8)),
+            (dst_node, Generation::new(1)),
+        );
+        assert!(run_future(&mut runtime, f).unwrap());
+        let ordered_hashes = vec![
+            string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+            string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+            string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+            string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+            string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+            string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+            string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+            string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+        ];
+        // Nothing is indexed by default
+        assert_eq!(sli.indexed_node_count(), 0);
+        for node in ordered_hashes.iter() {
+            assert!(!sli.is_node_indexed(*node));
+        }
+
+        let parents_count_before_indexing = get_parents_count.load(Ordering::Relaxed);
+        assert!(parents_count_before_indexing > 0);
+
+        // Index
+        sli.add_node(repo.get_changeset_fetcher(), src_node, 10)
+            .wait()
+            .unwrap();
+        assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
+        for node in ordered_hashes.into_iter() {
+            assert!(sli.is_node_indexed(node));
+        }
+
+        // Make sure that we don't use changeset fetcher anymore, because everything is
+        // indexed
+        let f = query_reachability_with_generation_hints(
+            cs_fetcher,
+            sli.skip_list_edges.clone(),
+            (src_node, Generation::new(8)),
+            (dst_node, Generation::new(1)),
+        );
+
+        assert!(run_future(&mut runtime, f).unwrap());
+
+        assert_eq!(
+            parents_count_before_indexing,
+            get_parents_count.load(Ordering::Relaxed)
+        );
+    }
+
+    fn query_from_indexed_merge_node(
+        runtime: &mut tokio::runtime::Runtime,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        let merge_node = string_to_bonsai(&repo, "d592490c4386cdb3373dd93af04d563de199b2fb");
+        let commit_after_merge =
+            string_to_bonsai(&repo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113");
+        // Indexing starting from a merge node
+        run_future(
+            runtime,
+            sli.add_node(repo.get_changeset_fetcher(), commit_after_merge, 10),
+        ).unwrap();
+        let f = query_reachability_with_generation_hints(
+            repo.get_changeset_fetcher(),
+            sli.skip_list_edges.clone(),
+            (commit_after_merge, Generation::new(8)),
+            (merge_node, Generation::new(7)),
+        );
+        assert!(run_future(runtime, f).unwrap());
+
+        // perform a query from the merge to the start of branch 1
+        let dst_node = string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b");
+        // performing this query should index all the nodes inbetween
+        let f = query_reachability_with_generation_hints(
+            repo.get_changeset_fetcher(),
+            sli.skip_list_edges.clone(),
+            (merge_node, Generation::new(7)),
+            (dst_node, Generation::new(1)),
+        );
+        assert!(run_future(runtime, f).unwrap());
+
+        // perform a query from the merge to the start of branch 2
+        let dst_node = string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b");
+        let f = query_reachability_with_generation_hints(
+            repo.get_changeset_fetcher(),
+            sli.skip_list_edges.clone(),
+            (merge_node, Generation::new(7)),
+            (dst_node, Generation::new(1)),
+        );
+        assert!(run_future(runtime, f).unwrap());
+    }
+
+    fn advance_node_forward(
+        changeset_fetcher: Arc<ChangesetFetcher>,
+        skip_list_edges: Arc<SkiplistEdgeMapping>,
+        (node, gen): (ChangesetId, Generation),
+        max_gen: Generation,
+    ) -> BoxFuture<NodeFrontier, Error> {
+        let initial_frontier = hashmap!{gen => hashset!{node}};
+        let initial_frontier = NodeFrontier::new(initial_frontier);
+        process_frontier(
+            changeset_fetcher,
+            skip_list_edges,
+            initial_frontier,
+            max_gen,
+        ).boxify()
+    }
+
+    fn advance_node_linear(
+        runtime: &mut tokio::runtime::Runtime,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        let mut ordered_hashes_oldest_to_newest = vec![
+            string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+            string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+            string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+            string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
+            string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+            string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
+            string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
+            string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+        ];
+        ordered_hashes_oldest_to_newest.reverse();
+
+        for (gen, node) in ordered_hashes_oldest_to_newest
+            .clone()
+            .into_iter()
+            .enumerate()
+        {
+            // advancing any node to any earlier generation
+            // will get a unique node in the linear segment
+            for gen_earlier in 0..gen {
+                let earlier_node = ordered_hashes_oldest_to_newest.get(gen_earlier).unwrap();
+                let mut expected_frontier_map = HashMap::new();
+                expected_frontier_map.insert(
+                    Generation::new(gen_earlier as u64 + 1),
+                    vec![earlier_node].into_iter().cloned().collect(),
+                );
+                let f = advance_node_forward(
+                    repo.get_changeset_fetcher(),
+                    sli.skip_list_edges.clone(),
+                    (node, Generation::new(gen as u64 + 1)),
+                    Generation::new(gen_earlier as u64 + 1),
+                );
+                assert_eq!(
+                    run_future(runtime, f).unwrap(),
+                    NodeFrontier::new(expected_frontier_map),
+                );
+            }
+        }
+        for (gen, node) in ordered_hashes_oldest_to_newest
+            .clone()
+            .into_iter()
+            .enumerate()
+        {
+            // attempting to advance to a larger gen gives a frontier with the start node
+            // this fits with the definition of what advance_node should do
+            for gen_later in gen + 1..ordered_hashes_oldest_to_newest.len() {
+                let mut expected_frontier_map = HashMap::new();
+                expected_frontier_map.insert(
+                    Generation::new(gen as u64 + 1),
+                    vec![node].into_iter().collect(),
+                );
+                let f = advance_node_forward(
+                    repo.get_changeset_fetcher(),
+                    sli.skip_list_edges.clone(),
+                    (node, Generation::new(gen as u64 + 1)),
+                    Generation::new(gen_later as u64 + 1),
+                );
+                assert_eq!(
+                    run_future(runtime, f).unwrap(),
+                    NodeFrontier::new(expected_frontier_map)
+                );
+            }
+        }
+    }
+
+    fn advance_node_uneven_merge(
+        runtime: &mut tokio::runtime::Runtime,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        let root_node = string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
+
+        // order is oldest to newest
+        let branch_1 = vec![
+            string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+            string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+            string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
+        ];
+
+        // order is oldest to newest
+        let branch_2 = vec![
+            string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
+            string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+            string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+            string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+            string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+            string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+            string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+            string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
+        ];
+        let merge_node = string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055");
+
+        // This test tries to advance the merge node forward.
+        // It should test the part of `advance_node_forward` for when the node doesn't
+        // have skip list edges.
+
+        // Generation 2 to 4
+        // Will have nodes in both branches at this generation
+        for gen in 0..branch_1.len() {
+            let mut expected_frontier_map = HashMap::new();
+            let frontier_generation = Generation::new(gen as u64 + 2);
+            expected_frontier_map.insert(
+                frontier_generation,
+                vec![
+                    branch_1.get(gen).unwrap().clone(),
+                    branch_2.get(gen).unwrap().clone(),
+                ].into_iter()
+                    .collect(),
+            );
+            let f = advance_node_forward(
                 repo.get_changeset_fetcher(),
-                get_parents_count.clone(),
-                get_gen_number_count,
-            ));
-
-            let src_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            let dst_node = string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
-
-            assert!(
-                query_reachability_with_generation_hints(
-                    cs_fetcher.clone(),
-                    sli.skip_list_edges.clone(),
-                    (src_node, Generation::new(8)),
-                    (dst_node, Generation::new(1))
-                ).wait()
-                    .unwrap()
+                sli.skip_list_edges.clone(),
+                (merge_node, Generation::new(10)),
+                frontier_generation,
             );
-            let ordered_hashes = vec![
-                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
-            ];
-            // Nothing is indexed by default
-            assert_eq!(sli.indexed_node_count(), 0);
-            for node in ordered_hashes.iter() {
-                assert!(!sli.is_node_indexed(*node));
-            }
-
-            let parents_count_before_indexing = get_parents_count.load(Ordering::Relaxed);
-            assert!(parents_count_before_indexing > 0);
-
-            // Index
-            sli.add_node(repo.get_changeset_fetcher(), src_node, 10)
-                .wait()
-                .unwrap();
-            assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
-            for node in ordered_hashes.into_iter() {
-                assert!(sli.is_node_indexed(node));
-            }
-
-            // Make sure that we don't use changeset fetcher anymore, because everything is
-            // indexed
-            assert!(
-                query_reachability_with_generation_hints(
-                    cs_fetcher,
-                    sli.skip_list_edges.clone(),
-                    (src_node, Generation::new(8)),
-                    (dst_node, Generation::new(1))
-                ).wait()
-                    .unwrap()
-            );
-
             assert_eq!(
-                parents_count_before_indexing,
-                get_parents_count.load(Ordering::Relaxed)
+                run_future(runtime, f).unwrap(),
+                NodeFrontier::new(expected_frontier_map),
             );
-        });
-    }
+        }
 
-    #[test]
-    fn test_query_reachability_on_partially_indexed_graph() {
-        async_unit::tokio_unit_test(|| {
-            let repo = Arc::new(linear::getrepo(None));
-            let sli = SkiplistIndex::new();
-
-            let src_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            let dst_node = string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0");
-            // performing this query should index all the nodes inbetween
-            sli.add_node(repo.get_changeset_fetcher(), src_node, 10)
-                .wait()
-                .unwrap();
-            assert!(
-                query_reachability_with_generation_hints(
-                    repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    (src_node, Generation::new(8)),
-                    (dst_node, Generation::new(4))
-                ).wait()
-                    .unwrap()
+        // Generation 4 to 9
+        // Will have nodes from both branches
+        // But the branch 1 node will be stuck at generation 3
+        let branch_1_head = branch_1.clone().into_iter().last().unwrap();
+        let branch_1_head_gen = Generation::new(branch_1.len() as u64 + 1);
+        for gen in branch_1.len()..branch_2.len() {
+            let mut expected_frontier_map = HashMap::new();
+            let frontier_generation = Generation::new(gen as u64 + 2);
+            assert!(branch_1_head_gen != frontier_generation);
+            expected_frontier_map.insert(
+                frontier_generation,
+                vec![branch_2.get(gen).unwrap().clone()]
+                    .into_iter()
+                    .collect(),
             );
-            let indexed_hashes = vec![
-                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
-            ];
-
-            // perform a query from the middle of the indexed hashes to the end of the graph
-            let src_node = string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372");
-            let dst_node = string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
-            // performing this query should index all the nodes inbetween
-            assert!(
-                query_reachability_with_generation_hints(
-                    repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    (src_node, Generation::new(5)),
-                    (dst_node, Generation::new(1))
-                ).wait()
-                    .unwrap()
+            expected_frontier_map.insert(
+                branch_1_head_gen,
+                vec![branch_1_head.clone()].into_iter().collect(),
             );
-            for node in indexed_hashes.into_iter() {
-                assert!(sli.is_node_indexed(node));
-            }
-        });
-    }
-
-    #[test]
-    fn test_query_from_indexed_merge_node() {
-        async_unit::tokio_unit_test(|| {
-            let repo = Arc::new(unshared_merge_even::getrepo(None));
-            let sli = SkiplistIndex::new();
-
-            let merge_node = string_to_bonsai(&repo, "d592490c4386cdb3373dd93af04d563de199b2fb");
-            let commit_after_merge =
-                string_to_bonsai(&repo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113");
-            // Indexing starting from a merge node
-            sli.add_node(repo.get_changeset_fetcher(), commit_after_merge, 10)
-                .wait()
-                .unwrap();
-            assert!(
-                query_reachability_with_generation_hints(
-                    repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    (commit_after_merge, Generation::new(8)),
-                    (merge_node, Generation::new(7))
-                ).wait()
-                    .unwrap()
+            let f = advance_node_forward(
+                repo.get_changeset_fetcher(),
+                sli.skip_list_edges.clone(),
+                (merge_node, Generation::new(10)),
+                frontier_generation,
             );
-
-            // perform a query from the merge to the start of branch 1
-            let dst_node = string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b");
-            // performing this query should index all the nodes inbetween
-            assert!(
-                query_reachability_with_generation_hints(
-                    repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    (merge_node, Generation::new(7)),
-                    (dst_node, Generation::new(1))
-                ).wait()
-                    .unwrap()
-            );
-
-            // perform a query from the merge to the start of branch 2
-            let dst_node = string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b");
-            assert!(
-                query_reachability_with_generation_hints(
-                    repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    (merge_node, Generation::new(7)),
-                    (dst_node, Generation::new(1))
-                ).wait()
-                    .unwrap()
-            );
-        });
-    }
-
-    #[test]
-    fn test_union_frontiers() {
-        // the actual hash and generation values are unimportant
-        // so we dont need to use values that are consistent with some repo.
-        let n1_g1 = ChangesetId::from_str(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        ).unwrap();
-        let n2_g2 = ChangesetId::from_str(
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        ).unwrap();
-        let n3_g2 = ChangesetId::from_str(
-            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-        ).unwrap();
-        let n4_g3 = ChangesetId::from_str(
-            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-        ).unwrap();
-        let mut f1_map = HashMap::new();
-        f1_map.insert(Generation::new(1), HashSet::from_iter(vec![n1_g1]));
-        f1_map.insert(Generation::new(2), HashSet::from_iter(vec![n2_g2]));
-
-        let mut f2_map = HashMap::new();
-        f2_map.insert(Generation::new(2), HashSet::from_iter(vec![n3_g2]));
-        f2_map.insert(Generation::new(3), HashSet::from_iter(vec![n4_g3]));
-
-        let f_union = union_frontiers(vec![NodeFrontier::new(f1_map), NodeFrontier::new(f2_map)]);
-
-        let mut f_union_expected_map = HashMap::new();
-        f_union_expected_map.insert(Generation::new(1), HashSet::from_iter(vec![n1_g1]));
-        f_union_expected_map.insert(Generation::new(2), HashSet::from_iter(vec![n2_g2, n3_g2]));
-        f_union_expected_map.insert(Generation::new(3), HashSet::from_iter(vec![n4_g3]));
-        assert_eq!(f_union, NodeFrontier::new(f_union_expected_map));
-    }
-
-    #[test]
-    fn test_advance_node_linear() {
-        async_unit::tokio_unit_test(|| {
-            let repo = Arc::new(linear::getrepo(None));
-            let sli = SkiplistIndex::new();
-            let mut ordered_hashes_oldest_to_newest = vec![
-                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
-            ];
-            ordered_hashes_oldest_to_newest.reverse();
-
-            for (gen, node) in ordered_hashes_oldest_to_newest
-                .clone()
-                .into_iter()
-                .enumerate()
-            {
-                // advancing any node to any earlier generation
-                // will get a unique node in the linear segment
-                for gen_earlier in 0..gen {
-                    let earlier_node = ordered_hashes_oldest_to_newest.get(gen_earlier).unwrap();
-                    let mut expected_frontier_map = HashMap::new();
-                    expected_frontier_map.insert(
-                        Generation::new(gen_earlier as u64 + 1),
-                        vec![earlier_node].into_iter().cloned().collect(),
-                    );
-                    assert_eq!(
-                        advance_node_forward(
-                            repo.get_changeset_fetcher(),
-                            sli.skip_list_edges.clone(),
-                            (node, Generation::new(gen as u64 + 1)),
-                            Generation::new(gen_earlier as u64 + 1)
-                        ).wait()
-                            .unwrap(),
-                        NodeFrontier::new(expected_frontier_map)
-                    );
-                }
-            }
-            for (gen, node) in ordered_hashes_oldest_to_newest
-                .clone()
-                .into_iter()
-                .enumerate()
-            {
-                // attempting to advance to a larger gen gives a frontier with the start node
-                // this fits with the definition of what advance_node should do
-                for gen_later in gen + 1..ordered_hashes_oldest_to_newest.len() {
-                    let mut expected_frontier_map = HashMap::new();
-                    expected_frontier_map.insert(
-                        Generation::new(gen as u64 + 1),
-                        vec![node].into_iter().collect(),
-                    );
-                    assert_eq!(
-                        advance_node_forward(
-                            repo.get_changeset_fetcher(),
-                            sli.skip_list_edges.clone(),
-                            (node, Generation::new(gen as u64 + 1)),
-                            Generation::new(gen_later as u64 + 1)
-                        ).wait()
-                            .unwrap(),
-                        NodeFrontier::new(expected_frontier_map)
-                    );
-                }
-            }
-        });
-    }
-
-    #[test]
-    fn test_advance_node_uneven_merge() {
-        async_unit::tokio_unit_test(move || {
-            let repo = Arc::new(merge_uneven::getrepo(None));
-            let root_node = string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
-
-            // order is oldest to newest
-            let branch_1 = vec![
-                string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
-            ];
-
-            // order is oldest to newest
-            let branch_2 = vec![
-                string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
-                string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
-            ];
-            let merge_node = string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055");
-            let sli = SkiplistIndex::new();
-
-            // This test tries to advance the merge node forward.
-            // It should test the part of `advance_node_forward` for when the node doesn't
-            // have skip list edges.
-
-            // Generation 2 to 4
-            // Will have nodes in both branches at this generation
-            for gen in 0..branch_1.len() {
-                let mut expected_frontier_map = HashMap::new();
-                let frontier_generation = Generation::new(gen as u64 + 2);
-                expected_frontier_map.insert(
-                    frontier_generation,
-                    vec![
-                        branch_1.get(gen).unwrap().clone(),
-                        branch_2.get(gen).unwrap().clone(),
-                    ].into_iter()
-                        .collect(),
-                );
-                assert_eq!(
-                    advance_node_forward(
-                        repo.get_changeset_fetcher(),
-                        sli.skip_list_edges.clone(),
-                        (merge_node, Generation::new(10)),
-                        frontier_generation
-                    ).wait()
-                        .unwrap(),
-                    NodeFrontier::new(expected_frontier_map)
-                );
-            }
-
-            // Generation 4 to 9
-            // Will have nodes from both branches
-            // But the branch 1 node will be stuck at generation 3
-            let branch_1_head = branch_1.clone().into_iter().last().unwrap();
-            let branch_1_head_gen = Generation::new(branch_1.len() as u64 + 1);
-            for gen in branch_1.len()..branch_2.len() {
-                let mut expected_frontier_map = HashMap::new();
-                let frontier_generation = Generation::new(gen as u64 + 2);
-                println!("{:?}", &frontier_generation);
-                assert!(branch_1_head_gen != frontier_generation);
-                expected_frontier_map.insert(
-                    frontier_generation,
-                    vec![branch_2.get(gen).unwrap().clone()]
-                        .into_iter()
-                        .collect(),
-                );
-                expected_frontier_map.insert(
-                    branch_1_head_gen,
-                    vec![branch_1_head.clone()].into_iter().collect(),
-                );
-                assert_eq!(
-                    advance_node_forward(
-                        repo.get_changeset_fetcher(),
-                        sli.skip_list_edges.clone(),
-                        (merge_node, Generation::new(10)),
-                        frontier_generation
-                    ).wait()
-                        .unwrap(),
-                    NodeFrontier::new(expected_frontier_map)
-                );
-            }
-
-            // Generation 1
-            let mut expected_root_frontier_map = HashMap::new();
-            expected_root_frontier_map
-                .insert(Generation::new(1), vec![root_node].into_iter().collect());
             assert_eq!(
+                run_future(runtime, f).unwrap(),
+                NodeFrontier::new(expected_frontier_map)
+            );
+        }
+
+        // Generation 1
+        let mut expected_root_frontier_map = HashMap::new();
+        expected_root_frontier_map
+            .insert(Generation::new(1), vec![root_node].into_iter().collect());
+        let f = advance_node_forward(
+            repo.get_changeset_fetcher(),
+            sli.skip_list_edges.clone(),
+            (merge_node, Generation::new(10)),
+            Generation::new(1),
+        );
+        assert_eq!(
+            run_future(runtime, f).unwrap(),
+            NodeFrontier::new(expected_root_frontier_map),
+        );
+    }
+
+    fn advance_node_on_partial_index(
+        runtime: &mut tokio::runtime::Runtime,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        let root_node = string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
+
+        // order is oldest to newest
+        let branch_1 = vec![
+            string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+            string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+            string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
+        ];
+
+        // order is oldest to newest
+        let branch_2 = vec![
+            string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
+            string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+            string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+            string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+            string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+            string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+            string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+            string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
+        ];
+
+        let merge_node = string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055");
+
+        // This test partially indexes the top few of the graph.
+        // Then it does a query that traverses from indexed to unindexed nodes.
+        sli.add_node(repo.get_changeset_fetcher(), merge_node, 2);
+
+        // Generation 1
+        // This call should index the rest of the graph,
+        // but due to the parital index, the skip edges may not jump past
+        // where the partial index ended.
+        // So we repeat the same tests to check for correctness.
+        let mut expected_root_frontier_map = HashMap::new();
+        expected_root_frontier_map
+            .insert(Generation::new(1), vec![root_node].into_iter().collect());
+        let f = advance_node_forward(
+            repo.get_changeset_fetcher(),
+            sli.skip_list_edges.clone(),
+            (merge_node, Generation::new(10)),
+            Generation::new(1),
+        );
+        assert_eq!(
+            run_future(runtime, f).unwrap(),
+            NodeFrontier::new(expected_root_frontier_map),
+        );
+
+        // Generation 2 to 4
+        // Will have nodes in both branches at this generation
+        for gen in 0..branch_1.len() {
+            let mut expected_frontier_map = HashMap::new();
+            let frontier_generation = Generation::new(gen as u64 + 2);
+            expected_frontier_map.insert(
+                frontier_generation,
+                vec![
+                    branch_1.get(gen).unwrap().clone(),
+                    branch_2.get(gen).unwrap().clone(),
+                ].into_iter()
+                    .collect(),
+            );
+            let f = advance_node_forward(
+                repo.get_changeset_fetcher(),
+                sli.skip_list_edges.clone(),
+                (merge_node, Generation::new(10)),
+                frontier_generation,
+            );
+            assert_eq!(
+                run_future(runtime, f).unwrap(),
+                NodeFrontier::new(expected_frontier_map)
+            );
+        }
+
+        // Generation 4 to 9
+        // Will have nodes from both branches
+        // But the branch 1 node will be stuck at generation 3
+        let branch_1_head = branch_1.clone().into_iter().last().unwrap();
+        let branch_1_head_gen = Generation::new(branch_1.len() as u64 + 1);
+        for gen in branch_1.len()..branch_2.len() {
+            let mut expected_frontier_map = HashMap::new();
+            let frontier_generation = Generation::new(gen as u64 + 2);
+            assert!(branch_1_head_gen != frontier_generation);
+            expected_frontier_map.insert(
+                frontier_generation,
+                vec![branch_2.get(gen).unwrap().clone()]
+                    .into_iter()
+                    .collect(),
+            );
+            expected_frontier_map.insert(
+                branch_1_head_gen,
+                vec![branch_1_head.clone()].into_iter().collect(),
+            );
+            let f = advance_node_forward(
+                repo.get_changeset_fetcher(),
+                sli.skip_list_edges.clone(),
+                (merge_node, Generation::new(10)),
+                frontier_generation,
+            );
+            assert_eq!(
+                run_future(runtime, f).unwrap(),
+                NodeFrontier::new(expected_frontier_map)
+            );
+        }
+    }
+
+    fn simul_node_advance_on_wide_branch(
+        runtime: &mut tokio::runtime::Runtime,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        let root_node = string_to_bonsai(&repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
+
+        let _b1 = string_to_bonsai(&repo, "9e8521affb7f9d10e9551a99c526e69909042b20");
+        let _b2 = string_to_bonsai(&repo, "4685e9e62e4885d477ead6964a7600c750e39b03");
+        let b1_1 = string_to_bonsai(&repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff");
+        let b1_2 = string_to_bonsai(&repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
+        let b2_1 = string_to_bonsai(&repo, "04decbb0d1a65789728250ddea2fe8d00248e01c");
+        let b2_2 = string_to_bonsai(&repo, "49f53ab171171b3180e125b918bd1cf0af7e5449");
+
+        let advance_to_root_futures = vec![b1_1, b1_2, b2_1, b2_2].into_iter().map(
+            move |branch_tip| {
                 advance_node_forward(
                     repo.get_changeset_fetcher(),
                     sli.skip_list_edges.clone(),
-                    (merge_node, Generation::new(10)),
-                    Generation::new(1)
-                ).wait()
-                    .unwrap(),
-                NodeFrontier::new(expected_root_frontier_map)
-            );
-        });
+                    (branch_tip, Generation::new(3)),
+                    Generation::new(1),
+                )
+            },
+        );
+        let advanced_frontiers = join_all(advance_to_root_futures);
+        let advanced_frontiers = run_future(runtime, advanced_frontiers).unwrap();
+        let mut expected_root_frontier_map = HashMap::new();
+        expected_root_frontier_map
+            .insert(Generation::new(1), vec![root_node].into_iter().collect());
+
+        let expected_root_frontier = NodeFrontier::new(expected_root_frontier_map);
+        for frontier in advanced_frontiers.into_iter() {
+            assert_eq!(frontier, expected_root_frontier);
+        }
     }
 
-    #[test]
-    fn test_advance_node_on_partial_index() {
-        async_unit::tokio_unit_test(move || {
-            let repo = Arc::new(merge_uneven::getrepo(None));
-            let root_node = string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c");
+    fn process_frontier_on_wide_branch(
+        runtime: &mut tokio::runtime::Runtime,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        let root_node = string_to_bonsai(&repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
 
-            // order is oldest to newest
-            let branch_1 = vec![
-                string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
-            ];
+        let b1 = string_to_bonsai(&repo, "9e8521affb7f9d10e9551a99c526e69909042b20");
+        let b2 = string_to_bonsai(&repo, "4685e9e62e4885d477ead6964a7600c750e39b03");
+        let b1_1 = string_to_bonsai(&repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff");
+        let b1_2 = string_to_bonsai(&repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
+        let b2_1 = string_to_bonsai(&repo, "04decbb0d1a65789728250ddea2fe8d00248e01c");
+        let b2_2 = string_to_bonsai(&repo, "49f53ab171171b3180e125b918bd1cf0af7e5449");
 
-            // order is oldest to newest
-            let branch_2 = vec![
-                string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
-                string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
-            ];
+        let mut starting_frontier_map = HashMap::new();
+        starting_frontier_map.insert(
+            Generation::new(3),
+            vec![b1_1, b1_2, b2_1, b2_2].into_iter().collect(),
+        );
 
-            let merge_node = string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055");
-            let sli = SkiplistIndex::new();
+        let mut expected_gen_2_frontier_map = HashMap::new();
+        expected_gen_2_frontier_map.insert(Generation::new(2), vec![b1, b2].into_iter().collect());
+        let f = process_frontier(
+            repo.get_changeset_fetcher(),
+            sli.skip_list_edges.clone(),
+            NodeFrontier::new(starting_frontier_map.clone()),
+            Generation::new(2),
+        );
+        assert_eq!(
+            run_future(runtime, f).unwrap(),
+            NodeFrontier::new(expected_gen_2_frontier_map)
+        );
 
-            // This test partially indexes the top few of the graph.
-            // Then it does a query that traverses from indexed to unindexed nodes.
-            sli.add_node(repo.get_changeset_fetcher(), merge_node, 2);
-
-            // Generation 1
-            // This call should index the rest of the graph,
-            // but due to the parital index, the skip edges may not jump past
-            // where the partial index ended.
-            // So we repeat the same tests to check for correctness.
-            let mut expected_root_frontier_map = HashMap::new();
-            expected_root_frontier_map
-                .insert(Generation::new(1), vec![root_node].into_iter().collect());
-            assert_eq!(
-                advance_node_forward(
-                    repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    (merge_node, Generation::new(10)),
-                    Generation::new(1)
-                ).wait()
-                    .unwrap(),
-                NodeFrontier::new(expected_root_frontier_map)
-            );
-
-            // Generation 2 to 4
-            // Will have nodes in both branches at this generation
-            for gen in 0..branch_1.len() {
-                let mut expected_frontier_map = HashMap::new();
-                let frontier_generation = Generation::new(gen as u64 + 2);
-                expected_frontier_map.insert(
-                    frontier_generation,
-                    vec![
-                        branch_1.get(gen).unwrap().clone(),
-                        branch_2.get(gen).unwrap().clone(),
-                    ].into_iter()
-                        .collect(),
-                );
-                assert_eq!(
-                    advance_node_forward(
-                        repo.get_changeset_fetcher(),
-                        sli.skip_list_edges.clone(),
-                        (merge_node, Generation::new(10)),
-                        frontier_generation
-                    ).wait()
-                        .unwrap(),
-                    NodeFrontier::new(expected_frontier_map)
-                );
-            }
-
-            // Generation 4 to 9
-            // Will have nodes from both branches
-            // But the branch 1 node will be stuck at generation 3
-            let branch_1_head = branch_1.clone().into_iter().last().unwrap();
-            let branch_1_head_gen = Generation::new(branch_1.len() as u64 + 1);
-            for gen in branch_1.len()..branch_2.len() {
-                let mut expected_frontier_map = HashMap::new();
-                let frontier_generation = Generation::new(gen as u64 + 2);
-                println!("{:?}", &frontier_generation);
-                assert!(branch_1_head_gen != frontier_generation);
-                expected_frontier_map.insert(
-                    frontier_generation,
-                    vec![branch_2.get(gen).unwrap().clone()]
-                        .into_iter()
-                        .collect(),
-                );
-                expected_frontier_map.insert(
-                    branch_1_head_gen,
-                    vec![branch_1_head.clone()].into_iter().collect(),
-                );
-                assert_eq!(
-                    advance_node_forward(
-                        repo.get_changeset_fetcher(),
-                        sli.skip_list_edges.clone(),
-                        (merge_node, Generation::new(10)),
-                        frontier_generation
-                    ).wait()
-                        .unwrap(),
-                    NodeFrontier::new(expected_frontier_map)
-                );
-            }
-        });
+        let mut expected_root_frontier_map = HashMap::new();
+        expected_root_frontier_map
+            .insert(Generation::new(1), vec![root_node].into_iter().collect());
+        let f = process_frontier(
+            repo.get_changeset_fetcher(),
+            sli.skip_list_edges.clone(),
+            NodeFrontier::new(starting_frontier_map),
+            Generation::new(1),
+        );
+        assert_eq!(
+            run_future(runtime, f).unwrap(),
+            NodeFrontier::new(expected_root_frontier_map)
+        );
     }
 
-    #[test]
-    fn test_simul_node_advance_on_wide_branch() {
-        async_unit::tokio_unit_test(move || {
-            // this repo has no merges but many branches
-            let repo = Arc::new(branch_wide::getrepo(None));
-            let root_node = string_to_bonsai(&repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
-
-            let _b1 = string_to_bonsai(&repo, "9e8521affb7f9d10e9551a99c526e69909042b20");
-            let _b2 = string_to_bonsai(&repo, "4685e9e62e4885d477ead6964a7600c750e39b03");
-            let b1_1 = string_to_bonsai(&repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff");
-            let b1_2 = string_to_bonsai(&repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
-            let b2_1 = string_to_bonsai(&repo, "04decbb0d1a65789728250ddea2fe8d00248e01c");
-            let b2_2 = string_to_bonsai(&repo, "49f53ab171171b3180e125b918bd1cf0af7e5449");
-
-            let sli = SkiplistIndex::new();
-            let advance_to_root_futures =
-                vec![b1_1, b1_2, b2_1, b2_2].into_iter().map(|branch_tip| {
-                    advance_node_forward(
-                        repo.get_changeset_fetcher(),
-                        sli.skip_list_edges.clone(),
-                        (branch_tip, Generation::new(3)),
-                        Generation::new(1),
-                    )
-                });
-            let advanced_frontiers = join_all(advance_to_root_futures).wait().unwrap();
-            let mut expected_root_frontier_map = HashMap::new();
-            expected_root_frontier_map
-                .insert(Generation::new(1), vec![root_node].into_iter().collect());
-
-            let expected_root_frontier = NodeFrontier::new(expected_root_frontier_map);
-            for frontier in advanced_frontiers.into_iter() {
-                assert_eq!(frontier, expected_root_frontier);
-            }
-        });
-    }
-
-    #[test]
-    fn test_process_frontier_on_wide_branch() {
-        async_unit::tokio_unit_test(move || {
-            // this repo has no merges but many branches
-            let repo = Arc::new(branch_wide::getrepo(None));
-            let root_node = string_to_bonsai(&repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd");
-
-            let b1 = string_to_bonsai(&repo, "9e8521affb7f9d10e9551a99c526e69909042b20");
-            let b2 = string_to_bonsai(&repo, "4685e9e62e4885d477ead6964a7600c750e39b03");
-            let b1_1 = string_to_bonsai(&repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff");
-            let b1_2 = string_to_bonsai(&repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12");
-            let b2_1 = string_to_bonsai(&repo, "04decbb0d1a65789728250ddea2fe8d00248e01c");
-            let b2_2 = string_to_bonsai(&repo, "49f53ab171171b3180e125b918bd1cf0af7e5449");
-
-            let sli = SkiplistIndex::new();
-            let mut starting_frontier_map = HashMap::new();
-            starting_frontier_map.insert(
-                Generation::new(3),
-                vec![b1_1, b1_2, b2_1, b2_2].into_iter().collect(),
-            );
-
-            let mut expected_gen_2_frontier_map = HashMap::new();
-            expected_gen_2_frontier_map
-                .insert(Generation::new(2), vec![b1, b2].into_iter().collect());
-            assert_eq!(
-                process_frontier(
-                    repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    NodeFrontier::new(starting_frontier_map.clone()),
-                    Generation::new(2)
-                ).wait()
-                    .unwrap(),
-                NodeFrontier::new(expected_gen_2_frontier_map)
-            );
-
-            let mut expected_root_frontier_map = HashMap::new();
-            expected_root_frontier_map
-                .insert(Generation::new(1), vec![root_node].into_iter().collect());
-            assert_eq!(
-                process_frontier(
-                    repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    NodeFrontier::new(starting_frontier_map),
-                    Generation::new(1)
-                ).wait()
-                    .unwrap(),
-                NodeFrontier::new(expected_root_frontier_map)
-            );
-        });
-    }
+    skiplist_test!(query_reachability_hint_on_self_is_true, linear);
+    skiplist_test!(query_reachability_to_higher_gen_is_false, linear);
+    skiplist_test!(query_from_indexed_merge_node, unshared_merge_even);
+    skiplist_test!(advance_node_linear, linear);
+    skiplist_test!(advance_node_uneven_merge, merge_uneven);
+    skiplist_test!(advance_node_on_partial_index, merge_uneven);
+    skiplist_test!(simul_node_advance_on_wide_branch, branch_wide);
+    skiplist_test!(process_frontier_on_wide_branch, branch_wide);
 }

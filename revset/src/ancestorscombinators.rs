@@ -36,7 +36,7 @@ use futures_ext::{BoxFuture, FutureExt, SelectAll, StreamExt};
 use blobrepo::ChangesetFetcher;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier, SimpleLcaHint};
+use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier, SkiplistIndex};
 
 use BonsaiNodeStream;
 use UniqueHeap;
@@ -189,7 +189,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
                     Self {
                         changeset_fetcher: changeset_fetcher.clone(),
-                        lca_hint_index: Arc::new(SimpleLcaHint {}),
+                        lca_hint_index: Arc::new(SkiplistIndex::new()),
                         next_generation,
                         // Start with a fake state - maximum generation number and no entries
                         // for it (see drain below)
@@ -341,7 +341,6 @@ mod test {
     use async_unit;
     use fixtures::linear;
     use fixtures::merge_uneven;
-    use futures::executor::spawn;
     use tests::{assert_changesets_sequence, string_to_bonsai, TestChangesetFetcher};
 
     #[test]
