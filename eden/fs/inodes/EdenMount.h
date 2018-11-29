@@ -28,6 +28,7 @@
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -43,7 +44,6 @@ namespace facebook {
 namespace eden {
 
 class BindMount;
-class BlobAccess;
 class BlobCache;
 class CheckoutConflict;
 class ClientConfig;
@@ -210,8 +210,8 @@ class EdenMount {
    *
    * The BlobAccess is guaranteed to be valid for the lifetime of the EdenMount.
    */
-  BlobAccess* getBlobAccess() const {
-    return blobAccess_.get();
+  BlobAccess* getBlobAccess() {
+    return &blobAccess_;
   }
 
   /**
@@ -637,7 +637,7 @@ class EdenMount {
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::shared_ptr<ObjectStore> objectStore_;
   std::shared_ptr<BlobCache> blobCache_;
-  std::unique_ptr<BlobAccess> blobAccess_;
+  BlobAccess blobAccess_;
   std::unique_ptr<Overlay> overlay_;
   InodeNumber dotEdenInodeNumber_{};
 

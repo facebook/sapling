@@ -190,7 +190,7 @@ EdenMount::EdenMount(
       dispatcher_{new EdenDispatcher(this)},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
-      blobAccess_{std::make_unique<BlobAccess>(objectStore_, blobCache_)},
+      blobAccess_{objectStore_, blobCache_},
       overlay_(std::make_unique<Overlay>(config_->getOverlayPath())),
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),

@@ -23,6 +23,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
@@ -224,7 +225,6 @@ void FileInode::LockedState::setMaterialized(folly::File&& file) {
 
   ptr_->file = std::move(file);
   ptr_->hash.reset();
-  ptr_->blob.reset();
   ptr_->tag = State::MATERIALIZED_IN_OVERLAY;
   ptr_->sha1Valid = false;
 }
@@ -234,103 +234,142 @@ void FileInode::LockedState::setMaterialized(folly::File&& file) {
  * These definitions need to appear before any functions that use them.
  ********************************************************************/
 
-template <typename Fn>
-typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
-    Return
-    FileInode::runWhileDataLoaded(LockedState state, Fn&& fn) {
-  auto future = Future<FileHandlePtr>::makeEmpty();
+template <typename ReturnType, typename Fn>
+ReturnType FileInode::runWhileDataLoaded(
+    LockedState state,
+    BlobCache::Interest interest,
+    std::shared_ptr<const Blob> blob,
+    Fn&& fn) {
+  auto future = Future<std::shared_ptr<const Blob>>::makeEmpty();
   switch (state->tag) {
-    case State::BLOB_LOADED:
-      // We can run the function immediately
-      return folly::makeFutureWith(
-          [&] { return std::forward<Fn>(fn)(std::move(state)); });
-    case State::MATERIALIZED_IN_OVERLAY:
-      // Open the file, then run the function
-      state.ensureFileOpen(this);
-      return folly::makeFutureWith(
-          [&] { return std::forward<Fn>(fn)(std::move(state)); });
+    case State::BLOB_NOT_LOADING:
+      if (!blob) {
+        // If no blob is given, check if the previous handle is still valid.
+        blob = state->interestHandle.getBlob();
+      }
+      if (!blob) {
+        // Otherwise, does the cache have one?
+        //
+        // The BlobAccess::getBlob call in startLoadingData will also check the
+        // BlobCache, but by checking it here, we can avoid a transition to
+        // BLOB_LOADING and back, and also avoid allocating some futures and
+        // closures.
+        auto result =
+            getMount()->getBlobCache()->get(state->hash.value(), interest);
+        if (result.blob) {
+          blob = std::move(result.blob);
+          state->interestHandle = std::move(result.interestHandle);
+        }
+      }
+      if (blob) {
+        // The blob was still in cache, so we can run the function immediately.
+        return folly::makeFutureWith([&] {
+          return std::forward<Fn>(fn)(std::move(state), std::move(blob));
+        });
+      } else {
+        future = startLoadingData(std::move(state), interest);
+      }
+      break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
       future = state->blobLoadingPromise->getFuture();
       state.unlock();
       break;
-    case State::NOT_LOADED:
-      future = startLoadingData(std::move(state));
-      break;
+    case State::MATERIALIZED_IN_OVERLAY:
+      state.ensureFileOpen(this);
+      return folly::makeFutureWith(
+          [&] { return std::forward<Fn>(fn)(std::move(state), nullptr); });
   }
 
-  return std::move(future).thenValue([self = inodePtrFromThis(),
-                                      fn = std::forward<Fn>(fn)](
-                                         FileHandlePtr /* handle */) mutable {
-    // Simply call runWhileDataLoaded() again when we we finish loading the blob
-    // data.  The state should be BLOB_LOADED or MATERIALIZED_IN_OVERLAY this
-    // time around.
-    auto stateLock = LockedState{self};
-    DCHECK(
-        stateLock->tag == State::BLOB_LOADED ||
-        stateLock->tag == State::MATERIALIZED_IN_OVERLAY)
-        << "unexpected FileInode state after loading: " << stateLock->tag;
-    return self->runWhileDataLoaded(std::move(stateLock), std::forward<Fn>(fn));
-  });
+  return std::move(future).thenValue(
+      [self = inodePtrFromThis(), fn = std::forward<Fn>(fn), interest](
+          std::shared_ptr<const Blob> blob) mutable {
+        // Simply call runWhileDataLoaded() again when we we finish loading the
+        // blob data.  The state should be BLOB_NOT_LOADING or
+        // MATERIALIZED_IN_OVERLAY this time around.
+        auto stateLock = LockedState{self};
+        DCHECK(
+            stateLock->tag == State::BLOB_NOT_LOADING ||
+            stateLock->tag == State::MATERIALIZED_IN_OVERLAY)
+            << "unexpected FileInode state after loading: " << stateLock->tag;
+        return self->runWhileDataLoaded<ReturnType>(
+            std::move(stateLock),
+            interest,
+            std::move(blob),
+            std::forward<Fn>(fn));
+      });
 }
 
 template <typename Fn>
 typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
     Return
-    FileInode::runWhileMaterialized(LockedState state, Fn&& fn) {
-  auto future = Future<FileHandlePtr>::makeEmpty();
+    FileInode::runWhileMaterialized(
+        LockedState state,
+        std::shared_ptr<const Blob> blob,
+        Fn&& fn) {
+  auto future = Future<std::shared_ptr<const Blob>>::makeEmpty();
   switch (state->tag) {
-    case State::BLOB_LOADED: {
-      // We have the blob data loaded.
-      // Materialize the file now.
-      materializeNow(state);
-      // Call materializeInParent before we return, after we are
-      // sure the state lock has been released.  This does mean that our parent
-      // won't have updated our state until after the caller's function runs,
-      // but this is okay.  There is always a brief gap between when we
-      // materialize ourself and when our parent gets updated to indicate this.
-      // If we do crash during this period it is not too unreasonable that
-      // recent change right before the crash might be reverted to their
-      // non-materialized state.
-      SCOPE_EXIT {
-        CHECK(state.isNull());
-        materializeInParent();
-      };
-      // Note that we explicitly create a temporary LockedState object
-      // to pass to the caller to ensure that the state lock will be released
-      // when they return, even if the caller's function accepts the state as
-      // an rvalue-reference and does not release it themselves.
-      return folly::makeFutureWith(
-          [&] { return std::forward<Fn>(fn)(LockedState{std::move(state)}); });
-    }
-    case State::MATERIALIZED_IN_OVERLAY:
-      // Open the file, then run the function
-      state.ensureFileOpen(this);
-      return folly::makeFutureWith(
-          [&] { return std::forward<Fn>(fn)(LockedState{std::move(state)}); });
+    case State::BLOB_NOT_LOADING:
+      if (!blob) {
+        // If a blob wasn't passed into runWhileMaterialized, try to see if the
+        // last one we loaded is still alive.
+        blob = state->interestHandle.getBlob();
+      }
+      if (blob) {
+        // We have the blob data loaded.
+        // Materialize the file now.
+        materializeNow(state, blob);
+        // Call materializeInParent before we return, after we are
+        // sure the state lock has been released.  This does mean that our
+        // parent won't have updated our state until after the caller's function
+        // runs, but this is okay.  There is always a brief gap between when we
+        // materialize ourself and when our parent gets updated to indicate
+        // this. If we do crash during this period it is not too unreasonable
+        // that recent change right before the crash might be reverted to their
+        // non-materialized state.
+        SCOPE_EXIT {
+          CHECK(state.isNull());
+          materializeInParent();
+        };
+        // Note that we explicitly create a temporary LockedState object
+        // to pass to the caller to ensure that the state lock will be released
+        // when they return, even if the caller's function accepts the state as
+        // an rvalue-reference and does not release it themselves.
+        return folly::makeFutureWith([&] {
+          return std::forward<Fn>(fn)(LockedState{std::move(state)});
+        });
+      }
+
+      // The blob must be loaded, so kick that off. There's no point in caching
+      // it in memory - the blob will immediately be written into the overlay
+      // and then dropped.
+      future = startLoadingData(
+          std::move(state), BlobCache::Interest::UnlikelyNeededAgain);
+      break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
       future = state->blobLoadingPromise->getFuture();
       state.unlock();
       break;
-    case State::NOT_LOADED:
-      future = startLoadingData(std::move(state));
-      break;
+    case State::MATERIALIZED_IN_OVERLAY:
+      // Open the file, then run the function
+      state.ensureFileOpen(this);
+      return folly::makeFutureWith(
+          [&] { return std::forward<Fn>(fn)(LockedState{std::move(state)}); });
   }
 
   return std::move(future).thenValue(
       [self = inodePtrFromThis(),
-       fn = std::forward<Fn>(fn)](FileHandlePtr /* handle */) mutable {
-        // Simply call runWhileDataLoaded() again when we we finish loading the
-        // blob data.  The state should be BLOB_LOADED or
-        // MATERIALIZED_IN_OVERLAY this time around.
+       fn = std::forward<Fn>(fn)](std::shared_ptr<const Blob> blob) mutable {
+        // Simply call runWhileMaterialized() again when we we are finished
+        // loading the blob data.
         auto stateLock = LockedState{self};
         DCHECK(
-            stateLock->tag == State::BLOB_LOADED ||
+            stateLock->tag == State::BLOB_NOT_LOADING ||
             stateLock->tag == State::MATERIALIZED_IN_OVERLAY)
             << "unexpected FileInode state after loading: " << stateLock->tag;
         return self->runWhileMaterialized(
-            std::move(stateLock), std::forward<Fn>(fn));
+            std::move(stateLock), std::move(blob), std::forward<Fn>(fn));
       });
 }
 
@@ -339,8 +378,7 @@ typename std::result_of<Fn(FileInode::LockedState&&)>::type
 FileInode::truncateAndRun(LockedState state, Fn&& fn) {
   auto future = Future<FileHandlePtr>::makeEmpty();
   switch (state->tag) {
-    case State::NOT_LOADED:
-    case State::BLOB_LOADED:
+    case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING: {
       // We are not materialized yet.  We need to materialize the file now.
       //
@@ -354,51 +392,37 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
       //   materialized in our parent TreeInode.
       // - If we successfully materialized the file and were in the
       //   BLOB_LOADING state, fulfill the blobLoadingPromise.
-      std::shared_ptr<EdenFileHandle> handle;
-      std::optional<folly::SharedPromise<FileHandlePtr>> loadingPromise;
+      std::optional<folly::SharedPromise<std::shared_ptr<const Blob>>>
+          loadingPromise;
       SCOPE_EXIT {
         if (loadingPromise) {
-          loadingPromise->setValue(std::move(handle));
+          // If transitioning from the loading state to materialized, fulfill
+          // the loading promise will null. Callbacks will have to handle the
+          // case that the state is now materialized.
+          loadingPromise->setValue(nullptr);
         }
       };
 
-      // If we are currently in the BLOB_LOADING state, we first need to create
-      // an EdenFileHandle object to use to fulfill the blobLoadingPromise.
-      // We do this early on so that we cannot fail to create the file handle
-      // after we have successfully materialized the file.
-      //
-      // We move the LockedState object into an inner scope when we do this, to
-      // ensure that the LockedState always gets destroyed before the
-      // EdenFileHandle object.  The EdenFileHandle destructor requires
-      // acquiring the state lock itself, so the lock cannot still be held when
-      // the EdenFileHandle destructor runs.
-      {
-        LockedState innerState(std::move(state));
-        if (innerState->tag == State::BLOB_LOADING) {
-          innerState.createHandleInOuterScope(inodePtrFromThis(), &handle);
-        }
+      // Call materializeAndTruncate()
+      materializeAndTruncate(state);
 
-        // Call materializeAndTruncate()
-        materializeAndTruncate(innerState);
+      // Now that materializeAndTruncate() has succeeded, extract the
+      // blobLoadingPromise so we can fulfill it as we exit.
+      loadingPromise = std::move(state->blobLoadingPromise);
+      state->blobLoadingPromise.reset();
+      // Also call materializeInParent() as we exit, before fulfilling the
+      // blobLoadingPromise.
+      SCOPE_EXIT {
+        CHECK(state.isNull());
+        materializeInParent();
+      };
 
-        // Now that materializeAndTruncate() has succeeded, extract the
-        // blobLoadingPromise so we can fulfill it as we exit.
-        loadingPromise = std::move(innerState->blobLoadingPromise);
-        innerState->blobLoadingPromise.reset();
-        // Also call materializeInParent() as we exit, before fulfilling the
-        // blobLoadingPromise.
-        SCOPE_EXIT {
-          CHECK(innerState.isNull());
-          materializeInParent();
-        };
-
-        // Now invoke the input function.
-        // Note that we explicitly create a temporary LockedState object
-        // to pass to the caller to ensure that the state lock will be released
-        // when they return, even if the caller's function accepts the state as
-        // an rvalue-reference and does not release it themselves.
-        return std::forward<Fn>(fn)(LockedState{std::move(innerState)});
-      }
+      // Now invoke the input function.
+      // Note that we explicitly create a temporary LockedState object
+      // to pass to the caller to ensure that the state lock will be released
+      // when they return, even if the caller's function accepts the state as
+      // an rvalue-reference and does not release it themselves.
+      return std::forward<Fn>(fn)(LockedState{std::move(state)});
     }
     case State::MATERIALIZED_IN_OVERLAY:
       // We are already materialized.
@@ -415,7 +439,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
  ********************************************************************/
 
 FileInodeState::FileInodeState(const std::optional<Hash>& h) : hash(h) {
-  tag = hash ? NOT_LOADED : MATERIALIZED_IN_OVERLAY;
+  tag = hash ? BLOB_NOT_LOADING : MATERIALIZED_IN_OVERLAY;
 
   checkInvariants();
 }
@@ -432,33 +456,22 @@ FileInodeState::~FileInodeState() = default;
 
 void FileInodeState::checkInvariants() {
   switch (tag) {
-    case NOT_LOADED:
+    case BLOB_NOT_LOADING:
       CHECK(hash);
       CHECK(!blobLoadingPromise);
-      CHECK(!blob);
       CHECK(!file);
       CHECK(!sha1Valid);
       return;
     case BLOB_LOADING:
       CHECK(hash);
       CHECK(blobLoadingPromise);
-      CHECK(!blob);
       CHECK(!file);
       CHECK(!sha1Valid);
-      return;
-    case BLOB_LOADED:
-      CHECK(hash);
-      CHECK(!blobLoadingPromise);
-      CHECK(blob);
-      CHECK(!file);
-      CHECK(!sha1Valid);
-      DCHECK_EQ(blob->getHash(), hash.value());
       return;
     case MATERIALIZED_IN_OVERLAY:
       // 'materialized'
       CHECK(!hash);
       CHECK(!blobLoadingPromise);
-      CHECK(!blob);
       if (file) {
         CHECK_GT(openCount, 0);
       }
@@ -482,18 +495,11 @@ void FileInodeState::decOpenCount() {
   --openCount;
   if (openCount == 0) {
     switch (tag) {
-      case BLOB_LOADED:
-        blob.reset();
-        tag = NOT_LOADED;
+      case BLOB_NOT_LOADING:
+      case BLOB_LOADING:
         break;
       case MATERIALIZED_IN_OVERLAY:
-        // TODO: Before closing the file handle, it might make sense to write
-        // in-memory timestamps into the overlay, even if the inode remains in
-        // memory. This would ensure timestamps persist even if the edenfs
-        // process crashes or otherwise exits without unloading all inodes.
         file.close();
-        break;
-      default:
         break;
     }
   }
@@ -606,7 +612,7 @@ folly::Future<Dispatcher::Attr> FileInode::setattr(
   if (truncate) {
     return truncateAndRun(std::move(state), setAttrs);
   } else {
-    return runWhileMaterialized(std::move(state), setAttrs);
+    return runWhileMaterialized(std::move(state), nullptr, setAttrs);
   }
 }
 
@@ -725,7 +731,7 @@ folly::Future<std::shared_ptr<FileHandle>> FileInode::open(int flags) {
       // Since we just want to materialize the file and don't need to do
       // anything else we pass in a no-op lambda function.
       (void)runWhileMaterialized(
-          std::move(state), [](LockedState&&) { return 0; });
+          std::move(state), nullptr, [](LockedState&&) { return 0; });
     }
   }
 
@@ -763,10 +769,9 @@ Future<Hash> FileInode::getSha1() {
   auto state = LockedState{this};
 
   switch (state->tag) {
-    case State::NOT_LOADED:
+    case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
-    case State::BLOB_LOADED:
-      // If a file is not materialized it should have a hash value.
+      // If a file is not materialized, it should have a hash value.
       return getObjectStore()->getSha1(state->hash.value());
     case State::MATERIALIZED_IN_OVERLAY:
       state.ensureFileOpen(this);
@@ -794,9 +799,8 @@ folly::Future<struct stat> FileInode::stat() {
   getMetadataLocked(*state).applyToStat(st);
 
   switch (state->tag) {
-    case State::NOT_LOADED:
+    case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
-    case State::BLOB_LOADED:
       CHECK(state->hash.has_value());
       // While getBlobMetadata will sometimes need to fetch a blob to compute
       // the size and SHA-1, if it's already known, use the cached metadata to
@@ -854,13 +858,31 @@ void FileInode::fsync(bool datasync) {
   checkUnixError(res);
 }
 
-Future<string> FileInode::readAll(CacheHint /*cacheHint*/) {
-  return runWhileDataLoaded(
+Future<string> FileInode::readAll(CacheHint cacheHint) {
+  auto interest = BlobCache::Interest::LikelyNeededAgain;
+  switch (cacheHint) {
+    case CacheHint::NotNeededAgain:
+      interest = BlobCache::Interest::UnlikelyNeededAgain;
+      break;
+    case CacheHint::LikelyNeededAgain:
+      // readAll() with LikelyNeededAgain is primarily called for files read
+      // by Eden itself, like .gitignore, and for symlinks on kernels that don't
+      // cache readlink. At least keep the blob around while the inode is
+      // loaded.
+      interest = BlobCache::Interest::WantHandle;
+      break;
+  }
+
+  return runWhileDataLoaded<Future<string>>(
       LockedState{this},
-      [self = inodePtrFromThis()](LockedState&& state) -> Future<string> {
+      interest,
+      nullptr,
+      [self = inodePtrFromThis()](
+          LockedState&& state, std::shared_ptr<const Blob> blob) -> string {
         std::string result;
         switch (state->tag) {
           case State::MATERIALIZED_IN_OVERLAY: {
+            DCHECK(!blob);
             // Note that this code requires a write lock on state_ because the
             // lseek() call modifies the file offset of the file descriptor.
             auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
@@ -869,8 +891,8 @@ Future<string> FileInode::readAll(CacheHint /*cacheHint*/) {
             folly::readFile(state->file.fd(), result);
             break;
           }
-          case State::BLOB_LOADED: {
-            const auto& contentsBuf = state->blob->getContents();
+          case State::BLOB_NOT_LOADING: {
+            const auto& contentsBuf = blob->getContents();
             folly::io::Cursor cursor(&contentsBuf);
             result =
                 cursor.readFixedString(contentsBuf.computeChainDataLength());
@@ -888,14 +910,22 @@ Future<string> FileInode::readAll(CacheHint /*cacheHint*/) {
 }
 
 Future<BufVec> FileInode::read(size_t size, off_t off) {
-  return runWhileDataLoaded(
+  return runWhileDataLoaded<Future<BufVec>>(
       LockedState{this},
-      [size, off, self = inodePtrFromThis()](LockedState&& state) {
+      BlobCache::Interest::WantHandle,
+      nullptr,
+      [size, off, self = inodePtrFromThis()](
+          LockedState&& state, std::shared_ptr<const Blob> blob) -> BufVec {
         SCOPE_SUCCESS {
           self->updateAtimeLocked(*state);
         };
 
+        // TODO: if blob, add [size, off] to coverage set and if coverage is
+        // full, drop interest.
+
+        // Materialized either before or during blob load.
         if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+          state.ensureFileOpen(self.get());
           auto buf = folly::IOBuf::createCombined(size);
           auto res = ::pread(
               state->file.fd(),
@@ -906,25 +936,26 @@ Future<BufVec> FileInode::read(size_t size, off_t off) {
           checkUnixError(res);
           buf->append(res);
           return BufVec{std::move(buf)};
-        } else {
-          // runWhileDataLoaded() ensures that the state is either
-          // MATERIALIZED_IN_OVERLAY or BLOB_LOADED
-          DCHECK_EQ(state->tag, State::BLOB_LOADED);
-          auto buf = state->blob->getContents();
-          folly::io::Cursor cursor(&buf);
-
-          if (!cursor.canAdvance(off)) {
-            // Seek beyond EOF.  Return an empty result.
-            return BufVec{folly::IOBuf::wrapBuffer("", 0)};
-          }
-
-          cursor.skip(off);
-
-          std::unique_ptr<folly::IOBuf> result;
-          cursor.cloneAtMost(result, size);
-
-          return BufVec{std::move(result)};
         }
+
+        // runWhileDataLoaded() ensures that the state is either
+        // MATERIALIZED_IN_OVERLAY or BLOB_NOT_LOADING
+        DCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
+        DCHECK(blob) << "blob missing after load completed";
+        auto buf = blob->getContents();
+        folly::io::Cursor cursor(&buf);
+
+        if (!cursor.canAdvance(off)) {
+          // Seek beyond EOF.  Return an empty result.
+          return BufVec{folly::IOBuf::wrapBuffer("", 0)};
+        }
+
+        cursor.skip(off);
+
+        std::unique_ptr<folly::IOBuf> result;
+        cursor.cloneAtMost(result, size);
+
+        return BufVec{std::move(result)};
       });
 }
 
@@ -957,6 +988,7 @@ size_t FileInode::writeImpl(
 folly::Future<size_t> FileInode::write(BufVec&& buf, off_t off) {
   return runWhileMaterialized(
       LockedState{this},
+      nullptr,
       [buf = std::move(buf), off, self = inodePtrFromThis()](
           LockedState&& state) {
         auto vec = buf.getIov();
@@ -977,6 +1009,7 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
 
   return runWhileMaterialized(
       std::move(state),
+      nullptr,
       [data = data.str(), off, self = inodePtrFromThis()](
           LockedState&& stateLock) {
         struct iovec iov;
@@ -986,14 +1019,16 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
       });
 }
 
-Future<FileInode::FileHandlePtr> FileInode::startLoadingData(
-    LockedState state) {
-  DCHECK_EQ(state->tag, State::NOT_LOADED);
+Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
+    LockedState state,
+    BlobCache::Interest interest) {
+  DCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
   // Start the blob load first in case this throws an exception.
   // Ideally the state transition is no-except in tandem with the
   // Future's .then call.
-  auto blobFuture = getObjectStore()->getBlob(state->hash.value());
+  auto getBlobFuture =
+      getMount()->getBlobAccess()->getBlob(state->hash.value(), interest);
 
   // Everything from here through blobFuture.then should be noexcept.
   state->blobLoadingPromise.emplace();
@@ -1004,11 +1039,16 @@ Future<FileInode::FileHandlePtr> FileInode::startLoadingData(
   state.unlock();
 
   auto self = inodePtrFromThis(); // separate line for formatting
-  std::move(blobFuture)
-      .thenTry([self](folly::Try<std::shared_ptr<const Blob>> tryBlob) mutable {
+  std::move(getBlobFuture)
+      .thenTry([self](folly::Try<BlobCache::GetResult> tryResult) mutable {
         auto state = LockedState{self};
 
         switch (state->tag) {
+          case State::BLOB_NOT_LOADING:
+            EDEN_BUG()
+                << "A blob load finished when the inode was in BLOB_NOT_LOADING state";
+            return;
+
           // Since the load doesn't hold the state lock for its duration,
           // sanity check that the inode is still in loading state.
           //
@@ -1018,32 +1058,28 @@ Future<FileInode::FileHandlePtr> FileInode::startLoadingData(
           case State::BLOB_LOADING: {
             auto promise = std::move(*state->blobLoadingPromise);
             state->blobLoadingPromise.reset();
+            state->tag = State::BLOB_NOT_LOADING;
 
-            if (tryBlob.hasValue()) {
-              // Transition to 'loaded' state.
-              state.incOpenCount();
-              state->blob = std::move(tryBlob.value());
-              state->tag = State::BLOB_LOADED;
-              promise.setValue(state.unlockAndCreateHandle(std::move(self)));
-            } else {
-              state->tag = State::NOT_LOADED;
-              // Call the Future's subscribers while the state_ lock is not
-              // held. Even if the FileInode has transitioned to a materialized
-              // state, any pending loads must be unblocked.
+            // Call the Future's subscribers while the state_ lock is not
+            // held. Even if the FileInode has transitioned to a materialized
+            // state, any pending loads must be unblocked.
+            if (tryResult.hasValue()) {
+              state->interestHandle = std::move(tryResult->interestHandle);
               state.unlock();
-              promise.setException(tryBlob.exception());
+              promise.setValue(std::move(tryResult->blob));
+            } else {
+              state.unlock();
+              promise.setException(std::move(tryResult).exception());
             }
-            break;
+            return;
           }
 
           case State::MATERIALIZED_IN_OVERLAY:
             // The load raced with a someone materializing the file to truncate
-            // it.  Nothing left to do here.
-            break;
-
-          default:
-            EDEN_BUG()
-                << "Inode left in unexpected state after getBlob() completed";
+            // it.  Nothing left to do here. The truncation completed the
+            // promise with a null blob.
+            CHECK_EQ(false, state->blobLoadingPromise.has_value());
+            return;
         }
       })
       .thenError([](folly::exception_wrapper&&) {
@@ -1059,10 +1095,11 @@ Future<FileInode::FileHandlePtr> FileInode::startLoadingData(
   return resultFuture;
 }
 
-void FileInode::materializeNow(LockedState& state) {
-  // This function should only be called from the BLOB_LOADED state
-  DCHECK_EQ(state->tag, State::BLOB_LOADED);
-  CHECK(state->blob);
+void FileInode::materializeNow(
+    LockedState& state,
+    std::shared_ptr<const Blob> blob) {
+  // This function should only be called from the BLOB_NOT_LOADING state
+  DCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
   // Look up the blob metadata so we can get the blob contents SHA1
   // Since this uses state->hash we perform this before calling
@@ -1070,7 +1107,7 @@ void FileInode::materializeNow(LockedState& state) {
   auto blobSha1 = getObjectStore()->getSha1(state->hash.value());
 
   auto file = getMount()->getOverlay()->createOverlayFile(
-      getNodeId(), state->blob->getContents());
+      getNodeId(), blob->getContents());
   state.setMaterialized(std::move(file));
 
   // If we have a SHA-1 from the metadata, apply it to the new file.  This
@@ -1099,7 +1136,6 @@ void FileInode::materializeAndTruncate(LockedState& state) {
 void FileInode::truncateInOverlay(LockedState& state) {
   CHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
   CHECK(!state->hash);
-  CHECK(!state->blob);
 
   state.ensureFileOpen(this);
   checkUnixError(ftruncate(state->file.fd(), 0 + Overlay::kHeaderLength));

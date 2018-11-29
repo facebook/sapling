@@ -78,8 +78,9 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
 }
 
 TestMount::TestMount()
-    : blobCache_(
-          BlobCache::create(kBlobCacheMaximumSize, kBlobCacheMinimumEntries)),
+    : blobCache_{BlobCache::create(
+          kBlobCacheMaximumSize,
+          kBlobCacheMinimumEntries)},
       privHelper_{make_shared<FakePrivHelper>()},
       serverExecutor_{make_shared<folly::ManualExecutor>()} {
   // Initialize the temporary directory.

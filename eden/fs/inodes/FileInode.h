@@ -17,6 +17,7 @@
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/store/BlobCache.h"
 
 namespace folly {
 class File;
@@ -39,25 +40,24 @@ class ObjectStore;
  * any member variables of FileInode.
  *
  * A FileInode can be in one of three states:
- *   - not loaded
+ *   - not loading: the blob may be in cache, but it is not currently being
+ *                  loaded
  *   - loading: fetching data from backing store, but it's not available yet
- *   - loaded: contents has been imported from mercurial and is accessible
  *   - materialized: contents are written into overlay and file handle is open
  *
  * Valid state transitions:
- *   - not loaded -> loading
- *   - not loaded -> materialized (O_TRUNC)
- *   - loading -> loaded
- *   - loading -> materialized (O_TRUNC)
- *   - loaded -> materialized
+ *   - not loading -> loading
+ *   - not loading -> materialized (O_TRUNC)
+ *   - loading -> not loaded (blob available during transition)
+ *   - loading -> materialized (O_TRUNC or not)
+ *   - loading -> not loading -> materialized
  */
 struct FileInodeState {
   using FileHandlePtr = std::shared_ptr<EdenFileHandle>;
 
   enum Tag : uint8_t {
-    NOT_LOADED,
+    BLOB_NOT_LOADING,
     BLOB_LOADING,
-    BLOB_LOADED,
     MATERIALIZED_IN_OVERLAY,
   };
 
@@ -86,8 +86,8 @@ struct FileInodeState {
   }
 
   /**
-   * Decrement the openCount, releasing the blob or file if the open count is
-   * now zero.
+   * Decrement the openCount, closing any open overlay file handles if the open
+   * count is now zero.
    */
   void decOpenCount();
 
@@ -99,20 +99,33 @@ struct FileInodeState {
   Tag tag;
 
   /**
-   * Set only in 'not loaded', 'loading', and 'loaded' states, none otherwise.
-   * TODO: Perhaps we ought to simply leave this defined...
+   * Set only in 'not loading' and 'loading' states. std::nullopt otherwise.
    */
   std::optional<Hash> hash;
 
   /**
-   * Set if 'loading'.
+   * Set if 'loading'. Unset when load completes.
+   *
+   * It's possible for this future to complete with a null blob - that happens
+   * if a truncate operation occurs during load. In that case, the future is
+   * completed and the inode transitions to the materialized state without
+   * a blob. Callbacks on this future must handle that case.
    */
-  std::optional<folly::SharedPromise<FileHandlePtr>> blobLoadingPromise;
+  std::optional<folly::SharedPromise<std::shared_ptr<const Blob>>>
+      blobLoadingPromise;
 
   /**
-   * Set if 'loaded', references immutable data from the backing store.
+   * If the blob has ever been loaded from cache, this handle represents this
+   * inode's interest in it. By explicitly resetting the interest handle, the
+   * inode indicates to the cache that the blob can be released.
+   *
+   * This also indicates to the cache that the blob is no longer needed in
+   * memory when the FileInode is deallocated.
+   *
+   * Before attempting to reload the blob, check if the interestHandle has it
+   * first.
    */
-  std::shared_ptr<const Blob> blob;
+  BlobInterestHandle interestHandle;
 
   /**
    * If backed by an overlay file, whether the sha1 xattr is valid
@@ -274,15 +287,21 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   /**
    * Run a function with the FileInode data loaded.
    *
-   * fn(state) will be invoked when state->tag is either BLOB_LOADED or
-   * MATERIALIZED_IN_OVERLAY.  If state->tag is MATERIALIZED_IN_OVERLAY,
-   * state->file will be available.
+   * fn(state, blob) will be invoked when state->tag is either NOT_LOADING or
+   * MATERIALIZED_IN_OVERLAY. If state->tag is MATERIALIZED_IN_OVERLAY,
+   * state->file will be available. If state->tag is NOT_LOADING, then the
+   * second argument will be a non-null std::shared_ptr<const Blob>.
    *
-   * Returns a Future with the result of fn(state_.wlock())
+   * The blob parameter is used when recursing.
+   *
+   * Returns a Future with the result of fn(state_.wlock(), blob)
    */
-  template <typename Fn>
-  typename folly::futures::detail::callableResult<LockedState, Fn>::Return
-  runWhileDataLoaded(LockedState state, Fn&& fn);
+  template <typename ReturnType, typename Fn>
+  ReturnType runWhileDataLoaded(
+      LockedState state,
+      BlobCache::Interest interest,
+      std::shared_ptr<const Blob> blob,
+      Fn&& fn);
 
   /**
    * Run a function with the FileInode materialized.
@@ -294,7 +313,10 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    */
   template <typename Fn>
   typename folly::futures::detail::callableResult<LockedState, Fn>::Return
-  runWhileMaterialized(LockedState state, Fn&& fn);
+  runWhileMaterialized(
+      LockedState state,
+      std::shared_ptr<const Blob> blob,
+      Fn&& fn);
 
   /**
    * Truncate the file and then call a function.
@@ -320,8 +342,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * runWhileMaterialized().  Most other callers should use
    * runWhileDataLoaded() or runWhileMaterialized() instead.
    */
-  FOLLY_NODISCARD folly::Future<FileHandlePtr> startLoadingData(
-      LockedState state);
+  FOLLY_NODISCARD folly::Future<std::shared_ptr<const Blob>> startLoadingData(
+      LockedState state,
+      BlobCache::Interest interest);
 
   /**
    * Materialize the file as an empty file in the overlay.
@@ -354,13 +377,13 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   void truncateInOverlay(LockedState& state);
 
   /**
-   * Transition from BLOB_LOADED to MATERIALIZED_IN_OVERLAY by copying the
+   * Transition from NOT_LOADING to MATERIALIZED_IN_OVERLAY by copying the
    * blob into the overlay.
    *
    * The input LockedState object will be updated to hold an open refcount,
    * and state->file will be valid when this function returns.
    */
-  void materializeNow(LockedState& state);
+  void materializeNow(LockedState& state, std::shared_ptr<const Blob> blob);
 
   /**
    * Get a FileInodePtr to ourself.
