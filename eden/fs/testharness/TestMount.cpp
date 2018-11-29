@@ -341,7 +341,13 @@ void TestMount::addSymlink(
 
 void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   auto file = getFileInode(path);
-  auto fileHandle = file->open(O_RDWR | O_TRUNC).get();
+
+  fuse_setattr_in attr;
+  attr.valid = FATTR_SIZE;
+  attr.size = 0;
+  (void)file->setattr(attr).get(0ms);
+
+  auto fileHandle = file->open().get(0ms);
   off_t offset = 0;
   file->write(contents, offset).get(0ms);
   file->fsync(/*datasync*/ true);

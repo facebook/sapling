@@ -163,7 +163,7 @@ folly::Future<std::shared_ptr<FileHandle>> EdenDispatcher::open(
     int flags) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "open({}, flags={:x})", ino, flags);
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [flags](const FileInodePtr& inode) { return inode->open(flags); });
+      [](const FileInodePtr& inode) { return inode->open(); });
 }
 
 folly::Future<Dispatcher::Create> EdenDispatcher::create(

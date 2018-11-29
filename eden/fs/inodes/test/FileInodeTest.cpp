@@ -379,7 +379,7 @@ TEST_F(FileInodeTest, writingMaterializesParent) {
   EXPECT_EQ(false, isInodeMaterialized(grandparent));
   EXPECT_EQ(false, isInodeMaterialized(parent));
 
-  auto handle = inode->open(O_WRONLY).get();
+  auto handle = inode->open().get();
   auto written = inode->write("abcd", 0).get();
   EXPECT_EQ(4, written);
 
@@ -395,7 +395,10 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
   EXPECT_EQ(false, isInodeMaterialized(grandparent));
   EXPECT_EQ(false, isInodeMaterialized(parent));
 
-  (void)inode->open(O_WRONLY | O_TRUNC).get();
+  fuse_setattr_in attr;
+  attr.valid = FATTR_SIZE;
+  attr.size = 0;
+  (void)inode->setattr(attr).get(0ms);
 
   EXPECT_EQ(true, isInodeMaterialized(grandparent));
   EXPECT_EQ(true, isInodeMaterialized(parent));
@@ -418,9 +421,10 @@ TEST(FileInode, truncatingDuringLoad) {
 
   {
     // Synchronously truncate the file while the load is in progress.
-    auto handleFuture = inode->open(O_TRUNC);
-    EXPECT_EQ(true, handleFuture.isReady());
-    EXPECT_EQ(true, handleFuture.hasValue());
+    fuse_setattr_in attr;
+    attr.valid = FATTR_SIZE;
+    attr.size = 0;
+    (void)inode->setattr(attr).get(0ms);
     // Deallocate the handle here, closing the open file.
   }
 
@@ -443,8 +447,8 @@ TEST(FileInode, readDuringLoad) {
 
   // Load the inode and start reading the contents
   auto inode = mount_.getFileInode("notready.txt");
-  auto dataFuture = inode->open(O_RDONLY).thenValue(
-      [inode](std::shared_ptr<FileHandle> /*handle*/) {
+  auto dataFuture =
+      inode->open().thenValue([inode](std::shared_ptr<FileHandle> /*handle*/) {
         return inode->read(4096, 0);
       });
   EXPECT_FALSE(dataFuture.isReady());
@@ -466,7 +470,7 @@ TEST(FileInode, writeDuringLoad) {
 
   // Load the inode and start reading the contents
   auto inode = mount_.getFileInode("notready.txt");
-  auto handleFuture = inode->open(O_WRONLY);
+  auto handleFuture = inode->open();
   ASSERT_TRUE(handleFuture.isReady());
   auto handle = std::move(handleFuture).get();
 
@@ -495,16 +499,21 @@ TEST(FileInode, truncateDuringLoad) {
   auto inode = mount_.getFileInode("notready.txt");
 
   // Open the file and start reading the contents
-  auto handleFuture = inode->open(O_RDWR);
+  auto handleFuture = inode->open();
   ASSERT_TRUE(handleFuture.isReady());
   auto handle = std::move(handleFuture).get();
   auto dataFuture = inode->read(4096, 0);
   EXPECT_FALSE(dataFuture.isReady());
 
-  // Open the file again with O_TRUNC while the initial read is in progress.
-  // This should immediately truncate the file even without needing to wait for
-  // the data from the object store.
-  auto truncHandleFuture = inode->open(O_WRONLY | O_TRUNC);
+  // Truncate the file while the initial read is in progress. This should
+  // immediately truncate the file even without needing to wait for the data
+  // from the object store.
+  fuse_setattr_in attr;
+  attr.valid = FATTR_SIZE;
+  attr.size = 0;
+  (void)inode->setattr(attr).get(0ms);
+
+  auto truncHandleFuture = inode->open();
   ASSERT_TRUE(truncHandleFuture.isReady());
   auto truncHandle = std::move(truncHandleFuture).get();
 

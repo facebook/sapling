@@ -699,7 +699,7 @@ std::optional<Hash> FileInode::getBlobHash() const {
   return state_.rlock()->hash;
 }
 
-folly::Future<std::shared_ptr<FileHandle>> FileInode::open(int flags) {
+folly::Future<std::shared_ptr<FileHandle>> FileInode::open() {
   if (dtype_t::Symlink == getType()) {
     // Linux reports ELOOP if you try to open a symlink with O_NOFOLLOW set.
     // Since it isn't clear whether FUSE will allow this to happen, this
@@ -714,13 +714,6 @@ folly::Future<std::shared_ptr<FileHandle>> FileInode::open(int flags) {
   {
     auto state = LockedState{this};
     state.createHandleInOuterScope(inodePtrFromThis(), &fileHandle);
-
-    if (flags & O_TRUNC) {
-      // Use truncateAndRun() to truncate the file, materializing it first if
-      // necessary.  We don't actually need to run anything, so we pass in a
-      // no-op lambda.
-      (void)truncateAndRun(std::move(state), [](LockedState&&) { return 0; });
-    }
   }
 
   return fileHandle;

@@ -974,10 +974,12 @@ void FuseChannel::readInitPacket() {
   // FUSE_READDIRPLUS_AUTO. FUSE_SPLICE_XXX are interesting too,
   // but may not directly benefit eden today.
   //
-  // It would be great to enable FUSE_ATOMIC_O_TRUNC but it
-  // seems to trigger a kernel/FUSE bug.  See
-  // test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
-  // in mmap_test.py. FUSE_ATOMIC_O_TRUNC |
+  // FUSE_ATOMIC_O_TRUNC is a nice optimization when the kernel supports it
+  // and the FUSE daemon requires handling open/release for stateful file
+  // handles. But FUSE_NO_OPEN_SUPPORT is superior, so edenfs has no need for
+  // FUSE_ATOMIC_O_TRUNC. Also, on older kernels, it triggers a kernel bug.
+  // See test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
+  // in mmap_test.py.
   want = capable & (FUSE_BIG_WRITES | FUSE_ASYNC_READ | FUSE_CACHE_SYMLINKS);
 
   XLOG(INFO) << "Speaking fuse protocol kernel=" << init.init.major << "."
