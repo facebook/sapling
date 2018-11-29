@@ -276,96 +276,67 @@ fn query_reachability_with_generation_hints(
         ok(true).boxify()
     } else if src_hash_gen.1 <= dst_hash_gen.1 {
         ok(false).boxify()
-    } else if let Some(skip_node_guard) = skip_list_edges.mapping.get(&src_hash_gen.0) {
-        let skip_node = skip_node_guard.deref();
-        match skip_node {
-            SkiplistNodeType::SkipEdges(edges) => {
-                let best_edge = edges
-                    .iter()
-                    .take_while(|edge_pair| edge_pair.1 >= dst_hash_gen.1)
-                    .last()
-                    .cloned();
-                match best_edge {
-                    Some(edge_pair) => {
-                        // best skip list edge that doesnt go past the dst
-                        query_reachability_with_generation_hints(
+    } else {
+        if let Some(skip_node_guard) = skip_list_edges.mapping.get(&src_hash_gen.0) {
+            let skip_node = skip_node_guard.deref();
+            match skip_node {
+                SkiplistNodeType::SkipEdges(edges) => {
+                    let best_edge = edges
+                        .iter()
+                        .take_while(|edge_pair| edge_pair.1 >= dst_hash_gen.1)
+                        .last()
+                        .cloned();
+                    if let Some(edge_pair) = best_edge {
+                        return query_reachability_with_generation_hints(
                             changeset_fetcher.clone(),
                             skip_list_edges.clone(),
                             edge_pair,
                             dst_hash_gen,
-                        )
-                    }
-                    None => {
-                        // no good skip list edge
-                        // this shouldnt really happen because of the checks above
-                        // the "safe" choice is to simply recurse on the parents
-                        // TODO: Add some kind of logging here,
-                        // since if the logic reaches this point something is wrong
-                        cloned!(skip_list_edges);
-                        get_parents(changeset_fetcher.clone(), src_hash_gen.0)
-                            .and_then({
-                                cloned!(changeset_fetcher);
-                                |parent_changesets| {
-                                    changesets_with_generation_numbers(
-                                        changeset_fetcher,
-                                        parent_changesets,
-                                    )
-                                }
-                            })
-                            .and_then(move |parent_edges| {
-                                join_all(parent_edges.into_iter().map({
-                                    move |parent_gen_pair| {
-                                        query_reachability_with_generation_hints(
-                                            changeset_fetcher.clone(),
-                                            skip_list_edges.clone(),
-                                            parent_gen_pair,
-                                            dst_hash_gen,
-                                        )
-                                    }
-                                }))
-                            })
-                            .map(|parent_results| parent_results.into_iter().any(|x| x))
-                            .boxify()
+                        );
                     }
                 }
-            }
-            SkiplistNodeType::ParentEdges(edges) => {
-                join_all(edges.clone().into_iter().map({
+                SkiplistNodeType::ParentEdges(parent_edges) => {
                     cloned!(skip_list_edges);
-                    move |parent_gen_pair| {
-                        query_reachability_with_generation_hints(
-                            changeset_fetcher.clone(),
-                            skip_list_edges.clone(),
-                            parent_gen_pair,
-                            dst_hash_gen,
-                        )
-                    }
-                })).map(|parent_results| parent_results.into_iter().any(|x| x))
-                    .boxify()
+                    return join_all(parent_edges.clone().into_iter().map({
+                        move |parent_gen_pair| {
+                            query_reachability_with_generation_hints(
+                                changeset_fetcher.clone(),
+                                skip_list_edges.clone(),
+                                parent_gen_pair,
+                                dst_hash_gen,
+                            )
+                        }
+                    }))
+                    .map(|parent_results| parent_results.into_iter().any(|x| x))
+                    .boxify();
+                }
             }
         }
-    } else {
-        if let Some(distance) = (src_hash_gen.1).difference_from(dst_hash_gen.1) {
-            lazy_index_node(
-                changeset_fetcher.clone(),
-                skip_list_edges.clone(),
-                src_hash_gen.0,
-                distance + 1,
-            ).and_then({
-                cloned!(skip_list_edges);
-                move |_| {
-                    query_reachability_with_generation_hints(
-                        changeset_fetcher.clone(),
-                        skip_list_edges.clone(),
-                        src_hash_gen,
-                        dst_hash_gen,
+
+        changeset_fetcher.get_parents(src_hash_gen.0)
+            .and_then({
+                cloned!(changeset_fetcher);
+                |parent_changesets| {
+                    changesets_with_generation_numbers(
+                        changeset_fetcher,
+                        parent_changesets,
                     )
                 }
             })
-                .boxify()
-        } else {
-            ok(false).boxify()
-        }
+        .and_then(move |parent_edges| {
+            join_all(parent_edges.into_iter().map({
+                move |parent_gen_pair| {
+                    query_reachability_with_generation_hints(
+                        changeset_fetcher.clone(),
+                        skip_list_edges.clone(),
+                        parent_gen_pair,
+                        dst_hash_gen,
+                    )
+                }
+            }))
+        })
+        .map(|parent_results| parent_results.into_iter().any(|x| x))
+        .boxify()
     }
 }
 
@@ -489,52 +460,52 @@ fn advance_node_forward(
         let mut result = HashMap::new();
         result.insert(gen, vec![node].into_iter().collect());
         ok(NodeFrontier::new(result)).boxify()
-    } else if let Some(skip_node_guard) = skip_list_edges.mapping.get(&node) {
-        let skip_node = skip_node_guard.deref();
-        match skip_node {
-            SkiplistNodeType::SkipEdges(edges) => {
-                let best_edge = edges
-                    .iter()
-                    .take_while(|edge_pair| edge_pair.1 >= max_gen)
-                    .last()
-                    .cloned();
-                match best_edge {
-                    Some(edge_pair) => {
-                        // best skip list edge that doesnt go past the dst
-                        advance_node_forward(
-                            changeset_fetcher.clone(),
+    } else {
+        if let Some(skip_node_guard) = skip_list_edges.mapping.get(&node) {
+            let skip_node = skip_node_guard.deref();
+            match skip_node {
+                SkiplistNodeType::SkipEdges(edges) => {
+                    let best_edge = edges
+                        .iter()
+                        .take_while(|edge_pair| edge_pair.1 >= max_gen)
+                        .last()
+                        .cloned();
+                    if let Some(edge_pair) = best_edge {
+                        return advance_node_forward(
+                            changeset_fetcher,
                             skip_list_edges.clone(),
                             edge_pair,
                             max_gen,
-                        ).boxify()
+                        );
                     }
-                    None => {
-                        // The only edges step over the destination generation.
-                        // example: node has generation 10.
-                        //          gen is 9.
-                        //          but the only edge from 10 goes to gen 8.
-                        // this shouldn't actually happen, since if a node has skip edges,
-                        // it only has one parent.
-                        // Safe thing to do is recurse on its parent.
-                        // which is the first skip edge.
-                        if let Some(parent_edge) = edges.iter().next() {
+                }
+                SkiplistNodeType::ParentEdges(parent_edges) => {
+                    cloned!(changeset_fetcher, skip_list_edges);
+                    return join_all(parent_edges.clone().into_iter().map({
+                        move |parent_gen_pair| {
                             advance_node_forward(
                                 changeset_fetcher.clone(),
                                 skip_list_edges.clone(),
-                                *parent_edge,
+                                parent_gen_pair,
                                 max_gen,
-                            ).boxify()
-                        } else {
-                            // really shouldn't get here.
-                            // ok(NodeFrontier::new(HashMap::new())).boxify()
-                            unreachable!();
+                            )
                         }
-                    }
+                    })).map(|parent_results| union_frontiers(parent_results))
+                        .boxify();
                 }
             }
-            SkiplistNodeType::ParentEdges(edges) => {
-                join_all(edges.clone().into_iter().map({
-                    cloned!(skip_list_edges);
+        }
+
+        changeset_fetcher
+            .get_parents(node)
+            .and_then({
+                cloned!(changeset_fetcher);
+                |parent_changesets| {
+                    changesets_with_generation_numbers(changeset_fetcher, parent_changesets)
+                }
+            })
+            .and_then(move |parent_edges| {
+                join_all(parent_edges.clone().into_iter().map({
                     move |parent_gen_pair| {
                         advance_node_forward(
                             changeset_fetcher.clone(),
@@ -544,35 +515,8 @@ fn advance_node_forward(
                         )
                     }
                 })).map(|parent_results| union_frontiers(parent_results))
-                    .boxify()
-            }
-        }
-    } else {
-        // Node unindexed
-        // Index deep enough to reach max_gen
-        if let Some(distance) = gen.difference_from(max_gen) {
-            lazy_index_node(
-                changeset_fetcher.clone(),
-                skip_list_edges.clone(),
-                node,
-                distance + 1,
-            ).and_then({
-                cloned!(skip_list_edges);
-                move |_| {
-                    advance_node_forward(
-                        changeset_fetcher.clone(),
-                        skip_list_edges.clone(),
-                        (node, gen),
-                        max_gen,
-                    )
-                }
             })
-                .boxify()
-        } else {
-            // Shouldn't reach here, since we already checked the difference at the start
-            // ok(NodeFrontier::new(HashMap::new())).boxify()
-            unreachable!();
-        }
+            .boxify()
     }
 }
 
@@ -621,7 +565,7 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
 #[cfg(test)]
 mod test {
     use std::iter::FromIterator;
-    use std::sync::Arc;
+    use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
 
     use async_unit;
     use chashmap::CHashMap;
@@ -928,6 +872,40 @@ mod test {
         test_branch_wide_reachability(sli_constructor);
     }
 
+    struct CountingChangesetFetcher {
+        pub get_parents_count: Arc<AtomicUsize>,
+        pub get_gen_number_count: Arc<AtomicUsize>,
+        cs_fetcher: Arc<ChangesetFetcher>,
+    }
+
+    impl CountingChangesetFetcher {
+        fn new(
+            cs_fetcher: Arc<ChangesetFetcher>,
+            get_parents_count: Arc<AtomicUsize>,
+            get_gen_number_count: Arc<AtomicUsize>,
+        ) -> Self {
+            Self {
+                get_parents_count,
+                get_gen_number_count,
+                cs_fetcher,
+            }
+        }
+    }
+
+    impl ChangesetFetcher for CountingChangesetFetcher {
+        fn get_generation_number(&self, cs_id: ChangesetId) -> BoxFuture<Generation, Error> {
+            self.get_gen_number_count.fetch_add(1, Ordering::Relaxed);
+            println!("get parents");
+            self.cs_fetcher.get_generation_number(cs_id)
+        }
+
+        fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error> {
+            self.get_parents_count.fetch_add(1, Ordering::Relaxed);
+            println!("get parents");
+            self.cs_fetcher.get_parents(cs_id)
+        }
+    }
+
     #[test]
     fn test_query_reachability_hint_on_self_is_true() {
         async_unit::tokio_unit_test(|| {
@@ -945,6 +923,7 @@ mod test {
             ];
             ordered_hashes_oldest_to_newest.reverse();
             // indexing doesn't even take place if the query can conclude true or false right away
+
             for (i, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
                 assert!(
                     query_reachability_with_generation_hints(
@@ -999,12 +978,20 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let sli = SkiplistIndex::new();
 
+            let get_parents_count = Arc::new(AtomicUsize::new(0));
+            let get_gen_number_count = Arc::new(AtomicUsize::new(0));
+            let cs_fetcher = Arc::new(CountingChangesetFetcher::new(
+                repo.get_changeset_fetcher(),
+                get_parents_count.clone(),
+                get_gen_number_count,
+            ));
+
             let src_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
             let dst_node = string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
-            // performing this query should index all the nodes inbetween
+
             assert!(
                 query_reachability_with_generation_hints(
-                    repo.get_changeset_fetcher(),
+                    cs_fetcher.clone(),
                     sli.skip_list_edges.clone(),
                     (src_node, Generation::new(8)),
                     (dst_node, Generation::new(1))
@@ -1021,10 +1008,40 @@ mod test {
                 string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
                 string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
+            // Nothing is indexed by default
+            assert_eq!(sli.indexed_node_count(), 0);
+            for node in ordered_hashes.iter() {
+                assert!(!sli.is_node_indexed(*node));
+            }
+
+            let parents_count_before_indexing = get_parents_count.load(Ordering::Relaxed);
+            assert!(parents_count_before_indexing > 0);
+
+            // Index
+            sli.add_node(repo.get_changeset_fetcher(), src_node, 10)
+                .wait()
+                .unwrap();
             assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
             for node in ordered_hashes.into_iter() {
                 assert!(sli.is_node_indexed(node));
             }
+
+            // Make sure that we don't use changeset fetcher anymore, because everything is
+            // indexed
+            assert!(
+                query_reachability_with_generation_hints(
+                    cs_fetcher,
+                    sli.skip_list_edges.clone(),
+                    (src_node, Generation::new(8)),
+                    (dst_node, Generation::new(1))
+                ).wait()
+                    .unwrap()
+            );
+
+            assert_eq!(
+                parents_count_before_indexing,
+                get_parents_count.load(Ordering::Relaxed)
+            );
         });
     }
 
@@ -1037,6 +1054,9 @@ mod test {
             let src_node = string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
             let dst_node = string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0");
             // performing this query should index all the nodes inbetween
+            sli.add_node(repo.get_changeset_fetcher(), src_node, 10)
+                .wait()
+                .unwrap();
             assert!(
                 query_reachability_with_generation_hints(
                     repo.get_changeset_fetcher(),
@@ -1052,19 +1072,10 @@ mod test {
                 string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
                 string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
                 string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-            ];
-            let unindexed_hashes = vec![
                 string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
                 string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
                 string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
             ];
-            assert_eq!(sli.indexed_node_count(), indexed_hashes.len());
-            for node in indexed_hashes.clone().into_iter() {
-                assert!(sli.is_node_indexed(node));
-            }
-            for node in unindexed_hashes.clone().into_iter() {
-                assert!(!sli.is_node_indexed(node));
-            }
 
             // perform a query from the middle of the indexed hashes to the end of the graph
             let src_node = string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372");
@@ -1079,11 +1090,7 @@ mod test {
                 ).wait()
                     .unwrap()
             );
-            assert_eq!(
-                sli.indexed_node_count(),
-                unindexed_hashes.len() + indexed_hashes.len()
-            );
-            for node in unindexed_hashes.into_iter() {
+            for node in indexed_hashes.into_iter() {
                 assert!(sli.is_node_indexed(node));
             }
         });
@@ -1094,27 +1101,14 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let repo = Arc::new(unshared_merge_even::getrepo(None));
             let sli = SkiplistIndex::new();
-            let branch_1 = vec![
-                string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b"),
-                string_to_bonsai(&repo, "36ff88dd69c9966c9fad9d6d0457c52153039dde"),
-                string_to_bonsai(&repo, "f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
-                string_to_bonsai(&repo, "0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
-                string_to_bonsai(&repo, "2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
-                string_to_bonsai(&repo, "03b0589d9788870817d03ce7b87516648ed5b33a"),
-            ];
-            let branch_2 = vec![
-                string_to_bonsai(&repo, "9d374b7e8180f933e3043ad1ffab0a9f95e2bac6"),
-                string_to_bonsai(&repo, "3775a86c64cceeaf68ffe3f012fc90774c42002b"),
-                string_to_bonsai(&repo, "eee492dcdeaae18f91822c4359dd516992e0dbcd"),
-                string_to_bonsai(&repo, "163adc0d0f5d2eb0695ca123addcb92bab202096"),
-                string_to_bonsai(&repo, "f01e186c165a2fbe931fd1bf4454235398c591c9"),
-                string_to_bonsai(&repo, "33fb49d8a47b29290f5163e30b294339c89505a2"),
-            ];
 
             let merge_node = string_to_bonsai(&repo, "d592490c4386cdb3373dd93af04d563de199b2fb");
             let commit_after_merge =
                 string_to_bonsai(&repo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113");
-            // performing this query should index just the tip and the merge node
+            // Indexing starting from a merge node
+            sli.add_node(repo.get_changeset_fetcher(), commit_after_merge, 10)
+                .wait()
+                .unwrap();
             assert!(
                 query_reachability_with_generation_hints(
                     repo.get_changeset_fetcher(),
@@ -1124,15 +1118,6 @@ mod test {
                 ).wait()
                     .unwrap()
             );
-
-            // indexing shouldn't have gone past the merge node because it was the destination
-            assert_eq!(sli.indexed_node_count(), 2);
-            for node in branch_1.clone().into_iter() {
-                assert!(!sli.is_node_indexed(node));
-            }
-            for node in branch_2.clone().into_iter() {
-                assert!(!sli.is_node_indexed(node));
-            }
 
             // perform a query from the merge to the start of branch 1
             let dst_node = string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b");
@@ -1146,17 +1131,6 @@ mod test {
                 ).wait()
                     .unwrap()
             );
-            // because its a merge node, all the parents need to be indexed
-            assert_eq!(
-                sli.indexed_node_count(),
-                2 + branch_1.len() + branch_2.len()
-            );
-            for node in branch_1.iter() {
-                assert!(sli.is_node_indexed(*node));
-            }
-            for node in branch_2.iter() {
-                assert!(sli.is_node_indexed(*node));
-            }
 
             // perform a query from the merge to the start of branch 2
             let dst_node = string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b");
@@ -1168,11 +1142,6 @@ mod test {
                     (dst_node, Generation::new(1))
                 ).wait()
                     .unwrap()
-            );
-            // index count doesn't change
-            assert_eq!(
-                sli.indexed_node_count(),
-                2 + branch_1.len() + branch_2.len()
             );
         });
     }
