@@ -452,6 +452,27 @@ def rename(src, dst):
         os.rename(src, dst)
 
 
+def syncfile(fp):
+    """Makes best effort attempt to make sure all contents previously written
+    to the fp is persisted to a permanent storage device."""
+    # See comments in posix implementation of syncdir for discussion on this
+    # topic.
+    try:
+        fp.flush()
+        os.fsync(fp.fileno())
+    except (OSError, IOError):
+        # do nothing since this is just best effort
+        pass
+
+
+def syncdir(dirpath):
+    """Makes best effort attempt to make sure previously issued
+    renames where target is a file immediately inside the specified
+    dirpath is persisted to a permanent storage device."""
+    # See comments in posix implementation for discussion on this topic.
+    # Do nothing.
+
+
 def getfstype(dirpath):
     try:
         return win32.getfstype(dirpath)

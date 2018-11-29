@@ -1041,3 +1041,98 @@ def bindunixsocket(sock, path):
     if bakwdfd:
         os.fchdir(bakwdfd)
         os.close(bakwdfd)
+
+
+def _safehasattr(thing, attr):
+    # deferred import to avoid circular import
+    from . import util
+
+    return util.safehasattr(thing, attr)
+
+
+def syncfile(fp):
+    """Makes best effort attempt to make sure all contents previously written
+    to the fp is persisted to a permanent storage device."""
+    try:
+        fp.flush()
+        if _safehasattr(fcntl, "F_FULLFSYNC"):
+            # OSX specific. See comments in syncdir for discussion on this topic.
+            fcntl.fcntl(fp.fileno(), fcntl.F_FULLFSYNC)
+        else:
+            os.fsync(fp.fileno())
+    except (OSError, IOError):
+        # do nothing since this is just best effort
+        pass
+
+
+def syncdir(dirpath):
+    """Makes best effort attempt to make sure previously issued renames where
+    target is a file immediately inside the specified dirpath is persisted
+    to a permanent storage device."""
+
+    # Syncing a file is not as simple as it seems.
+    #
+    # The most common sequence is to sync a file correctly in Unix is `open`,
+    # `fflush`, `fsync`, `close`.
+    #
+    # However, what is the right sequence in case a temporary staging file is
+    # involved? This [LWN article][lwn] lists a sequence of necessary actions.
+    #
+    # 1. create a new temp file (on the same file system!)
+    # 2. write data to the temp file
+    # 3. fsync() the temp file
+    # 4. rename the temp file to the appropriate name
+    # 5. fsync() the containing directory
+    #
+    # While the above step didn't mention flush, it is important to realize
+    # that step 2 implies flush. This is also emphasized by the python
+    # documentation for [os][os]: one should first do `f.flush()`, and then do
+    # `os.fsync(f.fileno())`.
+    #
+    # Performance wise, this [blog article][thunk] points out that the
+    # performance may be affected by other write operations. Here are two of
+    # the many reasons, to help provide an intuitive understanding:
+    #
+    # 1. There is no requirement to prioritize persistence of the file
+    # descriptor with an outstanding fsync call;
+    # 2. Some filesystems require a certain order of data persistence (for
+    # example, to match the order writes were issued).
+    #
+    # There are also platform specific complexities.
+    #
+    # * On [OSX][osx], it is helpful to call fcntl with a particular flag
+    #   in addition to calling flush. There is an unresolved
+    #   [issue][pythonissue] related to hiding this detail from Python
+    #   programmers. In Java, implementation of FileChannel.force was changed
+    #   to use fcntl since [JDK-8080589][jdk-rfr].
+    # * On [Windows][msdn], it is not possible to call FlushFileBuffers on a
+    #   Directory Handle. And this [svn mailing list thread][svn] shows that
+    #   MoveFile does not provide durability guarantee. It may be possible to
+    #   get durability by using MOVEFILE_WRITE_THROUGH flag.
+    #
+    # It is important that one does not retry `fsync` on failures, which is a
+    # point that PostgreSQL learned the hard way, now known as [fsyncgate][pg].
+    # The same thread also points out that the sequence of close/re-open/fsync
+    # does not provide the same durability guarantee in the presence of sync
+    # failures.
+    #
+    # [lwn]: https://lwn.net/Articles/457667/
+    # [os]: https://docs.python.org/3/library/os.html
+    # [osx]: https://github.com/untitaker/python-atomicwrites/pull/16/files
+    # [jdk-rfr]: http://mail.openjdk.java.net/pipermail/nio-dev/2015-May/003174.html
+    # [pg]: https://www.postgresql.org/message-id/flat/CAMsr%2BYHh%2B5Oq4xziwwoEfhoTZgr07vdGG%2Bhu%3D1adXx59aTeaoQ%40mail.gmail.com
+    # [thunk]: https://thunk.org/tytso/blog/2009/03/15/dont-fear-the-fsync/
+    # [pythonissue]: https://bugs.python.org/issue11877
+    # [msdn]: https://docs.microsoft.com/en-us/windows/desktop/FileIO/obtaining-a-handle-to-a-directory
+    # [svn]: http://mail-archives.apache.org/mod_mbox/subversion-dev/201506.mbox/%3cCA+t0gk00nz1f+5bpxjNSK5Xnr4rXZx7ywQ_twr5CN6MyZSKw+w@mail.gmail.com%3e
+    try:
+        dirfd = os.open(dirpath, os.O_DIRECTORY)
+        if _safehasattr(fcntl, "F_FULLFSYNC"):
+            # osx specific
+            fcntl.fcntl(dirfd, fcntl.F_FULLFSYNC)
+        else:
+            os.fsync(dirfd)
+        os.close(dirfd)
+    except (OSError, IOError):
+        # do nothing since this is just best effort
+        pass

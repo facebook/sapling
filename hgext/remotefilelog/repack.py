@@ -481,7 +481,7 @@ def _runrepack(
     with datapack.mutabledatapack(repo.ui, packpath, version=dv) as dpack:
         with historypack.mutablehistorypack(repo.ui, packpath) as hpack:
             try:
-                packer.run(dpack, hpack)
+                packer.run(packpath, dpack, hpack)
             except error.LockHeld:
                 raise RepackAlreadyRunning(
                     _("skipping repack - another repack " "is already running")
@@ -582,7 +582,7 @@ class repacker(object):
             self.keepkeys = keepset(repo, lambda f, n: (f, n))
             self.isold = isold
 
-    def run(self, targetdata, targethistory):
+    def run(self, packpath, targetdata, targethistory):
         ledger = repackledger()
 
         with flock(
@@ -605,6 +605,9 @@ class repacker(object):
             # Run repack
             self.repackdata(ledger, targetdata)
             self.repackhistory(ledger, targethistory)
+
+            # Flush renames in the directory
+            util.syncdir(packpath)
 
             # Call cleanup on each non-corrupt source
             for source in ledger.sources:

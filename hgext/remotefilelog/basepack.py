@@ -537,8 +537,16 @@ class mutablebasepack(versionmixin):
 
         try:
             sha = self.sha.hexdigest()
+
+            # Doing a repack. Sync the newly created pack files to disk
+            # now so that the new pack files are persisted before
+            # deletion of the old datapacks.
+            syncfile = ledger is not None
+
+            if syncfile:
+                util.syncfile(self.packfp)
             self.packfp.close()
-            self.writeindex()
+            self.writeindex(syncfile=syncfile)
 
             if len(self.entries) == 0:
                 # Empty pack
@@ -578,7 +586,7 @@ class mutablebasepack(versionmixin):
         except Exception:
             pass
 
-    def writeindex(self):
+    def writeindex(self, syncfile=False):
         rawindex = ""
 
         largefanout = len(self.entries) > SMALLFANOUTCUTOFF
@@ -622,6 +630,8 @@ class mutablebasepack(versionmixin):
         if self.VERSION == 1:
             self.idxfp.write(rawentrieslength)
         self.idxfp.write(rawindex)
+        if syncfile:
+            util.syncfile(self.idxfp)
         self.idxfp.close()
 
     def createindex(self, nodelocations):
