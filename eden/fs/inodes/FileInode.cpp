@@ -720,18 +720,6 @@ folly::Future<std::shared_ptr<FileHandle>> FileInode::open(int flags) {
       // necessary.  We don't actually need to run anything, so we pass in a
       // no-op lambda.
       (void)truncateAndRun(std::move(state), [](LockedState&&) { return 0; });
-    } else if (flags & (O_RDWR | O_WRONLY | O_CREAT)) {
-      // Call runWhileMaterialized() to begin materializing the data into the
-      // overlay, since the caller will likely want to use it soon since they
-      // have just opened a file handle.
-      //
-      // We don't wait for this to return, though, and we return the file
-      // handle immediately.
-      //
-      // Since we just want to materialize the file and don't need to do
-      // anything else we pass in a no-op lambda function.
-      (void)runWhileMaterialized(
-          std::move(state), nullptr, [](LockedState&&) { return 0; });
     }
   }
 
@@ -1001,6 +989,7 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
 
   // If we are currently materialized we don't need to copy the input data.
   if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+    state.ensureFileOpen(this);
     struct iovec iov;
     iov.iov_base = const_cast<char*>(data.data());
     iov.iov_len = data.size();
