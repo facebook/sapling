@@ -11,6 +11,7 @@
 #include <boost/operators.hpp>
 #include <folly/Expected.h>
 #include <folly/FBString.h>
+#include <folly/FBVector.h>
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/hash/Hash.h>
