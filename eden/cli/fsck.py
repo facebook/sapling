@@ -35,6 +35,11 @@ class ChildInfo(NamedTuple):
     mode: int
     hash: Optional[bytes]
 
+    def compute_path(self, parent: "InodeInfo") -> str:
+        if parent.inode_number == overlay_mod.Overlay.ROOT_INODE_NUMBER:
+            return self.name
+        return parent.compute_path() + os.path.sep + self.name
+
 
 class InodeInfo:
     __slots__ = ["inode_number", "type", "parents", "children", "mtime", "error"]
@@ -69,9 +74,7 @@ class InodeInfo:
             return f"[unlinked({self.inode_number})]"
 
         parent, child_entry = self.parents[0]
-        if parent.inode_number == overlay_mod.Overlay.ROOT_INODE_NUMBER:
-            return child_entry.name
-        return parent.compute_path() + os.path.sep + child_entry.name
+        return child_entry.compute_path(parent)
 
 
 class ErrorLevel(enum.IntEnum):
@@ -137,10 +140,7 @@ class MissingMaterializedInode(Error):
         )
 
     def compute_path(self) -> str:
-        parent_path = self.inode.compute_path()
-        if parent_path == "/":
-            return self.child.name
-        return f"{parent_path}/{self.child.name}"
+        return self.child.compute_path(self.inode)
 
     def repair(
         self, log: logging.Logger, overlay: overlay_mod.Overlay, fsck_dir: Path
@@ -298,6 +298,12 @@ class HardLinkedInode(Error):
     def __init__(self, inode: InodeInfo) -> None:
         super().__init__(ErrorLevel.WARNING)
         self.inode = inode
+
+    def __str__(self) -> str:
+        paths = [
+            child_info.compute_path(parent) for parent, child_info in self.inode.parents
+        ]
+        return f"inode {self.inode.inode_number} exists in multiple locations: {paths}"
 
 
 class MissingNextInodeNumber(Error):
