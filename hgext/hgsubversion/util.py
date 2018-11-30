@@ -347,6 +347,13 @@ def getsvnrev(ctx, defval=None):
     return defval
 
 
+def getsvnrevnum(ctx):
+    convinfo = getsvnrev(ctx)
+    if not convinfo:
+        return None
+    return int(convinfo.rsplit("@", 1)[1])
+
+
 def revset_fromsvn(repo, subset, x):
     """``fromsvn()``
     Select changesets that originate from Subversion.

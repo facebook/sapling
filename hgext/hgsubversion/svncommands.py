@@ -32,6 +32,50 @@ def rebuildmeta(ui, repo, args, unsafe_skip_uuid_check=False, **opts):
     return _buildmeta(ui, repo, args, partial=False, skipuuid=unsafe_skip_uuid_check)
 
 
+def truncatemeta(ui, repo, args, **opts):
+    """recreates the latest entries from the rev map that no longer correspond
+    to commits. This is useful after pushing recently converted commits to a
+    server that rewrites the hash. Running this command will update the
+    svn_rev's to point to the post-push hashes instead of the pre-push hashes.
+
+    Note, this only rewrites back to the first commit that has a good mapping.
+    If you want to rewrite more than that, you need to use rebuildmeta.
+    """
+    meta = svnmeta.SVNMeta(repo)
+    revmap = meta.revmap
+
+    cl = repo.changelog
+    rev = len(cl) - 1
+    earliestbadrev = None
+    with progress.bar(ui, "truncating", total=rev) as prog:
+        while rev >= 0:
+            prog.value = len(cl) - rev
+            if rev not in repo:
+                rev -= 1
+                continue
+            ctx = repo[rev]
+            svn_rev = util.getsvnrevnum(ctx)
+            nodes = set(h for h in revmap.revhashes(svn_rev))
+
+            # If the current commit's svn_rev is not attached to it, consider it for
+            # truncation. The upcoming updatemeta will fill it back in correctly.
+            if ctx.node() not in nodes:
+                if svn_rev is not None:
+                    if earliestbadrev is None:
+                        earliestbadrev = svn_rev
+                    else:
+                        earliestbadrev = min(svn_rev, earliestbadrev)
+
+                rev -= 1
+            else:
+                break
+
+    if earliestbadrev is not None:
+        revmap.truncate(earliestbadrev - 1)
+
+    return _buildmeta(ui, repo, args, partial=True)
+
+
 def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
     if repo is None:
@@ -502,6 +546,7 @@ table = {
     "help": help_,
     "updatemeta": updatemeta,
     "rebuildmeta": rebuildmeta,
+    "truncatemeta": truncatemeta,
     "updateexternals": svnexternals.updateexternals,
     "verify": verify.verify,
 }

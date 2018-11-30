@@ -487,6 +487,17 @@ class RevMap(dict):
         if self._hashes is not None:
             self._hashes[ha] = (revnum, branch)
 
+    def truncate(self, rev):
+        """Removes all entries with a svn_rev greater than the provided rev."""
+        items = (
+            (svn_rev, hash, br or "")
+            for (svn_rev, br), hash in self._origiteritems()
+            if svn_rev <= rev
+        )
+        lastpulled = max(svn_rev for svn_rev, x, x in items)
+        self._write()
+        self.batchset(items, lastpulled)
+
     @classmethod
     def _wrapitermethods(cls):
         def wrap(orig):
@@ -657,6 +668,12 @@ class SqliteRevMap(collections.MutableMapping):
         for row in self._querybykey("SELECT hash", key):
             return bytes(row[0])
         raise KeyError(key)
+
+    def truncate(self, rev):
+        """Removes all entries with a svn_rev greater than the provided rev."""
+        with self._transaction():
+            self._query("DELETE FROM revmap where rev > ?", (rev,))
+            self._updatefirstlastpulled()
 
     def __iter__(self):
         if not self._allowiter:
