@@ -13,6 +13,7 @@ use slog::Logger;
 
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
+use context::CoreContext;
 
 const SET_CMD: &'static str = "set";
 const GET_CMD: &'static str = "get";
@@ -52,13 +53,14 @@ pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn handle_command<'a>(
+    ctx: CoreContext,
     repo: &BlobRepo,
     matches: &ArgMatches<'a>,
     logger: Logger,
 ) -> BoxFuture<(), Error> {
     match matches.subcommand() {
-        (GET_CMD, Some(sub_m)) => handle_get(sub_m, logger, repo.clone()),
-        (SET_CMD, Some(sub_m)) => handle_set(sub_m, logger, repo.clone()),
+        (GET_CMD, Some(sub_m)) => handle_get(sub_m, ctx, logger, repo.clone()),
+        (SET_CMD, Some(sub_m)) => handle_set(sub_m, ctx, logger, repo.clone()),
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
@@ -78,14 +80,19 @@ fn format_output(json_flag: bool, changeset_id: String, changeset_type: &str) ->
     }
 }
 
-fn handle_get<'a>(args: &ArgMatches<'a>, _logger: Logger, repo: BlobRepo) -> BoxFuture<(), Error> {
+fn handle_get<'a>(
+    args: &ArgMatches<'a>,
+    ctx: CoreContext,
+    _logger: Logger,
+    repo: BlobRepo,
+) -> BoxFuture<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = Bookmark::new(bookmark_name).unwrap();
     let changeset_type = args.value_of("changeset-type").unwrap_or("hg");
     let json_flag: bool = args.is_present("json");
 
     match changeset_type {
-        "hg" => repo.get_bookmark(&bookmark)
+        "hg" => repo.get_bookmark(ctx, &bookmark)
             .and_then(move |cs| {
                 let changeset_id_str = cs.expect("bookmark could not be found").to_string();
                 let output = format_output(json_flag, changeset_id_str, "hg");
@@ -96,7 +103,7 @@ fn handle_get<'a>(args: &ArgMatches<'a>, _logger: Logger, repo: BlobRepo) -> Box
 
         "bonsai" => {
             cloned!(bookmark);
-            ::fetch_bonsai_changeset(bookmark.to_string().as_str(), &repo)
+            ::fetch_bonsai_changeset(ctx, bookmark.to_string().as_str(), &repo)
                 .and_then(move |bonsai_cs| {
                     let changeset_id_str = bonsai_cs.get_changeset_id().to_string();
                     let output = format_output(json_flag, changeset_id_str, "bonsai");
@@ -110,12 +117,17 @@ fn handle_get<'a>(args: &ArgMatches<'a>, _logger: Logger, repo: BlobRepo) -> Box
     }
 }
 
-fn handle_set<'a>(args: &ArgMatches<'a>, _logger: Logger, repo: BlobRepo) -> BoxFuture<(), Error> {
+fn handle_set<'a>(
+    args: &ArgMatches<'a>,
+    ctx: CoreContext,
+    _logger: Logger,
+    repo: BlobRepo,
+) -> BoxFuture<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let rev = args.value_of("HG_CHANGESET_ID").unwrap();
     let bookmark = Bookmark::new(bookmark_name).unwrap();
 
-    ::fetch_bonsai_changeset(rev, &repo)
+    ::fetch_bonsai_changeset(ctx, rev, &repo)
         .and_then(move |bonsai_cs| {
             let mut transaction = repo.update_bookmark_transaction();
             try_boxfuture!(transaction.force_set(&bookmark, &bonsai_cs.get_changeset_id()));

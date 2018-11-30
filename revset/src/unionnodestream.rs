@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
+use context::CoreContext;
 use futures::Async;
 use futures::Poll;
 use futures::stream::Stream;
@@ -30,13 +31,16 @@ pub struct UnionNodeStream {
 }
 
 impl UnionNodeStream {
-    pub fn new<I>(repo: &Arc<BlobRepo>, inputs: I) -> Self
+    pub fn new<I>(ctx: CoreContext, repo: &Arc<BlobRepo>, inputs: I) -> Self
     where
         I: IntoIterator<Item = Box<NodeStream>>,
     {
-        let hash_and_gen = inputs
-            .into_iter()
-            .map({ move |i| (add_generations(i, repo.clone()), Ok(Async::NotReady)) });
+        let hash_and_gen = inputs.into_iter().map(move |i| {
+            (
+                add_generations(ctx.clone(), i, repo.clone()),
+                Ok(Async::NotReady),
+            )
+        });
         UnionNodeStream {
             inputs: hash_and_gen.collect(),
             current_generation: None,
@@ -149,6 +153,7 @@ mod test {
     use super::*;
     use {NodeStream, SingleNodeHash};
     use async_unit;
+    use context::CoreContext;
     use errors::ErrorKind;
     use fixtures::{branch_even, branch_uneven, branch_wide, linear};
     use futures::executor::spawn;
@@ -160,30 +165,33 @@ mod test {
     #[test]
     fn union_identical_node() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
-                SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
+                SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
+                SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
-            assert_node_sequence(&repo, vec![head_hash.clone()], nodestream);
+            assert_node_sequence(ctx, &repo, vec![head_hash.clone()], nodestream);
         });
     }
 
     #[test]
     fn union_error_node() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
             let inputs: Vec<Box<NodeStream>> = vec![
                 Box::new(RepoErrorStream { hash: nodehash }),
-                SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
+                SingleNodeHash::new(ctx.clone(), nodehash.clone(), &repo).boxed(),
             ];
-            let mut nodestream = spawn(UnionNodeStream::new(&repo, inputs.into_iter()).boxed());
+            let mut nodestream =
+                spawn(UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed());
 
             match nodestream.wait_stream() {
                 Some(Err(err)) => match err_downcast!(err, err: ErrorKind => err) {
@@ -200,27 +208,32 @@ mod test {
     #[test]
     fn union_three_nodes() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             // Note that these are *not* in generation order deliberately.
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             // But, once I hit the asserts, I expect them in generation order.
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
@@ -235,43 +248,49 @@ mod test {
     #[test]
     fn union_nothing() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let inputs: Vec<Box<NodeStream>> = vec![];
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
-            assert_node_sequence(&repo, vec![], nodestream);
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
+            assert_node_sequence(ctx, &repo, vec![], nodestream);
         });
     }
 
     #[test]
     fn union_nesting() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             // Note that these are *not* in generation order deliberately.
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                     &repo,
                 ).boxed(),
             ];
 
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             let inputs: Vec<Box<NodeStream>> = vec![
                 nodestream,
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
@@ -286,6 +305,7 @@ mod test {
     #[test]
     fn slow_ready_union_nothing() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
@@ -294,7 +314,8 @@ mod test {
                     poll_count: repeats,
                 }),
             ];
-            let mut nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let mut nodestream =
+                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             // Keep polling until we should be done.
             for _ in 0..repeats + 1 {
@@ -314,26 +335,31 @@ mod test {
     #[test]
     fn union_branch_even_repo() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(branch_even::getrepo(None));
 
             // Two nodes should share the same generation number
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
@@ -348,34 +374,41 @@ mod test {
     #[test]
     fn union_branch_uneven_repo() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(branch_uneven::getrepo(None));
 
             // Two nodes should share the same generation number
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
@@ -392,30 +425,36 @@ mod test {
     #[test]
     fn union_branch_wide_repo() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(branch_wide::getrepo(None));
 
             // Two nodes should share the same generation number
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("4685e9e62e4885d477ead6964a7600c750e39b03"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("9e8521affb7f9d10e9551a99c526e69909042b20"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449"),

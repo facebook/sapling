@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::{BlobRepo, ChangesetFetcher};
+use context::CoreContext;
 use failure::prelude::*;
 use futures::future::Future;
 use futures::stream::Stream;
@@ -25,9 +26,13 @@ pub type InputStream = Box<Stream<Item = (HgNodeHash, Generation), Error = Error
 pub type BonsaiInputStream =
     Box<Stream<Item = (ChangesetId, Generation), Error = Error> + 'static + Send>;
 
-pub fn add_generations(stream: Box<NodeStream>, repo: Arc<BlobRepo>) -> InputStream {
+pub fn add_generations(
+    ctx: CoreContext,
+    stream: Box<NodeStream>,
+    repo: Arc<BlobRepo>,
+) -> InputStream {
     let stream = stream.and_then(move |node_hash| {
-        repo.get_generation_number(&HgChangesetId::new(node_hash))
+        repo.get_generation_number(ctx.clone(), &HgChangesetId::new(node_hash))
             .and_then(move |genopt| {
                 genopt.ok_or_else(|| err_msg(format!("{} not found", node_hash)))
             })

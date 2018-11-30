@@ -18,6 +18,7 @@ use scuba_ext::ScubaSampleBuilder;
 use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobEntry,
                UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
 use blobstore::{EagerMemblob, LazyMemblob};
+use context::CoreContext;
 use mercurial_types::{FileType, HgBlobNode, HgNodeHash, RepoPath};
 use mononoke_types::DateTime;
 use std::sync::Arc;
@@ -190,7 +191,11 @@ pub fn create_changeset_no_parents(
         cs_metadata,
         must_check_case_conflicts: true,
     };
-    create_changeset.create(repo, ScubaSampleBuilder::with_discard())
+    create_changeset.create(
+        CoreContext::test_mock(),
+        repo,
+        ScubaSampleBuilder::with_discard(),
+    )
 }
 
 pub fn create_changeset_one_parent(
@@ -215,7 +220,11 @@ pub fn create_changeset_one_parent(
         cs_metadata,
         must_check_case_conflicts: true,
     };
-    create_changeset.create(repo, ScubaSampleBuilder::with_discard())
+    create_changeset.create(
+        CoreContext::test_mock(),
+        repo,
+        ScubaSampleBuilder::with_discard(),
+    )
 }
 
 pub fn string_to_nodehash(hash: &str) -> HgNodeHash {

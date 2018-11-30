@@ -14,6 +14,7 @@ extern crate async_unit;
 extern crate slog_glog_fmt;
 
 extern crate blobrepo_utils;
+extern crate context;
 extern crate mercurial_types;
 
 extern crate fixtures;
@@ -35,6 +36,7 @@ mod test {
                 use slog_glog_fmt::default_drain as glog_drain;
 
                 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
+                use context::CoreContext;
                 use mercurial_types::HgChangesetId;
 
                 use $repo;
@@ -42,15 +44,17 @@ mod test {
                 #[test]
                 fn test() {
                     async_unit::tokio_unit_test(|| {
+                        let ctx = CoreContext::test_mock();
                         let drain = glog_drain().filter_level(Level::Debug).fuse();
                         let logger = Logger::root(drain, o![]);
 
                         let repo = $repo::getrepo(Some(logger.clone()));
-                        let heads = repo.get_heads_maybe_stale()
+                        let heads = repo.get_heads_maybe_stale(ctx.clone())
                             .collect()
                             .map(|heads| heads.into_iter().map(HgChangesetId::new));
 
                         let verify = BonsaiMFVerify {
+                            ctx,
                             logger,
                             repo,
                             follow_limit: 1024,

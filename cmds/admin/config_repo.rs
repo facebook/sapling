@@ -12,6 +12,7 @@ use std::process::{Command, ExitStatus};
 use std::sync::Arc;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
+use context::CoreContext;
 use failure::{Error, Result};
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
@@ -134,11 +135,15 @@ impl<'a, 'b> AppExt for App<'a, 'b> {
     }
 }
 
-pub fn handle_command<'a>(matches: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Error> {
+pub fn handle_command<'a>(
+    matches: &ArgMatches<'a>,
+    ctx: CoreContext,
+    logger: Logger,
+) -> BoxFuture<(), Error> {
     match matches.subcommand() {
         (CLONE_CMD, Some(sub_m)) => handle_clone(sub_m, logger),
-        (IMPORT_CMD, Some(sub_m)) => handle_import(sub_m, logger),
-        (FBPKG_CMD, Some(sub_m)) => handle_fbpkg(sub_m, logger),
+        (IMPORT_CMD, Some(sub_m)) => handle_import(sub_m, ctx, logger),
+        (FBPKG_CMD, Some(sub_m)) => handle_fbpkg(sub_m, ctx, logger),
         _ => {
             println!("{}", matches.usage());
             ::std::process::exit(1);
@@ -171,7 +176,11 @@ fn handle_clone<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Erro
     clone(dest)
 }
 
-fn handle_import<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Error> {
+fn handle_import<'a>(
+    args: &ArgMatches<'a>,
+    ctx: CoreContext,
+    logger: Logger,
+) -> BoxFuture<(), Error> {
     let interactive = args.is_present("interactive");
     let dest = {
         let default = try_boxfuture!(data_dir()).join(IMPORT_DFLT_DIR);
@@ -208,10 +217,14 @@ fn handle_import<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Err
     info!(logger, "Using {} as source for importing", src.display());
 
     try_boxfuture!(fs::create_dir_all(&dest));
-    import(logger, src, dest)
+    import(ctx, logger, src, dest)
 }
 
-fn handle_fbpkg<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Error> {
+fn handle_fbpkg<'a>(
+    args: &ArgMatches<'a>,
+    ctx: CoreContext,
+    logger: Logger,
+) -> BoxFuture<(), Error> {
     let interactive = args.is_present("interactive");
     let ephemeral = args.is_present("ephemeral");
     let non_forward = args.is_present("non-forward");
@@ -240,7 +253,7 @@ fn handle_fbpkg<'a>(args: &ArgMatches<'a>, logger: Logger) -> BoxFuture<(), Erro
         })
         .and_then({
             cloned!(src, import_dir);
-            move |()| import(logger, src.clone(), import_dir)
+            move |()| import(ctx, logger, src.clone(), import_dir)
         })
         .and_then(move |()| {
             let mut fbpkg = Command::new("fbpkg");
@@ -326,7 +339,7 @@ fn clone(dest: PathBuf) -> BoxFuture<(), Error> {
         .boxify()
 }
 
-fn import(logger: Logger, src: PathBuf, dest: PathBuf) -> BoxFuture<(), Error> {
+fn import(ctx: CoreContext, logger: Logger, src: PathBuf, dest: PathBuf) -> BoxFuture<(), Error> {
     try_boxfuture!(setup_repo_dir(&dest, true));
     let blobrepo = Arc::new(try_boxfuture!(BlobRepo::new_rocksdb(
         logger.new(o!["BlobRepo:Rocksdb" => dest.to_string_lossy().into_owned()]),
@@ -337,6 +350,7 @@ fn import(logger: Logger, src: PathBuf, dest: PathBuf) -> BoxFuture<(), Error> {
     check_hg_config_repo(src.clone())
         .and_then(move |()| {
             Blobimport {
+                ctx,
                 logger,
                 blobrepo,
                 revlogrepo_path: src.join(".hg"),

@@ -16,6 +16,7 @@ use slog::Logger;
 
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
+use context::CoreContext;
 use mercurial::RevlogRepo;
 use mercurial_types::HgChangesetId;
 
@@ -39,6 +40,7 @@ pub fn read_bookmarks(revlogrepo: RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChang
 }
 
 pub fn upload_bookmarks(
+    ctx: CoreContext,
     logger: &Logger,
     revlogrepo: RevlogRepo,
     blobrepo: Arc<BlobRepo>,
@@ -53,9 +55,9 @@ pub fn upload_bookmarks(
             move |bookmarks| {
                 stream::futures_unordered(bookmarks.into_iter().map(|(key, cs_id)| {
                     blobrepo
-                        .changeset_exists(&cs_id)
+                        .changeset_exists(ctx.clone(), &cs_id)
                         .and_then({
-                            cloned!(logger, key, blobrepo, stale_bookmarks);
+                            cloned!(ctx, logger, key, blobrepo, stale_bookmarks);
                             move |exists| {
                                 match (exists, stale_bookmarks.get(&key).cloned()) {
                                     (false, Some(stale_cs_id)) => {
@@ -70,7 +72,7 @@ pub fn upload_bookmarks(
                                         );
 
                                         blobrepo
-                                            .changeset_exists(&stale_cs_id)
+                                            .changeset_exists(ctx, &stale_cs_id)
                                             .map(move |exists| (key, stale_cs_id, exists))
                                             .boxify()
                                     }
@@ -78,10 +80,10 @@ pub fn upload_bookmarks(
                                 }
                             }})
                         .and_then({
-                            cloned!(blobrepo, logger);
+                            cloned!(ctx, blobrepo, logger);
                             move |(key, cs_id, exists)| {
                                 if exists {
-                                    blobrepo.get_bonsai_from_hg(&cs_id)
+                                    blobrepo.get_bonsai_from_hg(ctx, &cs_id)
                                         .and_then(move |bcs_id| bcs_id.ok_or(err_msg(
                                             format!("failed to resolve hg to bonsai: {}", cs_id),
                                         )))

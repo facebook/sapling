@@ -6,6 +6,7 @@
 
 use NodeStream;
 use blobrepo::{BlobRepo, ChangesetFetcher};
+use context::CoreContext;
 use failure::{err_msg, Error};
 use futures::{Future, Stream};
 use futures::executor::spawn;
@@ -22,9 +23,9 @@ pub fn string_to_nodehash(hash: &'static str) -> HgNodeHash {
     HgNodeHash::from_static_str(hash).expect("Can't turn string to HgNodeHash")
 }
 
-pub fn string_to_bonsai(repo: &Arc<BlobRepo>, s: &'static str) -> ChangesetId {
+pub fn string_to_bonsai(ctx: CoreContext, repo: &Arc<BlobRepo>, s: &'static str) -> ChangesetId {
     let node = string_to_nodehash(s);
-    repo.get_bonsai_from_hg(&HgChangesetId::new(node))
+    repo.get_bonsai_from_hg(ctx, &HgChangesetId::new(node))
         .wait()
         .unwrap()
         .unwrap()
@@ -60,8 +61,12 @@ impl ChangesetFetcher for TestChangesetFetcher {
 // TODO(stash): remove assert_node_sequence, use assert_changesets_sequence instead
 /// Accounting for reordering within generations, ensure that a NodeStream gives the expected
 /// NodeHashes for testing.
-pub fn assert_node_sequence<I>(repo: &Arc<BlobRepo>, hashes: I, stream: Box<NodeStream>)
-where
+pub fn assert_node_sequence<I>(
+    ctx: CoreContext,
+    repo: &Arc<BlobRepo>,
+    hashes: I,
+    stream: Box<NodeStream>,
+) where
     I: IntoIterator<Item = HgNodeHash>,
 {
     let mut nodestream = spawn(stream);
@@ -74,7 +79,7 @@ where
         }
 
         let expected_generation = repo.clone()
-            .get_generation_number(&HgChangesetId::new(expected))
+            .get_generation_number(ctx.clone(), &HgChangesetId::new(expected))
             .wait()
             .expect("Unexpected error");
 
@@ -90,7 +95,7 @@ where
             }
 
             let node_generation = repo.clone()
-                .get_generation_number(&HgChangesetId::new(expected))
+                .get_generation_number(ctx.clone(), &HgChangesetId::new(expected))
                 .wait()
                 .expect("Unexpected error");
 

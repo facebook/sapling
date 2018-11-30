@@ -19,6 +19,7 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use blobrepo::{BlobManifest, BlobRepo, HgBlobChangeset, HgBlobEntry};
 use blobrepo::internal::{IncompleteFilenodes, MemoryRootManifest};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
+use context::CoreContext;
 use mercurial_types::{Changeset, Entry, HgChangesetId, HgManifestId, HgNodeHash, Type};
 use mercurial_types::manifest_utils::{changed_entry_stream, ChangedEntry};
 use mononoke_types::DateTime;
@@ -110,6 +111,7 @@ impl fmt::Debug for BonsaiMFVerifyDifference {
 }
 
 pub struct BonsaiMFVerify {
+    pub ctx: CoreContext,
     pub logger: Logger,
     pub repo: BlobRepo,
     pub follow_limit: usize,
@@ -128,6 +130,7 @@ impl BonsaiMFVerify {
         let repo = self.repo.in_memory_writes_READ_DOC_COMMENT();
 
         visit_changesets(
+            self.ctx,
             self.logger,
             repo,
             BonsaiMFVerifyVisitor {
@@ -153,6 +156,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
 
     fn visit(
         self,
+        ctx: CoreContext,
         logger: Logger,
         repo: BlobRepo,
         changeset: HgBlobChangeset,
@@ -180,7 +184,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
 
         debug!(logger, "Starting bonsai diff computation");
 
-        let parents_fut = repo.get_changeset_parents(&changeset_id).and_then({
+        let parents_fut = repo.get_changeset_parents(ctx, &changeset_id).and_then({
             let repo = repo.clone();
             move |parent_hashes| {
                 let changesets = parent_hashes

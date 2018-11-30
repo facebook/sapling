@@ -5,16 +5,19 @@
 // GNU General Public License version 2 or any later version.
 
 extern crate scuba_ext;
+#[macro_use]
 extern crate slog;
 extern crate tracing;
+extern crate uuid;
 
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use tracing::TraceContext;
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
-pub struct CoreContext<T> {
-    pub session: T,
+pub struct CoreContext {
+    pub session: Uuid,
     pub logger: Logger,
     pub scuba: ScubaSampleBuilder,
     // Logging some prod wireproto requests to scribe so that they can be later replayed on
@@ -23,8 +26,18 @@ pub struct CoreContext<T> {
     pub trace: TraceContext,
 }
 
-impl<T> CoreContext<T> {
-    pub fn session(&self) -> &T {
+impl CoreContext {
+    pub fn test_mock() -> Self {
+        Self {
+            session: Uuid::new_v4(),
+            logger: Logger::root(::slog::Discard, o!()),
+            scuba: ScubaSampleBuilder::with_discard(),
+            wireproto_scribe_category: None,
+            trace: TraceContext::default(),
+        }
+    }
+
+    pub fn session(&self) -> &Uuid {
         &self.session
     }
     pub fn logger(&self) -> &Logger {

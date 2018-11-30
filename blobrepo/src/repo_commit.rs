@@ -20,6 +20,7 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::Timeseries;
 
 use blobstore::Blobstore;
+use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
 use mercurial_types::{Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, HgNodeKey,
@@ -77,8 +78,8 @@ impl ChangesetHandle {
         }
     }
 
-    pub fn ready_cs_handle(repo: Arc<BlobRepo>, hg_cs: HgChangesetId) -> Self {
-        let bonsai_cs = repo.get_bonsai_from_hg(&hg_cs)
+    pub fn ready_cs_handle(ctx: CoreContext, repo: Arc<BlobRepo>, hg_cs: HgChangesetId) -> Self {
+        let bonsai_cs = repo.get_bonsai_from_hg(ctx, &hg_cs)
             .and_then(move |bonsai_id| {
                 bonsai_id.ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs).into())
             })

@@ -242,8 +242,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                     } else if exclude_gen == current_generation {
                         let mut should_exclude: Option<bool> = None;
                         {
-                            if let Some(ref nodes) =
-                                curr_exclude_ancestors.get(&current_generation)
+                            if let Some(ref nodes) = curr_exclude_ancestors.get(&current_generation)
                             {
                                 should_exclude = Some(nodes.contains(&node));
                             }
@@ -342,6 +341,7 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
 mod test {
     use super::*;
     use async_unit;
+    use context::CoreContext;
     use fixtures::linear;
     use fixtures::merge_uneven;
     use reachabilityindex::SkiplistIndex;
@@ -350,6 +350,7 @@ mod test {
     #[test]
     fn empty_ancestors_combinators() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
@@ -363,7 +364,7 @@ mod test {
             assert_changesets_sequence(&repo, vec![], stream);
 
             let excludes = vec![
-                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
             ];
 
             let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
@@ -380,6 +381,7 @@ mod test {
     #[test]
     fn linear_ancestors_with_excludes() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
@@ -388,17 +390,25 @@ mod test {
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
-                    string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
+                    ),
                 ],
                 vec![
-                    string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+                    ),
                 ],
             ).boxify();
 
             assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                    string_to_bonsai(ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 ],
                 nodestream,
             );
@@ -408,6 +418,7 @@ mod test {
     #[test]
     fn linear_ancestors_with_excludes_empty() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
@@ -416,10 +427,14 @@ mod test {
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
-                    string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+                    ),
                 ],
                 vec![
-                    string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                    string_to_bonsai(ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
                 ],
             ).boxify();
 
@@ -430,6 +445,7 @@ mod test {
     #[test]
     fn ancestors_union() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
@@ -438,23 +454,67 @@ mod test {
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
-                    string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "16839021e338500b3cf7c9b871c8a07351697d68",
+                    ),
                 ],
             ).boxify();
             assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                    string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                    string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
-                    string_to_bonsai(&repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                    string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                    string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                    string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                    string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "bc7b4d0f858c19e2474b03e442b8495fd7aeef33",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "795b8133cf375f6d68d27c6c23db24cd5d0cd00f",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "16839021e338500b3cf7c9b871c8a07351697d68",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "b65231269f651cfe784fd1d97ef02a049a37b8a0",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "d7542c9db7f4c77dab4b315edd328edf1514952f",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "3cda5c78aa35f0f5b09780d971197b51cad4613a",
+                    ),
+                    string_to_bonsai(ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
                 ],
                 nodestream,
             );
@@ -464,6 +524,7 @@ mod test {
     #[test]
     fn merge_ancestors_from_merge_excludes() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
@@ -472,20 +533,40 @@ mod test {
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+                    ),
                 ],
                 vec![
-                    string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "16839021e338500b3cf7c9b871c8a07351697d68",
+                    ),
                 ],
             ).boxify();
 
             assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
-                    string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
-                    string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "264f01429683b3dd8042cb3979e8bf37007118bc",
+                    ),
+                    string_to_bonsai(ctx, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
                 ],
                 nodestream,
             );
@@ -495,6 +576,7 @@ mod test {
     #[test]
     fn merge_ancestors_from_merge_excludes_union() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
@@ -503,25 +585,65 @@ mod test {
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+                    ),
                 ],
                 vec![
-                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "16839021e338500b3cf7c9b871c8a07351697d68",
+                    ),
                 ],
             ).boxify();
 
             assert_changesets_sequence(
                 &repo,
                 vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
-                    string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
-                    string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
-                    string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                    string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                    string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                    string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "264f01429683b3dd8042cb3979e8bf37007118bc",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "5d43888a3c972fe68c224f93d41b30e9f888df7c",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "bc7b4d0f858c19e2474b03e442b8495fd7aeef33",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "795b8133cf375f6d68d27c6c23db24cd5d0cd00f",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "b65231269f651cfe784fd1d97ef02a049a37b8a0",
+                    ),
+                    string_to_bonsai(ctx, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
                 ],
                 nodestream,
             );

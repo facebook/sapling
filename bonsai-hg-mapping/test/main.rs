@@ -16,6 +16,7 @@ extern crate futures;
 extern crate futures_ext;
 
 extern crate bonsai_hg_mapping;
+extern crate context;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate mononoke_types;
@@ -27,6 +28,7 @@ use futures::Future;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds,
                         CachingBonsaiHgMapping, ErrorKind, MemWritesBonsaiHgMapping,
                         SqlBonsaiHgMapping, SqlConstructors};
+use context::CoreContext;
 use futures_ext::BoxFuture;
 use mercurial_types::RepositoryId;
 use mercurial_types_mocks::nodehash as hg;
@@ -36,6 +38,7 @@ use mononoke_types_mocks::changesetid as bonsai;
 use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
 
 fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
+    let ctx = CoreContext::test_mock();
     let entry = BonsaiHgMappingEntry {
         repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
@@ -44,30 +47,30 @@ fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
     assert_eq!(
         true,
         mapping
-            .add(entry.clone())
+            .add(ctx.clone(), entry.clone())
             .wait()
             .expect("Adding new entry failed")
     );
     assert_eq!(
         false,
         mapping
-            .add(entry.clone())
+            .add(ctx.clone(), entry.clone())
             .wait()
             .expect("Adding same entry failed")
     );
 
     let result = mapping
-        .get(REPO_ZERO, hg::ONES_CSID.into())
+        .get(ctx.clone(), REPO_ZERO, hg::ONES_CSID.into())
         .wait()
         .expect("Get failed");
     assert_eq!(result, vec![entry.clone()]);
     let result = mapping
-        .get_hg_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
+        .get_hg_from_bonsai(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID)
         .wait()
         .expect("Failed to get hg changeset by its bonsai counterpart");
     assert_eq!(result, Some(hg::ONES_CSID));
     let result = mapping
-        .get_bonsai_from_hg(REPO_ZERO, hg::ONES_CSID)
+        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
         .wait()
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
@@ -78,7 +81,7 @@ fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
         bcs_id: bonsai::ONES_CSID,
     };
     let result = mapping
-        .add(same_bc_entry.clone())
+        .add(ctx.clone(), same_bc_entry.clone())
         .wait()
         .expect_err("Conflicting entries should haved produced an error");
     assert_matches!(
@@ -92,7 +95,7 @@ fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
         bcs_id: bonsai::TWOS_CSID, // differ from entry.bcs_id
     };
     let result = mapping
-        .add(same_hg_entry.clone())
+        .add(ctx.clone(), same_hg_entry.clone())
         .wait()
         .expect_err("Conflicting entries should haved produced an error");
     assert_matches!(
@@ -102,14 +105,16 @@ fn add_and_get<M: BonsaiHgMapping>(mapping: M) {
 }
 
 fn missing<M: BonsaiHgMapping>(mapping: M) {
+    let ctx = CoreContext::test_mock();
     let result = mapping
-        .get(REPO_ZERO, bonsai::ONES_CSID.into())
+        .get(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID.into())
         .wait()
         .expect("Failed to fetch missing changeset (should succeed with None instead)");
     assert_eq!(result, vec![]);
 }
 
 fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
+    let ctx = CoreContext::test_mock();
     let entry = BonsaiHgMappingEntry {
         repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
@@ -118,7 +123,7 @@ fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
     assert_eq!(
         true,
         mapping
-            .add(entry.clone())
+            .add(ctx.clone(), entry.clone())
             .wait()
             .expect("Adding new entry failed")
     );
@@ -129,7 +134,7 @@ fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
     assert_eq!(
         false,
         mem_mapping
-            .add(entry.clone())
+            .add(ctx.clone(), entry.clone())
             .wait()
             .expect("Adding same entry failed")
     );
@@ -142,19 +147,19 @@ fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
     assert_eq!(
         true,
         mem_mapping
-            .add(first_entry.clone())
+            .add(ctx.clone(), first_entry.clone())
             .wait()
             .expect("Adding new entry failed")
     );
 
     let result = mem_mapping
-        .get_bonsai_from_hg(REPO_ZERO, hg::ONES_CSID)
+        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
         .wait()
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
 
     let result = mem_mapping
-        .get_bonsai_from_hg(REPO_ZERO, hg::TWOS_CSID)
+        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::TWOS_CSID)
         .wait()
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::TWOS_CSID));
@@ -170,7 +175,7 @@ fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
     assert_eq!(
         true,
         mem_mapping
-            .add(second_entry.clone())
+            .add(ctx.clone(), second_entry.clone())
             .wait()
             .expect("Adding new entry failed")
     );
@@ -179,7 +184,7 @@ fn mem_writes<M: BonsaiHgMapping + 'static>(mapping: M) {
 
     let inner = mem_mapping.get_inner();
     let result = inner
-        .get_bonsai_from_hg(REPO_ZERO, hg::TWOS_CSID)
+        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::TWOS_CSID)
         .wait()
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, None);
@@ -202,22 +207,24 @@ impl CountedBonsaiHgMapping {
 }
 
 impl BonsaiHgMapping for CountedBonsaiHgMapping {
-    fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
         self.adds.fetch_add(1, Ordering::Relaxed);
-        self.mapping.add(entry)
+        self.mapping.add(ctx, entry)
     }
 
     fn get(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
         self.gets.fetch_add(1, Ordering::Relaxed);
-        self.mapping.get(repo_id, cs_id)
+        self.mapping.get(ctx, repo_id, cs_id)
     }
 }
 
 fn caching<M: BonsaiHgMapping + 'static>(mapping: M) {
+    let ctx = CoreContext::test_mock();
     let gets = Arc::new(AtomicUsize::new(0));
     let adds = Arc::new(AtomicUsize::new(0));
     let mapping = CountedBonsaiHgMapping::new(Arc::new(mapping), gets.clone(), adds.clone());
@@ -231,27 +238,27 @@ fn caching<M: BonsaiHgMapping + 'static>(mapping: M) {
     assert_eq!(
         true,
         mapping
-            .add(entry.clone())
+            .add(ctx.clone(), entry.clone())
             .wait()
             .expect("Adding new entry failed")
     );
 
     let result = mapping
-        .get_bonsai_from_hg(REPO_ZERO, hg::ONES_CSID)
+        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
         .wait()
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
     assert_eq!(gets.load(Ordering::Relaxed), 1);
 
     let result = mapping
-        .get_bonsai_from_hg(REPO_ZERO, hg::ONES_CSID)
+        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
         .wait()
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
     assert_eq!(gets.load(Ordering::Relaxed), 1);
 
     let result = mapping
-        .get_bonsai_from_hg(REPO_ZERO, hg::TWOS_CSID)
+        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::TWOS_CSID)
         .wait()
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, None);

@@ -8,6 +8,7 @@
 
 extern crate clap;
 extern crate cmdlib;
+extern crate context;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate mercurial_types;
@@ -19,6 +20,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::{App, Arg};
+use context::CoreContext;
 use failure::{Result, SlogKVError};
 use futures::Future;
 
@@ -87,6 +89,8 @@ fn main() -> Result<()> {
     let no_bookmark = matches.is_present("no-bookmark");
 
     let blobimport = Blobimport {
+        // TODO(T37478150, luk) this is not a test use case, but I want to fix it properly later
+        ctx: CoreContext::test_mock(),
         logger: logger.clone(),
         blobrepo,
         revlogrepo_path,

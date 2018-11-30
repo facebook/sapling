@@ -12,6 +12,7 @@ extern crate blobrepo;
 extern crate blobstore;
 extern crate bookmarks;
 extern crate bytes;
+extern crate context;
 extern crate futures;
 #[macro_use]
 extern crate maplit;
@@ -25,6 +26,7 @@ use std::str::FromStr;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmarks::Bookmark;
 use bytes::Bytes;
+use context::CoreContext;
 use futures::future::{join_all, Future};
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{BonsaiChangesetMut, DateTime, FileChange, FileContents, FileType};
@@ -60,6 +62,7 @@ fn create_bonsai_changeset_from_test_data(
     files: BTreeMap<&str, Option<&str>>,
     commit_metadata: BTreeMap<&str, &str>,
 ) {
+    let ctx = CoreContext::test_mock();
     let file_changes = store_files(files, blobrepo.clone());
     let date: Vec<_> = commit_metadata
         .get("author_date")
@@ -76,7 +79,7 @@ fn create_bonsai_changeset_from_test_data(
         .map(|s| HgChangesetId::from_str(s).unwrap())
         .map(|p| {
             blobrepo
-                .get_bonsai_from_hg(&p)
+                .get_bonsai_from_hg(ctx.clone(), &p)
                 .map(|maybe_cs| maybe_cs.unwrap())
         });
 
@@ -101,7 +104,7 @@ fn create_bonsai_changeset_from_test_data(
         .unwrap();
 
     let hg_cs = blobrepo
-        .get_hg_from_bonsai_changeset(bcs_id)
+        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
         .wait()
         .unwrap();
 

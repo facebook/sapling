@@ -24,6 +24,7 @@ extern crate blobstore;
 extern crate bonsai_utils;
 extern crate bookmarks;
 extern crate cmdlib;
+extern crate context;
 #[macro_use]
 extern crate futures_ext;
 extern crate manifoldblob;
@@ -59,6 +60,7 @@ use blobstore::{new_memcache_blobstore, Blobstore, CacheBlobstoreExt, PrefixBlob
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::Bookmark;
 use cmdlib::args;
+use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
 use mercurial_types::{Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope,
@@ -202,11 +204,15 @@ fn fetch_content_from_manifest(
     }
 }
 
-fn resolve_hg_rev(repo: &BlobRepo, rev: &str) -> impl Future<Item = HgChangesetId, Error = Error> {
+fn resolve_hg_rev(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    rev: &str,
+) -> impl Future<Item = HgChangesetId, Error = Error> {
     let book = Bookmark::new(&rev).unwrap();
     let hash = HgChangesetId::from_str(rev);
 
-    repo.get_bookmark(&book).and_then({
+    repo.get_bookmark(ctx, &book).and_then({
         move |r| match r {
             Some(cs) => Ok(cs),
             None => hash,
@@ -215,13 +221,14 @@ fn resolve_hg_rev(repo: &BlobRepo, rev: &str) -> impl Future<Item = HgChangesetI
 }
 
 fn fetch_content(
+    ctx: CoreContext,
     logger: Logger,
     repo: &BlobRepo,
     rev: &str,
     path: &str,
 ) -> BoxFuture<Content, Error> {
     let path = try_boxfuture!(MPath::new(path));
-    let resolved_cs_id = resolve_hg_rev(repo, rev);
+    let resolved_cs_id = resolve_hg_rev(ctx, repo, rev);
 
     let mf = resolved_cs_id
         .and_then({
@@ -257,15 +264,16 @@ fn fetch_content(
 }
 
 pub fn fetch_bonsai_changeset(
+    ctx: CoreContext,
     rev: &str,
     repo: &BlobRepo,
 ) -> impl Future<Item = BonsaiChangeset, Error = Error> {
-    let hg_changeset_id = resolve_hg_rev(repo, rev);
+    let hg_changeset_id = resolve_hg_rev(ctx.clone(), repo, rev);
 
     hg_changeset_id
         .and_then({
             let repo = repo.clone();
-            move |hg_cs| repo.get_bonsai_from_hg(&hg_cs)
+            move |hg_cs| repo.get_bonsai_from_hg(ctx, &hg_cs)
         })
         .and_then({
             let rev = rev.to_string();
@@ -571,8 +579,11 @@ fn main() -> Result<()> {
 
             args::init_cachelib(&matches);
 
+            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+            let ctx = CoreContext::test_mock();
+
             let repo = args::open_repo(&logger, &matches)?;
-            fetch_bonsai_changeset(rev, repo.blobrepo())
+            fetch_bonsai_changeset(ctx, rev, repo.blobrepo())
                 .map(|bcs| {
                     println!("{:?}", bcs);
                 })
@@ -584,8 +595,11 @@ fn main() -> Result<()> {
 
             args::init_cachelib(&matches);
 
+            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+            let ctx = CoreContext::test_mock();
+
             let repo = args::open_repo(&logger, &matches)?;
-            fetch_content(logger.clone(), repo.blobrepo(), rev, path)
+            fetch_content(ctx, logger.clone(), repo.blobrepo(), rev, path)
                 .and_then(|content| {
                     match content {
                         Content::Executable(_) => {
@@ -628,12 +642,18 @@ fn main() -> Result<()> {
                 })
                 .boxify()
         }
-        (CONFIG_REPO, Some(sub_m)) => config_repo::handle_command(sub_m, logger),
+        (CONFIG_REPO, Some(sub_m)) => {
+            let ctx = CoreContext::test_mock();
+            config_repo::handle_command(sub_m, ctx, logger)
+        }
         (BOOKMARKS, Some(sub_m)) => {
             args::init_cachelib(&matches);
             let repo = args::open_repo(&logger, &matches)?;
 
-            bookmarks_manager::handle_command(&repo.blobrepo(), sub_m, logger)
+            // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+            let ctx = CoreContext::test_mock();
+
+            bookmarks_manager::handle_command(ctx, &repo.blobrepo(), sub_m, logger)
         }
         (HG_CHANGESET, Some(sub_m)) => match sub_m.subcommand() {
             (HG_CHANGESET_DIFF, Some(sub_m)) => {
@@ -673,15 +693,16 @@ fn main() -> Result<()> {
 
                 args::init_cachelib(&matches);
                 let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
+                let ctx = CoreContext::test_mock();
 
                 (start_cs, stop_cs)
                     .into_future()
                     .and_then({
-                        cloned!(repo);
+                        cloned!(ctx, repo);
                         move |(start_cs, stop_cs)| {
                             (
-                                repo.get_bonsai_from_hg(&start_cs),
-                                repo.get_bonsai_from_hg(&stop_cs),
+                                repo.get_bonsai_from_hg(ctx.clone(), &start_cs),
+                                repo.get_bonsai_from_hg(ctx, &stop_cs),
                             )
                         }
                     })
@@ -695,7 +716,7 @@ fn main() -> Result<()> {
                         cloned!(repo);
                         move |(start_cs, stop_cs)| {
                             RangeNodeStream::new(&Arc::new(repo.clone()), start_cs, stop_cs)
-                                .map(move |cs| repo.get_hg_from_bonsai_changeset(cs))
+                                .map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
                                 .buffered(100)
                                 .map(|cs| cs.to_hex().to_string())
                                 .collect()

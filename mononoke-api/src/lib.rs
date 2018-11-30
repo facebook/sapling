@@ -11,6 +11,7 @@ extern crate cloned;
 
 extern crate blobrepo;
 extern crate bookmarks;
+extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -27,6 +28,7 @@ use futures::Future;
 
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
+use context::CoreContext;
 use mercurial_types::{Changeset, HgChangesetId};
 use mercurial_types::manifest::Content;
 use mononoke_types::MPath;
@@ -52,10 +54,11 @@ pub fn get_content_by_path(
 }
 
 pub fn get_changeset_by_bookmark(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     bookmark: Bookmark,
 ) -> impl Future<Item = HgChangesetId, Error = Error> {
-    repo.get_bookmark(&bookmark)
+    repo.get_bookmark(ctx, &bookmark)
         .map_err({
             cloned!(bookmark);
             move |_| ErrorKind::InvalidInput(bookmark.to_string()).into()

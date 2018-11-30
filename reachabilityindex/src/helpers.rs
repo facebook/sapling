@@ -111,6 +111,7 @@ mod test {
     use std::sync::Arc;
 
     use async_unit;
+    use context::CoreContext;
     use fixtures::linear;
     use futures::Future;
     use mononoke_types::Generation;
@@ -121,16 +122,49 @@ mod test {
     #[test]
     fn test_helpers() {
         async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
             let mut ordered_hashes_oldest_to_newest = vec![
-                string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_bonsai(&repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372"),
-                string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                string_to_bonsai(&repo, "607314ef579bd2407752361ba1b0c1729d08b281"),
-                string_to_bonsai(&repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f"),
-                string_to_bonsai(&repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "cb15ca4a43a59acff5388cea9648c162afde8372",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "d0a361e9022d226ae52f689667bd7d212a19cfe0",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "607314ef579bd2407752361ba1b0c1729d08b281",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "3e0e761030db6e479a7fb58b12881883f9f8c63f",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+                ),
             ];
             ordered_hashes_oldest_to_newest.reverse();
 

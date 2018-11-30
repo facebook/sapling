@@ -20,6 +20,7 @@ use tokio::runtime::TaskExecutor;
 
 use api;
 use blobrepo::{BlobRepo, get_sha256_alias, get_sha256_alias_key};
+use context::CoreContext;
 use mercurial_types::{HgManifestId, RepositoryId};
 use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::RepoConfig;
@@ -115,6 +116,7 @@ impl MononokeRepo {
 
     fn is_ancestor(
         &self,
+        ctx: CoreContext,
         proposed_ancestor: String,
         proposed_descendent: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
@@ -122,14 +124,14 @@ impl MononokeRepo {
         let src_hash_maybe = FS::get_changeset_id(proposed_descendent.clone());
         let dst_hash_maybe = FS::get_changeset_id(proposed_ancestor.clone());
         let src_hash_future = src_hash_maybe.into_future().or_else({
-            cloned!(self.repo, proposed_descendent);
-            move |_| FS::string_to_bookmark_changeset_id(proposed_descendent, repo)
+            cloned!(ctx, self.repo, proposed_descendent);
+            move |_| FS::string_to_bookmark_changeset_id(ctx, proposed_descendent, repo)
         });
 
         let src_hash_future = src_hash_future
             .and_then({
-                cloned!(self.repo);
-                move |hg_cs_id| repo.get_bonsai_from_hg(&hg_cs_id).from_err()
+                cloned!(ctx, self.repo);
+                move |hg_cs_id| repo.get_bonsai_from_hg(ctx, &hg_cs_id).from_err()
             })
             .and_then(move |maybenode| {
                 maybenode.ok_or(ErrorKind::NotFound(
@@ -139,14 +141,14 @@ impl MononokeRepo {
             });
 
         let dst_hash_future = dst_hash_maybe.into_future().or_else({
-            cloned!(self.repo, proposed_ancestor);
-            move |_| FS::string_to_bookmark_changeset_id(proposed_ancestor, repo)
+            cloned!(ctx, self.repo, proposed_ancestor);
+            move |_| FS::string_to_bookmark_changeset_id(ctx, proposed_ancestor, repo)
         });
 
         let dst_hash_future = dst_hash_future
             .and_then({
                 cloned!(self.repo);
-                move |hg_cs_id| repo.get_bonsai_from_hg(&hg_cs_id).from_err()
+                move |hg_cs_id| repo.get_bonsai_from_hg(ctx, &hg_cs_id).from_err()
             })
             .and_then(move |maybenode| {
                 maybenode.ok_or(ErrorKind::NotFound(format!("{}", proposed_ancestor), None))
@@ -159,7 +161,11 @@ impl MononokeRepo {
                 .and_then(|src| dst_hash_future.map(move |dst| (src, dst)))
                 .and_then({
                     cloned!(self.repo);
-                    move |(src, dst)| genbfs.query_reachability(repo.get_changeset_fetcher(), src, dst).from_err()
+                    move |(src, dst)| {
+                        genbfs
+                            .query_reachability(repo.get_changeset_fetcher(), src, dst)
+                            .from_err()
+                    }
                 })
                 .then(|r| tx.send(r).map_err(|_| ())),
         );
@@ -298,7 +304,11 @@ impl MononokeRepo {
             .boxify()
     }
 
-    pub fn send_query(&self, msg: MononokeRepoQuery) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+    pub fn send_query(
+        &self,
+        ctx: CoreContext,
+        msg: MononokeRepoQuery,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         use MononokeRepoQuery::*;
 
         match msg {
@@ -310,7 +320,7 @@ impl MononokeRepo {
             IsAncestor {
                 proposed_ancestor,
                 proposed_descendent,
-            } => self.is_ancestor(proposed_ancestor, proposed_descendent),
+            } => self.is_ancestor(ctx, proposed_ancestor, proposed_descendent),
 
             DownloadLargeFile { oid } => self.download_large_file(oid),
             LfsBatch {

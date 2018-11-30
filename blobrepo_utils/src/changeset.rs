@@ -7,6 +7,7 @@
 use std::sync::Arc;
 
 use chashmap::CHashMap;
+use context::CoreContext;
 use failure::{Error, Result};
 use futures::{Future, Stream, sync::mpsc::{self, Sender}};
 use slog::Logger;
@@ -29,6 +30,7 @@ pub trait ChangesetVisitor: Clone + Send + Sync + 'static {
     /// unavoidable due to the way tokio works. To share state between instances, use an Arc.
     fn visit(
         self,
+        ctx: CoreContext,
         logger: Logger,
         repo: BlobRepo,
         changeset: HgBlobChangeset,
@@ -49,6 +51,7 @@ pub struct ChangesetVisitMeta {
 /// this is typically highly parallel). Dropping the returned stream will cause further visiting to
 /// be canceled.
 pub fn visit_changesets<V, I>(
+    ctx: CoreContext,
     logger: Logger,
     repo: BlobRepo,
     visitor: V,
@@ -80,7 +83,7 @@ where
 
     for changeset_id in start_points {
         // Start off with follow_limit + 1 because that's logically the previous follow_remaining.
-        let visit_one = VisitOne::new(&inner, changeset_id, follow_limit, &mut sender);
+        let visit_one = VisitOne::new(ctx.clone(), &inner, changeset_id, follow_limit, &mut sender);
         if let Some(visit_one) = visit_one {
             tokio::spawn(visit_one.visit());
         }
@@ -114,6 +117,7 @@ struct VisitOne<V>
 where
     V: ChangesetVisitor,
 {
+    ctx: CoreContext,
     shared: Arc<VisitOneShared<V>>,
     logger: Logger,
     changeset_id: HgChangesetId,
@@ -126,6 +130,7 @@ where
     V: ChangesetVisitor,
 {
     fn new(
+        ctx: CoreContext,
         shared: &Arc<VisitOneShared<V>>,
         changeset_id: HgChangesetId,
         prev_follow_remaining: usize,
@@ -148,6 +153,7 @@ where
             .new(o!["changeset_id" => format!("{}", changeset_id)]);
 
         Some(Self {
+            ctx,
             shared: shared.clone(),
             logger,
             changeset_id,
@@ -158,6 +164,7 @@ where
 
     fn visit(self) -> impl Future<Item = (), Error = ()> + Send {
         let Self {
+            ctx,
             shared,
             logger,
             changeset_id,
@@ -167,29 +174,35 @@ where
 
         shared.mark_visit_started(changeset_id);
 
-        let parents_fut = shared.repo.get_changeset_parents(&changeset_id).map({
-            let shared = shared.clone();
-            let mut sender = sender.clone();
-            move |parent_hashes| {
-                for parent_id in parent_hashes {
-                    let visit_one =
-                        VisitOne::new(&shared, parent_id, follow_remaining, &mut sender);
-                    if let Some(visit_one) = visit_one {
-                        // Avoid unbounded recursion by spawning separate futures for each parent
-                        // directly on the executor.
-                        tokio::spawn(visit_one.visit());
+        let parents_fut = shared
+            .repo
+            .get_changeset_parents(ctx.clone(), &changeset_id)
+            .map({
+                cloned!(ctx, shared, mut sender);
+                move |parent_hashes| {
+                    for parent_id in parent_hashes {
+                        let visit_one = VisitOne::new(
+                            ctx.clone(),
+                            &shared,
+                            parent_id,
+                            follow_remaining,
+                            &mut sender,
+                        );
+                        if let Some(visit_one) = visit_one {
+                            // Avoid unbounded recursion by spawning separate futures for each parent
+                            // directly on the executor.
+                            tokio::spawn(visit_one.visit());
+                        }
                     }
                 }
-            }
-        });
+            });
 
         let visit_fut = shared
             .repo
             .get_changeset_by_changesetid(&changeset_id)
             .and_then({
-                let visitor = shared.visitor.clone();
-                let repo = shared.repo.clone();
-                move |changeset| visitor.visit(logger, repo, changeset, follow_remaining)
+                cloned!(ctx, shared.visitor, shared.repo);
+                move |changeset| visitor.visit(ctx, logger, repo, changeset, follow_remaining)
             })
             .and_then({
                 let sender = sender.clone();

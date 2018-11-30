@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use blobrepo::BlobRepo;
+use context::CoreContext;
 use futures::{Async, Poll};
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;
@@ -30,14 +31,15 @@ pub struct SetDifferenceNodeStream {
 
 impl SetDifferenceNodeStream {
     pub fn new(
+        ctx: CoreContext,
         repo: &Arc<BlobRepo>,
         keep_input: Box<NodeStream>,
         remove_input: Box<NodeStream>,
     ) -> SetDifferenceNodeStream {
         SetDifferenceNodeStream {
-            keep_input: add_generations(keep_input, repo.clone()),
+            keep_input: add_generations(ctx.clone(), keep_input, repo.clone()),
             next_keep: Async::NotReady,
-            remove_input: add_generations(remove_input, repo.clone()),
+            remove_input: add_generations(ctx, remove_input, repo.clone()),
             next_remove: Async::NotReady,
 
             remove_nodes: HashSet::new(),
@@ -115,6 +117,7 @@ mod test {
     use SingleNodeHash;
     use UnionNodeStream;
     use async_unit;
+    use context::CoreContext;
     use fixtures::linear;
     use fixtures::merge_even;
     use fixtures::merge_uneven;
@@ -127,69 +130,80 @@ mod test {
     #[test]
     fn difference_identical_node() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let nodestream = SetDifferenceNodeStream::new(
+                ctx.clone(),
                 &repo,
-                SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
-                SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
+                SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
+                SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
             ).boxed();
 
-            assert_node_sequence(&repo, vec![], nodestream);
+            assert_node_sequence(ctx, &repo, vec![], nodestream);
         });
     }
 
     #[test]
     fn difference_node_and_empty() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let nodestream = SetDifferenceNodeStream::new(
+                ctx.clone(),
                 &repo,
-                SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
+                SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
                 Box::new(NotReadyEmptyStream { poll_count: 0 }),
             ).boxed();
 
-            assert_node_sequence(&repo, vec![head_hash], nodestream);
+            assert_node_sequence(ctx, &repo, vec![head_hash], nodestream);
         });
     }
 
     #[test]
     fn difference_empty_and_node() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
             let nodestream = SetDifferenceNodeStream::new(
+                ctx.clone(),
                 &repo,
                 Box::new(NotReadyEmptyStream { poll_count: 0 }),
-                SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
+                SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
             ).boxed();
 
-            assert_node_sequence(&repo, vec![], nodestream);
+            assert_node_sequence(ctx, &repo, vec![], nodestream);
         });
     }
 
     #[test]
     fn difference_two_nodes() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let nodestream = SetDifferenceNodeStream::new(
+                ctx.clone(),
                 &repo,
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                     &repo,
                 ).boxed(),
             ).boxed();
 
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
@@ -202,14 +216,16 @@ mod test {
     #[test]
     fn difference_error_node() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
             let mut nodestream = spawn(
                 SetDifferenceNodeStream::new(
+                    ctx.clone(),
                     &repo,
                     Box::new(RepoErrorStream { hash: nodehash }),
-                    SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
+                    SingleNodeHash::new(ctx.clone(), nodehash.clone(), &repo).boxed(),
                 ).boxed(),
             );
 
@@ -228,10 +244,12 @@ mod test {
     #[test]
     fn slow_ready_difference_nothing() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
             let mut nodestream = SetDifferenceNodeStream::new(
+                ctx.clone(),
                 &repo,
                 Box::new(NotReadyEmptyStream {
                     poll_count: repeats,
@@ -259,34 +277,41 @@ mod test {
     #[test]
     fn difference_union_with_single_node() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             let nodestream = SetDifferenceNodeStream::new(
+                ctx.clone(),
                 &repo,
                 nodestream,
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                     &repo,
                 ).boxed(),
             ).boxed();
 
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
@@ -300,84 +325,102 @@ mod test {
     #[test]
     fn difference_single_node_with_union() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             let nodestream = SetDifferenceNodeStream::new(
+                ctx.clone(),
                 &repo,
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                     &repo,
                 ).boxed(),
                 nodestream,
             ).boxed();
 
-            assert_node_sequence(&repo, vec![], nodestream);
+            assert_node_sequence(ctx, &repo, vec![], nodestream);
         });
     }
 
     #[test]
     fn difference_merge_even() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_even::getrepo(None));
 
             // Top three commits in my hg log -G -r 'all()' output
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("6120679e1fedb0b2f3717bbf042e5fd718763042"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
                     &repo,
                 ).boxed(),
             ];
-            let left_nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let left_nodestream =
+                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             // Everything from base to just before merge on one side
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
                     &repo,
                 ).boxed(),
             ];
-            let right_nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let right_nodestream =
+                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             let nodestream =
-                SetDifferenceNodeStream::new(&repo, left_nodestream, right_nodestream).boxed();
+                SetDifferenceNodeStream::new(ctx.clone(), &repo, left_nodestream, right_nodestream)
+                    .boxed();
 
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("6120679e1fedb0b2f3717bbf042e5fd718763042"),
@@ -391,50 +434,62 @@ mod test {
     #[test]
     fn difference_merge_uneven() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(merge_uneven::getrepo(None));
 
             // Merge commit, and one from each branch
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
                     &repo,
                 ).boxed(),
             ];
-            let left_nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let left_nodestream =
+                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             // Everything from base to just before merge on one side
             let inputs: Vec<Box<NodeStream>> = vec![
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                     &repo,
                 ).boxed(),
                 SingleNodeHash::new(
+                    ctx.clone(),
                     string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
                     &repo,
                 ).boxed(),
             ];
-            let right_nodestream = UnionNodeStream::new(&repo, inputs.into_iter()).boxed();
+            let right_nodestream =
+                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 
             let nodestream =
-                SetDifferenceNodeStream::new(&repo, left_nodestream, right_nodestream).boxed();
+                SetDifferenceNodeStream::new(ctx.clone(), &repo, left_nodestream, right_nodestream)
+                    .boxed();
 
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("6d0c1c30df4acb4e64cb4c4868d4c974097da055"),

@@ -29,6 +29,7 @@ extern crate blobrepo;
 extern crate bookmarks;
 extern crate cachelib;
 extern crate cmdlib;
+extern crate context;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate panichandler;
@@ -43,6 +44,7 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use clap::{App, ArgMatches};
+use context::CoreContext;
 use failure::SlogKVError;
 use futures::Future;
 use slog::{Drain, Level, Logger};
@@ -125,6 +127,8 @@ fn get_config<'a>(
 ) -> Result<RepoConfigs> {
     // TODO: This needs to cope with blob repos, too
     let crpath = PathBuf::from(matches.value_of("crpath").unwrap());
+    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+    let ctx = CoreContext::test_mock();
     let config_repo = BlobRepo::new_rocksdb(
         logger.new(o!["repo" => "Config repo"]),
         &crpath,
@@ -136,7 +140,7 @@ fn get_config<'a>(
             let book = bookmarks::Bookmark::new(book).expect("book must be ascii");
             println!("Looking for bookmark {:?}", book);
             runtime
-                .block_on(config_repo.get_bookmark(&book))?
+                .block_on(config_repo.get_bookmark(ctx, &book))?
                 .expect("bookmark not found")
         }
         None => mercurial_types::nodehash::HgChangesetId::from_str(

@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use context::CoreContext;
 use futures::{Future, future::ok};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{HgChangesetId, RepositoryId};
@@ -60,7 +61,7 @@ impl MemWritesBonsaiHgMapping {
 }
 
 impl BonsaiHgMapping for MemWritesBonsaiHgMapping {
-    fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
         let repo_id = entry.repo_id;
         {
             let mappings = self.mappings.lock().expect("lock poisoned");
@@ -73,7 +74,11 @@ impl BonsaiHgMapping for MemWritesBonsaiHgMapping {
         }
 
         self.inner
-            .get(repo_id, BonsaiOrHgChangesetIds::Bonsai(vec![entry.bcs_id]))
+            .get(
+                ctx,
+                repo_id,
+                BonsaiOrHgChangesetIds::Bonsai(vec![entry.bcs_id]),
+            )
             .and_then({
                 cloned!(self.mappings);
                 move |maybe_mapping| {
@@ -103,6 +108,7 @@ impl BonsaiHgMapping for MemWritesBonsaiHgMapping {
 
     fn get(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         ids: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
@@ -144,7 +150,7 @@ impl BonsaiHgMapping for MemWritesBonsaiHgMapping {
             ok(mappings).boxify()
         } else {
             self.inner
-                .get(repo_id, left_to_fetch)
+                .get(ctx, repo_id, left_to_fetch)
                 .map(move |mut mappings_from_inner| {
                     mappings.append(&mut mappings_from_inner);
                     mappings

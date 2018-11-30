@@ -121,7 +121,7 @@ pub fn request_handler(
 
     scuba_logger.log_with_msg("Connection established", None);
 
-    let ctxt = CoreContext {
+    let ctx = CoreContext {
         session: session_uuid,
         logger: conn_log.clone(),
         scuba: scuba_logger.clone(),
@@ -132,7 +132,7 @@ pub fn request_handler(
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         stdin,
-        RepoClient::new(repo.clone(), ctxt, hash_validation_percentage, lca_hint),
+        RepoClient::new(repo.clone(), ctx, hash_validation_percentage, lca_hint),
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
         &conn_log,

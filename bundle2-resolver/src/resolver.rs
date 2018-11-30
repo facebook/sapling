@@ -14,6 +14,7 @@ use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, Cr
                HgBlobEntry};
 use bookmarks::{Bookmark, Transaction};
 use bytes::{Bytes, BytesMut};
+use context::CoreContext;
 use failure::{err_msg, Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{Future, IntoFuture, Stream};
 use futures::future::{self, err, ok, Shared};
@@ -51,6 +52,7 @@ type UploadedChangesets = HashMap<HgNodeHash, ChangesetHandle>;
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
 /// It returns a Future that contains the response that should be send back to the requester.
 pub fn resolve(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     logger: Logger,
     scuba_logger: ScubaSampleBuilder,
@@ -67,20 +69,21 @@ pub fn resolve(
     resolver
         .maybe_resolve_commonheads(bundle2)
         .and_then(move |(commonheads, bundle2)| match commonheads {
-            Some(commonheads) => resolve_pushrebase(commonheads, resolver, bundle2, lca_hint),
-            None => resolve_push(resolver, bundle2),
+            Some(commonheads) => resolve_pushrebase(ctx, commonheads, resolver, bundle2, lca_hint),
+            None => resolve_push(ctx, resolver, bundle2),
         })
         .boxify()
 }
 
 fn resolve_push(
+    ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
         .maybe_resolve_changegroup(bundle2)
         .and_then({
-            let resolver = resolver.clone();
+            cloned!(resolver);
             move |(cg_push, bundle2)| {
                 resolver
                     .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
@@ -100,7 +103,7 @@ fn resolve_push(
             }
         })
         .and_then({
-            let resolver = resolver.clone();
+            cloned!(resolver);
             move |(cg_push, bookmark_push, bundle2)| {
                 if let Some(cg_push) = cg_push {
                     resolver
@@ -115,12 +118,12 @@ fn resolve_push(
             }
         })
         .and_then({
-            let resolver = resolver.clone();
+            cloned!(ctx, resolver);
             move |(cg_and_manifests, bookmark_push, bundle2)| {
                 if let Some((cg_push, manifests)) = cg_and_manifests {
                     let changegroup_id = Some(cg_push.part_id);
                     resolver
-                        .upload_changesets(cg_push, manifests)
+                        .upload_changesets(ctx, cg_push, manifests)
                         .map(move |()| (changegroup_id, bookmark_push, bundle2))
                         .boxify()
                 } else {
@@ -129,7 +132,7 @@ fn resolve_push(
             }
         })
         .and_then({
-            let resolver = resolver.clone();
+            cloned!(resolver);
             move |(changegroup_id, bookmark_push, bundle2)| {
                 resolver
                     .maybe_resolve_infinitepush_bookmarks(bundle2)
@@ -137,7 +140,7 @@ fn resolve_push(
             }
         })
         .and_then({
-            let resolver = resolver.clone();
+            cloned!(resolver);
             move |(changegroup_id, bookmark_push, bundle2)| {
                 resolver
                     .ensure_stream_finished(bundle2)
@@ -145,18 +148,18 @@ fn resolve_push(
             }
         })
         .and_then({
-            let resolver = resolver.clone();
+            cloned!(resolver);
             move |(changegroup_id, bookmarks_push)| {
                 let bookmarks_push_fut = bookmarks_push
                     .into_iter()
-                    .map(|bp| BonsaiBookmarkPush::new(&resolver.repo, bp))
+                    .map(|bp| BonsaiBookmarkPush::new(ctx.clone(), &resolver.repo, bp))
                     .collect::<Vec<_>>();
                 future::join_all(bookmarks_push_fut)
                     .map(move |bookmakrs_push| (changegroup_id, bookmakrs_push))
             }
         })
         .and_then({
-            let resolver = resolver.clone();
+            cloned!(resolver);
             move |(changegroup_id, bookmark_push)| {
                 (move || {
                     let bookmark_ids: Vec<_> = bookmark_push.iter().map(|bp| bp.part_id).collect();
@@ -189,6 +192,7 @@ fn resolve_push(
 }
 
 fn resolve_pushrebase(
+    ctx: CoreContext,
     commonheads: CommonHeads,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
@@ -231,11 +235,11 @@ fn resolve_pushrebase(
             }
         })
         .and_then({
-            cloned!(resolver);
+            cloned!(ctx, resolver);
             move |(onto, cg_push, manifests, maybe_pushvars, bundle2)| {
                 let changesets = cg_push.changesets.clone();
                 resolver
-                    .upload_changesets(cg_push, manifests)
+                    .upload_changesets(ctx, cg_push, manifests)
                     .map(move |()| (changesets, onto, maybe_pushvars, bundle2))
             }
         })
@@ -263,7 +267,7 @@ fn resolve_pushrebase(
             }
         })
         .and_then({
-            cloned!(resolver);
+            cloned!(ctx, resolver);
             move |(changesets, bookmark_pushes, maybe_pushvars, onto)| {
                 resolver
                     .run_hooks(changesets.clone(), maybe_pushvars, &onto)
@@ -292,16 +296,13 @@ fn resolve_pushrebase(
                     })
                     .and_then(move |()| {
                         resolver
-                            .pushrebase(changesets.clone(), bookmark_pushes, &onto)
+                            .pushrebase(ctx, changesets.clone(), bookmark_pushes, &onto)
                             .map(|pushrebased_rev| (pushrebased_rev, onto))
                     })
             }
         })
-        .and_then({
-            cloned!(resolver);
-            move |(pushrebased_rev, onto)| {
-                resolver.prepare_pushrebase_response(commonheads, pushrebased_rev, onto, lca_hint)
-            }
+        .and_then(move |(pushrebased_rev, onto)| {
+            resolver.prepare_pushrebase_response(ctx, commonheads, pushrebased_rev, onto, lca_hint)
         })
         .boxify()
 }
@@ -346,16 +347,18 @@ struct BonsaiBookmarkPush {
 
 impl BonsaiBookmarkPush {
     fn new(
+        ctx: CoreContext,
         repo: &Arc<BlobRepo>,
         bookmark_push: BookmarkPush,
     ) -> impl Future<Item = BonsaiBookmarkPush, Error = Error> + Send {
         fn bonsai_from_hg_opt(
+            ctx: CoreContext,
             repo: &Arc<BlobRepo>,
             cs_id: Option<HgChangesetId>,
         ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
             match cs_id {
                 None => future::ok(None).left_future(),
-                Some(cs_id) => repo.get_bonsai_from_hg(&cs_id).right_future(),
+                Some(cs_id) => repo.get_bonsai_from_hg(ctx, &cs_id).right_future(),
             }
         }
 
@@ -366,8 +369,10 @@ impl BonsaiBookmarkPush {
             new,
         } = bookmark_push;
 
-        (bonsai_from_hg_opt(repo, old), bonsai_from_hg_opt(repo, new))
-            .into_future()
+        (
+            bonsai_from_hg_opt(ctx.clone(), repo, old),
+            bonsai_from_hg_opt(ctx, repo, new),
+        ).into_future()
             .map(move |(old, new)| BonsaiBookmarkPush {
                 part_id,
                 name,
@@ -640,6 +645,7 @@ impl Bundle2Resolver {
     /// that the changesets were uploaded
     fn upload_changesets(
         &self,
+        ctx: CoreContext,
         cg_push: ChangegroupPush,
         manifests: Manifests,
     ) -> BoxFuture<(), Error> {
@@ -660,6 +666,7 @@ impl Bundle2Resolver {
         STATS::content_blobs_count.add_value(content_blobs.len() as i64);
 
         fn upload_changeset(
+            ctx: CoreContext,
             repo: Arc<BlobRepo>,
             scuba_logger: ScubaSampleBuilder,
             node: HgNodeHash,
@@ -671,8 +678,8 @@ impl Bundle2Resolver {
         ) -> BoxFuture<UploadedChangesets, Error> {
             let (p1, p2) = {
                 (
-                    get_parent(&repo, &uploaded_changesets, revlog_cs.p1),
-                    get_parent(&repo, &uploaded_changesets, revlog_cs.p2),
+                    get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p1),
+                    get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p2),
                 )
             };
             let NewBlobs {
@@ -708,7 +715,7 @@ impl Bundle2Resolver {
                         cs_metadata,
                         must_check_case_conflicts: true,
                     };
-                    let scheduled_uploading = create_changeset.create(&repo, scuba_logger);
+                    let scheduled_uploading = create_changeset.create(ctx, &repo, scuba_logger);
 
                     uploaded_changesets.insert(node, scheduled_uploading);
                     Ok(uploaded_changesets)
@@ -731,6 +738,7 @@ impl Bundle2Resolver {
                 HashMap::new(),
                 move |uploaded_changesets, (node, revlog_cs)| {
                     upload_changeset(
+                        ctx.clone(),
                         repo.clone(),
                         scuba_logger.clone(),
                         node.clone(),
@@ -800,6 +808,7 @@ impl Bundle2Resolver {
 
     fn prepare_pushrebase_response(
         &self,
+        ctx: CoreContext,
         commonheads: CommonHeads,
         pushrebased_rev: ChangesetId,
         onto: Bookmark,
@@ -810,9 +819,9 @@ impl Bundle2Resolver {
         // suddenly moved before current pushrebase finished.
         let repo: BlobRepo = (*self.repo).clone();
         let common = commonheads.heads;
-        let maybe_onto_head = repo.get_bookmark(&onto);
+        let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
 
-        let pushrebased_rev = repo.get_hg_from_bonsai_changeset(pushrebased_rev);
+        let pushrebased_rev = repo.get_hg_from_bonsai_changeset(ctx.clone(), pushrebased_rev);
 
         let mut scuba_logger = self.scuba_logger.clone();
         maybe_onto_head
@@ -823,7 +832,7 @@ impl Bundle2Resolver {
                     heads.push(onto_head);
                 }
                 heads.push(pushrebased_rev);
-                getbundle_response::create_getbundle_response(repo, common, heads, lca_hint)
+                getbundle_response::create_getbundle_response(ctx, repo, common, heads, lca_hint)
             })
             .and_then(|cg_part_builder| {
                 let compression = None;
@@ -887,6 +896,7 @@ impl Bundle2Resolver {
 
     fn pushrebase(
         &self,
+        ctx: CoreContext,
         changesets: Changesets,
         bookmark_pushes: Vec<BookmarkPush>,
         onto_bookmark: &Bookmark,
@@ -909,6 +919,7 @@ impl Bundle2Resolver {
         }
 
         pushrebase::do_pushrebase(
+            ctx,
             self.repo.clone(),
             self.pushrebase.clone(),
             onto_bookmark.clone(),
@@ -1021,6 +1032,7 @@ fn add_bookmark_to_transaction(
 
 /// Retrieves the parent from uploaded changesets, if it is missing then fetches it from BlobRepo
 fn get_parent(
+    ctx: CoreContext,
     repo: &BlobRepo,
     map: &UploadedChangesets,
     p: Option<HgNodeHash>,
@@ -1029,6 +1041,7 @@ fn get_parent(
         None => None,
         Some(p) => match map.get(&p) {
             None => Some(ChangesetHandle::ready_cs_handle(
+                ctx,
                 Arc::new(repo.clone()),
                 HgChangesetId::new(p),
             )),

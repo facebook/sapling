@@ -17,6 +17,7 @@ extern crate clap;
 #[macro_use]
 extern crate cloned;
 extern crate cmdlib;
+extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -45,6 +46,7 @@ pub mod tailer;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
+use context::CoreContext;
 use failure::Error;
 use failure::Result;
 use futures::Stream;
@@ -114,7 +116,11 @@ fn main() -> Result<()> {
 
     let manifold_client = ManifoldHttpClient::new(id, rc)?;
 
+    // TODO(T37478150, luk) This is not a test case, will be fixed in later diffs
+    let ctx = CoreContext::test_mock();
+
     let tailer = Tailer::new(
+        ctx,
         repo_name.to_string(),
         // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
         Arc::new(blobrepo),
@@ -305,6 +311,8 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
 
 fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     let crpath = PathBuf::from(matches.value_of("crpath").unwrap());
+    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+    let ctx = CoreContext::test_mock();
     let config_repo = BlobRepo::new_rocksdb(
         logger.new(o!["repo" => "Config repo"]),
         &crpath,
@@ -317,7 +325,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         Some(book) => {
             let book = bookmarks::Bookmark::new(book).expect("book must be ascii");
             tokio_runtime
-                .block_on(config_repo.get_bookmark(&book))?
+                .block_on(config_repo.get_bookmark(ctx, &book))?
                 .expect("bookmark not found")
         }
         None => mercurial_types::nodehash::HgChangesetId::from_str(

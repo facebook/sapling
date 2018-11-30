@@ -20,6 +20,7 @@ extern crate futures_ext;
 
 extern crate blobrepo_utils;
 extern crate cmdlib;
+extern crate context;
 extern crate failure_ext;
 extern crate mercurial_types;
 extern crate mononoke_types;
@@ -40,6 +41,7 @@ use futures_ext::FutureExt;
 
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use cmdlib::args;
+use context::CoreContext;
 use mercurial_types::HgChangesetId;
 
 use failure_ext::Result;
@@ -100,6 +102,9 @@ fn main() -> Result<()> {
     // matter much.
     let (end_sender, end_receiver) = ::std::sync::mpsc::channel();
 
+    // TODO(luk): This is not a test use case, fix it in next diffs
+    let ctx = CoreContext::test_mock();
+
     // The future::lazy is to ensure that bonsai_verify (which calls tokio::spawn) is called after
     // tokio::run, not before.
     let verify_fut = future::lazy({
@@ -110,6 +115,7 @@ fn main() -> Result<()> {
         let ignored = ignored.clone();
         move || {
             let bonsai_verify = BonsaiMFVerify {
+                ctx: ctx,
                 logger: logger.clone(),
                 repo: repo.blobrepo().clone(),
                 follow_limit,

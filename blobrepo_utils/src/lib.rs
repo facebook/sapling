@@ -10,6 +10,8 @@
 
 extern crate chashmap;
 #[macro_use]
+extern crate cloned;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
@@ -20,6 +22,7 @@ extern crate futures_ext;
 
 extern crate blobrepo;
 extern crate bonsai_utils;
+extern crate context;
 extern crate mercurial_types;
 extern crate mononoke_types;
 

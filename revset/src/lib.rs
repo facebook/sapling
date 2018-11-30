@@ -8,6 +8,7 @@ extern crate blobrepo;
 extern crate changesets;
 #[macro_use]
 extern crate cloned;
+extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 #[macro_use]

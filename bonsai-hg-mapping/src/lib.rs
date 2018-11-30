@@ -25,6 +25,7 @@ extern crate tokio;
 
 #[macro_use]
 extern crate cloned;
+extern crate context;
 extern crate futures_ext;
 #[macro_use]
 extern crate lazy_static;
@@ -43,6 +44,7 @@ use std::sync::Arc;
 use sql::Connection;
 pub use sql_ext::SqlConstructors;
 
+use context::CoreContext;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{HgChangesetId, HgNodeHash, RepositoryId};
@@ -125,46 +127,50 @@ impl From<HgChangesetId> for BonsaiOrHgChangesetIds {
 }
 
 pub trait BonsaiHgMapping: Send + Sync {
-    fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error>;
+    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error>;
 
     fn get(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error>;
 
     fn get_hg_from_bonsai(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<HgChangesetId>, Error> {
-        self.get(repo_id, cs_id.into())
+        self.get(ctx, repo_id, cs_id.into())
             .map(|result| result.into_iter().next().map(|entry| entry.hg_cs_id))
             .boxify()
     }
 
     fn get_bonsai_from_hg(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: HgChangesetId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
-        self.get(repo_id, cs_id.into())
+        self.get(ctx, repo_id, cs_id.into())
             .map(|result| result.into_iter().next().map(|entry| entry.bcs_id))
             .boxify()
     }
 }
 
 impl BonsaiHgMapping for Arc<BonsaiHgMapping> {
-    fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
-        (**self).add(entry)
+    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+        (**self).add(ctx, entry)
     }
 
     fn get(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
-        (**self).get(repo_id, cs_id)
+        (**self).get(ctx, repo_id, cs_id)
     }
 }
 
@@ -237,7 +243,7 @@ impl SqlConstructors for SqlBonsaiHgMapping {
 }
 
 impl BonsaiHgMapping for SqlBonsaiHgMapping {
-    fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+    fn add(&self, _ctxt: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
         STATS::adds.add_value(1);
         cloned!(self.read_master_connection);
 
@@ -273,6 +279,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
 
     fn get(
         &self,
+        _ctxt: CoreContext,
         repo_id: RepositoryId,
         ids: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {

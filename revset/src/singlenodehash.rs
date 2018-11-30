@@ -7,6 +7,7 @@
 use std::boxed::Box;
 
 use blobrepo::BlobRepo;
+use context::CoreContext;
 use failure::Error;
 use futures::{Async, Poll};
 use futures::future::Future;
@@ -22,9 +23,9 @@ pub struct SingleNodeHash {
 }
 
 impl SingleNodeHash {
-    pub fn new(nodehash: HgNodeHash, repo: &BlobRepo) -> Self {
+    pub fn new(ctx: CoreContext, nodehash: HgNodeHash, repo: &BlobRepo) -> Self {
         let changesetid = HgChangesetId::new(nodehash);
-        let exists = Box::new(repo.changeset_exists(&changesetid));
+        let exists = Box::new(repo.changeset_exists(ctx, &changesetid));
         let nodehash = Some(nodehash);
         SingleNodeHash { nodehash, exists }
     }
@@ -58,6 +59,7 @@ impl Stream for SingleNodeHash {
 mod test {
     use super::*;
     use async_unit;
+    use context::CoreContext;
     use fixtures::linear;
     use std::sync::Arc;
     use tests::assert_node_sequence;
@@ -66,13 +68,16 @@ mod test {
     #[test]
     fn valid_node() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
             let nodestream = SingleNodeHash::new(
+                ctx.clone(),
                 string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
                 &repo,
             );
 
             assert_node_sequence(
+                ctx,
                 &repo,
                 vec![
                     string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
@@ -85,11 +90,12 @@ mod test {
     #[test]
     fn invalid_node() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
             let nodehash = string_to_nodehash("1000000000000000000000000000000000000000");
-            let nodestream = SingleNodeHash::new(nodehash, &repo).boxed();
+            let nodestream = SingleNodeHash::new(ctx.clone(), nodehash, &repo).boxed();
 
-            assert_node_sequence(&repo, vec![].into_iter(), nodestream);
+            assert_node_sequence(ctx, &repo, vec![].into_iter(), nodestream);
         });
     }
 }

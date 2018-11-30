@@ -10,6 +10,7 @@ use bytes::Bytes;
 use cachelib::LruCachePool;
 use caching_ext::{CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind, McResult,
                   MemcacheHandler};
+use context::CoreContext;
 use errors::Error;
 use futures::{Future, future::ok};
 use futures_ext::{BoxFuture, FutureExt};
@@ -98,12 +99,13 @@ fn memcache_serialize(entry: &BonsaiHgMappingEntry) -> Bytes {
 }
 
 impl BonsaiHgMapping for CachingBonsaiHgMapping {
-    fn add(&self, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
-        self.mapping.add(entry)
+    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+        self.mapping.add(ctx, entry)
     }
 
     fn get(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
@@ -157,7 +159,7 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
             };
 
             mapping
-                .get(repo_id, bonsai_or_hg_csids)
+                .get(ctx.clone(), repo_id, bonsai_or_hg_csids)
                 .map(move |mapping_entries| {
                     mapping_entries
                         .into_iter()

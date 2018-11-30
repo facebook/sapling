@@ -37,7 +37,6 @@ extern crate stats;
 extern crate time_ext;
 #[macro_use]
 extern crate tracing;
-extern crate uuid;
 
 extern crate blobrepo;
 extern crate blobstore;

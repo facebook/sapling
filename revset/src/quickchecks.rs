@@ -18,6 +18,7 @@ use std::iter::Iterator;
 use std::sync::Arc;
 
 use blobrepo::{BlobRepo, ChangesetFetcher};
+use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::ChangesetId;
 use reachabilityindex::SkiplistIndex;
@@ -54,8 +55,8 @@ pub struct RevsetSpec {
     rp_entries: Vec<RevsetEntry>,
 }
 
-fn get_changesets_from_repo(repo: &BlobRepo) -> Vec<HgNodeHash> {
-    let mut all_changesets_executor = spawn(repo.get_changesets());
+fn get_changesets_from_repo(ctx: CoreContext, repo: &BlobRepo) -> Vec<HgNodeHash> {
+    let mut all_changesets_executor = spawn(repo.get_changesets(ctx));
     let mut all_changesets: Vec<HgNodeHash> = Vec::new();
     loop {
         all_changesets.push(match all_changesets_executor.wait_stream() {
@@ -69,11 +70,11 @@ fn get_changesets_from_repo(repo: &BlobRepo) -> Vec<HgNodeHash> {
 }
 
 impl RevsetSpec {
-    pub fn add_hashes<G>(&mut self, repo: &BlobRepo, random: &mut G)
+    pub fn add_hashes<G>(&mut self, ctx: CoreContext, repo: &BlobRepo, random: &mut G)
     where
         G: Rng,
     {
-        let all_changesets = get_changesets_from_repo(repo);
+        let all_changesets = get_changesets_from_repo(ctx, repo);
         for elem in self.rp_entries.iter_mut() {
             if let &mut RevsetEntry::SingleNode(None) = elem {
                 *elem = RevsetEntry::SingleNode(random.choose(all_changesets.as_slice()).cloned());
@@ -118,29 +119,31 @@ impl RevsetSpec {
         output.pop().expect("No revisions").into_iter().collect()
     }
 
-    pub fn as_revset(&self, repo: Arc<BlobRepo>) -> Box<NodeStream> {
+    pub fn as_revset(&self, ctx: CoreContext, repo: Arc<BlobRepo>) -> Box<NodeStream> {
         let mut output: Vec<Box<NodeStream>> = Vec::with_capacity(self.rp_entries.len());
         for entry in self.rp_entries.iter() {
             let next_node = ValidateNodeStream::new(
+                ctx.clone(),
                 match entry {
                     &RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),
                     &RevsetEntry::SingleNode(Some(hash)) => {
-                        SingleNodeHash::new(hash, &*repo.clone()).boxed()
+                        SingleNodeHash::new(ctx.clone(), hash, &*repo.clone()).boxed()
                     }
                     &RevsetEntry::SetDifference => {
                         let keep = output.pop().expect("No keep for setdifference");
                         let remove = output.pop().expect("No remove for setdifference");
-                        SetDifferenceNodeStream::new(&repo.clone(), keep, remove).boxed()
+                        SetDifferenceNodeStream::new(ctx.clone(), &repo.clone(), keep, remove)
+                            .boxed()
                     }
                     &RevsetEntry::Union(size) => {
                         let idx = output.len() - size;
                         let inputs = output.split_off(idx);
-                        UnionNodeStream::new(&repo.clone(), inputs).boxed()
+                        UnionNodeStream::new(ctx.clone(), &repo.clone(), inputs).boxed()
                     }
                     &RevsetEntry::Intersect(size) => {
                         let idx = output.len() - size;
                         let inputs = output.split_off(idx);
-                        IntersectNodeStream::new(&repo.clone(), inputs).boxed()
+                        IntersectNodeStream::new(ctx.clone(), &repo.clone(), inputs).boxed()
                     }
                 },
                 &repo.clone(),
@@ -255,10 +258,10 @@ fn match_streams(
     nodestream.wait_stream().is_none() && expected.is_empty()
 }
 
-fn match_hashset_to_revset(repo: Arc<BlobRepo>, mut set: RevsetSpec) -> bool {
-    set.add_hashes(&*repo, &mut thread_rng());
+fn match_hashset_to_revset(ctx: CoreContext, repo: Arc<BlobRepo>, mut set: RevsetSpec) -> bool {
+    set.add_hashes(ctx.clone(), &*repo, &mut thread_rng());
     let mut hashes = set.as_hashes();
-    let mut nodestream = spawn(set.as_revset(repo));
+    let mut nodestream = spawn(set.as_revset(ctx, repo));
 
     while !hashes.is_empty() {
         let hash = nodestream
@@ -280,8 +283,9 @@ macro_rules! quickcheck_setops {
         fn $test_name() {
             fn prop(set: RevsetSpec) -> bool {
                 async_unit::tokio_unit_test(|| {
+                    let ctx = CoreContext::test_mock();
                     let repo = Arc::new($repo::getrepo(None));
-                    match_hashset_to_revset(repo, set)
+                    match_hashset_to_revset(ctx, repo, set)
                 })
             }
 
@@ -352,13 +356,17 @@ impl Iterator for IncludeExcludeDiscardCombinationsIterator {
     }
 }
 
-fn hg_to_bonsai_changesetid(repo: &Arc<BlobRepo>, nodes: Vec<HgNodeHash>) -> Vec<ChangesetId> {
+fn hg_to_bonsai_changesetid(
+    ctx: CoreContext,
+    repo: &Arc<BlobRepo>,
+    nodes: Vec<HgNodeHash>,
+) -> Vec<ChangesetId> {
     stream::iter_ok(nodes.into_iter())
         .boxify()
         .and_then({
             let repo = repo.clone();
             move |hash| {
-                repo.get_bonsai_from_hg(&HgChangesetId::new(hash.clone()))
+                repo.get_bonsai_from_hg(ctx.clone(), &HgChangesetId::new(hash.clone()))
                     .map(move |maybe_bonsai| {
                         maybe_bonsai.expect("Failed to get Bonsai Changeset from HgNodeHash")
                     })
@@ -370,6 +378,7 @@ fn hg_to_bonsai_changesetid(repo: &Arc<BlobRepo>, nodes: Vec<HgNodeHash>) -> Vec
 }
 
 fn bonsai_nodestream_to_nodestream(
+    ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     stream: Box<BonsaiNodeStream>,
 ) -> Box<NodeStream> {
@@ -377,7 +386,7 @@ fn bonsai_nodestream_to_nodestream(
         .and_then({
             let repo = repo.clone();
             move |bonsai| {
-                repo.get_hg_from_bonsai_changeset(bonsai)
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bonsai)
                     .map(|cs| cs.into_nodehash())
             }
         })
@@ -389,12 +398,13 @@ macro_rules! ancestors_check {
         #[test]
         fn $test_name() {
             async_unit::tokio_unit_test(|| {
+                let ctx = CoreContext::test_mock();
 
                 let repo = Arc::new($repo::getrepo(None));
                 let changeset_fetcher: Arc<ChangesetFetcher> =
                     Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-                let all_changesets = get_changesets_from_repo(&*repo);
+                let all_changesets = get_changesets_from_repo(ctx.clone(), &*repo);
 
                 // Limit the number of changesets, otherwise tests take too much time
                 let max_changesets = 7;
@@ -407,13 +417,13 @@ macro_rules! ancestors_check {
                     let difference_stream =
                         create_skiplist(&repo)
                             .map({
-                                cloned!(changeset_fetcher, exclude, include, repo);
+                                cloned!(ctx, changeset_fetcher, exclude, include, repo);
                                 move |skiplist| {
                                     DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                                         &changeset_fetcher,
                                         skiplist,
-                                        hg_to_bonsai_changesetid(&repo, include.clone()),
-                                        hg_to_bonsai_changesetid(&repo, exclude.clone()),
+                                        hg_to_bonsai_changesetid(ctx.clone(), &repo, include.clone()),
+                                        hg_to_bonsai_changesetid(ctx, &repo, exclude.clone()),
                                     )
                                 }
                             })
@@ -421,14 +431,16 @@ macro_rules! ancestors_check {
                             .boxify();
 
                     let actual = ValidateNodeStream::new(
-                        bonsai_nodestream_to_nodestream(&repo, difference_stream),
+                        ctx.clone(),
+                        bonsai_nodestream_to_nodestream(ctx.clone(), &repo, difference_stream),
                         &repo.clone(),
                     );
 
                     let mut includes = vec![];
-                    for i in hg_to_bonsai_changesetid(&repo, include.clone()) {
+                    for i in hg_to_bonsai_changesetid(ctx.clone(), &repo, include.clone()) {
                         includes.push(
                             bonsai_nodestream_to_nodestream(
+                                ctx.clone(),
                                 &repo,
                                 AncestorsNodeStream::new(&changeset_fetcher, i).boxify()
                             )
@@ -436,18 +448,19 @@ macro_rules! ancestors_check {
                     }
 
                     let mut excludes = vec![];
-                    for i in hg_to_bonsai_changesetid(&repo, exclude.clone()) {
+                    for i in hg_to_bonsai_changesetid(ctx.clone(), &repo, exclude.clone()) {
                         excludes.push(
                             bonsai_nodestream_to_nodestream(
+                                ctx.clone(),
                                 &repo,
                                 AncestorsNodeStream::new(&changeset_fetcher, i).boxify()
                             )
                         );
                     }
 
-                    let includes = UnionNodeStream::new(&repo, includes).boxify();
-                    let excludes = UnionNodeStream::new(&repo, excludes).boxify();
-                    let expected = SetDifferenceNodeStream::new(&repo, includes, excludes);
+                    let includes = UnionNodeStream::new(ctx.clone(), &repo, includes).boxify();
+                    let excludes = UnionNodeStream::new(ctx.clone(), &repo, excludes).boxify();
+                    let expected = SetDifferenceNodeStream::new(ctx.clone(), &repo, includes, excludes);
 
                     assert!(
                         match_streams(expected.boxify(), actual.boxify()),

@@ -15,6 +15,7 @@ use sql::myrouter;
 
 use blobstore::Blobstore;
 use cache_warmup::cache_warmup;
+use context::CoreContext;
 use hooks::{HookManager, hook_loader::load_hooks};
 use mercurial_types::RepositoryId;
 use metaconfig::repoconfig::{RepoConfig, RepoType};
@@ -136,9 +137,11 @@ pub fn repo_handlers(
             // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
             let initial_warmup = ensure_myrouter_ready.and_then({
                 cloned!(reponame, listen_log);
+                // TODO(T37478150, luk): this is not a test use case, need to address this later
+                let ctx = CoreContext::test_mock();
                 let blobrepo = repo.blobrepo().clone();
                 move |()| {
-                    cache_warmup(Arc::new(blobrepo), config.cache_warmup, listen_log)
+                    cache_warmup(ctx, Arc::new(blobrepo), config.cache_warmup, listen_log)
                         .chain_err(format!("while warming up cache for repo: {}", reponame))
                         .from_err()
                 }

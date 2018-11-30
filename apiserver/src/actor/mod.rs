@@ -12,6 +12,7 @@ mod lfs;
 
 use std::collections::HashMap;
 
+use context::CoreContext;
 use failure::Error;
 use futures::{Future, IntoFuture, future::join_all};
 use futures_ext::{BoxFuture, FutureExt};
@@ -59,8 +60,11 @@ impl Mononoke {
         &self,
         MononokeQuery { repo, kind, .. }: MononokeQuery,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        // TODO(T37478150, luk): This is not good, APIServer is not a test case, but I want to handle this
+        // later
+        let ctx = CoreContext::test_mock();
         match self.repos.get(&repo) {
-            Some(repo) => repo.send_query(kind),
+            Some(repo) => repo.send_query(ctx, kind),
             None => match kind {
                 MononokeRepoQuery::LfsBatch { .. } => {
                     // LFS batch request require error in the different format:

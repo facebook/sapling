@@ -18,12 +18,14 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use slog::Logger;
 
 use blobrepo::BlobRepo;
+use context::CoreContext;
 use mercurial::RevlogRepo;
 use mercurial_types::HgNodeHash;
 
 use self::changeset::UploadChangesets;
 
 pub struct Blobimport {
+    pub ctx: CoreContext,
     pub logger: Logger,
     pub blobrepo: Arc<BlobRepo>,
     pub revlogrepo_path: PathBuf,
@@ -36,6 +38,7 @@ pub struct Blobimport {
 impl Blobimport {
     pub fn import(self) -> BoxFuture<(), Error> {
         let Self {
+            ctx,
             logger,
             blobrepo,
             revlogrepo_path,
@@ -53,6 +56,7 @@ impl Blobimport {
         let revlogrepo = RevlogRepo::open(revlogrepo_path).expect("cannot open revlogrepo");
 
         let upload_changesets = UploadChangesets {
+            ctx: ctx.clone(),
             blobrepo: blobrepo.clone(),
             revlogrepo: revlogrepo.clone(),
             changeset,
@@ -102,7 +106,7 @@ impl Blobimport {
                     );
                     future::ok(()).boxify()
                 } else {
-                    bookmark::upload_bookmarks(&logger, revlogrepo, blobrepo, stale_bookmarks)
+                    bookmark::upload_bookmarks(ctx, &logger, revlogrepo, blobrepo, stale_bookmarks)
                 }
             })
             .boxify()

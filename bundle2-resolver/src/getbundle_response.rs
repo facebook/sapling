@@ -12,6 +12,7 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
+use context::CoreContext;
 use futures::{stream, Future, Stream};
 use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{parts, part_encode::PartEncodeBuilder};
@@ -22,6 +23,7 @@ use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use mononoke_types::ChangesetId;
 
 pub fn create_getbundle_response(
+    ctx: CoreContext,
     blobrepo: BlobRepo,
     common: Vec<HgChangesetId>,
     heads: Vec<HgChangesetId>,
@@ -36,6 +38,7 @@ pub fn create_getbundle_response(
     let common_heads: HashSet<_> = HashSet::from_iter(common.iter());
 
     let heads = hg_to_bonsai_stream(
+        ctx.clone(),
         &blobrepo,
         heads
             .iter()
@@ -45,6 +48,7 @@ pub fn create_getbundle_response(
     );
 
     let excludes = hg_to_bonsai_stream(
+        ctx.clone(),
         &blobrepo,
         common
             .iter()
@@ -80,7 +84,7 @@ pub fn create_getbundle_response(
             cloned!(blobrepo);
             move |bonsai| {
                 blobrepo
-                    .get_hg_from_bonsai_changeset(bonsai)
+                    .get_hg_from_bonsai_changeset(ctx.clone(), bonsai)
                     .map(|cs| cs.into_nodehash())
                     .and_then({
                         cloned!(blobrepo);
@@ -116,6 +120,7 @@ pub fn create_getbundle_response(
 }
 
 fn hg_to_bonsai_stream(
+    ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     nodes: Vec<HgChangesetId>,
 ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
@@ -123,7 +128,7 @@ fn hg_to_bonsai_stream(
         .map({
             cloned!(repo);
             move |node| {
-                repo.get_bonsai_from_hg(&node)
+                repo.get_bonsai_from_hg(ctx.clone(), &node)
                     .and_then(move |maybe_bonsai| {
                         maybe_bonsai.ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node).into())
                     })

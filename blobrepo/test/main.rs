@@ -18,6 +18,7 @@ extern crate scuba_ext;
 extern crate blobrepo;
 extern crate blobstore;
 extern crate changesets;
+extern crate context;
 extern crate dbbookmarks;
 extern crate fixtures;
 #[macro_use]
@@ -39,6 +40,7 @@ use std::sync::Arc;
 
 use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
 use blobstore::{Blobstore, LazyMemblob, PrefixBlobstore};
+use context::CoreContext;
 use mercurial_types::{manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId,
                       HgManifestId, HgParents, MPath, MPathElement, RepoPath, RepositoryId};
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents,
@@ -289,6 +291,7 @@ test_both_repotypes!(
 );
 
 fn check_bonsai_creation(repo: BlobRepo) {
+    let ctx = CoreContext::test_mock();
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
 
@@ -308,7 +311,8 @@ fn check_bonsai_creation(repo: BlobRepo) {
 
     let commit = run_future(commit.get_completed_changeset()).unwrap();
     let commit = &commit.1;
-    let bonsai_cs_id = run_future(repo.get_bonsai_from_hg(&commit.get_changeset_id())).unwrap();
+    let bonsai_cs_id =
+        run_future(repo.get_bonsai_from_hg(ctx, &commit.get_changeset_id())).unwrap();
     assert!(bonsai_cs_id.is_some());
     let bonsai = run_future(repo.get_bonsai_changeset(bonsai_cs_id.unwrap())).unwrap();
     assert_eq!(
@@ -327,6 +331,7 @@ test_both_repotypes!(
 );
 
 fn check_bonsai_creation_with_rename(repo: BlobRepo) {
+    let ctx = CoreContext::test_mock();
     let parent = {
         let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
 
@@ -371,11 +376,13 @@ fn check_bonsai_creation_with_rename(repo: BlobRepo) {
     let child_cs = run_future(child.get_completed_changeset()).unwrap();
     let child_cs = &child_cs.1;
 
-    let parent_bonsai_cs_id = run_future(repo.get_bonsai_from_hg(&parent_cs.get_changeset_id()))
-        .unwrap()
-        .unwrap();
+    let parent_bonsai_cs_id =
+        run_future(repo.get_bonsai_from_hg(ctx.clone(), &parent_cs.get_changeset_id()))
+            .unwrap()
+            .unwrap();
 
-    let bonsai_cs_id = run_future(repo.get_bonsai_from_hg(&child_cs.get_changeset_id())).unwrap();
+    let bonsai_cs_id =
+        run_future(repo.get_bonsai_from_hg(ctx, &child_cs.get_changeset_id())).unwrap();
     let bonsai = run_future(repo.get_bonsai_changeset(bonsai_cs_id.unwrap())).unwrap();
     let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
     let file = MPath::new("file").unwrap();
@@ -677,6 +684,7 @@ fn make_file_change(
 #[test]
 fn test_get_manifest_from_bonsai() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = merge_uneven::getrepo(None);
         let get_manifest_for_changeset = |cs_nodehash: &str| -> HgManifestId {
             *run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(
@@ -716,6 +724,7 @@ fn test_get_manifest_from_bonsai() {
         // fails with conflict
         {
             let ms_hash = run_future(repo.get_manifest_from_bonsai(
+                ctx.clone(),
                 make_bonsai_changeset(None, None, vec![]),
                 Some(&ms1),
                 Some(&ms2),
@@ -733,6 +742,7 @@ fn test_get_manifest_from_bonsai() {
         // resolves same content different parents for `branch` file
         {
             let (ms_hash, _) = run_future(repo.get_manifest_from_bonsai(
+                ctx.clone(),
                 make_bonsai_changeset(None, None, vec![("base", None)]),
                 Some(&ms1),
                 Some(&ms2),
@@ -779,7 +789,7 @@ fn test_get_manifest_from_bonsai() {
             let fc = run_future(make_file_change(content_expected, &repo)).unwrap();
             let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
             let (ms_hash, _) =
-                run_future(repo.get_manifest_from_bonsai(bcs, Some(&ms1), Some(&ms2)))
+                run_future(repo.get_manifest_from_bonsai(ctx, bcs, Some(&ms1), Some(&ms2)))
                     .expect("adding new file should not produce coflict");
             let entries = run_future(get_entries(&ms_hash)).unwrap();
             let new = entries.get("new").expect("new file should be in entries");
@@ -798,6 +808,7 @@ fn test_get_manifest_from_bonsai() {
 #[test]
 fn test_case_conflict_in_manifest() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
         let get_manifest_for_changeset = |cs_id: &HgChangesetId| -> HgManifestId {
             *run_future(repo.get_changeset_by_changesetid(cs_id))
@@ -810,7 +821,7 @@ fn test_case_conflict_in_manifest() {
         ));
         let mf = get_manifest_for_changeset(&hg_cs);
 
-        let bonsai_parent = run_future(repo.get_bonsai_from_hg(&hg_cs))
+        let bonsai_parent = run_future(repo.get_bonsai_from_hg(ctx.clone(), &hg_cs))
             .unwrap()
             .unwrap();
 
@@ -827,7 +838,7 @@ fn test_case_conflict_in_manifest() {
             );
 
             let child_hg_cs =
-                run_future(repo.get_hg_from_bonsai_changeset(bcs_id.clone())).unwrap();
+                run_future(repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id.clone())).unwrap();
             let child_mf = get_manifest_for_changeset(&child_hg_cs);
             assert_eq!(
                 run_future(repo.check_case_conflict_in_manifest(

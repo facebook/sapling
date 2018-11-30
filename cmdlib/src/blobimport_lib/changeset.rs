@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
+use context::CoreContext;
 use failure::err_msg;
 use failure::prelude::*;
 use futures::{Future, IntoFuture};
@@ -203,6 +204,7 @@ fn upload_entry(
 }
 
 pub struct UploadChangesets {
+    pub ctx: CoreContext,
     pub blobrepo: Arc<BlobRepo>,
     pub revlogrepo: RevlogRepo,
     pub changeset: Option<HgNodeHash>,
@@ -213,6 +215,7 @@ pub struct UploadChangesets {
 impl UploadChangesets {
     pub fn upload(self) -> BoxStream<SharedItem<(BonsaiChangeset, HgBlobChangeset)>, Error> {
         let Self {
+            ctx,
             blobrepo,
             revlogrepo,
             changeset,
@@ -302,8 +305,8 @@ impl UploadChangesets {
                             let hg_cs_id = HgChangesetId::new(p);
 
                             maybe_handle.unwrap_or_else({
-                                cloned!(blobrepo);
-                                move || ChangesetHandle::ready_cs_handle(blobrepo, hg_cs_id)
+                                cloned!(ctx, blobrepo);
+                                move || ChangesetHandle::ready_cs_handle(ctx, blobrepo, hg_cs_id)
                             })
                         }
                     });
@@ -331,7 +334,7 @@ impl UploadChangesets {
                     must_check_case_conflicts: false,
                 };
                 let cshandle =
-                    create_changeset.create(&blobrepo, ScubaSampleBuilder::with_discard());
+                    create_changeset.create(ctx.clone(), &blobrepo, ScubaSampleBuilder::with_discard());
                 parent_changeset_handles.insert(csid, cshandle.clone());
                 oneshot::spawn(cshandle
                     .get_completed_changeset()

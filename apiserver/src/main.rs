@@ -21,6 +21,7 @@ extern crate clap;
 #[macro_use]
 extern crate cloned;
 extern crate cmdlib;
+extern crate context;
 extern crate env_logger;
 #[macro_use]
 extern crate failure_ext as failure;
@@ -73,6 +74,7 @@ use actix_web::{server, App, HttpRequest, HttpResponse, Json, State, http::heade
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::Arg;
+use context::CoreContext;
 use failure::{err_msg, Result};
 use futures::Future;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
@@ -293,6 +295,8 @@ fn create_config<P: AsRef<Path>>(
     bookmark: Option<&str>,
     hash: Option<&str>,
 ) -> Result<RepoConfigs> {
+    // TODO(T37478150, luk) This is not a test case, will be fixed in later diffs
+    let ctx = CoreContext::test_mock();
     let config_repo = BlobRepo::new_rocksdb(
         logger.new(o!["repo" => "Config repo"]),
         path.as_ref(),
@@ -303,7 +307,7 @@ fn create_config<P: AsRef<Path>>(
         .ok_or_else(|| err_msg(""))
         .and_then(|bookmark| {
             let bookmark = Bookmark::new(bookmark)?;
-            runtime.block_on(config_repo.get_bookmark(&bookmark))
+            runtime.block_on(config_repo.get_bookmark(ctx, &bookmark))
         })
         .and_then(|bookmark| bookmark.ok_or_else(|| err_msg("bookmark not found")))
         .or_else(|e| {

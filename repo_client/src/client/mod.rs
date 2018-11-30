@@ -22,7 +22,6 @@ use itertools::Itertools;
 use slog::Logger;
 use stats::Histogram;
 use time_ext::DurationExt;
-use uuid::Uuid;
 
 use blobrepo::HgBlobChangeset;
 use bookmarks::Bookmark;
@@ -163,7 +162,7 @@ fn bundle2caps() -> String {
 #[derive(Clone)]
 pub struct RepoClient {
     repo: MononokeRepo,
-    ctxt: CoreContext<Uuid>,
+    ctx: CoreContext,
     // Percent of returned entries (filelogs, manifests, changesets) which content
     // will be hash validated
     hash_validation_percentage: usize,
@@ -252,28 +251,28 @@ impl WireprotoLogger {
 impl RepoClient {
     pub fn new(
         repo: MononokeRepo,
-        ctxt: CoreContext<Uuid>,
+        ctx: CoreContext,
         hash_validation_percentage: usize,
         lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
     ) -> Self {
         RepoClient {
             repo,
-            ctxt,
+            ctx,
             hash_validation_percentage,
             lca_hint,
         }
     }
 
     fn logger(&self) -> &Logger {
-        self.ctxt.logger()
+        self.ctx.logger()
     }
 
     fn trace(&self) -> &TraceContext {
-        self.ctxt.trace()
+        self.ctx.trace()
     }
 
     fn scuba_logger(&self, op: &str, args: Option<String>) -> ScubaSampleBuilder {
-        let mut scuba_logger = self.ctxt.scuba().clone();
+        let mut scuba_logger = self.ctx.scuba().clone();
 
         scuba_logger.add("command", op);
 
@@ -289,6 +288,7 @@ impl RepoClient {
         let blobrepo = self.repo.blobrepo();
         let mut bundle2_parts = vec![];
         let cg_part_builder = bundle2_resolver::create_getbundle_response(
+            self.ctx.clone(),
             blobrepo.clone(),
             args.common
                 .into_iter()
@@ -308,10 +308,12 @@ impl RepoClient {
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
-            let items = blobrepo.get_bookmarks_maybe_stale().map(|(name, cs)| {
-                let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                (name.to_string(), hash)
-            });
+            let items = blobrepo
+                .get_bookmarks_maybe_stale(self.ctx.clone())
+                .map(|(name, cs)| {
+                    let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
+                    (name.to_string(), hash)
+                });
             bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
         }
         // TODO(stash): handle includepattern= and excludepattern=
@@ -410,10 +412,10 @@ impl RepoClient {
         args: Option<serde_json::Value>,
     ) -> WireprotoLogger {
         WireprotoLogger::new(
-            self.ctxt.scuba().clone(),
+            self.ctx.scuba().clone(),
             wireproto_command,
             args,
-            self.ctxt.wireproto_scribe_category().clone(),
+            self.ctx.wireproto_scribe_category().clone(),
             self.repo.reponame().clone(),
         )
     }
@@ -509,7 +511,7 @@ impl HgCommands for RepoClient {
 
         self.repo
             .blobrepo()
-            .get_heads_maybe_stale()
+            .get_heads_maybe_stale(self.ctx.clone())
             .collect()
             .map(|v| v.into_iter().collect())
             .from_err()
@@ -543,8 +545,12 @@ impl HgCommands for RepoClient {
             buf.freeze()
         }
 
-        fn check_bookmark_exists(repo: BlobRepo, bookmark: Bookmark) -> HgCommandRes<Bytes> {
-            repo.get_bookmark(&bookmark)
+        fn check_bookmark_exists(
+            ctx: CoreContext,
+            repo: BlobRepo,
+            bookmark: Bookmark,
+        ) -> HgCommandRes<Bytes> {
+            repo.get_bookmark(ctx, &bookmark)
                 .map(move |csid| match csid {
                     Some(csid) => generate_resp_buf(true, csid.to_hex().as_bytes()),
                     None => generate_resp_buf(false, format!("{} not found", bookmark).as_bytes()),
@@ -558,19 +564,22 @@ impl HgCommands for RepoClient {
         let lookup_fut = match (node, bookmark) {
             (Some(node), Some(bookmark)) => {
                 let csid = HgChangesetId::new(node);
-                repo.changeset_exists(&csid)
-                    .and_then(move |exists| {
-                        if exists {
-                            Ok(generate_resp_buf(true, node.to_hex().as_bytes()))
-                                .into_future()
-                                .boxify()
-                        } else {
-                            check_bookmark_exists(repo, bookmark)
+                repo.changeset_exists(self.ctx.clone(), &csid)
+                    .and_then({
+                        cloned!(self.ctx);
+                        move |exists| {
+                            if exists {
+                                Ok(generate_resp_buf(true, node.to_hex().as_bytes()))
+                                    .into_future()
+                                    .boxify()
+                            } else {
+                                check_bookmark_exists(ctx, repo, bookmark)
+                            }
                         }
                     })
                     .boxify()
             }
-            (None, Some(bookmark)) => check_bookmark_exists(repo, bookmark),
+            (None, Some(bookmark)) => check_bookmark_exists(self.ctx.clone(), repo, bookmark),
             // Failed to parse as a hash or bookmark.
             _ => Ok(generate_resp_buf(false, "invalid input".as_bytes()))
                 .into_future()
@@ -604,7 +613,7 @@ impl HgCommands for RepoClient {
 
         ({
             let ref_nodes: Vec<_> = nodes.iter().collect();
-            blobrepo.many_changesets_exists(&ref_nodes[..])
+            blobrepo.many_changesets_exists(self.ctx.clone(), &ref_nodes[..])
         }).map(move |cs| {
             let cs: HashSet<_> = cs.into_iter().collect();
             let known_nodes: Vec<_> = nodes
@@ -687,7 +696,7 @@ impl HgCommands for RepoClient {
 
             self.repo
                 .blobrepo()
-                .get_bookmarks_maybe_stale()
+                .get_bookmarks_maybe_stale(self.ctx.clone())
                 .map(|(name, cs)| {
                     let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                     (name, hash)
@@ -731,6 +740,7 @@ impl HgCommands for RepoClient {
         let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
 
         let res = bundle2_resolver::resolve(
+            self.ctx.clone(),
             Arc::new(self.repo.blobrepo().clone()),
             self.logger().new(o!("command" => "unbundle")),
             scuba_logger.clone(),

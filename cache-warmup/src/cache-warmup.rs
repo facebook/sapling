@@ -13,6 +13,7 @@ extern crate futures_ext;
 extern crate slog;
 
 extern crate blobrepo;
+extern crate context;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate revset;
@@ -21,6 +22,7 @@ use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
+use context::CoreContext;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, MPath, RepoPath};
@@ -94,6 +96,7 @@ fn blobstore_and_filenodes_warmup(
 
 // Iterate over first parents, and fetch them
 fn changesets_warmup(
+    ctx: CoreContext,
     start_rev: HgChangesetId,
     repo: Arc<BlobRepo>,
     cs_limit: usize,
@@ -101,7 +104,7 @@ fn changesets_warmup(
 ) -> impl Future<Item = (), Error = Error> {
     info!(logger, "about to start warming up changesets cache");
 
-    repo.get_bonsai_from_hg(&start_rev)
+    repo.get_bonsai_from_hg(ctx, &start_rev)
         .and_then({
             let start_rev = start_rev.clone();
             move |maybe_node| {
@@ -119,12 +122,13 @@ fn changesets_warmup(
 }
 
 fn do_cache_warmup(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     bookmark: Bookmark,
     commit_limit: usize,
     logger: Logger,
 ) -> BoxFuture<(), Error> {
-    repo.get_bookmark(&bookmark)
+    repo.get_bookmark(ctx.clone(), &bookmark)
         .and_then({
             let logger = logger.clone();
             let repo = repo.clone();
@@ -135,8 +139,13 @@ fn do_cache_warmup(
                         bookmark_rev,
                         logger.clone(),
                     ));
-                    let cs_warmup =
-                        spawn_future(changesets_warmup(bookmark_rev, repo, commit_limit, logger));
+                    let cs_warmup = spawn_future(changesets_warmup(
+                        ctx,
+                        bookmark_rev,
+                        repo,
+                        commit_limit,
+                        logger,
+                    ));
                     blobstore_warmup.join(cs_warmup).map(|_| ()).boxify()
                 }
                 None => {
@@ -157,12 +166,14 @@ fn do_cache_warmup(
 /// Fetch all manifest entries for a bookmark, and fetches up to `commit_warmup_limit`
 /// ancestors of the bookmark.
 pub fn cache_warmup(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     cache_warmup: Option<CacheWarmupParams>,
     logger: Logger,
 ) -> BoxFuture<(), Error> {
     match cache_warmup {
         Some(cache_warmup) => do_cache_warmup(
+            ctx,
             repo,
             cache_warmup.bookmark,
             cache_warmup.commit_limit,
