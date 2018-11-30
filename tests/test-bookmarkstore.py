@@ -65,8 +65,12 @@ class bookmarkstoretests(unittest.TestCase):
         bmstore.update("test", node.bin("1" * 40))
         bmstore.flush()
 
-        # Delete a random file from the bookmark store backing directory.
-        os.unlink(os.path.join(bmdir, random.choice(os.listdir(bmdir))))
+        def truncateFilesInDir(d):
+            for f in os.listdir(d):
+                with open(os.path.join(d, f), "w"):
+                    pass
+
+        truncateFilesInDir(bmdir)
         self.assertRaises(IOError, bookmarkstore.bookmarkstore, bmdir)
 
     def testLoadingBookmarks(self):
