@@ -600,18 +600,30 @@ impl HgCommands for RepoClient {
         let mut scuba_logger = self.scuba_logger(ops::KNOWN, None);
 
         let nodes: Vec<_> = nodes.into_iter().map(HgChangesetId::new).collect();
+        let nodes_len = nodes.len();
+
         ({
             let ref_nodes: Vec<_> = nodes.iter().collect();
             blobrepo.many_changesets_exists(&ref_nodes[..])
         }).map(move |cs| {
             let cs: HashSet<_> = cs.into_iter().collect();
-            nodes
+            let known_nodes: Vec<_> = nodes
                 .into_iter()
                 .map(move |node| cs.contains(&node))
-                .collect()
+                .collect();
+            known_nodes
         })
             .traced(self.trace(), ops::KNOWN, trace_args!())
-            .timed(move |stats, _| {
+            .timed(move |stats, known_nodes| {
+                if let Ok(known) = known_nodes {
+                    let extra_context = json!({
+                        "num_known": known.len(),
+                        "num_unknown": nodes_len - known.len(),
+                    }).to_string();
+
+                    scuba_logger.add("extra_context", extra_context);
+                }
+
                 scuba_logger
                     .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);
