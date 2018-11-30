@@ -20,6 +20,7 @@ extern crate blobrepo;
 extern crate maplit;
 extern crate mercurial_types;
 extern crate mononoke_types;
+extern crate uniqueheap;
 
 extern crate rust_thrift;
 extern crate skiplist_thrift;

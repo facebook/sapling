@@ -18,6 +18,7 @@ extern crate maplit;
 extern crate mercurial_types;
 extern crate mononoke_types;
 extern crate reachabilityindex;
+extern crate uniqueheap;
 
 use futures::stream::Stream;
 use mercurial_types::HgNodeHash;
@@ -55,7 +56,6 @@ pub use ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
 mod range;
 pub use range::RangeNodeStream;
 
-mod uniqueheap;
 use uniqueheap::UniqueHeap;
 
 pub use test::*;

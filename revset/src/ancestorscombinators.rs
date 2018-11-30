@@ -243,7 +243,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                         let mut should_exclude: Option<bool> = None;
                         {
                             if let Some(ref nodes) =
-                                curr_exclude_ancestors.gen_map.get(&current_generation)
+                                curr_exclude_ancestors.get(&current_generation)
                             {
                                 should_exclude = Some(nodes.contains(&node));
                             }

@@ -7,9 +7,10 @@
 use std::collections::{BinaryHeap, HashSet};
 use std::hash::Hash;
 
+#[derive(Clone, Debug)]
 pub struct UniqueHeap<T>
 where
-    T: Ord + Hash + Eq,
+    T: Clone + Ord + Hash + Eq,
 {
     sorted_vals: BinaryHeap<T>,
     unique_vals: HashSet<T>,
@@ -17,7 +18,7 @@ where
 
 impl<T> UniqueHeap<T>
 where
-    T: Ord + Hash + Eq + Clone,
+    T: Clone + Ord + Hash + Eq + Clone,
 {
     pub fn new() -> Self {
         UniqueHeap {
@@ -40,5 +41,9 @@ where
         } else {
             None
         }
+    }
+
+    pub fn peek(&self) -> Option<&T> {
+        self.sorted_vals.peek()
     }
 }

@@ -531,7 +531,7 @@ fn process_frontier(
         node_frontier,
         move |mut node_frontier: NodeFrontier| match node_frontier.max_gen() {
             Some(val) if val > max_gen => {
-                let all_cs_ids = node_frontier.gen_map.remove(&val).unwrap();
+                let all_cs_ids = node_frontier.remove_max_gen().unwrap();
                 let (no_skiplist_edges, skipped_frontier) = move_skippable_nodes(
                     skip_edges.clone(),
                     all_cs_ids.into_iter().collect(),
@@ -565,7 +565,7 @@ fn process_frontier(
                     .map(move |gen_cs| {
                         node_frontier.insert_iter(gen_cs.into_iter());
 
-                        for (gen, s) in skipped_frontier.gen_map {
+                        for (gen, s) in skipped_frontier.into_map() {
                             for entry in s {
                                 node_frontier.insert((entry, gen));
                             }
