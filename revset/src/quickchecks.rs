@@ -415,11 +415,12 @@ macro_rules! ancestors_check {
                 let iter = IncludeExcludeDiscardCombinationsIterator::new(all_changesets);
                 for (include, exclude) in iter {
                     let difference_stream =
-                        create_skiplist(&repo)
+                        create_skiplist(ctx.clone(), &repo)
                             .map({
                                 cloned!(ctx, changeset_fetcher, exclude, include, repo);
                                 move |skiplist| {
                                     DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                                        ctx.clone(),
                                         &changeset_fetcher,
                                         skiplist,
                                         hg_to_bonsai_changesetid(ctx.clone(), &repo, include.clone()),
@@ -442,7 +443,7 @@ macro_rules! ancestors_check {
                             bonsai_nodestream_to_nodestream(
                                 ctx.clone(),
                                 &repo,
-                                AncestorsNodeStream::new(&changeset_fetcher, i).boxify()
+                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify()
                             )
                         );
                     }
@@ -453,7 +454,7 @@ macro_rules! ancestors_check {
                             bonsai_nodestream_to_nodestream(
                                 ctx.clone(),
                                 &repo,
-                                AncestorsNodeStream::new(&changeset_fetcher, i).boxify()
+                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify()
                             )
                         );
                     }
@@ -478,7 +479,10 @@ mod empty_skiplist_tests {
     use super::*;
     use futures_ext::FutureExt;
 
-    fn create_skiplist(_repo: &Arc<BlobRepo>) -> BoxFuture<Arc<SkiplistIndex>, Error> {
+    fn create_skiplist(
+        _ctxt: CoreContext,
+        _repo: &Arc<BlobRepo>,
+    ) -> BoxFuture<Arc<SkiplistIndex>, Error> {
         ok(Arc::new(SkiplistIndex::new())).boxify()
     }
 
@@ -496,7 +500,10 @@ mod full_skiplist_tests {
     use super::*;
     use futures_ext::FutureExt;
 
-    fn create_skiplist(repo: &Arc<BlobRepo>) -> BoxFuture<Arc<SkiplistIndex>, Error> {
+    fn create_skiplist(
+        ctx: CoreContext,
+        repo: &Arc<BlobRepo>,
+    ) -> BoxFuture<Arc<SkiplistIndex>, Error> {
         let changeset_fetcher = repo.get_changeset_fetcher();
         let skiplist_index = SkiplistIndex::new();
         let max_index_depth = 100;
@@ -510,6 +517,7 @@ mod full_skiplist_tests {
                         cloned!(skiplist_index);
                         move |head| {
                             skiplist_index.add_node(
+                                ctx.clone(),
                                 changeset_fetcher.clone(),
                                 head,
                                 max_index_depth,

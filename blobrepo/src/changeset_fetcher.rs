@@ -7,6 +7,7 @@
 use blobstore::Blobstore;
 use cachelib;
 use changesets::{deserialize_cs_entries, get_cache_key, ChangesetEntry, Changesets};
+use context::CoreContext;
 use failure::{err_msg, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -23,9 +24,17 @@ use std::time::Duration;
 /// Trait that knows how to fetch DAG info about commits. Primary user is revsets
 /// Concrete implementation may add more efficient caching logic to make request faster
 pub trait ChangesetFetcher: Send + Sync {
-    fn get_generation_number(&self, cs_id: ChangesetId) -> BoxFuture<Generation, Error>;
+    fn get_generation_number(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Generation, Error>;
 
-    fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error>;
+    fn get_parents(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Vec<ChangesetId>, Error>;
 
     fn get_stats(&self) -> HashMap<String, Box<Any>> {
         HashMap::new()
@@ -48,9 +57,13 @@ impl SimpleChangesetFetcher {
 }
 
 impl ChangesetFetcher for SimpleChangesetFetcher {
-    fn get_generation_number(&self, cs_id: ChangesetId) -> BoxFuture<Generation, Error> {
+    fn get_generation_number(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Generation, Error> {
         self.changesets
-            .get(self.repo_id.clone(), cs_id.clone())
+            .get(ctx, self.repo_id.clone(), cs_id.clone())
             .and_then(move |maybe_cs| {
                 maybe_cs.ok_or_else(|| err_msg(format!("{} not found", cs_id)))
             })
@@ -58,9 +71,13 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
             .boxify()
     }
 
-    fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error> {
+    fn get_parents(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Vec<ChangesetId>, Error> {
         self.changesets
-            .get(self.repo_id.clone(), cs_id.clone())
+            .get(ctx, self.repo_id.clone(), cs_id.clone())
             .and_then(move |maybe_cs| {
                 maybe_cs.ok_or_else(|| err_msg(format!("{} not found", cs_id)))
             })
@@ -204,6 +221,7 @@ impl CachingChangesetFetcher {
 
     fn get_changeset_entry(
         &self,
+        ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> impl Future<Item = ChangesetEntry, Error = Error> {
         let cache_key = get_cache_key(&self.repo_id, &cs_id);
@@ -212,7 +230,7 @@ impl CachingChangesetFetcher {
         self.cache_requests.fetch_add(1, Ordering::Relaxed);
         cachelib::get_cached_or_fill(&self.cache_pool, cache_key, move || {
             self.cache_misses.fetch_add(1, Ordering::Relaxed);
-            self.changesets.get(repo_id, cs_id)
+            self.changesets.get(ctx, repo_id, cs_id)
         }).and_then(move |maybe_cs| maybe_cs.ok_or_else(|| err_msg(format!("{} not found", cs_id))))
             .and_then({
                 let cs_fetcher = self.clone();
@@ -236,14 +254,22 @@ impl CachingChangesetFetcher {
 }
 
 impl ChangesetFetcher for CachingChangesetFetcher {
-    fn get_generation_number(&self, cs_id: ChangesetId) -> BoxFuture<Generation, Error> {
-        self.get_changeset_entry(cs_id.clone())
+    fn get_generation_number(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Generation, Error> {
+        self.get_changeset_entry(ctx, cs_id.clone())
             .map(|cs| Generation::new(cs.gen))
             .boxify()
     }
 
-    fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error> {
-        self.get_changeset_entry(cs_id.clone())
+    fn get_parents(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Vec<ChangesetId>, Error> {
+        self.get_changeset_entry(ctx, cs_id.clone())
             .map(|cs| cs.parents)
             .boxify()
     }
@@ -303,7 +329,7 @@ mod tests {
     }
 
     impl Changesets for TestChangesets {
-        fn add(&self, cs_insert: ChangesetInsert) -> BoxFuture<bool, Error> {
+        fn add(&self, _ctxt: CoreContext, cs_insert: ChangesetInsert) -> BoxFuture<bool, Error> {
             let mut changesets = self.changesets.lock().unwrap();
 
             let mut max_gen: u64 = 0;
@@ -341,6 +367,7 @@ mod tests {
 
         fn get(
             &self,
+            _ctxt: CoreContext,
             _repo_id: RepositoryId,
             cs_id: ChangesetId,
         ) -> BoxFuture<Option<ChangesetEntry>, Error> {
@@ -379,41 +406,41 @@ mod tests {
         }
     }
 
-    fn create_stack(changesets: &Changesets) {
+    fn create_stack(ctx: CoreContext, changesets: &Changesets) {
         let cs = ChangesetInsert {
             repo_id: REPO_ZERO,
             cs_id: ONES_CSID,
             parents: vec![],
         };
-        changesets.add(cs).wait().unwrap();
+        changesets.add(ctx.clone(), cs).wait().unwrap();
 
         let cs = ChangesetInsert {
             repo_id: REPO_ZERO,
             cs_id: TWOS_CSID,
             parents: vec![ONES_CSID],
         };
-        changesets.add(cs).wait().unwrap();
+        changesets.add(ctx.clone(), cs).wait().unwrap();
 
         let cs = ChangesetInsert {
             repo_id: REPO_ZERO,
             cs_id: THREES_CSID,
             parents: vec![TWOS_CSID],
         };
-        changesets.add(cs).wait().unwrap();
+        changesets.add(ctx.clone(), cs).wait().unwrap();
 
         let cs = ChangesetInsert {
             repo_id: REPO_ZERO,
             cs_id: FOURS_CSID,
             parents: vec![THREES_CSID],
         };
-        changesets.add(cs).wait().unwrap();
+        changesets.add(ctx.clone(), cs).wait().unwrap();
 
         let cs = ChangesetInsert {
             repo_id: REPO_ZERO,
             cs_id: FIVES_CSID,
             parents: vec![FOURS_CSID],
         };
-        changesets.add(cs).wait().unwrap();
+        changesets.add(ctx, cs).wait().unwrap();
     }
 
     fn get_cache_pool() -> LruCachePool {
@@ -425,10 +452,11 @@ mod tests {
     #[test]
     fn test_changeset_fetcher_simple() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let cache_pool = get_cache_pool();
             let cs_get_counter = Arc::new(AtomicUsize::new(0));
             let changesets = TestChangesets::new(cs_get_counter.clone());
-            create_stack(&changesets);
+            create_stack(ctx.clone(), &changesets);
             let cs = Arc::new(changesets);
 
             let blobstore_get_counter = Arc::new(AtomicUsize::new(0));
@@ -439,7 +467,10 @@ mod tests {
                 Arc::new(TestBlobstore::new(blobstore_get_counter.clone())),
             );
 
-            cs_fetcher.get_generation_number(ONES_CSID).wait().unwrap();
+            cs_fetcher
+                .get_generation_number(ctx, ONES_CSID)
+                .wait()
+                .unwrap();
             assert_eq!(blobstore_get_counter.load(Ordering::Relaxed), 0);
             assert_eq!(cs_get_counter.load(Ordering::Relaxed), 1);
         });
@@ -448,11 +479,12 @@ mod tests {
     #[test]
     fn test_changeset_fetcher_no_entry_in_blobstore() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let cache_pool = get_cache_pool();
 
             let cs_get_counter = Arc::new(AtomicUsize::new(0));
             let changesets = TestChangesets::new(cs_get_counter.clone());
-            create_stack(&changesets);
+            create_stack(ctx.clone(), &changesets);
             let cs = Arc::new(changesets);
             let blobstore_get_counter = Arc::new(AtomicUsize::new(0));
             let blobstore = Arc::new(TestBlobstore::new(blobstore_get_counter.clone()));
@@ -465,7 +497,10 @@ mod tests {
                 2, /* 0, 2, 4 etc gen numbers  might have a cache entry */
             );
 
-            cs_fetcher.get_generation_number(FIVES_CSID).wait().unwrap();
+            cs_fetcher
+                .get_generation_number(ctx, FIVES_CSID)
+                .wait()
+                .unwrap();
             assert_eq!(blobstore_get_counter.load(Ordering::Relaxed), 1);
             assert_eq!(cs_get_counter.load(Ordering::Relaxed), 1);
 
@@ -505,11 +540,12 @@ mod tests {
     #[test]
     fn test_changeset_fetcher_entry_in_blobstore() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let cache_pool = get_cache_pool();
 
             let cs_get_counter = Arc::new(AtomicUsize::new(0));
             let changesets = TestChangesets::new(cs_get_counter.clone());
-            create_stack(&changesets);
+            create_stack(ctx.clone(), &changesets);
             let cs = Arc::new(changesets);
             let blobstore_get_counter = Arc::new(AtomicUsize::new(0));
             let blobstore = TestBlobstore::new(blobstore_get_counter.clone());
@@ -518,8 +554,14 @@ mod tests {
             blobstore.put(
                 "changesetscache_4".to_string(),
                 BlobstoreBytes::from_bytes(serialize_cs_entries(vec![
-                    cs.get(REPO_ZERO, FIVES_CSID).wait().unwrap().unwrap(),
-                    cs.get(REPO_ZERO, FOURS_CSID).wait().unwrap().unwrap(),
+                    cs.get(ctx.clone(), REPO_ZERO, FIVES_CSID)
+                        .wait()
+                        .unwrap()
+                        .unwrap(),
+                    cs.get(ctx.clone(), REPO_ZERO, FOURS_CSID)
+                        .wait()
+                        .unwrap()
+                        .unwrap(),
                 ])),
             );
 
@@ -536,8 +578,14 @@ mod tests {
             );
 
             assert_eq!(blobstore_get_counter.load(Ordering::Relaxed), 0);
-            cs_fetcher.get_generation_number(FIVES_CSID).wait().unwrap();
-            cs_fetcher.get_generation_number(FOURS_CSID).wait().unwrap();
+            cs_fetcher
+                .get_generation_number(ctx.clone(), FIVES_CSID)
+                .wait()
+                .unwrap();
+            cs_fetcher
+                .get_generation_number(ctx, FOURS_CSID)
+                .wait()
+                .unwrap();
             assert_eq!(blobstore_get_counter.load(Ordering::Relaxed), 1);
             assert_eq!(cs_get_counter.load(Ordering::Relaxed), 1);
 

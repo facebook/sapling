@@ -42,15 +42,25 @@ impl TestChangesetFetcher {
 }
 
 impl ChangesetFetcher for TestChangesetFetcher {
-    fn get_generation_number(&self, cs_id: ChangesetId) -> BoxFuture<Generation, Error> {
+    fn get_generation_number(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Generation, Error> {
         self.repo
-            .get_generation_number_by_bonsai(&cs_id)
+            .get_generation_number_by_bonsai(ctx, &cs_id)
             .and_then(move |genopt| genopt.ok_or_else(|| err_msg(format!("{} not found", cs_id))))
             .boxify()
     }
 
-    fn get_parents(&self, cs_id: ChangesetId) -> BoxFuture<Vec<ChangesetId>, Error> {
-        self.repo.get_changeset_parents_by_bonsai(&cs_id).boxify()
+    fn get_parents(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Vec<ChangesetId>, Error> {
+        self.repo
+            .get_changeset_parents_by_bonsai(ctx, &cs_id)
+            .boxify()
     }
 
     fn get_stats(&self) -> HashMap<String, Box<Any>> {
@@ -126,6 +136,7 @@ pub fn assert_node_sequence<I>(
 }
 
 pub fn assert_changesets_sequence<I>(
+    ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     hashes: I,
     stream: Box<Stream<Item = ChangesetId, Error = Error>>,
@@ -142,7 +153,7 @@ pub fn assert_changesets_sequence<I>(
         }
 
         let expected_generation = repo.clone()
-            .get_generation_number_by_bonsai(&expected)
+            .get_generation_number_by_bonsai(ctx.clone(), &expected)
             .wait()
             .expect("Unexpected error");
 
@@ -158,7 +169,7 @@ pub fn assert_changesets_sequence<I>(
             }
 
             let node_generation = repo.clone()
-                .get_generation_number_by_bonsai(&expected)
+                .get_generation_number_by_bonsai(ctx.clone(), &expected)
                 .wait()
                 .expect("Unexpected error");
 

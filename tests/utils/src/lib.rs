@@ -8,6 +8,7 @@
 
 extern crate blobrepo;
 extern crate bytes;
+extern crate context;
 extern crate futures;
 #[macro_use]
 extern crate maplit;
@@ -15,6 +16,7 @@ extern crate mononoke_types;
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bytes::Bytes;
+use context::CoreContext;
 use futures::future::Future;
 use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents,
                      FileType, MPath};
@@ -62,6 +64,7 @@ pub fn store_rename(
 }
 
 pub fn create_commit(
+    ctx: CoreContext,
     repo: BlobRepo,
     parents: Vec<ChangesetId>,
     file_changes: BTreeMap<MPath, Option<FileChange>>,
@@ -79,6 +82,8 @@ pub fn create_commit(
         .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], repo.clone()).wait().unwrap();
+    save_bonsai_changesets(vec![bcs], ctx, repo.clone())
+        .wait()
+        .unwrap();
     bcs_id
 }

@@ -43,12 +43,13 @@ pub fn add_generations(
 }
 
 pub fn add_generations_by_bonsai(
+    ctx: CoreContext,
     stream: Box<BonsaiNodeStream>,
     changeset_fetcher: Arc<ChangesetFetcher>,
 ) -> BonsaiInputStream {
     let stream = stream.and_then(move |changesetid| {
         changeset_fetcher
-            .get_generation_number(changesetid)
+            .get_generation_number(ctx.clone(), changesetid)
             .map(move |gen_id| (changesetid, gen_id))
             .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
     });

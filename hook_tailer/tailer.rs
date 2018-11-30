@@ -87,7 +87,7 @@ impl Tailer {
         cloned!(logger);
         nodehash_to_bonsai(ctx.clone(), &repo, end_rev)
             .and_then(move |end_rev| {
-                AncestorsNodeStream::new(&repo.get_changeset_fetcher(), end_rev)
+                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), end_rev)
                     .take(1000) // Limit number so we don't process too many
                     .map({
                         move |cs| {
@@ -135,14 +135,14 @@ impl Tailer {
                 |opt| opt.ok_or(ErrorKind::NoSuchBookmark(bm).into())
             })
             .and_then({
-                cloned!(self.repo);
+                cloned!(ctx, self.repo);
                 move |bm_rev| nodehash_to_bonsai(ctx, &repo, bm_rev.into_nodehash())
             });
 
         cloned!(self.ctx, self.repo, self.logger);
         bm_rev
             .and_then(move |bm_rev| {
-                AncestorsNodeStream::new(&repo.get_changeset_fetcher(), bm_rev)
+                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bm_rev)
                     .take(limit)
                     .map({
                         move |cs| {

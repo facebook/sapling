@@ -7,6 +7,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use context::CoreContext;
 use failure::Error;
 use futures::future::{loop_fn, ok, Future, Loop};
 use futures::stream::{iter_ok, Stream};
@@ -34,6 +35,7 @@ impl GenerationNumberBFS {
 // - filter out nodes whose generation number is too large
 // - return the parents as the next bfs layer, and the updated seen as the new seen set
 fn process_bfs_layer(
+    ctx: CoreContext,
     changeset_fetcher: Arc<ChangesetFetcher>,
     curr_layer: HashSet<ChangesetId>,
     mut curr_seen: HashSet<ChangesetId>,
@@ -45,11 +47,16 @@ fn process_bfs_layer(
     }
 
     iter_ok::<_, Error>(curr_layer)
-        .and_then(move |hash| new_changeset_fetcher.get_parents(hash))
+        .and_then({
+            cloned!(ctx);
+            move |hash| new_changeset_fetcher.get_parents(ctx.clone(), hash)
+        })
         .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
         .flatten()
         .collect()
-        .and_then(|all_parents| changesets_with_generation_numbers(changeset_fetcher, all_parents))
+        .and_then(|all_parents| {
+            changesets_with_generation_numbers(ctx, changeset_fetcher, all_parents)
+        })
         .map(move |flattened_node_generation_pairs| {
             let mut next_layer = HashSet::new();
             for (parent_hash, parent_gen) in flattened_node_generation_pairs.into_iter() {
@@ -65,36 +72,40 @@ fn process_bfs_layer(
 impl ReachabilityIndex for GenerationNumberBFS {
     fn query_reachability(
         &self,
+        ctx: CoreContext,
         changeset_fetcher: Arc<ChangesetFetcher>,
         src: ChangesetId,
         dst: ChangesetId,
     ) -> BoxFuture<bool, Error> {
         let start_bfs_layer: HashSet<_> = vec![src].into_iter().collect();
         let start_seen: HashSet<_> = HashSet::new();
-        check_if_node_exists(changeset_fetcher.clone(), src.clone())
+        check_if_node_exists(ctx.clone(), changeset_fetcher.clone(), src.clone())
             .and_then(move |_| {
-                fetch_generation(changeset_fetcher.clone(), dst.clone()).and_then(move |dst_gen| {
-                    loop_fn(
-                        (start_bfs_layer, start_seen),
-                        move |(curr_layer, curr_seen)| {
-                            if curr_layer.contains(&dst) {
-                                ok(Loop::Break(true)).boxify()
-                            } else if curr_layer.is_empty() {
-                                ok(Loop::Break(false)).boxify()
-                            } else {
-                                process_bfs_layer(
-                                    changeset_fetcher.clone(),
-                                    curr_layer,
-                                    curr_seen,
-                                    dst_gen,
-                                ).map(move |(next_layer, next_seen)| {
-                                    Loop::Continue((next_layer, next_seen))
-                                })
-                                    .boxify()
-                            }
-                        },
-                    )
-                })
+                fetch_generation(ctx.clone(), changeset_fetcher.clone(), dst.clone()).and_then(
+                    move |dst_gen| {
+                        loop_fn(
+                            (start_bfs_layer, start_seen),
+                            move |(curr_layer, curr_seen)| {
+                                if curr_layer.contains(&dst) {
+                                    ok(Loop::Break(true)).boxify()
+                                } else if curr_layer.is_empty() {
+                                    ok(Loop::Break(false)).boxify()
+                                } else {
+                                    process_bfs_layer(
+                                        ctx.clone(),
+                                        changeset_fetcher.clone(),
+                                        curr_layer,
+                                        curr_seen,
+                                        dst_gen,
+                                    ).map(move |(next_layer, next_seen)| {
+                                        Loop::Continue((next_layer, next_seen))
+                                    })
+                                        .boxify()
+                                }
+                            },
+                        )
+                    },
+                )
             })
             .from_err()
             .boxify()

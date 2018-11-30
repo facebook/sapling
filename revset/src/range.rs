@@ -17,6 +17,7 @@ use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
 
 use blobrepo::BlobRepo;
+use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
@@ -35,6 +36,7 @@ struct ParentChild {
 }
 
 pub struct RangeNodeStream {
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     start_node: ChangesetId,
     start_generation: Box<Stream<Item = Generation, Error = Error> + Send>,
@@ -46,6 +48,7 @@ pub struct RangeNodeStream {
 }
 
 fn make_pending(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     child: HashGen,
 ) -> Box<Stream<Item = ParentChild, Error = Error> + Send> {
@@ -61,7 +64,7 @@ fn make_pending(
         }.map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
             .flatten_stream()
             .and_then(move |(child, parent_hash)| {
-                repo.get_generation_number_by_bonsai(&parent_hash)
+                repo.get_generation_number_by_bonsai(ctx.clone(), &parent_hash)
                     .and_then(move |genopt| {
                         genopt.ok_or_else(|| err_msg(format!("{} not found", parent_hash)))
                     })
@@ -80,10 +83,15 @@ fn make_pending(
 impl RangeNodeStream {
     // `start_node` should have a lower generation number than end_node,
     // otherwise stream will be empty
-    pub fn new(repo: &Arc<BlobRepo>, start_node: ChangesetId, end_node: ChangesetId) -> Self {
+    pub fn new(
+        ctx: CoreContext,
+        repo: &Arc<BlobRepo>,
+        start_node: ChangesetId,
+        end_node: ChangesetId,
+    ) -> Self {
         let start_generation = Box::new(
             repo.clone()
-                .get_generation_number_by_bonsai(&start_node)
+                .get_generation_number_by_bonsai(ctx.clone(), &start_node)
                 .and_then(move |genopt| {
                     genopt.ok_or_else(|| err_msg(format!("{} not found", start_node)))
                 })
@@ -93,16 +101,17 @@ impl RangeNodeStream {
         );
 
         let pending_nodes = {
-            let repo = repo.clone();
+            cloned!(ctx, repo);
             Box::new(
                 repo.clone()
-                    .get_generation_number_by_bonsai(&end_node)
+                    .get_generation_number_by_bonsai(ctx.clone(), &end_node)
                     .and_then(move |genopt| {
                         genopt.ok_or_else(|| err_msg(format!("{} not found", end_node)))
                     })
                     .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
                     .map(move |generation| {
                         make_pending(
+                            ctx.clone(),
                             repo,
                             HashGen {
                                 hash: end_node,
@@ -115,6 +124,7 @@ impl RangeNodeStream {
         };
 
         RangeNodeStream {
+            ctx,
             repo: repo.clone(),
             start_node,
             start_generation,
@@ -194,8 +204,11 @@ impl Stream for RangeNodeStream {
 
                 if next_pending.parent.generation > start_generation {
                     let old_pending = replace(&mut self.pending_nodes, Box::new(stream::empty()));
-                    let pending =
-                        old_pending.chain(make_pending(self.repo.clone(), next_pending.parent));
+                    let pending = old_pending.chain(make_pending(
+                        self.ctx.clone(),
+                        self.repo.clone(),
+                        next_pending.parent,
+                    ));
                     self.pending_nodes = Box::new(pending);
                 }
             }
@@ -251,6 +264,7 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
 
             let nodestream = RangeNodeStream::new(
+                ctx.clone(),
                 &repo,
                 string_to_bonsai(
                     ctx.clone(),
@@ -265,6 +279,7 @@ mod test {
             ).boxify();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(
@@ -301,6 +316,7 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
 
             let nodestream = RangeNodeStream::new(
+                ctx.clone(),
                 &repo,
                 string_to_bonsai(
                     ctx.clone(),
@@ -315,6 +331,7 @@ mod test {
             ).boxify();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(
@@ -336,6 +353,7 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
 
             let nodestream = RangeNodeStream::new(
+                ctx.clone(),
                 &repo,
                 string_to_bonsai(
                     ctx.clone(),
@@ -350,6 +368,7 @@ mod test {
             ).boxify();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
@@ -367,16 +386,21 @@ mod test {
 
             // These are swapped, so won't find anything
             let nodestream = RangeNodeStream::new(
+                ctx.clone(),
                 &repo,
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
                     "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
                 ),
-                string_to_bonsai(ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "d0a361e9022d226ae52f689667bd7d212a19cfe0",
+                ),
             ).boxify();
 
-            assert_changesets_sequence(&repo, vec![], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         })
     }
 
@@ -387,6 +411,7 @@ mod test {
             let repo = Arc::new(merge_uneven::getrepo(None));
 
             let nodestream = RangeNodeStream::new(
+                ctx.clone(),
                 &repo,
                 string_to_bonsai(
                     ctx.clone(),
@@ -401,6 +426,7 @@ mod test {
             ).boxify();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(
@@ -427,6 +453,7 @@ mod test {
             let repo = Arc::new(merge_uneven::getrepo(None));
 
             let nodestream = RangeNodeStream::new(
+                ctx.clone(),
                 &repo,
                 string_to_bonsai(
                     ctx.clone(),
@@ -441,6 +468,7 @@ mod test {
             ).boxify();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(

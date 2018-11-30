@@ -832,6 +832,7 @@ fn test_case_conflict_in_manifest() {
             ("dir1/other_dir/file", false),
         ] {
             let bcs_id = create_commit(
+                ctx.clone(),
                 repo.clone(),
                 vec![bonsai_parent],
                 store_files(btreemap!{*path => Some("caseconflicttest")}, repo.clone()),

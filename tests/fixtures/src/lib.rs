@@ -99,7 +99,7 @@ fn create_bonsai_changeset_from_test_data(
         .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], blobrepo.clone())
+    save_bonsai_changesets(vec![bcs], ctx.clone(), blobrepo.clone())
         .wait()
         .unwrap();
 

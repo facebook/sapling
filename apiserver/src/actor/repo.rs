@@ -147,7 +147,7 @@ impl MononokeRepo {
 
         let dst_hash_future = dst_hash_future
             .and_then({
-                cloned!(self.repo);
+                cloned!(ctx, self.repo);
                 move |hg_cs_id| repo.get_bonsai_from_hg(ctx, &hg_cs_id).from_err()
             })
             .and_then(move |maybenode| {
@@ -163,7 +163,7 @@ impl MononokeRepo {
                     cloned!(self.repo);
                     move |(src, dst)| {
                         genbfs
-                            .query_reachability(repo.get_changeset_fetcher(), src, dst)
+                            .query_reachability(ctx, repo.get_changeset_fetcher(), src, dst)
                             .from_err()
                     }
                 })

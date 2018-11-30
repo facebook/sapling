@@ -682,10 +682,10 @@ impl BlobRepo {
         let repo = self.clone();
         let repoid = self.repoid.clone();
 
-        self.get_bonsai_from_hg(ctx, &changesetid)
+        self.get_bonsai_from_hg(ctx.clone(), &changesetid)
             .and_then(move |maybebonsai| match maybebonsai {
                 Some(bonsai) => repo.changesets
-                    .get(repoid, bonsai)
+                    .get(ctx, repoid, bonsai)
                     .map(|res| res.is_some())
                     .left_future(),
                 None => Ok(false).into_future().right_future(),
@@ -707,14 +707,18 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn changeset_exists_by_bonsai(&self, changesetid: &ChangesetId) -> BoxFuture<bool, Error> {
+    pub fn changeset_exists_by_bonsai(
+        &self,
+        ctx: CoreContext,
+        changesetid: &ChangesetId,
+    ) -> BoxFuture<bool, Error> {
         STATS::changeset_exists_by_bonsai.add_value(1);
         let changesetid = changesetid.clone();
         let repo = self.clone();
         let repoid = self.repoid.clone();
 
         repo.changesets
-            .get(repoid, changesetid)
+            .get(ctx, repoid, changesetid)
             .map(|res| res.is_some())
             .boxify()
     }
@@ -744,6 +748,7 @@ impl BlobRepo {
 
     pub fn get_changeset_parents_by_bonsai(
         &self,
+        ctx: CoreContext,
         cs: &ChangesetId,
     ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
         STATS::get_changeset_parents_by_bonsai.add_value(1);
@@ -752,7 +757,7 @@ impl BlobRepo {
         let repoid = self.repoid.clone();
 
         repo.changesets
-            .get(repoid, changesetid)
+            .get(ctx, repoid, changesetid)
             .and_then(move |maybe_bonsai| {
                 maybe_bonsai.ok_or(ErrorKind::BonsaiNotFound(changesetid).into())
             })
@@ -767,13 +772,13 @@ impl BlobRepo {
         let repoid = self.repoid.clone();
         let changesets = self.changesets.clone();
 
-        self.get_bonsai_from_hg(ctx, &changesetid)
+        self.get_bonsai_from_hg(ctx.clone(), &changesetid)
             .and_then(move |maybebonsai| {
                 maybebonsai.ok_or(ErrorKind::BonsaiMappingNotFound(changesetid).into())
             })
             .and_then(move |bonsai| {
                 changesets
-                    .get(repoid, bonsai)
+                    .get(ctx, repoid, bonsai)
                     .and_then(move |maybe_bonsai| {
                         maybe_bonsai.ok_or(ErrorKind::BonsaiNotFound(bonsai).into())
                     })
@@ -918,10 +923,10 @@ impl BlobRepo {
         let repo = self.clone();
         let repoid = self.repoid.clone();
 
-        self.get_bonsai_from_hg(ctx, &cs)
+        self.get_bonsai_from_hg(ctx.clone(), &cs)
             .and_then(move |maybebonsai| match maybebonsai {
                 Some(bonsai) => repo.changesets
-                    .get(repoid, bonsai)
+                    .get(ctx, repoid, bonsai)
                     .map(|res| res.map(|res| Generation::new(res.gen)))
                     .left_future(),
                 None => Ok(None).into_future().right_future(),
@@ -931,13 +936,14 @@ impl BlobRepo {
     // TODO(stash): rename to get_generation_number
     pub fn get_generation_number_by_bonsai(
         &self,
+        ctx: CoreContext,
         cs: &ChangesetId,
     ) -> impl Future<Item = Option<Generation>, Error = Error> {
         STATS::get_generation_number_by_bonsai.add_value(1);
         let repo = self.clone();
         let repoid = self.repoid.clone();
         repo.changesets
-            .get(repoid, *cs)
+            .get(ctx, repoid, *cs)
             .map(|res| res.map(|res| Generation::new(res.gen)))
     }
 
@@ -1882,6 +1888,7 @@ pub struct ChangesetMetadata {
 /// in the repository.
 pub fn save_bonsai_changesets(
     bonsai_changesets: Vec<BonsaiChangeset>,
+    ctx: CoreContext,
     repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
     let complete_changesets = repo.changesets.clone();
@@ -1921,17 +1928,21 @@ pub fn save_bonsai_changesets(
                 parents: bcs.parents().into_iter().cloned().collect(),
             };
             let pc = post_commit::PreCommitInfo::new(repo.repoid, bcs_id, bcs);
-            bonsai_complete_futs.push(complete_changesets.add(completion_record).and_then({
-                cloned!(repo);
-                move |_| {
-                    repo.get_generation_number_by_bonsai(pc.get_changeset_id())
-                        .map(move |gen| {
-                            pc.complete(gen.expect(
-                                "Just inserted changeset has no generation number",
-                            ))
-                        })
-                }
-            }));
+            bonsai_complete_futs.push(
+                complete_changesets
+                    .add(ctx.clone(), completion_record)
+                    .and_then({
+                        cloned!(ctx, repo);
+                        move |_| {
+                            repo.get_generation_number_by_bonsai(ctx, pc.get_changeset_id())
+                                .map(move |gen| {
+                                    pc.complete(gen.expect(
+                                        "Just inserted changeset has no generation number",
+                                    ))
+                                })
+                        }
+                    }),
+            );
         }
     }
 
@@ -2156,7 +2167,7 @@ impl CreateChangeset {
             changeset
                 .join(parents_complete)
                 .and_then({
-                    cloned!(repo.bonsai_hg_mapping);
+                    cloned!(ctx, repo.bonsai_hg_mapping);
                     move |((hg_cs, bonsai_cs), _)| {
                         let bcs_id = bonsai_cs.get_changeset_id();
                         let bonsai_hg_entry = BonsaiHgMappingEntry {
@@ -2183,11 +2194,11 @@ impl CreateChangeset {
                         parents: bonsai_cs.parents().into_iter().cloned().collect(),
                     };
                     complete_changesets
-                        .add(completion_record)
+                        .add(ctx.clone(), completion_record)
                         .and_then({
                             cloned!(repo);
                             move |_| {
-                                repo.get_generation_number_by_bonsai(pc.get_changeset_id())
+                                repo.get_generation_number_by_bonsai(ctx, pc.get_changeset_id())
                                     .map(move |gen| {
                                         pc.complete(gen.expect(
                                             "Just inserted changeset has no generation number",

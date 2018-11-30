@@ -26,6 +26,7 @@ extern crate sql_ext;
 extern crate tokio;
 
 extern crate changeset_entry_thrift;
+extern crate context;
 #[macro_use]
 extern crate futures_ext;
 #[macro_use]
@@ -47,6 +48,7 @@ use failure::SyncFailure;
 use sql::{Connection, Transaction};
 pub use sql_ext::SqlConstructors;
 
+use context::CoreContext;
 use futures::{stream, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial_types::RepositoryId;
@@ -152,11 +154,12 @@ pub struct ChangesetInsert {
 pub trait Changesets: Send + Sync {
     /// Add a new entry to the changesets table. Returns true if new changeset was inserted,
     /// returns false if the same changeset has already existed.
-    fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error>;
+    fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error>;
 
     /// Retrieve the row specified by this commit, if available.
     fn get(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error>;
@@ -231,7 +234,7 @@ impl SqlConstructors for SqlChangesets {
 }
 
 impl Changesets for SqlChangesets {
-    fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
+    fn add(&self, _ctxt: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
         STATS::adds.add_value(1);
         cloned!(self.write_connection);
 
@@ -284,6 +287,7 @@ impl Changesets for SqlChangesets {
 
     fn get(
         &self,
+        _ctxt: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {

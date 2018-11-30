@@ -61,8 +61,10 @@ pub fn create_getbundle_response(
     let nodestosend = heads
         .join(excludes)
         .map({
+            cloned!(ctx);
             move |(heads, excludes)| {
                 DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                    ctx,
                     &changeset_fetcher,
                     lca_hint,
                     heads,

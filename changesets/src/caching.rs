@@ -7,6 +7,7 @@
 use super::{changeset_entry_thrift, ChangesetEntry, ChangesetInsert, Changesets};
 use cachelib;
 use changeset_entry_thrift as thrift;
+use context::CoreContext;
 use errors::*;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
@@ -55,12 +56,13 @@ impl CachingChangests {
 }
 
 impl Changesets for CachingChangests {
-    fn add(&self, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
-        self.changesets.add(cs)
+    fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
+        self.changesets.add(ctx, cs)
     }
 
     fn get(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
@@ -74,7 +76,7 @@ impl Changesets for CachingChangests {
                         return future::ok(Some(res)).boxify();
                     }
                     Err(()) => changesets
-                        .get(repo_id, cs_id)
+                        .get(ctx, repo_id, cs_id)
                         .inspect(move |res| {
                             if let Some(cs_entry) = res {
                                 schedule_fill_changesets_memcache(

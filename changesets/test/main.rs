@@ -15,6 +15,7 @@ extern crate failure_ext as failure;
 extern crate futures;
 
 extern crate changesets;
+extern crate context;
 extern crate mercurial_types_mocks;
 extern crate mononoke_types_mocks;
 
@@ -22,19 +23,25 @@ use futures::Future;
 
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, SqlChangesets,
                  SqlConstructors};
+use context::CoreContext;
 use mercurial_types_mocks::repo::*;
 use mononoke_types_mocks::changesetid::*;
 
 fn add_and_get<C: Changesets + 'static>(changesets: C) {
+    let ctx = CoreContext::test_mock();
+
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(row).wait().expect("Adding new entry failed");
+    changesets
+        .add(ctx.clone(), row)
+        .wait()
+        .expect("Adding new entry failed");
 
     let result = changesets
-        .get(REPO_ZERO, ONES_CSID)
+        .get(ctx, REPO_ZERO, ONES_CSID)
         .wait()
         .expect("Get failed");
     assert_eq!(
@@ -49,13 +56,15 @@ fn add_and_get<C: Changesets + 'static>(changesets: C) {
 }
 
 fn add_missing_parents<C: Changesets>(changesets: C) {
+    let ctx = CoreContext::test_mock();
+
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: ONES_CSID,
         parents: vec![TWOS_CSID],
     };
     let result = changesets
-        .add(row)
+        .add(ctx, row)
         .wait()
         .expect_err("Adding entry with missing parents failed (should have succeeded)");
     assert_matches!(
@@ -65,14 +74,18 @@ fn add_missing_parents<C: Changesets>(changesets: C) {
 }
 
 fn missing<C: Changesets + 'static>(changesets: C) {
+    let ctx = CoreContext::test_mock();
+
     let result = changesets
-        .get(REPO_ZERO, ONES_CSID)
+        .get(ctx, REPO_ZERO, ONES_CSID)
         .wait()
         .expect("Failed to fetch missing changeset (should succeed with None instead)");
     assert_eq!(result, None);
 }
 
 fn duplicate<C: Changesets + 'static>(changesets: C) {
+    let ctx = CoreContext::test_mock();
+
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: ONES_CSID,
@@ -80,7 +93,7 @@ fn duplicate<C: Changesets + 'static>(changesets: C) {
     };
     assert_eq!(
         changesets
-            .add(row.clone())
+            .add(ctx.clone(), row.clone())
             .wait()
             .expect("Adding new entry failed"),
         true,
@@ -89,7 +102,7 @@ fn duplicate<C: Changesets + 'static>(changesets: C) {
 
     assert_eq!(
         changesets
-            .add(row)
+            .add(ctx.clone(), row)
             .wait()
             .expect("error while adding changeset"),
         false,
@@ -98,13 +111,18 @@ fn duplicate<C: Changesets + 'static>(changesets: C) {
 }
 
 fn broken_duplicate<C: Changesets + 'static>(changesets: C) {
+    let ctx = CoreContext::test_mock();
+
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: ONES_CSID,
         parents: vec![],
     };
     assert_eq!(
-        changesets.add(row).wait().expect("Adding new entry failed"),
+        changesets
+            .add(ctx.clone(), row)
+            .wait()
+            .expect("Adding new entry failed"),
         true,
         "inserting unique changeset must return true"
     );
@@ -115,7 +133,10 @@ fn broken_duplicate<C: Changesets + 'static>(changesets: C) {
         parents: vec![],
     };
     assert_eq!(
-        changesets.add(row).wait().expect("Adding new entry failed"),
+        changesets
+            .add(ctx.clone(), row)
+            .wait()
+            .expect("Adding new entry failed"),
         true,
         "inserting unique changeset must return true"
     );
@@ -126,7 +147,7 @@ fn broken_duplicate<C: Changesets + 'static>(changesets: C) {
         parents: vec![TWOS_CSID],
     };
     let result = changesets
-        .add(row)
+        .add(ctx.clone(), row)
         .wait()
         .expect_err("Adding changeset with the same hash but differen parents should fail");
     match result.downcast::<ErrorKind>() {
@@ -136,44 +157,61 @@ fn broken_duplicate<C: Changesets + 'static>(changesets: C) {
 }
 
 fn complex<C: Changesets>(changesets: C) {
+    let ctx = CoreContext::test_mock();
+
     let row1 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(row1).wait().expect("Adding row 1 failed");
+    changesets
+        .add(ctx.clone(), row1)
+        .wait()
+        .expect("Adding row 1 failed");
 
     let row2 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: TWOS_CSID,
         parents: vec![],
     };
-    changesets.add(row2).wait().expect("Adding row 2 failed");
+    changesets
+        .add(ctx.clone(), row2)
+        .wait()
+        .expect("Adding row 2 failed");
 
     let row3 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: THREES_CSID,
         parents: vec![TWOS_CSID],
     };
-    changesets.add(row3).wait().expect("Adding row 3 failed");
+    changesets
+        .add(ctx.clone(), row3)
+        .wait()
+        .expect("Adding row 3 failed");
 
     let row4 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: FOURS_CSID,
         parents: vec![ONES_CSID, THREES_CSID],
     };
-    changesets.add(row4).wait().expect("Adding row 4 failed");
+    changesets
+        .add(ctx.clone(), row4)
+        .wait()
+        .expect("Adding row 4 failed");
 
     let row5 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: FIVES_CSID,
         parents: vec![ONES_CSID, TWOS_CSID, FOURS_CSID],
     };
-    changesets.add(row5).wait().expect("Adding row 5 failed");
+    changesets
+        .add(ctx.clone(), row5)
+        .wait()
+        .expect("Adding row 5 failed");
 
     assert_eq!(
         changesets
-            .get(REPO_ZERO, ONES_CSID)
+            .get(ctx.clone(), REPO_ZERO, ONES_CSID)
             .wait()
             .expect("Get row 1 failed"),
         Some(ChangesetEntry {
@@ -186,7 +224,7 @@ fn complex<C: Changesets>(changesets: C) {
 
     assert_eq!(
         changesets
-            .get(REPO_ZERO, TWOS_CSID)
+            .get(ctx.clone(), REPO_ZERO, TWOS_CSID)
             .wait()
             .expect("Get row 2 failed"),
         Some(ChangesetEntry {
@@ -199,7 +237,7 @@ fn complex<C: Changesets>(changesets: C) {
 
     assert_eq!(
         changesets
-            .get(REPO_ZERO, THREES_CSID)
+            .get(ctx.clone(), REPO_ZERO, THREES_CSID)
             .wait()
             .expect("Get row 3 failed"),
         Some(ChangesetEntry {
@@ -212,7 +250,7 @@ fn complex<C: Changesets>(changesets: C) {
 
     assert_eq!(
         changesets
-            .get(REPO_ZERO, FOURS_CSID)
+            .get(ctx.clone(), REPO_ZERO, FOURS_CSID)
             .wait()
             .expect("Get row 4 failed"),
         Some(ChangesetEntry {
@@ -225,7 +263,7 @@ fn complex<C: Changesets>(changesets: C) {
 
     assert_eq!(
         changesets
-            .get(REPO_ZERO, FIVES_CSID)
+            .get(ctx.clone(), REPO_ZERO, FIVES_CSID)
             .wait()
             .expect("Get row 5 failed"),
         Some(ChangesetEntry {

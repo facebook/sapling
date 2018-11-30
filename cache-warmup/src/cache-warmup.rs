@@ -104,7 +104,7 @@ fn changesets_warmup(
 ) -> impl Future<Item = (), Error = Error> {
     info!(logger, "about to start warming up changesets cache");
 
-    repo.get_bonsai_from_hg(ctx, &start_rev)
+    repo.get_bonsai_from_hg(ctx.clone(), &start_rev)
         .and_then({
             let start_rev = start_rev.clone();
             move |maybe_node| {
@@ -112,7 +112,7 @@ fn changesets_warmup(
             }
         })
         .and_then(move |start_rev| {
-            AncestorsNodeStream::new(&repo.get_changeset_fetcher(), start_rev)
+            AncestorsNodeStream::new(ctx, &repo.get_changeset_fetcher(), start_rev)
                 .take(cs_limit as u64)
                 .collect()
                 .map(move |_| {

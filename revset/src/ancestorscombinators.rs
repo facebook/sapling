@@ -34,6 +34,7 @@ use futures::stream::{self, iter_ok, Stream};
 use futures_ext::{BoxFuture, FutureExt, SelectAll, StreamExt};
 
 use blobrepo::ChangesetFetcher;
+use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier};
@@ -79,6 +80,8 @@ use setcommon::*;
 ///
 
 pub struct DifferenceOfUnionsOfAncestorsNodeStream {
+    ctx: CoreContext,
+
     changeset_fetcher: Arc<ChangesetFetcher>,
 
     // Given a set "nodes", and a maximum generation "gen",
@@ -112,6 +115,7 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
 }
 
 fn make_pending(
+    ctx: CoreContext,
     changeset_fetcher: Arc<ChangesetFetcher>,
     hash: ChangesetId,
 ) -> Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
@@ -121,17 +125,20 @@ fn make_pending(
     Box::new(
         Ok::<_, Error>(hash)
             .into_future()
-            .and_then(move |hash| {
-                new_repo_changesets
-                    .get_parents(hash)
-                    .map(|parents| parents.into_iter())
-                    .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
+            .and_then({
+                cloned!(ctx);
+                move |hash| {
+                    new_repo_changesets
+                        .get_parents(ctx, hash)
+                        .map(|parents| parents.into_iter())
+                        .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
+                }
             })
             .map(|parents| iter_ok::<_, Error>(parents))
             .flatten_stream()
             .and_then(move |node_hash| {
                 new_repo_gennums
-                    .get_generation_number(node_hash)
+                    .get_generation_number(ctx.clone(), node_hash)
                     .map(move |gen_id| (node_hash, gen_id))
                     .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
             }),
@@ -140,33 +147,38 @@ fn make_pending(
 
 impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new(
+        ctx: CoreContext,
         changeset_fetcher: &Arc<ChangesetFetcher>,
         lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
         hash: ChangesetId,
     ) -> Box<BonsaiNodeStream> {
-        Self::new_with_excludes(changeset_fetcher, lca_hint_index, vec![hash], vec![])
+        Self::new_with_excludes(ctx, changeset_fetcher, lca_hint_index, vec![hash], vec![])
     }
 
     pub fn new_union(
+        ctx: CoreContext,
         changeset_fetcher: &Arc<ChangesetFetcher>,
         lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
         hashes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
-        Self::new_with_excludes(changeset_fetcher, lca_hint_index, hashes, vec![])
+        Self::new_with_excludes(ctx, changeset_fetcher, lca_hint_index, hashes, vec![])
     }
 
     pub fn new_with_excludes(
+        ctx: CoreContext,
         changeset_fetcher: &Arc<ChangesetFetcher>,
         lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
         hashes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
         add_generations_by_bonsai(
+            ctx.clone(),
             stream::iter_ok(excludes.into_iter()).boxify(),
             changeset_fetcher.clone(),
         ).collect()
             .join(
                 add_generations_by_bonsai(
+                    ctx.clone(),
                     stream::iter_ok(hashes.into_iter()).boxify(),
                     changeset_fetcher.clone(),
                 ).collect(),
@@ -191,6 +203,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                     }
 
                     Self {
+                        ctx,
                         changeset_fetcher: changeset_fetcher.clone(),
                         lca_hint_index,
                         next_generation,
@@ -262,6 +275,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                 // And indicate the current exclude gen needs to be recalculated.
                 self.current_exclude_generation = None;
                 self.exclude_ancestors_future = self.lca_hint_index.lca_hint(
+                    self.ctx.clone(),
                     self.changeset_fetcher.clone(),
                     curr_exclude_ancestors,
                     current_generation,
@@ -303,6 +317,7 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
                 } else {
                     let next_in_drain = self.drain.next();
                     self.pending_changesets.push(make_pending(
+                        self.ctx.clone(),
                         self.changeset_fetcher.clone(),
                         next_in_drain.unwrap(),
                     ));
@@ -356,25 +371,31 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
+                ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![],
             ).boxify();
 
-            assert_changesets_sequence(&repo, vec![], stream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], stream);
 
             let excludes = vec![
-                string_to_bonsai(ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+                ),
             ];
 
             let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![],
                 excludes,
             ).boxify();
 
-            assert_changesets_sequence(&repo, vec![], stream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], stream);
         });
     }
 
@@ -387,6 +408,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
@@ -406,6 +428,7 @@ mod test {
             ).boxify();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
@@ -424,6 +447,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
@@ -434,11 +458,15 @@ mod test {
                     ),
                 ],
                 vec![
-                    string_to_bonsai(ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+                    ),
                 ],
             ).boxify();
 
-            assert_changesets_sequence(&repo, vec![], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
     }
 
@@ -451,6 +479,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
+                ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
@@ -467,6 +496,7 @@ mod test {
                 ],
             ).boxify();
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(
@@ -530,6 +560,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
@@ -554,6 +585,7 @@ mod test {
             ).boxify();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(
@@ -582,6 +614,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![
@@ -601,6 +634,7 @@ mod test {
             ).boxify();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(

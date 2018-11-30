@@ -427,6 +427,7 @@ fn hg_changeset_diff(
 }
 
 fn build_skiplist_index<S: ToString>(
+    ctx: CoreContext,
     repo: BlobRepo,
     key: S,
     logger: Logger,
@@ -445,7 +446,12 @@ fn build_skiplist_index<S: ToString>(
                 (heads.into_iter(), skiplist_index),
                 move |(mut heads, skiplist_index)| match heads.next() {
                     Some(head) => {
-                        let f = skiplist_index.add_node(cs_fetcher.clone(), head, max_index_depth);
+                        let f = skiplist_index.add_node(
+                            ctx.clone(),
+                            cs_fetcher.clone(),
+                            head,
+                            max_index_depth,
+                        );
 
                         f.map(move |()| Loop::Continue((heads, skiplist_index)))
                             .boxify()
@@ -715,8 +721,12 @@ fn main() -> Result<()> {
                     .and_then({
                         cloned!(repo);
                         move |(start_cs, stop_cs)| {
-                            RangeNodeStream::new(&Arc::new(repo.clone()), start_cs, stop_cs)
-                                .map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
+                            RangeNodeStream::new(
+                                ctx.clone(),
+                                &Arc::new(repo.clone()),
+                                start_cs,
+                                stop_cs,
+                            ).map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
                                 .buffered(100)
                                 .map(|cs| cs.to_hex().to_string())
                                 .collect()
@@ -738,8 +748,9 @@ fn main() -> Result<()> {
             (SKIPLIST_BUILD, Some(sub_m)) => {
                 args::init_cachelib(&matches);
                 let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
+                let ctx = CoreContext::test_mock();
 
-                build_skiplist_index(repo, sub_m.value_of("BLOBSTORE_KEY").unwrap(), logger)
+                build_skiplist_index(ctx, repo, sub_m.value_of("BLOBSTORE_KEY").unwrap(), logger)
             }
             (SKIPLIST_READ, Some(sub_m)) => {
                 args::init_cachelib(&matches);

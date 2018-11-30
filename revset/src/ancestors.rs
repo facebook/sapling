@@ -32,6 +32,7 @@ use NodeStream;
 use errors::*;
 
 pub struct AncestorsNodeStream {
+    ctx: CoreContext,
     changeset_fetcher: Arc<ChangesetFetcher>,
     next_generation: BTreeMap<Generation, HashSet<ChangesetId>>,
     pending_changesets: Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send>,
@@ -42,6 +43,7 @@ pub struct AncestorsNodeStream {
 }
 
 fn make_pending(
+    ctx: CoreContext,
     changeset_fetcher: Arc<ChangesetFetcher>,
     hashes: IntoIter<ChangesetId>,
 ) -> Box<Stream<Item = (ChangesetId, Generation), Error = Error> + Send> {
@@ -50,10 +52,10 @@ fn make_pending(
     Box::new(
         iter_ok::<_, Error>(hashes)
             .map({
-                cloned!(changeset_fetcher);
+                cloned!(ctx, changeset_fetcher);
                 move |hash| {
                     changeset_fetcher
-                        .get_parents(hash)
+                        .get_parents(ctx.clone(), hash)
                         .map(|parents| parents.into_iter())
                         .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
                 }
@@ -63,7 +65,7 @@ fn make_pending(
             .flatten()
             .and_then(move |node_cs| {
                 changeset_fetcher
-                    .get_generation_number(node_cs)
+                    .get_generation_number(ctx.clone(), node_cs)
                     .map(move |gen_id| (node_cs, gen_id))
                     .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
             }),
@@ -71,12 +73,18 @@ fn make_pending(
 }
 
 impl AncestorsNodeStream {
-    pub fn new(changeset_fetcher: &Arc<ChangesetFetcher>, hash: ChangesetId) -> Self {
+    pub fn new(
+        ctx: CoreContext,
+        changeset_fetcher: &Arc<ChangesetFetcher>,
+        hash: ChangesetId,
+    ) -> Self {
         let node_set: HashSet<ChangesetId> = hashset!{hash};
         AncestorsNodeStream {
+            ctx: ctx.clone(),
             changeset_fetcher: changeset_fetcher.clone(),
             next_generation: BTreeMap::new(),
             pending_changesets: make_pending(
+                ctx,
                 changeset_fetcher.clone(),
                 node_set.clone().into_iter(),
             ),
@@ -129,6 +137,7 @@ impl Stream for AncestorsNodeStream {
             .remove(&highest_generation)
             .expect("Highest generation doesn't exist");
         self.pending_changesets = make_pending(
+            self.ctx.clone(),
             self.changeset_fetcher.clone(),
             current_generation.clone().into_iter(),
         );
@@ -162,7 +171,7 @@ where
                 .map({
                     cloned!(ctx, changeset_fetcher, repo);
                     move |node| {
-                        AncestorsNodeStream::new(&changeset_fetcher, node)
+                        AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, node)
                             .map({
                                 cloned!(repo);
                                 move |node| {
@@ -211,6 +220,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
+                ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(
                     ctx.clone(),
@@ -220,6 +230,7 @@ mod test {
             ).boxed();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(
@@ -273,6 +284,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
+                ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(
                     ctx.clone(),
@@ -282,6 +294,7 @@ mod test {
             ).boxed();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(
@@ -360,6 +373,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
+                ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(
                     ctx.clone(),
@@ -369,6 +383,7 @@ mod test {
             ).boxed();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(
@@ -404,6 +419,7 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let nodestream = AncestorsNodeStream::new(
+                ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(
                     ctx.clone(),
@@ -413,6 +429,7 @@ mod test {
             ).boxed();
 
             assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
                     string_to_bonsai(

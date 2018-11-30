@@ -12,6 +12,7 @@ use failure::Error;
 use futures_ext::BoxFuture;
 
 use blobrepo::ChangesetFetcher;
+use context::CoreContext;
 use mononoke_types::{ChangesetId, Generation};
 use uniqueheap::UniqueHeap;
 
@@ -107,6 +108,7 @@ pub trait ReachabilityIndex {
     /// Return a Future for whether the src node can reach the dst node
     fn query_reachability(
         &self,
+        ctx: CoreContext,
         repo: Arc<ChangesetFetcher>,
         src: ChangesetId,
         dst: ChangesetId,
@@ -122,6 +124,7 @@ pub trait LeastCommonAncestorsHint {
     /// - Any ancestor of "nodes" with generation <= gen is also an ancestor of "C"
     fn lca_hint(
         &self,
+        ctx: CoreContext,
         repo: Arc<ChangesetFetcher>,
         node_frontier: NodeFrontier,
         gen: Generation,
