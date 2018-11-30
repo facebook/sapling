@@ -2,7 +2,7 @@ test interaction between sparse and treemanifest (sparse file listing)
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext/sparse.py
+  > sparse=
   > treemanifest=
   > [treemanifest]
   > treeonly = True

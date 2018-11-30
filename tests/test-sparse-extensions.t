@@ -5,7 +5,7 @@ test sparse interaction with other extensions
   $ cd myrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext/sparse.py
+  > sparse=
   > strip=
   > # Remove once default-on:
   > simplecache=

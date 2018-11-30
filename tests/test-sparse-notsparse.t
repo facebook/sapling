@@ -7,7 +7,7 @@ First create a base repository with sparse enabled.
   $ cd base
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext/sparse.py
+  > sparse=
   > journal=
   > EOF
 

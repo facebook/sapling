@@ -2,7 +2,7 @@
   $ cd repo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext/sparse.py
+  > sparse=
   > EOF
   $ mkdir show hide
   $ echo show-modify-1 > show/modify
