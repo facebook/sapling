@@ -14,8 +14,6 @@ extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate sql;
 #[macro_use]
 extern crate stats;

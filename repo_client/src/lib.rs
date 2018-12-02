@@ -19,8 +19,6 @@ extern crate futures;
 extern crate futures_ext;
 extern crate futures_stats;
 extern crate itertools;
-#[macro_use]
-extern crate lazy_static;
 extern crate pylz4;
 extern crate rand;
 extern crate rand_hc;

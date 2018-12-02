@@ -1,3 +1,9 @@
+// Copyright (c) 2018-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 // Copyright (c) 2004-present, Facebook, Inc.
 // All Rights Reserved.
 //
@@ -17,8 +23,6 @@ extern crate tokio;
 extern crate bincode;
 extern crate bonsai_utils;
 extern crate bytes;
-#[macro_use]
-extern crate lazy_static;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;

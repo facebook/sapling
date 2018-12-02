@@ -14,8 +14,6 @@ extern crate cachelib;
 extern crate cloned;
 extern crate failure_ext as failure;
 extern crate futures;
-#[macro_use]
-extern crate lazy_static;
 extern crate memcache;
 extern crate mononoke_types;
 #[cfg_attr(test, macro_use)]

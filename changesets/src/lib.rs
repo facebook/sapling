@@ -29,8 +29,6 @@ extern crate changeset_entry_thrift;
 extern crate context;
 #[macro_use]
 extern crate futures_ext;
-#[macro_use]
-extern crate lazy_static;
 extern crate mercurial_types;
 extern crate mononoke_types;
 #[cfg(test)]

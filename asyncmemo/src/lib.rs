@@ -38,8 +38,6 @@ extern crate bytes;
 extern crate futures;
 extern crate futures_ext;
 extern crate heapsize;
-#[macro_use]
-extern crate lazy_static;
 extern crate linked_hash_map;
 extern crate parking_lot;
 #[macro_use]

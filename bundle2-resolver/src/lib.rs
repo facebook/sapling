@@ -25,6 +25,7 @@ extern crate futures_stats;
 extern crate heapsize;
 #[cfg(test)]
 extern crate itertools;
+#[allow(unused_imports)] // workaround for macro_use
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
