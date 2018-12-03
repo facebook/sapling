@@ -26,10 +26,12 @@ import json
 import os
 import re
 import signal
-import subprocess
+import threading
 
-from mercurial import error, hg, namespaces, registrar, util
+from mercurial import error, hg, namespaces, pycompat, registrar, util
 from mercurial.i18n import _
+
+from .extlib.phabricator import arcconfig, diffprops, graphql
 
 
 try:
@@ -60,43 +62,31 @@ DESCRIPTION_REGEX = re.compile(
 
 
 def getdiff(repo, diffid):
-    """Perform a Conduit API call by shelling out to `arc`
-
-    Returns a subprocess.Popen instance"""
-
+    """Resolves a phabricator Diff number to a commit hash of it's latest version """
+    timeout = repo.ui.configint("ssl", "timeout", 5)
+    ca_certs = repo.ui.configpath("web", "cacerts")
     try:
-        proc = subprocess.Popen(
-            ["arc", "call-conduit", "differential.getdiff"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            preexec_fn=os.setsid,
+        client = graphql.Client(
+            repodir=pycompat.getcwd(), ca_bundle=ca_certs, repo=repo
         )
-
-        input = json.dumps({"revision_id": diffid})
-        repo.ui.debug(
-            "[diffrev] echo '%s' | " "arc call-conduit differential.getdiff\n" % input
-        )
-        proc.stdin.write(input)
-        proc.stdin.close()
-
-        return proc
+        return client.getdifflatestversion(timeout, diffid)
     except Exception as e:
-        raise error.Abort('Could not not call "arc call-conduit": %s' % e)
+        raise error.Abort("Could not not call phabricator graphql API: %s" % e)
 
 
-def finddiff(repo, diffid, proc=None):
+def finddiff(repo, diffid, querythread=None):
     """Scans the changelog for commit lines mentioning the Differential ID
 
-    If the optional proc parameter is provided, it must be a subprocess.Popen
+    If the optional querythread parameter is provided, it must be a threading.Thread
     instance. It will be polled during the iteration and if it indicates that
-    the process has returned, the function will raise StopIteration"""
+    the thread has finished, the function will raise StopIteration"""
 
     repo.ui.debug("[diffrev] Traversing log for %s\n" % diffid)
 
     # traverse the changelog backwards
     for rev in repo.changelog.revs(start=len(repo.changelog), stop=0):
-        if rev % 100 == 0 and proc and proc.poll() is not None:
-            raise StopIteration("Parallel proc call completed")
+        if rev % 100 == 0 and querythread and querythread.is_alive() is False:
+            raise StopIteration("Parallel query completed")
 
         changectx = repo[rev]
         desc = changectx.description()
@@ -109,21 +99,30 @@ def finddiff(repo, diffid, proc=None):
 
 
 def forksearch(repo, diffid):
-    """Perform a log traversal and Conduit call in parallel
+    """Perform a log traversal and GraphQL call in parallel
 
-    Returns a (revisions, arc_response) tuple, where one of the items will be
+    Returns a (revisions, graphql_response) tuple, where one of the items will be
     None, depending on which process terminated first"""
 
-    repo.ui.debug("[diffrev] Starting Conduit call\n")
+    repo.ui.debug("[diffrev] Starting graphql call\n")
 
-    proc = getdiff(repo, diffid)
+    result = [None, None]
+
+    def makegraphqlcall():
+        try:
+            result[0] = getdiff(repo, diffid)
+        except Exception as exc:
+            result[1] = exc
+
+    querythread = threading.Thread(target=makegraphqlcall, name="graphqlquery")
+    querythread.daemon = True
+    querythread.start()
 
     try:
         repo.ui.debug("[diffrev] Starting log walk\n")
-        rev = finddiff(repo, diffid, proc)
+        rev = finddiff(repo, diffid, querythread)
 
         repo.ui.debug("[diffrev] Parallel log walk completed with %s\n" % rev)
-        os.killpg(proc.pid, signal.SIGTERM)
 
         if rev is None:
             # walked the entire repo and couldn't find the diff
@@ -135,13 +134,12 @@ def forksearch(repo, diffid):
         # search terminated because arc returned
         # if returncode == 0, return arc's output
 
-        repo.ui.debug("[diffrev] Conduit call returned %i\n" % proc.returncode)
+        repo.ui.debug("[diffrev] graphql call returned %s\n" % result[0])
 
-        if proc.returncode != 0:
-            raise error.Abort("arc call returned status %i" % proc.returncode)
+        if result[1] is not None:
+            raise result[1]
 
-        resp = proc.stdout.read()
-        return (None, resp)
+        return (None, result[0])
 
 
 def parsedesc(repo, resp, ignoreparsefailure):
@@ -194,16 +192,7 @@ def revsetdiff(repo, diffid):
         # The log walk found the diff, nothing more to do
         return revs
 
-    jsresp = json.loads(resp)
-    if not jsresp:
-        raise error.Abort("Could not decode Conduit response")
-
-    resp = jsresp.get("response")
-    if not resp:
-        e = jsresp.get("errorMessage", "unknown error")
-        raise error.Abort("Conduit error: %s" % e)
-
-    vcs = resp.get("sourceControlSystem")
+    vcs = resp["source_control_system"]
 
     repo.ui.debug("[diffrev] VCS is %s\n" % vcs)
 
@@ -253,8 +242,11 @@ def revsetdiff(repo, diffid):
 
         # commit is still local, get its hash
 
-        props = resp["properties"]
-        commits = props["local:commits"]
+        props = resp["phabricator_version_properties"]["edges"]
+        commits = []
+        for prop in props:
+            if prop["node"]["property_name"] == "local:commits":
+                commits = json.loads(prop["node"]["property_value"])
 
         # the JSON parser returns Unicode strings, convert to `str` in UTF-8
         revs = [c["commit"].encode("utf-8") for c in commits.values()]

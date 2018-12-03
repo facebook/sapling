@@ -110,6 +110,37 @@ class Client(object):
                 rev_numbers.append(int(r))
         return [int(x) for x in rev_numbers]
 
+    def getdifflatestversion(self, timeout, diffid):
+        query = """
+            query DiffLastVersionDescriptionQuery($diffid: String!){
+              phabricator_diff_query(query_params: {
+                numbers: [$diffid]
+              }) {
+                results {
+                    nodes {
+                    latest_phabricator_version {
+                      description
+                      source_control_system
+                      phabricator_version_properties {
+                        edges {
+                          node {
+                            property_name
+                            property_value
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+        """
+        params = {"diffid": diffid}
+        ret = self._client.query(timeout, query, params)
+        return ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
+            "latest_phabricator_version"
+        ]
+
     def getrevisioninfo(self, timeout, *revision_numbers):
         rev_numbers = self._normalizerevisionnumbers(revision_numbers)
         if self._mock:
