@@ -10,13 +10,12 @@
 import abc
 import configparser
 import os
-import shutil
-import tempfile
 import unittest
 from typing import Dict, List, Optional
 
 import toml
 import toml.decoder
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .. import config as config_mod, configutil, util
 from ..config import EdenInstance
@@ -169,10 +168,9 @@ class ForceFileMockConfig(EdenInstance):
         return self._rc_file_list
 
 
-class TomlConfigTest(unittest.TestCase):
+class TomlConfigTest(unittest.TestCase, TemporaryDirectoryMixin):
     def setUp(self) -> None:
-        self._test_dir = tempfile.mkdtemp(prefix="eden_config_test.")
-        self.addCleanup(shutil.rmtree, self._test_dir)
+        self._test_dir = self.make_temporary_directory()
 
         self._user = "bob"
         self._state_dir = os.path.join(self._test_dir, ".eden")

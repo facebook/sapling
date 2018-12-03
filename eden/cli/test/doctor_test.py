@@ -12,10 +12,8 @@ import collections
 import errno
 import io
 import os
-import shutil
 import stat
 import subprocess
-import tempfile
 import typing
 import unittest
 from textwrap import dedent
@@ -29,6 +27,7 @@ import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import filesystem, mtab, process_finder, util
 from eden.cli.config import EdenInstance, HealthStatus
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from fb303.ttypes import fb_status
 
 
@@ -57,12 +56,7 @@ class TestOutput(eden.cli.ui.TerminalOutput):
         return self._out.getvalue().decode("utf-8", errors="surrogateescape")
 
 
-class DoctorTestBase(unittest.TestCase):
-    def _create_tmp_dir(self) -> str:
-        tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
-        self.addCleanup(shutil.rmtree, tmp_dir)
-        return tmp_dir
-
+class DoctorTestBase(unittest.TestCase, TemporaryDirectoryMixin):
     def create_fixer(self, dry_run: bool) -> Tuple[doctor.ProblemFixer, TestOutput]:
         out = TestOutput()
         if not dry_run:
@@ -112,7 +106,7 @@ class DoctorTest(DoctorTestBase):
     ):
         side_effects: List[Dict[str, Any]] = []
         calls = []
-        instance = FakeEdenInstance(self._create_tmp_dir())
+        instance = FakeEdenInstance(self.make_temporary_directory())
 
         # In edenfs_path1, we will break the snapshot check.
         edenfs_path1_snapshot = "abcd" * 10
@@ -239,7 +233,7 @@ https://fb.facebook.com/groups/eden.users/
     def test_not_all_mounts_have_watchman_watcher(
         self, mock_get_roots_for_nuclide, mock_watchman
     ):
-        instance = FakeEdenInstance(self._create_tmp_dir())
+        instance = FakeEdenInstance(self.make_temporary_directory())
         edenfs_path = instance.create_test_mount("eden-mount", scm_type="git")
         edenfs_path_not_watched = instance.create_test_mount(
             "eden-mount-not-watched", scm_type="git"
@@ -276,7 +270,7 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor._call_watchman")
     @patch("eden.cli.doctor._get_roots_for_nuclide")
     def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman):
-        instance = FakeEdenInstance(self._create_tmp_dir(), is_healthy=False)
+        instance = FakeEdenInstance(self.make_temporary_directory(), is_healthy=False)
 
         out = TestOutput()
         dry_run = False
@@ -295,7 +289,7 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor._call_watchman")
     @patch("eden.cli.doctor._get_roots_for_nuclide")
     def test_edenfs_not_running(self, mock_get_roots_for_nuclide, mock_watchman):
-        instance = FakeEdenInstance(self._create_tmp_dir(), is_healthy=False)
+        instance = FakeEdenInstance(self.make_temporary_directory(), is_healthy=False)
         instance.create_test_mount("eden-mount")
 
         out = TestOutput()
@@ -780,7 +774,7 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
     def _test_hash_check(
         self, dirstate_hash_hex: str, snapshot_hex: str, dirstate_parent2_hash_hex=None
     ) -> Tuple["FakeEdenInstance", str, doctor.ProblemFixer, str]:
-        instance = FakeEdenInstance(self._create_tmp_dir())
+        instance = FakeEdenInstance(self.make_temporary_directory())
         if dirstate_parent2_hash_hex is None:
             mount_path = instance.create_test_mount(
                 "path1", snapshot=snapshot_hex, dirstate_parent=dirstate_hash_hex
@@ -835,7 +829,7 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
         mock_rpm_q.side_effect = side_effects
 
         instance = FakeEdenInstance(
-            self._create_tmp_dir(),
+            self.make_temporary_directory(),
             build_info={
                 "build_package_version": "20171213",
                 "build_package_release": "165642",
@@ -850,7 +844,7 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
     def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide):
         # If Eden advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
-        instance = FakeEdenInstance(self._create_tmp_dir())
+        instance = FakeEdenInstance(self.make_temporary_directory())
         edenfs_path1 = instance.create_test_mount("path1")
         edenfs_path2 = instance.create_test_mount("path2")
         # Remove path2 from the list of mounts in the instance
@@ -918,7 +912,7 @@ Checking {mounts[0]}
         """Test that `eden doctor` remounts configured mount points that are not
         currently mounted.
         """
-        tmp_dir = self._create_tmp_dir()
+        tmp_dir = self.make_temporary_directory()
         instance = FakeEdenInstance(tmp_dir)
 
         mounts = []
@@ -938,7 +932,7 @@ Checking {mounts[0]}
 
     @patch("eden.cli.doctor._call_watchman")
     def test_watchman_fails(self, mock_watchman):
-        tmp_dir = self._create_tmp_dir()
+        tmp_dir = self.make_temporary_directory()
         instance = FakeEdenInstance(tmp_dir)
 
         mount = instance.create_test_mount("path1", active=False)
@@ -1206,8 +1200,7 @@ class BindMountsCheckTest(DoctorTestBase):
     maxDiff = None
 
     def setUp(self) -> None:
-        tmp_dir = tempfile.mkdtemp(prefix="eden_test.")
-        self.addCleanup(shutil.rmtree, tmp_dir)
+        tmp_dir = self.make_temporary_directory()
         self.instance = FakeEdenInstance(tmp_dir, is_healthy=True)
 
         self.dot_eden_path = os.path.join(tmp_dir, ".eden")
@@ -2528,7 +2521,7 @@ class OperatingSystemsCheckTest(DoctorTestBase):
             "doctor.minimum-kernel-version": "4.11.3-67",
             "doctor.known-bad-kernel-versions": "^4.*_fbk13,TODO,TEST",
         }
-        tmp_dir = self._create_tmp_dir()
+        tmp_dir = self.make_temporary_directory()
         self.instance = FakeEdenInstance(tmp_dir, config=test_config)
 
     def test_kernel_version_split(self) -> None:

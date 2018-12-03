@@ -19,13 +19,13 @@ from typing import Optional, Sequence, Set
 import pexpect
 from eden.cli import util
 from eden.integration.lib.hgrepo import HgRepository
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib import edenclient, testcase
 from .lib.fake_edenfs import read_fake_edenfs_argv_file
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
 from .lib.service_test_case import ServiceTestCaseBase, service_test
-from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 # This is the name of the default repository created by EdenRepoTestBase.

@@ -19,9 +19,9 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Type, Union
 
 from eden.cli import fsck as fsck_mod
-from eden.integration.lib.temporary_directory import TemporaryDirectoryMixin
 from eden.integration.snapshot import snapshot as snapshot_mod, verify as verify_mod
 from eden.integration.snapshot.types.basic import BasicSnapshot
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 
 class ExpectedError(metaclass=abc.ABCMeta):

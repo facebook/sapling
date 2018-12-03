@@ -7,10 +7,14 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import abc
 import logging
 import os
+import pathlib
 import shutil
+import tempfile
 import types
+import typing
 from pathlib import Path
 from typing import Any, Callable, Tuple, Type, Union
 
@@ -53,3 +57,24 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
             return
 
     shutil.rmtree(tmp_dir, onerror=_remove_readonly)
+
+
+class TemporaryDirectoryMixin(metaclass=abc.ABCMeta):
+    def make_temporary_directory(self) -> str:
+        def clean_up(path_str: str) -> None:
+            if os.environ.get("EDEN_TEST_NO_CLEANUP"):
+                print("Leaving behind eden test directory %r" % path_str)
+            else:
+                cleanup_tmp_dir(pathlib.Path(path_str))
+
+        path_str = tempfile.mkdtemp(prefix="eden_test.")
+        self.addCleanup(lambda: clean_up(path_str))
+        return path_str
+
+    def addCleanup(
+        self,
+        function: typing.Callable[..., typing.Any],
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> None:
+        raise NotImplementedError()

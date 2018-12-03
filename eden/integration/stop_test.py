@@ -18,11 +18,11 @@ import typing
 import pexpect
 from eden.cli.daemon import did_process_exit
 from eden.cli.util import poll_until
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
 from .lib.service_test_case import ServiceTestCaseBase, service_test
-from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 SHUTDOWN_EXIT_CODE_NORMAL = 0

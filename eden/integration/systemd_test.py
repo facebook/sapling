@@ -12,10 +12,10 @@ import typing
 import unittest
 
 import pexpect
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib.environment_variable import EnvironmentVariableMixin
 from .lib.find_executables import FindExe
-from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 class SystemdTest(unittest.TestCase, EnvironmentVariableMixin, TemporaryDirectoryMixin):

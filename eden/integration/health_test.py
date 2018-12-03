@@ -15,12 +15,12 @@ import typing
 
 import pexpect
 from eden.cli.daemon import wait_for_shutdown
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib import edenclient, testcase
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
 from .lib.service_test_case import ServiceTestCaseBase, service_test
-from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 class HealthTest(testcase.EdenTestCase):

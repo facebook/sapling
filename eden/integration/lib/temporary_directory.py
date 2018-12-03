@@ -7,9 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import abc
 import contextlib
-import os
 import pathlib
 import tempfile
 import typing
@@ -18,7 +16,7 @@ from eden.test_support.temporary_directory import cleanup_tmp_dir
 
 
 # TODO(strager): Merge create_tmp_dir with
-# TemporaryDirectoryMixin.make_temporary_directory.
+# eden.test_support.temporary_directory.TemporaryDirectoryMixin.make_temporary_directory.
 
 
 @contextlib.contextmanager
@@ -34,24 +32,3 @@ def create_tmp_dir() -> typing.Iterator[pathlib.Path]:
         yield tmpdir
     finally:
         cleanup_tmp_dir(tmpdir)
-
-
-class TemporaryDirectoryMixin(metaclass=abc.ABCMeta):
-    def make_temporary_directory(self) -> str:
-        def clean_up(path_str: str) -> None:
-            if os.environ.get("EDEN_TEST_NO_CLEANUP"):
-                print("Leaving behind eden test directory %r" % path_str)
-            else:
-                cleanup_tmp_dir(pathlib.Path(path_str))
-
-        path_str = tempfile.mkdtemp(prefix="eden_test.")
-        self.addCleanup(lambda: clean_up(path_str))
-        return path_str
-
-    def addCleanup(
-        self,
-        function: typing.Callable[..., typing.Any],
-        *args: typing.Any,
-        **kwargs: typing.Any
-    ) -> None:
-        raise NotImplementedError()

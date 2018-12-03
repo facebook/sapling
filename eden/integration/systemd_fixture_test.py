@@ -15,6 +15,8 @@ import time
 import typing
 import unittest
 
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
+
 from .lib.linux import ProcessID, is_cgroup_v2_mounted
 from .lib.systemd import (
     SystemdService,
@@ -22,7 +24,6 @@ from .lib.systemd import (
     SystemdUserServiceManager,
     SystemdUserServiceManagerMixin,
 )
-from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 class TemporarySystemdUserServiceManagerTest(

@@ -18,11 +18,11 @@ import eden.thrift.client
 import pexpect
 from eden.cli.config import EdenInstance
 from eden.cli.util import HealthStatus
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
 from .lib.service_test_case import ServiceTestCaseBase, service_test
-from .lib.temporary_directory import TemporaryDirectoryMixin
 
 
 @service_test

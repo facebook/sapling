@@ -10,10 +10,11 @@
 import json
 import os
 import re
-import tempfile
 import unittest
 from pathlib import Path
 from typing import Optional, Union
+
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .. import config as config_mod
 
@@ -66,12 +67,9 @@ class CheckoutInfo:
         os.symlink(str(self.path), eden_dir.joinpath("root"))
 
 
-class FindEdenTest(unittest.TestCase):
+class FindEdenTest(unittest.TestCase, TemporaryDirectoryMixin):
     def setUp(self) -> None:
-        self._tmpdir = tempfile.TemporaryDirectory(prefix="eden_cli_test")
-        self.addCleanup(self._tmpdir.cleanup)
-
-        self._tmp_path = Path(self._tmpdir.name)
+        self._tmp_path = Path(self.make_temporary_directory())
         self._home_dir = self._tmp_path.joinpath("home")
         self._home_dir.mkdir()
         self._etc_eden_dir = self._tmp_path.joinpath("etc_eden")
