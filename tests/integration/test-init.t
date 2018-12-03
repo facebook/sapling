@@ -121,6 +121,7 @@ start mononoke
   $ wait_for_mononoke $TESTTMP/repo
   $ hgmn debugwireargs ssh://user@dummy/disabled_repo one two --three three
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  remote: * ERRO Requested repo "disabled_repo" does not exist or disabled (glob)
   abort: no suitable response from remote hg!
   [255]
   $ hgmn debugwireargs ssh://user@dummy/repo one two --three three

@@ -243,7 +243,9 @@ function no_ssl_apiserver {
 
 function wait_for_apiserver {
   for _ in $(seq 1 200); do
-    PORT=$(grep "Listening to" < "$TESTTMP/apiserver.out" | grep -Pzo "(\\d+)\$") && break
+    if [[ -a "$TESTTMP/apiserver.out" ]]; then
+      PORT=$(grep "Listening to" < "$TESTTMP/apiserver.out" | grep -Pzo "(\\d+)\$") && break
+    fi
     sleep 0.1
   done
 
