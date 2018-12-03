@@ -24,7 +24,7 @@
 /// Mercurial pull to find commits that need to be sent to a client.
 use std::collections::{BTreeMap, HashSet};
 use std::collections::hash_set::IntoIter;
-use std::iter;
+use std::iter::{self, FromIterator};
 use std::sync::Arc;
 
 use failure::prelude::*;
@@ -211,7 +211,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                         // for it (see drain below)
                         current_generation: Generation::max_gen(),
                         pending_changesets: SelectAll::new(),
-                        exclude_ancestors_future: ok(NodeFrontier::from_pairs(exclude_generations))
+                        exclude_ancestors_future: ok(NodeFrontier::from_iter(exclude_generations))
                             .boxify(),
                         current_exclude_generation,
                         drain: hashset!{}.into_iter().peekable(),

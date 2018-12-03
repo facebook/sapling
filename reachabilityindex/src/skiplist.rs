@@ -591,9 +591,9 @@ fn process_frontier(
                         }
                     })
                     .map(move |gen_cs| {
-                        node_frontier.insert_iter(gen_cs.into_iter());
+                        node_frontier.extend(gen_cs);
 
-                        for (gen, s) in skipped_frontier.into_map() {
+                        for (gen, s) in skipped_frontier {
                             for entry in s {
                                 node_frontier.insert((entry, gen));
                             }

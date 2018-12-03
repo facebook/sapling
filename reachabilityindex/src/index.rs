@@ -4,8 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map, HashMap, HashSet};
 use std::default::Default;
+use std::iter::{Extend, FromIterator};
 use std::sync::Arc;
 
 use failure::Error;
@@ -38,6 +39,31 @@ impl Default for NodeFrontier {
     }
 }
 
+impl IntoIterator for NodeFrontier {
+    type Item = (Generation, HashSet<ChangesetId>);
+    type IntoIter = hash_map::IntoIter<Generation, HashSet<ChangesetId>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.gen_map.into_iter()
+    }
+}
+
+impl Extend<(ChangesetId, Generation)> for NodeFrontier {
+    fn extend<T: IntoIterator<Item = (ChangesetId, Generation)>>(&mut self, iter: T) {
+        for edge_pair in iter {
+            self.insert(edge_pair);
+        }
+    }
+}
+
+impl FromIterator<(ChangesetId, Generation)> for NodeFrontier {
+    fn from_iter<I: IntoIterator<Item = (ChangesetId, Generation)>>(iter: I) -> Self {
+        let mut frontier = NodeFrontier::default();
+        frontier.extend(iter);
+        frontier
+    }
+}
+
 impl NodeFrontier {
     pub fn new(input: HashMap<Generation, HashSet<ChangesetId>>) -> Self {
         let mut gen_map = HashMap::new();
@@ -50,18 +76,6 @@ impl NodeFrontier {
         Self {
             gen_map,
             generations,
-        }
-    }
-
-    pub fn from_pairs(node_gen_pairs: Vec<(ChangesetId, Generation)>) -> Self {
-        let mut frontier = NodeFrontier::default();
-        frontier.insert_iter(node_gen_pairs.into_iter());
-        frontier
-    }
-
-    pub fn insert_iter(&mut self, iter: impl IntoIterator<Item = (ChangesetId, Generation)>) {
-        for edge_pair in iter {
-            self.insert(edge_pair);
         }
     }
 
@@ -92,10 +106,6 @@ impl NodeFrontier {
                 .remove(&max_gen)
                 .expect("inconsistent frontier state"),
         )
-    }
-
-    pub fn into_map(self) -> HashMap<Generation, HashSet<ChangesetId>> {
-        self.gen_map
     }
 
     pub fn len(&self) -> usize {
