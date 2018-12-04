@@ -109,7 +109,7 @@ fn create_bonsai_changeset_from_test_data(
         .unwrap();
 
     // TODO(stash): set only for heads
-    let mut txn = blobrepo.update_bookmark_transaction();
+    let mut txn = blobrepo.update_bookmark_transaction(ctx.clone());
     txn.force_set(
         &Bookmark::new(format!("bookmark-{}", hg_cs)).unwrap(),
         &bcs_id,

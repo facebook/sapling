@@ -6,6 +6,7 @@
 
 extern crate bookmarks;
 extern crate clap;
+extern crate context;
 extern crate dbbookmarks;
 extern crate failure_ext as failure;
 extern crate futures;
@@ -20,6 +21,7 @@ extern crate tokio;
 use std::path::PathBuf;
 
 use bookmarks::{Bookmark, Bookmarks};
+use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
 use failure::prelude::*;
 use mercurial_types::RepositoryId;
@@ -65,9 +67,10 @@ fn main() -> Result<()> {
         slog::Logger::root(drain, o![])
     };
 
+    let ctx = CoreContext::test_mock();
     let bookmarks = SqlBookmarks::with_sqlite_path(filename)?;
 
-    let fut = bookmarks.get(&bookmark, &repo_id);
+    let fut = bookmarks.get(ctx, &bookmark, &repo_id);
 
     let mut runtime = tokio::runtime::Runtime::new().expect("failed to create Runtime");
 

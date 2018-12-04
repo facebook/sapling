@@ -51,7 +51,7 @@ pub fn upload_bookmarks(
 
     read_bookmarks(revlogrepo)
         .map({
-            cloned!(logger, blobrepo, stale_bookmarks);
+            cloned!(ctx, logger, blobrepo, stale_bookmarks);
             move |bookmarks| {
                 stream::futures_unordered(bookmarks.into_iter().map(|(key, cs_id)| {
                     blobrepo
@@ -110,7 +110,7 @@ pub fn upload_bookmarks(
             let blobrepo = blobrepo.clone();
             move |vec| {
                 let count = vec.len();
-                let mut transaction = blobrepo.update_bookmark_transaction();
+                let mut transaction = blobrepo.update_bookmark_transaction(ctx.clone());
 
                 for (key, value) in vec {
                     let key = Bookmark::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));

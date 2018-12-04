@@ -508,7 +508,7 @@ mod full_skiplist_tests {
         let skiplist_index = SkiplistIndex::new();
         let max_index_depth = 100;
 
-        repo.get_bonsai_heads_maybe_stale()
+        repo.get_bonsai_heads_maybe_stale(ctx.clone())
             .collect()
             .and_then({
                 cloned!(skiplist_index);

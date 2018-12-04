@@ -127,9 +127,9 @@ fn handle_set<'a>(
     let rev = args.value_of("HG_CHANGESET_ID").unwrap();
     let bookmark = Bookmark::new(bookmark_name).unwrap();
 
-    ::fetch_bonsai_changeset(ctx, rev, &repo)
+    ::fetch_bonsai_changeset(ctx.clone(), rev, &repo)
         .and_then(move |bonsai_cs| {
-            let mut transaction = repo.update_bookmark_transaction();
+            let mut transaction = repo.update_bookmark_transaction(ctx);
             try_boxfuture!(transaction.force_set(&bookmark, &bonsai_cs.get_changeset_id()));
             transaction.commit().map(|_| ()).from_err().boxify()
         })

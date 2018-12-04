@@ -1323,7 +1323,7 @@ mod test {
                     let sli = SkiplistIndex::new();
                     {
                         let mut runtime = tokio::runtime::Runtime::new().unwrap();
-                        let heads = repo.get_bonsai_heads_maybe_stale().collect();
+                        let heads = repo.get_bonsai_heads_maybe_stale(ctx.clone()).collect();
                         let heads = run_future(&mut runtime, heads).unwrap();
                         for head in heads {
                             let f = sli.add_node(ctx.clone(),repo.get_changeset_fetcher(), head, 100);

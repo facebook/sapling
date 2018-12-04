@@ -8,6 +8,7 @@
 
 extern crate ascii;
 extern crate bookmarks;
+extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -24,6 +25,7 @@ extern crate storage_types;
 use std::collections::{HashMap, HashSet};
 
 use bookmarks::{Bookmark, BookmarkPrefix, Bookmarks, Transaction};
+use context::CoreContext;
 use failure::{Error, Result};
 use futures::{stream, Future, IntoFuture, future::{loop_fn, Loop}};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -156,6 +158,7 @@ impl SqlBookmarks {
 impl Bookmarks for SqlBookmarks {
     fn get(
         &self,
+        _ctx: CoreContext,
         name: &Bookmark,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
@@ -166,6 +169,7 @@ impl Bookmarks for SqlBookmarks {
 
     fn list_by_prefix(
         &self,
+        _ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repo_id: &RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
@@ -174,13 +178,14 @@ impl Bookmarks for SqlBookmarks {
 
     fn list_by_prefix_maybe_stale(
         &self,
+        _ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repo_id: &RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error> {
         self.list_by_prefix_impl(prefix, repo_id, &self.read_connection)
     }
 
-    fn create_transaction(&self, repoid: &RepositoryId) -> Box<Transaction> {
+    fn create_transaction(&self, _ctx: CoreContext, repoid: &RepositoryId) -> Box<Transaction> {
         Box::new(SqlBookmarksTransaction::new(
             self.write_connection.clone(),
             repoid.clone(),

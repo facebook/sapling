@@ -654,7 +654,7 @@ impl BlobRepo {
     ) -> impl Stream<Item = HgNodeHash, Error = Error> {
         STATS::get_heads_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix_maybe_stale(&BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
             .and_then({
                 let repo = self.clone();
                 move |(_, cs)| {
@@ -664,10 +664,13 @@ impl BlobRepo {
             })
     }
 
-    pub fn get_bonsai_heads_maybe_stale(&self) -> impl Stream<Item = ChangesetId, Error = Error> {
+    pub fn get_bonsai_heads_maybe_stale(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Stream<Item = ChangesetId, Error = Error> {
         STATS::get_bonsai_heads_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix(&BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix(ctx, &BookmarkPrefix::empty(), &self.repoid)
             .map(|(_, cs_id)| cs_id)
     }
 
@@ -822,7 +825,7 @@ impl BlobRepo {
     ) -> BoxFuture<Option<HgChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.bookmarks
-            .get(name, &self.repoid)
+            .get(ctx.clone(), name, &self.repoid)
             .and_then({
                 let repo = self.clone();
                 move |cs_opt| match cs_opt {
@@ -835,9 +838,13 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn get_bonsai_bookmark(&self, name: &Bookmark) -> BoxFuture<Option<ChangesetId>, Error> {
+    pub fn get_bonsai_bookmark(
+        &self,
+        ctx: CoreContext,
+        name: &Bookmark,
+    ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
-        self.bookmarks.get(name, &self.repoid)
+        self.bookmarks.get(ctx, name, &self.repoid)
     }
 
     /// Heads maybe read from replica, so they may be out of date. Prefer to use this method
@@ -848,7 +855,7 @@ impl BlobRepo {
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         STATS::get_bookmarks_maybe_stale.add_value(1);
         self.bookmarks
-            .list_by_prefix_maybe_stale(&BookmarkPrefix::empty(), &self.repoid)
+            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
             .and_then({
                 let repo = self.clone();
                 move |(bm, cs)| {
@@ -859,9 +866,9 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn update_bookmark_transaction(&self) -> Box<bookmarks::Transaction> {
+    pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<bookmarks::Transaction> {
         STATS::update_bookmark_transaction.add_value(1);
-        self.bookmarks.create_transaction(&self.repoid)
+        self.bookmarks.create_transaction(ctx, &self.repoid)
     }
 
     pub fn get_linknode(

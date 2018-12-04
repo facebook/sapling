@@ -148,7 +148,7 @@ fn resolve_push(
             }
         })
         .and_then({
-            cloned!(resolver);
+            cloned!(ctx, resolver);
             move |(changegroup_id, bookmarks_push)| {
                 let bookmarks_push_fut = bookmarks_push
                     .into_iter()
@@ -164,7 +164,7 @@ fn resolve_push(
                 (move || {
                     let bookmark_ids: Vec<_> = bookmark_push.iter().map(|bp| bp.part_id).collect();
 
-                    let mut txn = resolver.repo.update_bookmark_transaction();
+                    let mut txn = resolver.repo.update_bookmark_transaction(ctx);
                     for bp in bookmark_push {
                         try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp));
                     }

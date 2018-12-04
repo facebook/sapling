@@ -439,7 +439,7 @@ fn build_skiplist_index<S: ToString>(
     let cs_fetcher = repo.get_changeset_fetcher();
     let key = key.to_string();
 
-    repo.get_bonsai_heads_maybe_stale()
+    repo.get_bonsai_heads_maybe_stale(ctx.clone())
         .collect()
         .and_then(move |heads| {
             loop_fn(

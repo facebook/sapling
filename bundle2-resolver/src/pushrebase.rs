@@ -107,9 +107,10 @@ pub fn do_pushrebase(
             Ok((head, roots))
         })
         .and_then({
-            cloned!(config, repo, onto_bookmark);
+            cloned!(ctx, config, repo, onto_bookmark);
             move |(head, roots)| {
-                find_closest_root(&repo, config, onto_bookmark, roots).map(move |root| (head, root))
+                find_closest_root(ctx, &repo, config, onto_bookmark, roots)
+                    .map(move |root| (head, root))
             }
         })
         .and_then({
@@ -155,7 +156,7 @@ fn rebase_in_loop(
     loop_fn(
         (root.clone(), 0),
         move |(latest_rebase_attempt, retry_num)| {
-            get_bookmark_value(&repo, &onto_bookmark).and_then({
+            get_bookmark_value(ctx.clone(), &repo, &onto_bookmark).and_then({
                 cloned!(ctx, client_cf, client_bcs, onto_bookmark, repo, config);
                 move |bookmark_val| {
                     fetch_bonsai_range(ctx.clone(), &repo, latest_rebase_attempt, bookmark_val)
@@ -212,9 +213,10 @@ fn do_rebase(
     bookmark_val: ChangesetId,
     onto_bookmark: Bookmark,
 ) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
-    create_rebased_changesets(ctx, repo.clone(), config, root, head, bookmark_val).and_then({
-        move |new_head| try_update_bookmark(&repo, &onto_bookmark, bookmark_val, new_head)
-    })
+    create_rebased_changesets(ctx.clone(), repo.clone(), config, root, head, bookmark_val)
+        .and_then({
+            move |new_head| try_update_bookmark(ctx, &repo, &onto_bookmark, bookmark_val, new_head)
+        })
 }
 
 fn fetch_bonsai_changesets(
@@ -276,43 +278,47 @@ fn find_roots(
 }
 
 fn find_closest_root(
+    ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     config: PushrebaseParams,
     bookmark: Bookmark,
     roots: Vec<ChangesetId>,
 ) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
     let roots: HashSet<_> = roots.into_iter().collect();
-    get_bookmark_value(repo, &bookmark).from_err().and_then({
-        cloned!(repo);
-        move |id| {
-            let mut queue = VecDeque::new();
-            queue.push_back(id);
+    get_bookmark_value(ctx, repo, &bookmark)
+        .from_err()
+        .and_then({
+            cloned!(repo);
+            move |id| {
+                let mut queue = VecDeque::new();
+                queue.push_back(id);
 
-            loop_fn((queue, 0), move |(mut queue, depth)| {
-                if depth >= config.recursion_limit {
-                    return err(PushrebaseError::RootTooFarBehind).left_future();
-                }
-                match queue.pop_front() {
-                    None => err(PushrebaseError::Error(
-                        ErrorKind::PushrebaseNoCommonRoot(bookmark.clone(), roots.clone()).into(),
-                    )).left_future(),
-                    Some(id) => {
-                        if roots.contains(&id) {
-                            ok(Loop::Break(id)).left_future()
-                        } else {
-                            repo.get_bonsai_changeset(id)
-                                .map(move |bcs| {
-                                    queue.extend(bcs.parents());
-                                    Loop::Continue((queue, depth + 1))
-                                })
-                                .from_err()
-                                .right_future()
+                loop_fn((queue, 0), move |(mut queue, depth)| {
+                    if depth >= config.recursion_limit {
+                        return err(PushrebaseError::RootTooFarBehind).left_future();
+                    }
+                    match queue.pop_front() {
+                        None => err(PushrebaseError::Error(
+                            ErrorKind::PushrebaseNoCommonRoot(bookmark.clone(), roots.clone())
+                                .into(),
+                        )).left_future(),
+                        Some(id) => {
+                            if roots.contains(&id) {
+                                ok(Loop::Break(id)).left_future()
+                            } else {
+                                repo.get_bonsai_changeset(id)
+                                    .map(move |bcs| {
+                                        queue.extend(bcs.parents());
+                                        Loop::Continue((queue, depth + 1))
+                                    })
+                                    .from_err()
+                                    .right_future()
+                            }
                         }
                     }
-                }
-            })
-        }
-    })
+                })
+            }
+        })
 }
 
 /// find changed files by comparing manifests of `ancestor` and `descendant`
@@ -495,10 +501,11 @@ fn intersect_changed_files(
 }
 
 fn get_bookmark_value(
+    ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     bookmark_name: &Bookmark,
 ) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
-    repo.get_bonsai_bookmark(bookmark_name)
+    repo.get_bonsai_bookmark(ctx, bookmark_name)
         .and_then({
             cloned!(bookmark_name);
             move |bookmark| {
@@ -613,12 +620,13 @@ fn find_rebased_set(
 }
 
 fn try_update_bookmark(
+    ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     bookmark_name: &Bookmark,
     old_value: ChangesetId,
     new_value: ChangesetId,
 ) -> BoxFuture<Option<ChangesetId>, PushrebaseError> {
-    let mut txn = repo.update_bookmark_transaction();
+    let mut txn = repo.update_bookmark_transaction(ctx);
     try_boxfuture!(txn.update(bookmark_name, &new_value, &old_value));
     txn.commit()
         .map(move |success| if success { Some(new_value) } else { None })
@@ -640,8 +648,11 @@ mod tests {
 
     fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark, cs_id: &str) {
         let head = HgChangesetId::from_str(cs_id).unwrap();
-        let head = repo.get_bonsai_from_hg(ctx, &head).wait().unwrap().unwrap();
-        let mut txn = repo.update_bookmark_transaction();
+        let head = repo.get_bonsai_from_hg(ctx.clone(), &head)
+            .wait()
+            .unwrap()
+            .unwrap();
+        let mut txn = repo.update_bookmark_transaction(ctx);
         txn.force_set(&book, &head).unwrap();
         txn.commit().wait().unwrap();
     }
@@ -875,8 +886,13 @@ mod tests {
 
             let root = root1;
             assert_eq!(
-                find_closest_root(&repo_arc, config.clone(), book.clone(), vec![root0, root1])
-                    .wait()
+                find_closest_root(
+                    ctx.clone(),
+                    &repo_arc,
+                    config.clone(),
+                    book.clone(),
+                    vec![root0, root1]
+                ).wait()
                     .unwrap(),
                 root,
             );

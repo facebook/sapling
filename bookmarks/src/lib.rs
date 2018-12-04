@@ -7,6 +7,7 @@
 #![deny(warnings)]
 
 extern crate ascii;
+extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures_ext;
@@ -17,6 +18,7 @@ extern crate sql;
 use std::fmt;
 
 use ascii::AsciiString;
+use context::CoreContext;
 use failure::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::RepositoryId;
@@ -101,7 +103,12 @@ impl BookmarkPrefix {
 
 pub trait Bookmarks: Send + Sync + 'static {
     /// Returns Some(ChangesetId) if bookmark exists, returns None if doesn't
-    fn get(&self, name: &Bookmark, repoid: &RepositoryId) -> BoxFuture<Option<ChangesetId>, Error>;
+    fn get(
+        &self,
+        ctx: CoreContext,
+        name: &Bookmark,
+        repoid: &RepositoryId,
+    ) -> BoxFuture<Option<ChangesetId>, Error>;
 
     /// Lists the bookmarks that match the prefix with bookmark's values.
     /// Empty prefix means list all of the available bookmarks
@@ -109,6 +116,7 @@ pub trait Bookmarks: Send + Sync + 'static {
     /// listing all the bookmarks?
     fn list_by_prefix(
         &self,
+        ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repoid: &RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error>;
@@ -121,12 +129,13 @@ pub trait Bookmarks: Send + Sync + 'static {
     /// Empty prefix means list all of the available bookmarks
     fn list_by_prefix_maybe_stale(
         &self,
+        ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repoid: &RepositoryId,
     ) -> BoxStream<(Bookmark, ChangesetId), Error>;
 
     /// Creates a transaction that will be used for write operations.
-    fn create_transaction(&self, repoid: &RepositoryId) -> Box<Transaction>;
+    fn create_transaction(&self, ctx: CoreContext, repoid: &RepositoryId) -> Box<Transaction>;
 }
 
 pub trait Transaction: Send + Sync + 'static {
