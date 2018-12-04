@@ -833,7 +833,10 @@ def gc(ui, *args, **opts):
 
     # gc server cache
     for repo in repos:
-        remotefilelogserver.gcserver(ui, repo._repo)
+        try:
+            remotefilelogserver.gcserver(ui, repo._repo)
+        except Exception as e:
+            ui.warn(_("warning: can't gc repository: %s: %s\n") % (repo._repo.root, e))
 
 
 def gcclient(ui, cachepath):
