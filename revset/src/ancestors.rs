@@ -28,7 +28,6 @@ use mononoke_types::{ChangesetId, Generation};
 
 use BonsaiNodeStream;
 use IntersectNodeStream;
-use NodeStream;
 use errors::*;
 
 pub struct AncestorsNodeStream {
@@ -153,12 +152,12 @@ pub fn common_ancestors<I>(
     repo: &BlobRepo,
     changeset_fetcher: Arc<ChangesetFetcher>,
     nodes: I,
-) -> Box<NodeStream>
+) -> Box<BonsaiNodeStream>
 where
     I: IntoIterator<Item = HgNodeHash>,
 {
     let nodes_iter = nodes.into_iter().map({
-        cloned!(ctx, repo);
+        cloned!(ctx, changeset_fetcher, repo);
         move |node| {
             let node = HgChangesetId::new(node);
             repo.get_bonsai_from_hg(ctx.clone(), &node)
@@ -169,24 +168,15 @@ where
                     }
                 })
                 .map({
-                    cloned!(ctx, changeset_fetcher, repo);
-                    move |node| {
-                        AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, node)
-                            .map({
-                                cloned!(repo);
-                                move |node| {
-                                    repo.get_hg_from_bonsai_changeset(ctx.clone(), node)
-                                        .map(|cs| cs.into_nodehash())
-                                }
-                            })
-                            .buffered(100)
-                    }
+                    cloned!(ctx, changeset_fetcher);
+                    move |node| AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, node)
                 })
                 .flatten_stream()
                 .boxify()
         }
     });
-    IntersectNodeStream::new(ctx, &Arc::new(repo.clone()), nodes_iter).boxed()
+
+    IntersectNodeStream::new(ctx, &Arc::new(changeset_fetcher), nodes_iter.into_iter()).boxed()
 }
 
 pub fn greatest_common_ancestor<I>(
@@ -194,7 +184,7 @@ pub fn greatest_common_ancestor<I>(
     repo: &BlobRepo,
     changeset_fetcher: Arc<ChangesetFetcher>,
     nodes: I,
-) -> Box<NodeStream>
+) -> Box<BonsaiNodeStream>
 where
     I: IntoIterator<Item = HgNodeHash>,
 {
@@ -209,7 +199,7 @@ mod test {
     use fixtures::merge_uneven;
     use fixtures::unshared_merge_uneven;
     use tests::{string_to_bonsai, string_to_nodehash, TestChangesetFetcher};
-    use tests::{assert_changesets_sequence, assert_node_sequence};
+    use tests::assert_changesets_sequence;
 
     #[test]
     fn linear_ancestors() {
@@ -268,7 +258,11 @@ mod test {
                         &repo,
                         "3e0e761030db6e479a7fb58b12881883f9f8c63f",
                     ),
-                    string_to_bonsai(ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+                    ),
                 ],
                 nodestream,
             );
@@ -357,7 +351,11 @@ mod test {
                         &repo,
                         "3cda5c78aa35f0f5b09780d971197b51cad4613a",
                     ),
-                    string_to_bonsai(ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
+                    ),
                 ],
                 nodestream,
             );
@@ -401,7 +399,11 @@ mod test {
                         &repo,
                         "3cda5c78aa35f0f5b09780d971197b51cad4613a",
                     ),
-                    string_to_bonsai(ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
+                    ),
                 ],
                 nodestream,
             );
@@ -522,7 +524,11 @@ mod test {
                         &repo,
                         "1700524113b1a3b1806560341009684b4378660b",
                     ),
-                    string_to_bonsai(ctx, &repo, "9d374b7e8180f933e3043ad1ffab0a9f95e2bac6"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "9d374b7e8180f933e3043ad1ffab0a9f95e2bac6",
+                    ),
                 ],
                 nodestream,
             );
@@ -546,7 +552,7 @@ mod test {
                     string_to_nodehash("1700524113b1a3b1806560341009684b4378660b"),
                 ],
             );
-            assert_node_sequence(ctx, &repo, vec![], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
     }
 
@@ -567,11 +573,15 @@ mod test {
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                 ],
             );
-            assert_node_sequence(
-                ctx,
+            assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
-                    string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
+                    ),
                 ],
                 nodestream,
             );
@@ -595,11 +605,15 @@ mod test {
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
                 ],
             );
-            assert_node_sequence(
-                ctx,
+            assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+                    ),
                 ],
                 nodestream,
             );
@@ -623,11 +637,15 @@ mod test {
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                 ],
             );
-            assert_node_sequence(
-                ctx,
+            assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
-                    string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
+                    ),
                 ],
                 nodestream,
             );
@@ -651,14 +669,30 @@ mod test {
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
                 ],
             );
-            assert_node_sequence(
-                ctx,
+            assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                    string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                    string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "b65231269f651cfe784fd1d97ef02a049a37b8a0",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "d7542c9db7f4c77dab4b315edd328edf1514952f",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
+                    ),
                 ],
                 nodestream,
             );

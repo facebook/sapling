@@ -143,7 +143,12 @@ impl RevsetSpec {
                     &RevsetEntry::Intersect(size) => {
                         let idx = output.len() - size;
                         let inputs = output.split_off(idx);
-                        IntersectNodeStream::new(ctx.clone(), &repo.clone(), inputs).boxed()
+                        let nodestream = IntersectNodeStream::new(
+                            ctx.clone(),
+                            &repo.get_changeset_fetcher(),
+                            nodestreams_to_bonsai_nodestreams(ctx.clone(), &repo, inputs),
+                        ).boxed();
+                        bonsai_nodestream_to_nodestream(ctx.clone(), &repo.clone(), nodestream)
                     }
                 },
                 &repo.clone(),
@@ -354,6 +359,33 @@ impl Iterator for IncludeExcludeDiscardCombinationsIterator {
         self.index += 1;
         res
     }
+}
+
+pub fn nodestreams_to_bonsai_nodestreams(
+    ctx: CoreContext,
+    repo: &Arc<BlobRepo>,
+    inputs: Vec<Box<NodeStream>>,
+) -> Vec<Box<BonsaiNodeStream>> {
+    inputs
+        .into_iter()
+        .map({
+            cloned!(repo, ctx);
+            move |nodestream| {
+                nodestream
+                    .and_then({
+                        cloned!(repo, ctx);
+                        move |hash| {
+                            repo.get_bonsai_from_hg(ctx.clone(), &HgChangesetId::new(hash.clone()))
+                                .map(move |maybe_bonsai| {
+                                    maybe_bonsai
+                                        .expect("Failed to get Bonsai Changeset from HgNodeHash")
+                                })
+                        }
+                    })
+                    .boxify()
+            }
+        })
+        .collect()
 }
 
 fn hg_to_bonsai_changesetid(

@@ -36,6 +36,9 @@ pub use unionnodestream::UnionNodeStream;
 mod singlenodehash;
 pub use singlenodehash::SingleNodeHash;
 
+mod singlechangesetid;
+pub use singlechangesetid::SingleChangesetId;
+
 mod setdifferencenodestream;
 pub use setdifferencenodestream::SetDifferenceNodeStream;
 

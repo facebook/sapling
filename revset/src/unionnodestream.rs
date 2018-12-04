@@ -187,7 +187,7 @@ mod test {
 
             let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
             let inputs: Vec<Box<NodeStream>> = vec![
-                Box::new(RepoErrorStream { hash: nodehash }),
+                Box::new(RepoErrorStream { item: nodehash }),
                 SingleNodeHash::new(ctx.clone(), nodehash.clone(), &repo).boxed(),
             ];
             let mut nodestream =
@@ -195,7 +195,7 @@ mod test {
 
             match nodestream.wait_stream() {
                 Some(Err(err)) => match err_downcast!(err, err: ErrorKind => err) {
-                    Ok(ErrorKind::RepoError(hash)) => assert_eq!(hash, nodehash),
+                    Ok(ErrorKind::RepoNodeError(hash)) => assert_eq!(hash, nodehash),
                     Ok(bad) => panic!("unexpected error {:?}", bad),
                     Err(bad) => panic!("unknown error {:?}", bad),
                 },
@@ -309,11 +309,7 @@ mod test {
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
-            let inputs: Vec<Box<NodeStream>> = vec![
-                Box::new(NotReadyEmptyStream {
-                    poll_count: repeats,
-                }),
-            ];
+            let inputs: Vec<Box<NodeStream>> = vec![Box::new(NotReadyEmptyStream::new(repeats))];
             let mut nodestream =
                 UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
 

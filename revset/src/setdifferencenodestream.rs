@@ -156,7 +156,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
-                Box::new(NotReadyEmptyStream { poll_count: 0 }),
+                Box::new(NotReadyEmptyStream::new(0)),
             ).boxed();
 
             assert_node_sequence(ctx, &repo, vec![head_hash], nodestream);
@@ -173,7 +173,7 @@ mod test {
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &repo,
-                Box::new(NotReadyEmptyStream { poll_count: 0 }),
+                Box::new(NotReadyEmptyStream::new(0)),
                 SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
             ).boxed();
 
@@ -224,14 +224,14 @@ mod test {
                 SetDifferenceNodeStream::new(
                     ctx.clone(),
                     &repo,
-                    Box::new(RepoErrorStream { hash: nodehash }),
+                    Box::new(RepoErrorStream { item: nodehash }),
                     SingleNodeHash::new(ctx.clone(), nodehash.clone(), &repo).boxed(),
                 ).boxed(),
             );
 
             match nodestream.wait_stream() {
                 Some(Err(err)) => match err_downcast!(err, err: ErrorKind => err) {
-                    Ok(ErrorKind::RepoError(hash)) => assert_eq!(hash, nodehash),
+                    Ok(ErrorKind::RepoNodeError(hash)) => assert_eq!(hash, nodehash),
                     Ok(bad) => panic!("unexpected error {:?}", bad),
                     Err(bad) => panic!("unknown error {:?}", bad),
                 },
@@ -251,12 +251,8 @@ mod test {
             let mut nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &repo,
-                Box::new(NotReadyEmptyStream {
-                    poll_count: repeats,
-                }),
-                Box::new(NotReadyEmptyStream {
-                    poll_count: repeats,
-                }),
+                Box::new(NotReadyEmptyStream::new(repeats)),
+                Box::new(NotReadyEmptyStream::new(repeats)),
             ).boxed();
 
             // Keep polling until we should be done.

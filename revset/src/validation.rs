@@ -81,7 +81,6 @@ mod test {
     use SingleNodeHash;
     use async_unit;
     use fixtures::linear;
-
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
     use tests::assert_node_sequence;
@@ -110,13 +109,9 @@ mod test {
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
-            let mut nodestream = ValidateNodeStream::new(
-                ctx,
-                Box::new(NotReadyEmptyStream {
-                    poll_count: repeats,
-                }),
-                &repo,
-            ).boxed();
+            let mut nodestream =
+                ValidateNodeStream::new(ctx, Box::new(NotReadyEmptyStream::new(repeats)), &repo)
+                    .boxed();
 
             // Keep polling until we should be done.
             for _ in 0..repeats + 1 {

@@ -13,6 +13,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::{ChangesetId, Generation};
 use std::boxed::Box;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use BonsaiNodeStream;
@@ -22,9 +23,9 @@ use failure::{err_msg, Error};
 
 use futures::{Async, Poll};
 
-pub type InputStream = Box<Stream<Item = (HgNodeHash, Generation), Error = Error> + 'static + Send>;
-pub type BonsaiInputStream =
-    Box<Stream<Item = (ChangesetId, Generation), Error = Error> + 'static + Send>;
+type GenericStream<T> = Box<Stream<Item = (T, Generation), Error = Error> + 'static + Send>;
+pub type InputStream = GenericStream<HgNodeHash>;
+pub type BonsaiInputStream = GenericStream<ChangesetId>;
 
 pub fn add_generations(
     ctx: CoreContext,
@@ -56,8 +57,8 @@ pub fn add_generations_by_bonsai(
     Box::new(stream)
 }
 
-pub fn all_inputs_ready(
-    inputs: &Vec<(InputStream, Poll<Option<(HgNodeHash, Generation)>, Error>)>,
+pub fn all_inputs_ready<T>(
+    inputs: &Vec<(GenericStream<T>, Poll<Option<(T, Generation)>, Error>)>,
 ) -> bool {
     inputs
         .iter()
@@ -68,8 +69,8 @@ pub fn all_inputs_ready(
         .all(|ready| ready)
 }
 
-pub fn poll_all_inputs(
-    inputs: &mut Vec<(InputStream, Poll<Option<(HgNodeHash, Generation)>, Error>)>,
+pub fn poll_all_inputs<T>(
+    inputs: &mut Vec<(GenericStream<T>, Poll<Option<(T, Generation)>, Error>)>,
 ) {
     for &mut (ref mut input, ref mut state) in inputs.iter_mut() {
         if let Ok(Async::NotReady) = *state {
@@ -79,13 +80,24 @@ pub fn poll_all_inputs(
 }
 
 #[cfg(test)]
-pub struct NotReadyEmptyStream {
+pub struct NotReadyEmptyStream<T> {
     pub poll_count: usize,
+    __phantom: PhantomData<T>,
 }
 
 #[cfg(test)]
-impl Stream for NotReadyEmptyStream {
-    type Item = HgNodeHash;
+impl<T> NotReadyEmptyStream<T> {
+    pub fn new(poll_count: usize) -> Self {
+        Self {
+            poll_count: poll_count,
+            __phantom: PhantomData,
+        }
+    }
+}
+
+#[cfg(test)]
+impl<T> Stream for NotReadyEmptyStream<T> {
+    type Item = T;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -99,16 +111,26 @@ impl Stream for NotReadyEmptyStream {
 }
 
 #[cfg(test)]
-pub struct RepoErrorStream {
-    pub hash: HgNodeHash,
+pub struct RepoErrorStream<T> {
+    pub item: T,
 }
 
 #[cfg(test)]
-impl Stream for RepoErrorStream {
+impl Stream for RepoErrorStream<HgNodeHash> {
     type Item = HgNodeHash;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        bail_err!(ErrorKind::RepoError(self.hash));
+        bail_err!(ErrorKind::RepoNodeError(self.item));
+    }
+}
+
+#[cfg(test)]
+impl Stream for RepoErrorStream<ChangesetId> {
+    type Item = ChangesetId;
+    type Error = Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        bail_err!(ErrorKind::RepoChangesetError(self.item));
     }
 }
