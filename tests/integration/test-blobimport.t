@@ -45,6 +45,6 @@
   >     hg commit -Aqm "Small, Capital and Underscores commit"$i
   > done
 
+  $ setup_mononoke_config
   $ cd $TESTTMP
-
   $ blobimport rocksdb repo-hg/.hg repo

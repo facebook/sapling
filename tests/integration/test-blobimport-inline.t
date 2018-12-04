@@ -43,4 +43,6 @@
 
   $ cd $TESTTMP
 
+  $ setup_mononoke_config
+  $ cd $TESTTMP
   $ blobimport files repo-hg/.hg repo

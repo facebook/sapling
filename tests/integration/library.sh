@@ -175,8 +175,8 @@ function blobimport {
   shift 3
   mkdir -p "$output"
   $MONONOKE_BLOBIMPORT --repo_id 0 \
-     --blobstore "$blobstore" "$input" \
-     --data-dir "$output" --do-not-init-cachelib "$@" >> "$TESTTMP/blobimport.out" 2>&1
+     --mononoke-config-path "$TESTTMP/mononoke-config" \
+     "$input" --do-not-init-cachelib "$@" >> "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
   if [[ $BLOBIMPORT_RC -ne 0 ]]; then
     cat "$TESTTMP/blobimport.out"
@@ -188,7 +188,8 @@ function blobimport {
 function bonsai_verify {
   repo="$1"
   shift 1
-  $MONONOKE_BONSAI_VERIFY --repo_id 0 --blobstore rocksdb --data-dir "$repo" "$@"
+  $MONONOKE_BONSAI_VERIFY --repo_id 0 \
+  --mononoke-config-path "$TESTTMP/mononoke-config" "$@"
 }
 
 function setup_no_ssl_apiserver {
@@ -404,9 +405,9 @@ EOF
 }
 
 function aliasverify() {
-  blobstore=$1
-  repo_folder=$2
-  mode=$3
-  shift 3
-  $MONONOKE_ALIAS_VERIFY --repo_id 0 --blobstore "$blobstore" --data-dir "$repo_folder" --mode "$mode" "$@"
+  mode=$1
+  shift 1
+  $MONONOKE_ALIAS_VERIFY --repo_id 0 \
+     --mononoke-config-path "$TESTTMP/mononoke-config" \
+     --mode "$mode" "$@"
 }

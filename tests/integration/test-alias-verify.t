@@ -30,7 +30,8 @@
   blob-repo0000.alias.sha256.b9a294f298d0ed2b65ca4488a42b473ff5f75d0b9843cbea84e1b472f9a514d1
   blob-repo0000.alias.sha256.d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f
 
-  $ aliasverify files $TESTTMP/repo verify
+  $ aliasverify verify
+  * using repo "repo" repoid RepositoryId(0) (glob)
   * Process Changesets with ids: [1, 4) (glob)
   * Commit processed 0 (glob)
   * Alias Verification continues: 0 errors found (glob)
@@ -41,13 +42,15 @@
   $ ls $TESTTMP/repo/blobs | grep "alias" | wc -l
   0
 
-  $ aliasverify files $TESTTMP/repo verify
+  $ aliasverify verify
+  * using repo "repo" repoid RepositoryId(0) (glob)
   * Process Changesets with ids: [1, 4) (glob)
   * Commit processed 0 (glob)
   * Alias Verification continues: 3 errors found (glob)
   * Alias Verification finished: 3 errors found (glob)
 
-  $ aliasverify files $TESTTMP/repo verify --debug
+  $ aliasverify verify --debug
+  * using repo "repo" repoid RepositoryId(0) (glob)
   * Process Changesets with ids: [1, 4) (glob)
   * Commit processed 0 (glob)
   * Missing alias blob: alias Sha256(d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f), content_id ContentId(Blake2(73f63d223a944d13b617aaefd255742e870cde0107d19c52d02d45b0d5ed690d)) (glob)
@@ -59,7 +62,8 @@
   $ ls $TESTTMP/repo/blobs | grep "alias" | wc -l
   0
 
-  $ aliasverify files $TESTTMP/repo generate --debug
+  $ aliasverify generate --debug
+  * using repo "repo" repoid RepositoryId(0) (glob)
   * Process Changesets with ids: [1, 4) (glob)
   * Commit processed 0 (glob)
   * Missing alias blob: alias Sha256(d690916cdea320e620748799a2051a0f4e07d6d0c3e2bc199ea3c69e0c0b5e4f), content_id ContentId(Blake2(73f63d223a944d13b617aaefd255742e870cde0107d19c52d02d45b0d5ed690d)) (glob)

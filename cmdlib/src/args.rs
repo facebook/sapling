@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{App, Arg, ArgMatches};
-use failure::{Result, ResultExt};
+use failure::{err_msg, Result, ResultExt};
 use panichandler::{self, Fate};
 use slog::{Drain, Logger};
 use sloggers::Build;
@@ -25,7 +25,7 @@ use slog_glog_fmt::default_drain as glog_drain;
 use changesets::{SqlChangesets, SqlConstructors};
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
-use metaconfig::{ManifoldArgs, RepoReadOnly, RepoType};
+use metaconfig::{ManifoldArgs, RepoConfigs, RepoReadOnly, RepoType};
 use repo_client::{open_blobrepo, MononokeRepo};
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -112,6 +112,12 @@ impl MononokeApp {
                     .possible_values(&["continue", "exit", "abort"])
                     .default_value("abort")
                     .help("fate of the process when a panic happens")
+            )
+            .arg(
+                Arg::with_name("mononoke-config-path")
+                    .long("mononoke-config-path")
+                    .value_name("MONONOKE_CONFIG_PATH")
+                    .help("Path to the Mononoke configs")
             )
 
             // Manifold-specific arguments
@@ -216,21 +222,25 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {
 }
 
 pub fn open_sql_changesets(matches: &ArgMatches) -> Result<SqlChangesets> {
-    match matches.value_of("blobstore") {
-        Some("files") | Some("rocksdb") => {
-            let path = parse_data_dir(matches);
-            SqlChangesets::with_sqlite_path(path.join("changesets"))
+    let (_, repo_type) = find_repo_type(matches)?;
+    match repo_type {
+        RepoType::BlobFiles(ref data_dir) => {
+            SqlChangesets::with_sqlite_path(data_dir.join("changesets"))
         }
-        None | Some("manifold") => {
-            let manifold_args = parse_manifold_args(matches);
+        RepoType::BlobRocks(ref data_dir) => {
+            SqlChangesets::with_sqlite_path(data_dir.join("changesets"))
+        }
+        RepoType::BlobManifold(ref manifold_args) => {
             let myrouter_port =
-                parse_myrouter_port(matches).expect("myrouter port provided is not an int");
+                parse_myrouter_port(matches).expect("myrouter port provided is not provided");
             Ok(SqlChangesets::with_myrouter(
                 &manifold_args.db_address,
                 myrouter_port,
             ))
         }
-        Some(bad) => panic!("unexpected blobstore type: {}", bad),
+        RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
+            SqlChangesets::with_sqlite_path(data_dir.join("changesets"))
+        }
     }
 }
 
@@ -421,6 +431,25 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
     ).unwrap();
 }
 
+fn find_repo_type<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoType)> {
+    let repo_id = get_repo_id(matches);
+
+    let config_path = matches
+        .value_of("mononoke-config-path")
+        .expect("Mononoke config path must be specified");
+
+    let configs = RepoConfigs::read_configs(config_path)?;
+    let repo_config = configs
+        .repos
+        .into_iter()
+        .filter(|(_, config)| RepositoryId::new(config.repoid) == repo_id)
+        .last();
+    match repo_config {
+        Some((name, config)) => Ok((name, config.repotype)),
+        None => Err(err_msg(format!("uknown repoid {:?}", repo_id))),
+    }
+}
+
 fn open_repo_internal<'a>(
     logger: &Logger,
     matches: &ArgMatches<'a>,
@@ -428,39 +457,31 @@ fn open_repo_internal<'a>(
 ) -> Result<MononokeRepo> {
     let repo_id = get_repo_id(matches);
 
-    let (logger, repo_type) = match matches.value_of("blobstore") {
-        Some("files") => {
-            let data_dir = parse_data_dir(matches);
+    let (reponame, repotype) = find_repo_type(matches)?;
+    info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
+    let logger = match repotype {
+        RepoType::BlobFiles(ref data_dir) => {
             setup_repo_dir(&data_dir, create).expect("Setting up file blobrepo failed");
-
-            let logger =
-                logger.new(o!["BlobRepo:Files" => data_dir.to_string_lossy().into_owned()]);
-            let repo_type = RepoType::BlobFiles(data_dir);
-            (logger, repo_type)
+            logger.new(o!["BlobRepo:Files" => data_dir.to_string_lossy().into_owned()])
         }
-        Some("rocksdb") => {
-            let data_dir = parse_data_dir(matches);
+        RepoType::BlobRocks(ref data_dir) => {
             setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
-
-            let logger =
-                logger.new(o!["BlobRepo:Rocksdb" => data_dir.to_string_lossy().into_owned()]);
-            let repo_type = RepoType::BlobRocks(data_dir);
-            (logger, repo_type)
+            logger.new(o!["BlobRepo:Rocksdb" => data_dir.to_string_lossy().into_owned()])
         }
-        None | Some("manifold") => {
-            let manifold_args = parse_manifold_args(&matches);
-
-            let logger = logger.new(o!["BlobRepo:TestManifold" => manifold_args.bucket.clone()]);
-            let repo_type = RepoType::BlobManifold(manifold_args);
-            (logger, repo_type)
+        RepoType::BlobManifold(ref manifold_args) => {
+            logger.new(o!["BlobRepo:Manifold" => manifold_args.bucket.clone()])
         }
-        Some(bad) => panic!("unexpected blobstore type: {}", bad),
+        RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
+            setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
+            logger.new(o!["BlobRepo:DelayRocksdb" => data_dir.to_string_lossy().into_owned()])
+        }
     };
 
     let myrouter_port = parse_myrouter_port(matches);
 
-    let blobrepo = open_blobrepo(logger.clone(), repo_type.clone(), repo_id, myrouter_port)?;
-    let hook_manager = HookManager::new_with_blobrepo(Default::default(), blobrepo.clone(), logger);
+    let blobrepo = open_blobrepo(logger.clone(), repotype.clone(), repo_id, myrouter_port)?;
+    let hook_manager =
+        HookManager::new_with_blobrepo(Default::default(), blobrepo.clone(), logger.clone());
     // TODO fixup imports
     Ok(MononokeRepo::new(
         blobrepo,

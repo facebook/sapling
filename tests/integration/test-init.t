@@ -113,7 +113,6 @@ blobimport
 
   $ cd ..
   $ blobimport rocksdb repo-hg/.hg repo
-  $ blobimport rocksdb repo-hg/.hg enabled_repo
 
 start mononoke
 
