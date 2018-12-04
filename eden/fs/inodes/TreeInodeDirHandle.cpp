@@ -122,9 +122,5 @@ folly::Future<DirList> TreeInodeDirHandle::readdir(DirList&& list, off_t off) {
   return std::move(list);
 }
 
-folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool /*datasync*/) {
-  // We're read-only here, so there is nothing to sync
-  return folly::unit;
-}
 } // namespace eden
 } // namespace facebook

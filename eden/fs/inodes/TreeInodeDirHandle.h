@@ -20,8 +20,6 @@ class TreeInodeDirHandle : public DirHandle {
 
   folly::Future<DirList> readdir(DirList&& list, off_t off) override;
 
-  folly::Future<folly::Unit> fsyncdir(bool datasync) override;
-
  private:
   TreeInodePtr inode_;
 };

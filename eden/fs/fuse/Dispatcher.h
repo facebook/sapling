@@ -320,6 +320,16 @@ class Dispatcher {
       bool datasync);
 
   /**
+   * Ensure directory content changes are flushed to disk.
+   *
+   * If the datasync parameter is true, then only the directory contents should
+   * be flushed, not the metadata.
+   */
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsyncdir(
+      InodeNumber ino,
+      bool datasync);
+
+  /**
    * Get file system statistics
    *
    * @param ino the inode number, zero means "undefined"

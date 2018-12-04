@@ -25,10 +25,6 @@ class FakeDirHandle : public DirHandle {
   folly::Future<DirList> readdir(DirList&& /*list*/, off_t /*off*/) override {
     throw std::runtime_error("fake!");
   }
-
-  folly::Future<folly::Unit> fsyncdir(bool /*datasync*/) override {
-    throw std::runtime_error("fake!");
-  }
 };
 
 class FakeFileHandle : public FileHandle {

@@ -1697,7 +1697,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
-    const fuse_in_header* /*header*/,
+    const fuse_in_header* header,
     const uint8_t* arg) {
   const auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
   // There's no symbolic constant for this :-/
@@ -1705,9 +1705,10 @@ folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
 
   XLOG(DBG7) << "FUSE_FSYNCDIR";
 
-  auto dh = dispatcher_->getDirHandle(fsync->fh);
-  return dh->fsyncdir(datasync).thenValue(
-      [](auto&&) { RequestData::get().replyError(0); });
+  auto ino = InodeNumber{header->nodeid};
+  return dispatcher_->fsyncdir(ino, datasync).thenValue([](auto&&) {
+    RequestData::get().replyError(0);
+  });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseAccess(

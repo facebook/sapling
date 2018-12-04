@@ -24,17 +24,6 @@ class DirHandle : public FileHandleBase {
    * Send an empty DirList on end of stream.
    */
   virtual folly::Future<DirList> readdir(DirList&& list, off_t off) = 0;
-
-  /**
-   * Synchronize directory contents
-   *
-   * If the datasync parameter is non-zero, then only the directory
-   * contents should be flushed, not the meta data.
-   *
-   * @param datasync flag indicating if only data should be flushed
-   */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsyncdir(
-      bool datasync) = 0;
 };
 
 } // namespace eden
