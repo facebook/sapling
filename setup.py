@@ -1751,8 +1751,8 @@ rustextmodules = [
     ),
     RustExtension(
         "pymononokeapi",
-        package="hgext.extlib",
-        manifest="hgext/extlib/pymononokeapi/Cargo.toml",
+        package="mercurial.rust",
+        manifest="mercurial/rust/pymononokeapi/Cargo.toml",
     ),
     RustExtension(
         "pyrevisionstore",

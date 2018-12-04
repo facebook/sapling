@@ -7,8 +7,7 @@ from __future__ import absolute_import
 
 from mercurial import error, registrar, util
 from mercurial.i18n import _
-
-from ..extlib.pymononokeapi import PyMononokeClient
+from mercurial.rust.pymononokeapi import PyMononokeClient
 
 
 configtable = {}
