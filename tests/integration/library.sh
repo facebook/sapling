@@ -230,6 +230,7 @@ function wait_for_apiserver {
     exit 1
   fi
 
+  export APIHOST="localhost:$PORT"
   export APISERVER
   APISERVER="https://localhost:$PORT"
   if [[ ($# -eq 1 && "$1" == "--no-ssl") ]]; then

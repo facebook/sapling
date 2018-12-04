@@ -49,9 +49,10 @@ import testing repo to mononoke
 
 starts api server
   $ APISERVER_PORT=$(get_free_socket)
-  $ apiserver -H "127.0.0.1" -p $APISERVER_PORT
+  $ apiserver -H "[::1]" -p $APISERVER_PORT
   $ wait_for_apiserver
   $ alias sslcurl="sslcurl --silent"
+  $ alias s_client="openssl s_client -connect $APIHOST -cert \"$TESTDIR/testcert.crt\" -key \"$TESTDIR/testcert.key\" -ign_eof"
 
 ping test
   $ sslcurl -i $APISERVER/health_check | grep -iv "date"
@@ -272,6 +273,21 @@ test get changeset
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/changeset/0000 | extract_json_error
   0000 is invalid
   400
+
+test TLS Session/Ticket resumption when using client certs
+  $ TMPFILE=$(mktemp)
+  $ RUN1=$(echo -e "GET /health_check HTTP/1.1\r\n" | s_client -sess_out $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
+  depth=0 C = uk, L = Default City, O = Default Company Ltd, CN = localhost
+  verify error:num=18:self signed certificate
+  verify return:1
+  depth=0 C = uk, L = Default City, O = Default Company Ltd, CN = localhost
+  verify return:1
+  $ RUN2=$(echo -e "GET /health_check HTTP/1.1\r\n" | s_client -sess_in $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
+  $ echo "$RUN1"
+      Session-ID: [A-Z0-9]{64} (re)
+  HTTP/1.1 200 OK\r (esc)
+  $ if [ "$RUN1" == "$RUN2" ]; then echo "SUCCESS"; fi
+  SUCCESS
 
 test download LFS (GET request)
   $ sslcurl $APISERVER/repo/lfs/download/$SHA > output

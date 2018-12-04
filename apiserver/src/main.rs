@@ -431,7 +431,8 @@ fn main() -> Result<()> {
             private_key,
             ca_pem,
         };
-        Some(secure_utils::build_tls_acceptor_builder(ssl)?)
+        let acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())?;
+        Some(secure_utils::fb_tls_acceptor_builder(ssl.clone(), acceptor)?)
     } else {
         None
     };
