@@ -20,6 +20,7 @@ use mercurial_types::nodehash::HgEntryId;
 use mononoke_types::{ContentId, FileContents, MononokeId, hash::Sha256};
 
 use blobstore::Blobstore;
+use context::CoreContext;
 
 use errors::*;
 
@@ -44,15 +45,16 @@ impl PartialEq for HgBlobEntry {
 impl Eq for HgBlobEntry {}
 
 pub fn fetch_raw_filenode_bytes(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
 ) -> BoxFuture<HgBlob, Error> {
-    fetch_file_envelope(blobstore, node_id)
+    fetch_file_envelope(ctx.clone(), blobstore, node_id)
         .and_then({
             let blobstore = blobstore.clone();
             move |envelope| {
                 let envelope = envelope.into_mut();
-                let file_contents_fut = fetch_file_contents(&blobstore, envelope.content_id);
+                let file_contents_fut = fetch_file_contents(ctx, &blobstore, envelope.content_id);
 
                 let mut metadata = envelope.metadata;
                 if metadata.is_empty() {
@@ -76,47 +78,52 @@ pub fn fetch_raw_filenode_bytes(
 }
 
 pub fn fetch_file_content_from_blobstore(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
 ) -> impl Future<Item = FileContents, Error = Error> {
-    fetch_file_envelope(blobstore, node_id).and_then({
+    fetch_file_envelope(ctx.clone(), blobstore, node_id).and_then({
         let blobstore = blobstore.clone();
         move |envelope| {
             let content_id = envelope.content_id();
-            fetch_file_contents(&blobstore, content_id.clone())
+            fetch_file_contents(ctx, &blobstore, content_id.clone())
         }
     })
 }
 
 pub fn fetch_file_size_from_blobstore(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = u64, Error = Error> {
-    fetch_file_envelope(blobstore, node_id.into_nodehash())
+    fetch_file_envelope(ctx, blobstore, node_id.into_nodehash())
         .map({ |envelope| envelope.content_size() })
 }
 
 pub fn fetch_file_content_id_from_blobstore(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgFileNodeId,
 ) -> impl Future<Item = ContentId, Error = Error> {
-    fetch_file_envelope(blobstore, node_id.into_nodehash())
+    fetch_file_envelope(ctx, blobstore, node_id.into_nodehash())
         .map({ |envelope| *envelope.content_id() })
 }
 
 pub fn fetch_file_content_sha256_from_blobstore(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     content_id: ContentId,
 ) -> impl Future<Item = Sha256, Error = Error> {
-    fetch_file_contents(blobstore, content_id)
+    fetch_file_contents(ctx, blobstore, content_id)
         .map(|file_content| get_sha256(&file_content.into_bytes()))
 }
 
 pub fn fetch_rename_from_blobstore(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
 ) -> impl Future<Item = Option<(MPath, HgNodeHash)>, Error = Error> {
-    fetch_file_envelope(blobstore, node_id).and_then(|envelope| {
+    fetch_file_envelope(ctx, blobstore, node_id).and_then(|envelope| {
         let envelope = envelope.into_mut();
 
         // This is a bit of a hack because metadata is not the complete file. However, it's
@@ -130,10 +137,11 @@ pub fn fetch_rename_from_blobstore(
 }
 
 pub fn fetch_file_envelope(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
 ) -> impl Future<Item = HgFileEnvelope, Error = Error> {
-    fetch_file_envelope_opt(blobstore, node_id)
+    fetch_file_envelope_opt(ctx, blobstore, node_id)
         .and_then(move |envelope| {
             let envelope = envelope.ok_or(ErrorKind::HgContentMissing(
                 node_id,
@@ -145,12 +153,13 @@ pub fn fetch_file_envelope(
 }
 
 pub fn fetch_file_envelope_opt(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
 ) -> impl Future<Item = Option<HgFileEnvelope>, Error = Error> {
     let blobstore_key = HgFileNodeId::new(node_id).blobstore_key();
     blobstore
-        .get(blobstore_key.clone())
+        .get(ctx, blobstore_key.clone())
         .context("While fetching manifest envelope blob")
         .map_err(Error::from)
         .and_then(move |bytes| {
@@ -173,12 +182,13 @@ pub fn fetch_file_envelope_opt(
 }
 
 pub fn fetch_file_contents(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     content_id: ContentId,
 ) -> impl Future<Item = FileContents, Error = Error> {
     let blobstore_key = content_id.blobstore_key();
     blobstore
-        .get(blobstore_key.clone())
+        .get(ctx, blobstore_key.clone())
         .context("While fetching content blob")
         .map_err(Error::from)
         .and_then(move |bytes| {
@@ -212,10 +222,12 @@ impl HgBlobEntry {
         }
     }
 
-    fn get_raw_content_inner(&self) -> BoxFuture<HgBlob, Error> {
+    fn get_raw_content_inner(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
         match self.ty {
-            Type::Tree => fetch_raw_manifest_bytes(&self.blobstore, self.id.into_nodehash()),
-            Type::File(_) => fetch_raw_filenode_bytes(&self.blobstore, self.id.into_nodehash()),
+            Type::Tree => fetch_raw_manifest_bytes(ctx, &self.blobstore, self.id.into_nodehash()),
+            Type::File(_) => {
+                fetch_raw_filenode_bytes(ctx, &self.blobstore, self.id.into_nodehash())
+            }
         }
     }
 }
@@ -225,32 +237,36 @@ impl Entry for HgBlobEntry {
         self.ty
     }
 
-    fn get_parents(&self) -> BoxFuture<HgParents, Error> {
+    fn get_parents(&self, ctx: CoreContext) -> BoxFuture<HgParents, Error> {
         match self.ty {
-            Type::Tree => fetch_manifest_envelope(&self.blobstore, self.id.into_nodehash())
-                .map(move |envelope| {
-                    let (p1, p2) = envelope.parents();
-                    HgParents::new(p1, p2)
-                })
-                .boxify(),
-            Type::File(_) => fetch_file_envelope(&self.blobstore, self.id.into_nodehash())
-                .map(move |envelope| {
-                    let (p1, p2) = envelope.parents();
-                    HgParents::new(p1, p2)
-                })
-                .boxify(),
+            Type::Tree => {
+                fetch_manifest_envelope(ctx.clone(), &self.blobstore, self.id.into_nodehash())
+                    .map(move |envelope| {
+                        let (p1, p2) = envelope.parents();
+                        HgParents::new(p1, p2)
+                    })
+                    .boxify()
+            }
+            Type::File(_) => {
+                fetch_file_envelope(ctx.clone(), &self.blobstore, self.id.into_nodehash())
+                    .map(move |envelope| {
+                        let (p1, p2) = envelope.parents();
+                        HgParents::new(p1, p2)
+                    })
+                    .boxify()
+            }
         }
     }
 
-    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
-        self.get_raw_content_inner()
+    fn get_raw_content(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
+        self.get_raw_content_inner(ctx)
     }
 
-    fn get_content(&self) -> BoxFuture<Content, Error> {
+    fn get_content(&self, ctx: CoreContext) -> BoxFuture<Content, Error> {
         let blobstore = self.blobstore.clone();
         match self.ty {
             Type::Tree => {
-                BlobManifest::load(&blobstore, &HgManifestId::new(self.id.into_nodehash()))
+                BlobManifest::load(ctx, &blobstore, &HgManifestId::new(self.id.into_nodehash()))
                     .and_then({
                         let node_id = self.id.into_nodehash();
                         move |blob_manifest| {
@@ -266,10 +282,11 @@ impl Entry for HgBlobEntry {
                     .from_err()
                     .boxify()
             }
-            Type::File(ft) => fetch_file_envelope(&blobstore, self.id.into_nodehash())
+            Type::File(ft) => fetch_file_envelope(ctx.clone(), &blobstore, self.id.into_nodehash())
                 .and_then(move |envelope| {
                     let envelope = envelope.into_mut();
-                    let file_contents_fut = fetch_file_contents(&blobstore, envelope.content_id);
+                    let file_contents_fut =
+                        fetch_file_contents(ctx, &blobstore, envelope.content_id);
                     file_contents_fut.map(move |contents| match ft {
                         FileType::Regular => Content::File(contents),
                         FileType::Executable => Content::Executable(contents),
@@ -286,12 +303,14 @@ impl Entry for HgBlobEntry {
     }
 
     // XXX get_size should probably return a u64, not a usize
-    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
+    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
         match self.ty {
             Type::Tree => future::ok(None).boxify(),
-            Type::File(_) => fetch_file_envelope(&self.blobstore, self.id.into_nodehash())
-                .map(|envelope| Some(envelope.content_size() as usize))
-                .boxify(),
+            Type::File(_) => {
+                fetch_file_envelope(ctx.clone(), &self.blobstore, self.id.into_nodehash())
+                    .map(|envelope| Some(envelope.content_size() as usize))
+                    .boxify()
+            }
         }
     }
 

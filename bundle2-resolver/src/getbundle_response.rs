@@ -89,10 +89,10 @@ pub fn create_getbundle_response(
                     .get_hg_from_bonsai_changeset(ctx.clone(), bonsai)
                     .map(|cs| cs.into_nodehash())
                     .and_then({
-                        cloned!(blobrepo);
+                        cloned!(ctx, blobrepo);
                         move |node| {
                             blobrepo
-                                .get_changeset_by_changesetid(&HgChangesetId::new(node))
+                                .get_changeset_by_changesetid(ctx, &HgChangesetId::new(node))
                                 .map(move |cs| (node, cs))
                         }
                     })

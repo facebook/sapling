@@ -12,6 +12,7 @@ use utils::run_future;
 
 use blobrepo::HgBlobEntry;
 use blobrepo::internal::{IncompleteFilenodes, MemoryManifestEntry, MemoryRootManifest};
+use context::CoreContext;
 use fixtures::many_files_dirs;
 use mercurial_types::{Entry, FileType, HgManifestId, HgNodeHash, MPath, MPathElement, Type,
                       nodehash::HgEntryId};
@@ -31,12 +32,14 @@ fn insert_entry(tree: &MemoryManifestEntry, path: MPathElement, entry: MemoryMan
 #[test]
 fn empty_manifest() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
 
         // Create an empty memory manifest
-        let memory_manifest = MemoryRootManifest::new(repo, IncompleteFilenodes::new(), None, None)
-            .wait()
-            .expect("Could not create empty manifest");
+        let memory_manifest =
+            MemoryRootManifest::new(ctx, repo, IncompleteFilenodes::new(), None, None)
+                .wait()
+                .expect("Could not create empty manifest");
 
         if let MemoryManifestEntry::MemTree {
             base_manifest_id,
@@ -59,16 +62,21 @@ fn empty_manifest() {
 #[test]
 fn load_manifest() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
 
         let manifest_id = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
             .expect("Could not get nodehash");
 
         // Load a memory manifest
-        let memory_manifest =
-            MemoryRootManifest::new(repo, IncompleteFilenodes::new(), Some(&manifest_id), None)
-                .wait()
-                .expect("Could not load manifest");
+        let memory_manifest = MemoryRootManifest::new(
+            ctx.clone(),
+            repo,
+            IncompleteFilenodes::new(),
+            Some(&manifest_id),
+            None,
+        ).wait()
+            .expect("Could not load manifest");
 
         if let MemoryManifestEntry::MemTree {
             base_manifest_id,
@@ -104,13 +112,18 @@ fn load_manifest() {
 #[test]
 fn save_manifest() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
 
         // Create an empty memory manifest
-        let memory_manifest =
-            MemoryRootManifest::new(repo.clone(), IncompleteFilenodes::new(), None, None)
-                .wait()
-                .expect("Could not create empty manifest");
+        let memory_manifest = MemoryRootManifest::new(
+            ctx.clone(),
+            repo.clone(),
+            IncompleteFilenodes::new(),
+            None,
+            None,
+        ).wait()
+            .expect("Could not create empty manifest");
 
         // Add an unmodified entry
         let dir_nodehash = HgNodeHash::from_static_str("907f5b20e06dfb91057861d984423e84b64b5b7b")
@@ -126,12 +139,12 @@ fn save_manifest() {
         insert_entry(&memory_manifest.unittest_root(), path.clone(), dir);
 
         let manifest_entry = memory_manifest
-            .save()
+            .save(ctx.clone())
             .wait()
             .expect("Could not save manifest");
         let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(&manifest_id)
+        let refound = repo.get_manifest_by_nodeid(ctx.clone(), &manifest_id)
             .map(|m| m.lookup(&path))
             .wait()
             .expect("Lookup of entry just saved failed")
@@ -149,6 +162,7 @@ fn save_manifest() {
 #[test]
 fn remove_item() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
         let blobstore = repo.get_blobstore();
 
@@ -159,6 +173,7 @@ fn remove_item() {
 
         // Load a memory manifest
         let memory_manifest = MemoryRootManifest::new(
+            ctx.clone(),
             repo.clone(),
             IncompleteFilenodes::new(),
             Some(&manifest_id),
@@ -173,6 +188,7 @@ fn remove_item() {
         // Remove a file
         memory_manifest
             .change_entry(
+                ctx.clone(),
                 &MPath::new(b"dir2/file_1_in_dir2").expect("Can't create MPath"),
                 None,
             )
@@ -187,7 +203,9 @@ fn remove_item() {
                     .get(&dir2)
                     .expect("dir2 is missing")
                     .clone()
-                    .map_or(false, |e| e.is_empty(&blobstore).wait().unwrap()),
+                    .map_or(false, |e| e.is_empty(ctx.clone(), &blobstore)
+                        .wait()
+                        .unwrap()),
                 "Bad after remove"
             );
             if let Some(MemoryManifestEntry::MemTree { changes, .. }) =
@@ -206,12 +224,12 @@ fn remove_item() {
 
         // And check that dir2 disappears over a save/reload operation
         let manifest_entry = memory_manifest
-            .save()
+            .save(ctx.clone())
             .wait()
             .expect("Could not save manifest");
         let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(&manifest_id)
+        let refound = repo.get_manifest_by_nodeid(ctx.clone(), &manifest_id)
             .map(|m| m.lookup(&dir2))
             .wait()
             .expect("Lookup of entry just saved failed");
@@ -226,6 +244,7 @@ fn remove_item() {
 #[test]
 fn add_item() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
         let blobstore = repo.get_blobstore();
 
@@ -237,6 +256,7 @@ fn add_item() {
 
         // Load a memory manifest
         let memory_manifest = MemoryRootManifest::new(
+            ctx.clone(),
             repo.clone(),
             IncompleteFilenodes::new(),
             Some(&manifest_id),
@@ -249,6 +269,7 @@ fn add_item() {
             .expect("Could not get nodehash");
         memory_manifest
             .change_entry(
+                ctx.clone(),
                 &MPath::new(b"new_file").expect("Could not create MPath"),
                 Some(HgBlobEntry::new(
                     blobstore.clone(),
@@ -262,12 +283,12 @@ fn add_item() {
 
         // And check that new_file persists
         let manifest_entry = memory_manifest
-            .save()
+            .save(ctx.clone())
             .wait()
             .expect("Could not save manifest");
         let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(&manifest_id)
+        let refound = repo.get_manifest_by_nodeid(ctx.clone(), &manifest_id)
             .map(|m| m.lookup(&new_file))
             .wait()
             .expect("Lookup of entry just saved failed")
@@ -283,6 +304,7 @@ fn add_item() {
 #[test]
 fn replace_item() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
         let blobstore = repo.get_blobstore();
 
@@ -293,6 +315,7 @@ fn replace_item() {
 
         // Load a memory manifest
         let memory_manifest = MemoryRootManifest::new(
+            ctx.clone(),
             repo.clone(),
             IncompleteFilenodes::new(),
             Some(&manifest_id),
@@ -305,6 +328,7 @@ fn replace_item() {
             .expect("Could not get nodehash");
         memory_manifest
             .change_entry(
+                ctx.clone(),
                 &MPath::new(b"1").expect("Could not create MPath"),
                 Some(HgBlobEntry::new(
                     blobstore.clone(),
@@ -318,12 +342,12 @@ fn replace_item() {
 
         // And check that new_file persists
         let manifest_entry = memory_manifest
-            .save()
+            .save(ctx.clone())
             .wait()
             .expect("Could not save manifest");
         let manifest_id = HgManifestId::new(manifest_entry.get_hash().into_nodehash());
 
-        let refound = repo.get_manifest_by_nodeid(&manifest_id)
+        let refound = repo.get_manifest_by_nodeid(ctx, &manifest_id)
             .map(|m| m.lookup(&new_file))
             .wait()
             .expect("Lookup of entry just saved failed")
@@ -339,6 +363,7 @@ fn replace_item() {
 #[test]
 fn conflict_resolution() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
         let blobstore = repo.get_blobstore();
         let logger = repo.get_logger();
@@ -398,6 +423,7 @@ fn conflict_resolution() {
         };
 
         let merge = run_future(base.merge_with_conflicts(
+            ctx,
             other,
             blobstore,
             logger,
@@ -436,6 +462,7 @@ fn conflict_resolution() {
 #[test]
 fn merge_manifests() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
         let blobstore = repo.get_blobstore();
         let logger = repo.get_logger();
@@ -521,6 +548,7 @@ fn merge_manifests() {
         };
 
         let merged = base.merge_with_conflicts(
+            ctx,
             other,
             blobstore,
             logger,

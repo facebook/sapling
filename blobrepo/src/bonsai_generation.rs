@@ -13,6 +13,7 @@ use futures::future::{join_all, Future};
 use futures_ext::FutureExt;
 
 use bonsai_utils;
+use context::CoreContext;
 use mercurial_types::{Changeset, HgFileNodeId, HgManifestId, HgNodeHash, MPath};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange,
                      MononokeId};
@@ -24,12 +25,14 @@ use errors::*;
 
 /// Creates bonsai changeset from already created HgBlobChangeset.
 pub fn create_bonsai_changeset_object(
+    ctx: CoreContext,
     cs: HgBlobChangeset,
     parent_manifests: Vec<HgManifestId>,
     bonsai_parents: Vec<ChangesetId>,
     repo: BlobRepo,
 ) -> impl Future<Item = BonsaiChangeset, Error = Error> {
     let file_changes = find_file_changes(
+        ctx,
         cs.clone(),
         parent_manifests,
         repo.clone(),
@@ -67,6 +70,7 @@ pub fn create_bonsai_changeset_object(
 }
 
 pub fn save_bonsai_changeset_object(
+    ctx: CoreContext,
     blobstore: RepoBlobstore,
     bonsai_cs: BonsaiChangeset,
 ) -> impl Future<Item = (), Error = Error> {
@@ -74,11 +78,14 @@ pub fn save_bonsai_changeset_object(
     let bcs_id = bonsai_blob.id().clone();
     let blobstore_key = bcs_id.blobstore_key();
 
-    blobstore.put(blobstore_key, bonsai_blob.into()).map(|_| ())
+    blobstore
+        .put(ctx, blobstore_key, bonsai_blob.into())
+        .map(|_| ())
 }
 
 // Finds files that were changed in the commit and returns it in the format suitable for BonsaiChangeset
 fn find_file_changes(
+    ctx: CoreContext,
     cs: HgBlobChangeset,
     parent_manifests: Vec<HgManifestId>,
     repo: BlobRepo,
@@ -93,17 +100,18 @@ fn find_file_changes(
         .get(1)
         .map(|root_mf| repo.get_root_entry(root_mf));
 
-    bonsai_utils::bonsai_diff(root_entry, p1_root_entry, p2_root_entry)
+    bonsai_utils::bonsai_diff(ctx.clone(), root_entry, p1_root_entry, p2_root_entry)
         .map(move |changed_file| match changed_file {
             bonsai_utils::BonsaiDiffResult::Changed(path, ty, entry_id) => {
                 let file_node_id = entry_id.into_nodehash();
-                cloned!(bonsai_parents, repo, parent_manifests);
-                repo.get_file_content(&file_node_id)
+                cloned!(ctx, bonsai_parents, repo, parent_manifests);
+                repo.get_file_content(ctx.clone(), &file_node_id)
                     .and_then(move |file_contents| {
                         let size = file_contents.size();
                         let content_id = file_contents.into_blob().id().clone();
 
                         get_copy_info(
+                            ctx,
                             repo,
                             bonsai_parents,
                             path.clone(),
@@ -122,8 +130,8 @@ fn find_file_changes(
             }
             bonsai_utils::BonsaiDiffResult::ChangedReusedId(path, ty, entry_id) => {
                 let file_node_id = entry_id.into_nodehash();
-                cloned!(repo);
-                repo.get_file_content(&file_node_id).and_then(move |file_contents| {
+                cloned!(ctx, repo);
+                repo.get_file_content(ctx, &file_node_id).and_then(move |file_contents| {
                     let size = file_contents.size();
                     let content_id = file_contents.into_blob().id().clone();
 
@@ -150,61 +158,64 @@ fn find_file_changes(
 // In hg copy information is (path, filenode), in bonsai it's (path, parent cs id). That means that
 // we need to find a parent from which this filenode was copied.
 fn get_copy_info(
+    ctx: CoreContext,
     repo: BlobRepo,
     bonsai_parents: Vec<ChangesetId>,
     copy_from_path: MPath,
     nodehash: HgNodeHash,
     parent_manifests: Vec<HgManifestId>,
 ) -> impl Future<Item = Option<(MPath, ChangesetId)>, Error = Error> {
-    repo.get_hg_file_copy_from_blobstore(&nodehash).and_then({
-        cloned!(repo);
-        move |maybecopy| match maybecopy {
-            Some((repopath, copyfromnode)) => {
-                let repopath: Result<MPath> = repopath
-                    .mpath()
-                    .cloned()
-                    .ok_or(ErrorKind::UnexpectedRootPath.into());
+    repo.get_hg_file_copy_from_blobstore(ctx.clone(), &nodehash)
+        .and_then({
+            cloned!(repo);
+            move |maybecopy| match maybecopy {
+                Some((repopath, copyfromnode)) => {
+                    let repopath: Result<MPath> = repopath
+                        .mpath()
+                        .cloned()
+                        .ok_or(ErrorKind::UnexpectedRootPath.into());
 
-                let parents_bonsai_and_mfs =
-                    bonsai_parents.into_iter().zip(parent_manifests.into_iter());
+                    let parents_bonsai_and_mfs =
+                        bonsai_parents.into_iter().zip(parent_manifests.into_iter());
 
-                repopath
-                    .into_future()
-                    .and_then(move |repopath| {
-                        join_all(parents_bonsai_and_mfs.map({
-                            cloned!(repopath);
-                            move |(bonsai_parent, parent_mf)| {
-                                repo.find_file_in_manifest(&repopath, parent_mf).map(
-                                    move |res| match res {
-                                        Some((_, node)) if node == HgFileNodeId::new(copyfromnode) => {
-                                            Some(bonsai_parent)
-                                        }
-                                        _ => None,
-                                    },
-                                )
+                    repopath
+                        .into_future()
+                        .and_then(move |repopath| {
+                            join_all(parents_bonsai_and_mfs.map({
+                                cloned!(ctx, repopath);
+                                move |(bonsai_parent, parent_mf)| {
+                                    repo.find_file_in_manifest(ctx.clone(), &repopath, parent_mf)
+                                        .map(move |res| match res {
+                                            Some((_, node))
+                                                if node == HgFileNodeId::new(copyfromnode) =>
+                                            {
+                                                Some(bonsai_parent)
+                                            }
+                                            _ => None,
+                                        })
+                                }
+                            })).map(move |res| (res, repopath))
+                        })
+                        .and_then(move |(copied_from_bonsai_commits, repopath)| {
+                            let copied_from: Vec<_> = copied_from_bonsai_commits
+                                .into_iter()
+                                .filter_map(|x| x)
+                                .collect();
+                            match copied_from.get(0) {
+                                Some(bonsai_cs_copied_from) => {
+                                    Ok(Some((repopath, bonsai_cs_copied_from.clone())))
+                                }
+                                None => Err(ErrorKind::IncorrectCopyInfo {
+                                    from_path: copy_from_path,
+                                    from_node: nodehash,
+                                    to_path: repopath.clone(),
+                                    to_node: copyfromnode,
+                                }.into()),
                             }
-                        })).map(move |res| (res, repopath))
-                    })
-                    .and_then(move |(copied_from_bonsai_commits, repopath)| {
-                        let copied_from: Vec<_> = copied_from_bonsai_commits
-                            .into_iter()
-                            .filter_map(|x| x)
-                            .collect();
-                        match copied_from.get(0) {
-                            Some(bonsai_cs_copied_from) => {
-                                Ok(Some((repopath, bonsai_cs_copied_from.clone())))
-                            }
-                            None => Err(ErrorKind::IncorrectCopyInfo {
-                                from_path: copy_from_path,
-                                from_node: nodehash,
-                                to_path: repopath.clone(),
-                                to_node: copyfromnode,
-                            }.into()),
-                        }
-                    })
-                    .boxify()
+                        })
+                        .boxify()
+                }
+                None => Ok(None).into_future().boxify(),
             }
-            None => Ok(None).into_future().boxify(),
-        }
-    })
+        })
 }

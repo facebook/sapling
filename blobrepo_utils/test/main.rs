@@ -54,7 +54,7 @@ mod test {
                             .map(|heads| heads.into_iter().map(HgChangesetId::new));
 
                         let verify = BonsaiMFVerify {
-                            ctx,
+                            ctx: ctx.clone(),
                             logger,
                             repo,
                             follow_limit: 1024,
@@ -68,13 +68,13 @@ mod test {
                             .and_then(|heads| verify.verify(heads).collect());
                         tokio::spawn(
                             results
-                                .and_then(|results| {
-                                    let diffs = results.into_iter().filter_map(|(res, meta)| {
+                                .and_then(move |results| {
+                                    let diffs = results.into_iter().filter_map(move |(res, meta)| {
                                         match res {
                                             BonsaiMFVerifyResult::Invalid(difference) => {
                                                 let cs_id = meta.changeset_id;
                                                 Some(difference
-                                                    .changes()
+                                                    .changes(ctx.clone())
                                                     .collect()
                                                     .map(move |changes| (cs_id, changes)))
                                             }

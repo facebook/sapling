@@ -13,6 +13,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use sql::Connection;
 
 use blobstore::Blobstore;
+use context::CoreContext;
 use mercurial_types::RepositoryId;
 use mononoke_types::BlobstoreBytes;
 
@@ -62,6 +63,7 @@ impl SqlStreamingChunksFetcher {
 
     pub fn fetch_changelog(
         &self,
+        ctx: CoreContext,
         repo_id: RepositoryId,
         blobstore: impl Blobstore + Clone,
     ) -> BoxFuture<RevlogStreamingChunks, Error> {
@@ -75,7 +77,7 @@ impl SqlStreamingChunksFetcher {
                         let data_blob_key = String::from_utf8_lossy(&data_blob_name).into_owned();
                         res.data_blobs.push(
                             blobstore
-                                .get(data_blob_key.clone())
+                                .get(ctx.clone(), data_blob_key.clone())
                                 .and_then(|data| {
                                     data.ok_or(
                                         ErrorKind::MissingStreamingBlob(data_blob_key).into(),
@@ -87,7 +89,7 @@ impl SqlStreamingChunksFetcher {
                         let idx_blob_key = String::from_utf8_lossy(&idx_blob_name).into_owned();
                         res.index_blobs.push(
                             blobstore
-                                .get(idx_blob_key.clone())
+                                .get(ctx.clone(), idx_blob_key.clone())
                                 .and_then(|data| {
                                     data.ok_or(ErrorKind::MissingStreamingBlob(idx_blob_key).into())
                                 })

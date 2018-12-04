@@ -15,6 +15,7 @@ extern crate tokio;
 extern crate tokio_timer;
 
 extern crate cachelib;
+extern crate context;
 extern crate fbwhoami;
 extern crate futures_ext;
 extern crate memcache;
@@ -31,6 +32,7 @@ use failure::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
+use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 mod cachelib_cache;
@@ -87,22 +89,22 @@ pub use errors::ErrorKind;
 /// uses of Blobstores
 pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
     /// Fetch the value associated with `key`, or None if no value is present
-    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
     /// Associate `value` with `key` for future gets; if `put` is called with different `value`s
     /// for the same key, the implementation may return any `value` it's been given in response
     /// to a `get` for that `key`.
-    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error>;
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error>;
     /// Check that `get` will return a value for a given `key`, and not None. The provided
     /// implentation just calls `get`, and discards the return value; this can be overridden to
     /// avoid transferring data. In the absence of concurrent `put` calls, this must return
     /// `false` if `get` would return `None`, and `true` if `get` would return `Some(_)`.
-    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
-        self.get(key).map(|opt| opt.is_some()).boxify()
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+        self.get(ctx, key).map(|opt| opt.is_some()).boxify()
     }
     /// Errors if a given `key` is not present in the blob store. Useful to abort a chained
     /// future computation early if it cannot succeed unless the `key` is present
-    fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
-        self.is_present(key.clone())
+    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+        self.is_present(ctx, key.clone())
             .and_then(|present| {
                 if present {
                     future::ok(())
@@ -115,31 +117,31 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
 }
 
 impl Blobstore for Arc<Blobstore> {
-    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.as_ref().get(key)
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_ref().get(ctx, key)
     }
-    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        self.as_ref().put(key, value)
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+        self.as_ref().put(ctx, key, value)
     }
-    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
-        self.as_ref().is_present(key)
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+        self.as_ref().is_present(ctx, key)
     }
-    fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
-        self.as_ref().assert_present(key)
+    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+        self.as_ref().assert_present(ctx, key)
     }
 }
 
 impl Blobstore for Box<Blobstore> {
-    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.as_ref().get(key)
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_ref().get(ctx, key)
     }
-    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        self.as_ref().put(key, value)
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+        self.as_ref().put(ctx, key, value)
     }
-    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
-        self.as_ref().is_present(key)
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+        self.as_ref().is_present(ctx, key)
     }
-    fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
-        self.as_ref().assert_present(key)
+    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+        self.as_ref().assert_present(ctx, key)
     }
 }

@@ -147,6 +147,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
 }
 
 fn upload_entry(
+    ctx: CoreContext,
     blobrepo: &BlobRepo,
     entry: RevlogEntry,
     path: Option<MPath>,
@@ -183,7 +184,7 @@ fn upload_entry(
                         p2: p2.cloned(),
                         path: RepoPath::DirectoryPath(path),
                     };
-                    let (_, upload_fut) = try_boxfuture!(upload.upload(&blobrepo));
+                    let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
                     upload_fut
                 }
                 Type::File(ft) => {
@@ -195,7 +196,7 @@ fn upload_entry(
                         p2: p2.cloned(),
                         path,
                     };
-                    let (_, upload_fut) = try_boxfuture!(upload.upload(&blobrepo));
+                    let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, &blobrepo));
                     upload_fut
                 }
             }
@@ -243,8 +244,7 @@ impl UploadChangesets {
 
         changesets
             .and_then({
-                let revlogrepo = revlogrepo.clone();
-                let blobrepo = blobrepo.clone();
+                cloned!(ctx, revlogrepo, blobrepo);
                 move |csid| {
                     let ParseChangeset {
                         revlogcs,
@@ -253,7 +253,7 @@ impl UploadChangesets {
                     } = parse_changeset(revlogrepo.clone(), HgChangesetId::new(csid));
 
                     let rootmf = rootmf.map({
-                        let blobrepo = blobrepo.clone();
+                        cloned!(ctx, blobrepo);
                         move |rootmf| {
                             match rootmf {
                                 None => future::ok(None).boxify(),
@@ -271,7 +271,7 @@ impl UploadChangesets {
                                         path: RepoPath::root(),
                                     };
                                     upload
-                                        .upload(&blobrepo)
+                                        .upload(ctx, &blobrepo)
                                         .into_future()
                                         .and_then(|(_, entry)| entry)
                                         .map(Some)
@@ -282,8 +282,8 @@ impl UploadChangesets {
                     });
 
                     let entries = entries.map({
-                        let blobrepo = blobrepo.clone();
-                        move |(path, entry)| upload_entry(&blobrepo, entry, path)
+                        cloned!(ctx, blobrepo);
+                        move |(path, entry)| upload_entry(ctx.clone(), &blobrepo, entry, path)
                     });
 
                     revlogcs

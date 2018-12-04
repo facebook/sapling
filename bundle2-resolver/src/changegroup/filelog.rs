@@ -9,6 +9,7 @@ use std::mem;
 use std::sync::Arc;
 
 use bytes::Bytes;
+use context::CoreContext;
 use failure::Compat;
 use futures::{Future, IntoFuture, Stream};
 use futures::future::Shared;
@@ -60,7 +61,7 @@ impl UploadableHgBlob for Filelog {
         Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>,
     );
 
-    fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
+    fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let path = match &node_key.path {
             RepoPath::FilePath(path) => path.clone(),
@@ -83,7 +84,7 @@ impl UploadableHgBlob for Filelog {
             path,
         };
 
-        let (cbinfo, fut) = upload.upload(repo)?;
+        let (cbinfo, fut) = upload.upload(ctx, repo)?;
         Ok((
             node_key,
             (cbinfo, fut.map_err(Error::compat).boxify().shared()),
@@ -91,7 +92,11 @@ impl UploadableHgBlob for Filelog {
     }
 }
 
-pub fn convert_to_revlog_filelog<S>(repo: Arc<BlobRepo>, deltaed: S) -> BoxStream<Filelog, Error>
+pub fn convert_to_revlog_filelog<S>(
+    ctx: CoreContext,
+    repo: Arc<BlobRepo>,
+    deltaed: S,
+) -> BoxStream<Filelog, Error>
 where
     S: Stream<Item = FilelogDeltaed, Error = Error> + Send + 'static,
 {
@@ -109,15 +114,15 @@ where
             } = chunk;
 
             delta_cache
-                .decode(node.clone(), base.into_option(), delta)
+                .decode(ctx.clone(), node.clone(), base.into_option(), delta)
                 .and_then({
-                    cloned!(node, path, repo);
+                    cloned!(ctx, node, path, repo);
                     move |data| {
                         parse_rev_flags(flags_value)
                             .into_future()
                             .and_then(move |flags| {
-                                get_filelog_data(repo, data, flags).map(move |file_log_data| {
-                                    Filelog {
+                                get_filelog_data(ctx.clone(), repo, data, flags).map(
+                                    move |file_log_data| Filelog {
                                         node_key: HgNodeKey {
                                             path: RepoPath::FilePath(path),
                                             hash: node,
@@ -127,8 +132,8 @@ where
                                         linknode,
                                         data: file_log_data,
                                         flags,
-                                    }
-                                })
+                                    },
+                                )
                             })
                     }
                 })
@@ -145,6 +150,7 @@ where
 }
 
 fn generate_lfs_meta_data(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     data: Bytes,
 ) -> impl Future<Item = ContentBlobMeta, Error = Error> {
@@ -154,7 +160,7 @@ fn generate_lfs_meta_data(
         .into_future()
         .and_then(move |lfs_content| {
             (
-                repo.get_file_content_id_by_alias(lfs_content.oid()),
+                repo.get_file_content_id_by_alias(ctx, lfs_content.oid()),
                 Ok(lfs_content.copy_from()),
             )
         })
@@ -165,12 +171,13 @@ fn generate_lfs_meta_data(
 }
 
 fn get_filelog_data(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     data: Bytes,
     flags: RevFlags,
 ) -> impl Future<Item = FilelogData, Error = Error> {
     if flags.contains(RevFlags::REVIDX_EXTSTORED) {
-        generate_lfs_meta_data(repo, data)
+        generate_lfs_meta_data(ctx, repo, data)
             .map(|cbmeta| FilelogData::LfsMetaData(cbmeta))
             .left_future()
     } else {
@@ -193,6 +200,7 @@ impl DeltaCache {
 
     fn decode(
         &mut self,
+        ctx: CoreContext,
         node: HgNodeHash,
         base: Option<HgNodeHash>,
         delta: Delta,
@@ -225,7 +233,7 @@ impl DeltaCache {
                                 })
                                 .boxify(),
                             None => self.repo
-                                .get_raw_hg_content(&base)
+                                .get_raw_hg_content(ctx, &base)
                                 .and_then(move |blob| {
                                     let bytes = blob.into_inner();
                                     delta::apply(bytes.as_ref(), &delta)
@@ -365,12 +373,13 @@ mod tests {
         }
     }
 
-    fn check_conversion<I, J>(inp: I, exp: J)
+    fn check_conversion<I, J>(ctx: CoreContext, inp: I, exp: J)
     where
         I: IntoIterator<Item = FilelogDeltaed>,
         J: IntoIterator<Item = Filelog>,
     {
         let result = convert_to_revlog_filelog(
+            ctx,
             Arc::new(BlobRepo::new_memblob_empty(None, None).unwrap()),
             iter_ok(inp.into_iter().collect::<Vec<_>>()),
         ).collect()
@@ -456,6 +465,7 @@ mod tests {
 
     #[test]
     fn two_fulltext_files() {
+        let ctx = CoreContext::test_mock();
         let f1 = Filelog {
             node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
@@ -481,12 +491,13 @@ mod tests {
         };
 
         check_conversion(
+            ctx,
             vec![filelog_to_deltaed(&f1), filelog_to_deltaed(&f2)],
             vec![f1, f2],
         );
     }
 
-    fn files_check_order(correct_order: bool) {
+    fn files_check_order(ctx: CoreContext, correct_order: bool) {
         let f1 = Filelog {
             node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
@@ -524,6 +535,7 @@ mod tests {
         };
 
         let result = convert_to_revlog_filelog(
+            ctx,
             Arc::new(BlobRepo::new_memblob_empty(None, None).unwrap()),
             iter_ok(inp),
         ).collect()
@@ -543,12 +555,12 @@ mod tests {
 
     #[test]
     fn files_order_correct() {
-        files_check_order(true);
+        files_check_order(CoreContext::test_mock(), true);
     }
 
     #[test]
     fn files_order_incorrect() {
-        files_check_order(false);
+        files_check_order(CoreContext::test_mock(), false);
     }
 
     quickcheck! {
@@ -558,7 +570,9 @@ mod tests {
         }
 
         fn correct_conversion_single(f: Filelog) -> bool {
+            let ctx = CoreContext::test_mock();
             check_conversion(
+                ctx,
                 vec![filelog_to_deltaed(&f)],
                 vec![f],
             );
@@ -567,6 +581,7 @@ mod tests {
         }
 
         fn correct_conversion_delta_against_first(f: Filelog, fs: Vec<Filelog>) -> bool {
+    let ctx = CoreContext::test_mock();
             let mut hash_gen = NodeHashGen::new();
 
             let mut f = f.clone();
@@ -586,12 +601,13 @@ mod tests {
                 deltas.push(delta);
             }
 
-            check_conversion(deltas, vec![f].into_iter().chain(fs));
+            check_conversion(ctx, deltas, vec![f].into_iter().chain(fs));
 
             true
         }
 
         fn correct_conversion_delta_against_next(fs: Vec<Filelog>) -> bool {
+    let ctx = CoreContext::test_mock();
             let mut hash_gen = NodeHashGen::new();
 
             let mut fs = fs.clone();
@@ -617,7 +633,7 @@ mod tests {
                 deltas
             };
 
-            check_conversion(deltas, fs);
+            check_conversion(ctx, deltas, fs);
 
             true
         }

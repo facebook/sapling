@@ -9,6 +9,7 @@
 
 extern crate async_unit;
 extern crate blobrepo;
+extern crate context;
 extern crate fixtures;
 extern crate futures;
 extern crate futures_ext;
@@ -24,6 +25,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
+use context::CoreContext;
 use fixtures::{linear, many_files_dirs};
 use futures::{Future, Stream};
 use futures::executor::spawn;
@@ -39,12 +41,18 @@ use mercurial_types::nodehash::{HgChangesetId, HgEntryId, HgNodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash;
 
-fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &HgChangesetId) -> Box<Manifest> {
-    let cs = repo.get_changeset_by_changesetid(changesetid)
+fn get_root_manifest(
+    ctx: CoreContext,
+    repo: Arc<BlobRepo>,
+    changesetid: &HgChangesetId,
+) -> Box<Manifest> {
+    let cs = repo.get_changeset_by_changesetid(ctx.clone(), changesetid)
         .wait()
         .unwrap();
     let manifestid = cs.manifestid();
-    repo.get_manifest_by_nodeid(&manifestid).wait().unwrap()
+    repo.get_manifest_by_nodeid(ctx, &manifestid)
+        .wait()
+        .unwrap()
 }
 
 fn get_hash(c: char) -> HgEntryId {
@@ -192,12 +200,14 @@ fn test_diff_sorted_vecs_one_empty() {
 }
 
 fn find_changed_entry_status_stream(
+    ctx: CoreContext,
     manifest: Box<Manifest>,
     basemanifest: Box<Manifest>,
     pruner: impl Pruner + Send + Clone + 'static,
     max_depth: Option<usize>,
 ) -> Vec<ChangedEntry> {
     let mut stream = spawn(changed_entry_stream_with_pruner(
+        ctx,
         &manifest,
         &basemanifest,
         None,
@@ -274,6 +284,7 @@ fn check_changed_paths(
 }
 
 fn do_check_with_pruner(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     main_hash: HgNodeHash,
     base_hash: HgNodeHash,
@@ -284,11 +295,17 @@ fn do_check_with_pruner(
     max_depth: Option<usize>,
 ) {
     {
-        let manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash));
-        let base_manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
+        let manifest = get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash));
+        let base_manifest =
+            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(base_hash));
 
-        let res =
-            find_changed_entry_status_stream(manifest, base_manifest, pruner.clone(), max_depth);
+        let res = find_changed_entry_status_stream(
+            ctx.clone(),
+            manifest,
+            base_manifest,
+            pruner.clone(),
+            max_depth,
+        );
 
         check_changed_paths(
             res,
@@ -301,10 +318,17 @@ fn do_check_with_pruner(
     // Vice-versa: compare base_hash to main_hash. Deleted paths become added, added become
     // deleted.
     {
-        let manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
-        let base_manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash));
+        let manifest = get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(base_hash));
+        let base_manifest =
+            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash));
 
-        let res = find_changed_entry_status_stream(manifest, base_manifest, pruner, max_depth);
+        let res = find_changed_entry_status_stream(
+            ctx.clone(),
+            manifest,
+            base_manifest,
+            pruner,
+            max_depth,
+        );
 
         check_changed_paths(
             res,
@@ -316,6 +340,7 @@ fn do_check_with_pruner(
 }
 
 fn do_check(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     main_hash: HgNodeHash,
     base_hash: HgNodeHash,
@@ -324,6 +349,7 @@ fn do_check(
     expected_modified: Vec<&str>,
 ) {
     do_check_with_pruner(
+        ctx,
         repo,
         main_hash,
         base_hash,
@@ -338,12 +364,14 @@ fn do_check(
 #[test]
 fn test_recursive_changed_entry_stream_linear() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let repo = Arc::new(linear::getrepo(None));
         let main_hash = HgNodeHash::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
         let base_hash = HgNodeHash::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
 
         let expected_modified = vec!["10"];
         do_check(
+            ctx.clone(),
             repo,
             main_hash,
             base_hash,
@@ -358,6 +386,7 @@ fn test_recursive_changed_entry_stream_linear() {
 #[test]
 fn test_recursive_changed_entry_stream_simple() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         let base_hash = HgNodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
@@ -383,7 +412,15 @@ fn test_recursive_changed_entry_stream_simple() {
             "dir2",
             "dir2/file_1_in_dir2",
         ];
-        do_check(repo, main_hash, base_hash, expected_added, vec![], vec![]);
+        do_check(
+            ctx.clone(),
+            repo,
+            main_hash,
+            base_hash,
+            expected_added,
+            vec![],
+            vec![],
+        );
         Ok(())
     }).expect("test failed")
 }
@@ -391,6 +428,7 @@ fn test_recursive_changed_entry_stream_simple() {
 #[test]
 fn test_recursive_entry_stream() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let changesetid = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
 
@@ -403,13 +441,13 @@ fn test_recursive_entry_stream() {
         // dir1/subdir1/file_1
         // dir2/file_1_in_dir2
 
-        let cs = repo.get_changeset_by_changesetid(&HgChangesetId::new(changesetid))
+        let cs = repo.get_changeset_by_changesetid(ctx.clone(), &HgChangesetId::new(changesetid))
             .wait()
             .unwrap();
         let manifestid = cs.manifestid();
 
         let root_entry = repo.get_root_entry(&manifestid);
-        let fut = recursive_entry_stream(None, root_entry).collect();
+        let fut = recursive_entry_stream(ctx.clone(), None, root_entry).collect();
         let res = fut.wait().unwrap();
 
         let mut actual = hashset![];
@@ -432,14 +470,14 @@ fn test_recursive_entry_stream() {
 
         assert_eq!(actual, expected);
 
-        let root_mf = repo.get_manifest_by_nodeid(&manifestid)
+        let root_mf = repo.get_manifest_by_nodeid(ctx.clone(), &manifestid)
             .wait()
             .unwrap();
 
         let path_element = MPathElement::new(Vec::from("dir1".as_bytes())).unwrap();
         let subentry = root_mf.lookup(&path_element).unwrap();
 
-        let res = recursive_entry_stream(None, subentry)
+        let res = recursive_entry_stream(ctx.clone(), None, subentry)
             .collect()
             .wait()
             .unwrap();
@@ -465,6 +503,7 @@ fn test_recursive_entry_stream() {
 #[test]
 fn test_recursive_changed_entry_stream_changed_dirs() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         let base_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
@@ -482,6 +521,7 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
         ];
         let expected_modified = vec!["dir1", "dir1/subdir1"];
         do_check(
+            ctx.clone(),
             repo,
             main_hash,
             base_hash,
@@ -496,6 +536,7 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
 #[test]
 fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash = HgNodeHash::from_str("0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480").unwrap();
         let base_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
@@ -523,6 +564,7 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
             "dir1/subdir1/subsubdir2/file_2",
         ];
         do_check(
+            ctx.clone(),
             repo,
             main_hash,
             base_hash,
@@ -537,6 +579,7 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
 #[test]
 fn test_depth_parameter() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
         let base_hash = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
@@ -554,6 +597,7 @@ fn test_depth_parameter() {
         ];
         let expected_modified = vec!["dir1", "dir1/subdir1"];
         do_check_with_pruner(
+            ctx.clone(),
             repo.clone(),
             main_hash,
             base_hash,
@@ -567,6 +611,7 @@ fn test_depth_parameter() {
         let expected_added = vec!["dir1/subdir1/subsubdir1", "dir1/subdir1/subsubdir2"];
         let expected_modified = vec!["dir1", "dir1/subdir1"];
         do_check_with_pruner(
+            ctx.clone(),
             repo.clone(),
             main_hash,
             base_hash,
@@ -580,6 +625,7 @@ fn test_depth_parameter() {
         let expected_added = vec![];
         let expected_modified = vec!["dir1", "dir1/subdir1"];
         do_check_with_pruner(
+            ctx.clone(),
             repo.clone(),
             main_hash,
             base_hash,
@@ -593,6 +639,7 @@ fn test_depth_parameter() {
         let expected_added = vec![];
         let expected_modified = vec!["dir1"];
         do_check_with_pruner(
+            ctx.clone(),
             repo.clone(),
             main_hash,
             base_hash,
@@ -606,6 +653,7 @@ fn test_depth_parameter() {
         let expected_added = vec![];
         let expected_modified = vec![];
         do_check_with_pruner(
+            ctx.clone(),
             repo.clone(),
             main_hash,
             base_hash,
@@ -636,6 +684,7 @@ where
 #[test]
 fn test_recursive_changed_entry_prune() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash = HgNodeHash::from_str("0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480").unwrap();
         let base_hash = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
@@ -652,6 +701,7 @@ fn test_recursive_changed_entry_prune() {
         let expected_added = vec!["dir1"];
         let expected_deleted = vec!["dir1", "dir1/file_1_in_dir1", "dir1/file_2_in_dir1"];
         do_check_with_pruner(
+            ctx.clone(),
             repo.clone(),
             main_hash,
             base_hash,
@@ -685,6 +735,7 @@ fn test_recursive_changed_entry_prune() {
             "dir1/subdir1/subsubdir2/file_1",
         ];
         do_check_with_pruner(
+            ctx.clone(),
             repo,
             main_hash,
             base_hash,
@@ -712,6 +763,7 @@ fn test_recursive_changed_entry_prune() {
 #[test]
 fn test_recursive_changed_entry_prune_visited() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash_1 = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         let main_hash_2 = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
@@ -737,28 +789,38 @@ fn test_recursive_changed_entry_prune_visited() {
         // A dir1/subdir1/subsubdir2/file_1
         // A dir1/subdir1/subsubdir2/file_2
 
-        let manifest_1 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_1));
-        let manifest_2 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_2));
-        let basemanifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
+        let manifest_1 =
+            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash_1));
+        let manifest_2 =
+            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash_2));
+        let basemanifest =
+            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(base_hash));
 
         let pruner = VisitedPruner::new();
 
         let first_stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
             &manifest_1,
             &basemanifest,
             None,
             pruner.clone(),
             None,
         );
-        let second_stream =
-            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, pruner, None);
+        let second_stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
+            &manifest_2,
+            &basemanifest,
+            None,
+            pruner,
+            None,
+        );
         let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
         let res = res.wait_future().unwrap();
         let unique_len = res.len();
         assert_eq!(unique_len, 15);
 
-        let first_stream = changed_entry_stream(&manifest_1, &basemanifest, None);
-        let second_stream = changed_entry_stream(&manifest_2, &basemanifest, None);
+        let first_stream = changed_entry_stream(ctx.clone(), &manifest_1, &basemanifest, None);
+        let second_stream = changed_entry_stream(ctx.clone(), &manifest_2, &basemanifest, None);
         let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
         let res = res.wait_future().unwrap();
         // Make sure that more entries are produced without VisitedPruner i.e. some entries are
@@ -772,6 +834,7 @@ fn test_recursive_changed_entry_prune_visited() {
 #[test]
 fn test_recursive_changed_entry_prune_visited_no_files() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash_1 = HgNodeHash::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         let main_hash_2 = HgNodeHash::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap();
@@ -797,29 +860,51 @@ fn test_recursive_changed_entry_prune_visited_no_files() {
         // A dir1/subdir1/subsubdir2/file_1
         // A dir1/subdir1/subsubdir2/file_2
 
-        let manifest_1 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_1));
-        let manifest_2 = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash_2));
-        let basemanifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
+        let manifest_1 =
+            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash_1));
+        let manifest_2 =
+            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(main_hash_2));
+        let basemanifest =
+            get_root_manifest(ctx.clone(), repo.clone(), &HgChangesetId::new(base_hash));
 
         let pruner = CombinatorPruner::new(FilePruner, VisitedPruner::new());
         let first_stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
             &manifest_1,
             &basemanifest,
             None,
             pruner.clone(),
             None,
         );
-        let second_stream =
-            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, pruner, None);
+        let second_stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
+            &manifest_2,
+            &basemanifest,
+            None,
+            pruner,
+            None,
+        );
         let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
         let res = res.wait_future().unwrap();
         let unique_len = res.len();
         assert_eq!(unique_len, 7);
 
-        let first_stream =
-            changed_entry_stream_with_pruner(&manifest_1, &basemanifest, None, FilePruner, None);
-        let second_stream =
-            changed_entry_stream_with_pruner(&manifest_2, &basemanifest, None, FilePruner, None);
+        let first_stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
+            &manifest_1,
+            &basemanifest,
+            None,
+            FilePruner,
+            None,
+        );
+        let second_stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
+            &manifest_2,
+            &basemanifest,
+            None,
+            FilePruner,
+            None,
+        );
         let mut res = spawn(select_all(vec![first_stream, second_stream]).collect());
         let res = res.wait_future().unwrap();
         // Make sure that more entries are produced without VisitedPruner i.e. some entries are
@@ -833,6 +918,7 @@ fn test_recursive_changed_entry_prune_visited_no_files() {
 #[test]
 fn test_visited_pruner_different_files_same_hash() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let paths = btreemap! {
             "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
             "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
@@ -841,8 +927,14 @@ fn test_visited_pruner_different_files_same_hash() {
             MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
 
         let pruner = VisitedPruner::new();
-        let stream =
-            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner, None);
+        let stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
+            &root_manifest,
+            &EmptyManifest {},
+            None,
+            pruner,
+            None,
+        );
         let mut res = spawn(stream.collect());
         let res = res.wait_future().unwrap();
 
@@ -854,6 +946,7 @@ fn test_visited_pruner_different_files_same_hash() {
 #[test]
 fn test_file_pruner() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let paths = btreemap! {
             "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
             "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
@@ -862,8 +955,14 @@ fn test_file_pruner() {
             MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
 
         let pruner = FilePruner;
-        let stream =
-            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner, None);
+        let stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
+            &root_manifest,
+            &EmptyManifest {},
+            None,
+            pruner,
+            None,
+        );
         let mut res = spawn(stream.collect());
         let res = res.wait_future().unwrap();
 
@@ -875,6 +974,7 @@ fn test_file_pruner() {
 #[test]
 fn test_deleted_pruner() {
     async_unit::tokio_unit_test(|| -> Result<_, !> {
+        let ctx = CoreContext::test_mock();
         let paths = btreemap! {
             "foo1" => (FileType::Regular, "content", HgEntryId::new(NULL_HASH)),
             "foo2" => (FileType::Symlink, "content", HgEntryId::new(NULL_HASH)),
@@ -883,8 +983,14 @@ fn test_deleted_pruner() {
             MockManifest::from_path_hashes(paths, BTreeMap::new()).expect("manifest is valid");
 
         let pruner = DeletedPruner;
-        let stream =
-            changed_entry_stream_with_pruner(&root_manifest, &EmptyManifest {}, None, pruner, None);
+        let stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
+            &root_manifest,
+            &EmptyManifest {},
+            None,
+            pruner,
+            None,
+        );
         let mut res = spawn(stream.collect());
         let res = res.wait_future().unwrap();
 
@@ -895,8 +1001,14 @@ fn test_deleted_pruner() {
         );
 
         let pruner = DeletedPruner;
-        let stream =
-            changed_entry_stream_with_pruner(&EmptyManifest {}, &root_manifest, None, pruner, None);
+        let stream = changed_entry_stream_with_pruner(
+            ctx.clone(),
+            &EmptyManifest {},
+            &root_manifest,
+            None,
+            pruner,
+            None,
+        );
         let mut res = spawn(stream.collect());
         let res = res.wait_future().unwrap();
 

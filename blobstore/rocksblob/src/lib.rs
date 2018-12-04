@@ -13,6 +13,7 @@ extern crate futures_ext;
 extern crate rocksdb;
 
 extern crate blobstore;
+extern crate context;
 extern crate mononoke_types;
 
 use std::path::Path;
@@ -24,6 +25,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use rocksdb::{Db, ReadOptions, WriteOptions};
 
 use blobstore::Blobstore;
+use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -84,13 +86,13 @@ impl Future for PutBlob {
 }
 
 impl Blobstore for Rocksblob where {
-    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let db = self.db.clone();
 
         GetBlob(db, key).boxify()
     }
 
-    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         let db = self.db.clone();
 
         PutBlob(db, key, value).boxify()

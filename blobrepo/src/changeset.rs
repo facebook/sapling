@@ -13,6 +13,7 @@ use futures::future::{Either, Future, IntoFuture};
 
 use blobstore::Blobstore;
 
+use context::CoreContext;
 use mercurial;
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
@@ -142,6 +143,7 @@ impl HgBlobChangeset {
     }
 
     pub fn load(
+        ctx: CoreContext,
         blobstore: &RepoBlobstore,
         changesetid: &HgChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
@@ -157,7 +159,7 @@ impl HgBlobChangeset {
             let key = changesetid.blobstore_key();
 
             let fut = blobstore
-                .get(key.clone())
+                .get(ctx, key.clone())
                 .and_then(move |got| match got {
                     None => Ok(None),
                     Some(bytes) => {
@@ -185,6 +187,7 @@ impl HgBlobChangeset {
 
     pub fn save(
         &self,
+        ctx: CoreContext,
         blobstore: RepoBlobstore,
     ) -> impl Future<Item = (), Error = Error> + Send + 'static {
         let key = self.changesetid.blobstore_key();
@@ -207,7 +210,7 @@ impl HgBlobChangeset {
                 Ok(envelope.into_blob())
             })
             .into_future()
-            .and_then(move |blob| blobstore.put(key, blob.into()))
+            .and_then(move |blob| blobstore.put(ctx, key, blob.into()))
     }
 
     #[inline]

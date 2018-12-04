@@ -349,6 +349,7 @@ impl RepoClient {
             let visited_pruner = VisitedPruner::new();
             select_all(params.mfnodes.iter().map(|manifest_id| {
                 get_changed_manifests_stream(
+                    self.ctx.clone(),
                     self.repo.blobrepo(),
                     &manifest_id,
                     &basemfnode,
@@ -361,6 +362,7 @@ impl RepoClient {
         } else {
             match params.mfnodes.get(0) {
                 Some(mfnode) => get_changed_manifests_stream(
+                    self.ctx.clone(),
                     self.repo.blobrepo(),
                     &mfnode,
                     &basemfnode,
@@ -429,6 +431,7 @@ impl HgCommands for RepoClient {
         info!(self.logger(), "between pairs {:?}", pairs);
 
         struct ParentStream<CS> {
+            ctx: CoreContext,
             repo: MononokeRepo,
             n: HgNodeHash,
             bottom: HgNodeHash,
@@ -436,8 +439,14 @@ impl HgCommands for RepoClient {
         };
 
         impl<CS> ParentStream<CS> {
-            fn new(repo: &MononokeRepo, top: HgNodeHash, bottom: HgNodeHash) -> Self {
+            fn new(
+                ctx: CoreContext,
+                repo: &MononokeRepo,
+                top: HgNodeHash,
+                bottom: HgNodeHash,
+            ) -> Self {
                 ParentStream {
+                    ctx,
                     repo: repo.clone(),
                     n: top,
                     bottom: bottom,
@@ -456,11 +465,10 @@ impl HgCommands for RepoClient {
                 }
 
                 self.wait_cs = self.wait_cs.take().or_else(|| {
-                    Some(
-                        self.repo
-                            .blobrepo()
-                            .get_changeset_by_changesetid(&HgChangesetId::new(self.n)),
-                    )
+                    Some(self.repo.blobrepo().get_changeset_by_changesetid(
+                        self.ctx.clone(),
+                        &HgChangesetId::new(self.n),
+                    ))
                 });
                 let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());
                 self.wait_cs = None; // got it
@@ -476,11 +484,11 @@ impl HgCommands for RepoClient {
 
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
-        let repo = self.repo.clone();
+        cloned!(self.ctx, self.repo);
         stream::iter_ok(pairs.into_iter())
             .and_then(move |(top, bottom)| {
                 let mut f = 1;
-                ParentStream::new(&repo, top, bottom)
+                ParentStream::new(ctx.clone(), &repo, top, bottom)
                     .enumerate()
                     .filter(move |&(i, _)| {
                         if i == f {
@@ -867,7 +875,7 @@ impl HgCommands for RepoClient {
                 fetcher,
                 repoid,
             }) => fetcher
-                .fetch_changelog(*repoid, blobstore.clone())
+                .fetch_changelog(self.ctx.clone(), *repoid, blobstore.clone())
                 .right_future(),
         };
 
@@ -922,6 +930,7 @@ impl HgCommands for RepoClient {
 }
 
 fn get_changed_manifests_stream(
+    ctx: CoreContext,
     repo: &BlobRepo,
     mfid: &HgNodeHash,
     basemfid: &HgNodeHash,
@@ -931,12 +940,17 @@ fn get_changed_manifests_stream(
     trace: TraceContext,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
     let mfid = HgManifestId::new(*mfid);
-    let manifest = repo.get_manifest_by_nodeid(&mfid)
-        .traced(&trace, "fetch rootmf", trace_args!());
+    let manifest = repo.get_manifest_by_nodeid(ctx.clone(), &mfid).traced(
+        &trace,
+        "fetch rootmf",
+        trace_args!(),
+    );
     let basemfid = HgManifestId::new(*basemfid);
-    let basemanifest =
-        repo.get_manifest_by_nodeid(&basemfid)
-            .traced(&trace, "fetch baserootmf", trace_args!());
+    let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), &basemfid).traced(
+        &trace,
+        "fetch baserootmf",
+        trace_args!(),
+    );
 
     let root_entry_stream = stream::once(Ok((repo.get_root_entry(&mfid), rootpath.clone())));
 
@@ -947,9 +961,16 @@ fn get_changed_manifests_stream(
     let changed_entries = manifest
         .join(basemanifest)
         .map({
-            let rootpath = rootpath.clone();
+            cloned!(ctx, rootpath);
             move |(mf, basemf)| {
-                changed_entry_stream_with_pruner(&mf, &basemf, rootpath, pruner, Some(max_depth))
+                changed_entry_stream_with_pruner(
+                    ctx,
+                    &mf,
+                    &basemf,
+                    rootpath,
+                    pruner,
+                    Some(max_depth),
+                )
             }
         })
         .flatten_stream();
@@ -995,7 +1016,7 @@ fn fetch_treepack_part_input(
     let node = entry.get_hash().clone();
     let path = repo_path.clone();
 
-    let parents = entry.get_parents().traced(
+    let parents = entry.get_parents(ctx.clone()).traced(
         &trace,
         "fetching parents",
         trace_args!(
@@ -1004,18 +1025,19 @@ fn fetch_treepack_part_input(
         ),
     );
 
-    let linknode_fut = repo.get_linknode(ctx, &repo_path, &entry.get_hash().into_nodehash())
-        .traced(
-            &trace,
-            "fetching linknode",
-            trace_args!(
+    let linknode_fut =
+        repo.get_linknode(ctx.clone(), &repo_path, &entry.get_hash().into_nodehash())
+            .traced(
+                &trace,
+                "fetching linknode",
+                trace_args!(
                 "node" => node.to_string(),
                 "path" => path.to_string()
             ),
-        );
+            );
 
     let content_fut = entry
-        .get_raw_content()
+        .get_raw_content(ctx.clone())
         .map(|blob| blob.into_inner())
         .traced(
             &trace,
@@ -1028,8 +1050,8 @@ fn fetch_treepack_part_input(
 
     let validate_content = if validate_content {
         entry
-            .get_raw_content()
-            .join(entry.get_parents())
+            .get_raw_content(ctx.clone())
+            .join(entry.get_parents(ctx))
             .and_then(move |(content, parents)| {
                 let (p1, p2) = parents.get_nodes();
                 let actual = node.into_nodehash();

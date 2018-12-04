@@ -36,15 +36,16 @@ use mononoke_types::MPath;
 use errors::ErrorKind;
 
 pub fn get_content_by_path(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     changesetid: HgChangesetId,
     path: Option<MPath>,
 ) -> impl Future<Item = Content, Error = Error> {
-    repo.get_changeset_by_changesetid(&changesetid)
+    repo.get_changeset_by_changesetid(ctx.clone(), &changesetid)
         .from_err()
         .and_then({
-            let path = path.clone();
-            move |changeset| repo.find_path_in_manifest(path, *changeset.manifestid())
+            cloned!(ctx, path);
+            move |changeset| repo.find_path_in_manifest(ctx, path, *changeset.manifestid())
         })
         .and_then(|content| {
             content.ok_or_else(move || {

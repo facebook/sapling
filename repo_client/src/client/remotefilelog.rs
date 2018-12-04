@@ -45,7 +45,7 @@ pub fn create_remotefilelog_blob(
     let trace_args = trace_args!("node" => node.to_string(), "path" => path.to_string());
 
     // raw_content includes copy information
-    let raw_content_bytes = repo.get_file_size(&HgFileNodeId::new(node))
+    let raw_content_bytes = repo.get_file_size(ctx.clone(), &HgFileNodeId::new(node))
         .map({
             move |file_size| match lfs_params.threshold {
                 Some(threshold) => (file_size <= threshold, file_size),
@@ -53,20 +53,20 @@ pub fn create_remotefilelog_blob(
             }
         })
         .and_then({
-            cloned!(repo);
+            cloned!(ctx, repo);
             move |(direct_fetching_file, file_size)| {
                 if direct_fetching_file {
                     (
-                        repo.get_file_content(&node).left_future(),
+                        repo.get_file_content(ctx, &node).left_future(),
                         Ok(RevFlags::REVIDX_DEFAULT_FLAGS).into_future(),
                     )
                 } else {
                     // pass content id to prevent envelope fetching
                     cloned!(repo);
                     (
-                        repo.get_file_content_id(&HgFileNodeId::new(node))
+                        repo.get_file_content_id(ctx.clone(), &HgFileNodeId::new(node))
                             .and_then(move |content_id| {
-                                repo.generate_lfs_file(content_id, file_size)
+                                repo.generate_lfs_file(ctx, content_id, file_size)
                             })
                             .right_future(),
                         Ok(RevFlags::REVIDX_EXTSTORED).into_future(),
@@ -184,7 +184,7 @@ fn validate_content(
     actual: HgNodeHash,
     mut scuba_logger: ScubaSampleBuilder,
 ) -> impl Future<Item = (), Error = Error> {
-    let file_content = repo.get_file_content(&actual);
+    let file_content = repo.get_file_content(ctx.clone(), &actual);
     let repopath = RepoPath::FilePath(path.clone());
     let filenode = repo.get_filenode(ctx, &repopath, &actual);
 

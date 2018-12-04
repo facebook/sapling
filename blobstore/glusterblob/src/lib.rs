@@ -7,6 +7,7 @@
 extern crate blobstore;
 extern crate bytes;
 extern crate cloned;
+extern crate context;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
@@ -38,6 +39,7 @@ use rand::prelude::*;
 use twox_hash::{XxHash, XxHash32};
 
 use blobstore::Blobstore;
+use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 // UID and GID we're using for file ownership and permissions checking.
@@ -218,7 +220,7 @@ impl fmt::Debug for Glusterblob {
 
 impl Blobstore for Glusterblob {
     /// Fetch the value associated with `key`, or None if no value is present
-    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let path = self.keydir(&*key);
         let datapath = path.join(Self::keyfile(&*key));
         let metapath = path.join(Self::metafile(&*key));
@@ -297,7 +299,7 @@ impl Blobstore for Glusterblob {
     /// Associate `value` with `key` for future gets; if `put` is called with different `value`s
     /// for the same key, the implementation may return any `value` it's been given in response
     /// to a `get` for that `key`.
-    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         self.create_keydir(&*key)
             .and_then({
                 cloned!(self.ctxt);
@@ -390,7 +392,7 @@ impl Blobstore for Glusterblob {
     /// implentation just calls `get`, and discards the return value; this can be overridden to
     /// avoid transferring data. In the absence of concurrent `put` calls, this must return
     /// `false` if `get` would return `None`, and `true` if `get` would return `Some(_)`.
-    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, _ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
         let path = self.keydir(&*key);
         let datapath = path.join(Self::keyfile(&*key));
         let metapath = path.join(Self::metafile(&*key));

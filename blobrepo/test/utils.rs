@@ -69,6 +69,7 @@ macro_rules! test_both_repotypes {
 }
 
 pub fn upload_file_no_parents<B>(
+    ctx: CoreContext,
     repo: &BlobRepo,
     data: B,
     path: &RepoPath,
@@ -77,6 +78,7 @@ where
     B: Into<Bytes>,
 {
     upload_hg_file_entry(
+        ctx,
         repo,
         data.into(),
         FileType::Regular,
@@ -87,6 +89,7 @@ where
 }
 
 pub fn upload_file_one_parent<B>(
+    ctx: CoreContext,
     repo: &BlobRepo,
     data: B,
     path: &RepoPath,
@@ -96,6 +99,7 @@ where
     B: Into<Bytes>,
 {
     upload_hg_file_entry(
+        ctx,
         repo,
         data.into(),
         FileType::Regular,
@@ -106,6 +110,7 @@ where
 }
 
 pub fn upload_manifest_no_parents<B>(
+    ctx: CoreContext,
     repo: &BlobRepo,
     data: B,
     path: &RepoPath,
@@ -113,10 +118,11 @@ pub fn upload_manifest_no_parents<B>(
 where
     B: Into<Bytes>,
 {
-    upload_hg_tree_entry(repo, data.into(), path.clone(), None, None)
+    upload_hg_tree_entry(ctx, repo, data.into(), path.clone(), None, None)
 }
 
 pub fn upload_manifest_one_parent<B>(
+    ctx: CoreContext,
     repo: &BlobRepo,
     data: B,
     path: &RepoPath,
@@ -125,10 +131,11 @@ pub fn upload_manifest_one_parent<B>(
 where
     B: Into<Bytes>,
 {
-    upload_hg_tree_entry(repo, data.into(), path.clone(), Some(p1), None)
+    upload_hg_tree_entry(ctx, repo, data.into(), path.clone(), Some(p1), None)
 }
 
 fn upload_hg_tree_entry(
+    ctx: CoreContext,
     repo: &BlobRepo,
     contents: Bytes,
     path: RepoPath,
@@ -142,10 +149,11 @@ fn upload_hg_tree_entry(
         p2,
         path,
     };
-    upload.upload(repo).unwrap()
+    upload.upload(ctx, repo).unwrap()
 }
 
 fn upload_hg_file_entry(
+    ctx: CoreContext,
     repo: &BlobRepo,
     contents: Bytes,
     file_type: FileType,
@@ -166,7 +174,7 @@ fn upload_hg_file_entry(
         path: path.into_mpath().expect("expected a path to be present"),
     };
 
-    let (_, upload_fut) = upload.upload(repo).unwrap();
+    let (_, upload_fut) = upload.upload(ctx, repo).unwrap();
     (node_id, upload_fut)
 }
 

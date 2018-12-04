@@ -47,6 +47,7 @@ impl Tailer {
         let content_store = BlobRepoFileContentStore::new((*repo).clone());
 
         let mut hook_manager = HookManager::new(
+            ctx.clone(),
             repo_name,
             Box::new(changeset_store),
             Arc::new(content_store),
@@ -230,15 +231,15 @@ fn run_hooks_for_changeset(
     cs: ChangesetId,
     logger: Logger,
 ) -> impl Future<Item = (HgChangesetId, HookResults), Error = Error> {
-    repo.get_hg_from_bonsai_changeset(ctx, cs)
+    repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
         .and_then(move |hg_cs| {
             debug!(logger, "Running file hooks for changeset {:?}", hg_cs);
-            hm.run_file_hooks_for_bookmark(hg_cs.clone(), &bm, None)
+            hm.run_file_hooks_for_bookmark(ctx.clone(), hg_cs.clone(), &bm, None)
                 .map(move |res| (hg_cs, res))
                 .and_then(move |(hg_cs, file_res)| {
                     let hg_cs = hg_cs.clone();
                     debug!(logger, "Running changeset hooks for changeset {:?}", hg_cs);
-                    hm.run_changeset_hooks_for_bookmark(hg_cs.clone(), &bm, None)
+                    hm.run_changeset_hooks_for_bookmark(ctx, hg_cs.clone(), &bm, None)
                         .map(move |res| {
                             let hook_results = HookResults {
                                 file_hooks_results: file_res,

@@ -17,6 +17,7 @@ extern crate maplit;
 
 #[cfg(test)]
 extern crate async_unit;
+extern crate context;
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate mononoke_types;

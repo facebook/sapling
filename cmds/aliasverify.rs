@@ -12,6 +12,7 @@ extern crate clap;
 #[macro_use]
 extern crate cloned;
 extern crate cmdlib;
+extern crate context;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
@@ -35,6 +36,7 @@ use blobrepo::BlobRepo;
 use blobrepo::alias::get_sha256;
 use changesets::SqlChangesets;
 use cmdlib::args;
+use context::CoreContext;
 use mercurial_types::RepositoryId;
 use mononoke_types::{ChangesetId, ContentId, FileChange, hash::Sha256};
 
@@ -79,6 +81,7 @@ impl AliasVerification {
 
     fn get_file_changes_vector(
         &self,
+        ctx: CoreContext,
         bcs_id: ChangesetId,
     ) -> BoxFuture<Vec<Option<FileChange>>, Error> {
         let cs_cnt = self.cs_processed.fetch_add(1, Ordering::Relaxed);
@@ -88,7 +91,7 @@ impl AliasVerification {
         }
 
         self.blobrepo
-            .get_bonsai_changeset(bcs_id)
+            .get_bonsai_changeset(ctx, bcs_id)
             .map(|bcs| {
                 let file_changes: Vec<_> = bcs.file_changes()
                     .map(|(_, file_change)| file_change.cloned())
@@ -119,6 +122,7 @@ impl AliasVerification {
 
     fn process_missing_alias_blob(
         &self,
+        ctx: CoreContext,
         alias: Sha256,
         content_id: ContentId,
     ) -> impl Future<Item = (), Error = Error> {
@@ -133,19 +137,20 @@ impl AliasVerification {
         match mode {
             Mode::Verify => Ok(()).into_future().left_future(),
             Mode::Generate => blobrepo
-                .upload_alias_to_file_content_id(alias, content_id)
+                .upload_alias_to_file_content_id(ctx, alias, content_id)
                 .right_future(),
         }
     }
 
     fn process_alias(
         &self,
+        ctx: CoreContext,
         alias: Sha256,
         content_id: ContentId,
     ) -> impl Future<Item = (), Error = Error> {
         let av = self.clone();
         self.blobrepo
-            .get_file_content_id_by_alias(alias)
+            .get_file_content_id_by_alias(ctx.clone(), alias)
             .then(move |result| match result {
                 Ok(content_id_from_blobstore) => {
                     av.check_alias_blob(alias, content_id, content_id_from_blobstore)
@@ -153,7 +158,7 @@ impl AliasVerification {
                 }
                 Err(_) => {
                     // the blob with alias is not found
-                    av.process_missing_alias_blob(alias, content_id)
+                    av.process_missing_alias_blob(ctx, alias, content_id)
                         .right_future()
                 }
             })
@@ -161,14 +166,15 @@ impl AliasVerification {
 
     pub fn process_file_content(
         &self,
+        ctx: CoreContext,
         content_id: ContentId,
     ) -> impl Future<Item = (), Error = Error> {
         let repo = self.blobrepo.clone();
         let av = self.clone();
 
-        repo.get_file_content_by_content_id(content_id)
+        repo.get_file_content_by_content_id(ctx.clone(), content_id)
             .map(|content| get_sha256(&content.into_bytes()))
-            .and_then(move |alias| av.process_alias(alias, content_id))
+            .and_then(move |alias| av.process_alias(ctx, alias, content_id))
     }
 
     fn print_report(&self, partial: bool) {
@@ -183,7 +189,12 @@ impl AliasVerification {
         );
     }
 
-    fn get_bounded(&self, min_id: u64, max_id: u64) -> impl Future<Item = (), Error = Error> {
+    fn get_bounded(
+        &self,
+        ctx: CoreContext,
+        min_id: u64,
+        max_id: u64,
+    ) -> impl Future<Item = (), Error = Error> {
         let av = self.clone();
         let av_for_process = self.clone();
         let av_for_report = self.clone();
@@ -196,7 +207,10 @@ impl AliasVerification {
             // stream of cs_id
             .get_list_bs_cs_id_in_range(self.repoid, min_id, max_id)
             // future of vectors of file changes
-            .map(move |bcs_id| av.get_file_changes_vector(bcs_id))
+            .map({
+                cloned!(ctx);
+                move |bcs_id| av.get_file_changes_vector(ctx.clone(), bcs_id)
+            })
             .buffer_unordered(1000)
             // Stream of file_changes
             .map( move |file_changes_vec| {
@@ -212,7 +226,7 @@ impl AliasVerification {
                 if let Some(file_change) = file_change {
                     let content_id = file_change.content_id().clone();
                     av_for_process
-                        .process_file_content(content_id)
+                        .process_file_content(ctx.clone(), content_id)
                         .left_future()
                 } else {
                     Ok(()).into_future().right_future()
@@ -225,6 +239,7 @@ impl AliasVerification {
 
     pub fn verify_all(
         &self,
+        ctx: CoreContext,
         step: u64,
         min_cs_db_id: u64,
     ) -> impl Future<Item = (), Error = Error> {
@@ -247,7 +262,7 @@ impl AliasVerification {
                 stream::iter_ok(bounds.into_iter())
             })
             .flatten_stream()
-            .and_then(move |(min_val, max_val)| av.get_bounded(min_val, max_val))
+            .and_then(move |(min_val, max_val)| av.get_bounded(ctx.clone(), min_val, max_val))
             .for_each(|()| Ok(()))
             .map(move |()| av_for_report.print_report(false))
     }
@@ -290,10 +305,11 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
+    let ctx = CoreContext::test_mock();
     let logger = args::get_logger(&matches);
 
     args::init_cachelib(&matches);
-    let repo = args::open_repo(&logger, &matches)?;
+    let repo = args::open_repo(ctx.clone(), &logger, &matches)?;
     let blobrepo = Arc::new(repo.blobrepo().clone());
     let sqlchangesets = Arc::new(args::open_sql_changesets(&matches)?);
 
@@ -316,7 +332,7 @@ fn main() -> Result<()> {
     let repoid = args::get_repo_id(&matches);
 
     let aliasimport = AliasVerification::new(logger, blobrepo, repoid, sqlchangesets, mode)
-        .verify_all(step, min_cs_db_id);
+        .verify_all(ctx, step, min_cs_db_id);
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     let result = runtime.block_on(aliasimport);

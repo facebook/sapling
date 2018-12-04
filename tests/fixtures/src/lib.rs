@@ -33,6 +33,7 @@ use mononoke_types::{BonsaiChangesetMut, DateTime, FileChange, FileContents, Fil
 use slog::Logger;
 
 fn store_files(
+    ctx: CoreContext,
     files: BTreeMap<&str, Option<&str>>,
     repo: BlobRepo,
 ) -> BTreeMap<MPath, Option<FileChange>> {
@@ -44,7 +45,7 @@ fn store_files(
             Some(content) => {
                 let size = content.len();
                 let content = FileContents::Bytes(Bytes::from(content));
-                let content_id = repo.unittest_store(content).wait().unwrap();
+                let content_id = repo.unittest_store(ctx.clone(), content).wait().unwrap();
 
                 let file_change = FileChange::new(content_id, FileType::Regular, size as u64, None);
                 res.insert(path, Some(file_change));
@@ -63,7 +64,7 @@ fn create_bonsai_changeset_from_test_data(
     commit_metadata: BTreeMap<&str, &str>,
 ) {
     let ctx = CoreContext::test_mock();
-    let file_changes = store_files(files, blobrepo.clone());
+    let file_changes = store_files(ctx.clone(), files, blobrepo.clone());
     let date: Vec<_> = commit_metadata
         .get("author_date")
         .unwrap()

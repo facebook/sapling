@@ -55,7 +55,7 @@ fn blobstore_and_filenodes_warmup(
 ) -> BoxFuture<(), Error> {
     // TODO(stash): Arbitrary number. Tweak somehow?
     let buffer_size = 100;
-    repo.get_changeset_by_changesetid(&revision)
+    repo.get_changeset_by_changesetid(ctx.clone(), &revision)
         .map({
             let repo = repo.clone();
             move |cs| repo.get_root_entry(&cs.manifestid())
@@ -65,7 +65,7 @@ fn blobstore_and_filenodes_warmup(
                 info!(logger, "starting precaching");
                 let rootpath = None;
                 let mut i = 0;
-                recursive_entry_stream(rootpath, root_entry)
+                recursive_entry_stream(ctx.clone(), rootpath, root_entry)
                     .filter(|&(ref _path, ref entry)| entry.get_type() == Type::Tree)
                     .map(move |(path, entry)| {
                         let hash = entry.get_hash();

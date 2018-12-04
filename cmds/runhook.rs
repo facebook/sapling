@@ -18,6 +18,7 @@ extern crate blobstore;
 extern crate cachelib;
 extern crate clap;
 extern crate cmdlib;
+extern crate context;
 extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
@@ -42,6 +43,7 @@ extern crate tempdir;
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
+use context::CoreContext;
 use failure::{Error, Result};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -77,6 +79,7 @@ fn run_hook(
 
     cmdlib::args::init_cachelib(&matches);
 
+    let ctx = CoreContext::test_mock();
     let logger = {
         let level = if matches.is_present("debug") {
             Level::Debug
@@ -109,7 +112,8 @@ fn run_hook(
     println!("Hook file is {} revision is {:?}", hook_file, revstr);
     println!("Hook code is {}", code);
     println!("==============================");
-    let mut hook_manager = HookManager::new_with_blobrepo(Default::default(), repo.clone(), logger);
+    let mut hook_manager =
+        HookManager::new_with_blobrepo(ctx.clone(), Default::default(), repo.clone(), logger);
     let hook = LuaHook {
         name: String::from("testhook"),
         code,
@@ -124,7 +128,7 @@ fn run_hook(
     let id = try_boxfuture!(HgChangesetId::from_str(revstr));
     if file_hook {
         hook_manager
-            .run_file_hooks_for_bookmark(id, &bookmark, None)
+            .run_file_hooks_for_bookmark(ctx, id, &bookmark, None)
             .map(|executions| {
                 for execution in executions.iter() {
                     if let (_, HookExecution::Rejected(_)) = execution {
@@ -137,7 +141,7 @@ fn run_hook(
             .boxify()
     } else {
         hook_manager
-            .run_changeset_hooks_for_bookmark(id, &bookmark, None)
+            .run_changeset_hooks_for_bookmark(ctx, id, &bookmark, None)
             .map(|executions| executions.get(0).unwrap().1.clone())
             .boxify()
     }

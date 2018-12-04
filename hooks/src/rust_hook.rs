@@ -10,6 +10,7 @@
 #![deny(warnings)]
 
 use super::{Hook, HookChangeset, HookContext, HookExecution};
+use context::CoreContext;
 use failure::Error;
 use futures::finished;
 use futures_ext::{BoxFuture, FutureExt};
@@ -19,7 +20,11 @@ pub struct RustHook {
 }
 
 impl Hook<HookChangeset> for RustHook {
-    fn run(&self, _context: HookContext<HookChangeset>) -> BoxFuture<HookExecution, Error> {
+    fn run(
+        &self,
+        _ctx: CoreContext,
+        _context: HookContext<HookChangeset>,
+    ) -> BoxFuture<HookExecution, Error> {
         finished(HookExecution::Accepted).boxify()
     }
 }

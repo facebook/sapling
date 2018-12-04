@@ -8,6 +8,7 @@ use std::fmt::Debug;
 use std::mem;
 
 use bytes::Bytes;
+use context::CoreContext;
 use failure::Compat;
 use futures::{Future, Poll, Stream};
 use futures::future::Shared;
@@ -91,7 +92,7 @@ impl UploadableHgBlob for TreemanifestEntry {
         Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>,
     );
 
-    fn upload(self, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
+    fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let manifest_content = self.manifest_content;
         let p1 = self.p1;
@@ -110,7 +111,7 @@ impl UploadableHgBlob for TreemanifestEntry {
             p2: self.p2,
             path: node_key.path.clone(),
         };
-        upload.upload(repo).map(move |(_node, value)| {
+        upload.upload(ctx, repo).map(move |(_node, value)| {
             (
                 node_key,
                 (

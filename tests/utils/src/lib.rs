@@ -24,6 +24,7 @@ use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange, File
 use std::collections::BTreeMap;
 
 pub fn store_files(
+    ctx: CoreContext,
     files: BTreeMap<&str, Option<&str>>,
     repo: BlobRepo,
 ) -> BTreeMap<MPath, Option<FileChange>> {
@@ -35,7 +36,7 @@ pub fn store_files(
             Some(content) => {
                 let size = content.len();
                 let content = FileContents::Bytes(Bytes::from(content));
-                let content_id = repo.unittest_store(content).wait().unwrap();
+                let content_id = repo.unittest_store(ctx.clone(), content).wait().unwrap();
 
                 let file_change = FileChange::new(content_id, FileType::Regular, size as u64, None);
                 res.insert(path, Some(file_change));
@@ -49,6 +50,7 @@ pub fn store_files(
 }
 
 pub fn store_rename(
+    ctx: CoreContext,
     copy_src: (MPath, ChangesetId),
     path: &str,
     content: &str,
@@ -57,7 +59,7 @@ pub fn store_rename(
     let path = MPath::new(path).unwrap();
     let size = content.len();
     let content = FileContents::Bytes(Bytes::from(content));
-    let content_id = repo.unittest_store(content).wait().unwrap();
+    let content_id = repo.unittest_store(ctx, content).wait().unwrap();
 
     let file_change = FileChange::new(content_id, FileType::Regular, size as u64, Some(copy_src));
     (path, Some(file_change))

@@ -23,6 +23,7 @@ use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
 use changesets::{SqlChangesets, SqlConstructors};
+use context::CoreContext;
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
 use metaconfig::{ManifoldArgs, RepoConfigs, RepoReadOnly, RepoType};
@@ -246,14 +247,22 @@ pub fn open_sql_changesets(matches: &ArgMatches) -> Result<SqlChangesets> {
 
 /// Create a new `MononokeRepo` -- for local instances, expect its contents to be empty.
 #[inline]
-pub fn create_repo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<MononokeRepo> {
-    open_repo_internal(logger, matches, true)
+pub fn create_repo<'a>(
+    ctx: CoreContext,
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+) -> Result<MononokeRepo> {
+    open_repo_internal(ctx, logger, matches, true)
 }
 
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
 #[inline]
-pub fn open_repo<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<MononokeRepo> {
-    open_repo_internal(logger, matches, false)
+pub fn open_repo<'a>(
+    ctx: CoreContext,
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+) -> Result<MononokeRepo> {
+    open_repo_internal(ctx, logger, matches, false)
 }
 
 pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
@@ -451,6 +460,7 @@ fn find_repo_type<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoType)> {
 }
 
 fn open_repo_internal<'a>(
+    ctx: CoreContext,
     logger: &Logger,
     matches: &ArgMatches<'a>,
     create: bool,
@@ -481,7 +491,7 @@ fn open_repo_internal<'a>(
 
     let blobrepo = open_blobrepo(logger.clone(), repotype.clone(), repo_id, myrouter_port)?;
     let hook_manager =
-        HookManager::new_with_blobrepo(Default::default(), blobrepo.clone(), logger.clone());
+        HookManager::new_with_blobrepo(ctx, Default::default(), blobrepo.clone(), logger);
     // TODO fixup imports
     Ok(MononokeRepo::new(
         blobrepo,

@@ -12,6 +12,7 @@ use futures::{future, Future, IntoFuture, future::Either};
 use futures_ext::{BoxFuture, FutureExt};
 use tokio;
 
+use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 use Blobstore;
@@ -21,7 +22,11 @@ use Blobstore;
 ///
 /// This is primarily used by the admin command to manually check memcache.
 pub trait CacheBlobstoreExt: Blobstore {
-    fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
+    fn get_no_cache_fill(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error>;
     fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
 }
 
@@ -224,12 +229,12 @@ where
     L: LeaseOps + Clone,
     T: Blobstore + Clone,
 {
-    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let cache_get = self.cache_get(&key);
         let cache_put = self.cache_put_closure(&key);
         let blobstore_get = future::lazy({
             let blobstore = self.blobstore.clone();
-            move || blobstore.get(key)
+            move || blobstore.get(ctx, key)
         });
 
         cache_get
@@ -245,7 +250,7 @@ where
             .boxify()
     }
 
-    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         let can_put = self.take_put_lease(&key);
         let cache_put = self.cache_put(&key, value.clone())
             .join(future::lazy({
@@ -261,7 +266,7 @@ where
             let key = key.clone();
             move || {
                 blobstore
-                    .put(key.clone(), value)
+                    .put(ctx, key.clone(), value)
                     .or_else(move |r| lease.release_lease(&key, false).then(|_| Err(r)))
             }
         });
@@ -277,11 +282,11 @@ where
             .boxify()
     }
 
-    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
         let cache_check = self.cache_is_present(&key);
         let blobstore_check = future::lazy({
             let blobstore = self.blobstore.clone();
-            move || blobstore.is_present(key)
+            move || blobstore.is_present(ctx, key)
         });
 
         cache_check
@@ -302,9 +307,13 @@ where
     L: LeaseOps + Clone,
     T: Blobstore + Clone,
 {
-    fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get_no_cache_fill(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let cache_get = self.cache_get(&key);
-        let blobstore_get = self.blobstore.get(key);
+        let blobstore_get = self.blobstore.get(ctx, key);
 
         cache_get
             .and_then(move |blob| {

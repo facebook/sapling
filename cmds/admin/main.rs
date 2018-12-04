@@ -186,6 +186,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 }
 
 fn fetch_content_from_manifest(
+    ctx: CoreContext,
     logger: Logger,
     mf: Box<Manifest + Sync>,
     element: MPathElement,
@@ -198,7 +199,7 @@ fn fetch_content_from_manifest(
                 element,
                 entry.get_hash()
             );
-            entry.get_content()
+            entry.get_content(ctx)
         }
         None => try_boxfuture!(Err(format_err!("failed to lookup element {:?}", element))),
     }
@@ -228,38 +229,38 @@ fn fetch_content(
     path: &str,
 ) -> BoxFuture<Content, Error> {
     let path = try_boxfuture!(MPath::new(path));
-    let resolved_cs_id = resolve_hg_rev(ctx, repo, rev);
+    let resolved_cs_id = resolve_hg_rev(ctx.clone(), repo, rev);
 
     let mf = resolved_cs_id
         .and_then({
-            cloned!(repo);
-            move |cs_id| repo.get_changeset_by_changesetid(&cs_id)
+            cloned!(ctx, repo);
+            move |cs_id| repo.get_changeset_by_changesetid(ctx, &cs_id)
         })
         .map(|cs| cs.manifestid().clone())
         .and_then({
-            cloned!(repo);
-            move |root_mf_id| repo.get_manifest_by_nodeid(&root_mf_id)
+            cloned!(ctx, repo);
+            move |root_mf_id| repo.get_manifest_by_nodeid(ctx, &root_mf_id)
         });
 
     let all_but_last = iter_ok::<_, Error>(path.clone().into_iter().rev().skip(1).rev());
 
     let folded: BoxFuture<_, Error> = mf.and_then({
-        cloned!(logger);
+        cloned!(ctx, logger);
         move |mf| {
             all_but_last.fold(mf, move |mf, element| {
-                fetch_content_from_manifest(logger.clone(), mf, element).and_then(|content| {
-                    match content {
+                fetch_content_from_manifest(ctx.clone(), logger.clone(), mf, element).and_then(
+                    |content| match content {
                         Content::Tree(mf) => Ok(mf),
                         content => Err(format_err!("expected tree entry, found {:?}", content)),
-                    }
-                })
+                    },
+                )
             })
         }
     }).boxify();
 
     let basename = path.basename().clone();
     folded
-        .and_then(move |mf| fetch_content_from_manifest(logger.clone(), mf, basename))
+        .and_then(move |mf| fetch_content_from_manifest(ctx, logger.clone(), mf, basename))
         .boxify()
 }
 
@@ -272,7 +273,7 @@ pub fn fetch_bonsai_changeset(
 
     hg_changeset_id
         .and_then({
-            let repo = repo.clone();
+            cloned!(ctx, repo);
             move |hg_cs| repo.get_bonsai_from_hg(ctx, &hg_cs)
         })
         .and_then({
@@ -280,12 +281,13 @@ pub fn fetch_bonsai_changeset(
             move |maybe_bonsai| maybe_bonsai.ok_or(err_msg(format!("bonsai not found for {}", rev)))
         })
         .and_then({
-            cloned!(repo);
-            move |bonsai| repo.get_bonsai_changeset(bonsai)
+            cloned!(ctx, repo);
+            move |bonsai| repo.get_bonsai_changeset(ctx, bonsai)
         })
 }
 
 fn get_cache<B: CacheBlobstoreExt>(
+    ctx: CoreContext,
     blobstore: &B,
     key: String,
     mode: String,
@@ -293,9 +295,9 @@ fn get_cache<B: CacheBlobstoreExt>(
     if mode == "cache-only" {
         blobstore.get_cache_only(key)
     } else if mode == "no-fill" {
-        blobstore.get_no_cache_fill(key)
+        blobstore.get_no_cache_fill(ctx, key)
     } else {
-        blobstore.get(key)
+        blobstore.get(ctx, key)
     }
 }
 
@@ -331,11 +333,13 @@ fn slice_to_str(slice: &[u8]) -> String {
 }
 
 fn hg_manifest_diff(
+    ctx: CoreContext,
     repo: BlobRepo,
     left: &HgManifestId,
     right: &HgManifestId,
 ) -> impl Future<Item = Option<ChangesetAttrDiff>, Error = Error> {
     bonsai_diff(
+        ctx,
         repo.get_root_entry(left),
         Some(repo.get_root_entry(right)),
         None,
@@ -366,13 +370,14 @@ fn hg_manifest_diff(
 }
 
 fn hg_changeset_diff(
+    ctx: CoreContext,
     repo: BlobRepo,
     left_id: &HgChangesetId,
     right_id: &HgChangesetId,
 ) -> impl Future<Item = ChangesetDiff, Error = Error> {
     (
-        repo.get_changeset_by_changesetid(left_id),
-        repo.get_changeset_by_changesetid(right_id),
+        repo.get_changeset_by_changesetid(ctx.clone(), left_id),
+        repo.get_changeset_by_changesetid(ctx.clone(), right_id),
     ).into_future()
         .and_then({
             cloned!(repo, left_id, right_id);
@@ -418,10 +423,12 @@ fn hg_changeset_diff(
                     ))
                 }
 
-                hg_manifest_diff(repo, left.manifestid(), right.manifestid()).map(move |mdiff| {
-                    diff.diff.extend(mdiff);
-                    diff
-                })
+                hg_manifest_diff(ctx, repo, left.manifestid(), right.manifestid()).map(
+                    move |mdiff| {
+                        diff.diff.extend(mdiff);
+                        diff
+                    },
+                )
             }
         })
 }
@@ -441,24 +448,27 @@ fn build_skiplist_index<S: ToString>(
 
     repo.get_bonsai_heads_maybe_stale(ctx.clone())
         .collect()
-        .and_then(move |heads| {
-            loop_fn(
-                (heads.into_iter(), skiplist_index),
-                move |(mut heads, skiplist_index)| match heads.next() {
-                    Some(head) => {
-                        let f = skiplist_index.add_node(
-                            ctx.clone(),
-                            cs_fetcher.clone(),
-                            head,
-                            max_index_depth,
-                        );
+        .and_then({
+            cloned!(ctx);
+            move |heads| {
+                loop_fn(
+                    (heads.into_iter(), skiplist_index),
+                    move |(mut heads, skiplist_index)| match heads.next() {
+                        Some(head) => {
+                            let f = skiplist_index.add_node(
+                                ctx.clone(),
+                                cs_fetcher.clone(),
+                                head,
+                                max_index_depth,
+                            );
 
-                        f.map(move |()| Loop::Continue((heads, skiplist_index)))
-                            .boxify()
-                    }
-                    None => ok(Loop::Break(skiplist_index)).boxify(),
-                },
-            )
+                            f.map(move |()| Loop::Continue((heads, skiplist_index)))
+                                .boxify()
+                        }
+                        None => ok(Loop::Break(skiplist_index)).boxify(),
+                    },
+                )
+            }
         })
         .inspect(|skiplist_index| {
             println!(
@@ -484,20 +494,24 @@ fn build_skiplist_index<S: ToString>(
 
             compact_protocol::serialize(&thrift_merge_graph)
         })
-        .and_then(move |bytes| {
-            debug!(logger, "storing {} bytes", bytes.len());
-            blobstore.put(key, BlobstoreBytes::from_bytes(bytes))
+        .and_then({
+            cloned!(ctx);
+            move |bytes| {
+                debug!(logger, "storing {} bytes", bytes.len());
+                blobstore.put(ctx, key, BlobstoreBytes::from_bytes(bytes))
+            }
         })
         .boxify()
 }
 
 fn read_skiplist_index<S: ToString>(
+    ctx: CoreContext,
     repo: BlobRepo,
     key: S,
     logger: Logger,
 ) -> BoxFuture<(), Error> {
     repo.get_blobstore()
-        .get(key.to_string())
+        .get(ctx, key.to_string())
         .and_then(move |maybebytes| {
             match maybebytes {
                 Some(bytes) => {
@@ -525,6 +539,7 @@ fn main() -> Result<()> {
 
     let future = match matches.subcommand() {
         (BLOBSTORE_FETCH, Some(sub_m)) => {
+            let ctx = CoreContext::test_mock();
             let key = sub_m.value_of("KEY").unwrap().to_string();
             let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
             let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
@@ -536,9 +551,9 @@ fn main() -> Result<()> {
             match (use_memcache, no_prefix) {
                 (None, false) => {
                     let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
-                    blobstore.get(key.clone()).boxify()
+                    blobstore.get(ctx, key.clone()).boxify()
                 }
-                (None, true) => blobstore.get(key.clone()).boxify(),
+                (None, true) => blobstore.get(ctx, key.clone()).boxify(),
                 (Some(mode), false) => {
                     let blobstore = new_memcache_blobstore(
                         blobstore,
@@ -546,7 +561,7 @@ fn main() -> Result<()> {
                         manifold_args.bucket.as_ref(),
                     ).unwrap();
                     let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
-                    get_cache(&blobstore, key.clone(), mode)
+                    get_cache(ctx.clone(), &blobstore, key.clone(), mode)
                 }
                 (Some(mode), true) => {
                     let blobstore = new_memcache_blobstore(
@@ -554,7 +569,7 @@ fn main() -> Result<()> {
                         "manifold",
                         manifold_args.bucket.as_ref(),
                     ).unwrap();
-                    get_cache(&blobstore, key.clone(), mode)
+                    get_cache(ctx.clone(), &blobstore, key.clone(), mode)
                 }
             }.map(move |value| {
                 println!("{:?}", value);
@@ -588,7 +603,7 @@ fn main() -> Result<()> {
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
 
-            let repo = args::open_repo(&logger, &matches)?;
+            let repo = args::open_repo(ctx.clone(), &logger, &matches)?;
             fetch_bonsai_changeset(ctx, rev, repo.blobrepo())
                 .map(|bcs| {
                     println!("{:?}", bcs);
@@ -604,7 +619,7 @@ fn main() -> Result<()> {
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
 
-            let repo = args::open_repo(&logger, &matches)?;
+            let repo = args::open_repo(ctx.clone(), &logger, &matches)?;
             fetch_content(ctx, logger.clone(), repo.blobrepo(), rev, path)
                 .and_then(|content| {
                     match content {
@@ -652,16 +667,19 @@ fn main() -> Result<()> {
             config_repo::handle_command(sub_m)
         }
         (BOOKMARKS, Some(sub_m)) => {
-            args::init_cachelib(&matches);
-            let repo = args::open_repo(&logger, &matches)?;
-
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
+
+            args::init_cachelib(&matches);
+            let repo = args::open_repo(ctx.clone(), &logger, &matches)?;
 
             bookmarks_manager::handle_command(ctx, &repo.blobrepo(), sub_m, logger)
         }
         (HG_CHANGESET, Some(sub_m)) => match sub_m.subcommand() {
             (HG_CHANGESET_DIFF, Some(sub_m)) => {
+                // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+                let ctx = CoreContext::test_mock();
+
                 let left_cs = sub_m
                     .value_of("LEFT_CS")
                     .ok_or(format_err!("LEFT_CS argument expected"))
@@ -672,12 +690,14 @@ fn main() -> Result<()> {
                     .and_then(HgChangesetId::from_str);
 
                 args::init_cachelib(&matches);
-                let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
+                let repo = args::open_repo(ctx.clone(), &logger, &matches)?
+                    .blobrepo()
+                    .clone();
 
                 (left_cs, right_cs)
                     .into_future()
                     .and_then(move |(left_cs, right_cs)| {
-                        hg_changeset_diff(repo, &left_cs, &right_cs)
+                        hg_changeset_diff(ctx, repo, &left_cs, &right_cs)
                     })
                     .and_then(|diff| {
                         serde_json::to_writer(io::stdout(), &diff)
@@ -696,8 +716,13 @@ fn main() -> Result<()> {
                     .ok_or(format_err!("STOP_CS argument expected"))
                     .and_then(HgChangesetId::from_str);
 
+                // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
+                let ctx = CoreContext::test_mock();
+
                 args::init_cachelib(&matches);
-                let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
+                let repo = args::open_repo(ctx.clone(), &logger, &matches)?
+                    .blobrepo()
+                    .clone();
                 let ctx = CoreContext::test_mock();
 
                 (start_cs, stop_cs)
@@ -746,16 +771,22 @@ fn main() -> Result<()> {
         (SKIPLIST, Some(sub_m)) => match sub_m.subcommand() {
             (SKIPLIST_BUILD, Some(sub_m)) => {
                 args::init_cachelib(&matches);
-                let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
                 let ctx = CoreContext::test_mock();
+                let repo = args::open_repo(ctx.clone(), &logger, &matches)?
+                    .blobrepo()
+                    .clone();
 
                 build_skiplist_index(ctx, repo, sub_m.value_of("BLOBSTORE_KEY").unwrap(), logger)
             }
             (SKIPLIST_READ, Some(sub_m)) => {
                 args::init_cachelib(&matches);
-                let repo = args::open_repo(&logger, &matches)?.blobrepo().clone();
+                let ctx = CoreContext::test_mock();
+                let repo = args::open_repo(ctx.clone(), &logger, &matches)?
+                    .blobrepo()
+                    .clone();
 
                 read_skiplist_index(
+                    ctx.clone(),
                     repo,
                     sub_m
                         .value_of("BLOBSTORE_KEY")

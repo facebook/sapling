@@ -89,6 +89,7 @@ impl MononokeRepo {
 
     fn get_raw_file(
         &self,
+        ctx: CoreContext,
         changeset: String,
         path: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
@@ -101,7 +102,7 @@ impl MononokeRepo {
         let changesetid = try_boxfuture!(FS::get_changeset_id(changeset));
         let repo = self.repo.clone();
 
-        api::get_content_by_path(repo, changesetid, Some(mpath))
+        api::get_content_by_path(ctx, repo, changesetid, Some(mpath))
             .and_then(move |content| match content {
                 Content::File(content)
                 | Content::Executable(content)
@@ -175,11 +176,15 @@ impl MononokeRepo {
             .boxify()
     }
 
-    fn get_blob_content(&self, hash: String) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+    fn get_blob_content(
+        &self,
+        ctx: CoreContext,
+        hash: String,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let blobhash = try_boxfuture!(FS::get_nodehash(&hash));
 
         self.repo
-            .get_file_content(&blobhash)
+            .get_file_content(ctx, &blobhash)
             .and_then(move |content| match content {
                 FileContents::Bytes(content) => {
                     Ok(MononokeRepoResponse::GetBlobContent { content })
@@ -191,6 +196,7 @@ impl MononokeRepo {
 
     fn list_directory(
         &self,
+        ctx: CoreContext,
         changeset: String,
         path: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
@@ -202,7 +208,7 @@ impl MononokeRepo {
         let changesetid = try_boxfuture!(FS::get_changeset_id(changeset));
         let repo = self.repo.clone();
 
-        api::get_content_by_path(repo, changesetid, mpath)
+        api::get_content_by_path(ctx, repo, changesetid, mpath)
             .and_then(move |content| match content {
                 Content::Tree(tree) => Ok(tree),
                 _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into()),
@@ -218,16 +224,19 @@ impl MononokeRepo {
             .boxify()
     }
 
-    fn get_tree(&self, hash: String) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+    fn get_tree(
+        &self,
+        ctx: CoreContext,
+        hash: String,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let treehash = try_boxfuture!(FS::get_nodehash(&hash));
         let treemanifestid = HgManifestId::new(treehash);
         self.repo
-            .get_manifest_by_nodeid(&treemanifestid)
-            .map(|tree| {
-                join_all(
-                    tree.list()
-                        .map(|entry| EntryWithSizeAndContentHash::materialize_future(entry)),
-                )
+            .get_manifest_by_nodeid(ctx.clone(), &treemanifestid)
+            .map(move |tree| {
+                join_all(tree.list().map(move |entry| {
+                    EntryWithSizeAndContentHash::materialize_future(ctx.clone(), entry)
+                }))
             })
             .flatten()
             .map(|files| MononokeRepoResponse::GetTree { files })
@@ -235,22 +244,30 @@ impl MononokeRepo {
             .boxify()
     }
 
-    fn get_changeset(&self, hash: String) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+    fn get_changeset(
+        &self,
+        ctx: CoreContext,
+        hash: String,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let changesetid = try_boxfuture!(FS::get_changeset_id(hash));
 
         self.repo
-            .get_changeset_by_changesetid(&changesetid)
+            .get_changeset_by_changesetid(ctx, &changesetid)
             .and_then(|changeset| changeset.try_into().map_err(From::from))
             .map(|changeset| MononokeRepoResponse::GetChangeset { changeset })
             .from_err()
             .boxify()
     }
 
-    fn download_large_file(&self, oid: String) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+    fn download_large_file(
+        &self,
+        ctx: CoreContext,
+        oid: String,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         let sha256_oid = try_boxfuture!(FS::get_sha256_oid(oid));
 
         self.repo
-            .get_file_content_by_alias(sha256_oid)
+            .get_file_content_by_alias(ctx, sha256_oid)
             .and_then(move |content| match content {
                 FileContents::Bytes(content) => {
                     Ok(MononokeRepoResponse::DownloadLargeFile { content })
@@ -262,6 +279,7 @@ impl MononokeRepo {
 
     fn upload_large_file(
         &self,
+        ctx: CoreContext,
         oid: String,
         body: Bytes,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
@@ -278,7 +296,7 @@ impl MononokeRepo {
         }
 
         self.repo
-            .upload_file_content_by_alias(sha256_oid, body)
+            .upload_file_content_by_alias(ctx, sha256_oid, body)
             .and_then(|_| Ok(MononokeRepoResponse::UploadLargeFile {}))
             .from_err()
             .boxify()
@@ -312,23 +330,23 @@ impl MononokeRepo {
         use MononokeRepoQuery::*;
 
         match msg {
-            GetRawFile { changeset, path } => self.get_raw_file(changeset, path),
-            GetBlobContent { hash } => self.get_blob_content(hash),
-            ListDirectory { changeset, path } => self.list_directory(changeset, path),
-            GetTree { hash } => self.get_tree(hash),
-            GetChangeset { hash } => self.get_changeset(hash),
+            GetRawFile { changeset, path } => self.get_raw_file(ctx, changeset, path),
+            GetBlobContent { hash } => self.get_blob_content(ctx, hash),
+            ListDirectory { changeset, path } => self.list_directory(ctx, changeset, path),
+            GetTree { hash } => self.get_tree(ctx, hash),
+            GetChangeset { hash } => self.get_changeset(ctx, hash),
             IsAncestor {
                 proposed_ancestor,
                 proposed_descendent,
             } => self.is_ancestor(ctx, proposed_ancestor, proposed_descendent),
 
-            DownloadLargeFile { oid } => self.download_large_file(oid),
+            DownloadLargeFile { oid } => self.download_large_file(ctx, oid),
             LfsBatch {
                 repo_name,
                 req,
                 lfs_url,
             } => self.lfs_batch(repo_name, req, lfs_url),
-            UploadLargeFile { oid, body } => self.upload_large_file(oid, body),
+            UploadLargeFile { oid, body } => self.upload_large_file(ctx, oid, body),
         }
     }
 }

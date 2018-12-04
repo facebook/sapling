@@ -84,6 +84,7 @@ mod test {
     use super::ErrorKind;
     use super::super::*;
     use async_unit;
+    use context::CoreContext;
     use fixtures::many_files_dirs;
     use metaconfig::repoconfig::{BookmarkParams, HookParams, RepoReadOnly, RepoType};
     use slog::{Discard, Drain};
@@ -231,9 +232,10 @@ mod test {
     }
 
     fn hook_manager_blobrepo() -> HookManager {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
         let logger = Logger::root(Discard {}.ignore_res(), o!());
-        HookManager::new_with_blobrepo(Default::default(), repo, logger)
+        HookManager::new_with_blobrepo(ctx, Default::default(), repo, logger)
     }
 
 }

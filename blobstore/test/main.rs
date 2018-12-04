@@ -18,6 +18,7 @@ extern crate tempdir;
 extern crate tokio;
 
 extern crate blobstore;
+extern crate context;
 extern crate fileblob;
 extern crate glusterblob;
 extern crate mononoke_types;
@@ -33,6 +34,7 @@ use tempdir::TempDir;
 use tokio::{prelude::*, runtime::Runtime};
 
 use blobstore::{Blobstore, EagerMemblob};
+use context::CoreContext;
 use fileblob::Fileblob;
 use glusterblob::Glusterblob;
 use mononoke_types::BlobstoreBytes;
@@ -45,6 +47,7 @@ where
     B::Future: Send + 'static,
     Error: From<B::Error>,
 {
+    let ctx = CoreContext::test_mock();
     let blobstore = blobstore.into_future().map_err(|err| err.into());
 
     let foo = "foo".to_string();
@@ -52,8 +55,12 @@ where
     let fut = future::lazy(|| {
         blobstore.and_then(|blobstore| {
             blobstore
-                .put(foo.clone(), BlobstoreBytes::from_bytes(&b"bar"[..]))
-                .and_then(move |_| blobstore.get(foo))
+                .put(
+                    ctx.clone(),
+                    foo.clone(),
+                    BlobstoreBytes::from_bytes(&b"bar"[..]),
+                )
+                .and_then(move |_| blobstore.get(ctx, foo))
         })
     });
 
@@ -73,10 +80,12 @@ where
     B::Future: Send + 'static,
     Error: From<B::Error>,
 {
+    let ctx = CoreContext::test_mock();
     let blobstore = blobstore.into_future().map_err(|err| err.into());
 
-    let fut =
-        future::lazy(move || blobstore.and_then(|blobstore| blobstore.get("missing".to_string())));
+    let fut = future::lazy(move || {
+        blobstore.and_then(|blobstore| blobstore.get(ctx, "missing".to_string()))
+    });
 
     let mut runtime = Runtime::new().expect("runtime creation failed");
     let out = runtime.block_on(fut).expect("get failed");
@@ -91,6 +100,7 @@ where
     B::Future: Send + 'static,
     Error: From<B::Error>,
 {
+    let ctx = CoreContext::test_mock();
     let blobstore = Box::new(blobstore.into_future().map_err(|err| err.into()));
 
     let foo = "foo".to_string();
@@ -98,8 +108,12 @@ where
     let fut = future::lazy(|| {
         blobstore.and_then(|blobstore| {
             blobstore
-                .put(foo.clone(), BlobstoreBytes::from_bytes(&b"bar"[..]))
-                .and_then(move |_| blobstore.get(foo))
+                .put(
+                    ctx.clone(),
+                    foo.clone(),
+                    BlobstoreBytes::from_bytes(&b"bar"[..]),
+                )
+                .and_then(move |_| blobstore.get(ctx, foo))
         })
     });
     let mut runtime = Runtime::new().expect("runtime creation failed");

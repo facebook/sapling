@@ -13,6 +13,7 @@ extern crate pretty_assertions;
 extern crate async_unit;
 
 extern crate bonsai_utils;
+extern crate context;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate mononoke_types;
@@ -24,6 +25,7 @@ use futures::{Future, Stream};
 use async_unit::tokio_unit_test;
 
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
+use context::CoreContext;
 use mercurial_types::{Entry, HgEntryId};
 use mercurial_types_mocks::manifest::{MockEntry, MockManifest};
 use mercurial_types_mocks::nodehash::*;
@@ -34,10 +36,11 @@ use fixtures::ManifestFixture;
 #[test]
 fn diff_basic() {
     tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let parent_entry = root_entry(&fixtures::BASIC1);
         let working_entry = root_entry(&fixtures::BASIC2);
 
-        let diff = compute_diff(working_entry, Some(parent_entry), None);
+        let diff = compute_diff(ctx.clone(), working_entry, Some(parent_entry), None);
         let expected_diff = vec![
             deleted("dir1/file-to-dir"),
             // dir1/file-to-dir/foobar *is* a result, because it has changed and its parent is
@@ -58,7 +61,7 @@ fn diff_basic() {
         let parent2 = root_entry(&fixtures::BASIC1);
         let working_entry = root_entry(&fixtures::BASIC2);
 
-        let diff = compute_diff(working_entry, Some(parent1), Some(parent2));
+        let diff = compute_diff(ctx.clone(), working_entry, Some(parent1), Some(parent2));
         assert_eq!(diff, expected_diff);
     })
 }
@@ -66,10 +69,11 @@ fn diff_basic() {
 #[test]
 fn diff_truncate() {
     tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let parent_entry = root_entry(&fixtures::TRUNCATE1);
         let working_entry = root_entry(&fixtures::TRUNCATE2);
 
-        let diff = bonsai_diff(working_entry, Some(parent_entry), None);
+        let diff = bonsai_diff(ctx, working_entry, Some(parent_entry), None);
         let paths = diff.collect().wait().expect("computing diff failed");
         assert_eq!(paths, vec![]);
     })
@@ -78,11 +82,12 @@ fn diff_truncate() {
 #[test]
 fn diff_merge1() {
     tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let parent1 = root_entry(&fixtures::BASIC1);
         let parent2 = root_entry(&fixtures::BASIC2);
         let working_entry = root_entry(&fixtures::BASIC2);
 
-        let diff = compute_diff(working_entry, Some(parent1), Some(parent2));
+        let diff = compute_diff(ctx.clone(), working_entry, Some(parent1), Some(parent2));
 
         // Compare this result to expected_diff in diff_basic.
         let expected_diff = vec![
@@ -114,11 +119,12 @@ fn root_entry(mf: &ManifestFixture) -> Box<Entry + Sync> {
 }
 
 fn compute_diff(
+    ctx: CoreContext,
     working_entry: Box<Entry + Sync>,
     p1_entry: Option<Box<Entry + Sync>>,
     p2_entry: Option<Box<Entry + Sync>>,
 ) -> Vec<BonsaiDiffResult> {
-    let diff_stream = bonsai_diff(working_entry, p1_entry, p2_entry);
+    let diff_stream = bonsai_diff(ctx, working_entry, p1_entry, p2_entry);
     let mut paths = diff_stream.collect().wait().expect("computing diff failed");
     paths.sort_unstable();
 

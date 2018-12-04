@@ -9,6 +9,7 @@ use inlinable_string::InlinableString;
 
 use futures_ext::BoxFuture;
 
+use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 use {Blobstore, CacheBlobstoreExt};
@@ -40,8 +41,12 @@ impl<T: Blobstore + Clone> PrefixBlobstore<T> {
 
 impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for PrefixBlobstore<T> {
     #[inline]
-    fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.blobstore.get_no_cache_fill(self.prepend(key))
+    fn get_no_cache_fill(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.blobstore.get_no_cache_fill(ctx, self.prepend(key))
     }
 
     #[inline]
@@ -52,18 +57,18 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for PrefixBlobstore<T> {
 
 impl<T: Blobstore + Clone> Blobstore for PrefixBlobstore<T> {
     #[inline]
-    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.blobstore.get(self.prepend(key))
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.blobstore.get(ctx, self.prepend(key))
     }
 
     #[inline]
-    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        self.blobstore.put(self.prepend(key), value)
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+        self.blobstore.put(ctx, self.prepend(key), value)
     }
 
     #[inline]
-    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
-        self.blobstore.is_present(self.prepend(key))
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+        self.blobstore.is_present(ctx, self.prepend(key))
     }
 }
 
@@ -78,6 +83,7 @@ mod test {
 
     #[test]
     fn test_prefix() {
+        let ctx = CoreContext::test_mock();
         let base = EagerMemblob::new();
         let prefixed = PrefixBlobstore::new(base.clone(), "prefix123-");
         let unprefixed_key = "foobar".to_string();
@@ -86,6 +92,7 @@ mod test {
         // This is EagerMemblob (immediate future completion) so calling wait() is fine.
         prefixed
             .put(
+                ctx.clone(),
                 unprefixed_key.clone(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
@@ -95,7 +102,7 @@ mod test {
         // Test that both the prefixed and the unprefixed stores can access the key.
         assert_eq!(
             prefixed
-                .get(unprefixed_key.clone())
+                .get(ctx.clone(), unprefixed_key.clone())
                 .wait()
                 .expect("get should succeed")
                 .expect("value should be present")
@@ -103,7 +110,7 @@ mod test {
             Bytes::from("test foobar"),
         );
         assert_eq!(
-            base.get(prefixed_key.clone())
+            base.get(ctx.clone(), prefixed_key.clone())
                 .wait()
                 .expect("get should succeed")
                 .expect("value should be present")
@@ -114,12 +121,12 @@ mod test {
         // Test that is_present works for both the prefixed and unprefixed stores.
         assert!(
             prefixed
-                .is_present(unprefixed_key.clone())
+                .is_present(ctx.clone(), unprefixed_key.clone())
                 .wait()
                 .expect("is_present should succeed")
         );
         assert!(
-            base.is_present(prefixed_key.clone())
+            base.is_present(ctx.clone(), prefixed_key.clone())
                 .wait()
                 .expect("is_present should succeed")
         );

@@ -81,7 +81,7 @@ fn resolve_push(
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
-        .maybe_resolve_changegroup(bundle2)
+        .maybe_resolve_changegroup(ctx.clone(), bundle2)
         .and_then({
             cloned!(resolver);
             move |(cg_push, bundle2)| {
@@ -103,11 +103,11 @@ fn resolve_push(
             }
         })
         .and_then({
-            cloned!(resolver);
+            cloned!(ctx, resolver);
             move |(cg_push, bookmark_push, bundle2)| {
                 if let Some(cg_push) = cg_push {
                     resolver
-                        .resolve_b2xtreegroup2(bundle2)
+                        .resolve_b2xtreegroup2(ctx, bundle2)
                         .map(|(manifests, bundle2)| {
                             (Some((cg_push, manifests)), bookmark_push, bundle2)
                         })
@@ -201,18 +201,18 @@ fn resolve_pushrebase(
     resolver
         .maybe_resolve_pushvars(bundle2)
         .and_then({
-            cloned!(resolver);
+            cloned!(ctx, resolver);
             move |(maybe_pushvars, bundle2)| {
                 resolver
-                    .resolve_b2xtreegroup2(bundle2)
+                    .resolve_b2xtreegroup2(ctx, bundle2)
                     .map(move |(manifests, bundle2)| (manifests, maybe_pushvars, bundle2))
             }
         })
         .and_then({
-            cloned!(resolver);
+            cloned!(ctx, resolver);
             move |(manifests, maybe_pushvars, bundle2)| {
                 resolver
-                    .maybe_resolve_changegroup(bundle2)
+                    .maybe_resolve_changegroup(ctx, bundle2)
                     .map(move |(cg_push, bundle2)| (cg_push, manifests, maybe_pushvars, bundle2))
             }
         })
@@ -270,7 +270,7 @@ fn resolve_pushrebase(
             cloned!(ctx, resolver);
             move |(changesets, bookmark_pushes, maybe_pushvars, onto)| {
                 resolver
-                    .run_hooks(changesets.clone(), maybe_pushvars, &onto)
+                    .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &onto)
                     .map_err(|err| match err {
                         RunHooksError::Failures((cs_hook_failures, file_hook_failures)) => {
                             let mut err_msgs = vec![];
@@ -483,6 +483,7 @@ impl Bundle2Resolver {
     /// their upload should be used for uploading changesets
     fn maybe_resolve_changegroup(
         &self,
+        ctx: CoreContext,
         bundle2: BoxStream<Bundle2Item, Error>,
     ) -> BoxFuture<(Option<ChangegroupPush>, BoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
@@ -498,10 +499,11 @@ impl Bundle2Resolver {
                     let (c, f) = split_changegroup(parts);
                     convert_to_revlog_changesets(c)
                         .collect()
-                        .and_then(|changesets| {
+                        .and_then(move |changesets| {
                             upload_hg_blobs(
+                                ctx.clone(),
                                 repo.clone(),
-                                convert_to_revlog_filelog(repo, f),
+                                convert_to_revlog_filelog(ctx.clone(), repo, f),
                                 UploadBlobsType::EnsureNoDuplicates,
                             ).map(move |upload_map| {
                                 let mut filelogs = HashMap::new();
@@ -591,6 +593,7 @@ impl Bundle2Resolver {
     /// their upload as well as their parsed content should be used for uploading changesets.
     fn resolve_b2xtreegroup2(
         &self,
+        ctx: CoreContext,
         bundle2: BoxStream<Bundle2Item, Error>,
     ) -> BoxFuture<(Manifests, BoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
@@ -600,6 +603,7 @@ impl Bundle2Resolver {
                 Some(Bundle2Item::B2xTreegroup2(_, parts))
                 | Some(Bundle2Item::B2xRebasePack(_, parts)) => {
                     upload_hg_blobs(
+                        ctx,
                         repo,
                         TreemanifestBundle2Parser::new(parts),
                         UploadBlobsType::IgnoreDuplicates,
@@ -943,6 +947,7 @@ impl Bundle2Resolver {
 
     fn run_hooks(
         &self,
+        ctx: CoreContext,
         changesets: Changesets,
         pushvars: Option<HashMap<String, Bytes>>,
         onto_bookmark: &Bookmark,
@@ -953,11 +958,13 @@ impl Bundle2Resolver {
             futs.push(
                 self.hook_manager
                     .run_changeset_hooks_for_bookmark(
+                        ctx.clone(),
                         hg_cs_id.clone(),
                         onto_bookmark,
                         pushvars.clone(),
                     )
                     .join(self.hook_manager.run_file_hooks_for_bookmark(
+                        ctx.clone(),
                         hg_cs_id,
                         onto_bookmark,
                         pushvars.clone(),

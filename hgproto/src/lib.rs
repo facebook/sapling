@@ -31,6 +31,8 @@ extern crate maplit;
 #[macro_use]
 extern crate nom;
 
+#[cfg(test)]
+extern crate context;
 extern crate futures_ext;
 extern crate mercurial;
 extern crate mercurial_bundles;

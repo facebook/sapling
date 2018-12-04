@@ -9,6 +9,7 @@ use std::iter;
 
 use failure::Error;
 
+use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{FileContents, FileType, MPathElement};
 
@@ -176,17 +177,17 @@ pub trait Entry: Send + 'static {
     fn get_type(&self) -> Type;
 
     /// Get the parents (in the history graph) of the referred-to object
-    fn get_parents(&self) -> BoxFuture<HgParents, Error>;
+    fn get_parents(&self, ctx: CoreContext) -> BoxFuture<HgParents, Error>;
 
     /// Get the raw content of the object as it exists in the blobstore,
     /// without any interpretation. This is only really useful for doing a bit-level duplication.
-    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error>;
+    fn get_raw_content(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error>;
 
     /// Get the interpreted content of the object. This will likely require IO
-    fn get_content(&self) -> BoxFuture<Content, Error>;
+    fn get_content(&self, ctx: CoreContext) -> BoxFuture<Content, Error>;
 
     /// Get the logical size of the entry. Some entries don't really have a meaningful size.
-    fn get_size(&self) -> BoxFuture<Option<usize>, Error>;
+    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error>;
 
     /// Get the identity of the object this entry refers to.
     fn get_hash(&self) -> &HgEntryId;
@@ -231,20 +232,20 @@ where
         self.entry.get_type()
     }
 
-    fn get_parents(&self) -> BoxFuture<HgParents, Error> {
-        self.entry.get_parents().boxify()
+    fn get_parents(&self, ctx: CoreContext) -> BoxFuture<HgParents, Error> {
+        self.entry.get_parents(ctx).boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
-        self.entry.get_raw_content().boxify()
+    fn get_raw_content(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
+        self.entry.get_raw_content(ctx).boxify()
     }
 
-    fn get_content(&self) -> BoxFuture<Content, Error> {
-        self.entry.get_content().boxify()
+    fn get_content(&self, ctx: CoreContext) -> BoxFuture<Content, Error> {
+        self.entry.get_content(ctx).boxify()
     }
 
-    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
-        self.entry.get_size().boxify()
+    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
+        self.entry.get_size(ctx).boxify()
     }
 
     fn get_hash(&self) -> &HgEntryId {
@@ -261,20 +262,20 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_type()
     }
 
-    fn get_parents(&self) -> BoxFuture<HgParents, Error> {
-        (**self).get_parents()
+    fn get_parents(&self, ctx: CoreContext) -> BoxFuture<HgParents, Error> {
+        (**self).get_parents(ctx)
     }
 
-    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
-        (**self).get_raw_content()
+    fn get_raw_content(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
+        (**self).get_raw_content(ctx)
     }
 
-    fn get_content(&self) -> BoxFuture<Content, Error> {
-        (**self).get_content()
+    fn get_content(&self, ctx: CoreContext) -> BoxFuture<Content, Error> {
+        (**self).get_content(ctx)
     }
 
-    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
-        (**self).get_size()
+    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
+        (**self).get_size(ctx)
     }
 
     fn get_hash(&self) -> &HgEntryId {

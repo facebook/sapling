@@ -58,10 +58,11 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
+    let ctx = CoreContext::test_mock();
     let logger = args::get_logger(&matches);
 
     args::init_cachelib(&matches);
-    let repo = args::create_repo(&logger, &matches)?;
+    let repo = args::create_repo(ctx, &logger, &matches)?;
     let blobrepo = Arc::new(repo.blobrepo().clone());
 
     let revlogrepo_path = matches

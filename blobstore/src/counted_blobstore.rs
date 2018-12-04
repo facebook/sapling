@@ -9,6 +9,7 @@ use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use stats::DynamicTimeseries;
 
+use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 use {Blobstore, CacheBlobstoreExt};
@@ -54,11 +55,11 @@ impl<T: Blobstore> CountedBlobstore<T> {
 }
 
 impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
-    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let name = self.name;
         STATS::get.add_value(1, (name,));
         self.blobstore
-            .get(key)
+            .get(ctx, key)
             .then(move |res| {
                 match res {
                     Ok(Some(_)) => STATS::get_hit.add_value(1, (name,)),
@@ -70,11 +71,11 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             .boxify()
     }
 
-    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         let name = self.name;
         STATS::put.add_value(1, (name,));
         self.blobstore
-            .put(key, value)
+            .put(ctx, key, value)
             .then(move |res| {
                 match res {
                     Ok(()) => STATS::put_ok.add_value(1, (name,)),
@@ -85,11 +86,11 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             .boxify()
     }
 
-    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
         let name = self.name;
         STATS::is_present.add_value(1, (name,));
         self.blobstore
-            .is_present(key)
+            .is_present(ctx, key)
             .then(move |res| {
                 match res {
                     Ok(true) => STATS::is_present_hit.add_value(1, (name,)),
@@ -101,11 +102,11 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             .boxify()
     }
 
-    fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
+    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
         let name = self.name;
         STATS::assert_present.add_value(1, (name,));
         self.blobstore
-            .assert_present(key)
+            .assert_present(ctx, key)
             .then(move |res| {
                 match res {
                     Ok(()) => STATS::assert_present_ok.add_value(1, (name,)),
@@ -119,8 +120,12 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
 
 impl<T: CacheBlobstoreExt> CacheBlobstoreExt for CountedBlobstore<T> {
     #[inline]
-    fn get_no_cache_fill(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.as_inner().get_no_cache_fill(key)
+    fn get_no_cache_fill(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_inner().get_no_cache_fill(ctx, key)
     }
 
     #[inline]

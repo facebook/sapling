@@ -54,6 +54,8 @@ pub fn repo_handlers(
                 root_log,
                 "Start warming for repo {}, type {:?}", reponame, config.repotype
             );
+            // TODO(T37478150, luk): this is not a test use case, need to address this later
+            let ctx = CoreContext::test_mock();
             let ensure_myrouter_ready = match config.get_db_address() {
                 None => future::ok(()).left_future(),
                 Some(db_address) => {
@@ -82,8 +84,12 @@ pub fn repo_handlers(
                 None => Default::default(),
             };
 
-            let mut hook_manager =
-                HookManager::new_with_blobrepo(hook_manager_params, blobrepo.clone(), logger);
+            let mut hook_manager = HookManager::new_with_blobrepo(
+                ctx.clone(),
+                hook_manager_params,
+                blobrepo.clone(),
+                logger,
+            );
 
             info!(root_log, "Loading hooks");
             try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
@@ -118,7 +124,7 @@ pub fn repo_handlers(
                 Some(skiplist_index_blobstore_key) => {
                     let blobstore = repo.blobrepo().get_blobstore();
                     blobstore
-                        .get(skiplist_index_blobstore_key)
+                        .get(ctx.clone(), skiplist_index_blobstore_key)
                         .and_then(|maybebytes| {
                             let map = match maybebytes {
                                 Some(bytes) => {
@@ -136,9 +142,7 @@ pub fn repo_handlers(
 
             // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
             let initial_warmup = ensure_myrouter_ready.and_then({
-                cloned!(reponame, listen_log);
-                // TODO(T37478150, luk): this is not a test use case, need to address this later
-                let ctx = CoreContext::test_mock();
+                cloned!(ctx, reponame, listen_log);
                 let blobrepo = repo.blobrepo().clone();
                 move |()| {
                     cache_warmup(ctx, Arc::new(blobrepo), config.cache_warmup, listen_log)

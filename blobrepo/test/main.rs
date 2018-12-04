@@ -9,6 +9,8 @@
 extern crate ascii;
 extern crate async_unit;
 extern crate bytes;
+#[macro_use]
+extern crate cloned;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
@@ -58,14 +60,15 @@ use utils::{create_changeset_no_parents, create_changeset_one_parent, get_empty_
 use tests_utils::{create_commit, store_files};
 
 fn upload_blob_no_parents(repo: BlobRepo) {
+    let ctx = CoreContext::test_mock();
     let expected_hash = string_to_nodehash("c3127cdbf2eae0f09653f9237d85c8436425b246");
     let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
     // The blob does not exist...
-    assert!(run_future(repo.get_file_content(&expected_hash)).is_err());
+    assert!(run_future(repo.get_file_content(ctx.clone(), &expected_hash)).is_err());
 
     // We upload it...
-    let (hash, future) = upload_file_no_parents(&repo, "blob", &fake_path);
+    let (hash, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
     assert!(hash == expected_hash);
 
     // The entry we're given is correct...
@@ -77,14 +80,14 @@ fn upload_blob_no_parents(repo: BlobRepo) {
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );
 
-    let content = run_future(entry.get_content()).unwrap();
+    let content = run_future(entry.get_content(ctx.clone())).unwrap();
     match content {
         manifest::Content::File(FileContents::Bytes(f)) => assert_eq!(f.as_ref(), &b"blob"[..]),
         _ => panic!(),
     };
 
     // And the blob now exists
-    let bytes = run_future(repo.get_file_content(&expected_hash)).unwrap();
+    let bytes = run_future(repo.get_file_content(ctx.clone(), &expected_hash)).unwrap();
     assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
@@ -95,16 +98,17 @@ test_both_repotypes!(
 );
 
 fn upload_blob_one_parent(repo: BlobRepo) {
+    let ctx = CoreContext::test_mock();
     let expected_hash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");
     let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
-    let (p1, future) = upload_file_no_parents(&repo, "blob", &fake_path);
+    let (p1, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
 
     // The blob does not exist...
-    run_future(repo.get_file_content(&expected_hash)).is_err();
+    run_future(repo.get_file_content(ctx.clone(), &expected_hash)).is_err();
 
     // We upload it...
-    let (hash, future2) = upload_file_one_parent(&repo, "blob", &fake_path, p1);
+    let (hash, future2) = upload_file_one_parent(ctx.clone(), &repo, "blob", &fake_path, p1);
     assert!(hash == expected_hash);
 
     // The entry we're given is correct...
@@ -117,13 +121,13 @@ fn upload_blob_one_parent(repo: BlobRepo) {
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );
 
-    let content = run_future(entry.get_content()).unwrap();
+    let content = run_future(entry.get_content(ctx.clone())).unwrap();
     match content {
         manifest::Content::File(FileContents::Bytes(f)) => assert_eq!(f.as_ref(), &b"blob"[..]),
         _ => panic!(),
     };
     // And the blob now exists
-    let bytes = run_future(repo.get_file_content(&expected_hash)).unwrap();
+    let bytes = run_future(repo.get_file_content(ctx.clone(), &expected_hash)).unwrap();
     assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
@@ -136,6 +140,7 @@ test_both_repotypes!(
 #[test]
 fn upload_blob_aliases() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         // echo -n "blob" | sha256sum
         let alias_key =
             "alias.sha256.fa2c8cc4f28176bbeed4b736df569a34c79cd3723e9ec42f9674b4d46ac6b8b8";
@@ -151,19 +156,19 @@ fn upload_blob_aliases() {
 
         // The blob with alias does not exist...
         assert!(
-            run_future(prefixed_blobstore.get(alias_key.to_string()))
+            run_future(prefixed_blobstore.get(ctx.clone(), alias_key.to_string()))
                 .unwrap()
                 .is_none()
         );
 
         // We upload file and wait until file is uploaded...
-        let (_, future) = upload_file_no_parents(&repo, "blob", &fake_path);
+        let (_, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
         run_future(future).unwrap();
 
         let expected_content =
             "content.blake2.07ccc95f3ee9252a9e1dbdeaef59844d6aabd9dcf911fa29f542e891a4c5e90a";
 
-        let contents = run_future(prefixed_blobstore.get(alias_key.to_string()))
+        let contents = run_future(prefixed_blobstore.get(ctx.clone(), alias_key.to_string()))
             .unwrap()
             .unwrap();
         assert_eq!(contents.as_bytes(), expected_content.as_bytes());
@@ -171,6 +176,7 @@ fn upload_blob_aliases() {
 }
 
 fn create_one_changeset(repo: BlobRepo) {
+    let ctx = CoreContext::test_mock();
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
     let expected_files = vec![
@@ -182,13 +188,22 @@ fn create_one_changeset(repo: BlobRepo) {
     ];
     let author: String = "author <author@fb.com>".into();
 
-    let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+    let (filehash, file_future) =
+        upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path);
 
-    let (dirhash, manifest_dir_future) =
-        upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
+    let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
+        ctx.clone(),
+        &repo,
+        format!("file\0{}\n", filehash),
+        &fake_dir_path,
+    );
 
-    let (roothash, root_manifest_future) =
-        upload_manifest_no_parents(&repo, format!("dir\0{}t\n", dirhash), &RepoPath::root());
+    let (roothash, root_manifest_future) = upload_manifest_no_parents(
+        ctx.clone(),
+        &repo,
+        format!("dir\0{}t\n", dirhash),
+        &RepoPath::root(),
+    );
 
     let commit = create_changeset_no_parents(
         &repo,
@@ -208,7 +223,7 @@ fn create_one_changeset(repo: BlobRepo) {
     );
 
     // And check the file blob is present
-    let bytes = run_future(repo.get_file_content(&filehash)).unwrap();
+    let bytes = run_future(repo.get_file_content(ctx.clone(), &filehash)).unwrap();
     assert!(&bytes.into_bytes() == &b"blob"[..]);
 }
 
@@ -224,13 +239,22 @@ fn create_two_changesets(repo: BlobRepo) {
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
     let utf_author: String = "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into();
 
-    let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+    let (filehash, file_future) =
+        upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path);
 
-    let (dirhash, manifest_dir_future) =
-        upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
+    let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
+        ctx.clone(),
+        &repo,
+        format!("file\0{}\n", filehash),
+        &fake_dir_path,
+    );
 
-    let (roothash, root_manifest_future) =
-        upload_manifest_no_parents(&repo, format!("dir\0{}t\n", dirhash), &RepoPath::root());
+    let (roothash, root_manifest_future) = upload_manifest_no_parents(
+        ctx.clone(),
+        &repo,
+        format!("dir\0{}t\n", dirhash),
+        &RepoPath::root(),
+    );
 
     let commit1 = create_changeset_no_parents(
         &repo,
@@ -239,8 +263,10 @@ fn create_two_changesets(repo: BlobRepo) {
     );
 
     let fake_file_path_no_dir = RepoPath::file("file").expect("Can't generate fake RepoPath");
-    let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path_no_dir);
+    let (filehash, file_future) =
+        upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path_no_dir);
     let (roothash, root_manifest_future) = upload_manifest_one_parent(
+        ctx.clone(),
         &repo,
         format!("file\0{}\n", filehash),
         &RepoPath::root(),
@@ -296,13 +322,22 @@ fn check_bonsai_creation(repo: BlobRepo) {
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
 
-    let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+    let (filehash, file_future) =
+        upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path);
 
-    let (dirhash, manifest_dir_future) =
-        upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
+    let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
+        ctx.clone(),
+        &repo,
+        format!("file\0{}\n", filehash),
+        &fake_dir_path,
+    );
 
-    let (_, root_manifest_future) =
-        upload_manifest_no_parents(&repo, format!("dir\0{}t\n", dirhash), &RepoPath::root());
+    let (_, root_manifest_future) = upload_manifest_no_parents(
+        ctx.clone(),
+        &repo,
+        format!("dir\0{}t\n", dirhash),
+        &RepoPath::root(),
+    );
 
     let commit = create_changeset_no_parents(
         &repo,
@@ -313,9 +348,9 @@ fn check_bonsai_creation(repo: BlobRepo) {
     let commit = run_future(commit.get_completed_changeset()).unwrap();
     let commit = &commit.1;
     let bonsai_cs_id =
-        run_future(repo.get_bonsai_from_hg(ctx, &commit.get_changeset_id())).unwrap();
+        run_future(repo.get_bonsai_from_hg(ctx.clone(), &commit.get_changeset_id())).unwrap();
     assert!(bonsai_cs_id.is_some());
-    let bonsai = run_future(repo.get_bonsai_changeset(bonsai_cs_id.unwrap())).unwrap();
+    let bonsai = run_future(repo.get_bonsai_changeset(ctx.clone(), bonsai_cs_id.unwrap())).unwrap();
     assert_eq!(
         bonsai
             .file_changes()
@@ -336,10 +371,15 @@ fn check_bonsai_creation_with_rename(repo: BlobRepo) {
     let parent = {
         let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
 
-        let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+        let (filehash, file_future) =
+            upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path);
 
-        let (_, root_manifest_future) =
-            upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &RepoPath::root());
+        let (_, root_manifest_future) = upload_manifest_no_parents(
+            ctx.clone(),
+            &repo,
+            format!("file\0{}\n", filehash),
+            &RepoPath::root(),
+        );
 
         create_changeset_no_parents(
             &repo,
@@ -353,12 +393,14 @@ fn check_bonsai_creation_with_rename(repo: BlobRepo) {
             RepoPath::file("file_rename").expect("Can't generate fake RepoPath");
 
         let (filehash, file_future) = upload_file_no_parents(
+            ctx.clone(),
             &repo,
             "\x01\ncopy: file\ncopyrev: c3127cdbf2eae0f09653f9237d85c8436425b246\x01\nblob",
             &fake_renamed_file_path,
         );
 
         let (_, root_manifest_future) = upload_manifest_no_parents(
+            ctx.clone(),
             &repo,
             format!("file_rename\0{}\n", filehash),
             &RepoPath::root(),
@@ -383,8 +425,8 @@ fn check_bonsai_creation_with_rename(repo: BlobRepo) {
             .unwrap();
 
     let bonsai_cs_id =
-        run_future(repo.get_bonsai_from_hg(ctx, &child_cs.get_changeset_id())).unwrap();
-    let bonsai = run_future(repo.get_bonsai_changeset(bonsai_cs_id.unwrap())).unwrap();
+        run_future(repo.get_bonsai_from_hg(ctx.clone(), &child_cs.get_changeset_id())).unwrap();
+    let bonsai = run_future(repo.get_bonsai_changeset(ctx.clone(), bonsai_cs_id.unwrap())).unwrap();
     let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
     let file = MPath::new("file").unwrap();
     assert!(!fc[&file].is_some());
@@ -403,10 +445,15 @@ test_both_repotypes!(
 );
 
 fn create_bad_changeset(repo: BlobRepo) {
+    let ctx = CoreContext::test_mock();
     let dirhash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");
 
-    let (_, root_manifest_future) =
-        upload_manifest_no_parents(&repo, format!("dir\0{}t\n", dirhash), &RepoPath::root());
+    let (_, root_manifest_future) = upload_manifest_no_parents(
+        ctx,
+        &repo,
+        format!("dir\0{}t\n", dirhash),
+        &RepoPath::root(),
+    );
 
     let commit =
         create_changeset_no_parents(&repo, root_manifest_future.map(Some).boxify(), vec![]);
@@ -427,11 +474,20 @@ fn create_double_linknode(repo: BlobRepo) {
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
 
     let (filehash, parent_commit) = {
-        let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
-        let (dirhash, manifest_dir_future) =
-            upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
-        let (_, root_manifest_future) =
-            upload_manifest_no_parents(&repo, format!("dir\0{}t\n", dirhash), &RepoPath::root());
+        let (filehash, file_future) =
+            upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path);
+        let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
+            ctx.clone(),
+            &repo,
+            format!("file\0{}\n", filehash),
+            &fake_dir_path,
+        );
+        let (_, root_manifest_future) = upload_manifest_no_parents(
+            ctx.clone(),
+            &repo,
+            format!("dir\0{}t\n", dirhash),
+            &RepoPath::root(),
+        );
 
         (
             filehash,
@@ -445,13 +501,21 @@ fn create_double_linknode(repo: BlobRepo) {
 
     let child_commit = {
         let (filehash, file_future) =
-            upload_file_one_parent(&repo, "blob", &fake_file_path, filehash);
+            upload_file_one_parent(ctx.clone(), &repo, "blob", &fake_file_path, filehash);
 
-        let (dirhash, manifest_dir_future) =
-            upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
+        let (dirhash, manifest_dir_future) = upload_manifest_no_parents(
+            ctx.clone(),
+            &repo,
+            format!("file\0{}\n", filehash),
+            &fake_dir_path,
+        );
 
-        let (_, root_manifest_future) =
-            upload_manifest_no_parents(&repo, format!("dir\0{}t\n", dirhash), &RepoPath::root());
+        let (_, root_manifest_future) = upload_manifest_no_parents(
+            ctx.clone(),
+            &repo,
+            format!("dir\0{}t\n", dirhash),
+            &RepoPath::root(),
+        );
 
         create_changeset_one_parent(
             &repo,
@@ -494,7 +558,8 @@ fn check_linknode_creation(repo: BlobRepo) {
             let path = RepoPath::file(
                 MPath::new(format!("dir/file{}", id)).expect("String to MPath failed"),
             ).expect("Can't generate fake RepoPath");
-            let (hash, future) = upload_file_no_parents(&repo, format!("blob id {}", id), &path);
+            let (hash, future) =
+                upload_file_no_parents(ctx.clone(), &repo, format!("blob id {}", id), &path);
             ((hash, format!("file{}", id)), future)
         })
         .collect();
@@ -509,10 +574,14 @@ fn check_linknode_creation(repo: BlobRepo) {
         });
 
     let (dirhash, manifest_dir_future) =
-        upload_manifest_no_parents(&repo, manifest, &fake_dir_path);
+        upload_manifest_no_parents(ctx.clone(), &repo, manifest, &fake_dir_path);
 
-    let (roothash, root_manifest_future) =
-        upload_manifest_no_parents(&repo, format!("dir\0{}t\n", dirhash), &RepoPath::root());
+    let (roothash, root_manifest_future) = upload_manifest_no_parents(
+        ctx.clone(),
+        &repo,
+        format!("dir\0{}t\n", dirhash),
+        &RepoPath::root(),
+    );
 
     uploads.push(manifest_dir_future);
 
@@ -566,13 +635,14 @@ where
     K::Value: PartialEq + Arbitrary,
 {
     fn result<G: Gen>(&self, g: &mut G) -> TestResult {
+        let ctx = CoreContext::test_mock();
         let value = <K::Value as Arbitrary>::arbitrary(g);
         let value_cloned = value.clone();
         let store_fetch_future = self.repo
-            .unittest_store(value)
+            .unittest_store(ctx.clone(), value)
             .and_then({
-                let repo = self.repo.clone();
-                move |key| repo.unittest_fetch(&key)
+                cloned!(ctx, self.repo);
+                move |key| repo.unittest_fetch(ctx, &key)
             })
             .map(move |value_fetched| TestResult::from_bool(value_fetched == value_cloned));
         run_future(store_fetch_future).expect("valid mononoke type")
@@ -593,6 +663,7 @@ test_both_repotypes!(
 #[test]
 fn test_compute_changed_files_no_parents() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
         let nodehash = string_to_nodehash("0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480");
         let expected = vec![
@@ -602,11 +673,13 @@ fn test_compute_changed_files_no_parents() {
             MPath::new(b"dir2/file_1_in_dir2").unwrap(),
         ];
 
-        let cs =
-            run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
-        let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid())).unwrap();
+        let cs = run_future(repo.get_changeset_by_changesetid(
+            ctx.clone(),
+            &HgChangesetId::new(nodehash),
+        )).unwrap();
+        let mf = run_future(repo.get_manifest_by_nodeid(ctx.clone(), &cs.manifestid())).unwrap();
 
-        let diff = run_future(compute_changed_files(&mf, None, None)).unwrap();
+        let diff = run_future(compute_changed_files(ctx.clone(), &mf, None, None)).unwrap();
         assert!(
             diff == expected,
             "Got {:?}, expected {:?}\n",
@@ -619,6 +692,7 @@ fn test_compute_changed_files_no_parents() {
 #[test]
 fn test_compute_changed_files_one_parent() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         // Note that this is a commit and its parent commit, so you can use:
         // hg log -T"{node}\n{files % '    MPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
         // to see how Mercurial would compute the files list and confirm that it's the same
@@ -635,15 +709,25 @@ fn test_compute_changed_files_one_parent() {
             MPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
         ];
 
-        let cs =
-            run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
-        let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid())).unwrap();
+        let cs = run_future(repo.get_changeset_by_changesetid(
+            ctx.clone(),
+            &HgChangesetId::new(nodehash),
+        )).unwrap();
+        let mf = run_future(repo.get_manifest_by_nodeid(ctx.clone(), &cs.manifestid())).unwrap();
 
-        let parent_cs =
-            run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(parenthash))).unwrap();
-        let parent_mf = run_future(repo.get_manifest_by_nodeid(&parent_cs.manifestid())).unwrap();
+        let parent_cs = run_future(repo.get_changeset_by_changesetid(
+            ctx.clone(),
+            &HgChangesetId::new(parenthash),
+        )).unwrap();
+        let parent_mf =
+            run_future(repo.get_manifest_by_nodeid(ctx.clone(), &parent_cs.manifestid())).unwrap();
 
-        let diff = run_future(compute_changed_files(&mf, Some(&parent_mf), None)).unwrap();
+        let diff = run_future(compute_changed_files(
+            ctx.clone(),
+            &mf,
+            Some(&parent_mf),
+            None,
+        )).unwrap();
         assert!(
             diff == expected,
             "Got {:?}, expected {:?}\n",
@@ -675,12 +759,13 @@ fn make_bonsai_changeset(
 }
 
 fn make_file_change(
+    ctx: CoreContext,
     content: impl AsRef<[u8]>,
     repo: &BlobRepo,
 ) -> impl Future<Item = FileChange, Error = Error> + Send {
     let content = content.as_ref();
     let content_size = content.len() as u64;
-    repo.unittest_store(FileContents::new_bytes(content.as_ref()))
+    repo.unittest_store(ctx, FileContents::new_bytes(content.as_ref()))
         .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))
 }
 
@@ -689,15 +774,20 @@ fn test_get_manifest_from_bonsai() {
     async_unit::tokio_unit_test(|| {
         let ctx = CoreContext::test_mock();
         let repo = merge_uneven::getrepo(None);
-        let get_manifest_for_changeset = |cs_nodehash: &str| -> HgManifestId {
-            *run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(
-                string_to_nodehash(cs_nodehash),
-            ))).unwrap()
-                .manifestid()
+        let get_manifest_for_changeset = {
+            cloned!(ctx, repo);
+            move |cs_nodehash: &str| -> HgManifestId {
+                *run_future(repo.get_changeset_by_changesetid(
+                    ctx.clone(),
+                    &HgChangesetId::new(string_to_nodehash(cs_nodehash)),
+                )).unwrap()
+                    .manifestid()
+            }
         };
-        let get_entries =
-            |ms_hash: &HgManifestId| -> BoxFuture<HashMap<String, Box<Entry + Sync>>, Error> {
-                repo.get_manifest_by_nodeid(&ms_hash)
+        let get_entries = {
+            cloned!(ctx, repo);
+            move |ms_hash: &HgManifestId| -> BoxFuture<HashMap<String, Box<Entry + Sync>>, Error> {
+                repo.get_manifest_by_nodeid(ctx.clone(), &ms_hash)
                     .map(|ms| {
                         ms.list()
                             .map(|e| {
@@ -707,7 +797,8 @@ fn test_get_manifest_from_bonsai() {
                             .collect::<HashMap<_, _>>()
                     })
                     .boxify()
-            };
+            }
+        };
 
         // #CONTENT
         // 1: 1
@@ -779,7 +870,7 @@ fn test_get_manifest_from_bonsai() {
             );
 
             let br = entries.get("branch").expect("trivial merge should succeed");
-            let br_parents = run_future(br.get_parents())
+            let br_parents = run_future(br.get_parents(ctx.clone()))
                 .unwrap()
                 .into_iter()
                 .collect::<HashSet<_>>();
@@ -789,20 +880,20 @@ fn test_get_manifest_from_bonsai() {
         // add file
         {
             let content_expected = &b"some awesome content"[..];
-            let fc = run_future(make_file_change(content_expected, &repo)).unwrap();
+            let fc = run_future(make_file_change(ctx.clone(), content_expected, &repo)).unwrap();
             let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
             let (ms_hash, _) =
-                run_future(repo.get_manifest_from_bonsai(ctx, bcs, Some(&ms1), Some(&ms2)))
+                run_future(repo.get_manifest_from_bonsai(ctx.clone(), bcs, Some(&ms1), Some(&ms2)))
                     .expect("adding new file should not produce coflict");
             let entries = run_future(get_entries(&ms_hash)).unwrap();
             let new = entries.get("new").expect("new file should be in entries");
-            match run_future(new.get_content()).unwrap() {
+            match run_future(new.get_content(ctx.clone())).unwrap() {
                 manifest::Content::File(content) => {
                     assert_eq!(content, FileContents::new_bytes(content_expected));
                 }
                 _ => panic!("content type mismatch"),
             };
-            let new_parents = run_future(new.get_parents()).unwrap();
+            let new_parents = run_future(new.get_parents(ctx.clone())).unwrap();
             assert_eq!(new_parents, HgParents::None);
         }
     });
@@ -814,7 +905,7 @@ fn test_case_conflict_in_manifest() {
         let ctx = CoreContext::test_mock();
         let repo = many_files_dirs::getrepo(None);
         let get_manifest_for_changeset = |cs_id: &HgChangesetId| -> HgManifestId {
-            *run_future(repo.get_changeset_by_changesetid(cs_id))
+            *run_future(repo.get_changeset_by_changesetid(ctx.clone(), cs_id))
                 .unwrap()
                 .manifestid()
         };
@@ -838,7 +929,11 @@ fn test_case_conflict_in_manifest() {
                 ctx.clone(),
                 repo.clone(),
                 vec![bonsai_parent],
-                store_files(btreemap!{*path => Some("caseconflicttest")}, repo.clone()),
+                store_files(
+                    ctx.clone(),
+                    btreemap!{*path => Some("caseconflicttest")},
+                    repo.clone(),
+                ),
             );
 
             let child_hg_cs =
@@ -846,6 +941,7 @@ fn test_case_conflict_in_manifest() {
             let child_mf = get_manifest_for_changeset(&child_hg_cs);
             assert_eq!(
                 run_future(repo.check_case_conflict_in_manifest(
+                    ctx.clone(),
                     &mf,
                     &child_mf,
                     MPath::new(path).unwrap()
@@ -862,13 +958,19 @@ fn test_case_conflict_in_manifest() {
 #[test]
 fn test_case_conflict_two_changeset() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = get_empty_lazy_repo();
 
         let fake_file_path_1 = RepoPath::file("file").expect("Can't generate fake RepoPath");
-        let (filehash_1, file_future_1) = upload_file_no_parents(&repo, "blob", &fake_file_path_1);
+        let (filehash_1, file_future_1) =
+            upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path_1);
 
-        let (_roothash, root_manifest_future) =
-            upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash_1), &RepoPath::root());
+        let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+            ctx.clone(),
+            &repo,
+            format!("file\0{}\n", filehash_1),
+            &RepoPath::root(),
+        );
 
         let commit1 = create_changeset_no_parents(
             &repo,
@@ -879,8 +981,9 @@ fn test_case_conflict_two_changeset() {
         let commit2 = {
             let fake_file_path_2 = RepoPath::file("FILE").expect("Can't generate fake RepoPath");
             let (filehash_2, file_future_2) =
-                upload_file_no_parents(&repo, "blob", &fake_file_path_2);
+                upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path_2);
             let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+                ctx.clone(),
                 &repo,
                 format!("file\0{}\nFILE\0{}\n", filehash_1, filehash_2),
                 &RepoPath::root(),
@@ -907,14 +1010,18 @@ fn test_case_conflict_two_changeset() {
 #[test]
 fn test_case_conflict_inside_one_changeset() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = get_empty_lazy_repo();
         let fake_file_path_1 = RepoPath::file("file").expect("Can't generate fake RepoPath");
-        let (filehash_1, file_future_1) = upload_file_no_parents(&repo, "blob", &fake_file_path_1);
+        let (filehash_1, file_future_1) =
+            upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path_1);
 
         let fake_file_path_1 = RepoPath::file("FILE").expect("Can't generate fake RepoPath");
-        let (filehash_2, file_future_2) = upload_file_no_parents(&repo, "blob", &fake_file_path_1);
+        let (filehash_2, file_future_2) =
+            upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path_1);
 
         let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+            ctx.clone(),
             &repo,
             format!("file\0{}\nFILE\0{}", filehash_1, filehash_2),
             &RepoPath::root(),
@@ -933,13 +1040,19 @@ fn test_case_conflict_inside_one_changeset() {
 #[test]
 fn test_no_case_conflict_removal() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = get_empty_lazy_repo();
 
         let fake_file_path_1 = RepoPath::file("file").expect("Can't generate fake RepoPath");
-        let (filehash_1, file_future_1) = upload_file_no_parents(&repo, "blob", &fake_file_path_1);
+        let (filehash_1, file_future_1) =
+            upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path_1);
 
-        let (_roothash, root_manifest_future) =
-            upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash_1), &RepoPath::root());
+        let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+            ctx.clone(),
+            &repo,
+            format!("file\0{}\n", filehash_1),
+            &RepoPath::root(),
+        );
 
         let commit1 = create_changeset_no_parents(
             &repo,
@@ -950,8 +1063,9 @@ fn test_no_case_conflict_removal() {
         let commit2 = {
             let fake_file_path_2 = RepoPath::file("FILE").expect("Can't generate fake RepoPath");
             let (filehash_2, file_future_2) =
-                upload_file_no_parents(&repo, "blob", &fake_file_path_2);
+                upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path_2);
             let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+                ctx.clone(),
                 &repo,
                 format!("FILE\0{}\n", filehash_2),
                 &RepoPath::root(),
@@ -978,17 +1092,24 @@ fn test_no_case_conflict_removal() {
 #[test]
 fn test_no_case_conflict_removal_dir() {
     async_unit::tokio_unit_test(|| {
+        let ctx = CoreContext::test_mock();
         let repo = get_empty_lazy_repo();
 
         let commit1 = {
             let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
             let fake_dir_path = RepoPath::file("dir").expect("Can't generate fake RepoPath");
-            let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+            let (filehash, file_future) =
+                upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path);
 
-            let (dirhash_1, manifest_dir_future) =
-                upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
+            let (dirhash_1, manifest_dir_future) = upload_manifest_no_parents(
+                ctx.clone(),
+                &repo,
+                format!("file\0{}\n", filehash),
+                &fake_dir_path,
+            );
 
             let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+                ctx.clone(),
                 &repo,
                 format!("dir\0{}t\n", dirhash_1),
                 &RepoPath::root(),
@@ -1004,12 +1125,18 @@ fn test_no_case_conflict_removal_dir() {
         let commit2 = {
             let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
             let fake_dir_path = RepoPath::file("DIR").expect("Can't generate fake RepoPath");
-            let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+            let (filehash, file_future) =
+                upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_file_path);
 
-            let (dirhash_1, manifest_dir_future) =
-                upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &fake_dir_path);
+            let (dirhash_1, manifest_dir_future) = upload_manifest_no_parents(
+                ctx.clone(),
+                &repo,
+                format!("file\0{}\n", filehash),
+                &fake_dir_path,
+            );
 
             let (_roothash, root_manifest_future) = upload_manifest_no_parents(
+                ctx.clone(),
                 &repo,
                 format!("DIR\0{}t\n", dirhash_1),
                 &RepoPath::root(),

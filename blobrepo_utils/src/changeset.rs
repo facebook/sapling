@@ -199,7 +199,7 @@ where
 
         let visit_fut = shared
             .repo
-            .get_changeset_by_changesetid(&changeset_id)
+            .get_changeset_by_changesetid(ctx.clone(), &changeset_id)
             .and_then({
                 cloned!(ctx, shared.visitor, shared.repo);
                 move |changeset| visitor.visit(ctx, logger, repo, changeset, follow_remaining)

@@ -20,6 +20,7 @@ extern crate maplit;
 extern crate tempdir;
 
 extern crate blobrepo;
+extern crate context;
 extern crate hlua_futures;
 extern crate mercurial;
 extern crate mercurial_types;
@@ -38,6 +39,7 @@ use futures::Future;
 use hlua::{AnyLuaValue, Lua, LuaError, PushGuard};
 
 use blobrepo::BlobRepo;
+use context::CoreContext;
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
 use mercurial_types::{Changeset, HgNodeHash};
 use mercurial_types::nodehash::HgChangesetId;
@@ -67,6 +69,7 @@ pub struct HookContext<'hook> {
 impl<'hook> HookContext<'hook> {
     fn run<'a, 'lua>(
         &self,
+        ctx: CoreContext,
         lua: &'a mut Lua<'lua>,
     ) -> Result<LuaCoroutine<PushGuard<&'a mut Lua<'lua>>, bool>> {
         let repo = self.repo.clone();
@@ -78,7 +81,7 @@ impl<'hook> HookContext<'hook> {
             let changesetid = HgChangesetId::from_ascii_str(&hash)
                 .with_context(|_| ErrorKind::InvalidHash(name.clone(), hash.into()))?;
 
-            let future = repo.get_changeset_by_changesetid(&changesetid)
+            let future = repo.get_changeset_by_changesetid(ctx.clone(), &changesetid)
                 .map_err(|err| LuaError::ExecutionError(format!("failed to get author: {}", err)))
                 .map(|cs| AnyLuaValue::LuaString(String::from_utf8_lossy(cs.user()).into_owned()));
             Ok(AnyFuture::new(future))
@@ -113,11 +116,12 @@ impl<'lua> HookManager<'lua> {
 
     pub fn run_hook<'hook>(
         &mut self,
+        ctx: CoreContext,
         hook: HookContext<'hook>,
     ) -> Result<LuaCoroutine<PushGuard<&mut Lua<'lua>>, bool>> {
         // TODO: with multiple Lua contexts, choose a context to run in. Probably use a queue or
         // something.
-        hook.run(&mut self.lua)
+        hook.run(ctx, &mut self.lua)
     }
 }
 
@@ -128,6 +132,7 @@ mod test {
     #[test]
     fn test_hook() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_info = hashmap! {
                 "repo" => "fbsource".into(),
                 "bookmark" => "master".into(),
@@ -151,7 +156,7 @@ mod test {
                     end",
             };
 
-            let coroutine_fut = hook_manager.run_hook(hook).unwrap();
+            let coroutine_fut = hook_manager.run_hook(ctx, hook).unwrap();
             let result = coroutine_fut.wait();
             assert!(result.unwrap());
         })

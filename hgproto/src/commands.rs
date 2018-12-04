@@ -549,6 +549,7 @@ pub trait HgCommands {
 mod test {
     use super::*;
 
+    use context::CoreContext;
     use futures::{future, stream};
     use hooks::{InMemoryChangesetStore, InMemoryFileContentStore};
     use slog::{Discard, Drain};
@@ -678,10 +679,12 @@ mod test {
     }
 
     fn create_hook_manager() -> Arc<HookManager> {
+        let ctx = CoreContext::test_mock();
         let changeset_store = InMemoryChangesetStore::new();
         let content_store = InMemoryFileContentStore::new();
         let logger = Logger::root(Discard {}.ignore_res(), o!());
         Arc::new(HookManager::new(
+            ctx,
             "some_repo".into(),
             Box::new(changeset_store),
             Arc::new(content_store),

@@ -13,6 +13,7 @@ use failure::Error;
 use futures::{stream, Future, Stream, future::{self, Either}};
 use itertools::{EitherOrBoth, Itertools};
 
+use context::CoreContext;
 use futures_ext::{select_all, BoxStream, StreamExt};
 use mercurial_types::{Entry, HgEntryId, Manifest, Type};
 use mercurial_types::manifest::{Content, EmptyManifest};
@@ -25,6 +26,7 @@ use composite::CompositeEntry;
 ///
 /// Items may be returned in arbitrary order.
 pub fn bonsai_diff(
+    ctx: CoreContext,
     root_entry: Box<Entry + Sync>,
     p1_entry: Option<Box<Entry + Sync>>,
     p2_entry: Option<Box<Entry + Sync>>,
@@ -37,7 +39,7 @@ pub fn bonsai_diff(
         composite_entry.add_parent(entry);
     }
 
-    WorkingEntry::new(root_entry).bonsai_diff_tree(None, composite_entry)
+    WorkingEntry::new(root_entry).bonsai_diff_tree(ctx, None, composite_entry)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -146,10 +148,13 @@ impl WorkingEntry {
     }
 
     #[inline]
-    fn manifest(&self) -> impl Future<Item = Box<Manifest + Sync + 'static>, Error = Error> + Send {
+    fn manifest(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Future<Item = Box<Manifest + Sync + 'static>, Error = Error> + Send {
         match self {
             WorkingEntry::Tree(entry) => {
-                Either::A(entry.get_content().map(|content| match content {
+                Either::A(entry.get_content(ctx).map(|content| match content {
                     Content::Tree(mf) => mf,
                     _ => unreachable!("tree entries can only return manifests"),
                 }))
@@ -161,6 +166,7 @@ impl WorkingEntry {
     /// The path here corresponds to the path associated with this working entry.
     fn bonsai_diff(
         self,
+        ctx: CoreContext,
         path: MPath,
         composite_entry: CompositeEntry,
     ) -> impl Stream<Item = BonsaiDiffResult, Error = Error> + Send {
@@ -171,7 +177,7 @@ impl WorkingEntry {
                 stream::empty().boxify()
             }
             Some(BonsaiDiffResult::Deleted(..)) | None => {
-                self.bonsai_diff_tree(Some(path), composite_entry)
+                self.bonsai_diff_tree(ctx, Some(path), composite_entry)
             }
         };
         let file_stream = stream::iter_ok(file_result);
@@ -227,6 +233,7 @@ impl WorkingEntry {
     /// methods.
     fn bonsai_diff_tree(
         self,
+        ctx: CoreContext,
         path: Option<MPath>,
         composite_entry: CompositeEntry,
     ) -> BoxStream<BonsaiDiffResult, Error> {
@@ -248,9 +255,9 @@ impl WorkingEntry {
             }
         }
 
-        let working_mf_fut = self.manifest();
+        let working_mf_fut = self.manifest(ctx.clone());
         composite_entry
-            .manifest()
+            .manifest(ctx.clone())
             .join(working_mf_fut)
             .map(move |(composite_mf, working_mf)| {
                 let sub_streams = composite_mf
@@ -261,12 +268,12 @@ impl WorkingEntry {
                             .expect("manifest entries should have names");
                         cname.cmp(wname)
                     })
-                    .map(|entry_pair| {
+                    .map(move |entry_pair| {
                         match entry_pair {
                             EitherOrBoth::Left((name, centry)) => {
                                 // This entry was removed from the working set.
                                 let sub_path = MPath::join_opt_element(path.as_ref(), &name);
-                                WorkingEntry::absent().bonsai_diff(sub_path, centry)
+                                WorkingEntry::absent().bonsai_diff(ctx.clone(), sub_path, centry)
                             }
                             EitherOrBoth::Right(wentry) => {
                                 // This entry was added to the working set.
@@ -276,14 +283,17 @@ impl WorkingEntry {
                                         .expect("manifest entries should have names");
                                     MPath::join_opt_element(path.as_ref(), name)
                                 };
-                                WorkingEntry::new(wentry)
-                                    .bonsai_diff(sub_path, CompositeEntry::new())
+                                WorkingEntry::new(wentry).bonsai_diff(
+                                    ctx.clone(),
+                                    sub_path,
+                                    CompositeEntry::new(),
+                                )
                             }
                             EitherOrBoth::Both((name, centry), wentry) => {
                                 // This entry is present in both the working set and at least one of
                                 // the parents.
                                 let sub_path = MPath::join_opt_element(path.as_ref(), &name);
-                                WorkingEntry::new(wentry).bonsai_diff(sub_path, centry)
+                                WorkingEntry::new(wentry).bonsai_diff(ctx.clone(), sub_path, centry)
                             }
                         }
                     });

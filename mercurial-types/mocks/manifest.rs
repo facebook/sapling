@@ -13,6 +13,7 @@ use failure::{Error, ResultExt};
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 
+use context::CoreContext;
 use mercurial_types::{Entry, FileType, HgBlob, MPath, MPathElement, Manifest, RepoPath, Type};
 use mercurial_types::blobnode::HgParents;
 use mercurial_types::manifest::Content;
@@ -249,16 +250,16 @@ impl Entry for MockEntry {
     fn get_type(&self) -> Type {
         self.ty.expect("ty is not set!")
     }
-    fn get_parents(&self) -> BoxFuture<HgParents, Error> {
+    fn get_parents(&self, _ctx: CoreContext) -> BoxFuture<HgParents, Error> {
         unimplemented!();
     }
-    fn get_raw_content(&self) -> BoxFuture<HgBlob, Error> {
+    fn get_raw_content(&self, _ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
         unimplemented!();
     }
-    fn get_content(&self) -> BoxFuture<Content, Error> {
+    fn get_content(&self, _ctx: CoreContext) -> BoxFuture<Content, Error> {
         Ok((self.content_factory)()).into_future().boxify()
     }
-    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
+    fn get_size(&self, _ctx: CoreContext) -> BoxFuture<Option<usize>, Error> {
         unimplemented!();
     }
     fn get_hash(&self) -> &HgEntryId {
@@ -286,6 +287,7 @@ mod test {
     #[test]
     fn lookup() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let paths = btreemap! {
                 "foo/bar1" => (FileType::Regular, "bar1"),
                 "foo/bar2" => (FileType::Symlink, "bar2"),
@@ -304,7 +306,7 @@ mod test {
                 .lookup(&MPathElement::new(b"foo".to_vec()).unwrap())
                 .expect("foo should be present");
             let foo_content = foo_entry
-                .get_content()
+                .get_content(ctx.clone())
                 .wait()
                 .expect("content fetch should work");
             let foo_manifest = match foo_content {
@@ -316,7 +318,7 @@ mod test {
                 .lookup(&MPathElement::new(b"bar1".to_vec()).unwrap())
                 .expect("bar1 should be present");
             let bar1_content = bar1_entry
-                .get_content()
+                .get_content(ctx.clone())
                 .wait()
                 .expect("content fetch should work");
             match bar1_content {
@@ -330,7 +332,7 @@ mod test {
                 .lookup(&MPathElement::new(b"bar2".to_vec()).unwrap())
                 .expect("bar2 should be present");
             let bar2_content = bar2_entry
-                .get_content()
+                .get_content(ctx.clone())
                 .wait()
                 .expect("content fetch should work");
             match bar2_content {

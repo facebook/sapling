@@ -13,6 +13,7 @@ use failure::{Error, FutureFailureErrorExt, Result, ResultExt};
 use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
+use context::CoreContext;
 use mercurial_types::{Entry, FileType, HgBlob, HgManifestEnvelope, MPathElement, Manifest, Type};
 use mercurial_types::nodehash::{HgEntryId, HgManifestId, HgNodeHash, NULL_HASH};
 
@@ -84,10 +85,11 @@ impl ManifestContent {
 }
 
 pub fn fetch_raw_manifest_bytes(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
 ) -> BoxFuture<HgBlob, Error> {
-    fetch_manifest_envelope(blobstore, node_id)
+    fetch_manifest_envelope(ctx, blobstore, node_id)
         .map(move |envelope| {
             let envelope = envelope.into_mut();
             HgBlob::from(envelope.contents)
@@ -97,10 +99,11 @@ pub fn fetch_raw_manifest_bytes(
 }
 
 pub fn fetch_manifest_envelope(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
 ) -> impl Future<Item = HgManifestEnvelope, Error = Error> {
-    fetch_manifest_envelope_opt(blobstore, node_id)
+    fetch_manifest_envelope_opt(ctx, blobstore, node_id)
         .and_then(move |envelope| {
             let envelope = envelope.ok_or(ErrorKind::HgContentMissing(node_id, Type::Tree))?;
             Ok(envelope)
@@ -110,12 +113,13 @@ pub fn fetch_manifest_envelope(
 
 /// Like `fetch_manifest_envelope`, but returns None if the manifest wasn't found.
 pub fn fetch_manifest_envelope_opt(
+    ctx: CoreContext,
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
 ) -> impl Future<Item = Option<HgManifestEnvelope>, Error = Error> {
     let blobstore_key = HgManifestId::new(node_id).blobstore_key();
     blobstore
-        .get(blobstore_key.clone())
+        .get(ctx, blobstore_key.clone())
         .context("While fetching manifest envelope blob")
         .map_err(Error::from)
         .and_then(move |bytes| {
@@ -149,6 +153,7 @@ pub struct BlobManifest {
 
 impl BlobManifest {
     pub fn load(
+        ctx: CoreContext,
         blobstore: &RepoBlobstore,
         manifestid: &HgManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
@@ -164,7 +169,7 @@ impl BlobManifest {
             })).into_future()
                 .boxify()
         } else {
-            fetch_manifest_envelope_opt(&blobstore, manifestid.into_nodehash())
+            fetch_manifest_envelope_opt(ctx, &blobstore, manifestid.into_nodehash())
                 .and_then({
                     let blobstore = blobstore.clone();
                     move |envelope| match envelope {

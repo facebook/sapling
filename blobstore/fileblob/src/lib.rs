@@ -14,6 +14,7 @@ extern crate url;
 extern crate futures_ext;
 
 extern crate blobstore;
+extern crate context;
 extern crate mononoke_types;
 
 use std::fs::{create_dir_all, File};
@@ -28,6 +29,7 @@ use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobstore::Blobstore;
+use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 const PREFIX: &str = "blob";
@@ -63,7 +65,7 @@ impl Fileblob {
 }
 
 impl Blobstore for Fileblob {
-    fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         let p = self.path(&key);
 
         poll_fn(move || {
@@ -81,7 +83,7 @@ impl Blobstore for Fileblob {
             .boxify()
     }
 
-    fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         let p = self.path(&key);
 
         poll_fn::<_, Error, _>(move || {

@@ -13,6 +13,7 @@ use chrono::{DateTime, FixedOffset};
 use failure::{err_msg, Error};
 
 use blobrepo::HgBlobChangeset;
+use context::CoreContext;
 use futures::prelude::*;
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, Type};
@@ -77,7 +78,10 @@ pub struct EntryWithSizeAndContentHash {
 }
 
 impl EntryWithSizeAndContentHash {
-    pub fn materialize_future(entry: Box<HgEntry + Sync>) -> BoxFuture<Self, Error> {
+    pub fn materialize_future(
+        ctx: CoreContext,
+        entry: Box<HgEntry + Sync>,
+    ) -> BoxFuture<Self, Error> {
         let name = try_boxfuture!(
             entry
                 .get_name()
@@ -89,7 +93,7 @@ impl EntryWithSizeAndContentHash {
         let ttype = entry.get_type().into();
         let hash = entry.get_hash().to_string();
 
-        spawn_future(entry.get_content().and_then(move |content| {
+        spawn_future(entry.get_content(ctx).and_then(move |content| {
             let size = match &content {
                 Content::File(contents)
                 | Content::Executable(contents)

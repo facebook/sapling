@@ -55,7 +55,7 @@ fn make_pending(
     Box::new(
         {
             let repo = repo.clone();
-            repo.get_bonsai_changeset(child.hash)
+            repo.get_bonsai_changeset(ctx.clone(), child.hash)
                 .map(move |cs| {
                     let parents: Vec<_> = cs.parents().cloned().collect();
                     (child, parents)

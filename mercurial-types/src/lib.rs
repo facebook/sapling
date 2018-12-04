@@ -77,6 +77,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate context;
 extern crate futures_ext;
 extern crate mercurial_thrift;
 extern crate mononoke_types;

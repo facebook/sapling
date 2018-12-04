@@ -9,6 +9,7 @@ use std::collections::{btree_map, BTreeMap, HashMap};
 use failure::Error;
 use futures::{future, stream, Future, Stream};
 
+use context::CoreContext;
 use mercurial_types::{Entry, HgEntryId, Type, manifest::Content};
 use mononoke_types::{FileType, MPathElement};
 
@@ -72,11 +73,14 @@ impl CompositeEntry {
         self.trees.contains_key(hash)
     }
 
-    pub fn manifest(&self) -> impl Future<Item = CompositeManifest, Error = Error> + Send {
+    pub fn manifest(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Future<Item = CompositeManifest, Error = Error> + Send {
         // Manifests can only exist for tree entries. If self.trees is empty then an empty
         // composite manifest will be returned. This is by design.
         let mf_futs = self.trees.values().map(|entry| {
-            entry.get_content().map({
+            entry.get_content(ctx.clone()).map({
                 move |content| match content {
                     Content::Tree(mf) => mf,
                     _other => unreachable!("tree content must be a manifest"),

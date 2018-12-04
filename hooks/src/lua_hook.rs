@@ -12,6 +12,7 @@ use super::{ChangedFileType, Hook, HookChangeset, HookChangesetParents, HookCont
             HookExecution, HookFile, HookRejectionInfo};
 use super::errors::*;
 use aclchecker::Identity;
+use context::CoreContext;
 use failure::Error;
 use futures::{failed, Future};
 use futures::future::{ok, result};
@@ -105,7 +106,11 @@ pub struct LuaHook {
 }
 
 impl Hook<HookChangeset> for LuaHook {
-    fn run(&self, context: HookContext<HookChangeset>) -> BoxFuture<HookExecution, Error> {
+    fn run(
+        &self,
+        ctx: CoreContext,
+        context: HookContext<HookChangeset>,
+    ) -> BoxFuture<HookExecution, Error> {
         let mut hook_info = hashmap! {
             "repo_name" => context.repo_name.to_string(),
             "author" => context.data.author.to_string(),
@@ -134,10 +139,11 @@ impl Hook<HookChangeset> for LuaHook {
         let files_map2 = files_map.clone();
 
         let contains_string = {
+            cloned!(ctx);
             move |path: String, string: String| -> Result<AnyFuture, Error> {
                 match files_map.get(&path) {
                     Some(file) => {
-                        let future = file.contains_string(&string)
+                        let future = file.contains_string(ctx.clone(), &string)
                             .map_err(|err| {
                                 LuaError::ExecutionError(format!(
                                     "failed to get file content: {}",
@@ -153,11 +159,11 @@ impl Hook<HookChangeset> for LuaHook {
         };
         let contains_string = function2(contains_string);
         let file_content = {
-            let context2 = context.clone();
+            cloned!(ctx, context);
             move |path: String| -> Result<AnyFuture, Error> {
-                let future = context2
+                let future = context
                     .data
-                    .file_content(path)
+                    .file_content(ctx.clone(), path)
                     .map_err(|err| {
                         LuaError::ExecutionError(format!("failed to get file content: {}", err))
                     })
@@ -170,10 +176,11 @@ impl Hook<HookChangeset> for LuaHook {
         };
         let file_content = function1(file_content);
         let file_len = {
+            cloned!(ctx);
             move |path: String| -> Result<AnyFuture, Error> {
                 match files_map2.get(&path) {
                     Some(file) => {
-                        let future = file.len()
+                        let future = file.len(ctx.clone())
                             .map_err(|err| {
                                 LuaError::ExecutionError(format!(
                                     "failed to get file content: {}",
@@ -271,7 +278,11 @@ impl Hook<HookChangeset> for LuaHook {
 }
 
 impl Hook<HookFile> for LuaHook {
-    fn run(&self, context: HookContext<HookFile>) -> BoxFuture<HookExecution, Error> {
+    fn run(
+        &self,
+        ctx: CoreContext,
+        context: HookContext<HookFile>,
+    ) -> BoxFuture<HookExecution, Error> {
         let hook_info = hashmap! {
             "repo_name" => context.repo_name.to_string(),
         };
@@ -279,11 +290,11 @@ impl Hook<HookFile> for LuaHook {
         code.push_str(HOOK_START_CODE_BASE);
         code.push_str(&self.code);
         let contains_string = {
-            cloned!(context);
+            cloned!(ctx, context);
             move |string: String| -> Result<AnyFuture, Error> {
                 let future = context
                     .data
-                    .contains_string(&string)
+                    .contains_string(ctx.clone(), &string)
                     .map_err(|err| {
                         LuaError::ExecutionError(format!("failed to get file content: {}", err))
                     })
@@ -293,11 +304,11 @@ impl Hook<HookFile> for LuaHook {
         };
         let contains_string = function1(contains_string);
         let file_content = {
-            cloned!(context);
+            cloned!(ctx, context);
             move || -> Result<AnyFuture, Error> {
                 let future = context
                     .data
-                    .file_content()
+                    .file_content(ctx.clone())
                     .map_err(|err| {
                         LuaError::ExecutionError(format!("failed to get file content: {}", err))
                     })
@@ -307,11 +318,11 @@ impl Hook<HookFile> for LuaHook {
         };
         let file_content = function0(file_content);
         let is_symlink = {
-            cloned!(context);
+            cloned!(ctx, context);
             move || -> Result<AnyFuture, Error> {
                 let future = context
                     .data
-                    .file_type()
+                    .file_type(ctx.clone())
                     .map_err(|err| {
                         LuaError::ExecutionError(format!("failed to get file content: {}", err))
                     })
@@ -327,11 +338,11 @@ impl Hook<HookFile> for LuaHook {
         };
         let is_symlink = function0(is_symlink);
         let file_len = {
-            cloned!(context);
+            cloned!(ctx, context);
             move || -> Result<AnyFuture, Error> {
                 let future = context
                     .data
-                    .len()
+                    .len(ctx.clone())
                     .map_err(|err| {
                         LuaError::ExecutionError(format!("failed to get file content: {}", err))
                     })
@@ -754,6 +765,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_simple_rejected() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -761,7 +773,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -770,6 +782,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_reviewers() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -778,7 +791,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
 
@@ -801,13 +814,17 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  return #reviewers == 2\n\
                  end",
             );
-            assert_matches!(run_changeset_hook(code, hcs), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_changeset_hook(ctx.clone(), code, hcs),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_cs_hook_test_plan() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -816,7 +833,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
 
@@ -839,13 +856,17 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  return test_plan == 'testinprod'\n\
                  end",
             );
-            assert_matches!(run_changeset_hook(code, hcs), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_changeset_hook(ctx.clone(), code, hcs),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_cs_hook_author_unixname() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -853,7 +874,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
 
@@ -875,13 +896,17 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  return ctx.info.author_unixname == 'stash'\n\
                  end",
             );
-            assert_matches!(run_changeset_hook(code, hcs), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_changeset_hook(ctx.clone(), code, hcs),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_cs_hook_valid_reviewer() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -889,7 +914,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -898,6 +923,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_not_valid_reviewer() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -905,7 +931,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -914,6 +940,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_rejected_short_and_long_desc() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -921,7 +948,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Rejected(HookRejectionInfo{ref description,
                     ref long_description}))
                     if description==&"emus" && long_description==&"ostriches"
@@ -932,6 +959,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_author() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -939,7 +967,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -948,6 +976,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_file_paths() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             // Arrays passed from rust -> lua appear to be 1 indexed in Lua land
             let code = String::from(
@@ -958,7 +987,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -967,6 +996,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_file_contains_string_match() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -976,7 +1006,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -985,6 +1015,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_path_regex_match() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -994,7 +1025,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1003,6 +1034,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_regex_match() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1012,7 +1044,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1021,6 +1053,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_file_content_match() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1031,7 +1064,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1040,6 +1073,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_other_file_content_match() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1049,7 +1083,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1058,6 +1092,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_content_not_found_returns_nil() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1065,7 +1100,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1074,6 +1109,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_check_type() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1093,7 +1129,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1102,6 +1138,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_deleted() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1114,7 +1151,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1123,6 +1160,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_file_len() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1133,7 +1171,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1142,6 +1180,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_comments() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1149,7 +1188,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1158,6 +1197,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_repo_name() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1165,7 +1205,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1174,6 +1214,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_one_parent() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1182,7 +1223,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1191,6 +1232,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_two_parents() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let mut changeset = default_changeset();
             changeset.parents = HookChangesetParents::Two("p1-hash".into(), "p2-hash".into());
             let code = String::from(
@@ -1200,7 +1242,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1209,6 +1251,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_no_parents() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let mut changeset = default_changeset();
             changeset.parents = HookChangesetParents::None;
             let code = String::from(
@@ -1218,7 +1261,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1227,6 +1270,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_no_hook_func() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "elephants = function (ctx)\n\
@@ -1234,7 +1278,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref msg)) if msg.contains("no hook function")
              );
         });
@@ -1243,10 +1287,11 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_invalid_hook() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from("invalid code");
             assert_matches!(
-                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookParseError(ref err_msg))
                     if err_msg.starts_with("Syntax error:")
              );
@@ -1256,6 +1301,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_exception() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1266,7 +1312,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.starts_with("LuaError")
              );
@@ -1276,6 +1322,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_invalid_return_val() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1283,7 +1330,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook return type")
              );
@@ -1293,6 +1340,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_invalid_short_desc() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1300,7 +1348,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure short description type")
             );
@@ -1310,6 +1358,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_invalid_long_desc() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1317,7 +1366,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure long description type")
             );
@@ -1327,6 +1376,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_desc_when_hooks_is_accepted() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1334,7 +1384,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("failure description must only be set if hook fails")
              );
@@ -1344,6 +1394,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_long_desc_when_hooks_is_accepted() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1351,7 +1402,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("failure long description must only be set if hook fails")
              );
@@ -1361,6 +1412,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_cs_hook_no_io_nor_os() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let changeset = default_changeset();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1368,7 +1420,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_changeset_hook(code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset),
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1377,32 +1429,41 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_path() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.path == \"/a/b/c.txt\"\n\
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_file_hook_contains_string_matches() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.contains_string(\"sausages\")\n\
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_file_hook_contains_string_no_matches() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1410,7 +1471,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file),
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1419,6 +1480,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_path_regex_match_no_matches() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1426,7 +1488,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file),
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1435,6 +1497,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_regex_match_no_matches() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1442,7 +1505,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file),
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1451,32 +1514,41 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_path_regex_match_matches() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.path_regex_match(\"a*.txt\")\n\
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_file_hook_regex_match_matches() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.regex_match(\"a*.txt\", ctx.file.path)\n\
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_file_hook_path_regex_match_invalid_regex() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1484,7 +1556,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid regex")
              );
@@ -1494,6 +1566,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_regex_match_invalid_regex() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1501,7 +1574,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid regex")
              );
@@ -1511,32 +1584,41 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_content_matches() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.content() == \"sausages\"\n\
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_file_hook_is_symlink() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_symlink_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.is_symlink()\n\
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_file_hook_is_not_symlink() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1544,7 +1626,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file),
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1553,32 +1635,41 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_removed() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_removed_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.path == \"/a/b/c.txt\" and ctx.file.is_deleted()\n\
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_file_hook_len_matches() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.file.len() == 8\n\
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_file_hook_len_no_matches() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1586,7 +1677,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file),
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1595,19 +1686,24 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_repo_name() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return ctx.info.repo_name == \"some-repo\"\n\
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
     #[test]
     fn test_file_hook_rejected() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1615,7 +1711,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                run_file_hook(code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file),
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1624,6 +1720,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_no_hook_func() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "elephants = function (ctx)\n\
@@ -1631,7 +1728,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg)) if err_msg.contains("no hook function")
              );
         });
@@ -1640,10 +1737,11 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_invalid_hook() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from("invalid code");
             assert_matches!(
-                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookParseError(ref err_msg))
                     if err_msg.starts_with("Syntax error:")
              );
@@ -1653,6 +1751,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_exception() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1663,7 +1762,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.starts_with("LuaError")
              );
@@ -1673,6 +1772,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_invalid_return_val() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1680,7 +1780,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook return type")
              );
@@ -1690,6 +1790,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_invalid_short_desc() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1697,7 +1798,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure short description type")
             );
@@ -1707,6 +1808,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_invalid_long_desc() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
@@ -1714,7 +1816,7 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure long description type")
             );
@@ -1724,26 +1826,38 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     #[test]
     fn test_file_hook_no_io_nor_os() {
         async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
             let hook_file = default_hook_added_file();
             let code = String::from(
                 "hook = function (ctx)\n\
                  return io == nil and os == nil\n
                  end",
             );
-            assert_matches!(run_file_hook(code, hook_file), Ok(HookExecution::Accepted));
+            assert_matches!(
+                run_file_hook(ctx.clone(), code, hook_file),
+                Ok(HookExecution::Accepted)
+            );
         });
     }
 
-    fn run_changeset_hook(code: String, changeset: HookChangeset) -> Result<HookExecution, Error> {
+    fn run_changeset_hook(
+        ctx: CoreContext,
+        code: String,
+        changeset: HookChangeset,
+    ) -> Result<HookExecution, Error> {
         let hook = LuaHook::new(String::from("testhook"), code.to_string());
         let context = HookContext::new(hook.name.clone(), "some-repo".into(), changeset);
-        hook.run(context).wait()
+        hook.run(ctx, context).wait()
     }
 
-    fn run_file_hook(code: String, hook_file: HookFile) -> Result<HookExecution, Error> {
+    fn run_file_hook(
+        ctx: CoreContext,
+        code: String,
+        hook_file: HookFile,
+    ) -> Result<HookExecution, Error> {
         let hook = LuaHook::new(String::from("testhook"), code.to_string());
         let context = HookContext::new(hook.name.clone(), "some-repo".into(), hook_file);
-        hook.run(context).wait()
+        hook.run(ctx, context).wait()
     }
 
     fn default_changeset() -> HookChangeset {

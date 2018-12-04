@@ -18,6 +18,7 @@ use futures_ext::{BoxFuture, FutureExt};
 
 use slog::Logger;
 
+use context::CoreContext;
 use mercurial_types::{Entry, HgFileNodeId, HgManifestId, HgNodeHash, MPath, MPathElement,
                       Manifest, RepoPath, Type};
 use mercurial_types::manifest::Content;
@@ -95,6 +96,7 @@ impl MemoryManifestEntry {
     /// True iff this entry is a tree with no children
     pub fn is_empty(
         &self,
+        ctx: CoreContext,
         blobstore: &RepoBlobstore,
     ) -> impl Future<Item = bool, Error = Error> + Send {
         match self {
@@ -110,14 +112,14 @@ impl MemoryManifestEntry {
                 if changes_are_empty {
                     Either::B(future::ok(base_manifest_id.is_none()))
                 } else {
-                    let is_empty_rec = self.get_new_children(blobstore)
+                    let is_empty_rec = self.get_new_children(ctx.clone(), blobstore)
                     .and_then({
-                        let blobstore = blobstore.clone();
+                        cloned!(ctx, blobstore);
                         move |children| {
                             future::join_all(
                                 children
                                     .into_iter()
-                                    .map(move |(_, child)| child.is_empty(&blobstore)),
+                                    .map(move |(_, child)| child.is_empty(ctx.clone(), &blobstore)),
                             )
                         }
                     })
@@ -171,6 +173,7 @@ impl MemoryManifestEntry {
     /// Save all manifests represented here to the blobstore
     pub fn save(
         &self,
+        ctx: CoreContext,
         blobstore: &RepoBlobstore,
         logger: &Logger,
         incomplete_filenodes: &IncompleteFilenodes,
@@ -192,21 +195,25 @@ impl MemoryManifestEntry {
                 let p1 = *p1;
                 let p2 = *p2;
                 if self.is_modified() {
-                    self.get_new_children(blobstore)
+                    self.get_new_children(ctx.clone(), blobstore)
                         .and_then({
                             cloned!(logger, blobstore, incomplete_filenodes);
                             move |new_children| {
                                 // First save only the non-empty children
                                 let entries = stream::iter_ok(new_children.into_iter())
                                     .and_then({
-                                        cloned!(blobstore);
+                                        cloned!(ctx, blobstore);
                                         move |(path_elem, entry)| {
-                                            (entry.is_empty(&blobstore), Ok(path_elem), Ok(entry))
+                                            (
+                                                entry.is_empty(ctx.clone(), &blobstore),
+                                                Ok(path_elem),
+                                                Ok(entry),
+                                            )
                                         }
                                     })
                                     .filter(|(empty, ..)| !empty)
                                     .and_then({
-                                        cloned!(logger, blobstore, path, incomplete_filenodes);
+                                        cloned!(ctx, logger, blobstore, path, incomplete_filenodes);
                                         move |(_, path_elem, entry)| {
                                             let path_elem = path_elem.clone();
                                             // This is safe, because we only save trees
@@ -214,6 +221,7 @@ impl MemoryManifestEntry {
                                                 extend_repopath_with_dir(&path, &path_elem);
                                             entry
                                                 .save(
+                                                    ctx.clone(),
                                                     &blobstore,
                                                     &logger,
                                                     &incomplete_filenodes,
@@ -247,7 +255,7 @@ impl MemoryManifestEntry {
                                             path,
                                         };
                                         upload_manifest
-                                            .upload_to_blobstore(&blobstore, &logger)
+                                            .upload_to_blobstore(ctx, &blobstore, &logger)
                                             .map(|(_hash, future)| future)
                                             .into_future()
                                             .flatten()
@@ -319,6 +327,7 @@ impl MemoryManifestEntry {
     // The list of this node's children, or empty if it's not a tree with children.
     fn get_new_children(
         &self,
+        ctx: CoreContext,
         blobstore: &RepoBlobstore,
     ) -> impl Future<Item = BTreeMap<MPathElement, Self>, Error = Error> + Send {
         match self {
@@ -328,13 +337,13 @@ impl MemoryManifestEntry {
                 ..
             } => match base_manifest_id {
                 Some(manifest_id) => Either::B(
-                    BlobManifest::load(blobstore, &HgManifestId::new(*manifest_id))
+                    BlobManifest::load(ctx.clone(), blobstore, &HgManifestId::new(*manifest_id))
                         .and_then({
                             let manifest_id = HgManifestId::new(*manifest_id);
                             move |m| m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
                         })
                         .and_then({
-                            let blobstore = blobstore.clone();
+                            cloned!(blobstore);
                             move |m| {
                                 let mut children = BTreeMap::new();
                                 for entry in m.list() {
@@ -383,6 +392,7 @@ impl MemoryManifestEntry {
     }
 
     fn merge_trees(
+        ctx: CoreContext,
         mut children: BTreeMap<MPathElement, MemoryManifestEntry>,
         other_children: BTreeMap<MPathElement, MemoryManifestEntry>,
         blobstore: RepoBlobstore,
@@ -408,6 +418,7 @@ impl MemoryManifestEntry {
                     conflicts.push(
                         conflict_entry
                             .merge_with_conflicts(
+                                ctx.clone(),
                                 other_entry,
                                 blobstore.clone(),
                                 logger.clone(),
@@ -442,6 +453,7 @@ impl MemoryManifestEntry {
     /// structure in strict order, so that first entry is p1, second is p2 etc.
     pub fn merge_with_conflicts(
         self,
+        ctx: CoreContext,
         other: Self,
         blobstore: RepoBlobstore,
         logger: Logger,
@@ -451,6 +463,7 @@ impl MemoryManifestEntry {
         use self::MemoryManifestEntry::*;
         if self.is_modified() {
             return self.save(
+                ctx.clone(),
                 &blobstore,
                 &logger,
                 &incomplete_filenodes,
@@ -458,6 +471,7 @@ impl MemoryManifestEntry {
             ).map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
                 .and_then(move |saved| {
                     saved.merge_with_conflicts(
+                        ctx,
                         other,
                         blobstore,
                         logger,
@@ -470,6 +484,7 @@ impl MemoryManifestEntry {
         if other.is_modified() {
             return other
                 .save(
+                    ctx.clone(),
                     &blobstore,
                     &logger,
                     &incomplete_filenodes,
@@ -478,6 +493,7 @@ impl MemoryManifestEntry {
                 .map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
                 .and_then(move |saved| {
                     self.merge_with_conflicts(
+                        ctx,
                         saved,
                         blobstore,
                         logger,
@@ -545,13 +561,14 @@ impl MemoryManifestEntry {
                     future::ok(self.clone()).boxify()
                 } else {
                     // Otherwise, merge on an entry-by-entry basis
-                    self.get_new_children(&blobstore)
-                        .join(other.get_new_children(&blobstore))
+                    self.get_new_children(ctx.clone(), &blobstore)
+                        .join(other.get_new_children(ctx.clone(), &blobstore))
                         .and_then({
                             let p1 = p1.clone();
                             let p2 = p2.clone();
                             move |(children, other_children)| {
                                 Self::merge_trees(
+                                    ctx,
                                     children,
                                     other_children,
                                     blobstore,
@@ -645,6 +662,7 @@ impl MemoryManifestEntry {
     /// way through the path)
     pub fn find_mut(
         &self,
+        ctx: CoreContext,
         mut path: impl Iterator<Item = MPathElement> + Send + 'static,
         blobstore: RepoBlobstore,
     ) -> BoxFuture<Option<Self>, Error> {
@@ -673,12 +691,10 @@ impl MemoryManifestEntry {
                             // Do the lookup in base_manifest_id
                             if let Some(manifest_id) = base_manifest_id {
                                 let manifest_id = HgManifestId::new(*manifest_id);
-                                BlobManifest::load(&blobstore, &manifest_id)
-                                    .and_then(
-                                        move |m| {
-                                            m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
-                                        }
-                                    )
+                                BlobManifest::load(ctx.clone(), &blobstore, &manifest_id)
+                                    .and_then(move |m| {
+                                        m.ok_or(ErrorKind::ManifestMissing(manifest_id).into())
+                                    })
                                     .map({
                                         let entry_changes = entry_changes.clone();
                                         let element = element.clone();
@@ -696,9 +712,16 @@ impl MemoryManifestEntry {
                             } else {
                                 future::ok(()).boxify()
                             }
-                        }.and_then(move |_| {
-                            let mut changes = entry_changes.lock().expect("lock poisoned");
-                            Self::find_mut_helper(&mut changes, element).find_mut(path, blobstore)
+                        }.and_then({
+                            cloned!(ctx);
+                            move |_| {
+                                let mut changes = entry_changes.lock().expect("lock poisoned");
+                                Self::find_mut_helper(&mut changes, element).find_mut(
+                                    ctx,
+                                    path,
+                                    blobstore,
+                                )
+                            }
                         })
                             .boxify()
                     }
@@ -747,36 +770,38 @@ impl MemoryManifestEntry {
     /// Resolve conflicts when blobs point to the same data but have different parents
     pub fn resolve_trivial_conflicts(
         &self,
+        ctx: CoreContext,
         repo: BlobRepo,
         incomplete_filenodes: IncompleteFilenodes,
     ) -> impl Future<Item = (), Error = Error> + Send {
         fn merge_content(
+            ctx: CoreContext,
             entries: Vec<HgBlobEntry>,
         ) -> impl Future<Item = Option<(FileType, FileContents)>, Error = Error> + Send {
-            if let Some(Type::File(file_type)) = entries.first().map(|e| e.get_type()) {
-                let fut = future::join_all(entries.into_iter().map(|e| e.get_content())).map(
-                    move |content| {
-                        let mut iter = content.iter();
-                        if let Some(first) = iter.next() {
-                            if iter.all(|other| match (first, other) {
-                                (Content::File(c0), Content::File(c1))
-                                | (Content::Executable(c0), Content::Executable(c1))
-                                | (Content::Symlink(c0), Content::Symlink(c1)) => c0 == c1,
-                                _ => false,
-                            }) {
-                                return match first {
-                                    Content::Executable(file_content)
-                                    | Content::File(file_content)
-                                    | Content::Symlink(file_content) => {
-                                        Some((file_type, file_content.clone()))
-                                    }
-                                    _ => unreachable!(),
-                                };
+            if let Some(Type::File(file_type)) = entries.first().map(move |e| e.get_type()) {
+                let fut = future::join_all(
+                    entries.into_iter().map(move |e| e.get_content(ctx.clone())),
+                ).map(move |content| {
+                    let mut iter = content.iter();
+                    if let Some(first) = iter.next() {
+                        if iter.all(|other| match (first, other) {
+                            (Content::File(c0), Content::File(c1))
+                            | (Content::Executable(c0), Content::Executable(c1))
+                            | (Content::Symlink(c0), Content::Symlink(c1)) => c0 == c1,
+                            _ => false,
+                        }) {
+                            return match first {
+                                Content::Executable(file_content)
+                                | Content::File(file_content)
+                                | Content::Symlink(file_content) => {
+                                    Some((file_type, file_content.clone()))
+                                }
+                                _ => unreachable!(),
                             };
                         };
-                        None
-                    },
-                );
+                    };
+                    None
+                });
                 Either::A(fut)
             } else {
                 Either::B(future::ok(None))
@@ -784,6 +809,7 @@ impl MemoryManifestEntry {
         }
 
         fn merge_entries(
+            ctx: CoreContext,
             path: Option<MPath>,
             entries: Vec<HgBlobEntry>,
             repo: BlobRepo,
@@ -793,7 +819,7 @@ impl MemoryManifestEntry {
                 .iter()
                 .map(|e| e.get_hash().into_nodehash())
                 .collect::<Vec<_>>();
-            merge_content(entries).and_then(move |content| {
+            merge_content(ctx.clone(), entries).and_then(move |content| {
                 let mut parents = parents.into_iter();
                 if let Some((file_type, file_content)) = content {
                     let path = try_boxfuture!(path.ok_or(ErrorKind::EmptyFilePath).into());
@@ -809,7 +835,7 @@ impl MemoryManifestEntry {
                         p2: p2.clone(),
                         path: path,
                     };
-                    let (_, upload_future) = try_boxfuture!(upload_entry.upload(&repo));
+                    let (_, upload_future) = try_boxfuture!(upload_entry.upload(ctx, &repo));
                     upload_future
                         .map(move |(entry, path)| {
                             incomplete_filenodes.add(IncompleteFilenodeInfo {
@@ -829,6 +855,7 @@ impl MemoryManifestEntry {
         }
 
         fn resolve_rec(
+            ctx: CoreContext,
             path: Option<MPath>,
             node: MemoryManifestEntry,
             repo: BlobRepo,
@@ -843,11 +870,16 @@ impl MemoryManifestEntry {
                             .flat_map(|(k, v)| v.clone().map(|v| (k, v)))
                             .map(|(name, child)| {
                                 let path = MPath::join_opt(path.as_ref(), name);
-                                resolve_rec(path, child, repo.clone(), incomplete_filenodes.clone())
-                                    .map({
-                                        let name = name.clone();
-                                        move |v| v.map(|v| (name, v))
-                                    })
+                                resolve_rec(
+                                    ctx.clone(),
+                                    path,
+                                    child,
+                                    repo.clone(),
+                                    incomplete_filenodes.clone(),
+                                ).map({
+                                    let name = name.clone();
+                                    move |v| v.map(|v| (name, v))
+                                })
                             })
                             .collect::<Vec<_>>()
                     };
@@ -874,7 +906,7 @@ impl MemoryManifestEntry {
                         })
                         .collect::<Option<Vec<_>>>();
                     if let Some(entries) = entries {
-                        merge_entries(path, entries, repo, incomplete_filenodes).boxify()
+                        merge_entries(ctx, path, entries, repo, incomplete_filenodes).boxify()
                     } else {
                         future::ok(None).boxify()
                     }
@@ -882,7 +914,7 @@ impl MemoryManifestEntry {
                 _ => future::ok(None).boxify(),
             }
         }
-        resolve_rec(None, self.clone(), repo, incomplete_filenodes).map(|_| ())
+        resolve_rec(ctx, None, self.clone(), repo, incomplete_filenodes).map(|_| ())
     }
 }
 
@@ -907,6 +939,7 @@ impl MemoryRootManifest {
     }
 
     fn create_conflict(
+        ctx: CoreContext,
         repo: BlobRepo,
         incomplete_filenodes: IncompleteFilenodes,
         p1_root: MemoryManifestEntry,
@@ -914,6 +947,7 @@ impl MemoryRootManifest {
     ) -> BoxFuture<Self, Error> {
         p1_root
             .merge_with_conflicts(
+                ctx,
                 p2_root,
                 repo.get_blobstore(),
                 repo.get_logger(),
@@ -926,6 +960,7 @@ impl MemoryRootManifest {
 
     /// Create an in-memory manifest, backed by the given blobstore, and based on mp1 and mp2
     pub fn new(
+        ctx: CoreContext,
         repo: BlobRepo,
         incomplete_filenodes: IncompleteFilenodes,
         mp1: Option<&HgNodeHash>,
@@ -943,6 +978,7 @@ impl MemoryRootManifest {
                 MemoryManifestEntry::convert_treenode(p),
             )).boxify(),
             (Some(p1), Some(p2)) => Self::create_conflict(
+                ctx,
                 repo,
                 incomplete_filenodes,
                 MemoryManifestEntry::convert_treenode(p1),
@@ -961,9 +997,10 @@ impl MemoryRootManifest {
     /// manifest contains dir1/file1 and dir2/file2 and dir2 contains a conflict for file2, dir1
     /// can still be saved to the blobstore.
     /// Returns the saved manifest ID
-    pub fn save(&self) -> BoxFuture<HgBlobEntry, Error> {
+    pub fn save(&self, ctx: CoreContext) -> BoxFuture<HgBlobEntry, Error> {
         self.root_entry
             .save(
+                ctx,
                 &self.repo.get_blobstore(),
                 &self.repo.get_logger(),
                 &self.incomplete_filenodes,
@@ -974,6 +1011,7 @@ impl MemoryRootManifest {
 
     fn find_path(
         &self,
+        ctx: CoreContext,
         path: &MPath,
     ) -> (
         impl Future<Item = MemoryManifestEntry, Error = Error> + Send,
@@ -984,7 +1022,7 @@ impl MemoryRootManifest {
             None => Either::A(future::ok(self.root_entry.clone())),
             Some(filepath) => Either::B(
                 self.root_entry
-                    .find_mut(filepath.into_iter(), self.repo.get_blobstore())
+                    .find_mut(ctx, filepath.into_iter(), self.repo.get_blobstore())
                     .and_then({
                         let path = path.clone();
                         |entry| entry.ok_or(ErrorKind::PathNotFound(path).into())
@@ -996,17 +1034,28 @@ impl MemoryRootManifest {
     }
 
     /// Apply an add or remove based on whether the change is None (remove) or Some(blobentry) (add)
-    pub fn change_entry(&self, path: &MPath, entry: Option<HgBlobEntry>) -> BoxFuture<(), Error> {
-        let (target, filename) = self.find_path(path);
+    pub fn change_entry(
+        &self,
+        ctx: CoreContext,
+        path: &MPath,
+        entry: Option<HgBlobEntry>,
+    ) -> BoxFuture<(), Error> {
+        let (target, filename) = self.find_path(ctx, path);
 
         target
             .and_then(|target| target.change(filename, entry).into_future())
             .boxify()
     }
 
-    pub fn resolve_trivial_conflicts(&self) -> impl Future<Item = (), Error = Error> + Send {
-        self.root_entry
-            .resolve_trivial_conflicts(self.repo.clone(), self.incomplete_filenodes.clone())
+    pub fn resolve_trivial_conflicts(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Future<Item = (), Error = Error> + Send {
+        self.root_entry.resolve_trivial_conflicts(
+            ctx,
+            self.repo.clone(),
+            self.incomplete_filenodes.clone(),
+        )
     }
 
     pub fn unittest_root(&self) -> &MemoryManifestEntry {

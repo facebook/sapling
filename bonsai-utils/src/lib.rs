@@ -12,6 +12,7 @@ extern crate failure_ext as failure;
 extern crate futures;
 extern crate itertools;
 
+extern crate context;
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate mononoke_types;

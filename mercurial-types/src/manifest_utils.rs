@@ -10,6 +10,7 @@ use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 use std::sync::{Arc, Mutex};
 
+use context::CoreContext;
 use futures::IntoFuture;
 use futures::future::{self, Future};
 use futures::stream::{empty, once, Stream};
@@ -215,6 +216,7 @@ impl Hash for NewEntry {
 ///                      parents simultaniously and produce the intersection result while
 ///                      traversing
 pub fn new_entry_intersection_stream<M, P1M, P2M>(
+    ctx: CoreContext,
     root: &M,
     p1: Option<&P1M>,
     p2: Option<&P2M>,
@@ -226,21 +228,21 @@ where
 {
     if p1.is_none() || p2.is_none() {
         let ces = if let Some(p1) = p1 {
-            changed_entry_stream(root, p1, None)
+            changed_entry_stream(ctx, root, p1, None)
         } else if let Some(p2) = p2 {
-            changed_entry_stream(root, p2, None)
+            changed_entry_stream(ctx, root, p2, None)
         } else {
-            changed_entry_stream(root, &EmptyManifest {}, None)
+            changed_entry_stream(ctx, root, &EmptyManifest {}, None)
         };
 
         ces.filter_map(NewEntry::from_changed_entry)
             .map(NewEntry::into_tuple)
             .boxify()
     } else {
-        let p1 =
-            changed_entry_stream(root, p1.unwrap(), None).filter_map(NewEntry::from_changed_entry);
-        let p2 =
-            changed_entry_stream(root, p2.unwrap(), None).filter_map(NewEntry::from_changed_entry);
+        let p1 = changed_entry_stream(ctx.clone(), root, p1.unwrap(), None)
+            .filter_map(NewEntry::from_changed_entry);
+        let p2 = changed_entry_stream(ctx, root, p2.unwrap(), None)
+            .filter_map(NewEntry::from_changed_entry);
 
         p2.collect()
             .map(move |p2| {
@@ -350,6 +352,7 @@ impl<A: Pruner, B: Pruner> Pruner for CombinatorPruner<A, B> {
 /// and Added directory entry. The same *does not* apply for changes between the various
 /// file types (Regular, Executable and Symlink): those will only be one Modified entry.
 pub fn changed_entry_stream<TM, FM>(
+    ctx: CoreContext,
     to: &TM,
     from: &FM,
     path: Option<MPath>,
@@ -358,10 +361,11 @@ where
     TM: Manifest,
     FM: Manifest,
 {
-    changed_entry_stream_with_pruner(to, from, path, NoopPruner, None).boxify()
+    changed_entry_stream_with_pruner(ctx, to, from, path, NoopPruner, None).boxify()
 }
 
 pub fn changed_file_stream<TM, FM>(
+    ctx: CoreContext,
     to: &TM,
     from: &FM,
     path: Option<MPath>,
@@ -370,12 +374,13 @@ where
     TM: Manifest,
     FM: Manifest,
 {
-    changed_entry_stream_with_pruner(to, from, path, NoopPruner, None)
+    changed_entry_stream_with_pruner(ctx, to, from, path, NoopPruner, None)
         .filter(|changed_entry| !changed_entry.status.is_tree())
         .boxify()
 }
 
 pub fn changed_entry_stream_with_pruner<TM, FM>(
+    ctx: CoreContext,
     to: &TM,
     from: &FM,
     path: Option<MPath>,
@@ -399,7 +404,13 @@ where
                         move |entry| pruner.keep(entry)
                     })
                     .map(|entry| {
-                        recursive_changed_entry_stream(entry, 1, pruner.clone(), max_depth)
+                        recursive_changed_entry_stream(
+                            ctx.clone(),
+                            entry,
+                            1,
+                            pruner.clone(),
+                            max_depth,
+                        )
                     }),
             )
         })
@@ -411,6 +422,7 @@ where
 /// that differ. If input isn't a tree, then a stream with a single entry is returned, otherwise
 /// subtrees are recursively compared.
 fn recursive_changed_entry_stream(
+    ctx: CoreContext,
     changed_entry: ChangedEntry,
     depth: usize,
     pruner: impl Pruner + Send + Clone + 'static,
@@ -423,7 +435,10 @@ fn recursive_changed_entry_stream(
     let (to_mf, from_mf, path) = match &changed_entry.status {
         EntryStatus::Added(entry) => {
             let empty_mf: Box<Manifest> = Box::new(EmptyManifest {});
-            let to_mf = entry.get_content().map(get_tree_content).boxify();
+            let to_mf = entry
+                .get_content(ctx.clone())
+                .map(get_tree_content)
+                .boxify();
             let from_mf = Ok(empty_mf).into_future().boxify();
 
             let dirname = changed_entry.dirname.clone();
@@ -435,7 +450,10 @@ fn recursive_changed_entry_stream(
         EntryStatus::Deleted(entry) => {
             let empty_mf: Box<Manifest> = Box::new(EmptyManifest {});
             let to_mf = Ok(empty_mf).into_future().boxify();
-            let from_mf = entry.get_content().map(get_tree_content).boxify();
+            let from_mf = entry
+                .get_content(ctx.clone())
+                .map(get_tree_content)
+                .boxify();
 
             let dirname = changed_entry.dirname.clone();
             let entry_path = entry.get_name().cloned();
@@ -450,8 +468,14 @@ fn recursive_changed_entry_stream(
             debug_assert!(to_entry.get_type().is_tree() == from_entry.get_type().is_tree());
             debug_assert!(to_entry.get_type().is_tree());
 
-            let to_mf = to_entry.get_content().map(get_tree_content).boxify();
-            let from_mf = from_entry.get_content().map(get_tree_content).boxify();
+            let to_mf = to_entry
+                .get_content(ctx.clone())
+                .map(get_tree_content)
+                .boxify();
+            let from_mf = from_entry
+                .get_content(ctx.clone())
+                .map(get_tree_content)
+                .boxify();
 
             let dirname = changed_entry.dirname.clone();
             let entry_path = to_entry.get_name().cloned();
@@ -474,6 +498,7 @@ fn recursive_changed_entry_stream(
                             })
                             .map(|entry| {
                                 recursive_changed_entry_stream(
+                                    ctx.clone(),
                                     entry,
                                     depth + 1,
                                     pruner.clone(),
@@ -493,28 +518,28 @@ fn recursive_changed_entry_stream(
 /// their path from the root of the repo.
 /// For a non-tree entry returns a stream with a single (entry, path) pair.
 pub fn recursive_entry_stream(
+    ctx: CoreContext,
     rootpath: Option<MPath>,
     entry: Box<Entry + Sync>,
 ) -> BoxStream<(Option<MPath>, Box<Entry + Sync>), Error> {
-    let subentries = match entry.get_type() {
-        Type::File(_) => empty().boxify(),
-        Type::Tree => {
-            let entry_basename = entry.get_name();
-            let path = MPath::join_opt(rootpath.as_ref(), entry_basename);
+    let subentries =
+        match entry.get_type() {
+            Type::File(_) => empty().boxify(),
+            Type::Tree => {
+                let entry_basename = entry.get_name();
+                let path = MPath::join_opt(rootpath.as_ref(), entry_basename);
 
-            entry
-                .get_content()
-                .map(|content| {
-                    select_all(
-                        get_tree_content(content)
-                            .list()
-                            .map(move |entry| recursive_entry_stream(path.clone(), entry)),
-                    )
-                })
-                .flatten_stream()
-                .boxify()
-        }
-    };
+                entry
+                    .get_content(ctx.clone())
+                    .map(|content| {
+                        select_all(get_tree_content(content).list().map(move |entry| {
+                            recursive_entry_stream(ctx.clone(), path.clone(), entry)
+                        }))
+                    })
+                    .flatten_stream()
+                    .boxify()
+            }
+        };
 
     once(Ok((rootpath, entry))).chain(subentries).boxify()
 }

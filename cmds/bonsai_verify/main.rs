@@ -7,6 +7,8 @@
 #![deny(warnings)]
 
 extern crate clap;
+#[macro_use]
+extern crate cloned;
 extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
@@ -86,7 +88,10 @@ fn main() -> Result<()> {
     let matches = setup_app().get_matches();
     let logger = args::get_logger(&matches);
     args::init_cachelib(&matches);
-    let repo = args::open_repo(&logger, &matches)?;
+
+    // TODO(luk): This is not a test use case, fix it in next diffs
+    let ctx = CoreContext::test_mock();
+    let repo = args::open_repo(ctx.clone(), &logger, &matches)?;
 
     let config = config::get_config(&matches).expect("getting configuration failed");
     let start_points = get_start_points(&matches);
@@ -102,9 +107,6 @@ fn main() -> Result<()> {
     // matter much.
     let (end_sender, end_receiver) = ::std::sync::mpsc::channel();
 
-    // TODO(luk): This is not a test use case, fix it in next diffs
-    let ctx = CoreContext::test_mock();
-
     // The future::lazy is to ensure that bonsai_verify (which calls tokio::spawn) is called after
     // tokio::run, not before.
     let verify_fut = future::lazy({
@@ -115,7 +117,7 @@ fn main() -> Result<()> {
         let ignored = ignored.clone();
         move || {
             let bonsai_verify = BonsaiMFVerify {
-                ctx: ctx,
+                ctx: ctx.clone(),
                 logger: logger.clone(),
                 repo: repo.blobrepo().clone(),
                 follow_limit,
@@ -126,7 +128,7 @@ fn main() -> Result<()> {
             bonsai_verify
             .verify(start_points)
             .and_then({
-                let logger = logger.clone();
+                cloned!(ctx, logger);
                 move |(result, meta)| {
                     let logger = logger.new(o!["changeset_id" => format!("{}", meta.changeset_id)]);
 
@@ -175,7 +177,7 @@ fn main() -> Result<()> {
                             if print_changes {
                                 let logger = logger.clone();
                                 let diff_fut = difference
-                                    .changes()
+                                    .changes(ctx.clone())
                                     .map(move |changed_entry| {
                                         info!(
                                             logger,

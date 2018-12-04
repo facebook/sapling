@@ -179,7 +179,7 @@ impl CachingChangesetFetcher {
         format!("changesetscache_{}", bucket * self.cache_bucket_size)
     }
 
-    fn fill_cache(&self, gen_num: u64) -> impl Future<Item = (), Error = Error> {
+    fn fill_cache(&self, ctx: CoreContext, gen_num: u64) -> impl Future<Item = (), Error = Error> {
         let blobstore_cache_key = self.get_blobstore_cache_key(gen_num);
         if !self.already_fetched_blobs
             .lock()
@@ -188,7 +188,7 @@ impl CachingChangesetFetcher {
         {
             cloned!(self.fetches_from_blobstore);
             self.blobstore
-                .get(blobstore_cache_key.clone())
+                .get(ctx, blobstore_cache_key.clone())
                 .map({
                     let cs_fetcher = self.clone();
                     move |val| {
@@ -228,15 +228,21 @@ impl CachingChangesetFetcher {
 
         cloned!(self.repo_id, self.max_request_latency);
         self.cache_requests.fetch_add(1, Ordering::Relaxed);
-        cachelib::get_cached_or_fill(&self.cache_pool, cache_key, move || {
-            self.cache_misses.fetch_add(1, Ordering::Relaxed);
-            self.changesets.get(ctx, repo_id, cs_id)
+        cachelib::get_cached_or_fill(&self.cache_pool, cache_key, {
+            cloned!(ctx);
+            move || {
+                self.cache_misses.fetch_add(1, Ordering::Relaxed);
+                self.changesets.get(ctx.clone(), repo_id, cs_id)
+            }
         }).and_then(move |maybe_cs| maybe_cs.ok_or_else(|| err_msg(format!("{} not found", cs_id))))
             .and_then({
                 let cs_fetcher = self.clone();
                 move |cs| {
                     if cs_fetcher.too_many_cache_misses() {
-                        cs_fetcher.fill_cache(cs.gen).map(|()| cs).left_future()
+                        cs_fetcher
+                            .fill_cache(ctx, cs.gen)
+                            .map(|()| cs)
+                            .left_future()
                     } else {
                         future::ok(cs).right_future()
                     }
@@ -393,13 +399,18 @@ mod tests {
     }
 
     impl Blobstore for TestBlobstore {
-        fn get(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
             let blobstore = self.blobstore.lock().unwrap();
             self.get_counter.fetch_add(1, Ordering::Relaxed);
             Ok(blobstore.get(&key).cloned()).into_future().boxify()
         }
 
-        fn put(&self, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+        fn put(
+            &self,
+            _ctx: CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+        ) -> BoxFuture<(), Error> {
             let mut blobstore = self.blobstore.lock().unwrap();
             blobstore.insert(key, value);
             Ok(()).into_future().boxify()
@@ -552,6 +563,7 @@ mod tests {
 
             // Blob cache entries with gen number 0 up to 4
             blobstore.put(
+                ctx.clone(),
                 "changesetscache_4".to_string(),
                 BlobstoreBytes::from_bytes(serialize_cs_entries(vec![
                     cs.get(ctx.clone(), REPO_ZERO, FIVES_CSID)

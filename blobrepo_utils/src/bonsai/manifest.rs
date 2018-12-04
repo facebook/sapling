@@ -70,29 +70,39 @@ pub struct BonsaiMFVerifyDifference {
 
 impl BonsaiMFVerifyDifference {
     /// What entries changed from the original manifest to the roundtripped one.
-    pub fn changes(&self) -> impl Stream<Item = ChangedEntry, Error = Error> + Send {
+    pub fn changes(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Stream<Item = ChangedEntry, Error = Error> + Send {
         let lookup_mf_id = HgManifestId::new(self.lookup_mf_id);
         let roundtrip_mf_id = HgManifestId::new(self.roundtrip_mf_id);
-        let original_mf = self.repo.get_manifest_by_nodeid(&lookup_mf_id);
-        let roundtrip_mf = self.repo.get_manifest_by_nodeid(&roundtrip_mf_id);
+        let original_mf = self.repo.get_manifest_by_nodeid(ctx.clone(), &lookup_mf_id);
+        let roundtrip_mf = self.repo
+            .get_manifest_by_nodeid(ctx.clone(), &roundtrip_mf_id);
         original_mf
             .join(roundtrip_mf)
-            .map(|(original_mf, roundtrip_mf)| {
-                changed_entry_stream(&roundtrip_mf, &original_mf, None)
+            .map({
+                cloned!(ctx);
+                move |(original_mf, roundtrip_mf)| {
+                    changed_entry_stream(ctx, &roundtrip_mf, &original_mf, None)
+                }
             })
             .flatten_stream()
     }
 
     /// Whether there are any changes beyond the root manifest ID being different.
     #[inline]
-    pub fn has_changes(&self) -> impl Future<Item = bool, Error = Error> + Send {
-        self.changes().not_empty()
+    pub fn has_changes(&self, ctx: CoreContext) -> impl Future<Item = bool, Error = Error> + Send {
+        self.changes(ctx).not_empty()
     }
 
     /// Whether there are any files that changed.
     #[inline]
-    pub fn has_file_changes(&self) -> impl Future<Item = bool, Error = Error> + Send {
-        self.changes()
+    pub fn has_file_changes(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Future<Item = bool, Error = Error> + Send {
+        self.changes(ctx)
             .filter(|item| !item.status.is_tree())
             .not_empty()
     }
@@ -184,19 +194,20 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
 
         debug!(logger, "Starting bonsai diff computation");
 
-        let parents_fut = repo.get_changeset_parents(ctx, &changeset_id).and_then({
-            let repo = repo.clone();
-            move |parent_hashes| {
-                let changesets = parent_hashes
-                    .into_iter()
-                    .map(move |parent_id| repo.get_changeset_by_changesetid(&parent_id));
-                future::join_all(changesets)
-            }
-        });
+        let parents_fut = repo.get_changeset_parents(ctx.clone(), &changeset_id)
+            .and_then({
+                cloned!(ctx, repo);
+                move |parent_hashes| {
+                    let changesets = parent_hashes.into_iter().map(move |parent_id| {
+                        repo.get_changeset_by_changesetid(ctx.clone(), &parent_id)
+                    });
+                    future::join_all(changesets)
+                }
+            });
 
         // Convert to bonsai first.
         let bonsai_diff_fut = parents_fut.and_then({
-            let repo = repo.clone();
+            cloned!(ctx, repo);
             move |parents| {
                 let mut parents = parents.into_iter();
                 let p1: Option<_> = parents.next();
@@ -214,9 +225,10 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
 
                 // Also fetch the manifest as we're interested in the computed node id.
                 let root_mf_id = HgManifestId::new(root_entry.get_hash().into_nodehash());
-                let root_mf_fut = BlobManifest::load(&repo.get_blobstore(), &root_mf_id);
+                let root_mf_fut =
+                    BlobManifest::load(ctx.clone(), &repo.get_blobstore(), &root_mf_id);
 
-                bonsai_diff(root_entry, p1_entry, p2_entry)
+                bonsai_diff(ctx.clone(), root_entry, p1_entry, p2_entry)
                     .collect()
                     .join(root_mf_fut)
                     .and_then(move |(diff, root_mf)| match root_mf {
@@ -245,6 +257,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                     }
 
                     apply_diff(
+                        ctx.clone(),
                         logger.clone(),
                         repo.clone(),
                         diff_result,
@@ -285,7 +298,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                             if broken_merge {
                                 // This is a (potentially) broken merge. Ignore tree changes and
                                 // only check for file changes.
-                                Either::B(Either::A(difference.has_file_changes().map(
+                                Either::B(Either::A(difference.has_file_changes(ctx).map(
                                     move |has_file_changes| {
                                         if has_file_changes {
                                             BonsaiMFVerifyResult::Invalid(difference)
@@ -298,7 +311,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                                 // This is an empty changeset. Mercurial is relatively inconsistent
                                 // about creating new manifest nodes for such changesets, so it can
                                 // happen.
-                                Either::B(Either::B(difference.has_changes().map(
+                                Either::B(Either::B(difference.has_changes(ctx).map(
                                     move |has_changes| {
                                         if has_changes {
                                             BonsaiMFVerifyResult::Invalid(difference)
@@ -322,6 +335,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
 // https://github.com/rust-lang/rust/issues/50865.
 // TODO: (rain1) T31595868 make apply_diff private once Rust 1.29 is released
 pub fn apply_diff(
+    ctx: CoreContext,
     logger: Logger,
     repo: BlobRepo,
     diff_result: Vec<BonsaiDiffResult>,
@@ -329,6 +343,7 @@ pub fn apply_diff(
     manifest_p2: Option<&HgNodeHash>,
 ) -> impl Future<Item = HgNodeHash, Error = Error> + Send {
     MemoryRootManifest::new(
+        ctx.clone(),
         repo.clone(),
         IncompleteFilenodes::new(),
         manifest_p1,
@@ -340,21 +355,21 @@ pub fn apply_diff(
                 .into_iter()
                 .map(|result| {
                     let entry = make_entry(&repo, &result);
-                    memory_manifest.change_entry(result.path(), entry)
+                    memory_manifest.change_entry(ctx.clone(), result.path(), entry)
                 })
                 .collect();
 
             future::join_all(futures)
                 .and_then({
-                    let memory_manifest = memory_manifest.clone();
-                    move |_| memory_manifest.resolve_trivial_conflicts()
+                    cloned!(ctx, memory_manifest);
+                    move |_| memory_manifest.resolve_trivial_conflicts(ctx)
                 })
                 .and_then(move |_| {
                     // This will cause tree entries to be written to the blobstore, but
                     // those entries will be redirected to memory because of
                     // repo.in_memory_writes().
                     debug!(logger, "Applying complete: now saving");
-                    memory_manifest.save()
+                    memory_manifest.save(ctx)
                 })
                 .map(|m| m.get_hash().into_nodehash())
         }

@@ -79,16 +79,16 @@ impl ChangesetHandle {
     }
 
     pub fn ready_cs_handle(ctx: CoreContext, repo: Arc<BlobRepo>, hg_cs: HgChangesetId) -> Self {
-        let bonsai_cs = repo.get_bonsai_from_hg(ctx, &hg_cs)
+        let bonsai_cs = repo.get_bonsai_from_hg(ctx.clone(), &hg_cs)
             .and_then(move |bonsai_id| {
                 bonsai_id.ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs).into())
             })
             .and_then({
-                cloned!(repo);
-                move |bonsai_id| repo.get_bonsai_changeset(bonsai_id)
+                cloned!(ctx, repo);
+                move |bonsai_id| repo.get_bonsai_changeset(ctx, bonsai_id)
             });
 
-        let cs = repo.get_changeset_by_changesetid(&hg_cs);
+        let cs = repo.get_changeset_by_changesetid(ctx, &hg_cs);
 
         let (trigger, can_be_parent) = oneshot::channel();
         let fut = bonsai_cs.join(cs);
@@ -132,20 +132,17 @@ struct UploadEntriesState {
 
 #[derive(Clone)]
 pub struct UploadEntries {
-    ctx: CoreContext,
     scuba_logger: ScubaSampleBuilder,
     inner: Arc<Mutex<UploadEntriesState>>,
 }
 
 impl UploadEntries {
     pub fn new(
-        ctx: CoreContext,
         blobstore: RepoBlobstore,
         repoid: RepositoryId,
         scuba_logger: ScubaSampleBuilder,
     ) -> Self {
         Self {
-            ctx,
             scuba_logger,
             inner: Arc::new(Mutex::new(UploadEntriesState {
                 required_entries: HashMap::new(),
@@ -163,14 +160,19 @@ impl UploadEntries {
 
     /// Parse a manifest and record the referenced blobs so that we know whether or not we have
     /// a complete changeset with all blobs, or whether there is missing data.
-    fn process_manifest(&self, entry: &HgBlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
+    fn process_manifest(
+        &self,
+        ctx: CoreContext,
+        entry: &HgBlobEntry,
+        path: RepoPath,
+    ) -> BoxFuture<(), Error> {
         let inner_mutex = self.inner.clone();
-        let parents_found = self.find_parents(entry, path.clone());
+        let parents_found = self.find_parents(ctx.clone(), entry, path.clone());
         let entry_hash = entry.get_hash().into_nodehash();
         let entry_type = entry.get_type();
 
         entry
-            .get_content()
+            .get_content(ctx)
             .and_then(move |content| match content {
                 Content::Tree(manifest) => {
                     for entry in manifest.list() {
@@ -199,10 +201,15 @@ impl UploadEntries {
             .boxify()
     }
 
-    fn find_parents(&self, entry: &HgBlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
+    fn find_parents(
+        &self,
+        ctx: CoreContext,
+        entry: &HgBlobEntry,
+        path: RepoPath,
+    ) -> BoxFuture<(), Error> {
         let inner_mutex = self.inner.clone();
         entry
-            .get_parents()
+            .get_parents(ctx)
             .and_then(move |parents| {
                 let mut inner = inner_mutex.lock().expect("Lock poisoned");
                 let node_keys = parents.into_iter().map(move |hash| HgNodeKey {
@@ -222,7 +229,11 @@ impl UploadEntries {
     /// `process_one_entry` and can be called after it.
     /// It is safe to call this multiple times, but not recommended - every manifest passed to
     /// this function is assumed required for this commit, even if it is not the root.
-    pub fn process_root_manifest(&self, entry: &HgBlobEntry) -> BoxFuture<(), Error> {
+    pub fn process_root_manifest(
+        &self,
+        ctx: CoreContext,
+        entry: &HgBlobEntry,
+    ) -> BoxFuture<(), Error> {
         if entry.get_type() != manifest::Type::Tree {
             return future::err(
                 ErrorKind::NotAManifest(entry.get_hash().into_nodehash(), entry.get_type()).into(),
@@ -234,10 +245,15 @@ impl UploadEntries {
                 .required_entries
                 .insert(RepoPath::root(), *entry.get_hash());
         }
-        self.process_one_entry(entry, RepoPath::root())
+        self.process_one_entry(ctx, entry, RepoPath::root())
     }
 
-    pub fn process_one_entry(&self, entry: &HgBlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
+    pub fn process_one_entry(
+        &self,
+        ctx: CoreContext,
+        entry: &HgBlobEntry,
+        path: RepoPath,
+    ) -> BoxFuture<(), Error> {
         {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             inner.uploaded_entries.insert(path.clone(), entry.clone());
@@ -251,7 +267,7 @@ impl UploadEntries {
                     entry.get_hash(),
                     path
                 ),
-                self.process_manifest(entry, path),
+                self.process_manifest(ctx, entry, path),
             )
         } else {
             STATS::process_file_entry.add_value(1);
@@ -261,7 +277,7 @@ impl UploadEntries {
                     entry.get_hash(),
                     path
                 ),
-                self.find_parents(&entry, path),
+                self.find_parents(ctx, &entry, path),
             )
         };
 
@@ -270,6 +286,7 @@ impl UploadEntries {
 
     // Check the blobstore to see whether a particular node is present.
     fn assert_in_blobstore(
+        ctx: CoreContext,
         blobstore: RepoBlobstore,
         node_id: HgNodeHash,
         is_tree: bool,
@@ -279,10 +296,15 @@ impl UploadEntries {
         } else {
             HgFileNodeId::new(node_id).blobstore_key()
         };
-        blobstore.assert_present(key)
+        blobstore.assert_present(ctx, key)
     }
 
-    pub fn finalize(self, filenodes: Arc<Filenodes>, cs_id: HgNodeHash) -> BoxFuture<(), Error> {
+    pub fn finalize(
+        self,
+        ctx: CoreContext,
+        filenodes: Arc<Filenodes>,
+        cs_id: HgNodeHash,
+    ) -> BoxFuture<(), Error> {
         let required_checks = {
             let inner = self.inner.lock().expect("Lock poisoned");
             let required_len = inner.required_entries.len();
@@ -296,6 +318,7 @@ impl UploadEntries {
                     } else {
                         let path = path.clone();
                         let assert = Self::assert_in_blobstore(
+                            ctx.clone(),
                             inner.blobstore.clone(),
                             entryid.into_nodehash(),
                             path.is_tree(),
@@ -333,6 +356,7 @@ impl UploadEntries {
                 .iter()
                 .map(|node_key| {
                     let assert = Self::assert_in_blobstore(
+                        ctx.clone(),
                         inner.blobstore.clone(),
                         node_key.hash,
                         node_key.path.is_tree(),
@@ -385,23 +409,30 @@ impl UploadEntries {
 
             let filenodeinfos =
                 stream::futures_unordered(uploaded_entries.into_iter().map(|(path, blobentry)| {
-                    blobentry.get_parents().and_then(move |parents| {
-                        compute_copy_from_info(&path, &blobentry, &parents).map(move |copyfrom| {
-                            let (p1, p2) = parents.get_nodes();
-                            FilenodeInfo {
-                                path,
-                                filenode: HgFileNodeId::new(blobentry.get_hash().into_nodehash()),
-                                p1: p1.cloned().map(HgFileNodeId::new),
-                                p2: p2.cloned().map(HgFileNodeId::new),
-                                copyfrom,
-                                linknode: HgChangesetId::new(cs_id),
-                            }
-                        })
+                    blobentry.get_parents(ctx.clone()).and_then({
+                        cloned!(ctx);
+                        move |parents| {
+                            compute_copy_from_info(ctx, &path, &blobentry, &parents).map(
+                                move |copyfrom| {
+                                    let (p1, p2) = parents.get_nodes();
+                                    FilenodeInfo {
+                                        path,
+                                        filenode: HgFileNodeId::new(
+                                            blobentry.get_hash().into_nodehash(),
+                                        ),
+                                        p1: p1.cloned().map(HgFileNodeId::new),
+                                        p2: p2.cloned().map(HgFileNodeId::new),
+                                        copyfrom,
+                                        linknode: HgChangesetId::new(cs_id),
+                                    }
+                                },
+                            )
+                        }
                     })
                 })).boxify();
 
             filenodes
-                .add_filenodes(self.ctx.clone(), filenodeinfos, &inner.repoid)
+                .add_filenodes(ctx, filenodeinfos, &inner.repoid)
                 .timed({
                     let mut scuba_logger = self.scuba_logger();
                     move |stats, result| {
@@ -423,6 +454,7 @@ impl UploadEntries {
 }
 
 fn compute_copy_from_info(
+    ctx: CoreContext,
     path: &RepoPath,
     blobentry: &HgBlobEntry,
     parents: &HgParents,
@@ -432,7 +464,7 @@ fn compute_copy_from_info(
         &RepoPath::FilePath(_) => {
             STATS::finalize_compute_copy_from_info.add_value(1);
             blobentry
-                .get_raw_content()
+                .get_raw_content(ctx)
                 .and_then({
                     let parents = parents.clone();
                     move |blob| {
@@ -459,10 +491,11 @@ fn compute_copy_from_info(
 }
 
 fn compute_changed_files_pair(
+    ctx: CoreContext,
     to: &Box<Manifest + Sync>,
     from: &Box<Manifest + Sync>,
 ) -> BoxFuture<HashSet<MPath>, Error> {
-    changed_entry_stream(to, from, None)
+    changed_entry_stream(ctx, to, from, None)
         .filter_map(|change| match change.status {
             EntryStatus::Deleted(entry)
             | EntryStatus::Added(entry)
@@ -495,18 +528,19 @@ fn compute_changed_files_pair(
 /// Changesets might as well make this function obsolete and that I am not familiar with creating
 /// mock Manifests I will postpone writing tests for this
 pub fn compute_changed_files(
+    ctx: CoreContext,
     root: &Box<Manifest + Sync>,
     p1: Option<&Box<Manifest + Sync>>,
     p2: Option<&Box<Manifest + Sync>>,
 ) -> BoxFuture<Vec<MPath>, Error> {
     let empty = manifest::EmptyManifest {}.boxed();
     match (p1, p2) {
-        (None, None) => compute_changed_files_pair(&root, &empty),
+        (None, None) => compute_changed_files_pair(ctx, &root, &empty),
         (Some(manifest), None) | (None, Some(manifest)) => {
-            compute_changed_files_pair(&root, &manifest)
+            compute_changed_files_pair(ctx, &root, &manifest)
         }
-        (Some(p1), Some(p2)) => compute_changed_files_pair(&root, &p1)
-            .join(compute_changed_files_pair(&root, &p2))
+        (Some(p1), Some(p2)) => compute_changed_files_pair(ctx.clone(), &root, &p1)
+            .join(compute_changed_files_pair(ctx.clone(), &root, &p2))
             .map(|(left, right)| {
                 left.intersection(&right)
                     .cloned()
@@ -523,14 +557,15 @@ pub fn compute_changed_files(
 }
 
 fn compute_added_files(
+    ctx: CoreContext,
     child: &Box<Manifest + Sync>,
     parent: Option<&Box<Manifest + Sync>>,
 ) -> impl Future<Item = Vec<MPath>, Error = Error> {
     let s = match parent {
-        Some(parent) => changed_entry_stream(child, parent, None).boxify(),
+        Some(parent) => changed_entry_stream(ctx, child, parent, None).boxify(),
         None => {
             let empty = manifest::EmptyManifest {};
-            changed_entry_stream(child, &empty, None).boxify()
+            changed_entry_stream(ctx, child, &empty, None).boxify()
         }
     };
 
@@ -551,20 +586,24 @@ fn compute_added_files(
 /// 1) Checks that there are no case conflicts between added files
 /// 2) Checks that added files do not create new case conflicts with already existing files
 pub fn check_case_conflicts(
+    ctx: CoreContext,
     repo: BlobRepo,
     child_root_mf: HgManifestId,
     parent_root_mf: Option<HgManifestId>,
 ) -> impl Future<Item = (), Error = Error> {
-    let child_mf_fut = repo.get_manifest_by_nodeid(&child_root_mf.clone());
+    let child_mf_fut = repo.get_manifest_by_nodeid(ctx.clone(), &child_root_mf.clone());
 
     let parent_mf_fut = parent_root_mf.map({
-        cloned!(repo);
-        move |m| repo.get_manifest_by_nodeid(&m)
+        cloned!(ctx, repo);
+        move |m| repo.get_manifest_by_nodeid(ctx.clone(), &m)
     });
 
     child_mf_fut
         .join(parent_mf_fut)
-        .and_then(move |(child_mf, parent_mf)| compute_added_files(&child_mf, parent_mf.as_ref()))
+        .and_then({
+            cloned!(ctx);
+            move |(child_mf, parent_mf)| compute_added_files(ctx, &child_mf, parent_mf.as_ref())
+        })
         .and_then(
             |added_files| match mononoke_types::check_case_conflicts(added_files.clone()) {
                 Some(path) => Err(ErrorKind::CaseConflict(path).into()),
@@ -576,6 +615,7 @@ pub fn check_case_conflicts(
                 let mut case_conflict_checks = stream::FuturesUnordered::new();
                 for f in added_files {
                     case_conflict_checks.push(repo.check_case_conflict_in_manifest(
+                        ctx.clone(),
                         &parent_root_mf,
                         &child_root_mf,
                         f.clone(),
@@ -603,6 +643,7 @@ fn mercurial_mpath_comparator(a: &MPath, b: &MPath) -> ::std::cmp::Ordering {
 }
 
 pub fn process_entries(
+    ctx: CoreContext,
     repo: BlobRepo,
     entry_processor: &UploadEntries,
     root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
@@ -612,14 +653,14 @@ pub fn process_entries(
         .context("While uploading root manifest")
         .from_err()
         .and_then({
-            let entry_processor = entry_processor.clone();
+            cloned!(ctx, entry_processor);
             move |root_manifest| match root_manifest {
                 None => future::ok(None).boxify(),
                 Some((entry, path)) => {
                     let hash = entry.get_hash().into_nodehash();
                     if entry.get_type() == manifest::Type::Tree && path == RepoPath::RootPath {
                         entry_processor
-                            .process_root_manifest(&entry)
+                            .process_root_manifest(ctx, &entry)
                             .map(move |_| Some(hash))
                             .boxify()
                     } else {
@@ -634,8 +675,8 @@ pub fn process_entries(
         .context("While uploading child entries")
         .from_err()
         .map({
-            let entry_processor = entry_processor.clone();
-            move |(entry, path)| entry_processor.process_one_entry(&entry, path)
+            cloned!(ctx, entry_processor);
+            move |(entry, path)| entry_processor.process_one_entry(ctx.clone(), &entry, path)
         })
         .buffer_unordered(100)
         .for_each(|()| future::ok(()));
@@ -648,7 +689,7 @@ pub fn process_entries(
                 manifest::EmptyManifest.boxed(),
                 HgManifestId::new(NULL_HASH),
             )).boxify(),
-            Some(root_hash) => repo.get_manifest_by_nodeid(&HgManifestId::new(root_hash))
+            Some(root_hash) => repo.get_manifest_by_nodeid(ctx, &HgManifestId::new(root_hash))
                 .context("While fetching root manifest")
                 .from_err()
                 .map(move |m| (m, HgManifestId::new(root_hash)))
@@ -737,16 +778,17 @@ pub fn handle_parents(
 }
 
 pub fn fetch_parent_manifests(
+    ctx: CoreContext,
     repo: BlobRepo,
     parent_manifest_hashes: &Vec<HgManifestId>,
 ) -> BoxFuture<(Option<Box<Manifest + Sync>>, Option<Box<Manifest + Sync>>), Error> {
     let p1_manifest_hash = parent_manifest_hashes.get(0);
     let p2_manifest_hash = parent_manifest_hashes.get(1);
     let p1_manifest = p1_manifest_hash.map({
-        cloned!(repo);
-        move |m| repo.get_manifest_by_nodeid(&m)
+        cloned!(ctx, repo);
+        move |m| repo.get_manifest_by_nodeid(ctx, &m)
     });
-    let p2_manifest = p2_manifest_hash.map(move |m| repo.get_manifest_by_nodeid(&m));
+    let p2_manifest = p2_manifest_hash.map(move |m| repo.get_manifest_by_nodeid(ctx, &m));
 
     p1_manifest.join(p2_manifest).boxify()
 }
