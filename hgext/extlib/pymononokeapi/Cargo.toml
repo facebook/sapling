@@ -1,0 +1,17 @@
+[package]
+name = "pymononokeapi"
+version = "0.1.0"
+
+[lib]
+name = "pymononokeapi"
+crate-type = ["cdylib"]
+
+[dependencies]
+encoding = { path = "../../../lib/encoding" }
+failure = "*"
+mononokeapi = { path = "../../../lib/mononokeapi" }
+
+[dependencies.cpython]
+version = "0.2"
+default-features = false
+features = ["python27-sys", "extension-module-2-7"]

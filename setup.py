@@ -1750,6 +1750,11 @@ rustextmodules = [
         manifest="mercurial/rust/matcher/Cargo.toml",
     ),
     RustExtension(
+        "pymononokeapi",
+        package="hgext.extlib",
+        manifest="hgext/extlib/pymononokeapi/Cargo.toml",
+    ),
+    RustExtension(
         "pyrevisionstore",
         package="hgext.extlib",
         manifest="hgext/extlib/pyrevisionstore/Cargo.toml",
