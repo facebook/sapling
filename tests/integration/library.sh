@@ -39,7 +39,7 @@ function mononoke {
   --cert "$TESTDIR/testcert.crt" \
   --debug \
   --listening-host-port 127.0.0.1:"$MONONOKE_SOCKET" \
-  -P "$TESTTMP/mononoke-config-rocks" \
+  -P "$TESTTMP/mononoke-config" \
    --configrepo_book local_master \
    --do-not-init-cachelib >> "$TESTTMP/mononoke.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
@@ -91,34 +91,19 @@ EOF
 }
 
 function setup_common_config {
-    setup_config_repo "$@"
+    setup_mononoke_config "$@"
     setup_common_hg_configs
 }
 
-function setup_config_repo {
-  setup_hg_config_repo "$@"
-  commit_and_blobimport_config_repo
-}
-
-function setup_hg_config_repo {
-  hg init mononoke-config
-  cd mononoke-config || exit
-  cat >> .hg/hgrc <<EOF
-[extensions]
-treemanifest=
-remotefilelog=
-[treemanifest]
-server=True
-[remotefilelog]
-server=True
-shallowtrees=True
-EOF
-
+function setup_mononoke_config {
+  cd "$TESTTMP" || exit
+  mkdir mononoke-config
   REPOTYPE="blob:rocks"
   if [[ $# -gt 0 ]]; then
     REPOTYPE="$1"
   fi
 
+  cd mononoke-config
   mkdir -p repos/repo
   cat > repos/repo/server.toml <<CONFIG
 path="$TESTTMP/repo"
@@ -159,17 +144,6 @@ repotype="$REPOTYPE"
 repoid=2
 enabled=false
 CONFIG
-}
-
-function commit_and_blobimport_config_repo {
-  hg ci -Aqma
-  hg backfilltree
-  hg book local_master
-  cd ..
-
-  # We need to have a RocksDb version of config repo
-  mkdir mononoke-config-rocks
-  blobimport rocksdb mononoke-config/.hg mononoke-config-rocks
 }
 
 function register_hook {
@@ -225,7 +199,7 @@ function setup_no_ssl_apiserver {
 
 
 function apiserver {
-  $MONONOKE_APISERVER "$@" --config-path "$TESTTMP/mononoke-config-rocks" \
+  $MONONOKE_APISERVER "$@" --config-path "$TESTTMP/mononoke-config" \
     --config-bookmark "local_master" \
     --ssl-ca "$TESTDIR/testcert.crt" \
     --ssl-private-key "$TESTDIR/testcert.key" \
@@ -236,7 +210,7 @@ function apiserver {
 
 function no_ssl_apiserver {
   $MONONOKE_APISERVER "$@" \
-   --config-path "$TESTTMP/mononoke-config-rocks" \
+   --config-path "$TESTTMP/mononoke-config" \
   --config-bookmark "local_master" >> "$TESTTMP/apiserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
@@ -356,7 +330,7 @@ EOF
 function hook_test_setup() {
   . "$TESTDIR"/library.sh
 
-  setup_hg_config_repo
+  setup_mononoke_config
   cd "$TESTTMP/mononoke-config" || exit 1
 
   cat >> repos/repo/server.toml <<CONFIG
@@ -381,7 +355,6 @@ CONFIG
     register_hook "$HOOK_NAME" "" "$HOOK_TYPE" "$BYPASS"
   fi
 
-  commit_and_blobimport_config_repo
   setup_common_hg_configs
   cd "$TESTTMP" || exit 1
 

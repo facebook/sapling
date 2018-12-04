@@ -7,23 +7,16 @@
 //! Contains structures describing configuration of the entire repo. Those structures are
 //! deserialized from TOML files from metaconfig repo
 
-use blobrepo::{BlobRepo, ManifoldArgs};
+use blobrepo::ManifoldArgs;
 use bookmarks::Bookmark;
-use bytes::Bytes;
 use errors::*;
-use failure::chain::ChainExt;
-use futures::{failed, finished, future, Future};
-use futures::Stream;
-use futures_ext::FutureExt;
-use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
-use mercurial_types::manifest::Content;
-use mercurial_types::nodehash::HgChangesetId;
-use mononoke_types::FileContents;
+use failure::ResultExt;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
 use std::str;
 use toml;
-use vfs::{vfs_from_manifest, ManifestVfsDir, ManifestVfsFile, VfsDir, VfsFile, VfsNode, VfsWalker};
 
 /// Configuration of a single repository
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -218,150 +211,116 @@ pub struct RepoConfigs {
 }
 
 impl RepoConfigs {
-    /// Read the config repo and generate RepoConfigs based on it
-    pub fn read_config_repo(
-        repo: BlobRepo,
-        changesetid: HgChangesetId,
-    ) -> Box<Future<Item = Self, Error = Error> + Send> {
-        Box::new(
-            repo.get_changeset_by_changesetid(&changesetid)
-                .and_then(move |changeset| {
-                    repo.get_manifest_by_nodeid(&changeset.manifestid().clone())
-                })
-                .chain_err("failed to get manifest from changeset")
-                .from_err()
-                .and_then(|manifest| Self::read_manifest(&manifest))
-                .chain_err("While reading config repo")
-                .from_err(),
-        )
+    /// Read repo configs
+    pub fn read_configs<P: AsRef<Path>>(config_path: P) -> Result<Self> {
+        let repos_dir = config_path.as_ref().join("repos");
+        if !repos_dir.is_dir() {
+            return Err(ErrorKind::InvalidFileStructure("expected 'repos' directory".into()).into());
+        }
+        let mut repo_configs = HashMap::new();
+        for entry in repos_dir.read_dir()? {
+            let entry = entry?;
+            let dir_path = entry.path();
+            if dir_path.is_dir() {
+                let (name, config) =
+                    RepoConfigs::read_single_repo_config(&dir_path, config_path.as_ref())
+                        .context(format!("while opening config for {:?} repo", dir_path))?;
+                repo_configs.insert(name, config);
+            }
+        }
+
+        Ok(Self {
+            metaconfig: MetaConfig {},
+            repos: repo_configs,
+        })
     }
 
-    /// Read the given manifest of metaconfig repo and yield the RepoConfigs for it
-    fn read_manifest<M>(manifest: &M) -> Box<Future<Item = Self, Error = Error> + Send>
-    where
-        M: Manifest,
-    {
-        Box::new(
-            vfs_from_manifest(manifest)
-                .from_err()
-                .and_then(|vfs| RepoConfigs::read_repos(vfs.into_node())),
-        )
-    }
+    fn read_single_repo_config(
+        repo_config_path: &Path,
+        config_root_path: &Path,
+    ) -> Result<(String, RepoConfig)> {
+        let reponame = repo_config_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .ok_or_else(|| {
+                let e: Error = ErrorKind::InvalidFileStructure(format!(
+                    "invalid repo path {:?}",
+                    repo_config_path
+                )).into();
+                e
+            })?;
+        let reponame = reponame.to_string();
 
-    fn read_repos(
-        root_node: VfsNode<ManifestVfsDir, ManifestVfsFile>,
-    ) -> Box<Future<Item = Self, Error = Error> + Send> {
-        Box::new(
-            finished(root_node.clone())
-                .and_then(|root_node| {
-                    let path = try_boxfuture!(MPath::new(b"repos"));
-                    VfsWalker::new(root_node, path).walk()
-                })
-                .and_then(|repos_node| match repos_node {
-                    VfsNode::File(_) => {
-                        bail_err!(ErrorKind::InvalidFileStructure("expected directory".into()))
+        let config_file = repo_config_path.join("server.toml");
+        if !config_file.is_file() {
+            return Err(ErrorKind::InvalidFileStructure(format!(
+                "expected file server.toml in {}",
+                repo_config_path.to_string_lossy()
+            )).into());
+        }
+
+        fn read_file(path: &Path) -> Result<Vec<u8>> {
+            let file = File::open(path).context(format!("while opening {:?}", path))?;
+            let mut buf_reader = BufReader::new(file);
+            let mut contents = vec![];
+            buf_reader
+                .read_to_end(&mut contents)
+                .context(format!("while reading {:?}", path))?;
+            Ok(contents)
+        }
+
+        let raw_config = toml::from_slice::<RawRepoConfig>(&read_file(&config_file)?)?;
+
+        let hooks = raw_config.hooks.clone();
+        // Easier to deal with empty vector than Option
+        let hooks = hooks.unwrap_or(Vec::new());
+
+        let mut all_hook_params = vec![];
+        for raw_hook_config in hooks {
+            let bypass = RepoConfigs::get_bypass(raw_hook_config.clone())?;
+            let hook_params = if raw_hook_config.name.starts_with("rust:") {
+                // No need to load lua code for rust hook
+                HookParams {
+                    name: raw_hook_config.name,
+                    code: None,
+                    hook_type: raw_hook_config.hook_type,
+                    bypass,
+                }
+            } else {
+                let path = raw_hook_config.path.clone();
+                let path = match path {
+                    Some(path) => path,
+                    None => {
+                        return Err(ErrorKind::MissingPath().into());
                     }
-                    VfsNode::Dir(dir) => Ok(dir),
-                })
-                .and_then(move |repos_dir| {
-                    let repodirs: Vec<_> = repos_dir.read().into_iter().cloned().collect();
-                    let repos_node = repos_dir.into_node();
-                    future::join_all(repodirs.into_iter().map(move |repodir| {
-                        Self::read_repo(root_node.clone(), repos_node.clone(), repodir)
-                    }))
-                })
-                .map(|repos| RepoConfigs {
-                    metaconfig: MetaConfig {},
-                    repos: repos.into_iter().collect(),
-                }),
-        )
-    }
+                };
+                let relative_prefix = "./";
+                let is_relative = path.starts_with(relative_prefix);
+                let path_adjusted = if is_relative {
+                    let s: String = path.chars().skip(relative_prefix.len()).collect();
+                    repo_config_path.join(s)
+                } else {
+                    config_root_path.join(path)
+                };
 
-    fn read_repo(
-        root_node: VfsNode<ManifestVfsDir, ManifestVfsFile>,
-        repos_dir: VfsNode<ManifestVfsDir, ManifestVfsFile>,
-        repo_dir: MPathElement,
-    ) -> Box<Future<Item = (String, RepoConfig), Error = Error> + Send> {
-        let repo_name = try_boxfuture!(str::from_utf8(repo_dir.as_bytes())).to_string();
+                let contents = read_file(&path_adjusted)
+                    .context(format!("while reading hook {:?}", path_adjusted))?;
+                let code = str::from_utf8(&contents)?;
+                let code = code.to_string();
+                HookParams {
+                    name: raw_hook_config.name,
+                    code: Some(code),
+                    hook_type: raw_hook_config.hook_type,
+                    bypass,
+                }
+            };
 
-        VfsWalker::new(repos_dir, repo_dir.into_iter().cloned())
-            .walk()
-            .from_err()
-            .and_then(|node| match node {
-                VfsNode::Dir(dir) => Ok(dir),
-                _ => Err(ErrorKind::InvalidFileStructure("expected directory".into()).into()),
-            })
-            .and_then(|repo_dir| {
-                RepoConfigs::read_file(
-                    repo_dir.clone().into_node(),
-                    try_boxfuture!(MPath::new(b"server.toml".to_vec())),
-                ).map(move |bytes| (bytes, repo_dir))
-                    .boxify()
-            })
-            .and_then(|(bytes, repo_dir)| {
-                let raw_config = try_boxfuture!(toml::from_slice::<RawRepoConfig>(bytes.as_ref()));
-                let hooks = raw_config.hooks.clone();
-                // Easier to deal with empty vector than Option
-                let hooks = hooks.unwrap_or(Vec::new());
-                future::join_all(hooks.into_iter().map(move |raw_hook_config| {
-                    let bypass = RepoConfigs::get_bypass(raw_hook_config.clone());
-                    if raw_hook_config.name.starts_with("rust:") {
-                        // No need to load lua code for rust hook
-                        match bypass {
-                            Ok(bypass) => finished(HookParams {
-                                name: raw_hook_config.name,
-                                code: None,
-                                hook_type: raw_hook_config.hook_type,
-                                bypass,
-                            }).boxify(),
-                            Err(e) => failed(e).boxify(),
-                        }
-                    } else {
-                        let path = raw_hook_config.path.clone();
-                        let path = match path {
-                            Some(path) => path,
-                            None => return failed(ErrorKind::MissingPath().into()).boxify(),
-                        };
-                        let relative_prefix = "./";
-                        let is_relative = path.starts_with(relative_prefix);
-                        let path_node;
-                        let path_adjusted;
-                        if is_relative {
-                            path_node = repo_dir.clone().into_node();
-                            path_adjusted = path.chars().skip(relative_prefix.len()).collect();
-                        } else {
-                            path_node = root_node.clone();
-                            path_adjusted = path;
-                        }
-                        RepoConfigs::read_file(
-                            path_node,
-                            try_boxfuture!(MPath::new(path_adjusted.as_bytes().to_vec())),
-                        ).and_then(|bytes| {
-                            let code = str::from_utf8(&bytes)?;
-                            let code = code.to_string();
-                            match bypass {
-                                Ok(bypass) => Ok(HookParams {
-                                    name: raw_hook_config.name,
-                                    code: Some(code),
-                                    hook_type: raw_hook_config.hook_type,
-                                    bypass,
-                                }),
-                                Err(e) => Err(e),
-                            }
-                        })
-                            .boxify()
-                    }
-                })).map(|hook_params| (raw_config, hook_params))
-                    .boxify()
-            })
-            .then(|res| match res {
-                Ok((raw_config, all_hook_params)) => Ok((
-                    repo_name,
-                    RepoConfigs::convert_conf(raw_config, all_hook_params)?,
-                )),
-                Err(e) => Err(e),
-            })
-            .boxify()
+            all_hook_params.push(hook_params);
+        }
+        Ok((
+            reponame,
+            RepoConfigs::convert_conf(raw_config, all_hook_params)?,
+        ))
     }
 
     fn get_bypass(raw_hook_config: RawHookConfig) -> Result<Option<HookBypass>> {
@@ -393,32 +352,6 @@ impl RepoConfigs {
         let bypass = bypass_commit_message.or(bypass_pushvar);
 
         Ok(bypass)
-    }
-
-    fn read_file(
-        file_dir: VfsNode<ManifestVfsDir, ManifestVfsFile>,
-        file_path: MPath,
-    ) -> impl Future<Item = Bytes, Error = Error> {
-        VfsWalker::new(file_dir, file_path.clone())
-            .collect()
-            .and_then(move |nodes| {
-                nodes
-                    .last()
-                    .cloned()
-                    .ok_or(ErrorKind::InvalidPath(file_path).into())
-            })
-            .and_then(|node| match node {
-                VfsNode::File(file) => Ok(file),
-                _ => Err(ErrorKind::InvalidFileStructure("expected file".into()).into()),
-            })
-            .and_then(|file| {
-                file.read()
-                    .map_err(|err| err.context("failed to read content of the file").into())
-            })
-            .and_then(|content| match content {
-                Content::File(FileContents::Bytes(bytes)) => Ok(bytes),
-                _ => Err(ErrorKind::InvalidFileStructure("expected file".into()).into()),
-            })
     }
 
     fn convert_conf(this: RawRepoConfig, hooks: Vec<HookParams>) -> Result<RepoConfig> {
@@ -621,7 +554,8 @@ mod test {
     use super::*;
 
     use mercurial_types::FileType;
-    use mercurial_types_mocks::manifest::MockManifest;
+    use std::fs::{create_dir_all, write};
+    use tempdir::TempDir;
 
     #[test]
     fn test_read_manifest() {
@@ -682,10 +616,17 @@ mod test {
             "repos/www/server.toml" => (FileType::Regular, www_content),
             "my_path/my_files" => (FileType::Regular, ""),
         };
-        let root_manifest = MockManifest::from_paths(paths).expect("manifest is valid");
-        let repoconfig = RepoConfigs::read_manifest(&root_manifest)
-            .wait()
-            .expect("failed to read config from manifest");
+
+        let tmp_dir = TempDir::new("mononoke_test_config").unwrap();
+
+        for (path, (_, content)) in paths.clone() {
+            let file_path = Path::new(path);
+            let dir = file_path.parent().unwrap();
+            create_dir_all(tmp_dir.path().join(dir)).unwrap();
+            write(tmp_dir.path().join(file_path), content).unwrap();
+        }
+
+        let repoconfig = RepoConfigs::read_configs(tmp_dir.path()).expect("failed to read configs");
 
         let mut repos = HashMap::new();
         repos.insert(
@@ -803,8 +744,17 @@ mod test {
             "common/hooks/hook1.lua" => (FileType::Regular, hook1_content),
             "repos/fbsource/server.toml" => (FileType::Regular, content),
         };
-        let root_manifest = MockManifest::from_paths(paths).expect("manifest is valid");
-        let res = RepoConfigs::read_manifest(&root_manifest).wait();
+
+        let tmp_dir = TempDir::new("mononoke_test_config").unwrap();
+
+        for (path, (_, content)) in paths {
+            let file_path = Path::new(path);
+            let dir = file_path.parent().unwrap();
+            create_dir_all(tmp_dir.path().join(dir)).unwrap();
+            write(tmp_dir.path().join(file_path), content).unwrap();
+        }
+
+        let res = RepoConfigs::read_configs(tmp_dir.path());
         assert!(res.is_err());
 
         // Incorrect bypass string
@@ -828,8 +778,17 @@ mod test {
             "common/hooks/hook1.lua" => (FileType::Regular, hook1_content),
             "repos/fbsource/server.toml" => (FileType::Regular, content),
         };
-        let root_manifest = MockManifest::from_paths(paths).expect("manifest is valid");
-        let res = RepoConfigs::read_manifest(&root_manifest).wait();
+
+        let tmp_dir = TempDir::new("mononoke_test_config").unwrap();
+
+        for (path, (_, content)) in paths {
+            let file_path = Path::new(path);
+            let dir = file_path.parent().unwrap();
+            create_dir_all(tmp_dir.path().join(dir)).unwrap();
+            write(tmp_dir.path().join(file_path), content).unwrap();
+        }
+
+        let res = RepoConfigs::read_configs(tmp_dir.path());
         assert!(res.is_err());
     }
 }

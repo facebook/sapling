@@ -43,7 +43,6 @@ extern crate tokio_timer;
 
 pub mod tailer;
 
-use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
 use context::CoreContext;
@@ -83,7 +82,7 @@ fn main() -> Result<()> {
     let repo_name = matches.value_of("repo_name").unwrap();
     let logger = setup_logger(&matches, repo_name.to_string());
     info!(logger, "Hook tailer is starting");
-    let configs = get_config(&logger, &matches)?;
+    let configs = get_config(&matches)?;
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = Bookmark::new(bookmark_name).unwrap();
     let err: Error = ErrorKind::NoSuchRepo(repo_name.into()).into();
@@ -309,38 +308,9 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
     )
 }
 
-fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
+fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     let crpath = PathBuf::from(matches.value_of("crpath").unwrap());
-    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-    let ctx = CoreContext::test_mock();
-    let config_repo = BlobRepo::new_rocksdb(
-        logger.new(o!["repo" => "Config repo"]),
-        &crpath,
-        RepositoryId::new(0),
-    )?;
-
-    let mut tokio_runtime = tokio::runtime::Runtime::new()?;
-
-    let changesetid = match matches.value_of("crbook") {
-        Some(book) => {
-            let book = bookmarks::Bookmark::new(book).expect("book must be ascii");
-            tokio_runtime
-                .block_on(config_repo.get_bookmark(ctx, &book))?
-                .expect("bookmark not found")
-        }
-        None => mercurial_types::nodehash::HgChangesetId::from_str(
-            matches
-                .value_of("crhash")
-                .expect("crhash and crbook are not specified"),
-        )?,
-    };
-
-    info!(
-        logger,
-        "Config repository will be read from commit: {}", changesetid
-    );
-
-    tokio_runtime.block_on(RepoConfigs::read_config_repo(config_repo, changesetid).from_err())
+    RepoConfigs::read_configs(crpath)
 }
 
 #[derive(Debug, Fail)]

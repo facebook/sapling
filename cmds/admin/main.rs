@@ -649,8 +649,7 @@ fn main() -> Result<()> {
                 .boxify()
         }
         (CONFIG_REPO, Some(sub_m)) => {
-            let ctx = CoreContext::test_mock();
-            config_repo::handle_command(sub_m, ctx, logger)
+            config_repo::handle_command(sub_m)
         }
         (BOOKMARKS, Some(sub_m)) => {
             args::init_cachelib(&matches);

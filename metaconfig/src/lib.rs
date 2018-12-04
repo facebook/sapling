@@ -16,13 +16,13 @@ extern crate bytes;
 extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
-extern crate futures_ext;
-#[macro_use]
 #[cfg(test)]
 extern crate maplit;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+#[cfg(test)]
+extern crate tempdir;
 extern crate toml;
 
 extern crate blobrepo;
@@ -31,7 +31,6 @@ extern crate mercurial_types;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
 extern crate mononoke_types;
-extern crate vfs;
 
 pub mod errors;
 pub mod repoconfig;

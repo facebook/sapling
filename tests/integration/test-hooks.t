@@ -1,7 +1,7 @@
   $ . $TESTDIR/library.sh
 
 setup configuration
-  $ setup_hg_config_repo
+  $ setup_mononoke_config
   $ cd "$TESTTMP/mononoke-config"
 
   $ cat >> repos/repo/server.toml <<CONFIG
@@ -44,7 +44,6 @@ setup configuration
   > CONFIG
   $ register_hook no_owners2_file_deletes_pushvars common/hooks/no_owners2_file_deletes_pushvars.lua PerChangeset "bypass_pushvar=\"ALLOW_DELETE_OWNERS=true\""
 
-  $ commit_and_blobimport_config_repo
   $ setup_common_hg_configs
   $ cd $TESTTMP
 

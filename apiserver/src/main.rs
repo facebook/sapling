@@ -64,18 +64,13 @@ mod from_string;
 mod middleware;
 mod thrift;
 
-use std::path::Path;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use bytes::Bytes;
 
 use actix_web::{server, App, HttpRequest, HttpResponse, Json, State, http::header};
-use blobrepo::BlobRepo;
-use bookmarks::Bookmark;
 use clap::Arg;
-use context::CoreContext;
-use failure::{err_msg, Result};
+use failure::Result;
 use futures::Future;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use panichandler::Fate;
@@ -85,8 +80,6 @@ use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use tokio::runtime::Runtime;
 
-use mercurial_types::RepositoryId;
-use mercurial_types::nodehash::HgChangesetId;
 use metaconfig::RepoConfigs;
 use scuba_ext::ScubaSampleBuilder;
 
@@ -288,40 +281,6 @@ fn setup_logger(debug: bool) -> Logger {
     )
 }
 
-fn create_config<P: AsRef<Path>>(
-    runtime: &mut tokio::runtime::Runtime,
-    logger: &Logger,
-    path: P,
-    bookmark: Option<&str>,
-    hash: Option<&str>,
-) -> Result<RepoConfigs> {
-    // TODO(T37478150, luk) This is not a test case, will be fixed in later diffs
-    let ctx = CoreContext::test_mock();
-    let config_repo = BlobRepo::new_rocksdb(
-        logger.new(o!["repo" => "Config repo"]),
-        path.as_ref(),
-        RepositoryId::new(0),
-    )?;
-
-    let changeset: HgChangesetId = bookmark
-        .ok_or_else(|| err_msg(""))
-        .and_then(|bookmark| {
-            let bookmark = Bookmark::new(bookmark)?;
-            runtime.block_on(config_repo.get_bookmark(ctx, &bookmark))
-        })
-        .and_then(|bookmark| bookmark.ok_or_else(|| err_msg("bookmark not found")))
-        .or_else(|e| {
-            hash.ok_or_else(|| format_err!("must provide either bookmark or hash ({})", e))
-                .and_then(|r| HgChangesetId::from_str(r))
-        })?;
-
-    info!(logger, "Reading config from commit: {:?}", changeset);
-
-    RepoConfigs::read_config_repo(config_repo, changeset)
-        .from_err()
-        .wait()
-}
-
 #[derive(Clone)]
 struct HttpServerState {
     mononoke: Arc<Mononoke>,
@@ -454,13 +413,7 @@ fn main() -> Result<()> {
     };
 
     let mut runtime = Runtime::new().expect("tokio runtime for blocking jobs");
-    let repo_configs = create_config(
-        &mut runtime,
-        &root_logger,
-        config_path,
-        matches.value_of("config-bookmark"),
-        matches.value_of("config-commit"),
-    )?;
+    let repo_configs = RepoConfigs::read_configs(config_path)?;
 
     let ssl_acceptor = if let Some(cert) = matches.value_of("ssl-certificate") {
         let cert = cert.to_string();

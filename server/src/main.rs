@@ -40,11 +40,9 @@ mod monitoring;
 
 use std::io;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use clap::{App, ArgMatches};
-use context::CoreContext;
 use failure::SlogKVError;
 use futures::Future;
 use slog::{Drain, Level, Logger};
@@ -52,8 +50,6 @@ use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use tokio::runtime::Runtime;
 
-use blobrepo::BlobRepo;
-use mercurial_types::RepositoryId;
 use metaconfig::RepoConfigs;
 
 mod errors {
@@ -120,42 +116,10 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
     )
 }
 
-fn get_config<'a>(
-    logger: &Logger,
-    matches: &ArgMatches<'a>,
-    runtime: &mut Runtime,
-) -> Result<RepoConfigs> {
+fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     // TODO: This needs to cope with blob repos, too
     let crpath = PathBuf::from(matches.value_of("crpath").unwrap());
-    // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
-    let ctx = CoreContext::test_mock();
-    let config_repo = BlobRepo::new_rocksdb(
-        logger.new(o!["repo" => "Config repo"]),
-        &crpath,
-        RepositoryId::new(0),
-    )?;
-
-    let changesetid = match matches.value_of("crbook") {
-        Some(book) => {
-            let book = bookmarks::Bookmark::new(book).expect("book must be ascii");
-            println!("Looking for bookmark {:?}", book);
-            runtime
-                .block_on(config_repo.get_bookmark(ctx, &book))?
-                .expect("bookmark not found")
-        }
-        None => mercurial_types::nodehash::HgChangesetId::from_str(
-            matches
-                .value_of("crhash")
-                .expect("crhash and crbook are not specified"),
-        )?,
-    };
-
-    info!(
-        logger,
-        "Config repository will be read from commit: {}", changesetid
-    );
-
-    runtime.block_on(RepoConfigs::read_config_repo(config_repo, changesetid).from_err())
+    RepoConfigs::read_configs(crpath)
 }
 
 fn main() {
@@ -174,7 +138,7 @@ fn main() {
 
         let mut runtime = Runtime::new()?;
 
-        let config = get_config(root_log, &matches, &mut runtime)?;
+        let config = get_config(&matches)?;
         let cert = matches.value_of("cert").unwrap().to_string();
         let private_key = matches.value_of("private_key").unwrap().to_string();
         let ca_pem = matches.value_of("ca_pem").unwrap().to_string();

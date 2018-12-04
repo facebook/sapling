@@ -1,7 +1,7 @@
   $ . $TESTDIR/library.sh
 
 setup configuration
-  $ setup_config_repo
+  $ setup_mononoke_config
   $ cd $TESTTMP
 
 setup common configuration

@@ -1,10 +1,10 @@
   $ . $TESTDIR/library.sh
 
 setup configuration
-  $ setup_config_repo
-  $ cd $TESTTMP
+  $ setup_mononoke_config
 
 setup repo
+  $ cd $TESTTMP
   $ hginit_treemanifest repo-hg
   $ cd repo-hg
   $ touch a

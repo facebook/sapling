@@ -2,6 +2,7 @@
 
 setup configuration
   $ setup_common_config
+  $ cd $TESTTMP
 
 setup repo
 
