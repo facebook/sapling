@@ -476,4 +476,4 @@ def debugwaitonprefetch(repo):
 
 
 def debugmononokeapi(ui, repo, **opts):
-    mononokeapi.health_check(ui)
+    mononokeapi.healthcheck(ui)

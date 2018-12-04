@@ -3,6 +3,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+"""client for the Mononoke API server
+
+Configs:
+    ``mononoke-api.enabled`` specifies whether the Mononoke API should be used for this repo
+    ``mononoke-api.host`` specifies the URI prefix of the Mononoke API server
+    ``mononoke-api.creds`` specifies a PEM file containing TLS credentials for the API server
+"""
+
 from __future__ import absolute_import
 
 from mercurial import error, registrar, util
@@ -18,7 +26,7 @@ configitem("mononoke-api", "host", default=None)
 configitem("mononoke-api", "creds", default=None)
 
 
-def get_client(ui):
+def getclient(ui):
     if not ui.configbool("mononoke-api", "enabled"):
         raise error.Abort(_("Mononoke API is not enabled for this repository"))
 
@@ -33,10 +41,10 @@ def get_client(ui):
     return PyMononokeClient(host, creds)
 
 
-def health_check(ui):
-    client = get_client(ui)
+def healthcheck(ui):
+    client = getclient(ui)
     try:
         client.health_check()
-        ui.write("success\n")
+        ui.write(_("success\n"))
     except RuntimeError as e:
         raise error.Abort(e)

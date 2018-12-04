@@ -8,8 +8,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 encoding = { path = "../../../lib/encoding" }
-failure = "*"
-http = "*"
+failure = "0.1.3"
+http = "0.1.13"
 mononokeapi = { path = "../../../lib/mononokeapi" }
 
 [dependencies.cpython]
