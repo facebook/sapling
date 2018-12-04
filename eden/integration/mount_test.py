@@ -9,6 +9,7 @@
 
 import os
 from typing import Set
+import unittest
 
 from .lib import testcase
 
@@ -91,3 +92,21 @@ class MountTest(testcase.EdenRepoTest):
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
         entries = sorted(os.listdir(self.mount))
         self.assertEqual([".eden", "adir", "bdir", "hello", "slink"], entries)
+
+    @unittest.skip("not passing yet")
+    def test_unmount_succeeds_while_file_handle_is_open(self) -> None:
+        fd = os.open(os.path.join(self.mount, "hello"), os.O_RDWR)
+        # This test will fail or time out if unmounting times out.
+        self.eden.run_cmd("unmount", self.mount)
+        # Surprisingly, os.close does not return an error when the mount has
+        # gone away.
+        os.close(fd)
+
+    @unittest.skip("not passing yet")
+    def test_unmount_succeeds_while_dir_handle_is_open(self) -> None:
+        fd = os.open(self.mount, 0)
+        # This test will fail or time out if unmounting times out.
+        self.eden.run_cmd("unmount", self.mount)
+        # Surprisingly, os.close does not return an error when the mount has
+        # gone away.
+        os.close(fd)
