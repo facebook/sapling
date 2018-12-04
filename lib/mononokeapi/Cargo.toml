@@ -3,7 +3,6 @@ name = "mononokeapi"
 version = "0.1.0"
 
 [dependencies]
-bytes = "0.4.10"
 failure = "0.1.3"
 futures = "0.1.25"
 http = "0.1.13"

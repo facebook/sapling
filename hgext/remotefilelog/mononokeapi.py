@@ -30,8 +30,6 @@ def get_client(ui):
     creds = ui.config("mononoke-api", "creds")
     if creds is not None:
         creds = util.expandpath(creds)
-    if creds is None:
-        raise error.Abort(_("No Mononoke API server TLS credentials configured"))
 
     return PyMononokeClient(host, creds)
 

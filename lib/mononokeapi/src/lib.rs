@@ -1,7 +1,6 @@
 // Copyright Facebook, Inc. 2018
 //! mononokeapi - A Mononoke API server client library for Mercurial
 
-extern crate bytes;
 #[macro_use]
 extern crate failure;
 extern crate futures;
@@ -16,10 +15,9 @@ extern crate tokio;
 #[cfg(test)]
 extern crate users;
 
-use bytes::Bytes;
 use failure::Error;
 use futures::{Future, Stream};
-use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
+use http::uri::{PathAndQuery, Uri};
 use hyper::{Body, Client};
 use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
@@ -43,20 +41,22 @@ mod paths {
 
 /// An HTTP client for the Mononoke API server.
 ///
-/// # Examples
-///
+/// # Example
 /// ```no_run
+/// extern crate http;
 /// extern crate mononokeapi;
+///
+/// use http::Uri;
 /// use mononokeapi::MononokeClient;
 ///
-/// let host = "mononoke-api.internal.tfbnw.net";
-/// let creds = "/var/facebook/credentials/user/x509/user.pem";
-/// let client = MononokeClient::new(host, creds).unwrap();
+/// let uri = Uri::from_static("https://mononoke-api.internal.tfbnw.net");
+/// let creds = Some("/var/facebook/credentials/user/x509/user.pem");
+/// let client = MononokeClient::new(uri, creds).unwrap();
 /// client.health_check().expect("health check failed");
 /// ```
 pub struct MononokeClient {
     client: Client<HttpsConnector<HttpConnector>, Body>,
-    hostport: Authority,
+    base_uri: Uri,
 }
 
 impl MononokeClient {
@@ -66,12 +66,13 @@ impl MononokeClient {
     /// via a proxy (e.g., through a VIP). As such, users must pass valid client credentials
     /// to the client constructor. (Specifically, a path to a PEM file containing the client
     /// certificate and private key.)
-    pub fn new(hostport: impl Into<Bytes>, client_creds: impl AsRef<Path>) -> Result<Self> {
-        let creds = read_credentials(client_creds)?;
-        Ok(Self {
-            client: build_client(creds)?,
-            hostport: Authority::from_shared(hostport.into())?,
-        })
+    pub fn new<P: AsRef<Path>>(base_uri: Uri, client_creds: Option<P>) -> Result<Self> {
+        let creds = match client_creds {
+            Some(path) => Some(read_credentials(path)?),
+            None => None,
+        };
+        let client = build_client(creds)?;
+        Ok(Self { client, base_uri })
     }
 
     /// Hit the API server's /health_check endpoint.
@@ -105,9 +106,7 @@ impl MononokeClient {
     /// Construct a URI using this client's configured hostport as the
     /// base URI. The scheme will always be HTTPS.
     fn build_uri(&self, path: &PathAndQuery) -> Result<Uri> {
-        let mut parts = Parts::default();
-        parts.scheme = Some(Scheme::HTTPS);
-        parts.authority = Some(self.hostport.clone());
+        let mut parts = self.base_uri.clone().into_parts();
         parts.path_and_query = Some(path.clone());
         Ok(Uri::from_parts(parts)?)
     }
@@ -135,10 +134,16 @@ fn read_credentials(path: impl AsRef<Path>) -> Result<Identity> {
     Ok(Identity::from_pkcs12(&pkcs12_der_bytes, &password)?)
 }
 
-/// Build a hyper::Client configured to support TLS mutual authentication, using
-/// the provided client identity (certificate + private key) as client credentials.
-fn build_client(client_id: Identity) -> Result<Client<HttpsConnector<HttpConnector>, Body>> {
-    let tls = TlsConnector::builder().identity(client_id).build()?;
+/// Build a hyper::Client that supports HTTPS. Optionally takes a client identity
+/// (certificate + private key) which, if provided, will be used for TLS mutual authentication.
+fn build_client(
+    client_id: Option<Identity>,
+) -> Result<Client<HttpsConnector<HttpConnector>, Body>> {
+    let mut builder = TlsConnector::builder();
+    if let Some(id) = client_id {
+        let _ = builder.identity(id);
+    }
+    let tls = builder.build()?;
 
     let num_dns_threads = 1;
     let mut http = HttpConnector::new(num_dns_threads);
@@ -156,7 +161,13 @@ mod tests {
 
     use std::path::PathBuf;
 
-    const HOST: &str = "mononoke-api.internal.tfbnw.net";
+    const HOST: &str = "https://mononoke-api.internal.tfbnw.net";
+
+    fn init_client() -> MononokeClient {
+        let uri = Uri::from_static(HOST);
+        let creds = Some(get_creds_path());
+        MononokeClient::new(uri, creds).expect("failed to initialize client")
+    }
 
     fn get_creds_path() -> PathBuf {
         let uid = get_current_uid();
@@ -173,7 +184,6 @@ mod tests {
     #[test]
     #[ignore] // Talks to production Mononoke; ignore by default.
     fn health_check() -> Result<()> {
-        let creds = get_creds_path();
-        MononokeClient::new(HOST, creds)?.health_check()
+        init_client().health_check()
     }
 }

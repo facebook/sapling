@@ -5,12 +5,14 @@
 extern crate cpython;
 extern crate encoding;
 extern crate failure;
+extern crate http;
 extern crate mononokeapi;
 
 mod errors;
 
 use cpython::{PyBytes, PyObject, PyResult};
 use encoding::local_bytes_to_path;
+use http::Uri;
 use mononokeapi::MononokeClient;
 
 use errors::IntoPyResult;
@@ -32,10 +34,13 @@ py_class!(class PyMononokeClient |py| {
     def __new__(
         _cls,
         host: &PyBytes,
-        creds: &PyBytes
+        creds: Option<&PyBytes> = None
     ) -> PyResult<PyMononokeClient> {
-        let host = host.data(py);
-        let creds = local_bytes_to_path(creds.data(py)).into_pyresult(py)?;
+        let host = Uri::from_shared(host.data(py).into()).into_pyresult(py)?;
+        let creds = match creds {
+            Some(path) => Some(local_bytes_to_path(path.data(py)).into_pyresult(py)?),
+            None => None,
+        };
         let client = MononokeClient::new(host, creds).into_pyresult(py)?;
         PyMononokeClient::create_instance(py, client)
     }
