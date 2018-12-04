@@ -1149,6 +1149,11 @@ def debugwaitonprefetch(ui, repo, **opts):
     return debugcommands.debugwaitonprefetch(repo)
 
 
+@command("debugmononokeapi", [], _("hg debugmononokeapi"))
+def debugmononokeapi(ui, repo, **opts):
+    return debugcommands.debugmononokeapi(ui, repo, **opts)
+
+
 def resolveprefetchopts(ui, opts):
     if not opts.get("rev"):
         revset = [".", "draft()"]

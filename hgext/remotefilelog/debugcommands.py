@@ -19,6 +19,7 @@ from . import (
     datapack,
     fileserverclient,
     historypack,
+    mononokeapi,
     shallowrepo,
     shallowutil,
 )
@@ -472,3 +473,7 @@ def debugwaitonprefetch(repo):
         _("prefetching in %s") % repo.origroot,
     ):
         pass
+
+
+def debugmononokeapi(ui, repo, **opts):
+    mononokeapi.health_check(ui)
