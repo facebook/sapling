@@ -9,6 +9,7 @@ members = [
     "indexedlog",
     "lz4-pyframe",
     "minibench",
+    "mononokeapi",
     "mpatch-sys",
     "mpatch",
     "pathmatcher",
