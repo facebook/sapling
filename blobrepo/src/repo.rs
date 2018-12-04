@@ -22,6 +22,7 @@ use futures::stream::{self, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
+use metaconfig::ManifoldArgs;
 use scribe::ScribeClient;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{Discard, Drain, Logger};
@@ -110,19 +111,6 @@ define_stats! {
 ///    memcache.
 /// 2. It ensures that all possible blobrepos use a prefix.
 pub type RepoBlobstore = PrefixBlobstore<Arc<Blobstore>>;
-
-/// Arguments for setting up a Manifold blobstore.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ManifoldArgs {
-    /// Bucket of the backing Manifold blobstore to connect to
-    pub bucket: String,
-    /// Prefix to be prepended to all the keys. In prod it should be ""
-    pub prefix: String,
-    /// Identifies the SQL database to connect to.
-    pub db_address: String,
-    /// If present, the number of shards to spread filenodes across
-    pub filenode_shards: Option<usize>,
-}
 
 pub struct BlobRepo {
     logger: Logger,

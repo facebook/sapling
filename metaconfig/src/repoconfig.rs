@@ -7,7 +7,6 @@
 //! Contains structures describing configuration of the entire repo. Those structures are
 //! deserialized from TOML files from metaconfig repo
 
-use blobrepo::ManifoldArgs;
 use bookmarks::Bookmark;
 use errors::*;
 use failure::ResultExt;
@@ -17,6 +16,19 @@ use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::str;
 use toml;
+
+/// Arguments for setting up a Manifold blobstore.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ManifoldArgs {
+    /// Bucket of the backing Manifold blobstore to connect to
+    pub bucket: String,
+    /// Prefix to be prepended to all the keys. In prod it should be ""
+    pub prefix: String,
+    /// Identifies the SQL database to connect to.
+    pub db_address: String,
+    /// If present, the number of shards to spread filenodes across
+    pub filenode_shards: Option<usize>,
+}
 
 /// Configuration of a single repository
 #[derive(Debug, Clone, Eq, PartialEq)]

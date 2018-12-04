@@ -25,7 +25,6 @@ extern crate serde_derive;
 extern crate tempdir;
 extern crate toml;
 
-extern crate blobrepo;
 extern crate mercurial;
 extern crate mercurial_types;
 #[cfg(test)]
@@ -35,7 +34,7 @@ extern crate mononoke_types;
 pub mod errors;
 pub mod repoconfig;
 
-pub use repoconfig::{CacheWarmupParams, LfsParams, PushrebaseParams, RepoConfigs, RepoReadOnly,
-                     RepoType};
+pub use repoconfig::{CacheWarmupParams, LfsParams, ManifoldArgs, PushrebaseParams, RepoConfigs,
+                     RepoReadOnly, RepoType};
 
 pub use errors::{Error, ErrorKind};

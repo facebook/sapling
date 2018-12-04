@@ -22,11 +22,10 @@ use sloggers::types::{Format, Severity, SourceLocation};
 use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
-use blobrepo::ManifoldArgs;
 use changesets::{SqlChangesets, SqlConstructors};
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
-use metaconfig::{RepoReadOnly, RepoType};
+use metaconfig::{ManifoldArgs, RepoReadOnly, RepoType};
 use repo_client::{open_blobrepo, MononokeRepo};
 
 const CACHE_ARGS: &[(&str, &str)] = &[

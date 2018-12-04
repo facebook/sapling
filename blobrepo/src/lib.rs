@@ -57,6 +57,7 @@ extern crate manifoldblob;
 extern crate maplit;
 extern crate mercurial;
 extern crate mercurial_types;
+extern crate metaconfig;
 extern crate mononoke_types;
 #[cfg(test)]
 extern crate mononoke_types_mocks;
@@ -95,8 +96,8 @@ pub use changeset_fetcher::ChangesetFetcher;
 pub use file::HgBlobEntry;
 pub use manifest::BlobManifest;
 pub use repo::{save_bonsai_changesets, BlobRepo, ChangesetMetadata, ContentBlobInfo,
-               ContentBlobMeta, CreateChangeset, ManifoldArgs, UploadHgFileContents,
-               UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
+               ContentBlobMeta, CreateChangeset, UploadHgFileContents, UploadHgFileEntry,
+               UploadHgNodeHash, UploadHgTreeEntry};
 pub use repo_commit::ChangesetHandle;
 // TODO: This is exported for testing - is this the right place for it?
 pub use repo_commit::compute_changed_files;
