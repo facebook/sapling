@@ -12,6 +12,7 @@ extern crate abomonation_derive;
 extern crate cachelib;
 #[macro_use]
 extern crate cloned;
+extern crate context;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate memcache;
@@ -30,6 +31,7 @@ extern crate mercurial_types;
 
 mod caching;
 
+use context::CoreContext;
 use failure::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath, RepositoryId};
@@ -113,12 +115,14 @@ impl Arbitrary for FilenodeInfo {
 pub trait Filenodes: Send + Sync {
     fn add_filenodes(
         &self,
+        ctx: CoreContext,
         info: BoxStream<FilenodeInfo, Error>,
         repo_id: &RepositoryId,
     ) -> BoxFuture<(), Error>;
 
     fn get_filenode(
         &self,
+        ctx: CoreContext,
         path: &RepoPath,
         filenode: &HgFileNodeId,
         repo_id: &RepositoryId,
@@ -126,6 +130,7 @@ pub trait Filenodes: Send + Sync {
 
     fn get_all_filenodes(
         &self,
+        ctx: CoreContext,
         path: &RepoPath,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error>;

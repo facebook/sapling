@@ -16,6 +16,7 @@ use futures::stream;
 use futures_ext::StreamExt;
 
 use super::repo::BlobRepo;
+use context::CoreContext;
 use filenodes::FilenodeInfo;
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 
@@ -67,6 +68,7 @@ impl IncompleteFilenodes {
 
     pub fn upload(
         &self,
+        ctx: CoreContext,
         cs_id: HgChangesetId,
         repo: &BlobRepo,
     ) -> impl Future<Item = HgChangesetId, Error = Error> + Send {
@@ -79,7 +81,7 @@ impl IncompleteFilenodes {
                 move |node_info| node_info.with_linknode(cs_id)
             });
         repo.get_filenodes()
-            .add_filenodes(stream::iter_ok(filenodes).boxify(), &repo.get_repoid())
+            .add_filenodes(ctx, stream::iter_ok(filenodes).boxify(), &repo.get_repoid())
             .map(move |_| cs_id)
     }
 }

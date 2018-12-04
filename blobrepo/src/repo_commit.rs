@@ -132,17 +132,20 @@ struct UploadEntriesState {
 
 #[derive(Clone)]
 pub struct UploadEntries {
+    ctx: CoreContext,
     scuba_logger: ScubaSampleBuilder,
     inner: Arc<Mutex<UploadEntriesState>>,
 }
 
 impl UploadEntries {
     pub fn new(
+        ctx: CoreContext,
         blobstore: RepoBlobstore,
         repoid: RepositoryId,
         scuba_logger: ScubaSampleBuilder,
     ) -> Self {
         Self {
+            ctx,
             scuba_logger,
             inner: Arc::new(Mutex::new(UploadEntriesState {
                 required_entries: HashMap::new(),
@@ -398,7 +401,7 @@ impl UploadEntries {
                 })).boxify();
 
             filenodes
-                .add_filenodes(filenodeinfos, &inner.repoid)
+                .add_filenodes(self.ctx.clone(), filenodeinfos, &inner.repoid)
                 .timed({
                     let mut scuba_logger = self.scuba_logger();
                     move |stats, result| {

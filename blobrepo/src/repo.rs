@@ -873,33 +873,39 @@ impl BlobRepo {
 
     pub fn get_linknode(
         &self,
+        ctx: CoreContext,
         path: &RepoPath,
         node: &HgNodeHash,
     ) -> BoxFuture<HgChangesetId, Error> {
         STATS::get_linknode.add_value(1);
-        self.get_filenode(path, node)
+        self.get_filenode(ctx, path, node)
             .map(|filenode| filenode.linknode)
             .boxify()
     }
 
     pub fn get_filenode(
         &self,
+        ctx: CoreContext,
         path: &RepoPath,
         node: &HgNodeHash,
     ) -> BoxFuture<FilenodeInfo, Error> {
         let path = path.clone();
         let node = HgFileNodeId::new(*node);
         self.filenodes
-            .get_filenode(&path, &node, &self.repoid)
+            .get_filenode(ctx, &path, &node, &self.repoid)
             .and_then({
                 move |filenode| filenode.ok_or(ErrorKind::MissingFilenode(path, node).into())
             })
             .boxify()
     }
 
-    pub fn get_all_filenodes(&self, path: RepoPath) -> BoxFuture<Vec<FilenodeInfo>, Error> {
+    pub fn get_all_filenodes(
+        &self,
+        ctx: CoreContext,
+        path: RepoPath,
+    ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
         STATS::get_all_filenodes.add_value(1);
-        self.filenodes.get_all_filenodes(&path, &self.repoid)
+        self.filenodes.get_all_filenodes(ctx, &path, &self.repoid)
     }
 
     pub fn get_bonsai_from_hg(
@@ -1477,8 +1483,8 @@ impl BlobRepo {
 
                                 cs.save(repo.blobstore.clone())
                                     .and_then({
-                                        cloned!(repo);
-                                        move |_| incomplete_filenodes.upload(cs_id, &repo)
+                                        cloned!(ctx, repo);
+                                        move |_| incomplete_filenodes.upload(ctx, cs_id, &repo)
                                     })
                                     .and_then({
                                         cloned!(ctx, repo);
@@ -2001,6 +2007,7 @@ impl CreateChangeset {
         scuba_logger.add("changeset_uuid", format!("{}", uuid));
 
         let entry_processor = UploadEntries::new(
+            ctx.clone(),
             repo.blobstore.clone(),
             repo.repoid.clone(),
             scuba_logger.clone(),

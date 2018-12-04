@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use cachelib::{get_cached_or_fill, LruCachePool};
+use context::CoreContext;
 use failure::{Error, Result};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
@@ -81,14 +82,16 @@ impl CachingFilenodes {
 impl Filenodes for CachingFilenodes {
     fn add_filenodes(
         &self,
+        ctx: CoreContext,
         info: BoxStream<FilenodeInfo, Error>,
         repo_id: &RepositoryId,
     ) -> BoxFuture<(), Error> {
-        self.filenodes.add_filenodes(info, repo_id)
+        self.filenodes.add_filenodes(ctx, info, repo_id)
     }
 
     fn get_filenode(
         &self,
+        ctx: CoreContext,
         path: &RepoPath,
         filenode_id: &HgFileNodeId,
         repo_id: &RepositoryId,
@@ -115,7 +118,7 @@ impl Filenodes for CachingFilenodes {
                 move |res| match res {
                     Ok(filenode) => future::ok(Some(filenode)).left_future(),
                     Err(()) => filenodes
-                        .get_filenode(&path, &filenode_id, &repo_id)
+                        .get_filenode(ctx, &path, &filenode_id, &repo_id)
                         .inspect(move |maybefilenode| {
                             if let Some(filenode) = maybefilenode {
                                 schedule_fill_single_filenode_memcache(
@@ -137,6 +140,7 @@ impl Filenodes for CachingFilenodes {
 
     fn get_all_filenodes(
         &self,
+        ctx: CoreContext,
         path: &RepoPath,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
@@ -161,7 +165,7 @@ impl Filenodes for CachingFilenodes {
             }
 
             filenodes
-                .get_all_filenodes(&path, &repo_id)
+                .get_all_filenodes(ctx, &path, &repo_id)
                 .inspect(move |all_filenodes| {
                     schedule_fill_all_filenodes_memcache(
                         all_filenodes,

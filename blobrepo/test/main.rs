@@ -219,6 +219,7 @@ test_both_repotypes!(
 );
 
 fn create_two_changesets(repo: BlobRepo) {
+    let ctx = CoreContext::test_mock();
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
     let utf_author: String = "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into();
@@ -275,7 +276,7 @@ fn create_two_changesets(repo: BlobRepo) {
     let expected_parents = (commit1_id.as_ref(), None);
     assert!(commit2.parents().get_nodes() == expected_parents);
 
-    let linknode = run_future(repo.get_linknode(&fake_file_path, &filehash)).unwrap();
+    let linknode = run_future(repo.get_linknode(ctx, &fake_file_path, &filehash)).unwrap();
     assert!(
         linknode == commit1.get_changeset_id(),
         "Bad linknode {} - should be {}",
@@ -421,6 +422,7 @@ test_both_repotypes!(
 );
 
 fn create_double_linknode(repo: BlobRepo) {
+    let ctx = CoreContext::test_mock();
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
 
@@ -463,7 +465,7 @@ fn create_double_linknode(repo: BlobRepo) {
     let parent = run_future(parent_commit.get_completed_changeset()).unwrap();
     let parent = &parent.1;
 
-    let linknode = run_future(repo.get_linknode(&fake_file_path, &filehash)).unwrap();
+    let linknode = run_future(repo.get_linknode(ctx, &fake_file_path, &filehash)).unwrap();
     assert!(
         linknode != child.get_changeset_id(),
         "Linknode on child commit = should be on parent"
@@ -482,6 +484,7 @@ test_both_repotypes!(
 );
 
 fn check_linknode_creation(repo: BlobRepo) {
+    let ctx = CoreContext::test_mock();
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
     let author: String = "author <author@fb.com>".into();
 
@@ -527,7 +530,7 @@ fn check_linknode_creation(repo: BlobRepo) {
     metadata.into_iter().for_each(|(hash, basename)| {
         let path = RepoPath::file(format!("dir/{}", basename).as_str())
             .expect("Can't generate fake RepoPath");
-        let linknode = run_future(repo.get_linknode(&path, &hash)).unwrap();
+        let linknode = run_future(repo.get_linknode(ctx.clone(), &path, &hash)).unwrap();
         assert!(
             linknode == cs_id,
             "Linknode is {}, should be {}",

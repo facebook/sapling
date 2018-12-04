@@ -380,11 +380,13 @@ impl RepoClient {
                 move |entry| used_hashes.insert(*entry.0.get_hash())
             })
             .map({
+                cloned!(self.ctx);
                 let blobrepo = self.repo.blobrepo().clone();
                 let trace = self.trace().clone();
                 let scuba_logger = self.scuba_logger(ops::GETTREEPACK, None);
                 move |(entry, basepath)| {
                     fetch_treepack_part_input(
+                        ctx.clone(),
                         &blobrepo,
                         entry,
                         basepath,
@@ -806,33 +808,37 @@ impl HgCommands for RepoClient {
                     param
                 }
             })
-            .map(move |(node, path)| {
-                let args = format!("node: {}, path: {}", node, path);
-                // Logs info about processing of a single file to scuba
-                let mut scuba_logger = this.scuba_logger(ops::GETFILES, Some(args));
+            .map({
+                cloned!(self.ctx);
+                move |(node, path)| {
+                    let args = format!("node: {}, path: {}", node, path);
+                    // Logs info about processing of a single file to scuba
+                    let mut scuba_logger = this.scuba_logger(ops::GETFILES, Some(args));
 
-                let repo = this.repo.clone();
-                create_remotefilelog_blob(
-                    Arc::new(repo.blobrepo().clone()),
-                    node,
-                    path.clone(),
-                    trace.clone(),
-                    repo.lfs_params().clone(),
-                    scuba_logger.clone(),
-                    validate_hash,
-                ).traced(
-                    this.trace(),
-                    ops::GETFILES,
-                    trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
-                )
-                    .timed(move |stats, _| {
-                        STATS::getfiles_ms
-                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                        scuba_logger
-                            .add_future_stats(&stats)
-                            .log_with_msg("Command processed", None);
-                        Ok(())
-                    })
+                    let repo = this.repo.clone();
+                    create_remotefilelog_blob(
+                        ctx.clone(),
+                        Arc::new(repo.blobrepo().clone()),
+                        node,
+                        path.clone(),
+                        trace.clone(),
+                        repo.lfs_params().clone(),
+                        scuba_logger.clone(),
+                        validate_hash,
+                    ).traced(
+                        this.trace(),
+                        ops::GETFILES,
+                        trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
+                    )
+                        .timed(move |stats, _| {
+                            STATS::getfiles_ms
+                                .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                            scuba_logger
+                                .add_future_stats(&stats)
+                                .log_with_msg("Command processed", None);
+                            Ok(())
+                        })
+                }
             })
             .buffered(getfiles_buffer_size)
             .timed(move |stats, _| {
@@ -966,6 +972,7 @@ fn get_changed_manifests_stream(
 }
 
 fn fetch_treepack_part_input(
+    ctx: CoreContext,
     repo: &BlobRepo,
     entry: Box<Entry + Sync>,
     basepath: Option<MPath>,
@@ -997,7 +1004,7 @@ fn fetch_treepack_part_input(
         ),
     );
 
-    let linknode_fut = repo.get_linknode(&repo_path, &entry.get_hash().into_nodehash())
+    let linknode_fut = repo.get_linknode(ctx, &repo_path, &entry.get_hash().into_nodehash())
         .traced(
             &trace,
             "fetching linknode",

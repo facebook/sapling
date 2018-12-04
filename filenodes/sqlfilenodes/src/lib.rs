@@ -9,6 +9,7 @@
 
 #[macro_use]
 extern crate cloned;
+extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -26,6 +27,7 @@ extern crate sql_ext;
 
 mod errors;
 
+use context::CoreContext;
 use failure::prelude::*;
 use futures::{Future, IntoFuture, Stream, future::join_all};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
@@ -197,6 +199,7 @@ impl SqlFilenodes {
 impl Filenodes for SqlFilenodes {
     fn add_filenodes(
         &self,
+        _ctx: CoreContext,
         filenodes: BoxStream<FilenodeInfo, Error>,
         repo_id: &RepositoryId,
     ) -> BoxFuture<(), Error> {
@@ -226,6 +229,7 @@ impl Filenodes for SqlFilenodes {
 
     fn get_filenode(
         &self,
+        _ctx: CoreContext,
         path: &RepoPath,
         filenode: &HgFileNodeId,
         repo_id: &RepositoryId,
@@ -247,6 +251,7 @@ impl Filenodes for SqlFilenodes {
 
     fn get_all_filenodes(
         &self,
+        _ctx: CoreContext,
         path: &RepoPath,
         repo_id: &RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {

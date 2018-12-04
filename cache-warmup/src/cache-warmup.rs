@@ -48,6 +48,7 @@ use failure::Error;
 // Fetches all the manifest entries and their linknodes. Do not fetching files because
 // there can be too many of them.
 fn blobstore_and_filenodes_warmup(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     revision: HgChangesetId,
     logger: Logger,
@@ -73,7 +74,7 @@ fn blobstore_and_filenodes_warmup(
                             Some(path) => RepoPath::DirectoryPath(path),
                             None => RepoPath::RootPath,
                         };
-                        repo.get_linknode(&path, &hash.into_nodehash())
+                        repo.get_linknode(ctx.clone(), &path, &hash.into_nodehash())
                     })
                     .buffered(buffer_size)
                     .for_each({
@@ -135,6 +136,7 @@ fn do_cache_warmup(
             move |bookmark_rev| match bookmark_rev {
                 Some(bookmark_rev) => {
                     let blobstore_warmup = spawn_future(blobstore_and_filenodes_warmup(
+                        ctx.clone(),
                         repo.clone(),
                         bookmark_rev,
                         logger.clone(),

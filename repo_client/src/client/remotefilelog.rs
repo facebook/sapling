@@ -16,6 +16,7 @@ use pylz4;
 use blobrepo::BlobRepo;
 use filenodes::FilenodeInfo;
 
+use context::CoreContext;
 use mercurial::file::File;
 use mercurial_types::{HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath,
                       RepoPath, RevFlags, NULL_HASH};
@@ -32,6 +33,7 @@ const METAKEYSIZE: &str = "s";
 /// Remotefilelog blob consists of file content in `node` revision and all the history
 /// of the file up to `node`
 pub fn create_remotefilelog_blob(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     node: HgNodeHash,
     path: MPath,
@@ -99,20 +101,21 @@ pub fn create_remotefilelog_blob(
     // Do bulk prefetch of the filenodes first. That saves lots of db roundtrips.
     // Prefetched filenodes are used as a cache. If filenode is not in the cache, then it will
     // be fetched again.
-    let prefetched_filenodes = repo.get_all_filenodes(RepoPath::FilePath(path.clone()))
-        .map(move |filenodes| {
-            filenodes
-                .into_iter()
-                .map(|filenode| (filenode.filenode.into_nodehash(), filenode))
-                .collect()
-        })
-        .traced(&trace, "prefetching file history", trace_args.clone());
+    let prefetched_filenodes =
+        repo.get_all_filenodes(ctx.clone(), RepoPath::FilePath(path.clone()))
+            .map(move |filenodes| {
+                filenodes
+                    .into_iter()
+                    .map(|filenode| (filenode.filenode.into_nodehash(), filenode))
+                    .collect()
+            })
+            .traced(&trace, "prefetching file history", trace_args.clone());
 
     let file_history_bytes = prefetched_filenodes
         .and_then({
-            cloned!(node, path, repo, trace_args, trace);
+            cloned!(ctx, node, path, repo, trace_args, trace);
             move |prefetched_filenodes| {
-                get_file_history(repo, node, path, prefetched_filenodes)
+                get_file_history(ctx, repo, node, path, prefetched_filenodes)
                     .collect()
                     .traced(&trace, "fetching non-prefetched history", trace_args)
             }
@@ -155,7 +158,7 @@ pub fn create_remotefilelog_blob(
         .traced(&trace, "fetching file history", trace_args);
 
     let validate_content = if validate_hash {
-        validate_content(repo.clone(), path, node, scuba_logger).left_future()
+        validate_content(ctx, repo.clone(), path, node, scuba_logger).left_future()
     } else {
         ok(()).right_future()
     };
@@ -175,6 +178,7 @@ pub fn create_remotefilelog_blob(
 }
 
 fn validate_content(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     path: MPath,
     actual: HgNodeHash,
@@ -182,7 +186,7 @@ fn validate_content(
 ) -> impl Future<Item = (), Error = Error> {
     let file_content = repo.get_file_content(&actual);
     let repopath = RepoPath::FilePath(path.clone());
-    let filenode = repo.get_filenode(&repopath, &actual);
+    let filenode = repo.get_filenode(ctx, &repopath, &actual);
 
     file_content
         .join(filenode)
@@ -220,6 +224,7 @@ fn validate_content(
 }
 
 fn get_file_history(
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
     startnode: HgNodeHash,
     path: MPath,
@@ -249,7 +254,7 @@ fn get_file_history(
             let fut = if let Some(filenode) = prefetched_history.get(&node) {
                 Either::A(Ok(filenode.clone()).into_future())
             } else {
-                Either::B(repo.get_filenode(&path, &node))
+                Either::B(repo.get_filenode(ctx.clone(), &path, &node))
             };
 
             let fut = fut.and_then(move |filenode| {

@@ -7,6 +7,7 @@
 #![feature(duration_as_u128)]
 
 extern crate clap;
+extern crate context;
 extern crate failure_ext as failure;
 extern crate filenodes;
 extern crate futures;
@@ -19,6 +20,7 @@ extern crate sql;
 extern crate sqlfilenodes;
 extern crate tokio;
 
+use context::CoreContext;
 use failure::prelude::*;
 use filenodes::Filenodes;
 use futures::future::{loop_fn, Future, Loop};
@@ -100,6 +102,7 @@ fn main() -> Result<()> {
     };
 
     let mut runtime = tokio::runtime::Runtime::new().expect("failed to create Runtime");
+    let ctx = CoreContext::test_mock();
 
     info!(root_log, "Waiting for MyRouter to be accessible...");
     runtime.block_on(sql::myrouter::wait_for_myrouter(myrouter_port, xdb_tier))?;
@@ -110,7 +113,12 @@ fn main() -> Result<()> {
 
     let fut = loop_fn((1, filenode_hash), move |(res, filenode_hash)| {
         filenodes
-            .get_filenode(&filename, &filenode_hash, &RepositoryId::new(0))
+            .get_filenode(
+                ctx.clone(),
+                &filename,
+                &filenode_hash,
+                &RepositoryId::new(0),
+            )
             .map(move |filenode| {
                 if Some(res) == depth {
                     return Loop::Break(res);
