@@ -284,7 +284,7 @@ class HgEditor(svnwrap.Editor):
         assert dir == "" or dir.endswith("/")
         mf = ctx.manifest()
         if isinstance(mf, cstore.treemanifest):
-            matcher = matchmod.match("", "/", pattern=[dir], default='path')
+            matcher = matchmod.match("", "/", patterns=[dir], default='path')
             for x in mf.walk(matcher):
                 yield x
         else:
