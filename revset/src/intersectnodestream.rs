@@ -166,9 +166,7 @@ impl Stream for IntersectNodeStream {
 mod test {
     use super::*;
     use BonsaiNodeStream;
-    use NodeStream;
     use SingleChangesetId;
-    use SingleNodeHash;
     use UnionNodeStream;
     use async_unit;
     use context::CoreContext;
@@ -176,11 +174,11 @@ mod test {
     use fixtures::unshared_merge_even;
     use fixtures::unshared_merge_uneven;
     use futures::executor::spawn;
-    use quickchecks::nodestreams_to_bonsai_nodestreams;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
     use tests::TestChangesetFetcher;
     use tests::assert_changesets_sequence;
+    use tests::get_single_bonsai_streams;
     use tests::string_to_bonsai;
     use tests::string_to_nodehash;
 
@@ -352,28 +350,17 @@ mod test {
             let hash2 = "3c15267ebf11807f3d772eb891272b911ec68759";
             let hash3 = "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157";
 
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(ctx.clone(), string_to_nodehash(hash1), &repo).boxed(),
-                SingleNodeHash::new(ctx.clone(), string_to_nodehash(hash2), &repo).boxed(),
-            ];
-
-            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
+            let inputs = get_single_bonsai_streams(ctx.clone(), &repo, &vec![hash1, hash2]);
+            let nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
 
             // This set has a different node sequence, so that we can demonstrate that we skip nodes
             // when they're not going to contribute.
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(ctx.clone(), string_to_nodehash(hash3), &repo).boxed(),
-                SingleNodeHash::new(ctx.clone(), string_to_nodehash(hash2), &repo).boxed(),
-                SingleNodeHash::new(ctx.clone(), string_to_nodehash(hash1), &repo).boxed(),
-            ];
+            let inputs = get_single_bonsai_streams(ctx.clone(), &repo, &[hash3, hash2, hash1]);
+            let nodestream2 =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
 
-            let nodestream2 = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
-
-            let inputs: Vec<Box<BonsaiNodeStream>> = nodestreams_to_bonsai_nodestreams(
-                ctx.clone(),
-                &repo,
-                vec![nodestream, nodestream2],
-            );
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![nodestream, nodestream2];
             let nodestream =
                 IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter())
                     .boxed();
@@ -485,62 +472,35 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Post-merge, merge, and both unshared branches
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("7fe9947f101acb4acf7d945e69f0d6ce76a81113"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("d592490c4386cdb3373dd93af04d563de199b2fb"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("33fb49d8a47b29290f5163e30b294339c89505a2"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
-                    &repo,
-                ).boxed(),
-            ];
-            let left_nodestream =
-                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
-
-            // Four commits from one branch
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
-                    &repo,
-                ).boxed(),
-            ];
-            let right_nodestream =
-                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
-
-            let inputs: Vec<Box<BonsaiNodeStream>> = nodestreams_to_bonsai_nodestreams(
+            let inputs = get_single_bonsai_streams(
                 ctx.clone(),
                 &repo,
-                vec![left_nodestream, right_nodestream],
+                &[
+                    "7fe9947f101acb4acf7d945e69f0d6ce76a81113",
+                    "d592490c4386cdb3373dd93af04d563de199b2fb",
+                    "33fb49d8a47b29290f5163e30b294339c89505a2",
+                    "03b0589d9788870817d03ce7b87516648ed5b33a",
+                ],
             );
+
+            let left_nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+
+            // Four commits from one branch
+            let inputs = get_single_bonsai_streams(
+                ctx.clone(),
+                &repo,
+                &[
+                    "03b0589d9788870817d03ce7b87516648ed5b33a",
+                    "2fa8b4ee6803a18db4649a3843a723ef1dfe852b",
+                    "0b94a2881dda90f0d64db5fae3ee5695a38e7c8f",
+                    "f61fdc0ddafd63503dcd8eed8994ec685bfc8941",
+                ],
+            );
+            let right_nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![left_nodestream, right_nodestream];
             let nodestream =
                 IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter());
 
@@ -568,62 +528,35 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Post-merge, merge, and both unshared branches
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("c10443fa4198c6abad76dc6c69c1417b2e821508)"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("a5ab070634ab9cbdfc92404b3ec648f7e29547bc)"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("64011f64aaf9c2ad2e674f57c033987da4016f51"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
-                    &repo,
-                ).boxed(),
-            ];
-            let left_nodestream =
-                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
-
-            // Four commits from one branch
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
-                    &repo,
-                ).boxed(),
-            ];
-            let right_nodestream =
-                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
-
-            let inputs: Vec<Box<BonsaiNodeStream>> = nodestreams_to_bonsai_nodestreams(
+            let inputs = get_single_bonsai_streams(
                 ctx.clone(),
                 &repo,
-                vec![left_nodestream, right_nodestream],
+                &[
+                    "c10443fa4198c6abad76dc6c69c1417b2e821508",
+                    "a5ab070634ab9cbdfc92404b3ec648f7e29547bc",
+                    "64011f64aaf9c2ad2e674f57c033987da4016f51",
+                    "03b0589d9788870817d03ce7b87516648ed5b33a",
+                ],
             );
+
+            let left_nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+
+            // Four commits from one branch
+            let inputs = get_single_bonsai_streams(
+                ctx.clone(),
+                &repo,
+                &[
+                    "03b0589d9788870817d03ce7b87516648ed5b33a",
+                    "2fa8b4ee6803a18db4649a3843a723ef1dfe852b",
+                    "0b94a2881dda90f0d64db5fae3ee5695a38e7c8f",
+                    "f61fdc0ddafd63503dcd8eed8994ec685bfc8941",
+                ],
+            );
+            let right_nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![left_nodestream, right_nodestream];
             let nodestream =
                 IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter())
                     .boxed();

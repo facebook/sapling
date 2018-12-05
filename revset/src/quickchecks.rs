@@ -121,6 +121,8 @@ impl RevsetSpec {
 
     pub fn as_revset(&self, ctx: CoreContext, repo: Arc<BlobRepo>) -> Box<NodeStream> {
         let mut output: Vec<Box<NodeStream>> = Vec::with_capacity(self.rp_entries.len());
+        let changeset_fetcher: Arc<ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new(repo.clone()));
         for entry in self.rp_entries.iter() {
             let next_node = ValidateNodeStream::new(
                 ctx.clone(),
@@ -137,8 +139,14 @@ impl RevsetSpec {
                     }
                     &RevsetEntry::Union(size) => {
                         let idx = output.len() - size;
-                        let inputs = output.split_off(idx);
-                        UnionNodeStream::new(ctx.clone(), &repo.clone(), inputs).boxed()
+                        let inputs = nodestreams_to_bonsai_nodestreams(
+                            ctx.clone(),
+                            &repo,
+                            output.split_off(idx),
+                        );
+                        let nodestream =
+                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs).boxed();
+                        bonsai_nodestream_to_nodestream(ctx.clone(), &repo, nodestream)
                     }
                     &RevsetEntry::Intersect(size) => {
                         let idx = output.len() - size;
@@ -409,7 +417,7 @@ fn hg_to_bonsai_changesetid(
         .unwrap()
 }
 
-fn bonsai_nodestream_to_nodestream(
+pub fn bonsai_nodestream_to_nodestream(
     ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     stream: Box<BonsaiNodeStream>,
@@ -472,28 +480,19 @@ macro_rules! ancestors_check {
                     let mut includes = vec![];
                     for i in hg_to_bonsai_changesetid(ctx.clone(), &repo, include.clone()) {
                         includes.push(
-                            bonsai_nodestream_to_nodestream(
-                                ctx.clone(),
-                                &repo,
-                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify()
-                            )
+                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify()
                         );
                     }
 
                     let mut excludes = vec![];
                     for i in hg_to_bonsai_changesetid(ctx.clone(), &repo, exclude.clone()) {
                         excludes.push(
-                            bonsai_nodestream_to_nodestream(
-                                ctx.clone(),
-                                &repo,
-                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify()
-                            )
+                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify()
                         );
                     }
-
-                    let includes = UnionNodeStream::new(ctx.clone(), &repo, includes).boxify();
-                    let excludes = UnionNodeStream::new(ctx.clone(), &repo, excludes).boxify();
-                    let expected = SetDifferenceNodeStream::new(ctx.clone(), &repo, includes, excludes);
+                    let includes = UnionNodeStream::new(ctx.clone(), &changeset_fetcher, includes).boxify();
+                    let excludes = UnionNodeStream::new(ctx.clone(), &changeset_fetcher,  excludes).boxify();
+                    let expected = SetDifferenceNodeStream::new(ctx.clone(), &repo, bonsai_nodestream_to_nodestream(ctx.clone(), &repo, includes), bonsai_nodestream_to_nodestream(ctx.clone(), &repo, excludes));
 
                     assert!(
                         match_streams(expected.boxify(), actual.boxify()),

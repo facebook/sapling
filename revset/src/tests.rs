@@ -4,7 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use BonsaiNodeStream;
 use NodeStream;
+use SingleChangesetId;
 use blobrepo::{BlobRepo, ChangesetFetcher};
 use context::CoreContext;
 use failure::{err_msg, Error};
@@ -17,10 +19,11 @@ use mononoke_types::{ChangesetId, Generation};
 use std::any::Any;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::str::FromStr;
 use std::sync::Arc;
 
-pub fn string_to_nodehash(hash: &'static str) -> HgNodeHash {
-    HgNodeHash::from_static_str(hash).expect("Can't turn string to HgNodeHash")
+pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
+    HgNodeHash::from_str(hash).expect("Can't turn string to HgNodeHash")
 }
 
 pub fn string_to_bonsai(ctx: CoreContext, repo: &Arc<BlobRepo>, s: &'static str) -> ChangesetId {
@@ -197,4 +200,15 @@ pub fn assert_changesets_sequence<I>(
         "Too many nodes received: {:?}",
         next_node.unwrap()
     );
+}
+
+pub fn get_single_bonsai_streams(
+    ctx: CoreContext,
+    repo: &Arc<BlobRepo>,
+    hashes: &[&str],
+) -> Vec<Box<BonsaiNodeStream>> {
+    hashes
+        .iter()
+        .map(|hash| SingleChangesetId::new(ctx.clone(), string_to_nodehash(hash), &repo).boxed())
+        .collect()
 }

@@ -4,13 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobrepo::BlobRepo;
+use blobrepo::ChangesetFetcher;
 use context::CoreContext;
 use futures::Async;
 use futures::Poll;
 use futures::stream::Stream;
-use mercurial_types::HgNodeHash;
-use mononoke_types::Generation;
+use mononoke_types::{ChangesetId, Generation};
 use std::boxed::Box;
 use std::collections::HashSet;
 use std::collections::hash_set::IntoIter;
@@ -20,36 +19,41 @@ use std::sync::Arc;
 
 use failure::Error;
 
-use NodeStream;
+use BonsaiNodeStream;
 use setcommon::*;
 
 pub struct UnionNodeStream {
-    inputs: Vec<(InputStream, Poll<Option<(HgNodeHash, Generation)>, Error>)>,
+    inputs: Vec<
+        (
+            BonsaiInputStream,
+            Poll<Option<(ChangesetId, Generation)>, Error>,
+        ),
+    >,
     current_generation: Option<Generation>,
-    accumulator: HashSet<HgNodeHash>,
-    drain: Option<IntoIter<HgNodeHash>>,
+    accumulator: HashSet<ChangesetId>,
+    drain: Option<IntoIter<ChangesetId>>,
 }
 
 impl UnionNodeStream {
-    pub fn new<I>(ctx: CoreContext, repo: &Arc<BlobRepo>, inputs: I) -> Self
+    pub fn new<I>(ctx: CoreContext, changeset_fetcher: &Arc<ChangesetFetcher>, inputs: I) -> Self
     where
-        I: IntoIterator<Item = Box<NodeStream>>,
+        I: IntoIterator<Item = Box<BonsaiNodeStream>>,
     {
-        let hash_and_gen = inputs.into_iter().map(move |i| {
+        let csid_and_gen = inputs.into_iter().map(move |i| {
             (
-                add_generations(ctx.clone(), i, repo.clone()),
+                add_generations_by_bonsai(ctx.clone(), i, changeset_fetcher.clone()),
                 Ok(Async::NotReady),
             )
         });
-        UnionNodeStream {
-            inputs: hash_and_gen.collect(),
+        Self {
+            inputs: csid_and_gen.collect(),
             current_generation: None,
             accumulator: HashSet::new(),
             drain: None,
         }
     }
 
-    pub fn boxed(self) -> Box<NodeStream> {
+    pub fn boxed(self) -> Box<BonsaiNodeStream> {
         Box::new(self)
     }
 
@@ -77,24 +81,24 @@ impl UnionNodeStream {
     }
 
     fn accumulate_nodes(&mut self) {
-        let mut found_hashes = false;
+        let mut found_csids = false;
         for &mut (_, ref mut state) in self.inputs.iter_mut() {
-            if let Ok(Async::Ready(Some((hash, gen_id)))) = *state {
+            if let Ok(Async::Ready(Some((csid, gen_id)))) = *state {
                 if Some(gen_id) == self.current_generation {
-                    found_hashes = true;
-                    self.accumulator.insert(hash);
+                    found_csids = true;
+                    self.accumulator.insert(csid);
                     *state = Ok(Async::NotReady);
                 }
             }
         }
-        if !found_hashes {
+        if !found_csids {
             self.current_generation = None;
         }
     }
 }
 
 impl Stream for UnionNodeStream {
-    type Item = HgNodeHash;
+    type Item = ChangesetId;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -151,7 +155,7 @@ impl Stream for UnionNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use {NodeStream, SingleNodeHash};
+    use {BonsaiNodeStream, SingleChangesetId};
     use async_unit;
     use context::CoreContext;
     use errors::ErrorKind;
@@ -159,23 +163,31 @@ mod test {
     use futures::executor::spawn;
     use setcommon::{NotReadyEmptyStream, RepoErrorStream};
     use std::sync::Arc;
-    use tests::assert_node_sequence;
-    use tests::string_to_nodehash;
+    use tests::{string_to_bonsai, string_to_nodehash};
+    use tests::TestChangesetFetcher;
+    use tests::assert_changesets_sequence;
+    use tests::get_single_bonsai_streams;
 
     #[test]
     fn union_identical_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
-                SingleNodeHash::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
+            let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
+            let head_hash = string_to_nodehash(hash);
+            let head_csid = string_to_bonsai(ctx.clone(), &repo, hash);
+
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+                SingleChangesetId::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
+                SingleChangesetId::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
+            let nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
 
-            assert_node_sequence(ctx, &repo, vec![head_hash.clone()], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![head_csid.clone()], nodestream);
         });
     }
 
@@ -184,18 +196,26 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
-            let inputs: Vec<Box<NodeStream>> = vec![
-                Box::new(RepoErrorStream { item: nodehash }),
-                SingleNodeHash::new(ctx.clone(), nodehash.clone(), &repo).boxed(),
+            let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
+            let nodehash = string_to_nodehash(hash);
+            let expected_csid = string_to_bonsai(ctx.clone(), &repo, hash);
+
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+                Box::new(RepoErrorStream {
+                    item: expected_csid,
+                }),
+                SingleChangesetId::new(ctx.clone(), nodehash.clone(), &repo).boxed(),
             ];
-            let mut nodestream =
-                spawn(UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed());
+            let mut nodestream = spawn(
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed(),
+            );
 
             match nodestream.wait_stream() {
                 Some(Err(err)) => match err_downcast!(err, err: ErrorKind => err) {
-                    Ok(ErrorKind::RepoNodeError(hash)) => assert_eq!(hash, nodehash),
+                    Ok(ErrorKind::RepoChangesetError(cs)) => assert_eq!(cs, expected_csid),
                     Ok(bad) => panic!("unexpected error {:?}", bad),
                     Err(bad) => panic!("unknown error {:?}", bad),
                 },
@@ -210,35 +230,50 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Note that these are *not* in generation order deliberately.
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                     &repo,
                 ).boxed(),
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                     &repo,
                 ).boxed(),
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
+            let nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
 
             // But, once I hit the asserts, I expect them in generation order.
-            assert_node_sequence(
-                ctx,
+            assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
-                    string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
-                    string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                    string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "3c15267ebf11807f3d772eb891272b911ec68759",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "d0a361e9022d226ae52f689667bd7d212a19cfe0",
+                    ),
                 ],
                 nodestream,
             );
@@ -250,10 +285,13 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let inputs: Vec<Box<NodeStream>> = vec![];
-            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
-            assert_node_sequence(ctx, &repo, vec![], nodestream);
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![];
+            let nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
     }
 
@@ -262,40 +300,56 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Note that these are *not* in generation order deliberately.
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                     &repo,
                 ).boxed(),
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                     &repo,
                 ).boxed(),
             ];
 
-            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
+            let nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
 
-            let inputs: Vec<Box<NodeStream>> = vec![
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
                 nodestream,
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
+            let nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
 
-            assert_node_sequence(
-                ctx,
+            assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
-                    string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
-                    string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                    string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "3c15267ebf11807f3d772eb891272b911ec68759",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "d0a361e9022d226ae52f689667bd7d212a19cfe0",
+                    ),
                 ],
                 nodestream,
             );
@@ -309,9 +363,13 @@ mod test {
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
-            let inputs: Vec<Box<NodeStream>> = vec![Box::new(NotReadyEmptyStream::new(repeats))];
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
+
+            let inputs: Vec<Box<BonsaiNodeStream>> =
+                vec![Box::new(NotReadyEmptyStream::new(repeats))];
             let mut nodestream =
-                UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
 
             // Keep polling until we should be done.
             for _ in 0..repeats + 1 {
@@ -333,34 +391,48 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(branch_even::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Two nodes should share the same generation number
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                     &repo,
                 ).boxed(),
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
                     &repo,
                 ).boxed(),
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
-
-            assert_node_sequence(
-                ctx,
+            let nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+            assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                    string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "3cda5c78aa35f0f5b09780d971197b51cad4613a",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "d7542c9db7f4c77dab4b315edd328edf1514952f",
+                    ),
                 ],
                 nodestream,
             );
@@ -372,46 +444,69 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(branch_uneven::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Two nodes should share the same generation number
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(
+            let inputs: Vec<Box<BonsaiNodeStream>> = vec![
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                     &repo,
                 ).boxed(),
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
                     &repo,
                 ).boxed(),
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                     &repo,
                 ).boxed(),
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
                     &repo,
                 ).boxed(),
-                SingleNodeHash::new(
+                SingleChangesetId::new(
                     ctx.clone(),
                     string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
                     &repo,
                 ).boxed(),
             ];
-            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
+            let nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
 
-            assert_node_sequence(
-                ctx,
+            assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
-                    string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
-                    string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
-                    string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "264f01429683b3dd8042cb3979e8bf37007118bc",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "bc7b4d0f858c19e2474b03e442b8495fd7aeef33",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "3cda5c78aa35f0f5b09780d971197b51cad4613a",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "d7542c9db7f4c77dab4b315edd328edf1514952f",
+                    ),
                 ],
                 nodestream,
             );
@@ -423,40 +518,47 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(branch_wide::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             // Two nodes should share the same generation number
-            let inputs: Vec<Box<NodeStream>> = vec![
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("4685e9e62e4885d477ead6964a7600c750e39b03"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12"),
-                    &repo,
-                ).boxed(),
-                SingleNodeHash::new(
-                    ctx.clone(),
-                    string_to_nodehash("9e8521affb7f9d10e9551a99c526e69909042b20"),
-                    &repo,
-                ).boxed(),
-            ];
-            let nodestream = UnionNodeStream::new(ctx.clone(), &repo, inputs.into_iter()).boxed();
+            let inputs = get_single_bonsai_streams(
+                ctx.clone(),
+                &repo,
+                &[
+                    "49f53ab171171b3180e125b918bd1cf0af7e5449",
+                    "4685e9e62e4885d477ead6964a7600c750e39b03",
+                    "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12",
+                    "9e8521affb7f9d10e9551a99c526e69909042b20",
+                ],
+            );
+            let nodestream =
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
 
-            assert_node_sequence(
-                ctx,
+            assert_changesets_sequence(
+                ctx.clone(),
                 &repo,
                 vec![
-                    string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449"),
-                    string_to_nodehash("c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12"),
-                    string_to_nodehash("4685e9e62e4885d477ead6964a7600c750e39b03"),
-                    string_to_nodehash("9e8521affb7f9d10e9551a99c526e69909042b20"),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "49f53ab171171b3180e125b918bd1cf0af7e5449",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "4685e9e62e4885d477ead6964a7600c750e39b03",
+                    ),
+                    string_to_bonsai(
+                        ctx.clone(),
+                        &repo,
+                        "9e8521affb7f9d10e9551a99c526e69909042b20",
+                    ),
                 ],
                 nodestream,
             );
