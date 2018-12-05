@@ -20,7 +20,7 @@ the script is responsible for creating the `.hg` directory in the root of the
 Eden mount. It will receive the following arguments:
 
 ```
-/etc/eden/hooks/hg/post-clone <repo_type> <eden_checkout> <repo>
+/etc/eden/hooks/post-clone <repo_type> <eden_checkout> <repo>
 ```
 
 * `<repo_type>` is `hg` or `git`
