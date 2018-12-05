@@ -18,6 +18,7 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 class StatusTest(EdenHgTestCase):
     def populate_backing_repo(self, repo: HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
+        repo.write_file("subdir/file.txt", "contents")
         repo.commit("Initial commit.")
 
     def test_status(self) -> None:
@@ -69,6 +70,29 @@ class StatusTest(EdenHgTestCase):
         self.write_file("dir1/a.txt", "original contents\n")
         self.repo.commit("revert a.txt")
         self.assert_status_empty()
+
+    def test_truncation_upon_open_modifies_file(self) -> None:
+        fd = os.open(os.path.join(self.mount, "subdir/file.txt"), os.O_TRUNC)
+        try:
+            self.assert_status({"subdir/file.txt": "M"})
+        finally:
+            os.close(fd)
+
+    def test_truncation_after_open_modifies_file(self) -> None:
+        fd = os.open(os.path.join(self.mount, "subdir/file.txt"), os.O_WRONLY)
+        try:
+            os.ftruncate(fd, 0)
+            self.assert_status({"subdir/file.txt": "M"})
+        finally:
+            os.close(fd)
+
+    def test_partial_truncation_after_open_modifies_file(self) -> None:
+        fd = os.open(os.path.join(self.mount, "subdir/file.txt"), os.O_WRONLY)
+        try:
+            os.ftruncate(fd, 1)
+            self.assert_status({"subdir/file.txt": "M"})
+        finally:
+            os.close(fd)
 
 
 # Define a separate TestCase class purely to test with different initial

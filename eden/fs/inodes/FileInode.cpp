@@ -579,6 +579,7 @@ folly::Future<Dispatcher::Attr> FileInode::setattr(
     if (attr.valid & FATTR_SIZE) {
       checkUnixError(
           ftruncate(state->file.fd(), attr.size + Overlay::kHeaderLength));
+      state->sha1Valid = false;
     }
 
     auto metadata = self->getMount()->getInodeMetadataTable()->modifyOrThrow(
