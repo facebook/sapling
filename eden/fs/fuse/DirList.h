@@ -25,6 +25,13 @@ class DirList {
   char* cur_;
 
  public:
+  struct ExtractedEntry {
+    std::string name;
+    ino_t inode;
+    dtype_t type;
+    off_t offset;
+  };
+
   explicit DirList(size_t maxSize);
 
   DirList(const DirList&) = delete;
@@ -38,13 +45,13 @@ class DirList {
    */
   bool add(folly::StringPiece name, ino_t inode, dtype_t type, off_t off);
 
-  /**
-   * Variant of add() which takes a struct stat.
-   * Only st.st_ino and st.st_mode need be filled out.
-   */
-  bool add(folly::StringPiece name, const struct stat& st, off_t off);
-
   folly::StringPiece getBuf() const;
+
+  /**
+   * Helper function that parses an accumulated buffer back into its constituent
+   * parts.
+   */
+  std::vector<ExtractedEntry> extract() const;
 };
 
 } // namespace eden

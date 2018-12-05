@@ -10,8 +10,11 @@
 #include "eden/fs/inodes/TreeInode.h"
 
 #include <gtest/gtest.h>
+#include "eden/fs/fuse/DirList.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/testharness/FakeTreeBuilder.h"
+#include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
 
@@ -64,4 +67,85 @@ TEST(TreeInode, findEntryDifferencesWithOneAddition) {
   auto differences = findEntryDifferences(dir, tree);
   EXPECT_TRUE(differences);
   EXPECT_EQ((std::vector<std::string>{"+ three"}), *differences);
+}
+
+TEST(TreeInode, readdirReturnsSelfAndParentBeforeEntries) {
+  // libfuse's documentation says returning . and .. is optional, but the FUSE
+  // kernel module does not synthesize them, so not returning . and .. would be
+  // a visible behavior change relative to a native filesystem.
+  FakeTreeBuilder builder;
+  builder.setFiles({{"file", ""}});
+  TestMount mount{builder};
+
+  auto root = mount.getEdenMount()->getRootInode();
+  auto result = root->readdir(DirList{4096}, 0).extract();
+
+  ASSERT_EQ(4, result.size());
+  EXPECT_EQ(".", result[0].name);
+  EXPECT_EQ("..", result[1].name);
+  EXPECT_EQ(".eden", result[2].name);
+  EXPECT_EQ("file", result[3].name);
+}
+
+TEST(TreeInode, readdirOffsetsAreNonzero) {
+  // readdir's offset parameter means "start here". 0 means start from the
+  // beginning. To start after a particular entry, the offset given must be that
+  // entry's offset. Therefore, no entries should have offset 0.
+  FakeTreeBuilder builder;
+  builder.setFiles({{"file", ""}});
+  TestMount mount{builder};
+
+  auto root = mount.getEdenMount()->getRootInode();
+  auto result = root->readdir(DirList{4096}, 0).extract();
+  ASSERT_EQ(4, result.size());
+  for (auto& entry : result) {
+    EXPECT_NE(0, entry.offset);
+  }
+}
+
+TEST(TreeInode, readdirRespectsOffset) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"file", ""}});
+  TestMount mount{builder};
+
+  auto root = mount.getEdenMount()->getRootInode();
+
+  const auto resultA = root->readdir(DirList{4096}, 0).extract();
+  ASSERT_EQ(4, resultA.size());
+  EXPECT_EQ(".", resultA[0].name);
+  EXPECT_EQ("..", resultA[1].name);
+  EXPECT_EQ(".eden", resultA[2].name);
+  EXPECT_EQ("file", resultA[3].name);
+
+  const auto resultB =
+      root->readdir(DirList{4096}, resultA[0].offset).extract();
+  ASSERT_EQ(3, resultB.size());
+  EXPECT_EQ("..", resultB[0].name);
+  EXPECT_EQ(".eden", resultB[1].name);
+  EXPECT_EQ("file", resultB[2].name);
+
+  const auto resultC =
+      root->readdir(DirList{4096}, resultB[0].offset).extract();
+  ASSERT_EQ(2, resultC.size());
+  EXPECT_EQ(".eden", resultC[0].name);
+  EXPECT_EQ("file", resultC[1].name);
+
+  const auto resultD =
+      root->readdir(DirList{4096}, resultC[0].offset).extract();
+  ASSERT_EQ(1, resultD.size());
+  EXPECT_EQ("file", resultD[0].name);
+
+  const auto resultE =
+      root->readdir(DirList{4096}, resultD[0].offset).extract();
+  EXPECT_EQ(0, resultE.size());
+}
+
+TEST(TreeInode, readdirIgnoresWildOffsets) {
+  FakeTreeBuilder builder;
+  TestMount mount{builder};
+
+  auto root = mount.getEdenMount()->getRootInode();
+
+  auto result = root->readdir(DirList{4096}, 0xfaceb00c).extract();
+  EXPECT_EQ(0, result.size());
 }

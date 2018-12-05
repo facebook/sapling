@@ -43,12 +43,25 @@ bool DirList::add(StringPiece name, ino_t inode, dtype_t type, off_t off) {
   return true;
 }
 
-bool DirList::add(StringPiece name, const struct stat& st, off_t off) {
-  return add(name, st.st_ino, mode_to_dtype(st.st_mode), off);
-}
-
 StringPiece DirList::getBuf() const {
   return StringPiece(buf_.get(), cur_ - buf_.get());
+}
+
+std::vector<DirList::ExtractedEntry> DirList::extract() const {
+  std::vector<DirList::ExtractedEntry> result;
+
+  char* p = buf_.get();
+  while (p != cur_) {
+    auto entry = reinterpret_cast<fuse_dirent*>(p);
+    result.emplace_back(
+        ExtractedEntry{std::string{entry->name, entry->name + entry->namelen},
+                       entry->ino,
+                       static_cast<dtype_t>(entry->type),
+                       static_cast<off_t>(entry->off)});
+
+    p += FUSE_DIRENT_ALIGN(FUSE_NAME_OFFSET + entry->namelen);
+  }
+  return result;
 }
 
 } // namespace eden
