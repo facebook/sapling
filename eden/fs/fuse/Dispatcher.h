@@ -33,6 +33,7 @@ namespace eden {
     folly::throwSystemErrorExplicit(ENOSYS, __PRETTY_FUNCTION__);       \
   } while (0)
 
+class DirList;
 class Dispatcher;
 class EdenStats;
 class EdenStatsTag;
@@ -328,6 +329,15 @@ class Dispatcher {
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsyncdir(
       InodeNumber ino,
       bool datasync);
+
+  /**
+   * Read directory.
+   *
+   * Send a DirList filled using DirList::add().
+   * Send an empty DirList on end of stream.
+   */
+  virtual folly::Future<DirList>
+  readdir(InodeNumber ino, DirList&& dirList, off_t offset);
 
   /**
    * Get file system statistics

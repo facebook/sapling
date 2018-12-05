@@ -17,13 +17,6 @@ class DirList;
 
 class DirHandle : public FileHandleBase {
  public:
-  /**
-   * Read directory
-   *
-   * Send a DirList filled using DirList::add().
-   * Send an empty DirList on end of stream.
-   */
-  virtual folly::Future<DirList> readdir(DirList&& list, off_t off) = 0;
 };
 
 } // namespace eden

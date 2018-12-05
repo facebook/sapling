@@ -22,9 +22,6 @@ namespace {
 
 class FakeDirHandle : public DirHandle {
  public:
-  folly::Future<DirList> readdir(DirList&& /*list*/, off_t /*off*/) override {
-    throw std::runtime_error("fake!");
-  }
 };
 
 class FakeFileHandle : public FileHandle {

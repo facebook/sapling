@@ -179,6 +179,10 @@ folly::Future<folly::Unit> Dispatcher::fsyncdir(InodeNumber, bool) {
   FUSELL_NOT_IMPL();
 }
 
+folly::Future<DirList> Dispatcher::readdir(InodeNumber, DirList&&, off_t) {
+  FUSELL_NOT_IMPL();
+}
+
 folly::Future<struct fuse_kstatfs> Dispatcher::statfs(InodeNumber /*ino*/) {
   struct fuse_kstatfs info = {};
 

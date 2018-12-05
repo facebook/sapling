@@ -18,8 +18,6 @@ class TreeInodeDirHandle : public DirHandle {
  public:
   explicit TreeInodeDirHandle(TreeInodePtr inode);
 
-  folly::Future<DirList> readdir(DirList&& list, off_t off) override;
-
  private:
   TreeInodePtr inode_;
 };

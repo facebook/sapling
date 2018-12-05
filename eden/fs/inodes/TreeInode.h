@@ -21,6 +21,7 @@ namespace eden {
 class CheckoutAction;
 class CheckoutContext;
 class DiffContext;
+class DirList;
 class EdenFileHandle;
 class EdenMount;
 class GitIgnoreStack;
@@ -154,6 +155,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       TreeInodePtr newParent,
       PathComponentPiece newName);
+
+  DirList readdir(DirList&& list, off_t off);
 
   const folly::Synchronized<TreeInodeState>& getContents() const {
     return contents_;

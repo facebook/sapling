@@ -100,6 +100,9 @@ class EdenDispatcher : public Dispatcher {
       bool datasync);
 #endif
 
+  folly::Future<DirList>
+  readdir(InodeNumber ino, DirList&& dirList, off_t offset) override;
+
   folly::Future<std::string> getxattr(InodeNumber ino, folly::StringPiece name)
       override;
   folly::Future<std::vector<std::string>> listxattr(InodeNumber ino) override;

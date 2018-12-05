@@ -1674,15 +1674,15 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReadDir(
-    const fuse_in_header* /*header*/,
+    const fuse_in_header* header,
     const uint8_t* arg) {
   auto read = reinterpret_cast<const fuse_read_in*>(arg);
   XLOG(DBG7) << "FUSE_READDIR";
-  const auto dh = dispatcher_->getDirHandle(read->fh);
-  return dh->readdir(DirList(read->size), read->offset)
+  auto ino = InodeNumber{header->nodeid};
+  return dispatcher_->readdir(ino, DirList{read->size}, read->offset)
       .thenValue([](DirList&& list) {
         const auto buf = list.getBuf();
-        RequestData::get().sendReply(StringPiece(buf));
+        RequestData::get().sendReply(StringPiece{buf});
       });
 }
 

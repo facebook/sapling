@@ -18,6 +18,7 @@
 #include <shared_mutex>
 
 #include "eden/fs/fuse/DirHandle.h"
+#include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/inodes/EdenFileHandle.h"
@@ -244,6 +245,15 @@ folly::Future<std::string> EdenDispatcher::readlink(
         return inode->readlink(
             kernelCachesReadlink ? CacheHint::NotNeededAgain
                                  : CacheHint::LikelyNeededAgain);
+      });
+}
+
+folly::Future<DirList>
+EdenDispatcher::readdir(InodeNumber ino, DirList&& dirList, off_t offset) {
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "readdir({}, {})", ino, offset);
+  return inodeMap_->lookupTreeInode(ino).thenValue(
+      [dirList = std::move(dirList), offset](TreeInodePtr inode) mutable {
+        return inode->readdir(std::move(dirList), offset);
       });
 }
 
