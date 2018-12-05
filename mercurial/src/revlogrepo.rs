@@ -23,7 +23,6 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial_types::{fncache_fsencode, simple_fsencode, HgChangesetId, HgManifestId, HgNodeHash,
                       MPath, MPathElement, RepoPath};
 use stockbookmarks::StockBookmarks;
-use storage_types::Version;
 
 pub use changeset::RevlogChangeset;
 use errors::*;
@@ -230,10 +229,7 @@ impl RevlogRepo {
         Ok(StockBookmarks::read(self.basepath.clone())?)
     }
 
-    pub fn get_bookmark_value(
-        &self,
-        key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
+    pub fn get_bookmark_value(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<HgChangesetId>, Error> {
         match self.get_bookmarks() {
             Ok(b) => b.get(key).boxify(),
             Err(e) => future::err(e).boxify(),

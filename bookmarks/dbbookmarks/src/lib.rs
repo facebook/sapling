@@ -20,7 +20,6 @@ extern crate mononoke_types;
 #[macro_use]
 extern crate sql;
 extern crate sql_ext;
-extern crate storage_types;
 
 use std::collections::{HashMap, HashSet};
 

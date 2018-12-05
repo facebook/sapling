@@ -17,7 +17,6 @@ use futures_ext::{BoxFuture, BoxStream, StreamExt};
 
 use mercurial_types::HgChangesetId;
 
-use storage_types::Version;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -90,9 +89,9 @@ impl StockBookmarks {
         Ok(StockBookmarks { bookmarks })
     }
 
-    pub fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
+    pub fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<HgChangesetId>, Error> {
         let value = match self.bookmarks.get(name.as_ref()) {
-            Some(hash) => Some((*hash, Version::from(1))),
+            Some(hash) => Some(*hash),
             None => None,
         };
         Box::new(future::result(Ok(value)))
@@ -126,7 +125,7 @@ mod tests {
         expected: Option<HgChangesetId>,
     ) {
         let expected = match expected {
-            Some(hash) => Some((hash, Version::from(1))),
+            Some(hash) => Some(hash),
             None => None,
         };
         assert_eq!(bookmarks.get(key).wait().unwrap(), expected);

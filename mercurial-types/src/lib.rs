@@ -82,7 +82,6 @@ extern crate futures_ext;
 extern crate mercurial_thrift;
 extern crate mononoke_types;
 extern crate mononoke_types_thrift;
-extern crate storage_types;
 
 pub mod bdiff;
 pub mod delta_apply;

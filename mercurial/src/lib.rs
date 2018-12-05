@@ -44,7 +44,6 @@ extern crate mercurial_types_mocks;
 extern crate mononoke_types;
 extern crate mononoke_types_thrift;
 extern crate pylz4;
-extern crate storage_types;
 
 pub mod revlog;
 pub mod manifest;

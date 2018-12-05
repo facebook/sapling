@@ -31,7 +31,7 @@ pub fn read_bookmarks(revlogrepo: RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChang
                 (*bookmarks).get(&key).and_then(move |cs_id| {
                     cs_id
                         .ok_or_else(|| format_err!("Bookmark value missing: {:?}", key))
-                        .map(move |(cs_id, _)| (key, cs_id))
+                        .map(move |cs_id| (key, cs_id))
                 })
             }
         })
