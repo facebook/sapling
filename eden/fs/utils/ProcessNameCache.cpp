@@ -8,6 +8,7 @@
  *
  */
 #include "eden/fs/utils/ProcessNameCache.h"
+#include <folly/FileUtil.h>
 #include <folly/MapUtil.h>
 #include "eden/fs/utils/Synchronized.h"
 
@@ -15,17 +16,26 @@ using namespace std::literals;
 
 namespace facebook::eden::detail {
 
-ProcPidExe getProcPidExe(pid_t pid) {
-  ProcPidExe path;
+ProcPidCmdLine getProcPidCmdLine(pid_t pid) {
+  ProcPidCmdLine path;
   memcpy(path.data(), "/proc/", 6);
   auto digits = folly::uint64ToBufferUnsafe(pid, path.data() + 6);
-  memcpy(path.data() + 6 + digits, "/exe", 5);
+  memcpy(path.data() + 6 + digits, "/cmdline", 9);
   return path;
 }
 
 std::string readPidName(pid_t pid) {
   char target[256];
-  ssize_t rv = readlink(getProcPidExe(pid).data(), target, sizeof(target));
+  const auto fd =
+      folly::openNoInt(getProcPidCmdLine(pid).data(), O_RDONLY | O_CLOEXEC);
+  if (fd == -1) {
+    return folly::to<std::string>("<err:", errno, ">");
+  }
+  SCOPE_EXIT {
+    folly::closeNoInt(fd);
+  };
+
+  ssize_t rv = folly::readFull(fd, target, sizeof(target));
   if (rv == -1) {
     return folly::to<std::string>("<err:", errno, ">");
   } else {

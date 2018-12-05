@@ -34,10 +34,7 @@ def refresh(stdscr, client):
     for mount, fuseMountAccesses in counts.fuseAccessesByMount.items():
         for pid, accessCount in fuseMountAccesses.fuseAccesses.items():
             countsByMountsAndBaseNames[
-                (
-                    os.path.basename(mount),
-                    os.path.basename(exeNames.get(pid, b"<unknown>")),
-                )
+                (os.path.basename(mount), exeNames.get(pid, b"<unknown>"))
             ].append((accessCount.count, pid))
 
     hostname = socket.gethostname()[:width]
@@ -69,6 +66,17 @@ def refresh(stdscr, client):
     def compute_total(ls):
         return sum(c[0] for c in ls)
 
+    def summarize_exe(name):
+        args = name.split("\x00", 2)
+        # focus on just the basename as the paths can be quite long
+        result = os.path.basename(args[0])[:process_width]
+        if len(args) > 1 and len(result) < process_width:
+            # show cmdline args too, provided they fit in the available space
+            args = args[1].replace("\x00", " ")
+            result += " "
+            result += args[: process_width - len(result)]
+        return result
+
     line = 3
     for (mount, exe_name), counts_and_pids in sorted(
         countsByMountsAndBaseNames.items(),
@@ -80,7 +88,7 @@ def refresh(stdscr, client):
 
         total_count = compute_total(counts_and_pids)
 
-        exe_name_printed = os.fsdecode(exe_name)[:process_width]
+        exe_name_printed = summarize_exe(os.fsdecode(exe_name))
         mount_printed = os.fsdecode(mount)[:mount_width]
 
         pids_str = ""

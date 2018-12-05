@@ -82,16 +82,17 @@ constexpr size_t kMaxDecimalPidLength = 10;
 static_assert(sizeof(pid_t) <= 4);
 
 /**
- * A stack-allocated string with the contents /proc/<pid>/exe for any pid.
+ * A stack-allocated string with the contents /proc/<pid>/cmdline for any pid.
  */
-using ProcPidExe = std::array<
+using ProcPidCmdLine = std::array<
     char,
-    6 /* /proc/ */ + kMaxDecimalPidLength + 4 /* /exe */ + 1 /* null */>;
+    6 /* /proc/ */ + kMaxDecimalPidLength + 8 /* /cmdline */ + 1 /* null */>;
 
 /**
- * Returns the ProcPidExe for a given pid. The result is always null-terminated.
+ * Returns the ProcPidCmdLine for a given pid. The result is always
+ * null-terminated.
  */
-ProcPidExe getProcPidExe(pid_t pid);
+ProcPidCmdLine getProcPidCmdLine(pid_t pid);
 
 /**
  * Given a pid, returns its executable name or <err:###> with the appropriate

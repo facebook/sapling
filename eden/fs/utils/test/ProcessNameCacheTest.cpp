@@ -13,13 +13,13 @@
 using namespace std::literals;
 using namespace facebook::eden;
 
-TEST(ProcessNameCache, getProcPidExe) {
+TEST(ProcessNameCache, getProcPidCmdLine) {
   using namespace facebook::eden::detail;
-  EXPECT_EQ("/proc/0/exe"s, getProcPidExe(0).data());
-  EXPECT_EQ("/proc/1234/exe"s, getProcPidExe(1234).data());
-  EXPECT_EQ("/proc/1234/exe"s, getProcPidExe(1234).data());
+  EXPECT_EQ("/proc/0/cmdline"s, getProcPidCmdLine(0).data());
+  EXPECT_EQ("/proc/1234/cmdline"s, getProcPidCmdLine(1234).data());
+  EXPECT_EQ("/proc/1234/cmdline"s, getProcPidCmdLine(1234).data());
 
-  auto longestPath = getProcPidExe(std::numeric_limits<pid_t>::max());
+  auto longestPath = getProcPidCmdLine(std::numeric_limits<pid_t>::max());
   EXPECT_EQ(longestPath.size(), strlen(longestPath.data()) + 1);
 }
 
