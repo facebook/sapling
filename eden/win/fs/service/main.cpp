@@ -54,86 +54,6 @@ void debugSetLogLevel(std::string category, std::string level) {
       folly::stringToLogLevel(level), true);
 }
 
-///////////////////////////////////////
-// The following is temp code to test. This would go away.
-
-#include "eden/fs/service/EdenCPUThreadPool.h"
-#include "eden/fs/store/BackingStore.h"
-#include "eden/fs/store/EmptyBackingStore.h"
-#include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/store/SqliteLocalStore.h"
-#include "eden/fs/store/git/GitBackingStore.h"
-#include "eden/fs/store/hg/HgBackingStore.h"
-#include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/UnboundedQueueExecutor.h"
-
-using namespace facebook::eden;
-
-constexpr StringPiece kLockFileName{"lock"};
-constexpr StringPiece kThriftSocketName{"socket"};
-constexpr StringPiece kTakeoverSocketName{"takeover"};
-constexpr StringPiece kRocksDBPath{"storage\\rocks-db"};
-constexpr StringPiece kSqlitePath{"storage\\sqlite.db"};
-
-std::shared_ptr<LocalStore> localStore_;
-std::shared_ptr<UnboundedQueueExecutor> threadPool_;
-AbsolutePathPiece edenDir_ = "c:\\eden\\eden"_abspath;
-AbsolutePathPiece etcEdenDir_ = "c:\\eden\\etcedendir"_abspath;
-AbsolutePathPiece configPath_ = "c:\\eden\\configpath\\.edenrc"_abspath;
-
-shared_ptr<BackingStore> backingStore_;
-shared_ptr<ObjectStore> objectStore_;
-
-shared_ptr<BackingStore> createBackingStore(
-    StringPiece type,
-    StringPiece name) {
-  cout << "createBackingStore: type: " << type << " name: " << name << endl;
-  if (type == "null") {
-    // return make_shared<EmptyBackingStore>();
-  } else if (type == "hg") {
-    const auto repoPath = realpath(name);
-    return make_shared<HgBackingStore>(
-        repoPath, localStore_.get(), threadPool_.get(), nullptr);
-    // Disabling git support in this test code.
-    //} else if (type == "git") {
-    //  throw std::domain_error(
-    //      folly::to<string>("unsupported backing store type: ", type));
-    //   const auto repoPath = realpath(name);
-    //   return make_shared<GitBackingStore>(repoPath, localStore_.get());
-  } else {
-    throw std::domain_error(
-        folly::to<string>("unsupported backing store type: ", type));
-  }
-}
-
-void startBackingStore() {
-  cout << "StartBackingStore" << endl;
-  const auto path = edenDir_ + RelativePathPiece{kSqlitePath};
-  XLOG(DBG2) << "opening local Sqlite store " << path;
-  localStore_ = make_shared<SqliteLocalStore>(path);
-  XLOG(DBG2) << "done opening local Sqlite store";
-
-  threadPool_ = std::make_shared<EdenCPUThreadPool>();
-
-  cout << "CreateBackingStore" << endl;
-  backingStore_ = createBackingStore("hg", "c:\\open\\fbsource");
-
-  objectStore_ = ObjectStore::create(localStore_, backingStore_);
-
-  // facebook::eden::Hash commitID("777362dde8e5");
-  // facebook::eden::Hash commitID("777362dde8e574bda92c42816b7df0de0e8aba39");
-  facebook::eden::Hash commitID("67f1923706e05421e823effbb51e41770486a5e0");
-  // facebook::eden::Hash commitID("240625dabfa3b0b442e4939147de860d5a916459");
-
-  unique_ptr<const Tree> tree = backingStore_->getTreeForCommit(commitID).get();
-  cout << "TREE ENTRIES";
-
-  for (const auto& entry : tree->getTreeEntries()) {
-    cout << entry.getName() << endl;
-  }
-}
-
 constexpr folly::StringPiece kDefaultUserConfigFile{".edenrc"};
 constexpr folly::StringPiece kEdenfsConfigFile{"edenfs.rc"};
 
@@ -180,24 +100,15 @@ void startServer() {
   server->run(runServer);
 }
 
-/////////////////////////////////
-
 int __cdecl main(int argc, char** argv) {
-  cout << "Eden Windows - started" << endl;
+  XLOG(INFO) << "Eden Windows - started";
 
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
   debugSetLogLevel("eden", "DBG");
   debugSetLogLevel(".", "DBG");
 
-  // std::wstring rootPath = argv[1];
-  wstring rootPath = L"virtfs";
-
-  XLOG(INFO) << "Mounting the virtual FS at: " << wstringToString(rootPath);
-
   startServer();
-  // startBackingStore();
-  // StartFS(rootPath);
-
+  XLOG(INFO) << "Eden Windows - Stopped";
   return 0;
 };
