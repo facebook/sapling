@@ -379,7 +379,7 @@ impl RepoConfigs {
         let repotype = match this.repotype {
             RawRepoType::Files => RepoType::BlobFiles(get_path(&this)?),
             RawRepoType::BlobRocks => RepoType::BlobRocks(get_path(&this)?),
-            RawRepoType::TestBlobManifold => {
+            RawRepoType::BlobRemote => {
                 let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
                     "manifold bucket must be specified".into(),
                 ))?;
@@ -546,7 +546,7 @@ struct RawHookConfig {
 enum RawRepoType {
     #[serde(rename = "blob:files")] Files,
     #[serde(rename = "blob:rocks")] BlobRocks,
-    #[serde(rename = "blob:testmanifold")] TestBlobManifold,
+    #[serde(rename = "blob:remote")] BlobRemote,
     #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,
 }
 
