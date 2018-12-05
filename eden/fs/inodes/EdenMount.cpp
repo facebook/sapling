@@ -23,7 +23,6 @@
 #include <folly/system/ThreadName.h>
 
 #include "eden/fs/config/ClientConfig.h"
-#include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/CheckoutContext.h"

@@ -15,7 +15,6 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
-#include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 
@@ -43,16 +42,6 @@ std::shared_ptr<FileHandle> FileHandleMap::getFileHandle(uint64_t fh) {
   }
   folly::throwSystemErrorExplicit(
       EISDIR, "file number ", fh, " is a DirHandle, not a FileHandle");
-}
-
-std::shared_ptr<DirHandle> FileHandleMap::getDirHandle(uint64_t fh) {
-  const auto handle = getGenericFileHandle(fh);
-  const auto result = std::dynamic_pointer_cast<DirHandle>(handle);
-  if (result) {
-    return result;
-  }
-  folly::throwSystemErrorExplicit(
-      ENOTDIR, "file number ", fh, " is a FileHandle, not a DirHandle");
 }
 
 void FileHandleMap::recordHandle(
@@ -133,8 +122,7 @@ SerializedFileHandleMap FileHandleMap::serializeMap() {
     FileHandleMapEntry entry;
 
     entry.handleId = (int64_t)it.first;
-    entry.isDir =
-        std::dynamic_pointer_cast<DirHandle>(it.second.handle) != nullptr;
+    entry.isDir = false;
     entry.inodeNumber = it.second.inodeNumber.get();
 
     result.entries.push_back(std::move(entry));

@@ -15,7 +15,6 @@
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
 
@@ -67,9 +66,6 @@ std::shared_ptr<FileHandleBase> Dispatcher::getGenericFileHandle(uint64_t fh) {
 
 std::shared_ptr<FileHandle> Dispatcher::getFileHandle(uint64_t fh) {
   return fileHandles_.getFileHandle(fh);
-}
-std::shared_ptr<DirHandle> Dispatcher::getDirHandle(uint64_t dh) {
-  return fileHandles_.getDirHandle(dh);
 }
 
 void Dispatcher::initConnection(const fuse_init_out& out) {
@@ -148,9 +144,15 @@ folly::Future<std::shared_ptr<FileHandle>> Dispatcher::open(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
+folly::Future<uint64_t> Dispatcher::opendir(
     InodeNumber /*ino*/,
     int /*flags*/) {
+  FUSELL_NOT_IMPL();
+}
+
+folly::Future<folly::Unit> Dispatcher::releasedir(
+    InodeNumber /*ino*/,
+    uint64_t /*fh*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -179,7 +181,8 @@ folly::Future<folly::Unit> Dispatcher::fsyncdir(InodeNumber, bool) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<DirList> Dispatcher::readdir(InodeNumber, DirList&&, off_t) {
+folly::Future<DirList>
+Dispatcher::readdir(InodeNumber, DirList&&, off_t, uint64_t) {
   FUSELL_NOT_IMPL();
 }
 

@@ -17,7 +17,6 @@
 #include <cstring>
 #include <shared_mutex>
 
-#include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
@@ -81,12 +80,17 @@ folly::Future<Dispatcher::Attr> EdenDispatcher::getattr(InodeNumber ino) {
       [](const InodePtr& inode) { return inode->getattr(); });
 }
 
-folly::Future<std::shared_ptr<DirHandle>> EdenDispatcher::opendir(
-    InodeNumber ino,
-    int flags) {
+folly::Future<uint64_t> EdenDispatcher::opendir(InodeNumber ino, int flags) {
   FB_LOGF(
       mount_->getStraceLogger(), DBG7, "opendir({}, flags={:x})", ino, flags);
-  return std::make_shared<DirHandle>();
+  return 0;
+}
+
+folly::Future<folly::Unit> EdenDispatcher::releasedir(
+    InodeNumber ino,
+    uint64_t fh) {
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "releasedir({}, {})", ino, fh);
+  return folly::unit;
 }
 
 folly::Future<fuse_entry_out> EdenDispatcher::lookup(
@@ -247,8 +251,11 @@ folly::Future<std::string> EdenDispatcher::readlink(
       });
 }
 
-folly::Future<DirList>
-EdenDispatcher::readdir(InodeNumber ino, DirList&& dirList, off_t offset) {
+folly::Future<DirList> EdenDispatcher::readdir(
+    InodeNumber ino,
+    DirList&& dirList,
+    off_t offset,
+    uint64_t /*fh*/) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "readdir({}, {})", ino, offset);
   return inodeMap_->lookupTreeInode(ino).thenValue(
       [dirList = std::move(dirList), offset](TreeInodePtr inode) mutable {

@@ -29,7 +29,6 @@
 #include "eden/win/fs/service/StartupLogger.h"
 #include "eden/win/fs/utils/Stub.h" // @manual
 #else
-#include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/FileHandleBase.h"
 #include "eden/fs/fuse/FuseChannel.h"
@@ -762,23 +761,7 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
   auto dispatcher = edenMount->getDispatcher();
 
   for (const auto& handleEntry : info.fileHandleMap.entries) {
-    if (handleEntry.isDir) {
-      futures.emplace_back(
-          // TODO: we should record the opendir() flags in the
-          // SerializedFileHandleMap so that we can restore
-          // the correct flags here.
-          dispatcher
-              ->opendir(InodeNumber::fromThrift(handleEntry.inodeNumber), 0)
-              .thenValue([dispatcher,
-                          inodeNumber = handleEntry.inodeNumber,
-                          number = handleEntry.handleId](
-                             std::shared_ptr<DirHandle> handle) {
-                dispatcher->getFileHandles().recordHandle(
-                    std::static_pointer_cast<FileHandleBase>(handle),
-                    InodeNumber::fromThrift(inodeNumber),
-                    number);
-              }));
-    } else {
+    if (!handleEntry.isDir) {
       futures.emplace_back(
           // TODO: we should record the open() flags in the
           // SerializedFileHandleMap so that we can restore

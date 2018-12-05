@@ -39,7 +39,6 @@ class EdenStats;
 class EdenStatsTag;
 class RequestData;
 class FileHandle;
-class DirHandle;
 class MountPoint;
 using ThreadLocalEdenStats = folly::ThreadLocal<EdenStats, EdenStatsTag, void>;
 
@@ -61,8 +60,6 @@ class Dispatcher {
   std::shared_ptr<FileHandleBase> getGenericFileHandle(uint64_t fh);
   // delegates to FileHandleMap::getFileHandle
   std::shared_ptr<FileHandle> getFileHandle(uint64_t fh);
-  // delegates to FileHandleMap::getDirHandle
-  std::shared_ptr<DirHandle> getDirHandle(uint64_t dh);
 
   /**
    * Called during filesystem mounting.  It informs the filesystem
@@ -251,10 +248,19 @@ class Dispatcher {
    * Open a directory
    *
    * open(2) flags are available in the flags parameter.
+   *
+   * The return value will be given to releasedir and readdir.
    */
-  virtual folly::Future<std::shared_ptr<DirHandle>> opendir(
-      InodeNumber ino,
-      int flags);
+  virtual folly::Future<uint64_t> opendir(InodeNumber ino, int flags);
+
+  /**
+   * Release an open directory
+   *
+   * For every opendir call there will be exactly one releasedir call. (Except
+   * during unmount - further releasedir calls are not sent.) The fh parameter
+   * contains the result of opendir.
+   */
+  virtual folly::Future<folly::Unit> releasedir(InodeNumber ino, uint64_t fh);
 
   /**
    * Read data
@@ -335,9 +341,11 @@ class Dispatcher {
    *
    * Send a DirList filled using DirList::add().
    * Send an empty DirList on end of stream.
+   *
+   * The fh parameter contains opendir's result.
    */
   virtual folly::Future<DirList>
-  readdir(InodeNumber ino, DirList&& dirList, off_t offset);
+  readdir(InodeNumber ino, DirList&& dirList, off_t offset, uint64_t fh);
 
   /**
    * Get file system statistics

@@ -34,8 +34,8 @@ class EdenDispatcher : public Dispatcher {
   folly::Future<Attr> getattr(InodeNumber ino) override;
   folly::Future<Attr> setattr(InodeNumber ino, const fuse_setattr_in& attr)
       override;
-  folly::Future<std::shared_ptr<DirHandle>> opendir(InodeNumber ino, int flags)
-      override;
+  folly::Future<uint64_t> opendir(InodeNumber ino, int flags) override;
+  folly::Future<folly::Unit> releasedir(InodeNumber ino, uint64_t fh) override;
   folly::Future<fuse_entry_out> lookup(
       InodeNumber parent,
       PathComponentPiece name) override;
@@ -100,8 +100,11 @@ class EdenDispatcher : public Dispatcher {
       bool datasync);
 #endif
 
-  folly::Future<DirList>
-  readdir(InodeNumber ino, DirList&& dirList, off_t offset) override;
+  folly::Future<DirList> readdir(
+      InodeNumber ino,
+      DirList&& dirList,
+      off_t offset,
+      uint64_t fh) override;
 
   folly::Future<std::string> getxattr(InodeNumber ino, folly::StringPiece name)
       override;

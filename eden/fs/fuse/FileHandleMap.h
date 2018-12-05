@@ -16,7 +16,6 @@
 namespace facebook {
 namespace eden {
 
-class DirHandle;
 class FileHandle;
 class FileHandleBase;
 class SerializedFileHandleMap;
@@ -44,11 +43,6 @@ class FileHandleMap {
    * Can throw EBADF if the file handle is not tracked by this map,
    * or EISDIR if the handle is a DirHandle instead of a FileHandle. */
   std::shared_ptr<FileHandle> getFileHandle(uint64_t fh);
-
-  /** Returns the DirHandle associated with a file handle number.
-   * Can throw EBADF if the file handle is not tracked by this map,
-   * or ENOTDIR if the handle is a FileHandle instead of a DirHandle. */
-  std::shared_ptr<DirHandle> getDirHandle(uint64_t dh);
 
   /** Assigns a file handle number for the given instance.
    * Repeated calls with the same instance should not happen (it's not

@@ -16,7 +16,6 @@
 #include <folly/system/ThreadName.h>
 #include <signal.h>
 #include <type_traits>
-#include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FileHandle.h"
@@ -1532,7 +1531,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRelease(
   XLOG(DBG7) << "FUSE_RELEASE";
   dispatcher_->getFileHandles().forgetGenericHandle(release->fh);
   RequestData::get().replyError(0);
-  return Unit{};
+  return folly::unit;
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsync(
@@ -1655,22 +1654,11 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
   XLOG(DBG7) << "FUSE_OPENDIR";
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->opendir(ino, open->flags)
-      .thenValue([this, ino](std::shared_ptr<DirHandle> dh) {
-        if (!dh) {
-          throw std::runtime_error("Dispatcher::opendir failed to set dh");
-        }
-        fuse_open_out out = {};
-        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(dh), ino);
-        XLOG(DBG7) << "OPENDIR fh=" << out.fh;
-        try {
-          RequestData::get().sendReply(out);
-        } catch (const std::system_error&) {
-          // Was interrupted, tidy up
-          dispatcher_->getFileHandles().forgetGenericHandle(out.fh);
-          throw;
-        }
-      });
+  return dispatcher_->opendir(ino, open->flags).thenValue([](uint64_t fh) {
+    fuse_open_out out = {};
+    out.fh = fh;
+    RequestData::get().sendReply(out);
+  });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReadDir(
@@ -1679,7 +1667,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReadDir(
   auto read = reinterpret_cast<const fuse_read_in*>(arg);
   XLOG(DBG7) << "FUSE_READDIR";
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->readdir(ino, DirList{read->size}, read->offset)
+  return dispatcher_->readdir(ino, DirList{read->size}, read->offset, read->fh)
       .thenValue([](DirList&& list) {
         const auto buf = list.getBuf();
         RequestData::get().sendReply(StringPiece{buf});
@@ -1687,13 +1675,14 @@ folly::Future<folly::Unit> FuseChannel::fuseReadDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
-    const fuse_in_header* /*header*/,
+    const fuse_in_header* header,
     const uint8_t* arg) {
-  const auto release = reinterpret_cast<const fuse_release_in*>(arg);
   XLOG(DBG7) << "FUSE_RELEASEDIR";
-  dispatcher_->getFileHandles().forgetGenericHandle(release->fh);
-  RequestData::get().replyError(0);
-  return Unit{};
+  auto ino = InodeNumber{header->nodeid};
+  auto release = reinterpret_cast<const fuse_release_in*>(arg);
+  return dispatcher_->releasedir(ino, release->fh).thenValue([](folly::Unit) {
+    RequestData::get().replyError(0);
+  });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
@@ -1780,7 +1769,7 @@ folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
     dispatcher_->forget(InodeNumber{item->nodeid}, item->nlookup);
     ++item;
   }
-  return Unit{};
+  return folly::unit;
 }
 
 } // namespace eden

@@ -10,7 +10,6 @@
 #include "eden/fs/fuse/FileHandleMap.h"
 #include <folly/experimental/TestUtil.h>
 #include <gtest/gtest.h>
-#include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 
@@ -19,10 +18,6 @@ using folly::Future;
 using folly::test::TemporaryFile;
 
 namespace {
-
-class FakeDirHandle : public DirHandle {
- public:
-};
 
 class FakeFileHandle : public FileHandle {
  public:
@@ -41,10 +36,8 @@ TEST(FileHandleMap, Serialization) {
   FileHandleMap fmap;
 
   auto fileHandle = std::make_shared<FakeFileHandle>();
-  auto dirHandle = std::make_shared<FakeDirHandle>();
 
   auto fileHandleNo = fmap.recordHandle(fileHandle, 123_ino);
-  auto dirHandleNo = fmap.recordHandle(dirHandle, 345_ino);
 
   auto serialized = fmap.serializeMap();
 
@@ -56,13 +49,12 @@ TEST(FileHandleMap, Serialization) {
       });
 
   std::vector<FileHandleMapEntry> expected = {
-      makeEntry(123, fileHandleNo, false), makeEntry(345, dirHandleNo, true)};
+      makeEntry(123, fileHandleNo, false)};
 
   EXPECT_EQ(expected, serialized.entries);
 
   FileHandleMap newMap;
   newMap.recordHandle(fileHandle, 123_ino, fileHandleNo);
-  newMap.recordHandle(dirHandle, 345_ino, dirHandleNo);
 
   auto newSerialized = newMap.serializeMap();
 
