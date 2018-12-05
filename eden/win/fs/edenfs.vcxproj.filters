@@ -72,8 +72,14 @@
     <Filter Include="Win\fs\Service">
       <UniqueIdentifier>{e5ddd6cf-3c18-445c-a13c-05d39ff5011e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Win\fs\Mount">
+      <UniqueIdentifier>{a29c2182-bd12-4b96-be11-262b4d348cc9}</UniqueIdentifier>
+    </Filter>
     <Filter Include="fs\Tracing">
       <UniqueIdentifier>{71ab52ce-cc25-4206-8738-c0323d53fbfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Win\fs\Store">
+      <UniqueIdentifier>{c4235fc9-8517-4917-b608-652dff12b567}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -275,17 +281,32 @@
     <ClCompile Include="utils\Subprocess.cpp">
       <Filter>Win\fs\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\fs\store\SerializedBlobMetadata.cpp">
-      <Filter>fs\Store\Hg</Filter>
+    <ClCompile Include="mount\EdenMount.cpp">
+      <Filter>Win\fs\Mount</Filter>
+    </ClCompile>
+    <ClCompile Include="mount\FsChannel.cpp">
+      <Filter>Win\fs\Mount</Filter>
+    </ClCompile>
+    <ClCompile Include="mount\EdenDispatcher.cpp">
+      <Filter>Win\fs\Mount</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\tracing\Tracing.cpp">
       <Filter>fs\Tracing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\fs\store\SerializedBlobMetadata.cpp">
+      <Filter>fs\Store\Hg</Filter>
+    </ClCompile>
+    <ClCompile Include="store\WinStore.cpp">
+      <Filter>Win\fs\Store</Filter>
     </ClCompile>
     <ClCompile Include="utils\WinError.cpp">
       <Filter>Win\fs\Utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\fs\store\BlobCache.cpp">
       <Filter>fs\Store</Filter>
+    </ClCompile>
+    <ClCompile Include="mount\Enumerator.cpp">
+      <Filter>Win\fs\Mount</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -508,14 +529,32 @@
     <ClInclude Include="utils\Subprocess.h">
       <Filter>Win\fs\Utils</Filter>
     </ClInclude>
+    <ClInclude Include="mount\EdenMount.h">
+      <Filter>Win\fs\Mount</Filter>
+    </ClInclude>
+    <ClInclude Include="mount\FsChannel.h">
+      <Filter>Win\fs\Mount</Filter>
+    </ClInclude>
+    <ClInclude Include="mount\EdenDispatcher.h">
+      <Filter>Win\fs\Mount</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\fs\tracing\Tracing.h">
       <Filter>fs\Tracing</Filter>
+    </ClInclude>
+    <ClInclude Include="store\WinStore.h">
+      <Filter>Win\fs\Store</Filter>
     </ClInclude>
     <ClInclude Include="utils\WinError.h">
       <Filter>Win\fs\Utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\store\BlobCache.h">
       <Filter>fs\Store</Filter>
+    </ClInclude>
+    <ClInclude Include="mount\Enumerator.h">
+      <Filter>Win\fs\Mount</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\Guid.h">
+      <Filter>Win\fs\Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

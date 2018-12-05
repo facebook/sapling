@@ -114,7 +114,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>D:\edenwin64\pklib\lib;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)build\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;wangle.lib;mstch.lib;protocol.lib;thriftprotocol.lib;thrift.lib;thrift-core.lib;thriftcpp2.lib;thriftfrozen2.lib;concurrency.lib;transport.lib;security.lib;yarpl.lib;fizz.lib;async.lib;compiler_ast.lib;compiler_base.lib;compiler_generators.lib;compiler_lib.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;wangle.lib;mstch.lib;protocol.lib;thriftprotocol.lib;thrift.lib;thrift-core.lib;thriftcpp2.lib;thriftfrozen2.lib;concurrency.lib;transport.lib;security.lib;yarpl.lib;fizz.lib;async.lib;compiler_ast.lib;compiler_base.lib;compiler_generators.lib;compiler_lib.lib;Iphlpapi.lib;ProjectedFSLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -154,7 +154,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>D:\edenwin64\pklib\lib;D:\edenwin64\vcpkg\installed\x64-windows\lib;$(SolutionDir)build\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;wangle.lib;mstch.lib;protocol.lib;thriftprotocol.lib;thrift.lib;thrift-core.lib;thriftcpp2.lib;thriftfrozen2.lib;concurrency.lib;transport.lib;security.lib;yarpl.lib;fizz.lib;async.lib;compiler_ast.lib;compiler_base.lib;compiler_generators.lib;compiler_lib.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>datapack.lib;Ws2_32.lib;folly.lib;sqlite3.lib;wangle.lib;mstch.lib;protocol.lib;thriftprotocol.lib;thrift.lib;thrift-core.lib;thriftcpp2.lib;thriftfrozen2.lib;concurrency.lib;transport.lib;security.lib;yarpl.lib;fizz.lib;async.lib;compiler_ast.lib;compiler_base.lib;compiler_generators.lib;compiler_lib.lib;Iphlpapi.lib;ProjectedFSLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -224,7 +224,12 @@
     <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_data.cpp" />
     <ClCompile Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.cpp" />
     <ClCompile Include="D:\edenwin64\stubs\common\stats\ServiceData.cpp" />
+    <ClCompile Include="mount\EdenDispatcher.cpp" />
+    <ClCompile Include="mount\EdenMount.cpp" />
+    <ClCompile Include="mount\Enumerator.cpp" />
+    <ClCompile Include="mount\FsChannel.cpp" />
     <ClCompile Include="service\main.cpp" />
+    <ClCompile Include="store\WinStore.cpp" />
     <ClCompile Include="utils\Pipe.cpp" />
     <ClCompile Include="utils\Subprocess.cpp" />
     <ClCompile Include="utils\WinError.cpp" />
@@ -299,8 +304,14 @@
     <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types.h" />
     <ClInclude Include="..\build\thrift\eden\fs\service\gen-cpp2\streamingeden_types_custom_protocol.h" />
     <ClInclude Include="D:\edenwin64\pklib\include\thrift\lib\cpp2\protocol\Cpp2Ops.h" />
+    <ClInclude Include="mount\EdenDispatcher.h" />
+    <ClInclude Include="mount\EdenMount.h" />
+    <ClInclude Include="mount\Enumerator.h" />
+    <ClInclude Include="mount\FsChannel.h" />
     <ClInclude Include="service\StartupLogger.h" />
+    <ClInclude Include="store\WinStore.h" />
     <ClInclude Include="Stub.h" />
+    <ClInclude Include="utils\Guid.h" />
     <ClInclude Include="utils\Pipe.h" />
     <ClInclude Include="utils\StringConv.h" />
     <ClInclude Include="utils\Stub.h" />

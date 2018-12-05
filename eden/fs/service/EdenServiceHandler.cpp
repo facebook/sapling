@@ -258,7 +258,6 @@ facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
-#ifndef EDEN_WIN
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, info->get_mountPoint());
   try {
     auto initialConfig = ClientConfig::loadFromClientDirectory(
@@ -266,13 +265,12 @@ void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
         AbsolutePathPiece{info->edenClientPath});
     server_->mount(std::move(initialConfig)).get();
   } catch (const EdenError& ex) {
+    XLOG(ERR) << "Error :" << ex.what();
     throw;
   } catch (const std::exception& ex) {
+    XLOG(ERR) << "Error :" << ex.what();
     throw newEdenError(ex);
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !EDEN_WIN
 }
 
 void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {

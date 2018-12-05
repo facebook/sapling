@@ -25,6 +25,7 @@
 #include "common/stats/ServiceData.h"
 #include "eden/fs/config/ClientConfig.h"
 #ifdef EDEN_WIN
+#include "eden/win/fs/mount/EdenMount.h"
 #include "eden/win/fs/service/StartupLogger.h"
 #include "eden/win/fs/utils/Stub.h" // @manual
 #else
@@ -686,7 +687,6 @@ void EdenServer::shutdownPrivhelper() {
 }
 
 void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
-#ifndef EDEN_WIN
   auto mountPath = edenMount->getPath().stringPiece();
   {
     const auto mountPoints = mountPoints_.wlock();
@@ -697,9 +697,6 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
           "mount point \"", mountPath, "\" is already mounted"));
     }
   }
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
 
 void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
@@ -815,18 +812,24 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<ClientConfig> initialConfig,
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
-#ifndef EDEN_WIN
   auto backingStore = getBackingStore(
       initialConfig->getRepoType(), initialConfig->getRepoSource());
   auto objectStore = ObjectStore::create(getLocalStore(), backingStore);
-  const bool doTakeover = optionalTakeover.has_value();
 
+#if EDEN_WIN
+  auto edenMount = EdenMount::create(
+      std::move(initialConfig), std::move(objectStore), serverState_);
+  edenMount->start();
+  addToMountPoints(edenMount);
+  return makeFuture<std::shared_ptr<EdenMount>>(std::move(edenMount));
+
+#else
   auto edenMount = EdenMount::create(
       std::move(initialConfig),
       std::move(objectStore),
       blobCache_,
       serverState_);
-
+  const bool doTakeover = optionalTakeover.has_value();
   auto initFuture = edenMount->initialize(
       optionalTakeover ? std::make_optional(optionalTakeover->inodeMap)
                        : std::nullopt);
@@ -890,8 +893,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               }
             });
       });
-#else
-  NOT_IMPLEMENTED();
 #endif
 }
 
