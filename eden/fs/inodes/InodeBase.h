@@ -307,7 +307,7 @@ class InodeBase {
    * return value being used.  If the rename lock is held, call getParent()
    * instead.
    *
-   * Used in TreeInodeDirHandle.
+   * Used in TreeInode::readdir.
    */
   TreeInodePtr getParentRacy() {
     return location_.rlock()->parent;

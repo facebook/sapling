@@ -8,8 +8,8 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
-from typing import Set
 import unittest
+from typing import Set
 
 from .lib import testcase
 
@@ -102,7 +102,6 @@ class MountTest(testcase.EdenRepoTest):
         # gone away.
         os.close(fd)
 
-    @unittest.skip("not passing yet")
     def test_unmount_succeeds_while_dir_handle_is_open(self) -> None:
         fd = os.open(self.mount, 0)
         # This test will fail or time out if unmounting times out.

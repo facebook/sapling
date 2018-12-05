@@ -150,7 +150,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   InodeNumber getChildInodeNumber(PathComponentPiece name);
 
-  std::shared_ptr<DirHandle> opendir();
   FOLLY_NODISCARD folly::Future<folly::Unit> rename(
       PathComponentPiece name,
       TreeInodePtr newParent,
@@ -389,12 +388,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   InodeMetadata getMetadata() const override;
 
-  /**
-   * Updates the last-access timestamp.  Public so TreeInodeDirHandle can call
-   * it.
-   */
-  void updateAtime();
-
  private:
   class TreeRenameLocks;
   class IncompleteInodeLoad;
@@ -472,6 +465,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
   static DirContents buildDirFromTree(const Tree* tree, Overlay* overlay);
+
+  void updateAtime();
 
   /**
    * Get a TreeInodePtr to ourself.

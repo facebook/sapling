@@ -33,7 +33,6 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/inodes/TreeInodeDirHandle.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -650,10 +649,6 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       std::move(*overlayDir),
       std::nullopt);
 } // namespace eden
-
-std::shared_ptr<DirHandle> TreeInode::opendir() {
-  return std::make_shared<TreeInodeDirHandle>(inodePtrFromThis());
-}
 
 void TreeInode::materialize(const RenameLock* renameLock) {
   // If we don't have the rename lock yet, do a quick check first
