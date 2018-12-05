@@ -282,6 +282,8 @@ impl BlobRepo {
     pub fn new_manifold_scribe_commits<C>(
         logger: Logger,
         args: &ManifoldArgs,
+        db_address: String,
+        filenode_shards: Option<usize>,
         repoid: RepositoryId,
         myrouter_port: u16,
         scribe: C,
@@ -289,7 +291,14 @@ impl BlobRepo {
     where
         C: ScribeClient + Sync + Send + 'static,
     {
-        let mut repo = Self::new_manifold_no_postcommit(logger, args, repoid, myrouter_port)?;
+        let mut repo = Self::new_manifold_no_postcommit(
+            logger,
+            args,
+            db_address,
+            filenode_shards,
+            repoid,
+            myrouter_port,
+        )?;
         let category = format!("mononoke_commits");
         repo.postcommit_queue = Arc::new(post_commit::LogToScribe::new(scribe, category));
         Ok(repo)
@@ -298,10 +307,12 @@ impl BlobRepo {
     pub fn new_manifold_no_postcommit(
         logger: Logger,
         args: &ManifoldArgs,
+        db_address: String,
+        filenode_shards: Option<usize>,
         repoid: RepositoryId,
         myrouter_port: u16,
     ) -> Result<Self> {
-        let bookmarks = SqlBookmarks::with_myrouter(&args.db_address, myrouter_port);
+        let bookmarks = SqlBookmarks::with_myrouter(&db_address, myrouter_port);
 
         let blobstore = ThriftManifoldBlob::new(args.bucket.clone())?;
         let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", args.prefix));
@@ -315,11 +326,9 @@ impl BlobRepo {
             ))?);
         let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
 
-        let filenodes = match args.filenode_shards {
-            Some(shards) => {
-                SqlFilenodes::with_sharded_myrouter(&args.db_address, myrouter_port, shards)
-            }
-            None => SqlFilenodes::with_myrouter(&args.db_address, myrouter_port),
+        let filenodes = match filenode_shards {
+            Some(shards) => SqlFilenodes::with_sharded_myrouter(&db_address, myrouter_port, shards),
+            None => SqlFilenodes::with_myrouter(&db_address, myrouter_port),
         };
         let filenodes = CachingFilenodes::new(
             Arc::new(filenodes),
@@ -327,17 +336,17 @@ impl BlobRepo {
                 "filenodes".to_string(),
             )))?,
             "sqlfilenodes",
-            &args.db_address,
+            &db_address,
         );
 
-        let changesets = SqlChangesets::with_myrouter(&args.db_address, myrouter_port);
+        let changesets = SqlChangesets::with_myrouter(&db_address, myrouter_port);
         let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
             ErrorKind::MissingCachePool("changesets".to_string()),
         ))?;
         let changesets = CachingChangests::new(Arc::new(changesets), changesets_cache_pool.clone());
         let changesets = Arc::new(changesets);
 
-        let bonsai_hg_mapping = SqlBonsaiHgMapping::with_myrouter(&args.db_address, myrouter_port);
+        let bonsai_hg_mapping = SqlBonsaiHgMapping::with_myrouter(&db_address, myrouter_port);
         let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
             Arc::new(bonsai_hg_mapping),
             cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(

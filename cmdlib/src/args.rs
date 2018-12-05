@@ -26,7 +26,7 @@ use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
-use metaconfig::{ManifoldArgs, RepoConfigs, RepoReadOnly, RepoType};
+use metaconfig::{ManifoldArgs, RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType};
 use repo_client::{open_blobrepo, MononokeRepo};
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -231,13 +231,10 @@ pub fn open_sql_changesets(matches: &ArgMatches) -> Result<SqlChangesets> {
         RepoType::BlobRocks(ref data_dir) => {
             SqlChangesets::with_sqlite_path(data_dir.join("changesets"))
         }
-        RepoType::BlobManifold(ref manifold_args) => {
+        RepoType::BlobRemote { ref db_address, .. } => {
             let myrouter_port =
                 parse_myrouter_port(matches).expect("myrouter port provided is not provided");
-            Ok(SqlChangesets::with_myrouter(
-                &manifold_args.db_address,
-                myrouter_port,
-            ))
+            Ok(SqlChangesets::with_myrouter(&db_address, myrouter_port))
         }
         RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
             SqlChangesets::with_sqlite_path(data_dir.join("changesets"))
@@ -478,7 +475,15 @@ fn open_repo_internal<'a>(
             setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
             logger.new(o!["BlobRepo:Rocksdb" => data_dir.to_string_lossy().into_owned()])
         }
-        RepoType::BlobManifold(ref manifold_args) => {
+        RepoType::BlobRemote{ref blobstores_args, ..} => {
+            if blobstores_args.len() != 1 {
+                return Err(err_msg("only single manifold blobstore is supported"));
+            }
+            let manifold_args = match blobstores_args.get(0).unwrap() {
+                RemoteBlobstoreArgs::Manifold(manifold_args) => {
+                    manifold_args
+                }
+            };
             logger.new(o!["BlobRepo:Manifold" => manifold_args.bucket.clone()])
         }
         RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
@@ -512,12 +517,6 @@ pub fn parse_manifold_args<'a>(matches: &ArgMatches<'a>) -> ManifoldArgs {
     ManifoldArgs {
         bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
         prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
-        db_address: matches.value_of("db-address").unwrap().to_string(),
-        filenode_shards: matches.value_of("filenode-shards").map(|shard_count| {
-            shard_count
-                .parse()
-                .expect("shard count must be a positive integer")
-        }),
     }
 }
 

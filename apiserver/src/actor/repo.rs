@@ -23,8 +23,9 @@ use blobrepo::{BlobRepo, get_sha256_alias, get_sha256_alias_key};
 use context::CoreContext;
 use mercurial_types::{HgManifestId, RepositoryId};
 use mercurial_types::manifest::Content;
+use metaconfig::RemoteBlobstoreArgs;
 use metaconfig::repoconfig::RepoConfig;
-use metaconfig::repoconfig::RepoType::{BlobFiles, BlobManifold, BlobRocks};
+use metaconfig::repoconfig::RepoType::{BlobFiles, BlobRemote, BlobRocks};
 use mononoke_types::FileContents;
 use reachabilityindex::{GenerationNumberBFS, ReachabilityIndex};
 
@@ -56,24 +57,44 @@ impl MononokeRepo {
             BlobRocks(path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid)
                 .into_future()
                 .left_future(),
-            BlobManifold(args) => match myrouter_port {
-                None => Err(err_msg(
-                    "Missing myrouter port, unable to open BlobManifold repo",
-                )).into_future()
-                    .left_future(),
-                Some(myrouter_port) => myrouter::wait_for_myrouter(myrouter_port, &args.db_address)
-                    .and_then({
-                        cloned!(logger);
-                        move |()| {
-                            BlobRepo::new_manifold_no_postcommit(
-                                logger,
-                                &args,
-                                repoid,
-                                myrouter_port,
-                            )
+            BlobRemote{
+                ref blobstores_args,
+                ref db_address,
+                ref filenode_shards,
+            } => {
+                if blobstores_args.len() != 1 {
+                    Err(err_msg("only single manifold blobstore is supported"))
+                        .into_future()
+                        .left_future()
+                } else {
+                    let manifold_args = match blobstores_args.get(0).unwrap() {
+                        RemoteBlobstoreArgs::Manifold(manifold_args) => {
+                            manifold_args
                         }
-                    })
-                    .right_future(),
+                    };
+
+                    match myrouter_port {
+                        None => Err(err_msg(
+                            "Missing myrouter port, unable to open BlobRemote repo",
+                        )).into_future()
+                            .left_future(),
+                        Some(myrouter_port) => myrouter::wait_for_myrouter(myrouter_port, &db_address)
+                            .and_then({
+                                cloned!(db_address, filenode_shards, logger, manifold_args);
+                                move |()| {
+                                    BlobRepo::new_manifold_no_postcommit(
+                                        logger,
+                                        &manifold_args,
+                                        db_address.clone(),
+                                        filenode_shards.clone(),
+                                        repoid,
+                                        myrouter_port,
+                                    )
+                                }
+                            })
+                            .right_future(),
+                    }
+                }
             },
             _ => Err(err_msg("Unsupported repo type."))
                 .into_future()

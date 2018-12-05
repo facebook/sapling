@@ -20,7 +20,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PrefixBlobstore};
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
-use metaconfig::{LfsParams, PushrebaseParams};
+use metaconfig::{LfsParams, PushrebaseParams, RemoteBlobstoreArgs};
 use metaconfig::repoconfig::{RepoReadOnly, RepoType};
 
 use errors::*;
@@ -113,15 +113,30 @@ pub fn open_blobrepo(
     let blobrepo = match repotype {
         BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
         BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
-        BlobManifold(ref args) => BlobRepo::new_manifold_scribe_commits(
-            logger,
-            args,
-            repoid,
-            myrouter_port.ok_or(err_msg(
-                "Missing myrouter port, unable to open BlobManifold repo",
-            ))?,
-            ScribeCxxClient::new(),
-        )?,
+        BlobRemote {
+            ref blobstores_args,
+            ref db_address,
+            ref filenode_shards,
+        } => {
+            if blobstores_args.len() != 1 {
+                return Err(err_msg("only single manifold blobstore is supported"));
+            }
+            let manifold_args = match blobstores_args.get(0).unwrap() {
+                RemoteBlobstoreArgs::Manifold(manifold_args) => manifold_args,
+            };
+
+            BlobRepo::new_manifold_scribe_commits(
+                logger,
+                manifold_args,
+                db_address.clone(),
+                filenode_shards.clone(),
+                repoid,
+                myrouter_port.ok_or(err_msg(
+                    "Missing myrouter port, unable to open BlobRemote repo",
+                ))?,
+                ScribeCxxClient::new(),
+            )?
+        }
         TestBlobDelayRocks(ref path, mean, stddev) => {
             // We take in an arithmetic mean and stddev, and deduce a log normal
             let mean = mean as f64 / 1_000_000.0;

@@ -34,7 +34,7 @@ extern crate mononoke_types;
 pub mod errors;
 pub mod repoconfig;
 
-pub use repoconfig::{CacheWarmupParams, LfsParams, ManifoldArgs, PushrebaseParams, RepoConfigs,
-                     RepoReadOnly, RepoType};
+pub use repoconfig::{CacheWarmupParams, LfsParams, ManifoldArgs, PushrebaseParams,
+                     RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType};
 
 pub use errors::{Error, ErrorKind};

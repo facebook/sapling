@@ -95,10 +95,10 @@ pub fn repo_handlers(
             try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
 
             let streaming_clone = match config.repotype {
-                RepoType::BlobManifold(ref args) => Some(try_boxfuture!(streaming_clone(
+                RepoType::BlobRemote{ ref db_address, ..} => Some(try_boxfuture!(streaming_clone(
                     blobrepo.clone(),
-                    &args.db_address,
-                    myrouter_port.expect("myrouter_port not provided for BlobManifold repo"),
+                    &db_address,
+                    myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
                     repoid
                 ))),
                 _ => None,

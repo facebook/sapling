@@ -24,10 +24,6 @@ pub struct ManifoldArgs {
     pub bucket: String,
     /// Prefix to be prepended to all the keys. In prod it should be ""
     pub prefix: String,
-    /// Identifies the SQL database to connect to.
-    pub db_address: String,
-    /// If present, the number of shards to spread filenodes across
-    pub filenode_shards: Option<usize>,
 }
 
 /// Configuration of a single repository
@@ -70,7 +66,7 @@ impl RepoConfig {
     /// Returns a db address that is referenced in this config or None if there is none
     pub fn get_db_address(&self) -> Option<&str> {
         match self.repotype {
-            RepoType::BlobManifold(ref args) => Some(&args.db_address),
+            RepoType::BlobRemote { ref db_address, .. } => Some(&db_address),
             _ => None,
         }
     }
@@ -190,6 +186,13 @@ impl Default for LfsParams {
     }
 }
 
+/// Remote blobstore arguments
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum RemoteBlobstoreArgs {
+    /// Manifold arguments
+    Manifold(ManifoldArgs),
+}
+
 /// Types of repositories supported
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RepoType {
@@ -202,7 +205,14 @@ pub enum RepoType {
     /// RocksDb database
     BlobRocks(PathBuf),
     /// Blob repository with path pointing to the directory where a server socket is going to be.
-    BlobManifold(ManifoldArgs),
+    BlobRemote {
+        /// Manifold arguments
+        blobstores_args: Vec<RemoteBlobstoreArgs>,
+        /// Identifies the SQL database to connect to.
+        db_address: String,
+        /// If present, the number of shards to spread filenodes across
+        filenode_shards: Option<usize>,
+    },
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database, and a log-normal delay is applied to access to simulate a remote store
     /// like Manifold. Params are path, mean microseconds, stddev microseconds.
@@ -380,16 +390,33 @@ impl RepoConfigs {
             RawRepoType::Files => RepoType::BlobFiles(get_path(&this)?),
             RawRepoType::BlobRocks => RepoType::BlobRocks(get_path(&this)?),
             RawRepoType::BlobRemote => {
-                let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
-                    "manifold bucket must be specified".into(),
+                let remote_blobstores = this.remote_blobstore.ok_or(ErrorKind::InvalidConfig(
+                    "remote blobstores must be specified".into(),
                 ))?;
+
+                let mut blobstores_args = vec![];
                 let db_address = this.db_address.expect("xdb tier was not specified");
-                RepoType::BlobManifold(ManifoldArgs {
-                    bucket: manifold_bucket,
-                    prefix: this.manifold_prefix.unwrap_or("".into()),
+                for blobstore in remote_blobstores {
+                    match blobstore.blobstore_type {
+                        RawBlobstoreType::Manifold => {
+                            let manifold_bucket =
+                                blobstore.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
+                                    "manifold bucket must be specified".into(),
+                                ))?;
+                            let manifold_args = ManifoldArgs {
+                                bucket: manifold_bucket,
+                                prefix: blobstore.manifold_prefix.unwrap_or("".into()),
+                            };
+                            blobstores_args.push(RemoteBlobstoreArgs::Manifold(manifold_args));
+                        }
+                    }
+                }
+
+                RepoType::BlobRemote {
+                    blobstores_args,
                     db_address,
                     filenode_shards: this.filenode_shards,
-                })
+                }
             }
             RawRepoType::TestBlobDelayRocks => RepoType::TestBlobDelayRocks(
                 get_path(&this)?,
@@ -488,8 +515,6 @@ struct RawRepoConfig {
     repotype: RawRepoType,
     enabled: Option<bool>,
     generation_cache_size: Option<usize>,
-    manifold_bucket: Option<String>,
-    manifold_prefix: Option<String>,
     repoid: i32,
     db_address: Option<String>,
     filenode_shards: Option<usize>,
@@ -507,6 +532,7 @@ struct RawRepoConfig {
     readonly: Option<bool>,
     hook_manager_params: Option<HookManagerParams>,
     skiplist_index_blobstore_key: Option<String>,
+    remote_blobstore: Option<Vec<RawRemoteBlobstoreConfig>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -541,6 +567,13 @@ struct RawHookConfig {
     bypass_pushvar: Option<String>,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+struct RawRemoteBlobstoreConfig {
+    blobstore_type: RawBlobstoreType,
+    manifold_bucket: Option<String>,
+    manifold_prefix: Option<String>,
+}
+
 /// Types of repositories supported
 #[derive(Clone, Debug, Deserialize)]
 enum RawRepoType {
@@ -548,6 +581,12 @@ enum RawRepoType {
     #[serde(rename = "blob:rocks")] BlobRocks,
     #[serde(rename = "blob:remote")] BlobRemote,
     #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,
+}
+
+/// Types of blobstores supported
+#[derive(Clone, Debug, Deserialize)]
+enum RawBlobstoreType {
+    #[serde(rename = "manifold")] Manifold,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -574,8 +613,8 @@ mod test {
         let hook1_content = "this is hook1";
         let hook2_content = "this is hook2";
         let fbsource_content = r#"
-            path="/tmp/fbsource"
-            repotype="blob:rocks"
+            db_address="db_address"
+            repotype="blob:remote"
             generation_cache_size=1048576
             repoid=0
             scuba_table="scuba_table"
@@ -586,6 +625,13 @@ mod test {
             [hook_manager_params]
             entrylimit=1234
             weightlimit=4321
+            [[remote_blobstore]]
+            blobstore_type="manifold"
+            manifold_bucket="bucket"
+            [[remote_blobstore]]
+            blobstore_type="manifold"
+            manifold_bucket="anotherbucket"
+            manifold_prefix="someprefix"
             [[bookmarks]]
             name="master"
             [[bookmarks.hooks]]
@@ -640,12 +686,27 @@ mod test {
 
         let repoconfig = RepoConfigs::read_configs(tmp_dir.path()).expect("failed to read configs");
 
+        let first_manifold_args = ManifoldArgs {
+            bucket: "bucket".into(),
+            prefix: "".into(),
+        };
+        let second_manifold_args = ManifoldArgs {
+            bucket: "anotherbucket".into(),
+            prefix: "someprefix".into(),
+        };
         let mut repos = HashMap::new();
         repos.insert(
             "fbsource".to_string(),
             RepoConfig {
                 enabled: true,
-                repotype: RepoType::BlobRocks("/tmp/fbsource".into()),
+                repotype: RepoType::BlobRemote{
+                    db_address: "db_address".into(),
+                    blobstores_args: vec![
+                        RemoteBlobstoreArgs::Manifold(first_manifold_args),
+                        RemoteBlobstoreArgs::Manifold(second_manifold_args),
+                    ],
+                    filenode_shards: None,
+                },
                 generation_cache_size: 1024 * 1024,
                 repoid: 0,
                 scuba_table: Some("scuba_table".to_string()),

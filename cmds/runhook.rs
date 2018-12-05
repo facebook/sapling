@@ -154,9 +154,18 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
         .expect("missing myrouter port")
         .parse::<u16>()
         .expect("myrouter port is not a valid u16");
+
+    let db_address = matches.value_of("db-address").unwrap().to_string();
+    let filenode_shards = matches.value_of("filenode-shards").map(|shard_count| {
+        shard_count
+            .parse()
+            .expect("shard count must be a positive integer")
+    });
     BlobRepo::new_manifold_no_postcommit(
         logger.clone(),
         &manifold_args,
+        db_address,
+        filenode_shards,
         RepositoryId::new(0),
         myrouter_port,
     ).expect("failed to create blobrepo instance")
