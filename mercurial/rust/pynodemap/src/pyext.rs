@@ -60,4 +60,19 @@ py_class!(class pynodemap |py| {
             .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?
             .map_or(py.None(), |node| PyBytes::new(py, node.as_ref()).into_object()))
     }
+
+    def items(&self) -> PyResult<Vec<(PyBytes, PyBytes)>> {
+        let log = self.log(py).borrow();
+        let iter = log.iter()
+            .map_err(|e|  PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
+        let keys = iter
+            .map(|result| result.map(|keys| {
+                let (first, second) = keys;
+                (PyBytes::new(py, first.as_ref()),
+                 PyBytes::new(py, second.as_ref()))
+            }))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e|  PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
+        Ok(keys)
+    }
 });

@@ -68,7 +68,7 @@ const INDEX_FILE_PREFIX: &str = "index-";
 /// Writes are buffered in memory. Flushing in-memory parts to
 /// disk requires taking a flock on the directory.
 pub struct Log {
-    dir: PathBuf,
+    pub dir: PathBuf,
     disk_buf: Mmap,
     mem_buf: Vec<u8>,
     meta: LogMetadata,

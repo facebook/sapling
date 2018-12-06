@@ -76,6 +76,31 @@ impl NodeMap {
             None => None,
         })
     }
+
+    pub fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Result<(Node, Node)>> + 'a>> {
+        let iter = self.log.iter().map(move |entry| match entry {
+            Ok(data) => {
+                let mut first = self.log.index_func(0, &data)?;
+                if first.len() != 1 {
+                    return Err(
+                        NodeMapError(format!("invalid index 1 keys in {:?}", self.log.dir)).into(),
+                    );
+                }
+                let first = first.pop().unwrap();
+                let mut second = self.log.index_func(1, &data)?;
+                if second.len() != 1 {
+                    return Err(
+                        NodeMapError(format!("invalid index 2 keys in {:?}", self.log.dir)).into(),
+                    );
+                }
+                let second = second.pop().unwrap();
+
+                Ok((Node::from_slice(&first)?, Node::from_slice(&second)?))
+            }
+            Err(e) => Err(e.into()),
+        });
+        Ok(Box::new(iter))
+    }
 }
 
 #[cfg(test)]
@@ -115,7 +140,9 @@ mod tests {
                 }
 
             }
-            true
+
+            let actual_pairs = map.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
+            actual_pairs == pairs
         }
     }
 }
