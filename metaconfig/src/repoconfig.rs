@@ -699,7 +699,7 @@ mod test {
             "fbsource".to_string(),
             RepoConfig {
                 enabled: true,
-                repotype: RepoType::BlobRemote{
+                repotype: RepoType::BlobRemote {
                     db_address: "db_address".into(),
                     blobstores_args: vec![
                         RemoteBlobstoreArgs::Manifold(first_manifold_args),
