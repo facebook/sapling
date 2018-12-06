@@ -25,7 +25,7 @@
 // embed checksum logic into them.
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use memmap::Mmap;
 use std::cell::RefCell;
@@ -165,17 +165,17 @@ impl ChecksumTable {
             (DEFAULT_CHUNK_SIZE_LOG, 0, vec![], vec![])
         } else {
             let mut cur = Cursor::new(checksum_buf);
-            let chunk_size_log = cur.read_u64::<BigEndian>()?;
+            let chunk_size_log = cur.read_u64::<LittleEndian>()?;
             if chunk_size_log > MAX_CHUNK_SIZE_LOG as u64 {
                 return Err(io::ErrorKind::InvalidData.into());
             }
             let chunk_size_log = chunk_size_log as u32;
             let chunk_size = 1 << chunk_size_log;
-            let file_size = len.min(cur.read_u64::<BigEndian>()?);
+            let file_size = len.min(cur.read_u64::<LittleEndian>()?);
             let n = (file_size + chunk_size - 1) / chunk_size;
             let mut checksums = Vec::with_capacity(n as usize);
             for _ in 0..n {
-                checksums.push(cur.read_u64::<BigEndian>()?);
+                checksums.push(cur.read_u64::<LittleEndian>()?);
             }
             let checked = vec![0; (n as usize + 63) / 64];
             (chunk_size_log, file_size, checksums, checked)
@@ -273,10 +273,10 @@ impl ChecksumTable {
 
         // Prepare changes
         let mut buf = vec![];
-        buf.write_u64::<BigEndian>(chunk_size_log as u64)?;
-        buf.write_u64::<BigEndian>(len)?;
+        buf.write_u64::<LittleEndian>(chunk_size_log as u64)?;
+        buf.write_u64::<LittleEndian>(len)?;
         for checksum in &checksums {
-            buf.write_u64::<BigEndian>(*checksum)?;
+            buf.write_u64::<LittleEndian>(*checksum)?;
         }
 
         // Write changes to disk
