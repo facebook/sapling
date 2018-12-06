@@ -22,6 +22,16 @@ namespace eden {
 class CoverageSet {
  public:
   /**
+   * Removes all intervals from the set.
+   */
+  void clear();
+
+  /**
+   * Returns true if no ranges are covered.
+   */
+  bool empty() const noexcept;
+
+  /**
    * Adds the interval [begin, end) to the set.
    */
   void add(size_t begin, size_t end);

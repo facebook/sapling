@@ -531,6 +531,87 @@ TEST(FileInode, truncateDuringLoad) {
   EXPECT_FILE_INODE(inode, "\0\0\0\0\0foobar\n"_sp, 0644);
 }
 
+TEST(FileInode, dropsCacheWhenFullyRead) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"bigfile.txt", "1234567890ab"}});
+  TestMount mount{builder};
+  auto blobCache = mount.getBlobCache();
+
+  auto inode = mount.getFileInode("bigfile.txt");
+  auto hash = inode->getBlobHash().value();
+
+  EXPECT_FALSE(blobCache->get(hash).blob);
+
+  inode->read(4, 0).get(0ms);
+  EXPECT_TRUE(blobCache->contains(hash));
+
+  inode->read(4, 4).get(0ms);
+  EXPECT_TRUE(blobCache->contains(hash));
+
+  inode->read(4, 8).get(0ms);
+  EXPECT_FALSE(blobCache->contains(hash));
+}
+
+TEST(FileInode, keepsCacheIfPartiallyReread) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"bigfile.txt", "1234567890ab"}});
+  TestMount mount{builder};
+  auto blobCache = mount.getBlobCache();
+
+  auto inode = mount.getFileInode("bigfile.txt");
+  auto hash = inode->getBlobHash().value();
+
+  EXPECT_FALSE(blobCache->contains(hash));
+
+  inode->read(6, 0).get(0ms);
+  EXPECT_TRUE(blobCache->contains(hash));
+
+  inode->read(6, 6).get(0ms);
+  EXPECT_FALSE(blobCache->contains(hash));
+
+  inode->read(6, 0).get(0ms);
+  EXPECT_TRUE(blobCache->contains(hash));
+
+  // Evicts again on the second full read!
+  inode->read(6, 6).get(0ms);
+  EXPECT_FALSE(blobCache->contains(hash));
+}
+
+TEST(FileInode, dropsCacheWhenMaterialized) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"bigfile.txt", "1234567890ab"}});
+  TestMount mount{builder};
+  auto blobCache = mount.getBlobCache();
+
+  auto inode = mount.getFileInode("bigfile.txt");
+  auto hash = inode->getBlobHash().value();
+
+  EXPECT_FALSE(blobCache->get(hash).blob);
+
+  inode->read(4, 0).get(0ms);
+  EXPECT_TRUE(blobCache->contains(hash));
+
+  inode->write("data"_sp, 0).get(0ms);
+  EXPECT_FALSE(blobCache->contains(hash));
+}
+
+TEST(FileInode, dropsCacheWhenUnloaded) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"bigfile.txt", "1234567890ab"}});
+  TestMount mount{builder};
+  auto blobCache = mount.getBlobCache();
+
+  auto inode = mount.getFileInode("bigfile.txt");
+  auto hash = inode->getBlobHash().value();
+
+  inode->read(4, 0).get(0ms);
+  EXPECT_TRUE(blobCache->contains(hash));
+
+  inode.reset();
+  mount.getEdenMount()->getRootInode()->unloadChildrenNow();
+  EXPECT_FALSE(blobCache->contains(hash));
+}
+
 // TODO: test multiple flags together
 // TODO: ensure ctime is updated after every call to setattr()
 // TODO: ensure mtime is updated after opening a file, writing to it, then

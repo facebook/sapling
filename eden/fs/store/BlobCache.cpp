@@ -153,6 +153,11 @@ BlobInterestHandle BlobCache::insert(
   return interestHandle;
 }
 
+bool BlobCache::contains(const Hash& hash) const {
+  auto state = state_.rlock();
+  return 1 == state->items.count(hash);
+}
+
 size_t BlobCache::getTotalSize() const {
   return state_.rlock()->totalSize;
 }

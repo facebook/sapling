@@ -227,6 +227,9 @@ void FileInode::LockedState::setMaterialized(folly::File&& file) {
   ptr_->hash.reset();
   ptr_->tag = State::MATERIALIZED_IN_OVERLAY;
   ptr_->sha1Valid = false;
+
+  ptr_->interestHandle.reset();
+  ptr_->readByteRanges.clear();
 }
 
 /*********************************************************************
@@ -465,6 +468,7 @@ void FileInodeState::checkInvariants() {
     case BLOB_LOADING:
       CHECK(hash);
       CHECK(blobLoadingPromise);
+      CHECK(readByteRanges.empty());
       CHECK(!file);
       CHECK(!sha1Valid);
       return;
@@ -472,6 +476,7 @@ void FileInodeState::checkInvariants() {
       // 'materialized'
       CHECK(!hash);
       CHECK(!blobLoadingPromise);
+      CHECK(readByteRanges.empty());
       if (file) {
         CHECK_GT(openCount, 0);
       }
@@ -892,6 +897,7 @@ Future<string> FileInode::readAll(CacheHint cacheHint) {
 }
 
 Future<BufVec> FileInode::read(size_t size, off_t off) {
+  DCHECK_GE(off, 0);
   return runWhileDataLoaded<Future<BufVec>>(
       LockedState{this},
       BlobCache::Interest::WantHandle,
@@ -901,9 +907,6 @@ Future<BufVec> FileInode::read(size_t size, off_t off) {
         SCOPE_SUCCESS {
           self->updateAtimeLocked(*state);
         };
-
-        // TODO: if blob, add [size, off] to coverage set and if coverage is
-        // full, drop interest.
 
         // Materialized either before or during blob load.
         if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
@@ -924,6 +927,16 @@ Future<BufVec> FileInode::read(size_t size, off_t off) {
         // MATERIALIZED_IN_OVERLAY or BLOB_NOT_LOADING
         DCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
         DCHECK(blob) << "blob missing after load completed";
+
+        state->readByteRanges.add(off, off + size);
+        if (state->readByteRanges.covers(0, blob->getSize())) {
+          XLOG(DBG4) << "Inode " << self->getNodeId()
+                     << " dropping interest for blob " << blob->getHash()
+                     << " because it's been fully read.";
+          state->interestHandle.reset();
+          state->readByteRanges.clear();
+        }
+
         auto buf = blob->getContents();
         folly::io::Cursor cursor(&buf);
 

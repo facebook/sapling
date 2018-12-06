@@ -13,6 +13,14 @@
 namespace facebook {
 namespace eden {
 
+void CoverageSet::clear() {
+  set_.clear();
+}
+
+bool CoverageSet::empty() const noexcept {
+  return set_.empty();
+}
+
 void CoverageSet::add(size_t begin, size_t end) {
   using Set = std::set<Interval>;
   using Iter = Set::iterator;

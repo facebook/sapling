@@ -18,6 +18,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BlobCache.h"
+#include "eden/fs/utils/CoverageSet.h"
 
 namespace folly {
 class File;
@@ -126,6 +127,11 @@ struct FileInodeState {
    * first.
    */
   BlobInterestHandle interestHandle;
+
+  /**
+   * Records the ranges that have been read() when not materialized.
+   */
+  CoverageSet readByteRanges;
 
   /**
    * If backed by an overlay file, whether the sha1 xattr is valid

@@ -158,6 +158,11 @@ class BlobCache : public std::enable_shared_from_this<BlobCache> {
       Interest interest = Interest::LikelyNeededAgain);
 
   /**
+   * Returns true if the cache contains a blob for the given hash.
+   */
+  bool contains(const Hash& hash) const;
+
+  /**
    * Returns the sum of all of the cached blob sizes.
    */
   size_t getTotalSize() const;

@@ -163,6 +163,10 @@ class TestMount {
     return backingStore_;
   }
 
+  const std::shared_ptr<BlobCache>& getBlobCache() const {
+    return blobCache_;
+  }
+
   Dispatcher* getDispatcher() const;
 
   /**
