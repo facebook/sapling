@@ -12,7 +12,6 @@ use std::mem;
 
 use bytes::BytesMut;
 use futures::{Async, Poll, Stream};
-use slog;
 
 use futures_ext::BoxFuture;
 use futures_ext::io::Either;
@@ -20,6 +19,7 @@ use tokio_codec::{Framed, FramedParts};
 use tokio_io::AsyncRead;
 
 use Bundle2Item;
+use context::CoreContext;
 use errors::*;
 use part_inner::inner_stream;
 use part_outer::{outer_stream, OuterFrame, OuterStream};
@@ -62,7 +62,7 @@ where
 
 #[derive(Debug)]
 struct Bundle2StreamInner {
-    logger: slog::Logger,
+    ctx: CoreContext,
     app_errors: Vec<ErrorKind>,
 }
 
@@ -125,10 +125,10 @@ impl<R> Bundle2Stream<R>
 where
     R: AsyncRead + BufRead + 'static + Send,
 {
-    pub fn new(read: R, logger: slog::Logger) -> Bundle2Stream<R> {
+    pub fn new(ctx: CoreContext, read: R) -> Bundle2Stream<R> {
         Bundle2Stream {
             inner: Bundle2StreamInner {
-                logger: logger,
+                ctx,
                 app_errors: Vec::new(),
             },
             current_stream: CurrentStream::Start(Framed::from_parts(FramedParts::new(
@@ -190,7 +190,11 @@ impl Bundle2StreamInner {
                             "write_buf must be empty, since io is not AsyncWrite"
                         );
 
-                        match outer_stream(&start, Cursor::new(read_buf).chain(io), &self.logger) {
+                        match outer_stream(
+                            self.ctx.clone(),
+                            &start,
+                            Cursor::new(read_buf).chain(io),
+                        ) {
                             Err(e) => {
                                 // Can't do much if reading stream level params
                                 // failed -- go to the invalid state.
@@ -225,7 +229,8 @@ impl Bundle2StreamInner {
                         (Ok(Async::Ready(None)), CurrentStream::Outer(stream))
                     }
                     Ok(Async::Ready(Some(OuterFrame::Header(header)))) => {
-                        let (bundle2item, remainder) = inner_stream(header, stream, &self.logger);
+                        let (bundle2item, remainder) =
+                            inner_stream(self.ctx.clone(), header, stream);
                         (
                             Ok(Async::Ready(Some(StreamEvent::Next(bundle2item)))),
                             CurrentStream::Inner(remainder),

@@ -11,10 +11,10 @@ use std::cmp;
 use std::mem;
 
 use bytes::BytesMut;
-use slog;
 use std::str::FromStr;
 use tokio_io::codec::Decoder;
 
+use context::CoreContext;
 use mercurial_types::MPath;
 
 use delta;
@@ -54,7 +54,7 @@ const CHUNK_HEADER3_LEN: usize = 20 + 20 + 20 + 20 + 20 + 2 + 4;
 
 #[derive(Debug)]
 pub struct CgUnpacker {
-    logger: slog::Logger,
+    ctx: CoreContext,
     state: State,
     version: CgVersion,
 }
@@ -134,9 +134,9 @@ impl Decoder for CgUnpacker {
 }
 
 impl CgUnpacker {
-    pub fn new(logger: slog::Logger, version: CgVersion) -> Self {
+    pub fn new(ctx: CoreContext, version: CgVersion) -> Self {
         CgUnpacker {
-            logger,
+            ctx,
             state: State::Changeset,
             version,
         }

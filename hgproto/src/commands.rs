@@ -14,8 +14,6 @@ use std::mem;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use slog::Logger;
-
 use bytes::{Bytes, BytesMut};
 use failure::{err_msg, FutureFailureErrorExt};
 use futures::IntoFuture;
@@ -24,6 +22,7 @@ use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;
 
 use HgNodeHash;
+use context::CoreContext;
 use dechunker::Dechunker;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
 use mercurial_bundles::Bundle2Item;
@@ -41,16 +40,16 @@ use errors::*;
 const HASH_SIZE: usize = 40;
 
 pub struct HgCommandHandler<H> {
+    ctx: CoreContext,
     commands: H,
-    logger: Logger,
     hook_manager: Arc<HookManager>,
 }
 
 impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
-    pub fn new(commands: H, logger: Logger, hook_manager: Arc<HookManager>) -> Self {
+    pub fn new(ctx: CoreContext, commands: H, hook_manager: Arc<HookManager>) -> Self {
         HgCommandHandler {
+            ctx,
             commands,
-            logger,
             hook_manager,
         }
     }
@@ -161,8 +160,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 ok(instream).boxify(),
             ),
             SingleRequest::Unbundle { heads } => {
-                let bundle2stream =
-                    Bundle2Stream::new(Dechunker::new(instream), self.logger.new(o!()));
+                let bundle2stream = Bundle2Stream::new(self.ctx.clone(), Dechunker::new(instream));
                 let (bundle2stream, remainder) = extract_remainder_from_bundle2(bundle2stream);
 
                 let remainder = remainder
@@ -552,7 +550,7 @@ mod test {
     use context::CoreContext;
     use futures::{future, stream};
     use hooks::{InMemoryChangesetStore, InMemoryFileContentStore};
-    use slog::{Discard, Drain};
+    use slog::{Discard, Drain, Logger};
 
     struct Dummy;
     impl HgCommands for Dummy {
@@ -579,8 +577,8 @@ mod test {
 
     #[test]
     fn hello() {
-        let logger = Logger::root(Discard, o!());
-        let handler = HgCommandHandler::new(Dummy, logger, create_hook_manager());
+        let ctx = CoreContext::test_mock();
+        let handler = HgCommandHandler::new(ctx, Dummy, create_hook_manager());
 
         let (r, _) = handler.handle(SingleRequest::Hello, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());
@@ -597,8 +595,8 @@ mod test {
 
     #[test]
     fn unimpl() {
-        let logger = Logger::root(Discard, o!());
-        let handler = HgCommandHandler::new(Dummy, logger, create_hook_manager());
+        let ctx = CoreContext::test_mock();
+        let handler = HgCommandHandler::new(ctx, Dummy, create_hook_manager());
 
         let (r, _) = handler.handle(SingleRequest::Heads, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());

@@ -41,6 +41,7 @@ extern crate url;
 
 extern crate async_compression;
 extern crate bytes_ext;
+extern crate context;
 extern crate futures_ext;
 extern crate mercurial;
 extern crate mercurial_types;

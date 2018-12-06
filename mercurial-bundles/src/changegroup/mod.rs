@@ -48,13 +48,11 @@ pub struct CgDeltaChunk {
 
 #[cfg(test)]
 mod test {
-    use std::io::{self, Cursor};
+    use std::io::Cursor;
 
     use futures::{Future, Stream};
     use quickcheck::{QuickCheck, StdGen, TestResult};
     use quickcheck::rand;
-    use slog::{Drain, Logger};
-    use slog_term;
     use tokio;
     use tokio_codec::{FramedRead, FramedWrite};
 
@@ -62,6 +60,7 @@ mod test {
     use partial_io::{GenWouldBlock, PartialAsyncRead, PartialAsyncWrite, PartialWithErrors};
 
     use chunk::{ChunkDecoder, ChunkEncoder};
+    use context::CoreContext;
     use quickcheck_types::CgPartSequence;
 
     use super::*;
@@ -127,8 +126,8 @@ mod test {
                 let chunks = FramedRead::new(partial_read, ChunkDecoder)
                     .map(|chunk| chunk.into_bytes().expect("expected normal chunk"));
 
-                let logger = make_root_logger();
-                let unpacker = unpacker::CgUnpacker::new(logger, unpacker_version);
+                let ctx = CoreContext::test_mock();
+                let unpacker = unpacker::CgUnpacker::new(ctx, unpacker_version);
                 let part_stream = chunks.decode(unpacker);
 
                 let parts = Vec::new();
@@ -148,10 +147,5 @@ mod test {
         let result = runtime.block_on(fut);
         runtime.shutdown_on_idle();
         result.unwrap()
-    }
-
-    fn make_root_logger() -> Logger {
-        let plain = slog_term::PlainSyncDecorator::new(io::stdout());
-        Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
     }
 }

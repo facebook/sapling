@@ -121,21 +121,26 @@ pub fn request_handler(
 
     scuba_logger.log_with_msg("Connection established", None);
 
-    let ctx = CoreContext {
-        session: session_uuid,
-        logger: conn_log.clone(),
-        scuba: scuba_logger.clone(),
+    let ctx = CoreContext::new(
+        session_uuid,
+        conn_log,
+        scuba_logger.clone(),
         wireproto_scribe_category,
-        trace: trace.clone(),
-    };
+        trace.clone(),
+    );
 
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
+        ctx.clone(),
         stdin,
-        RepoClient::new(repo.clone(), ctx, hash_validation_percentage, lca_hint),
+        RepoClient::new(
+            repo.clone(),
+            ctx.clone(),
+            hash_validation_percentage,
+            lca_hint,
+        ),
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
-        &conn_log,
         wireproto_calls.clone(),
         hook_manager,
     );
@@ -181,14 +186,14 @@ pub fn request_handler(
         })
         .map_err(move |err| {
             if err.is_inner() {
-                error!(conn_log, "Command failed";
+                error!(ctx.logger(), "Command failed";
                 SlogKVError(err.into_inner().unwrap()),
                 "remote" => "true");
             } else if err.is_elapsed() {
-                error!(conn_log, "Timeout while handling request";
+                error!(ctx.logger(), "Timeout while handling request";
                 "remote" => "true");
             } else {
-                crit!(conn_log, "Unexpected error";
+                crit!(ctx.logger(), "Unexpected error";
                 SlogKVError(err.into_timer().unwrap().into()),
                 "remote" => "true");
             }

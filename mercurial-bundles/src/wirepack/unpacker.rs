@@ -10,9 +10,9 @@ use std::cmp;
 use std::mem;
 
 use bytes::BytesMut;
-use slog;
 use tokio_codec::Decoder;
 
+use context::CoreContext;
 use mercurial_types::RepoPath;
 
 use super::{DataEntry, HistoryEntry, Kind, Part, WIREPACK_END};
@@ -72,16 +72,16 @@ impl Decoder for WirePackUnpacker {
     }
 }
 
-pub fn new(logger: slog::Logger, kind: Kind) -> WirePackUnpacker {
+pub fn new(ctx: CoreContext, kind: Kind) -> WirePackUnpacker {
     WirePackUnpacker {
         state: State::Filename,
-        inner: UnpackerInner { logger, kind },
+        inner: UnpackerInner { ctx, kind },
     }
 }
 
 #[derive(Debug)]
 struct UnpackerInner {
-    logger: slog::Logger,
+    ctx: CoreContext,
     kind: Kind,
 }
 
@@ -91,7 +91,7 @@ impl UnpackerInner {
         let mut state = state;
 
         loop {
-            trace!(self.logger, "state: {:?}", state);
+            trace!(self.ctx.logger(), "state: {:?}", state);
             match state {
                 Filename => match self.decode_filename(buf)? {
                     DecodeRes::None => return Ok((None, State::Filename)),
@@ -205,7 +205,11 @@ impl UnpackerInner {
             }.with_context(|_| ErrorKind::WirePackDecode("invalid filename".into()))?
         };
 
-        trace!(self.logger, "decoding entries for filename: {}", filename);
+        trace!(
+            self.ctx.logger(),
+            "decoding entries for filename: {}",
+            filename
+        );
 
         Ok(DecodeRes::Some(filename))
     }
@@ -254,11 +258,9 @@ enum DecodeRes<T> {
 
 #[cfg(test)]
 mod test {
-    use std::io::{self, Cursor};
+    use std::io::Cursor;
 
     use futures::{Future, Stream};
-    use slog::Drain;
-    use slog_term;
     use tokio;
     use tokio_codec::FramedRead;
 
@@ -266,11 +268,11 @@ mod test {
 
     #[test]
     fn test_empty() {
-        let logger = make_root_logger();
+        let ctx = CoreContext::test_mock();
 
         // Absolutely nothing in here.
         let empty_1 = Cursor::new(WIREPACK_END);
-        let unpacker = new(logger.clone(), Kind::Tree);
+        let unpacker = new(ctx.clone(), Kind::Tree);
         let stream = FramedRead::new(empty_1, unpacker);
         let collect_fut = stream.collect();
 
@@ -284,7 +286,7 @@ mod test {
                 // - data count: b"\0\0\0\0"
                 // - next filename, end of stream: b"\0\0\0\0\0\0\0\0\0\0"
                 let empty_2 = Cursor::new(b"\0\x03foo\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
-                let unpacker = new(logger.clone(), Kind::File);
+                let unpacker = new(ctx.clone(), Kind::File);
                 let stream = FramedRead::new(empty_2, unpacker);
                 stream.collect()
             })
@@ -308,10 +310,5 @@ mod test {
             .map_err(|err| panic!("{:#?}", err));
 
         tokio::run(fut);
-    }
-
-    fn make_root_logger() -> slog::Logger {
-        let plain = slog_term::PlainSyncDecorator::new(io::stdout());
-        slog::Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
     }
 }

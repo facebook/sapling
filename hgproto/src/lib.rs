@@ -18,6 +18,7 @@ extern crate futures;
 #[macro_use]
 extern crate tokio_io;
 
+#[cfg(test)]
 #[macro_use]
 extern crate slog;
 
@@ -31,7 +32,6 @@ extern crate maplit;
 #[macro_use]
 extern crate nom;
 
-#[cfg(test)]
 extern crate context;
 extern crate futures_ext;
 extern crate mercurial;

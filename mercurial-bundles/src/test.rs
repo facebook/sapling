@@ -7,14 +7,12 @@
 use std::collections::HashMap;
 use std::convert::From;
 use std::fmt::Debug;
-use std::io::{self, BufRead, BufReader, Cursor};
+use std::io::{BufRead, BufReader, Cursor};
 use std::iter::Iterator;
 use std::str::FromStr;
 
 use futures::stream::Stream;
 use futures_ext::BoxStream;
-use slog::{Drain, Logger};
-use slog_term;
 use tokio::runtime::Runtime;
 use tokio_io::AsyncRead;
 
@@ -29,6 +27,7 @@ use Bundle2Item;
 use bundle2::{Bundle2Stream, StreamEvent};
 use bundle2_encode::Bundle2EncodeBuilder;
 use changegroup;
+use context::CoreContext;
 use errors::*;
 use part_encode::PartEncodeBuilder;
 use part_header::{PartHeaderBuilder, PartHeaderType};
@@ -112,8 +111,8 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
     buf.set_position(0);
 
     // Now decode it.
-    let logger = make_root_logger();
-    let stream = Bundle2Stream::new(buf, logger);
+    let ctx = CoreContext::test_mock();
+    let stream = Bundle2Stream::new(ctx, buf);
     let (item, stream) = runtime.block_on(stream.into_future()).unwrap();
 
     let mut mparams = HashMap::new();
@@ -168,8 +167,8 @@ fn unknown_part(ct: Option<CompressorType>) {
     let mut buf = runtime.block_on(encode_fut).unwrap();
     buf.set_position(0);
 
-    let logger = make_root_logger();
-    let stream = Bundle2Stream::new(buf, logger);
+    let ctx = CoreContext::test_mock();
+    let stream = Bundle2Stream::new(ctx, buf);
     let parts = Vec::new();
 
     let decode_fut = stream
@@ -541,9 +540,8 @@ fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
         a_stream_params: a_stream_params,
     };
 
-    let logger = make_root_logger();
-
-    let stream = Bundle2Stream::new(reader, logger);
+    let ctx = CoreContext::test_mock();
+    let stream = Bundle2Stream::new(ctx, reader);
     match runtime.block_on(stream.into_future()) {
         Ok((item, stream)) => {
             let stream_start = item.unwrap();
@@ -552,11 +550,6 @@ fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
         }
         Err((e, _)) => Err(e),
     }
-}
-
-fn make_root_logger() -> Logger {
-    let plain = slog_term::PlainSyncDecorator::new(io::stdout());
-    Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
 }
 
 trait RuntimeExt {

@@ -11,8 +11,6 @@ use std::collections::{HashMap, HashSet};
 use std::io::BufRead;
 use std::str;
 
-use slog;
-
 use bytes::{Bytes, BytesMut};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamWrapper};
@@ -22,6 +20,7 @@ use tokio_io::codec::Decoder;
 use Bundle2Item;
 use capabilities;
 use changegroup;
+use context::CoreContext;
 use errors::*;
 use futures_ext::{StreamExt, StreamLayeredExt};
 use infinitepush;
@@ -99,26 +98,23 @@ pub fn get_cg_version(header: PartHeader) -> Result<changegroup::unpacker::CgVer
         })
 }
 
-pub fn get_cg_unpacker(
-    header: PartHeader,
-    logger: slog::Logger,
-) -> changegroup::unpacker::CgUnpacker {
+pub fn get_cg_unpacker(ctx: CoreContext, header: PartHeader) -> changegroup::unpacker::CgUnpacker {
     // TODO(anastasiyaz): T34812941 return Result here, no default packer (version should be specified)
     get_cg_version(header)
-    .map(|version| changegroup::unpacker::CgUnpacker::new(logger.clone(), version))
+    .map(|version| changegroup::unpacker::CgUnpacker::new(ctx.clone(), version))
     // ChangeGroup2 by default
     .unwrap_or_else(|e| {
-        warn!(logger, "{:?}", e);
+        warn!(ctx.logger(), "{:?}", e);
         let default_version = changegroup::unpacker::CgVersion::Cg2Version;
-        changegroup::unpacker::CgUnpacker::new(logger, default_version)
+        changegroup::unpacker::CgUnpacker::new(ctx, default_version)
     })
 }
 
 /// Convert an OuterStream into an InnerStream using the part header.
 pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
+    ctx: CoreContext,
     header: PartHeader,
     stream: OuterStream<R>,
-    logger: &slog::Logger,
 ) -> (Bundle2Item, BoxFuture<OuterStream<R>, Error>) {
     let wrapped_stream = stream
         .take_while_wrapper(|frame| future::ok(frame.is_payload()))
@@ -128,8 +124,8 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
     let bundle2item = match header.part_type() {
         &PartHeaderType::Changegroup => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
+                ctx.with_logger_kv(o!("stream" => "cg2")),
                 header.clone(),
-                logger.new(o!("stream" => "cg2")),
             ));
             Bundle2Item::Changegroup(header, Box::new(cg2_stream))
         }
@@ -139,8 +135,8 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xInfinitepush => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
+                ctx.with_logger_kv(o!("stream" => "cg2")),
                 header.clone(),
-                logger.new(o!("stream" => "cg2")),
             ));
             Bundle2Item::B2xInfinitepush(header, Box::new(cg2_stream))
         }
@@ -151,7 +147,7 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xTreegroup2 => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(
-                logger.new(o!("stream" => "wirepack")),
+                ctx.with_logger_kv(o!("stream" => "wirepack")),
                 // Mercurial only knows how to send trees at the moment.
                 // TODO: add support for file wirepacks once that's a thing
                 wirepack::Kind::Tree,
@@ -170,7 +166,7 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xRebasePack => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(
-                logger.new(o!("stream" => "wirepack")),
+                ctx.with_logger_kv(o!("stream" => "wirepack")),
                 // Mercurial only knows how to send trees at the moment.
                 // TODO: add support for file wirepacks once that's a thing
                 wirepack::Kind::Tree,
@@ -179,8 +175,8 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         }
         &PartHeaderType::B2xRebase => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
+                ctx.with_logger_kv(o!("stream" => "cg2")),
                 header.clone(),
-                logger.new(o!("stream" => "cg2")),
             ));
             Bundle2Item::B2xRebase(header, Box::new(cg2_stream))
         }

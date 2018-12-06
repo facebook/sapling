@@ -15,7 +15,7 @@ use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
 use tokio_io::codec::Decoder;
 
 use bytes::Bytes;
-use slog::{self, Logger};
+use context::CoreContext;
 
 use {HgCommands, Request, Response};
 use commands::HgCommandHandler;
@@ -37,17 +37,16 @@ struct HgProtoHandlerInner<H, Dec, Enc> {
     commands_handler: HgCommandHandler<H>,
     reqdec: Dec,
     respenc: Enc,
-    _logger: Logger,
     wireproto_calls: Arc<Mutex<Vec<String>>>,
 }
 
 impl HgProtoHandler {
-    pub fn new<'a, In, H, Dec, Enc, L>(
+    pub fn new<'a, In, H, Dec, Enc>(
+        ctx: CoreContext,
         input: In,
         commands: H,
         reqdec: Dec,
         respenc: Enc,
-        logger: L,
         wireproto_calls: Arc<Mutex<Vec<String>>>,
         hook_manager: Arc<HookManager>,
     ) -> Self
@@ -58,18 +57,11 @@ impl HgProtoHandler {
         Dec::Error: From<io::Error> + Send + 'static,
         Enc: ResponseEncoder + Clone + Send + Sync + 'static,
         Error: From<Dec::Error>,
-        L: Into<Option<&'a Logger>>,
     {
-        let logger = match logger.into() {
-            None => Logger::root(slog::Discard, o!()),
-            Some(logger) => logger.new(o!()),
-        };
-
         let inner = Arc::new(HgProtoHandlerInner {
-            commands_handler: HgCommandHandler::new(commands, logger.new(o!()), hook_manager),
+            commands_handler: HgCommandHandler::new(ctx, commands, hook_manager),
             reqdec,
             respenc,
-            _logger: logger,
             wireproto_calls,
         });
 
