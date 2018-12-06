@@ -53,9 +53,9 @@ class unionmetadatastore(object):
                     continue
                 p1, p2, linknode, copyfrom = value
                 if p1 != nullid and p1 not in known:
-                    queue.append((copyfrom or curname, p1))
+                    queue.append((copyfrom or name, p1))
                 if p2 != nullid and p2 not in known:
-                    queue.append((curname, p2))
+                    queue.append((name, p2))
             return missing
 
         missing = [(name, node)]

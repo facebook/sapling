@@ -114,11 +114,12 @@ Trace renames
   $ hg commit -m move
   $ hg repack
   $ hg log -f z -T '{desc}\n' -G --pager=off
-  remote: abort: data/z.i@1406e7411862: no match found!
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-  abort: error downloading file contents:
-  'connection closed early'
-  [255]
+  @  move
+  |
+  o  Edit x
+  :
+  o  x
+  
 
 Verify remotefilelog handles rename metadata stripping when comparing file sizes
   $ hg debugrebuilddirstate
