@@ -48,38 +48,38 @@ clear the cache to be sure it is regenerated correctly
   $ cd ..
 git log in repo pushed from hg
   $ git --git-dir=gitrepo2 log --pretty=medium master
-  commit 5806851511aaf3bfe813ae3a86c5027165fa9b96
-  Merge: e5023f9 9497a4e
+  commit fdbdf0eb28dbc846a66f8bf458c5aa8ebfc87412
+  Merge: 3ab4bf1 dbed4f6
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:12 2007 +0000
   
       Merge branch 'beta'
   
-  commit e5023f9e5cb24fdcec7b6c127cec45d8888e35a9
+  commit 3ab4bf1785d6dbdb82467bf09e6aa1450312968d
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:12 2007 +0000
   
       add gamma
   
-  commit 9497a4ee62e16ee641860d7677cdb2589ea15554
+  commit dbed4f6a8ff04d4d1f0a5ce79f9a07cf0f461d7f
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:11 2007 +0000
   
       add beta
   
-  commit 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03
+  commit 205598a42833e532ad20d80414b8e3b85a65936e
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       add alpha
   $ git --git-dir=gitrepo2 log --pretty=medium beta
-  commit 9497a4ee62e16ee641860d7677cdb2589ea15554
+  commit dbed4f6a8ff04d4d1f0a5ce79f9a07cf0f461d7f
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:11 2007 +0000
   
       add beta
   
-  commit 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03
+  commit 205598a42833e532ad20d80414b8e3b85a65936e
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:10 2007 +0000
   

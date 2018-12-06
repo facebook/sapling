@@ -28,15 +28,15 @@ Load commonly used test logic
   adding reference refs/tags/alpha
 
   $ hg log --graph
-  @  changeset:   1:e8b150f84560
+  @  changeset:   1:efe51d25e3ad
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     Added tag alpha for changeset ff7a2f2d8d70
+  |  summary:     Added tag alpha for changeset 69982ec78c6d
   |
-  o  changeset:   0:ff7a2f2d8d70
+  o  changeset:   0:69982ec78c6d
      bookmark:    not-master
      tag:         alpha
      tag:         default/not-master
@@ -56,15 +56,15 @@ git should have the tag alpha
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo2 log --graph
-  @  changeset:   1:e8b150f84560
+  @  changeset:   1:948f1361f9c9
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     Added tag alpha for changeset ff7a2f2d8d70
+  |  summary:     Added tag alpha for changeset 69982ec78c6d
   |
-  o  changeset:   0:ff7a2f2d8d70
+  o  changeset:   0:69982ec78c6d
      bookmark:    not-master
      tag:         alpha
      tag:         default/not-master
@@ -75,4 +75,4 @@ git should have the tag alpha
 
 the tag should be in .hgtags
   $ cat hgrepo2/.hgtags
-  ff7a2f2d8d7099694ae1e8b03838d40575bebb63 alpha
+  69982ec78c6dd2f24b3b62f3e2baaa79ab48ed93 alpha

@@ -188,7 +188,7 @@ replace subrepo with symlink
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
   $ hg log --graph
-  @  changeset:   9:9c3929c04f22
+  @  changeset:   9:5ae8371d90fe
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
@@ -196,53 +196,53 @@ replace subrepo with symlink
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     remove all subrepos
   |
-  o  changeset:   8:1b71dd3e6033
+  o  changeset:   8:3d35b3b681ad
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace subrepo with symlink
   |
-  o  changeset:   7:e338dc0b9f64
+  o  changeset:   7:7ab2f3f0d2a2
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace symlink with subrepo
   |
-  o  changeset:   6:db94aa767571
+  o  changeset:   6:10077550ca45
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add symlink
   |
-  o  changeset:   5:87bae50d72cb
+  o  changeset:   5:5ccecec21679
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace file with subrepo
   |
-  o  changeset:   4:33729ae46d57
+  o  changeset:   4:a44b8fb5038d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace subrepo with file
   |
-  o  changeset:   3:4d2f0f4fb53d
+  o  changeset:   3:fa3b1061c069
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add another subrepo
   |
-  o  changeset:   2:620c9d5e9a98
+  o  changeset:   2:61810bd16e46
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     change subrepo commit
   |
-  o  changeset:   1:f20b40ad6da1
+  o  changeset:   1:ab274969926a
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add subrepo
   |
-  o  changeset:   0:ff7a2f2d8d70
+  o  changeset:   0:69982ec78c6d
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
   $ hg book
-   * master                    9:9c3929c04f22
+   * master                    9:5ae8371d90fe
 
 (add subrepo)
   $ hg cat -r 1 .hgsubstate
@@ -250,7 +250,7 @@ replace subrepo with symlink
   $ hg cat -r 1 .hgsub
   subrepo = [git]../gitsubrepo
   $ hg gverify -r 1
-  verifying rev f20b40ad6da1 against git commit e42b08b3cb7069b4594a4ee1d9cb641ee47b2355
+  verifying rev ab274969926a against git commit e42b08b3cb7069b4594a4ee1d9cb641ee47b2355
 
 (change subrepo commit)
   $ hg cat -r 2 .hgsubstate
@@ -258,7 +258,7 @@ replace subrepo with symlink
   $ hg cat -r 2 .hgsub
   subrepo = [git]../gitsubrepo
   $ hg gverify -r 2
-  verifying rev 620c9d5e9a98 against git commit a000567ceefbd9a2ce364e0dea6e298010b02b6d
+  verifying rev 61810bd16e46 against git commit a000567ceefbd9a2ce364e0dea6e298010b02b6d
 
 (add another subrepo)
   $ hg cat -r 3 .hgsubstate
@@ -268,7 +268,7 @@ replace subrepo with symlink
   subrepo = [git]../gitsubrepo
   subrepo2 = [git]../gitsubrepo
   $ hg gverify -r 3
-  verifying rev 4d2f0f4fb53d against git commit 6e219527869fa40eb6ffbdd013cd86d576b26b01
+  verifying rev fa3b1061c069 against git commit 6e219527869fa40eb6ffbdd013cd86d576b26b01
 
 (replace subrepo with file)
   $ hg cat -r 4 .hgsubstate
@@ -282,7 +282,7 @@ replace subrepo with symlink
   alpha
   subrepo
   $ hg gverify -r 4
-  verifying rev 33729ae46d57 against git commit f6436a472da00f581d8d257e9bbaf3c358a5e88c
+  verifying rev a44b8fb5038d against git commit f6436a472da00f581d8d257e9bbaf3c358a5e88c
 
 (replace file with subrepo)
   $ hg cat -r 5 .hgsubstate
@@ -297,7 +297,7 @@ replace subrepo with symlink
   .hgsubstate
   subrepo
   $ hg gverify -r 5
-  verifying rev 87bae50d72cb against git commit 88171163bf4795b5570924e51d5f8ede33f8bc28
+  verifying rev 5ccecec21679 against git commit 88171163bf4795b5570924e51d5f8ede33f8bc28
 
 (replace symlink with subrepo)
 XXX: The new logic in core is too strict but we don't really care about this usecase so
@@ -312,7 +312,7 @@ we just ignore this failure for now.
   abort: subrepo 'foolink' traverses symbolic link
   [255]
   $ hg gverify -r 7
-  verifying rev e338dc0b9f64 against git commit e3288fa737d429a60637b3b6782cb25b8298bc00
+  verifying rev 7ab2f3f0d2a2 against git commit e3288fa737d429a60637b3b6782cb25b8298bc00
 
 (replace subrepo with symlink)
   $ hg cat -r 8 .hgsub .hgsubstate
@@ -322,31 +322,31 @@ we just ignore this failure for now.
   6e4ad8da50204560c00fa25e4987eb2e239029ba subrepo2
 
   $ hg gverify -r 8
-  verifying rev 1b71dd3e6033 against git commit d28364013fe1a0fde56c0e1921e49ecdeee8571d
+  verifying rev 3d35b3b681ad against git commit d28364013fe1a0fde56c0e1921e49ecdeee8571d
 
 (remove all subrepos)
   $ hg cat -r 9 .hgsub .hgsubstate
-  .hgsub: no such file in rev 9c3929c04f22
-  .hgsubstate: no such file in rev 9c3929c04f22
+  .hgsub: no such file in rev 5ae8371d90fe
+  .hgsubstate: no such file in rev 5ae8371d90fe
   [1]
   $ hg gverify -r 9
-  verifying rev 9c3929c04f22 against git commit 15ba94929481c654814178aac1dbca06ae688718
+  verifying rev 5ae8371d90fe against git commit 15ba94929481c654814178aac1dbca06ae688718
 
   $ hg gclear
   clearing out the git cache data
   $ hg gexport
   $ cd .hg/git
   $ git log --pretty=oneline
-  15ba94929481c654814178aac1dbca06ae688718 remove all subrepos
-  d28364013fe1a0fde56c0e1921e49ecdeee8571d replace subrepo with symlink
-  e3288fa737d429a60637b3b6782cb25b8298bc00 replace symlink with subrepo
-  2d1c135447d11df4dfe96dd5d4f37926dc5c821d add symlink
-  88171163bf4795b5570924e51d5f8ede33f8bc28 replace file with subrepo
-  f6436a472da00f581d8d257e9bbaf3c358a5e88c replace subrepo with file
-  6e219527869fa40eb6ffbdd013cd86d576b26b01 add another subrepo
-  a000567ceefbd9a2ce364e0dea6e298010b02b6d change subrepo commit
-  e42b08b3cb7069b4594a4ee1d9cb641ee47b2355 add subrepo
-  7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 add alpha
+  5029f164081f610d376405968d4588b823810838 remove all subrepos
+  80ac0dcee3a4f86fdb7bab740f737f2cd4b19182 replace subrepo with symlink
+  9c650056de9a0a417e5590a588bf4e942d378519 replace symlink with subrepo
+  0d13ab8294c9c35f5af94dc8af2ffc7f96fb395b add symlink
+  d3ce4262b9bc8e1f7f6497b8039627f073b77426 replace file with subrepo
+  71941511905ee6178d184519ff131468c2f84241 replace subrepo with file
+  83d542a647b4f08344e3937697efb936dcb1d178 add another subrepo
+  6e6d32168939af1a292dc85b5f737c95dbde349c change subrepo commit
+  14951d27ab1a586eede27e0b10e8d29f5b070743 add subrepo
+  205598a42833e532ad20d80414b8e3b85a65936e add alpha
 
 test with rename detection enabled -- simply checking that the Mercurial hashes
 are the same is enough
@@ -356,7 +356,7 @@ are the same is enough
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgreporenames
   $ hg log --graph
-  @  changeset:   9:9c3929c04f22
+  @  changeset:   9:5ae8371d90fe
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
@@ -364,47 +364,47 @@ are the same is enough
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     remove all subrepos
   |
-  o  changeset:   8:1b71dd3e6033
+  o  changeset:   8:3d35b3b681ad
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace subrepo with symlink
   |
-  o  changeset:   7:e338dc0b9f64
+  o  changeset:   7:7ab2f3f0d2a2
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace symlink with subrepo
   |
-  o  changeset:   6:db94aa767571
+  o  changeset:   6:10077550ca45
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add symlink
   |
-  o  changeset:   5:87bae50d72cb
+  o  changeset:   5:5ccecec21679
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace file with subrepo
   |
-  o  changeset:   4:33729ae46d57
+  o  changeset:   4:a44b8fb5038d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace subrepo with file
   |
-  o  changeset:   3:4d2f0f4fb53d
+  o  changeset:   3:fa3b1061c069
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add another subrepo
   |
-  o  changeset:   2:620c9d5e9a98
+  o  changeset:   2:61810bd16e46
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     change subrepo commit
   |
-  o  changeset:   1:f20b40ad6da1
+  o  changeset:   1:ab274969926a
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add subrepo
   |
-  o  changeset:   0:ff7a2f2d8d70
+  o  changeset:   0:69982ec78c6d
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha

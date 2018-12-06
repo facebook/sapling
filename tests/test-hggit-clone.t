@@ -23,7 +23,7 @@ clone a tag
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-a log --graph
-  @  changeset:   0:ff7a2f2d8d70
+  @  changeset:   0:69982ec78c6d
      bookmark:    master
      tag:         alpha
      tag:         default/master
@@ -41,7 +41,7 @@ clone a branch
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-b log --graph
-  @  changeset:   1:7fe02317c63d
+  @  changeset:   1:3bb02b6794dd
   |  bookmark:    beta
   |  tag:         default/beta
   |  tag:         tip
@@ -49,7 +49,7 @@ clone a branch
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:ff7a2f2d8d70
+  o  changeset:   0:69982ec78c6d
      bookmark:    master
      tag:         alpha
      tag:         default/master

@@ -879,6 +879,14 @@ class GitHandler(object):
         (strip_message, hg_renames, hg_branch, extra) = git2hg.extract_hg_metadata(
             commit.message, commit.extra
         )
+
+        # Store the original git commit hash in the Mercurial extras. This
+        # breaks bidirectionality, but makes it possible for a Mercurial client
+        # to compute the git/hg mapping without having the entire git repo.
+        # "convert_revision" was chosen to match the hgsubversion and hg convert
+        # extra field.
+        extra["convert_revision"] = commit.id
+
         if hg_renames is None:
             detect_renames = True
             # We have to store this unconditionally, even if there are no

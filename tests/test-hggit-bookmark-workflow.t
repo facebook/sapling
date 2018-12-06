@@ -79,10 +79,10 @@ Cloning transfers all bookmarks from remote to local
   $ hg clone -q gitremoterepo hggitlocalrepo --config hggit.usephases=True
   $ cd hggitlocalrepo
   $ hggitstate
-    3 03769a650ded 55b133e1d558 "add delta" bookmarks: [master]
-    2 ca33a262eb46 d338971a96e2 "add gamma" bookmarks: []
-    1 7fe02317c63d 9497a4ee62e1 "add beta" bookmarks: [b1]
-    0 ff7a2f2d8d70 7eeab2ea75ec "add alpha" bookmarks: []
+    3 3783f3cdb535 55b133e1d558 "add delta" bookmarks: [master]
+    2 1221213928d3 d338971a96e2 "add gamma" bookmarks: []
+    1 3bb02b6794dd 9497a4ee62e1 "add beta" bookmarks: [b1]
+    0 69982ec78c6d 7eeab2ea75ec "add alpha" bookmarks: []
 
 Make sure that master is public
   $ hg phase -r master
@@ -198,14 +198,14 @@ This changed in 3.4 to start showing changed and deleted bookmarks again.
   $ hg bookmark -fr 2 b1
   $ hg bookmark -r 0 b2
   $ hgstate
-    3 03769a650ded "add delta" bookmarks: [master]
-    2 ca33a262eb46 "add gamma" bookmarks: [b1]
-    1 7fe02317c63d "add beta" bookmarks: []
-    0 ff7a2f2d8d70 "add alpha" bookmarks: [b2]
+    3 3783f3cdb535 "add delta" bookmarks: [master]
+    2 1221213928d3 "add gamma" bookmarks: [b1]
+    1 3bb02b6794dd "add beta" bookmarks: []
+    0 69982ec78c6d "add alpha" bookmarks: [b2]
   $ hg incoming -B
   comparing with $TESTTMP/gitremoterepo
   searching for changed bookmarks
-     b3                        03769a650ded
+     b3                        3783f3cdb535
      b4                        fcfd2c0262db
   $ hg outgoing
   comparing with $TESTTMP/gitremoterepo
@@ -218,5 +218,5 @@ This changed in 3.4 to start showing changed and deleted bookmarks again.
   $ hg outgoing -B | egrep -v -w 'b1|b3|b4'
   comparing with $TESTTMP/gitremoterepo
   searching for changed bookmarks
-     b2                        ff7a2f2d8d70
+     b2                        69982ec78c6d
   $ cd ..

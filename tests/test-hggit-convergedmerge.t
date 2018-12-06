@@ -59,20 +59,20 @@ Load commonly used test logic
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 expect the same revision ids as above
   $ hg -R hgrepo2 log --graph --style compact
-  @    4[default/master,tip][master]:1,3   eaa21d002113   1970-01-01 00:00 +0000   test
+  @    4[default/master,tip][master]:1,3   b08a922386d5   1970-01-01 00:00 +0000   test
   |\     merge
   | |
-  | o  3   0dbe4ac1a758   1970-01-01 00:00 +0000   test
+  | o  3   8bfd72bff163   1970-01-01 00:00 +0000   test
   | |    B->C
   | |
-  | o  2:0   7205e83b5a3f   1970-01-01 00:00 +0000   test
+  | o  2:0   47fc555571b8   1970-01-01 00:00 +0000   test
   | |    A->B
   | |
-  o |  1   ea82b67264a1   1970-01-01 00:00 +0000   test
+  o |  1   8ec5b459b86e   1970-01-01 00:00 +0000   test
   |/     A->C
   |
-  o  0   5d1a6b64f9d0   1970-01-01 00:00 +0000   test
+  o  0   fd5eb788c3a1   1970-01-01 00:00 +0000   test
        origin
   
   $ hg -R hgrepo2 gverify
-  verifying rev eaa21d002113 against git commit fb8c9e2afe5418cfff337eeed79fad5dd58826f0
+  verifying rev b08a922386d5 against git commit fb8c9e2afe5418cfff337eeed79fad5dd58826f0

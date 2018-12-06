@@ -18,7 +18,7 @@ Load commonly used test logic
   $ hg log -r tip --template 'files: {files}\n'
   files: 
   $ hg gverify
-  verifying rev 01708ca54a8f against git commit 678256865a8c85ae925bf834369264193c88f8de
+  verifying rev fff47be752a2 against git commit 678256865a8c85ae925bf834369264193c88f8de
 
   $ hg gclear
   clearing out the git cache data
@@ -29,7 +29,7 @@ Load commonly used test logic
   added 1 commits with 1 trees and 0 blobs
   $ cd ..
   $ git --git-dir=gitrepo2 log --pretty=medium
-  commit 678256865a8c85ae925bf834369264193c88f8de
+  commit d053da5f0bb9a1a7eb0dd82f36ddc3b1cd378527
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:00 2007 +0000
   

@@ -22,7 +22,7 @@ Load commonly used test logic
 
   $ cd hgrepo
   $ hg log --graph
-  @  changeset:   1:5403d6137622
+  @  changeset:   1:adbd57955611
   |  bookmark:    master
   |  tag:         beta
   |  tag:         default/master
@@ -31,7 +31,7 @@ Load commonly used test logic
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:ff7a2f2d8d70
+  o  changeset:   0:69982ec78c6d
      tag:         alpha
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000

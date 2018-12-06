@@ -117,7 +117,7 @@ make sure the commit doesn't have an HG:rename-source annotation
   importing git objects into hg
   (run 'hg heads' to see heads)
   $ hg log --graph
-  o  changeset:   3:ae8eb55f7090
+  o  changeset:   3:24fd35be5ac7
   |  bookmark:    branch2_bookmark
   |  tag:         default/branch2
   |  tag:         tip
@@ -126,7 +126,7 @@ make sure the commit doesn't have an HG:rename-source annotation
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     append f2
   |
-  | o  changeset:   2:8211cade99e4
+  | o  changeset:   2:3685cc14543e
   | |  bookmark:    branch1_bookmark
   | |  tag:         default/branch1
   | |  parent:      0:40a840c1f8ae

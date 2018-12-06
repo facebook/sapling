@@ -46,19 +46,19 @@ Load commonly used test logic
   $ cd ..
 
   $ git --git-dir=gitrepo2 log --pretty=medium
-  commit 6e0dbd8cd92ed4823c69cb48d8a2b81f904e6e69
+  commit d16fb6b69bb183a673483b4d239c3ecd1c5476ec
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:12 2007 +0000
   
       replace a dir with a file
   
-  commit a1874d5cd0b1549ed729e36f0da4a93ed36259ee
+  commit 5b24ce288cfde71c483834f3b2b62aa5bcb05a43
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:11 2007 +0000
   
       rename
   
-  commit 102c17a5deda49db3f10ec5573f9378867098b7c
+  commit 9f99e4bc96145e874b20c616cd8824b6e74f9fc7
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:10 2007 +0000
   

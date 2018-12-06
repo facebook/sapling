@@ -97,7 +97,7 @@ Load commonly used test logic
   updating reference refs/heads/master
 
   $ hg log --graph
-  @  changeset:   8:c5d1976ab12c
+  @  changeset:   8:de0c236bcd02
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
@@ -105,42 +105,42 @@ Load commonly used test logic
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     add theta
   |
-  o  changeset:   7:0e2fb4d21667
+  o  changeset:   7:b4ada284aa0b
   |  user:        test < test@example.com >
   |  date:        Mon Jan 01 00:00:17 2007 +0000
   |  summary:     add eta
   |
-  o  changeset:   6:faa3aae96199
+  o  changeset:   6:be9e5ffbcff0
   |  user:        test
   |  date:        Mon Jan 01 00:00:16 2007 +0000
   |  summary:     add zeta
   |
-  o  changeset:   5:2cf6ad5a1afc
+  o  changeset:   5:721ffc4d7c76
   |  user:        name <test@example.com
   |  date:        Mon Jan 01 00:00:15 2007 +0000
   |  summary:     add epsilon
   |
-  o  changeset:   4:3131b2a71396
+  o  changeset:   4:f1254cd4f0d9
   |  user:        name<test@example.com>
   |  date:        Mon Jan 01 00:00:14 2007 +0000
   |  summary:     add delta
   |
-  o  changeset:   3:6b854d65d0d6
+  o  changeset:   3:10310359956b
   |  user:        <test@example.com>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     add gamma
   |
-  o  changeset:   2:46303c652e79
+  o  changeset:   2:a6260b330211
   |  user:        test <test@example.com> (comment)
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     modify beta
   |
-  o  changeset:   1:47580592d3d6
+  o  changeset:   1:574e2d660a7d
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:ff7a2f2d8d70
+  o  changeset:   0:69982ec78c6d
      bookmark:    not-master
      tag:         default/not-master
      user:        test <test@example.org>
@@ -153,7 +153,7 @@ Load commonly used test logic
   importing git objects into hg
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo2 log --graph
-  @  changeset:   8:1fbf3aa91221
+  @  changeset:   8:0e82f70d8365
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
@@ -161,42 +161,42 @@ Load commonly used test logic
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     add theta
   |
-  o  changeset:   7:20310508f06d
+  o  changeset:   7:353db02be541
   |  user:        test <test@example.com>
   |  date:        Mon Jan 01 00:00:17 2007 +0000
   |  summary:     add eta
   |
-  o  changeset:   6:e3d81af8a8c1
+  o  changeset:   6:8b7698cb629f
   |  user:        test
   |  date:        Mon Jan 01 00:00:16 2007 +0000
   |  summary:     add zeta
   |
-  o  changeset:   5:78f609fd208f
+  o  changeset:   5:8264dd8cdfb8
   |  user:        name <test@example.com>
   |  date:        Mon Jan 01 00:00:15 2007 +0000
   |  summary:     add epsilon
   |
-  o  changeset:   4:42fa61d57718
+  o  changeset:   4:ba47c351307f
   |  user:        name <test@example.com>
   |  date:        Mon Jan 01 00:00:14 2007 +0000
   |  summary:     add delta
   |
-  o  changeset:   3:6b854d65d0d6
+  o  changeset:   3:44bb6eac290f
   |  user:        <test@example.com>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     add gamma
   |
-  o  changeset:   2:46303c652e79
+  o  changeset:   2:9699c3457ee8
   |  user:        test <test@example.com> (comment)
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     modify beta
   |
-  o  changeset:   1:47580592d3d6
+  o  changeset:   1:4272913025dd
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:ff7a2f2d8d70
+  o  changeset:   0:69982ec78c6d
      bookmark:    not-master
      tag:         default/not-master
      user:        test <test@example.org>

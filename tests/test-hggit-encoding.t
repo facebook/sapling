@@ -32,11 +32,11 @@ The warning message changed in Git 1.8.0
   $ cd hgrepo
 
   $ HGENCODING=utf-8 hg log --graph --debug | grep -v 'phase:' | grep -v ': *author=' | grep -v ': *message='
-  @  changeset:   3:b8a0ac52f339ccd6d5729508bac4aee6e8b489d8
+  @  changeset:   3:3c284d9743de7c02ac66b8b5ce10d39efd38d7bc
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
-  |  parent:      2:8bc4d64940260d4a1e70b54c099d3a76c83ff41e
+  |  parent:      2:727e37c486803fce561d97a80721324febade37e
   |  parent:      -1:0000000000000000000000000000000000000000
   |  manifest:    3:ea49f93388380ead5601c8fcbfa187516e7c2ed8
   |  user:        tést èncödîng <test@example.org>
@@ -44,14 +44,15 @@ The warning message changed in Git 1.8.0
   |  files+:      delta
   |  extra:       branch=default
   |  extra:       committer=test <test@example.org> 1167609613 0
+  |  extra:       convert_revision=51c509c1c7eeb8f0a5b20aa3e894e8823f39171f
   |  extra:       encoding=latin-1
   |  extra:       hg-git-rename-source=git
   |  description:
   |  add d\xc3\xa9lt\xc3\xa0 (esc)
   |
   |
-  o  changeset:   2:8bc4d64940260d4a1e70b54c099d3a76c83ff41e
-  |  parent:      1:f35a3100b78e57a0f5e4589a438f952a14b26ade
+  o  changeset:   2:727e37c486803fce561d97a80721324febade37e
+  |  parent:      1:5408f831a4d1a1d6ecccdddbe04c5a8b888a33c1
   |  parent:      -1:0000000000000000000000000000000000000000
   |  manifest:    2:f580e7da3673c137370da2b931a1dee83590d7b4
   |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
@@ -59,13 +60,14 @@ The warning message changed in Git 1.8.0
   |  files+:      gamma
   |  extra:       branch=default
   |  extra:       committer=test <test@example.org> 1167609612 0
+  |  extra:       convert_revision=bd576458238cbda49ffcfbafef5242e103f1bc24
   |  extra:       hg-git-rename-source=git
   |  description:
   |  add g\xc3\xa4mm\xc3\xa2 (esc)
   |
   |
-  o  changeset:   1:f35a3100b78e57a0f5e4589a438f952a14b26ade
-  |  parent:      0:87cd29b67a9159eec3b5495b0496ef717b2769f5
+  o  changeset:   1:5408f831a4d1a1d6ecccdddbe04c5a8b888a33c1
+  |  parent:      0:b1884a2b1964e4881e235f33485aebc34ee61b90
   |  parent:      -1:0000000000000000000000000000000000000000
   |  manifest:    1:f0bd6fbafbaebe4bb59c35108428f6fce152431d
   |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
@@ -73,12 +75,13 @@ The warning message changed in Git 1.8.0
   |  files+:      beta
   |  extra:       branch=default
   |  extra:       committer=test <test@example.org> 1167609611 0
+  |  extra:       convert_revision=7a7e86fc1b24db03109c9fe5da28b352de59ce90
   |  extra:       hg-git-rename-source=git
   |  description:
   |  add beta
   |
   |
-  o  changeset:   0:87cd29b67a9159eec3b5495b0496ef717b2769f5
+  o  changeset:   0:b1884a2b1964e4881e235f33485aebc34ee61b90
      parent:      -1:0000000000000000000000000000000000000000
      parent:      -1:0000000000000000000000000000000000000000
      manifest:    0:8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
@@ -86,6 +89,7 @@ The warning message changed in Git 1.8.0
      date:        Mon Jan 01 00:00:10 2007 +0000
      files+:      alpha
      extra:       branch=default
+     extra:       convert_revision=0530b75d8c203e10dc934292a6a4032c6e958a83
      extra:       hg-git-rename-source=git
      description:
      add \xc3\xa4lph\xc3\xa0 (esc)
@@ -102,25 +106,25 @@ The warning message changed in Git 1.8.0
 
   $ cd ..
   $ git --git-dir=gitrepo2 log --pretty=medium
-  commit e85fef6b515d555e45124a5dc39a019cf8db9ff0
+  commit 21cee4094d142130e18dce6bd1e3a60accd6799b
   Author: t\xe9st \xe8nc\xf6d\xeeng <test@example.org> (esc)
   Date:   Mon Jan 1 00:00:13 2007 +0000
   
       add d\xe9lt\xe0 (esc)
   
-  commit bd576458238cbda49ffcfbafef5242e103f1bc24
+  commit 4e120a5e4b8f6440e5f4aea0da3b1ddc8960186f
   Author: * <test@example.org> (glob)
   Date:   Mon Jan 1 00:00:12 2007 +0000
   
       add g*mm* (glob)
   
-  commit 7a7e86fc1b24db03109c9fe5da28b352de59ce90
+  commit 4840d5849378794ea269174845d7fc2ae19506a0
   Author: * <test@example.org> (glob)
   Date:   Mon Jan 1 00:00:11 2007 +0000
   
       add beta
   
-  commit 0530b75d8c203e10dc934292a6a4032c6e958a83
+  commit 075e54047ff498b9229fc127668d157095658b04
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:10 2007 +0000
   

@@ -17,7 +17,7 @@ Load commonly used test logic
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo log --graph
-  @  changeset:   1:7fe02317c63d
+  @  changeset:   1:3bb02b6794dd
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
@@ -25,7 +25,7 @@ Load commonly used test logic
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:ff7a2f2d8d70
+  o  changeset:   0:69982ec78c6d
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -33,9 +33,9 @@ Load commonly used test logic
 
 we should have some bookmarks
   $ hg -R hgrepo book
-   * master                    1:7fe02317c63d
+   * master                    1:3bb02b6794dd
   $ hg -R hgrepo gverify
-  verifying rev 7fe02317c63d against git commit 9497a4ee62e16ee641860d7677cdb2589ea15554
+  verifying rev 3bb02b6794dd against git commit 9497a4ee62e16ee641860d7677cdb2589ea15554
 
 test for ssh vulnerability
 

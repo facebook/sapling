@@ -93,8 +93,8 @@ Remove the submodule and rename the file back:
   $ cd hgrepo
   $ hg book master -q
   $ hg log -p --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
-  @  8 a26f94023ab2ea40c9e4c4dbb753c9a4e572fefe remove submodule and rename back
-  |  branch=default hg-git-rename-source=git
+  @  8 2e3567dd7aeb6c566bfe675119b2cc008d042c26 remove submodule and rename back
+  |  branch=default convert_revision=50d116676a308b7c22935137d944e725d2296f2a hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
   |  --- a/.gitmodules
@@ -122,8 +122,8 @@ Remove the submodule and rename the file back:
   |  rename from gamma-new
   |  rename to gamma
   |
-  o  7 a7c65d466ee1f33540695666c2e65dcbe3fbe388 rename and add submodule
-  |  branch=default hg-git-rename-source=git
+  o  7 24a0764120d700b1701941eb3f67454157136836 rename and add submodule
+  |  branch=default convert_revision=59fb8e82ea18f79eab99196f588e8948089c134f hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
   |  --- a/.gitmodules
@@ -151,8 +151,8 @@ Remove the submodule and rename the file back:
   |  rename from gamma
   |  rename to gamma-new
   |
-  o  6 10614bb16f4d240ba81b6a71d76a7aa160621a29 beta renamed back
-  |  branch=default hg-git-rename-source=git
+  o  6 4dfc1ab4a0ecd9066e613d8728fc6347f910801d beta renamed back
+  |  branch=default convert_revision=f95497455dfa891b4cd9b524007eb9514c3ab654 hg-git-rename-source=git
   |
   |  diff --git a/beta b/beta
   |  old mode 120000
@@ -192,8 +192,8 @@ Remove the submodule and rename the file back:
   |  -11
   |  -12
   |
-  o  5 96ad24db491a180ccd330556129d75377e201f63 beta renamed
-  |  branch=default hg-git-rename-source=git
+  o  5 4bc4be232b3d6e53ddef658ef3d9ab142b3d0a0f beta renamed
+  |  branch=default convert_revision=055f482277da6cd3dd37c7093d06983bad68f782 hg-git-rename-source=git
   |
   |  diff --git a/beta b/beta
   |  old mode 100644
@@ -219,8 +219,8 @@ Remove the submodule and rename the file back:
   |  copy from beta
   |  copy to beta-new
   |
-  o  4 d22608e850ea875936802e119831f1789f5d98bd move submodule
-  |  branch=default hg-git-rename-source=git
+  o  4 ffad978ae6259b23aae39d566ec89d3af85a6c7a move submodule
+  |  branch=default convert_revision=d7f31298f27df8a9226eddb1e4feb96922c46fa5 hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
   |  --- a/.gitmodules
@@ -243,8 +243,8 @@ Remove the submodule and rename the file back:
   |  -5944b31ff85b415573d1a43eb942e2dea30ab8be gitsubmodule
   |  +5944b31ff85b415573d1a43eb942e2dea30ab8be gitsubmodule2
   |
-  o  3 db55fd0e7083555ec886f6175fa0a42a711c6592 add submodule
-  |  branch=default hg-git-rename-source=git
+  o  3 c8c8ef153360b7368535b6ca01b7e02a7998b67e add submodule
+  |  branch=default convert_revision=c610256cb6959852d9e70d01902a06726317affc hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
   |  new file mode 100644
@@ -267,8 +267,8 @@ Remove the submodule and rename the file back:
   |  @@ -0,0 +1,1 @@
   |  +5944b31ff85b415573d1a43eb942e2dea30ab8be gitsubmodule
   |
-  o  2 20f9e56b6d006d0403f853245e483d0892b8ac48 gamma
-  |  branch=default hg-git-rename-source=git
+  o  2 e3e6b2083b5cc4382f611b16d23df93a40a19a00 gamma
+  |  branch=default convert_revision=e1348449e0c3a417b086ed60fc13f068d4aa8b26 hg-git-rename-source=git
   |
   |  diff --git a/beta b/beta
   |  --- a/beta
@@ -289,8 +289,8 @@ Remove the submodule and rename the file back:
   |   11
   |  +13
   |
-  o  1 9f7744e68def81da3b394f11352f602ca9c8ab68 beta
-  |  branch=default hg-git-rename-source=git
+  o  1 80be639891f44172f321d555badcbc3f9d11fa87 beta
+  |  branch=default convert_revision=cc83241f39927232f690d370894960b0d1943a0e hg-git-rename-source=git
   |
   |  diff --git a/alpha b/beta
   |  rename from alpha
@@ -303,8 +303,8 @@ Remove the submodule and rename the file back:
   |   10
   |  +11
   |
-  o  0 7bc844166f76e49562f81eacd54ea954d01a9e42 alpha
-     branch=default hg-git-rename-source=git
+  o  0 ff861f77355d7a6aba082ff95f2bc716cf192980 alpha
+     branch=default convert_revision=938bb65bb322eb4a3558bec4cdc8a680c4d1794c hg-git-rename-source=git
   
      diff --git a/alpha b/alpha
      new file mode 100644
@@ -338,8 +338,8 @@ Make a new commit with a copy and a rename in Mercurial
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID a725f9bdefe29f1a1db89ad030d9f1ee36b3a440
-  # Parent  814ed6aa5bd2867ce5ab80f3c2602155d89027b1
+  # Node ID e01c1320d15c0a7abe4d30f3f71e03b2058a002f
+  # Parent  3c7e506adb7b7a2b82f887d2923ee4d955695ca2
   delta/epsilon
   
   diff --git a/gamma b/delta
@@ -413,8 +413,8 @@ Now make another clone and compare the hashes
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID a725f9bdefe29f1a1db89ad030d9f1ee36b3a440
-  # Parent  814ed6aa5bd2867ce5ab80f3c2602155d89027b1
+  # Node ID 5ba38aef569229c46e403f4ab17c16520e40108e
+  # Parent  2423517f443d79f55da435dfc95b828bf7b56d94
   delta/epsilon
   
   diff --git a/gamma b/delta
@@ -444,17 +444,17 @@ Regenerate the Git metadata and compare the hashes
   $ hg gexport
   $ cd .hg/git
   $ git log master --pretty=oneline
-  5f2948d029693346043f320620af99a615930dc4 delta/epsilon
-  bbd2ec050f7fbc64f772009844f7d58a556ec036 gamma2
-  50d116676a308b7c22935137d944e725d2296f2a remove submodule and rename back
-  59fb8e82ea18f79eab99196f588e8948089c134f rename and add submodule
-  f95497455dfa891b4cd9b524007eb9514c3ab654 beta renamed back
-  055f482277da6cd3dd37c7093d06983bad68f782 beta renamed
-  d7f31298f27df8a9226eddb1e4feb96922c46fa5 move submodule
-  c610256cb6959852d9e70d01902a06726317affc add submodule
-  e1348449e0c3a417b086ed60fc13f068d4aa8b26 gamma
-  cc83241f39927232f690d370894960b0d1943a0e beta
-  938bb65bb322eb4a3558bec4cdc8a680c4d1794c alpha
+  9a60acf6a3a7cfaa723628d9f611f984ffdbe223 delta/epsilon
+  48cc0b1b9c2aa12caa72a86fd5d9a6dbbf392352 gamma2
+  44dbe9ba6dab7d29c312cd7001e9f1b5c52c612d remove submodule and rename back
+  fb9c13c5ac5994b47906f59376e999cbb7017327 rename and add submodule
+  dcdc3b83eec5f3b214e1cb5199edecf72d60de58 beta renamed back
+  e805d81c8372a4d0d6a22ec5abb35e3467043588 beta renamed
+  4899220730aca75da3f8f311f40bba30a7bd42ca move submodule
+  843e2dc46308ace4649dbc9c82ff87f2cf420e09 add submodule
+  00d2f34d2f9e2230ed49343b2b3eb14637b16c2e gamma
+  e3ddc25bf9b3a6a00e4379673ee2d9d6bbef720e beta
+  8557a753ca442f07736d74570a9cfebde4bf02e9 alpha
 
 Test findcopiesharder
 
@@ -491,8 +491,8 @@ Clone without findcopiesharder does not find copies from unmodified files
   # User test <test@example.org>
   # Date 1167609621 0
   #      Mon Jan 01 00:00:21 2007 +0000
-  # Node ID 555831c93e2a250e5ba42efad45bf7ba71da13e4
-  # Parent  b45d023c6842337ffe694663a44aa672d311081c
+  # Node ID 2e1fd38583278f0b6ede71d0f913f02ff3e14a36
+  # Parent  3557dd9e8accc08148642bb4d8b2a4028e85f1f9
   file1
   
   diff --git a/file1 b/file1
@@ -509,8 +509,8 @@ Clone without findcopiesharder does not find copies from unmodified files
   # User test <test@example.org>
   # Date 1167609622 0
   #      Mon Jan 01 00:00:22 2007 +0000
-  # Node ID ec77ccdbefe023eb9898b0399f84f670c8c0f5fc
-  # Parent  555831c93e2a250e5ba42efad45bf7ba71da13e4
+  # Node ID 6b935af41daea1bf80d299ea139fab32c937e2b0
+  # Parent  2e1fd38583278f0b6ede71d0f913f02ff3e14a36
   file2
   
   diff --git a/file2 b/file2
@@ -536,8 +536,8 @@ findcopiesharder finds copies from unmodified files if similarity is met
   # User test <test@example.org>
   # Date 1167609621 0
   #      Mon Jan 01 00:00:21 2007 +0000
-  # Node ID cd05a87103eed9d270fc05b62b00f48e174ab960
-  # Parent  b45d023c6842337ffe694663a44aa672d311081c
+  # Node ID 822f61b91c7d74a67114314c5f6b078d9de4f3ac
+  # Parent  3557dd9e8accc08148642bb4d8b2a4028e85f1f9
   file1
   
   diff --git a/file0 b/file1
@@ -547,8 +547,8 @@ findcopiesharder finds copies from unmodified files if similarity is met
   # User test <test@example.org>
   # Date 1167609622 0
   #      Mon Jan 01 00:00:22 2007 +0000
-  # Node ID 9b30998342729c7357d418bebed7399986cfe643
-  # Parent  cd05a87103eed9d270fc05b62b00f48e174ab960
+  # Node ID 6827e4ffec1b7f3e8b0e96a995adcc5fce4f8e8b
+  # Parent  822f61b91c7d74a67114314c5f6b078d9de4f3ac
   file2
   
   diff --git a/file0 b/file2
@@ -571,8 +571,8 @@ findcopiesharder finds copies from unmodified files if similarity is met
   # User test <test@example.org>
   # Date 1167609621 0
   #      Mon Jan 01 00:00:21 2007 +0000
-  # Node ID cd05a87103eed9d270fc05b62b00f48e174ab960
-  # Parent  b45d023c6842337ffe694663a44aa672d311081c
+  # Node ID 822f61b91c7d74a67114314c5f6b078d9de4f3ac
+  # Parent  3557dd9e8accc08148642bb4d8b2a4028e85f1f9
   file1
   
   diff --git a/file0 b/file1
@@ -582,8 +582,8 @@ findcopiesharder finds copies from unmodified files if similarity is met
   # User test <test@example.org>
   # Date 1167609622 0
   #      Mon Jan 01 00:00:22 2007 +0000
-  # Node ID d9d2e8cbf050772be31dccf78851f71dc547d139
-  # Parent  cd05a87103eed9d270fc05b62b00f48e174ab960
+  # Node ID 481884f836b7ce63906ad6875ac53b5bc5df134c
+  # Parent  822f61b91c7d74a67114314c5f6b078d9de4f3ac
   file2
   
   diff --git a/file2 b/file2

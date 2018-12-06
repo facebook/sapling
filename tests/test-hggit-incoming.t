@@ -62,7 +62,7 @@ Load commonly used test logic
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
-  diff -r ff7a2f2d8d70 -r 9497a4ee62e1 beta
+  diff -r 69982ec78c6d -r 9497a4ee62e1 beta
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/beta	Mon Jan 01 00:00:11 2007 +0000
   @@ -0,0 +1,1 @@
@@ -70,12 +70,12 @@ Load commonly used test logic
   
   changeset:   2:9865e289be73
   tag:         t1
-  parent:      0:ff7a2f2d8d70
+  parent:      0:69982ec78c6d
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add d/gamma
   
-  diff -r ff7a2f2d8d70 -r 9865e289be73 d/gamma
+  diff -r 69982ec78c6d -r 9865e289be73 d/gamma
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/d/gamma	Mon Jan 01 00:00:12 2007 +0000
   @@ -0,0 +1,1 @@

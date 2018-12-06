@@ -67,40 +67,40 @@ Load commonly used test logic
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
   $ hg log --graph --style compact
-  @    9[default/master,tip][master]:7,8   307506d6ae8a   2007-01-01 00:00 +0000   test
+  @    9[default/master,tip][master]:7,8   49ab838a9c6d   2007-01-01 00:00 +0000   test
   |\     Merge branches 'branch3' and 'branch4'
   | |
-  | o    8:3,4   2b07220e422e   2007-01-01 00:00 +0000   test
+  | o    8:3,4   772137582d44   2007-01-01 00:00 +0000   test
   | |\     Merge branches 'branch3' and 'branch4'
   | | |
-  o | |    7:5,6   ccf2d65d982c   2007-01-01 00:00 +0000   test
+  o | |    7:5,6   605318eb3cbf   2007-01-01 00:00 +0000   test
   |\ \ \     Merge branches 'branch1' and 'branch2'
   | | | |
-  | o | |    6:1,2   690b40256117   2007-01-01 00:00 +0000   test
+  | o | |    6:1,2   c37d2773086b   2007-01-01 00:00 +0000   test
   | |\ \ \     Merge branches 'branch1' and 'branch2'
   | | | | |
-  o | | | |  5:0   e459c0629ca4   2007-01-01 00:00 +0000   test
+  o | | | |  5:0   e70767a0294a   2007-01-01 00:00 +0000   test
   | | | | |    add delta
   | | | | |
-  +-------o  4[default/branch4][branch4]:0   e857c9a04474   2007-01-01 00:00 +0000   test
+  +-------o  4[default/branch4][branch4]:0   8b150650bbba   2007-01-01 00:00 +0000   test
   | | | |      add zeta
   | | | |
-  +-----o  3[default/branch3][branch3]:0   0071dec0de0e   2007-01-01 00:00 +0000   test
+  +-----o  3[default/branch3][branch3]:0   b869fdf3e852   2007-01-01 00:00 +0000   test
   | | |      add epsilon
   | | |
-  +---o  2[default/branch2][branch2]:0   205a004356ef   2007-01-01 00:00 +0000   test
+  +---o  2[default/branch2][branch2]:0   328de8a94600   2007-01-01 00:00 +0000   test
   | |      add gamma
   | |
-  | o  1[default/branch1][branch1]   7fe02317c63d   2007-01-01 00:00 +0000   test
+  | o  1[default/branch1][branch1]   3bb02b6794dd   2007-01-01 00:00 +0000   test
   |/     add beta
   |
-  o  0   ff7a2f2d8d70   2007-01-01 00:00 +0000   test
+  o  0   69982ec78c6d   2007-01-01 00:00 +0000   test
        add alpha
   
   $ hg gverify -r 9
-  verifying rev 307506d6ae8a against git commit b32ff845df61df998206b630e4370a44f9b36845
+  verifying rev 49ab838a9c6d against git commit b32ff845df61df998206b630e4370a44f9b36845
   $ hg gverify -r 8
-  abort: no git commit found for rev 2b07220e422e
+  abort: no git commit found for rev 772137582d44
   (if this is an octopus merge, verify against the last rev)
   [255]
 
@@ -114,51 +114,51 @@ Load commonly used test logic
   $ cd ..
 
   $ git --git-dir=gitrepo2 log --pretty=medium
-  commit b32ff845df61df998206b630e4370a44f9b36845
-  Merge: 9ac68f9 7e9cd9f e695849
+  commit 2359e57d541911d60d80549ad41462b220d10c65
+  Merge: f37a7b7 7ceac1d 692cf8a
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:15 2007 +0000
   
       Merge branches 'branch3' and 'branch4'
   
-  commit 9ac68f982ae7426d9597ff16c74afb4e6053c582
-  Merge: d40f375 9497a4e e5023f9
+  commit f37a7b7b4969612fd5ab85b6d31d6465c25fef0b
+  Merge: 47293d4 dbed4f6 3ab4bf1
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:15 2007 +0000
   
       Merge branches 'branch1' and 'branch2'
   
-  commit d40f375a81b7d033e92cbad89487115fe2dd472f
+  commit 47293d46a21e55863c4a47f168731a2b9f95712b
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:15 2007 +0000
   
       add delta
   
-  commit e695849087f6c320c1a447620492b29a82ca41b1
+  commit 692cf8ab35262a87694759a7668700632ca52c47
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:14 2007 +0000
   
       add zeta
   
-  commit 7e9cd9f90b6d2c60579375eb796ce706d2d8bbe6
+  commit 7ceac1da981d4d67a88c662cc1c27e5e40c95884
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:13 2007 +0000
   
       add epsilon
   
-  commit e5023f9e5cb24fdcec7b6c127cec45d8888e35a9
+  commit 3ab4bf1785d6dbdb82467bf09e6aa1450312968d
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:12 2007 +0000
   
       add gamma
   
-  commit 9497a4ee62e16ee641860d7677cdb2589ea15554
+  commit dbed4f6a8ff04d4d1f0a5ce79f9a07cf0f461d7f
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:11 2007 +0000
   
       add beta
   
-  commit 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03
+  commit 205598a42833e532ad20d80414b8e3b85a65936e
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
