@@ -285,3 +285,9 @@ Test parsing various ISO8601 forms
   $ hg debugdate "2016-07-27 121021Z"
   internal: 1469621421 0
   standard: Wed Jul 27 12:10:21 2016 +0000
+
+Test parsing months
+
+  $ for i in Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec; do
+  >   hg log -d "$i 2018" -r null
+  > done
