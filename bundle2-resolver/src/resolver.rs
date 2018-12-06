@@ -32,7 +32,6 @@ use mononoke_types::ChangesetId;
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use slog::Logger;
 use stats::*;
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
@@ -54,7 +53,6 @@ type UploadedChangesets = HashMap<HgNodeHash, ChangesetHandle>;
 pub fn resolve(
     ctx: CoreContext,
     repo: Arc<BlobRepo>,
-    logger: Logger,
     scuba_logger: ScubaSampleBuilder,
     pushrebase: PushrebaseParams,
     _heads: Vec<String>,
@@ -62,7 +60,7 @@ pub fn resolve(
     hook_manager: Arc<HookManager>,
     lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
 ) -> BoxFuture<Bytes, Error> {
-    let resolver = Bundle2Resolver::new(repo, logger, scuba_logger, pushrebase, hook_manager);
+    let resolver = Bundle2Resolver::new(ctx.clone(), repo, scuba_logger, pushrebase, hook_manager);
 
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
@@ -385,8 +383,8 @@ impl BonsaiBookmarkPush {
 /// Holds repo and logger for convienience access from it's methods
 #[derive(Clone)]
 struct Bundle2Resolver {
+    ctx: CoreContext,
     repo: Arc<BlobRepo>,
-    logger: Logger,
     scuba_logger: ScubaSampleBuilder,
     pushrebase: PushrebaseParams,
     hook_manager: Arc<HookManager>,
@@ -394,15 +392,15 @@ struct Bundle2Resolver {
 
 impl Bundle2Resolver {
     fn new(
+        ctx: CoreContext,
         repo: Arc<BlobRepo>,
-        logger: Logger,
         scuba_logger: ScubaSampleBuilder,
         pushrebase: PushrebaseParams,
         hook_manager: Arc<HookManager>,
     ) -> Self {
         Self {
+            ctx,
             repo,
-            logger,
             scuba_logger,
             pushrebase,
             hook_manager,
@@ -731,10 +729,14 @@ impl Bundle2Resolver {
 
         let changesets_hashes: Vec<_> = changesets.iter().map(|(hash, _)| *hash).collect();
 
-        trace!(self.logger, "changesets: {:?}", changesets);
-        trace!(self.logger, "filelogs: {:?}", filelogs.keys());
-        trace!(self.logger, "manifests: {:?}", manifests.keys());
-        trace!(self.logger, "content blobs: {:?}", content_blobs.keys());
+        trace!(self.ctx.logger(), "changesets: {:?}", changesets);
+        trace!(self.ctx.logger(), "filelogs: {:?}", filelogs.keys());
+        trace!(self.ctx.logger(), "manifests: {:?}", manifests.keys());
+        trace!(
+            self.ctx.logger(),
+            "content blobs: {:?}",
+            content_blobs.keys()
+        );
 
         let scuba_logger = self.scuba_logger.clone();
         stream::iter_ok(changesets)

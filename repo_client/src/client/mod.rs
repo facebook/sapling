@@ -19,7 +19,6 @@ use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, stream::e
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{StreamStats, Timed, TimedStreamTrait};
 use itertools::Itertools;
-use slog::Logger;
 use stats::Histogram;
 use time_ext::DurationExt;
 
@@ -38,7 +37,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde_json;
-use tracing::{TraceContext, Traced};
+use tracing::Traced;
 
 use blobrepo::BlobRepo;
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
@@ -263,14 +262,6 @@ impl RepoClient {
         }
     }
 
-    fn logger(&self) -> &Logger {
-        self.ctx.logger()
-    }
-
-    fn trace(&self) -> &TraceContext {
-        self.ctx.trace()
-    }
-
     fn scuba_logger(&self, op: &str, args: Option<String>) -> ScubaSampleBuilder {
         let mut scuba_logger = self.ctx.scuba().clone();
 
@@ -323,7 +314,7 @@ impl RepoClient {
     }
 
     fn gettreepack_untimed(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
-        debug!(self.logger(), "gettreepack");
+        debug!(self.ctx.logger(), "gettreepack");
 
         // 65536 matches the default TREE_DEPTH_MAX value from Mercurial
         let fetchdepth = params.depth.unwrap_or(2 << 16);
@@ -356,7 +347,6 @@ impl RepoClient {
                     rootpath.clone(),
                     CombinatorPruner::new(default_pruner.clone(), visited_pruner.clone()),
                     fetchdepth,
-                    self.trace().clone(),
                 )
             })).boxify()
         } else {
@@ -369,7 +359,6 @@ impl RepoClient {
                     rootpath.clone(),
                     default_pruner,
                     fetchdepth,
-                    self.trace().clone(),
                 ),
                 None => empty().boxify(),
             }
@@ -384,7 +373,6 @@ impl RepoClient {
             .map({
                 cloned!(self.ctx);
                 let blobrepo = self.repo.blobrepo().clone();
-                let trace = self.trace().clone();
                 let scuba_logger = self.scuba_logger(ops::GETTREEPACK, None);
                 move |(entry, basepath)| {
                     fetch_treepack_part_input(
@@ -392,7 +380,6 @@ impl RepoClient {
                         &blobrepo,
                         entry,
                         basepath,
-                        trace.clone(),
                         validate_hash,
                         scuba_logger.clone(),
                     )
@@ -428,7 +415,7 @@ impl RepoClient {
 impl HgCommands for RepoClient {
     // @wireprotocommand('between', 'pairs')
     fn between(&self, pairs: Vec<(HgNodeHash, HgNodeHash)>) -> HgCommandRes<Vec<Vec<HgNodeHash>>> {
-        info!(self.logger(), "between pairs {:?}", pairs);
+        info!(self.ctx.logger(), "between pairs {:?}", pairs);
 
         struct ParentStream<CS> {
             ctx: CoreContext,
@@ -502,7 +489,7 @@ impl HgCommands for RepoClient {
                     .collect()
             })
             .collect()
-            .traced(self.trace(), ops::BETWEEN, trace_args!())
+            .traced(self.ctx.trace(), ops::BETWEEN, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
                     .add_future_stats(&stats)
@@ -516,7 +503,7 @@ impl HgCommands for RepoClient {
     fn heads(&self) -> HgCommandRes<HashSet<HgNodeHash>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
-        info!(self.logger(), "heads");
+        info!(self.ctx.logger(), "heads");
         let mut scuba_logger = self.scuba_logger(ops::HEADS, None);
 
         self.repo
@@ -525,7 +512,7 @@ impl HgCommands for RepoClient {
             .collect()
             .map(|v| v.into_iter().collect())
             .from_err()
-            .traced(self.trace(), ops::HEADS, trace_args!())
+            .traced(self.ctx.trace(), ops::HEADS, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
                     .add_future_stats(&stats)
@@ -537,7 +524,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
-        info!(self.logger(), "lookup: {:?}", key);
+        info!(self.ctx.logger(), "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support prefixes
         let repo = self.repo.blobrepo().clone();
         let mut scuba_logger = self.scuba_logger(ops::LOOKUP, None);
@@ -597,7 +584,7 @@ impl HgCommands for RepoClient {
         };
 
         lookup_fut
-            .traced(self.trace(), ops::LOOKUP, trace_args!())
+            .traced(self.ctx.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
                     .add_future_stats(&stats)
@@ -610,9 +597,13 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgNodeHash>) -> HgCommandRes<Vec<bool>> {
         if nodes.len() > MAX_NODES_TO_LOG {
-            info!(self.logger(), "known: {:?}...", &nodes[..MAX_NODES_TO_LOG]);
+            info!(
+                self.ctx.logger(),
+                "known: {:?}...",
+                &nodes[..MAX_NODES_TO_LOG]
+            );
         } else {
-            info!(self.logger(), "known: {:?}", nodes);
+            info!(self.ctx.logger(), "known: {:?}", nodes);
         }
         let blobrepo = self.repo.blobrepo().clone();
 
@@ -632,7 +623,7 @@ impl HgCommands for RepoClient {
                 .collect();
             known_nodes
         })
-            .traced(self.trace(), ops::KNOWN, trace_args!())
+            .traced(self.ctx.trace(), ops::KNOWN, trace_args!())
             .timed(move |stats, known_nodes| {
                 if let Ok(known) = known_nodes {
                     let extra_context = json!({
@@ -653,7 +644,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getbundle', '*')
     fn getbundle(&self, args: GetbundleArgs) -> BoxStream<Bytes, Error> {
-        info!(self.logger(), "Getbundle: {:?}", args);
+        info!(self.ctx.logger(), "Getbundle: {:?}", args);
 
         let value = json!({
             "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
@@ -667,7 +658,7 @@ impl HgCommands for RepoClient {
         match self.create_bundle(args) {
             Ok(res) => res.boxify(),
             Err(err) => stream::once(Err(err)).boxify(),
-        }.traced(self.trace(), ops::GETBUNDLE, trace_args!())
+        }.traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
             .timed(move |stats, _| {
                 STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
                 wireproto_logger.finish_stream_wireproto_processing(&stats);
@@ -678,7 +669,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('hello')
     fn hello(&self) -> HgCommandRes<HashMap<String, Vec<String>>> {
-        info!(self.logger(), "Hello -> capabilities");
+        info!(self.ctx.logger(), "Hello -> capabilities");
 
         let mut res = HashMap::new();
         let mut caps = wireprotocaps();
@@ -688,7 +679,7 @@ impl HgCommands for RepoClient {
         let mut scuba_logger = self.scuba_logger(ops::HELLO, None);
 
         future::ok(res)
-            .traced(self.trace(), ops::HELLO, trace_args!())
+            .traced(self.ctx.trace(), ops::HELLO, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
                     .add_future_stats(&stats)
@@ -700,7 +691,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('listkeys', 'namespace')
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
-        info!(self.logger(), "listkeys: {}", namespace);
+        info!(self.ctx.logger(), "listkeys: {}", namespace);
         if namespace == "bookmarks" {
             let mut scuba_logger = self.scuba_logger(ops::LISTKEYS, None);
 
@@ -718,7 +709,7 @@ impl HgCommands for RepoClient {
                         .map(|(name, value)| (Vec::from(name.to_string()), value));
                     HashMap::from_iter(bookiter)
                 })
-                .traced(self.trace(), ops::LISTKEYS, trace_args!())
+                .traced(self.ctx.trace(), ops::LISTKEYS, trace_args!())
                 .timed(move |stats, _| {
                     scuba_logger
                         .add_future_stats(&stats)
@@ -728,7 +719,7 @@ impl HgCommands for RepoClient {
                 .boxify()
         } else {
             info!(
-                self.logger(),
+                self.ctx.logger(),
                 "unsupported listkeys namespace: {}",
                 namespace
             );
@@ -750,9 +741,8 @@ impl HgCommands for RepoClient {
         let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
 
         let res = bundle2_resolver::resolve(
-            self.ctx.clone(),
+            self.ctx.with_logger_kv(o!("command" => "unbundle")),
             Arc::new(self.repo.blobrepo().clone()),
-            self.logger().new(o!("command" => "unbundle")),
             scuba_logger.clone(),
             self.repo.pushrebase_params().clone(),
             heads,
@@ -761,7 +751,7 @@ impl HgCommands for RepoClient {
             self.lca_hint.clone(),
         );
 
-        res.traced(self.trace(), ops::UNBUNDLE, trace_args!())
+        res.traced(self.ctx.trace(), ops::UNBUNDLE, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
                     .add_future_stats(&stats)
@@ -783,7 +773,7 @@ impl HgCommands for RepoClient {
         let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK, Some(args));
 
         self.gettreepack_untimed(params)
-            .traced(self.trace(), ops::GETTREEPACK, trace_args!())
+            .traced(self.ctx.trace(), ops::GETTREEPACK, trace_args!())
             .timed(move |stats, _| {
                 STATS::gettreepack_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
                 wireproto_logger.finish_stream_wireproto_processing(&stats);
@@ -794,9 +784,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getfiles', 'files*')
     fn getfiles(&self, params: BoxStream<(HgNodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
-        let logger = self.logger().clone();
-        let trace = self.trace().clone();
-        info!(logger, "getfiles");
+        info!(self.ctx.logger(), "getfiles");
 
         let mut wireproto_logger = self.wireproto_logger(ops::GETFILES, None);
         let this = self.clone();
@@ -829,12 +817,11 @@ impl HgCommands for RepoClient {
                         Arc::new(repo.blobrepo().clone()),
                         node,
                         path.clone(),
-                        trace.clone(),
                         repo.lfs_params().clone(),
                         scuba_logger.clone(),
                         validate_hash,
                     ).traced(
-                        this.trace(),
+                        this.ctx.trace(),
                         ops::GETFILES,
                         trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
                     )
@@ -867,7 +854,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
-        info!(self.logger(), "stream_out_shallow");
+        info!(self.ctx.logger(), "stream_out_shallow");
         let changelog = match self.repo.streaming_clone() {
             None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
             Some(SqlStreamingCloneConfig {
@@ -881,10 +868,10 @@ impl HgCommands for RepoClient {
 
         changelog
             .map({
-                let logger = self.logger().clone();
+                let ctx = self.ctx.clone();
                 move |changelog_chunks| {
                     debug!(
-                        logger,
+                        ctx.logger(),
                         "streaming changelog {} index bytes, {} data bytes",
                         changelog_chunks.index_size,
                         changelog_chunks.data_size
@@ -937,17 +924,16 @@ fn get_changed_manifests_stream(
     rootpath: Option<MPath>,
     pruner: impl Pruner + Send + Clone + 'static,
     max_depth: usize,
-    trace: TraceContext,
 ) -> BoxStream<(Box<Entry + Sync>, Option<MPath>), Error> {
     let mfid = HgManifestId::new(*mfid);
     let manifest = repo.get_manifest_by_nodeid(ctx.clone(), &mfid).traced(
-        &trace,
+        ctx.trace(),
         "fetch rootmf",
         trace_args!(),
     );
     let basemfid = HgManifestId::new(*basemfid);
     let basemanifest = repo.get_manifest_by_nodeid(ctx.clone(), &basemfid).traced(
-        &trace,
+        ctx.trace(),
         "fetch baserootmf",
         trace_args!(),
     );
@@ -997,7 +983,6 @@ fn fetch_treepack_part_input(
     repo: &BlobRepo,
     entry: Box<Entry + Sync>,
     basepath: Option<MPath>,
-    trace: TraceContext,
     validate_content: bool,
     mut scuba_logger: ScubaSampleBuilder,
 ) -> BoxFuture<parts::TreepackPartInput, Error> {
@@ -1017,7 +1002,7 @@ fn fetch_treepack_part_input(
     let path = repo_path.clone();
 
     let parents = entry.get_parents(ctx.clone()).traced(
-        &trace,
+        ctx.trace(),
         "fetching parents",
         trace_args!(
             "node" => node.to_string(),
@@ -1028,7 +1013,7 @@ fn fetch_treepack_part_input(
     let linknode_fut =
         repo.get_linknode(ctx.clone(), &repo_path, &entry.get_hash().into_nodehash())
             .traced(
-                &trace,
+                ctx.trace(),
                 "fetching linknode",
                 trace_args!(
                 "node" => node.to_string(),
@@ -1040,7 +1025,7 @@ fn fetch_treepack_part_input(
         .get_raw_content(ctx.clone())
         .map(|blob| blob.into_inner())
         .traced(
-            &trace,
+            ctx.trace(),
             "fetching raw content",
             trace_args!(
                 "node" => node.to_string(),

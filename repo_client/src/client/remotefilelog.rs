@@ -23,7 +23,7 @@ use mercurial_types::{HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgPar
 
 use metaconfig::LfsParams;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use tracing::{TraceContext, Traced};
+use tracing::Traced;
 
 use errors::*;
 
@@ -37,7 +37,6 @@ pub fn create_remotefilelog_blob(
     repo: Arc<BlobRepo>,
     node: HgNodeHash,
     path: MPath,
-    trace: TraceContext,
     lfs_params: LfsParams,
     scuba_logger: ScubaSampleBuilder,
     validate_hash: bool,
@@ -96,7 +95,11 @@ pub fn create_remotefilelog_blob(
                 .map_err(Error::from)
                 .map(|_| writer.into_inner())
         })
-        .traced(&trace, "fetching remotefilelog content", trace_args.clone());
+        .traced(
+            ctx.trace(),
+            "fetching remotefilelog content",
+            trace_args.clone(),
+        );
 
     // Do bulk prefetch of the filenodes first. That saves lots of db roundtrips.
     // Prefetched filenodes are used as a cache. If filenode is not in the cache, then it will
@@ -109,15 +112,15 @@ pub fn create_remotefilelog_blob(
                     .map(|filenode| (filenode.filenode.into_nodehash(), filenode))
                     .collect()
             })
-            .traced(&trace, "prefetching file history", trace_args.clone());
+            .traced(ctx.trace(), "prefetching file history", trace_args.clone());
 
     let file_history_bytes = prefetched_filenodes
         .and_then({
-            cloned!(ctx, node, path, repo, trace_args, trace);
+            cloned!(ctx, node, path, repo, trace_args);
             move |prefetched_filenodes| {
-                get_file_history(ctx, repo, node, path, prefetched_filenodes)
+                get_file_history(ctx.clone(), repo, node, path, prefetched_filenodes)
                     .collect()
-                    .traced(&trace, "fetching non-prefetched history", trace_args)
+                    .traced(ctx.trace(), "fetching non-prefetched history", trace_args)
             }
         })
         .and_then(|history| {
@@ -155,7 +158,7 @@ pub fn create_remotefilelog_blob(
             }
             Ok(writer.into_inner())
         })
-        .traced(&trace, "fetching file history", trace_args);
+        .traced(ctx.trace(), "fetching file history", trace_args);
 
     let validate_content = if validate_hash {
         validate_content(ctx, repo.clone(), path, node, scuba_logger).left_future()
