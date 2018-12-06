@@ -1,0 +1,14 @@
+[package]
+name = "nodemap"
+version = "0.1.0"
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+
+[dependencies]
+failure = "*"
+indexedlog = { path = "../indexedlog" }
+types = { path = "../types" }
+
+[dev-dependencies]
+quickcheck = "0.6"
+tempfile = "*"
+types = { path = "../types", default-features = false, features = ["for-tests"] }

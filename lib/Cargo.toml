@@ -12,6 +12,7 @@ members = [
     "mononokeapi",
     "mpatch-sys",
     "mpatch",
+    "nodemap",
     "pathmatcher",
     "radixbuf",
     "revisionstore",
