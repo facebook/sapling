@@ -104,13 +104,21 @@ Log on a file via -fr
   1
 
 Trace renames
+- Enable local packs and rust history packs to test a bug involving tracking
+- renames across packs.
+  $ setconfig remotefilelog.packlocaldata=True remotefilelog.localdatarepack=True
+  $ setconfig format.userusthistorypack=True
+  $ echo >> x
+  $ hg commit -m "Edit x"
   $ hg mv x z
   $ hg commit -m move
-  $ hg log -f z -T '{desc}\n' -G
-  @  move
-  :
-  o  x
-  
+  $ hg repack
+  $ hg log -f z -T '{desc}\n' -G --pager=off
+  remote: abort: data/z.i@1406e7411862: no match found!
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  abort: error downloading file contents:
+  'connection closed early'
+  [255]
 
 Verify remotefilelog handles rename metadata stripping when comparing file sizes
   $ hg debugrebuilddirstate
