@@ -8,9 +8,10 @@ extern crate minibench;
 extern crate rand;
 extern crate tempdir;
 
-use indexedlog::index::OpenOptions;
-use minibench::{bench, elapsed};
+use indexedlog::index::{InsertKey, OpenOptions};
+use minibench::{bench, bench_once, elapsed};
 use rand::{ChaChaRng, Rng};
+use std::sync::Arc;
 use tempdir::TempDir;
 
 const N: usize = 20480;
@@ -30,10 +31,25 @@ fn open_opts() -> OpenOptions {
 }
 
 fn main() {
-    bench("index insertion", || {
+    bench("index insertion (owned key)", || {
         let dir = TempDir::new("index").expect("TempDir::new");
         let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
+        elapsed(move || {
+            for i in 0..N {
+                idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
+                    .expect("insert");
+            }
+        })
+    });
+
+    bench("index insertion (referred key)", || {
+        let dir = TempDir::new("index").expect("TempDir::new");
+        let buf = gen_buf(N * 20);
+        let mut idx = open_opts()
+            .key_buf(Some(Arc::new(buf.clone())))
+            .open(dir.path().join("i"))
+            .expect("open");
         elapsed(move || {
             for i in 0..N {
                 idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
@@ -103,5 +119,31 @@ fn main() {
                 idx.get(&&buf[20 * i..20 * (i + 1)]).expect("lookup");
             }
         })
+    });
+
+    bench_once("index size (owned key)", || {
+        let dir = TempDir::new("index").expect("TempDir::new");
+        let mut idx = open_opts().open(dir.path().join("i")).expect("open");
+        let buf = gen_buf(N * 20);
+        for i in 0..N {
+            idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
+                .expect("insert");
+        }
+        idx.flush().unwrap()
+    });
+
+    bench_once("index size (referred key)", || {
+        let dir = TempDir::new("index").expect("TempDir::new");
+        let buf = gen_buf(N * 20);
+        let mut idx = open_opts()
+            .key_buf(Some(Arc::new(buf.clone())))
+            .open(dir.path().join("i"))
+            .expect("open");
+        for i in 0..N {
+            let ext_key = InsertKey::Reference((i as u64 * 20, 20));
+            idx.insert_advanced(ext_key, i as u64, None)
+                .expect("insert");
+        }
+        idx.flush().unwrap()
     });
 }

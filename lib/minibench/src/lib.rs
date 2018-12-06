@@ -14,6 +14,7 @@
 //! - Minimalism. Without fancy features.
 
 use std::env::args;
+use std::fmt::Display;
 use std::time::SystemTime;
 
 /// Return the wall time (in seconds) executing the given function.
@@ -60,5 +61,17 @@ pub fn bench<F: Fn() -> f64>(name: &str, func: F) {
     if args.is_empty() || args.iter().any(|a| name.find(a).is_some()) {
         let best = min_run(func, 40);
         println!("{:30}{:7.3} ms", name, best * 1e3);
+    }
+}
+
+/// Run a function once. Print its result.
+///
+/// If `std::env::args` (excluding the first item and flags) is not empty, and none of them is a
+/// substring of `name`, skip running and return directly.
+pub fn bench_once<D: Display, F: Fn() -> D>(name: &str, func: F) {
+    // The first arg is the program name. Skip it and flag-like arguments (ex. --bench).
+    let args: Vec<String> = args().skip(1).filter(|a| !a.starts_with('-')).collect();
+    if args.is_empty() || args.iter().any(|a| name.find(a).is_some()) {
+        println!("{:30}{:10}", name, func());
     }
 }
