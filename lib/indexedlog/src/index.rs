@@ -20,6 +20,7 @@
 // LINK        := '\4' + VLQ(VALUE) + PTR(NEXT_LINK | NULL)
 // KEY         := '\5' + VLQ(KEY_LEN) + KEY_BYTES
 // EXT_KEY     := '\6' + VLQ(KEY_START) + VLQ(KEY_LEN)
+// INLINE_LEAF := '\7' + EXT_KEY + LINK
 // ROOT        := '\1' + PTR(RADIX) + VLQ(META_LEN) + META
 //
 // PTR(ENTRY)  := VLQ(the offset of ENTRY)
@@ -45,6 +46,7 @@
 // - The "EXT_KEY" type has a logically similar function with "KEY". But it refers to an external
 //   buffer. This is useful to save spaces if the index is not a source of truth and keys are
 //   long.
+// - The "INLINE_LEAF" type is basically an inlined version of EXT_KEY and LINK, to save space.
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
@@ -96,6 +98,7 @@ struct MemExtKey {
 struct MemLink {
     pub value: u64,
     pub next_link_offset: LinkOffset,
+    pub unused: bool,
 }
 
 #[derive(Clone, PartialEq)]
@@ -150,6 +153,7 @@ const TYPE_LEAF: u8 = 3;
 const TYPE_LINK: u8 = 4;
 const TYPE_KEY: u8 = 5;
 const TYPE_EXT_KEY: u8 = 6;
+const TYPE_INLINE_LEAF: u8 = 7;
 
 // Bits needed to represent the above type integers.
 const TYPE_BITS: usize = 3;
@@ -223,6 +227,8 @@ impl Offset {
             TYPE_LINK => Ok(TypedOffset::Link(LinkOffset(self))),
             TYPE_KEY => Ok(TypedOffset::Key(KeyOffset(self))),
             TYPE_EXT_KEY => Ok(TypedOffset::ExtKey(ExtKeyOffset(self))),
+            // LeafOffset handles inline transparently.
+            TYPE_INLINE_LEAF => Ok(TypedOffset::Leaf(LeafOffset(self))),
             _ => Err(InvalidData.into()),
         }
     }
@@ -509,35 +515,67 @@ impl RadixOffset {
     }
 }
 
+/// Extract key_content from an untyped Offset. Internal use only.
+fn extract_key_content(index: &Index, key_offset: Offset) -> io::Result<&[u8]> {
+    let typed_offset = key_offset.to_typed(&index.buf, &index.checksum)?;
+    match typed_offset {
+        TypedOffset::Key(x) => Ok(x.key_content(index)?),
+        TypedOffset::ExtKey(x) => Ok(x.key_content(index)?),
+        _ => Err(InvalidData.into()),
+    }
+}
+
 impl LeafOffset {
     /// Key content and link offsets of a leaf entry.
     #[inline]
     fn key_and_link_offset(self, index: &Index) -> io::Result<(&[u8], LinkOffset)> {
-        let (key_offset, link_offset) = if self.is_dirty() {
+        if self.is_dirty() {
             let e = &index.dirty_leafs[self.dirty_index()];
-            (e.key_offset, e.link_offset)
+            let key_content = extract_key_content(index, e.key_offset)?;
+            Ok((key_content, e.link_offset))
         } else {
-            let (key_offset, vlq_len): (u64, _) =
-                index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
-            let key_offset = Offset::from_disk(key_offset)?;
-            let (link_offset, vlq_len2) = index
-                .buf
-                .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
+            let (key_content, raw_link_offset) = match index.buf[usize::from(self)] {
+                TYPE_INLINE_LEAF => {
+                    let raw_key_offset = u64::from(self) + TYPE_BYTES as u64;
+                    let key_offset = ExtKeyOffset::from_offset(
+                        Offset::from_disk(raw_key_offset)?,
+                        &index.buf,
+                        &None,
+                    )?;
+                    // Avoid using key_content. Skip one checksum check.
+                    let (key_content, key_entry_size) =
+                        key_offset.key_content_and_entry_size_unchecked(index)?;
+                    let key_entry_size = key_entry_size.unwrap();
+                    let raw_link_offset = raw_key_offset + key_entry_size as u64;
+                    index.verify_checksum(
+                        u64::from(self),
+                        raw_link_offset as u64 - u64::from(self),
+                    )?;
+                    (key_content, raw_link_offset)
+                }
+                TYPE_LEAF => {
+                    let (raw_key_offset, vlq_len): (u64, _) =
+                        index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+                    let key_offset = Offset::from_disk(raw_key_offset)?;
+                    let key_content = extract_key_content(index, key_offset)?;
+                    let (raw_link_offset, vlq_len2) = index
+                        .buf
+                        .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
+                    index.verify_checksum(
+                        u64::from(self),
+                        (TYPE_BYTES + vlq_len + vlq_len2) as u64,
+                    )?;
+                    (key_content, raw_link_offset)
+                }
+                _ => unreachable!("bug: LeafOffset constructed with non-leaf types"),
+            };
             let link_offset = LinkOffset::from_offset(
-                Offset::from_disk(link_offset)?,
+                Offset::from_disk(raw_link_offset as u64)?,
                 &index.buf,
                 &index.checksum,
             )?;
-            index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len + vlq_len2) as u64)?;
-            (key_offset, link_offset)
-        };
-        // Read key content
-        let key_content = match key_offset.to_typed(&index.buf, &index.checksum)? {
-            TypedOffset::Key(x) => x.key_content(index)?,
-            TypedOffset::ExtKey(x) => x.key_content(index)?,
-            _ => return Err(InvalidData.into()),
-        };
-        Ok((key_content, link_offset))
+            Ok((key_content, link_offset))
+        }
     }
 
     /// Create a new in-memory leaf entry. The key entry cannot be null.
@@ -648,6 +686,7 @@ impl LinkOffset {
         let new_link = MemLink {
             value,
             next_link_offset: self.into(),
+            unused: false,
         };
         let len = index.dirty_links.len();
         index.dirty_links.push(new_link);
@@ -699,19 +738,32 @@ impl ExtKeyOffset {
     /// Key content of a key entry.
     #[inline]
     fn key_content(self, index: &Index) -> io::Result<&[u8]> {
-        let (start, len) = if self.is_dirty() {
+        let (key_content, entry_size) = self.key_content_and_entry_size_unchecked(index)?;
+        if let Some(entry_size) = entry_size {
+            index.verify_checksum(u64::from(self), entry_size as u64)?;
+        }
+        Ok(key_content)
+    }
+
+    /// Key content and key entry size. Used internally.
+    #[inline]
+    fn key_content_and_entry_size_unchecked(
+        self,
+        index: &Index,
+    ) -> io::Result<(&[u8], Option<usize>)> {
+        let (start, len, entry_size) = if self.is_dirty() {
             let e = &index.dirty_ext_keys[self.dirty_index()];
-            (e.start, e.len)
+            (e.start, e.len, None)
         } else {
             let (start, vlq_len1): (u64, _) =
                 index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
             let (len, vlq_len2): (u64, _) = index
                 .buf
                 .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len1)?;
-            index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len1 + vlq_len2) as u64)?;
-            (start, len)
+            (start, len, Some(TYPE_BYTES + vlq_len1 + vlq_len2))
         };
-        Ok(&index.key_buf.as_ref().as_ref()[start as usize..(start + len) as usize])
+        let key_buf = index.key_buf.as_ref().as_ref();
+        Ok((&key_buf[start as usize..(start + len) as usize], entry_size))
     }
 
     /// Create a new in-memory external key entry. The key cannot be empty.
@@ -849,19 +901,113 @@ impl MemLeaf {
     fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
-        check_type(buf, offset, TYPE_LEAF)?;
-        let (key_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
-        let key_offset = Offset::from_disk(key_offset)?;
-        let (link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
-        let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf, checksum)?;
-        verify_checksum(checksum, offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
-        Ok(MemLeaf {
-            key_offset,
-            link_offset,
-        })
+        match buf.get(offset) {
+            Some(&TYPE_INLINE_LEAF) => {
+                let key_offset = offset + TYPE_BYTES;
+                // Skip the key part
+                let offset = key_offset + TYPE_BYTES;
+                let (_key_start, vlq_len): (u64, _) = buf.read_vlq_at(offset)?;
+                let offset = offset + vlq_len;
+                let (_key_len, vlq_len): (u64, _) = buf.read_vlq_at(offset)?;
+                let offset = offset + vlq_len;
+                // Checksum will be verified by ExtKey and Leaf nodes
+                let key_offset = Offset::from_disk(key_offset as u64)?;
+                let link_offset =
+                    LinkOffset::from_offset(Offset::from_disk(offset as u64)?, buf, checksum)?;
+                Ok(MemLeaf {
+                    key_offset,
+                    link_offset,
+                })
+            }
+            Some(&TYPE_LEAF) => {
+                let (key_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
+                let key_offset = Offset::from_disk(key_offset)?;
+                let (link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
+                let link_offset =
+                    LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf, checksum)?;
+                verify_checksum(checksum, offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
+                Ok(MemLeaf {
+                    key_offset,
+                    link_offset,
+                })
+            }
+            _ => Err(integrity_error()),
+        }
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
+    /// If the entry is suitable for writing inline, write a inline entry, mark dependent
+    /// entries as "unused", and return `true`. Otherwise do nothing and return `false`.
+    ///
+    /// The caller probably wants to set this entry to "unused" to prevent writing twice,
+    /// if true is returned.
+    fn maybe_write_inline_to<W: Write>(
+        &self,
+        writer: &mut W,
+        buf: &[u8],
+        buf_offset: u64,
+        dirty_ext_keys: &mut Vec<MemExtKey>,
+        dirty_links: &mut Vec<MemLink>,
+        offset_map: &mut OffsetMap,
+    ) -> io::Result<bool> {
+        debug_assert!(!self.is_unused());
+
+        // Conditions to be inlined:
+        // - Both Key and Link are dirty (in-memory). Otherwise this might waste space.
+        // - Key is ExtKey. This is just to make implemenation easier. Owned key support might be
+        // added in the future.
+        // - Link does not refer to another in-memory link that hasn't been written yet (i.e.
+        //   does not exist in offset_map). This is just to make implemenation easier.
+
+        let are_dependencies_dirty = self.key_offset.is_dirty() && self.link_offset.is_dirty();
+
+        if are_dependencies_dirty {
+            if let Ok(TypedOffset::ExtKey(key_offset)) = self.key_offset.to_typed(buf, &None) {
+                let ext_key_index = key_offset.dirty_index();
+                let link_index = self.link_offset.dirty_index();
+                let mut ext_key = dirty_ext_keys.get_mut(ext_key_index).unwrap();
+                let mut link = dirty_links.get_mut(link_index).unwrap();
+
+                let next_link_offset = link.next_link_offset;
+                if next_link_offset.is_dirty()
+                    && offset_map.link_map[next_link_offset.dirty_index()] == 0
+                {
+                    // Dependent Link is not written yet.
+                    return Ok(false);
+                }
+
+                // Header
+                writer.write_all(&[TYPE_INLINE_LEAF])?;
+
+                // Inlined ExtKey
+                let offset = buf.len() as u64 + buf_offset;
+                offset_map.ext_key_map[ext_key_index] = offset;
+                ext_key.write_to(writer, offset_map)?;
+
+                // Inlined Link
+                let offset = buf.len() as u64 + buf_offset;
+                offset_map.link_map[ext_key_index] = offset;
+                link.write_to(writer, offset_map)?;
+
+                ext_key.mark_unused();
+                link.mark_unused();
+
+                Ok(true)
+            } else {
+                // InlineLeaf only supports ExtKey, not embeeded Key.
+                Ok(false)
+            }
+        } else {
+            Ok(false)
+        }
+    }
+
+    /// Write a Leaf entry.
+    fn write_noninline_to<W: Write>(
+        &self,
+        writer: &mut W,
+        offset_map: &OffsetMap,
+    ) -> io::Result<()> {
+        debug_assert!(!self.is_unused());
         writer.write_all(&[TYPE_LEAF])?;
         writer.write_vlq(self.key_offset.to_disk(offset_map))?;
         writer.write_vlq(self.link_offset.to_disk(offset_map))?;
@@ -892,6 +1038,7 @@ impl MemLink {
         Ok(MemLink {
             value,
             next_link_offset,
+            unused: false,
         })
     }
 
@@ -900,6 +1047,16 @@ impl MemLink {
         writer.write_vlq(self.value)?;
         writer.write_vlq(self.next_link_offset.to_disk(offset_map))?;
         Ok(())
+    }
+
+    /// Mark the entry as unused. An unused entry won't be written to disk.
+    fn mark_unused(&mut self) {
+        self.unused = true;
+    }
+
+    #[inline]
+    fn is_unused(&self) -> bool {
+        self.unused
     }
 }
 
@@ -1034,15 +1191,15 @@ struct OffsetMap {
 }
 
 impl OffsetMap {
-    fn with_capacity(index: &Index) -> OffsetMap {
+    fn empty_for_index(index: &Index) -> OffsetMap {
         let radix_len = index.dirty_radixes.len();
         OffsetMap {
             radix_len,
-            radix_map: Vec::with_capacity(radix_len),
-            leaf_map: Vec::with_capacity(index.dirty_leafs.len()),
-            link_map: Vec::with_capacity(index.dirty_links.len()),
-            key_map: Vec::with_capacity(index.dirty_keys.len()),
-            ext_key_map: Vec::with_capacity(index.dirty_ext_keys.len()),
+            radix_map: vec![0; radix_len],
+            leaf_map: vec![0; index.dirty_leafs.len()],
+            link_map: vec![0; index.dirty_links.len()],
+            key_map: vec![0; index.dirty_keys.len()],
+            ext_key_map: vec![0; index.dirty_ext_keys.len()],
         }
     }
 
@@ -1352,7 +1509,7 @@ impl Index {
 
         // Critical section: need write lock
         {
-            let mut offset_map = OffsetMap::with_capacity(self);
+            let mut offset_map = OffsetMap::empty_for_index(self);
             let estimated_dirty_bytes = self.dirty_links.len() * 50;
             let mut lock = ScopedFileLock::new(&mut self.file, true)?;
             let len = lock.as_mut().seek(SeekFrom::End(0))?;
@@ -1366,50 +1523,62 @@ impl Index {
                 buf.write_all(&[TYPE_HEAD])?;
             }
 
-            for entry in self.dirty_keys.iter() {
-                let offset = if entry.is_unused() {
-                    0
-                } else {
+            for (i, entry) in self.dirty_keys.iter().enumerate() {
+                if !entry.is_unused() {
                     let offset = buf.len() as u64 + len;
+                    offset_map.key_map[i] = offset;
                     entry.write_to(&mut buf, &offset_map)?;
-                    offset
                 };
-                offset_map.key_map.push(offset);
             }
 
-            for entry in self.dirty_ext_keys.iter() {
-                let offset = if entry.is_unused() {
-                    0
-                } else {
-                    let offset = buf.len() as u64 + len;
-                    entry.write_to(&mut buf, &offset_map)?;
-                    offset
-                };
-                offset_map.ext_key_map.push(offset);
-            }
-
-            for entry in self.dirty_links.iter() {
+            // Inlined leafs. They might affect ExtKeys and Links. Need to write first.
+            for i in 0..self.dirty_leafs.len() {
+                let mut entry = self.dirty_leafs.get_mut(i).unwrap();
                 let offset = buf.len() as u64 + len;
-                entry.write_to(&mut buf, &offset_map)?;
-                offset_map.link_map.push(offset);
+                if !entry.is_unused()
+                    && entry.maybe_write_inline_to(
+                        &mut buf,
+                        &self.buf,
+                        len,
+                        &mut self.dirty_ext_keys,
+                        &mut self.dirty_links,
+                        &mut offset_map,
+                    )? {
+                    offset_map.leaf_map[i] = offset;
+                    entry.mark_unused();
+                }
             }
 
-            for entry in self.dirty_leafs.iter() {
-                let offset = if entry.is_unused() {
-                    0
-                } else {
+            for (i, entry) in self.dirty_ext_keys.iter().enumerate() {
+                if !entry.is_unused() {
                     let offset = buf.len() as u64 + len;
+                    offset_map.ext_key_map[i] = offset;
                     entry.write_to(&mut buf, &offset_map)?;
-                    offset
-                };
-                offset_map.leaf_map.push(offset);
+                }
+            }
+
+            for (i, entry) in self.dirty_links.iter().enumerate() {
+                if !entry.is_unused() {
+                    let offset = buf.len() as u64 + len;
+                    offset_map.link_map[i] = offset;
+                    entry.write_to(&mut buf, &offset_map)?;
+                }
+            }
+
+            // Non-inlined leafs.
+            for (i, entry) in self.dirty_leafs.iter().enumerate() {
+                if !entry.is_unused() {
+                    let offset = buf.len() as u64 + len;
+                    offset_map.leaf_map[i] = offset;
+                    entry.write_noninline_to(&mut buf, &offset_map)?;
+                }
             }
 
             // Write Radix entries in reversed order since former ones might refer to latter ones.
-            for entry in self.dirty_radixes.iter().rev() {
+            for (i, entry) in self.dirty_radixes.iter().rev().enumerate() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
-                offset_map.radix_map.push(offset);
+                offset_map.radix_map[i] = offset;
             }
 
             self.root.write_to(&mut buf, &offset_map)?;
@@ -1863,11 +2032,17 @@ impl Debug for Index {
                 }
                 TYPE_LEAF => {
                     let e = MemLeaf::read_from(&self.buf, i, &None).expect("read");
-                    e.write_to(&mut buf, &offset_map).expect("write");
+                    e.write_noninline_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
+                TYPE_INLINE_LEAF => {
+                    let e = MemLeaf::read_from(&self.buf, i, &None).expect("read");
+                    write!(f, "Inline{:?}\n", e);
+                    // Just skip the type int byte so we can parse inlined structures.
+                    buf.push(TYPE_INLINE_LEAF);
+                }
                 TYPE_LINK => {
-                    let e = MemLink::read_from(&self.buf, i, &None).expect("read");
+                    let e = MemLink::read_from(&self.buf, i, &None).unwrap();
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
@@ -2250,21 +2425,84 @@ mod tests {
             .expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 22, root: Radix[0] }\n\
-             Disk[1]: ExtKey { start: 1, len: 2 }\n\
-             Disk[4]: Link { value: 55, next: None }\n\
-             Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
-             Disk[10]: Radix { link: None, 3: Disk[7] }\n\
-             Disk[18]: Root { radix: Disk[10] }\n\
+            "Index { len: 20, root: Radix[0] }\n\
+             Disk[1]: InlineLeaf { key: Disk[2], link: Disk[5] }\n\
+             Disk[2]: ExtKey { start: 1, len: 2 }\n\
+             Disk[5]: Link { value: 55, next: None }\n\
+             Disk[8]: Radix { link: None, 3: Disk[1] }\n\
+             Disk[16]: Root { radix: Disk[8] }\n\
              Radix[0]: Radix { link: None, 3: Radix[1] }\n\
              Radix[1]: Radix { link: None, 4: Radix[2] }\n\
              Radix[2]: Radix { link: None, 5: Radix[3] }\n\
              Radix[3]: Radix { link: None, 6: Radix[4] }\n\
-             Radix[4]: Radix { link: Disk[4], 7: Leaf[0] }\n\
+             Radix[4]: Radix { link: Disk[5], 7: Leaf[0] }\n\
              Leaf[0]: Leaf { key: ExtKey[0], link: Link[0] }\n\
              Link[0]: Link { value: 77, next: None }\n\
              ExtKey[0]: ExtKey { start: 1, len: 3 }\n"
         );
+    }
+
+    #[test]
+    fn test_inline_leafs() {
+        let buf = Arc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index = open_opts()
+            .key_buf(Some(buf.clone()))
+            .open(dir.path().join("a"))
+            .expect("open");
+
+        // New entry. Should be inlined.
+        index
+            .insert_advanced(InsertKey::Reference((1, 1)), 55, None)
+            .unwrap();
+        index.flush().expect("flush");
+
+        // Independent leaf. Should also be inlined.
+        index
+            .insert_advanced(InsertKey::Reference((2, 1)), 77, None)
+            .unwrap();
+        index.flush().expect("flush");
+
+        // The link with 88 should refer to the inlined leaf 77.
+        index
+            .insert_advanced(InsertKey::Reference((2, 1)), 88, None)
+            .unwrap();
+        index.flush().expect("flush");
+
+        // Not inlined because dependent link was not written first.
+        // (could be optimized in the future)
+        index
+            .insert_advanced(InsertKey::Reference((3, 1)), 99, None)
+            .unwrap();
+        index
+            .insert_advanced(InsertKey::Reference((3, 1)), 100, None)
+            .unwrap();
+        index.flush().expect("flush");
+
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 97, root: Disk[77] }\n\
+             Disk[1]: InlineLeaf { key: Disk[2], link: Disk[5] }\n\
+             Disk[2]: ExtKey { start: 1, len: 1 }\n\
+             Disk[5]: Link { value: 55, next: None }\n\
+             Disk[8]: Radix { link: None, 3: Disk[1] }\n\
+             Disk[16]: Root { radix: Disk[8] }\n\
+             Disk[20]: InlineLeaf { key: Disk[21], link: Disk[24] }\n\
+             Disk[21]: ExtKey { start: 2, len: 1 }\n\
+             Disk[24]: Link { value: 77, next: None }\n\
+             Disk[27]: Radix { link: None, 3: Disk[1], 5: Disk[20] }\n\
+             Disk[39]: Root { radix: Disk[27] }\n\
+             Disk[43]: Link { value: 88, next: Disk[24] }\n\
+             Disk[46]: Leaf { key: Disk[21], link: Disk[43] }\n\
+             Disk[49]: Radix { link: None, 3: Disk[1], 5: Disk[46] }\n\
+             Disk[61]: Root { radix: Disk[49] }\n\
+             Disk[65]: ExtKey { start: 3, len: 1 }\n\
+             Disk[68]: Link { value: 99, next: None }\n\
+             Disk[71]: Link { value: 100, next: Disk[68] }\n\
+             Disk[74]: Leaf { key: Disk[65], link: Disk[71] }\n\
+             Disk[77]: Radix { link: None, 3: Disk[1], 5: Disk[46], 7: Disk[74] }\n\
+             Disk[93]: Root { radix: Disk[77] }\n"
+        )
     }
 
     #[test]
