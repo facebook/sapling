@@ -31,6 +31,7 @@ import facebook.eden.ttypes as eden_ttypes
 import toml
 
 from . import configinterpolator, configutil, util
+from .systemd import should_use_experimental_systemd_mode
 from .util import EdenStartError, HealthStatus, print_stderr, readlink_retry_estale
 
 
@@ -663,6 +664,9 @@ Do you want to run `eden mount %s` instead?"""
         if extra_args:
             cmd.extend(extra_args)
         if should_use_experimental_systemd_mode():
+            # TODO(T33122320): Delete this after making 'eden restart' and other
+            # callers support systemd mode. (--foreground should never set
+            # --experimentalSystemd.)
             cmd.append("--experimentalSystemd")
         if takeover:
             cmd.append("--takeover")
@@ -1161,12 +1165,6 @@ def _verify_mount_point(mount_point: str) -> None:
             )
             % (parent_dir, mount_point, parent_dir)
         )
-
-
-def should_use_experimental_systemd_mode() -> bool:
-    # TODO(T33122320): Delete this environment variable when systemd is properly
-    # integrated.
-    return os.getenv("EDEN_EXPERIMENTAL_SYSTEMD") == "1"
 
 
 _TomlConfigDict = Mapping[str, Mapping[str, Any]]

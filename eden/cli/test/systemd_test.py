@@ -8,16 +8,65 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import collections
+import pathlib
 import typing
 import unittest
 
 import hypothesis
 import hypothesis.strategies
-from eden.cli.systemd import SystemdEnvironmentFile
+from eden.cli.systemd import SystemdEnvironmentFile, systemd_escape_path
 from eden.test_support.hypothesis import fast_hypothesis_test, set_up_hypothesis
 
 
 set_up_hypothesis()
+
+
+class SystemdEscapeTest(unittest.TestCase):
+    def test_escape_benign_absolute_path(self) -> None:
+        self.assertEqual(
+            systemd_escape_path(pathlib.PurePosixPath("/path/to/file.txt")),
+            "path-to-file.txt",
+        )
+
+    def test_escape_path_containing_funky_characters(self) -> None:
+        self.assertEqual(
+            systemd_escape_path(pathlib.PurePosixPath("/file with spaces")),
+            r"file\x20with\x20spaces",
+        )
+        self.assertEqual(
+            systemd_escape_path(pathlib.PurePosixPath(r"/file\with\backslashes")),
+            r"file\x5cwith\x5cbackslashes",
+        )
+        self.assertEqual(
+            systemd_escape_path(pathlib.PurePosixPath(r"/Hallöchen, Meister")),
+            r"Hall\xc3\xb6chen\x2c\x20Meister",
+        )
+
+    def test_escape_path_containing_newlines(self) -> None:
+        self.assertEqual(
+            systemd_escape_path(pathlib.PurePosixPath("/file\nwith\nnewlines")),
+            r"file\x0awith\x0anewlines",
+        )
+        self.assertEqual(
+            systemd_escape_path(pathlib.PurePosixPath("/trailing\n")), r"trailing\x0a"
+        )
+        self.assertEqual(systemd_escape_path(pathlib.PurePosixPath("/\n")), r"\x0a")
+
+    def test_escaping_path_ignores_trailing_slashes(self) -> None:
+        self.assertEqual(
+            systemd_escape_path(pathlib.PurePosixPath("/path/to/directory///")),
+            "path-to-directory",
+        )
+
+    def test_escape_relative_path_raises(self) -> None:
+        path = pathlib.PurePosixPath("path/to/file.txt")
+        with self.assertRaises(ValueError):
+            systemd_escape_path(path)
+
+    def test_escape_path_with_dotdot_components_raises(self) -> None:
+        path = pathlib.PurePosixPath("/path/to/../file.txt")
+        with self.assertRaises(ValueError):
+            systemd_escape_path(path)
 
 
 class SystemdEnvironmentFileDumpTest(unittest.TestCase):

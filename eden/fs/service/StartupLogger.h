@@ -16,6 +16,7 @@
 #include <gflags/gflags_declare.h>
 #include <memory>
 #include <optional>
+#include "eden/fs/config/EdenConfig.h"
 
 namespace facebook {
 namespace eden {

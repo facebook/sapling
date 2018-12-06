@@ -409,7 +409,8 @@ echo -n "$1" >> "{scratch_file}"
         self.assertEqual(custom_readme_text, util.read_all(bytes(readme_path, "utf-8")))
 
 
-@service_test
+# TODO(T33122320): Integrate systemd and 'eden clone'.
+@service_test(skip_systemd=True)
 class CloneFakeEdenFSTest(
     ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin
 ):

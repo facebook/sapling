@@ -1,0 +1,29 @@
+# systemd service unit file for EdenFS.
+# systemd: https://freedesktop.org/wiki/Software/systemd/
+# EdenFS: https://our.intern.facebook.com/intern/wiki/Eden/
+
+[Unit]
+Description=EdenFS FUSE filesystem
+
+[Service]
+Environment=EDENFS_EXECUTABLE_PATH=/usr/local/bin/edenfs
+Environment=EDENFS_SYSTEM_CONFIG_DIR=/etc/eden
+Environment=EDENFS_USER_CONFIG_DIR=%h/.edenrc
+
+EnvironmentFile=-%f/systemd.conf
+
+Environment=EDENFS_CONFIG_DIR=%f
+
+ExecStart=/usr/bin/env \
+    ${EDENFS_EXECUTABLE_PATH} \
+    --configPath ${EDENFS_USER_CONFIG_DIR} \
+    --edenDir ${EDENFS_CONFIG_DIR} \
+    --edenfs \
+    --etcEdenDir ${EDENFS_SYSTEM_CONFIG_DIR} \
+    --experimentalSystemd \
+    --foreground
+
+NotifyAccess=main
+Type=notify
+
+[Install]

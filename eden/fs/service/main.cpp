@@ -25,6 +25,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/service/Systemd.h"
 
 DEFINE_bool(
     edenfs,
@@ -32,12 +33,6 @@ DEFINE_bool(
     "This argument must be supplied to confirm you intend to run "
     "edenfs instead of eden");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
-#if EDEN_HAVE_SYSTEMD
-DEFINE_bool(
-    experimentalSystemd,
-    false,
-    "EXPERIMENTAL: Run edenfs as if systemd controls its lifecycle");
-#endif
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(
     etcEdenDir,

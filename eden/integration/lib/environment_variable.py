@@ -17,6 +17,10 @@ class EnvironmentVariableMixin(metaclass=abc.ABCMeta):
         self.__add_cleanup_for_environment_variable(name)
         os.environ[name] = value
 
+    def set_environment_variables(self, variables: typing.Mapping[str, str]) -> None:
+        for name, value in variables.items():
+            self.set_environment_variable(name, value)
+
     def unset_environment_variable(self, name: str) -> None:
         self.__add_cleanup_for_environment_variable(name)
         del os.environ[name]

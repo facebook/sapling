@@ -40,9 +40,10 @@ class FakeEdenFS(typing.ContextManager[int]):
             "start",
             "--daemon-binary",
             FindExe.FAKE_EDENFS,
-            "--",
         ]
-        command.extend(extra_arguments)
+        if extra_arguments:
+            command.append("--")
+            command.extend(extra_arguments)
         subprocess.check_call(command)
         return cls.from_existing_process(eden_dir=eden_dir)
 

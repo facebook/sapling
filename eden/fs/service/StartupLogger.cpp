@@ -8,6 +8,7 @@
  *
  */
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/service/Systemd.h"
 
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
@@ -23,6 +24,8 @@
 #include <sysexits.h>
 #include <unistd.h>
 #endif
+
+#include "eden/fs/eden-config.h"
 
 using folly::checkUnixError;
 using folly::File;
@@ -56,6 +59,13 @@ void StartupLogger::success() {
   writeMessage(
       folly::LogLevel::INFO,
       folly::to<string>("Started edenfs (pid ", getpid(), ")"));
+
+#if EDEN_HAVE_SYSTEMD
+  if (FLAGS_experimentalSystemd) {
+    Systemd::notifyReady();
+  }
+#endif
+
   successImpl();
 }
 

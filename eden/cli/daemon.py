@@ -9,12 +9,17 @@
 
 import errno
 import os
+import pathlib
 import signal
 import subprocess
 import sys
 from typing import Dict, List, NoReturn, Optional, Tuple, Union
 
 from .config import EdenInstance
+from .systemd import (
+    edenfs_systemd_service_name,
+    write_edenfs_systemd_service_config_file,
+)
 from .util import ShutdownError, poll_until, print_stderr
 
 
@@ -172,6 +177,19 @@ def start_daemon(
 
     cmd, env = result
     return subprocess.call(cmd, env=env)
+
+
+def start_systemd_service(
+    instance: EdenInstance, daemon_binary: Optional[str] = None
+) -> int:
+    if daemon_binary is None:
+        raise NotImplementedError("TODO(T33122320): Use system-installed edenfs")
+
+    write_edenfs_systemd_service_config_file(
+        eden_dir=instance.state_dir, edenfs_executable_path=pathlib.Path(daemon_binary)
+    )
+    service_name = edenfs_systemd_service_name(instance.state_dir)
+    return subprocess.call(["systemctl", "--user", "start", "--", service_name])
 
 
 def _get_daemon_args(

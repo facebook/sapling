@@ -133,6 +133,10 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def SYSTEMD_FB_EDENFS_SERVICE(self) -> str:
+        return os.path.join(self.REPO_ROOT, "eden/fs/service/fb-edenfs@.service")
+
+    @cached_property
     def TAKEOVER_TOOL(self) -> str:
         return self._find_exe(
             "takeover_tool",

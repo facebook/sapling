@@ -31,7 +31,8 @@ SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 
-@service_test
+# TODO(T33122320): Support 'eden stop' with systemd.
+@service_test(skip_systemd=True)
 class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin):
     def setUp(self) -> None:
         super().setUp()

@@ -25,7 +25,8 @@ from .lib.pexpect import PexpectAssertionMixin
 from .lib.service_test_case import ServiceTestCaseBase, service_test
 
 
-@service_test
+# TODO(T33122320): Support 'eden restart' with systemd.
+@service_test(skip_systemd=True)
 class RestartTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin):
     def setUp(self) -> None:
         self.tmp_dir = self.make_temporary_directory()

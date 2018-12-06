@@ -7,8 +7,47 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import os
+import pathlib
 import re
+import subprocess
 import typing
+
+
+def should_use_experimental_systemd_mode() -> bool:
+    # TODO(T33122320): Delete this environment variable when systemd is properly
+    # integrated.
+    return os.getenv("EDEN_EXPERIMENTAL_SYSTEMD") == "1"
+
+
+def edenfs_systemd_service_name(eden_dir: pathlib.Path) -> str:
+    assert isinstance(eden_dir, pathlib.PosixPath)
+    instance_name = systemd_escape_path(eden_dir)
+    return f"fb-edenfs@{instance_name}.service"
+
+
+def systemd_escape_path(path: pathlib.PurePosixPath) -> str:
+    """Escape a path for inclusion in a systemd unit name.
+
+    See the 'systemd-escape --path' command for details.
+    """
+    if not path.is_absolute():
+        raise ValueError("systemd_escape_path can only escape absolute paths")
+    if ".." in path.parts:
+        raise ValueError(
+            "systemd_escape_path can only escape paths without '..' components"
+        )
+    stdout: bytes = subprocess.check_output(
+        ["systemd-escape", "--path", "--", str(path)]
+    )
+    return stdout.decode("utf-8").rstrip("\n")
+
+
+def write_edenfs_systemd_service_config_file(
+    eden_dir: pathlib.Path, edenfs_executable_path: pathlib.Path
+) -> None:
+    variables = {b"EDENFS_EXECUTABLE_PATH": bytes(edenfs_executable_path)}
+    (eden_dir / "systemd.conf").write_bytes(SystemdEnvironmentFile.dumps(variables))
 
 
 class SystemdEnvironmentFile:

@@ -49,6 +49,7 @@ from . import (
 from .cmd_util import get_eden_instance, require_checkout
 from .config import EdenInstance
 from .subcmd import Subcmd
+from .systemd import should_use_experimental_systemd_mode
 from .util import ShutdownError, print_stderr
 
 
@@ -875,6 +876,15 @@ class StartCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
+        if should_use_experimental_systemd_mode():
+            if args.foreground:
+                return self.start(args)
+            else:
+                return self.start_using_systemd(args)
+        else:
+            return self.start(args)
+
+    def start(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
         if args.if_necessary and not instance.get_mount_paths():
@@ -890,6 +900,27 @@ class StartCmd(Subcmd):
             gdb_args=args.gdb_arg,
             strace_file=args.strace,
             foreground=args.foreground,
+        )
+
+    def start_using_systemd(self, args: argparse.Namespace) -> int:
+        if args.edenfs_args:
+            raise NotImplementedError(
+                "TODO(T33122320): Forward custom daemon arguments to edenfs"
+            )
+        if args.gdb:
+            raise NotImplementedError("TODO(T33122320): Implement 'eden start --gdb'")
+        if args.strace:
+            raise NotImplementedError(
+                "TODO(T33122320): Implement 'eden start --strace'"
+            )
+        if args.takeover:
+            raise NotImplementedError(
+                "TODO(T33122320): Implement 'eden start --takeover'"
+            )
+
+        instance = get_eden_instance(args)
+        return daemon.start_systemd_service(
+            instance=instance, daemon_binary=args.daemon_binary
         )
 
 

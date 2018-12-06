@@ -27,6 +27,7 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/service/Systemd.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -56,12 +57,6 @@ DEFINE_bool(
     exitWithoutCleanupOnStop,
     false,
     "Respond to stop requests by exiting abruptly");
-#if EDEN_HAVE_SYSTEMD
-DEFINE_bool(
-    experimentalSystemd,
-    false,
-    "EXPERIMENTAL: Run edenfs as if systemd controls its lifecycle");
-#endif
 DEFINE_bool(
     failDuringStartup,
     false,
