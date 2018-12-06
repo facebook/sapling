@@ -121,7 +121,8 @@ fn main() {
         })
     });
 
-    bench_once("index size (owned key)", || {
+    bench_once("index size (5M owned keys)", || {
+        const N: usize = 5000000;
         let dir = TempDir::new("index").expect("TempDir::new");
         let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
@@ -132,7 +133,8 @@ fn main() {
         idx.flush().unwrap()
     });
 
-    bench_once("index size (referred key)", || {
+    bench_once("index size (5M referred keys)", || {
+        const N: usize = 5000000;
         let dir = TempDir::new("index").expect("TempDir::new");
         let buf = gen_buf(N * 20);
         let mut idx = open_opts()
