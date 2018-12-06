@@ -44,7 +44,7 @@ pub type ContentBlob = Blob<ContentId>;
 /// A type representing bytes written to or read from a blobstore. The goal here is to ensure
 /// that only types that implement `From<BlobstoreBytes>` and `Into<BlobstoreBytes>` can be
 /// stored in the blob store.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlobstoreBytes(Bytes);
 
 impl BlobstoreBytes {
