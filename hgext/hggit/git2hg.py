@@ -2,6 +2,7 @@
 
 from dulwich.objects import Commit, Tag
 from mercurial import util
+from mercurial.node import bin
 
 
 def find_incoming(git_object_store, git_map, refs):
@@ -46,7 +47,7 @@ def find_incoming(git_object_store, git_map, refs):
         commits = []
         while todo:
             sha = todo[-1]
-            if sha in done or sha in git_map:
+            if sha in done or git_map.lookupbyfirst(bin(sha)) is not None:
                 todo.pop()
                 continue
             assert isinstance(sha, str)
@@ -57,7 +58,7 @@ def find_incoming(git_object_store, git_map, refs):
                 commit_cache[sha] = obj
             assert isinstance(obj, Commit)
             for p in obj.parents:
-                if p not in done and p not in git_map:
+                if p not in done and git_map.lookupbyfirst(bin(p)) is None:
                     todo.append(p)
                     # process parents of a commit before processing the
                     # commit itself, and come back to this commit later

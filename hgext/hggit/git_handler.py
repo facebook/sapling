@@ -113,23 +113,16 @@ class GitHandler(object):
             ui, "string", "git", "branch_bookmark_suffix"
         )
 
-        self._map_git_real = None
-        self._map_hg_real = None
+        self._map_real = None
         self._map_hg_modifications = set()
         self.load_tags()
         self._remote_refs = None
 
     @property
-    def _map_git(self):
-        if self._map_git_real is None:
+    def _map(self):
+        if self._map_real is None:
             self.load_map()
-        return self._map_git_real
-
-    @property
-    def _map_hg(self):
-        if self._map_hg_real is None:
-            self.load_map()
-        return self._map_hg_real
+        return self._map_real
 
     @property
     def remote_refs(self):
@@ -173,44 +166,43 @@ class GitHandler(object):
     # FILE LOAD AND SAVE METHODS
 
     def map_set(self, gitsha, hgsha):
-        self._map_git[gitsha] = hgsha
-        self._map_hg[hgsha] = gitsha
-        self._map_hg_modifications.add(hgsha)
+        hgnode = bin(hgsha)
+        self._map.add(bin(gitsha), hgnode)
+        self._map_hg_modifications.add(hgnode)
 
     def map_hg_get(self, gitsha):
-        return self._map_git.get(gitsha)
+        node = self._map.lookupbyfirst(bin(gitsha))
+        if node is not None:
+            node = hex(node)
+        return node
 
     def map_git_get(self, hgsha):
-        return self._map_hg.get(hgsha)
+        node = self._map.lookupbysecond(bin(hgsha))
+        if node is not None:
+            node = hex(node)
+        return node
 
     def load_map(self):
-        map_git_real = {}
-        map_hg_real = {}
+        content = []
         if os.path.exists(self.vfs.join(self.map_file)):
-            for line in self.vfs(self.map_file):
-                # format is <40 hex digits> <40 hex digits>\n
-                if len(line) != 82:
-                    raise ValueError(
-                        _("corrupt mapfile: incorrect line length %d") % len(line)
-                    )
-                gitsha = line[:40]
-                hgsha = line[41:81]
-                map_git_real[gitsha] = hgsha
-                map_hg_real[hgsha] = gitsha
-        self._map_git_real = map_git_real
-        self._map_hg_real = map_hg_real
+            content = self.vfs(self.map_file)
+
+        self._map_real = GitMap(content)
 
     def save_map(self, map_file):
         wlock = self.repo.wlock()
         try:
             file = self.vfs(map_file, "a+", atomictemp=True)
-            map_hg = self._map_hg
+            map = self._map
             buf = hgutil.stringio()
             bwrite = buf.write
             # Append new entries to the end of the file so we can search
             # backwards from the end for recently added entries.
-            for hgsha in self._map_hg_modifications:
-                bwrite("%s %s\n" % (map_hg[hgsha], hgsha))
+            for hgnode in self._map_hg_modifications:
+                gitnode = map.lookupbysecond(hgnode)
+                if gitnode is None:
+                    raise KeyError(hex(hgnode))
+                bwrite("%s %s\n" % (hex(gitnode), hex(hgnode)))
             self._map_hg_modifications.clear()
             file.write(buf.getvalue())
             buf.close()
@@ -253,7 +245,10 @@ class GitHandler(object):
                     try:
                         ref = root.replace(refdir + pycompat.ossep, "") + "/"
                         node = open(os.path.join(root, f)).read().strip()
-                        self._remote_refs[ref + f] = bin(self._map_git[node])
+                        hgsha = self._map.lookupbyfirst(bin(node))
+                        if hgsha is None:
+                            raise KeyError(hex(node))
+                        self._remote_refs[ref + f] = hgsha
                     except (KeyError, IOError):
                         pass
 
@@ -289,8 +284,10 @@ class GitHandler(object):
                     rhead = symref.replace("refs/heads/", "")
 
                 rnode = refs["refs/heads/%s" % rhead]
-                rnode = self._map_git[rnode]
-                rnode = self.repo[rnode].node()
+                hgrnode = self._map.lookupbyfirst(bin(rnode))
+                if hgrnode is None:
+                    raise KeyError(rnode)
+                rnode = self.repo[hgrnode].node()
             except KeyError:
                 # if there is any error make sure to clear the variables
                 rhead = None
@@ -492,7 +489,7 @@ class GitHandler(object):
         while pending:
             rev = pending.pop()
             node = clnode(rev)
-            if hex(node) not in self._map_hg:
+            if self._map.lookupbysecond(node) is None:
                 exportrevs.add(rev)
                 for parentrev in clparents(rev):
                     if parentrev != nullrev and parentrev not in exportrevs:
@@ -501,7 +498,7 @@ class GitHandler(object):
         # these in topological order.
         to_export = list(repo[r] for r in sorted(exportrevs))
 
-        todo_total = len(repo) - len(self._map_hg)
+        todo_total = len(exportrevs)
         pos = 0
         export = []
         with progress.bar(
@@ -531,7 +528,10 @@ class GitHandler(object):
         if pnode == nullid:
             gitcommit = None
         else:
-            gitsha = self._map_hg[hex(pnode)]
+            gitnode = self._map.lookupbysecond(pnode)
+            if gitnode is None:
+                raise KeyError(hex(pnode))
+            gitsha = hex(gitnode)
             try:
                 gitcommit = self.git[gitsha]
             except KeyError:
@@ -837,7 +837,7 @@ class GitHandler(object):
         return message, git_extra
 
     def get_git_incoming(self, refs):
-        return git2hg.find_incoming(self.git.object_store, self._map_git, refs)
+        return git2hg.find_incoming(self.git.object_store, self._map, refs)
 
     def import_git_objects(self, remote_name, refs):
         result = self.get_git_incoming(refs)
@@ -1285,7 +1285,7 @@ class GitHandler(object):
             for ref in rev_refs:
                 if ref not in refs:
                     new_refs[ref] = self.map_git_get(ctx.hex())
-                elif new_refs[ref] in self._map_git:
+                elif self._map.lookupbyfirst(bin(new_refs[ref])) is not None:
                     rctx = unfiltered[self.map_hg_get(new_refs[ref])]
                     if rctx.ancestor(ctx) == rctx or force:
                         new_refs[ref] = self.map_git_get(ctx.hex())
@@ -1861,3 +1861,35 @@ class GitHandler(object):
 
         # if its not git or git+ssh, try a local url..
         return client.SubprocessGitClient(), uri
+
+
+class GitMap(object):
+    def __init__(self, content):
+        mapgit = {}
+        maphg = {}
+        for line in content:
+            # format is <40 hex digits> <40 hex digits>\n
+            if len(line) != 82:
+                raise ValueError(
+                    _("corrupt mapfile: incorrect line length %d %s")
+                    % (len(line), content)
+                )
+            gitnode = bin(line[:40])
+            hgnode = bin(line[41:81])
+            mapgit[gitnode] = hgnode
+            maphg[hgnode] = gitnode
+        self._mapgit = mapgit
+        self._maphg = maphg
+
+    def lookupbyfirst(self, gitnode):
+        return self._mapgit.get(gitnode)
+
+    def lookupbysecond(self, hgnode):
+        return self._maphg.get(hgnode)
+
+    def add(self, gitnode, hgnode):
+        self._mapgit[gitnode] = hgnode
+        self._maphg[hgnode] = gitnode
+
+    def items(self):
+        return self._mapgit.items()

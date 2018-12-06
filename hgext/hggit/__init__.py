@@ -296,11 +296,11 @@ def gverify(ui, repo, **opts):
 @command("git-cleanup")
 def git_cleanup(ui, repo):
     """clean up Git commit map after history editing"""
+    items = repo.githandler._map.items()
     new_map = []
-    for line in repo.sharedvfs(GitHandler.map_file):
-        gitsha, hgsha = line.strip().split(" ", 1)
+    for gitsha, hgsha in items:
         if hgsha in repo:
-            new_map.append("%s %s\n" % (gitsha, hgsha))
+            new_map.append("%s %s\n" % (hex(gitsha), hex(hgsha)))
     wlock = repo.wlock()
     try:
         f = repo.sharedvfs(GitHandler.map_file, "wb")
