@@ -56,7 +56,21 @@ pub struct RevsetSpec {
 }
 
 fn get_changesets_from_repo(ctx: CoreContext, repo: &BlobRepo) -> Vec<HgNodeHash> {
-    let mut all_changesets_executor = spawn(repo.get_changesets(ctx));
+    let changeset_fetcher = repo.get_changeset_fetcher();
+    let mut all_changesets_executor = spawn(
+        repo.get_bonsai_heads_maybe_stale(ctx.clone())
+            .map({
+                cloned!(ctx);
+                move |head| AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, head)
+            })
+            .flatten()
+            .and_then({
+                cloned!(ctx, repo);
+                move |bonsai_cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), bonsai_cs)
+            })
+            .map(|cs| cs.into_nodehash()),
+    );
+
     let mut all_changesets: Vec<HgNodeHash> = Vec::new();
     loop {
         all_changesets.push(match all_changesets_executor.wait_stream() {

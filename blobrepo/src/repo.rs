@@ -4,10 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::convert::From;
 use std::iter::FromIterator;
-use std::mem;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -16,9 +15,9 @@ use std::usize;
 
 use bytes::Bytes;
 use failure::{Error, FutureFailureErrorExt, FutureFailureExt, Result, prelude::*};
-use futures::{Async, IntoFuture, Poll};
+use futures::IntoFuture;
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
-use futures::stream::{self, FuturesUnordered, Stream};
+use futures::stream::{FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
@@ -669,17 +668,6 @@ impl BlobRepo {
         fetch_rename_from_blobstore(ctx, &self.blobstore, *key)
             .map(|rename| rename.map(|(path, hash)| (RepoPath::FilePath(path), hash)))
             .boxify()
-    }
-
-    pub fn get_changesets(&self, ctx: CoreContext) -> BoxStream<HgNodeHash, Error> {
-        STATS::get_changesets.add_value(1);
-        HgBlobChangesetStream {
-            ctx: ctx.clone(),
-            repo: self.clone(),
-            state: BCState::Idle,
-            heads: self.get_heads_maybe_stale(ctx).boxify(),
-            seen: HashSet::new(),
-        }.boxify()
     }
 
     /// Heads maybe read from replica, so they may be out of date
@@ -2344,73 +2332,6 @@ impl Clone for BlobRepo {
             repoid: self.repoid.clone(),
             changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
             postcommit_queue: self.postcommit_queue.clone(),
-        }
-    }
-}
-
-pub struct HgBlobChangesetStream {
-    ctx: CoreContext,
-    repo: BlobRepo,
-    seen: HashSet<HgNodeHash>,
-    heads: BoxStream<HgNodeHash, Error>,
-    state: BCState,
-}
-
-enum BCState {
-    Idle,
-    WaitCS(HgNodeHash, BoxFuture<HgBlobChangeset, Error>),
-}
-
-impl Stream for HgBlobChangesetStream {
-    type Item = HgNodeHash;
-    type Error = Error;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
-        use self::BCState::*;
-
-        loop {
-            let (ret, state) = match &mut self.state {
-                &mut Idle => {
-                    if let Some(next) = try_ready!(self.heads.poll()) {
-                        let state = if self.seen.insert(next) {
-                            // haven't seen before
-                            WaitCS(
-                                next,
-                                self.repo.get_changeset_by_changesetid(
-                                    self.ctx.clone(),
-                                    &HgChangesetId::new(next),
-                                ),
-                            )
-                        } else {
-                            Idle // already done it
-                        };
-
-                        // Nothing to report, keep going
-                        (None, state)
-                    } else {
-                        // Finished
-                        (Some(None), Idle)
-                    }
-                }
-
-                &mut WaitCS(ref next, ref mut csfut) => {
-                    let cs = try_ready!(csfut.poll());
-
-                    // get current heads stream and replace it with a placeholder
-                    let heads = mem::replace(&mut self.heads, stream::empty().boxify());
-
-                    // Add new heads - existing first, then new to get BFS
-                    let parents = cs.parents().into_iter();
-                    self.heads = heads.chain(stream::iter_ok(parents)).boxify();
-
-                    (Some(Some(*next)), Idle)
-                }
-            };
-
-            self.state = state;
-            if let Some(ret) = ret {
-                return Ok(Async::Ready(ret));
-            }
         }
     }
 }

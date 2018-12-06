@@ -16,7 +16,6 @@
 extern crate cloned;
 #[macro_use]
 extern crate failure_ext as failure;
-#[macro_use]
 extern crate futures;
 extern crate tokio;
 
