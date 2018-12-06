@@ -15,7 +15,8 @@
 //   LOG := HEADER + ENTRY_LIST
 //   HEADER := 'log\0'
 //   ENTRY_LIST := '' | ENTRY_LIST + ENTRY
-//   ENTRY := LEN(CONTENT) + XXHASH64(CONTENT) + CONTENT
+//   ENTRY := ENTRY_FLAGS + LEN(CONTENT) + CHECKSUM + CONTENT
+//   CHECKSUM := '' | XXHASH64(CONTENT) | XXHASH32(CONTENT)
 //
 // Metadata:
 //   META := HEADER + XXHASH64(DATA) + LEN(DATA) + DATA
@@ -27,8 +28,8 @@
 // Indexes:
 //   See `index.rs`.
 //
-// Integers are VLQ encoded, except for XXHASH64, which uses LittleEndian 64-bit
-// encoding.
+// Integers are VLQ encoded, except for XXHASH64 and XXHASH32, which uses
+// LittleEndian encoding.
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
@@ -42,7 +43,7 @@ use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use utils::{mmap_readonly, xxhash};
+use utils::{mmap_readonly, xxhash, xxhash32};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 // Constants about file names
@@ -51,6 +52,9 @@ const PRIMARY_HEADER: &[u8] = b"indexedlog0\0";
 const PRIMARY_START_OFFSET: u64 = 12; // PRIMARY_HEADER.len() as u64;
 const META_FILE: &str = "meta";
 const INDEX_FILE_PREFIX: &str = "index-";
+
+const ENTRY_FLAG_HAS_XXHASH64: u32 = 1;
+const ENTRY_FLAG_HAS_XXHASH32: u32 = 2;
 
 /// An append-only storage with indexes and integrity checks.
 ///
@@ -145,6 +149,23 @@ pub enum IndexOutput {
     Owned(Box<[u8]>),
 }
 
+/// What checksum function to use for an entry.
+#[derive(Copy, Clone, Debug)]
+pub enum ChecksumType {
+    /// No checksum. Suitable for data that have their own checksum logic.
+    /// For example, source control commit data might have SHA1 that can
+    /// verify themselves.
+    None,
+
+    /// Use xxhash64 checksum algorithm. Efficient on 64bit platforms.
+    Xxhash64,
+
+    /// Use xxhash64 checksum algorithm. It is slower than xxhash64 for 64bit
+    /// platforms, but takes less space. Perhaps a good fit when entries are
+    /// short.
+    Xxhash32,
+}
+
 /// Iterator over all entries in a [Log].
 pub struct LogIter<'a> {
     next_offset: u64,
@@ -224,11 +245,69 @@ impl Log {
     ///
     /// To write in-memory entries and indexes to disk, call [Log::flush].
     pub fn append<T: AsRef<[u8]>>(&mut self, data: T) -> io::Result<()> {
+        // xxhash64 is slower for smaller data. A quick benchmark on x64 platform shows:
+        //
+        // bytes  xxhash32  xxhash64 (MB/s)
+        //   32       1882      1600
+        //   40       1739      1538
+        //   48       2285      1846
+        //   56       2153      2000
+        //   64       2666      2782
+        //   72       2400      2322
+        //   80       2962      2758
+        //   88       2750      2750
+        //   96       3200      3692
+        //  104       2810      3058
+        //  112       3393      3500
+        //  120       3000      3428
+        //  128       3459      4266
+        const XXHASH64_THRESHOLD: usize = 88;
+        let data = data.as_ref();
+        let checksum_type = if data.len() >= XXHASH64_THRESHOLD {
+            ChecksumType::Xxhash64
+        } else {
+            ChecksumType::Xxhash32
+        };
+        self.append_advanced(data, checksum_type)
+    }
+
+    /// Advanced version of [Log::append], with more controls, like specifying
+    /// the checksum algorithm.
+    pub fn append_advanced<T: AsRef<[u8]>>(
+        &mut self,
+        data: T,
+        checksum_type: ChecksumType,
+    ) -> io::Result<()> {
         let data = data.as_ref();
         let offset = self.meta.primary_len + self.mem_buf.len() as u64;
-        // ENTRY := LEN(CONTENT) + XXHASH64(CONTENT) + CONTENT
+
+        // Design note: Currently checksum_type is the only thing that decides
+        // entry_flags.  Entry flags is not designed to just cover different
+        // checksum types.  For example, if we'd like to introduce transparent
+        // compression (maybe not a good idea since it can be more cleanly built
+        // at an upper layer), or some other ways to store data (ex. reference
+        // to other data, or fixed length data), they can probably be done by
+        // extending the entry type.
+        let mut entry_flags = 0;
+        entry_flags |= match checksum_type {
+            ChecksumType::None => 0,
+            ChecksumType::Xxhash64 => ENTRY_FLAG_HAS_XXHASH64,
+            ChecksumType::Xxhash32 => ENTRY_FLAG_HAS_XXHASH32,
+        };
+
+        self.mem_buf.write_vlq(entry_flags)?;
         self.mem_buf.write_vlq(data.len())?;
-        self.mem_buf.write_u64::<LittleEndian>(xxhash(data))?;
+
+        match checksum_type {
+            ChecksumType::None => (),
+            ChecksumType::Xxhash64 => {
+                self.mem_buf.write_u64::<LittleEndian>(xxhash(data))?;
+            }
+            ChecksumType::Xxhash32 => {
+                self.mem_buf.write_u32::<LittleEndian>(xxhash32(data))?;
+            }
+        };
+
         self.mem_buf.write_all(data)?;
         self.update_indexes_for_in_memory_entry(data, offset)?;
         Ok(())
@@ -523,30 +602,65 @@ impl Log {
     fn read_entry_from_buf(buf: &[u8], offset: u64) -> io::Result<Option<EntryResult>> {
         if offset == buf.len() as u64 {
             return Ok(None);
+        } else if offset > buf.len() as u64 {
+            let msg = format!("invalid read offset {}", offset);
+            return Err(io::Error::new(io::ErrorKind::InvalidData, msg));
         }
+
+        let (entry_flags, vlq_len): (u32, _) = buf.read_vlq_at(offset as usize)?;
+        let offset = offset + vlq_len as u64;
+
+        // For now, data_len is the next field regardless of entry flags.
         let (data_len, vlq_len): (u64, _) = buf.read_vlq_at(offset as usize)?;
         let offset = offset + vlq_len as u64;
-        let checksum = LittleEndian::read_u64(&buf.get(offset as usize..offset as usize + 8)
-            .ok_or_else(|| {
-                let msg = format!("entry data out of range");
-                io::Error::new(io::ErrorKind::UnexpectedEof, msg)
-            })?);
-        let offset = offset + 8;
+
+        // Depends on entry_flags, some of them have a checksum field.
+        let checksum_flags = entry_flags & (ENTRY_FLAG_HAS_XXHASH64 | ENTRY_FLAG_HAS_XXHASH32);
+        let (checksum, offset) = match checksum_flags {
+            0 => (0, offset),
+            ENTRY_FLAG_HAS_XXHASH64 => {
+                let checksum = LittleEndian::read_u64(&buf.get(
+                    offset as usize..offset as usize + 8,
+                ).ok_or_else(|| invalid(format!("xxhash cannot be read at {}", offset)))?);
+                (checksum, offset + 8)
+            }
+            ENTRY_FLAG_HAS_XXHASH32 => {
+                let checksum = LittleEndian::read_u32(&buf.get(
+                    offset as usize..offset as usize + 4,
+                ).ok_or_else(|| invalid(format!("xxhash32 cannot be read at {}", offset)))?)
+                    as u64;
+                (checksum, offset + 4)
+            }
+            _ => {
+                return Err(invalid(format!(
+                    "entry at {} cannot have multiple checksums",
+                    offset
+                )))
+            }
+        };
+
+        // Read the actual payload
         let end = offset + data_len;
         if end > buf.len() as u64 {
-            let msg = format!("entry data out of range");
-            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, msg));
+            return Err(invalid(format!("incomplete entry data at {}", offset)));
         }
         let data = &buf[offset as usize..end as usize];
-        if xxhash(&data) != checksum {
-            let msg = format!("integrity check failed at {}", offset);
-            Err(io::Error::new(io::ErrorKind::InvalidData, msg))
-        } else {
+
+        let verified = match checksum_flags {
+            0 => true,
+            ENTRY_FLAG_HAS_XXHASH64 => xxhash(&data) == checksum,
+            ENTRY_FLAG_HAS_XXHASH32 => xxhash32(&data) as u64 == checksum,
+            // Tested above. Therefore unreachable.
+            _ => unreachable!(),
+        };
+        if verified {
             Ok(Some(EntryResult {
                 data,
                 data_offset: offset,
                 next_offset: end,
             }))
+        } else {
+            Err(invalid(format!("integrity check failed at {}", offset)))
         }
     }
 
@@ -739,6 +853,11 @@ impl IndexOutput {
     }
 }
 
+// Shorter way to construct an "InvalidData" error.
+fn invalid(message: String) -> io::Error {
+    return io::Error::new(io::ErrorKind::InvalidData, message);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -752,6 +871,48 @@ mod tests {
         assert_eq!(log1.iter().count(), 0);
         let log2 = Log::open(&log_path, Vec::new()).unwrap();
         assert_eq!(log2.iter().count(), 0);
+    }
+
+    #[test]
+    fn test_append_advanced() {
+        let dir = TempDir::new("log").unwrap();
+        let log_path = dir.path().join("log");
+        let mut log = Log::open(&log_path, Vec::new()).unwrap();
+
+        let short_bytes = vec![12; 20];
+        let long_bytes = vec![24; 200];
+        let mut expected = Vec::new();
+
+        log.append(&short_bytes).unwrap();
+        expected.push(short_bytes.clone());
+        log.append(&long_bytes).unwrap();
+        expected.push(long_bytes.clone());
+        log.append_advanced(&short_bytes, ChecksumType::None)
+            .unwrap();
+        expected.push(short_bytes.clone());
+        log.append_advanced(&long_bytes, ChecksumType::Xxhash32)
+            .unwrap();
+        expected.push(long_bytes.clone());
+        log.append_advanced(&short_bytes, ChecksumType::Xxhash64)
+            .unwrap();
+        expected.push(short_bytes.clone());
+
+        assert_eq!(
+            log.iter()
+                .map(|v| v.unwrap().to_vec())
+                .collect::<Vec<Vec<u8>>>(),
+            expected,
+        );
+
+        // Reload and verify
+        log.flush().unwrap();
+        let log = Log::open(&log_path, Vec::new()).unwrap();
+        assert_eq!(
+            log.iter()
+                .map(|v| v.unwrap().to_vec())
+                .collect::<Vec<Vec<u8>>>(),
+            expected,
+        );
     }
 
     fn get_index_defs(lag_threshold: u64) -> Vec<IndexDef> {

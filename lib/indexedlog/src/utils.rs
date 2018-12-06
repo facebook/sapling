@@ -7,7 +7,7 @@ use memmap::{Mmap, MmapOptions};
 use std::fs::File;
 use std::hash::Hasher;
 use std::io;
-use twox_hash::XxHash;
+use twox_hash::{XxHash, XxHash32};
 
 /// Return a read-only mmap view of the entire file, and its length.
 ///
@@ -48,4 +48,11 @@ pub fn xxhash<T: AsRef<[u8]>>(buf: T) -> u64 {
     let mut xx = XxHash::default();
     xx.write(buf.as_ref());
     xx.finish()
+}
+
+#[inline]
+pub fn xxhash32<T: AsRef<[u8]>>(buf: T) -> u32 {
+    let mut xx = XxHash32::default();
+    xx.write(buf.as_ref());
+    xx.finish() as u32
 }
