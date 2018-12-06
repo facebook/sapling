@@ -14,7 +14,8 @@
 // HEADER      := '\0'  (takes offset 0, so 0 is not a valid offset for ENTRY)
 // ENTRY_LIST  := RADIX | ENTRY_LIST + ENTRY
 // ENTRY       := RADIX | LEAF | LINK | KEY | ROOT + REVERSED(VLQ(ROOT_LEN))
-// RADIX       := '\2' + JUMP_TABLE (16 bytes) + PTR(LINK) + PTR(RADIX | LEAF) * N
+// RADIX       := '\2' + RADIX_FLAG (1 byte) + BITMAP (2 bytes) +
+//                PTR2(RADIX | LEAF) * popcnt(BITMAP) + PTR2(LINK)
 // LEAF        := '\3' + PTR(KEY | EXT_KEY) + PTR(LINK)
 // LINK        := '\4' + VLQ(VALUE) + PTR(NEXT_LINK | NULL)
 // KEY         := '\5' + VLQ(KEY_LEN) + KEY_BYTES
@@ -22,6 +23,9 @@
 // ROOT        := '\1' + PTR(RADIX) + VLQ(META_LEN) + META
 //
 // PTR(ENTRY)  := VLQ(the offset of ENTRY)
+// PTR2(ENTRY) := the offset of ENTRY, in 0 or 4, or 8 bytes depending on BITMAP and FLAGS
+//
+// RADIX_FLAG := USE_64_BIT (1 bit) + RESERVED (6 bits) + HAVE_LINK (1 bit)
 // ```
 //
 // Some notes about the format:
@@ -38,17 +42,16 @@
 //   recovery purpose, or adding new entry types (ex. tree entries other than the 16-children
 //   radix entry, value entries that are not u64 linked list, key entries that refers external
 //   buffer).
-// - The "JUMP_TABLE" in "RADIX" entry stores relative offsets to the actual value of
-//   RADIX/LEAF offsets. It has redundant information. The more compact form is a 2-byte
-//   (16-bit) bitmask but that hurts lookup performance.
 // - The "EXT_KEY" type has a logically similar function with "KEY". But it refers to an external
 //   buffer. This is useful to save spaces if the index is not a source of truth and keys are
 //   long.
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
+use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
 use std::io::{self, Seek, SeekFrom, Write};
+use std::mem::size_of;
 use std::ops::Deref;
 use std::path::Path;
 use std::sync::Arc;
@@ -109,10 +112,15 @@ type Checksum = Option<ChecksumTable>;
 fn verify_checksum(checksum: &Checksum, start: u64, length: u64) -> io::Result<()> {
     if let &Some(ref table) = checksum {
         if !table.check_range(start, length) {
-            return Err(io::Error::new(InvalidData, "integrity check failed"));
+            return Err(integrity_error());
         }
     }
     Ok(())
+}
+
+#[inline]
+fn integrity_error() -> io::Error {
+    io::Error::new(InvalidData, "integrity check failed")
 }
 
 /// Read reversed vlq at the given end offset (exclusive).
@@ -148,7 +156,12 @@ const TYPE_BITS: usize = 3;
 
 // Size constants. Do not change.
 const TYPE_BYTES: usize = 1;
-const JUMPTABLE_BYTES: usize = 16;
+const RADIX_FLAG_BYTES: usize = 1;
+const RADIX_BITMAP_BYTES: usize = 2;
+
+// Bit flags used by radix
+const RADIX_FLAG_USE_64BIT: u8 = 1;
+const RADIX_FLAG_HAVE_LINK: u8 = 1 << 7;
 
 /// Offset to an entry. The type of the entry is yet to be resolved.
 #[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
@@ -362,10 +375,25 @@ impl RadixOffset {
         if self.is_dirty() {
             Ok(index.dirty_radixes[self.dirty_index()].link_offset)
         } else {
-            let start = TYPE_BYTES + JUMPTABLE_BYTES + usize::from(self);
-            let (v, vlq_len) = index.buf.read_vlq_at(start)?;
-            index.verify_checksum(start as u64, vlq_len as u64)?;
-            LinkOffset::from_offset(Offset::from_disk(v)?, &index.buf, &index.checksum)
+            let flag_start = TYPE_BYTES + usize::from(self);
+            let flag = *index.buf.get(flag_start).ok_or_else(integrity_error)?;
+            index.verify_checksum(
+                flag_start as u64,
+                (RADIX_FLAG_BYTES + RADIX_BITMAP_BYTES) as u64,
+            )?;
+
+            if Self::parse_have_link_from_flag(flag) {
+                let bitmap_start = flag_start + RADIX_FLAG_BYTES;
+                let bitmap = Self::read_bitmap_unchecked(&index.buf, bitmap_start)?;
+                let int_size = Self::parse_int_size_from_flag(flag);
+                let link_offset =
+                    bitmap_start + RADIX_BITMAP_BYTES + bitmap.count_ones() as usize * int_size;
+                index.verify_checksum(link_offset as u64, int_size as u64)?;
+                let raw_offset = Self::read_raw_int_unchecked(&index.buf, int_size, link_offset)?;
+                LinkOffset::from_offset(Offset::from_disk(raw_offset)?, &index.buf, &index.checksum)
+            } else {
+                Ok(LinkOffset::default())
+            }
         }
     }
 
@@ -377,24 +405,26 @@ impl RadixOffset {
         if self.is_dirty() {
             Ok(index.dirty_radixes[self.dirty_index()].offsets[i as usize])
         } else {
-            // Read from jump table
-            match index.buf.get(usize::from(self) + TYPE_BYTES + i as usize) {
-                None => Err(InvalidData.into()),
-                Some(&jump) => {
-                    // jump is 0: special case - child is null
-                    if jump == 0 {
-                        index.verify_checksum(
-                            u64::from(self),
-                            (TYPE_BYTES + JUMPTABLE_BYTES) as u64,
-                        )?;
-                        Ok(Offset::default())
-                    } else {
-                        let (v, vlq_len) =
-                            index.buf.read_vlq_at(usize::from(self) + jump as usize)?;
-                        index.verify_checksum(u64::from(self), jump as u64 + vlq_len as u64)?;
-                        Offset::from_disk(v)
-                    }
-                }
+            let flag_start = TYPE_BYTES + usize::from(self);
+            let bitmap_start = flag_start + RADIX_FLAG_BYTES;
+            // Integrity of "bitmap" is checked below to reduce calls to verify_checksum, since
+            // this is a hot path.
+            let bitmap = Self::read_bitmap_unchecked(&index.buf, bitmap_start)?;
+            let has_child = (1u16 << i) & bitmap != 0;
+            if has_child {
+                let flag = *index.buf.get(flag_start).ok_or_else(integrity_error)?;
+                let int_size = Self::parse_int_size_from_flag(flag);
+                let skip_child_count = (((1u16 << i) - 1) & bitmap).count_ones() as usize;
+                let child_offset = bitmap_start + RADIX_BITMAP_BYTES + skip_child_count * int_size;
+                index.verify_checksum(
+                    flag_start as u64,
+                    (child_offset + int_size - flag_start) as u64,
+                )?;
+                let raw_offset = Self::read_raw_int_unchecked(&index.buf, int_size, child_offset)?;
+                Ok(Offset::from_disk(raw_offset)?)
+            } else {
+                index.verify_checksum(bitmap_start as u64, RADIX_BITMAP_BYTES as u64)?;
+                Ok(Offset::default())
             }
         }
     }
@@ -440,6 +470,42 @@ impl RadixOffset {
         let len = index.dirty_radixes.len();
         index.dirty_radixes.push(radix);
         RadixOffset::from_dirty_index(len)
+    }
+
+    /// Parse whether link offset exists from a flag.
+    #[inline]
+    fn parse_have_link_from_flag(flag: u8) -> bool {
+        flag & RADIX_FLAG_HAVE_LINK != 0
+    }
+
+    /// Parse int size (in bytes) from a flag.
+    #[inline]
+    fn parse_int_size_from_flag(flag: u8) -> usize {
+        if flag & RADIX_FLAG_USE_64BIT == 0 {
+            size_of::<u32>()
+        } else {
+            size_of::<u64>()
+        }
+    }
+
+    /// Read bitmap from the given offset without integrity check.
+    #[inline]
+    fn read_bitmap_unchecked(buf: &[u8], bitmap_offset: usize) -> io::Result<u16> {
+        debug_assert_eq!(RADIX_BITMAP_BYTES, size_of::<u16>());
+        Ok(LittleEndian::read_u16(buf.get(
+            bitmap_offset..bitmap_offset + RADIX_BITMAP_BYTES,
+        ).ok_or_else(integrity_error)?))
+    }
+
+    /// Read integer from the given offset without integrity check.
+    #[inline]
+    fn read_raw_int_unchecked(buf: &[u8], int_size: usize, offset: usize) -> io::Result<u64> {
+        Ok(match int_size {
+            4 => LittleEndian::read_u32(buf.get(offset..offset + 4).ok_or_else(integrity_error)?)
+                as u64,
+            8 => LittleEndian::read_u64(buf.get(offset..offset + 8).ok_or_else(integrity_error)?),
+            _ => unreachable!(),
+        })
     }
 }
 
@@ -682,28 +748,38 @@ impl MemRadix {
         let offset = offset as usize;
         let mut pos = 0;
 
+        // Integrity check is done at the end to reduce overhead.
         check_type(buf, offset, TYPE_RADIX)?;
         pos += TYPE_BYTES;
 
-        let jumptable = buf.get(offset + pos..offset + pos + JUMPTABLE_BYTES)
-            .ok_or(InvalidData)?;
-        pos += JUMPTABLE_BYTES;
+        let flag = *buf.get(offset + pos).ok_or_else(integrity_error)?;
+        pos += RADIX_FLAG_BYTES;
 
-        let (link_offset, len) = buf.read_vlq_at(offset + pos)?;
-        let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf, checksum)?;
-        pos += len;
+        let bitmap = RadixOffset::read_bitmap_unchecked(buf, offset + pos)?;
+        pos += RADIX_BITMAP_BYTES;
+
+        let int_size = RadixOffset::parse_int_size_from_flag(flag);
 
         let mut offsets = [Offset::default(); 16];
         for i in 0..16 {
-            if jumptable[i] != 0 {
-                if jumptable[i] as usize != pos {
-                    return Err(InvalidData.into());
-                }
-                let (v, len) = buf.read_vlq_at(offset + pos)?;
-                offsets[i] = Offset::from_disk(v)?;
-                pos += len;
+            if (bitmap >> i) & 1 == 1 {
+                offsets[i] = Offset::from_disk(RadixOffset::read_raw_int_unchecked(
+                    buf,
+                    int_size,
+                    offset + pos,
+                )?)?;
+                pos += int_size;
             }
         }
+
+        let link_offset = if RadixOffset::parse_have_link_from_flag(flag) {
+            let raw_offset = RadixOffset::read_raw_int_unchecked(buf, int_size, offset + pos)?;
+            pos += int_size;
+            LinkOffset::from_offset(Offset::from_disk(raw_offset)?, buf, checksum)?
+        } else {
+            LinkOffset::default()
+        };
+
         verify_checksum(checksum, offset as u64, pos as u64)?;
 
         Ok(MemRadix {
@@ -713,23 +789,59 @@ impl MemRadix {
     }
 
     fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
-        // Approximate size good enough for an average radix entry
-        let mut buf = Vec::with_capacity(1 + 16 + 5 * 17);
+        // Prepare data to write
+        let mut flag = 0;
+        let mut bitmap = 0;
+        let u32_max = ::std::u32::MAX as u64;
 
-        buf.write_all(&[TYPE_RADIX])?;
-        buf.write_all(&[0u8; 16])?;
-        buf.write_vlq(self.link_offset.to_disk(offset_map))?;
+        let link_offset = if !self.link_offset.is_null() {
+            flag |= RADIX_FLAG_HAVE_LINK;
+            let link_offset = self.link_offset.to_disk(offset_map);
+            if link_offset > u32_max {
+                flag |= RADIX_FLAG_USE_64BIT;
+            }
+            link_offset
+        } else {
+            0
+        };
 
+        let mut child_offsets = [0u64; 16];
         for i in 0..16 {
-            let v = self.offsets[i];
-            if !v.is_null() {
-                let v = v.to_disk(offset_map);
-                buf[1 + i] = buf.len() as u8; // update jump table
-                buf.write_vlq(v)?;
+            let child_offset = self.offsets[i];
+            if !child_offset.is_null() {
+                bitmap |= 1u16 << i;
+                let child_offset = child_offset.to_disk(offset_map);
+                if child_offset > u32_max {
+                    flag |= RADIX_FLAG_USE_64BIT;
+                }
+                child_offsets[i] = child_offset;
             }
         }
 
-        writer.write_all(&buf)
+        // Write them
+        writer.write_all(&[TYPE_RADIX, flag])?;
+        writer.write_u16::<LittleEndian>(bitmap)?;
+
+        if flag & RADIX_FLAG_USE_64BIT != 0 {
+            for &child_offset in child_offsets.iter() {
+                if child_offset > 0 {
+                    writer.write_u64::<LittleEndian>(child_offset)?;
+                }
+            }
+            if link_offset > 0 {
+                writer.write_u64::<LittleEndian>(link_offset)?;
+            }
+        } else {
+            for &child_offset in child_offsets.iter() {
+                if child_offset > 0 {
+                    writer.write_u32::<LittleEndian>(child_offset as u32)?;
+                }
+            }
+            if link_offset > 0 {
+                writer.write_u32::<LittleEndian>(link_offset as u32)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -1882,12 +1994,12 @@ mod tests {
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // 1st flush.
-        assert_eq!(index.flush().expect("flush"), 23);
+        assert_eq!(index.flush().expect("flush"), 9);
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 23, root: Disk[1] }\n\
+            "Index { len: 9, root: Disk[1] }\n\
              Disk[1]: Radix { link: None }\n\
-             Disk[19]: Root { radix: Disk[1] }\n"
+             Disk[5]: Root { radix: Disk[1] }\n"
         );
 
         // Mixed on-disk and in-memory state.
@@ -1895,9 +2007,9 @@ mod tests {
         index.insert(&[0x12], 77).expect("update");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 23, root: Radix[0] }\n\
+            "Index { len: 9, root: Radix[0] }\n\
              Disk[1]: Radix { link: None }\n\
-             Disk[19]: Root { radix: Disk[1] }\n\
+             Disk[5]: Root { radix: Disk[1] }\n\
              Radix[0]: Radix { link: Link[0], 1: Leaf[0] }\n\
              Leaf[0]: Leaf { key: Key[0], link: Link[1] }\n\
              Link[0]: Link { value: 55, next: None }\n\
@@ -1913,18 +2025,18 @@ mod tests {
         index.flush().expect("flush");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 68, root: Disk[44] }\n\
+            "Index { len: 50, root: Disk[30] }\n\
              Disk[1]: Radix { link: None }\n\
-             Disk[19]: Root { radix: Disk[1] }\n\
-             Disk[23]: Key { key: 12 }\n\
-             Disk[26]: Key { key: 34 }\n\
-             Disk[29]: Link { value: 55, next: None }\n\
-             Disk[32]: Link { value: 77, next: None }\n\
-             Disk[35]: Link { value: 99, next: Disk[32] }\n\
-             Disk[38]: Leaf { key: Disk[23], link: Disk[32] }\n\
-             Disk[41]: Leaf { key: Disk[26], link: Disk[35] }\n\
-             Disk[44]: Radix { link: Disk[29], 1: Disk[38], 3: Disk[41] }\n\
-             Disk[64]: Root { radix: Disk[44] }\n"
+             Disk[5]: Root { radix: Disk[1] }\n\
+             Disk[9]: Key { key: 12 }\n\
+             Disk[12]: Key { key: 34 }\n\
+             Disk[15]: Link { value: 55, next: None }\n\
+             Disk[18]: Link { value: 77, next: None }\n\
+             Disk[21]: Link { value: 99, next: Disk[18] }\n\
+             Disk[24]: Leaf { key: Disk[9], link: Disk[18] }\n\
+             Disk[27]: Leaf { key: Disk[12], link: Disk[21] }\n\
+             Disk[30]: Radix { link: Disk[15], 1: Disk[24], 3: Disk[27] }\n\
+             Disk[46]: Root { radix: Disk[30] }\n"
         );
     }
 
@@ -2019,22 +2131,22 @@ mod tests {
         index.flush().expect("flush");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 34, root: Disk[11] }\n\
+            "Index { len: 23, root: Disk[11] }\n\
              Disk[1]: Key { key: 12 34 }\n\
              Disk[5]: Link { value: 5, next: None }\n\
              Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
              Disk[11]: Radix { link: None, 1: Disk[8] }\n\
-             Disk[30]: Root { radix: Disk[11] }\n"
+             Disk[19]: Root { radix: Disk[11] }\n"
         );
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 34, root: Radix[0] }\n\
+            "Index { len: 23, root: Radix[0] }\n\
              Disk[1]: Key { key: 12 34 }\n\
              Disk[5]: Link { value: 5, next: None }\n\
              Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
              Disk[11]: Radix { link: None, 1: Disk[8] }\n\
-             Disk[30]: Root { radix: Disk[11] }\n\
+             Disk[19]: Root { radix: Disk[11] }\n\
              Radix[0]: Radix { link: None, 1: Radix[1] }\n\
              Radix[1]: Radix { link: None, 2: Radix[2] }\n\
              Radix[2]: Radix { link: None, 3: Disk[8], 7: Leaf[0] }\n\
@@ -2050,12 +2162,12 @@ mod tests {
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 34, root: Radix[0] }\n\
+            "Index { len: 23, root: Radix[0] }\n\
              Disk[1]: Key { key: 12 34 }\n\
              Disk[5]: Link { value: 5, next: None }\n\
              Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
              Disk[11]: Radix { link: None, 1: Disk[8] }\n\
-             Disk[30]: Root { radix: Disk[11] }\n\
+             Disk[19]: Root { radix: Disk[11] }\n\
              Radix[0]: Radix { link: None, 1: Radix[1] }\n\
              Radix[1]: Radix { link: None, 2: Radix[2] }\n\
              Radix[2]: Radix { link: Link[0], 3: Disk[8] }\n\
@@ -2070,15 +2182,15 @@ mod tests {
         index.flush().expect("flush");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 75, root: Disk[52] }\n\
+            "Index { len: 46, root: Disk[34] }\n\
              Disk[1]: Key { key: 12 78 }\n\
              Disk[5]: Link { value: 5, next: None }\n\
              Disk[8]: Link { value: 7, next: None }\n\
              Disk[11]: Leaf { key: Disk[1], link: Disk[8] }\n\
              Disk[14]: Radix { link: Disk[5], 7: Disk[11] }\n\
-             Disk[33]: Radix { link: None, 2: Disk[14] }\n\
-             Disk[52]: Radix { link: None, 1: Disk[33] }\n\
-             Disk[71]: Root { radix: Disk[52] }\n"
+             Disk[26]: Radix { link: None, 2: Disk[14] }\n\
+             Disk[34]: Radix { link: None, 1: Disk[26] }\n\
+             Disk[42]: Root { radix: Disk[34] }\n"
         );
 
         // With two flushes - the old key cannot be removed since it was written.
@@ -2088,12 +2200,12 @@ mod tests {
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 33, root: Radix[0] }\n\
+            "Index { len: 22, root: Radix[0] }\n\
              Disk[1]: Key { key: 12 }\n\
              Disk[4]: Link { value: 5, next: None }\n\
              Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
              Disk[10]: Radix { link: None, 1: Disk[7] }\n\
-             Disk[29]: Root { radix: Disk[10] }\n\
+             Disk[18]: Root { radix: Disk[10] }\n\
              Radix[0]: Radix { link: None, 1: Radix[1] }\n\
              Radix[1]: Radix { link: None, 2: Radix[2] }\n\
              Radix[2]: Radix { link: Disk[4], 7: Leaf[0] }\n\
@@ -2109,15 +2221,15 @@ mod tests {
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 33, root: Radix[0] }\n\
+            "Index { len: 22, root: Radix[0] }\n\
              Disk[1]: Key { key: 12 }\n\
              Disk[4]: Link { value: 5, next: None }\n\
              Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
              Disk[10]: Radix { link: None, 1: Disk[7] }\n\
-             Disk[29]: Root { radix: Disk[10] }\n\
+             Disk[18]: Root { radix: Disk[10] }\n\
              Radix[0]: Radix { link: None, 1: Leaf[0] }\n\
              Leaf[0]: Leaf { key: Disk[1], link: Link[0] }\n\
-             Link[0]: Link { value: 7, next: Disk[4] }\n",
+             Link[0]: Link { value: 7, next: Disk[4] }\n"
         );
     }
 
@@ -2138,12 +2250,12 @@ mod tests {
             .expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 33, root: Radix[0] }\n\
+            "Index { len: 22, root: Radix[0] }\n\
              Disk[1]: ExtKey { start: 1, len: 2 }\n\
              Disk[4]: Link { value: 55, next: None }\n\
              Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
              Disk[10]: Radix { link: None, 3: Disk[7] }\n\
-             Disk[29]: Root { radix: Disk[10] }\n\
+             Disk[18]: Root { radix: Disk[10] }\n\
              Radix[0]: Radix { link: None, 3: Radix[1] }\n\
              Radix[1]: Radix { link: None, 4: Radix[2] }\n\
              Radix[2]: Radix { link: None, 5: Radix[3] }\n\
