@@ -23,3 +23,7 @@ harness = false
 [[bench]]
 name = "misc"
 harness = false
+
+[[bench]]
+name = "log"
+harness = false
