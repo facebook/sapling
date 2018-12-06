@@ -364,6 +364,12 @@ fn main() -> Result<()> {
                     .help("path to the ssl ca file"),
             )
             .arg(
+                Arg::with_name("ssl-ticket-seeds")
+                    .long("ssl-ticket-seeds")
+                    .value_name("PATH")
+                    .help("path to the ssl ticket seeds"),
+            )
+            .arg(
                 Arg::with_name("myrouter-port")
                     .long("myrouter-port")
                     .value_name("PORT")
@@ -423,6 +429,10 @@ fn main() -> Result<()> {
             .value_of("ssl-ca")
             .expect("must specify CA")
             .to_string();
+        let ticket_seed = matches
+            .value_of("ssl-ticket-seeds")
+            .unwrap_or(secure_utils::fb_tls::SEED_PATH)
+            .to_string();
 
         let ssl = secure_utils::SslConfig {
             cert,
@@ -430,7 +440,12 @@ fn main() -> Result<()> {
             ca_pem,
         };
         let acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())?;
-        Some(secure_utils::fb_tls_acceptor_builder(ssl.clone(), acceptor)?)
+        Some(secure_utils::fb_tls::tls_acceptor_builder(
+            root_logger.clone(),
+            ssl.clone(),
+            acceptor,
+            ticket_seed,
+        )?)
     } else {
         None
     };

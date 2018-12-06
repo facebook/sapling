@@ -289,6 +289,25 @@ test TLS Session/Ticket resumption when using client certs
   $ if [ "$RUN1" == "$RUN2" ]; then echo "SUCCESS"; fi
   SUCCESS
 
+test TLS Tickets use encryption keys from seeds - sessions should persist across restarts
+  $ kill -9 $APISERVER_PID && wait $APISERVER_PID
+  $TESTTMP.sh: * Killed * (glob)
+  [137]
+  $ truncate -s 0 "$TESTTMP/apiserver.out"
+  $ apiserver -H "[::1]" -p $APISERVER_PORT
+  $ wait_for_apiserver
+  $ echo -e "GET /health_check HTTP/1.1\r\n" | s_client -sess_in $TMPFILE -state | grep -E "^SSL_connect"
+  SSL_connect:before/connect initialization
+  SSL_connect:SSLv3 write client hello A
+  SSL_connect:SSLv3 read server hello A
+  SSL_connect:SSLv3 read finished A
+  SSL_connect:SSLv3 write change cipher spec A
+  SSL_connect:SSLv3 write finished A
+  SSL_connect:SSLv3 flush data
+  SSL3 alert read:warning:close notify
+  SSL3 alert write:warning:close notify
+  [1]
+
 test download LFS (GET request)
   $ sslcurl $APISERVER/repo/lfs/download/$SHA > output
   $ diff output - <<< $TEST_CONTENT

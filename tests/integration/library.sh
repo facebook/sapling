@@ -205,8 +205,10 @@ function apiserver {
     --ssl-ca "$TESTDIR/testcert.crt" \
     --ssl-private-key "$TESTDIR/testcert.key" \
     --ssl-certificate "$TESTDIR/testcert.crt" \
+    --ssl-ticket-seeds "$TESTDIR/server.pem.seeds" \
     --do-not-init-cachelib >> "$TESTTMP/apiserver.out" 2>&1 &
-  echo $! >> "$DAEMON_PIDS"
+  export APISERVER_PID=$!
+  echo "$APISERVER_PID" >> "$DAEMON_PIDS"
 }
 
 function no_ssl_apiserver {
