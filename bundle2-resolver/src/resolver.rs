@@ -53,14 +53,13 @@ type UploadedChangesets = HashMap<HgNodeHash, ChangesetHandle>;
 pub fn resolve(
     ctx: CoreContext,
     repo: Arc<BlobRepo>,
-    scuba_logger: ScubaSampleBuilder,
     pushrebase: PushrebaseParams,
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
     hook_manager: Arc<HookManager>,
     lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
 ) -> BoxFuture<Bytes, Error> {
-    let resolver = Bundle2Resolver::new(ctx.clone(), repo, scuba_logger, pushrebase, hook_manager);
+    let resolver = Bundle2Resolver::new(ctx.clone(), repo, pushrebase, hook_manager);
 
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
@@ -385,7 +384,6 @@ impl BonsaiBookmarkPush {
 struct Bundle2Resolver {
     ctx: CoreContext,
     repo: Arc<BlobRepo>,
-    scuba_logger: ScubaSampleBuilder,
     pushrebase: PushrebaseParams,
     hook_manager: Arc<HookManager>,
 }
@@ -394,14 +392,12 @@ impl Bundle2Resolver {
     fn new(
         ctx: CoreContext,
         repo: Arc<BlobRepo>,
-        scuba_logger: ScubaSampleBuilder,
         pushrebase: PushrebaseParams,
         hook_manager: Arc<HookManager>,
     ) -> Self {
         Self {
             ctx,
             repo,
-            scuba_logger,
             pushrebase,
             hook_manager,
         }
@@ -655,7 +651,8 @@ impl Bundle2Resolver {
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
 
-        self.scuba_logger
+        self.ctx
+            .scuba()
             .clone()
             .add("changeset_count", changesets.len())
             .add("manifests_count", manifests.len())
@@ -738,7 +735,7 @@ impl Bundle2Resolver {
             content_blobs.keys()
         );
 
-        let scuba_logger = self.scuba_logger.clone();
+        let scuba_logger = self.ctx.scuba().clone();
         stream::iter_ok(changesets)
             .fold(
                 HashMap::new(),
@@ -829,7 +826,7 @@ impl Bundle2Resolver {
 
         let pushrebased_rev = repo.get_hg_from_bonsai_changeset(ctx.clone(), pushrebased_rev);
 
-        let mut scuba_logger = self.scuba_logger.clone();
+        let mut scuba_logger = self.ctx.scuba().clone();
         maybe_onto_head
             .join(pushrebased_rev)
             .and_then(move |(maybe_onto_head, pushrebased_rev)| {
@@ -932,7 +929,7 @@ impl Bundle2Resolver {
             changesets,
         ).map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
             .timed({
-                let mut scuba_logger = self.scuba_logger.clone();
+                let mut scuba_logger = self.ctx.scuba().clone();
                 move |stats, result| {
                     if let Ok(res) = result {
                         scuba_logger

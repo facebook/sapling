@@ -67,6 +67,21 @@ impl CoreContext {
         }
     }
 
+    pub fn with_scuba_initialization<F>(&self, init: F) -> Self
+    where
+        F: FnOnce(ScubaSampleBuilder) -> ScubaSampleBuilder,
+    {
+        Self {
+            inner: Arc::new(Inner {
+                session: self.inner.session.clone(),
+                logger: self.inner.logger.clone(),
+                scuba: init(self.inner.scuba.clone()),
+                wireproto_scribe_category: self.inner.wireproto_scribe_category.clone(),
+                trace: self.inner.trace.clone(),
+            }),
+        }
+    }
+
     pub fn test_mock() -> Self {
         Self::new(
             Uuid::new_v4(),

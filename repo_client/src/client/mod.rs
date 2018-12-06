@@ -262,17 +262,17 @@ impl RepoClient {
         }
     }
 
-    fn scuba_logger(&self, op: &str, args: Option<String>) -> ScubaSampleBuilder {
-        let mut scuba_logger = self.ctx.scuba().clone();
+    fn prepared_ctx(&self, op: &str, args: Option<String>) -> CoreContext {
+        self.ctx.with_scuba_initialization(|mut scuba_logger| {
+            scuba_logger.add("command", op);
 
-        scuba_logger.add("command", op);
+            if let Some(args) = args {
+                scuba_logger.add("command_args", args);
+            }
 
-        if let Some(args) = args {
-            scuba_logger.add("command_args", args);
-        }
-
-        scuba_logger.log_with_msg("Start processing", None);
-        scuba_logger
+            scuba_logger.log_with_msg("Start processing", None);
+            scuba_logger
+        })
     }
 
     fn create_bundle(&self, args: GetbundleArgs) -> Result<BoxStream<Bytes, Error>> {
@@ -371,9 +371,8 @@ impl RepoClient {
                 move |entry| used_hashes.insert(*entry.0.get_hash())
             })
             .map({
-                cloned!(self.ctx);
+                let ctx = self.prepared_ctx(ops::GETTREEPACK, None);
                 let blobrepo = self.repo.blobrepo().clone();
-                let scuba_logger = self.scuba_logger(ops::GETTREEPACK, None);
                 move |(entry, basepath)| {
                     fetch_treepack_part_input(
                         ctx.clone(),
@@ -381,7 +380,6 @@ impl RepoClient {
                         entry,
                         basepath,
                         validate_hash,
-                        scuba_logger.clone(),
                     )
                 }
             });
@@ -467,7 +465,7 @@ impl HgCommands for RepoClient {
             }
         }
 
-        let mut scuba_logger = self.scuba_logger(ops::BETWEEN, None);
+        let mut scuba_logger = self.prepared_ctx(ops::BETWEEN, None).scuba().clone();
 
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
@@ -504,7 +502,7 @@ impl HgCommands for RepoClient {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
         info!(self.ctx.logger(), "heads");
-        let mut scuba_logger = self.scuba_logger(ops::HEADS, None);
+        let mut scuba_logger = self.prepared_ctx(ops::HEADS, None).scuba().clone();
 
         self.repo
             .blobrepo()
@@ -527,7 +525,7 @@ impl HgCommands for RepoClient {
         info!(self.ctx.logger(), "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support prefixes
         let repo = self.repo.blobrepo().clone();
-        let mut scuba_logger = self.scuba_logger(ops::LOOKUP, None);
+        let mut scuba_logger = self.prepared_ctx(ops::LOOKUP, None).scuba().clone();
 
         fn generate_resp_buf(success: bool, message: &[u8]) -> Bytes {
             let mut buf = BytesMut::with_capacity(message.len() + 3);
@@ -607,7 +605,7 @@ impl HgCommands for RepoClient {
         }
         let blobrepo = self.repo.blobrepo().clone();
 
-        let mut scuba_logger = self.scuba_logger(ops::KNOWN, None);
+        let mut scuba_logger = self.prepared_ctx(ops::KNOWN, None).scuba().clone();
 
         let nodes: Vec<_> = nodes.into_iter().map(HgChangesetId::new).collect();
         let nodes_len = nodes.len();
@@ -676,7 +674,7 @@ impl HgCommands for RepoClient {
         caps.push(format!("bundle2={}", bundle2caps()));
         res.insert("capabilities".to_string(), caps);
 
-        let mut scuba_logger = self.scuba_logger(ops::HELLO, None);
+        let mut scuba_logger = self.prepared_ctx(ops::HELLO, None).scuba().clone();
 
         future::ok(res)
             .traced(self.ctx.trace(), ops::HELLO, trace_args!())
@@ -693,7 +691,7 @@ impl HgCommands for RepoClient {
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
         info!(self.ctx.logger(), "listkeys: {}", namespace);
         if namespace == "bookmarks" {
-            let mut scuba_logger = self.scuba_logger(ops::LISTKEYS, None);
+            let mut scuba_logger = self.prepared_ctx(ops::LISTKEYS, None).scuba().clone();
 
             self.repo
                 .blobrepo()
@@ -738,12 +736,12 @@ impl HgCommands for RepoClient {
             return future::err(ErrorKind::RepoReadOnly.into()).boxify();
         }
 
-        let mut scuba_logger = self.scuba_logger(ops::UNBUNDLE, None);
+        let ctx = self.prepared_ctx(ops::UNBUNDLE, None);
+        let mut scuba_logger = ctx.scuba().clone();
 
         let res = bundle2_resolver::resolve(
-            self.ctx.with_logger_kv(o!("command" => "unbundle")),
+            ctx.with_logger_kv(o!("command" => "unbundle")),
             Arc::new(self.repo.blobrepo().clone()),
-            scuba_logger.clone(),
             self.repo.pushrebase_params().clone(),
             heads,
             stream,
@@ -809,7 +807,8 @@ impl HgCommands for RepoClient {
                 move |(node, path)| {
                     let args = format!("node: {}, path: {}", node, path);
                     // Logs info about processing of a single file to scuba
-                    let mut scuba_logger = this.scuba_logger(ops::GETFILES, Some(args));
+                    let mut scuba_logger =
+                        this.prepared_ctx(ops::GETFILES, Some(args)).scuba().clone();
 
                     let repo = this.repo.clone();
                     create_remotefilelog_blob(
@@ -984,7 +983,6 @@ fn fetch_treepack_part_input(
     entry: Box<Entry + Sync>,
     basepath: Option<MPath>,
     validate_content: bool,
-    mut scuba_logger: ScubaSampleBuilder,
 ) -> BoxFuture<parts::TreepackPartInput, Error> {
     let path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
     let repo_path = match path {
@@ -1036,7 +1034,7 @@ fn fetch_treepack_part_input(
     let validate_content = if validate_content {
         entry
             .get_raw_content(ctx.clone())
-            .join(entry.get_parents(ctx))
+            .join(entry.get_parents(ctx.clone()))
             .and_then(move |(content, parents)| {
                 let (p1, p2) = parents.get_nodes();
                 let actual = node.into_nodehash();
@@ -1050,7 +1048,9 @@ fn fetch_treepack_part_input(
                         "gettreepack: {} expected: {} actual: {}",
                         path, expected, actual
                     );
-                    scuba_logger.log_with_msg("Data corruption", Some(error_msg));
+                    ctx.scuba()
+                        .clone()
+                        .log_with_msg("Data corruption", Some(error_msg));
                     Err(ErrorKind::DataCorruption {
                         path,
                         expected,
