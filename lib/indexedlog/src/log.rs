@@ -27,9 +27,11 @@
 // Indexes:
 //   See `index.rs`.
 //
-// Integers are VLQ encoded.
+// Integers are VLQ encoded, except for XXHASH64, which uses LittleEndian 64-bit
+// encoding.
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
+use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use index::{self, Index, InsertKey, LeafValueIter};
 use lock::ScopedFileLock;
 use memmap::Mmap;
@@ -226,7 +228,7 @@ impl Log {
         let offset = self.meta.primary_len + self.mem_buf.len() as u64;
         // ENTRY := LEN(CONTENT) + XXHASH64(CONTENT) + CONTENT
         self.mem_buf.write_vlq(data.len())?;
-        self.mem_buf.write_vlq(xxhash(data))?;
+        self.mem_buf.write_u64::<LittleEndian>(xxhash(data))?;
         self.mem_buf.write_all(data)?;
         self.update_indexes_for_in_memory_entry(data, offset)?;
         Ok(())
@@ -524,8 +526,12 @@ impl Log {
         }
         let (data_len, vlq_len): (u64, _) = buf.read_vlq_at(offset as usize)?;
         let offset = offset + vlq_len as u64;
-        let (checksum, vlq_len) = buf.read_vlq_at(offset as usize)?;
-        let offset = offset + vlq_len as u64;
+        let checksum = LittleEndian::read_u64(&buf.get(offset as usize..offset as usize + 8)
+            .ok_or_else(|| {
+                let msg = format!("entry data out of range");
+                io::Error::new(io::ErrorKind::UnexpectedEof, msg)
+            })?);
+        let offset = offset + 8;
         let end = offset + data_len;
         if end > buf.len() as u64 {
             let msg = format!("entry data out of range");
