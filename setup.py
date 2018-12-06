@@ -1739,6 +1739,11 @@ with open(".cargo/config", "w") as f:
 
 rustextmodules = [
     RustExtension(
+        "bookmarkstore",
+        package="mercurial.rust",
+        manifest="mercurial/rust/bookmarkstore/Cargo.toml",
+    ),
+    RustExtension(
         "config", package="mercurial.rust", manifest="mercurial/rust/config/Cargo.toml"
     ),
     RustExtension(
@@ -1755,6 +1760,11 @@ rustextmodules = [
         manifest="mercurial/rust/pymononokeapi/Cargo.toml",
     ),
     RustExtension(
+        "pynodemap",
+        package="mercurial.rust",
+        manifest="mercurial/rust/pynodemap/Cargo.toml",
+    ),
+    RustExtension(
         "pyrevisionstore",
         package="hgext.extlib",
         manifest="hgext/extlib/pyrevisionstore/Cargo.toml",
@@ -1768,11 +1778,6 @@ rustextmodules = [
         "treestate",
         package="mercurial.rust",
         manifest="mercurial/rust/treestate/Cargo.toml",
-    ),
-    RustExtension(
-        "bookmarkstore",
-        package="mercurial.rust",
-        manifest="mercurial/rust/bookmarkstore/Cargo.toml",
     ),
     RustExtension(
         "zstd", package="mercurial.rust", manifest="mercurial/rust/zstd/Cargo.toml"

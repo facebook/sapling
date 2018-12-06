@@ -4,11 +4,11 @@ version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 
 [dependencies]
-failure = "*"
+failure = "0.1.3"
 indexedlog = { path = "../indexedlog" }
 types = { path = "../types" }
 
 [dev-dependencies]
 quickcheck = "0.6"
-tempfile = "*"
+tempfile = "3.0.5"
 types = { path = "../types", default-features = false, features = ["for-tests"] }

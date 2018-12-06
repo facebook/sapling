@@ -1,0 +1,21 @@
+[package]
+name = "pynodemap"
+version = "0.1.0"
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+
+[lib]
+name = "pynodemap"
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+
+[dependencies]
+encoding = { path = "../../../lib/encoding" }
+nodemap = { path = "../../../lib/nodemap" }
+types = { path = "../../../lib/types" }
+
+[dependencies.cpython]
+version = "0.2"
+default-features = false
+features = ["python27-sys", "extension-module-2-7"]
