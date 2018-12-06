@@ -38,6 +38,7 @@ use lock::ScopedFileLock;
 use memmap::Mmap;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
 use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
 use std::ops::Range;
@@ -850,6 +851,22 @@ impl IndexOutput {
             })?),
             IndexOutput::Owned(key) => Cow::Owned(key.into_vec()),
         })
+    }
+}
+
+impl Debug for Log {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        let mut iter = self.iter();
+        loop {
+            let offset = iter.next_offset;
+            write!(f, "Entry[{}]: ", offset);
+            match iter.next() {
+                None => break,
+                Some(Ok(bytes)) => write!(f, "{{ bytes: {:?} }}\n", bytes)?,
+                Some(Err(err)) => write!(f, "{{ error: {:?} }}\n", err)?,
+            }
+        }
+        Ok(())
     }
 }
 

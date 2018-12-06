@@ -27,3 +27,7 @@ harness = false
 [[bench]]
 name = "log"
 harness = false
+
+[[bin]]
+name = "indexedlog-dump"
+path = "src/indexedlog_dump.rs"
