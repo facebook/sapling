@@ -200,8 +200,7 @@ function setup_no_ssl_apiserver {
 
 
 function apiserver {
-  $MONONOKE_APISERVER "$@" --config-path "$TESTTMP/mononoke-config" \
-    --config-bookmark "local_master" \
+  $MONONOKE_APISERVER "$@" --mononoke-config-path "$TESTTMP/mononoke-config" \
     --ssl-ca "$TESTDIR/testcert.crt" \
     --ssl-private-key "$TESTDIR/testcert.key" \
     --ssl-certificate "$TESTDIR/testcert.crt" \
@@ -213,8 +212,7 @@ function apiserver {
 
 function no_ssl_apiserver {
   $MONONOKE_APISERVER "$@" \
-   --config-path "$TESTTMP/mononoke-config" \
-  --config-bookmark "local_master" >> "$TESTTMP/apiserver.out" 2>&1 &
+   --mononoke-config-path "$TESTTMP/mononoke-config" >> "$TESTTMP/apiserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 

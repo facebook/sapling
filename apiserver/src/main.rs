@@ -324,25 +324,11 @@ fn main() -> Result<()> {
                     .help("print logs from third-party crates"),
             )
             .arg(
-                Arg::with_name("config-path")
-                    .long("config-path")
+                Arg::with_name("mononoke-config-path")
+                    .long("mononoke-config-path")
                     .value_name("PATH")
                     .required(true)
                     .help("directory of the config repository"),
-            )
-            .arg(
-                Arg::with_name("config-bookmark")
-                    .long("config-bookmark")
-                    .value_name("BOOKMARK")
-                    .required_unless("config-commit")
-                    .help("bookmark of the config repository"),
-            )
-            .arg(
-                Arg::with_name("config-commit")
-                    .long("config-commit")
-                    .value_name("HASH")
-                    .required_unless("config-bookmark")
-                    .help("commit hash of the config repository"),
             )
             .arg(
                 Arg::with_name("ssl-certificate")
@@ -385,7 +371,7 @@ fn main() -> Result<()> {
     let debug = matches.is_present("debug");
     let stdlog = matches.is_present("stdlog");
     let config_path = matches
-        .value_of("config-path")
+        .value_of("mononoke-config-path")
         .expect("must set config path");
     let with_scuba = matches.is_present("with-scuba");
 
