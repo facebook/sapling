@@ -2365,7 +2365,7 @@ def difffeatureopts(
             # True, or False.
             if v or isinstance(v, bool):
                 return v
-        if forceplain is not None and ui.plain():
+        if forceplain is not None and ui.plain("diffopts"):
             return forceplain
         return getter(section, name or key, untrusted=untrusted)
 
@@ -2377,7 +2377,7 @@ def difffeatureopts(
     }
     buildopts["worddiff"] = (
         ui.configbool("experimental", "worddiff")
-        and not ui.plain()
+        and not ui.plain("diffopts")
         and ui._colormode is not None
     )
 
