@@ -548,7 +548,10 @@ def chunkselector(ui, headerlist, operation=None):
         with progress.suspend():
             curses.wrapper(chunkselector.main)
             if chunkselector.initerr is not None:
-                raise error.Abort(chunkselector.initerr)
+                hint = _(
+                    "re-run with '--config ui.interface=text' to use the text interface"
+                )
+                raise error.Abort(chunkselector.initerr, hint=hint)
             # ncurses does not restore signal handler for SIGTSTP
     finally:
         if origsigtstp is not sentinel:
