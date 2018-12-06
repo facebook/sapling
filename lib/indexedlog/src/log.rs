@@ -33,6 +33,7 @@ use atomicwrites::{AllowOverwrite, AtomicFile};
 use index::{self, Index, InsertKey, LeafValueIter};
 use lock::ScopedFileLock;
 use memmap::Mmap;
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::{self, Cursor, Read, Seek, SeekFrom, Write};
@@ -333,6 +334,24 @@ impl Log {
             next_offset: PRIMARY_START_OFFSET,
             errored: false,
         }
+    }
+
+    /// Applies the given index function to the entry data and returns the index keys.
+    pub fn index_func<'a>(
+        &self,
+        index_id: usize,
+        entry: &'a [u8],
+    ) -> io::Result<Vec<Cow<'a, [u8]>>> {
+        let index_def = self.index_defs.get(index_id).ok_or_else(|| {
+            let msg = format!("invalid index_id {} (len={})", index_id, self.indexes.len());
+            io::Error::new(io::ErrorKind::InvalidData, msg)
+        })?;
+        let mut result = vec![];
+        for output in (index_def.func)(entry).into_iter() {
+            result.push(output.into_cow(&entry)?);
+        }
+
+        Ok(result)
     }
 
     /// Build in-memory index for the newly added entry.
@@ -700,6 +719,20 @@ impl LogMetadata {
     }
 }
 
+impl IndexOutput {
+    fn into_cow(self, data: &[u8]) -> io::Result<Cow<[u8]>> {
+        Ok(match self {
+            IndexOutput::Reference(range) => Cow::Borrowed(&data.get(
+                range.start as usize..range.end as usize,
+            ).ok_or_else(|| {
+                let msg = format!("invalid range {:?} (len={})", range, data.len());
+                io::Error::new(io::ErrorKind::InvalidData, msg)
+            })?),
+            IndexOutput::Owned(key) => Cow::Owned(key.into_vec()),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -830,6 +863,67 @@ mod tests {
         let mut index_file = File::create(dir.path().join("index-x")).unwrap();
         index_file.write_all(&backup).expect("write");
         assert!(log.lookup(1, b"23").is_err());
+    }
+
+    #[test]
+    fn test_index_func() {
+        let dir = TempDir::new("log").unwrap();
+        let entries = vec![
+            b"abcdefghij",
+            b"klmnopqrst",
+            b"uvwxyz1234",
+            b"5678901234",
+            b"5678901234",
+        ];
+
+        let first_index =
+            |_data: &[u8]| vec![IndexOutput::Reference(0..2), IndexOutput::Reference(3..5)];
+        let second_index = |data: &[u8]| vec![IndexOutput::Owned(Box::from(&data[5..10]))];
+        let mut log = Log::open(
+            dir.path(),
+            vec![
+                IndexDef {
+                    func: Box::new(first_index),
+                    name: "first",
+                    lag_threshold: 0,
+                },
+                IndexDef {
+                    func: Box::new(second_index),
+                    name: "second",
+                    lag_threshold: 0,
+                },
+            ],
+        ).unwrap();
+
+        let mut expected_keys1 = vec![];
+        let mut expected_keys2 = vec![];
+        for &data in entries {
+            log.append(data).expect("append");
+            expected_keys1.push(data[0..2].to_vec());
+            expected_keys1.push(data[3..5].to_vec());
+            expected_keys2.push(data[5..10].to_vec());
+        }
+
+        let mut found_keys1 = vec![];
+        let mut found_keys2 = vec![];
+
+        for entry in log.iter() {
+            let entry = entry.unwrap();
+            found_keys1.extend(
+                log.index_func(0, &entry)
+                    .unwrap()
+                    .into_iter()
+                    .map(|c| c.into_owned()),
+            );
+            found_keys2.extend(
+                log.index_func(1, &entry)
+                    .unwrap()
+                    .into_iter()
+                    .map(|c| c.into_owned()),
+            );
+        }
+        assert_eq!(found_keys1, expected_keys1);
+        assert_eq!(found_keys2, expected_keys2);
     }
 
     quickcheck! {
