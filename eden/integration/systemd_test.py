@@ -90,12 +90,4 @@ class SystemdTest(
                 FindExe.FAKE_EDENFS,
             ]
         )
-        self.assert_systemd_service_is_active()
-
-    def assert_systemd_service_is_active(self) -> None:
-        service = self.get_edenfs_systemd_service(eden_dir=pathlib.Path(self.eden_dir))
-        self.assertEqual(
-            (service.query_active_state(), service.query_sub_state()),
-            ("active", "running"),
-            f"EdenFS systemd service ({service}) should be running",
-        )
+        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.eden_dir))

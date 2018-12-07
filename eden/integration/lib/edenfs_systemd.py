@@ -10,6 +10,7 @@
 import abc
 import pathlib
 import typing
+import unittest
 
 from eden.cli.systemd import edenfs_systemd_service_name
 
@@ -39,3 +40,21 @@ class EdenFSSystemdMixin(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def set_environment_variables(self, variables: typing.Mapping[str, str]) -> None:
         raise NotImplementedError()
+
+    def assert_systemd_service_is_active(self, eden_dir: pathlib.Path) -> None:
+        service = self.get_edenfs_systemd_service(eden_dir=eden_dir)
+        assert isinstance(self, unittest.TestCase)
+        self.assertEqual(
+            (service.query_active_state(), service.query_sub_state()),
+            ("active", "running"),
+            f"EdenFS systemd service ({service}) should be running",
+        )
+
+    def assert_systemd_service_is_stopped(self, eden_dir: pathlib.Path) -> None:
+        service = self.get_edenfs_systemd_service(eden_dir=eden_dir)
+        assert isinstance(self, unittest.TestCase)
+        self.assertEqual(
+            (service.query_active_state(), service.query_sub_state()),
+            ("inactive", "dead"),
+            f"EdenFS systemd service ({service}) should be stopped",
+        )

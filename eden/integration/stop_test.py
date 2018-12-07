@@ -198,12 +198,4 @@ class StopWithSystemdTest(
             stop_process = self.spawn_stop(["--timeout", "5"])
             stop_process.expect_exact("edenfs exited cleanly.")
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
-            self.assert_systemd_service_is_stopped()
-
-    def assert_systemd_service_is_stopped(self) -> None:
-        service = self.get_edenfs_systemd_service(eden_dir=pathlib.Path(self.tmp_dir))
-        self.assertEqual(
-            (service.query_active_state(), service.query_sub_state()),
-            ("inactive", "dead"),
-            f"EdenFS systemd service ({service}) should be stopped",
-        )
+            self.assert_systemd_service_is_stopped(eden_dir=pathlib.Path(self.tmp_dir))
