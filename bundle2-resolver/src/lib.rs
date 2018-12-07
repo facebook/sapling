@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![cfg_attr(test, type_length_limit="2097152")]
 
 extern crate ascii;
 #[cfg(test)]
