@@ -354,6 +354,7 @@ class _gitlfsremote(object):
                 (),
                 sorted(objects, key=lambda o: o.get("oid")),
                 preferthreads=True,
+                callsite="blobstore",
             )
         else:
             oids = transfer(objects)

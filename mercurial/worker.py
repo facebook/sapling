@@ -67,7 +67,7 @@ def worthwhile(ui, costperop, nops):
     return benefit >= 0.15
 
 
-def worker(ui, costperarg, func, staticargs, args, preferthreads=False):
+def worker(ui, costperarg, func, staticargs, args, preferthreads=False, callsite=None):
     """run a function, possibly in parallel in multiple worker
     processes.
 
@@ -83,9 +83,12 @@ def worker(ui, costperarg, func, staticargs, args, preferthreads=False):
     workers
 
     preferthreads - use threads instead of processes
-    """
-    enabled = ui.configbool("worker", "enabled")
 
+    callsite - where this worker function is being called
+    """
+    workerenabled = ui.configbool("worker", "enabled")
+    callsiteenabled = callsite in ui.configlist("worker", "_enabledcallsites")
+    enabled = workerenabled or callsiteenabled
     if enabled and worthwhile(ui, costperarg, len(args)):
         if preferthreads:
             return _windowsworker(ui, func, staticargs, args)
