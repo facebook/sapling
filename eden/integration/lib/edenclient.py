@@ -100,8 +100,11 @@ class EdenFS(object):
         cmd = self._get_eden_args(command, *args)
         try:
             stderr = subprocess.STDOUT if capture_stderr else subprocess.PIPE
+            env = dict(os.environ)
+            # TODO(T37669726): Delete LSAN logging.
+            env["LSAN_OPTIONS"] = "verbosity=1:log_threads=1"
             completed_process = subprocess.run(
-                cmd, stdout=subprocess.PIPE, stderr=stderr, check=True, cwd=cwd
+                cmd, stdout=subprocess.PIPE, stderr=stderr, check=True, cwd=cwd, env=env
             )
         except subprocess.CalledProcessError as ex:
             # Re-raise our own exception type so we can include the error
