@@ -9,8 +9,9 @@ import tempfile
 import svnexternals
 import svnwrap
 import util
-from ..extlib import cstore
 from mercurial import match as matchmod, node, revlog, util as hgutil
+
+from ..extlib import cstore
 
 
 class EditingError(Exception):
@@ -284,7 +285,7 @@ class HgEditor(svnwrap.Editor):
         assert dir == "" or dir.endswith("/")
         mf = ctx.manifest()
         if isinstance(mf, cstore.treemanifest):
-            matcher = matchmod.match("", "/", patterns=[dir], default='path')
+            matcher = matchmod.match("", "/", patterns=[dir], default="path")
             for x in mf.walk(matcher):
                 yield x
         else:
