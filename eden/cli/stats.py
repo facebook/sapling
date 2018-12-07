@@ -38,56 +38,45 @@ stdoutWrapper = cast(io.TextIOWrapper, sys.stdout)
 def do_stats_general(
     instance: EdenInstance, out: io.TextIOWrapper = stdoutWrapper
 ) -> None:
-    stats_print.write_heading("General EdenFS Statistics", out)
-
     with instance.get_thrift_client() as client:
         diag_info = client.getStatInfo()
 
-        private_dirty_bytes = diag_info.privateBytes
-        format_str = "{:>40} {:^1} {:<20}\n"
-        if private_dirty_bytes is not None:
-            out.write(
-                format_str.format(
-                    "edenfs process memory usage",
-                    ":",
-                    stats_print.format_size(private_dirty_bytes),
-                )
-            )
-        vm_rss_bytes = diag_info.vmRSSBytes
-        if vm_rss_bytes is not None:
-            out.write(
-                format_str.format(
-                    "edenfs process resident virtual memory",
-                    ":",
-                    stats_print.format_size(vm_rss_bytes),
-                )
-            )
+    private_bytes = stats_print.format_size(diag_info.privateBytes)
+    resident_bytes = stats_print.format_size(diag_info.vmRSSBytes)
+
+    out.write(
+        textwrap.dedent(
+            f"""\
+        edenfs memory usage
+        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+        private bytes: {private_bytes} ({resident_bytes} resident)
+
+        active mounts
+        ▔▔▔▔▔▔▔▔▔▔▔▔▔
+    """
+        )
+    )
+
+    inode_info = diag_info.mountPointInfo
+    for key in inode_info:
+        info = inode_info[key]
+        mount_path = os.fsdecode(key)
+
+        in_memory = info.loadedInodeCount
+        files = info.loadedFileCount
+        trees = info.loadedTreeCount
+
         out.write(
-            format_str.format(
-                "inodes unloaded by periodic job",
-                ":",
-                "{}".format(diag_info.periodicUnloadCount),
+            textwrap.dedent(
+                f"""\
+            {mount_path}
+              - Inodes in memory: {in_memory} ({trees} trees, {files} files)
+              - Unloaded, tracked inodes: {info.unloadedInodeCount}
+              - Loaded and materialized inodes: {info.materializedInodeCount}
+
+            """
             )
         )
-        out.write("\n")
-
-        # print InodeInfo for all the mountPoints
-        inode_info = diag_info.mountPointInfo
-        for key in inode_info:
-            info = inode_info[key]
-            mount_path = os.fsdecode(key)
-            out.write(
-                textwrap.dedent(
-                    f"""\
-                Mount information for {mount_path}
-                    Loaded inodes in memory: {info.loadedInodeCount}
-                        Files: {info.loadedFileCount}
-                        Trees: {info.loadedTreeCount}
-                    Unloaded inodes in memory: {info.unloadedInodeCount}
-                    Materialized inodes in memory: {info.materializedInodeCount}
-                """
-                )
-            )
 
 
 @stats_cmd("memory", "Show memory statistics for Eden")
