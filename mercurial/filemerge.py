@@ -409,11 +409,11 @@ def _findconflictingcommits(repo, fcd, fca, maxcommits=10):
     """
     # (In a remotefilelog repo this will trigger a loose file download -- max
     # one per call to _find_conflicting_commits)
-    # fcd is the workingfilectx, so call p1().
-    current = fcd.p1()
+    # fcd is often workingfilectx, but not always.
+    current = fcd.parents()[:1]
     candidates = []
-    while True:
-        ctx = current.changectx()
+    while current:
+        ctx = current[0].changectx()
 
         # Stop once we go beyond the common ancestor.
         if repo.changelog.isancestor(ctx.node(), fca.node()):
@@ -423,12 +423,9 @@ def _findconflictingcommits(repo, fcd, fca, maxcommits=10):
         if len(candidates) >= maxcommits:
             break
 
-        if len(current.parents()) < 1:
-            break
-
         # Ignoring p2 path for simplicity. Ideally, we also follow p2, and
         # can draw the graph DAG to the user.
-        current = current.p1()
+        current = current[0].parents()[:1]
 
     return candidates, len(candidates) >= maxcommits
 
