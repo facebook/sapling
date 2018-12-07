@@ -501,13 +501,7 @@ def pull(repo, source, heads=None, force=False, meta=None):
         try:
             # start converting revisions
             firstrun = True
-            with repo.wlock(), repo.lock(), repo.transaction(
-                "svn"
-            ), meta.revmap._transaction() if hgutil.safehasattr(
-                meta.revmap, "_transaction"
-            ) else hgutil.nullcontextmanager(), progress.bar(
-                ui, "pull", total=total
-            ) as prog:
+            with progress.bar(ui, "pull", total=total) as prog:
                 for r in svn.revisions(start=start, stop=stopat_rev):
                     if r.revnum in skiprevs or (
                         r.author is None
@@ -542,6 +536,7 @@ def pull(repo, source, heads=None, force=False, meta=None):
                                     continue
                                 meta.delbranch(branch, parent, r)
 
+                            meta.save()
                             converted = True
                             firstrun = False
 
@@ -562,7 +557,6 @@ def pull(repo, source, heads=None, force=False, meta=None):
                                 raise hgutil.Abort(*e.args)
 
                     lastpulled = r.revnum
-                meta.save()
 
         except KeyboardInterrupt:
             ui.traceback()

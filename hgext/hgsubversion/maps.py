@@ -607,7 +607,6 @@ class SqliteRevMap(collections.MutableMapping):
         self._lastpulledpath = lastpulled_path
 
         self._db = None
-        self._txndb = None
         self._sqlitepragmas = sqlitepragmas
         self.firstpulled = 0
         self._updatefirstlastpulled()
@@ -713,34 +712,25 @@ class SqliteRevMap(collections.MutableMapping):
 
     @contextlib.contextmanager
     def _transaction(self, mode="IMMEDIATE"):
-        if self._txndb is not None:
-            yield self._txndb
-        else:
-            if self._db is None:
-                self._opendb()
-            with self._db as db:
-                # wait indefinitely for database lock
-                while True:
-                    try:
-                        db.execute("BEGIN %s" % mode)
-                        break
-                    except sqlite3.OperationalError as ex:
-                        if str(ex) != "database is locked":
-                            raise
-                self._txndb = db
-                yield db
-                self._txndb = None
+        if self._db is None:
+            self._opendb()
+        with self._db as db:
+            # wait indefinitely for database lock
+            while True:
+                try:
+                    db.execute("BEGIN %s" % mode)
+                    break
+                except sqlite3.OperationalError as ex:
+                    if str(ex) != "database is locked":
+                        raise
+            yield db
 
     def _query(self, sql, params=()):
         with self._transaction() as db:
             cur = db.execute(sql, params)
             try:
-                # Process the entire query instead of yielding one by one. If we
-                # yield one by one then if the query terminates early then the
-                # iterator might not complete and the transaction might not be
-                # released until gabarge collection cleans up the iterator. This
-                # can result in deadlocks.
-                return list(cur)
+                for row in cur:
+                    yield row
             finally:
                 cur.close()
 
@@ -827,7 +817,7 @@ class SqliteRevMap(collections.MutableMapping):
         for row in self._query(sql % "ASC"):
             self.firstpulled = row[0]
         for row in self._query(sql % "DESC"):
-            if row[0] != self.lastpulled:
+            if row[0] > self.lastpulled:
                 self.lastpulled = row[0]
 
     @util.gcdisable
