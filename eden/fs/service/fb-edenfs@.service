@@ -14,14 +14,52 @@ EnvironmentFile=-%f/systemd.conf
 
 Environment=EDENFS_CONFIG_DIR=%f
 
-ExecStart=/usr/bin/env \
-    ${EDENFS_EXECUTABLE_PATH} \
-    --configPath ${EDENFS_USER_CONFIG_DIR} \
-    --edenDir ${EDENFS_CONFIG_DIR} \
-    --edenfs \
-    --etcEdenDir ${EDENFS_SYSTEM_CONFIG_DIR} \
-    --experimentalSystemd \
-    --foreground
+# Some important escaping rules for how the quoted argument of 'sh -c' within
+# ExecStart is interpreted by systemd:
+#
+# * '\' followed by a newline is replaced with ' ' (a space). (You *must* escape
+#    newlines with '\'.) A leading '\' escapes '\'. [1]
+# * '\' followed by "'" (a single quote) is replaced with single quote. [2]
+# * '$' followed by '$' is replaced with a single '$'. [3]
+# * '%' followed by '%' is replaced with a single '%'. [4]
+#
+# Recommendations:
+#
+# * End each physical line with ' \' (a space followed by a backslash). [1]
+# * Escape "'" (a single quote) using '\'. Use "can\'t", not "can't". Prefer
+#   using double quotes instead of single quotes. [2]
+# * Escape '$' using '$'. Use '$${var}', not '$var' or '${var}'. [3]
+# * Escape '%' using '%'. Use '100%% cool', not '100% cool'. [4]
+# * Terminate commands with ';', if appropriate, instead of a newline. [5]
+#
+# References:
+#
+# [1] https://www.freedesktop.org/software/systemd/man/systemd.syntax.html
+#     https://github.com/systemd/systemd/blob/66a5b5ce9b991327d594f7b635de16999ca54093/src/shared/conf-parser.c#L354-L365
+#
+# [2] https://github.com/systemd/systemd/blob/66a5b5ce9b991327d594f7b635de16999ca54093/src/basic/extract-word.c#L68
+#     https://github.com/systemd/systemd/blob/66a5b5ce9b991327d594f7b635de16999ca54093/src/basic/escape.c#L48-L51
+#
+# [3] https://github.com/systemd/systemd/blob/66a5b5ce9b991327d594f7b635de16999ca54093/src/basic/env-util.c#L526-L542
+#
+# [4] https://github.com/systemd/systemd/blob/66a5b5ce9b991327d594f7b635de16999ca54093/src/core/unit-printf.c#L217
+#     https://github.com/systemd/systemd/blob/66a5b5ce9b991327d594f7b635de16999ca54093/src/shared/specifier.c#L48-L49
+#
+# [5] https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html
+
+ExecStart=/bin/sh -c ' \
+    set -e; \
+    set -u; \
+    \
+    exec \
+        "$${EDENFS_EXECUTABLE_PATH}" \
+        --configPath "$${EDENFS_USER_CONFIG_DIR}" \
+        --edenDir "$${EDENFS_CONFIG_DIR}" \
+        --edenfs \
+        --etcEdenDir "$${EDENFS_SYSTEM_CONFIG_DIR}" \
+        --experimentalSystemd \
+        --foreground; \
+'
 
 NotifyAccess=main
 Type=notify
