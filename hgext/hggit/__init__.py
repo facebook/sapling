@@ -329,6 +329,38 @@ def git_cleanup(ui, repo):
     ui.status(_("git commit map cleaned\n"))
 
 
+@command("git-updatemeta")
+def gitupdatemeta(ui, repo):
+    """Reads git hashes from the latest hg commits and adds them to the git-hg
+    mapping."""
+    with repo.wlock(), repo.lock():
+        stack = repo.heads()
+        githandler = repo.githandler
+
+        seen = set(stack)
+        while stack:
+            node = stack.pop()
+            hgsha = hex(node)
+            gitsha = githandler.map_git_get(hgsha)
+
+            # If the gitsha is not already known, add it if we can
+            if gitsha is None:
+                ctx = repo[node]
+                gitsha = ctx.extra().get("convert_revision")
+
+                # If there is no git sha, it may be a local commit. Just walk past
+                # it.
+                if gitsha:
+                    githandler.map_set(gitsha, hgsha)
+                for parent in ctx.parents():
+                    pnode = parent.node()
+                    if pnode not in seen:
+                        seen.add(pnode)
+                        stack.append(pnode)
+
+        githandler.save_map(githandler.map_file)
+
+
 def findcommonoutgoing(orig, repo, other, *args, **kwargs):
     if isinstance(other, gitrepo.gitrepo):
         heads = repo.githandler.get_refs(other.path)[0]
