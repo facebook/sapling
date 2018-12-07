@@ -182,6 +182,10 @@ class remotefilelog(object):
         if _metatuple:
             # _metatuple: used by "addrevision" internally by remotefilelog
             # meta was parsed confidently
+            #
+            # NOTE: meta is the "filelog" meta, which contains "copyrev"
+            # information. It's *incompatible* with datapack meta, which is
+            # about file size and revlog flags.
             meta, metaoffset = _metatuple
             if flags == revlog.REVIDX_DEFAULT_FLAGS:
                 # For non-LFS text, remove hg filelog metadata
@@ -204,7 +208,8 @@ class remotefilelog(object):
             hashtext = shallowutil.createrevlogtext(
                 blobtext, meta.get("copy"), meta.get("copyrev")
             )
-            dpack.add(self.filename, node, revlog.nullid, hashtext, metadata=meta)
+            dpackmeta = {constants.METAKEYFLAG: flags}
+            dpack.add(self.filename, node, revlog.nullid, hashtext, metadata=dpackmeta)
 
             copyfrom = ""
             realp1node = p1

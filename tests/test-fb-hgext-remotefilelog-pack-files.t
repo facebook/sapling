@@ -198,3 +198,18 @@
   merging foo
   rebasing 5:f579bc04d2ae "D" (tip)
   merging foo
+
+# Test compatibility with LFS
+
+  $ newrepo
+  $ enable lfs
+  $ setconfig lfs.threshold=1B lfs.url=file://$TESTTMP/lfs
+  $ drawdag <<'EOS'
+  > A # A/A=THIS-IS-LFS
+  > EOS
+  $ hg cat -r $A A
+  THIS-IS-LFS (no-eol)
+
+  $ hg debugfilerev -r $A
+  267e8be81b24: A
+   A: bin=0 lnk=0 flag=2000 size=11 copied='' chain=7d8ad6217b8a
