@@ -89,7 +89,11 @@ templatekeyword = registrar.templatekeyword()
 
 
 @templatekeyword("globalrev")
-def _globalrevkw(repo, ctx, **args):
+def globalrevkw(repo, ctx, **kwargs):
+    return _globalrevkw(repo, ctx, **kwargs)
+
+
+def _globalrevkw(repo, ctx, **kwargs):
     grev = ctx.extra().get("global_rev")
     # If the revision number associated with the commit is before the supported
     # starting revision, nothing to do.
