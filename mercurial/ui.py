@@ -621,9 +621,9 @@ class ui(object):
         ['this', 'is', 'a small', 'test']
         """
         # default is not always a list
-        v = self.configwith(config.parselist, section, name, default, "list", untrusted)
+        v = self.configwith(parselist, section, name, default, "list", untrusted)
         if isinstance(v, bytes):
-            return config.parselist(v)
+            return parselist(v)
         elif v is None:
             return []
         return v
@@ -1754,3 +1754,10 @@ class path(object):
             if value is not None:
                 d[subopt] = value
         return d
+
+
+def parselist(value):
+    if isinstance(value, bytes):
+        return rustconfig.parselist(value)
+    else:
+        return value

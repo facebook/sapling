@@ -11,7 +11,7 @@ extern crate cpython;
 extern crate encoding;
 
 use configparser::config::{ConfigSet, Options};
-use configparser::hg::{ConfigSetHgExt, OptionsHgExt};
+use configparser::hg::{parse_list, ConfigSetHgExt, OptionsHgExt};
 use cpython::{PyBytes, PyErr, PyObject, PyResult, Python};
 use cpython::exc::UnicodeDecodeError;
 use encoding::{local_bytes_to_path, path_to_local_bytes};
@@ -20,6 +20,7 @@ use std::collections::HashMap;
 
 py_module_initializer!(config, initconfig, PyInit_config, |py, m| {
     m.add_class::<config>(py)?;
+    m.add(py, "parselist", py_fn!(py, parselist(value: PyBytes)))?;
     Ok(())
 });
 
@@ -149,6 +150,12 @@ py_class!(class config |py| {
         config::create_instance(py, RefCell::new(cfg)).map(|cfg| (cfg, errors))
     }
 });
+
+fn parselist(py: Python, value: PyBytes) -> PyResult<Vec<PyBytes>> {
+    let value = value.data(py);
+    let list = parse_list(value);
+    Ok(list.into_iter().map(|v| PyBytes::new(py, &v)).collect())
+}
 
 fn encoding_error(py: Python, input: &PyBytes) -> PyErr {
     use std::ffi::CStr;
