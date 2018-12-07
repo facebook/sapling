@@ -15,8 +15,12 @@ from __future__ import absolute_import
 
 from mercurial import error, registrar, util
 from mercurial.i18n import _
-from mercurial.rust.pymononokeapi import PyMononokeClient
 
+
+try:
+    from mercurial.rust.pymononokeapi import PyMononokeClient
+except ImportError:
+    pass
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -27,6 +31,11 @@ configitem("mononoke-api", "creds", default=None)
 
 
 def getclient(ui):
+    try:
+        PyMononokeClient
+    except NameError:
+        raise error.Abort(_("pymononokeapi rust extension is not loaded"))
+
     if not ui.configbool("mononoke-api", "enabled"):
         raise error.Abort(_("Mononoke API is not enabled for this repository"))
 
@@ -43,6 +52,7 @@ def getclient(ui):
 
 def healthcheck(ui):
     client = getclient(ui)
+
     try:
         client.health_check()
         ui.write(_("success\n"))

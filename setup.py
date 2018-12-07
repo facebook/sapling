@@ -1755,11 +1755,6 @@ rustextmodules = [
         manifest="mercurial/rust/matcher/Cargo.toml",
     ),
     RustExtension(
-        "pymononokeapi",
-        package="mercurial.rust",
-        manifest="mercurial/rust/pymononokeapi/Cargo.toml",
-    ),
-    RustExtension(
         "pynodemap",
         package="mercurial.rust",
         manifest="mercurial/rust/pynodemap/Cargo.toml",
@@ -1784,6 +1779,18 @@ rustextmodules = [
     ),
 ]
 
+# TODO(T37772042): Make the Mononoke API crate build on Windows as part of the
+# Mercurial build process. Presently, this fails because the of a dependency
+# on OpenSSL, which is either not available or incorrectly configured  in
+# the Windows build environment.
+if not iswindows:
+    rustextmodules.append(
+        RustExtension(
+            "pymononokeapi",
+            package="mercurial.rust",
+            manifest="mercurial/rust/pymononokeapi/Cargo.toml",
+        )
+    )
 
 hgmainfeatures = (
     " ".join(
