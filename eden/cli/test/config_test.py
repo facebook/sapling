@@ -21,63 +21,6 @@ from .. import config as config_mod, configutil, util
 from ..config import EdenInstance
 
 
-def get_cfg_test_file_defaults():
-    cfg_file = """
-[core]
-systemIgnoreFile = /etc/eden/gitignore
-ignoreFile = /home/${USER}/.gitignore
-
-[clone]
-default-revision = master
-
-[rage]
-reporter=arc paste --title "eden rage from $(hostname)" --conduit-uri=https://phabricator.intern.facebook.com/api/
-"""
-    return cfg_file
-
-
-def get_cfg_test_file_hooks():
-    cfg_file = """
-[hooks]
-hg.edenextension = /usr/local/fb-mercurial/eden/hgext3rd/eden
-"""
-    return cfg_file
-
-
-def get_cfg_test_file_fbsource_repo():
-    cfg_file = """
-[repository fbsource]
-type = hg
-path = /data/users/${USER}/fbsource
-
-[bindmounts fbsource]
-fbcode-buck-out = fbcode/buck-out
-buck-out = buck-out
-"""
-    return cfg_file
-
-
-def get_cfg_test_file_user_rc():
-    cfg_file = """
-[core]
-ignoreFile=/home/${USER}/.gitignore-override
-edenDirectory=/home/${USER}/.eden
-
-[repository fbsource]
-type = hg
-path = /data/users/${USER}/fbsource-override
-
-[bindmounts fbsource]
-fbcode-buck-out = fbcode/buck-out-override
-
-[repository git]
-type = git
-path = /home/${USER}/src/git/.git
-hooks = /home/${USER}/my-git-hook
-"""
-    return cfg_file
-
-
 def get_toml_test_file_invalid():
     cfg_file = """
 [core thisIsNotAllowed]
@@ -140,32 +83,6 @@ path = "/home/${USER}/src/git/.git"
 hooks = "/home/${USER}/my-git-hook"
 """
     return cfg_file
-
-
-# Utility method to get config as string
-def get_config_as_string(config: configparser.ConfigParser) -> str:
-    s = ""
-    for section in config.sections():
-        s += "[" + section + "]\n"
-        for k, v in config.items(section):
-            s += k + "=" + v + "\n"
-    return s
-
-
-class ForceFileMockConfig(EdenInstance):
-    def __init__(
-        self,
-        config_dir: str,
-        etc_eden_dir: str,
-        home_dir: str,
-        rc_file_list: List[str],
-        interpolate_dict: Optional[Dict[str, str]] = None,
-    ) -> None:
-        super().__init__(config_dir, etc_eden_dir, home_dir, interpolate_dict)
-        self._rc_file_list = rc_file_list
-
-    def get_rc_files(self) -> List[str]:
-        return self._rc_file_list
 
 
 class TomlConfigTest(unittest.TestCase, TemporaryDirectoryMixin):
