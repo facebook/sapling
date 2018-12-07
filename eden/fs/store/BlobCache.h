@@ -124,6 +124,15 @@ class BlobCache : public std::enable_shared_from_this<BlobCache> {
     GetResult& operator=(GetResult&&) = default;
   };
 
+  struct Stats {
+    size_t blobCount{0};
+    size_t totalSizeInBytes{0};
+    uint64_t hitCount{0};
+    uint64_t missCount{0};
+    uint64_t evictionCount{0};
+    uint64_t dropCount{0};
+  };
+
   static std::shared_ptr<BlobCache> create(
       size_t maximumCacheSizeBytes,
       size_t minimumEntryCount);
@@ -163,9 +172,10 @@ class BlobCache : public std::enable_shared_from_this<BlobCache> {
   bool contains(const Hash& hash) const;
 
   /**
-   * Returns the sum of all of the cached blob sizes.
+   * Return information about the current size of the cache and the total number
+   * of hits and misses.
    */
-  size_t getTotalSize() const;
+  Stats getStats() const;
 
  private:
   /*
@@ -199,6 +209,11 @@ class BlobCache : public std::enable_shared_from_this<BlobCache> {
 
     /// Entries are evicted from the front of the queue.
     std::list<CacheItem*> evictionQueue;
+
+    uint64_t hitCount{0};
+    uint64_t missCount{0};
+    uint64_t evictionCount{0};
+    uint64_t dropCount{0};
   };
 
   void dropInterestHandle(const Hash& hash) noexcept;

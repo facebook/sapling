@@ -1254,6 +1254,14 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
   if (folly::readFile("/proc/self/smaps", smaps)) {
     result.smaps = std::move(smaps);
   }
+
+  const auto blobCacheStats = server_->getBlobCache()->getStats();
+  result.blobCacheStats.entryCount = blobCacheStats.blobCount;
+  result.blobCacheStats.totalSizeInBytes = blobCacheStats.totalSizeInBytes;
+  result.blobCacheStats.hitCount = blobCacheStats.hitCount;
+  result.blobCacheStats.missCount = blobCacheStats.missCount;
+  result.blobCacheStats.evictionCount = blobCacheStats.evictionCount;
+  result.blobCacheStats.dropCount = blobCacheStats.dropCount;
 #else
   NOT_IMPLEMENTED();
 #endif // !EDEN_WIN

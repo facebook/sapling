@@ -75,6 +75,7 @@ BlobCache::GetResult BlobCache::get(const Hash& hash, Interest interest) {
 
   auto* item = folly::get_ptr(state->items, hash);
   if (!item) {
+    ++state->missCount;
     return GetResult{};
   }
 
@@ -103,6 +104,7 @@ BlobCache::GetResult BlobCache::get(const Hash& hash, Interest interest) {
   // For now, we'll try not to be too clever.
   state->evictionQueue.splice(
       state->evictionQueue.end(), state->evictionQueue, item->index);
+  ++state->hitCount;
   return GetResult{item->blob, std::move(interestHandle)};
 }
 
@@ -158,8 +160,16 @@ bool BlobCache::contains(const Hash& hash) const {
   return 1 == state->items.count(hash);
 }
 
-size_t BlobCache::getTotalSize() const {
-  return state_.rlock()->totalSize;
+BlobCache::Stats BlobCache::getStats() const {
+  auto state = state_.rlock();
+  Stats stats;
+  stats.blobCount = state->items.size();
+  stats.totalSizeInBytes = state->totalSize;
+  stats.hitCount = state->hitCount;
+  stats.missCount = state->missCount;
+  stats.evictionCount = state->evictionCount;
+  stats.dropCount = state->dropCount;
+  return stats;
 }
 
 void BlobCache::dropInterestHandle(const Hash& hash) noexcept {
@@ -180,6 +190,7 @@ void BlobCache::dropInterestHandle(const Hash& hash) noexcept {
 
   if (--item->referenceCount == 0) {
     state->evictionQueue.erase(item->index);
+    ++state->dropCount;
     evictItem(*state, item);
   }
 }
@@ -194,6 +205,7 @@ void BlobCache::evictUntilFits(State& state) noexcept {
 void BlobCache::evictOne(State& state) noexcept {
   CacheItem* front = state.evictionQueue.front();
   state.evictionQueue.pop_front();
+  ++state.evictionCount;
   evictItem(state, front);
 }
 

@@ -343,6 +343,15 @@ struct MountInodeInfo {
   5: i64 loadedTreeCount
 }
 
+struct CacheStats {
+  1: i64 entryCount
+  2: i64 totalSizeInBytes
+  3: i64 hitCount
+  4: i64 missCount
+  5: i64 evictionCount
+  6: i64 dropCount
+}
+
 /**
  * Struct to store fb303 counters from ServiceData.getCounters() and inode
  * information of all the mount points.
@@ -374,6 +383,10 @@ struct InternalStats {
    * Populated with current value (the fb303 counters value is an average).
    */
   6: i64 vmRSSBytes
+  /**
+   * Statistics about the in-memory blob cache.
+   */
+  7: CacheStats blobCacheStats
 }
 
 struct ManifestEntry {

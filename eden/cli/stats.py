@@ -39,10 +39,19 @@ def do_stats_general(
     instance: EdenInstance, out: io.TextIOWrapper = stdoutWrapper
 ) -> None:
     with instance.get_thrift_client() as client:
-        diag_info = client.getStatInfo()
+        stat_info = client.getStatInfo()
 
-    private_bytes = stats_print.format_size(diag_info.privateBytes)
-    resident_bytes = stats_print.format_size(diag_info.vmRSSBytes)
+    private_bytes = stats_print.format_size(stat_info.privateBytes)
+    resident_bytes = stats_print.format_size(stat_info.vmRSSBytes)
+
+    if stat_info.blobCacheStats is not None:
+        blob_cache_size = stats_print.format_size(
+            stat_info.blobCacheStats.totalSizeInBytes
+        )
+        blob_cache_entry_count = stat_info.blobCacheStats.entryCount
+    else:
+        blob_cache_size = None
+        blob_cache_entry_count = None
 
     out.write(
         textwrap.dedent(
@@ -50,6 +59,16 @@ def do_stats_general(
         edenfs memory usage
         ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
         private bytes: {private_bytes} ({resident_bytes} resident)
+        """
+        )
+    )
+
+    if blob_cache_size is not None and blob_cache_entry_count is not None:
+        out.write(f"blob cache: {blob_cache_size} in {blob_cache_entry_count} blobs\n")
+
+    out.write(
+        textwrap.dedent(
+            f"""\
 
         active mounts
         ▔▔▔▔▔▔▔▔▔▔▔▔▔
@@ -57,7 +76,7 @@ def do_stats_general(
         )
     )
 
-    inode_info = diag_info.mountPointInfo
+    inode_info = stat_info.mountPointInfo
     for key in inode_info:
         info = inode_info[key]
         mount_path = os.fsdecode(key)

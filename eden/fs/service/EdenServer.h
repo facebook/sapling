@@ -196,6 +196,10 @@ class EdenServer : private TakeoverHandler {
     return localStore_;
   }
 
+  const std::shared_ptr<BlobCache>& getBlobCache() const {
+    return blobCache_;
+  }
+
   /**
    * Look up the BackingStore object for the specified repository type+name.
    *

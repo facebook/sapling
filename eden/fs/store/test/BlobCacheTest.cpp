@@ -35,14 +35,14 @@ TEST(BlobCache, evicts_oldest_on_insertion) {
   auto cache = BlobCache::create(10, 0);
   cache->insert(blob3);
   cache->insert(blob4); // blob4 is considered more recent than blob3
-  EXPECT_EQ(7, cache->getTotalSize());
+  EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
   cache->insert(blob5); // evicts blob3
-  EXPECT_EQ(9, cache->getTotalSize());
+  EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
   EXPECT_EQ(nullptr, cache->get(hash3).blob)
       << "Inserting blob5 should evict oldest (blob3)";
   EXPECT_EQ(blob4, cache->get(hash4).blob) << "But blob4 still fits";
   cache->insert(blob3); // evicts blob5
-  EXPECT_EQ(7, cache->getTotalSize());
+  EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
   EXPECT_EQ(nullptr, cache->get(hash5).blob)
       << "Inserting blob3 again evicts blob5 because blob4 was accessed";
   EXPECT_EQ(blob4, cache->get(hash4).blob);
@@ -78,7 +78,7 @@ TEST(
   cache->insert(blob4);
   cache->insert(blob5);
 
-  EXPECT_EQ(12, cache->getTotalSize());
+  EXPECT_EQ(12, cache->getStats().totalSizeInBytes);
   EXPECT_TRUE(cache->get(hash3).blob);
   EXPECT_TRUE(cache->get(hash4).blob);
   EXPECT_TRUE(cache->get(hash5).blob);
@@ -91,7 +91,7 @@ TEST(BlobCache, preserves_minimum_number_of_entries) {
   cache->insert(blob5);
   cache->insert(blob6);
 
-  EXPECT_EQ(15, cache->getTotalSize());
+  EXPECT_EQ(15, cache->getStats().totalSizeInBytes);
   EXPECT_FALSE(cache->get(hash3).blob);
   EXPECT_TRUE(cache->get(hash4).blob);
   EXPECT_TRUE(cache->get(hash5).blob);
@@ -192,11 +192,11 @@ TEST(BlobCache, redundant_inserts_are_ignored) {
   auto cache = BlobCache::create(10, 0);
   auto blob = std::make_shared<Blob>(Hash{}, "not ready"_sp);
   cache->insert(blob);
-  EXPECT_EQ(9, cache->getTotalSize());
+  EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
   cache->insert(blob);
-  EXPECT_EQ(9, cache->getTotalSize());
+  EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
   cache->insert(blob);
-  EXPECT_EQ(9, cache->getTotalSize());
+  EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
 }
 
 TEST(
