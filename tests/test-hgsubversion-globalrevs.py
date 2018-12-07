@@ -104,7 +104,7 @@ class TestGlobalRev(test_hgsubversion_util.TestBase):
         self._assert_globalrev(
             repo,
             """
-@  svnrev:2 globalrev:
+@  svnrev:2 globalrev:2
 
 """,
             showgraph=True,
@@ -125,7 +125,7 @@ o  svnrev:4 globalrev:5001
 |
 o  svnrev:3 globalrev:5000
 |
-@  svnrev:2 globalrev:
+@  svnrev:2 globalrev:2
 """,
             showgraph=True,
         )
@@ -145,7 +145,7 @@ o  svnrev:3 globalrev:5000
 |
 o  svnrev:3 globalrev:5000
 |
-o  svnrev:2 globalrev:
+o  svnrev:2 globalrev:2
 """,
             showgraph=True,
         )

@@ -68,7 +68,7 @@ from mercurial import (
 from mercurial.i18n import _
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
-from .hgsubversion import util as svnutil
+from .hgsubversion import svnrevkw, util as svnutil
 from .pushrebase import isnonpushrebaseblocked
 
 
@@ -101,6 +101,10 @@ def _globalrevkw(repo, ctx, **kwargs):
         return grev
 
 
+def _globalrevkwwrapper(orig, repo, ctx, **kwargs):
+    return orig(repo, ctx, **kwargs) or svnrevkw(repo=repo, ctx=ctx, **kwargs)
+
+
 cls = localrepo.localrepository
 for reqs in ["_basesupported", "supportedformats"]:
     getattr(cls, reqs).add("globalrevs")
@@ -131,6 +135,8 @@ def uisetup(ui):
             )
 
             globalrevsmod = extensions.find("globalrevs")
+
+            extensions.wrapfunction(globalrevsmod, "_globalrevkw", _globalrevkwwrapper)
             extensions.wrapfunction(
                 globalrevsmod, "_lookupglobalrev", _lookupglobalrevwrapper
             )
