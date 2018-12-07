@@ -37,6 +37,23 @@ class ServiceTestCaseBase(
         pass
 
 
+if typing.TYPE_CHECKING:
+
+    class SystemdServiceTestCaseMarker(EdenFSSystemdMixin):
+        pass
+
+
+else:
+
+    class SystemdServiceTestCaseMarker:
+        """Marker base class for tests requiring systemd integration.
+
+        Only use SystemdServiceTestCaseMarker with @service_test.
+
+        Subclasses can use any method in EdenFSSystemdMixin.
+        """
+
+
 class AdHocFakeEdenFSMixin:
     """Test by spawning fake_edenfs directly.
 
@@ -106,19 +123,26 @@ class SystemdEdenCLIFakeEdenFSMixin:
 def _replicate_service_test(
     test_class: typing.Type[ServiceTestCaseBase], skip_systemd: bool = False
 ) -> typing.Iterable[typing.Tuple[str, typing.Type[ServiceTestCaseBase]]]:
+    only_systemd = issubclass(test_class, SystemdServiceTestCaseMarker)
+    assert not (only_systemd and skip_systemd)
+
     tests = []
 
-    class AdHocTest(AdHocFakeEdenFSMixin, test_class):  # type: ignore
-        pass
+    if not only_systemd:
 
-    tests.append(("AdHoc", typing.cast(typing.Type[ServiceTestCaseBase], AdHocTest)))
+        class AdHocTest(AdHocFakeEdenFSMixin, test_class):  # type: ignore
+            pass
 
-    class ManagedTest(ManagedFakeEdenFSMixin, test_class):  # type: ignore
-        pass
+        tests.append(
+            ("AdHoc", typing.cast(typing.Type[ServiceTestCaseBase], AdHocTest))
+        )
 
-    tests.append(
-        ("Managed", typing.cast(typing.Type[ServiceTestCaseBase], ManagedTest))
-    )
+        class ManagedTest(ManagedFakeEdenFSMixin, test_class):  # type: ignore
+            pass
+
+        tests.append(
+            ("Managed", typing.cast(typing.Type[ServiceTestCaseBase], ManagedTest))
+        )
 
     if not skip_systemd:
 
@@ -146,9 +170,12 @@ def _replicate_service_test(
 # Given an input test class named "MyTest", this will create the following
 # classes which each run test a different kind of edenfs process:
 #
-# * MyTestAdHoc tests with ad-hoc edenfs processes
+# * MyTestAdHoc tests with ad-hoc edenfs processes [1]
 # * MyTestManaged tests with 'eden start' edenfs processes (with systemd
-#   integration disabled)
+#   integration disabled) [1]
 # * MyTestSystemdEdenCLI tests with 'eden start' edenfs processes with systemd
 #   integration enabled
+#
+# [1] This class is *not* created if the input test class derives from
+#     SystemdServiceTestCaseMarker.
 service_test = test_replicator(_replicate_service_test)

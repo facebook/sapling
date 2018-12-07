@@ -22,7 +22,11 @@ from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
-from .lib.service_test_case import ServiceTestCaseBase, service_test
+from .lib.service_test_case import (
+    ServiceTestCaseBase,
+    SystemdServiceTestCaseMarker,
+    service_test,
+)
 
 
 SHUTDOWN_EXIT_CODE_NORMAL = 0
@@ -31,12 +35,24 @@ SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 
-@service_test
-class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin):
+class StopTestBase(ServiceTestCaseBase, TemporaryDirectoryMixin):
+    tmp_dir: str
+
     def setUp(self) -> None:
         super().setUp()
         self.tmp_dir = self.make_temporary_directory()
 
+    def spawn_stop(self, extra_args: typing.List[str]) -> "pexpect.spawn[str]":
+        return pexpect.spawn(
+            FindExe.EDEN_CLI,
+            ["--config-dir", self.tmp_dir, "stop"] + extra_args,
+            encoding="utf-8",
+            logfile=sys.stderr,
+        )
+
+
+@service_test
+class StopTest(StopTestBase, PexpectAssertionMixin):
     def test_stop_stops_running_daemon(self) -> None:
         with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
             stop_process = self.spawn_stop(["--timeout", "5"])
@@ -172,10 +188,22 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
             stop_process = self.spawn_stop(["--timeout", "10"])
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
 
-    def spawn_stop(self, extra_args: typing.List[str]) -> "pexpect.spawn[str]":
-        return pexpect.spawn(
-            FindExe.EDEN_CLI,
-            ["--config-dir", self.tmp_dir, "stop"] + extra_args,
-            encoding="utf-8",
-            logfile=sys.stderr,
+
+@service_test
+class StopWithSystemdTest(
+    SystemdServiceTestCaseMarker, StopTestBase, PexpectAssertionMixin
+):
+    def test_stop_stops_systemd_service(self) -> None:
+        with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)):
+            stop_process = self.spawn_stop(["--timeout", "5"])
+            stop_process.expect_exact("edenfs exited cleanly.")
+            self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
+            self.assert_systemd_service_is_stopped()
+
+    def assert_systemd_service_is_stopped(self) -> None:
+        service = self.get_edenfs_systemd_service(eden_dir=pathlib.Path(self.tmp_dir))
+        self.assertEqual(
+            (service.query_active_state(), service.query_sub_state()),
+            ("inactive", "dead"),
+            f"EdenFS systemd service ({service}) should be stopped",
         )
