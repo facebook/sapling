@@ -31,8 +31,7 @@ SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 
-# TODO(T33122320): Support 'eden stop' with systemd.
-@service_test(skip_systemd=True)
+@service_test
 class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin):
     def setUp(self) -> None:
         super().setUp()
@@ -48,6 +47,9 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
             )
 
     def test_eden_stop_shuts_down_edenfs_cleanly(self) -> None:
+        self.skip_if_systemd(
+            "TODO(T33122320): Forward custom daemon arguments to edenfs"
+        )
         clean_shutdown_file = pathlib.Path(self.tmp_dir) / "clean_shutdown"
         assert not clean_shutdown_file.exists()
 
@@ -68,6 +70,9 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
             )
 
     def test_stop_sigkill(self) -> None:
+        self.skip_if_systemd(
+            "TODO(T33122320): Forward custom daemon arguments to edenfs"
+        )
         with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir), ["--ignoreStop"]):
             # Ask the CLI to stop edenfs, with a 1 second timeout.
             # It should have to kill the process with SIGKILL
@@ -146,6 +151,9 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
                     os.kill(daemon_pid, signal.SIGCONT)
 
     def test_hanging_thrift_call_kills_daemon_with_sigkill(self) -> None:
+        self.skip_if_systemd(
+            "TODO(T33122320): Forward custom daemon arguments to edenfs"
+        )
         with self.spawn_fake_edenfs(
             pathlib.Path(self.tmp_dir), ["--sleepBeforeStop=5"]
         ):
@@ -155,6 +163,9 @@ class StopTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMix
             )
 
     def test_stop_succeeds_if_thrift_call_abruptly_kills_daemon(self) -> None:
+        self.skip_if_systemd(
+            "TODO(T33122320): Forward custom daemon arguments to edenfs"
+        )
         with self.spawn_fake_edenfs(
             pathlib.Path(self.tmp_dir), ["--exitWithoutCleanupOnStop"]
         ):
