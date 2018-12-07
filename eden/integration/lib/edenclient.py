@@ -101,8 +101,8 @@ class EdenFS(object):
         try:
             stderr = subprocess.STDOUT if capture_stderr else subprocess.PIPE
             env = dict(os.environ)
-            # TODO(T37669726): Delete LSAN logging.
-            env["LSAN_OPTIONS"] = "verbosity=1:log_threads=1"
+            # TODO(T37669726): Re-enable LSAN.
+            env["LSAN_OPTIONS"] = "detect_leaks=0:verbosity=1:log_threads=1"
             completed_process = subprocess.run(
                 cmd, stdout=subprocess.PIPE, stderr=stderr, check=True, cwd=cwd, env=env
             )
