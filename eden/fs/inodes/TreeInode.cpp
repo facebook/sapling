@@ -1698,28 +1698,58 @@ void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
 }
 
 DirList TreeInode::readdir(DirList&& list, off_t off) {
-  // We will be called multiple times for a given directory read.  The first
-  // time through, the off parameter will be 0 to indicate that it is reading
-  // from the start.  On subsequent calls it will hold the off value from the
-  // last the entry we added to the DirList.  It may actually hold some
-  // arbitrary offset if the application is seeking around in the dir stream.
-  // Most applications will perform a full scan until we return an empty
-  // DirList. We need to return as soon as we have filled the available space in
-  // the provided DirList object.
-
-  // For now, for simplicity, off is simply the index into the (sorted) contents
-  // of the directory, plus the . and .. entries. This is not correct under
-  // concurrent renames and removals. See T28717457. A correct implementation
-  // will need to store smarter cookies in the off_t field of the entries.
-
+  /*
+   * Implementing readdir correctly in the presence of concurrent modifications
+   * to the directory is nontrivial. This function will be called multiple
+   * times. The off_t value given is either 0, on the first read, or the value
+   * corresponding to the last entry's offset. (Or an arbitrary entry's offset
+   * value, given seekdir and telldir).
+   *
+   * POSIX compliance requires that, given a sequence of readdir calls across
+   * the an entire directory stream, all entries that are not modified are
+   * returned exactly once. Entries that are added or removed between readdir
+   * calls may be returned, but don't have to be.
+   *
+   * Thus, off_t as an index into an ordered list of entries is not sufficient.
+   * If an entry is unlinked, the next readdir will skip entries.
+   *
+   * One option might be to populate off_t with a hash of the entry name. off_t
+   * has 63 usable bits (minus the 0 value which is reserved for the initial
+   * request). 63 bits of SpookyHashV2 is probably sufficient in practice, but
+   * it would be possible to create a directory containing collisions, causing
+   * duplicate entries or an infinite loop. Also it's unclear how to handle
+   * the entry at `off` being removed before the next readdir. (How do you find
+   * where to restart in the stream?).
+   *
+   * Today, Eden does not support hard links. Therefore, in the short term, we
+   * can store inode numbers in off_t and treat them as an index into an
+   * inode-sorted list of entries. This has quadratic time complexity without an
+   * additional index but is correct.
+   *
+   * In the long term, especially when Eden's tree directory structure is stored
+   * in SQLite or something similar, we should maintain a seekdir/readdir cookie
+   * index and use said cookies to enumerate entries.
+   *
+   * - https://oss.oracle.com/pipermail/btrfs-devel/2008-January/000463.html
+   * - https://yarchive.net/comp/linux/readdir_nonatomicity.html
+   * - https://lwn.net/Articles/544520/
+   */
   if (off < 0) {
     XLOG(ERR) << "Negative readdir offsets are illegal, off = " << off;
     folly::throwSystemErrorExplicit(EINVAL);
   }
   updateAtime();
 
+  // Possible offset values are:
+  //   0: start at the beginning
+  //   1: start after .
+  //   2: start after ..
+  //   2+N: start after inode N
+
   if (off <= 0) {
-    list.add(".", getNodeId().get(), dtype_t::Dir, 1);
+    if (!list.add(".", getNodeId().get(), dtype_t::Dir, 1)) {
+      return std::move(list);
+    }
   }
   if (off <= 1) {
     // It's okay to query the parent without the rename lock held because, if
@@ -1729,23 +1759,39 @@ DirList TreeInode::readdir(DirList&& list, off_t off) {
     // For the root of the mount point, just add its own inode ID as its parent.
     // FUSE seems to overwrite the parent inode number on the root dir anyway.
     auto parentNodeId = parent ? parent->getNodeId() : getNodeId();
-    list.add("..", parentNodeId.get(), dtype_t::Dir, 2);
+    if (!list.add("..", parentNodeId.get(), dtype_t::Dir, 2)) {
+      return std::move(list);
+    }
   }
 
   auto dir = contents_.rlock();
   auto& entries = dir->entries;
 
-  // Now write as many entries into DirList as fit.
-  auto entry = entries.begin();
-  for (off_t idx = 2; entry != entries.end(); ++entry, ++idx) {
-    if (off > idx) {
-      continue;
+  // Compute an index into the PathMap by InodeNumber, only including the
+  // entries that are greater than the given offset.
+  std::vector<std::pair<InodeNumber, size_t>> indices;
+  indices.reserve(entries.size());
+  size_t index = 0;
+  for (auto& entry : entries) {
+    auto inodeNumber = entry.second.getInodeNumber();
+    if (static_cast<off_t>(inodeNumber.get() + 2) > off) {
+      indices.emplace_back(entry.second.getInodeNumber(), index);
     }
+    ++index;
+  }
+  std::make_heap(indices.begin(), indices.end(), std::greater<>{});
+
+  // The provided DirList has limited space. Add entries until no more fit.
+  while (indices.size()) {
+    std::pop_heap(indices.begin(), indices.end(), std::greater<>{});
+    auto& [name, entry] = entries.begin()[indices.back().second];
+    indices.pop_back();
+
     if (!list.add(
-            entry->first.stringPiece(),
-            entry->second.getInodeNumber().get(),
-            entry->second.getDtype(),
-            idx + 1)) {
+            name.stringPiece(),
+            entry.getInodeNumber().get(),
+            entry.getDtype(),
+            entry.getInodeNumber().get() + 2)) {
       break;
     }
   }

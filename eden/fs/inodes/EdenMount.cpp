@@ -231,6 +231,9 @@ folly::Future<folly::Unit> EdenMount::initialize(
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the
         // snapshot id forward through subsequent journal entries.
+        // TODO: It would be nice if the .eden inode was created before
+        // allocating inode numbers for the Tree's entries. This would give the
+        // .eden directory inode number 2.
         auto delta = std::make_unique<JournalDelta>();
         delta->toHash = parents->parent1();
         journal_.addDelta(std::move(delta));
