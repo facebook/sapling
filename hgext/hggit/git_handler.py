@@ -2,6 +2,7 @@ import collections
 import itertools
 import os
 import re
+import shutil
 import StringIO
 
 import _ssh
@@ -28,6 +29,7 @@ from mercurial import (
 )
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid, nullrev
+from mercurial.rust import pynodemap
 from overlay import overlayrepo
 
 
@@ -183,17 +185,39 @@ class GitHandler(object):
         return node
 
     def load_map(self):
-        content = []
-        if os.path.exists(self.vfs.join(self.map_file)):
-            content = self.vfs(self.map_file)
+        if self.ui.configbool("hggit", "indexedlognodemap", False):
+            dir = self.vfs.join(self.map_file + "-log")
 
-        self._map_real = GitMap(content)
+            # Check for log existance before we instantiate it.
+            logexists = self.vfs.exists(dir)
+
+            self._map_real = pynodemap.pynodemap(dir)
+
+            # If the indexedlog map doesn't exist, populate it.
+            if not logexists and self.vfs.exists(self.map_file):
+                # Don't construct
+                oldmap = GitMap(self.vfs(self.map_file))
+                for gitsha, hgsha in oldmap.items():
+                    self._map_real.add(gitsha, hgsha)
+                self._map_real.flush()
+        else:
+            content = []
+            if os.path.exists(self.vfs.join(self.map_file)):
+                content = self.vfs(self.map_file)
+
+            self._map_real = GitMap(content)
 
     def save_map(self, map_file):
         wlock = self.repo.wlock()
         try:
-            file = self.vfs(map_file, "a+", atomictemp=True)
             map = self._map
+
+            if self.ui.configbool("hggit", "indexedlognodemap", False):
+                # If using index log, also write the flat map, so we can roll
+                # back easily.
+                self._map_real.flush()
+
+            file = self.vfs(map_file, "a+", atomictemp=True)
             buf = hgutil.stringio()
             bwrite = buf.write
             # Append new entries to the end of the file so we can search
@@ -440,6 +464,9 @@ class GitHandler(object):
 
     def clear(self):
         mapfile = self.vfs.join(self.map_file)
+        if self.ui.configbool("hggit", "indexedlognodemap", False):
+            shutil.rmtree(mapfile + "-log")
+
         if os.path.exists(self.gitdir):
             for root, dirs, files in os.walk(self.gitdir, topdown=False):
                 for name in files:

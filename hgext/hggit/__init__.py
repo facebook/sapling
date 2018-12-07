@@ -19,6 +19,7 @@ For more information and instructions, see :hg:`help git`
 
 # global modules
 import os
+import shutil
 import warnings
 from bisect import insort
 
@@ -50,6 +51,7 @@ from mercurial import (
 from mercurial.error import LookupError
 from mercurial.i18n import _
 from mercurial.node import hex
+from mercurial.rust import pynodemap
 
 
 # Disable DeprecationWarning from newer dulwich since hggit also supports older
@@ -297,6 +299,23 @@ def gverify(ui, repo, **opts):
 def git_cleanup(ui, repo):
     """clean up Git commit map after history editing"""
     items = repo.githandler._map.items()
+    if ui.configbool("hggit", "indexedlognodemap", False):
+        dir = repo.sharedvfs.join(repo.githandler.map_file + "-log")
+        tempdir = dir + ".temp"
+        if os.path.exists(tempdir):
+            hgutil.removedirs(tempdir)
+
+        nodemap = pynodemap.pynodemap(tempdir)
+        for gitsha, hgsha in items:
+            if hgsha in repo:
+                nodemap.add(gitsha, hgsha)
+        nodemap.flush()
+        with repo.wlock():
+            tempdir2 = dir + ".temp2"
+            hgutil.rename(dir, tempdir2)
+            hgutil.rename(tempdir, dir)
+            shutil.rmtree(tempdir2)
+
     new_map = []
     for gitsha, hgsha in items:
         if hgsha in repo:

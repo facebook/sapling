@@ -71,6 +71,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: grep.biggreptier (str) ["biggrep.master"]
   undocumented: grep.command (str)
   undocumented: hggit.disallowinitbare (bool)
+  undocumented: hggit.indexedlognodemap (bool)
   undocumented: hggit.usephases (bool)
   undocumented: hgsql.bypass (bool)
   undocumented: hgsql.database (str)
