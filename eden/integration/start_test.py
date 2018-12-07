@@ -22,10 +22,13 @@ from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from fb303.ttypes import fb_status
 
 from .lib import testcase
+from .lib.edenfs_systemd import EdenFSSystemdMixin
+from .lib.environment_variable import EnvironmentVariableMixin
 from .lib.fake_edenfs import read_fake_edenfs_argv_file
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
 from .lib.service_test_case import ServiceTestCaseBase, service_test
+from .lib.systemd import SystemdUserServiceManagerMixin
 
 
 class StartTest(testcase.EdenTestCase):
@@ -61,7 +64,7 @@ class StartTest(testcase.EdenTestCase):
         self.eden.shutdown()
         self.assertFalse(self.eden.is_healthy())
         # `eden start --if-necessary` should start edenfs now
-        if "SANDCASTLE" in os.environ:
+        if eden_start_needs_allow_root_option(systemd=False):
             output = self.eden.run_cmd(
                 "start", "--if-necessary", "--", "--allowRoot", capture_stderr=True
             )
@@ -74,6 +77,61 @@ class StartTest(testcase.EdenTestCase):
         # so the self.eden class doesn't really know it is running and that
         # it needs to be shut down.
         self.eden.run_cmd("stop")
+
+
+@testcase.eden_repo_test
+class StartWithRepoTest(
+    testcase.EdenRepoTest,
+    EnvironmentVariableMixin,
+    SystemdUserServiceManagerMixin,
+    EdenFSSystemdMixin,
+):
+    """Test 'eden start' with a repo and checkout already configured.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.eden.shutdown()
+
+    def test_eden_start_mounts_checkouts(self) -> None:
+        self.run_eden_start(systemd=False)
+        self.assert_checkout_is_mounted()
+
+    def test_eden_start_with_systemd_mounts_checkouts(self) -> None:
+        self.set_up_edenfs_systemd_service()
+        self.run_eden_start(systemd=True)
+        self.assert_checkout_is_mounted()
+
+    def run_eden_start(self, systemd: bool) -> None:
+        env = dict(os.environ)
+        if systemd:
+            env["EDEN_EXPERIMENTAL_SYSTEMD"] = "1"
+        else:
+            env.pop("EDEN_EXPERIMENTAL_SYSTEMD", None)
+        command = [
+            FindExe.EDEN_CLI,
+            "--config-dir",
+            self.eden_dir,
+            "start",
+            "--daemon-binary",
+            FindExe.EDEN_DAEMON,
+        ]
+        if eden_start_needs_allow_root_option(systemd=systemd):
+            command.extend(["--", "--allowRoot"])
+        subprocess.check_call(command, env=env)
+
+    def assert_checkout_is_mounted(self) -> None:
+        file = pathlib.Path(self.mount) / "hello"
+        self.assertTrue(file.is_file())
+        self.assertEqual(file.read_text(), "hola\n")
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("hello", "hola\n")
+        self.repo.commit("Initial commit.")
+
+    def select_storage_engine(self) -> str:
+        """ we need to persist data across restarts """
+        return "rocksdb"
 
 
 class DirectInvokeTest(unittest.TestCase):
@@ -258,3 +316,7 @@ class StartFakeEdenFSTest(
             f"fake_edenfs should have recognized the --commandArgumentsLogFile argument",
         )
         return list(argv_file.read_text().splitlines())
+
+
+def eden_start_needs_allow_root_option(systemd: bool) -> bool:
+    return not systemd and "SANDCASTLE" in os.environ

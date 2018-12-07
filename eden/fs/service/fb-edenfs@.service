@@ -13,6 +13,7 @@ Environment=EDENFS_USER_CONFIG_DIR=%h/.edenrc
 EnvironmentFile=-%f/systemd.conf
 
 Environment=EDENFS_CONFIG_DIR=%f
+Environment=EDENFS_USER_ID=%U
 
 # Some important escaping rules for how the quoted argument of 'sh -c' within
 # ExecStart is interpreted by systemd:
@@ -51,8 +52,15 @@ ExecStart=/bin/sh -c ' \
     set -e; \
     set -u; \
     \
-    exec \
-        "$${EDENFS_EXECUTABLE_PATH}" \
+    exec_edenfs_as_root() { \
+        if [ "$${EDENFS_USER_ID}" -eq 0 ]; then \
+            exec "$${EDENFS_EXECUTABLE_PATH}" --allowRoot "$${@}"; \
+        else \
+            exec /usr/bin/sudo -- "$${EDENFS_EXECUTABLE_PATH}" "$${@}"; \
+        fi; \
+    }; \
+    \
+    exec_edenfs_as_root \
         --configPath "$${EDENFS_USER_CONFIG_DIR}" \
         --edenDir "$${EDENFS_CONFIG_DIR}" \
         --edenfs \
@@ -61,7 +69,9 @@ ExecStart=/bin/sh -c ' \
         --foreground; \
 '
 
-NotifyAccess=main
+NotifyAccess=all
 Type=notify
+
+NoNewPrivileges=false
 
 [Install]
