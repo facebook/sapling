@@ -75,6 +75,13 @@ class ThriftTest(testcase.EdenRepoTest):
             self.client.getSHA1(self.mount_path_bytes, [b"hello", b"adir/file"]),
         )
 
+    def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
+        results = self.client.getSHA1(self.mount_path_bytes, [b"./hello"])
+        self.assertEqual(1, len(results))
+        self.assert_error(
+            results[0], "std::domain_error: PathComponent must not be . or .."
+        )
+
     def test_get_sha1_throws_for_empty_string(self) -> None:
         results = self.client.getSHA1(self.mount_path_bytes, [b""])
         self.assertEqual(1, len(results))

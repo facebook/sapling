@@ -375,13 +375,8 @@ Future<Hash> EdenServiceHandler::getSHA1ForPathDefensively(
     StringPiece mountPoint,
     StringPiece path) noexcept {
 #ifndef EDEN_WIN
-  // Calls getSHA1ForPath() and traps all immediate exceptions and converts
-  // them in to a Future result.
-  try {
-    return getSHA1ForPath(mountPoint, path);
-  } catch (const std::system_error& e) {
-    return makeFuture<Hash>(newEdenError(e));
-  }
+  return folly::makeFutureWith(
+      [&] { return getSHA1ForPath(mountPoint, path); });
 #else
   NOT_IMPLEMENTED();
 #endif // !EDEN_WIN
