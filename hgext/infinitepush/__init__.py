@@ -829,13 +829,8 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
-    # In order to be consistent,
-    # we make hidden revisions available for lookup by default.
-    # Update will access hidden commits rather than trying to pull.
-
-    repo = repo.unfiltered()
-
-    if not opts.get("date") and (rev or node) not in repo:
+    unfi = repo.unfiltered()
+    if not opts.get("date") and (rev or node) not in unfi:
         mayberemote = rev or node
         mayberemote = _tryhoist(ui, mayberemote)
         dopull = False
@@ -866,7 +861,7 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
                 # This is useful for dogfooding other hg backend that stores
                 # only public commits (e.g. Mononoke)
                 with _resetinfinitepushpath(ui):
-                    pullcmd(ui, repo, **pullopts)
+                    pullcmd(ui, unfi, **pullopts)
             except Exception:
                 remoteerror = str(sys.exc_info()[1])
                 replacements = {

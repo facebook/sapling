@@ -1,6 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > amend =
+  > directaccess=
   > commitcloud =
   > infinitepush =
   > infinitepushbackup =

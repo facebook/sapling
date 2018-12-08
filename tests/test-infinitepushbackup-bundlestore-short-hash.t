@@ -61,6 +61,7 @@ Check update now accesses hidden commits rather than trying to pull
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > amend=
+  > directaccess=
   > [experimental]
   > evolution=exchange
   > evolution.createmarkers=True
@@ -82,10 +83,8 @@ Test that updating to new head after hiding current head works as expected.
   working directory now at f8b49bf62d4d
   1 changesets hidden
   $ hg up -qr "heads(.::)"
-
-- We should have updated to 'c1b6fe8fce73' instead of '5862354b0f4f'!!
   $ hg log -r "." -T "{node|short}\n"
-  5862354b0f4f
+  c1b6fe8fce73
 
 Check hg up on another client.
 Commit should be pulled from backup storage.
