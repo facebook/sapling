@@ -44,10 +44,24 @@ def systemd_escape_path(path: pathlib.PurePosixPath) -> str:
 
 
 def write_edenfs_systemd_service_config_file(
-    eden_dir: pathlib.Path, edenfs_executable_path: pathlib.Path
+    eden_dir: pathlib.Path,
+    edenfs_executable_path: pathlib.Path,
+    extra_edenfs_arguments: typing.Sequence[str],
 ) -> None:
-    variables = {b"EDENFS_EXECUTABLE_PATH": bytes(edenfs_executable_path)}
+    variables = {
+        b"EDENFS_EXECUTABLE_PATH": bytes(edenfs_executable_path),
+        b"EDENFS_EXTRA_ARGUMENTS": _escape_argument_list(extra_edenfs_arguments),
+    }
     (eden_dir / "systemd.conf").write_bytes(SystemdEnvironmentFile.dumps(variables))
+
+
+def _escape_argument_list(arguments: typing.Sequence[str]) -> bytes:
+    for argument in arguments:
+        if "\n" in arguments:
+            raise ValueError(
+                f"Newlines in arguments are not supported\nArgument: {argument!r}"
+            )
+    return b"\n".join(arg.encode("utf-8") for arg in arguments)
 
 
 class SystemdEnvironmentFile:

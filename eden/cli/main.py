@@ -876,6 +876,13 @@ class StartCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
+        # If the user put an "--" argument before the edenfs args, argparse passes
+        # that through to us.  Strip it out.
+        try:
+            args.edenfs_args.remove("--")
+        except ValueError:
+            pass
+
         if should_use_experimental_systemd_mode():
             if args.foreground:
                 return self.start(args)
@@ -903,10 +910,6 @@ class StartCmd(Subcmd):
         )
 
     def start_using_systemd(self, args: argparse.Namespace) -> int:
-        if args.edenfs_args:
-            raise NotImplementedError(
-                "TODO(T33122320): Forward custom daemon arguments to edenfs"
-            )
         if args.gdb:
             raise NotImplementedError("TODO(T33122320): Implement 'eden start --gdb'")
         if args.strace:
@@ -920,7 +923,9 @@ class StartCmd(Subcmd):
 
         instance = get_eden_instance(args)
         return daemon.start_systemd_service(
-            instance=instance, daemon_binary=args.daemon_binary
+            instance=instance,
+            daemon_binary=args.daemon_binary,
+            edenfs_args=args.edenfs_args,
         )
 
 

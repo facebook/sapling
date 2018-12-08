@@ -60,9 +60,6 @@ class HealthOfFakeEdenFSTest(
             self.assert_process_fails(status_process, exit_code=1)
 
     def test_hanging_thrift_call_reports_daemon_is_unresponsive(self) -> None:
-        self.skip_if_systemd(
-            "TODO(T33122320): Forward custom daemon arguments to edenfs"
-        )
         with self.spawn_fake_edenfs(self.temp_dir, ["--sleepBeforeGetPid=5"]):
             status_process = self.spawn_status(["--timeout", "1"])
             status_process.expect_exact(
@@ -72,9 +69,6 @@ class HealthOfFakeEdenFSTest(
             self.assert_process_fails(status_process, exit_code=1)
 
     def test_slow_thrift_call_reports_daemon_is_healthy(self) -> None:
-        self.skip_if_systemd(
-            "TODO(T33122320): Forward custom daemon arguments to edenfs"
-        )
         with self.spawn_fake_edenfs(self.temp_dir, ["--sleepBeforeGetPid=2"]):
             status_process = self.spawn_status(["--timeout", "10"])
             status_process.expect_exact("eden running normally")

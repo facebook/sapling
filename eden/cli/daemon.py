@@ -180,13 +180,17 @@ def start_daemon(
 
 
 def start_systemd_service(
-    instance: EdenInstance, daemon_binary: Optional[str] = None
+    instance: EdenInstance,
+    daemon_binary: Optional[str] = None,
+    edenfs_args: Optional[List[str]] = None,
 ) -> int:
     if daemon_binary is None:
         raise NotImplementedError("TODO(T33122320): Use system-installed edenfs")
 
     write_edenfs_systemd_service_config_file(
-        eden_dir=instance.state_dir, edenfs_executable_path=pathlib.Path(daemon_binary)
+        eden_dir=instance.state_dir,
+        edenfs_executable_path=pathlib.Path(daemon_binary),
+        extra_edenfs_arguments=edenfs_args or [],
     )
     service_name = edenfs_systemd_service_name(instance.state_dir)
     return subprocess.call(["systemctl", "--user", "start", "--", service_name])
@@ -210,14 +214,6 @@ def _get_daemon_args(
             return 1
     else:
         valid_daemon_binary = daemon_binary
-
-    # If the user put an "--" argument before the edenfs args, argparse passes
-    # that through to us.  Strip it out.
-    if edenfs_args is not None:
-        try:
-            edenfs_args.remove("--")
-        except ValueError:
-            pass
 
     return instance.get_edenfs_start_cmd(
         valid_daemon_binary,
