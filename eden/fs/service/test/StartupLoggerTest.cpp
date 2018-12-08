@@ -38,6 +38,7 @@ using std::string;
 using testing::ContainsRegex;
 using testing::HasSubstr;
 using testing::Not;
+using namespace folly::string_piece_literals;
 
 namespace facebook {
 namespace eden {
@@ -50,14 +51,39 @@ struct FunctionResult {
 };
 
 FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName);
+FunctionResult runFunctionInSeparateProcess(
+    folly::StringPiece functionName,
+    std::vector<std::string> arguments);
 folly::ProcessReturnCode waitWithTimeout(
     folly::Subprocess&,
     std::chrono::milliseconds timeout);
 bool isReadablePipeBroken(int fd);
 bool isWritablePipeBroken(int fd);
+
+bool fileExists(folly::fs::path);
 } // namespace
 
-class DaemonStartupLoggerTest : public ::testing::Test {
+class StartupLoggerTestBase : public ::testing::Test {
+ protected:
+  string logPath() {
+    return logFile_.path().string();
+  }
+  string readLogContents() {
+    string logContents;
+    if (!folly::readFile(logPath().c_str(), logContents)) {
+      throw std::runtime_error(folly::to<string>(
+          "error reading from log file ",
+          logPath(),
+          ": ",
+          folly::errnoStr(errno)));
+    }
+    return logContents;
+  }
+
+  TemporaryFile logFile_{"eden_test_log"};
+};
+
+class DaemonStartupLoggerTest : public StartupLoggerTestBase {
  protected:
   /*
    * Use DaemonStartupLogger::daemonizeImpl() to run the specified function in
@@ -101,23 +127,6 @@ class DaemonStartupLoggerTest : public ::testing::Test {
       StringPiece logPath) {
     return logger.waitForChildStatus(std::move(readPipe), childPid, logPath);
   }
-
-  string logPath() {
-    return logFile_.path().string();
-  }
-  string readLogContents() {
-    string logContents;
-    if (!folly::readFile(logPath().c_str(), logContents)) {
-      throw std::runtime_error(folly::to<string>(
-          "error reading from log file ",
-          logPath(),
-          ": ",
-          folly::errnoStr(errno)));
-    }
-    return logContents;
-  }
-
-  TemporaryFile logFile_{"eden_test_log"};
 };
 
 TEST_F(DaemonStartupLoggerTest, crashWithNoResult) {
@@ -383,13 +392,67 @@ void successWritesStartedMessageToStandardErrorForegroundChild() {
   logger.success();
 }
 
+class FileStartupLoggerTest : public StartupLoggerTestBase {};
+
+TEST_F(FileStartupLoggerTest, loggerCreatesFileIfMissing) {
+  auto tempDir = folly::test::TemporaryDirectory();
+  auto logPath = tempDir.path() / "startup.log";
+  ASSERT_FALSE(fileExists(logPath));
+  auto logger = FileStartupLogger{logPath.string()};
+  EXPECT_TRUE(fileExists(logPath));
+}
+
+TEST_F(FileStartupLoggerTest, loggingWritesMessagesToFile) {
+  auto logger = FileStartupLogger{logPath()};
+  logger.log("hello world");
+  logger.warn("warning message");
+  EXPECT_EQ("hello world\nwarning message\n", readLogContents());
+}
+
+TEST_F(FileStartupLoggerTest, loggingAppendsToFileIfItAlreadyExists) {
+  ASSERT_TRUE(folly::writeFile("existing line\n"_sp, logPath().c_str()));
+  auto logger = FileStartupLogger{logPath()};
+  logger.log("new line");
+  EXPECT_EQ("existing line\nnew line\n", readLogContents());
+}
+
+TEST_F(FileStartupLoggerTest, successWritesMessageToFile) {
+  auto logger = FileStartupLogger{logPath()};
+  logger.success();
+  EXPECT_EQ(
+      folly::to<std::string>("Started edenfs (pid ", getpid(), ")\n"),
+      readLogContents());
+}
+
+TEST_F(FileStartupLoggerTest, exitUnsuccessfullyWritesMessageAndKillsProcess) {
+  auto result = runFunctionInSeparateProcess(
+      "exitUnsuccessfullyWritesMessageAndKillsProcessChild",
+      std::vector<std::string>{logPath()});
+  EXPECT_EQ("exited with status 3", result.returnCode.str());
+  EXPECT_EQ("error message\n", readLogContents());
+}
+
+void exitUnsuccessfullyWritesMessageAndKillsProcessChild(std::string logPath) {
+  auto logger = FileStartupLogger{logPath};
+  logger.exitUnsuccessfully(3, "error message");
+}
+
 namespace {
 FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
+  return runFunctionInSeparateProcess(functionName, std::vector<std::string>{});
+}
+
+FunctionResult runFunctionInSeparateProcess(
+    folly::StringPiece functionName,
+    std::vector<std::string> arguments) {
+  auto command = std::vector<std::string>{{
+      folly::fs::executable_path().string(),
+      std::string{functionName},
+  }};
+  command.insert(command.end(), arguments.begin(), arguments.end());
+
   auto process = folly::Subprocess{
-      std::vector<std::string>{{
-          folly::fs::executable_path().string(),
-          std::string{functionName},
-      }},
+      command,
       folly::Subprocess::Options{}.pipeStdout().pipeStderr(),
   };
   SCOPE_FAIL {
@@ -401,16 +464,28 @@ FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
   return FunctionResult{out, err, returnCode};
 }
 
-[[noreturn]] void runFunctionInCurrentProcess(folly::StringPiece functionName) {
-  auto checkFunction = [&](folly::StringPiece name, void (*function)()) {
+[[noreturn]] void runFunctionInCurrentProcess(
+    folly::StringPiece functionName,
+    std::vector<std::string> arguments) {
+  auto checkFunction = [&](folly::StringPiece name, auto function) {
     if (functionName == name) {
-      function();
+      if constexpr (std::is_invocable_v<decltype(function)>) {
+        function();
+      } else if constexpr (std::is_invocable_v<
+                               decltype(function),
+                               std::string>) {
+        auto argument = std::string{arguments.at(0)};
+        function(std::move(argument));
+      } else {
+        XLOG(FATAL) << "Unsupported function type";
+      }
       std::exit(0);
     }
   };
 #define CHECK_FUNCTION(name) checkFunction(#name, name)
   CHECK_FUNCTION(daemonClosesStandardFileDescriptorsChild);
   CHECK_FUNCTION(exitUnsuccessfullyMakesProcessExitWithCodeChild);
+  CHECK_FUNCTION(exitUnsuccessfullyWritesMessageAndKillsProcessChild);
   CHECK_FUNCTION(loggedMessagesAreWrittenToStandardErrorChild);
   CHECK_FUNCTION(programExitsUnsuccessfullyIfLogFileIsInaccessibleChild);
   CHECK_FUNCTION(successWritesStartedMessageToStandardErrorDaemonChild);
@@ -465,8 +540,11 @@ bool isWritablePipeBroken(int fd) {
   return false;
 }
 
+bool fileExists(folly::fs::path path) {
+  auto status = folly::fs::status(path);
+  return folly::fs::exists(status) && folly::fs::is_regular_file(status);
+}
 } // namespace
-
 } // namespace eden
 } // namespace facebook
 
@@ -475,7 +553,9 @@ int main(int argc, char** argv) {
   auto removeFlags = true;
   auto initGuard = folly::Init(&argc, &argv, removeFlags);
   if (argc >= 2) {
-    runFunctionInCurrentProcess(argv[1]);
+    auto functionName = folly::StringPiece{argv[1]};
+    auto arguments = std::vector<std::string>{&argv[2], &argv[argc]};
+    runFunctionInCurrentProcess(functionName, std::move(arguments));
   }
   return RUN_ALL_TESTS();
 }

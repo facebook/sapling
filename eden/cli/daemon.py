@@ -13,13 +13,12 @@ import pathlib
 import signal
 import subprocess
 import sys
+import time
 from typing import Dict, List, NoReturn, Optional, Tuple, Union
 
 from .config import EdenInstance
-from .systemd import (
-    edenfs_systemd_service_name,
-    write_edenfs_systemd_service_config_file,
-)
+from .logfile import forward_log_file
+from .systemd import EdenFSSystemdServiceConfig, edenfs_systemd_service_name
 from .util import ShutdownError, poll_until, print_stderr
 
 
@@ -187,13 +186,29 @@ def start_systemd_service(
     if daemon_binary is None:
         raise NotImplementedError("TODO(T33122320): Use system-installed edenfs")
 
-    write_edenfs_systemd_service_config_file(
+    service_config = EdenFSSystemdServiceConfig(
         eden_dir=instance.state_dir,
         edenfs_executable_path=pathlib.Path(daemon_binary),
         extra_edenfs_arguments=edenfs_args or [],
     )
+    service_config.write_config_file()
     service_name = edenfs_systemd_service_name(instance.state_dir)
-    return subprocess.call(["systemctl", "--user", "start", "--", service_name])
+
+    startup_log_path = service_config.startup_log_file_path
+    startup_log_path.write_bytes(b"")
+    with forward_log_file(  # pyre-ignore (T37455202)
+        startup_log_path, sys.stderr.buffer
+    ) as log_forwarder:
+        with subprocess.Popen(
+            ["systemctl", "--user", "start", "--", service_name]
+        ) as start_process:
+            while True:
+                log_forwarder.poll()
+                exit_code = start_process.poll()
+                if exit_code is not None:
+                    log_forwarder.poll()
+                    return exit_code
+                time.sleep(0.1)
 
 
 def _get_daemon_args(

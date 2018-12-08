@@ -186,5 +186,18 @@ class ForegroundStartupLogger : public StartupLogger {
   [[noreturn]] void failAndExitImpl(uint8_t exitCode) override;
 };
 
+class FileStartupLogger : public StartupLogger {
+ public:
+  explicit FileStartupLogger(folly::StringPiece startupLogFile);
+
+ protected:
+  void writeMessageImpl(folly::LogLevel level, folly::StringPiece message)
+      override;
+  void successImpl() override;
+  [[noreturn]] void failAndExitImpl(uint8_t exitCode) override;
+
+  folly::File logFile_;
+};
+
 } // namespace eden
 } // namespace facebook

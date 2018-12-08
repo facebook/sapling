@@ -14,6 +14,7 @@ Environment=EDENFS_USER_CONFIG_DIR=%h/.edenrc
 EnvironmentFile=-%f/systemd.conf
 
 Environment=EDENFS_CONFIG_DIR=%f
+Environment=EDENFS_STARTUP_LOG=%f/startup.log
 Environment=EDENFS_USER_ID=%U
 
 # Some important escaping rules for how the quoted argument of 'sh -c' within
@@ -74,6 +75,7 @@ ExecStart=/bin/sh -c ' \
         --etcEdenDir "$${EDENFS_SYSTEM_CONFIG_DIR}" \
         --experimentalSystemd \
         --foreground \
+        --startupLogPath "$${EDENFS_STARTUP_LOG}" \
         $${EDENFS_EXTRA_ARGUMENTS}; \
 '
 

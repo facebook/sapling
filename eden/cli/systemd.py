@@ -43,25 +43,48 @@ def systemd_escape_path(path: pathlib.PurePosixPath) -> str:
     return stdout.decode("utf-8").rstrip("\n")
 
 
-def write_edenfs_systemd_service_config_file(
-    eden_dir: pathlib.Path,
-    edenfs_executable_path: pathlib.Path,
-    extra_edenfs_arguments: typing.Sequence[str],
-) -> None:
-    variables = {
-        b"EDENFS_EXECUTABLE_PATH": bytes(edenfs_executable_path),
-        b"EDENFS_EXTRA_ARGUMENTS": _escape_argument_list(extra_edenfs_arguments),
-    }
-    (eden_dir / "systemd.conf").write_bytes(SystemdEnvironmentFile.dumps(variables))
+class EdenFSSystemdServiceConfig:
+    __eden_dir: pathlib.Path
+    __edenfs_executable_path: pathlib.Path
+    __extra_edenfs_arguments: typing.List[str]
 
+    def __init__(
+        self,
+        eden_dir: pathlib.Path,
+        edenfs_executable_path: pathlib.Path,
+        extra_edenfs_arguments: typing.Sequence[str],
+    ) -> None:
+        super().__init__()
+        self.__eden_dir = eden_dir
+        self.__edenfs_executable_path = edenfs_executable_path
+        self.__extra_edenfs_arguments = list(extra_edenfs_arguments)
 
-def _escape_argument_list(arguments: typing.Sequence[str]) -> bytes:
-    for argument in arguments:
-        if "\n" in arguments:
-            raise ValueError(
-                f"Newlines in arguments are not supported\nArgument: {argument!r}"
-            )
-    return b"\n".join(arg.encode("utf-8") for arg in arguments)
+    @property
+    def config_file_path(self) -> pathlib.Path:
+        return self.__eden_dir / "systemd.conf"
+
+    @property
+    def startup_log_file_path(self) -> pathlib.Path:
+        # TODO(T33122320): Move this into <eden_dir>/logs/.
+        return self.__eden_dir / "startup.log"
+
+    def write_config_file(self) -> None:
+        variables = {
+            b"EDENFS_EXECUTABLE_PATH": bytes(self.__edenfs_executable_path),
+            b"EDENFS_EXTRA_ARGUMENTS": self.__escape_argument_list(
+                self.__extra_edenfs_arguments
+            ),
+        }
+        self.config_file_path.write_bytes(SystemdEnvironmentFile.dumps(variables))
+
+    @staticmethod
+    def __escape_argument_list(arguments: typing.Sequence[str]) -> bytes:
+        for argument in arguments:
+            if "\n" in arguments:
+                raise ValueError(
+                    f"Newlines in arguments are not supported\nArgument: {argument!r}"
+                )
+        return b"\n".join(arg.encode("utf-8") for arg in arguments)
 
 
 class SystemdEnvironmentFile:

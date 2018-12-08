@@ -40,14 +40,29 @@ DEFINE_bool(
     false,
     "Run edenfs in the foreground, rather than daemonizing "
     "as a background process");
+DEFINE_string(
+    startupLogPath,
+    "",
+    "If set, log messages to this file until startup completes.");
+
+namespace {
+void writeMessageToFile(folly::File&, folly::StringPiece);
+}
 
 std::unique_ptr<StartupLogger> daemonizeIfRequested(
     folly::StringPiece logPath) {
   if (FLAGS_foreground) {
+    if (!FLAGS_startupLogPath.empty()) {
+      return std::make_unique<FileStartupLogger>(FLAGS_startupLogPath);
+    }
     auto startupLogger = std::make_unique<ForegroundStartupLogger>();
     return startupLogger;
   } else {
     auto startupLogger = std::make_unique<DaemonStartupLogger>();
+    if (!FLAGS_startupLogPath.empty()) {
+      startupLogger->warn(
+          "Ignoring --startupLogPath because --foreground was not specified");
+    }
     startupLogger->daemonize(logPath);
     return startupLogger;
   }
@@ -94,16 +109,7 @@ void DaemonStartupLogger::writeMessageImpl(
     StringPiece message) {
   auto& file = origStderr_;
   if (file) {
-    std::array<iovec, 2> iov;
-    iov[0].iov_base = const_cast<char*>(message.data());
-    iov[0].iov_len = message.size();
-    constexpr StringPiece newline("\n");
-    iov[1].iov_base = const_cast<char*>(newline.data());
-    iov[1].iov_len = newline.size();
-
-    // We intentionally don't check the return code from writevFull()
-    // There is not much we can do if it fails.
-    (void)folly::writevFull(file.fd(), iov.data(), iov.size());
+    writeMessageToFile(file, message);
   }
 }
 
@@ -315,6 +321,38 @@ void ForegroundStartupLogger::successImpl() {}
 [[noreturn]] void ForegroundStartupLogger::failAndExitImpl(uint8_t exitCode) {
   exit(exitCode);
 }
+
+FileStartupLogger::FileStartupLogger(folly::StringPiece startupLogPath)
+    : logFile_{startupLogPath,
+               O_APPEND | O_CLOEXEC | O_CREAT | O_WRONLY,
+               0644} {}
+
+void FileStartupLogger::writeMessageImpl(
+    folly::LogLevel,
+    folly::StringPiece message) {
+  writeMessageToFile(logFile_, message);
+}
+
+void FileStartupLogger::successImpl() {}
+
+[[noreturn]] void FileStartupLogger::failAndExitImpl(uint8_t exitCode) {
+  exit(exitCode);
+}
+
+namespace {
+void writeMessageToFile(folly::File& file, folly::StringPiece message) {
+  std::array<iovec, 2> iov;
+  iov[0].iov_base = const_cast<char*>(message.data());
+  iov[0].iov_len = message.size();
+  constexpr StringPiece newline("\n");
+  iov[1].iov_base = const_cast<char*>(newline.data());
+  iov[1].iov_len = newline.size();
+
+  // We intentionally don't check the return code from writevFull()
+  // There is not much we can do if it fails.
+  (void)folly::writevFull(file.fd(), iov.data(), iov.size());
+}
+} // namespace
 
 } // namespace eden
 } // namespace facebook

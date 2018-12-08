@@ -270,7 +270,6 @@ class StartFakeEdenFSTest(
             self.assert_process_fails(start_process, 1)
 
     def test_eden_start_fails_if_edenfs_fails_during_startup(self) -> None:
-        self.skip_if_systemd("TODO(T33122320): Forward startup logs to CLI")
         start_process = self.spawn_start(daemon_args=["--failDuringStartup"])
         start_process.expect_exact(
             "Started successfully, but reporting failure because "
