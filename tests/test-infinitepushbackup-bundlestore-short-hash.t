@@ -73,6 +73,20 @@ Check update now accesses hidden commits rather than trying to pull
   $ hg up c1b6fe8fce73
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+Test that updating to new head after hiding current head works as expected.
+  $ hg up -q ".^"
+  $ mkcommit newheadcommit
+  $ hg hide -r "."
+  hiding commit 5862354b0f4f "newheadcommit"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at f8b49bf62d4d
+  1 changesets hidden
+  $ hg up -qr "heads(.::)"
+
+- We should have updated to 'c1b6fe8fce73' instead of '5862354b0f4f'!!
+  $ hg log -r "." -T "{node|short}\n"
+  5862354b0f4f
+
 Check hg up on another client.
 Commit should be pulled from backup storage.
   $ (cd ../client2 && hg up c1b6fe)
