@@ -22,12 +22,14 @@ from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
-from .lib.service_test_case import ServiceTestCaseBase, service_test
+from .lib.service_test_case import (
+    ServiceTestCaseBase,
+    SystemdServiceTestCaseMarker,
+    service_test,
+)
 
 
-# TODO(T33122320): Support 'eden restart' with systemd.
-@service_test(skip_systemd=True)
-class RestartTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin):
+class RestartTestBase(ServiceTestCaseBase, TemporaryDirectoryMixin):
     def setUp(self) -> None:
         self.tmp_dir = self.make_temporary_directory()
 
@@ -57,6 +59,9 @@ class RestartTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectory
         daemon = self.spawn_fake_edenfs(eden_dir=pathlib.Path(self.tmp_dir))
         return daemon.process_id
 
+
+@service_test
+class RestartTest(RestartTestBase, PexpectAssertionMixin):
     def _check_edenfs_health(self) -> HealthStatus:
         instance = EdenInstance(self.tmp_dir, etc_eden_dir=None, home_dir=None)
         return instance.check_health()
@@ -247,3 +252,29 @@ class RestartTest(ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectory
         )
         restart_process.expect_exact("Failed to start edenfs")
         self.assert_process_fails(restart_process, 1)
+
+
+@service_test
+class RestartWithSystemdTest(
+    RestartTestBase, SystemdServiceTestCaseMarker, PexpectAssertionMixin
+):
+    def test_eden_restart_starts_service_if_not_running(self) -> None:
+        restart_process = self._spawn_restart()
+        restart_process.expect_exact("Eden is not currently running.  Starting it...")
+        restart_process.expect_exact("Started edenfs")
+        self.assert_process_succeeds(restart_process)
+        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.tmp_dir))
+
+    def test_service_is_active_after_full_eden_restart(self) -> None:
+        self._start_fake_edenfs()
+        restart_process = self._spawn_restart("--force")
+        self.assert_process_succeeds(restart_process)
+        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.tmp_dir))
+
+    def test_graceful_restart_is_not_supported_yet(self) -> None:
+        self._start_fake_edenfs()
+        restart_process = self._spawn_restart("--graceful")
+        restart_process.expect_exact("NotImplementedError")
+        restart_process.expect_exact("eden restart --graceful")
+        self.assert_process_fails(restart_process, 1)
+        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.tmp_dir))

@@ -1056,14 +1056,24 @@ class RestartCmd(Subcmd):
 
     def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
-        daemon.exec_daemon(
-            instance, daemon_binary=self.args.daemon_binary, takeover=True
-        )
-        return 1  # never reached
+        if should_use_experimental_systemd_mode():
+            raise NotImplementedError(
+                "TODO(T33122320): Implement 'eden restart --graceful'"
+            )
+        else:
+            daemon.exec_daemon(
+                instance, daemon_binary=self.args.daemon_binary, takeover=True
+            )
+            return 1  # never reached
 
     def _start(self, instance: EdenInstance) -> int:
         print("Eden is not currently running.  Starting it...")
-        daemon.exec_daemon(instance, daemon_binary=self.args.daemon_binary)
+        if should_use_experimental_systemd_mode():
+            return daemon.start_systemd_service(
+                instance=instance, daemon_binary=self.args.daemon_binary
+            )
+        else:
+            daemon.exec_daemon(instance, daemon_binary=self.args.daemon_binary)
         return 1  # never reached
 
     def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
@@ -1120,7 +1130,14 @@ re-open these files after Eden is restarted.
         self._wait_for_stop(instance, pid, timeout)
 
     def _finish_restart(self, instance: EdenInstance) -> int:
-        exit_code = daemon.start_daemon(instance, daemon_binary=self.args.daemon_binary)
+        if should_use_experimental_systemd_mode():
+            exit_code = daemon.start_systemd_service(
+                instance=instance, daemon_binary=self.args.daemon_binary
+            )
+        else:
+            exit_code = daemon.start_daemon(
+                instance, daemon_binary=self.args.daemon_binary
+            )
         if exit_code != 0:
             print("Failed to start edenfs!", file=sys.stderr)
             return exit_code
