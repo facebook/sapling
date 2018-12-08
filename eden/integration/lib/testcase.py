@@ -18,13 +18,13 @@ import typing
 import unittest
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type
 
+from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.hypothesis import set_up_hypothesis
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from eden.thrift import EdenClient
 from hypothesis.internal.detection import is_hypothesis_test
 
 from . import edenclient, gitrepo, hgrepo, repobase, util
-from .environment_variable import EnvironmentVariableMixin
 
 
 set_up_hypothesis()

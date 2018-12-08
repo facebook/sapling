@@ -12,8 +12,9 @@ import pathlib
 import typing
 import unittest
 
+from eden.test_support.environment_variable import EnvironmentVariableMixin
+
 from .edenfs_systemd import EdenFSSystemdMixin
-from .environment_variable import EnvironmentVariableMixin
 from .fake_edenfs import FakeEdenFS
 from .systemd import SystemdUserServiceManagerMixin
 from .testcase import test_replicator

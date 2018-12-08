@@ -14,10 +14,10 @@ import typing
 import unittest
 
 import pexpect
+from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib.edenfs_systemd import EdenFSSystemdMixin
-from .lib.environment_variable import EnvironmentVariableMixin
 from .lib.find_executables import FindExe
 from .lib.systemd import SystemdUserServiceManagerMixin
 

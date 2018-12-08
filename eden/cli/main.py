@@ -49,7 +49,6 @@ from . import (
 from .cmd_util import get_eden_instance, require_checkout
 from .config import EdenInstance
 from .subcmd import Subcmd
-from .systemd import should_use_experimental_systemd_mode
 from .util import ShutdownError, print_stderr
 
 
@@ -883,17 +882,17 @@ class StartCmd(Subcmd):
         except ValueError:
             pass
 
-        if should_use_experimental_systemd_mode():
-            if args.foreground:
-                return self.start(args)
-            else:
-                return self.start_using_systemd(args)
-        else:
-            return self.start(args)
-
-    def start(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
+        if instance.should_use_experimental_systemd_mode():
+            if args.foreground:
+                return self.start(args, instance)
+            else:
+                return self.start_using_systemd(args, instance)
+        else:
+            return self.start(args, instance)
+
+    def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
         if args.if_necessary and not instance.get_mount_paths():
             print("No Eden mount points configured.")
             return 0
@@ -909,7 +908,9 @@ class StartCmd(Subcmd):
             foreground=args.foreground,
         )
 
-    def start_using_systemd(self, args: argparse.Namespace) -> int:
+    def start_using_systemd(
+        self, args: argparse.Namespace, instance: EdenInstance
+    ) -> int:
         if args.gdb:
             raise NotImplementedError("TODO(T33122320): Implement 'eden start --gdb'")
         if args.strace:
@@ -921,7 +922,6 @@ class StartCmd(Subcmd):
                 "TODO(T33122320): Implement 'eden start --takeover'"
             )
 
-        instance = get_eden_instance(args)
         return daemon.start_systemd_service(
             instance=instance,
             daemon_binary=args.daemon_binary,
@@ -1056,7 +1056,7 @@ class RestartCmd(Subcmd):
 
     def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
-        if should_use_experimental_systemd_mode():
+        if instance.should_use_experimental_systemd_mode():
             raise NotImplementedError(
                 "TODO(T33122320): Implement 'eden restart --graceful'"
             )
@@ -1068,7 +1068,7 @@ class RestartCmd(Subcmd):
 
     def _start(self, instance: EdenInstance) -> int:
         print("Eden is not currently running.  Starting it...")
-        if should_use_experimental_systemd_mode():
+        if instance.should_use_experimental_systemd_mode():
             return daemon.start_systemd_service(
                 instance=instance, daemon_binary=self.args.daemon_binary
             )
@@ -1130,7 +1130,7 @@ re-open these files after Eden is restarted.
         self._wait_for_stop(instance, pid, timeout)
 
     def _finish_restart(self, instance: EdenInstance) -> int:
-        if should_use_experimental_systemd_mode():
+        if instance.should_use_experimental_systemd_mode():
             exit_code = daemon.start_systemd_service(
                 instance=instance, daemon_binary=self.args.daemon_binary
             )

@@ -31,7 +31,6 @@ import facebook.eden.ttypes as eden_ttypes
 import toml
 
 from . import configinterpolator, configutil, util
-from .systemd import should_use_experimental_systemd_mode
 from .util import EdenStartError, HealthStatus, print_stderr, readlink_retry_estale
 
 
@@ -209,6 +208,11 @@ class EdenInstance:
             return parser.get(section, option)
         except (configparser.NoOptionError, configparser.NoSectionError) as exc:
             raise KeyError(str(exc))
+
+    def should_use_experimental_systemd_mode(self) -> bool:
+        # TODO(T33122320): Delete this environment variable when systemd is properly
+        # integrated.
+        return os.getenv("EDEN_EXPERIMENTAL_SYSTEMD") == "1"
 
     def print_full_config(self) -> None:
         parser = self._loadConfig()
@@ -663,7 +667,7 @@ Do you want to run `eden mount %s` instead?"""
             cmd = ["strace", "-fttT", "-o", strace_file] + cmd
         if extra_args:
             cmd.extend(extra_args)
-        if should_use_experimental_systemd_mode():
+        if self.should_use_experimental_systemd_mode():
             # TODO(T33122320): Delete this after making 'eden restart' and other
             # callers support systemd mode. (--foreground should never set
             # --experimentalSystemd.)

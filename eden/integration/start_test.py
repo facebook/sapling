@@ -18,12 +18,12 @@ from typing import List, Optional
 import pexpect
 from eden.cli.config import EdenInstance
 from eden.cli.util import HealthStatus
+from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from fb303.ttypes import fb_status
 
 from .lib import testcase
 from .lib.edenfs_systemd import EdenFSSystemdMixin
-from .lib.environment_variable import EnvironmentVariableMixin
 from .lib.fake_edenfs import read_fake_edenfs_argv_file
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process

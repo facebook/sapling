@@ -15,6 +15,7 @@ from typing import Dict, List, Optional
 
 import toml
 import toml.decoder
+from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .. import config as config_mod, configutil, util
@@ -85,7 +86,9 @@ hooks = "/home/${USER}/my-git-hook"
     return cfg_file
 
 
-class TomlConfigTest(unittest.TestCase, TemporaryDirectoryMixin):
+class TomlConfigTest(
+    unittest.TestCase, TemporaryDirectoryMixin, EnvironmentVariableMixin
+):
     def setUp(self) -> None:
         self._test_dir = self.make_temporary_directory()
 
@@ -265,3 +268,16 @@ class TomlConfigTest(unittest.TestCase, TemporaryDirectoryMixin):
         )
         with self.assertRaises(toml.decoder.TomlDecodeError):
             cfg._loadConfig()
+
+    def test_experimental_systemd_is_disabled_by_default(self) -> None:
+        cfg = EdenInstance(
+            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
+        )
+        self.assertFalse(cfg.should_use_experimental_systemd_mode())
+
+    def test_experimental_systemd_is_enabled_with_environment_variable(self) -> None:
+        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
+        cfg = EdenInstance(
+            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
+        )
+        self.assertTrue(cfg.should_use_experimental_systemd_mode())
