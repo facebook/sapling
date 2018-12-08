@@ -43,5 +43,5 @@ class RageTest(testcase.EdenRepoTest):
         self.assertIn("\nList of running Eden processes:\n", output)
         self.assertIn("\nList of mount points:\n", output)
         self.assertIn(f"\nMount point info for path {self.mount}:\n", output)
-        self.assertIn("General EdenFS Statistics", output)
-        self.assertIn(f"\nMount information for {self.mount}\n", output)
+        self.assertIn("edenfs memory usage", output)
+        self.assertIn(f"{self.mount}\n", output)
