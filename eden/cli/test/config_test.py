@@ -162,9 +162,7 @@ class TomlConfigTest(
 
     def test_load_config(self) -> None:
         self.copy_config_files()
-        cfg = EdenInstance(
-            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
-        )
+        cfg = self.get_config()
 
         # Check the various config sections
         self.assert_core_config(cfg)
@@ -186,9 +184,7 @@ class TomlConfigTest(
         self.copy_config_files()
 
         os.remove(os.path.join(self._home_dir, ".edenrc"))
-        cfg = EdenInstance(
-            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
-        )
+        cfg = self.get_config()
         cfg._loadConfig()
 
         exp_repos = ["fbsource"]
@@ -217,9 +213,7 @@ class TomlConfigTest(
     def test_add_existing_repo(self) -> None:
         self.copy_config_files()
 
-        cfg = EdenInstance(
-            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
-        )
+        cfg = self.get_config()
         with self.assertRaisesRegex(
             config_mod.UsageError,
             "repository fbsource already exists. You will need to edit "
@@ -231,15 +225,11 @@ class TomlConfigTest(
     def test_add_repo(self) -> None:
         self.copy_config_files()
 
-        cfg = EdenInstance(
-            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
-        )
+        cfg = self.get_config()
         cfg.add_repository("fbandroid", "hg", f"/data/users/{self._user}/fbandroid")
 
         # Lets reload our config
-        cfg = EdenInstance(
-            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
-        )
+        cfg = self.get_config()
         # Check the various config sections
         self.assert_core_config(cfg)
         exp_repos = ["fbandroid", "fbsource", "git"]
@@ -263,21 +253,18 @@ class TomlConfigTest(
         with open(path, "w") as text_file:
             text_file.write(get_toml_test_file_invalid())
 
-        cfg = EdenInstance(
-            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
-        )
+        cfg = self.get_config()
         with self.assertRaises(toml.decoder.TomlDecodeError):
             cfg._loadConfig()
 
     def test_experimental_systemd_is_disabled_by_default(self) -> None:
-        cfg = EdenInstance(
-            self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
-        )
-        self.assertFalse(cfg.should_use_experimental_systemd_mode())
+        self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
 
     def test_experimental_systemd_is_enabled_with_environment_variable(self) -> None:
         self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
-        cfg = EdenInstance(
+        self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
+
+    def get_config(self) -> EdenInstance:
+        return EdenInstance(
             self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
         )
-        self.assertTrue(cfg.should_use_experimental_systemd_mode())
