@@ -260,10 +260,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             r#"
             <crpath>      -P, --configrepo_path [PATH]           'path to the config repo in rocksdb form'
 
-            -C, --configrepo_hash [HASH]                         'config repo commit hash'
-
-            <crbook>      -C, --configrepo_book [BOOK]           'config repo bookmark'
-
             <bookmark>    -B, --bookmark [BOOK]                  'bookmark to tail'
                            --poll-interval                       'the poll interval in seconds'
 

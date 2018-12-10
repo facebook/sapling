@@ -69,10 +69,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             r#"
             <crpath>      -P, --configrepo_path [PATH]           'path to the config repo in rocksdb form'
 
-            -C, --configrepo_hash [HASH]                         'config repo commit hash'
-
-            <crbook>      -C, --configrepo_book [BOOK]           'config repo bookmark'
-
                           --listening-host-port <PATH>           'tcp address to listen to in format `host:port`'
 
             -p, --thrift_port [PORT] 'if provided the thrift server will start on this port'

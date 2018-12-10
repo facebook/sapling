@@ -40,7 +40,6 @@ function mononoke {
   --debug \
   --listening-host-port 127.0.0.1:"$MONONOKE_SOCKET" \
   -P "$TESTTMP/mononoke-config" \
-   --configrepo_book local_master \
    --do-not-init-cachelib >> "$TESTTMP/mononoke.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
