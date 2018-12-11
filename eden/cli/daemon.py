@@ -132,6 +132,15 @@ class DaemonBinaryNotFound(Exception):
         super().__init__("unable to find edenfs executable")
 
 
+def _find_daemon_binary(explicit_daemon_binary: Optional[str]) -> str:
+    if explicit_daemon_binary is not None:
+        return explicit_daemon_binary
+    daemon_binary = _find_default_daemon_binary()
+    if daemon_binary is None:
+        raise DaemonBinaryNotFound()
+    return daemon_binary
+
+
 def exec_daemon(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
@@ -190,8 +199,11 @@ def start_systemd_service(
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
 ) -> int:
-    if daemon_binary is None:
-        raise NotImplementedError("TODO(T33122320): Use system-installed edenfs")
+    try:
+        daemon_binary = _find_daemon_binary(daemon_binary)
+    except DaemonBinaryNotFound as e:
+        print_stderr(f"error: {e}")
+        return 1
 
     service_config = EdenFSSystemdServiceConfig(
         eden_dir=instance.state_dir,
@@ -229,15 +241,9 @@ def _get_daemon_args(
     foreground: bool = False,
 ) -> Tuple[List[str], Dict[str, str]]:
     """Get the command and environment to use to start edenfs."""
-    if daemon_binary is None:
-        valid_daemon_binary = _find_default_daemon_binary()
-        if valid_daemon_binary is None:
-            raise DaemonBinaryNotFound()
-    else:
-        valid_daemon_binary = daemon_binary
-
+    daemon_binary = _find_daemon_binary(daemon_binary)
     return instance.get_edenfs_start_cmd(
-        valid_daemon_binary,
+        daemon_binary,
         edenfs_args,
         takeover=takeover,
         gdb=gdb,
