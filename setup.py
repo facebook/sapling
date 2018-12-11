@@ -588,7 +588,7 @@ class asset(object):
                 if all((name + "/").startswith(prefix) for name in f.getnames()):
                     destpath = os.path.dirname(destpath)
                 f.extractall(destpath)
-        elif srcpath.endswith(".zip"):
+        elif srcpath.endswith(".zip") or srcpath.endswith(".whl"):
             with zipfile.ZipFile(srcpath, "r") as f:
                 # Same as above. Strip the destdir name if all entries ahve it.
                 prefix = destdir + "/"
@@ -620,12 +620,38 @@ class fetchbuilddeps(Command):
     description = "download build depencencies"
     user_options = []
 
-    assets = [
+    re2assets = [
         asset(
             name="re2-2018-04-01.tar.gz",
             url="https://github.com/google/re2/archive/2018-04-01.tar.gz",
         )
     ]
+
+    # The URLs are extracted from output of "pip2 download ipython"
+    ipythonassets = [
+        asset(url=url)
+        for url in [
+            "https://files.pythonhosted.org/packages/b0/88/d996ab8be22cea1eaa18baee3678a11265e18cf09974728d683c51102148/ipython-5.8.0-py2-none-any.whl",
+            "https://files.pythonhosted.org/packages/bc/bb/a24838832ba35baf52f32ab1a49b906b5f82fb7c76b2f6a7e35e140bac30/decorator-4.3.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/d1/b0/1a6c262da35c779dd79550137aa7c298a424987240a28792ec5ccf48f848/prompt_toolkit-1.0.15-py2-none-any.whl",
+            "https://files.pythonhosted.org/packages/e7/16/da8cb8046149d50940c6110310983abb359bbb8cbc3539e6bef95c29428a/setuptools-40.6.2-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/7d/cd/1750d6c35fe86d35f8562091737907f234b78fdffab42b29c72b1dd861f4/backports.shutil_get_terminal_size-1.0.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/89/e6/b5a1de8b0cc4e07ca1b305a4fcc3f9806025c1b651ea302646341222f88b/pexpect-4.6.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/2a/46/c696dcf1c7aad917b39b875acdc5451975e3a9b4890dca8329983201c97a/pathlib2-2.3.3-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/fc/41/4f900a7852e25bb9350b4e3ee8c4aba0ee32abefd401456962b25f954823/Pygments-2.3.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/93/d6/abcb22de61d78e2fc3959c964628a5771e47e7cc60d53e9342e21ed6cc9a/traitlets-4.3.2-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/3d/57/4d9c9e3ae9a255cd4e1106bb57e24056d3d0709fc01b2e3e345898e49d5b/simplegeneric-0.8.1.zip",
+            "https://files.pythonhosted.org/packages/9a/41/220f49aaea88bc6fa6cba8d05ecf24676326156c23b991e80b3f2fc24c77/pickleshare-0.7.5-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/7e/9f/526a6947247599b084ee5232e4f9190a38f398d7300d866af3ab571a5bfe/wcwidth-0.1.7-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/67/4b/141a581104b1f6397bfa78ac9d43d8ad29a7ca43ea90a2d863fe3056e86a/six-1.11.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/d1/29/605c2cc68a9992d18dada28206eeada56ea4bd07a239669da41674648b6f/ptyprocess-0.6.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/16/2a/557af1181e6b4e30254d5a6163b18f5053791ca66e251e77ab08887e8fe3/scandir-1.9.0.tar.gz",
+            "https://files.pythonhosted.org/packages/fa/bc/9bd3b5c2b4774d5f33b2d544f1460be9df7df2fe42f352135381c347c69a/ipython_genutils-0.2.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/c5/db/e56e6b4bbac7c4a06de1c50de6fe1ef3810018ae11732a50f15f62c7d050/enum34-1.1.6-py2-none-any.whl",
+        ]
+    ]
+
+    assets = re2assets + ipythonassets
 
     def initialize_options(self):
         pass
