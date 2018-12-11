@@ -612,6 +612,24 @@ TEST(FileInode, dropsCacheWhenUnloaded) {
   EXPECT_FALSE(blobCache->contains(hash));
 }
 
+TEST(FileInode, reloadsBlobIfCacheIsEvicted) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"bigfile.txt", "1234567890ab"}});
+  TestMount mount{builder};
+  auto blobCache = mount.getBlobCache();
+
+  auto inode = mount.getFileInode("bigfile.txt");
+  auto hash = inode->getBlobHash().value();
+
+  inode->read(4, 0).get(0ms);
+  blobCache->clear();
+  EXPECT_FALSE(blobCache->contains(hash));
+
+  inode->read(4, 4).get(0ms);
+  EXPECT_TRUE(blobCache->contains(hash))
+      << "reading should insert hash " << hash << " into cache";
+}
+
 // TODO: test multiple flags together
 // TODO: ensure ctime is updated after every call to setattr()
 // TODO: ensure mtime is updated after opening a file, writing to it, then

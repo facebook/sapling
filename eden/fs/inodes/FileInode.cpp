@@ -144,6 +144,15 @@ class FileInode::LockedState {
     return hasOpenRefcount_;
   }
 
+  /**
+   * If this inode still has access to a cached blob, return it.
+   *
+   * Can only be called when not materialized.
+   */
+  std::shared_ptr<const Blob> getCachedBlob(
+      EdenMount* mount,
+      BlobCache::Interest interest);
+
  private:
   folly::Synchronized<State>::LockedPtr ptr_;
   bool hasOpenRefcount_{false};
@@ -199,6 +208,37 @@ void FileInode::LockedState::incOpenCount() {
   hasOpenRefcount_ = true;
 }
 
+std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
+    EdenMount* mount,
+    BlobCache::Interest interest) {
+  CHECK(!ptr_->isMaterialized())
+      << "getCachedBlob can only be called when not materialized";
+
+  // Is the previous handle still valid? If so, return it.
+  if (auto blob = ptr_->interestHandle.getBlob()) {
+    return blob;
+  }
+  // Otherwise, does the cache have one?
+  //
+  // The BlobAccess::getBlob call in startLoadingData on a cache miss will also
+  // check the BlobCache, but by checking it here, we can avoid a transition to
+  // BLOB_LOADING and back, and also avoid allocating some futures and closures.
+  auto result = mount->getBlobCache()->get(ptr_->hash.value(), interest);
+  if (result.blob) {
+    ptr_->interestHandle = std::move(result.interestHandle);
+    return std::move(result.blob);
+  }
+
+  // If we received a read and missed cache because the blob was
+  // already evicted, assume the existing readByteRanges CoverageSet
+  // doesn't accurately reflect how much data is in the kernel's
+  // caches.
+  ptr_->interestHandle.reset();
+  ptr_->readByteRanges.clear();
+
+  return nullptr;
+}
+
 void FileInode::LockedState::ensureFileOpen(const FileInode* inode) {
   DCHECK(ptr_->isMaterialized())
       << "must only be called for materialized files";
@@ -247,22 +287,8 @@ ReturnType FileInode::runWhileDataLoaded(
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
       if (!blob) {
-        // If no blob is given, check if the previous handle is still valid.
-        blob = state->interestHandle.getBlob();
-      }
-      if (!blob) {
-        // Otherwise, does the cache have one?
-        //
-        // The BlobAccess::getBlob call in startLoadingData will also check the
-        // BlobCache, but by checking it here, we can avoid a transition to
-        // BLOB_LOADING and back, and also avoid allocating some futures and
-        // closures.
-        auto result =
-            getMount()->getBlobCache()->get(state->hash.value(), interest);
-        if (result.blob) {
-          blob = std::move(result.blob);
-          state->interestHandle = std::move(result.interestHandle);
-        }
+        // If no blob is given, check cache.
+        blob = state.getCachedBlob(getMount(), interest);
       }
       if (blob) {
         // The blob was still in cache, so we can run the function immediately.
@@ -314,9 +340,9 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
       if (!blob) {
-        // If a blob wasn't passed into runWhileMaterialized, try to see if the
-        // last one we loaded is still alive.
-        blob = state->interestHandle.getBlob();
+        // If no blob is given, check cache.
+        blob = state.getCachedBlob(
+            getMount(), BlobCache::Interest::UnlikelyNeededAgain);
       }
       if (blob) {
         // We have the blob data loaded.
