@@ -39,3 +39,35 @@ Run status again. NEED_CHECK will disappear.
   $ hg debugtree list
   A: 0100644 1 + EXIST_P1 EXIST_NEXT 
   B: 0100644 1 + EXIST_P1 EXIST_NEXT 
+
+Enable sparse
+
+  $ enable sparse
+  $ hg sparse include A
+
+When removing "B", fsmonitor+treestate will mark it as "NEED_CHECK" instead
+
+  $ hg debugtree list
+  A: 0100644 1 + EXIST_P1 EXIST_NEXT 
+  B: 0100644 1 + NEED_CHECK  (fsmonitor !)
+
+Force NEED_CHECK on files outside sparse
+
+  $ printf B > B
+  $ hg debugshell --config extensions.sparse=! -c "
+  > with repo.lock(), repo.transaction('needcheck') as tr:
+  >     d = repo.dirstate
+  >     d.needcheck('A')
+  >     d.normal('B')
+  >     d.needcheck('B')
+  >     d.write(tr)
+  > "
+
+Run "hg status" and NEED_CHECK can be removed:
+
+  $ sleep 1
+  $ hg status
+
+  $ hg debugtree list
+  A: 0100644 1 + EXIST_P1 EXIST_NEXT 
+  B: 0100644 1 + EXIST_P1 EXIST_NEXT 
