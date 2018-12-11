@@ -185,9 +185,7 @@ function blobimport {
 }
 
 function bonsai_verify {
-  repo="$1"
-  shift 1
-  $MONONOKE_BONSAI_VERIFY --repo_id 0 \
+  GLOG_minloglevel=2 $MONONOKE_BONSAI_VERIFY --repo_id 0 \
   --mononoke-config-path "$TESTTMP/mononoke-config" "$@"
 }
 
@@ -407,7 +405,7 @@ EOF
 function aliasverify() {
   mode=$1
   shift 1
-  $MONONOKE_ALIAS_VERIFY --repo_id 0 \
+  GLOG_minloglevel=2 $MONONOKE_ALIAS_VERIFY --repo_id 0 \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --mode "$mode" "$@"
 }
