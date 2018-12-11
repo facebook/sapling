@@ -9,10 +9,11 @@
 from __future__ import absolute_import
 
 import code
+import os
 import sys
 
 import mercurial
-from mercurial import demandimport, registrar
+from mercurial import demandimport, registrar, thirdparty
 from mercurial.i18n import _
 
 
@@ -30,19 +31,6 @@ def _assignobjects(objects, repo):
         objects[name] = __import__(name)
 
 
-def pdb(ui, repo, msg, **opts):
-    objects = {}
-    _assignobjects(objects, repo)
-    code.interact(msg, local=objects)
-
-
-def ipdb(ui, repo, msg, **opts):
-    import IPython
-
-    _assignobjects(locals(), repo)
-    IPython.embed()
-
-
 @command(
     "debugshell|dbsh",
     [("c", "command", "", _("program passed in as string"), _("CMD"))],
@@ -55,26 +43,28 @@ def debugshell(ui, repo, **opts):
         exec(command)
         return 0
 
-    bannermsg = "loaded repo : %s\n" "using source: %s" % (
-        repo and repo.root or "(none)",
-        mercurial.__path__[0],
+    bannermsg = (
+        "loaded repo:  %s\n"
+        "using source: %s" % (repo and repo.root or "(none)", mercurial.__path__[0])
+        + "\n\nAvailable variables:\n m:  the mercurial module\n ui: the ui object"
     )
-
-    pdbmap = {"pdb": "code", "ipdb": "IPython"}
-
-    debugger = ui.config("ui", "debugger")
-    if not debugger:
-        debugger = "pdb"
-
-    # if IPython doesn't exist, fallback to code.interact
-    try:
-        with demandimport.deactivated():
-            __import__(pdbmap[debugger])
-    except ImportError:
-        ui.warn(
-            ("%s debugger specified but %s module was not found\n")
-            % (debugger, pdbmap[debugger])
+    if repo:
+        bannermsg += (
+            "\n repo: the repo object\n cl: repo.changelog\n mf: repo.manifestlog"
         )
-        debugger = "pdb"
 
-    getattr(sys.modules[__name__], debugger)(ui, repo, bannermsg, **opts)
+    # Use bundled IPython. It can be newer and more lightweight than the system
+    # package. For a buck build, the IPython dependency is included without
+    # using the zip.
+    ipypath = os.path.join(os.path.dirname(thirdparty.__file__), "IPython.zip")
+    if ipypath not in sys.path and os.path.exists(ipypath):
+        sys.path.insert(0, ipypath)
+
+    _assignobjects(locals(), repo)
+
+    # demandimport is incompatible with many IPython dependencies, both at
+    # import time and at runtime.
+    with demandimport.deactivated():
+        import IPython
+
+        IPython.embed(header=bannermsg)
