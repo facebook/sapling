@@ -38,7 +38,6 @@ extern crate slog;
 extern crate tempdir;
 extern crate tokio;
 
-mod config_repo;
 mod bookmarks_manager;
 
 use std::borrow::Borrow;
@@ -75,7 +74,6 @@ use slog::Logger;
 const BLOBSTORE_FETCH: &'static str = "blobstore-fetch";
 const BONSAI_FETCH: &'static str = "bonsai-fetch";
 const CONTENT_FETCH: &'static str = "content-fetch";
-const CONFIG_REPO: &'static str = "config";
 const BOOKMARKS: &'static str = "bookmarks";
 const SKIPLIST: &'static str = "skiplist";
 
@@ -175,9 +173,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(blobstore_fetch)
         .subcommand(bonsai_fetch)
         .subcommand(content_fetch)
-        .subcommand(config_repo::prepare_command(SubCommand::with_name(
-            CONFIG_REPO,
-        )))
         .subcommand(bookmarks_manager::prepare_command(SubCommand::with_name(
             BOOKMARKS,
         )))
@@ -662,9 +657,6 @@ fn main() -> Result<()> {
                     future::ok(()).boxify()
                 })
                 .boxify()
-        }
-        (CONFIG_REPO, Some(sub_m)) => {
-            config_repo::handle_command(sub_m)
         }
         (BOOKMARKS, Some(sub_m)) => {
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
