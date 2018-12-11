@@ -33,7 +33,7 @@ For example::
 The test engine will execute ``echo A`` and verify its output is ``A``.
 
 The ``.t`` format also supports multi-line commands, Python scripts and
-testing exit code:
+testing exit code::
 
   Multi-line commands (with heredoc):
 
