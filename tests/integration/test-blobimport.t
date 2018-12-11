@@ -29,21 +29,21 @@
   $ echo s > $FILENAME
   $ hg commit -Aqm "Encoding results in 255 symbols, go to second type"
 
-# Attempt to make the max possible file len of Upper Case letter and underscores
-# hg accept such a file, as 253 is max length
+# Capitals and underscores in a filename. Total len of the filename is 253
 # 253 because: 253 + len(".i") = 255 (max filename in UNIX system)
-  $ for ((i=1;i<=100;i++)); do
-  >     FILENAME=$(cat /dev/urandom | tr -dc 'A-H_' | fold -w 253 | head -n 1)
-  >     echo s > $FILENAME
-  >     hg commit -Aqm "Capitals and Underscores commit"$i
-  > done
+  $ UNDERSCORES=`printf '_%.0s' {1..123}`
+  $ CAPITALS=`printf 'A%.0s' {1..130}`
+  $ echo s > "$UNDERSCORES$CAPITALS"
+  $ hg commit -Aqm "underscores, capitals"
 
+# Capitals, lowercase and underscores in a filename. Total len of the filename
+# is 253
 # 253 because: 253 + len(".i") = 255 (max filename in UNIX system)
-  $ for ((i=1;i<=100;i++)); do
-  >     FILENAME=$(cat /dev/urandom | tr -dc 'a-hA-H_' | fold -w 253 | head -n 1)
-  >     echo s > $FILENAME
-  >     hg commit -Aqm "Small, Capital and Underscores commit"$i
-  > done
+  $ UNDERSCORES=`printf '_%.0s' {1..123}`
+  $ CAPITALS=`printf 'A%.0s' {1..100}`
+  $ LOWERCASE=`printf 'a%.0s' {1..30}`
+  $ echo s > "$UNDERSCORES$CAPITALS$LOWERCASE"
+  $ hg commit -Aqm "underscores, capitals, lowercase"
 
   $ setup_mononoke_config
   $ cd $TESTTMP
