@@ -9,14 +9,17 @@
  */
 #include "eden/fs/inodes/TreeInode.h"
 
+#include <folly/Random.h>
 #include <gtest/gtest.h>
 #include "eden/fs/fuse/DirList.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
+using namespace std::chrono_literals;
 
 static DirEntry makeDirEntry() {
   return DirEntry{S_IFREG | 0644, 1_ino, Hash{}};
@@ -148,4 +151,115 @@ TEST(TreeInode, readdirIgnoresWildOffsets) {
 
   auto result = root->readdir(DirList{4096}, 0xfaceb00c).extract();
   EXPECT_EQ(0, result.size());
+}
+
+namespace {
+
+// 500 is big enough for ~9 entries
+constexpr size_t kDirListBufferSize = 500;
+constexpr size_t kDirListNameSize = 25;
+constexpr unsigned kModificationCountPerIteration = 4;
+
+void runConcurrentModificationAndReaddirIteration(
+    const std::vector<std::string>& names) {
+  std::unordered_set<std::string> modified;
+
+  struct Collision : std::exception {};
+
+  auto randomName = [&]() -> PathComponent {
+    // + 1 to avoid collisions with existing names.
+    std::array<char, kDirListNameSize + 1> name;
+    for (char& c : name) {
+      c = folly::Random::rand32('a', 'z' + 1);
+    }
+    return PathComponent{name};
+  };
+
+  // Selects a random name from names and adds it to modified, throwing
+  // Collision if it's already been used.
+  auto pickName = [&]() -> PathComponentPiece {
+    const auto& name = names[folly::Random::rand32(names.size())];
+    if (modified.count(name)) {
+      throw Collision{};
+    }
+    modified.insert(name);
+    // Returning PathComponentPiece is safe because name is a reference into
+    // names.
+    return PathComponentPiece{name};
+  };
+
+  FakeTreeBuilder builder;
+  for (const auto& name : names) {
+    builder.setFile(name, name);
+  }
+  TestMount mount{builder};
+  auto root = mount.getEdenMount()->getRootInode();
+
+  off_t lastOffset = 0;
+
+  std::unordered_map<std::string, unsigned> seen;
+
+  for (;;) {
+    auto result =
+        root->readdir(DirList{kDirListBufferSize}, lastOffset).extract();
+    if (result.empty()) {
+      break;
+    }
+    lastOffset = result.back().offset;
+    for (auto& entry : result) {
+      ++seen[entry.name];
+    }
+
+    for (unsigned j = 0; j < kModificationCountPerIteration; ++j) {
+      try {
+        switch (folly::Random::rand32(3)) {
+          case 0: // create
+            root->symlink(randomName(), "symlink-target");
+            break;
+          case 1: { // unlink
+            root->unlink(pickName()).get(0ms);
+            break;
+          }
+          case 2: { // rename
+            root->rename(pickName(), root, pickName()).get(0ms);
+            break;
+          }
+        }
+      } catch (const Collision&) {
+        // Just skip, no big deal.
+      }
+    }
+  }
+
+  // Verify all unmodified files were read.
+  for (auto& name : names) {
+    // If modified, it is not guaranteed to be returned by readdir.
+    if (modified.count(name)) {
+      continue;
+    }
+
+    EXPECT_EQ(1, seen[name])
+        << "unmodified entries should be returned by readdir exactly once, but "
+        << name << " wasn't";
+  }
+}
+} // namespace
+
+TEST(TreeInode, fuzzConcurrentModificationAndReaddir) {
+  std::vector<std::string> names;
+  for (char c = 'a'; c <= 'z'; ++c) {
+    names.emplace_back(kDirListNameSize, c);
+  }
+
+  auto minimumTime = 500ms;
+  unsigned minimumIterations = 5;
+
+  auto end = std::chrono::steady_clock::now() + minimumTime;
+  unsigned iterations = 0;
+  while (std::chrono::steady_clock::now() < end ||
+         iterations < minimumIterations) {
+    runConcurrentModificationAndReaddirIteration(names);
+    ++iterations;
+  }
+  std::cout << "Ran " << iterations << " iterations" << std::endl;
 }
