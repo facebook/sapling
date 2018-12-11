@@ -18,10 +18,6 @@ export LC_ALL=C
 TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
 OSXVERSIONFLAGS ?= $(shell echo $$OSXVERSIONFLAGS)
 
-DEFAULT_RE2SRC = build/re2-2018-04-01
-RE2SRC ?= $(DEFAULT_RE2SRC)
-export RE2SRC
-
 HGDEV := 1
 export HGDEV
 
@@ -53,26 +49,11 @@ help:
 
 all: build doc
 
-build/re2-2018-04-01.tar.gz:
-ifeq ($(RE2SRC), $(DEFAULT_RE2SRC))
-	mkdir -p build
-	if [ -e ../../tools/lfs/lfs.py ]; then \
-		../../tools/lfs/lfs.py -l fb/tools/.lfs-pointers download build/re2-2018-04-01.tar.gz; \
-  else \
-		curl -L https://github.com/google/re2/archive/2018-04-01.tar.gz -o $@; \
-	fi
-endif
-
-build/re2-2018-04-01/README: build/re2-2018-04-01.tar.gz
-ifeq ($(RE2SRC), $(DEFAULT_RE2SRC))
-	tar -C build -x -f $< && touch $@
-endif
-
-local: build/re2-2018-04-01/README
+local:
 	$(PYTHON) setup.py $(PURE) \
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
-	  build_ext $(COMPILERFLAG) -i --re2-src $(RE2SRC) \
+	  build_ext $(COMPILERFLAG) -i \
 	  build_rust_ext -i -l\
 	  build_mo
 ifeq ($(OS),Windows_NT)
