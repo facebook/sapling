@@ -271,6 +271,14 @@ def samepath(path1, path2):
     return p1 == p2
 
 
+def tryunlink(path):
+    try:
+        os.unlink(path)
+    except Exception as ex:
+        if ex.errno != errno.ENOENT:
+            raise
+
+
 def copy_to(source, target):
     if os.path.isdir(source):
         copy_tree(source, target)
@@ -1104,6 +1112,55 @@ class hgbuildpy(build_py):
 
         build_py.run(self)
 
+        buildpyzip(self.distribution).run()
+
+
+class buildpyzip(Command):
+    description = "generate zip for bundled dependent Python modules (ex. IPython)"
+    user_options = []
+
+    # Currently this only handles IPython. It avoids conflicts with the system
+    # IPython (which might be older and have GUI dependencies that we don't
+    # need). In the future this might evolve into packing the main library
+    # as weel (i.e. some buildembedded logic will move here).
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        fetchbuilddeps(self.distribution).run()
+
+        # Directories of IPython dependencies
+        depdirs = [pjoin(builddir, a.destdir) for a in fetchbuilddeps.ipythonassets]
+
+        # Perform a mtime check so we can skip building if possible
+        zippath = pjoin(builddir, "IPython.zip")
+        if os.path.exists(zippath):
+            depmtime = max(os.stat(d).st_mtime for d in depdirs)
+            zipmtime = os.stat(zippath).st_mtime
+            if zipmtime > depmtime:
+                return
+
+        # Compile all (pure Python) IPython dependencies and zip them into
+        # IPython.zip
+        tryunlink(zippath)
+        # Special case: pexpect/_async.py is Python 3 only. Delete it so
+        # writepy won't try to compile it and fail.
+        tryunlink(pjoin(builddir, "pexpect-4.6.0-py2.py3-none-any/pexpect/_async.py"))
+        with zipfile.PyZipFile(zippath, "w") as f:
+            for asset in fetchbuilddeps.ipythonassets:
+                # writepy only scans directories if it is a Python package
+                # (ex. with __init__.py). Therefore scan the top-level
+                # directories to get everything included.
+                extracteddir = pjoin(builddir, asset.destdir)
+                for name in os.listdir(extracteddir):
+                    path = pjoin(extracteddir, name)
+                    if path.endswith(".py") or os.path.isdir(path):
+                        f.writepy(path)
+
 
 class buildhgextindex(Command):
     description = "generate prebuilt index of hgext (for frozen package)"
@@ -1191,8 +1248,15 @@ class hginstalllib(install_lib):
         file_util.copy_file = copyfileandsetmode
         try:
             install_lib.run(self)
+            self._installpyzip()
         finally:
             file_util.copy_file = realcopyfile
+
+    def _installpyzip(self):
+        for src, dst in [("IPython.zip", "mercurial/thirdparty/IPython.zip")]:
+            srcpath = pjoin(builddir, src)
+            dstpath = pjoin(self.install_dir, dst)
+            file_util.copy_file(srcpath, dstpath)
 
 
 class hginstallscripts(install_scripts):
@@ -1276,6 +1340,7 @@ cmdclass = {
     "build_mo": hgbuildmo,
     "build_ext": hgbuildext,
     "build_py": hgbuildpy,
+    "build_pyzip": buildpyzip,
     "build_scripts": hgbuildscripts,
     "build_hgextindex": buildhgextindex,
     "install": hginstall,
