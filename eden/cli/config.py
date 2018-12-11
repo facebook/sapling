@@ -212,7 +212,18 @@ class EdenInstance:
     def should_use_experimental_systemd_mode(self) -> bool:
         # TODO(T33122320): Delete this environment variable when systemd is properly
         # integrated.
-        return os.getenv("EDEN_EXPERIMENTAL_SYSTEMD") == "1"
+        env_var_value = os.getenv("EDEN_EXPERIMENTAL_SYSTEMD")
+        if env_var_value == "1":
+            return True
+        if env_var_value == "0":
+            return False
+
+        try:
+            if self.get_config_value("service.experimental_systemd") == "True":
+                return True
+        except KeyError:
+            pass
+        return False
 
     def print_full_config(self) -> None:
         parser = self._loadConfig()

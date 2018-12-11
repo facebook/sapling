@@ -23,18 +23,24 @@ class EnvironmentVariableMixin(metaclass=abc.ABCMeta):
 
     def unset_environment_variable(self, name: str) -> None:
         self.__add_cleanup_for_environment_variable(name)
-        del os.environ[name]
+        self.__unset_environment_variable_with_cleanup(name)
 
     def __add_cleanup_for_environment_variable(self, name: str) -> None:
         old_value = os.getenv(name)
 
         def restore() -> None:
             if old_value is None:
-                del os.environ[name]
+                self.__unset_environment_variable_with_cleanup(name)
             else:
                 os.environ[name] = old_value
 
         self.addCleanup(restore)
+
+    def __unset_environment_variable_with_cleanup(self, name: str) -> None:
+        try:
+            del os.environ[name]
+        except KeyError:
+            pass
 
     def addCleanup(
         self,

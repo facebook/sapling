@@ -103,6 +103,8 @@ class TomlConfigTest(
         util.mkdir_p(self._config_d)
         util.mkdir_p(self._home_dir)
 
+        self.unset_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD")
+
     def copy_config_files(self) -> None:
         path = os.path.join(self._config_d, "_use_toml_configs_")
         with open(path, "w") as text_file:
@@ -249,9 +251,7 @@ class TomlConfigTest(
     def test_toml_error(self) -> None:
         self.copy_config_files()
 
-        path = os.path.join(self._home_dir, ".edenrc")
-        with open(path, "w") as text_file:
-            text_file.write(get_toml_test_file_invalid())
+        self.write_user_config(get_toml_test_file_invalid())
 
         cfg = self.get_config()
         with self.assertRaises(toml.decoder.TomlDecodeError):
@@ -264,7 +264,56 @@ class TomlConfigTest(
         self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
         self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
 
+    def test_experimental_systemd_is_enabled_with_user_config_setting(self) -> None:
+        self.write_user_config(
+            """[service]
+experimental_systemd = true
+"""
+        )
+        self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
+
+    def test_experimental_systemd_environment_variable_overrides_config(self) -> None:
+        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
+        self.write_user_config(
+            f"""[service]
+experimental_systemd = false
+"""
+        )
+        self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
+
+        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "0")
+        self.write_user_config(
+            f"""[service]
+experimental_systemd = true
+"""
+        )
+        self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
+
+    def test_empty_experimental_systemd_environment_variable_does_not_override_config(
+        self
+    ) -> None:
+        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "")
+        self.write_user_config(
+            f"""[service]
+experimental_systemd = true
+"""
+        )
+        self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
+
+        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "")
+        self.write_user_config(
+            f"""[service]
+experimental_systemd = false
+"""
+        )
+        self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
+
     def get_config(self) -> EdenInstance:
         return EdenInstance(
             self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
         )
+
+    def write_user_config(self, content: str) -> None:
+        path = os.path.join(self._home_dir, ".edenrc")
+        with open(path, "w") as text_file:
+            text_file.write(content)
