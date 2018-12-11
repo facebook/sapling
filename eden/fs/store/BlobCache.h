@@ -27,26 +27,14 @@ class BlobCache;
  */
 class BlobInterestHandle {
  public:
-  BlobInterestHandle() = default;
+  BlobInterestHandle() noexcept = default;
 
-  ~BlobInterestHandle() {
+  ~BlobInterestHandle() noexcept {
     reset();
   }
 
-  BlobInterestHandle(BlobInterestHandle&& other) noexcept
-      : blobCache_{std::move(other.blobCache_)}, hash_{other.hash_} {
-    // We don't need to clear other.hash_ because it's only referenced when
-    // blobCache_ is not expired.
-  }
-
-  BlobInterestHandle& operator=(BlobInterestHandle&& other) noexcept {
-    if (this != &other) {
-      reset();
-      blobCache_ = std::move(other.blobCache_);
-      hash_ = other.hash_;
-    }
-    return *this;
-  }
+  BlobInterestHandle(BlobInterestHandle&& other) noexcept = default;
+  BlobInterestHandle& operator=(BlobInterestHandle&& other) noexcept = default;
 
   /**
    * If this is a valid interest handle, and the blob is still in cache, return
@@ -59,19 +47,24 @@ class BlobInterestHandle {
   void reset() noexcept;
 
  private:
-  explicit BlobInterestHandle(std::weak_ptr<const Blob> blob);
   BlobInterestHandle(
       std::weak_ptr<BlobCache> blobCache,
       const Hash& hash,
-      std::weak_ptr<const Blob> blob);
+      std::weak_ptr<const Blob> blob,
+      uint64_t generation) noexcept;
 
   std::weak_ptr<BlobCache> blobCache_;
+
   // hash_ is only accessed if blobCache_ is non-expired.
   Hash hash_;
 
   // In the situation that the Blob exists even if it's been evicted, allow
   // retrieving it anyway.
   std::weak_ptr<const Blob> blob_;
+
+  // Only causes eviction if this matches the corresponding
+  // CacheItem::generation.
+  uint64_t cacheItemGeneration_{0};
 
   friend class BlobCache;
 };
@@ -172,6 +165,11 @@ class BlobCache : public std::enable_shared_from_this<BlobCache> {
   bool contains(const Hash& hash) const;
 
   /**
+   * Evicts everything from cache.
+   */
+  void clear();
+
+  /**
    * Return information about the current size of the cache and the total number
    * of hits and misses.
    */
@@ -193,7 +191,8 @@ class BlobCache : public std::enable_shared_from_this<BlobCache> {
     // WARNING: leaves index unset. Since the items map and evictionQueue are
     // circular, initialization of index must happen after the CacheItem is
     // constructed.
-    explicit CacheItem(BlobPtr b) : blob{std::move(b)} {}
+    explicit CacheItem(BlobPtr b, uint64_t g)
+        : blob{std::move(b)}, generation{g} {}
 
     BlobPtr blob;
     std::list<CacheItem*>::iterator index;
@@ -201,6 +200,10 @@ class BlobCache : public std::enable_shared_from_this<BlobCache> {
     /// Incremented on every LikelyNeededAgain or WantInterestHandle.
     /// Decremented on every dropInterestHandle. Evicted if it reaches zero.
     uint64_t referenceCount{0};
+
+    /// Given a unique value upon allocation. Used to verify InterestHandle
+    // matches this specific item.
+    uint64_t generation{0};
   };
 
   struct State {
@@ -216,7 +219,7 @@ class BlobCache : public std::enable_shared_from_this<BlobCache> {
     uint64_t dropCount{0};
   };
 
-  void dropInterestHandle(const Hash& hash) noexcept;
+  void dropInterestHandle(const Hash& hash, uint64_t generation) noexcept;
 
   explicit BlobCache(size_t maximumCacheSizeBytes, size_t minimumEntryCount);
   void evictUntilFits(State& state) noexcept;

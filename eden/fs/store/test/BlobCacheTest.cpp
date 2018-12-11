@@ -199,6 +199,13 @@ TEST(BlobCache, redundant_inserts_are_ignored) {
   EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
 }
 
+TEST(BlobCache, redundant_insert_does_not_invalidate_interest_handles) {
+  auto cache = BlobCache::create(10, 0);
+  auto handle3 = cache->insert(blob3, BlobCache::Interest::WantHandle);
+  cache->insert(blob3, BlobCache::Interest::WantHandle);
+  EXPECT_TRUE(handle3.getBlob());
+}
+
 TEST(
     BlobCache,
     fetching_blob_from_interest_handle_moves_to_back_of_eviction_queue) {
@@ -229,4 +236,27 @@ TEST(BlobCache, interest_handle_can_return_blob_even_if_it_was_evicted) {
       << "Blob accessible even though it's been evicted";
   EXPECT_EQ(blob4, handle4.getBlob());
   EXPECT_EQ(blob5, handle5.getBlob());
+}
+
+TEST(
+    BlobCache,
+    dropping_interest_handle_does_not_evict_if_item_has_been_reloaded_after_clear) {
+  auto cache = BlobCache::create(10, 0);
+  auto handle3 = cache->insert(blob3, BlobCache::Interest::WantHandle);
+  cache->clear();
+  cache->insert(blob3);
+  handle3.reset();
+  EXPECT_TRUE(cache->contains(hash3));
+}
+
+TEST(
+    BlobCache,
+    dropping_interest_handle_does_not_evict_if_item_has_been_reloaded_after_eviction) {
+  auto cache = BlobCache::create(10, 0);
+  auto handle3 = cache->insert(blob3, BlobCache::Interest::WantHandle);
+  cache->insert(blob4);
+  cache->insert(blob5);
+  auto handle3again = cache->insert(blob3, BlobCache::Interest::WantHandle);
+  handle3.reset();
+  EXPECT_TRUE(cache->contains(hash3));
 }

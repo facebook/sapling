@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -199,6 +199,7 @@
     <ClCompile Include="..\..\fs\store\StoreResult.cpp" />
     <ClCompile Include="..\..\fs\tracing\Tracing.cpp" />
     <ClCompile Include="..\..\fs\utils\Clock.cpp" />
+    <ClCompile Include="..\..\fs\utils\IDGen.cpp" />
     <ClCompile Include="..\..\fs\utils\PathFuncs.cpp" />
     <ClCompile Include="..\..\fs\utils\TimeUtil.cpp" />
     <ClCompile Include="..\..\fs\utils\UnboundedQueueExecutor.cpp" />

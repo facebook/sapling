@@ -33,7 +33,7 @@ class Hash : boost::totally_ordered<Hash> {
   /**
    * Create a 0-initialized hash
    */
-  constexpr Hash() : bytes_{} {}
+  constexpr Hash() noexcept : bytes_{} {}
 
   explicit constexpr Hash(const Storage& bytes) : bytes_{bytes} {}
 

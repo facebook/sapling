@@ -11,24 +11,24 @@
 #include <folly/MapUtil.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/utils/IDGen.h"
 
 namespace facebook {
 namespace eden {
 
-BlobInterestHandle::BlobInterestHandle(std::weak_ptr<const Blob> blob)
-    : blob_{std::move(blob)} {
-  // No need to initialize hash_ because blobCache_ is unset.
-}
-
 BlobInterestHandle::BlobInterestHandle(
     std::weak_ptr<BlobCache> blobCache,
     const Hash& hash,
-    std::weak_ptr<const Blob> blob)
-    : blobCache_{std::move(blobCache)}, hash_{hash}, blob_{std::move(blob)} {}
+    std::weak_ptr<const Blob> blob,
+    uint64_t generation) noexcept
+    : blobCache_{std::move(blobCache)},
+      hash_{hash},
+      blob_{std::move(blob)},
+      cacheItemGeneration_{generation} {}
 
 void BlobInterestHandle::reset() noexcept {
   if (auto blobCache = blobCache_.lock()) {
-    blobCache->dropInterestHandle(hash_);
+    blobCache->dropInterestHandle(hash_, cacheItemGeneration_);
   }
   blobCache_.reset();
 }
@@ -66,6 +66,8 @@ BlobCache::BlobCache(size_t maximumCacheSizeBytes, size_t minimumEntryCount)
 BlobCache::~BlobCache() {}
 
 BlobCache::GetResult BlobCache::get(const Hash& hash, Interest interest) {
+  XLOG(DBG6) << "BlobCache::get " << hash;
+
   // Acquires BlobCache's lock upon destruction by calling dropInterestHandle,
   // so ensure that, if an exception is thrown below, the ~BlobInterestHandle
   // runs after the lock is released.
@@ -75,6 +77,7 @@ BlobCache::GetResult BlobCache::get(const Hash& hash, Interest interest) {
 
   auto* item = folly::get_ptr(state->items, hash);
   if (!item) {
+    XLOG(DBG6) << "BlobCache::get missed";
     ++state->missCount;
     return GetResult{};
   }
@@ -84,7 +87,8 @@ BlobCache::GetResult BlobCache::get(const Hash& hash, Interest interest) {
       interestHandle.blob_ = item->blob;
       break;
     case Interest::WantHandle:
-      interestHandle = BlobInterestHandle{shared_from_this(), hash, item->blob};
+      interestHandle = BlobInterestHandle{
+          shared_from_this(), hash, item->blob, item->generation};
       ++item->referenceCount;
       break;
     case Interest::LikelyNeededAgain:
@@ -100,6 +104,8 @@ BlobCache::GetResult BlobCache::get(const Hash& hash, Interest interest) {
       break;
   }
 
+  XLOG(DBG6) << "BlobCache::get hit";
+
   // TODO: Should we avoid promoting if interest is UnlikelyNeededAgain?
   // For now, we'll try not to be too clever.
   state->evictionQueue.splice(
@@ -111,6 +117,8 @@ BlobCache::GetResult BlobCache::get(const Hash& hash, Interest interest) {
 BlobInterestHandle BlobCache::insert(
     std::shared_ptr<const Blob> blob,
     Interest interest) {
+  XLOG(DBG6) << "BlobCache::insert " << blob->getHash();
+
   // Acquires BlobCache's lock upon destruction by calling dropInterestHandle,
   // so ensure that, if an exception is thrown below, the ~BlobInterestHandle
   // runs after the lock is released.
@@ -119,15 +127,21 @@ BlobInterestHandle BlobCache::insert(
   auto hash = blob->getHash();
   auto size = blob->getSize();
 
+  auto cacheItemGeneration = generateUniqueID();
+
   if (interest == Interest::WantHandle) {
     // This can throw, so do it before inserting into items.
-    interestHandle = BlobInterestHandle{shared_from_this(), hash, blob};
+    interestHandle =
+        BlobInterestHandle{shared_from_this(), hash, blob, cacheItemGeneration};
   } else {
     interestHandle.blob_ = blob;
   }
 
+  XLOG(DBG6) << "  creating entry with generation=" << cacheItemGeneration;
+
   auto state = state_.wlock();
-  auto [iter, inserted] = state->items.try_emplace(hash, std::move(blob));
+  auto [iter, inserted] =
+      state->items.try_emplace(hash, std::move(blob), cacheItemGeneration);
   // noexcept from here until `try`
   switch (interest) {
     case Interest::UnlikelyNeededAgain:
@@ -137,8 +151,8 @@ BlobInterestHandle BlobCache::insert(
       ++iter->second.referenceCount;
       break;
   }
+  auto* itemPtr = &iter->second;
   if (inserted) {
-    auto* itemPtr = &iter->second;
     try {
       state->evictionQueue.push_back(itemPtr);
     } catch (std::exception&) {
@@ -149,8 +163,11 @@ BlobInterestHandle BlobCache::insert(
     state->totalSize += size;
     evictUntilFits(*state);
   } else {
+    XLOG(DBG6) << "  duplicate entry, using generation " << itemPtr->generation;
+    // Inserting duplicate entry - use its generation.
+    interestHandle.cacheItemGeneration_ = itemPtr->generation;
     state->evictionQueue.splice(
-        state->evictionQueue.end(), state->evictionQueue, iter->second.index);
+        state->evictionQueue.end(), state->evictionQueue, itemPtr->index);
   }
   return interestHandle;
 }
@@ -158,6 +175,14 @@ BlobInterestHandle BlobCache::insert(
 bool BlobCache::contains(const Hash& hash) const {
   auto state = state_.rlock();
   return 1 == state->items.count(hash);
+}
+
+void BlobCache::clear() {
+  XLOG(DBG6) << "BlobCache::clear";
+  auto state = state_.wlock();
+  state->totalSize = 0;
+  state->items.clear();
+  state->evictionQueue.clear();
 }
 
 BlobCache::Stats BlobCache::getStats() const {
@@ -172,12 +197,21 @@ BlobCache::Stats BlobCache::getStats() const {
   return stats;
 }
 
-void BlobCache::dropInterestHandle(const Hash& hash) noexcept {
+void BlobCache::dropInterestHandle(
+    const Hash& hash,
+    uint64_t generation) noexcept {
+  XLOG(DBG6) << "dropInterestHandle " << hash << " generation=" << generation;
   auto state = state_.wlock();
 
   auto* item = folly::get_ptr(state->items, hash);
   if (!item) {
     // Cached item already evicted.
+    return;
+  }
+
+  if (generation != item->generation) {
+    // Item was evicted and re-added between creating and dropping the interest
+    // handle.
     return;
   }
 
@@ -196,6 +230,10 @@ void BlobCache::dropInterestHandle(const Hash& hash) noexcept {
 }
 
 void BlobCache::evictUntilFits(State& state) noexcept {
+  XLOG(DBG6) << "state.totalSize=" << state.totalSize
+             << ", maximumCacheSizeBytes_=" << maximumCacheSizeBytes_
+             << ", evictionQueue.size()=" << state.evictionQueue.size()
+             << ", minimumEntryCount_=" << minimumEntryCount_;
   while (state.totalSize > maximumCacheSizeBytes_ &&
          state.evictionQueue.size() > minimumEntryCount_) {
     evictOne(state);
@@ -210,6 +248,8 @@ void BlobCache::evictOne(State& state) noexcept {
 }
 
 void BlobCache::evictItem(State& state, CacheItem* item) noexcept {
+  XLOG(DBG6) << "evicting " << item->blob->getHash()
+             << " generation=" << item->generation;
   auto size = item->blob->getSize();
   // TODO: Releasing this BlobPtr here can run arbitrary deleters which could,
   // in theory, try to reacquire the BlobCache's lock. The blob could be
