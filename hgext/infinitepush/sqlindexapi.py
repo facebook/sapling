@@ -400,3 +400,7 @@ class CustomConverter(mysql.connector.conversion.MySQLConverter):
 
     def _BLOB_to_python(self, value, dsc=None):
         return str(value)
+
+    # localstr is Mercurial-specific. See encoding.py
+    def _localstr_to_mysql(self, value):
+        return str(value)
