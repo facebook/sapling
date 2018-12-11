@@ -127,6 +127,11 @@ def _find_default_daemon_binary() -> Optional[str]:
         return None
 
 
+class DaemonBinaryNotFound(Exception):
+    def __init__(self) -> None:
+        super().__init__("unable to find edenfs executable")
+
+
 def exec_daemon(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
@@ -142,20 +147,21 @@ def exec_daemon(
     This method uses os.exec() to replace the current process with the edenfs daemon.
     It does not return on success.  It may throw an exception on error.
     """
-    result = _get_daemon_args(
-        instance=instance,
-        daemon_binary=daemon_binary,
-        edenfs_args=edenfs_args,
-        takeover=takeover,
-        gdb=gdb,
-        gdb_args=gdb_args,
-        strace_file=strace_file,
-        foreground=foreground,
-    )
-    if isinstance(result, int):
-        os._exit(result)
+    try:
+        cmd, env = _get_daemon_args(
+            instance=instance,
+            daemon_binary=daemon_binary,
+            edenfs_args=edenfs_args,
+            takeover=takeover,
+            gdb=gdb,
+            gdb_args=gdb_args,
+            strace_file=strace_file,
+            foreground=foreground,
+        )
+    except DaemonBinaryNotFound as e:
+        print_stderr(f"error: {e}")
+        os._exit(1)
 
-    cmd, env = result
     os.execve(cmd[0], cmd, env)
     # Throw an exception just to let mypy know that we should never reach here
     # and will never return normally.
@@ -168,13 +174,14 @@ def start_daemon(
     edenfs_args: Optional[List[str]] = None,
 ) -> int:
     """Start the edenfs daemon."""
-    result = _get_daemon_args(
-        instance=instance, daemon_binary=daemon_binary, edenfs_args=edenfs_args
-    )
-    if isinstance(result, int):
-        return result
+    try:
+        cmd, env = _get_daemon_args(
+            instance=instance, daemon_binary=daemon_binary, edenfs_args=edenfs_args
+        )
+    except DaemonBinaryNotFound as e:
+        print_stderr(f"error: {e}")
+        return 1
 
-    cmd, env = result
     return subprocess.call(cmd, env=env)
 
 
@@ -220,13 +227,12 @@ def _get_daemon_args(
     gdb_args: Optional[List[str]] = None,
     strace_file: Optional[str] = None,
     foreground: bool = False,
-) -> Union[Tuple[List[str], Dict[str, str]], int]:
+) -> Tuple[List[str], Dict[str, str]]:
     """Get the command and environment to use to start edenfs."""
     if daemon_binary is None:
         valid_daemon_binary = _find_default_daemon_binary()
         if valid_daemon_binary is None:
-            print_stderr("error: unable to find edenfs executable")
-            return 1
+            raise DaemonBinaryNotFound()
     else:
         valid_daemon_binary = daemon_binary
 
