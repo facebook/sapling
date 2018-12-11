@@ -259,7 +259,7 @@ def ensureexists(path):
 
 def ensureempty(path):
     if os.path.exists(path):
-        shutil.rmtree(path)
+        rmtree(path)
     os.makedirs(path)
 
 
@@ -275,6 +275,22 @@ def copy_to(source, target):
     else:
         ensureexists(os.path.dirname(target))
         shutil.copy2(source, target)
+
+
+def rmtree(path):
+    # See https://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
+    processed = set()
+
+    def handlereadonly(func, path, exc):
+        if path not in processed:
+            processed.add(path)
+            excvalue = exc[1]
+            if func in (os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
+                os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+                return func(path)
+        raise
+
+    shutil.rmtree(path, ignore_errors=False, onerror=handlereadonly)
 
 
 @contextlib.contextmanager
@@ -322,7 +338,7 @@ def cancompile(cc, code):
             os.dup2(oldstderr, sys.stderr.fileno())
         if devnull is not None:
             devnull.close()
-        shutil.rmtree(tmpdir)
+        rmtree(tmpdir)
 
 
 # simplified version of distutils.ccompiler.CCompiler.has_function
@@ -879,7 +895,7 @@ class buildembedded(Command):
         self._process_hg_exts(libdir)
         self._process_py_exts(libdir)
         self._zip_pyc_files(pjoin(libdir, "library.zip"), tozip)
-        shutil.rmtree(tozip)
+        rmtree(tozip)
         # On Windows, Python shared library has to live at the same level
         # as the main project binary, since this is the location which
         # has the first priority in dynamic linker search path.
