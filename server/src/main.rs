@@ -67,7 +67,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("serve repos")
         .args_from_usage(
             r#"
-            <crpath>      -P, --configrepo_path [PATH]           'path to the config repo in rocksdb form'
+            <cpath>      -P, --config_path [PATH]           'path to the config files'
 
                           --listening-host-port <PATH>           'tcp address to listen to in format `host:port`'
 
@@ -114,8 +114,8 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
 
 fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     // TODO: This needs to cope with blob repos, too
-    let crpath = PathBuf::from(matches.value_of("crpath").unwrap());
-    RepoConfigs::read_configs(crpath)
+    let cpath = PathBuf::from(matches.value_of("cpath").unwrap());
+    RepoConfigs::read_configs(cpath)
 }
 
 fn main() {

@@ -258,7 +258,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("run hooks against repo")
         .args_from_usage(
             r#"
-            <crpath>      -P, --configrepo_path [PATH]           'path to the config repo in rocksdb form'
+            <cpath>      -P, --config_path [PATH]           'path to the config files'
 
             <bookmark>    -B, --bookmark [BOOK]                  'bookmark to tail'
                            --poll-interval                       'the poll interval in seconds'
@@ -305,8 +305,8 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
 }
 
 fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    let crpath = PathBuf::from(matches.value_of("crpath").unwrap());
-    RepoConfigs::read_configs(crpath)
+    let cpath = PathBuf::from(matches.value_of("cpath").unwrap());
+    RepoConfigs::read_configs(cpath)
 }
 
 #[derive(Debug, Fail)]
