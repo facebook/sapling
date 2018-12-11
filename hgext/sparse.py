@@ -141,7 +141,7 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
-from mercurial.node import nullid
+from mercurial.node import nullid, nullrev
 from mercurial.thirdparty import attr
 
 
@@ -980,6 +980,9 @@ def _wraprepo(ui, repo):
                     for node in self.dirstate.parents()
                     if node != nullid
                 ]
+            if not revs:
+                # Need a revision to read .hg/sparse
+                revs = [nullrev]
 
             includetemp = kwargs.get("includetemp", True)
             config = kwargs.get("config")
