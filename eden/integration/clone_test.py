@@ -266,8 +266,8 @@ class CloneTest(testcase.EdenRepoTest):
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden.run_cmd("clone", repo_name, file_in_directory)
         stderr = context.exception.stderr.decode("utf-8")
-        self.assertEqual(
-            stderr, f"error: destination path {file_in_directory} is not a directory\n"
+        self.assertIn(
+            f"error: destination path {file_in_directory} is not a directory\n", stderr
         )
 
     def test_clone_to_non_existent_directory_that_is_under_a_file_fails(self) -> None:
@@ -279,8 +279,8 @@ class CloneTest(testcase.EdenRepoTest):
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden.run_cmd("clone", repo_name, non_existent_dir)
         stderr = context.exception.stderr.decode("utf-8")
-        self.assertEqual(
-            stderr, f"error: destination path {non_existent_dir} is not a directory\n"
+        self.assertIn(
+            f"error: destination path {non_existent_dir} is not a directory\n", stderr
         )
 
     def test_post_clone_hook(self) -> None:
@@ -339,10 +339,10 @@ echo -n "$1" >> "{scratch_file}"
 
         with self.assertRaises(edenclient.EdenCommandError) as context:
             self.eden.run_cmd("clone", repo_name, tmp)
-        self.assertEqual(
-            context.exception.stderr.decode(),
+        self.assertIn(
             f"error: {repo_name!r} does not look like a valid hg or git "
             "repository or a well-known repository name\n",
+            context.exception.stderr.decode(),
         )
 
     def test_clone_should_start_daemon(self) -> None:
