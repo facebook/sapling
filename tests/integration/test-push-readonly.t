@@ -29,7 +29,7 @@ verify content
    (re)
 
   $ cd $TESTTMP
-  $ blobimport rocksdb repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 setup push source repo
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2

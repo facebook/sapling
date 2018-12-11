@@ -20,7 +20,7 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport rocksdb repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 start mononoke
 

@@ -40,5 +40,5 @@ Init treemanifest and remotefilelog
 blobimport with missing first commit, it should fail
   $ setup_mononoke_config
   $ cd $TESTTMP
-  $ blobimport rocksdb repo-hg/.hg repo --skip 1 --panic-fate=exit > /dev/null
+  $ blobimport repo-hg/.hg repo --skip 1 --panic-fate=exit > /dev/null
   [1]

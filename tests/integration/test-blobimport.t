@@ -47,4 +47,4 @@
 
   $ setup_mononoke_config
   $ cd $TESTTMP
-  $ blobimport rocksdb repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo

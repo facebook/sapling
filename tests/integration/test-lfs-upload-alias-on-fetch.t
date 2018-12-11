@@ -27,7 +27,7 @@
 #   2.b Motivation: For blob:files storage, is because we need to run Mononoke and Mononoke API server.
 #       We cannot have 2 processes for 1 RocksDB repo, as RocksDb does not allows us to do that.
 #   2.c Still Mononoke config is blobimported to Rocks DB. As Api server and Mononoke server are using them separately.
-  $ blobimport files repo-hg-nolfs/.hg repo
+  $ blobimport repo-hg-nolfs/.hg repo
 
 # 3. Setup Mononoke. Introduce LFS_THRESHOLD into Mononoke server config.
   $ mononoke

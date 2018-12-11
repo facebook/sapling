@@ -17,7 +17,7 @@ Populate test repo
 
 Blobimport test repo
   $ cd ..
-  $ blobimport rocksdb repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 Start API server
   $ APISERVER_PORT=$(get_free_socket)

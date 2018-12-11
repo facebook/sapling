@@ -51,7 +51,7 @@ create a hashed index and data revlogs
 blobimport and start mononoke
 
   $ cd $TESTTMP
-  $ blobimport rocksdb repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 

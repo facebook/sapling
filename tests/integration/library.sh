@@ -168,10 +168,9 @@ CONFIG
 }
 
 function blobimport {
-  blobstore="$1"
-  input="$2"
-  output="$3"
-  shift 3
+  input="$1"
+  output="$2"
+  shift 2
   mkdir -p "$output"
   $MONONOKE_BLOBIMPORT --repo_id 0 \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
@@ -376,7 +375,7 @@ EOF
   hg bookmark master_bookmark -r tip
 
   cd ..
-  blobimport rocksdb repo-hg/.hg repo
+  blobimport repo-hg/.hg repo
 
   mononoke
   wait_for_mononoke "$TESTTMP"/repo

@@ -45,7 +45,7 @@ setup testing repo for mononoke
 
 import testing repo to mononoke
   $ cd ..
-  $ blobimport rocksdb repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 starts api server
   $ APISERVER_PORT=$(get_free_socket)

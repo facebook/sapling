@@ -33,7 +33,7 @@ setup master bookmark
 
 blobimport
   $ cd $TESTTMP
-  $ blobimport rocksdb repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 start mononoke
   $ mononoke

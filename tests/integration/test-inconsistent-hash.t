@@ -18,7 +18,7 @@
   $ hg bookmark master_bookmark -r tip
   $ cd ..
 
-  $ blobimport files repo-hg/.hg repo
+  $ blobimport repo-hg/.hg repo
 
 # 2. Setup Mononoke.
   $ mononoke

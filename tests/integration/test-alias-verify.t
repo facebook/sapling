@@ -23,7 +23,7 @@
 
   $ cd ..
 
-  $ blobimport files repo-hg-nolfs/.hg repo
+  $ blobimport repo-hg-nolfs/.hg repo
 
   $ ls $TESTTMP/repo/blobs | grep "alias"
   blob-repo0000.alias.sha256.2ba85baaa7922ff4c0dfdbc00fd07bd69dcb1dce745c6a8c676fe8b5642a0d66
