@@ -13,8 +13,8 @@ import contextlib
 import ctypes
 import ctypes.util
 import errno
-import imp
 import glob
+import imp
 import os
 import py_compile
 import re
@@ -23,6 +23,7 @@ import stat
 import struct
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import zipfile
@@ -250,6 +251,7 @@ def write_if_changed(path, content):
 pjoin = os.path.join
 relpath = os.path.relpath
 scriptdir = os.path.realpath(pjoin(__file__, ".."))
+builddir = pjoin(scriptdir, "build")
 
 
 def ensureexists(path):
@@ -506,6 +508,134 @@ finally:
         del os.environ["HGMODULEPOLICY"]
     else:
         os.environ["HGMODULEPOLICY"] = oldpolicy
+
+
+class asset(object):
+    def __init__(self, name=None, url=None, destdir=None, version=0):
+        """Declare an asset to download
+
+        When building inside fbsource, look up the name from the LFS list, and
+        use internal LFS to download it. Outside fbsource, use the specified
+        URL to download it.
+
+        name: File name matching the internal lfs-pointers file
+        url:  External url. If not provided, external build will fail.
+        destdir: Destination directory name, excluding build/
+        version: Number to invalidate existing downloaded cache. Useful when
+                 content has changed while neither name nor url was changed.
+
+        Files will be downloaded to build/<name> and extract to
+        build/<destdir>.
+        """
+        if name is None and url:
+            # Try to infer the name from url
+            name = os.path.basename(url)
+        assert name is not None
+        if destdir is None:
+            # Try to infer it from name
+            destdir = os.path.splitext(name)[0]
+            if destdir.endswith(".tar"):
+                destdir = destdir[:-4]
+        assert name != destdir, "name (%s) and destdir cannot be the same" % name
+        self.name = name
+        self.url = url
+        self.destdir = destdir
+        self.version = version
+
+    def ensureready(self):
+        """Download and extract the asset to self.destdir"""
+        if not self._isready():
+            self._download()
+            self._extract()
+            self._markready()
+        assert self._isready(), "%r should be ready now" % self
+
+    def _download(self):
+        destpath = pjoin(builddir, self.name)
+        if havefb:
+            # via internal LFS utlity
+            lfspypath = os.environ.get(
+                "LFSPY_PATH", pjoin(scriptdir, "../../tools/lfs/lfs.py")
+            )
+            ptrpath = pjoin(scriptdir, "fb/tools/.lfs-pointers")
+            args = [
+                sys.executable,
+                lfspypath,
+                "-l",
+                ptrpath,
+                "-q",
+                "download",
+                destpath,
+            ]
+        else:
+            # via external URL
+            assert self.url, "Cannot download %s - no URL provided" % self.name
+            args = ["curl", "-L", self.url, "-o", destpath]
+        subprocess.check_call(args)
+
+    def _extract(self):
+        destdir = self.destdir
+        srcpath = pjoin(builddir, self.name)
+        destpath = pjoin(builddir, destdir)
+        assert os.path.isfile(srcpath), "%s is not downloaded properly" % srcpath
+        ensureempty(destpath)
+
+        if srcpath.endswith(".tar.gz"):
+            with tarfile.open(srcpath, "r") as f:
+                # Be smarter: are all paths in the tar already starts with
+                # destdir? If so, strip it.
+                prefix = destdir + "/"
+                if all((name + "/").startswith(prefix) for name in f.getnames()):
+                    destpath = os.path.dirname(destpath)
+                f.extractall(destpath)
+        elif srcpath.endswith(".zip"):
+            with zipfile.ZipFile(srcpath, "r") as f:
+                # Same as above. Strip the destdir name if all entries ahve it.
+                prefix = destdir + "/"
+                if all((name + "/").startswith(prefix) for name in f.namelist()):
+                    destpath = os.path.dirname(destpath)
+                f.extractall(destpath)
+        else:
+            raise RuntimeError("don't know how to extract %s" % self.name)
+
+    def __hash__(self):
+        return hash((self.name, self.url, self.version))
+
+    def _isready(self):
+        try:
+            return int(open(self._readypath).read()) == hash(self)
+        except Exception:
+            return False
+
+    def _markready(self):
+        with open(self._readypath, "w") as f:
+            f.write("%s" % hash(self))
+
+    @property
+    def _readypath(self):
+        return pjoin(builddir, self.destdir, ".ready")
+
+
+class fetchbuilddeps(Command):
+    description = "download build depencencies"
+    user_options = []
+
+    assets = [
+        asset(
+            name="re2-2018-04-01.tar.gz",
+            url="https://github.com/google/re2/archive/2018-04-01.tar.gz",
+        )
+    ]
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        for item in self.assets:
+            item.ensureready()
 
 
 class hgbuild(build):
@@ -1122,6 +1252,7 @@ class hginstallscripts(install_scripts):
 
 
 cmdclass = {
+    "fetch_build_deps": fetchbuilddeps,
     "build": hgbuild,
     "build_mo": hgbuildmo,
     "build_ext": hgbuildext,
