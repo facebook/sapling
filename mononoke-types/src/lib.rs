@@ -55,7 +55,7 @@ pub mod typed_hash;
 
 pub use blob::{Blob, BlobstoreBytes, BlobstoreValue, ChangesetBlob, ContentBlob};
 pub use bonsai_changeset::{BonsaiChangeset, BonsaiChangesetMut};
-pub use datetime::DateTime;
+pub use datetime::{DateTime, Timestamp};
 pub use file_change::{FileChange, FileType};
 pub use file_contents::FileContents;
 pub use generation::Generation;

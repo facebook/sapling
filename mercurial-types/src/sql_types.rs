@@ -77,6 +77,7 @@ impl ConvIr<RepositoryId> for RepositoryId {
     fn new(v: Value) -> FromValueResult<Self> {
         match v {
             Value::UInt(id) => Ok(RepositoryId::new(id as i32)),
+            Value::Int(id) => Ok(RepositoryId::new(id as i32)), // sqlite always produces `int`
             v => Err(FromValueError(v)),
         }
     }
@@ -86,7 +87,7 @@ impl ConvIr<RepositoryId> for RepositoryId {
     }
 
     fn rollback(self) -> Value {
-        Value::UInt(self.id() as u64)
+        self.into()
     }
 }
 

@@ -6,7 +6,7 @@
 
 use std::fmt::{self, Display};
 
-use chrono::{DateTime as ChronoDateTime, FixedOffset, Local, LocalResult, TimeZone};
+use chrono::{DateTime as ChronoDateTime, FixedOffset, Local, LocalResult, NaiveDateTime, TimeZone};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use errors::*;
@@ -108,6 +108,41 @@ impl Arbitrary for DateTime {
     }
 }
 
+/// Number of non-leap-nanoseconds since January 1, 1970 UTC
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub struct Timestamp(i64);
+
+impl Timestamp {
+    pub fn now() -> Self {
+        DateTime::now().into()
+    }
+
+    pub fn from_timestamp_nanos(ts: i64) -> Self {
+        Timestamp(ts)
+    }
+
+    pub fn timestamp_nanos(&self) -> i64 {
+        self.0
+    }
+}
+
+impl From<DateTime> for Timestamp {
+    fn from(dt: DateTime) -> Self {
+        Timestamp(dt.0.timestamp_nanos())
+    }
+}
+
+impl From<Timestamp> for DateTime {
+    fn from(ts: Timestamp) -> Self {
+        let ts_secs = ts.0 / 1_000_000_000;
+        let ts_nsecs = (ts.0 % 1_000_000_000) as u32;
+        DateTime::new(ChronoDateTime::<FixedOffset>::from_utc(
+            NaiveDateTime::from_timestamp(ts_secs, ts_nsecs),
+            FixedOffset::west(0),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -168,5 +203,15 @@ mod test {
             timestamp_secs: i64::max_value(),
             tz_offset_secs: 0,
         }).expect_err("unexpected OK - timestamp_secs out of bounds");
+    }
+
+    #[test]
+    fn timestamp_round_trip() {
+        let ts0 = Timestamp::now();
+        let dt0: DateTime = ts0.into();
+        let ts1: Timestamp = dt0.into();
+        let dt1: DateTime = ts1.into();
+        assert_eq!(ts0, ts1);
+        assert_eq!(dt0, dt1);
     }
 }

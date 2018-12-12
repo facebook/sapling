@@ -10,6 +10,7 @@ extern crate cloned;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
+extern crate sql;
 extern crate tokio;
 
 extern crate blobstore;
@@ -27,6 +28,7 @@ use cloned::cloned;
 use failure::{err_msg, Error};
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
+use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
 use tokio::executor::spawn;
 
 use blobstore::Blobstore;
@@ -34,8 +36,42 @@ use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 /// Id used to discriminate diffirent underlying blobstore instances
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BlobstoreId(u32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct BlobstoreId(u64);
+
+impl BlobstoreId {
+    pub fn new(id: u64) -> Self {
+        BlobstoreId(id)
+    }
+}
+
+impl From<BlobstoreId> for Value {
+    fn from(id: BlobstoreId) -> Self {
+        Value::UInt(id.0)
+    }
+}
+
+impl ConvIr<BlobstoreId> for BlobstoreId {
+    fn new(v: Value) -> Result<Self, FromValueError> {
+        match v {
+            Value::UInt(id) => Ok(BlobstoreId(id)),
+            Value::Int(id) => Ok(BlobstoreId(id as u64)), // sqlite always produces `int`
+            _ => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> Self {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for BlobstoreId {
+    type Intermediate = BlobstoreId;
+}
 
 /// This handler is called on each successful put to underlying blobstore,
 /// for put to be considered successful this handler must return success.
