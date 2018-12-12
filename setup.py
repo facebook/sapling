@@ -656,6 +656,8 @@ class fetchbuilddeps(Command):
             "https://files.pythonhosted.org/packages/16/2a/557af1181e6b4e30254d5a6163b18f5053791ca66e251e77ab08887e8fe3/scandir-1.9.0.tar.gz",
             "https://files.pythonhosted.org/packages/fa/bc/9bd3b5c2b4774d5f33b2d544f1460be9df7df2fe42f352135381c347c69a/ipython_genutils-0.2.0-py2.py3-none-any.whl",
             "https://files.pythonhosted.org/packages/c5/db/e56e6b4bbac7c4a06de1c50de6fe1ef3810018ae11732a50f15f62c7d050/enum34-1.1.6-py2-none-any.whl",
+            "https://files.pythonhosted.org/packages/89/8d/7aad74930380c8972ab282304a2ff45f3d4927108bb6693cabcc9fc6a099/win_unicode_console-0.5.zip",
+            "https://files.pythonhosted.org/packages/4f/a6/728666f39bfff1719fc94c481890b2106837da9318031f71a8424b662e12/colorama-0.4.1-py2.py3-none-any.whl",
         ]
     ]
 
@@ -1117,7 +1119,15 @@ class hgbuildpy(build_py):
 
 class buildpyzip(Command):
     description = "generate zip for bundled dependent Python modules (ex. IPython)"
-    user_options = []
+    user_options = [
+        (
+            "inplace",
+            "i",
+            "ignore build-lib and put compiled extensions into the source "
+            + "directory alongside your pure Python modules",
+        )
+    ]
+    boolean_options = ["inplace"]
 
     # Currently this only handles IPython. It avoids conflicts with the system
     # IPython (which might be older and have GUI dependencies that we don't
@@ -1125,7 +1135,7 @@ class buildpyzip(Command):
     # as weel (i.e. some buildembedded logic will move here).
 
     def initialize_options(self):
-        pass
+        self.inplace = None
 
     def finalize_options(self):
         pass
@@ -1137,7 +1147,10 @@ class buildpyzip(Command):
         depdirs = [pjoin(builddir, a.destdir) for a in fetchbuilddeps.ipythonassets]
 
         # Perform a mtime check so we can skip building if possible
-        zippath = pjoin(builddir, "IPython.zip")
+        if self.inplace:
+            zippath = pjoin(scriptdir, "mercurial/thirdparty/IPython.zip")
+        else:
+            zippath = pjoin(builddir, "IPython.zip")
         if os.path.exists(zippath):
             depmtime = max(os.stat(d).st_mtime for d in depdirs)
             zipmtime = os.stat(zippath).st_mtime
@@ -1157,6 +1170,8 @@ class buildpyzip(Command):
                 # directories to get everything included.
                 extracteddir = pjoin(builddir, asset.destdir)
                 for name in os.listdir(extracteddir):
+                    if name == "setup.py":
+                        continue
                     path = pjoin(extracteddir, name)
                     if path.endswith(".py") or os.path.isdir(path):
                         f.writepy(path)
