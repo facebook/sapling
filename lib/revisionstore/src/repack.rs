@@ -3,10 +3,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use datapack::{DataPack, DataPackVersion};
+use datastore::DataStore;
 use error::Result;
+use historypack::{HistoryPack, HistoryPackVersion};
+use historystore::HistoryStore;
 use key::Key;
+use mutabledatapack::MutableDataPack;
+use mutablehistorypack::MutableHistoryPack;
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -75,12 +81,74 @@ pub trait Repackable: IterableStore {
     }
 }
 
+fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Result<()> {
+    for k in data_pack.iter() {
+        let key = k?;
+        let chain = data_pack.get_delta_chain(&key)?;
+        for delta in chain.iter() {
+            if mut_pack.get_delta(&delta.key).is_ok() {
+                break;
+            }
+
+            let meta = Some(data_pack.get_meta(&delta.key)?);
+            mut_pack.add(&delta, meta)?;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn repack_datapacks<'a>(
+    paths: impl Iterator<Item = &'a PathBuf>,
+    outdir: &Path,
+) -> Result<PathBuf> {
+    let mut mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
+
+    for path in paths {
+        let data_pack = DataPack::new(&path)?;
+        repack_datapack(&data_pack, &mut mut_pack)?;
+    }
+
+    mut_pack.close()
+}
+
+fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryPack) -> Result<()> {
+    for k in history_pack.iter() {
+        let key = k?;
+        let node = history_pack.get_node_info(&key)?;
+        mut_pack.add(&key, &node)?;
+    }
+
+    Ok(())
+}
+
+pub fn repack_historypacks<'a>(
+    paths: impl Iterator<Item = &'a PathBuf>,
+    outdir: &Path,
+) -> Result<PathBuf> {
+    let mut mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
+
+    for path in paths {
+        let history_pack = HistoryPack::new(path)?;
+        repack_historypack(&history_pack, &mut mut_pack)?;
+    }
+
+    mut_pack.close()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use datapack::tests::make_datapack;
+    use datastore::Delta;
+    use historypack::tests::{get_nodes, make_historypack};
+    use historystore::Ancestors;
     use rand::SeedableRng;
     use rand::chacha::ChaChaRng;
     use std::cell::RefCell;
+    use std::collections::HashMap;
+    use std::rc::Rc;
+    use tempfile::TempDir;
     use types::node::Node;
 
     struct FakeStore {
@@ -169,5 +237,129 @@ mod tests {
             ))
             .unwrap();
         assert_eq!(*store.deleted.borrow(), true);
+    }
+
+    #[test]
+    fn test_repack_one_datapack() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let revisions = vec![
+            (
+                Delta {
+                    data: Rc::new([1, 2, 3, 4]),
+                    base: None,
+                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                },
+                None,
+            ),
+        ];
+
+        let pack = make_datapack(&tempdir, &revisions);
+        let newpath = repack_datapacks(vec![pack.pack_path().to_path_buf()].iter(), tempdir.path());
+        assert!(newpath.is_ok());
+        let newpath2 = newpath.unwrap();
+        assert_eq!(newpath2.with_extension("datapack"), pack.pack_path());
+        let newpack = DataPack::new(&newpath2).unwrap();
+        assert_eq!(
+            newpack.iter().collect::<Result<Vec<Key>>>().unwrap(),
+            revisions
+                .iter()
+                .map(|d| d.0.key.clone())
+                .collect::<Vec<Key>>()
+        );
+    }
+
+    #[test]
+    fn test_repack_multiple_datapacks() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+        let mut revisions = Vec::new();
+        let mut paths = Vec::new();
+
+        for _ in 0..2 {
+            let base = Key::new(Box::new([0]), Node::random(&mut rng));
+            let rev = vec![
+                (
+                    Delta {
+                        data: Rc::new([1, 2, 3, 4]),
+                        base: None,
+                        key: base.clone(),
+                    },
+                    None,
+                ),
+                (
+                    Delta {
+                        data: Rc::new([1, 2, 3, 4]),
+                        base: Some(base),
+                        key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                    },
+                    None,
+                ),
+            ];
+            let pack = make_datapack(&tempdir, &rev);
+            let path = pack.pack_path().to_path_buf();
+            revisions.push(rev);
+            paths.push(path);
+        }
+
+        let newpath = repack_datapacks(paths.iter(), tempdir.path());
+        assert!(newpath.is_ok());
+        let newpack = DataPack::new(&newpath.unwrap()).unwrap();
+        assert_eq!(
+            newpack.iter().collect::<Result<Vec<Key>>>().unwrap(),
+            revisions
+                .iter()
+                .flatten()
+                .map(|d| d.0.key.clone())
+                .collect::<Vec<Key>>()
+        );
+    }
+
+    #[test]
+    fn test_repack_one_historypack() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+
+        let (nodes, ancestors) = get_nodes(&mut rng);
+
+        let pack = make_historypack(&tempdir, &nodes);
+        let newpath =
+            repack_historypacks(vec![pack.pack_path().to_path_buf()].iter(), tempdir.path());
+        assert!(newpath.is_ok());
+        let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
+
+        for (ref key, _) in nodes.iter() {
+            let response: Ancestors = newpack.get_ancestors(key).unwrap();
+            assert_eq!(&response, ancestors.get(key).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_repack_multiple_historypack() {
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let tempdir = TempDir::new().unwrap();
+        let mut ancestors = HashMap::new();
+        let mut nodes = HashMap::new();
+        let mut paths = Vec::new();
+
+        for _ in 0..2 {
+            let (node, ancestor) = get_nodes(&mut rng);
+            let pack = make_historypack(&tempdir, &node);
+            let path = pack.pack_path().to_path_buf();
+
+            ancestors.extend(ancestor.into_iter());
+            nodes.extend(node.into_iter());
+            paths.push(path);
+        }
+
+        let newpath = repack_historypacks(paths.iter(), tempdir.path());
+        assert!(newpath.is_ok());
+        let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
+
+        for (key, _) in nodes.iter() {
+            let response = newpack.get_ancestors(&key).unwrap();
+            assert_eq!(&response, ancestors.get(key).unwrap());
+        }
     }
 }

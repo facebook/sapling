@@ -410,7 +410,7 @@ impl<'a> Iterator for DataPackIterator<'a> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use datastore::{Delta, Metadata};
     use mutabledatapack::MutableDataPack;
@@ -419,7 +419,7 @@ mod tests {
     use tempfile::TempDir;
     use types::node::Node;
 
-    fn make_pack(tempdir: &TempDir, deltas: &Vec<(Delta, Option<Metadata>)>) -> DataPack {
+    pub fn make_datapack(tempdir: &TempDir, deltas: &Vec<(Delta, Option<Metadata>)>) -> DataPack {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         for &(ref delta, ref metadata) in deltas.iter() {
             mutdatapack.add(&delta, metadata.clone()).unwrap();
@@ -433,7 +433,7 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = TempDir::new().unwrap();
-        let pack = make_pack(&tempdir, &vec![]);
+        let pack = make_datapack(&tempdir, &vec![]);
         assert!(pack.len() > 0);
     }
 
@@ -452,7 +452,7 @@ mod tests {
                 None,
             ),
         ];
-        let pack = make_pack(&tempdir, &revisions);
+        let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref _metadata) in revisions.iter() {
             let missing = pack.get_missing(&[delta.key.clone()]).unwrap();
             assert_eq!(missing.len(), 0);
@@ -490,7 +490,7 @@ mod tests {
             ),
         ];
 
-        let pack = make_pack(&tempdir, &revisions);
+        let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref metadata) in revisions.iter() {
             let meta = pack.get_meta(&delta.key).unwrap();
             let mut metadata = match metadata {
@@ -525,7 +525,7 @@ mod tests {
             ),
         ];
 
-        let pack = make_pack(&tempdir, &revisions);
+        let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref _metadata) in revisions.iter() {
             let chain = pack.get_delta_chain(&delta.key).unwrap();
             assert_eq!(chain[0], *delta);
@@ -556,7 +556,7 @@ mod tests {
             ),
         ];
 
-        let pack = make_pack(&tempdir, &revisions);
+        let pack = make_datapack(&tempdir, &revisions);
         for &(ref expected_delta, _) in revisions.iter() {
             let delta = pack.get_delta(&expected_delta.key).unwrap();
             assert_eq!(expected_delta, &delta);
@@ -597,7 +597,7 @@ mod tests {
             None,
         ));
 
-        let pack = make_pack(&tempdir, &revisions);
+        let pack = make_datapack(&tempdir, &revisions);
 
         let chains = [
             vec![revisions[0].0.clone()],
@@ -639,7 +639,7 @@ mod tests {
             ),
         ];
 
-        let pack = make_pack(&tempdir, &revisions);
+        let pack = make_datapack(&tempdir, &revisions);
         assert_eq!(
             pack.iter().collect::<Result<Vec<Key>>>().unwrap(),
             revisions
@@ -665,7 +665,7 @@ mod tests {
             ),
         ];
 
-        let pack = make_pack(&tempdir, &revisions);
+        let pack = make_datapack(&tempdir, &revisions);
         assert_eq!(
             tempdir.path().read_dir().unwrap().collect::<Vec<_>>().len(),
             2
@@ -693,7 +693,7 @@ mod tests {
                 ));
             }
 
-            let pack = make_pack(&tempdir, &revisions);
+            let pack = make_datapack(&tempdir, &revisions);
             let same = pack.iter().collect::<Result<Vec<Key>>>().unwrap()
                 == revisions
                     .iter()

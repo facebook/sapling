@@ -344,7 +344,7 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use rand::SeedableRng;
     use rand::chacha::ChaChaRng;
@@ -354,7 +354,7 @@ mod tests {
 
     use mutablehistorypack::MutableHistoryPack;
 
-    fn make_pack(tempdir: &TempDir, nodes: &HashMap<Key, NodeInfo>) -> HistoryPack {
+    pub fn make_historypack(tempdir: &TempDir, nodes: &HashMap<Key, NodeInfo>) -> HistoryPack {
         let mut mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
         for (ref key, ref info) in nodes.iter() {
             mutpack.add(key.clone(), info.clone()).unwrap();
@@ -365,7 +365,7 @@ mod tests {
         HistoryPack::new(&path).unwrap()
     }
 
-    fn get_nodes(mut rng: &mut ChaChaRng) -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
+    pub fn get_nodes(mut rng: &mut ChaChaRng) -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
         let file1 = Box::new([1, 2, 3]);
         let file2 = Box::new([1, 2, 3, 4, 5]);
         let null = Node::null_id();
@@ -430,7 +430,7 @@ mod tests {
 
         let (nodes, ancestors) = get_nodes(&mut rng);
 
-        let pack = make_pack(&tempdir, &nodes);
+        let pack = make_historypack(&tempdir, &nodes);
 
         for (ref key, _) in nodes.iter() {
             pack.get_node_info(key).unwrap();
@@ -446,7 +446,7 @@ mod tests {
 
         let (nodes, _) = get_nodes(&mut rng);
 
-        let pack = make_pack(&tempdir, &nodes);
+        let pack = make_historypack(&tempdir, &nodes);
 
         for (ref key, ref info) in nodes.iter() {
             let response: NodeInfo = pack.get_node_info(key).unwrap();
@@ -461,7 +461,7 @@ mod tests {
 
         let (nodes, _) = get_nodes(&mut rng);
 
-        let pack = make_pack(&tempdir, &nodes);
+        let pack = make_historypack(&tempdir, &nodes);
 
         let mut test_keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
         let missing_key = Key::new(Box::new([9]), Node::random(&mut rng));
@@ -478,7 +478,7 @@ mod tests {
 
         let (nodes, _) = get_nodes(&mut rng);
 
-        let pack = make_pack(&tempdir, &nodes);
+        let pack = make_historypack(&tempdir, &nodes);
 
         let mut keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
         keys.sort_unstable();
