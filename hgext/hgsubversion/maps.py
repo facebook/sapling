@@ -546,12 +546,16 @@ class SqliteRevMap(collections.MutableMapping):
         """CREATE TABLE IF NOT EXISTS revmap (
                rev INTEGER NOT NULL,
                branch TEXT NOT NULL DEFAULT '',
-               hash BLOB NOT NULL)"""
+               hash BLOB NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS svnmeta (
+               name TEXT NOT NULL,
+               value TEXT NOT NULL)""",
     ]
 
     INDEXSCHEMA = [
         "CREATE UNIQUE INDEX IF NOT EXISTS revbranch ON revmap (rev,branch);",
         "CREATE INDEX IF NOT EXISTS hash ON revmap (hash);",
+        "CREATE UNIQUE INDEX IF NOT EXISTS name ON svnmeta (name);",
     ]
 
     # "bytes" in Python 2 will get truncated at '\0' when storing as sqlite
@@ -593,9 +597,6 @@ class SqliteRevMap(collections.MutableMapping):
             for row in self.revmap._query("SELECT hash FROM revmap"):
                 yield bytes(row[0])
 
-    lastpulled = util.fileproperty(
-        "_lastpulled", lambda x: x._lastpulledpath, default=0, deserializer=safeint
-    )
     rowcount = util.fileproperty(
         "_rowcount", lambda x: x._rowcountpath, default=0, deserializer=safeint
     )
@@ -618,6 +619,26 @@ class SqliteRevMap(collections.MutableMapping):
 
     def hashes(self):
         return self.ReverseRevMap(self, self._hashescache)
+
+    @property
+    def lastpulled(self):
+        rows = self._query("SELECT value FROM svnmeta WHERE name = 'lastpulled'")
+        if len(rows) == 0:
+            # Migrate from the old format if necessary
+            if os.path.exists(self._lastpulledpath):
+                with open(self._lastpulledpath, "r") as f:
+                    lastpulled = safeint(f.read())
+                    self.lastpulled = lastpulled
+                    return lastpulled
+            return 0
+        return safeint(rows[0][0])
+
+    @lastpulled.setter
+    def lastpulled(self, value):
+        self._query(
+            "INSERT OR REPLACE INTO svnmeta (name, value) VALUES (?, ?)",
+            ("lastpulled", str(value)),
+        )
 
     def branchedits(self, branch, revnum):
         return [
@@ -729,8 +750,12 @@ class SqliteRevMap(collections.MutableMapping):
         with self._transaction() as db:
             cur = db.execute(sql, params)
             try:
-                for row in cur:
-                    yield row
+                # Process the entire query instead of yielding one by one. If we
+                # yield one by one then if the query terminates early then the
+                # iterator might not complete and the transaction might not be
+                # released until gabarge collection cleans up the iterator. This
+                # can result in deadlocks.
+                return list(cur)
             finally:
                 cur.close()
 

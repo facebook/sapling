@@ -4,7 +4,7 @@ import os
 import sys
 
 import test_hgsubversion_util
-from hgext.hgsubversion import svncommands, svnmeta, util
+from hgext.hgsubversion import maps, svncommands, svnmeta, util
 from mercurial import context, extensions, hg, localrepo, util as hgutil
 
 
@@ -106,6 +106,11 @@ def _run_assertions(self, name, single, src, dest, u):
     )
     dest = hg.repository(u, os.path.dirname(dest.path))
     for tf in ("lastpulled", "rev_map", "uuid", "tagmap", "layout", "subdir"):
+        if tf == "lastpulled" and isinstance(src.svnmeta().revmap, maps.SqliteRevMap):
+            self.assertEqual(
+                src.svnmeta().revmap.lastpulled, dest.svnmeta().revmap.lastpulled
+            )
+            continue
 
         stf = os.path.join(src.path, "svn", tf)
         # the generation of tagmap is lazy so it doesn't strictly need to exist
@@ -127,11 +132,11 @@ def _run_assertions(self, name, single, src, dest, u):
             )
             continue
         self.assertEqual(old, new, "%s differs old: %r new %r" % (tf, old, new))
-        try:
-            self.assertEqual(src.branchmap(), dest.branchmap())
-        except AttributeError:
-            # hg 2.8 and earlier
-            self.assertEqual(src.branchtags(), dest.branchtags())
+    try:
+        self.assertEqual(src.branchmap(), dest.branchmap())
+    except AttributeError:
+        # hg 2.8 and earlier
+        self.assertEqual(src.branchtags(), dest.branchtags())
     srcbi = util.load(os.path.join(src.path, "svn", "branch_info"))
     destbi = util.load(os.path.join(dest.path, "svn", "branch_info"))
     self.assertEqual(sorted(srcbi.keys()), sorted(destbi.keys()))
