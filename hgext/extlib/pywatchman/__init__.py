@@ -180,7 +180,20 @@ if os.name == "nt":
     WaitForSingleObjectEx.restype = wintypes.DWORD
 
     CreateEvent = ctypes.windll.kernel32.CreateEventA
-    CreateEvent.argtypes = [LPDWORD, wintypes.BOOL, wintypes.BOOL, wintypes.LPSTR]
+    # Skip setting argtypes to avoid conflicts with prompt_toolkit used by
+    # IPython. Otherwise it can error out like:
+    #
+    #   File "prompt_toolkit\eventloop\win32.py", line 189, in _create_event
+    #     return windll.kernel32.CreateEventA(pointer(SECURITY_ATTRIBUTES()), ...
+    #   ctypes.ArgumentError: argument 1: <type 'exceptions.TypeError'>: expected
+    #     LP_c_ulong instance instead of LP_SECURITY_ATTRIBUTES
+    #
+    # CreateEvent.argtypes = [LPDWORD, wintypes.BOOL, wintypes.BOOL, wintypes.LPSTR]
+    #                         ^^^^^^^ Pointer(SECURITY_ATTRIBUTES) is more accurate.
+    # However, we don't borther creating another SECURITY_ATTRIBUTES structure here.
+    #
+    # Without argtypes, ctypes can still infer types from parameters. That's
+    # what prompt_toolkit does, and it works just fine for pywatchman.
     CreateEvent.restype = wintypes.HANDLE
 
     # Windows Vista is the minimum supported client for CancelIoEx.
