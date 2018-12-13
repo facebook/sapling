@@ -180,6 +180,35 @@ def newandmodified(chunks, originalchunks):
     return newlyaddedandmodifiedfiles
 
 
+def comparechunks(chunks1, chunks2):
+    """
+    Determine whether two sets of chunks are the same, even after having
+    been filtered.
+
+    Extract the patch recordhunks and compare them.  The crecord module wraps
+    these in uihunks, so we need to unwrap those.
+    """
+
+    def makehunkset(chunks):
+        s = set()
+
+        def addhunk(hunk):
+            if isinstance(hunk, crecordmod.uihunk):
+                s.add(hunk._hunk)
+            elif isinstance(hunk, patch.recordhunk):
+                s.add(hunk)
+
+        for c in chunks:
+            if util.safehasattr(c, "hunks"):
+                for hunk in c.hunks:
+                    addhunk(hunk)
+            else:
+                addhunk(c)
+        return s
+
+    return makehunkset(chunks1) == makehunkset(chunks2)
+
+
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
 

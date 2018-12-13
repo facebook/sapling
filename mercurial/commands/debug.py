@@ -3246,7 +3246,15 @@ def debugmutation(ui, repo, *revs, **opts):
                 mutop = ctx.mutationoperation()
                 mutuser = ctx.mutationuser()
                 mutdate = util.shortdatetime(util.parsedate(ctx.mutationdate()))
-                ui.status((" %s by %s at %s from:\n") % (mutop, mutuser, mutdate))
+                extra = ""
+                mutsplit = ctx.mutationsplit()
+                if mutsplit is not None:
+                    extra += " (split into this and: %s)" % ", ".join(
+                        [hex(n) for n in mutsplit]
+                    )
+                ui.status(
+                    (" %s by %s at %s%s from:\n") % (mutop, mutuser, mutdate, extra)
+                )
                 nodestack.append(list(reversed(pred)))
             while nodestack and not nodestack[-1]:
                 nodestack.pop()

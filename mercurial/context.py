@@ -687,6 +687,12 @@ class changectx(basectx):
     def mutationdate(self):
         return self.extra().get("mutdate")
 
+    def mutationsplit(self):
+        split = self.extra().get("mutsplit")
+        if split is not None:
+            split = [bin(n) for n in split.split(",")]
+        return split
+
     def isinmemory(self):
         return False
 

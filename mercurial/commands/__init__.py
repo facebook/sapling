@@ -1946,6 +1946,9 @@ def _docommit(ui, repo, *pats, **opts):
             ui.status(_("nothing changed\n"))
             return 1
     else:
+        commitextrafunc = opts.get("_commitextrafunc")
+        if commitextrafunc is not None:
+            commitextrafunc(extra)
 
         def commitfunc(ui, repo, message, match, opts):
             overrides = {}

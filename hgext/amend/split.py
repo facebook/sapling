@@ -19,6 +19,7 @@ from mercurial import (
     hg,
     hintutil,
     lock as lockmod,
+    mutation,
     obsolete,
     registrar,
     scmutil,
@@ -99,6 +100,29 @@ def split(ui, repo, *revs, **opts):
             modified, added, removed, deleted = repo.status()[:4]
             return modified or added or removed or deleted
 
+        # We need to detect the case where the user selects all remaining
+        # changes, as that will end the split.  That's the commit we want to
+        # mark as the result of the split.  To do this, wrap the recordfilter
+        # function and compare the output to see if it contains all the
+        # originalchunks.
+        shouldrecordmutation = [False]
+
+        def commitextra(extra):
+            if shouldrecordmutation[0]:
+                mutation.record(
+                    repo,
+                    extra,
+                    [ctx.node()],
+                    "split",
+                    splitting=[c.node() for c in newcommits],
+                )
+
+        def recordfilter(ui, originalchunks, operation=None):
+            chunks, newopts = cmdutil.recordfilter(ui, originalchunks, operation)
+            if cmdutil.comparechunks(chunks, originalchunks):
+                shouldrecordmutation[0] = True
+            return chunks, newopts
+
         msg = (
             "HG: This is the original pre-split commit message. "
             "Edit it as appropriate.\n\n"
@@ -106,23 +130,18 @@ def split(ui, repo, *revs, **opts):
         msg += ctx.description()
         opts["message"] = msg
         opts["edit"] = True
+        opts["_commitextrafunc"] = commitextra
         while haschanges():
             pats = ()
             cmdutil.dorecord(
-                ui,
-                repo,
-                commands.commit,
-                "commit",
-                False,
-                cmdutil.recordfilter,
-                *pats,
-                **opts
+                ui, repo, commands.commit, "commit", False, recordfilter, *pats, **opts
             )
             # TODO: Does no seem like the best way to do this
             # We should make dorecord return the newly created commit
             newcommits.append(repo["."])
             if haschanges():
                 if ui.prompt("Done splitting? [yN]", default="n") == "y":
+                    shouldrecordmutation[0] = True
                     commands.commit(ui, repo, **opts)
                     newcommits.append(repo["."])
                     break

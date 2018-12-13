@@ -8,8 +8,8 @@
 from mercurial import error, node as nodemod, util
 
 
-def record(repo, extra, prednodes, op=None):
-    for key in "mutpred", "mutuser", "mutdate", "mutop":
+def record(repo, extra, prednodes, op=None, splitting=None):
+    for key in "mutpred", "mutuser", "mutdate", "mutop", "mutsplit":
         if key in extra:
             del extra[key]
     if recording(repo):
@@ -23,6 +23,8 @@ def record(repo, extra, prednodes, op=None):
         extra["mutdate"] = "%d %d" % date
         if op is not None:
             extra["mutop"] = op
+        if splitting is not None:
+            extra["mutsplit"] = ",".join(nodemod.hex(n) for n in splitting)
 
 
 def recording(repo):

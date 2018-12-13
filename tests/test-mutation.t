@@ -7,6 +7,8 @@ We need obsmarkers for now, to allow unstable commits
   > [mutation]
   > record=true
   > date=0 0
+  > [ui]
+  > interactive = true
   > EOF
   $ newrepo
   $ echo "base" > base
@@ -76,3 +78,91 @@ Fold
           8ae4b2d33bbb804e1e8a5d5e43164e61dfb09885 rebase by test at 1970-01-01T00:00:00 from:
             afcbdd90543ac6273d77ce2b6e967fb73373e5a4 rebase by test at 1970-01-01T00:00:00 from:
               1e2c46af1a22b8949201aee655b53f2aba83c490
+
+Split, leaving some changes left over at the end
+
+  $ echo "b" >> file2
+  $ echo "b" >> file3
+  $ hg commit -qm c4
+  $ hg split << EOF
+  > y
+  > y
+  > n
+  > y
+  > EOF
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  reverting file2
+  reverting file3
+  diff --git a/file2 b/file2
+  1 hunks, 1 lines changed
+  examine changes to 'file2'? [Ynesfdaq?] y
+  
+  @@ -1,1 +1,2 @@
+   a
+  +b
+  record change 1/2 to 'file2'? [Ynesfdaq?] y
+  
+  diff --git a/file3 b/file3
+  1 hunks, 1 lines changed
+  examine changes to 'file3'? [Ynesfdaq?] n
+  
+  Done splitting? [yN] y
+  $ hg debugmutation ".^::."
+    a7e46e8d9faf725274ea4cde6d202dd8d74991b0
+    b23a10bc8972610ae489b044312b4e89e89fa08e split by test at 1970-01-01T00:00:00 (split into this and: a7e46e8d9faf725274ea4cde6d202dd8d74991b0) from:
+      618c9a83fb832b6742123bd06fa829aa32bdb1bf
+
+Split parent, selecting all changes at the end
+
+  $ echo "c" >> file2
+  $ echo "c" >> file3
+  $ hg commit -qm c5
+  $ echo "d" >> file3
+  $ hg commit -qm c6
+  $ hg split ".^" << EOF
+  > y
+  > y
+  > n
+  > n
+  > y
+  > y
+  > EOF
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  reverting file2
+  reverting file3
+  diff --git a/file2 b/file2
+  1 hunks, 1 lines changed
+  examine changes to 'file2'? [Ynesfdaq?] y
+  
+  @@ -1,2 +1,3 @@
+   a
+   b
+  +c
+  record change 1/2 to 'file2'? [Ynesfdaq?] y
+  
+  diff --git a/file3 b/file3
+  1 hunks, 1 lines changed
+  examine changes to 'file3'? [Ynesfdaq?] n
+  
+  Done splitting? [yN] n
+  diff --git a/file3 b/file3
+  1 hunks, 1 lines changed
+  examine changes to 'file3'? [Ynesfdaq?] y
+  
+  @@ -1,2 +1,3 @@
+   a
+   b
+  +c
+  record this change to 'file3'? [Ynesfdaq?] y
+  
+  no more change to split
+  rebasing 23:2802b58ff916 "c6"
+
+Split leaves the checkout at the top of the split commits
+
+  $ hg debugmutation ".^::tip"
+    9f5728118af072cb4d27b2e87c1c4abf1d744c54
+    94fde643eeb6b11e10eb5de6268ce62601f8c185 split by test at 1970-01-01T00:00:00 (split into this and: 9f5728118af072cb4d27b2e87c1c4abf1d744c54) from:
+      98372bb0c913529155d64663575faf5698fe8b1b
+    e536de343881687fa51ea0174bd3333686cb4ced rebase by test at 1970-01-01T00:00:00 from:
+      2802b58ff916d7dbca8462b9843ce7fca4ca18f4
