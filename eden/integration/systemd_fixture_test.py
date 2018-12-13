@@ -15,6 +15,7 @@ import time
 import typing
 import unittest
 
+from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib.linux import ProcessID, is_cgroup_v2_mounted
@@ -59,7 +60,10 @@ class TemporarySystemdUserServiceManagerTest(
 
 
 class TemporarySystemdUserServiceManagerIsolationTest(
-    unittest.TestCase, SystemdUserServiceManagerMixin
+    unittest.TestCase,
+    EnvironmentVariableMixin,
+    SystemdUserServiceManagerMixin,
+    TemporaryDirectoryMixin,
 ):
     def test_services_with_same_name_by_different_managers_are_independent(
         self
@@ -104,6 +108,70 @@ class TemporarySystemdUserServiceManagerIsolationTest(
             systemd_2.get_active_unit_names(),
             "systemd_2 should not see systemd_1's unit",
         )
+
+    def test_environment_variables_do_not_leak_to_services(self) -> None:
+        spy_variable_name = "EDEN_TEST_VARIABLE"
+        self.set_environment_variable(
+            spy_variable_name, "this should not propogate to the service"
+        )
+
+        systemd = self.make_temporary_systemd_user_service_manager()
+        env_variables = self.get_service_environment(systemd)
+
+        env_variable_names = [name for (name, value) in env_variables]
+        self.assertIn(
+            "PATH",
+            env_variable_names,
+            "Sanity check: $PATH should be set in service environment",
+        )
+        self.assertNotIn(spy_variable_name, env_variable_names)
+
+    def test_path_environment_variable_is_forced_to_default(self) -> None:
+        # See https://www.freedesktop.org/software/systemd/man/systemd.exec.html#%24PATH
+        allowed_path_entries = {
+            "/usr/local/sbin",
+            "/usr/local/bin",
+            "/usr/sbin",
+            "/usr/bin",
+            "/sbin",
+            "/bin",
+        }
+
+        spy_path_entry = self.make_temporary_directory()
+        self.set_environment_variable(
+            "PATH", spy_path_entry + os.pathsep + os.environ["PATH"]
+        )
+
+        systemd = self.make_temporary_systemd_user_service_manager()
+        env_variables = self.get_service_environment(systemd)
+
+        path_value = [value for (name, value) in env_variables if name == "PATH"][0]
+        for path_entry in path_value.split(os.pathsep):
+            self.assertIn(
+                path_entry,
+                allowed_path_entries,
+                "$PATH should only include default paths\n$PATH: {path_value!r}",
+            )
+
+    def get_service_environment(
+        self, systemd: SystemdUserServiceManager
+    ) -> typing.List[typing.Tuple[str, str]]:
+        env_output_file = pathlib.Path(self.make_temporary_directory()) / "env_output"
+        env_service = systemd.systemd_run(
+            command=["/usr/bin/env", "-0"],
+            properties={"StandardOutput": f"file:{env_output_file}"},
+            extra_env={},
+        )
+        env_service.poll_until_inactive(timeout=10)
+
+        def parse_entry(entry_str: str) -> typing.Tuple[str, str]:
+            [name, value] = entry_str.split("=", 1)
+            return (name, value)
+
+        env_output = env_output_file.read_text()
+        return [
+            parse_entry(entry_str) for entry_str in env_output.split("\0") if entry_str
+        ]
 
 
 class SystemdServiceTest(

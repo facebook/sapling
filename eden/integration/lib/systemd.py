@@ -22,6 +22,8 @@ import threading
 import types
 import typing
 
+from eden.cli.util import poll_until
+
 from .find_executables import FindExe
 from .linux import LinuxCgroup, ProcessID
 from .temporary_directory import create_tmp_dir
@@ -204,6 +206,12 @@ class SystemdService:
 
     def restart(self) -> None:
         self.__systemctl.check_call(["restart", "--", self.unit_name])
+
+    def poll_until_inactive(self, timeout: float) -> None:
+        def check_inactive() -> typing.Optional[bool]:
+            return True if self.query_active_state() == "inactive" else None
+
+        poll_until(check_inactive, timeout=timeout)
 
     def query_active_state(self) -> str:
         return self.__query_property("ActiveState").decode("utf-8")
@@ -409,7 +417,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
 
     def start_systemd_process(self) -> subprocess.Popen:
         cgroup = self.create_cgroup()
-        env = dict(os.environ)
+        env = self.base_systemd_environment
         env["XDG_RUNTIME_DIR"] = str(self.__xdg_runtime_dir)
         # HACK(strager): Work around 'systemd --user' refusing to start if the
         # system is not managed by systemd.
@@ -431,6 +439,11 @@ class _TransientUnmanagedSystemdUserServiceManager:
         )
         self.__cleanups.callback(lambda: self.stop_systemd_process(process))
         return process
+
+    @property
+    def base_systemd_environment(self) -> typing.Dict[str, str]:
+        # See https://www.freedesktop.org/software/systemd/man/systemd.exec.html#Environment%20variables%20in%20spawned%20processes
+        return {"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
 
     def stop_systemd_process(self, systemd_process: subprocess.Popen) -> None:
         systemd_process.terminate()
