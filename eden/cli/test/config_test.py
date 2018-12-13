@@ -106,10 +106,6 @@ class TomlConfigTest(
         self.unset_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD")
 
     def copy_config_files(self) -> None:
-        path = os.path.join(self._config_d, "_use_toml_configs_")
-        with open(path, "w") as text_file:
-            text_file.write("")
-
         path = os.path.join(self._config_d, "defaults.toml")
         with open(path, "w") as text_file:
             text_file.write(get_toml_test_file_defaults())
