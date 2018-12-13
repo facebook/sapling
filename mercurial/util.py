@@ -2161,6 +2161,11 @@ def shortdate(date=None):
     return datestr(date, format="%Y-%m-%d")
 
 
+def shortdatetime(date=None):
+    """turn (timestamp, tzoff) tuple into iso 8631 date and time."""
+    return datestr(date, format="%Y-%m-%dT%H:%M:%S")
+
+
 def parsetimezone(s):
     """find a trailing timezone, if any, in string, and return a
        (offset, remainder) pair"""

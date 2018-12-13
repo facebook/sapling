@@ -3225,3 +3225,29 @@ def debugtreestate(ui, repo, cmd="status", **opts):
             )
     else:
         raise error.Abort("unrecognised command: %s" % cmd)
+
+
+@command(b"debugmutation", [], _("[REV]"))
+def debugmutation(ui, repo, *revs, **opts):
+    """display the mutation history of a commit"""
+    repo = repo.unfiltered()
+    opts = pycompat.byteskwargs(opts)
+    for rev in scmutil.revrange(repo, revs):
+        ctx = repo[rev]
+        nodestack = [[ctx.node()]]
+        while nodestack:
+            node = nodestack[-1].pop()
+            ctx = repo[node]
+            ui.status(("%s%s") % ("  " * len(nodestack), ctx.hex()))
+            pred = ctx.mutationpredecessors()
+            if pred is None:
+                ui.status(("\n"))
+            else:
+                mutop = ctx.mutationoperation()
+                mutuser = ctx.mutationuser()
+                mutdate = util.shortdatetime(util.parsedate(ctx.mutationdate()))
+                ui.status((" %s by %s at %s from:\n") % (mutop, mutuser, mutdate))
+                nodestack.append(list(reversed(pred)))
+            while nodestack and not nodestack[-1]:
+                nodestack.pop()
+    return 0

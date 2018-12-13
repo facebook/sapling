@@ -1004,6 +1004,8 @@ Test list of internal help commands
    debuglocks    show or modify state of locks
    debugmergestate
                  print merge state
+   debugmutation
+                 display the mutation history of a commit
    debugnamecomplete
                  complete "names" - tags, open branch names, bookmark names
    debugobsolete

@@ -109,6 +109,7 @@ Show debug commands if there are no other candidates
   debuglabelcomplete
   debuglocks
   debugmergestate
+  debugmutation
   debugnamecomplete
   debugobsolete
   debugpathcomplete
@@ -303,6 +304,7 @@ Show all commands + options
   debuglabelcomplete: 
   debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock
   debugmergestate: 
+  debugmutation: 
   debugnamecomplete: 
   debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template
   debugpathcomplete: full, normal, added, removed
