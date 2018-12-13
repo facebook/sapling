@@ -13,7 +13,6 @@
 #include <folly/Range.h>
 #include <sys/statvfs.h>
 #include "eden/fs/fuse/BufVec.h"
-#include "eden/fs/fuse/FileHandleMap.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -45,7 +44,6 @@ using ThreadLocalEdenStats = folly::ThreadLocal<EdenStats, EdenStatsTag, void>;
 class Dispatcher {
   fuse_init_out connInfo_;
   ThreadLocalEdenStats* stats_{nullptr};
-  FileHandleMap fileHandles_;
 
  public:
   virtual ~Dispatcher();
@@ -54,12 +52,6 @@ class Dispatcher {
   ThreadLocalEdenStats* getStats() const;
 
   const fuse_init_out& getConnInfo() const;
-  FileHandleMap& getFileHandles();
-
-  // delegates to FileHandleMap::getGenericFileHandle
-  std::shared_ptr<FileHandleBase> getGenericFileHandle(uint64_t fh);
-  // delegates to FileHandleMap::getFileHandle
-  std::shared_ptr<FileHandle> getFileHandle(uint64_t fh);
 
   /**
    * Called during filesystem mounting.  It informs the filesystem
@@ -239,10 +231,25 @@ class Dispatcher {
    *
    * open(2) flags (with the exception of O_CREAT, O_EXCL, O_NOCTTY and
    * O_TRUNC) are available in the flags parameter.
+   *
+   * The returned fh value will be passed to release.
    */
-  virtual folly::Future<std::shared_ptr<FileHandle>> open(
-      InodeNumber ino,
-      int flags);
+  virtual folly::Future<uint64_t> open(InodeNumber ino, int flags);
+
+  /**
+   * Release an open file
+   *
+   * Release is called when there are no more references to an open file: all
+   * file descriptors are closed and all memory mappings are unmapped.
+   *
+   * For every open call there will be exactly one release call.
+   *
+   * The filesystem may reply with an error, but error values are not returned
+   * to close() or munmap() which triggered the release.
+   *
+   * fh will contain the value returned by the open method.
+   */
+  virtual folly::Future<folly::Unit> release(InodeNumber ino, uint64_t fh);
 
   /**
    * Open a directory

@@ -756,39 +756,13 @@ Future<Unit> EdenServer::performTakeoverFuseStart(
 Future<Unit> EdenServer::completeTakeoverFuseStart(
     std::shared_ptr<EdenMount> edenMount,
     TakeoverData::MountInfo&& info) {
-  // (re)open file handles for each entry in info.fileHandleMap
-  std::vector<Future<Unit>> futures;
-  auto dispatcher = edenMount->getDispatcher();
-
-  for (const auto& handleEntry : info.fileHandleMap.entries) {
-    if (!handleEntry.isDir) {
-      futures.emplace_back(
-          // TODO: we should record the open() flags in the
-          // SerializedFileHandleMap so that we can restore
-          // the correct flags here.
-          dispatcher
-              ->open(InodeNumber::fromThrift(handleEntry.inodeNumber), O_RDWR)
-              .thenValue([dispatcher,
-                          inodeNumber = handleEntry.inodeNumber,
-                          number = handleEntry.handleId](
-                             std::shared_ptr<FileHandle> handle) {
-                dispatcher->getFileHandles().recordHandle(
-                    std::static_pointer_cast<FileHandleBase>(handle),
-                    InodeNumber::fromThrift(inodeNumber),
-                    number);
-              }));
-    }
-  }
-
   FuseChannelData channelData;
   channelData.fd = std::move(info.fuseFD);
   channelData.connInfo = info.connInfo;
 
   // Start up the fuse workers.
-  return folly::collectAllSemiFuture(futures).toUnsafeFuture().thenValue(
-      [edenMount, chData = std::move(channelData)](auto&&) mutable {
-        return edenMount->takeoverFuse(std::move(chData));
-      });
+  return folly::makeFutureWith(
+      [&] { edenMount->takeoverFuse(std::move(channelData)); });
 }
 #endif // !EDEN_WIN
 

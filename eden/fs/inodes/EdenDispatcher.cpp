@@ -161,9 +161,7 @@ void EdenDispatcher::forget(InodeNumber ino, unsigned long nlookup) {
   inodeMap_->decFuseRefcount(ino, nlookup);
 }
 
-folly::Future<std::shared_ptr<FileHandle>> EdenDispatcher::open(
-    InodeNumber ino,
-    int flags) {
+folly::Future<uint64_t> EdenDispatcher::open(InodeNumber ino, int flags) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "open({}, flags={:x})", ino, flags);
   if (getConnInfo().flags & FUSE_NO_OPEN_SUPPORT) {
     // If the kernel understands FUSE_NO_OPEN_SUPPORT, then returning ENOSYS
@@ -171,7 +169,7 @@ folly::Future<std::shared_ptr<FileHandle>> EdenDispatcher::open(
     folly::throwSystemErrorExplicit(
         ENOSYS, "Eden open() calls are stateless and not required");
   } else {
-    return nullptr;
+    return 0;
   }
 }
 

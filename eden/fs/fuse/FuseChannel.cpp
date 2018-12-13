@@ -1495,12 +1495,12 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
   XLOG(DBG7) << "FUSE_OPEN";
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->open(ino, open->flags)
-      .thenValue([](std::shared_ptr<FileHandle> /* fh */) {
-        fuse_open_out out = {};
-        out.open_flags |= FOPEN_KEEP_CACHE;
-        RequestData::get().sendReply(out);
-      });
+  return dispatcher_->open(ino, open->flags).thenValue([](uint64_t fh) {
+    fuse_open_out out = {};
+    out.open_flags |= FOPEN_KEEP_CACHE;
+    out.fh = fh;
+    RequestData::get().sendReply(out);
+  });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseStatFs(
@@ -1516,11 +1516,14 @@ folly::Future<folly::Unit> FuseChannel::fuseStatFs(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRelease(
-    const fuse_in_header* /*header*/,
+    const fuse_in_header* header,
     const uint8_t* arg) {
   XLOG(DBG7) << "FUSE_RELEASE";
-  RequestData::get().replyError(0);
-  return folly::unit;
+  auto ino = InodeNumber{header->nodeid};
+  auto release = reinterpret_cast<const fuse_release_in*>(arg);
+  return dispatcher_->release(ino, release->fh).thenValue([](folly::Unit) {
+    RequestData::get().replyError(0);
+  });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsync(

@@ -56,18 +56,6 @@ Dispatcher::~Dispatcher() {}
 
 Dispatcher::Dispatcher(ThreadLocalEdenStats* stats) : stats_(stats) {}
 
-FileHandleMap& Dispatcher::getFileHandles() {
-  return fileHandles_;
-}
-
-std::shared_ptr<FileHandleBase> Dispatcher::getGenericFileHandle(uint64_t fh) {
-  return fileHandles_.getGenericFileHandle(fh);
-}
-
-std::shared_ptr<FileHandle> Dispatcher::getFileHandle(uint64_t fh) {
-  return fileHandles_.getFileHandle(fh);
-}
-
 void Dispatcher::initConnection(const fuse_init_out& out) {
   connInfo_ = out;
 }
@@ -138,9 +126,13 @@ Dispatcher::link(InodeNumber, InodeNumber, PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<std::shared_ptr<FileHandle>> Dispatcher::open(
+folly::Future<uint64_t> Dispatcher::open(InodeNumber /*ino*/, int /*flags*/) {
+  FUSELL_NOT_IMPL();
+}
+
+folly::Future<folly::Unit> Dispatcher::release(
     InodeNumber /*ino*/,
-    int /*flags*/) {
+    uint64_t /*fh*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -161,10 +153,8 @@ Dispatcher::read(InodeNumber /*ino*/, size_t /*size*/, off_t /*off*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<size_t> Dispatcher::write(
-    InodeNumber /*ino*/,
-    StringPiece /*data*/,
-    off_t /*off*/) {
+folly::Future<size_t>
+Dispatcher::write(InodeNumber /*ino*/, StringPiece /*data*/, off_t /*off*/) {
   FUSELL_NOT_IMPL();
 }
 

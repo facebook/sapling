@@ -414,16 +414,8 @@ EdenMount::shutdownImpl(bool doTakeover) {
   journal_.cancelAllSubscribers();
   XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
 
-  // We need to wind down the file handle map prior to shutting down
-  // the inodeMap, otherwise the outstanding file handles will effectively
-  // block its shutdown forever
-  auto fileHandleMap = doTakeover
-      ? getDispatcher()->getFileHandles().serializeMap()
-      : SerializedFileHandleMap{};
-
   return inodeMap_->shutdown(doTakeover)
-      .thenValue([this, fileHandleMap = std::move(fileHandleMap)](
-                     SerializedInodeMap inodeMap) {
+      .thenValue([this](SerializedInodeMap inodeMap) {
         XLOG(DBG1) << "shutdown complete for EdenMount " << getPath();
         // Close the Overlay object to make sure we have released its lock.
         // This is important during graceful restart to ensure that we have
@@ -431,7 +423,7 @@ EdenMount::shutdownImpl(bool doTakeover) {
         // the mount point.
         overlay_->close();
         state_.store(State::SHUT_DOWN);
-        return std::make_tuple(fileHandleMap, inodeMap);
+        return std::make_tuple(SerializedFileHandleMap{}, inodeMap);
       });
 }
 const shared_ptr<UnboundedQueueExecutor>& EdenMount::getThreadPool() const {
