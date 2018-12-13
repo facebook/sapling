@@ -181,24 +181,6 @@ def _collectimport(orig, name, *args, **kwargs):
     return mod
 
 
-# When path has "/mercurial/" or "/hgext/" consider it as an hg module.
-# Used by _checkforeignmodules.
-_hgmodpathre = util.re.compile("/(?:mercurial|hgext)/")
-
-
-def _checkforeignmodules():
-    """check _collectedimports and complain about importing foreign modules
-
-    Only call this when the extension is imported without an explict path.
-    """
-    for name, path in _collectedimports:
-        # an hg module should live in the hg (repo) root
-        if _hgmodpathre.search(path) and not path.startswith(_hgroot):
-            raise error.ForeignImportError(
-                "%s: %s lives outside %s" % (name, path, _hgroot)
-            )
-
-
 def _importh(name):
     """import and return the <name> module"""
     mod = __import__(pycompat.sysstr(name))
@@ -217,24 +199,14 @@ def _resolvenestedmodules(mod, name):
     return mod
 
 
-def _importext(name, path=None, reportfunc=None, strict=False):
+def _importext(name, path=None, reportfunc=None):
     if path:
         # the module will be loaded in sys.modules
         # choose an unique name so that it doesn't
         # conflicts with other modules
         mod = loadpath(path, "hgext.%s" % name)
     else:
-        if strict:
-            import __builtin__ as builtins
-            import hgdemandimport
-
-            _collectedimports[:] = []
-            with hgdemandimport.disabled():
-                with wrappedfunction(builtins, "__import__", _collectimport):
-                    mod = loaddefault(name, reportfunc)
-            _checkforeignmodules()
-        else:
-            mod = loaddefault(name, reportfunc)
+        mod = loaddefault(name, reportfunc)
     return mod
 
 
@@ -296,10 +268,7 @@ def load(ui, name, path):
     # false positives.
     from . import dispatch  # avoid cycles
 
-    strict = util.safehasattr(ui, "configbool") and ui.configbool(
-        "devel", "all-warnings"
-    )
-    mod = _importext(name, path, bind(_reportimporterror, ui), strict)
+    mod = _importext(name, path, bind(_reportimporterror, ui))
 
     # Before we do anything with the extension, check against minimum stated
     # compatibility. This gives extension authors a mechanism to have their
