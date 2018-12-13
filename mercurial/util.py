@@ -222,7 +222,6 @@ if _dowarn:
     # makes the whole PYTHONWARNINGS thing useless for our usecase.
     warnings.filterwarnings(r"default", r"", DeprecationWarning, r"mercurial")
     warnings.filterwarnings(r"default", r"", DeprecationWarning, r"hgext")
-    warnings.filterwarnings(r"default", r"", DeprecationWarning, r"hgext3rd")
 
 
 def nouideprecwarn(msg, version, stacklevel=1):

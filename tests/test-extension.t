@@ -850,17 +850,6 @@ Test help topic with same name as extension
 
   $ echo "multirevs = !" >> $HGRCPATH
 
-Issue811: Problem loading extensions twice (by site and by user)
-
-  $ cat <<EOF >> $HGRCPATH
-  > strip =
-  > hgext.strip =
-  > hgext/strip =
-  > EOF
-
-  $ hg debugextensions | egrep -v "(default)"
-  strip
-
 For extensions, which name matches one of its commands, help
 message should ask '-v -e' to get list of built-in aliases
 along with extension help itself

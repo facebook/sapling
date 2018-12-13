@@ -428,7 +428,7 @@ command provided extension, should be aborted.
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > hgext.rebase =
+  > rebase =
   > EOF
 #if windows
   $ cat >> .hg/hgrc <<EOF

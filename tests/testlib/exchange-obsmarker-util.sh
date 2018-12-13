@@ -30,7 +30,7 @@ evolution=true
 
 [extensions]
 # we need to strip some changeset for some test cases
-hgext.strip=
+strip=
 
 [devel]
 strip-obsmarkers = no

@@ -39,7 +39,6 @@ another bad extension
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > gpg =
-  > hgext.gpg =
   > badext = $abspathexc
   > baddocext = $abspathdoc
   > badext2 =
@@ -81,15 +80,9 @@ show traceback for ImportError of hgext.name if debug is set
   *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  could not import hgext.badext2 (No module named *badext2): trying hgext3rd.badext2 (glob)
-  Traceback (most recent call last):
-  ImportError: No module named *badext2 (glob)
-  could not import hgext3rd.badext2 (No module named *badext2): trying badext2 (glob)
-  Traceback (most recent call last):
-  ImportError: No module named *badext2 (glob)
   *** failed to import extension badext2: No module named badext2
   Traceback (most recent call last):
-  ImportError: No module named badext2
+  ImportError: No module named *badext2 (glob)
 
 confirm that there's no crash when an extension's documentation is bad
 

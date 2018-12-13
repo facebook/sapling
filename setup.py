@@ -1402,7 +1402,6 @@ packages = [
     "hgext.pushrebase",
     "hgext.remotefilelog",
     "hgext.treemanifest",
-    "hgext3rd",
     "hgdemandimport",
 ]
 

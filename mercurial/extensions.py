@@ -154,17 +154,7 @@ def loaddefault(name, reportfunc=None):
     mod = _preimported.get(name)
     if mod:
         return mod
-    try:
-        mod = _importh("hgext.%s" % name)
-    except ImportError as err:
-        if reportfunc:
-            reportfunc(err, "hgext.%s" % name, "hgext3rd.%s" % name)
-        try:
-            mod = _importh("hgext3rd.%s" % name)
-        except ImportError as err:
-            if reportfunc:
-                reportfunc(err, "hgext3rd.%s" % name, name)
-            mod = _importh(name)
+    mod = _importh("hgext.%s" % name)
     return mod
 
 

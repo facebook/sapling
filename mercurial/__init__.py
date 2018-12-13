@@ -33,7 +33,7 @@ if sys.version_info[0] >= 3:
 
         def find_spec(self, fullname, path, target=None):
             # Only handle Mercurial-related modules.
-            if not fullname.startswith(("mercurial.", "hgext.", "hgext3rd.")):
+            if not fullname.startswith(("mercurial.", "hgext.")):
                 return None
             # third-party packages are expected to be dual-version clean
             if fullname.startswith("mercurial.thirdparty"):

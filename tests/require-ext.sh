@@ -1,7 +1,7 @@
 #!/bin/bash
 
 hasext() {
-    for modname in "$1" "hgext.$1" "hgext3rd.$1"; do
+    for modname in "$1" "hgext.$1"; do
         ${PYTHON:-python} -c "import $modname" 2> /dev/null && return 0
     done
     false
