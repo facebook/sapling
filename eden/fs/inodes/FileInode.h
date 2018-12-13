@@ -32,6 +32,7 @@ class BufVec;
 class EdenFileHandle;
 class Hash;
 class ObjectStore;
+class OverlayFileAccess;
 
 /**
  * The contents of a FileInode.
@@ -462,6 +463,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   folly::Synchronized<State> state_;
 
+  // So it can call inodePtrFromThis() for better error messages.
+  friend class ::facebook::eden::OverlayFileAccess;
   friend class ::facebook::eden::EdenFileHandle;
 };
 } // namespace eden
