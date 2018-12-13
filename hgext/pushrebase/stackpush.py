@@ -39,7 +39,7 @@ from __future__ import absolute_import
 
 import time
 
-from mercurial import context, error
+from mercurial import context, error, mutation
 from mercurial.node import nullid, nullrev
 
 from .errors import ConflictsError, StackPushUnsupportedError
@@ -191,6 +191,9 @@ class pushrequest(object):
                     copied=copysource,
                 )
 
+        extra = commit.extra.copy()
+        mutation.record(repo, extra, [commit.orignode], "pushrebase")
+
         return context.memctx(
             repo,
             [ctx.node(), nullid],
@@ -199,5 +202,5 @@ class pushrequest(object):
             getfilectx,
             commit.user,
             date,
-            commit.extra,
+            extra,
         ).commit()

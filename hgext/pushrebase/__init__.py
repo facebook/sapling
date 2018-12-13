@@ -62,6 +62,7 @@ from mercurial import (
     extensions,
     hg,
     manifest,
+    mutation,
     obsolete,
     phases as phasesmod,
     pushkey,
@@ -874,6 +875,9 @@ def _graft(op, rev, mapping, lastdestnode):
     if repo.ui.configbool("pushrebase", "rewritedates"):
         date = (time.time(), date[1])
 
+    extra = rev.extra().copy()
+    mutation.record(repo, extra, [rev.node()], "pushrebase")
+
     return _commit(
         repo,
         [newp1, newp2],
@@ -882,7 +886,7 @@ def _graft(op, rev, mapping, lastdestnode):
         getfilectx,
         rev.user(),
         date,
-        rev.extra(),
+        extra,
     )
 
 

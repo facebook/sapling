@@ -3237,25 +3237,25 @@ def debugmutation(ui, repo, *revs, **opts):
         nodestack = [[ctx.node()]]
         while nodestack:
             node = nodestack[-1].pop()
-            ctx = repo[node]
-            ui.status(("%s%s") % ("  " * len(nodestack), ctx.hex()))
-            pred = ctx.mutationpredecessors()
-            if pred is None:
-                ui.status(("\n"))
-            else:
-                mutop = ctx.mutationoperation()
-                mutuser = ctx.mutationuser()
-                mutdate = util.shortdatetime(util.parsedate(ctx.mutationdate()))
-                extra = ""
-                mutsplit = ctx.mutationsplit()
-                if mutsplit is not None:
-                    extra += " (split into this and: %s)" % ", ".join(
-                        [hex(n) for n in mutsplit]
+            ui.status(("%s%s") % ("  " * len(nodestack), hex(node)))
+            if node in repo:
+                ctx = repo[node]
+                pred = ctx.mutationpredecessors()
+                if pred:
+                    mutop = ctx.mutationoperation()
+                    mutuser = ctx.mutationuser()
+                    mutdate = util.shortdatetime(util.parsedate(ctx.mutationdate()))
+                    extra = ""
+                    mutsplit = ctx.mutationsplit()
+                    if mutsplit is not None:
+                        extra += " (split into this and: %s)" % ", ".join(
+                            [hex(n) for n in mutsplit]
+                        )
+                    ui.status(
+                        (" %s by %s at %s%s from:") % (mutop, mutuser, mutdate, extra)
                     )
-                ui.status(
-                    (" %s by %s at %s%s from:\n") % (mutop, mutuser, mutdate, extra)
-                )
-                nodestack.append(list(reversed(pred)))
+                    nodestack.append(list(reversed(pred)))
+            ui.status(("\n"))
             while nodestack and not nodestack[-1]:
                 nodestack.pop()
     return 0
