@@ -13,6 +13,7 @@ import typing
 import unittest
 
 from eden.test_support.environment_variable import EnvironmentVariableMixin
+from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .edenfs_systemd import EdenFSSystemdMixin
 from .fake_edenfs import FakeEdenFS
@@ -21,7 +22,10 @@ from .testcase import test_replicator
 
 
 class ServiceTestCaseBase(
-    unittest.TestCase, EnvironmentVariableMixin, metaclass=abc.ABCMeta
+    unittest.TestCase,
+    EnvironmentVariableMixin,
+    TemporaryDirectoryMixin,
+    metaclass=abc.ABCMeta,
 ):
     """Abstract base class for tests covering 'eden start', 'eden stop', etc.
 
@@ -59,12 +63,6 @@ class ServiceTestCaseBase(
         if self.__home_dir is None:
             self.__home_dir = pathlib.Path(self.make_temporary_directory())
         return self.__home_dir
-
-    if typing.TYPE_CHECKING:
-
-        @abc.abstractmethod
-        def make_temporary_directory(self) -> str:
-            raise NotImplementedError()
 
 
 class ServiceTestCaseMixinBase:

@@ -19,7 +19,6 @@ from typing import Optional, Sequence, Set
 import pexpect
 from eden.cli import util
 from eden.integration.lib.hgrepo import HgRepository
-from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib import edenclient, testcase
 from .lib.fake_edenfs import read_fake_edenfs_argv_file
@@ -411,9 +410,7 @@ echo -n "$1" >> "{scratch_file}"
 
 # TODO(T33122320): Integrate systemd and 'eden clone'.
 @service_test(skip_systemd=True)
-class CloneFakeEdenFSTest(
-    ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin
-):
+class CloneFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
         self.eden_dir = pathlib.Path(self.make_temporary_directory())

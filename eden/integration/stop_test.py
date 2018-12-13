@@ -18,7 +18,6 @@ import typing
 import pexpect
 from eden.cli.daemon import did_process_exit
 from eden.cli.util import poll_until
-from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
@@ -35,7 +34,7 @@ SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 
-class StopTestBase(ServiceTestCaseBase, TemporaryDirectoryMixin):
+class StopTestBase(ServiceTestCaseBase):
     tmp_dir: str
 
     def setUp(self) -> None:

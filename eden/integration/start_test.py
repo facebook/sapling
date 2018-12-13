@@ -19,7 +19,6 @@ import pexpect
 from eden.cli.config import EdenInstance
 from eden.cli.util import HealthStatus
 from eden.test_support.environment_variable import EnvironmentVariableMixin
-from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from fb303.ttypes import fb_status
 
 from .lib import testcase
@@ -164,9 +163,7 @@ Did you mean to run "eden" instead of "edenfs"?
 
 
 @service_test
-class StartFakeEdenFSTest(
-    ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin
-):
+class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
         self.eden_dir = pathlib.Path(self.make_temporary_directory())

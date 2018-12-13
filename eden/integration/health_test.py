@@ -15,7 +15,6 @@ import typing
 
 import pexpect
 from eden.cli.daemon import wait_for_shutdown
-from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib import edenclient, testcase
 from .lib.find_executables import FindExe
@@ -37,9 +36,7 @@ class HealthTest(testcase.EdenTestCase):
 
 
 @service_test()
-class HealthOfFakeEdenFSTest(
-    ServiceTestCaseBase, PexpectAssertionMixin, TemporaryDirectoryMixin
-):
+class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
         self.temp_dir = pathlib.Path(self.make_temporary_directory())
