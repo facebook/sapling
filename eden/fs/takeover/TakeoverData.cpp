@@ -118,12 +118,9 @@ IOBuf TakeoverData::serializeVersion1() {
     }
     bodyLength += sizeof(fuse_init_out);
 
-    // TODO: remove this redundant serialization.  We're doing this here
-    // solely to compute the size of the data.  We plan to refactor this
-    // whole thing to use a single thrift struct; T25009883
-    auto serializedFileHandleMap =
-        CompactSerializer::serialize<std::string>(mount.fileHandleMap);
-    bodyLength += sizeof(uint32_t) + serializedFileHandleMap.size();
+    // The fileHandleMap has been removed, so its size will always be 0.
+    constexpr size_t fileHandleMapSize = 0;
+    bodyLength += sizeof(uint32_t) + fileHandleMapSize;
 
     auto serializedInodeMap =
         CompactSerializer::serialize<std::string>(mount.inodeMap);
@@ -166,10 +163,8 @@ IOBuf TakeoverData::serializeVersion1() {
     // takeover.
     app.push(folly::StringPiece{reinterpret_cast<const char*>(&mount.connInfo),
                                 sizeof(mount.connInfo)});
-    auto serializedFileHandleMap =
-        CompactSerializer::serialize<std::string>(mount.fileHandleMap);
-    app.writeBE<uint32_t>(serializedFileHandleMap.size());
-    app.push(folly::StringPiece{serializedFileHandleMap});
+    // SerializedFileHandleMap has been removed so its size is always 0.
+    app.writeBE<uint32_t>(0);
 
     auto serializedInodeMap =
         CompactSerializer::serialize<std::string>(mount.inodeMap);
@@ -251,10 +246,8 @@ TakeoverData TakeoverData::deserializeVersion1(IOBuf* buf) {
     cursor.pull(&connInfo, sizeof(connInfo));
 
     auto fileHandleMapLength = cursor.readBE<uint32_t>();
-    auto fileHandleMapBuffer = cursor.readFixedString(fileHandleMapLength);
-    auto fileHandleMap =
-        CompactSerializer::deserialize<SerializedFileHandleMap>(
-            fileHandleMapBuffer);
+    cursor.readFixedString(fileHandleMapLength);
+    // No need to decode the file handle map.
 
     auto inodeMapLength = cursor.readBE<uint32_t>();
     auto inodeMapBuffer = cursor.readFixedString(inodeMapLength);
@@ -267,7 +260,6 @@ TakeoverData TakeoverData::deserializeVersion1(IOBuf* buf) {
         std::move(bindMounts),
         folly::File{},
         connInfo,
-        std::move(fileHandleMap),
         std::move(inodeMap));
   }
 
@@ -302,7 +294,6 @@ IOBuf TakeoverData::serializeVersion3() {
     serializedMount.connInfo = std::string{
         reinterpret_cast<const char*>(&mount.connInfo), sizeof(mount.connInfo)};
 
-    serializedMount.fileHandleMap = mount.fileHandleMap;
     serializedMount.inodeMap = mount.inodeMap;
 
     serializedMounts.emplace_back(std::move(serializedMount));
@@ -356,7 +347,6 @@ TakeoverData TakeoverData::deserializeVersion3(IOBuf* buf) {
             std::move(bindMounts),
             folly::File{},
             *connInfo,
-            std::move(serializedMount.fileHandleMap),
             std::move(serializedMount.inodeMap));
       }
       return data;

@@ -262,12 +262,12 @@ void TestMount::remountGracefully() {
          "remountGracefully()";
 
   XLOG(DBG1) << "number of unloaded inodes transferred on graceful remount: "
-             << std::get<1>(takeoverData).unloadedInodes.size();
+             << takeoverData.unloadedInodes.size();
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
       std::move(config), std::move(objectStore), blobCache_, serverState_);
-  edenMount_->initialize(std::get<1>(takeoverData)).get();
+  edenMount_->initialize(takeoverData).get();
 }
 
 void TestMount::resetCommit(FakeTreeBuilder& builder, bool setReady) {

@@ -393,8 +393,9 @@ void EdenMount::destroy() {
               << " in unexpected state " << static_cast<uint32_t>(oldState);
 }
 
-Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
-EdenMount::shutdown(bool doTakeover, bool allowFuseNotStarted) {
+Future<SerializedInodeMap> EdenMount::shutdown(
+    bool doTakeover,
+    bool allowFuseNotStarted) {
   // shutdown() should only be called on mounts that have not yet reached
   // SHUTTING_DOWN or later states.  Confirm this is the case, and move to
   // SHUTTING_DOWN.
@@ -409,8 +410,7 @@ EdenMount::shutdown(bool doTakeover, bool allowFuseNotStarted) {
   return shutdownImpl(doTakeover);
 }
 
-Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
-EdenMount::shutdownImpl(bool doTakeover) {
+Future<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
   journal_.cancelAllSubscribers();
   XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
 
@@ -423,7 +423,7 @@ EdenMount::shutdownImpl(bool doTakeover) {
         // the mount point.
         overlay_->close();
         state_.store(State::SHUT_DOWN);
-        return std::make_tuple(SerializedFileHandleMap{}, inodeMap);
+        return inodeMap;
       });
 }
 const shared_ptr<UnboundedQueueExecutor>& EdenMount::getThreadPool() const {
@@ -846,7 +846,6 @@ void EdenMount::fuseInitSuccessful(
             bindMounts,
             std::move(stopData.fuseDevice),
             stopData.fuseSettings,
-            SerializedFileHandleMap{}, // placeholder
             SerializedInodeMap{} // placeholder
             ));
       })

@@ -23,7 +23,6 @@
 #include <shared_mutex>
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/journal/Journal.h"
@@ -157,8 +156,9 @@ class EdenMount {
    * If doTakeover is false, this function will return default-constructed
    * SerializedFileHandleMap and SerializedInodeMap instances.
    */
-  folly::Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
-  shutdown(bool doTakeover, bool allowFuseNotStarted = false);
+  folly::Future<SerializedInodeMap> shutdown(
+      bool doTakeover,
+      bool allowFuseNotStarted = false);
 
   /**
    * Get the FUSE channel for this mount point.
@@ -590,8 +590,7 @@ class EdenMount {
   folly::Future<TreeInodePtr> createRootInode(
       const ParentCommits& parentCommits);
   FOLLY_NODISCARD folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
-  folly::Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
-  shutdownImpl(bool doTakeover);
+  folly::Future<SerializedInodeMap> shutdownImpl(bool doTakeover);
 
   std::unique_ptr<DiffContext> createDiffContext(
       InodeDiffCallback* callback,

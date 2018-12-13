@@ -1,4 +1,3 @@
-include "eden/fs/fuse/handlemap.thrift"
 namespace cpp2 facebook.eden
 
 // A list of takeover data serialization versions that the client supports
@@ -21,6 +20,8 @@ struct SerializedInodeMap {
   2: list<SerializedInodeMapEntry> unloadedInodes,
 }
 
+struct SerializedFileHandleMap {}
+
 struct SerializedMountInfo {
   1: string mountPath,
   2: string stateDirectory,
@@ -33,7 +34,10 @@ struct SerializedMountInfo {
   // boundary.  Note that takeover is always local to the same
   // machine and thus has the same endianness.
   4: binary connInfo, // fuse_init_out
-  5: handlemap.SerializedFileHandleMap fileHandleMap,
+
+  // Removed, do not use 5
+  // 5: SerializedFileHandleMap fileHandleMap,
+
   6: SerializedInodeMap inodeMap,
 }
 

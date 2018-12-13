@@ -30,8 +30,6 @@ namespace eden {
 // Holds the versions supported by this build.
 extern const std::set<int32_t> kSupportedTakeoverVersions;
 
-class SerializedFileHandleMap;
-
 /**
  * TakeoverData contains the data exchanged between processes during
  * graceful mount point takeover.
@@ -79,14 +77,12 @@ class TakeoverData {
         const std::vector<AbsolutePath>& bindMountPaths,
         folly::File fd,
         fuse_init_out connInfo,
-        SerializedFileHandleMap&& fileHandleMap,
         SerializedInodeMap&& inodeMap)
         : mountPath{mountPath},
           stateDirectory{stateDirectory},
           bindMounts{bindMountPaths},
           fuseFD{std::move(fd)},
           connInfo{connInfo},
-          fileHandleMap{std::move(fileHandleMap)},
           inodeMap{std::move(inodeMap)} {}
 
     AbsolutePath mountPath;
@@ -94,7 +90,6 @@ class TakeoverData {
     std::vector<AbsolutePath> bindMounts;
     folly::File fuseFD;
     fuse_init_out connInfo;
-    SerializedFileHandleMap fileHandleMap;
     SerializedInodeMap inodeMap;
   };
 

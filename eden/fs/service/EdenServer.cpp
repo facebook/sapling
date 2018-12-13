@@ -908,28 +908,22 @@ void EdenServer::mountFinished(
   // Shutdown the EdenMount, and fulfill the unmount promise
   // when the shutdown completes
   edenMount->shutdown(doTakeover)
-      .thenTry(
-          [unmountPromise = std::move(unmountPromise),
-           takeoverPromise = std::move(takeoverPromise),
-           takeoverData = std::move(takeover)](
-              folly::Try<
-                  std::tuple<SerializedFileHandleMap, SerializedInodeMap>>&&
-                  result) mutable {
-            if (takeoverPromise) {
-              takeoverPromise.value().setWith([&]() mutable {
-                takeoverData.value().fileHandleMap =
-                    std::move(std::get<0>(result.value()));
-                takeoverData.value().inodeMap =
-                    std::move(std::get<1>(result.value()));
-                return std::move(takeoverData.value());
-              });
-            }
-            unmountPromise.setTry(
-                folly::makeTryWith([result = std::move(result)]() {
-                  result.throwIfFailed();
-                  return Unit{};
-                }));
+      .thenTry([unmountPromise = std::move(unmountPromise),
+                takeoverPromise = std::move(takeoverPromise),
+                takeoverData = std::move(takeover)](
+                   folly::Try<SerializedInodeMap>&& result) mutable {
+        if (takeoverPromise) {
+          takeoverPromise.value().setWith([&]() mutable {
+            takeoverData.value().inodeMap = std::move(result.value());
+            return std::move(takeoverData.value());
           });
+        }
+        unmountPromise.setTry(
+            folly::makeTryWith([result = std::move(result)]() {
+              result.throwIfFailed();
+              return Unit{};
+            }));
+      });
 #else
   NOT_IMPLEMENTED();
 #endif // !EDEN_WIN

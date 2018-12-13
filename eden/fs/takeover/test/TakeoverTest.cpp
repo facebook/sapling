@@ -174,7 +174,6 @@ TEST(Takeover, simple) {
       std::vector<AbsolutePath>{},
       folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
       fuse_init_out{},
-      SerializedFileHandleMap{},
       SerializedInodeMap{});
 
   auto mount2Path = tmpDirPath + "mount2"_pc;
@@ -191,7 +190,6 @@ TEST(Takeover, simple) {
       mount2BindMounts,
       folly::File{mount2FusePath.stringPiece(), O_RDWR | O_CREAT},
       fuse_init_out{},
-      SerializedFileHandleMap{},
       SerializedInodeMap{});
 
   // Perform the takeover
@@ -292,7 +290,6 @@ TEST(Takeover, manyMounts) {
         bindMounts,
         folly::File{fusePath.stringPiece(), O_RDWR | O_CREAT},
         fuse_init_out{},
-        SerializedFileHandleMap{},
         SerializedInodeMap{});
   }
 
