@@ -215,7 +215,7 @@ class StartFakeEdenFSTest(
             "hello world",
             "--ignoredOption",
         ]
-        start_process = self.spawn_start(daemon_args=extra_daemon_args)
+        start_process = self.spawn_start(extra_args=["--"] + extra_daemon_args)
         wait_for_pexpect_process(start_process)
 
         argv = read_fake_edenfs_argv_file(argv_file)
@@ -231,14 +231,8 @@ class StartFakeEdenFSTest(
         argv_file = self.eden_dir / "argv"
         assert not argv_file.exists()
 
-        subprocess.check_call(
-            [
-                FindExe.EDEN_CLI,
-                "--config-dir",
-                str(self.eden_dir),
-                "start",
-                "--daemon-binary",
-                FindExe.FAKE_EDENFS,
+        start_process = self.spawn_start(
+            extra_args=[
                 "hello world",
                 "another fake_edenfs argument",
                 "--",
@@ -247,6 +241,7 @@ class StartFakeEdenFSTest(
                 "arg_after_dashdash",
             ]
         )
+        self.assert_process_succeeds(start_process)
 
         expected_extra_daemon_args = [
             "hello world",
@@ -270,7 +265,7 @@ class StartFakeEdenFSTest(
             self.assert_process_fails(start_process, 1)
 
     def test_eden_start_fails_if_edenfs_fails_during_startup(self) -> None:
-        start_process = self.spawn_start(daemon_args=["--failDuringStartup"])
+        start_process = self.spawn_start(extra_args=["--", "--failDuringStartup"])
         start_process.expect_exact(
             "Started successfully, but reporting failure because "
             "--failDuringStartup was specified"
@@ -279,8 +274,8 @@ class StartFakeEdenFSTest(
 
     def spawn_start(
         self,
-        daemon_args: typing.Sequence[str] = (),
         eden_dir: typing.Optional[pathlib.Path] = None,
+        extra_args: typing.Sequence[str] = (),
     ) -> "pexpect.spawn[str]":
         if eden_dir is None:
             eden_dir = self.eden_dir
@@ -291,9 +286,8 @@ class StartFakeEdenFSTest(
             "--daemon-binary",
             FindExe.FAKE_EDENFS,
         ]
-        if daemon_args:
-            args.append("--")
-            args.extend(daemon_args)
+        if extra_args:
+            args.extend(extra_args)
         return pexpect.spawn(
             FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
         )
