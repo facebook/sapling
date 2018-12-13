@@ -1478,6 +1478,26 @@ Supported arguments:
     the executable name of the tool.
     (default: None)
 
+``mutation``
+------------
+
+Controls recording of commit mutation metadata.
+
+``record``
+    Set to True to enable recording of commit mutation metadata inside commits.
+
+``enabled``
+    Set to True to enable usage of recorded commit mutation metadata in
+    preference to obsolescence markers.
+
+``date``
+    Override the date and time the commit was mutated at.  The default is the
+    current date and time.
+
+``user``
+    Override the username of the user performing the mutation.  The default is
+    the current user.
+
 ``pager``
 ---------
 

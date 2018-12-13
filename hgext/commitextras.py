@@ -30,6 +30,10 @@ usedinternally = {
     "__touch-noise__",
     "source",
     "transplant_source",
+    "mutpred",
+    "mutuser",
+    "mutdate",
+    "mutop",
 }
 
 

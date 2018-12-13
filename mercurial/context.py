@@ -19,6 +19,7 @@ from . import (
     fileset,
     match as matchmod,
     mdiff,
+    mutation,
     obsolete as obsmod,
     patch,
     pathutil,
@@ -670,6 +671,21 @@ class changectx(basectx):
 
     def hidden(self):
         return self._rev in repoview.filterrevs(self._repo, "visible")
+
+    def mutationpredecessors(self):
+        pred = self.extra().get("mutpred")
+        if pred:
+            pred = [bin(p) for p in pred.split(",")]
+        return pred
+
+    def mutationoperation(self):
+        return self.extra().get("mutop")
+
+    def mutationuser(self):
+        return self.extra().get("mutuser")
+
+    def mutationdate(self):
+        return self.extra().get("mutdate")
 
     def isinmemory(self):
         return False
