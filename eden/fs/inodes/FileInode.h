@@ -30,7 +30,6 @@ namespace eden {
 
 class Blob;
 class BufVec;
-class EdenFileHandle;
 class Hash;
 class ObjectStore;
 class OverlayFileAccess;
@@ -56,8 +55,6 @@ class OverlayFileAccess;
  *   - loading -> not loading -> materialized
  */
 struct FileInodeState {
-  using FileHandlePtr = std::shared_ptr<EdenFileHandle>;
-
   enum Tag : uint8_t {
     BLOB_NOT_LOADING,
     BLOB_LOADING,
@@ -121,24 +118,8 @@ struct FileInodeState {
 class FileInode final : public InodeBaseMetadata<FileInodeState> {
  public:
   using Base = InodeBaseMetadata<FileInodeState>;
-  using FileHandlePtr = std::shared_ptr<EdenFileHandle>;
 
   enum : int { WRONG_TYPE_ERRNO = EISDIR };
-
-  /**
-   * The FUSE create request wants both the inode and a file handle.  This
-   * constructor simultaneously allocates a FileInode given the File and
-   * returns a new EdenFileHandle to it.
-   *
-   * The given timestamp populates all three timestamp fields.
-   */
-  static std::tuple<FileInodePtr, FileHandlePtr> create(
-      InodeNumber ino,
-      TreeInodePtr parentInode,
-      PathComponentPiece name,
-      mode_t initialMode,
-      const InodeTimestamps& initialTimestamps,
-      folly::File&& file);
 
   /**
    * If hash is none, this opens the file in the overlay and leaves the inode
@@ -169,8 +150,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   /// Throws InodeError EINVAL if inode is not a symbolic node.
   folly::Future<std::string> readlink(
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
-
-  folly::Future<std::shared_ptr<FileHandle>> open();
 
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
   folly::Future<std::vector<std::string>> listxattr() override;
@@ -404,7 +383,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   // So it can call inodePtrFromThis() for better error messages.
   friend class ::facebook::eden::OverlayFileAccess;
-  friend class ::facebook::eden::EdenFileHandle;
 };
 } // namespace eden
 } // namespace facebook

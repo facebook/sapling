@@ -22,7 +22,6 @@
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -347,7 +346,6 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   attr.size = 0;
   (void)file->setattr(attr).get(0ms);
 
-  auto fileHandle = file->open().get(0ms);
   off_t offset = 0;
   file->write(contents, offset).get(0ms);
   file->fsync(/*datasync*/ true);

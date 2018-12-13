@@ -72,7 +72,7 @@ class EdenDispatcher : public Dispatcher {
       InodeNumber newparent,
       PathComponentPiece newname) override;
 
-  folly::Future<Dispatcher::Create> create(
+  folly::Future<fuse_entry_out> create(
       InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,

@@ -20,7 +20,6 @@
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
-#include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -166,11 +165,10 @@ folly::Future<std::shared_ptr<FileHandle>> EdenDispatcher::open(
     InodeNumber ino,
     int flags) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "open({}, flags={:x})", ino, flags);
-  return inodeMap_->lookupFileInode(ino).thenValue(
-      [](const FileInodePtr& inode) { return inode->open(); });
+  return nullptr;
 }
 
-folly::Future<Dispatcher::Create> EdenDispatcher::create(
+folly::Future<fuse_entry_out> EdenDispatcher::create(
     InodeNumber parent,
     PathComponentPiece name,
     mode_t mode,
@@ -189,12 +187,8 @@ folly::Future<Dispatcher::Create> EdenDispatcher::create(
         return parentInode->create(childName, mode, flags);
       })
       .thenValue([=](TreeInode::CreateResult created) {
-        Dispatcher::Create result;
         created.inode->incFuseRefcount();
-        result.entry =
-            computeEntryParam(created.inode->getNodeId(), created.attr);
-        result.fh = std::move(created.file);
-        return result;
+        return computeEntryParam(created.inode->getNodeId(), created.attr);
       });
 }
 
@@ -211,10 +205,8 @@ EdenDispatcher::read(InodeNumber ino, size_t size, off_t off) {
       [size, off](FileInodePtr&& inode) { return inode->read(size, off); });
 }
 
-folly::Future<size_t> EdenDispatcher::write(
-    InodeNumber ino,
-    folly::StringPiece data,
-    off_t off) {
+folly::Future<size_t>
+EdenDispatcher::write(InodeNumber ino, folly::StringPiece data, off_t off) {
   FB_LOGF(
       mount_->getStraceLogger(),
       DBG7,

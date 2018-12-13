@@ -379,7 +379,6 @@ TEST_F(FileInodeTest, writingMaterializesParent) {
   EXPECT_EQ(false, isInodeMaterialized(grandparent));
   EXPECT_EQ(false, isInodeMaterialized(parent));
 
-  auto handle = inode->open().get();
   auto written = inode->write("abcd", 0).get();
   EXPECT_EQ(4, written);
 
@@ -447,10 +446,8 @@ TEST(FileInode, readDuringLoad) {
 
   // Load the inode and start reading the contents
   auto inode = mount_.getFileInode("notready.txt");
-  auto dataFuture =
-      inode->open().thenValue([inode](std::shared_ptr<FileHandle> /*handle*/) {
-        return inode->read(4096, 0);
-      });
+  auto dataFuture = inode->read(4096, 0);
+
   EXPECT_FALSE(dataFuture.isReady());
 
   // Make the backing store data ready now.
@@ -470,9 +467,6 @@ TEST(FileInode, writeDuringLoad) {
 
   // Load the inode and start reading the contents
   auto inode = mount_.getFileInode("notready.txt");
-  auto handleFuture = inode->open();
-  ASSERT_TRUE(handleFuture.isReady());
-  auto handle = std::move(handleFuture).get();
 
   auto newContents = "TENTS"_sp;
   auto writeFuture = inode->write(newContents, 3);
@@ -498,10 +492,7 @@ TEST(FileInode, truncateDuringLoad) {
 
   auto inode = mount_.getFileInode("notready.txt");
 
-  // Open the file and start reading the contents
-  auto handleFuture = inode->open();
-  ASSERT_TRUE(handleFuture.isReady());
-  auto handle = std::move(handleFuture).get();
+  // Start reading the contents
   auto dataFuture = inode->read(4096, 0);
   EXPECT_FALSE(dataFuture.isReady());
 
@@ -512,10 +503,6 @@ TEST(FileInode, truncateDuringLoad) {
   attr.valid = FATTR_SIZE;
   attr.size = 0;
   (void)inode->setattr(attr).get(0ms);
-
-  auto truncHandleFuture = inode->open();
-  ASSERT_TRUE(truncHandleFuture.isReady());
-  auto truncHandle = std::move(truncHandleFuture).get();
 
   // The read should complete now too.
   ASSERT_TRUE(dataFuture.isReady());

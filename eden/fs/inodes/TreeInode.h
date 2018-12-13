@@ -22,7 +22,6 @@ class CheckoutAction;
 class CheckoutContext;
 class DiffContext;
 class DirList;
-class EdenFileHandle;
 class EdenMount;
 class GitIgnoreStack;
 class InodeDiffCallback;
@@ -79,8 +78,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
     Dispatcher::Attr attr;
     /// The newly created inode instance.
     FileInodePtr inode;
-    /// The newly opened file handle.
-    std::shared_ptr<EdenFileHandle> file;
 
     explicit CreateResult(const EdenMount* mount);
   };
@@ -485,16 +482,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * createImpl() is a helper function for creating new children inodes.
    *
    * This is used by create(), symlink(), and mknod().
-   *
-   * If outHandle is non-null a FileHandle will also be created and will be
-   * returned via this parameter.
    */
   FileInodePtr createImpl(
       folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
       PathComponentPiece name,
       mode_t mode,
-      folly::ByteRange fileContents,
-      std::shared_ptr<EdenFileHandle>* outHandle);
+      folly::ByteRange fileContents);
 
   /**
    * removeImpl() is the actual implementation used for unlink() and rmdir().

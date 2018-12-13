@@ -1525,7 +1525,6 @@ folly::Future<folly::Unit> FuseChannel::fuseRelease(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsync(
-
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
@@ -1707,7 +1706,7 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
   XLOG(DBG7) << "FUSE_CREATE " << name;
   auto ino = InodeNumber{header->nodeid};
   return dispatcher_->create(ino, name, create->mode, create->flags)
-      .thenValue([](Dispatcher::Create info) {
+      .thenValue([](fuse_entry_out entry) {
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;
 
@@ -1715,10 +1714,9 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
 
         folly::fbvector<iovec> vec;
 
-        // 3 to avoid realloc when sendRepy prepends a header to the iovec
+        // 3 to avoid realloc when sendReply prepends a header to the iovec
         vec.reserve(3);
-
-        vec.push_back(make_iovec(info.entry));
+        vec.push_back(make_iovec(entry));
         vec.push_back(make_iovec(out));
 
         RequestData::get().sendReply(std::move(vec));

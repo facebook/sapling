@@ -397,11 +397,6 @@ class Dispatcher {
       InodeNumber ino,
       int mask);
 
-  struct Create {
-    fuse_entry_out entry;
-    std::shared_ptr<FileHandle> fh;
-  };
-
   /**
    * Create and open a file
    *
@@ -421,7 +416,7 @@ class Dispatcher {
    * @param name to create
    * @param mode file type and mode with which to create the new file
    */
-  virtual folly::Future<Create>
+  virtual folly::Future<fuse_entry_out>
   create(InodeNumber parent, PathComponentPiece name, mode_t mode, int flags);
 
   /**

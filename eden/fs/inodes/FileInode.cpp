@@ -14,7 +14,6 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
-#include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeTable.h"
@@ -54,9 +53,7 @@ namespace eden {
  * folly::Synchronized<State>::LockedPtr
  *
  * It implements operator->() and operator*() so it can be used just like
- * LockedPtr.  However, it also is capable of managing a reference count
- * to State::openCount, and decrementing this count when it is destroyed, or
- * transferring this count to a new EdenFileHandle object.
+ * LockedPtr.
  */
 class FileInode::LockedState {
  public:
@@ -89,26 +86,9 @@ class FileInode::LockedState {
   void unlock();
 
   /**
-   * Unlock the state and create a new EdenFileHandle object.
-   */
-  std::shared_ptr<EdenFileHandle> unlockAndCreateHandle(FileInodePtr inode);
-
-  /**
-   * Create an EdenFileHandle object.
-   *
-   * Beware that you must pass in an EdenFileHandle object that exists in a
-   * higher-level scope than the LockedState object itself.  You must ensure
-   * that the LockedState object is destroyed before the EdenFileHandle
-   * object.
-   */
-  void createHandleInOuterScope(
-      FileInodePtr inode,
-      std::shared_ptr<EdenFileHandle>* outHandle);
-
-  /**
    * Move the file into the MATERIALIZED_IN_OVERLAY state.
    *
-   * This also implicitly ensures that this LockedState has an open refcount.
+   * This updates state->tag and state->hash.
    */
   void setMaterialized();
 
@@ -136,25 +116,6 @@ FileInode::LockedState::~LockedState() {
 void FileInode::LockedState::unlock() {
   ptr_->checkInvariants();
   ptr_.unlock();
-}
-
-std::shared_ptr<EdenFileHandle> FileInode::LockedState::unlockAndCreateHandle(
-    FileInodePtr inode) {
-  std::shared_ptr<EdenFileHandle> handle;
-  createHandleInOuterScope(std::move(inode), &handle);
-  // Beware: creating the EdenFileHandle should be the very last thing we do
-  // before unlocking the state.  If we throw an exception after creating the
-  // EdenFileHandle but while still holding the state lock we will deadlock in
-  // the EdenFileHandle destructor, which acquires the state lock.
-  ptr_.unlock();
-  return handle;
-}
-
-void FileInode::LockedState::createHandleInOuterScope(
-    FileInodePtr /*inode*/,
-    std::shared_ptr<EdenFileHandle>* outHandle) {
-  ptr_->checkInvariants();
-  *outHandle = std::make_shared<EdenFileHandle>();
 }
 
 std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
@@ -326,7 +287,6 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
 template <typename Fn>
 typename std::result_of<Fn(FileInode::LockedState&&)>::type
 FileInode::truncateAndRun(LockedState state, Fn&& fn) {
-  auto future = Future<FileHandlePtr>::makeEmpty();
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING: {
@@ -429,21 +389,6 @@ void FileInodeState::checkInvariants() {
 /*********************************************************************
  * FileInode methods
  ********************************************************************/
-
-std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
-    InodeNumber ino,
-    TreeInodePtr parentInode,
-    PathComponentPiece name,
-    mode_t mode,
-    const InodeTimestamps& initialTimestamps,
-    folly::File&& file) {
-  // The FileInode is in MATERIALIZED_IN_OVERLAY state.
-  auto inode =
-      FileInodePtr::makeNew(ino, parentInode, name, mode, initialTimestamps);
-
-  auto state = LockedState{inode};
-  return std::make_tuple(inode, state.unlockAndCreateHandle(inode));
-}
 
 // The FileInode is in NOT_LOADED or MATERIALIZED_IN_OVERLAY state.
 FileInode::FileInode(
@@ -608,26 +553,6 @@ InodeMetadata FileInode::getMetadata() const {
 
 std::optional<Hash> FileInode::getBlobHash() const {
   return state_.rlock()->hash;
-}
-
-folly::Future<std::shared_ptr<FileHandle>> FileInode::open() {
-  if (dtype_t::Symlink == getType()) {
-    // Linux reports ELOOP if you try to open a symlink with O_NOFOLLOW set.
-    // Since it isn't clear whether FUSE will allow this to happen, this
-    // is a speculative defense against that happening; the O_PATH flag
-    // does allow a file handle to be opened on a symlink on Linux,
-    // but does not allow it to be used for real IO operations.  We're
-    // punting on handling those situations here for now.
-    throw InodeError(ELOOP, inodePtrFromThis(), "is a symlink");
-  }
-
-  std::shared_ptr<EdenFileHandle> fileHandle;
-  {
-    auto state = LockedState{this};
-    state.createHandleInOuterScope(inodePtrFromThis(), &fileHandle);
-  }
-
-  return fileHandle;
 }
 
 void FileInode::materializeInParent() {

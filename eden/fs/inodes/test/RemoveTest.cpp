@@ -93,7 +93,6 @@ TEST_F(UnlinkTest, modified) {
   // Modify the child, so it is materialized before we remove it
   auto file = mount_.getFileInode("dir/a.txt");
   EXPECT_EQ(file->getNodeId(), dir->getChildInodeNumber(childPath));
-  auto handle = file->open().get();
   auto newContents = StringPiece{
       "new contents for the file\n"
       "testing testing\n"

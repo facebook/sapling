@@ -25,7 +25,6 @@
 #include "eden/fs/inodes/DeferredDiffEntry.h"
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
@@ -840,8 +839,7 @@ FileInodePtr TreeInode::createImpl(
     folly::Synchronized<TreeInodeState>::LockedPtr contents,
     PathComponentPiece name,
     mode_t mode,
-    ByteRange fileContents,
-    std::shared_ptr<EdenFileHandle>* outHandle) {
+    ByteRange fileContents) {
   // This relies on the fact that the dotEdenInodeNumber field of EdenMount is
   // not defined until after EdenMount finishes configuring the .eden directory.
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
@@ -894,22 +892,12 @@ FileInodePtr TreeInode::createImpl(
         << "we already confirmed that this entry did not exist above";
     auto& entry = insertion.first->second;
 
-    if (outHandle) {
-      std::tie(inode, *outHandle) = FileInode::create(
-          childNumber,
-          this->inodePtrFromThis(),
-          name,
-          mode,
-          inodeTimestamps,
-          std::move(file));
-    } else {
-      inode = FileInodePtr::makeNew(
-          childNumber,
-          this->inodePtrFromThis(),
-          name,
-          entry.getInitialMode(),
-          inodeTimestamps);
-    }
+    inode = FileInodePtr::makeNew(
+        childNumber,
+        this->inodePtrFromThis(),
+        name,
+        entry.getInitialMode(),
+        inodeTimestamps);
 
     entry.setInode(inode.get());
     getInodeMap()->inodeCreated(inode);
@@ -929,7 +917,6 @@ FileInodePtr TreeInode::createImpl(
 
 folly::Future<TreeInode::CreateResult>
 TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
-  std::shared_ptr<EdenFileHandle> handle;
   FileInodePtr inode;
 
   validatePathComponentLength(name);
@@ -944,7 +931,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a regular file.
     mode = S_IFREG | (07777 & mode);
-    inode = createImpl(std::move(contents), name, mode, ByteRange{}, &handle);
+    inode = createImpl(std::move(contents), name, mode, ByteRange{});
   }
 
   // Now that we have the file handle, let's look up the attributes.
@@ -954,17 +941,15 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   // immediately in this case.  We should be able to avoid calling stat() on
   // the underlying overlay file since we just created it and know it is an
   // empty file.
-  return inode->getattr().thenValue(
-      [=, handle = std::move(handle)](Dispatcher::Attr attr) mutable {
-        CreateResult result(getMount());
+  return inode->getattr().thenValue([=](Dispatcher::Attr attr) {
+    CreateResult result(getMount());
 
-        // Return all of the results back to the kernel.
-        result.inode = inode;
-        result.file = std::move(handle);
-        result.attr = attr;
+    // Return all of the results back to the kernel.
+    result.inode = inode;
+    result.attr = attr;
 
-        return result;
-      });
+    return result;
+  });
 }
 
 FileInodePtr TreeInode::symlink(
@@ -978,7 +963,7 @@ FileInodePtr TreeInode::symlink(
     auto contents = contents_.wlock();
     const mode_t mode = S_IFLNK | 0770;
     return createImpl(
-        std::move(contents), name, mode, ByteRange{symlinkTarget}, nullptr);
+        std::move(contents), name, mode, ByteRange{symlinkTarget});
   }
 }
 
@@ -987,7 +972,6 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
 
   // Compute the effective name of the node they want to create.
   RelativePath targetName;
-  std::shared_ptr<EdenFileHandle> handle;
   FileInodePtr inode;
 
   if (!S_ISSOCK(mode)) {
@@ -1009,7 +993,7 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
   {
     // Acquire our contents lock
     auto contents = contents_.wlock();
-    return createImpl(std::move(contents), name, mode, ByteRange{}, nullptr);
+    return createImpl(std::move(contents), name, mode, ByteRange{});
   }
 }
 

@@ -252,7 +252,7 @@ folly::Future<folly::Unit> Dispatcher::access(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<Dispatcher::Create>
+folly::Future<fuse_entry_out>
 Dispatcher::create(InodeNumber, PathComponentPiece, mode_t, int) {
   FUSELL_NOT_IMPL();
 }
