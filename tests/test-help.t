@@ -1033,6 +1033,7 @@ Test list of internal help commands
                  manually set the parents of the current working directory
    debugshell    (no help text available)
    debugssl      test a secure connection to a server
+   debugstatus   common performance issues for status
    debugsub      (no help text available)
    debugsuccessorssets
                  show set of successors for revision

@@ -125,6 +125,7 @@ Show debug commands if there are no other candidates
   debugsetparents
   debugshell
   debugssl
+  debugstatus
   debugsub
   debugsuccessorssets
   debugtemplate
@@ -318,6 +319,7 @@ Show all commands + options
   debugsetparents: 
   debugshell: command
   debugssl: 
+  debugstatus: nonnormal
   debugsub: rev
   debugsuccessorssets: closest
   debugtemplate: rev, define
