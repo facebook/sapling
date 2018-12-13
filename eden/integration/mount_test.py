@@ -93,7 +93,6 @@ class MountTest(testcase.EdenRepoTest):
         entries = sorted(os.listdir(self.mount))
         self.assertEqual([".eden", "adir", "bdir", "hello", "slink"], entries)
 
-    @unittest.skip("not passing yet")
     def test_unmount_succeeds_while_file_handle_is_open(self) -> None:
         fd = os.open(os.path.join(self.mount, "hello"), os.O_RDWR)
         # This test will fail or time out if unmounting times out.

@@ -106,38 +106,11 @@ class FileInode::LockedState {
       std::shared_ptr<EdenFileHandle>* outHandle);
 
   /**
-   * Ensure that state->file is an open File object.
-   *
-   * This method may only be called when the state tag is
-   * MATERIALIZED_IN_OVERLAY.
-   */
-  void ensureFileOpen(const FileInode* inode);
-
-  /**
    * Move the file into the MATERIALIZED_IN_OVERLAY state.
    *
    * This also implicitly ensures that this LockedState has an open refcount.
    */
   void setMaterialized();
-
-  /**
-   * Increment the state's open count.
-   *
-   * This should generally be called when setting the blob or file object in
-   * the state, to ensure that the blob or file is destroyed when the state
-   * lock is released if it is not still referenced by an EdenFileHandle
-   * object.
-   *
-   * This reference count will automatically be decremented again when the
-   * LockedState is destroyed.  This can only be called at most once on a
-   * LockedState object--it is not valid to call incOpenCount() on a
-   * LockedState that already has a reference count.
-   */
-  void incOpenCount();
-
-  bool hasOpenCount() const {
-    return hasOpenRefcount_;
-  }
 
   /**
    * If this inode still has access to a cached blob, return it.
@@ -150,24 +123,17 @@ class FileInode::LockedState {
 
  private:
   folly::Synchronized<State>::LockedPtr ptr_;
-  bool hasOpenRefcount_{false};
 };
 
 FileInode::LockedState::~LockedState() {
   if (!ptr_) {
     return;
   }
-  if (hasOpenRefcount_) {
-    ptr_->decOpenCount();
-  }
   // Check the state invariants every time we release the lock
   ptr_->checkInvariants();
 }
 
 void FileInode::LockedState::unlock() {
-  if (hasOpenRefcount_) {
-    ptr_->decOpenCount();
-  }
   ptr_->checkInvariants();
   ptr_.unlock();
 }
@@ -185,22 +151,10 @@ std::shared_ptr<EdenFileHandle> FileInode::LockedState::unlockAndCreateHandle(
 }
 
 void FileInode::LockedState::createHandleInOuterScope(
-    FileInodePtr inode,
+    FileInodePtr /*inode*/,
     std::shared_ptr<EdenFileHandle>* outHandle) {
-  if (!hasOpenRefcount_) {
-    ptr_->incOpenCount();
-    hasOpenRefcount_ = true;
-  }
-
   ptr_->checkInvariants();
-  *outHandle =
-      std::make_shared<EdenFileHandle>(std::move(inode), &hasOpenRefcount_);
-}
-
-void FileInode::LockedState::incOpenCount() {
-  CHECK(!hasOpenRefcount_);
-  ptr_->incOpenCount();
-  hasOpenRefcount_ = true;
+  *outHandle = std::make_shared<EdenFileHandle>();
 }
 
 std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
@@ -234,22 +188,7 @@ std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
   return nullptr;
 }
 
-void FileInode::LockedState::ensureFileOpen(const FileInode* inode) {
-  DCHECK(ptr_->isMaterialized())
-      << "must only be called for materialized files";
-
-  if (!hasOpenRefcount_) {
-    ptr_->incOpenCount();
-    hasOpenRefcount_ = true;
-  }
-}
-
 void FileInode::LockedState::setMaterialized() {
-  if (!hasOpenRefcount_) {
-    ptr_->incOpenCount();
-    hasOpenRefcount_ = true;
-  }
-
   ptr_->hash.reset();
   ptr_->tag = State::MATERIALIZED_IN_OVERLAY;
 
@@ -290,7 +229,6 @@ ReturnType FileInode::runWhileDataLoaded(
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
-      state.ensureFileOpen(this);
       return folly::makeFutureWith(
           [&] { return std::forward<Fn>(fn)(std::move(state), nullptr); });
   }
@@ -366,8 +304,6 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
-      // Open the file, then run the function
-      state.ensureFileOpen(this);
       return folly::makeFutureWith(
           [&] { return std::forward<Fn>(fn)(LockedState{std::move(state)}); });
   }
@@ -490,15 +426,6 @@ void FileInodeState::checkInvariants() {
   XLOG(FATAL) << "Unexpected tag value: " << tag;
 }
 
-void FileInodeState::incOpenCount() {
-  ++openCount;
-}
-
-void FileInodeState::decOpenCount() {
-  DCHECK_GT(openCount, 0);
-  --openCount;
-}
-
 /*********************************************************************
  * FileInode methods
  ********************************************************************/
@@ -515,9 +442,6 @@ std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
       FileInodePtr::makeNew(ino, parentInode, name, mode, initialTimestamps);
 
   auto state = LockedState{inode};
-  state.incOpenCount();
-  DCHECK_EQ(state->openCount, 1)
-      << "open count cannot be anything other than 1";
   return std::make_tuple(inode, state.unlockAndCreateHandle(inode));
 }
 
@@ -616,11 +540,6 @@ folly::Future<std::string> FileInode::readlink(CacheHint cacheHint) {
 
   // The symlink contents are simply the file contents!
   return readAll(cacheHint);
-}
-
-void FileInode::fileHandleDidClose() {
-  auto state = LockedState{this};
-  state->decOpenCount();
 }
 
 std::optional<bool> FileInode::isSameAsFast(
@@ -782,7 +701,6 @@ folly::Future<struct stat> FileInode::stat() {
           });
 
     case State::MATERIALIZED_IN_OVERLAY:
-      state.ensureFileOpen(this);
       st.st_size = getOverlayFileAccess(state)->getFileSize(getNodeId(), *this);
       updateBlockCount(st);
       return st;
@@ -939,7 +857,6 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
 
   // If we are currently materialized we don't need to copy the input data.
   if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-    state.ensureFileOpen(this);
     struct iovec iov;
     iov.iov_base = const_cast<char*>(data.data());
     iov.iov_len = data.size();

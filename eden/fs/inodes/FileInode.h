@@ -46,7 +46,7 @@ class OverlayFileAccess;
  *   - not loading: the blob may be in cache, but it is not currently being
  *                  loaded
  *   - loading: fetching data from backing store, but it's not available yet
- *   - materialized: contents are written into overlay and file handle is open
+ *   - materialized: contents are written into overlay
  *
  * Valid state transitions:
  *   - not loading -> loading
@@ -80,17 +80,6 @@ struct FileInodeState {
   bool isMaterialized() const {
     return tag == MATERIALIZED_IN_OVERLAY;
   }
-
-  /**
-   * Decrement the openCount, closing any open overlay file handles if the open
-   * count is now zero.
-   */
-  void decOpenCount();
-
-  /**
-   * Increment the open count.
-   */
-  void incOpenCount();
 
   Tag tag;
 
@@ -127,11 +116,6 @@ struct FileInodeState {
    * Records the ranges that have been read() when not materialized.
    */
   CoverageSet readByteRanges;
-
-  /**
-   * Number of open file handles referencing us.
-   */
-  size_t openCount{0};
 };
 
 class FileInode final : public InodeBaseMetadata<FileInodeState> {
@@ -171,8 +155,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   /**
    * Construct an inode using a freshly created overlay file.
-   * file must be moved in and must have been created by a call to
-   * Overlay::openFile.
    */
   FileInode(
       InodeNumber ino,
@@ -259,9 +241,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * that the end of the file was reached.
    *
    * May throw exceptions on error.
-   *
-   * Precondition: openCount > 0.  This is held because read is only called by
-   * FileInode or FileHandle.
    */
   folly::Future<BufVec> read(size_t size, off_t off);
 
@@ -297,7 +276,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * Run a function with the FileInode materialized.
    *
    * fn(state) will be invoked when state->tag is MATERIALIZED_IN_OVERLAY.
-   * state->file will also be open.
    *
    * Returns a Future with the result of fn(state_.wlock())
    */
@@ -347,9 +325,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    *
    * This should normally only be invoked by truncateAndRun().  Most callers
    * should use truncateAndRun() instead of calling this function directly.
-   *
-   * The input LockedState object will be updated to hold an open refcount,
-   * and state->file will be valid when this function returns.
    */
   void materializeAndTruncate(LockedState& state);
 
@@ -360,18 +335,12 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    *
    * This should normally only be invoked by truncateAndRun().  Most callers
    * should use truncateAndRun() instead of calling this function directly.
-   *
-   * The input LockedState object will be updated to hold an open refcount,
-   * and state->file will be valid when this function returns.
    */
   void truncateInOverlay(LockedState& state);
 
   /**
    * Transition from NOT_LOADING to MATERIALIZED_IN_OVERLAY by copying the
    * blob into the overlay.
-   *
-   * The input LockedState object will be updated to hold an open refcount,
-   * and state->file will be valid when this function returns.
    */
   void materializeNow(LockedState& state, std::shared_ptr<const Blob> blob);
 
@@ -394,11 +363,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * The state_ lock must not be held when calling this method.
    */
   void materializeInParent();
-
-  /**
-   * Called as part of shutting down an open handle.
-   */
-  void fileHandleDidClose();
 
   /**
    * Helper function for isSameAs().
