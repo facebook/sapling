@@ -329,9 +329,9 @@ re-run `eden clone` with --allow-empty-repo"""
 
     def _get_repo_info(
         self, instance: EdenInstance, repo_arg: str, rev: Optional[str]
-    ) -> Tuple[util.Repo, Optional[str], config_mod.ClientConfig]:
+    ) -> Tuple[util.Repo, Optional[str], config_mod.CheckoutConfig]:
         # Check to see if repo_arg points to an existing Eden mount
-        eden_config = instance.get_client_config_for_path(repo_arg)
+        eden_config = instance.get_checkout_config_for_path(repo_arg)
         if eden_config is not None:
             repo = util.get_repo(eden_config.path)
             if repo is None:
@@ -375,7 +375,7 @@ re-run `eden clone` with --allow-empty-repo"""
             project_config = instance.find_config_for_alias(project_id)
         repo_type = project_id
         if project_config is None:
-            repo_config = config_mod.ClientConfig(
+            repo_config = config_mod.CheckoutConfig(
                 path=repo.source,
                 scm_type=repo.type,
                 hooks_path=instance.get_default_hooks_path(),
@@ -383,10 +383,10 @@ re-run `eden clone` with --allow-empty-repo"""
                 default_revision=config_mod.DEFAULT_REVISION[repo.type],
             )
         else:
-            # Build our own ClientConfig object, using our source repository
+            # Build our own CheckoutConfig object, using our source repository
             # path and type, but the hooks, bind-mount, and revision
             # configuration from the project configuration.
-            repo_config = config_mod.ClientConfig(
+            repo_config = config_mod.CheckoutConfig(
                 path=repo.source,
                 scm_type=repo.type,
                 hooks_path=project_config.hooks_path,

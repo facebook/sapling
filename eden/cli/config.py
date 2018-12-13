@@ -90,9 +90,9 @@ class UsageError(Exception):
     pass
 
 
-class ClientConfig:
-    """Configuration for a client. A client stores its config in config.toml
-    under ~/local/.eden/clients/.
+class CheckoutConfig:
+    """Configuration for an Eden checkout. A checkout stores its config in config.toml
+    it its state directory (.eden/clients/<checkout_name>/config.toml)
 
     - path real path where the true repo resides on disk
     - scm_type "hg" or "git"
@@ -232,11 +232,11 @@ class EdenInstance:
             for k, v in parser.items(section):
                 print("%s=%s" % (k, v))
 
-    def find_config_for_alias(self, alias: str) -> Optional[ClientConfig]:
+    def find_config_for_alias(self, alias: str) -> Optional[CheckoutConfig]:
         """Looks through the existing config files and searches for a
         [repository <alias>] section that defines a config:
         - If no such section is found, returns None.
-        - If the appropriate section is found, returns a ClientConfig if all of
+        - If the appropriate section is found, returns a CheckoutConfig if all of
           the fields for the config data are present and well-formed.
         - Otherwise, throws an Exception.
         """
@@ -269,7 +269,7 @@ class EdenInstance:
             or DEFAULT_REVISION[scm_type]
         )
 
-        return ClientConfig(
+        return CheckoutConfig(
             path=repo_data["path"],
             scm_type=scm_type,
             hooks_path=repo_data.get("hooks") or self.get_default_hooks_path(),
@@ -314,14 +314,14 @@ class EdenInstance:
     def get_client_info(self, path: str) -> collections.OrderedDict:
         path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
-        client_config = self._get_client_config(client_dir)
+        checkout_config = self._get_checkout_config(client_dir)
         snapshot = self._get_snapshot(client_dir)
 
         return collections.OrderedDict(
             [
-                ("bind-mounts", client_config.bind_mounts),
+                ("bind-mounts", checkout_config.bind_mounts),
                 ("mount", path),
-                ("scm_type", client_config.scm_type),
+                ("scm_type", checkout_config.scm_type),
                 ("snapshot", snapshot),
                 ("client-dir", client_dir),
             ]
@@ -360,7 +360,9 @@ by hand to make changes to the repository or remove it."""
                 config["bindmounts " + name] = bind_mounts
             config.save()
 
-    def clone(self, client_config: ClientConfig, path: str, snapshot_id: str) -> None:
+    def clone(
+        self, checkout_config: CheckoutConfig, path: str, snapshot_id: str
+    ) -> None:
         if path in self._get_directory_map():
             raise Exception(
                 """\
@@ -389,11 +391,11 @@ Do you want to run `eden mount %s` instead?"""
         # Create bind mounts directories
         bind_mounts_dir = os.path.join(client_dir, "bind-mounts")
         util.mkdir_p(bind_mounts_dir)
-        for mount in client_config.bind_mounts:
+        for mount in checkout_config.bind_mounts:
             util.mkdir_p(os.path.join(bind_mounts_dir, mount))
 
         config_path = os.path.join(client_dir, MOUNT_CONFIG)
-        self._save_client_config(client_config, config_path)
+        self._save_checkout_config(checkout_config, config_path)
 
         # Prepare to mount
         mount_info = eden_ttypes.MountInfo(
@@ -402,7 +404,7 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client() as client:
             client.mount(mount_info)
 
-        self._run_post_clone_hooks(path, client_dir, client_config)
+        self._run_post_clone_hooks(path, client_dir, checkout_config)
 
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, os.path.basename(client_dir))
@@ -492,22 +494,22 @@ Do you want to run `eden mount %s` instead?"""
                 raise
 
     def _run_post_clone_hooks(
-        self, eden_mount_path: str, client_dir: str, client_config: ClientConfig
+        self, eden_mount_path: str, client_dir: str, checkout_config: CheckoutConfig
     ) -> None:
         # First, check to see if the post-clone hook has been run successfully
         # before.
         clone_success_path = os.path.join(client_dir, CLONE_SUCCEEDED)
         is_initial_mount = not os.path.isfile(clone_success_path)
         if is_initial_mount:
-            post_clone = os.path.join(client_config.hooks_path, "post-clone")
+            post_clone = os.path.join(checkout_config.hooks_path, "post-clone")
             snapshot = self._get_snapshot(client_dir)
             try:
                 subprocess.run(
                     [
                         post_clone,
-                        client_config.scm_type,
+                        checkout_config.scm_type,
                         eden_mount_path,
-                        client_config.path,
+                        checkout_config.path,
                         snapshot,
                     ],
                     pass_fds=[1, 2],
@@ -520,24 +522,24 @@ Do you want to run `eden mount %s` instead?"""
                     raise
                 print_stderr(
                     f'Did not run post-clone hook "{post_clone}" for '
-                    f"{client_config.path} because it was not found."
+                    f"{checkout_config.path} because it was not found."
                 )
 
         # "touch" the clone_success_path.
         with open(clone_success_path, "a"):
             os.utime(clone_success_path, None)
 
-    def _save_client_config(
-        self, client_config: ClientConfig, config_path: str
+    def _save_checkout_config(
+        self, checkout_config: CheckoutConfig, config_path: str
     ) -> None:
         # Store information about the mount in the config.toml file.
         config_data = {
             "repository": {
-                "path": client_config.path,
-                "type": client_config.scm_type,
-                "hooks": client_config.hooks_path,
+                "path": checkout_config.path,
+                "type": checkout_config.scm_type,
+                "hooks": checkout_config.hooks_path,
             },
-            "bind-mounts": client_config.bind_mounts,
+            "bind-mounts": checkout_config.bind_mounts,
         }
         with open(config_path, "w") as f:
             toml.dump(config_data, f)
@@ -548,9 +550,9 @@ Do you want to run `eden mount %s` instead?"""
         path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
 
-        # Call _get_client_config() for the side-effect of it raising an
+        # Call _get_checkout_config() for the side-effect of it raising an
         # Exception if the config is in an invalid state.
-        self._get_client_config(client_dir)
+        self._get_checkout_config(client_dir)
 
         # Make sure the mount path exists
         util.mkdir_p(path)
@@ -754,8 +756,8 @@ Do you want to run `eden mount %s` instead?"""
 
         return eden_env
 
-    def _get_client_config(self, client_dir: str) -> ClientConfig:
-        """Returns ClientConfig or raises an Exception if the config.toml
+    def _get_checkout_config(self, client_dir: str) -> CheckoutConfig:
+        """Returns CheckoutConfig or raises an Exception if the config.toml
         under the client_dir is not properly formatted or does not exist.
         """
         config_toml = os.path.join(client_dir, MOUNT_CONFIG)
@@ -794,7 +796,7 @@ Do you want to run `eden mount %s` instead?"""
                     )
                 bind_mounts[key] = value
 
-        return ClientConfig(
+        return CheckoutConfig(
             path=get_field("path"),
             scm_type=scm_type,
             hooks_path=get_field("hooks"),
@@ -804,14 +806,14 @@ Do you want to run `eden mount %s` instead?"""
             ),
         )
 
-    def get_client_config_for_path(self, path: str) -> Optional[ClientConfig]:
+    def get_checkout_config_for_path(self, path: str) -> Optional[CheckoutConfig]:
         client_link = os.path.join(path, ".eden", "client")
         try:
             client_dir = readlink_retry_estale(client_link)
         except OSError:
             return None
 
-        return self._get_client_config(client_dir)
+        return self._get_checkout_config(client_dir)
 
     def _get_directory_map(self) -> Dict[str, str]:
         """
