@@ -28,6 +28,7 @@ from . import (
     match as matchmod,
     mdiff,
     mergeutil,
+    mutation,
     obsolete,
     patch,
     pathutil,
@@ -3582,6 +3583,7 @@ def amend(ui, repo, old, extra, pats, opts):
 
         pureextra = extra.copy()
         extra["amend_source"] = old.hex()
+        mutation.record(repo, extra, [old.node()], "amend")
 
         new = context.memctx(
             repo,
@@ -3604,7 +3606,7 @@ def amend(ui, repo, old, extra, pats, opts):
             and pureextra == old.extra()
         ):
             # nothing changed. continuing here would create a new node
-            # anyway because of the amend_source noise.
+            # anyway because of the mutation or amend_source data.
             #
             # This not what we expect from amend.
             return old.node()
