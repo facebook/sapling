@@ -183,20 +183,21 @@ EdenMount::EdenMount(
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState)
-    : config_(std::move(config)),
-      serverState_(std::move(serverState)),
+    : config_{std::move(config)},
+      serverState_{std::move(serverState)},
       inodeMap_{new InodeMap(this)},
       dispatcher_{new EdenDispatcher(this)},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
-      overlay_(std::make_unique<Overlay>(config_->getOverlayPath())),
-      bindMounts_(config_->getBindMounts()),
-      mountGeneration_(globalProcessGeneration | ++mountGeneration),
+      overlay_{std::make_unique<Overlay>(config_->getOverlayPath())},
+      overlayFileAccess_{overlay_.get()},
+      bindMounts_{config_->getBindMounts()},
+      mountGeneration_{globalProcessGeneration | ++mountGeneration},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       lastCheckoutTime_{serverState_->getClock()->getRealtime()},
-      owner_(Owner{getuid(), getgid()}),
-      clock_(serverState_->getClock()) {}
+      owner_{Owner{getuid(), getgid()}},
+      clock_{serverState_->getClock()} {}
 
 folly::Future<folly::Unit> EdenMount::initialize(
     const std::optional<SerializedInodeMap>& takeover) {

@@ -16,6 +16,7 @@
 #include <optional>
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/utils/CoverageSet.h"
@@ -81,13 +82,6 @@ struct FileInodeState {
   }
 
   /**
-   * Returns true if we're maintaining an open file.
-   */
-  bool isFileOpen() const {
-    return bool(file);
-  }
-
-  /**
    * Decrement the openCount, closing any open overlay file handles if the open
    * count is now zero.
    */
@@ -133,17 +127,6 @@ struct FileInodeState {
    * Records the ranges that have been read() when not materialized.
    */
   CoverageSet readByteRanges;
-
-  /**
-   * If backed by an overlay file, whether the sha1 xattr is valid
-   */
-  bool sha1Valid{false};
-
-  /**
-   * Set if 'materialized', holds the open file descriptor backed by an
-   * overlay file.
-   */
-  folly::File file;
 
   /**
    * Number of open file handles referencing us.
@@ -428,25 +411,17 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   std::optional<bool> isSameAsFast(const Hash& blobID, TreeEntryType entryType);
 
   /**
-   * Recompute the SHA1 content hash of the open file.
-   *
-   * state->tag must be MATERIALIZED_IN_OVERLAY, and state.ensureFileOpen()
-   * must have already been called.
-   */
-  Hash recomputeAndStoreSha1(const LockedState& state);
-
-  /**
-   * Store the SHA1 content hash on an overlay file.
-   *
-   * state->tag must be MATERIALIZED_IN_OVERLAY, and state.ensureFileOpen()
-   * must have already been called.
-   */
-  static void storeSha1(const LockedState& state, Hash sha1);
-
-  /**
    * Get the ObjectStore used by this FileInode to load non-materialized data.
    */
   ObjectStore* getObjectStore() const;
+
+  /**
+   * Returns the OverlayFileAccess used to mediate access to an overlay file.
+   *
+   * An unused LockedState& is passed in to help avoid unsynchronized access.
+   * (Don't use the returned OverlayFileAccess outside of the lock).
+   */
+  OverlayFileAccess* getOverlayFileAccess(LockedState&) const;
 
   size_t writeImpl(
       LockedState& state,

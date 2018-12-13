@@ -25,6 +25,7 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
+#include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
@@ -60,6 +61,7 @@ class InodeTable;
 using InodeMetadataTable = InodeTable<InodeMetadata>;
 class ObjectStore;
 class Overlay;
+class OverlayFileAccess;
 class ServerState;
 class Tree;
 class UnboundedQueueExecutor;
@@ -233,6 +235,10 @@ class EdenMount {
    */
   Overlay* getOverlay() const {
     return overlay_.get();
+  }
+
+  OverlayFileAccess* getOverlayFileAccess() {
+    return &overlayFileAccess_;
   }
 
   InodeMetadataTable* getInodeMetadataTable() const;
@@ -639,6 +645,7 @@ class EdenMount {
   std::shared_ptr<BlobCache> blobCache_;
   BlobAccess blobAccess_;
   std::unique_ptr<Overlay> overlay_;
+  OverlayFileAccess overlayFileAccess_;
   InodeNumber dotEdenInodeNumber_{};
 
   /**

@@ -14,7 +14,6 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
-#include <openssl/sha.h>
 #include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -115,15 +114,11 @@ class FileInode::LockedState {
   void ensureFileOpen(const FileInode* inode);
 
   /**
-   * This moves the file into the MATERIALIZED_IN_OVERLAY state, setting
-   * state->file.
-   *
-   * This updates state->tag and state->file, and clears state->blob,
-   * state-hash, and state->sha1Valid.
+   * Move the file into the MATERIALIZED_IN_OVERLAY state.
    *
    * This also implicitly ensures that this LockedState has an open refcount.
    */
-  void setMaterialized(folly::File&& file);
+  void setMaterialized();
 
   /**
    * Increment the state's open count.
@@ -247,26 +242,16 @@ void FileInode::LockedState::ensureFileOpen(const FileInode* inode) {
     ptr_->incOpenCount();
     hasOpenRefcount_ = true;
   }
-
-  if (!ptr_->isFileOpen()) {
-    // When opening a file handle to the file, the openCount is incremented but
-    // the overlay file is not actually opened.  Instead, it's opened lazily
-    // here.
-    ptr_->file =
-        inode->getMount()->getOverlay()->openFileNoVerify(inode->getNodeId());
-  }
 }
 
-void FileInode::LockedState::setMaterialized(folly::File&& file) {
+void FileInode::LockedState::setMaterialized() {
   if (!hasOpenRefcount_) {
     ptr_->incOpenCount();
     hasOpenRefcount_ = true;
   }
 
-  ptr_->file = std::move(file);
   ptr_->hash.reset();
   ptr_->tag = State::MATERIALIZED_IN_OVERLAY;
-  ptr_->sha1Valid = false;
 
   ptr_->interestHandle.reset();
   ptr_->readByteRanges.clear();
@@ -488,29 +473,17 @@ void FileInodeState::checkInvariants() {
     case BLOB_NOT_LOADING:
       CHECK(hash);
       CHECK(!blobLoadingPromise);
-      CHECK(!file);
-      CHECK(!sha1Valid);
       return;
     case BLOB_LOADING:
       CHECK(hash);
       CHECK(blobLoadingPromise);
       CHECK(readByteRanges.empty());
-      CHECK(!file);
-      CHECK(!sha1Valid);
       return;
     case MATERIALIZED_IN_OVERLAY:
       // 'materialized'
       CHECK(!hash);
       CHECK(!blobLoadingPromise);
       CHECK(readByteRanges.empty());
-      if (file) {
-        CHECK_GT(openCount, 0);
-      }
-      if (openCount == 0) {
-        // file is lazily set, so the only interesting assertion is
-        // that it's not open if openCount is zero.
-        CHECK(!file);
-      }
       return;
   }
 
@@ -524,16 +497,6 @@ void FileInodeState::incOpenCount() {
 void FileInodeState::decOpenCount() {
   DCHECK_GT(openCount, 0);
   --openCount;
-  if (openCount == 0) {
-    switch (tag) {
-      case BLOB_NOT_LOADING:
-      case BLOB_LOADING:
-        break;
-      case MATERIALIZED_IN_OVERLAY:
-        file.close();
-        break;
-    }
-  }
 }
 
 /*********************************************************************
@@ -553,7 +516,6 @@ std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
 
   auto state = LockedState{inode};
   state.incOpenCount();
-  state->file = std::move(file);
   DCHECK_EQ(state->openCount, 1)
       << "open count cannot be anything other than 1";
   return std::make_tuple(inode, state.unlockAndCreateHandle(inode));
@@ -600,21 +562,20 @@ folly::Future<Dispatcher::Attr> FileInode::setattr(
   }
 
   auto setAttrs = [self = inodePtrFromThis(), attr](LockedState&& state) {
+    auto ino = self->getNodeId();
     auto result = Dispatcher::Attr{self->getMount()->initStatData()};
 
     DCHECK_EQ(State::MATERIALIZED_IN_OVERLAY, state->tag)
         << "Must have a file in the overlay at this point";
-    DCHECK(state->isFileOpen());
 
     // Set the size of the file when FATTR_SIZE is set
     if (attr.valid & FATTR_SIZE) {
-      checkUnixError(
-          ftruncate(state->file.fd(), attr.size + Overlay::kHeaderLength));
-      state->sha1Valid = false;
+      // Throws upon error.
+      self->getOverlayFileAccess(state)->truncate(ino, attr.size);
     }
 
     auto metadata = self->getMount()->getInodeMetadataTable()->modifyOrThrow(
-        self->getNodeId(), [&](auto& metadata) {
+        ino, [&](auto& metadata) {
           metadata.updateFromAttr(self->getClock(), attr);
         });
 
@@ -623,10 +584,9 @@ folly::Future<Dispatcher::Attr> FileInode::setattr(
     // when FATTR_SIZE flag is set but when the flag is not set we
     // have to return the correct size of the file even if some size is sent
     // in attr.st.st_size.
-    struct stat overlayStat;
-    checkUnixError(fstat(state->file.fd(), &overlayStat));
-    result.st.st_ino = self->getNodeId().get();
-    result.st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
+    off_t size = self->getOverlayFileAccess(state)->getFileSize(ino, *self);
+    result.st.st_ino = ino.get();
+    result.st.st_size = size;
     metadata.applyToStat(result.st);
     result.st.st_nlink = 1;
     updateBlockCount(result.st);
@@ -787,14 +747,7 @@ Future<Hash> FileInode::getSha1() {
       // If a file is not materialized, it should have a hash value.
       return getObjectStore()->getSha1(state->hash.value());
     case State::MATERIALIZED_IN_OVERLAY:
-      state.ensureFileOpen(this);
-      if (state->sha1Valid) {
-        auto shaStr = fgetxattr(state->file.fd(), kXattrSha1);
-        if (!shaStr.empty()) {
-          return Hash(shaStr);
-        }
-      }
-      return recomputeAndStoreSha1(state);
+      return getOverlayFileAccess(state)->getSha1(getNodeId());
   }
 
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
@@ -830,19 +783,7 @@ folly::Future<struct stat> FileInode::stat() {
 
     case State::MATERIALIZED_IN_OVERLAY:
       state.ensureFileOpen(this);
-      // We are calling fstat only to get the size of the file.
-      struct stat overlayStat;
-      checkUnixError(fstat(state->file.fd(), &overlayStat));
-
-      if (overlayStat.st_size < static_cast<off_t>(Overlay::kHeaderLength)) {
-        // Truncated overlay files can sometimes occur after a hard reboot
-        // where the overlay file data was not flushed to disk before the
-        // system powered off.
-        XLOG(ERR) << "overlay file for " << getNodeId()
-                  << " is too short for header: size=" << overlayStat.st_size;
-        throw InodeError(EIO, inodePtrFromThis(), "corrupt overlay file");
-      }
-      st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
+      st.st_size = getOverlayFileAccess(state)->getFileSize(getNodeId(), *this);
       updateBlockCount(st);
       return st;
   }
@@ -858,17 +799,9 @@ void FileInode::updateBlockCount(struct stat& st) {
 
 void FileInode::fsync(bool datasync) {
   auto state = LockedState{this};
-  if (!state->isFileOpen()) {
-    // If we don't have an overlay file then we have nothing to sync.
-    return;
+  if (state->isMaterialized()) {
+    getOverlayFileAccess(state)->fsync(getNodeId(), datasync);
   }
-
-  auto res =
-#ifndef __APPLE__
-      datasync ? ::fdatasync(state->file.fd()) :
-#endif
-               ::fsync(state->file.fd());
-  checkUnixError(res);
 }
 
 Future<string> FileInode::readAll(CacheHint cacheHint) {
@@ -896,12 +829,8 @@ Future<string> FileInode::readAll(CacheHint cacheHint) {
         switch (state->tag) {
           case State::MATERIALIZED_IN_OVERLAY: {
             DCHECK(!blob);
-            // Note that this code requires a write lock on state_ because the
-            // lseek() call modifies the file offset of the file descriptor.
-            auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
-            folly::checkUnixError(
-                rc, "unable to seek in materialized FileInode");
-            folly::readFile(state->file.fd(), result);
+            result = self->getOverlayFileAccess(state)->readAllContents(
+                self->getNodeId());
             break;
           }
           case State::BLOB_NOT_LOADING: {
@@ -936,17 +865,8 @@ Future<BufVec> FileInode::read(size_t size, off_t off) {
 
         // Materialized either before or during blob load.
         if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-          state.ensureFileOpen(self.get());
-          auto buf = folly::IOBuf::createCombined(size);
-          auto res = ::pread(
-              state->file.fd(),
-              buf->writableBuffer(),
-              size,
-              off + Overlay::kHeaderLength);
-
-          checkUnixError(res);
-          buf->append(res);
-          return BufVec{std::move(buf)};
+          return self->getOverlayFileAccess(state)->read(
+              self->getNodeId(), size, off);
         }
 
         // runWhileDataLoaded() ensures that the state is either
@@ -986,12 +906,9 @@ size_t FileInode::writeImpl(
     size_t numIovecs,
     off_t off) {
   DCHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
-  DCHECK(state->isFileOpen());
 
-  state->sha1Valid = false;
   auto xfer =
-      ::pwritev(state->file.fd(), iov, numIovecs, off + Overlay::kHeaderLength);
-  checkUnixError(xfer);
+      getOverlayFileAccess(state)->write(getNodeId(), iov, numIovecs, off);
 
   updateMtimeAndCtimeLocked(*state, getNow());
 
@@ -1123,97 +1040,40 @@ void FileInode::materializeNow(
   // This function should only be called from the BLOB_NOT_LOADING state
   DCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
-  // Look up the blob metadata so we can get the blob contents SHA1
+  // If the blob metadata is immediately available, use it to populate the SHA-1
+  // value in the overlay for this file.
   // Since this uses state->hash we perform this before calling
-  // state.setMaterialized()
-  auto blobSha1 = getObjectStore()->getSha1(state->hash.value());
-
-  auto file = getMount()->getOverlay()->createOverlayFile(
-      getNodeId(), blob->getContents());
-  state.setMaterialized(std::move(file));
-
-  // If we have a SHA-1 from the metadata, apply it to the new file.  This
-  // saves us from recomputing it again in the case that something opens the
-  // file read/write and closes it without changing it.
-  if (blobSha1.isReady()) {
-    storeSha1(state, blobSha1.value());
-  } else {
-    // Leave the SHA-1 attribute dirty - it is not very likely that a file
-    // will be opened for writing, closed without changing, and then have
-    // its SHA-1 queried via Thrift or xattr. If so, the SHA-1 will be
-    // recomputed as needed. That said, it's perhaps cheaper to hash now
-    // (SHA-1 is hundreds of MB/s) while the data is accessible in the blob
-    // than to read the file out of the overlay later.
+  // state.setMaterialized().
+  auto blobSha1Future = getObjectStore()->getSha1(state->hash.value());
+  std::optional<Hash> blobSha1;
+  if (blobSha1Future.isReady()) {
+    blobSha1 = blobSha1Future.value();
   }
+
+  getOverlayFileAccess(state)->createFile(getNodeId(), *blob, blobSha1);
+
+  state.setMaterialized();
 }
 
 void FileInode::materializeAndTruncate(LockedState& state) {
   CHECK_NE(state->tag, State::MATERIALIZED_IN_OVERLAY);
-  auto file =
-      getMount()->getOverlay()->createOverlayFile(getNodeId(), ByteRange{});
-  state.setMaterialized(std::move(file));
-  storeSha1(state, Hash::sha1(ByteRange{}));
+  getOverlayFileAccess(state)->createEmptyFile(getNodeId());
+  state.setMaterialized();
 }
 
 void FileInode::truncateInOverlay(LockedState& state) {
   CHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
   CHECK(!state->hash);
 
-  state.ensureFileOpen(this);
-  checkUnixError(ftruncate(state->file.fd(), 0 + Overlay::kHeaderLength));
+  getOverlayFileAccess(state)->truncate(getNodeId());
 }
 
 ObjectStore* FileInode::getObjectStore() const {
   return getMount()->getObjectStore();
 }
 
-Hash FileInode::recomputeAndStoreSha1(const LockedState& state) {
-  DCHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
-  DCHECK(state->isFileOpen());
-
-  uint8_t buf[8192];
-  off_t off = Overlay::kHeaderLength;
-  SHA_CTX ctx;
-  SHA1_Init(&ctx);
-
-  while (true) {
-    // Using pread here so that we don't move the file position;
-    // the file descriptor is shared between multiple file handles
-    // and while we serialize the requests to FileData, it seems
-    // like a good property of this function to avoid changing that
-    // state.
-    auto len = folly::preadNoInt(state->file.fd(), buf, sizeof(buf), off);
-    if (len == 0) {
-      break;
-    }
-    if (len == -1) {
-      folly::throwSystemError();
-    }
-    SHA1_Update(&ctx, buf, len);
-    off += len;
-  }
-
-  uint8_t digest[SHA_DIGEST_LENGTH];
-  SHA1_Final(digest, &ctx);
-  auto sha1 = Hash(folly::ByteRange(digest, sizeof(digest)));
-  storeSha1(state, sha1);
-  return sha1;
-}
-
-void FileInode::storeSha1(const LockedState& state, Hash sha1) {
-  DCHECK_EQ(state->tag, State::MATERIALIZED_IN_OVERLAY);
-  DCHECK(state->isFileOpen());
-
-  try {
-    fsetxattr(state->file.fd(), kXattrSha1, sha1.toString());
-    state->sha1Valid = true;
-  } catch (const std::exception& ex) {
-    // If something goes wrong storing the attribute just log a warning
-    // and leave sha1Valid as false.  We'll have to recompute the value
-    // next time we need it.
-    XLOG(WARNING) << "error setting SHA1 attribute in the overlay: "
-                  << folly::exceptionStr(ex);
-  }
+OverlayFileAccess* FileInode::getOverlayFileAccess(LockedState&) const {
+  return getMount()->getOverlayFileAccess();
 }
 
 folly::Future<folly::Unit> FileInode::prefetch() {
