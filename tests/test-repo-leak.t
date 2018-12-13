@@ -119,7 +119,6 @@ Somehow problematic: With many extensions
   > clindex=
   > color=
   > commitcloud=
-  > configwarn=
   > conflictinfo=
   > copytrace=
   > crdump=

@@ -286,7 +286,6 @@ Test extension help:
                      provide information about the client in server telemetry
        clonebundles  advertise pre-generated bundles to seed clones
        commitcloud   sync changesets via the cloud
-       configwarn    warn unsupported user configs
        convert       import revisions from foreign VCS repositories into
                      Mercurial
        copytrace     extension that does copytracing fast

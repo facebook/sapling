@@ -32,6 +32,7 @@ _ignoreextensions = {
     "censor",
     "children",
     "color",
+    "configwarn",
     "factotum",
     "fastpartialmatch",
     "fbsparse",

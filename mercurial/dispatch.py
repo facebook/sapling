@@ -217,7 +217,6 @@ def _preimportmodules():
         "chistedit",
         "clienttelemetry",
         "clindex",
-        "configwarn",
         "conflictinfo",
         "convert",
         "copytrace",
