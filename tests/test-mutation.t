@@ -333,3 +333,52 @@ Histedit with stop, extra commit, and fold
     ef799246f6e1caab4e24a094396f91970d71703d histedit by test at 1970-01-01T00:00:00 from:
       0b78a069a4a88e74e534c80cce8e3983db06271e
       0d4155d128bf7fff3f12582a65b52be84ad44809
+
+Drawdag
+
+  $ cd ..
+  $ newrepo
+  $ hg debugdrawdag <<'EOS'
+  >       G
+  >       |
+  > I D C F   # split: B -> E, F, G
+  >  \ \| |   # rebase: C -> D -> H
+  >   H B E   # prune: F, I
+  >    \|/
+  >     A
+  > EOS
+
+  $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node}'
+  x  I 9d3d3e8bcf0521804d5d14513461a1b43f2722ef
+  |
+  o  H 45d7378ca81d4ce1e9b31f0e3d567b8292dffc77
+  |
+  | o  G 63a5789cbb56b401dcf1c5d228d75c645df293d8
+  | |
+  | x  F 64a8289d249234b9886244d379f15e6b650b28e3
+  | |
+  | o  E 7fb047a69f220c21711122dfd94305a9efb60cba
+  |/
+  | x  D 78698f46e6eb5de39fc18042f71f03cb7a21285c
+  | |
+  | | x  C 26805aba1e600a82e93661149f2313866a221a7b
+  | |/
+  | x  B 112478962961147124edd43549aedd1a335e44bf
+  |/
+  o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  
+  $ hg debugmutation "all()"
+    426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+    112478962961147124edd43549aedd1a335e44bf
+    7fb047a69f220c21711122dfd94305a9efb60cba
+    26805aba1e600a82e93661149f2313866a221a7b
+    64a8289d249234b9886244d379f15e6b650b28e3
+    78698f46e6eb5de39fc18042f71f03cb7a21285c rebase by test at 1970-01-01T00:00:00 from:
+      26805aba1e600a82e93661149f2313866a221a7b
+    63a5789cbb56b401dcf1c5d228d75c645df293d8 split by test at 1970-01-01T00:00:00 (split into this and: 7fb047a69f220c21711122dfd94305a9efb60cba, 64a8289d249234b9886244d379f15e6b650b28e3) from:
+      112478962961147124edd43549aedd1a335e44bf
+    45d7378ca81d4ce1e9b31f0e3d567b8292dffc77 rebase by test at 1970-01-01T00:00:00 from:
+      78698f46e6eb5de39fc18042f71f03cb7a21285c rebase by test at 1970-01-01T00:00:00 from:
+        26805aba1e600a82e93661149f2313866a221a7b
+    9d3d3e8bcf0521804d5d14513461a1b43f2722ef
+

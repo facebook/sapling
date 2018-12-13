@@ -86,7 +86,16 @@ import collections
 import itertools
 import re
 
-from . import context, error, node, obsolete, pycompat, scmutil, tags as tagsmod
+from . import (
+    context,
+    error,
+    mutation,
+    node,
+    obsolete,
+    pycompat,
+    scmutil,
+    tags as tagsmod,
+)
 from .i18n import _
 
 
@@ -279,7 +288,7 @@ class simplefilectx(object):
 
 
 class simplecommitctx(context.committablectx):
-    def __init__(self, repo, name, parentctxs, filemap):
+    def __init__(self, repo, name, parentctxs, filemap, mutation):
         added = []
         removed = []
         for path, data in filemap.items():
@@ -294,10 +303,19 @@ class simplecommitctx(context.committablectx):
                 if path in removed:
                     raise error.Abort(_("%s: both added and removed") % path)
                 added.append(path)
+        extra = {b"branch": b"default"}
+        if mutation is not None:
+            predctx, cmd, split = mutation
+            extra["mutpred"] = predctx.hex()
+            extra["mutdate"] = b"0 0"
+            extra["mutuser"] = repo.ui.config("mutation", "user") or repo.ui.username()
+            extra["mutop"] = cmd
+            if split:
+                extra["mutsplit"] = ",".join([s.hex() for s in split])
         opts = {
             "changes": scmutil.status([], added, removed, [], [], [], []),
             "date": b"0 0",
-            "extra": {b"branch": b"default"},
+            "extra": extra,
         }
         super(simplecommitctx, self).__init__(self, name, **opts)
         self._repo = repo
@@ -320,15 +338,25 @@ class simplecommitctx(context.committablectx):
         return self._repo.commitctx(self)
 
 
-def _walkgraph(edges):
-    """yield node, parents in topologically order"""
+def _walkgraph(edges, extraedges):
+    """yield node, parents in topologically order
+
+    ``edges`` is a dict containing a mapping of each node to its parent nodes.
+
+    ``extraedges`` is a dict containing other constraints on the ordering, e.g.
+    if commit B was created by amending commit A, then this dict should have B
+    -> A to ensure A is created before B.
+    """
     visible = set(edges.keys())
     remaining = {}  # {str: [str]}
     for k, vs in edges.items():
+        vs = vs[:]
+        if k in extraedges:
+            vs.append(extraedges[k])
         for v in vs:
             if v not in remaining:
                 remaining[v] = []
-        remaining[k] = vs[:]
+        remaining[k] = vs
     while remaining:
         leafs = [k for k, v in remaining.items() if not v]
         if not leafs:
@@ -401,8 +429,66 @@ def drawdag(repo, text):
             except error.RepoLookupError:
                 pass
 
+    # parse special comments
+    obsmarkers = []
+    mutations = {}
+    for comment in comments:
+        rels = []  # obsolete relationships
+        args = comment.split(b":", 1)
+        if len(args) <= 1:
+            continue
+
+        cmd = args[0].strip()
+        arg = args[1].strip()
+
+        if cmd in (b"replace", b"rebase", b"amend"):
+            nodes = [n.strip() for n in arg.split(b"->")]
+            for i in range(len(nodes) - 1):
+                pred, succ = nodes[i], nodes[i + 1]
+                rels.append((pred, (succ,)))
+                if succ in mutations:
+                    raise error.Abort(
+                        _("%s: multiple mutations: from %s and %s")
+                        % (succ, pred, mutations[succ][0])
+                    )
+                mutations[succ] = (pred, cmd, None)
+        elif cmd in (b"split",):
+            pred, succs = arg.split(b"->")
+            pred = pred.strip()
+            succs = [s.strip() for s in succs.split(b",")]
+            rels.append((pred, succs))
+            for succ in succs:
+                if succ in mutations:
+                    raise error.Abort(
+                        _("%s: multiple mutations: from %s and %s")
+                        % (succ, pred, mutations[succ][0])
+                    )
+            for i in range(len(succs) - 1):
+                parent = succs[i]
+                child = succs[i + 1]
+                if child not in edges or parent not in edges[child]:
+                    raise error.Abort(
+                        _("%s: split targets must be a stack: %s is not a parent of %s")
+                        % (pred, parent, child)
+                    )
+            mutations[succs[-1]] = (pred, cmd, succs[:-1])
+        elif cmd in (b"prune",):
+            for n in arg.split(b","):
+                rels.append((n.strip(), ()))
+        if rels:
+            obsmarkers.append((cmd, rels))
+
+    # Only record mutations if mutation recording is enabled.
+    if mutation.recording(repo):
+        # For mutation recording to work, we must include the mutations
+        # as extra edges when walking the DAG.
+        mutationedges = {s: p for (s, (p, _c, _sp)) in mutations.items()}
+    else:
+        mutationedges = {}
+        mutations = {}
+
     # commit in topological order
-    for name, parents in _walkgraph(edges):
+    for name, parents in _walkgraph(edges, mutationedges):
         if name in committed:
             continue
         pctxs = [repo[committed[n]] for n in parents]
@@ -419,7 +505,14 @@ def drawdag(repo, text):
         # add extra file contents in comments
         for path, content in files.get(name, {}).items():
             added[path] = content
-        ctx = simplecommitctx(repo, name, pctxs, added)
+        commitmutations = None
+        if name in mutations:
+            pred, cmd, split = mutations[name]
+            if split is not None:
+                split = [repo[committed[s]] for s in split]
+            commitmutations = (repo[committed[pred]], cmd, split)
+
+        ctx = simplecommitctx(repo, name, pctxs, added, commitmutations)
         n = ctx.commit()
         committed[name] = n
         tagsmod.tag(repo, [name], n, message=None, user=None, date=None, local=True)
@@ -427,25 +520,7 @@ def drawdag(repo, text):
     # handle special comments
     with repo.wlock(), repo.lock(), repo.transaction(b"drawdag"):
         getctx = lambda x: repo.unfiltered()[committed[x.strip()]]
-        for comment in comments:
-            rels = []  # obsolete relationships
-            args = comment.split(b":", 1)
-            if len(args) <= 1:
-                continue
-
-            cmd = args[0].strip()
-            arg = args[1].strip()
-
-            if cmd in (b"replace", b"rebase", b"amend"):
-                nodes = [getctx(m) for m in arg.split(b"->")]
-                for i in range(len(nodes) - 1):
-                    rels.append((nodes[i], (nodes[i + 1],)))
-            elif cmd in (b"split",):
-                pre, succs = arg.split(b"->")
-                succs = succs.split(b",")
-                rels.append((getctx(pre), [getctx(s) for s in succs]))
-            elif cmd in (b"prune",):
-                for n in arg.split(b","):
-                    rels.append((getctx(n), ()))
-            if rels:
-                obsolete.createmarkers(repo, rels, date=(0, 0), operation=cmd)
+        for cmd, markers in obsmarkers:
+            obsrels = [(getctx(p), [getctx(s) for s in ss]) for p, ss in markers]
+            if obsrels:
+                obsolete.createmarkers(repo, obsrels, date=(0, 0), operation=cmd)
