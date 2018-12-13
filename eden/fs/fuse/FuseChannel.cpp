@@ -1494,10 +1494,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
   XLOG(DBG7) << "FUSE_OPEN";
   auto ino = InodeNumber{header->nodeid};
   return dispatcher_->open(ino, open->flags)
-      .thenValue([](std::shared_ptr<FileHandle> fh) {
-        if (!fh) {
-          throw std::runtime_error("Dispatcher::open failed to set fh");
-        }
+      .thenValue([](std::shared_ptr<FileHandle> /* fh */) {
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;
         RequestData::get().sendReply(out);
