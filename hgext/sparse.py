@@ -1002,17 +1002,6 @@ def _wraprepo(ui, repo):
                     includes, excludes, profiles = self.getsparsepatterns(rev, config)
 
                     if includes or excludes:
-                        # Explicitly include subdirectories of includes so
-                        # status will walk them down to the actual include.
-                        subdirs = set()
-                        for include in includes:
-                            dirname = os.path.dirname(include)
-                            # basename is used to avoid issues with absolute
-                            # paths (which on Windows can include the drive).
-                            while os.path.basename(dirname):
-                                subdirs.add(dirname)
-                                dirname = os.path.dirname(dirname)
-
                         matcher = matchmod.match(
                             self.root,
                             "",
@@ -1021,8 +1010,6 @@ def _wraprepo(ui, repo):
                             exclude=excludes,
                             default="relpath",
                         )
-                        if subdirs:
-                            matcher = forceincludematcher(matcher, subdirs)
                         matchers.append(matcher)
                 except IOError:
                     pass

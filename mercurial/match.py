@@ -1100,6 +1100,29 @@ class unionmatcher(basematcher):
         return "<unionmatcher matchers=%r>" % self._matchers
 
 
+class recursivematcher(basematcher):
+    """Make matchers recursive. If "a/b/c" matches, match "a/b/c/**".
+
+    It is intended to be used by hgignore only. Other matchers would want to
+    fix "visitdir" and "matchfn" to take parent directories into consideration.
+    """
+
+    def __init__(self, matcher):
+        self._matcher = matcher
+
+    def matchfn(self, f):
+        match = self._matcher
+        return match(f) or any(map(match, util.dirs((f,))))
+
+    def visitdir(self, dir):
+        if self(dir):
+            return "all"
+        return self._matcher.visitdir(dir)
+
+    def __repr__(self):
+        return "<recursivematcher %r>" % self._matcher
+
+
 def patkind(pattern, default=None):
     """If pattern is 'kind:pat' with a known kind, return kind."""
     return _patsplit(pattern, default)[0]

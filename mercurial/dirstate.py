@@ -217,7 +217,9 @@ class dirstate(object):
         files = self._ignorefiles()
         if files:
             pats = ["include:%s" % f for f in files]
-            hgignore = matchmod.match(self._root, "", [], pats, warn=self._ui.warn)
+            hgignore = matchmod.recursivematcher(
+                matchmod.match(self._root, "", [], pats, warn=self._ui.warn)
+            )
         else:
             hgignore = None
 
@@ -809,11 +811,9 @@ class dirstate(object):
     def _dirignore(self, f):
         if f == ".":
             return False
-        if self._ignore(f):
+        visitdir = self._ignore.visitdir
+        if visitdir(f) == "all":
             return True
-        for p in util.finddirs(f):
-            if self._ignore(p):
-                return True
         return False
 
     def _ignorefiles(self):
@@ -1074,7 +1074,7 @@ class dirstate(object):
                         nf = nd and (nd + "/" + f) or f
                     if nf not in results:
                         if kind == dirkind:
-                            if not ignore(nf):
+                            if not dirignore(nf):
                                 if matchtdir:
                                     matchtdir(nf)
                                 wadd(nf)
@@ -1180,7 +1180,7 @@ class dirstate(object):
         dadd = deleted.append
         cadd = clean.append
         mexact = match.exact
-        dirignore = self._dirignore
+        ignore = self._ignore
         checkexec = self._checkexec
         copymap = self._map.copymap
         lastnormaltime = self._lastnormaltime
@@ -1205,7 +1205,7 @@ class dirstate(object):
                 if t[0] == "?":
                     raise KeyError
             except KeyError:
-                if (listignored or mexact(fn)) and dirignore(fn):
+                if (listignored or mexact(fn)) and ignore(fn):
                     if listignored:
                         iadd(fn)
                 else:

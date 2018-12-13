@@ -205,10 +205,10 @@ Test relative ignore path (issue4473):
   A b.o
 
   $ hg debugignore --config ui.gitignore=1
-  <unionmatcher matchers=[<gitignorematcher>, <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>]>
+  <unionmatcher matchers=[<gitignorematcher>, <recursivematcher <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>>]>
 
   $ hg debugignore --config ui.gitignore=0
-  <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>
+  <recursivematcher <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>>
 
   $ hg debugignore --config ui.hgignore=0 --config ui.gitignore=0
   <nevermatcher>
@@ -231,7 +231,6 @@ re-walking whole repository at detection of .hgignore change.
   ? .hgignore
   ? a.c
   ? a.o
-  ? dir/c.o (fsmonitor !)
   ? syntax
 
 Check recursive glob pattern matches no directories (dir/**/c.o matches dir/c.o)

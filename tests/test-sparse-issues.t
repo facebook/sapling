@@ -17,7 +17,6 @@ More complex pattern
   $ mkdir -p a1/b1
   $ touch a1/b1/c
 
-BUG: a1/b1/c should show up
   $ hg status
   ? a/b/c
-  ? a1/b1/c (fsmonitor !)
+  ? a1/b1/c
