@@ -28,6 +28,9 @@ class ServiceTestCaseBase(
     Use the @service_test decorator to make a concrete subclass.
     """
 
+    __etc_eden_dir: typing.Optional[pathlib.Path] = None
+    __home_dir: typing.Optional[pathlib.Path] = None
+
     @abc.abstractmethod
     def spawn_fake_edenfs(
         self, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
@@ -36,6 +39,46 @@ class ServiceTestCaseBase(
 
     def skip_if_systemd(self, message: str) -> None:
         pass
+
+    def get_required_eden_cli_args(self) -> typing.List[str]:
+        return [
+            "--etc-eden-dir",
+            str(self.etc_eden_dir),
+            "--home-dir",
+            str(self.home_dir),
+        ]
+
+    @property
+    def etc_eden_dir(self) -> pathlib.Path:
+        if self.__etc_eden_dir is None:
+            self.__etc_eden_dir = pathlib.Path(self.make_temporary_directory())
+        return self.__etc_eden_dir
+
+    @property
+    def home_dir(self) -> pathlib.Path:
+        if self.__home_dir is None:
+            self.__home_dir = pathlib.Path(self.make_temporary_directory())
+        return self.__home_dir
+
+    if typing.TYPE_CHECKING:
+
+        @abc.abstractmethod
+        def make_temporary_directory(self) -> str:
+            raise NotImplementedError()
+
+
+class ServiceTestCaseMixinBase:
+    if typing.TYPE_CHECKING:
+
+        @property
+        @abc.abstractmethod
+        def etc_eden_dir(self) -> pathlib.Path:
+            raise NotImplementedError()
+
+        @property
+        @abc.abstractmethod
+        def home_dir(self) -> pathlib.Path:
+            raise NotImplementedError()
 
 
 if typing.TYPE_CHECKING:
@@ -55,7 +98,7 @@ else:
         """
 
 
-class AdHocFakeEdenFSMixin:
+class AdHocFakeEdenFSMixin(ServiceTestCaseMixinBase):
     """Test by spawning fake_edenfs directly.
 
     Use the @service_test decorator to use this mixin automatically.
@@ -64,10 +107,15 @@ class AdHocFakeEdenFSMixin:
     def spawn_fake_edenfs(
         self, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
     ) -> FakeEdenFS:
-        return FakeEdenFS.spawn(eden_dir=eden_dir, extra_arguments=extra_arguments)
+        return FakeEdenFS.spawn(
+            eden_dir=eden_dir,
+            etc_eden_dir=self.etc_eden_dir,
+            home_dir=self.home_dir,
+            extra_arguments=extra_arguments,
+        )
 
 
-class ManagedFakeEdenFSMixin:
+class ManagedFakeEdenFSMixin(ServiceTestCaseMixinBase):
     """Test by using 'eden start' to spawn fake_edenfs.
 
     Use the @service_test decorator to use this mixin automatically.
@@ -79,11 +127,14 @@ class ManagedFakeEdenFSMixin:
         # TODO(T33122320): Opt out of using systemd when using systemd is the
         # default option.
         return FakeEdenFS.spawn_via_cli(
-            eden_dir=eden_dir, extra_arguments=extra_arguments
+            eden_dir=eden_dir,
+            etc_eden_dir=self.etc_eden_dir,
+            home_dir=self.home_dir,
+            extra_arguments=extra_arguments,
         )
 
 
-class SystemdEdenCLIFakeEdenFSMixin:
+class SystemdEdenCLIFakeEdenFSMixin(ServiceTestCaseMixinBase):
     """Test by using 'eden start' with systemd enabled to spawn fake_edenfs.
 
     Use the @service_test decorator to use this mixin automatically.
@@ -100,7 +151,10 @@ class SystemdEdenCLIFakeEdenFSMixin:
         self, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
     ) -> FakeEdenFS:
         return FakeEdenFS.spawn_via_cli(
-            eden_dir=eden_dir, extra_arguments=extra_arguments
+            eden_dir=eden_dir,
+            etc_eden_dir=self.etc_eden_dir,
+            home_dir=self.home_dir,
+            extra_arguments=extra_arguments,
         )
 
     def skip_if_systemd(self, message: str) -> None:

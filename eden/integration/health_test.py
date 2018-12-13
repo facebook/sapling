@@ -77,7 +77,10 @@ class HealthOfFakeEdenFSTest(
     def spawn_status(self, extra_args: typing.List[str]) -> "pexpect.spawn[str]":
         return pexpect.spawn(
             FindExe.EDEN_CLI,
-            ["--config-dir", str(self.temp_dir), "status"] + extra_args,
+            ["--config-dir", str(self.temp_dir)]
+            + self.get_required_eden_cli_args()
+            + ["status"]
+            + extra_args,
             encoding="utf-8",
             logfile=sys.stderr,
         )

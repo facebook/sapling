@@ -22,21 +22,42 @@ class FakeEdenFS(typing.ContextManager[int]):
 
     @classmethod
     def spawn(
-        cls, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+        cls,
+        eden_dir: pathlib.Path,
+        etc_eden_dir: pathlib.Path,
+        home_dir: pathlib.Path,
+        extra_arguments: typing.Sequence[str] = (),
     ) -> "FakeEdenFS":
-        command = [FindExe.FAKE_EDENFS, "--edenDir", str(eden_dir), "--edenfs"]
+        command = [
+            FindExe.FAKE_EDENFS,
+            "--configPath",
+            str(home_dir / ".edenrc"),
+            "--edenDir",
+            str(eden_dir),
+            "--etcEdenDir",
+            str(etc_eden_dir),
+            "--edenfs",
+        ]
         command.extend(extra_arguments)
         subprocess.check_call(command)
         return cls.from_existing_process(eden_dir=eden_dir)
 
     @classmethod
     def spawn_via_cli(
-        cls, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+        cls,
+        eden_dir: pathlib.Path,
+        etc_eden_dir: pathlib.Path,
+        home_dir: pathlib.Path,
+        extra_arguments: typing.Sequence[str] = (),
     ) -> "FakeEdenFS":
         command = [
             FindExe.EDEN_CLI,
             "--config-dir",
             str(eden_dir),
+            "--etc-eden-dir",
+            str(etc_eden_dir),
+            "--home-dir",
+            str(home_dir),
             "start",
             "--daemon-binary",
             FindExe.FAKE_EDENFS,

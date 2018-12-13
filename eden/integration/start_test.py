@@ -112,6 +112,10 @@ class StartWithRepoTest(
             FindExe.EDEN_CLI,
             "--config-dir",
             self.eden_dir,
+            "--etc-eden-dir",
+            self.etc_eden_dir,
+            "--home-dir",
+            self.home_dir,
             "start",
             "--daemon-binary",
             FindExe.EDEN_DAEMON,
@@ -279,13 +283,11 @@ class StartFakeEdenFSTest(
     ) -> "pexpect.spawn[str]":
         if eden_dir is None:
             eden_dir = self.eden_dir
-        args = [
-            "--config-dir",
-            str(eden_dir),
-            "start",
-            "--daemon-binary",
-            FindExe.FAKE_EDENFS,
-        ]
+        args = (
+            ["--config-dir", str(eden_dir)]
+            + self.get_required_eden_cli_args()
+            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
+        )
         if extra_args:
             args.extend(extra_args)
         return pexpect.spawn(

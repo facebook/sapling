@@ -45,7 +45,10 @@ class StopTestBase(ServiceTestCaseBase, TemporaryDirectoryMixin):
     def spawn_stop(self, extra_args: typing.List[str]) -> "pexpect.spawn[str]":
         return pexpect.spawn(
             FindExe.EDEN_CLI,
-            ["--config-dir", self.tmp_dir, "stop"] + extra_args,
+            ["--config-dir", self.tmp_dir]
+            + self.get_required_eden_cli_args()
+            + ["stop"]
+            + extra_args,
             encoding="utf-8",
             logfile=sys.stderr,
         )

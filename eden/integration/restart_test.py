@@ -34,20 +34,21 @@ class RestartTestBase(ServiceTestCaseBase, TemporaryDirectoryMixin):
         self.tmp_dir = self.make_temporary_directory()
 
         def ensure_stopped() -> None:
-            stop_cmd = [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir, "stop"]
+            stop_cmd = (
+                [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir]
+                + self.get_required_eden_cli_args()
+                + ["stop"]
+            )
             subprocess.call(stop_cmd)
 
         self.addCleanup(ensure_stopped)
 
     def _spawn_restart(self, *args: str) -> "pexpect.spawn[bytes]":
-        restart_cmd = [
-            FindExe.EDEN_CLI,
-            "--config-dir",
-            self.tmp_dir,
-            "restart",
-            "--daemon-binary",
-            FindExe.FAKE_EDENFS,
-        ]
+        restart_cmd = (
+            [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir]
+            + self.get_required_eden_cli_args()
+            + ["restart", "--daemon-binary", FindExe.FAKE_EDENFS]
+        )
         restart_cmd.extend(args)
 
         print("Retarting eden: %r" % (restart_cmd,))

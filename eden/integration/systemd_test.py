@@ -36,6 +36,8 @@ class SystemdTest(
 
         self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
         self.eden_dir = self.make_temporary_directory()
+        self.etc_eden_dir = self.make_temporary_directory()
+        self.home_dir = self.make_temporary_directory()
 
     # TODO(T33122320): Delete this test when systemd is properly integrated.
     # TODO(T33122320): Test without --foreground.
@@ -44,7 +46,8 @@ class SystemdTest(
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
                     FindExe.EDEN_CLI,
-                    ["--config-dir", self.eden_dir, "start", "--foreground"]
+                    self.get_required_eden_cli_args()
+                    + ["start", "--foreground"]
                     + start_args,
                     encoding="utf-8",
                     logfile=sys.stderr,
@@ -65,7 +68,8 @@ class SystemdTest(
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
                     FindExe.EDEN_CLI,
-                    ["--config-dir", self.eden_dir, "start", "--foreground"]
+                    self.get_required_eden_cli_args()
+                    + ["start", "--foreground"]
                     + start_args,
                     encoding="utf-8",
                     logfile=sys.stderr,
@@ -81,13 +85,18 @@ class SystemdTest(
     def test_eden_start_starts_systemd_service(self) -> None:
         self.set_up_edenfs_systemd_service()
         subprocess.check_call(
-            [
-                FindExe.EDEN_CLI,
-                "--config-dir",
-                self.eden_dir,
-                "start",
-                "--daemon-binary",
-                FindExe.FAKE_EDENFS,
-            ]
+            [FindExe.EDEN_CLI]
+            + self.get_required_eden_cli_args()
+            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
         )
         self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.eden_dir))
+
+    def get_required_eden_cli_args(self) -> typing.List[str]:
+        return [
+            "--config-dir",
+            self.eden_dir,
+            "--etc-eden-dir",
+            self.etc_eden_dir,
+            "--home-dir",
+            self.home_dir,
+        ]

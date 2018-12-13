@@ -452,15 +452,17 @@ class CloneFakeEdenFSTest(
         mount_path: pathlib.Path,
         extra_args: Sequence[str] = (),
     ) -> "pexpect.spawn[str]":
-        args = [
-            "--config-dir",
-            str(self.eden_dir),
-            "clone",
-            "--daemon-binary",
-            FindExe.FAKE_EDENFS,
-            str(repo_path),
-            str(mount_path),
-        ]
+        args = (
+            ["--config-dir", str(self.eden_dir)]
+            + self.get_required_eden_cli_args()
+            + [
+                "clone",
+                "--daemon-binary",
+                FindExe.FAKE_EDENFS,
+                str(repo_path),
+                str(mount_path),
+            ]
+        )
         args.extend(extra_args)
         return pexpect.spawn(
             FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
