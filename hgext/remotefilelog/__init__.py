@@ -88,7 +88,6 @@ from mercurial import (
     commands,
     context,
     copies,
-    debugcommands as hgdebugcommands,
     dispatch,
     error,
     exchange,
@@ -109,6 +108,7 @@ from mercurial import (
     templatekw,
     util,
 )
+from mercurial.commands import debug as hgdebugcommands
 from mercurial.extensions import wrapfunction
 from mercurial.i18n import _
 from mercurial.node import hex, nullrev

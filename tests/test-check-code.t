@@ -154,7 +154,7 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   >>> import re
   >>> commands = []
-  >>> with open('mercurial/debugcommands.py', 'rb') as fh:
+  >>> with open('mercurial/commands/debug.py', 'rb') as fh:
   ...     for line in fh:
   ...         m = re.match("^@command\('([a-z]+)", line)
   ...         if m:

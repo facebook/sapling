@@ -135,7 +135,6 @@ def _preimportmodules():
         "dagop",
         "dagparser",
         "dagutil",
-        "debugcommands",
         "destutil",
         "dirstate",
         "dirstateguard",

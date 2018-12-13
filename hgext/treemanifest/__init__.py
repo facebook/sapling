@@ -128,7 +128,6 @@ from mercurial import (
     bundlerepo,
     changegroup,
     commands,
-    debugcommands,
     error,
     exchange,
     extensions,
@@ -148,6 +147,7 @@ from mercurial import (
     util,
     wireproto,
 )
+from mercurial.commands import debug as debugcommands
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid, short
 

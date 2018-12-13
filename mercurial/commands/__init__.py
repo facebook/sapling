@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-from . import uncommit
+from . import debug, uncommit
 from .. import (
     archival,
     bookmarks,
@@ -25,7 +25,6 @@ from .. import (
     changegroup,
     cmdutil,
     copies,
-    debugcommands as debugcommandsmod,
     destutil,
     dirstateguard,
     discovery,
@@ -66,7 +65,7 @@ from ..node import bin, hex, nullid, nullrev, short
 release = lockmod.release
 
 table = {}
-table.update(debugcommandsmod.command._table)
+table.update(debug.command._table)
 
 command = registrar.command(table)
 readonly = registrar.command.readonly
