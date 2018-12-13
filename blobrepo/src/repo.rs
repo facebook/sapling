@@ -89,6 +89,7 @@ define_stats! {
     get_manifest_by_nodeid: timeseries(RATE, SUM),
     get_root_entry: timeseries(RATE, SUM),
     get_bookmark: timeseries(RATE, SUM),
+    get_bookmarks: timeseries(RATE, SUM),
     get_bookmarks_maybe_stale: timeseries(RATE, SUM),
     get_bonsai_from_hg: timeseries(RATE, SUM),
     update_bookmark_transaction: timeseries(RATE, SUM),
@@ -888,6 +889,40 @@ impl BlobRepo {
                         .map(move |cs| (bm, cs))
                 }
             })
+            .boxify()
+    }
+
+    pub fn get_bonsai_bookmarks_maybe_stale(
+        &self,
+        ctx: CoreContext,
+    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        STATS::get_bookmarks_maybe_stale.add_value(1);
+        self.bookmarks
+            .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
+            .boxify()
+    }
+
+    pub fn get_bookmarks(&self, ctx: CoreContext) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+        STATS::get_bookmarks.add_value(1);
+        self.bookmarks
+            .list_by_prefix(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
+            .and_then({
+                let repo = self.clone();
+                move |(bm, cs)| {
+                    repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
+                        .map(move |cs| (bm, cs))
+                }
+            })
+            .boxify()
+    }
+
+    pub fn get_bonsai_bookmarks(
+        &self,
+        ctx: CoreContext,
+    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        STATS::get_bookmarks.add_value(1);
+        self.bookmarks
+            .list_by_prefix(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
             .boxify()
     }
 
