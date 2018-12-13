@@ -305,8 +305,8 @@ class simplecommitctx(context.committablectx):
                 added.append(path)
         extra = {b"branch": b"default"}
         if mutation is not None:
-            predctx, cmd, split = mutation
-            extra["mutpred"] = predctx.hex()
+            predctxs, cmd, split = mutation
+            extra["mutpred"] = ",".join([p.hex() for p in predctxs])
             extra["mutdate"] = b"0 0"
             extra["mutuser"] = repo.ui.config("mutation", "user") or repo.ui.username()
             extra["mutop"] = cmd
@@ -352,7 +352,7 @@ def _walkgraph(edges, extraedges):
     for k, vs in edges.items():
         vs = vs[:]
         if k in extraedges:
-            vs.append(extraedges[k])
+            vs.extend(list(extraedges[k]))
         for v in vs:
             if v not in remaining:
                 remaining[v] = []
@@ -451,7 +451,7 @@ def drawdag(repo, text):
                         _("%s: multiple mutations: from %s and %s")
                         % (succ, pred, mutations[succ][0])
                     )
-                mutations[succ] = (pred, cmd, None)
+                mutations[succ] = ([pred], cmd, None)
         elif cmd in (b"split",):
             pred, succs = arg.split(b"->")
             pred = pred.strip()
@@ -471,18 +471,47 @@ def drawdag(repo, text):
                         _("%s: split targets must be a stack: %s is not a parent of %s")
                         % (pred, parent, child)
                     )
-            mutations[succs[-1]] = (pred, cmd, succs[:-1])
+            mutations[succs[-1]] = ([pred], cmd, succs[:-1])
+        elif cmd in (b"fold",):
+            preds, succ = arg.split(b"->")
+            preds = [p.strip() for p in preds.split(b",")]
+            succ = succ.strip()
+            for pred in preds:
+                rels.append((pred, (succ,)))
+            if succ in mutations:
+                raise error.Abort(
+                    _("%s: multiple mutations: from %s and %s")
+                    % (succ, ", ".join(preds), mutations[succ][0])
+                )
+            for i in range(len(preds) - 1):
+                parent = preds[i]
+                child = preds[i + 1]
+                if child not in edges or parent not in edges[child]:
+                    raise error.Abort(
+                        _("%s: fold sources must be a stack: %s is not a parent of %s")
+                        % (succ, parent, child)
+                    )
+            mutations[succ] = (preds, cmd, None)
         elif cmd in (b"prune",):
             for n in arg.split(b","):
                 rels.append((n.strip(), ()))
+        elif cmd in (b"revive",):
+            for n in arg.split(b","):
+                rels.append((n.strip(), (n.strip(),)))
         if rels:
             obsmarkers.append((cmd, rels))
 
     # Only record mutations if mutation recording is enabled.
+    mutationedges = {}
     if mutation.recording(repo):
         # For mutation recording to work, we must include the mutations
         # as extra edges when walking the DAG.
-        mutationedges = {s: p for (s, (p, _c, _sp)) in mutations.items()}
+        for succ, (preds, cmd, split) in mutations.items():
+            succs = {succ}
+            if split:
+                succs.update(split)
+            for s in succs:
+                mutationedges.setdefault(s, set()).update(preds)
     else:
         mutationedges = {}
         mutations = {}
@@ -507,10 +536,10 @@ def drawdag(repo, text):
             added[path] = content
         commitmutations = None
         if name in mutations:
-            pred, cmd, split = mutations[name]
+            preds, cmd, split = mutations[name]
             if split is not None:
                 split = [repo[committed[s]] for s in split]
-            commitmutations = (repo[committed[pred]], cmd, split)
+            commitmutations = ([repo[committed[p]] for p in preds], cmd, split)
 
         ctx = simplecommitctx(repo, name, pctxs, added, commitmutations)
         n = ctx.commit()

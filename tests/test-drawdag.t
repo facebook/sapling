@@ -197,31 +197,39 @@ Create obsmarkers via comments
   $ reinit
 
   $ hg debugdrawdag <<'EOS'
-  >       G
-  >       |
-  > I D C F   # split: B -> E, F, G
-  >  \ \| |   # replace: C -> D -> H
-  >   H B E   # prune: F, I
-  >    \|/
-  >     A
+  >       G L
+  >       | |
+  > I D C F K    # split: B -> E, F, G
+  >  \ \| | |    # replace: C -> D -> H
+  >   H B E J M  # prune: F, I
+  >    \|/  |/   # fold: J, K, L -> M
+  >     A   A    # revive: D, K
   > EOS
 
   $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node}'
-  o  G 711f53bbef0bebd12eb6f0511d5e2e998b984846
+  x  L 12ac214c2132ccaa5b97fa70b25570496f86853c
   |
-  x  F 64a8289d249234b9886244d379f15e6b650b28e3
+  o  K 623037570ba0971f93c31b1b90fa8a1b82307329
   |
-  o  E 7fb047a69f220c21711122dfd94305a9efb60cba
+  x  J a0a5005cec670cc22e984711855473e8ba07230a
   |
-  | x  D be0ef73c17ade3fc89dc41701eb9fc3a91b58282
+  | x  I 58e6b987bf7045fcd9c54f496396ca1d1fc81047
+  | |
+  | o  H 575c4b5ec114d64b681d33f8792853568bfb2b2c
+  |/
+  | o  G 711f53bbef0bebd12eb6f0511d5e2e998b984846
+  | |
+  | x  F 64a8289d249234b9886244d379f15e6b650b28e3
+  | |
+  | o  E 7fb047a69f220c21711122dfd94305a9efb60cba
+  |/
+  | o  D be0ef73c17ade3fc89dc41701eb9fc3a91b58282
   | |
   | | x  C 26805aba1e600a82e93661149f2313866a221a7b
   | |/
   | x  B 112478962961147124edd43549aedd1a335e44bf
   |/
-  | x  I 58e6b987bf7045fcd9c54f496396ca1d1fc81047
-  | |
-  | o  H 575c4b5ec114d64b681d33f8792853568bfb2b2c
+  | o  M 699bc4b6fa2207ae482508d19836281c02008d1e
   |/
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   
@@ -231,6 +239,11 @@ Create obsmarkers via comments
   be0ef73c17ade3fc89dc41701eb9fc3a91b58282 575c4b5ec114d64b681d33f8792853568bfb2b2c 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'replace', 'user': 'test'}
   64a8289d249234b9886244d379f15e6b650b28e3 0 {7fb047a69f220c21711122dfd94305a9efb60cba} (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'prune', 'user': 'test'}
   58e6b987bf7045fcd9c54f496396ca1d1fc81047 0 {575c4b5ec114d64b681d33f8792853568bfb2b2c} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'prune', 'user': 'test'}
+  a0a5005cec670cc22e984711855473e8ba07230a 699bc4b6fa2207ae482508d19836281c02008d1e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'fold', 'user': 'test'}
+  623037570ba0971f93c31b1b90fa8a1b82307329 699bc4b6fa2207ae482508d19836281c02008d1e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'fold', 'user': 'test'}
+  12ac214c2132ccaa5b97fa70b25570496f86853c 699bc4b6fa2207ae482508d19836281c02008d1e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'fold', 'user': 'test'}
+  be0ef73c17ade3fc89dc41701eb9fc3a91b58282 be0ef73c17ade3fc89dc41701eb9fc3a91b58282 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'revive', 'user': 'test'}
+  623037570ba0971f93c31b1b90fa8a1b82307329 623037570ba0971f93c31b1b90fa8a1b82307329 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'revive', 'user': 'test'}
 
 Change file contents via comments
 
