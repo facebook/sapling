@@ -148,8 +148,19 @@ impl RevsetSpec {
                     &RevsetEntry::SetDifference => {
                         let keep = output.pop().expect("No keep for setdifference");
                         let remove = output.pop().expect("No remove for setdifference");
-                        SetDifferenceNodeStream::new(ctx.clone(), &repo.clone(), keep, remove)
-                            .boxed()
+                        let keep_input =
+                            nodestreams_to_bonsai_nodestreams(ctx.clone(), &repo, vec![keep])
+                                .remove(0);
+                        let remove_input =
+                            nodestreams_to_bonsai_nodestreams(ctx.clone(), &repo, vec![remove])
+                                .remove(0);
+                        let nodestream = SetDifferenceNodeStream::new(
+                            ctx.clone(),
+                            &changeset_fetcher,
+                            keep_input,
+                            remove_input,
+                        ).boxed();
+                        bonsai_nodestream_to_nodestream(ctx.clone(), &repo, nodestream)
                     }
                     &RevsetEntry::Union(size) => {
                         let idx = output.len() - size;
@@ -202,12 +213,14 @@ impl Arbitrary for RevsetSpec {
                     // Bias towards SingleNode if we only have 1 rev
                     match range.sample(g) {
                         0 => RevsetEntry::SingleNode(None),
-                        1 => if revspecs_in_set >= 2 {
-                            revspecs_in_set -= 2;
-                            RevsetEntry::SetDifference
-                        } else {
-                            RevsetEntry::SingleNode(None)
-                        },
+                        1 => {
+                            if revspecs_in_set >= 2 {
+                                revspecs_in_set -= 2;
+                                RevsetEntry::SetDifference
+                            } else {
+                                RevsetEntry::SingleNode(None)
+                            }
+                        }
                         2 => {
                             revspecs_in_set -= input_count;
                             RevsetEntry::Intersect(input_count)
@@ -462,28 +475,25 @@ macro_rules! ancestors_check {
 
                 // Limit the number of changesets, otherwise tests take too much time
                 let max_changesets = 7;
-                let all_changesets: Vec<_> = all_changesets
-                    .into_iter()
-                    .take(max_changesets)
-                    .collect();
+                let all_changesets: Vec<_> =
+                    all_changesets.into_iter().take(max_changesets).collect();
                 let iter = IncludeExcludeDiscardCombinationsIterator::new(all_changesets);
                 for (include, exclude) in iter {
-                    let difference_stream =
-                        create_skiplist(ctx.clone(), &repo)
-                            .map({
-                                cloned!(ctx, changeset_fetcher, exclude, include, repo);
-                                move |skiplist| {
-                                    DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                                        ctx.clone(),
-                                        &changeset_fetcher,
-                                        skiplist,
-                                        hg_to_bonsai_changesetid(ctx.clone(), &repo, include.clone()),
-                                        hg_to_bonsai_changesetid(ctx, &repo, exclude.clone()),
-                                    )
-                                }
-                            })
-                            .flatten_stream()
-                            .boxify();
+                    let difference_stream = create_skiplist(ctx.clone(), &repo)
+                        .map({
+                            cloned!(ctx, changeset_fetcher, exclude, include, repo);
+                            move |skiplist| {
+                                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                                    ctx.clone(),
+                                    &changeset_fetcher,
+                                    skiplist,
+                                    hg_to_bonsai_changesetid(ctx.clone(), &repo, include.clone()),
+                                    hg_to_bonsai_changesetid(ctx, &repo, exclude.clone()),
+                                )
+                            }
+                        })
+                        .flatten_stream()
+                        .boxify();
 
                     let actual = ValidateNodeStream::new(
                         ctx.clone(),
@@ -494,22 +504,31 @@ macro_rules! ancestors_check {
                     let mut includes = vec![];
                     for i in hg_to_bonsai_changesetid(ctx.clone(), &repo, include.clone()) {
                         includes.push(
-                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify()
+                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify(),
                         );
                     }
 
                     let mut excludes = vec![];
                     for i in hg_to_bonsai_changesetid(ctx.clone(), &repo, exclude.clone()) {
                         excludes.push(
-                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify()
+                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify(),
                         );
                     }
-                    let includes = UnionNodeStream::new(ctx.clone(), &changeset_fetcher, includes).boxify();
-                    let excludes = UnionNodeStream::new(ctx.clone(), &changeset_fetcher,  excludes).boxify();
-                    let expected = SetDifferenceNodeStream::new(ctx.clone(), &repo, bonsai_nodestream_to_nodestream(ctx.clone(), &repo, includes), bonsai_nodestream_to_nodestream(ctx.clone(), &repo, excludes));
+                    let includes =
+                        UnionNodeStream::new(ctx.clone(), &changeset_fetcher, includes).boxify();
+                    let excludes =
+                        UnionNodeStream::new(ctx.clone(), &changeset_fetcher, excludes).boxify();
+                    let expected = SetDifferenceNodeStream::new(
+                        ctx.clone(),
+                        &changeset_fetcher,
+                        includes,
+                        excludes,
+                    )
+                    .boxed();
 
+                    let expected = bonsai_nodestream_to_nodestream(ctx.clone(), &repo, expected);
                     assert!(
-                        match_streams(expected.boxify(), actual.boxify()),
+                        match_streams(expected, actual.boxify()),
                         "streams do not match for {:?} {:?}",
                         include,
                         exclude
@@ -518,7 +537,7 @@ macro_rules! ancestors_check {
                 ()
             })
         }
-    }
+    };
 }
 mod empty_skiplist_tests {
     use super::*;
