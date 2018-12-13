@@ -33,6 +33,7 @@ from mercurial import (
     lock,
     merge as mergemod,
     mergeutil,
+    mutation,
     obsolete,
     obsutil,
     patch,
@@ -176,6 +177,7 @@ class rebaseruntime(object):
         self.state = {}
         self.activebookmark = None
         self.destmap = {}
+        self.predmap = {}
         self.skipped = set()
 
         self.collapsef = opts.get("collapse", False)
@@ -296,6 +298,9 @@ class rebaseruntime(object):
         if keepbranches is None:
             raise error.Abort(_(".hg/rebasestate is incomplete"))
 
+        # recompute the predecessor map
+        predmap = _definepredmap(repo, destmap.keys())
+
         skipped = set()
         # recompute the set of skipped revs
         if not collapse:
@@ -312,6 +317,7 @@ class rebaseruntime(object):
 
         self.originalwd = originalwd
         self.destmap = destmap
+        self.predmap = predmap
         self.state = state
         self.skipped = skipped
         self.collapsef = collapse
@@ -379,6 +385,8 @@ class rebaseruntime(object):
                 _("can't remove original changesets with" " unrebased descendants"),
                 hint=_("use --keep to keep original changesets"),
             )
+
+        self.predmap = _definepredmap(self.repo, rebaseset)
 
         result = buildstate(self.repo, destmap, self.collapsef)
 
@@ -498,10 +506,14 @@ class rebaseruntime(object):
 
     def _performrebasesubset(self, tr, subset, pos, prog):
         repo, ui = self.repo, self.ui
-        sortedrevs = repo.revs("sort(%ld, -topo)", subset)
+        if mutation.enabled(repo):
+            # We must traverse mutation edges, too - topo sort is not enough.
+            sortedrevs = mutation.toposortrevs(repo, subset, self.predmap)
+        else:
+            sortedrevs = repo.revs("sort(%ld, -topo)", subset)
         allowdivergence = self.ui.configbool(
             "experimental", "evolution.allowdivergence"
-        )
+        ) or mutation.enabled(repo)
         if not allowdivergence:
             sortedrevs -= repo.revs(
                 "descendants(%ld) and not %ld",
@@ -604,6 +616,7 @@ class rebaseruntime(object):
         p1, p2, base = defineparents(
             repo, rev, self.destmap, self.state, self.skipped, self.obsoletenotrebased
         )
+        copypreds = [self.state[p] for p in self.predmap[rev]]
         self.storestatus(tr=tr)
         storecollapsemsg(repo, self.collapsemsg)
         if len(repo[None].parents()) == 2:
@@ -655,6 +668,7 @@ class rebaseruntime(object):
                     editor=editor,
                     keepbranches=self.keepbranchesf,
                     date=self.date,
+                    copypreds=copypreds,
                 )
                 mergemod.mergestate.clean(repo)
             else:
@@ -667,6 +681,7 @@ class rebaseruntime(object):
                     editor=editor,
                     keepbranches=self.keepbranchesf,
                     date=self.date,
+                    copypreds=copypreds,
                 )
 
             if newnode is None:
@@ -1268,6 +1283,31 @@ def _definedestmap(
     return destmap
 
 
+def _definepredmap(repo, rebaseset):
+    """defines the predecessor map
+
+    Returns a map of {rev: [preds]}, where preds are the predecessors of the
+    rebased node that are also being rebased.
+    """
+    clnode = repo.unfiltered().changelog.node
+    clrev = repo.unfiltered().changelog.rev
+    if mutation.enabled(repo):
+        predmap = {
+            r: [
+                p
+                for p in map(
+                    clrev, mutation.predecessorsset(repo, clnode(r), closest=True)
+                )
+                if p in rebaseset and p != r
+            ]
+            for r in rebaseset
+        }
+    else:
+        # Mutation is not enabled - ignore predecessor information.
+        predmap = {r: [] for r in rebaseset}
+    return predmap
+
+
 def externalparent(repo, state, destancestors):
     """Return the revision that should be used as the second parent
     when the revisions in state is collapsed on top of destancestors.
@@ -1305,6 +1345,7 @@ def concludememorynode(
     extrafn=None,
     keepbranches=False,
     date=None,
+    copypreds=None,
 ):
     """Commit the memory changes with parents p1 and p2. Reuse commit info from
     rev but also store useful information in extra.
@@ -1314,6 +1355,12 @@ def concludememorynode(
         commitmsg = ctx.description()
     keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
     extra = {"rebase_source": ctx.hex()}
+    preds = [ctx.node()]
+    mutop = "rebase"
+    if copypreds:
+        preds.extend(repo.changelog.node(r) for r in copypreds)
+        mutop = "rebase-copy"
+    mutation.record(repo, extra, preds, mutop)
     if extrafn:
         extrafn(ctx, extra)
 
@@ -1359,6 +1406,7 @@ def concludenode(
     extrafn=None,
     keepbranches=False,
     date=None,
+    copypreds=None,
 ):
     """Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
@@ -1373,6 +1421,12 @@ def concludenode(
             commitmsg = ctx.description()
         keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
         extra = {"rebase_source": ctx.hex()}
+        preds = [ctx.node()]
+        mutop = "rebase"
+        if copypreds:
+            preds.extend(repo.changelog.node(r) for r in copypreds)
+            mutop = "rebase-copy"
+        mutation.record(repo, extra, preds, mutop)
         if extrafn:
             extrafn(ctx, extra)
 

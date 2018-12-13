@@ -4203,3 +4203,24 @@ def stripansiescapes(s):
     Borrowed from https://stackoverflow.com/a/45448194/149111
     """
     return ansiregex.sub("", s)
+
+
+def removeduplicates(items, key=None):
+    """Returns a list containing everything in items, with duplicates removed.
+
+    If ``key`` is not None, it is used as a function to map from the item in the
+    list to a value that determines uniqueness.  This value must be hashable.
+
+    The order of items is preserved.  Where duplicates are encountered, the
+    first item in the list is preserved.
+    """
+    if key is None:
+        key = lambda item: item
+    uniqueitems = []
+    seen = set()
+    for item in items:
+        itemkey = key(item)
+        if itemkey not in seen:
+            seen.add(itemkey)
+            uniqueitems.append(item)
+    return uniqueitems
