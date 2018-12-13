@@ -50,3 +50,29 @@ Rebase
         afcbdd90543ac6273d77ce2b6e967fb73373e5a4 rebase by test at 1970-01-01T00:00:00 from:
           1e2c46af1a22b8949201aee655b53f2aba83c490
 
+Metaedit
+
+  $ hg meta -m "c3 (metaedited)"
+  $ hg debugmutation .
+    60f9e7d031c5b05f8ff106d39a20d67c40dc7411 metaedit by test at 1970-01-01T00:00:00 from:
+      8462f4f357413f9f1c76a798d6ccdfc1e4337bd7 rebase by test at 1970-01-01T00:00:00 from:
+        8ae4b2d33bbb804e1e8a5d5e43164e61dfb09885 rebase by test at 1970-01-01T00:00:00 from:
+          afcbdd90543ac6273d77ce2b6e967fb73373e5a4 rebase by test at 1970-01-01T00:00:00 from:
+            1e2c46af1a22b8949201aee655b53f2aba83c490
+
+Fold
+
+  $ hg fold --from ".^"
+  2 changesets folded
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg debugmutation .
+    2fd85d288d1b25636df6532b000fbb150e43646e fold by test at 1970-01-01T00:00:00 from:
+      ded4fa782bd8c1051c8be550cebbc267572e15d0 rebase by test at 1970-01-01T00:00:00 from:
+        33905c5919f60e31c4e4f00ad5956a06848cbe10 rebase by test at 1970-01-01T00:00:00 from:
+          afdb4ea72e8cb14b34dfae49b9cc9be698468edf rebase by test at 1970-01-01T00:00:00 from:
+            561937d12f41e7d2f5ade2799de1bc21b92ddc51
+      60f9e7d031c5b05f8ff106d39a20d67c40dc7411 metaedit by test at 1970-01-01T00:00:00 from:
+        8462f4f357413f9f1c76a798d6ccdfc1e4337bd7 rebase by test at 1970-01-01T00:00:00 from:
+          8ae4b2d33bbb804e1e8a5d5e43164e61dfb09885 rebase by test at 1970-01-01T00:00:00 from:
+            afcbdd90543ac6273d77ce2b6e967fb73373e5a4 rebase by test at 1970-01-01T00:00:00 from:
+              1e2c46af1a22b8949201aee655b53f2aba83c490

@@ -141,6 +141,7 @@ def fold(ui, repo, *revs, **opts):
                 head,
                 [root.p1().node(), root.p2().node()],
                 commitopts=commitopts,
+                mutop="fold",
             )
             phases.retractboundary(repo, tr, targetphase, [newid])
 

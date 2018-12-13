@@ -111,3 +111,26 @@ def toposortrevs(repo, revs, predmap):
             sortedrevs.append(rev)
             revstack.pop()
     return sortedrevs
+
+
+def toposort(repo, items, nodefn=None):
+    """topologically sort nodes according to the given predecessor map
+
+    items can either be nodes, or something convertible to nodes by a provided
+    node function.
+    """
+    if nodefn is None:
+        nodefn = lambda item: item
+    clrev = repo.changelog.rev
+    revmap = {clrev(nodefn(x)): i for i, x in enumerate(items)}
+    predmap = {}
+    for item in items:
+        node = nodefn(item)
+        rev = clrev(node)
+        predmap[rev] = [
+            r
+            for r in map(clrev, predecessorsset(repo, node, closest=True))
+            if r != rev and r in revmap
+        ]
+    sortedrevs = toposortrevs(repo, revmap.keys(), predmap)
+    return [items[revmap[r]] for r in sortedrevs]

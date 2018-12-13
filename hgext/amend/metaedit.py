@@ -11,7 +11,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import cmdutil, commands, error, hg, phases, registrar, scmutil
+from mercurial import cmdutil, commands, error, hg, mutation, phases, registrar, scmutil
 from mercurial.i18n import _
 
 from . import common, fold
@@ -126,7 +126,12 @@ def metaedit(ui, repo, templ, *revs, **opts):
                 else:
                     allctxopt += newunstableopt
                 # we need topological order for all
-                allctxopt = sorted(allctxopt, key=lambda copt: copt["ctx"].rev())
+                if mutation.enabled(repo):
+                    allctxopt = mutation.toposort(
+                        repo, allctxopt, nodefn=lambda copt: copt["ctx"].node()
+                    )
+                else:
+                    allctxopt = sorted(allctxopt, key=lambda copt: copt["ctx"].rev())
 
                 def _rewritesingle(c, _commitopts):
                     if _commitopts.get("edit", False):
@@ -138,9 +143,19 @@ def metaedit(ui, repo, templ, *revs, **opts):
                         replacemap.get(c.p1().node(), c.p1().node()),
                         replacemap.get(c.p2().node(), c.p2().node()),
                     ]
+                    if mutation.enabled(repo):
+                        preds = [
+                            replacemap[p]
+                            for p in mutation.predecessorsset(
+                                repo, c.node(), closest=True
+                            )
+                            if p in replacemap
+                        ]
+                    else:
+                        preds = []
 
                     newid, created = common.metarewrite(
-                        repo, c, bases, commitopts=_commitopts
+                        repo, c, bases, commitopts=_commitopts, copypreds=preds
                     )
                     if created:
                         replacemap[c.node()] = newid
@@ -183,6 +198,7 @@ def metaedit(ui, repo, templ, *revs, **opts):
                     head,
                     [root.p1().node(), root.p2().node()],
                     commitopts=commitopts,
+                    mutop="metaedit",
                 )
                 if created:
                     if p1.rev() in revs:
