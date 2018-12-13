@@ -289,7 +289,7 @@ Show all commands + options
   debugdeltachain: changelog, manifest, dir, template
   debugdirstate: nodates, datesort
   debugdiscovery: old, nonheads, rev, ssh, remotecmd, insecure
-  debugdrawdag: 
+  debugdrawdag: print
   debugextensions: excludedefault, template
   debugfilerevision: rev, include, exclude
   debugfileset: rev

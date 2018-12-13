@@ -3015,7 +3015,10 @@ def debugwireargs(ui, repopath, *vals, **opts):
         ui.warn("%s\n" % res2)
 
 
-@command(b"debugdrawdag", [])
+@command(
+    b"debugdrawdag",
+    [("p", "print", False, _("print the node to hash mapping of all created nodes"))],
+)
 def debugdrawdag(ui, repo, **opts):
     """read an ASCII graph from stdin and create changesets
 
@@ -3033,7 +3036,7 @@ def debugdrawdag(ui, repo, **opts):
     the part of the graph edges, like `|/+-\`.
     """
     text = ui.fin.read()
-    return drawdag.drawdag(repo, text)
+    return drawdag.drawdag(repo, text, **opts)
 
 
 @command(

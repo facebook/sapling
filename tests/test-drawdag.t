@@ -286,7 +286,7 @@ Change file contents via comments
 Special comments: "(removed)", "(copied from X)", "(renamed from X)"
 
   $ newrepo
-  $ drawdag <<'EOS'
+  $ drawdag --print <<'EOS'
   > C   # C/X1 = (removed)
   > |   # C/C = (removed)
   > |
@@ -298,6 +298,9 @@ Special comments: "(removed)", "(copied from X)", "(renamed from X)"
   > A   # A/X = X\n
   >     # A/Y = Y\n
   > EOS
+  4cde4db8875f A
+  034611431ce7 B
+  4406a8c344b8 C
 
   $ hg log -p -G -r 'all()' --config diff.git=1 -T '{desc}\n'
   o  C

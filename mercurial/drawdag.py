@@ -389,7 +389,7 @@ def _getcomments(text):
         yield line.split(b" # ", 1)[1].split(b" # ")[0].strip()
 
 
-def drawdag(repo, text):
+def drawdag(repo, text, **opts):
     """given an ASCII graph as text, create changesets in repo.
 
     The ASCII graph is like what :hg:`log -G` outputs, with each `o` replaced
@@ -425,7 +425,7 @@ def drawdag(repo, text):
     for name, parents in edges.items():
         if len(parents) == 0:
             try:
-                committed[name] = scmutil.revsingle(repo, name)
+                committed[name] = scmutil.revsingle(repo, name).node()
             except error.RepoLookupError:
                 pass
 
@@ -553,3 +553,8 @@ def drawdag(repo, text):
             obsrels = [(getctx(p), [getctx(s) for s in ss]) for p, ss in markers]
             if obsrels:
                 obsolete.createmarkers(repo, obsrels, date=(0, 0), operation=cmd)
+
+    if opts.get("print"):
+        for name, n in sorted(committed.items()):
+            if name:
+                repo.ui.write("%s %s\n" % (node.short(n), name))
