@@ -212,7 +212,6 @@ EdenDispatcher::read(InodeNumber ino, size_t size, off_t off) {
 }
 
 folly::Future<size_t> EdenDispatcher::write(
-    std::shared_ptr<FileHandle> ptr,
     InodeNumber ino,
     folly::StringPiece data,
     off_t off) {
@@ -224,7 +223,7 @@ folly::Future<size_t> EdenDispatcher::write(
       off,
       data.size());
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [ptr = std::move(ptr), copy = data.str(), off](FileInodePtr&& inode) {
+      [copy = data.str(), off](FileInodePtr&& inode) {
         return inode->write(copy, off);
       });
 }

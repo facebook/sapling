@@ -1304,9 +1304,8 @@ folly::Future<folly::Unit> FuseChannel::fuseWrite(
   XLOG(DBG7) << "FUSE_WRITE " << write->size << " @" << write->offset;
 
   auto ino = InodeNumber{header->nodeid};
-  const auto fh = dispatcher_->getFileHandle(write->fh);
   return dispatcher_
-      ->write(fh, ino, folly::StringPiece{bufPtr, write->size}, write->offset)
+      ->write(ino, folly::StringPiece{bufPtr, write->size}, write->offset)
       .thenValue([](size_t written) {
         fuse_write_out out = {};
         out.size = written;
@@ -1495,20 +1494,13 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
   XLOG(DBG7) << "FUSE_OPEN";
   auto ino = InodeNumber{header->nodeid};
   return dispatcher_->open(ino, open->flags)
-      .thenValue([this, ino](std::shared_ptr<FileHandle> fh) {
+      .thenValue([](std::shared_ptr<FileHandle> fh) {
         if (!fh) {
           throw std::runtime_error("Dispatcher::open failed to set fh");
         }
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;
-        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(fh), ino);
-        try {
-          RequestData::get().sendReply(out);
-        } catch (const std::system_error&) {
-          // Was interrupted, tidy up.
-          dispatcher_->getFileHandles().forgetGenericHandle(out.fh);
-          throw;
-        }
+        RequestData::get().sendReply(out);
       });
 }
 
@@ -1527,9 +1519,7 @@ folly::Future<folly::Unit> FuseChannel::fuseStatFs(
 folly::Future<folly::Unit> FuseChannel::fuseRelease(
     const fuse_in_header* /*header*/,
     const uint8_t* arg) {
-  const auto release = reinterpret_cast<const fuse_release_in*>(arg);
   XLOG(DBG7) << "FUSE_RELEASE";
-  dispatcher_->getFileHandles().forgetGenericHandle(release->fh);
   RequestData::get().replyError(0);
   return folly::unit;
 }
@@ -1717,11 +1707,9 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
   XLOG(DBG7) << "FUSE_CREATE " << name;
   auto ino = InodeNumber{header->nodeid};
   return dispatcher_->create(ino, name, create->mode, create->flags)
-      .thenValue([this, ino](Dispatcher::Create info) {
+      .thenValue([](Dispatcher::Create info) {
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;
-        out.fh =
-            dispatcher_->getFileHandles().recordHandle(std::move(info.fh), ino);
 
         XLOG(DBG7) << "CREATE fh=" << out.fh << " flags=" << out.open_flags;
 
@@ -1733,13 +1721,7 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
         vec.push_back(make_iovec(info.entry));
         vec.push_back(make_iovec(out));
 
-        try {
-          RequestData::get().sendReply(std::move(vec));
-        } catch (const std::system_error&) {
-          // Was interrupted, tidy up.
-          dispatcher_->getFileHandles().forgetGenericHandle(out.fh);
-          throw;
-        }
+        RequestData::get().sendReply(std::move(vec));
       });
 }
 

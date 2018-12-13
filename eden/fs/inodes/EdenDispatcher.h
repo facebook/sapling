@@ -80,7 +80,6 @@ class EdenDispatcher : public Dispatcher {
 
   folly::Future<BufVec> read(InodeNumber ino, size_t size, off_t off) override;
   folly::Future<size_t> write(
-      std::shared_ptr<FileHandle> ptr,
       InodeNumber ino,
       folly::StringPiece data,
       off_t off) override;

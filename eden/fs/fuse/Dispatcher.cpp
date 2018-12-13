@@ -162,7 +162,6 @@ Dispatcher::read(InodeNumber /*ino*/, size_t /*size*/, off_t /*off*/) {
 }
 
 folly::Future<size_t> Dispatcher::write(
-    std::shared_ptr<FileHandle> /*ptr*/,
     InodeNumber /*ino*/,
     StringPiece /*data*/,
     off_t /*off*/) {

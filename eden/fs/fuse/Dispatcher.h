@@ -285,15 +285,9 @@ class Dispatcher {
    * been opened in 'direct_io' mode, in which case the return value
    * of the write system call will reflect the return value of this
    * operation.
-   *
-   * The FileHandle is passed in for now because it must stay valid while the
-   * write request is processed.
    */
-  FOLLY_NODISCARD virtual folly::Future<size_t> write(
-      std::shared_ptr<FileHandle> ptr,
-      InodeNumber ino,
-      folly::StringPiece data,
-      off_t off);
+  FOLLY_NODISCARD virtual folly::Future<size_t>
+  write(InodeNumber ino, folly::StringPiece data, off_t off);
 
   /**
    * This is called on each close() of the opened file.
