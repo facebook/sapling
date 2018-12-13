@@ -979,7 +979,9 @@ void FuseChannel::readInitPacket() {
   // FUSE_ATOMIC_O_TRUNC. Also, on older kernels, it triggers a kernel bug.
   // See test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
   // in mmap_test.py.
-  want = capable & (FUSE_BIG_WRITES | FUSE_ASYNC_READ | FUSE_CACHE_SYMLINKS);
+  want = capable &
+      (FUSE_BIG_WRITES | FUSE_ASYNC_READ | FUSE_CACHE_SYMLINKS |
+       FUSE_NO_OPEN_SUPPORT);
 
   XLOG(INFO) << "Speaking fuse protocol kernel=" << init.init.major << "."
              << init.init.minor << " local=" << FUSE_KERNEL_VERSION << "."

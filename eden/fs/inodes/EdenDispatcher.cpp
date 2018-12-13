@@ -165,7 +165,14 @@ folly::Future<std::shared_ptr<FileHandle>> EdenDispatcher::open(
     InodeNumber ino,
     int flags) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "open({}, flags={:x})", ino, flags);
-  return nullptr;
+  if (getConnInfo().flags & FUSE_NO_OPEN_SUPPORT) {
+    // If the kernel understands FUSE_NO_OPEN_SUPPORT, then returning ENOSYS
+    // means that no further open() nor release() calls will make it into Eden.
+    folly::throwSystemErrorExplicit(
+        ENOSYS, "Eden open() calls are stateless and not required");
+  } else {
+    return nullptr;
+  }
 }
 
 folly::Future<fuse_entry_out> EdenDispatcher::create(
