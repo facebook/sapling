@@ -689,20 +689,6 @@ class HgServer(object):
             return self._get_manifest_node_impl(rev)
 
     def get_file(self, path, rev_hash):
-        contents = self._get_file_impl(path, rev_hash)
-
-        if not contents:
-            # T24406969: We have been encountering a bug where we appear to sometimes
-            # incorrectly receive empty file contents.  We haven't tracked down what the
-            # exact issue is yet.
-            #
-            # For now, if we receive empty file contents perform some additional checks
-            # to try and make sure this really seems like the right result.
-            self._check_empty_file(path, rev_hash)
-
-        return contents
-
-    def _get_file_impl(self, path, rev_hash):
         try:
             fctx = self.repo.filectx(path, fileid=rev_hash)
         except Exception:
@@ -721,43 +707,6 @@ class HgServer(object):
             # that this will make the server return data correctly when we
             # retry.
             raise ResetRepoError(ex)
-
-    def _check_empty_file(self, path, rev_hash):
-        # The rev_hash is computed from the file contents plus the file's parent history
-        # information as well as rename metadata.  This is somewhat unfortunate, as it
-        # makes it difficult to verify the hash matches the contents without also
-        # knowing information about the file history as well.
-        #
-        # However, many empty files were initially created as empty and have never been
-        # changed.  In this case they have no parents, and their rev hash is the
-        # following value.
-        #
-        # If the rev hash is the following value we can be confident that the file is
-        # legitimately empty.
-        no_history_rev_hash = (
-            b"\xb8\r\xe5\xd18u\x85A\xc5\xf0Re\xad\x14J\xb9\xfa\x86\xd1\xdb"
-        )
-        if rev_hash == no_history_rev_hash:
-            return
-
-        # If the remotefilelog extension is in use we can check with it to get the
-        # expected file length.
-        remotefilelog_file_size = None
-        if hasattr(self.repo, "contentstore"):
-            metadata = self.repo.contentstore.getmeta(path, rev_hash)
-            remotefilelog_file_size = metadata.get(constants.METAKEYSIZE, None)
-            if remotefilelog_file_size:
-                # Log if the length is different
-                logging.error(
-                    "hg_import_helper incorrectly received empty contents "
-                    "from mercurial for %s:%s; remotefilelog reports length as %s",
-                    path,
-                    rev_hash,
-                    remotefilelog_file_size,
-                )
-                raise ResetRepoError("inconsistent file length")
-
-        return
 
     def prefetch(self, rev):
         if not hasattr(self.repo, "prefetch"):

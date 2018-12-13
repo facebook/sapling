@@ -450,15 +450,8 @@ unique_ptr<Blob> HgImporter::importFileContents(Hash blobHash) {
     throw std::runtime_error(std::move(msg));
   }
 
-  // Log empty files with a higher verbosity for now, while we are trying to
-  // debug issues where some files get incorrectly imported as being empty.
-  if (bodyLength == 0) {
-    XLOG(DBG2) << "imported blob " << blobHash << " (" << hgInfo.path() << ", "
-               << hgInfo.revHash() << ") as an empty file";
-  } else {
-    XLOG(DBG4) << "imported blob " << blobHash << " (" << hgInfo.path() << ", "
-               << hgInfo.revHash() << "); length=" << bodyLength;
-  }
+  XLOG(DBG4) << "imported blob " << blobHash << " (" << hgInfo.path() << ", "
+             << hgInfo.revHash() << "); length=" << bodyLength;
 
   return make_unique<Blob>(blobHash, std::move(buf));
 }
