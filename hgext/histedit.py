@@ -200,6 +200,7 @@ from mercurial import (
     lock,
     merge as mergemod,
     mergeutil,
+    mutation,
     node,
     obsolete,
     progress,
@@ -574,6 +575,7 @@ def commitfuncfor(repo, src):
         with repo.ui.configoverride(overrides, "histedit"):
             extra = kwargs.get(r"extra", {}).copy()
             extra["histedit_source"] = src.hex()
+            mutation.record(repo, extra, [src.node()], "histedit")
             kwargs[r"extra"] = extra
             return repo.commit(**kwargs)
 
@@ -768,9 +770,7 @@ class fold(histeditaction):
             return ctx, [(self.node, (parentctxnode,))]
 
         parentctx = repo[parentctxnode]
-        newcommits = set(
-            c.node() for c in repo.set("(%d::. - %d)", parentctx, parentctx)
-        )
+        newcommits = list(repo.nodes("(%d::. - %d)", parentctx, parentctx))
         if not newcommits:
             repo.ui.warn(
                 _(
@@ -781,11 +781,9 @@ class fold(histeditaction):
             )
             return ctx, [(self.node, (ctx.node(),))]
 
-        middlecommits = newcommits.copy()
-        middlecommits.discard(ctx.node())
-
+        newcommits.remove(ctx.node())
         return self.finishfold(
-            repo.ui, repo, parentctx, rulectx, ctx.node(), middlecommits
+            repo.ui, repo, parentctx, rulectx, ctx.node(), newcommits
         )
 
     def skipprompt(self):
@@ -844,6 +842,10 @@ class fold(histeditaction):
         # note: ctx is likely a temporary commit but that the best we can do
         #       here. This is sufficient to solve issue3681 anyway.
         extra["histedit_source"] = "%s,%s" % (ctx.hex(), oldctx.hex())
+        # mutation predecessors - ctx is likely an intermediate commit, but its
+        # predecessors will refer to the original commits.
+        preds = [ctx.node()] + internalchanges + [oldctx.node()]
+        mutation.record(repo, extra, preds, "histedit")
         commitopts["extra"] = extra
         phasemin = max(ctx.phase(), oldctx.phase())
         overrides = {("phases", "new-commit"): phasemin}
@@ -1409,7 +1411,9 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
 
     # Create a backup so we can always abort completely.
     backupfile = None
-    if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+    if not obsolete.isenabled(repo, obsolete.createmarkersopt) and not mutation.enabled(
+        repo
+    ):
         backupfile = repair._bundle(repo, [parentctxnode], [topmost], root, "histedit")
     state.backupfile = backupfile
 
