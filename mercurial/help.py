@@ -520,7 +520,11 @@ class _helpdispatch(object):
         if util.safehasattr(entry[0], "definition"):  # aliased command
             aliasdoc = ""
             if util.safehasattr(entry[0], "aliasdoc") and entry[0].aliasdoc is not None:
-                aliasdoc = entry[0].aliasdoc + "\n\n"
+                lines = entry[0].aliasdoc.splitlines()
+                if lines:
+                    aliasdoc = (
+                        "\n".join(templater.unquotestring(l) for l in lines) + "\n\n"
+                    )
             source = entry[0].source
             if entry[0].definition.startswith("!"):  # shell alias
                 doc = _("%sshell alias for::\n\n    %s\n\ndefined by: %s\n") % (
