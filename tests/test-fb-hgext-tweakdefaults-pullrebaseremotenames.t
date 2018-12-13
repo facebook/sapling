@@ -1,6 +1,5 @@
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
-  $ . $TESTDIR/require-ext.sh remotenames
 
 Set up with remotenames
   $ cat >> $HGRCPATH << EOF

@@ -1,4 +1,3 @@
-  $ . $TESTDIR/require-ext.sh remotenames
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon

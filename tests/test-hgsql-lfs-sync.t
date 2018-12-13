@@ -1,6 +1,5 @@
 Inital setup
 
-  $ . $TESTDIR/require-ext.sh lfs
   $ . "$TESTDIR/hgsql/library.sh"
   $ initclient client
   $ initserver server lfsrepo

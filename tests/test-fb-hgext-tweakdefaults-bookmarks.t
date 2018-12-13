@@ -23,5 +23,4 @@ Test hg bookmark works with hidden commits
 
 Same test but with remotenames enabled
 
-  $ . $TESTDIR/require-ext.sh remotenames
   $ hg bookmark b2 -r da7a5140a611 -q --config extensions.remotenames=

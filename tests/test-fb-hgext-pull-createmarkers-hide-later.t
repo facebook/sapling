@@ -1,4 +1,3 @@
-  $ . $TESTDIR/require-ext.sh remotenames
 
 Setup
 

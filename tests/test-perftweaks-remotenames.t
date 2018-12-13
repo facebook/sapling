@@ -1,4 +1,3 @@
-  $ . $TESTDIR/require-ext.sh remotenames
 
   $ cat >> $HGRCPATH << EOF
   > [ui]

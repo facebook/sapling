@@ -1,7 +1,5 @@
 TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution=
-Skip test if remotenames not present
-  $ . $TESTDIR/require-ext.sh remotenames
 
 Set up extensions (order is important here, we must test tweakdefaults loading last)
   $ cat >> $HGRCPATH << EOF

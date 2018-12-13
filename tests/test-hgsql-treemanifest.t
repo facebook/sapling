@@ -1,4 +1,3 @@
-  $ . $TESTDIR/require-ext.sh treemanifest
 
   $ CACHEDIR=`pwd`/hgcache
   $ . "$TESTDIR/hgsql/library.sh"
