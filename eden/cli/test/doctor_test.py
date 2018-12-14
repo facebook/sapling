@@ -16,6 +16,7 @@ import stat
 import subprocess
 import typing
 import unittest
+from pathlib import Path
 from textwrap import dedent
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Set, Tuple, Union
 from unittest.mock import call, patch
@@ -969,15 +970,6 @@ Remounting {mount}...<green>fixed<reset>
         self.assertEqual(exit_code, 0)
 
 
-def choose_mock_readall_output(path: bytes) -> str:
-    if b"config1" in path:
-        return "475203"
-    if b"config2" in path:
-        return "575203"
-    else:
-        return "WRONG_TEST_DATA"
-
-
 class MultipleEdenfsRunningTest(DoctorTestBase):
     maxDiff = None
 
@@ -989,7 +981,10 @@ class MultipleEdenfsRunningTest(DoctorTestBase):
         return fixer, out.getvalue()
 
     def test_when_there_are_rogue_pids(self):
-        process_finder = FakeProcessFinder([123, 124])
+        process_finder = FakeProcessFinder()
+        process_finder.add_edenfs(123, "/home/someuser/.eden", set_lockfile=False)
+        process_finder.add_edenfs(124, "/home/someuser/.eden", set_lockfile=False)
+        process_finder.add_edenfs(125, "/home/someuser/.eden", set_lockfile=True)
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
         self.assertEqual(
@@ -1003,8 +998,7 @@ kill -9 123 124
         )
 
     def test_when_no_rogue_edenfs_process_running(self):
-        fake_pid_results_when_no_process = []
-        process_finder = FakeProcessFinder(fake_pid_results_when_no_process)
+        process_finder = FakeProcessFinder()
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
@@ -1021,52 +1015,36 @@ kill -9 123 124
             fixer, out = self.run_check(linux_process_finder, dry_run=False)
             self.assertEqual("", out)
             self.assert_results(fixer, num_problems=0)
-        logs = "\n".join(logs_assertion.output)
         self.assertIn(
-            "WARNING:eden.cli.process_finder:Error running command: ['pgrep', \
-'-aU', '"
-            + util.get_username()
-            + "', 'edenfs']\nIt exited with failure status.",
-            logs,
-            "Check should have reported that pgrep failed",
+            "Error running command: ['pgrep', '-aU", "\n".join(logs_assertion.output)
         )
 
-    @patch("subprocess.check_output", return_value="")
-    def test_when_os_found_no_pids_at_all(self, subprocess_function):
-        linux_process_finder = process_finder.LinuxProcessFinder()
-        with self.assertLogs() as logs_assertion:
-            fixer, out = self.run_check(linux_process_finder, dry_run=False)
-            self.assertEqual("", out)
-            self.assert_results(fixer, num_problems=0)
-            logs = "\n".join(logs_assertion.output)
-            self.assertIn(
-                "WARNING:eden.cli.process_finder:No output received from \
-the OS for cmd: ['pgrep', '-aU', '"
-                + util.get_username()
-                + "', 'edenfs']",
-                logs,
-                "when no edenfs processes running at all",
-            )
-
-    @patch("subprocess.check_output", return_value=b"1614248 edenfs\n1639164 edenfs")
-    def test_when_os_found_pids_but_edenDir_not_in_cmdline(self, subprocess_function):
-        linux_process_finder = process_finder.LinuxProcessFinder()
-        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+    def test_when_os_found_no_pids_at_all(self):
+        process_finder = FakeProcessFinder()
+        fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    @patch(
-        "subprocess.check_output",
-        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        475204 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        475205 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
-    )
-    @patch("eden.cli.util.read_all", return_value="475203")
-    def test_when_many_edenfs_procs_run_for_same_config(
-        self, readall_function, subprocess_function
-    ):
-        linux_process_finder = process_finder.LinuxProcessFinder()
-        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+    def test_when_os_found_pids_but_edenDir_not_in_cmdline(self):
+        process_finder = FakeProcessFinder()
+        process_finder.add_process(1_614_248, b"edenfs")
+        process_finder.add_process(1_639_164, b"edenfs")
+        fixer, out = self.run_check(process_finder, dry_run=False)
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
+
+    def test_when_many_edenfs_procs_run_for_same_config(self):
+        process_finder = FakeProcessFinder()
+        process_finder.add_edenfs(
+            475_203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=True
+        )
+        process_finder.add_edenfs(
+            475_204, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+        )
+        process_finder.add_edenfs(
+            475_205, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+        )
+        fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual(
             out,
             f"""\
@@ -1078,19 +1056,20 @@ kill -9 475204 475205
         )
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
-    @patch(
-        "subprocess.check_output",
-        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        475204 /foobar/fooedenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        475205 /foobar/edenfsbar --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        475206 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
-    )
-    @patch("eden.cli.util.read_all", return_value="475203")
-    def test_when_other_processes_with_similar_names_running(
-        self, readall_function, subprocess_function
-    ):
-        linux_process_finder = process_finder.LinuxProcessFinder()
-        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+    def test_when_other_processes_with_similar_names_running(self):
+        process_finder = FakeProcessFinder()
+        process_finder.add_edenfs(475_203, "/home/user/.eden")
+        process_finder.add_process(
+            475_204, b"/foobar/fooedenfs --edenDir /home/user/.eden --edenfs"
+        )
+        process_finder.add_process(
+            475_205, b"/foobar/edenfsbar --edenDir /home/user/.eden --edenfs"
+        )
+        process_finder.add_process(
+            475_206, b"/foobar/edenfs --edenDir /home/user/.eden --edenfs"
+        )
+
+        fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual(
             out,
             f"""\
@@ -1102,47 +1081,30 @@ kill -9 475206
         )
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
-    @patch(
-        "subprocess.check_output",
-        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
-    )
-    @patch("eden.cli.util.read_all", return_value="475203")
-    def test_when_only_valid_edenfs_process_running(
-        self, readall_function, subprocess_function
-    ):
-        fake_pid_results_when_no_process = []
-        process_finder = FakeProcessFinder(fake_pid_results_when_no_process)
+    def test_when_only_valid_edenfs_process_running(self):
+        process_finder = FakeProcessFinder()
+        process_finder.add_edenfs(475_203, "/home/someuser/.eden")
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    @patch(
-        "subprocess.check_output",
-        return_value=b"1614248 edenfs --edenDir\n1639164 edenfs",
-    )
-    def test_when_os_found_pids_but_edenDir_value_not_in_cmdline(
-        self, subprocess_function
-    ):
-        linux_process_finder = process_finder.LinuxProcessFinder()
-        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+    def test_when_os_found_pids_but_edenDir_value_not_in_cmdline(self):
+        process_finder = FakeProcessFinder()
+        process_finder.add_process(1_614_248, b"edenfs --edenDir")
+        process_finder.add_process(1_639_164, b"edenfs")
+        fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    @patch(
-        "subprocess.check_output",
-        return_value=b"475203 /foobar/edenfs --edenDir /tmp/config1/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        475204 /foobar/edenfs --edenDir /tmp/config1/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        475205 /foobar/edenfs --edenDir /tmp/config1/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        575203 /foobar/edenfs --edenDir /tmp/config2/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        575204 /foobar/edenfs --edenDir /tmp/config2/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground\n\
-        575205 /foobar/edenfs --edenDir /tmp/config2/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
-    )
-    @patch("eden.cli.util.read_all", side_effect=choose_mock_readall_output)
-    def test_when_differently_configured_edenfs_processes_running_with_rogue_pids(
-        self, readall_function, subprocess_function
-    ):
-        linux_process_finder = process_finder.LinuxProcessFinder()
-        fixer, out = self.run_check(linux_process_finder, dry_run=False)
+    def test_when_differently_configured_edenfs_processes_running_with_rogue_pids(self):
+        process_finder = FakeProcessFinder()
+        process_finder.add_edenfs(475_203, "/tmp/config1/.eden")
+        process_finder.add_edenfs(475_204, "/tmp/config1/.eden", set_lockfile=False)
+        process_finder.add_edenfs(475_205, "/tmp/config1/.eden", set_lockfile=False)
+        process_finder.add_edenfs(575_203, "/tmp/config2/.eden")
+        process_finder.add_edenfs(575_204, "/tmp/config2/.eden", set_lockfile=False)
+        process_finder.add_edenfs(575_205, "/tmp/config2/.eden", set_lockfile=False)
+        fixer, out = self.run_check(process_finder, dry_run=False)
 
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
         self.assertEqual(
@@ -1155,20 +1117,13 @@ kill -9 475204 475205 575204 575205
 """,
         )
 
-    def throw_io_error(self):
-        raise IOError()
-
-    @patch(
-        "subprocess.check_output",
-        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
-    )
-    @patch("eden.cli.util.read_all", side_effect=throw_io_error)
-    def test_when_lock_file_op_has_io_exception(
-        self, read_all_function, subprocess_function
-    ):
-        linux_process_finder = process_finder.LinuxProcessFinder()
+    def test_when_lock_file_op_has_io_exception(self):
+        process_finder = FakeProcessFinder()
+        process_finder.add_edenfs(
+            475_203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+        )
         with self.assertLogs() as logs_assertion:
-            fixer, out = self.run_check(linux_process_finder, dry_run=False)
+            fixer, out = self.run_check(process_finder, dry_run=False)
             self.assertEqual("", out)
             self.assert_results(fixer, num_problems=0)
             logs = "\n".join(logs_assertion.output)
@@ -1178,23 +1133,23 @@ kill -9 475204 475205 575204 575205
                 "when lock file cant be opened",
             )
 
-    def throw_value_error(self):
-        raise ValueError()
-
-    @patch(
-        "subprocess.check_output",
-        return_value=b"475203 /foobar/edenfs --edenDir /tmp/eden_test.68yxptnx/.eden --etcEdenDir /tmp/eden_test.68yxptnx/etc-eden --configPath /tmp/eden_test.68yxptnx/.edenrc --num_hg_import_threads 2 --local_storage_engine_unsafe sqlite --hgImportHelper /foobar/hg/hg_import_helper.par --allow_flatmanifest_fallback=no --foreground",
-    )
-    @patch("eden.cli.util.read_all", side_effect=throw_value_error)
-    @patch("eden.cli.process_finder.log")
-    def test_when_lock_file_data_is_garbage(
-        self, warning, readall_function, subprocess_function
-    ):
-        linux_process_finder = process_finder.LinuxProcessFinder()
-        fixer, out = self.run_check(linux_process_finder, dry_run=False)
-        self.assertEqual("", out)
-        self.assert_results(fixer, num_problems=0)
-        self.assertTrue(warning.warning.called)
+    def test_when_lock_file_data_is_garbage(self):
+        process_finder = FakeProcessFinder()
+        process_finder.add_edenfs(
+            475_203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+        )
+        process_finder.add_edenfs(
+            475_204, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+        )
+        process_finder.set_file_contents("/tmp/eden_test.68yxptnx/.eden/lock", "asdf")
+        with self.assertLogs() as logs_assertion:
+            fixer, out = self.run_check(process_finder, dry_run=False)
+            self.assertEqual("", out)
+            self.assert_results(fixer, num_problems=0)
+        self.assertIn(
+            "lock file contains data that cannot be parsed",
+            "\n".join(logs_assertion.output),
+        )
 
 
 class BindMountsCheckTest(DoctorTestBase):
@@ -2381,12 +2336,41 @@ class FakeEdenInstance:
         return self._config[key]
 
 
-class FakeProcessFinder(process_finder.ProcessFinder):
-    def __init__(self, pid_list: List[process_finder.ProcessID]) -> None:
-        self._pid_list = pid_list
+class FakeProcessFinder(process_finder.LinuxProcessFinder):
+    def __init__(self) -> None:
+        self._pgrep_output = b""
+        self._file_contents: Dict[Path, Union[bytes, Exception]] = {}
 
-    def find_rogue_pids(self) -> List[process_finder.ProcessID]:
-        return self._pid_list
+    def add_process(self, pid: int, cmdline: bytes) -> None:
+        line = f"{pid} ".encode("utf-8") + cmdline + b"\n"
+        self._pgrep_output += line
+
+    def add_edenfs(self, pid: int, eden_dir: str, set_lockfile: bool = True) -> None:
+        if set_lockfile:
+            self.set_file_contents(Path(eden_dir) / "lock", f"{pid}\n".encode("utf-8"))
+
+        cmdline = (
+            f"/usr/bin/edenfs --edenfs --edenDir {eden_dir} "
+            f"--etcEdenDir /etc/eden --configPath /home/user/.edenrc"
+        ).encode("utf-8")
+        self.add_process(pid, cmdline)
+
+    def set_file_contents(self, path: Union[Path, str], contents: bytes) -> None:
+        self._file_contents[Path(path)] = contents
+
+    def set_file_exception(self, path: Union[Path, str], exception: Exception) -> None:
+        self._file_contents[Path(path)] = exception
+
+    def get_pgrep_output(self) -> bytes:
+        return self._pgrep_output
+
+    def read_lock_file(self, path: Path) -> bytes:
+        contents = self._file_contents.get(path, None)
+        if contents is None:
+            raise FileNotFoundError(errno.ENOENT, str(path))
+        if isinstance(contents, Exception):
+            raise contents
+        return contents
 
 
 class FakeMountTable(mtab.MountTable):

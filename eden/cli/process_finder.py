@@ -10,7 +10,9 @@ import abc
 import logging
 import os
 import subprocess
-from typing import Dict, List
+import typing
+from pathlib import Path
+from typing import Dict, List, Optional
 
 from . import util
 
@@ -29,26 +31,44 @@ class ProcessFinder(abc.ABC):
 
 class LinuxProcessFinder(ProcessFinder):
     def find_rogue_pids(self) -> List[ProcessID]:
+        try:
+            output = self.get_pgrep_output()
+        except Exception as ex:
+            log.warning(
+                f"Error determining currently running edenfs processes", exc_info=True
+            )
+            return []
+        return self.keep_only_rogue_pids(output)
+
+    def get_pgrep_output(self) -> bytes:
+        # TODO: It would perhaps be better for this code to just manually examine
+        # /proc/*/cmdline.  The caller really wants to know the argument list,
+        # and this can't really be split up correctly from the pgrep output.  The
+        # calling code also will choke on the output today if one of the commands
+        # contains a newline in one of its arguments.
         username = util.get_username()
         cmd = ["pgrep", "-aU", username, "edenfs"]
 
         try:
-            output = subprocess.check_output(cmd)
+            output = typing.cast(bytes, subprocess.check_output(cmd))
         except subprocess.CalledProcessError:
             log.warning(f"Error running command: {cmd}\nIt exited with failure status.")
-            return []
+            return b""
 
         if len(output) == 0:
             log.warning(f"No output received from the OS for cmd: {cmd}")
-            return []
+            return b""
 
         log.debug(f"Output for cmd {cmd}\n{output}")
-        return self.keep_only_rogue_pids(output)
+        return output
+
+    def read_lock_file(self, path: Path) -> bytes:
+        return path.read_bytes()
 
     def keep_only_rogue_pids(self, output: bytes) -> List[ProcessID]:
         pid_list: List[ProcessID] = []
 
-        pid_config_dict: Dict[bytes, List[ProcessID]] = {}
+        pid_config_dict: Dict[Path, List[ProcessID]] = {}
         # find all potential pids
         for line in output.splitlines():
             # line looks like: "PID<SPACE>CMDLINE".
@@ -58,13 +78,15 @@ class LinuxProcessFinder(ProcessFinder):
             if process_name != b"edenfs":
                 continue
             pid = ProcessID(entries[0])
-            eden_dir = b""
+            eden_dir: Optional[Path] = None
             for i in range(len(entries) - 1):
                 if entries[i] == b"--edenDir":
-                    eden_dir = entries[i + 1]
+                    eden_dir = Path(os.fsdecode(entries[i + 1]))
                     break
 
-            if len(eden_dir) == 0:
+            # TODO: This check logic assumes eden_dir is an absolute path,
+            # but does not actually verify that.
+            if eden_dir is None:
                 log.debug(
                     f"could not determine edenDir for edenfs process {pid} "
                     f"({entries[1:]})"
@@ -77,14 +99,14 @@ class LinuxProcessFinder(ProcessFinder):
 
         log.debug(f"List of processes per eden_dir output: {pid_config_dict}")
         # find the real PID we want to save
-        for dir, pid_list in pid_config_dict.items():
-            lockfile = os.path.join(dir, b"lock")
+        for eden_dir, pid_list in pid_config_dict.items():
+            lockfile = eden_dir / "lock"
             try:
-                lock_pid = ProcessID(util.read_all(lockfile).strip())
+                lock_pid = ProcessID(self.read_lock_file(lockfile).strip())
                 if lock_pid in pid_list:
                     pid_list.remove(ProcessID(lock_pid))
             except IOError:
-                log.warning(f"Lock file cannot be read for {dir}", exc_info=True)
+                log.warning(f"Lock file cannot be read for {eden_dir}", exc_info=True)
                 pid_list[:] = []
                 continue
             except ValueError:
