@@ -690,8 +690,7 @@ impl fmt::Debug for MPathElement {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(
             fmt,
-            "MPathElement({:?} \"{}\")",
-            self.0,
+            "MPathElement(\"{}\")",
             String::from_utf8_lossy(&self.0)
         )
     }
