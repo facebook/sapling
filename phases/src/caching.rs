@@ -37,26 +37,26 @@ pub fn get_cache_key(repo_id: &RepositoryId, cs_id: &ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id)
 }
 
-pub struct CachingPhases {
-    phases: Arc<Phases>, // Phases is the underlying storage we cache around
-    memcache: MemcacheClient,
+pub struct CachingHintPhases {
+    phases_store: Arc<Phases>, // phases_store is the underlying persistent storage (db)
+    phases_hint: PhasesHint,   // phases_hint for slow path calculation
+    memcache: MemcacheClient,  // Memcache Client for temporary caching
     keygen: KeyGen,
-    phases_hint: PhasesHint,
 }
 
-impl CachingPhases {
-    pub fn new(phases: Arc<Phases>) -> Self {
+impl CachingHintPhases {
+    pub fn new(phases_store: Arc<Phases>) -> Self {
         let key_prefix = "scm.mononoke.phases";
         Self {
-            phases,
+            phases_store,
+            phases_hint: PhasesHint::new(),
             memcache: MemcacheClient::new(),
             keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
-            phases_hint: PhasesHint::new(),
         }
     }
 }
 
-impl Phases for CachingPhases {
+impl Phases for CachingHintPhases {
     /// Add a new entry to the phases.
     /// Memcache + underlying storage
     /// Returns true if a new changeset was added or the phase has been changed,
@@ -68,7 +68,7 @@ impl Phases for CachingPhases {
         cs_id: ChangesetId,
         phase: Phase,
     ) -> BoxFuture<bool, Error> {
-        cloned!(self.keygen, self.memcache, self.phases);
+        cloned!(self.keygen, self.memcache, self.phases_store);
         let repo_id = repo.get_repoid();
         get_phase_from_memcache(&memcache, &keygen, &repo_id, &cs_id)
             .and_then(move |maybe_phase| {
@@ -83,7 +83,7 @@ impl Phases for CachingPhases {
                         // Refresh the underlying persistent storage (currently for public commits only).
                         .and_then(move |_| {
                             if phase == Phase::Public {
-                                phases.add(ctx, repo, cs_id, phase)
+                                phases_store.add(ctx, repo, cs_id, phase)
                             } else {
                                 future::ok(true).boxify()
                             }
@@ -103,7 +103,12 @@ impl Phases for CachingPhases {
         repo: BlobRepo,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<Phase>, Error> {
-        cloned!(self.keygen, self.memcache, self.phases, self.phases_hint);
+        cloned!(
+            self.keygen,
+            self.memcache,
+            self.phases_store,
+            self.phases_hint
+        );
         let repo_id = repo.get_repoid();
         // Look up in the memcache.
         get_phase_from_memcache(&memcache, &keygen, &repo_id, &cs_id)
@@ -113,7 +118,7 @@ impl Phases for CachingPhases {
                     return future::ok(maybe_phase).left_future();
                 }
                 // The phase is missing in memcache. Try to fetch from the underlying storage.
-                phases
+                phases_store
                     .get(ctx.clone(), repo.clone(), cs_id)
                     .and_then(move |maybe_phase| {
                         match maybe_phase {
@@ -139,7 +144,7 @@ impl Phases for CachingPhases {
                                         // Update the underlying storage (currently public commits only).
                                         // Return the phase.
                                         if phase == Phase::Public {
-                                            phases
+                                            phases_store
                                                 .add(ctx, repo, cs_id, phase.clone())
                                                 .map(|_| Some(phase))
                                                 .left_future()

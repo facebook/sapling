@@ -29,7 +29,7 @@ extern crate sql_ext;
 extern crate stats;
 
 mod caching;
-pub use caching::CachingPhases;
+pub use caching::CachingHintPhases;
 
 mod errors;
 pub use errors::*;
@@ -40,23 +40,21 @@ pub use hint::PhasesHint;
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::Future;
-use futures_ext::BoxFuture;
-use futures_ext::FutureExt;
+use futures::{future, Future};
+use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::RepositoryId;
 use mononoke_types::ChangesetId;
-use std::fmt;
+use std::{fmt, str};
+use std::sync::Arc;
 use try_from::TryFrom;
 
 use sql::Connection;
 use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
 pub use sql_ext::SqlConstructors;
 
-use std::str;
-
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Phase {
     Draft,
     Public,
@@ -146,6 +144,11 @@ pub trait Phases: Send + Sync {
     ) -> BoxFuture<Option<Phase>, Error>;
 }
 
+pub struct HintPhases {
+    phases_store: Arc<Phases>, // phases_store is the underlying persistent storage (db)
+    phases_hint: PhasesHint,   // phases_hint for slow path calculation
+}
+
 #[derive(Clone)]
 pub struct SqlPhases {
     write_connection: Connection,
@@ -216,6 +219,70 @@ impl Phases for SqlPhases {
     }
 }
 
+impl HintPhases {
+    pub fn new(phases_store: Arc<Phases>) -> Self {
+        Self {
+            phases_store,
+            phases_hint: PhasesHint::new(),
+        }
+    }
+}
+
+impl Phases for HintPhases {
+    /// Add a new phases entry to the underlying storage.
+    /// Returns true if a new changeset was added or the phase has been changed,
+    /// returns false if the phase hasn't been changed for the changeset.
+    fn add(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        cs_id: ChangesetId,
+        phase: Phase,
+    ) -> BoxFuture<bool, Error> {
+        // Refresh the underlying persistent storage (currently for public commits only).
+        if phase == Phase::Public {
+            self.phases_store.add(ctx, repo, cs_id, phase)
+        } else {
+            future::ok(false).boxify()
+        }
+    }
+
+    /// Retrieve the phase specified by this commit, if available.
+    /// If not available recalculate it if possible.
+    fn get(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Option<Phase>, Error> {
+        cloned!(self.phases_store, self.phases_hint);
+        // Try to fetch from the underlying storage.
+        phases_store
+            .get(ctx.clone(), repo.clone(), cs_id)
+            .and_then(move |maybe_phase| {
+                // Found
+                if maybe_phase.is_some() {
+                    return future::ok(maybe_phase).left_future();
+                }
+                // Not found. Calculate using the slow path.
+                phases_hint
+                    .get(ctx.clone(), repo.clone(), cs_id)
+                    .and_then(move |phase| {
+                        if phase == Phase::Public {
+                            phases_store
+                                .add(ctx, repo, cs_id, phase.clone())
+                                .map(|_| Some(phase))
+                                .left_future()
+                        } else {
+                            future::ok(Some(phase)).right_future()
+                        }
+                    })
+                    .right_future()
+            })
+            .boxify()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     extern crate async_unit;
@@ -257,10 +324,8 @@ mod tests {
             phases
                 .get(ctx.clone(), repo.clone(), ONES_CSID)
                 .wait()
-                .expect("Get phase failed")
-                .unwrap()
-                .to_string(),
-            Phase::Public.to_string(),
+                .expect("Get phase failed"),
+            Some(Phase::Public),
             "sql: get phase for the existing changeset"
         );
 
@@ -268,9 +333,8 @@ mod tests {
             phases
                 .get(ctx.clone(), repo.clone(), TWOS_CSID)
                 .wait()
-                .expect("Get phase failed")
-                .is_some(),
-            false,
+                .expect("Get phase failed"),
+            None,
             "sql: get phase for non existing changeset"
         );
     }
@@ -371,46 +435,61 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let phases_hint = PhasesHint::new();
+        let phases_store = Arc::new(SqlPhases::with_sqlite_in_memory().unwrap());
+        let hint_phases = HintPhases::new(phases_store.clone());
 
         assert_eq!(
-            phases_hint
+            hint_phases
                 .get(ctx.clone(), repo.clone(), public_commit)
                 .wait()
-                .unwrap()
-                .to_string(),
-            Phase::Public.to_string(),
+                .unwrap(),
+            Some(Phase::Public),
             "slow path: get phase for a Public commit"
         );
 
         assert_eq!(
-            phases_hint
+            hint_phases
                 .get(ctx.clone(), repo.clone(), other_public_commit)
                 .wait()
-                .unwrap()
-                .to_string(),
-            Phase::Public.to_string(),
+                .unwrap(),
+            Some(Phase::Public),
             "slow path: get phase for other Public commit"
         );
 
         assert_eq!(
-            phases_hint
+            hint_phases
                 .get(ctx.clone(), repo.clone(), draft_commit)
                 .wait()
-                .unwrap()
-                .to_string(),
-            Phase::Draft.to_string(),
+                .unwrap(),
+            Some(Phase::Draft),
             "slow path: get phase for a Draft commit"
         );
 
         assert_eq!(
-            phases_hint
+            hint_phases
                 .get(ctx.clone(), repo.clone(), other_draft_commit)
                 .wait()
-                .unwrap()
-                .to_string(),
-            Phase::Draft.to_string(),
+                .unwrap(),
+            Some(Phase::Draft),
             "slow path: get phase for other Draft commit"
+        );
+
+        assert_eq!(
+            phases_store
+                .get(ctx.clone(), repo.clone(), public_commit)
+                .wait()
+                .expect("Get phase failed"),
+            Some(Phase::Public),
+            "sql: make sure that phase was written to the db for public commit"
+        );
+
+        assert_eq!(
+            phases_store
+                .get(ctx.clone(), repo.clone(), draft_commit)
+                .wait()
+                .expect("Get phase failed"),
+            None,
+            "sql: make sure that phase was not written to the db for draft commit"
         );
     }
 
