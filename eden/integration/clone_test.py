@@ -9,10 +9,10 @@
 
 import json
 import os
-import pathlib
 import stat
 import subprocess
 import sys
+from pathlib import Path
 from textwrap import dedent
 from typing import Optional, Sequence, Set
 
@@ -283,54 +283,44 @@ class CloneTest(testcase.EdenRepoTest):
         )
 
     def test_post_clone_hook(self) -> None:
-        edenrc = os.path.join(self.home_dir, ".edenrc")
-        hooks_dir = os.path.join(self.tmp_dir, "the_hooks")
+        edenrc = Path(self.home_dir) / ".edenrc"
+        hooks_dir = Path(self.tmp_dir) / "the_hooks"
         os.mkdir(hooks_dir)
 
-        with open(edenrc, "w") as f:
-            f.write(
-                """\
+        edenrc.write_text(
+            f"""\
 ["repository {repo_name}"]
-path = "{repo_path}"
-type = "{repo_type}"
+path = "{self.repo.get_canonical_root()}"
+type = "{self.repo.get_type()}"
 hooks = "{hooks_dir}"
-""".format(
-                    repo_name=repo_name,
-                    repo_path=self.repo.get_canonical_root(),
-                    repo_type=self.repo.get_type(),
-                    hooks_dir=hooks_dir,
-                )
-            )
+"""
+        )
 
         # Create a post-clone hook that has a visible side-effect every time it
         # is run so we can verify that it is only run once.
-        hg_post_clone_hook = os.path.join(hooks_dir, "post-clone")
-        scratch_file = os.path.join(self.tmp_dir, "scratch_file")
-        with open(scratch_file, "w") as f:
-            f.write("ok")
-        with open(hg_post_clone_hook, "w") as f:
-            f.write(
-                """\
+        hg_post_clone_hook = hooks_dir / "post-clone"
+        scratch_file = Path(self.tmp_dir) / "scratch_file"
+        scratch_file.write_text("ok")
+        hg_post_clone_hook.write_text(
+            f"""\
 #!/bin/bash
 CONTENTS=`cat "{scratch_file}"`
 echo -n "$1" >> "{scratch_file}"
-""".format(
-                    scratch_file=scratch_file
-                )
-            )
-        os.chmod(hg_post_clone_hook, stat.S_IRWXU)
+"""
+        )
+        hg_post_clone_hook.chmod(stat.S_IRWXU)
 
         # Verify that the hook gets run as part of `eden clone`.
-        self.assertEqual("ok", util.read_all(bytes(scratch_file, "utf-8")))
+        self.assertEqual("ok", scratch_file.read_text())
         tmp = self.make_temporary_directory()
         self.eden.clone(repo_name, tmp)
         new_contents = "ok" + self.repo.get_type()
-        self.assertEqual(new_contents, util.read_all(bytes(scratch_file, "utf-8")))
+        self.assertEqual(new_contents, scratch_file.read_text())
 
         # Restart Eden and verify that post-clone is NOT run again.
         self.eden.shutdown()
         self.eden.start()
-        self.assertEqual(new_contents, util.read_all(bytes(scratch_file, "utf-8")))
+        self.assertEqual(new_contents, scratch_file.read_text())
 
     def test_attempt_clone_invalid_repo_name(self) -> None:
         tmp = self.make_temporary_directory()
@@ -361,13 +351,13 @@ echo -n "$1" >> "{scratch_file}"
         extra_daemon_args = self.eden.get_extra_daemon_args()
 
         # Verify that clone starts the daemon.
-        tmp = self.make_temporary_directory()
+        tmp = Path(self.make_temporary_directory())
         clone_output = self.eden.run_cmd(
             "clone",
             "--daemon-binary",
             FindExe.EDEN_DAEMON,
             self.repo.path,
-            tmp,
+            str(tmp),
             "--daemon-args",
             *extra_daemon_args,
         )
@@ -375,14 +365,12 @@ echo -n "$1" >> "{scratch_file}"
         self.assertTrue(self.eden.is_healthy(), msg="clone should start Eden.")
         mount_points = {
             self.mount: self.eden.CLIENT_ACTIVE,
-            tmp: self.eden.CLIENT_ACTIVE,
+            str(tmp): self.eden.CLIENT_ACTIVE,
         }
         self.assertEqual(
             mount_points, self.eden.list_cmd(), msg="Eden should have two mounts."
         )
-        self.assertEqual(
-            "hola\n", util.read_all(bytes(os.path.join(tmp, "hello"), "utf-8"))
-        )
+        self.assertEqual("hola\n", (tmp / "hello").read_text())
 
     def test_custom_not_mounted_readme(self) -> None:
         """Test that "eden clone" creates a README file in the mount point directory
@@ -394,18 +382,16 @@ echo -n "$1" >> "{scratch_file}"
             f.write(custom_readme_text)
 
         # Perform a clone
-        new_mount = self.make_temporary_directory()
-        readme_path = os.path.join(new_mount, "README_EDEN.txt")
-        self.eden.run_cmd("clone", self.repo.path, new_mount)
-        self.assertEqual(
-            "hola\n", util.read_all(bytes(os.path.join(new_mount, "hello"), "utf-8"))
-        )
+        new_mount = Path(self.make_temporary_directory())
+        readme_path = new_mount / "README_EDEN.txt"
+        self.eden.run_cmd("clone", self.repo.path, str(new_mount))
+        self.assertEqual("hola\n", (new_mount / "hello").read_text())
         self.assertFalse(os.path.exists(readme_path))
 
         # Now unmount the checkout and make sure we see the readme
-        self.eden.run_cmd("unmount", new_mount)
-        self.assertFalse(os.path.exists(os.path.join(new_mount, "hello")))
-        self.assertEqual(custom_readme_text, util.read_all(bytes(readme_path, "utf-8")))
+        self.eden.run_cmd("unmount", str(new_mount))
+        self.assertFalse((new_mount / "hello").exists())
+        self.assertEqual(custom_readme_text, readme_path.read_text())
 
 
 # TODO(T33122320): Integrate systemd and 'eden clone'.
@@ -413,17 +399,17 @@ echo -n "$1" >> "{scratch_file}"
 class CloneFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
-        self.eden_dir = pathlib.Path(self.make_temporary_directory())
+        self.eden_dir = Path(self.make_temporary_directory())
 
     def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
         argv_file = self.eden_dir / "argv"
         assert not argv_file.exists()
         repo = self.make_dummy_hg_repo()
-        mount_path = pathlib.Path(self.make_temporary_directory())
+        mount_path = Path(self.make_temporary_directory())
 
         extra_daemon_args = ["--commandArgumentsLogFile", str(argv_file), "hello world"]
         clone_process = self.spawn_clone(
-            repo_path=pathlib.Path(repo.path),
+            repo_path=Path(repo.path),
             mount_path=mount_path,
             extra_args=["--daemon-args"] + extra_daemon_args,
         )
@@ -444,10 +430,7 @@ class CloneFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         return repo
 
     def spawn_clone(
-        self,
-        repo_path: pathlib.Path,
-        mount_path: pathlib.Path,
-        extra_args: Sequence[str] = (),
+        self, repo_path: Path, mount_path: Path, extra_args: Sequence[str] = ()
     ) -> "pexpect.spawn[str]":
         args = (
             ["--config-dir", str(self.eden_dir)]

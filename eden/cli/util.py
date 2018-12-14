@@ -444,12 +444,6 @@ def is_valid_sha1(sha1: str) -> bool:
     return set(sha1).issubset(string.hexdigits)
 
 
-def read_all(path: bytes) -> str:
-    """One-liner to read the contents of a text file and properly close the fd."""
-    with open(path, "r") as f:
-        return f.read()
-
-
 def readlink_retry_estale(path: Union[Path, str]) -> str:
     attempts = 10
     while True:
