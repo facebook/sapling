@@ -1,6 +1,7 @@
 // Copyright Facebook, Inc. 2018
 use errors::Result;
 use std::fmt::{self, Display};
+use std::io::{self, Read, Write};
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;
@@ -106,6 +107,55 @@ impl<'a> From<&'a [u8; 20]> for Node {
 impl AsRef<[u8]> for Node {
     fn as_ref(&self) -> &[u8] {
         &self.0
+    }
+}
+
+pub trait WriteNodeExt {
+    /// Write a ``Node`` directly to a stream.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use types::node::{Node, WriteNodeExt};
+    /// let mut v = vec![];
+    ///
+    /// let n = Node::null_id();
+    /// v.write_node(&n).expect("writing a node to a vec should work");
+    ///
+    /// assert_eq!(v, vec![0; 20]);
+    /// ```
+    fn write_node(&mut self, value: &Node) -> io::Result<()>;
+}
+
+impl<W: Write + ?Sized> WriteNodeExt for W {
+    fn write_node(&mut self, value: &Node) -> io::Result<()> {
+        self.write_all(&value.0)
+    }
+}
+
+pub trait ReadNodeExt {
+    /// Read a ``Node`` directly from a stream.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::io::Cursor;
+    /// use types::node::{Node, ReadNodeExt};
+    /// let mut v = vec![0; 20];
+    /// let mut c = Cursor::new(v);
+    ///
+    /// let n = c.read_node().expect("reading a node from a vec should work");
+    ///
+    /// assert_eq!(&n, Node::null_id());
+    /// ```
+    fn read_node(&mut self) -> io::Result<Node>;
+}
+
+impl<R: Read + ?Sized> ReadNodeExt for R {
+    fn read_node(&mut self) -> io::Result<Node> {
+        let mut node = Node([0u8; NODE_LEN]);
+        self.read_exact(&mut node.0)?;
+        Ok(node)
     }
 }
 
