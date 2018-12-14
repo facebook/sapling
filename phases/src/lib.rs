@@ -5,19 +5,40 @@
 // GNU General Public License version 2 or any later version.
 
 extern crate ascii;
+extern crate blobrepo;
+#[macro_use]
+extern crate cloned;
 extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
+extern crate iobuf;
+extern crate memcache;
 extern crate mercurial_types;
 extern crate mononoke_types;
+extern crate reachabilityindex;
+extern crate tokio;
+extern crate try_from;
 
 #[macro_use]
 extern crate sql;
 extern crate sql_ext;
 
+#[macro_use]
+extern crate stats;
+
+mod caching;
+pub use caching::CachingPhases;
+
+mod errors;
+pub use errors::*;
+
+mod hint;
+pub use hint::PhasesHint;
+
 use ascii::AsciiString;
+use blobrepo::BlobRepo;
 use context::CoreContext;
 use futures::Future;
 use futures_ext::BoxFuture;
@@ -25,19 +46,17 @@ use futures_ext::FutureExt;
 use mercurial_types::RepositoryId;
 use mononoke_types::ChangesetId;
 use std::fmt;
+use try_from::TryFrom;
 
 use sql::Connection;
 use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
 pub use sql_ext::SqlConstructors;
 
-mod errors;
-pub use errors::*;
-
 use std::str;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Phase {
     Draft,
     Public,
@@ -48,6 +67,26 @@ impl fmt::Display for Phase {
         match self {
             Phase::Draft => write!(f, "{}", "Draft"),
             Phase::Public => write!(f, "{}", "Public"),
+        }
+    }
+}
+
+impl TryFrom<iobuf::IOBuf> for Phase {
+    type Err = ErrorKind;
+    fn try_from(buf: iobuf::IOBuf) -> ::std::result::Result<Self, Self::Err> {
+        let v: Vec<u8> = buf.into();
+        match str::from_utf8(&v) {
+            Ok("Draft") => Ok(Phase::Draft),
+            Ok("Public") => Ok(Phase::Public),
+            Ok(s) => Err(ErrorKind::PhasesError(
+                format!("Conversion error from IOBuf to Phase for {}", s).into(),
+            )),
+            _ => Err(ErrorKind::PhasesError(
+                format!(
+                    "Conversion error from IOBuf to Phase, received {} bytes",
+                    v.len()
+                ).into(),
+            )),
         }
     }
 }
@@ -93,7 +132,7 @@ pub trait Phases: Send + Sync {
     fn add(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
+        repo: BlobRepo,
         cs_id: ChangesetId,
         phase: Phase,
     ) -> BoxFuture<bool, Error>;
@@ -102,7 +141,7 @@ pub trait Phases: Send + Sync {
     fn get(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
+        repo: BlobRepo,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<Phase>, Error>;
 }
@@ -153,12 +192,14 @@ impl Phases for SqlPhases {
     fn add(
         &self,
         _ctx: CoreContext,
-        repo_id: RepositoryId,
+        repo: BlobRepo,
         cs_id: ChangesetId,
         phase: Phase,
     ) -> BoxFuture<bool, Error> {
-        InsertPhase::query(&self.write_connection, &[(&repo_id, &cs_id, &phase)])
-            .map(move |result| result.affected_rows() >= 1)
+        InsertPhase::query(
+            &self.write_connection,
+            &[(&repo.get_repoid(), &cs_id, &phase)],
+        ).map(move |result| result.affected_rows() >= 1)
             .boxify()
     }
 
@@ -166,10 +207,10 @@ impl Phases for SqlPhases {
     fn get(
         &self,
         _ctx: CoreContext,
-        repo_id: RepositoryId,
+        repo: BlobRepo,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<Phase>, Error> {
-        SelectPhase::query(&self.read_connection, &repo_id, &cs_id)
+        SelectPhase::query(&self.read_connection, &repo.get_repoid(), &cs_id)
             .map(move |rows| rows.into_iter().next().map(|row| row.0))
             .boxify()
     }
@@ -178,19 +219,18 @@ impl Phases for SqlPhases {
 #[cfg(test)]
 mod tests {
     extern crate async_unit;
-    extern crate mercurial_types_mocks;
     extern crate mononoke_types_mocks;
 
     use super::*;
-    use tests::mercurial_types_mocks::repo::*;
     use tests::mononoke_types_mocks::changesetid::*;
 
     fn add_get_phase<P: Phases>(phases: P) {
         let ctx = CoreContext::test_mock();
+        let repo = BlobRepo::new_memblob_empty(None, None).unwrap();
 
         assert_eq!(
             phases
-                .add(ctx.clone(), REPO_ZERO, ONES_CSID, Phase::Public)
+                .add(ctx.clone(), repo.clone(), ONES_CSID, Phase::Public)
                 .wait()
                 .expect("Adding new phase entry failed"),
             true,
@@ -199,7 +239,7 @@ mod tests {
 
         assert_eq!(
             phases
-                .add(ctx.clone(), REPO_ZERO, ONES_CSID, Phase::Public)
+                .add(ctx.clone(), repo.clone(), ONES_CSID, Phase::Public)
                 .wait()
                 .expect("Adding new phase entry failed"),
             false,
@@ -208,7 +248,7 @@ mod tests {
 
         assert_eq!(
             phases
-                .get(ctx.clone(), REPO_ZERO, ONES_CSID)
+                .get(ctx.clone(), repo.clone(), ONES_CSID)
                 .wait()
                 .expect("Get phase failed")
                 .unwrap()
@@ -219,7 +259,7 @@ mod tests {
 
         assert_eq!(
             phases
-                .get(ctx.clone(), REPO_TWO, ONES_CSID)
+                .get(ctx.clone(), repo.clone(), TWOS_CSID)
                 .wait()
                 .expect("Get phase failed")
                 .is_some(),
