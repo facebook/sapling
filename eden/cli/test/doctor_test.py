@@ -178,7 +178,7 @@ class DoctorTest(DoctorTestBase):
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.LinuxProcessFinder(),
+            process_finder=FakeProcessFinder(),
             out=out,
         )
 
@@ -256,7 +256,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             mount_table=instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.LinuxProcessFinder(),
+            process_finder=FakeProcessFinder(),
             out=out,
         )
 
@@ -281,7 +281,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.LinuxProcessFinder(),
+            process_finder=FakeProcessFinder(),
             out=out,
         )
 
@@ -301,7 +301,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.LinuxProcessFinder(),
+            process_finder=FakeProcessFinder(),
             out=out,
         )
 
@@ -859,7 +859,7 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.LinuxProcessFinder(),
+            process_finder=FakeProcessFinder(),
             out=out,
         )
 
@@ -927,7 +927,7 @@ Checking {mounts[0]}
             dry_run,
             instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.LinuxProcessFinder(),
+            process_finder=FakeProcessFinder(),
             out=out,
         )
         return exit_code, out.getvalue(), mounts
@@ -949,7 +949,7 @@ Checking {mounts[0]}
             dry_run=False,
             mount_table=instance.mount_table,
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.LinuxProcessFinder(),
+            process_finder=FakeProcessFinder(),
             out=out,
         )
 
