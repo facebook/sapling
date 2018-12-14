@@ -75,12 +75,8 @@ std::string getLogPath(AbsolutePathPiece edenDir) {
     return "";
   }
 
-  // When running in the background default to logging to
-  // <edenDir>/logs/edenfs.log
-  // Create the logs/ directory first in case it does not exist.
-  auto logDir = edenDir + "logs"_pc;
-  ensureDirectoryExists(logDir);
-  return (logDir + "edenfs.log"_pc).value();
+  auto logDir = makeDefaultLogDirectory(edenDir);
+  return (logDir + getDefaultLogFileName()).value();
 }
 
 AbsolutePath ensureEdenDirExists(folly::StringPiece path) {

@@ -333,7 +333,7 @@ int main(int argc, char** argv) {
   }
   auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
 
-  auto logPath = edenDir + "edenfs.log"_pc;
+  auto logPath = makeDefaultLogDirectory(edenDir) + getDefaultLogFileName();
   auto startupLogger = daemonizeIfRequested(logPath.value());
 
   // Acquire the lock file

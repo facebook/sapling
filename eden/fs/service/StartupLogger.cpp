@@ -49,6 +49,16 @@ namespace {
 void writeMessageToFile(folly::File&, folly::StringPiece);
 }
 
+AbsolutePath makeDefaultLogDirectory(AbsolutePathPiece edenDir) {
+  auto logDir = edenDir + "logs"_pc;
+  ensureDirectoryExists(logDir);
+  return logDir;
+}
+
+PathComponentPiece getDefaultLogFileName() {
+  return "edenfs.log"_pc;
+}
+
 std::unique_ptr<StartupLogger> daemonizeIfRequested(
     folly::StringPiece logPath) {
   if (FLAGS_foreground) {

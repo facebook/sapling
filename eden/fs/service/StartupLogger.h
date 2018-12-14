@@ -17,6 +17,7 @@
 #include <memory>
 #include <optional>
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
@@ -24,6 +25,9 @@ namespace eden {
 DECLARE_bool(foreground);
 
 class StartupLogger;
+
+AbsolutePath makeDefaultLogDirectory(AbsolutePathPiece edenDir);
+PathComponentPiece getDefaultLogFileName();
 
 std::unique_ptr<StartupLogger> daemonizeIfRequested(folly::StringPiece logPath);
 

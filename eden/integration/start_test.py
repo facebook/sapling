@@ -102,26 +102,12 @@ class StartWithRepoTest(
         self.assert_checkout_is_mounted()
 
     def run_eden_start(self, systemd: bool) -> None:
-        env = dict(os.environ)
-        if systemd:
-            env["EDEN_EXPERIMENTAL_SYSTEMD"] = "1"
-        else:
-            env.pop("EDEN_EXPERIMENTAL_SYSTEMD", None)
-        command = [
-            FindExe.EDEN_CLI,
-            "--config-dir",
-            self.eden_dir,
-            "--etc-eden-dir",
-            self.etc_eden_dir,
-            "--home-dir",
-            self.home_dir,
-            "start",
-            "--daemon-binary",
-            FindExe.EDEN_DAEMON,
-        ]
-        if eden_start_needs_allow_root_option(systemd=systemd):
-            command.extend(["--", "--allowRoot"])
-        subprocess.check_call(command, env=env)
+        run_eden_start_with_real_daemon(
+            eden_dir=pathlib.Path(self.eden_dir),
+            etc_eden_dir=pathlib.Path(self.etc_eden_dir),
+            home_dir=pathlib.Path(self.home_dir),
+            systemd=systemd,
+        )
 
     def assert_checkout_is_mounted(self) -> None:
         file = pathlib.Path(self.mount) / "hello"
@@ -297,6 +283,34 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
             f"fake_edenfs should have recognized the --commandArgumentsLogFile argument",
         )
         return list(argv_file.read_text().splitlines())
+
+
+def run_eden_start_with_real_daemon(
+    eden_dir: pathlib.Path,
+    etc_eden_dir: pathlib.Path,
+    home_dir: pathlib.Path,
+    systemd: bool,
+) -> None:
+    env = dict(os.environ)
+    if systemd:
+        env["EDEN_EXPERIMENTAL_SYSTEMD"] = "1"
+    else:
+        env.pop("EDEN_EXPERIMENTAL_SYSTEMD", None)
+    command = [
+        FindExe.EDEN_CLI,
+        "--config-dir",
+        str(eden_dir),
+        "--etc-eden-dir",
+        str(etc_eden_dir),
+        "--home-dir",
+        str(home_dir),
+        "start",
+        "--daemon-binary",
+        FindExe.EDEN_DAEMON,
+    ]
+    if eden_start_needs_allow_root_option(systemd=systemd):
+        command.extend(["--", "--allowRoot"])
+    subprocess.check_call(command, env=env)
 
 
 def eden_start_needs_allow_root_option(systemd: bool) -> bool:
