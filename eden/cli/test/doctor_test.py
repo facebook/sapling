@@ -28,7 +28,7 @@ import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import filesystem, mtab, process_finder, util
 from eden.cli.config import EdenInstance, HealthStatus
-from eden.cli.doctor import check_os, check_rogue_edenfs, check_watchman
+from eden.cli.doctor import check_hg, check_os, check_rogue_edenfs, check_watchman
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from fb303.ttypes import fb_status
 
@@ -626,7 +626,7 @@ Fixing Eden to point to parent commit 1200000012000000120000001200000012000000..
         )
 
     @patch(
-        "eden.cli.doctor.is_commit_hash_valid",
+        "eden.cli.doctor.check_hg.is_commit_hash_valid",
         new=_commit_hash_valid_test_snapshot_invalid,
     )
     def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self):
@@ -661,8 +661,8 @@ Fixing Eden to point to parent commit 1200000012000000120000001200000012000000..
             ],
         )
 
-    @patch("eden.cli.doctor.is_commit_hash_valid", return_value=False)
-    @patch("eden.cli.doctor.get_tip_commit_hash", return_value="87654321" * 5)
+    @patch("eden.cli.doctor.check_hg.is_commit_hash_valid", return_value=False)
+    @patch("eden.cli.doctor.check_hg.get_tip_commit_hash", return_value="87654321" * 5)
     def test_snapshot_and_dirstate_file_differ_and_all_commit_hash_invalid(
         self, mock_is_commit_hash_valid, mock_get_tip_commit_hash
     ):
@@ -698,8 +698,8 @@ Fixing Eden to point to parent commit {valid_commit_hash}...\
             ],
         )
 
-    @patch("eden.cli.doctor.is_commit_hash_valid", return_value=False)
-    @patch("eden.cli.doctor.get_tip_commit_hash", return_value="87654321" * 5)
+    @patch("eden.cli.doctor.check_hg.is_commit_hash_valid", return_value=False)
+    @patch("eden.cli.doctor.check_hg.get_tip_commit_hash", return_value="87654321" * 5)
     def test_snapshot_and_dirstate_file_differ_and_all_parents_invalid(
         self, mock_is_commit_hash_valid, mock_get_tip_commit_hash
     ):
@@ -737,7 +737,7 @@ Fixing Eden to point to parent commit {valid_commit_hash}...\
         )
 
     @patch(
-        "eden.cli.doctor.is_commit_hash_valid",
+        "eden.cli.doctor.check_hg.is_commit_hash_valid",
         side_effect=_commit_hash_valid_test_dirstate_hex_invalid,
     )
     def test_snapshot_and_dirstate_file_differ_and_dirstate_commit_hash_invalid(
@@ -789,7 +789,7 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
             )
 
         fixer, out = self.create_fixer(dry_run=False)
-        doctor.check_snapshot_dirstate_consistency(
+        check_hg.check_snapshot_dirstate_consistency(
             fixer, typing.cast(EdenInstance, instance), mount_path, snapshot_hex
         )
         return instance, mount_path, fixer, out.getvalue()
