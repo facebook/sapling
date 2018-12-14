@@ -4,6 +4,7 @@ members = [
     "bookmarkstore",
     "commitcloudsubscriber",
     "configparser",
+    "cpython-failure",
     "encoding",
     "hg_watchman_client",
     "indexedlog",

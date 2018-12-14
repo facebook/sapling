@@ -1,0 +1,11 @@
+[package]
+name = "cpython-failure"
+version = "0.1.0"
+
+[dependencies]
+failure = "0.1.3"
+
+[dependencies.cpython]
+version = "0.2"
+default-features = false
+features = ["python27-sys", "extension-module-2-7"]
