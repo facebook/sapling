@@ -13,9 +13,10 @@ use Phase;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use errors::*;
-use futures::future;
+use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::ChangesetId;
+use reachabilityindex::ReachabilityIndex;
 use reachabilityindex::SkiplistIndex;
 
 #[derive(Clone)]
@@ -30,16 +31,36 @@ impl PhasesHint {
         }
     }
 
-    /// Retrieve the phase specified by this commit, if available the commit exists
-    /// Calculates it based on beeing ancestor of public bookmark.
+    /// Retrieve the phase specified by this commit, if the commit exists
+    /// Calculate it based on beeing ancestor of a public bookmark.
+    /// Return error if calculation is unsuccessful due to any reason.
     pub fn get(
         &self,
-        _ctx: CoreContext,
-        _repo: BlobRepo,
-        _cs_id: ChangesetId,
-    ) -> BoxFuture<Option<Phase>, Error> {
-        // TODO (liubovd): implement calculation and cover with unit tests
-        // currently everything is public
-        future::ok(Some(Phase::Public)).boxify()
+        ctx: CoreContext,
+        repo: BlobRepo,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Phase, Error> {
+        cloned!(self.index);
+        repo.get_bonsai_bookmarks(ctx.clone())
+            .collect()
+            .and_then(move |vec| {
+                let mut vecf = Vec::new();
+                for (_, public_cs) in vec {
+                    cloned!(ctx, index);
+                    let changeset_fetcher = repo.get_changeset_fetcher();
+                    vecf.push(index.query_reachability(ctx, changeset_fetcher, public_cs, cs_id));
+                }
+                future::join_all(vecf)
+            })
+            .map(|vec| {
+                // if the changeset is ancestor of some public bookmark, it is public
+                if vec.iter().any(|&x| x) {
+                    Phase::Public
+                } else {
+                    // we can be sure that it is a draft commit
+                    Phase::Draft
+                }
+            })
+            .boxify()
     }
 }

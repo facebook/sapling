@@ -219,12 +219,19 @@ impl Phases for SqlPhases {
 #[cfg(test)]
 mod tests {
     extern crate async_unit;
+    extern crate bookmarks;
+    extern crate fixtures;
     extern crate mononoke_types_mocks;
 
     use super::*;
+    use futures::Stream;
+    use mercurial_types::nodehash::HgChangesetId;
+    use std::str::FromStr;
+    use tests::bookmarks::Bookmark;
+    use tests::fixtures::linear;
     use tests::mononoke_types_mocks::changesetid::*;
 
-    fn add_get_phase<P: Phases>(phases: P) {
+    fn add_get_sql_phase<P: Phases>(phases: P) {
         let ctx = CoreContext::test_mock();
         let repo = BlobRepo::new_memblob_empty(None, None).unwrap();
 
@@ -234,7 +241,7 @@ mod tests {
                 .wait()
                 .expect("Adding new phase entry failed"),
             true,
-            "try to add phase Public for a new changeset"
+            "sql: try to add phase Public for a new changeset"
         );
 
         assert_eq!(
@@ -243,7 +250,7 @@ mod tests {
                 .wait()
                 .expect("Adding new phase entry failed"),
             false,
-            "try to add the same changeset with the same phase"
+            "sql: try to add the same changeset with the same phase"
         );
 
         assert_eq!(
@@ -254,7 +261,7 @@ mod tests {
                 .unwrap()
                 .to_string(),
             Phase::Public.to_string(),
-            "get phase for the existing changeset"
+            "sql: get phase for the existing changeset"
         );
 
         assert_eq!(
@@ -264,14 +271,153 @@ mod tests {
                 .expect("Get phase failed")
                 .is_some(),
             false,
-            "get phase for non existing changeset"
+            "sql: get phase for non existing changeset"
         );
     }
 
     #[test]
-    fn add_get_phase_test() {
+    fn add_get_phase_sql_test() {
         async_unit::tokio_unit_test(|| {
-            add_get_phase(SqlPhases::with_sqlite_in_memory().unwrap());
+            add_get_sql_phase(SqlPhases::with_sqlite_in_memory().unwrap());
+        });
+    }
+
+    fn delete_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark) {
+        let mut txn = repo.update_bookmark_transaction(ctx);
+        txn.force_delete(&book).unwrap();
+        txn.commit().wait().unwrap();
+    }
+
+    fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark, cs_id: &str) {
+        let head = repo.get_bonsai_from_hg(ctx.clone(), &HgChangesetId::from_str(cs_id).unwrap())
+            .wait()
+            .unwrap()
+            .unwrap();
+        let mut txn = repo.update_bookmark_transaction(ctx);
+        txn.force_set(&book, &head).unwrap();
+        txn.commit().wait().unwrap();
+    }
+
+    /*
+    @  79a13814c5ce7330173ec04d279bf95ab3f652fb
+    |
+    o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
+    |
+    o  3c15267ebf11807f3d772eb891272b911ec68759
+    |
+    o  a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
+    |
+    o  0ed509bf086fadcb8a8a5384dc3b550729b0fc17
+    |
+    o  eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b  master
+    |
+    o  cb15ca4a43a59acff5388cea9648c162afde8372
+    |
+    o  d0a361e9022d226ae52f689667bd7d212a19cfe0
+    |
+    o  607314ef579bd2407752361ba1b0c1729d08b281
+    |
+    o  3e0e761030db6e479a7fb58b12881883f9f8c63f
+    |
+    o  2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
+    */
+
+    fn get_hint_phase() {
+        let ctx = CoreContext::test_mock();
+        let repo = linear::getrepo(None);
+
+        // delete all existing bookmarks
+        for (bookmark, _) in repo.get_bonsai_bookmarks(ctx.clone())
+            .collect()
+            .wait()
+            .unwrap()
+        {
+            delete_bookmark(ctx.clone(), repo.clone(), &bookmark);
+        }
+
+        // create a new master bookmark
+        set_bookmark(
+            ctx.clone(),
+            repo.clone(),
+            &Bookmark::new("master").unwrap(),
+            "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
+        );
+
+        let public_commit = repo.get_bonsai_from_hg(
+            ctx.clone(),
+            &HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0").unwrap(),
+        ).wait()
+            .unwrap()
+            .unwrap();
+
+        let other_public_commit = repo.get_bonsai_from_hg(
+            ctx.clone(),
+            &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        ).wait()
+            .unwrap()
+            .unwrap();
+
+        let draft_commit = repo.get_bonsai_from_hg(
+            ctx.clone(),
+            &HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").unwrap(),
+        ).wait()
+            .unwrap()
+            .unwrap();
+
+        let other_draft_commit = repo.get_bonsai_from_hg(
+            ctx.clone(),
+            &HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
+        ).wait()
+            .unwrap()
+            .unwrap();
+
+        let phases_hint = PhasesHint::new();
+
+        assert_eq!(
+            phases_hint
+                .get(ctx.clone(), repo.clone(), public_commit)
+                .wait()
+                .unwrap()
+                .to_string(),
+            Phase::Public.to_string(),
+            "slow path: get phase for a Public commit"
+        );
+
+        assert_eq!(
+            phases_hint
+                .get(ctx.clone(), repo.clone(), other_public_commit)
+                .wait()
+                .unwrap()
+                .to_string(),
+            Phase::Public.to_string(),
+            "slow path: get phase for other Public commit"
+        );
+
+        assert_eq!(
+            phases_hint
+                .get(ctx.clone(), repo.clone(), draft_commit)
+                .wait()
+                .unwrap()
+                .to_string(),
+            Phase::Draft.to_string(),
+            "slow path: get phase for a Draft commit"
+        );
+
+        assert_eq!(
+            phases_hint
+                .get(ctx.clone(), repo.clone(), other_draft_commit)
+                .wait()
+                .unwrap()
+                .to_string(),
+            Phase::Draft.to_string(),
+            "slow path: get phase for other Draft commit"
+        );
+    }
+
+    #[test]
+    fn get_phase_hint_test() {
+        async_unit::tokio_unit_test(|| {
+            get_hint_phase();
         });
     }
 }

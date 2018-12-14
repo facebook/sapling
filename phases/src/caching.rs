@@ -124,33 +124,29 @@ impl Phases for CachingPhases {
                                     .left_future()
                             }
                             // The phase is not found. Try to calculate it.
+                            // It will be error if calculation failed.
                             None => phases_hint
                                 .get(ctx.clone(), repo.clone(), cs_id)
-                                .and_then(move |maybe_phase| {
-                                    match maybe_phase {
-                                        // The phase is calculated. Refresh memcache.
-                                        Some(phase) => set_phase_to_memcache(
-                                            &memcache,
-                                            &keygen,
-                                            &repo_id,
-                                            &cs_id,
-                                            &phase,
-                                        ).and_then(move |_| {
-                                            // Update the underlying storage (currently public commits only).
-                                            // Return the phase.
-                                            if phase == Phase::Public {
-                                                phases
-                                                    .add(ctx, repo, cs_id, phase.clone())
-                                                    .map(|_| Some(phase))
-                                                    .left_future()
-                                            } else {
-                                                future::ok(Some(phase)).right_future()
-                                            }
-                                        })
-                                            .left_future(),
-                                        // Changeset is not found, return None
-                                        None => future::ok(None).right_future(),
-                                    }
+                                .and_then(move |phase| {
+                                    // The phase is calculated. Refresh memcache.
+                                    set_phase_to_memcache(
+                                        &memcache,
+                                        &keygen,
+                                        &repo_id,
+                                        &cs_id,
+                                        &phase,
+                                    ).and_then(move |_| {
+                                        // Update the underlying storage (currently public commits only).
+                                        // Return the phase.
+                                        if phase == Phase::Public {
+                                            phases
+                                                .add(ctx, repo, cs_id, phase.clone())
+                                                .map(|_| Some(phase))
+                                                .left_future()
+                                        } else {
+                                            future::ok(Some(phase)).right_future()
+                                        }
+                                    })
                                 })
                                 .right_future(),
                         }
