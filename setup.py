@@ -2000,6 +2000,11 @@ rustextmodules = [
         manifest="mercurial/rust/matcher/Cargo.toml",
     ),
     RustExtension(
+        "mutationstore",
+        package="mercurial.rust",
+        manifest="mercurial/rust/mutationstore/Cargo.toml",
+    ),
+    RustExtension(
         "pynodemap",
         package="mercurial.rust",
         manifest="mercurial/rust/pynodemap/Cargo.toml",
