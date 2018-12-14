@@ -29,7 +29,7 @@ from eden.cli import config as config_mod, filesystem, mtab, process_finder, ui,
 from eden.cli.config import EdenInstance
 from thrift.Thrift import TApplicationException
 
-from . import check_watchman
+from . import check_rogue_edenfs, check_watchman
 from .problem import (
     DryRunFixer,
     FixableProblem,
@@ -71,7 +71,7 @@ def cure_what_ails_you(
     run_operating_system_checks(fixer, instance, out)
 
     # check multiple edenfs running with some rogue stale PIDs
-    check_many_edenfs_are_running(fixer, process_finder)
+    check_rogue_edenfs.check_many_edenfs_are_running(fixer, process_finder)
 
     status = instance.check_health()
     if not status.is_healthy():
@@ -283,34 +283,6 @@ def run_normal_checks(
 
 def printable_bytes(b: bytes) -> str:
     return b.decode("utf-8", "backslashreplace")
-
-
-def check_many_edenfs_are_running(
-    tracker: ProblemTracker, process_finder: process_finder.ProcessFinder
-) -> None:
-    rogue_pids_list = process_finder.find_rogue_pids()
-    if len(rogue_pids_list) > 0:
-        rogue_pids_problem = ManyEdenFsRunning(rogue_pids_list)
-        tracker.add_problem(rogue_pids_problem)
-
-
-class ManyEdenFsRunning(Problem):
-    def __init__(self, rogue_pids_list):
-        self._rogue_pids_list = rogue_pids_list
-        self.set_manual_remediation_message()
-
-    def description(self) -> str:
-        return f"Many edenfs processes are running. Please keep only one for \
-each config directory."
-
-    def severity(self) -> ProblemSeverity:
-        return ProblemSeverity.ADVICE
-
-    def set_manual_remediation_message(self) -> None:
-        if self._rogue_pids_list is not None:
-            kill_command = ["kill", "-9"]
-            kill_command.extend(map(str, self._rogue_pids_list))
-            self._remediation = " ".join(map(shlex.quote, kill_command))
 
 
 class CheckoutNotMounted(FixableProblem):

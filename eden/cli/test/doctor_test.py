@@ -28,7 +28,7 @@ import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import filesystem, mtab, process_finder, util
 from eden.cli.config import EdenInstance, HealthStatus
-from eden.cli.doctor import check_watchman
+from eden.cli.doctor import check_rogue_edenfs, check_watchman
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from fb303.ttypes import fb_status
 
@@ -977,7 +977,7 @@ class MultipleEdenfsRunningTest(DoctorTestBase):
         self, process_finder: process_finder.ProcessFinder, dry_run: bool
     ) -> Tuple[doctor.ProblemFixer, str]:
         fixer, out = self.create_fixer(dry_run)
-        doctor.check_many_edenfs_are_running(fixer, process_finder)
+        check_rogue_edenfs.check_many_edenfs_are_running(fixer, process_finder)
         return fixer, out.getvalue()
 
     def test_when_there_are_rogue_pids(self):
