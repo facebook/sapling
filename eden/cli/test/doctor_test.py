@@ -28,7 +28,13 @@ import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import filesystem, mtab, process_finder, util
 from eden.cli.config import EdenInstance, HealthStatus
-from eden.cli.doctor import check_hg, check_os, check_rogue_edenfs, check_watchman
+from eden.cli.doctor import (
+    check_bind_mounts,
+    check_hg,
+    check_os,
+    check_rogue_edenfs,
+    check_watchman,
+)
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from fb303.ttypes import fb_status
 
@@ -1228,7 +1234,7 @@ class BindMountsCheckTest(DoctorTestBase):
         fixer, out = self.create_fixer(dry_run)
         if fs_util is None:
             fs_util = FakeFsUtil()
-        doctor.check_bind_mounts(
+        check_bind_mounts.check_bind_mounts(
             fixer,
             self.edenfs_path1,
             typing.cast(EdenInstance, self.instance),
