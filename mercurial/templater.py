@@ -846,14 +846,14 @@ def indent(context, mapping, args):
     return templatefilters.indent(firstline + text, indent)
 
 
-@templatefunc("get(dict, key)")
+@templatefunc("get(dict, key[, default])")
 def get(context, mapping, args):
     """Get an attribute/key from an object. Some keywords
     are complex types. This function allows you to obtain the value of an
     attribute on these types."""
-    if len(args) != 2:
+    if not (2 <= len(args) <= 3):
         # i18n: "get" is a keyword
-        raise error.ParseError(_("get() expects two arguments"))
+        raise error.ParseError(_("get() expects two or three arguments"))
 
     dictarg = evalfuncarg(context, mapping, args[0])
     if not util.safehasattr(dictarg, "get"):
@@ -861,13 +861,16 @@ def get(context, mapping, args):
         raise error.ParseError(_("get() expects a dict as first argument"))
 
     key = evalfuncarg(context, mapping, args[1])
-    return _getdictitem(dictarg, key)
+    value = _getdictitem(dictarg, key)
+    if value is None and len(args) == 3:
+        value = evalrawexp(context, mapping, args[2])
+    return value
 
 
 def _getdictitem(dictarg, key):
     val = dictarg.get(key)
     if val is None:
-        return
+        return None
     return templatekw.wraphybridvalue(dictarg, key, val)
 
 
