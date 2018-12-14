@@ -991,7 +991,7 @@ class MultipleEdenfsRunningTest(DoctorTestBase):
             out,
             f"""\
 <yellow>- Found problem:<reset>
-Many edenfs proesses are running. Please keep only one for each config directory.
+Many edenfs processes are running. Please keep only one for each config directory.
 kill -9 123 124
 
 """,
@@ -1049,7 +1049,7 @@ kill -9 123 124
             out,
             f"""\
 <yellow>- Found problem:<reset>
-Many edenfs proesses are running. Please keep only one for each config directory.
+Many edenfs processes are running. Please keep only one for each config directory.
 kill -9 475204 475205
 
 """,
@@ -1074,7 +1074,7 @@ kill -9 475204 475205
             out,
             f"""\
 <yellow>- Found problem:<reset>
-Many edenfs proesses are running. Please keep only one for each config directory.
+Many edenfs processes are running. Please keep only one for each config directory.
 kill -9 475206
 
 """,
@@ -1111,7 +1111,7 @@ kill -9 475206
             out,
             f"""\
 <yellow>- Found problem:<reset>
-Many edenfs proesses are running. Please keep only one for each config directory.
+Many edenfs processes are running. Please keep only one for each config directory.
 kill -9 475204 475205 575204 575205
 
 """,
@@ -1130,7 +1130,7 @@ kill -9 475204 475205 575204 575205
             self.assertIn(
                 "WARNING:eden.cli.process_finder:Lock file cannot be read for",
                 logs,
-                "when lock file cant be opened",
+                "when lock file can't be opened",
             )
 
     def test_when_lock_file_data_is_garbage(self):

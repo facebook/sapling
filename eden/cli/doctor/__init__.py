@@ -300,7 +300,7 @@ class ManyEdenFsRunning(Problem):
         self.set_manual_remediation_message()
 
     def description(self) -> str:
-        return f"Many edenfs proesses are running. Please keep only one for \
+        return f"Many edenfs processes are running. Please keep only one for \
 each config directory."
 
     def severity(self) -> ProblemSeverity:
