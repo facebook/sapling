@@ -7,7 +7,6 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import abc
 import binascii
 import collections
 import errno
@@ -21,16 +20,25 @@ import shlex
 import stat
 import subprocess
 import typing
-from enum import IntEnum
 from textwrap import dedent
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
+from eden.cli import config as config_mod, filesystem, mtab, process_finder, ui, version
+from eden.cli.config import EdenInstance
 from thrift.Thrift import TApplicationException
 
-from . import config as config_mod, filesystem, mtab, process_finder, ui, version
-from .config import EdenInstance
+from . import check_watchman
+from .problem import (
+    DryRunFixer,
+    FixableProblem,
+    Problem,
+    ProblemFixer,
+    ProblemSeverity,
+    ProblemTracker,
+    RemediationError,
+)
 
 
 log = logging.getLogger("eden.cli.doctor")
@@ -38,111 +46,6 @@ log = logging.getLogger("eden.cli.doctor")
 # working_directory_was_stale may be set to True by the CLI main module
 # if the original working directory referred to a stale eden mount point.
 working_directory_was_stale = False
-
-
-class RemediationError(Exception):
-    pass
-
-
-class ProblemSeverity(IntEnum):
-    # Note that we intentionally want to be able to compare severity values
-    # using < and > operators.
-    ADVICE = 3
-    ERROR = 10
-
-
-class ProblemBase(abc.ABC):
-    @abc.abstractmethod
-    def description(self) -> str:
-        "Return the description of this problem."
-
-    def severity(self) -> ProblemSeverity:
-        """Return the problem severity.
-
-        Defaults to ERROR if not overridden.
-        """
-        return ProblemSeverity.ERROR
-
-    def get_manual_remediation_message(self) -> Optional[str]:
-        "Return a message explaining how to manually fix this problem."
-        return None
-
-
-class FixableProblem(ProblemBase):
-    @abc.abstractmethod
-    def dry_run_msg(self) -> str:
-        """Return a string to print for dry-run operations."""
-
-    @abc.abstractmethod
-    def start_msg(self) -> str:
-        """Return a string to print when starting the remediation."""
-
-    @abc.abstractmethod
-    def perform_fix(self) -> None:
-        """Attempt to automatically fix the problem."""
-
-
-class Problem(ProblemBase):
-    def __init__(
-        self,
-        description: str,
-        remediation: Optional[str] = None,
-        severity: ProblemSeverity = ProblemSeverity.ERROR,
-    ) -> None:
-        self._description = description
-        self._remediation = remediation
-        self._severity = severity
-
-    def description(self) -> str:
-        return self._description
-
-    def severity(self) -> ProblemSeverity:
-        return self._severity
-
-    def get_manual_remediation_message(self) -> Optional[str]:
-        return self._remediation
-
-
-class ProblemTracker(abc.ABC):
-    def add_problem(self, problem: ProblemBase) -> None:
-        """Record a new problem"""
-
-
-class ProblemFixer(ProblemTracker):
-    def __init__(self, out: ui.Output) -> None:
-        self._out = out
-        self.num_problems = 0
-        self.num_fixed_problems = 0
-        self.num_failed_fixes = 0
-        self.num_manual_fixes = 0
-
-    def add_problem(self, problem: ProblemBase) -> None:
-        self.num_problems += 1
-        self._out.writeln("- Found problem:", fg=self._out.YELLOW)
-        self._out.writeln(problem.description())
-        if isinstance(problem, FixableProblem):
-            self.fix_problem(problem)
-        else:
-            self.num_manual_fixes += 1
-            msg = problem.get_manual_remediation_message()
-            if msg:
-                self._out.write(msg, end="\n\n")
-
-    def fix_problem(self, problem: FixableProblem) -> None:
-        self._out.write(f"{problem.start_msg()}...", flush=True)
-        try:
-            problem.perform_fix()
-            self._out.write("fixed", fg=self._out.GREEN, end="\n\n", flush=True)
-            self.num_fixed_problems += 1
-        except Exception as ex:
-            self._out.writeln("error", fg=self._out.RED)
-            self._out.write(f"Failed to fix problem: {ex}", end="\n\n", flush=True)
-            self.num_failed_fixes += 1
-
-
-class DryRunFixer(ProblemFixer):
-    def fix_problem(self, problem: FixableProblem) -> None:
-        self._out.write(problem.dry_run_msg(), end="\n\n")
 
 
 def cure_what_ails_you(
@@ -348,8 +251,7 @@ def run_normal_checks(
     check_for_stale_mounts(tracker, mount_table)
     check_edenfs_version(tracker, instance)
 
-    watchman_roots = _get_watch_roots_for_watchman()
-    nuclide_roots = _get_roots_for_nuclide()
+    watchman_info = check_watchman.pre_check()
 
     configured_mounts = list(instance.get_mount_paths())
     configured_mounts.sort()
@@ -367,15 +269,10 @@ def run_normal_checks(
 
         out.writeln(f"Checking {mount_path}")
         client_info = instance.get_client_info(mount_path)
-        check_watchman_subscriptions(tracker, mount_path, watchman_roots)
+        check_watchman.check_active_mount(tracker, mount_path, watchman_info)
         check_bind_mounts(
             tracker, mount_path, instance, client_info, mount_table, fs_util
         )
-
-        if nuclide_roots is not None:
-            check_nuclide_watchman_subscriptions(
-                tracker, mount_path, watchman_roots, nuclide_roots
-            )
 
         if client_info["scm_type"] == "hg":
             snapshot_hex = client_info["snapshot"]
@@ -710,168 +607,6 @@ class BindMountNotMounted(FixableProblem):
         self._mount_table.create_bind_mount(self._client_dir_path, self._mount_path)
 
 
-def check_watchman_subscriptions(
-    tracker: ProblemTracker, path: str, watchman_roots: Set[str]
-) -> None:
-    if path not in watchman_roots:
-        return
-
-    watch_details = _call_watchman(["watch-project", path])
-    watcher = watch_details.get("watcher")
-    if watcher == "eden":
-        return
-
-    tracker.add_problem(IncorrectWatchmanWatch(path, watcher))
-
-
-class IncorrectWatchmanWatch(FixableProblem):
-    def __init__(self, path: str, watcher: Any) -> None:
-        self._path = path
-        self._watcher = watcher
-
-    def description(self) -> str:
-        return (
-            f"Watchman is watching {self._path} with the wrong watcher type: "
-            f'"{self._watcher}" instead of "eden"'
-        )
-
-    def dry_run_msg(self) -> str:
-        return f"Would fix watchman watch for {self._path}"
-
-    def start_msg(self) -> str:
-        return f"Fixing watchman watch for {self._path}"
-
-    def perform_fix(self) -> None:
-        # Delete the old watch and try to re-establish it. Hopefully it will be
-        # an Eden watch this time.
-        _call_watchman(["watch-del", self._path])
-        watch_details = _call_watchman(["watch-project", self._path])
-        if watch_details.get("watcher") != "eden":
-            raise RemediationError(
-                f"Failed to replace watchman watch for {self._path} "
-                'with an "eden" watcher'
-            )
-
-
-# Watchman subscriptions that Nuclide creates for an Hg repository.
-NUCLIDE_HG_SUBSCRIPTIONS = [
-    "hg-repository-watchman-subscription-primary",
-    "hg-repository-watchman-subscription-conflicts",
-    "hg-repository-watchman-subscription-hgbookmark",
-    "hg-repository-watchman-subscription-hgbookmarks",
-    "hg-repository-watchman-subscription-dirstate",
-    "hg-repository-watchman-subscription-progress",
-    "hg-repository-watchman-subscription-lock-files",
-]
-
-
-def check_nuclide_watchman_subscriptions(
-    tracker: ProblemTracker,
-    path: str,
-    watchman_roots: Set[str],
-    nuclide_roots: Set[str],
-) -> None:
-    # Note that nuclide_roots is a set, but each entry in the set
-    # could appear as a root folder multiple times if the user uses multiple
-    # Atom windows.
-    path_prefix = path + "/"
-    connected_nuclide_roots = [
-        nuclide_root
-        for nuclide_root in nuclide_roots
-        if path == nuclide_root or nuclide_root.startswith(path_prefix)
-    ]
-    if not connected_nuclide_roots:
-        # There do not appear to be any Nuclide connections for path.
-        return
-
-    subscriptions = _call_watchman(["debug-get-subscriptions", path])
-    subscribers = subscriptions.get("subscribers", [])
-    subscription_counts: Dict[str, int] = {}
-    for subscriber in subscribers:
-        info = subscriber.get("info", {})
-        name = info.get("name")
-        if name is None:
-            continue
-        elif name in subscription_counts:
-            subscription_counts[name] += 1
-        else:
-            subscription_counts[name] = 1
-
-    missing_or_duplicate_subscriptions = []
-    for nuclide_root in connected_nuclide_roots:
-        filewatcher_subscription = f"filewatcher-{nuclide_root}"
-        # Note that even if the user has `nuclide_root` opened in multiple
-        # Nuclide windows, the Nuclide server should not create the
-        # "filewatcher-" subscription multiple times.
-        if subscription_counts.get(filewatcher_subscription) != 1:
-            missing_or_duplicate_subscriptions.append(filewatcher_subscription)
-
-    # Today, Nuclide creates a number of Watchman subscriptions per root
-    # folder that is under an Hg working copy. (It should probably
-    # consolidate these subscriptions, though it will take some work to
-    # refactor things to do that.) Because each of connected_nuclide_roots
-    # is a root folder in at least one Atom window, there must be at least
-    # as many instances of each subscription as there are
-    # connected_nuclide_roots.
-    #
-    # TODO(mbolin): Come up with a more stable contract than including a
-    # hardcoded list of Nuclide subscription names in here because Eden and
-    # Nuclide releases are not synced. This is admittedly a stopgap measure:
-    # the primary objective is to figure out how Eden/Nuclide gets into
-    # this state to begin with and prevent it.
-    #
-    # Further, Nuclide should probably rename these subscriptions so that:
-    # (1) It is clear that Nuclide is the one who created the subscription.
-    # (2) The subscription can be ascribed to an individual Nuclide client
-    #     if we are going to continue to create the same subscription
-    #     multiple times.
-    num_roots = len(connected_nuclide_roots)
-    for hg_subscription in NUCLIDE_HG_SUBSCRIPTIONS:
-        if subscription_counts.get(hg_subscription, 0) < num_roots:
-            missing_or_duplicate_subscriptions.append(hg_subscription)
-
-    if missing_or_duplicate_subscriptions:
-
-        def format_paths(paths: List[str]) -> str:
-            return "\n  ".join(paths)
-
-        missing_subscriptions = [
-            sub
-            for sub in missing_or_duplicate_subscriptions
-            if 0 == subscription_counts.get(sub, 0)
-        ]
-        duplicate_subscriptions = [
-            sub
-            for sub in missing_or_duplicate_subscriptions
-            if 1 < subscription_counts.get(sub, 0)
-        ]
-
-        output = io.StringIO()
-        output.write(
-            "Nuclide appears to be used to edit the following directories\n"
-            f"under {path}:\n\n"
-            f"  {format_paths(connected_nuclide_roots)}\n\n"
-        )
-        if missing_subscriptions:
-            output.write(
-                "but the following Watchman subscriptions appear to be missing:\n\n"
-                f"  {format_paths(missing_subscriptions)}\n\n"
-            )
-        if duplicate_subscriptions:
-            conj = "and" if missing_subscriptions else "but"
-            output.write(
-                f"{conj} the following Watchman subscriptions have duplicates:\n\n"
-                f"  {format_paths(duplicate_subscriptions)}\n\n"
-            )
-        output.write(
-            "This can cause file changes to fail to show up in Nuclide.\n"
-            "Currently, the only workaround for this is to run\n"
-            '"Nuclide Remote Projects: Kill And Restart" from the\n'
-            "command palette in Atom.\n"
-        )
-        tracker.add_problem(Problem(output.getvalue()))
-
-
 def check_snapshot_dirstate_consistency(
     tracker: ProblemTracker, instance: EdenInstance, path: str, snapshot_hex: str
 ) -> None:
@@ -1092,41 +827,3 @@ may have important bug fixes or performance improvements.
             severity=ProblemSeverity.ADVICE,
         )
     )
-
-
-def _get_watch_roots_for_watchman() -> Set[str]:
-    js = _call_watchman(["watch-list"])
-    roots = set(js.get("roots", []))
-    return roots
-
-
-def _call_watchman(args: List[str]) -> Dict:
-    full_args = ["watchman"]
-    full_args.extend(args)
-    return _check_json_output(full_args)
-
-
-def _get_roots_for_nuclide() -> Optional[Set[str]]:
-    connections = _check_json_output(["nuclide-connections"])
-    if isinstance(connections, list):
-        return set(connections)
-    else:
-        # connections should be a dict with an "error" property.
-        return None
-
-
-def _check_json_output(args: List[str]) -> Dict[str, Any]:
-    """Calls subprocess.check_output() and returns the output parsed as JSON.
-    If the call fails, it will write the error to stderr and return a dict with
-    a single property named "error".
-    """
-    try:
-        output = subprocess.check_output(args)
-        return typing.cast(Dict[str, Any], json.loads(output))
-    except Exception as e:
-        # FileNotFoundError if the command is not found.
-        # CalledProcessError if the command exits unsuccessfully.
-        # ValueError if `output` is not valid JSON.
-        errstr = getattr(e, "strerror", str(e))
-        log.warning(f'Calling `{" ".join(args)}` failed with: {errstr}')
-        return {"error": str(e)}
