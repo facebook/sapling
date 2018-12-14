@@ -665,3 +665,11 @@ Set the limit back high, and try again
   b226c8ca23a2db9b70a50978c6d30658683d9e9f backed up
   $ scratchnodes | grep b226c8ca23a2db9b70a50978c6d30658683d9e9f
   b226c8ca23a2db9b70a50978c6d30658683d9e9f 17b31b46303cad87ba9dc939fcd19ce0f31c6df8
+
+Test push for new bookmark, should not be pushed with --delete-bookmarks
+  $ hg book booktester
+  $ hg pushbackup --delete-bookmarks
+  starting backup .* (re)
+  nothing to backup
+  $ scratchbookmarks | grep booktester
+  [1]

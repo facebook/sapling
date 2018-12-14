@@ -168,13 +168,13 @@ def _smartlogbackupmessagemap(orig, ui, repo):
         return orig(ui, repo)
 
 
-def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None):
+def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None, **opts):
     if commitcloudutil.getworkspacename(repo) is not None:
-        return orig(ui, repo, dest, ["hg", "cloud", "sync"])
+        return orig(ui, repo, dest, ["hg", "cloud", "sync"], **opts)
     else:
         if ui.configbool("commitcloud", "autocloudjoin"):
-            return orig(ui, repo, dest, ["hg", "cloud", "join"])
-        return orig(ui, repo, dest, command)
+            return orig(ui, repo, dest, ["hg", "cloud", "join"], **opts)
+        return orig(ui, repo, dest, command, **opts)
 
 
 def _smartlogbackuphealthcheckmsg(orig, ui, repo, **opts):

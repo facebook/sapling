@@ -271,7 +271,18 @@ def backupdisable(ui, repo, **opts):
     return 0
 
 
-@command("pushbackup", [("", "background", None, "run backup in background")])
+@command(
+    "pushbackup",
+    [
+        ("", "background", None, "run backup in background"),
+        (
+            "",
+            "delete-bookmarks",
+            None,
+            "don't push auxiliary bookmarks and delete existing",
+        ),
+    ],
+)
 def backup(ui, repo, dest=None, **opts):
     """
     Pushes commits, bookmarks and heads to infinitepush.
@@ -283,7 +294,7 @@ def backup(ui, repo, dest=None, **opts):
         infinitepush/backups/USERNAME/HOST/REPOROOT/heads/HEAD_HASH
     """
     if opts.get("background"):
-        _dobackgroundbackup(ui, repo, dest)
+        _dobackgroundbackup(ui, repo, dest, **opts)
         return 0
 
     try:
@@ -782,7 +793,9 @@ def _dobackup(ui, repo, dest, **opts):
 
     # Work out what the heads and bookmarks to backup are.
     headstobackup = _backupheads(ui, repo)
-    localbookmarks = _getlocalbookmarks(repo)
+    localbookmarks = (
+        _getlocalbookmarks(repo) if not opts.get("delete_bookmarks") else {}
+    )
 
     # We don't want to backup commits that are marked as bad.
     headstobackup = _filterbadnodes(ui, repo, headstobackup)
@@ -860,7 +873,7 @@ def _dobackup(ui, repo, dest, **opts):
         raise error.Abort(_("failed to backup %d heads\n") % len(failedheads))
 
 
-def _dobackgroundbackup(ui, repo, dest=None, command=None):
+def _dobackgroundbackup(ui, repo, dest=None, command=None, **opts):
     background_cmd = command or ["hg", "pushbackup"]
     infinitepush_bgssh = ui.config("infinitepush", "bgssh")
     if infinitepush_bgssh:
@@ -873,6 +886,9 @@ def _dobackgroundbackup(ui, repo, dest=None, command=None):
     # developer config: infinitepushbackup.bgdebug
     if ui.configbool("infinitepushbackup", "bgdebug", False):
         background_cmd.append("--debug")
+
+    if opts.get("delete_bookmarks"):
+        background_cmd.append("--delete-bookmarks")
 
     if dest:
         background_cmd.append(dest)
