@@ -1117,10 +1117,44 @@ kill -9 475204 475205 575204 575205
 """,
         )
 
+    def test_single_edenfs_process_per_dir_okay(self):
+        # The rogue process finder should not complain about edenfs processes
+        # when there is just a single edenfs process running per directory, even if the
+        # pid file does not appear to currently contain that pid.
+        #
+        # The pid file check is inherently racy.  `eden doctor` may not read the correct
+        # pid if edenfs was in the middle of (re)starting.  Therefore we intentionally
+        # only report rogue processes when we can actually confirm there is more than
+        # one edenfs process running for a given directory.
+        process_finder = FakeProcessFinder()
+        # In config1/ replace the lock file contents with a different process ID
+        process_finder.add_edenfs(123_203, "/tmp/config1/.eden", set_lockfile=False)
+        process_finder.set_file_contents("/tmp/config1/.eden/lock", "9765\n")
+        # In config2/ do not write a lock file at all
+        process_finder.add_edenfs(123_456, "/tmp/config2/.eden", set_lockfile=False)
+        # In config3/ report two separate edenfs processes, with one legitimate rogue
+        # process
+        process_finder.add_edenfs(123_900, "/tmp/config3/.eden")
+        process_finder.add_edenfs(123_901, "/tmp/config3/.eden", set_lockfile=False)
+
+        fixer, out = self.run_check(process_finder, dry_run=False)
+        self.assertEqual(
+            out,
+            f"""\
+<yellow>- Found problem:<reset>
+Many edenfs processes are running. Please keep only one for each config directory.
+kill -9 123901
+
+""",
+        )
+
     def test_when_lock_file_op_has_io_exception(self):
         process_finder = FakeProcessFinder()
         process_finder.add_edenfs(
             475_203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+        )
+        process_finder.add_edenfs(
+            475_204, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
         with self.assertLogs() as logs_assertion:
             fixer, out = self.run_check(process_finder, dry_run=False)

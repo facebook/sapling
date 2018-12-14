@@ -66,8 +66,6 @@ class LinuxProcessFinder(ProcessFinder):
         return path.read_bytes()
 
     def keep_only_rogue_pids(self, output: bytes) -> List[ProcessID]:
-        pid_list: List[ProcessID] = []
-
         pid_config_dict: Dict[Path, List[ProcessID]] = {}
         # find all potential pids
         for line in output.splitlines():
@@ -79,7 +77,7 @@ class LinuxProcessFinder(ProcessFinder):
                 continue
             pid = ProcessID(entries[0])
             eden_dir: Optional[Path] = None
-            for i in range(len(entries) - 1):
+            for i in range(2, len(entries) - 1):
                 if entries[i] == b"--edenDir":
                     eden_dir = Path(os.fsdecode(entries[i + 1]))
                     break
@@ -98,16 +96,25 @@ class LinuxProcessFinder(ProcessFinder):
             pid_config_dict[eden_dir].append(pid)
 
         log.debug(f"List of processes per eden_dir output: {pid_config_dict}")
-        # find the real PID we want to save
+
+        # Filter this list to only ones that we can confirm shouldn't be running
+        rogue_pids: List[ProcessID] = []
         for eden_dir, pid_list in pid_config_dict.items():
+            # Only bother checking for rogue processes if we found more than one EdenFS
+            # instance for this directory.
+            #
+            # The check below is inherently racy: it can misdetect state if edenfs
+            # processes are currently starting/stopping/restarting while it runs.
+            # Therefore we only want to try and report this if we actually find multiple
+            # edenfs processes for the same state directory.
+            if len(pid_list) <= 1:
+                continue
+
             lockfile = eden_dir / "lock"
             try:
                 lock_pid = ProcessID(self.read_lock_file(lockfile).strip())
-                if lock_pid in pid_list:
-                    pid_list.remove(ProcessID(lock_pid))
             except IOError:
                 log.warning(f"Lock file cannot be read for {eden_dir}", exc_info=True)
-                pid_list[:] = []
                 continue
             except ValueError:
                 log.warning(
@@ -115,11 +122,11 @@ class LinuxProcessFinder(ProcessFinder):
                     f"{lockfile}",
                     exc_info=True,
                 )
-                pid_list[:] = []
                 continue
 
-        # flatten all lists from dict's values
-        pid_list = [v for sublist in pid_config_dict.values() for v in sublist]
+            for pid in pid_list:
+                if pid != lock_pid:
+                    rogue_pids.append(pid)
 
-        log.debug(f"List of rogue processes : {pid_list}")
-        return pid_list
+        log.debug(f"List of rogue processes : {rogue_pids}")
+        return rogue_pids
