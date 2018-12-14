@@ -16,7 +16,7 @@ use failure::{err_msg, Result, ResultExt};
 use panichandler::{self, Fate};
 use slog::{Drain, Logger};
 use sloggers::Build;
-use sloggers::terminal::TerminalLoggerBuilder;
+use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::{Format, Severity, SourceLocation};
 
 use cachelib;
@@ -203,6 +203,7 @@ pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
         }
         "compact" => {
             let mut builder = TerminalLoggerBuilder::new();
+            builder.destination(Destination::Stderr);
             builder.level(severity);
             builder.format(Format::Compact);
             builder.source_location(SourceLocation::None);
