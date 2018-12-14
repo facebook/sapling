@@ -28,7 +28,7 @@ import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import filesystem, mtab, process_finder, util
 from eden.cli.config import EdenInstance, HealthStatus
-from eden.cli.doctor import check_rogue_edenfs, check_watchman
+from eden.cli.doctor import check_os, check_rogue_edenfs, check_watchman
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from fb303.ttypes import fb_status
 
@@ -2557,7 +2557,7 @@ class OperatingSystemsCheckTest(DoctorTestBase):
         )
         for test_version, expected in test_versions:
             with self.subTest(test_version=test_version):
-                result = doctor._parse_os_kernel_version(test_version)
+                result = check_os._parse_os_kernel_version(test_version)
                 self.assertEquals(result, expected)
 
     def test_kernel_version_min(self) -> None:
@@ -2573,7 +2573,7 @@ class OperatingSystemsCheckTest(DoctorTestBase):
         )
         for fake_release, expected in min_kernel_versions_tests:
             with self.subTest(fake_release=fake_release):
-                result = doctor._os_is_kernel_version_too_old(
+                result = check_os._os_is_kernel_version_too_old(
                     typing.cast(EdenInstance, self.instance), fake_release
                 )
                 self.assertIs(result, expected)
@@ -2582,7 +2582,7 @@ class OperatingSystemsCheckTest(DoctorTestBase):
         bad_kernel_versions_tests = ("4.11.3-52_fbk13", "999.2.3-4_TEST", "777.1_TODO")
         for bad_release in bad_kernel_versions_tests:
             with self.subTest(bad_release=bad_release):
-                result = doctor._os_is_bad_release(
+                result = check_os._os_is_bad_release(
                     typing.cast(EdenInstance, self.instance), bad_release
                 )
                 self.assertTrue(result)
