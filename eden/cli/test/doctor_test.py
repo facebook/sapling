@@ -33,6 +33,7 @@ from eden.cli.doctor import (
     check_hg,
     check_os,
     check_rogue_edenfs,
+    check_stale_mounts,
     check_watchman,
 )
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
@@ -2004,7 +2005,7 @@ class StaleMountsCheckTest(DoctorTestBase):
 
     def run_check(self, dry_run: bool) -> Tuple[doctor.ProblemFixer, str]:
         fixer, out = self.create_fixer(dry_run)
-        doctor.check_for_stale_mounts(fixer, mount_table=self.mount_table)
+        check_stale_mounts.check_for_stale_mounts(fixer, mount_table=self.mount_table)
         return fixer, out.getvalue()
 
     def test_does_not_unmount_active_mounts(self):
@@ -2111,21 +2112,22 @@ Failed to fix problem: Failed to unmount 1 mount point:
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    @patch("eden.cli.doctor.log.warning")
-    def test_does_not_unmount_if_cannot_stat_stale_mount(self, warning):
+    def test_does_not_unmount_if_cannot_stat_stale_mount(self):
         self.mount_table.add_mount("/mnt/stale1")
         self.mount_table.fail_access("/mnt/stale1", errno.EACCES)
         self.mount_table.fail_access("/mnt/stale1/.eden", errno.EACCES)
 
-        fixer, out = self.run_check(dry_run=False)
-        self.assertEqual("", out)
-        self.assertEqual(0, fixer.num_problems)
-        self.assertEqual([], self.mount_table.unmount_lazy_calls)
-        self.assertEqual([], self.mount_table.unmount_force_calls)
+        with self.assertLogs() as logs_assertion:
+            fixer, out = self.run_check(dry_run=False)
+            self.assertEqual("", out)
+            self.assertEqual(0, fixer.num_problems)
+            self.assertEqual([], self.mount_table.unmount_lazy_calls)
+            self.assertEqual([], self.mount_table.unmount_force_calls)
         # Verify that the reason for skipping this mount is logged.
-        warning.assert_called_once_with(
+        self.assertIn(
             "Unclear whether /mnt/stale1 is stale or not. "
-            "lstat() failed: [Errno 13] Permission denied"
+            "lstat() failed: [Errno 13] Permission denied",
+            "\n".join(logs_assertion.output),
         )
 
     def test_does_unmount_if_stale_mount_is_unconnected(self):
