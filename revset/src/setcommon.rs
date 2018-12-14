@@ -13,6 +13,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::{ChangesetId, Generation};
 use std::boxed::Box;
+#[cfg(test)]
 use std::marker::PhantomData;
 use std::sync::Arc;
 
