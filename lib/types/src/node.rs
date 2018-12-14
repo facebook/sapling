@@ -6,6 +6,9 @@ use std::io::{self, Read, Write};
 #[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;
 
+#[cfg(any(test, feature = "for-tests"))]
+use std::collections::HashSet;
+
 #[derive(Debug, Fail)]
 #[fail(display = "Node Error: {:?}", _0)]
 struct NodeError(String);
@@ -83,6 +86,20 @@ impl Node {
                 return node;
             }
         }
+    }
+
+    #[cfg(any(test, feature = "for-tests"))]
+    pub fn random_distinct(rng: &mut RngCore, count: usize) -> Vec<Self> {
+        let mut nodes = Vec::new();
+        let mut nodeset = HashSet::new();
+        while nodes.len() < count {
+            let node = Node::random(rng);
+            if !nodeset.contains(&node) {
+                nodeset.insert(node.clone());
+                nodes.push(node);
+            }
+        }
+        nodes
     }
 }
 
