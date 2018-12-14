@@ -1,6 +1,6 @@
 // Copyright Facebook, Inc. 2018
 use errors::Result;
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display};
 use std::io::{self, Read, Write};
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -18,7 +18,7 @@ const HEX_CHARS: &[u8] = b"0123456789abcdef";
 
 /// A 20-byte identifier, often a hash. Nodes are used to uniquely identify
 /// commits, file versions, and many other things.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Node([u8; 20]);
 
 /// The nullid (0x00) is used throughout Mercurial to represent "None".
@@ -106,6 +106,12 @@ impl Node {
 impl Display for Node {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.to_hex(), fmt)
+    }
+}
+
+impl Debug for Node {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Node({:?})", &self.to_hex())
     }
 }
 
