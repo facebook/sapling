@@ -165,9 +165,9 @@ def crdump(ui, repo, *revs, **opts):
             )
         )
         ui.write("\n")
-    except Exception as e:
+    except Exception:
         shutil.rmtree(outdir)
-        raise e
+        raise
 
 
 def dumppatch(ui, repo, ctx, outdir, contextlines):
