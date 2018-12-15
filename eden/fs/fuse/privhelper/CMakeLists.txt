@@ -4,15 +4,22 @@ add_library(
     ${PRIVHELPER_SRCS}
 )
 
-target_include_directories(
-  eden_fuse_privhelper
-  PRIVATE
-    ${SELINUX_INCLUDE_DIR}
-)
 target_link_libraries(
   eden_fuse_privhelper
   PUBLIC
     eden_utils
     Folly::folly
-    ${SELINUX_LIBRARIES}
 )
+
+if (SELINUX_INCLUDE_DIR)
+  target_include_directories(
+    eden_fuse_privhelper
+    PRIVATE
+      ${SELINUX_INCLUDE_DIR}
+  )
+  target_link_libraries(
+    eden_fuse_privhelper
+    PUBLIC
+      ${SELINUX_LIBRARIES}
+  )
+endif()
