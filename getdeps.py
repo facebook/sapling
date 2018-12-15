@@ -95,13 +95,41 @@ class GitUpdater(object):
         run_cmd(["git", "-C", project.path, "clean", "-fxd"])
 
 
+def fixup_env_for_darwin(env):
+    def add_flag(name, item, separator, append=True):
+        val = env.get(name, "").split(separator)
+        if append:
+            val.append(item)
+        else:
+            val.insert(0, item)
+        env[name] = separator.join(val)
+
+    # The brew/openssl installation situation is a bit too weird for vanilla
+    # cmake logic to find, and most packages don't deal with this correctly,
+    # so inject these into the environment to give them a hand
+    add_flag("PKG_CONFIG_PATH", "/usr/local/opt/openssl/lib/pkgconfig", ":")
+    add_flag("LDFLAGS", "-L/usr/local/opt/openssl/lib", " ")
+    add_flag("CPPFLAGS", "-I/usr/local/opt/openssl/include", " ")
+
+    # system bison is ancient, so ensure that the brew installed one takes
+    # precedence.  Brew refuses to to install or link bison into /usr/local/bin,
+    # so we have to insert this opt path instead.  Likewise for flex.
+    add_flag("PATH", "/usr/local/opt/bison/bin", ":", append=False)
+    add_flag("PATH", "/usr/local/opt/flex/bin", ":", append=False)
+
+    # flex generates code that sprinkles the `register` keyword liberally
+    # and the thrift compilation flags hate that in C++17 code.  Disable
+    # the warning that promotes this to an error.
+    add_flag("CXXFLAGS", "-Wno-register", " ")
+
+
 class BuilderBase(object):
     def __init__(self, subdir=None, env=None, build_dir=None):
+        self.env = os.environ.copy()
+        if sys.platform == "darwin":
+            fixup_env_for_darwin(self.env)
         if env:
-            self.env = os.environ.copy()
             self.env.update(env)
-        else:
-            self.env = None
 
         self.subdir = subdir
         self.build_dir = build_dir
@@ -231,7 +259,9 @@ def get_projects(opts):
             "fizz",
             opts,
             GitUpdater("https://github.com/facebookincubator/fizz.git"),
-            CMakeBuilder(subdir="fizz"),
+            CMakeBuilder(
+                subdir="fizz", defines={"BUILD_EXAMPLES": "OFF", "BUILD_TESTS": "OFF"}
+            ),
         ),
         Project(
             "wangle",
@@ -304,6 +334,36 @@ def install_platform_deps():
             "libsqlite3-dev libzstd-dev"
         ).split()
         install_apt(ubuntu_pkgs)
+    elif os_name == "darwin":
+        print("Installing necessary packages via Homebrew...")
+        run_cmd(
+            [
+                "brew",
+                "install",
+                "autoconf",
+                "automake",
+                "bison",
+                "boost",
+                "boost-python",
+                "cmake",
+                "curl",
+                "double-conversion",
+                "flex",
+                "gflags",
+                "glog",
+                "libevent",
+                "libgit2",
+                "libtool",
+                "lz4",
+                "openssl",
+                "snappy",
+                "xz",
+                "zstd",
+            ]
+        )
+        run_cmd(["brew", "tap", "homebrew/cask"])
+        run_cmd(["brew", "cask", "install", "osxfuse"])
+
     else:
         # TODO: Handle distributions other than Ubuntu.
         raise Exception(
