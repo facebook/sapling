@@ -177,8 +177,8 @@ std::unordered_map<pid_t, size_t> ProcessAccessLog::getAllAccesses(
   }
 
   Bucket bucket;
-  uint64_t count =
-      std::min(allBuckets.size(), static_cast<uint64_t>(secondCount));
+  uint64_t count = std::min(static_cast<uint64_t>(allBuckets.size()),
+                            static_cast<uint64_t>(secondCount));
   for (auto iter = allBuckets.end() - count; iter != allBuckets.end(); ++iter) {
     bucket.merge(*iter);
   }
