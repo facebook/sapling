@@ -1,8 +1,6 @@
 add_thrift_cpp2_library(
   eden_takeover_thrift
   takeover.thrift
-  DEPENDS
-    eden_fuse_handlemap
 )
 
 file(GLOB TAKEOVER_SRCS "*.cpp")
