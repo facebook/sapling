@@ -13,7 +13,9 @@
 #include <folly/logging/xlog.h>
 #include <grp.h>
 #include <pwd.h>
+#ifdef __linux__
 #include <sys/prctl.h>
+#endif
 #include <vector>
 #include "eden/fs/eden-config.h"
 
@@ -74,12 +76,14 @@ void UserInfo::dropPrivileges() {
   rc = setreuid(uid_, uid_);
   checkUnixError(rc, "failed to drop user privileges");
 
+#ifdef __linux__
   // Per PR_SET_DUMPABLE's documentation in ptrace(2), the dumpable bit is set
   // to 0 on any call to setregid or setreuid.  Since we've dropped privileges,
   // reset the dumpable bit to 1 so gdb can attach to Eden without running as
   // root.  This also means that edenfs can produce core dumps.
   rc = prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
   checkUnixError(rc, "failed to mark process dumpable");
+#endif
 
   dropToBasicSELinuxPrivileges();
 }
