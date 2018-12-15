@@ -1,4 +1,6 @@
 
+  $ shorttraceback
+
   $ . "$TESTDIR/library.sh"
 
   $ hginit master
@@ -153,7 +155,6 @@
 
 # Test that it doesn't break non-remotefilelog repos
 
-  $ cd ..
   $ newrepo
   $ setconfig remotefilelog.packlocaldata=True
   $ echo 1 >> a
@@ -202,14 +203,26 @@
 # Test compatibility with LFS
 
   $ newrepo
-  $ enable lfs
-  $ setconfig lfs.threshold=1B lfs.url=file://$TESTTMP/lfs
+  $ echo remotefilelog >> .hg/requires
+  $ enable lfs remotefilelog
+  $ setconfig lfs.threshold=1B lfs.url=file://$TESTTMP/lfs remotefilelog.packlocaldata=1
+  $ hg log
+  $ printf THIS-IS-LFS > A
+  $ hg ci -m A -A A
+  transaction abort!
+  rollback completed
+  ProgrammingError: v0 pack cannot store flags
+  [255]
   $ drawdag <<'EOS'
   > A # A/A=THIS-IS-LFS
   > EOS
+  transaction abort!
+  rollback completed
+  ProgrammingError: v0 pack cannot store flags
   $ hg cat -r $A A
-  THIS-IS-LFS (no-eol)
+  abort: unknown revision 'aa3b73f5f0b4334e80037d133f112bb9fb9d98cb'!
+  [255]
 
   $ hg debugfilerev -r $A
-  267e8be81b24: A
-   A: bin=0 lnk=0 flag=2000 size=11 copied='' chain=7d8ad6217b8a
+  abort: unknown revision 'aa3b73f5f0b4334e80037d133f112bb9fb9d98cb'!
+  [255]
