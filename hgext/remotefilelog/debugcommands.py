@@ -267,9 +267,14 @@ def debugdatapack(ui, *paths, **opts):
         node = opts.get("node")
         if node:
             unionstore = unioncontentstore(dpack)
-            content = unionstore.get("", bin(node))
-            ui.write(("%s") % content)
-            return
+            try:
+                content = unionstore.get("", bin(node))
+            except KeyError:
+                ui.write(("(not found)\n"))
+                continue
+            else:
+                ui.write(("%s") % content)
+                return
 
         if opts.get("long"):
             hashformatter = hex
