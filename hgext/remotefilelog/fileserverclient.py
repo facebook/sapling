@@ -16,7 +16,16 @@ import subprocess
 import threading
 import time
 
-from mercurial import error, httppeer, progress, revlog, sshpeer, util, wireproto
+from mercurial import (
+    encoding,
+    error,
+    httppeer,
+    progress,
+    revlog,
+    sshpeer,
+    util,
+    wireproto,
+)
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 
@@ -620,6 +629,9 @@ class fileserverclient(object):
             self.remotecache = simplecache()
 
     def close(self):
+        # Make it "run-tests.py -i" friendly
+        if "TESTTMP" in encoding.environ:
+            fetchcost = 0
         if fetches:
             msg = (
                 "%s files fetched over %d fetches - "
