@@ -8,9 +8,10 @@
  *
  */
 #include "eden/fs/utils/ProcessNameCache.h"
+#include "eden/fs/utils/Synchronized.h"
 #include <folly/FileUtil.h>
 #include <folly/MapUtil.h>
-#include "eden/fs/utils/Synchronized.h"
+#include <optional>
 
 using namespace std::literals;
 
