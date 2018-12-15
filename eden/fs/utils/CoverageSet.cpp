@@ -34,6 +34,13 @@ void CoverageSet::add(size_t begin, size_t end) {
   Iter right = set_.lower_bound(Interval{begin, end});
   Iter left = right == set_.begin() ? set_.end() : std::prev(right);
 
+  // While the xcode 10 clang compiler is C++17, its libc++ doesn't
+  // implement node_type/extract from C++17, so we need to live
+  // without it for now.  When that support is available, we can
+  // remove this ifdef.
+#ifdef __APPLE__
+  auto erase = [&](Iter iter) -> void { set_.erase(iter); };
+#else
   // To avoid allocation when possible, save up to one node that can be
   // modified before reinsertion.
   Set::node_type reuse_handle;
@@ -45,6 +52,7 @@ void CoverageSet::add(size_t begin, size_t end) {
       reuse_handle = set_.extract(iter);
     }
   };
+#endif
 
   // In the case that the new interval is completely subsumed by an existing
   // interval, this code currently rebalances once on the erase and once on the
@@ -62,11 +70,14 @@ void CoverageSet::add(size_t begin, size_t end) {
     right = next;
   }
 
+#ifndef __APPLE__
   if (reuse_handle) {
     reuse_handle.value().begin = begin;
     reuse_handle.value().end = end;
     set_.insert(std::move(reuse_handle));
-  } else {
+  } else
+#endif
+  {
     set_.insert(Interval{begin, end});
   }
 }
