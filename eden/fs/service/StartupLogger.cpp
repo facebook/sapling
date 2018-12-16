@@ -143,11 +143,27 @@ void DaemonStartupLogger::sendResult(ResultType result) {
   setsid();
 }
 
+namespace {
+void setCloExec(int fd) {
+#ifndef FOLLY_HAVE_PIPE2
+  fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
+#else
+  (void)fd;
+#endif
+}
+} // namespace
+
 File DaemonStartupLogger::createPipe() {
   // Create the pipe for communication between the processes
   std::array<int, 2> pipeFDs;
+#ifdef FOLLY_HAVE_PIPE2
   auto rc = pipe2(pipeFDs.data(), O_CLOEXEC);
+#else
+  auto rc = pipe(pipeFDs.data());
+#endif
   checkUnixError(rc, "failed to create communication pipes for daemonization");
+  setCloExec(pipeFDs[0]);
+  setCloExec(pipeFDs[1]);
   pipe_ = folly::File(pipeFDs[1], /*ownsFd=*/true);
 
   return folly::File(pipeFDs[0], /*ownsFd=*/true);
