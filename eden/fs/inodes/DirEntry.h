@@ -190,7 +190,15 @@ class DirEntry {
    * Overlay Dir storage. After the InodeMetadataTable is in use for a while,
    * this should be replaced with dtype_t and the bitfields can go away.
    */
+#ifdef __APPLE__
+  // macOS: mode_t is only 16 bits wide, so use its full width here
+  mode_t initialMode_;
+  static_assert(
+      sizeof(mode_t) <= 30,
+      "expected mode_t to be smaller than 30 bits on Mac OS X");
+#else
   mode_t initialMode_ : 30;
+#endif
 
   /**
    * Whether the hash_ field matches the contents from source control. If
