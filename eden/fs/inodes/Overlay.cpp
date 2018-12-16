@@ -144,8 +144,13 @@ void Overlay::initOverlay() {
   }
 
   // Open a handle on the overlay directory itself
-  int dirFd =
-      open(localDir_.c_str(), O_RDONLY | O_PATH | O_DIRECTORY | O_CLOEXEC);
+  int dirFd = open(
+      localDir_.c_str(),
+      O_RDONLY |
+#ifdef O_PATH
+          O_PATH |
+#endif
+          O_DIRECTORY | O_CLOEXEC);
   folly::checkUnixError(
       dirFd, "error opening overlay directory handle for ", localDir_.value());
   dirFile_ = File{dirFd, /* ownsFd */ true};
