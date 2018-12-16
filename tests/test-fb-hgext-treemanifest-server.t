@@ -57,7 +57,7 @@ Test committing auto-downloads server trees and produces local trees
   2 trees fetched over * (glob)
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/4d21ecb6c95e12dcf807b793cd1c55eeed861734:
+  $TESTTMP/hgcache/master/packs/manifests/878a145025fb3997b91efd9bb5f384e27d81f327:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
@@ -68,7 +68,7 @@ Test committing auto-downloads server trees and produces local trees
   
 
   $ hg debugdatapack .hg/store/packs/manifests/*.dataidx
-  .hg/store/packs/manifests/e3876af326e0e51d1f3ea0444d2b1a7db2915763:
+  .hg/store/packs/manifests/142949b3e7a62ab1d76f6d0720ca3117b819da1f:
   subdir2:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
@@ -90,7 +90,7 @@ Test pushing only flat manifests without pushrebase creates trees
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       1 ddb35f099a64 000000000000 000000000000
   $ hg debugdatapack .hg/store/packs/manifests/*.datapack
-  .hg/store/packs/manifests/e3876af326e0e51d1f3ea0444d2b1a7db2915763:
+  .hg/store/packs/manifests/142949b3e7a62ab1d76f6d0720ca3117b819da1f:
   subdir2:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)

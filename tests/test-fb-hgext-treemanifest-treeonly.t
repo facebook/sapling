@@ -84,8 +84,8 @@ Make a local hybrid flat+tree draft commit
   $ hg up '.^'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1106 3c68632603fbc30bd6ee720bd43c0f0940930cc8.dataidx
-  -r--r--r--     211 3c68632603fbc30bd6ee720bd43c0f0940930cc8.datapack
+  -r--r--r--    1114 768e50b2051c807d50b545de7cd42db8c0789a53.dataidx
+  -r--r--r--     219 768e50b2051c807d50b545de7cd42db8c0789a53.datapack
   -r--r--r--    1196 a5c12ff082e94f0aabc66725c89bcb2e624310bf.histidx
   -r--r--r--     183 a5c12ff082e94f0aabc66725c89bcb2e624310bf.histpack
 

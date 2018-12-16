@@ -474,7 +474,10 @@ class basepack(versionmixin):
 
 
 class mutablebasepack(versionmixin):
-    def __init__(self, ui, packdir, version=0):
+    def __init__(self, ui, packdir, version=None):
+        if version is None:
+            # Use the latest version
+            version = max(self.SUPPORTED_VERSIONS)
         self._checkversion(version)
 
         opener = vfsmod.vfs(packdir)

@@ -53,21 +53,21 @@
   $ findfilessorted .hg/store/packs
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histidx
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histpack
-  .hg/store/packs/56ada2b7be9789489f60b142cc493ce506db4b97.dataidx
-  .hg/store/packs/56ada2b7be9789489f60b142cc493ce506db4b97.datapack
+  .hg/store/packs/6b9f244ddd95ecb2e7d32472c05bad1883b34cea.dataidx
+  .hg/store/packs/6b9f244ddd95ecb2e7d32472c05bad1883b34cea.datapack
 
   $ echo "new commit - 2" > new_file
   $ hg commit -qAm "one more node - 2"
   $ findfilessorted .hg/store/data
   $ findfilessorted .hg/store/packs
-  .hg/store/packs/07330c1ad616e8ccf9d924d039769934ebc82db8.dataidx
-  .hg/store/packs/07330c1ad616e8ccf9d924d039769934ebc82db8.datapack
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histidx
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histpack
   .hg/store/packs/3cd8d266014a45ac9f32ce6fe60bbba3ef841577.histidx
   .hg/store/packs/3cd8d266014a45ac9f32ce6fe60bbba3ef841577.histpack
-  .hg/store/packs/56ada2b7be9789489f60b142cc493ce506db4b97.dataidx
-  .hg/store/packs/56ada2b7be9789489f60b142cc493ce506db4b97.datapack
+  .hg/store/packs/6b9f244ddd95ecb2e7d32472c05bad1883b34cea.dataidx
+  .hg/store/packs/6b9f244ddd95ecb2e7d32472c05bad1883b34cea.datapack
+  .hg/store/packs/7a1982eca9ec13b2258dcf844adb3a536d733d75.dataidx
+  .hg/store/packs/7a1982eca9ec13b2258dcf844adb3a536d733d75.datapack
 
 # check the commit data
   $ hg cat -r . new_file
@@ -78,14 +78,14 @@
 # Test repack
   $ hg repack --looseonly
   $ findfilessorted .hg/store/packs
-  .hg/store/packs/07330c1ad616e8ccf9d924d039769934ebc82db8.dataidx
-  .hg/store/packs/07330c1ad616e8ccf9d924d039769934ebc82db8.datapack
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histidx
   .hg/store/packs/39a8e8bed95e2e3bb5391ee6bda40ca3ca572916.histpack
   .hg/store/packs/3cd8d266014a45ac9f32ce6fe60bbba3ef841577.histidx
   .hg/store/packs/3cd8d266014a45ac9f32ce6fe60bbba3ef841577.histpack
-  .hg/store/packs/56ada2b7be9789489f60b142cc493ce506db4b97.dataidx
-  .hg/store/packs/56ada2b7be9789489f60b142cc493ce506db4b97.datapack
+  .hg/store/packs/6b9f244ddd95ecb2e7d32472c05bad1883b34cea.dataidx
+  .hg/store/packs/6b9f244ddd95ecb2e7d32472c05bad1883b34cea.datapack
+  .hg/store/packs/7a1982eca9ec13b2258dcf844adb3a536d733d75.dataidx
+  .hg/store/packs/7a1982eca9ec13b2258dcf844adb3a536d733d75.datapack
   $ hg repack
   $ findfilessorted .hg/store/packs
   .hg/store/packs/7edafc4e8f1fcf89ce1abe2046a76ffff61d9e18.dataidx
@@ -165,8 +165,18 @@
   $ cd ../shallow
   $ hg mv x xx
   $ hg commit -m "move x to xx"
-  $ hg debugdatapack --node ede4cf65837b184e3aea21fb13ba08bcc26f7988 .hg/store/packs/80f941e578d038b4e95ddb387a289fbb1b35e38c.dataidx
-  .hg/store/packs/80f941e578d038b4e95ddb387a289fbb1b35e38c:
+  $ hg debugfilerev -r .
+  e61a2a5ac410: move x to xx
+   xx: bin=0 lnk=0 flag=0 size=4 copied='x' chain=ede4cf65837b
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  $ hg debugdatapack --node ede4cf65837b184e3aea21fb13ba08bcc26f7988 .hg/store/packs/*.dataidx
+  .hg/store/packs/30e5a4f1fde0aa10de7c8bbc818d97aac0d4087e:
+  (not found)
+  .hg/store/packs/35f801efb2af8c02fe003127b71ce4b2083a20e1:
+  (not found)
+  .hg/store/packs/7edafc4e8f1fcf89ce1abe2046a76ffff61d9e18:
+  (not found)
+  .hg/store/packs/c5539d8d2a5eb7fc3b412e76a12bcd882f797e58:
   \x01 (esc)
   copy: x
   copyrev: aee31534993a501858fb6dd96a065671922e7d51
@@ -177,7 +187,7 @@
 # Test that pending pack writes can be read
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master pending_test -q
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
   $ cd pending_test
   $ setconfig rebase.singeltransaction=True remotefilelog.packlocaldata=True
   $ drawdag <<'EOS'
@@ -209,20 +219,12 @@
   $ hg log
   $ printf THIS-IS-LFS > A
   $ hg ci -m A -A A
-  transaction abort!
-  rollback completed
-  ProgrammingError: v0 pack cannot store flags
-  [255]
   $ drawdag <<'EOS'
   > A # A/A=THIS-IS-LFS
   > EOS
-  transaction abort!
-  rollback completed
-  ProgrammingError: v0 pack cannot store flags
   $ hg cat -r $A A
-  abort: unknown revision 'aa3b73f5f0b4334e80037d133f112bb9fb9d98cb'!
-  [255]
+  THIS-IS-LFS (no-eol)
 
   $ hg debugfilerev -r $A
-  abort: unknown revision 'aa3b73f5f0b4334e80037d133f112bb9fb9d98cb'!
-  [255]
+  267e8be81b24: A
+   A: bin=0 lnk=0 flag=2000 size=11 copied='' chain=7d8ad6217b8a

@@ -102,11 +102,11 @@ Test prefetch
   $ ls $CACHEDIR/master/packs/manifests
   29938257d506f677320d5abec8e34a1a9ed635fe.histidx
   29938257d506f677320d5abec8e34a1a9ed635fe.histpack
-  8adc618d23082c0a5311a4bbf9ac08b9b9672471.dataidx
-  8adc618d23082c0a5311a4bbf9ac08b9b9672471.datapack
+  adc41dd93f904447812dd994d49bce59ea7c4360.dataidx
+  adc41dd93f904447812dd994d49bce59ea7c4360.datapack
   $ hg debugdatapack --config extensions.remotefilelog= \
   > --long $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/8adc618d23082c0a5311a4bbf9ac08b9b9672471:
+  $TESTTMP/hgcache/master/packs/manifests/adc41dd93f904447812dd994d49bce59ea7c4360:
   subdir:
   Node                                      Delta Base                                Delta Length  Blob Size
   ddb35f099a648a43a997aef53123bce309c794fd  0000000000000000000000000000000000000000  43            (missing)
@@ -150,7 +150,7 @@ Test prefetch
   ddb35f099a64  000000000000  000000000000  f15c65c6e9bd  
   $ hg debugdatapack --config extensions.remotefilelog= \
   > --node-delta ef362f8bbe8aa457b0cfc49f200cbeb7747984ed $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/8adc618d23082c0a5311a4bbf9ac08b9b9672471:
+  $TESTTMP/hgcache/master/packs/manifests/adc41dd93f904447812dd994d49bce59ea7c4360:
   
   
   Node                                      Delta Base                                Delta SHA1                                Delta Length
@@ -181,10 +181,10 @@ requires tree manifest for the base commit.
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/ac8ce590a2ff835c7a1c4a1a4653d9a2265ddae4.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/9e2665e9046d365538eaa0f532dfd5c62aa1bf9c.dataidx
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/ac8ce590a2ff835c7a1c4a1a4653d9a2265ddae4:
+  $TESTTMP/hgcache/master/packs/manifests/9e2665e9046d365538eaa0f532dfd5c62aa1bf9c:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
@@ -209,10 +209,10 @@ requires tree manifest for the base commit.
   $ hg prefetch -r '2' --base '1'
   2 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/4113a1ecc22f9f280deb722133d462720d3d7a9d.dataidx
 
   $ hg debugdatapack --config extensions.remotefilelog= $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c:
+  $TESTTMP/hgcache/master/packs/manifests/4113a1ecc22f9f280deb722133d462720d3d7a9d:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
@@ -294,11 +294,11 @@ Test auto prefetch during normal access
   $ ls $CACHEDIR/master/packs/manifests
   0ac61f8fd04a6623ecbde9812036089c557f07fa.histidx
   0ac61f8fd04a6623ecbde9812036089c557f07fa.histpack
-  a20546acd9623acde8a6b471b0a3013963d1c85d.dataidx
-  a20546acd9623acde8a6b471b0a3013963d1c85d.datapack
+  93d481677f2b09bd1cec155608977cb9806df077.dataidx
+  93d481677f2b09bd1cec155608977cb9806df077.datapack
 
   $ hg debugdatapack --config extensions.remotefilelog= $CACHEDIR/master/packs/manifests/*.datapack
-  $TESTTMP/hgcache/master/packs/manifests/a20546acd9623acde8a6b471b0a3013963d1c85d:
+  $TESTTMP/hgcache/master/packs/manifests/93d481677f2b09bd1cec155608977cb9806df077:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
@@ -348,7 +348,7 @@ Test auto prefetch during pull
   6 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/8adc618d23082c0a5311a4bbf9ac08b9b9672471:
+  $TESTTMP/hgcache/master/packs/manifests/adc41dd93f904447812dd994d49bce59ea7c4360:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
@@ -386,7 +386,7 @@ Test auto prefetch during pull
   3 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/4ee15de76c068ec1c80e3e61f2c3c476a779078a:
+  $TESTTMP/hgcache/master/packs/manifests/9c4f8bc12fc0d3a742847e75687c57cc0cafa334:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
@@ -406,7 +406,7 @@ Test auto prefetch during pull
   3 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
-  $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/c3ae0c4afc5f96ac510fd7ea3dddd0720a6d4dfb.dataidx
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
   pulling from ssh://user@dummy/master
   searching for changes
@@ -414,11 +414,11 @@ Test auto prefetch during pull
   prefetching tree for bd6f9b289c01
   2 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
-  $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/4113a1ecc22f9f280deb722133d462720d3d7a9d.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/c3ae0c4afc5f96ac510fd7ea3dddd0720a6d4dfb.dataidx
   $ hg debugdatapack --config extensions.remotefilelog= \
-  >  $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c:
+  >  $CACHEDIR/master/packs/manifests/*.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/4113a1ecc22f9f280deb722133d462720d3d7a9d:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
@@ -426,6 +426,19 @@ Test auto prefetch during pull
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
+  
+  $TESTTMP/hgcache/master/packs/manifests/c3ae0c4afc5f96ac510fd7ea3dddd0720a6d4dfb:
+  dir:
+  Node          Delta Base    Delta Length  Blob Size
+  bc0c2c938b92  000000000000  43            (missing)
+  
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  ddb35f099a64  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  1be4ab2126dd  000000000000  95            (missing)
   
 
 Test prefetching certain revs during pull
@@ -451,7 +464,7 @@ Test prefetching certain revs during pull
   3 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/4ee15de76c068ec1c80e3e61f2c3c476a779078a:
+  $TESTTMP/hgcache/master/packs/manifests/9c4f8bc12fc0d3a742847e75687c57cc0cafa334:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
@@ -474,8 +487,8 @@ Test prefetching certain revs during pull
   prefetching tree for cfacdcc4cee5
   2 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
-  > $CACHEDIR/master/packs/manifests/99050e724a9236121684523ba3f4db270e62fb58.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/99050e724a9236121684523ba3f4db270e62fb58:
+  > $CACHEDIR/master/packs/manifests/*.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/59658c2bcbdcbfd3c836edc4cdca4f0297acc287:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   bf22bc15398b  000000000000  43            (missing)
@@ -483,6 +496,19 @@ Test prefetching certain revs during pull
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   aa52a49be522  000000000000  95            (missing)
+  
+  $TESTTMP/hgcache/master/packs/manifests/9c4f8bc12fc0d3a742847e75687c57cc0cafa334:
+  dir:
+  Node          Delta Base    Delta Length  Blob Size
+  a18d21674e76  000000000000  43            (missing)
+  
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  ddb35f099a64  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  60a7f7acb6bb  000000000000  95            (missing)
   
 
 Test that prefetch refills just part of a tree when the cache is deleted

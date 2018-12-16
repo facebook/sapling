@@ -363,7 +363,7 @@ treemanifest data for the public commits.
   
 # Verify only the infinitepush commit tree data was downloaded
   $ hg debugdatapack .hg/store/packs/manifests/*datapack
-  .hg/store/packs/manifests/1eed629c715db092ec5684dbec32765f46279837:
+  .hg/store/packs/manifests/a9b899bcf54bca96b39e9e135ca0625126487ceb:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   9eee655b90d1  000000000000  43            (missing)

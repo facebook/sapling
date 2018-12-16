@@ -6,7 +6,6 @@ cat >> $HGRCPATH <<EOF
 cachepath=$CACHEDIR
 debug=True
 historypackv1=True
-datapackversion=1
 [extensions]
 remotefilelog=
 rebase=
@@ -32,7 +31,6 @@ hgcloneshallow() {
   cat >> $dest/.hg/hgrc <<EOF
 [remotefilelog]
 reponame=master
-datapackversion=1
 [phases]
 publish=False
 EOF
@@ -56,7 +54,6 @@ lfs=
 url=$lfsdir
 [remotefilelog]
 reponame=master
-datapackversion=1
 [phases]
 publish=False
 EOF

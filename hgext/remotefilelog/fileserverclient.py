@@ -631,6 +631,7 @@ class fileserverclient(object):
     def close(self):
         # Make it "run-tests.py -i" friendly
         if "TESTTMP" in encoding.environ:
+            global fetchcost
             fetchcost = 0
         if fetches:
             msg = (

@@ -73,10 +73,10 @@ Create client1 - it will have both server commits
   2 trees fetched over * (glob)
 
   $ ls .hg/store/packs/manifests
+  4b4694ea93f389701cc52b66a9ff390d280658c0.dataidx
+  4b4694ea93f389701cc52b66a9ff390d280658c0.datapack
   53e6d2d846d94f543bad25dcbaa1f753c3ce9fa6.histidx
   53e6d2d846d94f543bad25dcbaa1f753c3ce9fa6.histpack
-  a235931ce2211c58acacdf765f4050d5c92a54e5.dataidx
-  a235931ce2211c58acacdf765f4050d5c92a54e5.datapack
 
 Pushing with treemanifest disabled does not produce trees
 (disable demand import so treemanifest.py is forced to load)
@@ -108,14 +108,14 @@ cache.
   remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ ls_l $CACHEDIR/master/packs/manifests
-  -r--r--r--    1186 06f87527833ba45e5e277a5acf0a20d9e6ec2671.dataidx
-  -r--r--r--     421 06f87527833ba45e5e277a5acf0a20d9e6ec2671.datapack
   -r--r--r--    1196 1b69dc04d7f9d9825351f0af940c80f956e372b9.histidx
   -r--r--r--     183 1b69dc04d7f9d9825351f0af940c80f956e372b9.histpack
-  -r--r--r--    1106 4d21ecb6c95e12dcf807b793cd1c55eeed861734.dataidx
-  -r--r--r--     211 4d21ecb6c95e12dcf807b793cd1c55eeed861734.datapack
+  -r--r--r--    1114 878a145025fb3997b91efd9bb5f384e27d81f327.dataidx
+  -r--r--r--     219 878a145025fb3997b91efd9bb5f384e27d81f327.datapack
   -r--r--r--    1252 940bb8bf7ddf4196fff7fd1e837cbed98cb19c19.histidx
   -r--r--r--     347 940bb8bf7ddf4196fff7fd1e837cbed98cb19c19.histpack
+  -r--r--r--    1194 ab051d0b748fd193f5a4b2721359aa8588bc6d6e.dataidx
+  -r--r--r--     437 ab051d0b748fd193f5a4b2721359aa8588bc6d6e.datapack
   $ hg -R ../client2 strip -q -r 'tip^^' --config extensions.treemanifest=! --config fastmanifest.usetree=False
   $ rm -rf ../client2/.hg/store/packs
   $ mv ../client2/.hg/hgrc.bak ../client2/.hg/hgrc
@@ -144,8 +144,8 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   $ ls ../client2/.hg/store/packs/manifests
   700fb8a7918068e308a998d338d1689074118d07.histidx
   700fb8a7918068e308a998d338d1689074118d07.histpack
-  c446da942a8eb5a687e11a12920e4d4526ef765a.dataidx
-  c446da942a8eb5a687e11a12920e4d4526ef765a.datapack
+  d09e0e79320feb0d1bcae4e0027b25b52d522e96.dataidx
+  d09e0e79320feb0d1bcae4e0027b25b52d522e96.datapack
   $ mv ../client2/.hg/hgrc.bak ../client2/.hg/hgrc
   $ hg debughistorypack ../client2/.hg/store/packs/manifests/*histidx
   
@@ -187,10 +187,10 @@ Pulling between peers should send local trees but not remote trees
   $ ls_l .hg/store/packs/manifests
   -r--r--r--    1273 700fb8a7918068e308a998d338d1689074118d07.histidx
   -r--r--r--     274 700fb8a7918068e308a998d338d1689074118d07.histpack
-  -r--r--r--    1146 c446da942a8eb5a687e11a12920e4d4526ef765a.dataidx
-  -r--r--r--     402 c446da942a8eb5a687e11a12920e4d4526ef765a.datapack
+  -r--r--r--    1154 d09e0e79320feb0d1bcae4e0027b25b52d522e96.dataidx
+  -r--r--r--     414 d09e0e79320feb0d1bcae4e0027b25b52d522e96.datapack
   $ hg debugdatapack .hg/store/packs/manifests/*.datapack
-  .hg/store/packs/manifests/c446da942a8eb5a687e11a12920e4d4526ef765a:
+  .hg/store/packs/manifests/d09e0e79320feb0d1bcae4e0027b25b52d522e96:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   23226e7a252c  000000000000  43            (missing)

@@ -68,7 +68,7 @@ Make a draft commit
   fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   2 trees fetched over * (glob)
   $ hg debugdatapack .hg/store/packs/manifests/*datapack
-  .hg/store/packs/manifests/da9af3771b30963e2eb5624a2df366eb989223c1:
+  .hg/store/packs/manifests/5395c3a9f408d2f2ffac93a2f1d6f039234be6ff:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   97c1b2747888  000000000000  43            (missing)
@@ -86,7 +86,7 @@ Test bundling/unbundling
   $ hg unbundle ../treebundle.hg --debug | grep treegroup
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   $ hg debugdatapack .hg/store/packs/manifests/*datapack
-  .hg/store/packs/manifests/da9af3771b30963e2eb5624a2df366eb989223c1:
+  .hg/store/packs/manifests/5395c3a9f408d2f2ffac93a2f1d6f039234be6ff:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   97c1b2747888  000000000000  43            (missing)

@@ -51,13 +51,13 @@ Test autocreatetrees
   new changesets e4d61696a942
   (run 'hg update' to get a working copy)
   $ ls_l $CACHEDIR/master/packs/manifests
-  -r--r--r--    1146 678f597a73b2b96f2e120c84ef8a84069a250266.dataidx
-  -r--r--r--     315 678f597a73b2b96f2e120c84ef8a84069a250266.datapack
+  -r--r--r--    1154 5477a48a1f99b7c300cca583ac3ab845096424c3.dataidx
+  -r--r--r--     327 5477a48a1f99b7c300cca583ac3ab845096424c3.datapack
   -r--r--r--    1224 ed1a27864c5d25f144a51961ad6e79088f2a7571.histidx
   -r--r--r--     265 ed1a27864c5d25f144a51961ad6e79088f2a7571.histpack
 
-  $ hg debugdatapack $CACHEDIR/master/packs/manifests/678f597a73b2b96f2e120c84ef8a84069a250266
-  $TESTTMP/hgcache/master/packs/manifests/678f597a73b2b96f2e120c84ef8a84069a250266:
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/5477a48a1f99b7c300cca583ac3ab845096424c3:
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
@@ -77,10 +77,10 @@ Test that commit creates local trees
   $ echo z >> subdir/z
   $ hg commit -qAm 'modify subdir/z'
   $ ls_l .hg/store/packs/manifests
+  -r--r--r--    1114 4c1ed7b5ede2ef728698d7c27d195f42c74cd238.dataidx
+  -r--r--r--     262 4c1ed7b5ede2ef728698d7c27d195f42c74cd238.datapack
   -r--r--r--    1196 7c930adf1e81d971be4609f898b1c6948cd50023.histidx
   -r--r--r--     183 7c930adf1e81d971be4609f898b1c6948cd50023.histpack
-  -r--r--r--    1106 a7f7e084adff88a01cf76909345be1e56ee704a9.dataidx
-  -r--r--r--     254 a7f7e084adff88a01cf76909345be1e56ee704a9.datapack
   $ hg debughistorypack .hg/store/packs/manifests/7c930adf1e81d971be4609f898b1c6948cd50023.histpack
   
   
@@ -90,8 +90,8 @@ Test that commit creates local trees
   subdir
   Node          P1 Node       P2 Node       Link Node     Copy From
   ac728a786423  ddb35f099a64  000000000000  7dd80139a0c9  
-  $ hg debugdatapack .hg/store/packs/manifests/a7f7e084adff88a01cf76909345be1e56ee704a9
-  .hg/store/packs/manifests/a7f7e084adff88a01cf76909345be1e56ee704a9:
+  $ hg debugdatapack .hg/store/packs/manifests/*.dataidx
+  .hg/store/packs/manifests/4c1ed7b5ede2ef728698d7c27d195f42c74cd238:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   ac728a786423  000000000000  43            (missing)
@@ -127,8 +127,8 @@ Test rebasing a stack of commits results in a pack with all the trees
   $ hg log -r '.^::.' -T '{manifest}\n'
   0d05c20bb7eb53dbfe91f834ed3f0c26ca6ca655
   8289b85c6a307a5a64ffe3bd80bd7998775c787a
-  $ hg debugdatapack .hg/store/packs/manifests/5a5fb42e99986c90ac86b57d184561c44238b7b7.datapack
-  .hg/store/packs/manifests/5a5fb42e99986c90ac86b57d184561c44238b7b7:
+  $ hg debugdatapack .hg/store/packs/manifests/*.datapack
+  .hg/store/packs/manifests/20c4a2261c2e7b9985385ca10219670dc10a6aef:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   a4e2f032ee0f  000000000000  43            (missing)
@@ -144,6 +144,33 @@ Test rebasing a stack of commits results in a pack with all the trees
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   8289b85c6a30  000000000000  92            (missing)
+  
+  .hg/store/packs/manifests/3f3f675f03d1d5c32ce32a7ca749309fb59f4c9e:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  66460700b3a5  000000000000  86            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  ff75b8ba8d79  000000000000  92            (missing)
+  
+  .hg/store/packs/manifests/4c1ed7b5ede2ef728698d7c27d195f42c74cd238:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  ac728a786423  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  7a911436836f  000000000000  92            (missing)
+  
+  .hg/store/packs/manifests/dcda72bf149ff3d15689406ee73e30c31a303630:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  d67ded07f949  000000000000  86            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  8e5245404428  000000000000  92            (missing)
   
 
 Test treemanifest with sparse enabled

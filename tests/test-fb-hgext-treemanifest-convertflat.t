@@ -179,31 +179,19 @@ able to view it even with 'treemanifest.demandgenerate' being False.
 - Check the tree manifest for commit '9055b56f3916' and 'b9b574be2f5d'.
 
   $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1106 4bb74ed3582b14a57f34a23c494496a4212af761.dataidx
-  -r--r--r--     211 4bb74ed3582b14a57f34a23c494496a4212af761.datapack
   -r--r--r--    1196 4efbca00685bceff6359c358de842938789d6d3a.histidx
   -r--r--r--     183 4efbca00685bceff6359c358de842938789d6d3a.histpack
   -r--r--r--    1196 574eeaafb26148d853004c1617e6f8f11c743709.histidx
   -r--r--r--     183 574eeaafb26148d853004c1617e6f8f11c743709.histpack
-  -r--r--r--    1106 5a179c0bb6419ffadbed2c826f2e17b95b05bafb.dataidx
-  -r--r--r--     211 5a179c0bb6419ffadbed2c826f2e17b95b05bafb.datapack
+  -r--r--r--    1114 5e71d43af637c17fb8ad3b3eb9799f9ea30fa786.dataidx
+  -r--r--r--     219 5e71d43af637c17fb8ad3b3eb9799f9ea30fa786.datapack
+  -r--r--r--    1114 7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e.dataidx
+  -r--r--r--     219 7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e.datapack
 
 - Tree manifest data for commit '9055b56f3916'.
 
-  $ hg debugdatapack .hg/store/packs/manifests/5a179c0bb6419ffadbed2c826f2e17b95b05bafb.datapack
-  .hg/store/packs/manifests/5a179c0bb6419ffadbed2c826f2e17b95b05bafb:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  33600a12f793  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  40f43426c87b  000000000000  49            (missing)
-  
-- Tree manifest data for commit 'b9b574be2f5d'.
-
-  $ hg debugdatapack .hg/store/packs/manifests/4bb74ed3582b14a57f34a23c494496a4212af761.datapack
-  .hg/store/packs/manifests/4bb74ed3582b14a57f34a23c494496a4212af761:
+  $ hg debugdatapack .hg/store/packs/manifests/*.datapack
+  .hg/store/packs/manifests/5e71d43af637c17fb8ad3b3eb9799f9ea30fa786:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   397e59856f06  000000000000  43            (missing)
@@ -212,6 +200,16 @@ able to view it even with 'treemanifest.demandgenerate' being False.
   Node          Delta Base    Delta Length  Blob Size
   53c631458e33  000000000000  49            (missing)
   
+  .hg/store/packs/manifests/7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  33600a12f793  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  40f43426c87b  000000000000  49            (missing)
+  
+
 - Again, this would generate the tree manifest from the corresponding flat
 manifest for commit 'f7febcf0f689'.
 
@@ -235,23 +233,32 @@ manifest for commit 'f7febcf0f689'.
   +f12
   
   $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1106 1074860af987f99d7c9e6d053852060e47ed05bd.dataidx
-  -r--r--r--     211 1074860af987f99d7c9e6d053852060e47ed05bd.datapack
-  -r--r--r--    1106 4bb74ed3582b14a57f34a23c494496a4212af761.dataidx
-  -r--r--r--     211 4bb74ed3582b14a57f34a23c494496a4212af761.datapack
   -r--r--r--    1196 4efbca00685bceff6359c358de842938789d6d3a.histidx
   -r--r--r--     183 4efbca00685bceff6359c358de842938789d6d3a.histpack
   -r--r--r--    1196 574eeaafb26148d853004c1617e6f8f11c743709.histidx
   -r--r--r--     183 574eeaafb26148d853004c1617e6f8f11c743709.histpack
-  -r--r--r--    1106 5a179c0bb6419ffadbed2c826f2e17b95b05bafb.dataidx
-  -r--r--r--     211 5a179c0bb6419ffadbed2c826f2e17b95b05bafb.datapack
+  -r--r--r--    1114 5e71d43af637c17fb8ad3b3eb9799f9ea30fa786.dataidx
+  -r--r--r--     219 5e71d43af637c17fb8ad3b3eb9799f9ea30fa786.datapack
+  -r--r--r--    1114 61406e4caf3e020d101d44b3a0790ad31ac67e05.dataidx
+  -r--r--r--     219 61406e4caf3e020d101d44b3a0790ad31ac67e05.datapack
+  -r--r--r--    1114 7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e.dataidx
+  -r--r--r--     219 7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e.datapack
   -r--r--r--    1196 f2f83026385a0ae7128583b50734e5d09f0b66ec.histidx
   -r--r--r--     183 f2f83026385a0ae7128583b50734e5d09f0b66ec.histpack
 
 - Tree manifest data for commit 'f7febcf0f689'.
 
-  $ hg debugdatapack .hg/store/packs/manifests/1074860af987f99d7c9e6d053852060e47ed05bd.datapack
-  .hg/store/packs/manifests/1074860af987f99d7c9e6d053852060e47ed05bd:
+  $ hg debugdatapack .hg/store/packs/manifests/*.datapack
+  .hg/store/packs/manifests/5e71d43af637c17fb8ad3b3eb9799f9ea30fa786:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  397e59856f06  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  53c631458e33  000000000000  49            (missing)
+  
+  .hg/store/packs/manifests/61406e4caf3e020d101d44b3a0790ad31ac67e05:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   906f17f69284  000000000000  43            (missing)
@@ -260,6 +267,16 @@ manifest for commit 'f7febcf0f689'.
   Node          Delta Base    Delta Length  Blob Size
   a6875e5fbf69  000000000000  49            (missing)
   
+  .hg/store/packs/manifests/7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  33600a12f793  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  40f43426c87b  000000000000  49            (missing)
+  
+
 - Clean up generated tree manifests for remaining tests.
 
   $ rm -rf .hg/store/packs

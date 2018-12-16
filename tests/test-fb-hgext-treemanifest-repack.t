@@ -30,24 +30,18 @@
   $ hg pull -q -r 0
   $ hg pull -q -r 1
   $ ls_l $CACHEDIR/master/packs/manifests | grep pack
+  -r--r--r--     256 0369e6459e768b72223a4a4fcbba59b5ada8d08f.datapack
   -r--r--r--      89 4301ce26f4c07686220c7f57d80b466cfba9899e.histpack
-  -r--r--r--     100 65df85879cdd898607ee3f323a0b61edc7de25b8.datapack
+  -r--r--r--     104 4ad892ec0ccef1d0cc04e31986a6b7b4f3a5abbf.datapack
   -r--r--r--     180 7da383a74e4ff5333b3733b9a52eb05c40b1df3d.histpack
-  -r--r--r--     248 bb55d9105672c45d4f82df15bd091a555ef02c79.datapack
 
 - Verify datapack contents
   $ for i in $CACHEDIR/master/packs/manifests/*.datapack; do
   >   echo $i
   >   hg debugdatapack "$i"
   > done
-  $TESTTMP/hgcache/master/packs/manifests/65df85879cdd898607ee3f323a0b61edc7de25b8.datapack
-  $TESTTMP/hgcache/master/packs/manifests/65df85879cdd898607ee3f323a0b61edc7de25b8:
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  a0c8bcbbb45c  000000000000  43            (missing)
-  
-  $TESTTMP/hgcache/master/packs/manifests/bb55d9105672c45d4f82df15bd091a555ef02c79.datapack
-  $TESTTMP/hgcache/master/packs/manifests/bb55d9105672c45d4f82df15bd091a555ef02c79:
+  $TESTTMP/hgcache/master/packs/manifests/0369e6459e768b72223a4a4fcbba59b5ada8d08f.datapack
+  $TESTTMP/hgcache/master/packs/manifests/0369e6459e768b72223a4a4fcbba59b5ada8d08f:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   23226e7a252c  000000000000  43            (missing)
@@ -55,6 +49,12 @@
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   1832e0765de9  000000000000  89            (missing)
+  
+  $TESTTMP/hgcache/master/packs/manifests/4ad892ec0ccef1d0cc04e31986a6b7b4f3a5abbf.datapack
+  $TESTTMP/hgcache/master/packs/manifests/4ad892ec0ccef1d0cc04e31986a6b7b4f3a5abbf:
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  a0c8bcbbb45c  000000000000  43            (missing)
   
 
 - Verify histpack contents
@@ -114,8 +114,8 @@
   $ echo a >> a && hg commit -Aqm 'modify a'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     248 5d1716bbef6e7200192de6509055d1ee31a4172c.datapack
-  -r--r--r--     146 cffef142da32f3e52c1779490e5d0ddac5f9b82b.datapack
+  -r--r--r--     150 258363c2f85fdf980f6849495909f19336125a9a.datapack
+  -r--r--r--     256 500a3e20e412979cb4b719bd2bb41a9a1425a1d8.datapack
 
 # As we only have packs, also test that --packsonly doesn't prevent packs from
 being repacked
@@ -127,44 +127,43 @@ being repacked
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
+  -r--r--r--     256 6a20e3744f7859d46240ff781f90056825af3c0c.datapack
+  -r--r--r--     256 c3bb90e5d6d6906fdc1653487ab2f0b055726090.datapack
   -r--r--r--     386 d15c09a9a5a13bb689bd9764455a415a20dc885e.datapack
-  -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
 
 - repack incremental does nothing here because there are so few packs
   $ hg repack --incremental --config remotefilelog.data.generations=300,200 --config remotefilelog.data.repacksizelimit=300
   $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
+  -r--r--r--     256 6a20e3744f7859d46240ff781f90056825af3c0c.datapack
+  -r--r--r--     256 c3bb90e5d6d6906fdc1653487ab2f0b055726090.datapack
   -r--r--r--     386 d15c09a9a5a13bb689bd9764455a415a20dc885e.datapack
-  -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
 
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
-  -r--r--r--     248 347263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack
-  -r--r--r--     248 544a3b46a61732209116ae50847ec333b75e3765.datapack
-  -r--r--r--     248 863908ef8149261ab0d891c2344d8e8766c39441.datapack
+  -r--r--r--     256 403049b40660b78ebf7c3bdebefc14595ce148e7.datapack
+  -r--r--r--     256 68944bb5b7e904191b7527dee071ae36b15096e9.datapack
+  -r--r--r--     256 6a20e3744f7859d46240ff781f90056825af3c0c.datapack
+  -r--r--r--     256 c3bb90e5d6d6906fdc1653487ab2f0b055726090.datapack
   -r--r--r--     386 d15c09a9a5a13bb689bd9764455a415a20dc885e.datapack
-  -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
+  -r--r--r--     256 ed87e44e45980f08dc560d64c17762f6e22b813a.datapack
   $ cd .hg/store/packs/manifests
-  $ cp d7e689a91ac63385be120a118af9ce8663748f28.datapack x7e689a91ac63385be120a118af9ce8663748f28.datapack
-  $ cp d7e689a91ac63385be120a118af9ce8663748f28.dataidx x7e689a91ac63385be120a118af9ce8663748f28.dataidx
-  $ cp 21501384df03b8489b366c5218be639fa08830e4.datapack x1501384df03b8489b366c5218be639fa08830e4.datapack
-  $ cp 21501384df03b8489b366c5218be639fa08830e4.dataidx x1501384df03b8489b366c5218be639fa08830e4.dataidx
-  $ cp 347263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack x47263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack
-  $ cp 347263bf1efbdb5bf7e1d1565b6b504073fb9093.dataidx x47263bf1efbdb5bf7e1d1565b6b504073fb9093.dataidx
+  $ for i in *.data*; do
+  >   cp $i x$i
+  > done
   $ cd ../../../../
 
 - repack incremental kicks in once there are a number of packs
-- (set the repacksizelimit so that we test that we only repack up to 1500 bytes,
+- (set the repacksizelimit so that we test that we only repack up to 2500 bytes,
 - and it leaves one datapack behind)
-  $ hg repack --incremental --config remotefilelog.data.generations=300,200 --config remotefilelog.data.repacksizelimit=1500B
-  $ ls_l .hg/store/packs/manifests | grep datapack | wc -l
-  .*3 (re)
-  $ ls_l .hg/store/packs/manifests | grep datapack | grep 248
-  -r--r--r--     248 *.datapack (glob)
+  >>> sorted(__import__('os').listdir('.hg/store/packs/manifests'))
+  ['403049b40660b78ebf7c3bdebefc14595ce148e7.dataidx', '403049b40660b78ebf7c3bdebefc14595ce148e7.datapack', '4ea308dfd16203929fb0bf3680f989a47e149bcb.histidx', '4ea308dfd16203929fb0bf3680f989a47e149bcb.histpack', '68944bb5b7e904191b7527dee071ae36b15096e9.dataidx', '68944bb5b7e904191b7527dee071ae36b15096e9.datapack', '6a20e3744f7859d46240ff781f90056825af3c0c.dataidx', '6a20e3744f7859d46240ff781f90056825af3c0c.datapack', '7d8575ec97a220b0502a708d4e50e529e2d4c078.histidx', '7d8575ec97a220b0502a708d4e50e529e2d4c078.histpack', '7e260bb8f7e2276ed727e3c91391449dd6b5a88b.histidx', '7e260bb8f7e2276ed727e3c91391449dd6b5a88b.histpack', 'c3bb90e5d6d6906fdc1653487ab2f0b055726090.dataidx', 'c3bb90e5d6d6906fdc1653487ab2f0b055726090.datapack', 'd15c09a9a5a13bb689bd9764455a415a20dc885e.dataidx', 'd15c09a9a5a13bb689bd9764455a415a20dc885e.datapack', 'd734760d7080518750728e2790a48380e4ae0d1b.histidx', 'd734760d7080518750728e2790a48380e4ae0d1b.histpack', 'ed87e44e45980f08dc560d64c17762f6e22b813a.dataidx', 'ed87e44e45980f08dc560d64c17762f6e22b813a.datapack', 'x403049b40660b78ebf7c3bdebefc14595ce148e7.dataidx', 'x403049b40660b78ebf7c3bdebefc14595ce148e7.datapack', 'x68944bb5b7e904191b7527dee071ae36b15096e9.dataidx', 'x68944bb5b7e904191b7527dee071ae36b15096e9.datapack', 'x6a20e3744f7859d46240ff781f90056825af3c0c.dataidx', 'x6a20e3744f7859d46240ff781f90056825af3c0c.datapack', 'xc3bb90e5d6d6906fdc1653487ab2f0b055726090.dataidx', 'xc3bb90e5d6d6906fdc1653487ab2f0b055726090.datapack', 'xd15c09a9a5a13bb689bd9764455a415a20dc885e.dataidx', 'xd15c09a9a5a13bb689bd9764455a415a20dc885e.datapack', 'xed87e44e45980f08dc560d64c17762f6e22b813a.dataidx', 'xed87e44e45980f08dc560d64c17762f6e22b813a.datapack']
+  $ hg repack --incremental --config remotefilelog.data.generations=300,200 --config remotefilelog.data.repacksizelimit=2500B
+  >>> sorted(__import__('os').listdir('.hg/store/packs/manifests'))
+  ['5e242ae58cd6475a97b6278ad1a56ee1937a3f40.histidx', '5e242ae58cd6475a97b6278ad1a56ee1937a3f40.histpack', 'bfe83f875a1fb12ac3e91b12f80bc48ea728c86d.dataidx', 'bfe83f875a1fb12ac3e91b12f80bc48ea728c86d.datapack', 'd15c09a9a5a13bb689bd9764455a415a20dc885e.dataidx', 'd15c09a9a5a13bb689bd9764455a415a20dc885e.datapack', 'xd15c09a9a5a13bb689bd9764455a415a20dc885e.dataidx', 'xd15c09a9a5a13bb689bd9764455a415a20dc885e.datapack']
+  $ ls_l .hg/store/packs/manifests | grep datapack | grep 256
+  [1]
 
 - incremental repacking with a maxpacksize setting doesn't delete local data even if the pack files are large
   $ hg repack --incremental --debug --config packs.maxpacksize=1
