@@ -142,7 +142,7 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> Iterator for BatchedAncest
 mod tests {
     use super::*;
     use rand::SeedableRng;
-    use rand::chacha::ChaChaRng;
+    use rand_chacha::ChaChaRng;
     use types::node::Node;
 
     fn build_diamond_graph() -> (Key, Ancestors) {

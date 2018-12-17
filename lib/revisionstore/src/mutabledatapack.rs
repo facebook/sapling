@@ -199,7 +199,7 @@ impl DataStore for MutableDataPack {
 mod tests {
     use super::*;
     use rand::SeedableRng;
-    use rand::chacha::ChaChaRng;
+    use rand_chacha::ChaChaRng;
     use std::fs;
     use std::fs::File;
     use std::io::Read;

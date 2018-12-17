@@ -99,7 +99,7 @@ impl LooseFile {
 mod tests {
     use super::*;
     use rand::SeedableRng;
-    use rand::chacha::ChaChaRng;
+    use rand_chacha::ChaChaRng;
 
     quickcheck! {
         fn test_roundtrip_atoi(value: u32) -> bool {

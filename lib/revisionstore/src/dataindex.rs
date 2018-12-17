@@ -292,7 +292,7 @@ impl DataIndex {
 mod tests {
     use super::*;
     use rand::SeedableRng;
-    use rand::chacha::ChaChaRng;
+    use rand_chacha::ChaChaRng;
     use tempfile::NamedTempFile;
 
     fn make_index(values: &HashMap<Node, DeltaLocation>) -> DataIndex {

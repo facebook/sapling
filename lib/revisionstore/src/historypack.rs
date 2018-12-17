@@ -347,7 +347,7 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
 pub mod tests {
     use super::*;
     use rand::SeedableRng;
-    use rand::chacha::ChaChaRng;
+    use rand_chacha::ChaChaRng;
     use std::collections::HashMap;
     use std::fs::{File, OpenOptions};
     use tempfile::TempDir;

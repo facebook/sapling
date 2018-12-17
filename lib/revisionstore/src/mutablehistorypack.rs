@@ -270,7 +270,7 @@ mod tests {
     use super::*;
     use rand::Rng;
     use rand::SeedableRng;
-    use rand::chacha::ChaChaRng;
+    use rand_chacha::ChaChaRng;
     use tempfile::tempdir;
 
     use historypack::HistoryPack;

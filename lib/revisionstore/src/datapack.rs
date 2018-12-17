@@ -415,7 +415,7 @@ pub mod tests {
     use datastore::{Delta, Metadata};
     use mutabledatapack::MutableDataPack;
     use rand::SeedableRng;
-    use rand::chacha::ChaChaRng;
+    use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
     use types::node::Node;
 

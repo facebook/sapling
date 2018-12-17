@@ -16,6 +16,8 @@ extern crate types;
 extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
+#[cfg(test)]
+extern crate rand_chacha;
 
 mod ancestors;
 mod dataindex;

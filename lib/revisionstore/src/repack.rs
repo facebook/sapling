@@ -144,7 +144,7 @@ mod tests {
     use historypack::tests::{get_nodes, make_historypack};
     use historystore::Ancestors;
     use rand::SeedableRng;
-    use rand::chacha::ChaChaRng;
+    use rand_chacha::ChaChaRng;
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::rc::Rc;
