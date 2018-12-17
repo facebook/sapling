@@ -253,9 +253,25 @@ def _validatecmdtable(ui, cmdtable):
         )
 
 
+_warned = set()
+
+
 def load(ui, name, path):
     if name.startswith("hgext.") or name.startswith("hgext/"):
         shortname = name[6:]
+        if name not in _warned:
+            _warned.add(name)
+            msg = _("'hgext' prefix in [extensions] config section is deprecated.\n")
+            location = ui.configsource("extensions", name)
+            if location and ":" in location:
+                msg += _("(hint: replace %r with %r at %s)\n") % (
+                    name,
+                    shortname,
+                    location,
+                )
+            else:
+                msg += _("(hint: replace %r with %r)\n") % (name, shortname)
+            ui.warn(msg)
     else:
         shortname = name
     if shortname in _ignoreextensions:
@@ -268,7 +284,7 @@ def load(ui, name, path):
     # false positives.
     from . import dispatch  # avoid cycles
 
-    mod = _importext(name, path, bind(_reportimporterror, ui))
+    mod = _importext(shortname, path, bind(_reportimporterror, ui))
 
     # Before we do anything with the extension, check against minimum stated
     # compatibility. This gives extension authors a mechanism to have their

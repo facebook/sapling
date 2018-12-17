@@ -3,7 +3,6 @@ bail if the user does not have dulwich
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$TESTDIR/../hgext/hggit" >> $HGRCPATH
-  $ echo 'hgext.graphlog =' >> $HGRCPATH
   $ echo "[git]" >> $HGRCPATH
   $ echo "branch_bookmark_suffix=_bookmark" >> $HGRCPATH
 
