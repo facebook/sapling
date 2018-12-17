@@ -792,20 +792,6 @@ pub mod many_files_dirs {
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
 
         let files = btreemap!{
-            "dir1/subdir1/subsubdir1/file_1" => Some("content5\n"),
-            "dir1/subdir1/subsubdir2/file_1" => Some("content6\n"),
-            "dir1/subdir1/subsubdir2/file_2" => Some("content7\n"),
-        };
-        let commit_metadata = btreemap!{
-            "parents"=> "2f866e7e549760934e31bf0420a873f65100ad63",
-            "author"=> "Stanislau Hlebik <stash@fb.com>",
-            "author_date"=> "1516808173 28800",
-            "message"=> "3",
-            "expected_hg_changeset"=> "d261bc7900818dea7c86935b3fb17a33b2e3a6b4",
-        };
-        create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
-
-        let files = btreemap!{
             "1" => Some("1\n"),
         };
         let commit_metadata = btreemap!{
