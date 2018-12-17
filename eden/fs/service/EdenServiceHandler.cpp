@@ -56,6 +56,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/tracing/Tracing.h"
 #include "eden/fs/utils/ProcUtil.h"
+#include "eden/fs/utils/StatTimes.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -705,8 +706,9 @@ EdenServiceHandler::future_getFileInformation(
                    return inode->getattr().thenValue([](Dispatcher::Attr attr) {
                      FileInformation info;
                      info.size = attr.st.st_size;
-                     info.mtime.seconds = attr.st.st_mtim.tv_sec;
-                     info.mtime.nanoSeconds = attr.st.st_mtim.tv_nsec;
+                     auto& ts = stMtime(attr.st);
+                     info.mtime.seconds = ts.tv_sec;
+                     info.mtime.nanoSeconds = ts.tv_nsec;
                      info.mode = attr.st.st_mode;
 
                      FileInformationOrError result;

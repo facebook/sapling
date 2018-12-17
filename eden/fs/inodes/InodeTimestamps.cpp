@@ -149,7 +149,11 @@ void InodeTimestamps::setattrTimes(
 }
 
 void InodeTimestamps::applyToStat(struct stat& st) const {
-#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
+#ifdef __APPLE__
+  st.st_atimespec = atime.toTimespec();
+  st.st_ctimespec = ctime.toTimespec();
+  st.st_mtimespec = mtime.toTimespec();
+#elif defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
     _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
   st.st_atim = atime.toTimespec();
   st.st_ctim = ctime.toTimespec();

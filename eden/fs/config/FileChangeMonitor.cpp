@@ -15,22 +15,21 @@
 #ifdef EDEN_WIN
 #include "eden/win/fs/utils/Stub.h" // @manual
 #endif
+#include "eden/fs/utils/StatTimes.h"
+#include "eden/fs/utils/TimeUtil.h"
 
 namespace facebook {
 namespace eden {
 
 bool equalStats(const struct stat& stat1, const struct stat& stat2) noexcept {
-  return (
-      stat1.st_dev == stat2.st_dev && stat1.st_size == stat2.st_size &&
+  return stat1.st_dev == stat2.st_dev && stat1.st_size == stat2.st_size &&
       stat1.st_ino == stat2.st_ino && stat1.st_mode == stat2.st_mode &&
 #ifdef EDEN_WIN
-      stat1.st_ctime == stat2.st_ctime && stat1.st_mtime == stat2.st_mtime);
+      stat1.st_ctime == stat2.st_ctime && stat1.st_mtime == stat2.st_mtime
 #else
-      stat1.st_ctim.tv_sec == stat2.st_ctim.tv_sec &&
-      stat1.st_ctim.tv_nsec == stat2.st_ctim.tv_nsec &&
-      stat1.st_mtim.tv_sec == stat2.st_mtim.tv_sec &&
-      stat1.st_mtim.tv_nsec == stat2.st_mtim.tv_nsec);
+      stCtime(stat1) == stCtime(stat2) && stMtime(stat1) == stMtime(stat2)
 #endif
+      ;
 }
 AbsolutePath FileChangeMonitor::getFilePath() {
   return filePath_;

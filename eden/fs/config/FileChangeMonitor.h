@@ -134,12 +134,8 @@ class FileChangeMonitor {
     // Set values for stat to force changedSinceUpdate() to return TRUE.
     // We use a novel setting to force change to be detected
     memset(&fileStat_, 0, sizeof(struct stat));
-#ifdef EDEN_WIN
     fileStat_.st_mtime = 1;
-#else
-    fileStat_.st_mtim.tv_sec = 1;
-    fileStat_.st_mtim.tv_nsec = 1;
-#endif
+
     statErrno_ = 0;
     openErrno_ = 0;
     // Set lastCheck in past so throttle does not apply.

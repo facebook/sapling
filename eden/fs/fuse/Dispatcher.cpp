@@ -17,6 +17,7 @@
 
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
+#include "eden/fs/utils/StatTimes.h"
 
 using namespace folly;
 using namespace std::chrono;
@@ -34,11 +35,11 @@ fuse_attr_out Dispatcher::Attr::asFuseAttr() const {
   result.attr.size = st.st_size;
   result.attr.blocks = st.st_blocks;
   result.attr.atime = st.st_atime;
-  result.attr.atimensec = st.st_atim.tv_nsec;
+  result.attr.atimensec = stAtime(st).tv_nsec;
   result.attr.mtime = st.st_mtime;
-  result.attr.mtimensec = st.st_mtim.tv_nsec;
+  result.attr.mtimensec = stMtime(st).tv_nsec;
   result.attr.ctime = st.st_ctime;
-  result.attr.ctimensec = st.st_ctim.tv_nsec;
+  result.attr.ctimensec = stCtime(st).tv_nsec;
   result.attr.mode = st.st_mode;
   result.attr.nlink = st.st_nlink;
   result.attr.uid = st.st_uid;
