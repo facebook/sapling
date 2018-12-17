@@ -15,6 +15,7 @@
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/utils/StatTimes.h"
