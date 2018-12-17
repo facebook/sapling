@@ -6713,12 +6713,12 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         ("C", "clean", None, _("discard uncommitted changes (no backup)")),
         ("c", "check", None, _("require clean working directory")),
         ("m", "merge", None, _("merge uncommitted changes")),
-        ("d", "date", "", _("tipmost revision matching date"), _("DATE")),
+        ("d", "date", "", _("tipmost revision matching date (ADVANCED)"), _("DATE")),
         ("r", "rev", "", _("revision"), _("REV")),
         ("", "inactive", None, _("update without activating bookmarks")),
     ]
     + mergetoolopts,
-    _("[-C|-c|-m] [-d DATE] [[-r] REV]"),
+    _("[-C|-c|-m] [[-r] REV]"),
 )
 def update(
     ui,
@@ -6734,55 +6734,34 @@ def update(
 ):
     """check out a specific commit
 
-    Update the repository's working directory to the specified
-    changeset. If no changeset is specified, update to the tip of the
-    current named branch and move the active bookmark (see :hg:`help
-    bookmarks`).
+    Update your checkout to the given destination commit. More precisely, make
+    the destination commit the current commit and update the contents of all
+    files in your checkout to match their state in the destination commit.
 
-    Update sets the working directory's parent revision to the specified
-    changeset (see :hg:`help parents`).
+    By default, if you attempt to check out a commit while you have pending
+    changes, and the destination commit is not an ancestor or descendant of
+    the current commit, the checkout will abort. However, if the destination
+    commit is an ancestor or descendant of the current commit, the pending
+    changes will be merged into the new checkout.
 
-    If the changeset is not a descendant or ancestor of the working
-    directory's parent and there are uncommitted changes, the update is
-    aborted. With the -c/--check option, the working directory is checked
-    for uncommitted changes; if none are found, the working directory is
-    updated to the specified changeset.
+    Use one of the following flags to modify this behavior:
 
-    .. container:: verbose
+    --check: abort if there are pending changes
 
-      The -C/--clean, -c/--check, and -m/--merge options control what
-      happens if the working directory contains uncommitted changes.
-      At most of one of them can be specified.
+    --clean: permanently discard any pending changes (use with caution)
 
-      1. If no option is specified, and if
-         the requested changeset is an ancestor or descendant of
-         the working directory's parent, the uncommitted changes
-         are merged into the requested changeset and the merged
-         result is left uncommitted. If the requested changeset is
-         not an ancestor or descendant (that is, it is on another
-         branch), the update is aborted and the uncommitted changes
-         are preserved.
+    --merge: attempt to merge the pending changes into the new checkout, even
+    if the destination commit is not an ancestor or descendant of the current
+    commit
 
-      2. With the -m/--merge option, the update is allowed even if the
-         requested changeset is not an ancestor or descendant of
-         the working directory's parent.
+    If merge conflicts occur during checkout, Mercurial enters an unfinished
+    merge state. If this happens, fix the conflicts manually and then run
+    hg commit to exit the unfinished merge state and save your changes in a
+    new commit. Alternatively, run hg checkout --clean to discard your pending
+    changes.
 
-      3. With the -c/--check option, the update is aborted and the
-         uncommitted changes are preserved.
-
-      4. With the -C/--clean option, uncommitted changes are discarded and
-         the working directory is updated to the requested changeset.
-
-    To cancel an uncommitted merge (and lose your changes), use
-    :hg:`update --clean .`.
-
-    Use null as the changeset to remove the working directory (like
-    :hg:`clone -U`).
-
-    If you want to revert just one file to an older revision, use
-    :hg:`revert [-r REV] NAME`.
-
-    See :hg:`help dates` for a list of formats valid for -d/--date.
+    Specify null as the destination commit to get an empty checkout (sometimes
+    known as a bare repository).
 
     Returns 0 on success, 1 if there are unresolved files.
     """

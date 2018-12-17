@@ -35,10 +35,6 @@ Test keyword search in translated help text:
   Themen:
   
    subrepos Unterarchive
-  
-  Befehle:
-  
-   update check out a specific commit
 
 #endif
 

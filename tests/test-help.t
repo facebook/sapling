@@ -1560,7 +1560,6 @@ Test keyword search help
    bookmarks create a new bookmark or list existing bookmarks
    clone     make a copy of an existing repository
    paths     show aliases for remote repositories
-   update    check out a specific commit
   
   Extensions:
   
