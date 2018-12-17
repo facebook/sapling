@@ -503,6 +503,19 @@ write_if_changed(
     ),
 )
 
+if not os.path.isdir(builddir):
+    # Create the "build" directory
+    try:
+        # Prefer a symlink to a "scratch path" path if the "scratch" tool exists
+        scratchpath = subprocess.check_output(
+            ["scratch", "path", "--subdir", "hgbuild"]
+        ).strip()
+        assert os.path.isdir(scratchpath)
+        os.symlink(scratchpath, builddir)
+    except Exception:
+        ensureexists(builddir)
+
+
 try:
     oldpolicy = os.environ.get("HGMODULEPOLICY", None)
     os.environ["HGMODULEPOLICY"] = "py"
