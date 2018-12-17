@@ -311,7 +311,17 @@ class MappedDiskVector {
         folly::throwSystemError("ftruncateNoInt failed when growing capacity");
       }
 
+#ifdef __APPLE__
+      auto newMap = mmap(
+          nullptr,
+          newFileSize,
+          PROT_READ | PROT_WRITE,
+          MAP_SHARED,
+          file_.fd(),
+          0);
+#else
       auto newMap = mremap(map_, mapSizeInBytes_, newFileSize, MREMAP_MAYMOVE);
+#endif
       if (newMap == MAP_FAILED) {
         folly::throwSystemError(folly::to<std::string>(
             "mremap failed when growing capacity from ",
@@ -320,6 +330,9 @@ class MappedDiskVector {
             newFileSize));
       }
 
+#ifdef __APPLE__
+      munmap(map_, mapSizeInBytes_);
+#endif
       map_ = newMap;
       mapSizeInBytes_ = newFileSize;
 
@@ -433,7 +446,11 @@ class MappedDiskVector {
         0,
         desiredSize,
         PROT_READ | PROT_WRITE,
-        MAP_SHARED | (populate ? MAP_POPULATE : 0),
+        MAP_SHARED
+#ifdef MAP_POPULATE
+            | (populate ? MAP_POPULATE : 0)
+#endif
+            ,
         file_.fd(),
         0);
     if (map == MAP_FAILED) {
