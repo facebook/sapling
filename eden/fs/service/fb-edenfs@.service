@@ -14,6 +14,8 @@ Environment=EDENFS_USER_CONFIG_DIR=%h/.edenrc
 EnvironmentFile=-%f/systemd.conf
 
 Environment=EDENFS_CONFIG_DIR=%f
+Environment=EDENFS_LOG_DIR=%f/logs
+Environment=EDENFS_LOG_FILE=%f/logs/edenfs.log
 Environment=EDENFS_STARTUP_LOG=%f/startup.log
 Environment=EDENFS_USER_ID=%U
 
@@ -53,6 +55,9 @@ Environment=EDENFS_USER_ID=%U
 ExecStart=/bin/sh -c ' \
     set -e; \
     set -u; \
+    \
+    /bin/mkdir -p -- "$${EDENFS_LOG_DIR}"; \
+    exec >>"$${EDENFS_LOG_FILE}" 2>&1; \
     \
     newline="$$(printf "\\nx")"; \
     newline="$${newline::-1}"; \

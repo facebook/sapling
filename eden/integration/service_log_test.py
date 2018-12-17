@@ -32,7 +32,7 @@ class ServiceLogTestBase(ServiceTestCaseBase):
         return self.eden_dir / "logs" / "edenfs.log"
 
 
-@service_test(skip_systemd=True)
+@service_test
 class ServiceLogFakeEdenFSTest(ServiceLogTestBase):
     def test_fake_edenfs_writes_logs_to_file_in_eden_dir(self) -> None:
         self.assertFalse(
@@ -45,6 +45,15 @@ class ServiceLogFakeEdenFSTest(ServiceLogTestBase):
                 f"fake_edenfs should create {self.log_file_path}",
             )
             self.assertIn("Starting fake edenfs daemon", self.log_file_path.read_text())
+
+    def test_fake_edenfs_appends_to_existing_log_file(self) -> None:
+        self.log_file_path.parent.mkdir(  # pyre-ignore (T32649448)
+            exist_ok=True, parents=True
+        )
+        self.log_file_path.write_text("test log messages\n")
+        with self.spawn_fake_edenfs(self.eden_dir):
+            pass
+        self.assertIn("test log messages", self.log_file_path.read_text())
 
 
 class ServiceLogRealEdenFSTest(ManagedFakeEdenFSMixin, ServiceLogTestBase):
