@@ -109,18 +109,22 @@ fn create_bonsai_changeset_from_test_data(
         .wait()
         .unwrap();
 
-    // TODO(stash): set only for heads
-    let mut txn = blobrepo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(
-        &Bookmark::new(format!("bookmark-{}", hg_cs)).unwrap(),
-        &bcs_id,
-    ).unwrap();
-    txn.commit().wait().unwrap();
-
     assert_eq!(
         hg_cs,
         HgChangesetId::from_str(commit_metadata.get("expected_hg_changeset").unwrap()).unwrap()
     );
+}
+
+fn set_bookmark(blobrepo: BlobRepo, hg_cs_id: &str, bookmark: Bookmark) {
+    let ctx = CoreContext::test_mock();
+    let hg_cs_id = HgChangesetId::from_str(hg_cs_id).unwrap();
+    let bcs_id = blobrepo
+        .get_bonsai_from_hg(ctx.clone(), &hg_cs_id)
+        .wait()
+        .unwrap();
+    let mut txn = blobrepo.update_bookmark_transaction(ctx.clone());
+    txn.force_set(&bookmark, &bcs_id.unwrap()).unwrap();
+    txn.commit().wait().unwrap();
 }
 
 pub mod linear {
@@ -271,6 +275,11 @@ pub mod linear {
             "expected_hg_changeset"=> "79a13814c5ce7330173ec04d279bf95ab3f652fb",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+        set_bookmark(
+            blobrepo.clone(),
+            "79a13814c5ce7330173ec04d279bf95ab3f652fb",
+            Bookmark::new("master").unwrap(),
+        );
 
         blobrepo
     }
@@ -366,6 +375,11 @@ pub mod branch_even {
             "expected_hg_changeset"=> "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+        set_bookmark(
+            blobrepo.clone(),
+            "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+            Bookmark::new("master").unwrap(),
+        );
 
         blobrepo
     }
@@ -521,6 +535,11 @@ pub mod branch_uneven {
             "expected_hg_changeset"=> "264f01429683b3dd8042cb3979e8bf37007118bc",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+        set_bookmark(
+            blobrepo.clone(),
+            "264f01429683b3dd8042cb3979e8bf37007118bc",
+            Bookmark::new("master").unwrap(),
+        );
 
         blobrepo
     }
@@ -616,6 +635,11 @@ pub mod branch_wide {
             "expected_hg_changeset"=> "49f53ab171171b3180e125b918bd1cf0af7e5449",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+        set_bookmark(
+            blobrepo.clone(),
+            "49f53ab171171b3180e125b918bd1cf0af7e5449",
+            Bookmark::new("master").unwrap(),
+        );
 
         blobrepo
     }
@@ -726,6 +750,12 @@ pub mod merge_even {
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
 
+        set_bookmark(
+            blobrepo.clone(),
+            "6120679e1fedb0b2f3717bbf042e5fd718763042",
+            Bookmark::new("master").unwrap(),
+        );
+
         blobrepo
     }
 }
@@ -790,6 +820,11 @@ pub mod many_files_dirs {
             "expected_hg_changeset"=> "0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+        set_bookmark(
+            blobrepo.clone(),
+            "0c59c8d0da93cbf9d7f4b888f28823ffb2e3e480",
+            Bookmark::new("master").unwrap(),
+        );
 
         let files = btreemap!{
             "1" => Some("1\n"),
@@ -802,6 +837,11 @@ pub mod many_files_dirs {
             "expected_hg_changeset"=> "5a28e25f924a5d209b82ce0713d8d83e68982bc8",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+        set_bookmark(
+            blobrepo.clone(),
+            "5a28e25f924a5d209b82ce0713d8d83e68982bc8",
+            Bookmark::new("master").unwrap(),
+        );
 
         blobrepo
     }
@@ -975,6 +1015,12 @@ pub mod merge_uneven {
             "expected_hg_changeset"=> "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+
+        set_bookmark(
+            blobrepo.clone(),
+            "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+            Bookmark::new("master").unwrap(),
+        );
 
         blobrepo
     }
@@ -1152,6 +1198,12 @@ pub mod unshared_merge_even {
             "expected_hg_changeset"=> "7fe9947f101acb4acf7d945e69f0d6ce76a81113",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+
+        set_bookmark(
+            blobrepo.clone(),
+            "7fe9947f101acb4acf7d945e69f0d6ce76a81113",
+            Bookmark::new("master").unwrap(),
+        );
 
         blobrepo
     }
@@ -1394,6 +1446,12 @@ pub mod unshared_merge_uneven {
             "expected_hg_changeset"=> "c10443fa4198c6abad76dc6c69c1417b2e821508",
         };
         create_bonsai_changeset_from_test_data(blobrepo.clone(), files, commit_metadata);
+
+        set_bookmark(
+            blobrepo.clone(),
+            "c10443fa4198c6abad76dc6c69c1417b2e821508",
+            Bookmark::new("master").unwrap(),
+        );
 
         blobrepo
     }
