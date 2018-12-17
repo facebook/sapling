@@ -859,7 +859,7 @@ impl Debug for Log {
         let mut iter = self.iter();
         loop {
             let offset = iter.next_offset;
-            write!(f, "Entry[{}]: ", offset);
+            write!(f, "Entry[{}]: ", offset)?;
             match iter.next() {
                 None => break,
                 Some(Ok(bytes)) => write!(f, "{{ bytes: {:?} }}\n", bytes)?,

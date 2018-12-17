@@ -2037,7 +2037,7 @@ impl Debug for Index {
                 }
                 TYPE_INLINE_LEAF => {
                     let e = MemLeaf::read_from(&self.buf, i, &None).expect("read");
-                    write!(f, "Inline{:?}\n", e);
+                    write!(f, "Inline{:?}\n", e)?;
                     // Just skip the type int byte so we can parse inlined structures.
                     buf.push(TYPE_INLINE_LEAF);
                 }
