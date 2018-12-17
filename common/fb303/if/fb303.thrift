@@ -55,4 +55,9 @@ service FacebookService {
    */
   i64 aliveSince() (priority = 'IMPORTANT'),
 
+  /**
+   * Returns the pid of the process
+   */
+  i64 getPid(),
+
 }

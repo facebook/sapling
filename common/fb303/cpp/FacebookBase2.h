@@ -44,6 +44,10 @@ public:
     return (uint64_t) startTime;
   }
 
+  int64_t getPid() override {
+    return getpid();
+  }
+
   void exportThriftFuncHist(
       const std::string& /*funcName*/,
       ThriftFuncAction /*action*/,
