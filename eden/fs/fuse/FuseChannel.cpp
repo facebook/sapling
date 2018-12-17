@@ -1242,8 +1242,7 @@ void FuseChannel::processSession() {
 void FuseChannel::finishRequest(const fuse_in_header& header) {
   // Remove the current request from the map.
   auto state = state_.wlock();
-  const bool erased = state->requests.erase(header.unique) > 0;
-  DCHECK(erased);
+  state->requests.erase(header.unique);
 
   // We may be complete; check to see if all requests are
   // done and whether there are any threads remaining.
