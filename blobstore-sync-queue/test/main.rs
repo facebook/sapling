@@ -14,7 +14,6 @@ extern crate futures;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
-extern crate multiplexedblob;
 extern crate tokio;
 
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobstoreSyncQueue,
