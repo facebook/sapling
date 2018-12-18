@@ -163,14 +163,15 @@ void EdenDispatcher::forget(InodeNumber ino, unsigned long nlookup) {
 
 folly::Future<uint64_t> EdenDispatcher::open(InodeNumber ino, int flags) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "open({}, flags={:x})", ino, flags);
+#ifdef FUSE_NO_OPEN_SUPPORT
   if (getConnInfo().flags & FUSE_NO_OPEN_SUPPORT) {
     // If the kernel understands FUSE_NO_OPEN_SUPPORT, then returning ENOSYS
     // means that no further open() nor release() calls will make it into Eden.
     folly::throwSystemErrorExplicit(
         ENOSYS, "Eden open() calls are stateless and not required");
-  } else {
-    return 0;
   }
+#endif
+  return 0;
 }
 
 folly::Future<fuse_entry_out> EdenDispatcher::create(

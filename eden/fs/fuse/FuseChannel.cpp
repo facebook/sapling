@@ -119,12 +119,22 @@ StringPiece fuseOpcodeName(FuseOpcode opcode) {
       return "FUSE_BATCH_FORGET";
     case FUSE_FALLOCATE:
       return "FUSE_FALLOCATE";
+#ifdef __linux__
     case FUSE_READDIRPLUS:
       return "FUSE_READDIRPLUS";
     case FUSE_RENAME2:
       return "FUSE_RENAME2";
     case FUSE_LSEEK:
       return "FUSE_LSEEK";
+#endif
+#ifdef __APPLE__
+    case FUSE_SETVOLNAME:
+      return "FUSE_SETVOLNAME";
+    case FUSE_GETXTIMES:
+      return "FUSE_GETXTIMES";
+    case FUSE_EXCHANGE:
+      return "FUSE_EXCHANGE";
+#endif
 
     case CUSE_INIT:
       return "CUSE_INIT";
@@ -244,10 +254,11 @@ static const std::unordered_map<int32_t, const char*> capsLabels = {
     {FUSE_EXPORT_SUPPORT, "EXPORT_SUPPORT"},
     {FUSE_BIG_WRITES, "BIG_WRITES"},
     {FUSE_DONT_MASK, "DONT_MASK"},
+    {FUSE_FLOCK_LOCKS, "FLOCK_LOCKS"},
+#ifdef __linux__
     {FUSE_SPLICE_WRITE, "SPLICE_WRITE"},
     {FUSE_SPLICE_MOVE, "SPLICE_MOVE"},
     {FUSE_SPLICE_READ, "SPLICE_READ"},
-    {FUSE_FLOCK_LOCKS, "FLOCK_LOCKS"},
     {FUSE_HAS_IOCTL_DIR, "IOCTL_DIR"},
     {FUSE_AUTO_INVAL_DATA, "AUTO_INVAL_DATA"},
     {FUSE_DO_READDIRPLUS, "DO_READDIRPLUS"},
@@ -259,6 +270,7 @@ static const std::unordered_map<int32_t, const char*> capsLabels = {
     {FUSE_HANDLE_KILLPRIV, "HANDLE_KILLPRIV"},
     {FUSE_POSIX_ACL, "POSIX_ACL"},
     {FUSE_CACHE_SYMLINKS, "CACHE_SYMLINKS"},
+#endif
 #ifdef __APPLE__
     {FUSE_ALLOCATE, "ALLOCATE"},
     {FUSE_EXCHANGE_DATA, "EXCHANGE_DATA"},
@@ -980,8 +992,11 @@ void FuseChannel::readInitPacket() {
   // See test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
   // in mmap_test.py.
   want = capable &
-      (FUSE_BIG_WRITES | FUSE_ASYNC_READ | FUSE_CACHE_SYMLINKS |
-       FUSE_NO_OPEN_SUPPORT);
+      (FUSE_BIG_WRITES | FUSE_ASYNC_READ
+#ifdef __linux__
+       | FUSE_CACHE_SYMLINKS | FUSE_NO_OPEN_SUPPORT
+#endif
+      );
 
   XLOG(INFO) << "Speaking fuse protocol kernel=" << init.init.major << "."
              << init.init.minor << " local=" << FUSE_KERNEL_VERSION << "."
@@ -1012,6 +1027,7 @@ void FuseChannel::readInitPacket() {
   // initPromise_, so that the kernel will put the mount point in use and will
   // not block further filesystem access on us while running the Dispatcher
   // callback code.
+#ifdef __linux__
   static_assert(
       FUSE_KERNEL_MINOR_VERSION > 22,
       "Your kernel headers are too old to build Eden.");
@@ -1026,6 +1042,13 @@ void FuseChannel::readInitPacket() {
         ByteRange{reinterpret_cast<const uint8_t*>(&connInfo),
                   FUSE_COMPAT_22_INIT_OUT_SIZE});
   }
+#elif defined(__APPLE__)
+  static_assert(
+      FUSE_KERNEL_MINOR_VERSION == 19,
+      "osxfuse: API/ABI likely changed, may need something like the"
+      " linux code above to send the correct response to the kernel");
+  sendReply(init.header, connInfo);
+#endif
 
   dispatcher_->initConnection(connInfo);
 }
@@ -1366,7 +1389,13 @@ folly::Future<folly::Unit> FuseChannel::fuseReadLink(
   return dispatcher_
       ->readlink(
           InodeNumber{header->nodeid},
-          /*kernelCachesReadlink=*/connInfo_->flags & FUSE_CACHE_SYMLINKS)
+  /*kernelCachesReadlink=*/
+#ifdef FUSE_CACHE_SYMLINKS
+          connInfo_->flags & FUSE_CACHE_SYMLINKS
+#else
+          false
+#endif
+          )
       .thenValue([](std::string&& str) {
         RequestData::get().sendReply(folly::StringPiece(str));
       });
