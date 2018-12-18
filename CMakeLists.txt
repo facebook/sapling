@@ -22,6 +22,10 @@ include_directories(
   ${CMAKE_BINARY_DIR}
 )
 
+if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external/osxfuse")
+  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/external/osxfuse/common")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 include(CompilerSettingsUnix)
 include(EdenConfigChecks)

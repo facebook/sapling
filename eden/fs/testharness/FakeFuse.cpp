@@ -15,7 +15,6 @@
 #include <folly/logging/xlog.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "eden/third-party/fuse_kernel_linux.h"
 
 using namespace std::chrono_literals;
 using folly::ByteRange;

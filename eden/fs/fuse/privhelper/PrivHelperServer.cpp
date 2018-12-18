@@ -34,6 +34,10 @@
 #include <set>
 
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#ifdef __APPLE__
+#include <fuse_ioctl.h> // @manual
+#include <fuse_mount.h> // @manual
+#endif
 
 using folly::checkUnixError;
 using folly::IOBuf;

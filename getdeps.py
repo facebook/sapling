@@ -90,6 +90,7 @@ class GitUpdater(object):
         run_cmd(
             ["git", "clone", self.origin_repo, project.path, "--branch", self.branch]
         )
+        run_cmd(["git", "submodule", "update", "--init"], cwd=project.path)
 
     def clean(self, project):
         run_cmd(["git", "-C", project.path, "clean", "-fxd"])
@@ -157,6 +158,14 @@ class BuilderBase(object):
             self._build_path = None
 
 
+class NullBuilder(BuilderBase):
+    def __init__(self):
+        super(NullBuilder, self).__init__()
+
+    def _build(self, project):
+        pass
+
+
 class MakeBuilder(BuilderBase):
     def __init__(self, subdir=None, env=None, args=None):
         super(MakeBuilder, self).__init__(subdir=subdir, env=env)
@@ -218,7 +227,7 @@ def install_apt(pkgs):
 
 
 def get_projects(opts):
-    return [
+    projects = [
         Project(
             "mstch",
             opts,
@@ -282,6 +291,19 @@ def get_projects(opts):
             CMakeBuilder(),
         ),
     ]
+    if sys.platform == "darwin":
+        projects.append(
+            Project(
+                "osxfuse",
+                opts,
+                GitUpdater(
+                    "https://github.com/osxfuse/osxfuse.git", branch="support/osxfuse-3"
+                ),
+                NullBuilder(),
+            )
+        )
+
+    return projects
 
 
 def get_linux_type():

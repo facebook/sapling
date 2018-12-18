@@ -13,7 +13,7 @@
 #include <folly/Range.h>
 #include <chrono>
 
-#include "eden/third-party/fuse_kernel_linux.h"
+#include "eden/fs/fuse/FuseTypes.h"
 
 namespace facebook {
 namespace eden {
