@@ -904,23 +904,6 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     }
 
     #[test]
-    fn test_cs_hook_valid_reviewer() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
-            let code = String::from(
-                "hook = function (ctx)\n\
-                 return ctx.is_valid_reviewer('tfox')\n\
-                 end",
-            );
-            assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
-                Ok(HookExecution::Accepted)
-            );
-        });
-    }
-
-    #[test]
     fn test_cs_hook_not_valid_reviewer() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
