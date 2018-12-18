@@ -63,13 +63,35 @@ std::string deserializeString(Cursor& cursor) {
   return cursor.readFixedString(length);
 }
 
+// Helper for setting close-on-exec.  Not needed on systems
+// that can atomically do this in socketpair
+void setCloExecIfNoSockCloExec(int fd) {
+#ifndef SOCK_CLOEXEC
+  auto flags = fcntl(fd, F_GETFD);
+  folly::checkPosixError(flags);
+  folly::checkPosixError(fcntl(fd, F_SETFD, flags | FD_CLOEXEC));
+#else
+  (void)fd;
+#endif
+}
+
 } // unnamed namespace
 
 void PrivHelperConn::createConnPair(folly::File& client, folly::File& server) {
   std::array<int, 2> sockpair;
   checkUnixError(
-      socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockpair.data()),
+      socketpair(
+          AF_UNIX,
+          SOCK_STREAM
+#ifdef SOCK_CLOEXEC
+              | SOCK_CLOEXEC
+#endif
+          ,
+          0,
+          sockpair.data()),
       "failed to create socket pair for privhelper");
+  setCloExecIfNoSockCloExec(sockpair[0]);
+  setCloExecIfNoSockCloExec(sockpair[1]);
   client = folly::File{sockpair[0], /*ownsFd=*/true};
   server = folly::File{sockpair[1], /*ownsFd=*/true};
 }
