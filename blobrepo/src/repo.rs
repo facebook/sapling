@@ -21,7 +21,6 @@ use futures::stream::{FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
-use metaconfig::ManifoldArgs;
 use scribe::ScribeClient;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{Discard, Drain, Logger};
@@ -35,6 +34,7 @@ use super::changeset_fetcher::{CachingChangesetFetcher, ChangesetFetcher, Simple
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob,
                 MemWritesBlobstore, PrefixBlobstore};
+use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds,
                         CachingBonsaiHgMapping, SqlBonsaiHgMapping};
@@ -53,9 +53,11 @@ use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFil
                       HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
                       Manifest, RepoPath, RepositoryId, Type};
 use mercurial_types::manifest::Content;
+use metaconfig::RemoteBlobstoreArgs;
 use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
                      ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath,
                      MPathElement, MononokeId, hash::Blake2, hash::Sha256};
+use multiplexedblob::MultiplexedBlobstore;
 use rocksblob::Rocksblob;
 use rocksdb;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
@@ -279,9 +281,9 @@ impl BlobRepo {
         ))
     }
 
-    pub fn new_manifold_scribe_commits<C>(
+    pub fn new_remote_scribe_commits<C>(
         logger: Logger,
-        args: &ManifoldArgs,
+        args: &RemoteBlobstoreArgs,
         db_address: String,
         filenode_shards: Option<usize>,
         repoid: RepositoryId,
@@ -291,7 +293,7 @@ impl BlobRepo {
     where
         C: ScribeClient + Sync + Send + 'static,
     {
-        let mut repo = Self::new_manifold_no_postcommit(
+        let mut repo = Self::new_remote_no_postcommit(
             logger,
             args,
             db_address,
@@ -304,19 +306,50 @@ impl BlobRepo {
         Ok(repo)
     }
 
-    pub fn new_manifold_no_postcommit(
+    pub fn new_remote_no_postcommit(
         logger: Logger,
-        args: &ManifoldArgs,
+        args: &RemoteBlobstoreArgs,
         db_address: String,
         filenode_shards: Option<usize>,
         repoid: RepositoryId,
         myrouter_port: u16,
     ) -> Result<Self> {
-        let bookmarks = SqlBookmarks::with_myrouter(&db_address, myrouter_port);
+        fn eval_remote_args(
+            args: &RemoteBlobstoreArgs,
+            repoid: RepositoryId,
+            queue: &Arc<BlobstoreSyncQueue>,
+        ) -> Result<Arc<Blobstore>> {
+            match args {
+                RemoteBlobstoreArgs::Manifold(manifold_args) => {
+                    let blobstore = ThriftManifoldBlob::new(manifold_args.bucket.clone())?;
+                    let blobstore =
+                        PrefixBlobstore::new(blobstore, format!("flat/{}", manifold_args.prefix));
+                    Ok(Arc::new(blobstore))
+                }
+                RemoteBlobstoreArgs::Multiplexed(args) => {
+                    let mut blobstores = Vec::new();
+                    for (blobstore_id, arg) in args {
+                        blobstores.push((*blobstore_id, eval_remote_args(arg, repoid, queue)?));
+                    }
+                    if blobstores.len() == 1 {
+                        let (_, blobstore) = blobstores.into_iter().next().unwrap();
+                        Ok(blobstore)
+                    } else {
+                        Ok(Arc::new(MultiplexedBlobstore::new(
+                            repoid,
+                            blobstores,
+                            queue.clone(),
+                        )))
+                    }
+                }
+            }
+        }
 
-        let blobstore = ThriftManifoldBlob::new(args.bucket.clone())?;
-        let blobstore = PrefixBlobstore::new(blobstore, format!("flat/{}", args.prefix));
-        let blobstore = new_memcache_blobstore(blobstore, "manifold", args.bucket.as_ref())?;
+        let blobstore_sync_queue: Arc<BlobstoreSyncQueue> = Arc::new(
+            SqlBlobstoreSyncQueue::with_myrouter(&db_address, myrouter_port),
+        );
+        let blobstore = eval_remote_args(args, repoid, &blobstore_sync_queue)?;
+        let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
         let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
             ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
         ))?);
@@ -338,6 +371,8 @@ impl BlobRepo {
             "sqlfilenodes",
             &db_address,
         );
+
+        let bookmarks = SqlBookmarks::with_myrouter(&db_address, myrouter_port);
 
         let changesets = SqlChangesets::with_myrouter(&db_address, myrouter_port);
         let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(

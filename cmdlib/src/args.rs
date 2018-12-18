@@ -26,7 +26,7 @@ use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_types::RepositoryId;
-use metaconfig::{ManifoldArgs, RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType};
+use metaconfig::{ManifoldArgs, RepoConfigs, RepoReadOnly, RepoType};
 use repo_client::{open_blobrepo, MononokeRepo};
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -479,15 +479,7 @@ fn open_repo_internal<'a>(
         RepoType::BlobRemote {
             ref blobstores_args,
             ..
-        } => {
-            if blobstores_args.len() != 1 {
-                return Err(err_msg("only single manifold blobstore is supported"));
-            }
-            let manifold_args = match blobstores_args.iter().next().unwrap() {
-                (_, RemoteBlobstoreArgs::Manifold(manifold_args)) => manifold_args,
-            };
-            logger.new(o!["BlobRepo:Manifold" => manifold_args.bucket.clone()])
-        }
+        } => logger.new(o!["BlobRepo:Remote" => format!("{:?}", blobstores_args)]),
         RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
             setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
             logger.new(o!["BlobRepo:DelayRocksdb" => data_dir.to_string_lossy().into_owned()])

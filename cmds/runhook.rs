@@ -40,6 +40,12 @@ extern crate fixtures;
 #[cfg(test)]
 extern crate tempdir;
 
+use std::env::args;
+use std::fs::File;
+use std::io::prelude::*;
+use std::str::FromStr;
+use std::sync::Arc;
+
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
@@ -52,11 +58,6 @@ use hooks::lua_hook::LuaHook;
 use mercurial_types::{HgChangesetId, RepositoryId};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
-use std::env::args;
-use std::fs::File;
-use std::io::prelude::*;
-use std::str::FromStr;
-use std::sync::Arc;
 
 fn run_hook(
     args: Vec<String>,
@@ -149,6 +150,7 @@ fn run_hook(
 
 fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
     let manifold_args = cmdlib::args::parse_manifold_args(matches);
+
     let myrouter_port = matches
         .value_of("myrouter-port")
         .expect("missing myrouter port")
@@ -161,9 +163,9 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
             .parse()
             .expect("shard count must be a positive integer")
     });
-    BlobRepo::new_manifold_no_postcommit(
+    BlobRepo::new_remote_no_postcommit(
         logger.clone(),
-        &manifold_args,
+        &manifold_args.into(),
         db_address,
         filenode_shards,
         RepositoryId::new(0),

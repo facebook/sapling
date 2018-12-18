@@ -38,6 +38,7 @@ extern crate futures_stats;
 
 extern crate ascii;
 extern crate blobstore;
+extern crate blobstore_sync_queue;
 extern crate bonsai_hg_mapping;
 extern crate bookmarks;
 extern crate cachelib;
@@ -60,6 +61,7 @@ extern crate metaconfig;
 extern crate mononoke_types;
 #[cfg(test)]
 extern crate mononoke_types_mocks;
+extern crate multiplexedblob;
 extern crate rocksblob;
 extern crate rocksdb;
 extern crate scribe;

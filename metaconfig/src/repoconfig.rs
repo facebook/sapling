@@ -11,7 +11,7 @@ use bookmarks::Bookmark;
 use errors::*;
 use failure::ResultExt;
 use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
@@ -192,6 +192,14 @@ impl Default for LfsParams {
 pub enum RemoteBlobstoreArgs {
     /// Manifold arguments
     Manifold(ManifoldArgs),
+    /// Multiplexed
+    Multiplexed(HashMap<BlobstoreId, RemoteBlobstoreArgs>),
+}
+
+impl From<ManifoldArgs> for RemoteBlobstoreArgs {
+    fn from(manifold_args: ManifoldArgs) -> Self {
+        RemoteBlobstoreArgs::Manifold(manifold_args)
+    }
 }
 
 /// Id used to discriminate diffirent underlying blobstore instances
@@ -244,8 +252,8 @@ pub enum RepoType {
     BlobRocks(PathBuf),
     /// Blob repository with path pointing to the directory where a server socket is going to be.
     BlobRemote {
-        /// Manifold arguments
-        blobstores_args: HashMap<BlobstoreId, RemoteBlobstoreArgs>,
+        /// Remote blobstores arguments
+        blobstores_args: RemoteBlobstoreArgs,
         /// Identifies the SQL database to connect to.
         db_address: String,
         /// If present, the number of shards to spread filenodes across
@@ -431,19 +439,13 @@ impl RepoConfigs {
                 let remote_blobstores = this.remote_blobstore.ok_or(ErrorKind::InvalidConfig(
                     "remote blobstores must be specified".into(),
                 ))?;
+                let db_address = this.db_address.ok_or(ErrorKind::InvalidConfig(
+                    "xdb tier was not specified".into(),
+                ))?;
 
-                let unique_blobsotre_ids: HashSet<_> =
-                    remote_blobstores.iter().map(|c| c.blobstore_id).collect();
-                if unique_blobsotre_ids.len() != remote_blobstores.len() {
-                    return Err(ErrorKind::InvalidConfig(
-                        "blobstore identifiers are not unique".into(),
-                    ).into());
-                }
-
-                let mut blobstores_args = HashMap::new();
-                let db_address = this.db_address.expect("xdb tier was not specified");
+                let mut blobstores = HashMap::new();
                 for blobstore in remote_blobstores {
-                    match blobstore.blobstore_type {
+                    let args = match blobstore.blobstore_type {
                         RawBlobstoreType::Manifold => {
                             let manifold_bucket =
                                 blobstore.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
@@ -453,13 +455,22 @@ impl RepoConfigs {
                                 bucket: manifold_bucket,
                                 prefix: blobstore.manifold_prefix.unwrap_or("".into()),
                             };
-                            blobstores_args.insert(
-                                blobstore.blobstore_id,
-                                RemoteBlobstoreArgs::Manifold(manifold_args),
-                            );
+                            RemoteBlobstoreArgs::Manifold(manifold_args)
                         }
+                    };
+                    if blobstores.insert(blobstore.blobstore_id, args).is_some() {
+                        return Err(ErrorKind::InvalidConfig(
+                            "blobstore identifiers are not unique".into(),
+                        ).into());
                     }
                 }
+
+                let blobstores_args = if blobstores.len() == 1 {
+                    let (_, args) = blobstores.into_iter().next().unwrap();
+                    args
+                } else {
+                    RemoteBlobstoreArgs::Multiplexed(blobstores)
+                };
 
                 RepoType::BlobRemote {
                     blobstores_args,
@@ -746,15 +757,16 @@ mod test {
             bucket: "anotherbucket".into(),
             prefix: "someprefix".into(),
         };
-        let mut blobstores_args = HashMap::new();
-        blobstores_args.insert(
+        let mut blobstores = HashMap::new();
+        blobstores.insert(
             BlobstoreId::new(0),
             RemoteBlobstoreArgs::Manifold(first_manifold_args),
         );
-        blobstores_args.insert(
+        blobstores.insert(
             BlobstoreId::new(1),
             RemoteBlobstoreArgs::Manifold(second_manifold_args),
         );
+        let blobstores_args = RemoteBlobstoreArgs::Multiplexed(blobstores);
 
         let mut repos = HashMap::new();
         repos.insert(
