@@ -28,6 +28,3 @@ harness = false
 name = "log"
 harness = false
 
-[[bin]]
-name = "indexedlog-dump"
-path = "src/indexedlog_dump.rs"

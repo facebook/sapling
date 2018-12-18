@@ -11,20 +11,7 @@
 // Write code paths are not used.
 #![allow(dead_code)]
 
-extern crate atomicwrites;
-extern crate byteorder;
-extern crate fs2;
-extern crate memmap;
-extern crate twox_hash;
-extern crate vlqencoding;
-
-mod base16;
-mod checksum_table;
-mod index;
-mod lock;
-mod log;
-mod utils;
-
+extern crate indexedlog;
 use std::{env, path::Path};
 
 fn main() {
@@ -32,11 +19,11 @@ fn main() {
         let path = Path::new(&arg);
         if path.is_dir() {
             // Treate it as Log.
-            let log = log::Log::open(path, Vec::new()).unwrap();
+            let log = indexedlog::log::Log::open(path, Vec::new()).unwrap();
             println!("Log Directory {:?}:\n{:#?}\n", path, log);
         } else if path.is_file() {
             // Treate it as Index.
-            let idx = index::OpenOptions::new().open(path).unwrap();
+            let idx = indexedlog::index::OpenOptions::new().open(path).unwrap();
             println!("Index File {:?}\n{:?}\n", path, idx);
         } else {
             println!(

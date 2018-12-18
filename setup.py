@@ -2075,6 +2075,7 @@ rustextbinaries = [
         rename="hg.rust",
         features=hgmainfeatures,
     ),
+    RustBinary("indexedlog_dump", manifest="exec/utils/Cargo.toml"),
 ]
 
 setup(
