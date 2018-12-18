@@ -243,8 +243,7 @@ class shallowcg1packer(changegroup.cg1packer):
                     if repo.shallowmatch(fname):
                         fnode = bin(fnode)
                         filerevlog = repo.file(fname)
-                        ancestormap = filerevlog.ancestormap(fnode)
-                        p1, p2, linknode, copyfrom = ancestormap[fnode]
+                        p1, p2, linknode, copyfrom = filerevlog.getnodeinfo(fnode)
                         if p1 != nullid:
                             prevfiles.append((copyfrom or fname, hex(p1)))
 

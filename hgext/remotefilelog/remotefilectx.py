@@ -111,8 +111,7 @@ class remotefilectx(context.filectx):
         if self._filenode == nullid:
             return nullrev
 
-        ancestormap = self.ancestormap()
-        p1, p2, linknode, copyfrom = ancestormap[self._filenode]
+        p1, p2, linknode, copyfrom = self.getnodeinfo()
         rev = self._repo.changelog.nodemap.get(linknode)
         if rev is not None:
             return rev
@@ -162,9 +161,7 @@ class remotefilectx(context.filectx):
         if file revisions linkrev points back to the changeset in question
         or both changeset parents contain different file revisions.
         """
-        ancestormap = self.ancestormap()
-
-        p1, p2, linknode, copyfrom = ancestormap[self._filenode]
+        p1, p2, linknode, copyfrom = self.getnodeinfo()
         if not copyfrom:
             return None
 
@@ -187,6 +184,12 @@ class remotefilectx(context.filectx):
             self._ancestormap = self.filelog().ancestormap(self._filenode)
 
         return self._ancestormap
+
+    def getnodeinfo(self):
+        if self._ancestormap:
+            return self._ancestormap[self._filenode]
+
+        return self.filelog().getnodeinfo(self._filenode)
 
     def parents(self):
         repo = self._repo
@@ -258,8 +261,7 @@ class remotefilectx(context.filectx):
         repo = self._repo
         cl = repo.unfiltered().changelog
         mfl = repo.manifestlog
-        ancestormap = self.ancestormap()
-        linknode = ancestormap[fnode][2]
+        linknode = self.getnodeinfo()[2]
 
         if srcrev is None:
             # wctx case, used by workingfilectx during mergecopy
@@ -407,7 +409,7 @@ class remotefilectx(context.filectx):
             # we need to rebuild the ancestor map to recompute the
             # linknodes.
             self._ancestormap = None
-            linknode = self.ancestormap()[fnode][2]  # 2 is linknode
+            linknode = self.getnodeinfo()[2]  # 2 is linknode
             if self._verifylinknode(revs, linknode):
                 logmsg = "remotefilelog prefetching succeeded"
                 return linknode
@@ -580,20 +582,33 @@ class remoteworkingfilectx(context.workingfilectx, remotefilectx):
     def parents(self):
         return remotefilectx.parents(self)
 
+    def _getnodeinfo(self):
+        path = self._path
+        pcl = self._changectx._parents
+        renamed = self.renamed()
+
+        if renamed:
+            p1 = renamed
+        else:
+            p1 = (path, pcl[0]._manifest.get(path, nullid))
+
+        p2 = (path, nullid)
+        if len(pcl) > 1:
+            p2 = (path, pcl[1]._manifest.get(path, nullid))
+
+        copyfrom = ""
+        if renamed:
+            copyfrom = renamed[0]
+
+        return (p1, p2, nullid, copyfrom)
+
+    def getnodeinfo(self):
+        p1, p2, linknode, copyfrom = self._getnodeinfo()
+        return (p1[1], p2[1], linknode, copyfrom)
+
     def ancestormap(self):
         if not self._ancestormap:
-            path = self._path
-            pcl = self._changectx._parents
-            renamed = self.renamed()
-
-            if renamed:
-                p1 = renamed
-            else:
-                p1 = (path, pcl[0]._manifest.get(path, nullid))
-
-            p2 = (path, nullid)
-            if len(pcl) > 1:
-                p2 = (path, pcl[1]._manifest.get(path, nullid))
+            p1, p2, linknode, copyfrom = self._getnodeinfo()
 
             m = {}
             if p1[1] != nullid:
@@ -604,9 +619,6 @@ class remoteworkingfilectx(context.workingfilectx, remotefilectx):
                 p2ctx = self._repo.filectx(p2[0], fileid=p2[1])
                 m.update(p2ctx.filelog().ancestormap(p2[1]))
 
-            copyfrom = ""
-            if renamed:
-                copyfrom = renamed[0]
             m[None] = (p1[1], p2[1], nullid, copyfrom)
             self._ancestormap = m
 

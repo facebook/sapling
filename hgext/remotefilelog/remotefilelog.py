@@ -226,8 +226,7 @@ class remotefilelog(object):
         return node
 
     def renamed(self, node):
-        ancestors = self.repo.fileslog.metadatastore.getancestors(self.filename, node)
-        p1, p2, linknode, copyfrom = ancestors[node]
+        p1, p2, linknode, copyfrom = self.getnodeinfo(node)
         if copyfrom:
             return (copyfrom, p1)
 
@@ -293,16 +292,18 @@ class remotefilelog(object):
         if node == nullid:
             return nullid, nullid
 
-        ancestormap = self.repo.fileslog.metadatastore.getancestors(self.filename, node)
-        p1, p2, linknode, copyfrom = ancestormap[node]
+        p1, p2, linknode, copyfrom = self.repo.fileslog.metadatastore.getnodeinfo(
+            self.filename, node
+        )
         if copyfrom:
             p1 = nullid
 
         return p1, p2
 
     def linknode(self, node):
-        ancestormap = self.repo.fileslog.metadatastore.getancestors(self.filename, node)
-        p1, p2, linknode, copyfrom = ancestormap[node]
+        p1, p2, linknode, copyfrom = self.repo.fileslog.metadatastore.getnodeinfo(
+            self.filename, node
+        )
         return linknode
 
     def revdiff(self, node1, node2):
@@ -412,6 +413,9 @@ class remotefilelog(object):
 
     def ancestormap(self, node):
         return self.repo.fileslog.metadatastore.getancestors(self.filename, node)
+
+    def getnodeinfo(self, node):
+        return self.repo.fileslog.metadatastore.getnodeinfo(self.filename, node)
 
     def ancestor(self, a, b):
         if a == nullid or b == nullid:

@@ -168,7 +168,6 @@
   $ hg debugfilerev -r .
   e61a2a5ac410: move x to xx
    xx: bin=0 lnk=0 flag=0 size=4 copied='x' chain=ede4cf65837b
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
   $ hg debugdatapack --node ede4cf65837b184e3aea21fb13ba08bcc26f7988 .hg/store/packs/*.dataidx
   .hg/store/packs/30e5a4f1fde0aa10de7c8bbc818d97aac0d4087e:
   (not found)
@@ -187,7 +186,7 @@
 # Test that pending pack writes can be read
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master pending_test -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over 0.00s
   $ cd pending_test
   $ setconfig rebase.singeltransaction=True remotefilelog.packlocaldata=True
   $ drawdag <<'EOS'
