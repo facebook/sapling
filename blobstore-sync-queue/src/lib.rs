@@ -13,8 +13,8 @@ extern crate cloned;
 extern crate context;
 extern crate futures_ext;
 extern crate mercurial_types;
+extern crate metaconfig;
 extern crate mononoke_types;
-extern crate multiplexedblob;
 #[macro_use]
 extern crate sql;
 extern crate sql_ext;
@@ -32,8 +32,8 @@ use failure::{format_err, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::RepositoryId;
+use metaconfig::BlobstoreId;
 use mononoke_types::{DateTime, Timestamp};
-use multiplexedblob::BlobstoreId;
 
 use stats::Timeseries;
 

@@ -10,11 +10,11 @@ extern crate cloned;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
-extern crate sql;
 extern crate tokio;
 
 extern crate blobstore;
 extern crate context;
+extern crate metaconfig;
 extern crate mononoke_types;
 
 #[cfg(test)]
@@ -28,50 +28,12 @@ use cloned::cloned;
 use failure::{err_msg, Error};
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
-use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
 use tokio::executor::spawn;
 
 use blobstore::Blobstore;
 use context::CoreContext;
+use metaconfig::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
-
-/// Id used to discriminate diffirent underlying blobstore instances
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BlobstoreId(u64);
-
-impl BlobstoreId {
-    pub fn new(id: u64) -> Self {
-        BlobstoreId(id)
-    }
-}
-
-impl From<BlobstoreId> for Value {
-    fn from(id: BlobstoreId) -> Self {
-        Value::UInt(id.0)
-    }
-}
-
-impl ConvIr<BlobstoreId> for BlobstoreId {
-    fn new(v: Value) -> Result<Self, FromValueError> {
-        match v {
-            Value::UInt(id) => Ok(BlobstoreId(id)),
-            Value::Int(id) => Ok(BlobstoreId(id as u64)), // sqlite always produces `int`
-            _ => Err(FromValueError(v)),
-        }
-    }
-
-    fn commit(self) -> Self {
-        self
-    }
-
-    fn rollback(self) -> Value {
-        self.into()
-    }
-}
-
-impl FromValue for BlobstoreId {
-    type Intermediate = BlobstoreId;
-}
 
 /// This handler is called on each successful put to underlying blobstore,
 /// for put to be considered successful this handler must return success.
@@ -330,7 +292,10 @@ mod test {
             let bs1 = Arc::new(TickBlobstore::new());
             let log = Arc::new(LogHandler::new());
             let bs = MultiplexedBlobstore::new(
-                vec![(BlobstoreId(0), bs0.clone()), (BlobstoreId(1), bs1.clone())],
+                vec![
+                    (BlobstoreId::new(0), bs0.clone()),
+                    (BlobstoreId::new(1), bs1.clone()),
+                ],
                 log.clone(),
             );
             let ctx = CoreContext::test_mock();
@@ -350,7 +315,8 @@ mod test {
                 );
                 assert!(with(&bs1.storage, |s| s.is_empty()));
                 bs1.tick(Some("bs1 failed"));
-                assert!(with(&log.log, |log| log == &vec![(BlobstoreId(0), k0.clone())]));
+                assert!(with(&log.log, |log| log
+                    == &vec![(BlobstoreId::new(0), k0.clone())]));
 
                 // should succeed as it is stored in bs1
                 let mut get_fut = bs.get(ctx.clone(), k0);
@@ -379,7 +345,8 @@ mod test {
                     with(&bs1.storage, |s| s.get(&k1).cloned()),
                     Some(v1.clone())
                 );
-                assert!(with(&log.log, |log| log == &vec![(BlobstoreId(1), k1.clone())]));
+                assert!(with(&log.log, |log| log
+                    == &vec![(BlobstoreId::new(1), k1.clone())]));
 
                 let mut get_fut = bs.get(ctx.clone(), k1.clone());
                 assert_eq!(get_fut.poll().unwrap(), Async::NotReady);

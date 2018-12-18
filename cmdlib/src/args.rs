@@ -476,14 +476,15 @@ fn open_repo_internal<'a>(
             setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
             logger.new(o!["BlobRepo:Rocksdb" => data_dir.to_string_lossy().into_owned()])
         }
-        RepoType::BlobRemote{ref blobstores_args, ..} => {
+        RepoType::BlobRemote {
+            ref blobstores_args,
+            ..
+        } => {
             if blobstores_args.len() != 1 {
                 return Err(err_msg("only single manifold blobstore is supported"));
             }
-            let manifold_args = match blobstores_args.get(0).unwrap() {
-                RemoteBlobstoreArgs::Manifold(manifold_args) => {
-                    manifold_args
-                }
+            let manifold_args = match blobstores_args.iter().next().unwrap() {
+                (_, RemoteBlobstoreArgs::Manifold(manifold_args)) => manifold_args,
             };
             logger.new(o!["BlobRepo:Manifold" => manifold_args.bucket.clone()])
         }

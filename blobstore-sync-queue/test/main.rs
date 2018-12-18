@@ -12,6 +12,7 @@ extern crate blobstore_sync_queue;
 extern crate context;
 extern crate futures;
 extern crate mercurial_types;
+extern crate metaconfig;
 extern crate mononoke_types;
 extern crate multiplexedblob;
 extern crate tokio;
@@ -20,8 +21,8 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobs
                            SqlConstructors};
 use context::CoreContext;
 use mercurial_types::RepositoryId;
+use metaconfig::BlobstoreId;
 use mononoke_types::DateTime;
-use multiplexedblob::BlobstoreId;
 
 #[test]
 fn test_simple() {

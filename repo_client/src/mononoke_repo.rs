@@ -121,8 +121,8 @@ pub fn open_blobrepo(
             if blobstores_args.len() != 1 {
                 return Err(err_msg("only single manifold blobstore is supported"));
             }
-            let manifold_args = match blobstores_args.get(0).unwrap() {
-                RemoteBlobstoreArgs::Manifold(manifold_args) => manifold_args,
+            let manifold_args = match blobstores_args.iter().next().unwrap() {
+                (_, RemoteBlobstoreArgs::Manifold(manifold_args)) => manifold_args,
             };
 
             BlobRepo::new_manifold_scribe_commits(

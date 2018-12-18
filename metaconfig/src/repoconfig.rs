@@ -10,7 +10,8 @@
 use bookmarks::Bookmark;
 use errors::*;
 use failure::ResultExt;
-use std::collections::HashMap;
+use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
@@ -193,6 +194,43 @@ pub enum RemoteBlobstoreArgs {
     Manifold(ManifoldArgs),
 }
 
+/// Id used to discriminate diffirent underlying blobstore instances
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd, Deserialize)]
+pub struct BlobstoreId(u64);
+
+impl BlobstoreId {
+    /// Construct blobstore from integer
+    pub fn new(id: u64) -> Self {
+        BlobstoreId(id)
+    }
+}
+
+impl From<BlobstoreId> for Value {
+    fn from(id: BlobstoreId) -> Self {
+        Value::UInt(id.0)
+    }
+}
+
+impl ConvIr<BlobstoreId> for BlobstoreId {
+    fn new(v: Value) -> std::result::Result<Self, FromValueError> {
+        match v {
+            Value::UInt(id) => Ok(BlobstoreId(id)),
+            Value::Int(id) => Ok(BlobstoreId(id as u64)), // sqlite always produces `int`
+            _ => Err(FromValueError(v)),
+        }
+    }
+    fn commit(self) -> Self {
+        self
+    }
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for BlobstoreId {
+    type Intermediate = BlobstoreId;
+}
+
 /// Types of repositories supported
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RepoType {
@@ -207,7 +245,7 @@ pub enum RepoType {
     /// Blob repository with path pointing to the directory where a server socket is going to be.
     BlobRemote {
         /// Manifold arguments
-        blobstores_args: Vec<RemoteBlobstoreArgs>,
+        blobstores_args: HashMap<BlobstoreId, RemoteBlobstoreArgs>,
         /// Identifies the SQL database to connect to.
         db_address: String,
         /// If present, the number of shards to spread filenodes across
@@ -394,7 +432,15 @@ impl RepoConfigs {
                     "remote blobstores must be specified".into(),
                 ))?;
 
-                let mut blobstores_args = vec![];
+                let unique_blobsotre_ids: HashSet<_> =
+                    remote_blobstores.iter().map(|c| c.blobstore_id).collect();
+                if unique_blobsotre_ids.len() != remote_blobstores.len() {
+                    return Err(ErrorKind::InvalidConfig(
+                        "blobstore identifiers are not unique".into(),
+                    ).into());
+                }
+
+                let mut blobstores_args = HashMap::new();
                 let db_address = this.db_address.expect("xdb tier was not specified");
                 for blobstore in remote_blobstores {
                     match blobstore.blobstore_type {
@@ -407,7 +453,10 @@ impl RepoConfigs {
                                 bucket: manifold_bucket,
                                 prefix: blobstore.manifold_prefix.unwrap_or("".into()),
                             };
-                            blobstores_args.push(RemoteBlobstoreArgs::Manifold(manifold_args));
+                            blobstores_args.insert(
+                                blobstore.blobstore_id,
+                                RemoteBlobstoreArgs::Manifold(manifold_args),
+                            );
                         }
                     }
                 }
@@ -570,6 +619,7 @@ struct RawHookConfig {
 #[derive(Debug, Deserialize, Clone)]
 struct RawRemoteBlobstoreConfig {
     blobstore_type: RawBlobstoreType,
+    blobstore_id: BlobstoreId,
     manifold_bucket: Option<String>,
     manifold_prefix: Option<String>,
 }
@@ -626,9 +676,11 @@ mod test {
             entrylimit=1234
             weightlimit=4321
             [[remote_blobstore]]
+            blobstore_id=0
             blobstore_type="manifold"
             manifold_bucket="bucket"
             [[remote_blobstore]]
+            blobstore_id=1
             blobstore_type="manifold"
             manifold_bucket="anotherbucket"
             manifold_prefix="someprefix"
@@ -694,6 +746,16 @@ mod test {
             bucket: "anotherbucket".into(),
             prefix: "someprefix".into(),
         };
+        let mut blobstores_args = HashMap::new();
+        blobstores_args.insert(
+            BlobstoreId::new(0),
+            RemoteBlobstoreArgs::Manifold(first_manifold_args),
+        );
+        blobstores_args.insert(
+            BlobstoreId::new(1),
+            RemoteBlobstoreArgs::Manifold(second_manifold_args),
+        );
+
         let mut repos = HashMap::new();
         repos.insert(
             "fbsource".to_string(),
@@ -701,10 +763,7 @@ mod test {
                 enabled: true,
                 repotype: RepoType::BlobRemote {
                     db_address: "db_address".into(),
-                    blobstores_args: vec![
-                        RemoteBlobstoreArgs::Manifold(first_manifold_args),
-                        RemoteBlobstoreArgs::Manifold(second_manifold_args),
-                    ],
+                    blobstores_args,
                     filenode_shards: None,
                 },
                 generation_cache_size: 1024 * 1024,

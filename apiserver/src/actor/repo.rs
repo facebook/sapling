@@ -57,7 +57,7 @@ impl MononokeRepo {
             BlobRocks(path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid)
                 .into_future()
                 .left_future(),
-            BlobRemote{
+            BlobRemote {
                 ref blobstores_args,
                 ref db_address,
                 ref filenode_shards,
@@ -67,10 +67,8 @@ impl MononokeRepo {
                         .into_future()
                         .left_future()
                 } else {
-                    let manifold_args = match blobstores_args.get(0).unwrap() {
-                        RemoteBlobstoreArgs::Manifold(manifold_args) => {
-                            manifold_args
-                        }
+                    let manifold_args = match blobstores_args.iter().next().unwrap() {
+                        (_, RemoteBlobstoreArgs::Manifold(manifold_args)) => manifold_args,
                     };
 
                     match myrouter_port {
@@ -78,24 +76,26 @@ impl MononokeRepo {
                             "Missing myrouter port, unable to open BlobRemote repo",
                         )).into_future()
                             .left_future(),
-                        Some(myrouter_port) => myrouter::wait_for_myrouter(myrouter_port, &db_address)
-                            .and_then({
-                                cloned!(db_address, filenode_shards, logger, manifold_args);
-                                move |()| {
-                                    BlobRepo::new_manifold_no_postcommit(
-                                        logger,
-                                        &manifold_args,
-                                        db_address.clone(),
-                                        filenode_shards.clone(),
-                                        repoid,
-                                        myrouter_port,
-                                    )
-                                }
-                            })
-                            .right_future(),
+                        Some(myrouter_port) => {
+                            myrouter::wait_for_myrouter(myrouter_port, &db_address)
+                                .and_then({
+                                    cloned!(db_address, filenode_shards, logger, manifold_args);
+                                    move |()| {
+                                        BlobRepo::new_manifold_no_postcommit(
+                                            logger,
+                                            &manifold_args,
+                                            db_address.clone(),
+                                            filenode_shards.clone(),
+                                            repoid,
+                                            myrouter_port,
+                                        )
+                                    }
+                                })
+                                .right_future()
+                        }
                     }
                 }
-            },
+            }
             _ => Err(err_msg("Unsupported repo type."))
                 .into_future()
                 .left_future(),

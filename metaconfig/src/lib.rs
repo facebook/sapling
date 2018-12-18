@@ -21,6 +21,7 @@ extern crate maplit;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate sql;
 #[cfg(test)]
 extern crate tempdir;
 extern crate toml;
@@ -34,7 +35,7 @@ extern crate mononoke_types;
 pub mod errors;
 pub mod repoconfig;
 
-pub use repoconfig::{CacheWarmupParams, LfsParams, ManifoldArgs, PushrebaseParams,
+pub use repoconfig::{BlobstoreId, CacheWarmupParams, LfsParams, ManifoldArgs, PushrebaseParams,
                      RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType};
 
 pub use errors::{Error, ErrorKind};
