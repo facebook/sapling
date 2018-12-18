@@ -216,6 +216,7 @@ def insert_latency_record(
             return str(i) + "   "
 
     if operation not in table.keys():
+        # pyre-ignore[6]: T38220626
         table[operation] = [
             ["" for _ in range(len(percentile_table))]
             for _ in range(len(period_table) + 1)
@@ -299,6 +300,7 @@ class ThriftCmd(Subcmd):
         with instance.get_thrift_client() as client:
             counters = client.getCounters()
 
+        # pyre-ignore[6]: T38219653
         thrift_counters = get_thrift_counters(counters)
         stats_print.write_table(thrift_counters, "Thrift Call", out)
 

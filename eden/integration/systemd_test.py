@@ -86,6 +86,7 @@ class SystemdTest(
         self.set_up_edenfs_systemd_service()
         subprocess.check_call(
             [FindExe.EDEN_CLI]
+            # pyre-ignore[6]: T38220626
             + self.get_required_eden_cli_args()
             + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
         )

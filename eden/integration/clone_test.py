@@ -430,7 +430,10 @@ class CloneFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         return repo
 
     def spawn_clone(
-        self, repo_path: Path, mount_path: Path, extra_args: Sequence[str] = ()
+        self,
+        repo_path: Path,
+        mount_path: Path,
+        extra_args: Optional[Sequence[str]] = None,
     ) -> "pexpect.spawn[str]":
         args = (
             ["--config-dir", str(self.eden_dir)]
@@ -443,7 +446,8 @@ class CloneFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
                 str(mount_path),
             ]
         )
-        args.extend(extra_args)
+        if extra_args:
+            args.extend(extra_args)
         return pexpect.spawn(
             FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
         )

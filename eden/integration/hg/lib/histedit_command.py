@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+from typing import Optional
 
 from .hg_extension_test_base import EdenHgTestCase
 
@@ -30,7 +31,7 @@ class HisteditCommand:
     def stop(self, commit_hash: str) -> None:
         self._actions.append("stop %s\n" % commit_hash)
 
-    def run(self, test_base: EdenHgTestCase, ancestor: str = None) -> None:
+    def run(self, test_base: EdenHgTestCase, ancestor: Optional[str] = None) -> None:
         commands_file = os.path.join(test_base.tmp_dir, "histedit_commands.txt")
         with open(commands_file, "w") as f:
             [f.write(action) for action in self._actions]

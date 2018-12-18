@@ -48,6 +48,7 @@ class GitRepository(repobase.Repository):
           repo.git('commit', '-m', 'my new commit',
                    env={'GIT_AUTHOR_NAME': 'John Doe'})
         """
+        # pyre-ignore[6]: T38220626
         cmd = [self.git_bin] + list(args)
 
         git_env = None
@@ -122,9 +123,11 @@ class GitRepository(repobase.Repository):
         git_commit_env = {
             "GIT_AUTHOR_NAME": author_name,
             "GIT_AUTHOR_EMAIL": author_email,
+            # pyre-fixme[18]: Global name `date_str` is undefined.
             "GIT_AUTHOR_DATE": date_str,
             "GIT_COMMITTER_NAME": committer_name,
             "GIT_COMMITTER_EMAIL": committer_email,
+            # pyre-fixme[18]: Global name `committer_date_str` is undefined.
             "GIT_COMMITTER_DATE": committer_date_str,
         }
 
@@ -137,6 +140,7 @@ class GitRepository(repobase.Repository):
             args = ["commit", "-F", msgf.name]
             if amend:
                 args.append("--amend")
+            # pyre-fixme[18]: Global name `git_commit_env` is undefined.
             self.git(*args, env=git_commit_env)
 
         # Get the commit ID and return it

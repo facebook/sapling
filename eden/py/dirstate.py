@@ -119,8 +119,7 @@ def read(fp, filename):  # noqa: C901
         raise DirstateParseException(
             "Reached EOF while reading the version number in {}.\n".format(filename)
         )
-    version = struct.unpack(">I", binary_version)[0]
-    version  # type: int
+    version = struct.unpack(">I", binary_version)[0]  # type: int
     if version != CURRENT_DIRSTATE_VERSION:
         raise DirstateParseException(
             "Unknown dirstate version in {}. Found {} but expected {}.\n".format(
@@ -141,10 +140,10 @@ def read(fp, filename):  # noqa: C901
                     + ". Aborting read().\n"
                 )
             path = _read_path(hashing_read, filename)
+            status = 0  # type: int
+            mode = 0  # type: int
+            merge = 0  # type: int
             status, mode, merge = struct.unpack(">BIb", scalars)
-            status  # type: int
-            mode  # type: int
-            merge  # type: int
             # TODO(mbolin): Verify status and merge?
             tuples_dict[path] = (chr(status), mode, merge)
         elif header == b"\x02":
@@ -202,8 +201,7 @@ def _read_path(reader, filename):
             "Reached EOF while reading path length in {}.\n".format(filename)
         )
 
-    path_len = struct.unpack(">H", binary_path_len)[0]
-    path_len  # type: int
+    path_len = struct.unpack(">H", binary_path_len)[0]  # type: int
     path = reader(path_len)
     if len(path) == path_len:
         if isinstance(path, str):

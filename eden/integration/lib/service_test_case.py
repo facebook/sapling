@@ -37,7 +37,9 @@ class ServiceTestCaseBase(
 
     @abc.abstractmethod
     def spawn_fake_edenfs(
-        self, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+        self,
+        eden_dir: pathlib.Path,
+        extra_arguments: typing.Optional[typing.Sequence[str]] = None,
     ) -> FakeEdenFS:
         raise NotImplementedError()
 
@@ -103,7 +105,9 @@ class AdHocFakeEdenFSMixin(ServiceTestCaseMixinBase):
     """
 
     def spawn_fake_edenfs(
-        self, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+        self,
+        eden_dir: pathlib.Path,
+        extra_arguments: typing.Optional[typing.Sequence[str]] = None,
     ) -> FakeEdenFS:
         return FakeEdenFS.spawn(
             eden_dir=eden_dir,
@@ -120,7 +124,9 @@ class ManagedFakeEdenFSMixin(ServiceTestCaseMixinBase):
     """
 
     def spawn_fake_edenfs(
-        self, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+        self,
+        eden_dir: pathlib.Path,
+        extra_arguments: typing.Optional[typing.Sequence[str]] = None,
     ) -> FakeEdenFS:
         # TODO(T33122320): Opt out of using systemd when using systemd is the
         # default option.
@@ -146,7 +152,9 @@ class SystemdEdenCLIFakeEdenFSMixin(ServiceTestCaseMixinBase):
         self.set_up_edenfs_systemd_service()
 
     def spawn_fake_edenfs(
-        self, eden_dir: pathlib.Path, extra_arguments: typing.Sequence[str] = ()
+        self,
+        eden_dir: pathlib.Path,
+        extra_arguments: typing.Optional[typing.Sequence[str]] = None,
     ) -> FakeEdenFS:
         return FakeEdenFS.spawn_via_cli(
             eden_dir=eden_dir,

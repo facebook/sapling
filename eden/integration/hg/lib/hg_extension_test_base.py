@@ -341,7 +341,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
     def assert_unresolved(
         self,
         unresolved: Union[List[str], Set[str]],
-        resolved: Union[List[str], Set[str]] = None,
+        resolved: Optional[Union[List[str], Set[str]]] = None,
     ) -> None:
         out = self.hg("resolve", "--list")
         actual_resolved = set()

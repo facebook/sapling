@@ -324,6 +324,7 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
         inode_number = 45  # untracked/new/normal2.txt
         self._replace_overlay_inode(inode_number, data)
 
+        # pyre-ignore[29]: T38221530
         error = error_type(inode_number, "untracked/new/normal2.txt")
         expected_errors: List[ExpectedError] = [error]
         repaired_files = self.snapshot.get_expected_files()
@@ -369,6 +370,7 @@ class Test(unittest.TestCase, TemporaryDirectoryMixin):
         inode_number = 42  # untracked/
         self._replace_overlay_inode(inode_number, data)
 
+        # pyre-ignore[29]: T38221530
         main_error = error_type(inode_number, "untracked")
         repaired_files = self.snapshot.get_expected_files()
         orphan_files = [

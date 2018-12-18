@@ -26,6 +26,7 @@ from .find_executables import FindExe
 class EdenFS(object):
     """Manages an instance of the eden fuse server."""
 
+    # pyre-ignore[13]: T38223649
     _eden_dir: str
 
     def __init__(
@@ -135,7 +136,7 @@ class EdenFS(object):
             A list of arguments to run Eden that can be used with
             subprocess.Popen() or subprocess.check_call().
         """
-        cmd = [FindExe.EDEN_CLI, "--config-dir", self._eden_dir]
+        cmd = [FindExe.EDEN_CLI, "--config-dir", self._eden_dir]  # type: List[str]
         if self._etc_eden_dir:
             cmd += ["--etc-eden-dir", self._etc_eden_dir]
         if self._home_dir:

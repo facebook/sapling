@@ -119,6 +119,7 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
 
     def test_stopping_killed_daemon_reports_not_running(self) -> None:
         daemon = self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir))
+        # pyre-ignore[6]: T38216313
         os.kill(daemon.process_id, signal.SIGKILL)
 
         stop_process = self.spawn_stop(["--timeout", "1"])
@@ -129,6 +130,7 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
 
     def test_killing_hung_daemon_during_stop_makes_stop_finish(self) -> None:
         with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
+            # pyre-ignore[6]: T38216313
             os.kill(daemon_pid, signal.SIGSTOP)
             try:
                 stop_process = self.spawn_stop(["--timeout", "5"])
@@ -139,6 +141,7 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
                     "'eden stop' should wait while daemon is hung",
                 )
 
+                # pyre-ignore[6]: T38216313
                 os.kill(daemon_pid, signal.SIGKILL)
 
                 stop_process.expect_exact("error: edenfs is not running")
@@ -151,6 +154,7 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
 
     def test_stopping_daemon_stopped_by_sigstop_kills_daemon(self) -> None:
         with self.spawn_fake_edenfs(pathlib.Path(self.tmp_dir)) as daemon_pid:
+            # pyre-ignore[6]: T38216313
             os.kill(daemon_pid, signal.SIGSTOP)
             try:
                 stop_process = self.spawn_stop(["--timeout", "1"])

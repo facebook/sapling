@@ -35,6 +35,7 @@ class RestartTestBase(ServiceTestCaseBase):
         def ensure_stopped() -> None:
             stop_cmd = (
                 [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir]
+                # pyre-ignore[6]: T38220626
                 + self.get_required_eden_cli_args()
                 + ["stop"]
             )
@@ -45,6 +46,7 @@ class RestartTestBase(ServiceTestCaseBase):
     def _spawn_restart(self, *args: str) -> "pexpect.spawn[bytes]":
         restart_cmd = (
             [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir]
+            # pyre-ignore[6]: T38220626
             + self.get_required_eden_cli_args()
             + ["restart", "--daemon-binary", FindExe.FAKE_EDENFS]
         )

@@ -133,7 +133,7 @@ class DirectInvokeTest(unittest.TestCase):
         self._check_error(["restart"])
 
     def _check_error(self, args: List[str], err: Optional[str] = None) -> None:
-        cmd = [FindExe.EDEN_DAEMON]
+        cmd = [FindExe.EDEN_DAEMON]  # type: List[str]
         cmd.extend(args)
         out = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(os.EX_USAGE, out.returncode)
@@ -262,7 +262,7 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def spawn_start(
         self,
         eden_dir: typing.Optional[pathlib.Path] = None,
-        extra_args: typing.Sequence[str] = (),
+        extra_args: typing.Optional[typing.Sequence[str]] = None,
     ) -> "pexpect.spawn[str]":
         if eden_dir is None:
             eden_dir = self.eden_dir
