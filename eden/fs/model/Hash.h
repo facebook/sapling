@@ -37,12 +37,14 @@ class Hash : boost::totally_ordered<Hash> {
 
   explicit constexpr Hash(const Storage& bytes) : bytes_{bytes} {}
 
-  explicit Hash(folly::ByteRange bytes);
+  explicit constexpr Hash(folly::ByteRange bytes)
+      : bytes_{constructFromByteRange(bytes)} {}
 
   /**
    * @param hex is a string of 40 hexadecimal characters.
    */
-  explicit Hash(folly::StringPiece hex);
+  explicit constexpr Hash(folly::StringPiece hex)
+      : bytes_{constructFromHex(hex)} {}
 
   /**
    * Compute the SHA1 hash of an IOBuf chain.
@@ -54,7 +56,9 @@ class Hash : boost::totally_ordered<Hash> {
    */
   static Hash sha1(folly::ByteRange data);
 
-  folly::ByteRange getBytes() const;
+  constexpr folly::ByteRange getBytes() const {
+    return folly::ByteRange{bytes_.data(), bytes_.size()};
+  }
   folly::MutableByteRange mutableBytes();
 
   /** @return 40-character [lowercase] hex representation of this hash. */
@@ -66,6 +70,49 @@ class Hash : boost::totally_ordered<Hash> {
   bool operator<(const Hash&) const;
 
  private:
+  static constexpr Storage constructFromByteRange(folly::ByteRange bytes) {
+    if (bytes.size() != RAW_SIZE) {
+      throw std::invalid_argument(
+          "incorrect data size for Hash constructor from bytes");
+    }
+    return {
+        bytes.data()[0],  bytes.data()[1],  bytes.data()[2],  bytes.data()[3],
+        bytes.data()[4],  bytes.data()[5],  bytes.data()[6],  bytes.data()[7],
+        bytes.data()[8],  bytes.data()[9],  bytes.data()[10], bytes.data()[11],
+        bytes.data()[12], bytes.data()[13], bytes.data()[14], bytes.data()[15],
+        bytes.data()[16], bytes.data()[17], bytes.data()[18], bytes.data()[19]};
+  }
+  static constexpr Storage constructFromHex(folly::StringPiece hex) {
+    if (hex.size() != (RAW_SIZE * 2)) {
+      throw std::invalid_argument(
+          "incorrect data size for Hash constructor from string");
+    }
+    return {
+        hexByteAt(hex, 0),  hexByteAt(hex, 1),  hexByteAt(hex, 2),
+        hexByteAt(hex, 3),  hexByteAt(hex, 4),  hexByteAt(hex, 5),
+        hexByteAt(hex, 6),  hexByteAt(hex, 7),  hexByteAt(hex, 8),
+        hexByteAt(hex, 9),  hexByteAt(hex, 10), hexByteAt(hex, 11),
+        hexByteAt(hex, 12), hexByteAt(hex, 13), hexByteAt(hex, 14),
+        hexByteAt(hex, 15), hexByteAt(hex, 16), hexByteAt(hex, 17),
+        hexByteAt(hex, 18), hexByteAt(hex, 19),
+    };
+  }
+  static constexpr uint8_t hexByteAt(folly::StringPiece hex, size_t index) {
+    return (nibbleToHex(hex.data()[index * 2]) * 16) +
+        nibbleToHex(hex.data()[(index * 2) + 1]);
+  }
+  static constexpr uint8_t nibbleToHex(char c) {
+    if ('0' <= c && c <= '9') {
+      return c - '0';
+    } else if ('a' <= c && c <= 'f') {
+      return 10 + c - 'a';
+    } else if ('A' <= c && c <= 'F') {
+      return 10 + c - 'A';
+    }
+    throw std::invalid_argument(
+        "invalid hex digit supplied to Hash constructor from string");
+  }
+
   Storage bytes_;
 };
 

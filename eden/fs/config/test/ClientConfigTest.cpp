@@ -211,7 +211,7 @@ TEST_F(ClientConfigTest, testBadSnapshot) {
   // The error type and message for this will probably change in the future
   // when we drop support for the legacy SNAPSHOT file format (of a 40-byte
   // ASCII string containing the snapshot hash).
-  testBadSnapshot<std::invalid_argument>("ede", "should have size 40");
+  testBadSnapshot<std::invalid_argument>("ede", "incorrect data size for Hash");
   testBadSnapshot<std::invalid_argument>(
       StringPiece{"xden\00\00\00\01"
                   "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
@@ -219,5 +219,5 @@ TEST_F(ClientConfigTest, testBadSnapshot) {
                   "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
                   "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33",
                   48},
-      "should have size 40");
+      "incorrect data size for Hash");
 }

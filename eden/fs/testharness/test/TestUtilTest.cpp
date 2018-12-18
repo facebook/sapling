@@ -31,11 +31,10 @@ TEST(TestUtil, makeTestHash) {
       makeTestHash("123456789abcdef0fedcba9876543210faceb00c1"),
       std::invalid_argument,
       "too big");
-  EXPECT_THROW_RE(
-      makeTestHash("z"), std::exception, "could not be unhexlified");
+  EXPECT_THROW_RE(makeTestHash("z"), std::exception, "invalid hex digit");
   EXPECT_THROW_RE(
       // There's a "g" in the string below
       makeTestHash("123456789abcdefgfedcba9876543210faceb00c"),
       std::exception,
-      "could not be unhexlified");
+      "invalid hex digit");
 }

@@ -131,6 +131,31 @@ TEST(Hash, ensureHashCopiesBytesPassedToConstructor) {
   EXPECT_TRUE(hash1 > hash2);
 }
 
+TEST(Hash, constexprHexConstructor) {
+  // It would be nice to static_assert that two Hashes are equal.
+  // Unfortunately the std::array operator== comparison isn't constexpr until
+  // C++20, so we don't do this for now.
+  static_assert(
+      Hash("faceb00cdeadbeefc00010ff1badb0028badf00d").getBytes().data()[0] ==
+      0xfa);
+  static_assert(
+      Hash("faceb00cdeadbeefc00010ff1badb0028badf00d").getBytes().data()[1] ==
+      0xce);
+  static_assert(
+      Hash("faceb00cdeadbeefc00010ff1badb0028badf00d").getBytes().data()[15] ==
+      0x02);
+}
+
+TEST(Hash, constexprBytesConstructor) {
+  constexpr std::array<uint8_t, 20> data = {
+      0xfa, 0xce, 0xb0, 0x0c, 0xde, 0xad, 0xbe, 0xef, 0xc0, 0x00,
+      0x10, 0xff, 0x1b, 0xad, 0xb0, 0x02, 0x8b, 0xad, 0xf0, 0x0d,
+  };
+  static_assert(Hash(data).getBytes().data()[0] == 0xfa);
+  static_assert(Hash(data).getBytes().data()[1] == 0xce);
+  static_assert(Hash(data).getBytes().data()[15] == 0x02);
+}
+
 TEST(Hash, ensureStringConstructorRejectsArgumentWithWrongLength) {
   EXPECT_THROW(Hash("badfood"), std::invalid_argument);
 }

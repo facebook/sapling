@@ -32,19 +32,6 @@ const Hash kEmptySha1{Hash::Storage{0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b,
                                     0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60,
                                     0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09}};
 
-namespace {
-Hash::Storage hexToBytes(StringPiece hex);
-Hash::Storage byteRangeToArray(ByteRange bytes);
-} // namespace
-
-Hash::Hash(ByteRange bytes) : Hash{byteRangeToArray(bytes)} {}
-
-Hash::Hash(StringPiece hex) : Hash{hexToBytes(hex)} {}
-
-ByteRange Hash::getBytes() const {
-  return ByteRange{bytes_.data(), bytes_.size()};
-}
-
 folly::MutableByteRange Hash::mutableBytes() {
   return folly::MutableByteRange{bytes_.data(), bytes_.size()};
 }
@@ -69,45 +56,6 @@ bool Hash::operator==(const Hash& otherHash) const {
 bool Hash::operator<(const Hash& otherHash) const {
   return bytes_ < otherHash.bytes_;
 }
-
-namespace {
-Hash::Storage hexToBytes(StringPiece hex) {
-  size_t requiredSize = Hash::RAW_SIZE * 2;
-  if (hex.size() != requiredSize) {
-    throw std::invalid_argument(folly::sformat(
-        "{} should have size {} but had size {}",
-        folly::backslashify<std::string>(hex.str()),
-        requiredSize,
-        hex.size()));
-  }
-
-  string bytes;
-  bool isSuccess = folly::unhexlify(hex, bytes);
-  if (!isSuccess) {
-    throw std::invalid_argument(folly::sformat(
-        "{} could not be unhexlified: likely due to invalid characters",
-        folly::backslashify<std::string>(hex.str())));
-  }
-
-  Hash::Storage hashBytes;
-  std::copy(bytes.begin(), bytes.end(), hashBytes.data());
-  return hashBytes;
-}
-
-Hash::Storage byteRangeToArray(ByteRange bytes) {
-  if (bytes.size() != Hash::RAW_SIZE) {
-    throw std::invalid_argument(folly::sformat(
-        "{} should have size {} but had size {}",
-        folly::hexlify(bytes),
-        static_cast<size_t>(Hash::RAW_SIZE),
-        bytes.size()));
-  }
-
-  Hash::Storage arr;
-  std::copy(bytes.begin(), bytes.end(), arr.data());
-  return arr;
-}
-} // namespace
 
 Hash Hash::sha1(const folly::IOBuf& buf) {
   Storage hashBytes;
