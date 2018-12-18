@@ -166,30 +166,34 @@ class shallowcg1packer(changegroup.cg1packer):
                 filestosend = self.shouldaddfilegroups(source)
                 if filestosend is not NoFiles:
                     mflog = repo.manifestlog
-                    for mfnode, clnode in mfs.iteritems():
-                        if filestosend == LocalFiles and not containslocalfiles(mfnode):
-                            continue
+                    with progress.bar(repo.ui, _("manifests"), total=len(mfs)) as prog:
+                        for mfnode, clnode in mfs.iteritems():
+                            prog.value += 1
+                            if filestosend == LocalFiles and not containslocalfiles(
+                                mfnode
+                            ):
+                                continue
 
-                        try:
-                            mfctx = mflog[mfnode]
-                            p1node = mfctx.parents[0]
-                            p1ctx = mflog[p1node]
-                        except LookupError:
-                            if not repo.svfs.treemanifestserver or treeonly(repo):
-                                raise
-                            # If we can't find the flat version, look for trees
-                            tmfl = mflog.treemanifestlog
-                            mfctx = tmfl[mfnode]
-                            p1node = tmfl[mfnode].parents[0]
-                            p1ctx = tmfl[p1node]
+                            try:
+                                mfctx = mflog[mfnode]
+                                p1node = mfctx.parents[0]
+                                p1ctx = mflog[p1node]
+                            except LookupError:
+                                if not repo.svfs.treemanifestserver or treeonly(repo):
+                                    raise
+                                # If we can't find the flat version, look for trees
+                                tmfl = mflog.treemanifestlog
+                                mfctx = tmfl[mfnode]
+                                p1node = tmfl[mfnode].parents[0]
+                                p1ctx = tmfl[p1node]
 
-                        diff = p1ctx.read().diff(mfctx.read()).iteritems()
-                        for filename, ((anode, aflag), (bnode, bflag)) in diff:
-                            if bnode is not None:
-                                fclnodes = fnodes.setdefault(filename, {})
-                                fclnode = fclnodes.setdefault(bnode, clnode)
-                                if clrevorder[clnode] < clrevorder[fclnode]:
-                                    fclnodes[bnode] = clnode
+                            diff = p1ctx.read().diff(mfctx.read()).iteritems()
+                            for filename, ((anode, aflag), (bnode, bflag)) in diff:
+                                if bnode is not None:
+                                    fclnodes = fnodes.setdefault(filename, {})
+                                    fclnode = fclnodes.setdefault(bnode, clnode)
+                                    if clrevorder[clnode] < clrevorder[fclnode]:
+                                        fclnodes[bnode] = clnode
 
             yield self.close()
 
