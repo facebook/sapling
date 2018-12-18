@@ -81,6 +81,13 @@ pub trait BlobstoreSyncQueue: Send + Sync {
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error>;
 
     fn del(&self, ctx: CoreContext, entries: Vec<BlobstoreSyncQueueEntry>) -> BoxFuture<(), Error>;
+
+    fn get(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        key: String,
+    ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error>;
 }
 
 impl BlobstoreSyncQueue for Arc<BlobstoreSyncQueue> {
@@ -99,6 +106,15 @@ impl BlobstoreSyncQueue for Arc<BlobstoreSyncQueue> {
 
     fn del(&self, ctx: CoreContext, entries: Vec<BlobstoreSyncQueueEntry>) -> BoxFuture<(), Error> {
         (**self).del(ctx, entries)
+    }
+
+    fn get(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        key: String,
+    ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
+        (**self).get(ctx, repo_id, key)
     }
 }
 
@@ -145,6 +161,19 @@ queries! {
          WHERE add_timestamp >= {older_than}
          ORDER BY id
          LIMIT {limit}"
+    }
+
+    read GetByKey(repo_id: RepositoryId, key: String) -> (
+        RepositoryId,
+        String,
+        BlobstoreId,
+        Timestamp,
+        u64,
+    ) {
+        "SELECT repo_id, blobstore_key, blobstore_id, add_timestamp, id
+         FROM blobstore_sync_queue
+         WHERE repo_id = {repo_id}
+         AND blobstore_key = {key}"
     }
 }
 
@@ -236,6 +265,29 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
                 }
             })
             .map(|_| ())
+            .boxify()
+    }
+
+    fn get(
+        &self,
+        _ctx: CoreContext,
+        repo_id: RepositoryId,
+        key: String,
+    ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
+        GetByKey::query(&self.read_master_connection, &repo_id, &key)
+            .map(|rows| {
+                rows.into_iter()
+                    .map(|(repo_id, blobstore_key, blobstore_id, timestamp, id)| {
+                        BlobstoreSyncQueueEntry {
+                            repo_id,
+                            blobstore_key,
+                            blobstore_id,
+                            timestamp: timestamp.into(),
+                            id: Some(id),
+                        }
+                    })
+                    .collect()
+            })
             .boxify()
     }
 }

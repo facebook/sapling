@@ -50,6 +50,11 @@ fn test_simple() {
             .expect("Adding entry with the same key should succeed")
     );
 
+    // get
+    let entries = rt.block_on(queue.get(ctx.clone(), repo_id, key0.clone()))
+        .expect("Get failed");
+    assert_eq!(entries.len(), 2);
+
     // iter
     let some_entries = rt.block_on(queue.iter(ctx.clone(), t0, 1))
         .expect("DateTime range iteration faield");
