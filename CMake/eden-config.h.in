@@ -14,6 +14,8 @@
 
 #cmakedefine EDEN_HAVE_HG_TREEMANIFEST
 #cmakedefine EDEN_HAVE_ROCKSDB
-#cmakedefine EDEN_HAVE_SQLITE3
 #cmakedefine EDEN_HAVE_SELINUX
+#cmakedefine EDEN_HAVE_SQLITE3
 #cmakedefine EDEN_HAVE_SYSTEMD
+#cmakedefine EDEN_WIN_NOMONONOKE
+#cmakedefine EDEN_WIN_NO_RUST_DATAPACK

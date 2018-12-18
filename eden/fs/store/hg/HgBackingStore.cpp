@@ -240,8 +240,7 @@ HgBackingStore::HgBackingStore(
               folly::CPUThreadPoolExecutor::CPUTask>>(),
           std::make_shared<HgImporterThreadFactory>(repository, localStore))),
       config_(config),
-      serverThreadPool_(serverThreadPool),
-      useDatapackGetBlob_(false) {
+      serverThreadPool_(serverThreadPool) {
 #if EDEN_HAVE_HG_TREEMANIFEST
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
   initializeDatapackImport(repository);
