@@ -21,7 +21,9 @@
 #include <folly/portability/SysUio.h>
 #include <algorithm>
 #include <new>
-
+#ifdef __APPLE__
+#include <sys/ucred.h> // @manual
+#endif
 #include "eden/fs/utils/Bug.h"
 
 using folly::ByteRange;
@@ -40,6 +42,12 @@ using folly::io::Cursor;
 using folly::io::RWPrivateCursor;
 using std::unique_ptr;
 using std::vector;
+
+#ifdef MSG_CMSG_CLOEXEC
+#define HAVE_MSG_CMSG_CLOEXEC
+#else
+#define MSG_CMSG_CLOEXEC 0
+#endif
 
 namespace facebook {
 namespace eden {
@@ -782,7 +790,16 @@ void UnixSocket::processReceivedFiles(struct cmsghdr* cmsg) {
 
   auto* data = reinterpret_cast<const int*>(CMSG_DATA(cmsg));
   for (size_t n = 0; n < numFDs; ++n) {
-    recvMessage_.files.push_back(File{data[n], /* ownsFd */ true});
+    auto fd = data[n];
+#ifndef HAVE_MSG_CMSG_CLOEXEC
+    // We don't have atomic FD_CLOEXEC setting ability, so make a best
+    // effort attempt at setting it here, and hope that it doesn't escape
+    // into a newly spawned import helper
+    auto flags = fcntl(fd, F_GETFD);
+    folly::checkPosixError(flags);
+    folly::checkPosixError(fcntl(fd, F_SETFD, flags | FD_CLOEXEC));
+#endif
+    recvMessage_.files.push_back(File{fd, /* ownsFd */ true});
   }
 }
 
