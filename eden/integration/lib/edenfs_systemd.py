@@ -50,6 +50,15 @@ class EdenFSSystemdMixin(metaclass=abc.ABCMeta):
             f"EdenFS systemd service ({service}) should be running",
         )
 
+    def assert_systemd_service_is_failed(self, eden_dir: pathlib.Path) -> None:
+        service = self.get_edenfs_systemd_service(eden_dir=eden_dir)
+        assert isinstance(self, unittest.TestCase)
+        self.assertEqual(
+            (service.query_active_state(), service.query_sub_state()),
+            ("failed", "failed"),
+            f"EdenFS systemd service ({service}) should have failed",
+        )
+
     def assert_systemd_service_is_stopped(self, eden_dir: pathlib.Path) -> None:
         service = self.get_edenfs_systemd_service(eden_dir=eden_dir)
         assert isinstance(self, unittest.TestCase)

@@ -91,6 +91,22 @@ class SystemdTest(
         )
         self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.eden_dir))
 
+    def test_systemd_service_is_failed_if_edenfs_crashes_on_start(self) -> None:
+        self.set_up_edenfs_systemd_service()
+        self.assert_systemd_service_is_stopped(eden_dir=pathlib.Path(self.eden_dir))
+        subprocess.call(
+            [FindExe.EDEN_CLI]
+            + self.get_required_eden_cli_args()
+            + [
+                "start",
+                "--daemon-binary",
+                FindExe.FAKE_EDENFS,
+                "--",
+                "--failDuringStartup",
+            ]
+        )
+        self.assert_systemd_service_is_failed(eden_dir=pathlib.Path(self.eden_dir))
+
     def get_required_eden_cli_args(self) -> typing.List[str]:
         return [
             "--config-dir",
