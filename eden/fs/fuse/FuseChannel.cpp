@@ -977,13 +977,12 @@ void FuseChannel::readInitPacket() {
 
   connInfo.max_readahead = init.init.max_readahead;
 
-  const auto& capable = init.init.flags;
+  const auto capable = init.init.flags;
   auto& want = connInfo.flags;
 
   // TODO: follow up and look at the new flags; particularly
-  // FUSE_PARALLEL_DIROPS, FUSE_DO_READDIRPLUS,
-  // FUSE_READDIRPLUS_AUTO. FUSE_SPLICE_XXX are interesting too,
-  // but may not directly benefit eden today.
+  // FUSE_DO_READDIRPLUS, FUSE_READDIRPLUS_AUTO. FUSE_SPLICE_XXX are interesting
+  // too, but may not directly benefit eden today.
   //
   // FUSE_ATOMIC_O_TRUNC is a nice optimization when the kernel supports it
   // and the FUSE daemon requires handling open/release for stateful file
@@ -991,12 +990,24 @@ void FuseChannel::readInitPacket() {
   // FUSE_ATOMIC_O_TRUNC. Also, on older kernels, it triggers a kernel bug.
   // See test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
   // in mmap_test.py.
-  want = capable &
-      (FUSE_BIG_WRITES | FUSE_ASYNC_READ
+
+  // We can handle reads concurrently with any other type of request.
+  want |= FUSE_ASYNC_READ;
+  // We handle writes of any size.
+  want |= FUSE_BIG_WRITES;
+
 #ifdef __linux__
-       | FUSE_CACHE_SYMLINKS | FUSE_NO_OPEN_SUPPORT
+  // We're happy to let the kernel cache readlink responses.
+  want |= FUSE_CACHE_SYMLINKS;
+  // We can handle almost any request in parallel.
+  want |= FUSE_PARALLEL_DIROPS;
+  // File handles are stateless so the kernel does not need to send open() and
+  // release().
+  want |= FUSE_NO_OPEN_SUPPORT;
 #endif
-      );
+
+  // Only return the capabilities the kernel supports.
+  want &= capable;
 
   XLOG(INFO) << "Speaking fuse protocol kernel=" << init.init.major << "."
              << init.init.minor << " local=" << FUSE_KERNEL_VERSION << "."
