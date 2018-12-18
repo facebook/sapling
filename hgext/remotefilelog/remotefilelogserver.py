@@ -48,34 +48,6 @@ except Exception:
     hasstreamclone = False
 
 
-def setupserver(ui, repo):
-    """Sets up a normal Mercurial repo so it can serve files to shallow repos.
-    """
-    onetimesetup(ui)
-
-    # don't send files to shallow clients during pulls
-    def generatefiles(orig, self, changedfiles, linknodes, commonrevs, source):
-        caps = self._bundlecaps or []
-        if shallowrepo.requirement in caps:
-            # only send files that don't match the specified patterns
-            includepattern = None
-            excludepattern = None
-            for cap in self._bundlecaps or []:
-                if cap.startswith("includepattern="):
-                    includepattern = cap[len("includepattern=") :].split("\0")
-                elif cap.startswith("excludepattern="):
-                    excludepattern = cap[len("excludepattern=") :].split("\0")
-
-            m = match.always(repo.root, "")
-            if includepattern or excludepattern:
-                m = match.match(repo.root, "", None, includepattern, excludepattern)
-
-            changedfiles = list([f for f in changedfiles if not m(f)])
-        return orig(self, changedfiles, linknodes, commonrevs, source)
-
-    wrapfunction(changegroup.cg1packer, "generatefiles", generatefiles)
-
-
 onetime = False
 
 

@@ -348,7 +348,7 @@ def reposetup(ui, repo):
         setupclient(ui, repo)
 
     if isserverenabled:
-        remotefilelogserver.setupserver(ui, repo)
+        remotefilelogserver.onetimesetup(ui)
 
 
 def setupclient(ui, repo):

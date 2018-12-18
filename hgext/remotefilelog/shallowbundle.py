@@ -198,6 +198,26 @@ class shallowcg1packer(changegroup.cg1packer):
             yield self.close()
 
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
+
+        if self._repo.ui.configbool("remotefilelog", "server"):
+            caps = self._bundlecaps or []
+            if requirement in caps:
+                # only send files that don't match the specified patterns
+                includepattern = None
+                excludepattern = None
+                for cap in self._bundlecaps or []:
+                    if cap.startswith("includepattern="):
+                        includepattern = cap[len("includepattern=") :].split("\0")
+                    elif cap.startswith("excludepattern="):
+                        excludepattern = cap[len("excludepattern=") :].split("\0")
+
+                m = match.always(self._repo.root, "")
+                if includepattern or excludepattern:
+                    m = match.match(
+                        self._repo.root, "", None, includepattern, excludepattern
+                    )
+                changedfiles = list([f for f in changedfiles if not m(f)])
+
         if requirement in self._repo.requirements:
             repo = self._repo
             if isinstance(repo, bundlerepo.bundlerepository):
