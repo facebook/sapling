@@ -49,6 +49,7 @@ extern crate hgproto;
 extern crate hooks;
 extern crate mercurial_types;
 extern crate metaconfig;
+extern crate phases;
 extern crate reachabilityindex;
 extern crate ready_state;
 extern crate repo_client;
@@ -88,7 +89,13 @@ pub fn create_repo_listeners(
     (
         repo_handlers(repos, myrouter_port, &root_log, &mut ready)
             .and_then(move |handlers| {
-                connection_acceptor(sockname, root_log, handlers, tls_acceptor, terminate_process)
+                connection_acceptor(
+                    sockname,
+                    root_log,
+                    handlers,
+                    tls_acceptor,
+                    terminate_process,
+                )
             })
             .boxify(),
         ready.freeze(),

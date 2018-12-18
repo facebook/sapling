@@ -49,6 +49,7 @@ extern crate mercurial_bundles;
 extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
+extern crate phases;
 extern crate reachabilityindex;
 extern crate revset;
 extern crate scuba_ext;

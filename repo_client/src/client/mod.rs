@@ -32,6 +32,7 @@ use mercurial_types::{percent_encode, Entry, HgBlobNode, HgChangesetId, HgManife
 use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, CombinatorPruner,
                                       DeletedPruner, EntryStatus, FilePruner, Pruner,
                                       VisitedPruner};
+use phases::Phases;
 use rand;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe::ScribeClient;
@@ -166,6 +167,7 @@ pub struct RepoClient {
     // will be hash validated
     hash_validation_percentage: usize,
     lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    phases_hint: Arc<Phases + Send + Sync>,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -253,12 +255,14 @@ impl RepoClient {
         ctx: CoreContext,
         hash_validation_percentage: usize,
         lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+        phases_hint: Arc<Phases + Send + Sync>,
     ) -> Self {
         RepoClient {
             repo,
             ctx,
             hash_validation_percentage,
             lca_hint,
+            phases_hint,
         }
     }
 

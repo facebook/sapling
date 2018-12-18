@@ -19,6 +19,7 @@ use context::CoreContext;
 use hooks::{HookManager, hook_loader::load_hooks};
 use mercurial_types::RepositoryId;
 use metaconfig::repoconfig::{RepoConfig, RepoType};
+use phases::{CachingHintPhases, HintPhases, Phases, SqlConstructors, SqlPhases};
 use reachabilityindex::{deserialize_skiplist_map, LeastCommonAncestorsHint, SkiplistIndex};
 use ready_state::ReadyStateBuilder;
 use repo_client::{open_blobrepo, streaming_clone, MononokeRepo};
@@ -32,6 +33,7 @@ pub struct RepoHandler {
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
     pub lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    pub phases_hint: Arc<Phases + Send + Sync>,
 }
 
 pub fn repo_handlers(
@@ -95,12 +97,14 @@ pub fn repo_handlers(
             try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
 
             let streaming_clone = match config.repotype {
-                RepoType::BlobRemote{ ref db_address, ..} => Some(try_boxfuture!(streaming_clone(
-                    blobrepo.clone(),
-                    &db_address,
-                    myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
-                    repoid
-                ))),
+                RepoType::BlobRemote { ref db_address, .. } => {
+                    Some(try_boxfuture!(streaming_clone(
+                        blobrepo.clone(),
+                        &db_address,
+                        myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
+                        repoid
+                    )))
+                }
                 _ => None,
             };
 
@@ -140,6 +144,25 @@ pub fn repo_handlers(
                 None => ok(Arc::new(SkiplistIndex::new())).right_future(),
             };
 
+            let phases_hint: Arc<Phases + Send + Sync> = match config.repotype {
+                RepoType::BlobFiles(ref data_dir)
+                | RepoType::BlobRocks(ref data_dir)
+                | RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
+                    let storage = Arc::new(
+                        SqlPhases::with_sqlite_path(data_dir.join("phases"))
+                            .expect("unable to initialize sqlite db for phases"),
+                    );
+                    Arc::new(HintPhases::new(storage))
+                }
+                RepoType::BlobRemote { ref db_address, .. } => {
+                    let storage = Arc::new(SqlPhases::with_myrouter(
+                        &db_address,
+                        myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
+                    ));
+                    Arc::new(CachingHintPhases::new(storage))
+                }
+            };
+
             // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
             let initial_warmup = ensure_myrouter_ready.and_then({
                 cloned!(ctx, reponame, listen_log);
@@ -166,6 +189,7 @@ pub fn repo_handlers(
                                 repo,
                                 hash_validation_percentage,
                                 lca_hint,
+                                phases_hint,
                             },
                         )
                     }
