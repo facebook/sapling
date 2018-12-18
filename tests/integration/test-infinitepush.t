@@ -80,6 +80,11 @@ Do infinitepush (aka commit cloud) push
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 0 bytes
+  $ hg log --graph -T "{node}: {phase}"
+  @  47da8b81097c5534f3eb7947a8764dd323cffe3d: draft
+  |
+  o  3903775176ed42b1458a6281db4a0ccf4d9f287a: public
+  
 
   $ cd ../repo-pull
   $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
@@ -95,6 +100,12 @@ Do infinitepush (aka commit cloud) push
   $ hgmn up -q 47da8b81097c
   $ cat newfile
   new
+// currently phases are not passed correctly
+  $ hg log --graph -T "{node}: {phase}"
+  @  47da8b81097c5534f3eb7947a8764dd323cffe3d: public
+  |
+  o  3903775176ed42b1458a6281db4a0ccf4d9f287a: public
+  
 
 Pushbackup also works
   $ cd ../repo-push
@@ -127,6 +138,13 @@ Pushbackup also works
   heads added: 95cad53aab1b0b33eceee14473b3983312721529
   heads removed:  (re)
   finished in * seconds (glob)
+  $ hg log --graph -T "{node}: {phase}"
+  @  95cad53aab1b0b33eceee14473b3983312721529: draft
+  |
+  o  47da8b81097c5534f3eb7947a8764dd323cffe3d: draft
+  |
+  o  3903775176ed42b1458a6281db4a0ccf4d9f287a: public
+  
 
   $ cd ../repo-pull
   $ hgmn pull -r 95cad53aab1b0b33eceee14473b3983312721529
@@ -142,6 +160,14 @@ Pushbackup also works
   $ hgmn up -q 95cad53aab1b0b33ecee
   $ cat aa
   aa
+// currently phases are not passed correctly 
+  $ hg log --graph -T "{node}: {phase}"
+  @  95cad53aab1b0b33eceee14473b3983312721529: public
+  |
+  o  47da8b81097c5534f3eb7947a8764dd323cffe3d: public
+  |
+  o  3903775176ed42b1458a6281db4a0ccf4d9f287a: public
+  
 
 Pushbackup that pushes only bookmarks
   $ cd ../repo-push
