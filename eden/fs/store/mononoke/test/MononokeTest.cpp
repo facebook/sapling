@@ -33,37 +33,30 @@ using folly::SocketAddress;
 
 using BlobContents = std::map<std::string, std::string>;
 
-class Handler : public proxygen::RequestHandler {
+namespace {
+
+class Handler {
  public:
   explicit Handler(const BlobContents& blobs)
       : regex_(
             "^(/repo/blob/(.*)|"
             "/repo/tree/(.*)|"
             "/repo/changeset/(.*))$"),
-        path_(),
         blobs_(blobs) {}
 
-  ~Handler() {}
-
-  void onRequest(
-      std::unique_ptr<proxygen::HTTPMessage> headers) noexcept override {
-    headers_ = std::move(headers);
-  }
-
-  void onBody(std::unique_ptr<folly::IOBuf> /* body */) noexcept override {}
-
-  void onEOM() noexcept override {
-    if (headers_->getHeaders()
+  void operator()(
+      const proxygen::HTTPMessage& headers,
+      std::unique_ptr<folly::IOBuf> /* requestBody */,
+      ResponseBuilder& responseBuilder) {
+    if (headers.getHeaders()
             .getSingleOrEmpty(proxygen::HTTP_HEADER_HOST)
             .empty()) {
-      ResponseBuilder(downstream_)
-          .status(400, "bad request: Host header is missing")
-          .body("Host header is missing")
-          .sendWithEOM();
+      responseBuilder.status(400, "bad request: Host header is missing")
+          .body("Host header is missing");
       return;
     }
     boost::cmatch m;
-    auto match = boost::regex_match(headers_->getPath().c_str(), m, regex_);
+    auto match = boost::regex_match(headers.getPath().c_str(), m, regex_);
     if (match) {
       std::string content;
       if (blobs_.find(m[2]) != blobs_.end()) {
@@ -73,75 +66,34 @@ class Handler : public proxygen::RequestHandler {
       } else if (blobs_.find(m[4]) != blobs_.end()) {
         content = blobs_[m[4]];
       } else {
-        ResponseBuilder(downstream_)
-            .status(404, "not found")
-            .body("cannot find content")
-            .sendWithEOM();
+        responseBuilder.status(404, "not found").body("cannot find content");
         return;
       }
       // Split the data in two to make sure that client's onBody() callback
       // works fine
-      ResponseBuilder(downstream_).status(200, "OK").send();
+      responseBuilder.status(200, "OK").send();
 
       for (auto c : content) {
         // Send characters one by one to make sure client's onBody() methods
         // works correctly.
-        ResponseBuilder(downstream_).body(c).send();
+        responseBuilder.body(c).send();
       }
-      ResponseBuilder(downstream_).sendWithEOM();
     } else {
-      ResponseBuilder(downstream_)
-          .status(404, "not found")
-          .body("malformed url")
-          .sendWithEOM();
+      responseBuilder.status(404, "not found").body("malformed url");
     }
   }
 
-  void onUpgrade(proxygen::UpgradeProtocol /* proto */) noexcept override {}
-
-  void requestComplete() noexcept override {
-    delete this;
-  }
-
-  void onError(proxygen::ProxygenError /* err */) noexcept override {}
-
  private:
   boost::regex regex_;
-  std::string path_;
-  BlobContents blobs_;
-  std::unique_ptr<HTTPMessage> headers_;
-};
-
-class HandlerFactory : public RequestHandlerFactory {
- public:
-  explicit HandlerFactory(const BlobContents& blobs) : blobs_(blobs) {}
-
-  void onServerStart(folly::EventBase* /*evb*/) noexcept override {}
-
-  void onServerStop() noexcept override {}
-
-  RequestHandler* onRequest(RequestHandler*, HTTPMessage*) noexcept override {
-    return new Handler(blobs_);
-  }
-
- private:
   BlobContents blobs_;
 };
+
+} // namespace
 
 class MononokeBackingStoreTest : public ::testing::Test {
  protected:
   std::unique_ptr<ScopedHTTPServer> createServer() {
-    SocketAddress address;
-    address.setFromLocalPort(uint16_t(0)); // choose any free port
-    HTTPServer::IPConfig ipConfig{address, HTTPServer::Protocol::HTTP};
-
-    auto blobs = getBlobs();
-    HTTPServerOptions options;
-    options.threads = 1;
-    options.handlerFactories =
-        RequestHandlerChain().addThen<HandlerFactory>(blobs).build();
-
-    return ScopedHTTPServer::start(ipConfig, std::move(options));
+    return ScopedHTTPServer::start(Handler(getBlobs()));
   }
 
   BlobContents getBlobs() {
