@@ -192,7 +192,7 @@ mod test {
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let head_hash = string_to_nodehash(hash);
-            let head_csid = string_to_bonsai(ctx.clone(), &repo, hash);
+            let head_csid = string_to_bonsai(&repo, hash);
 
             let inputs: Vec<Box<BonsaiNodeStream>> = vec![
                 SingleChangesetId::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
@@ -275,11 +275,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        ctx.clone(),
-                        &repo,
-                        "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-                    ),
+                    string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 ],
                 nodestream,
             );
@@ -327,11 +323,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        ctx.clone(),
-                        &repo,
-                        "3c15267ebf11807f3d772eb891272b911ec68759",
-                    ),
+                    string_to_bonsai(&repo, "3c15267ebf11807f3d772eb891272b911ec68759"),
                 ],
                 nodestream,
             );
@@ -369,16 +361,8 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        ctx.clone(),
-                        &repo,
-                        "3c15267ebf11807f3d772eb891272b911ec68759",
-                    ),
-                    string_to_bonsai(
-                        ctx.clone(),
-                        &repo,
-                        "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-                    ),
+                    string_to_bonsai(&repo, "3c15267ebf11807f3d772eb891272b911ec68759"),
+                    string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 ],
                 nodestream,
             );
@@ -395,7 +379,7 @@ mod test {
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let nodehash = string_to_nodehash(hash);
-            let changeset = string_to_bonsai(ctx.clone(), &repo, hash);
+            let changeset = string_to_bonsai(&repo, hash);
 
             let inputs: Vec<Box<BonsaiNodeStream>> = vec![
                 Box::new(RepoErrorStream { item: changeset }),
@@ -509,7 +493,6 @@ mod test {
                 &repo,
                 vec![
                     string_to_bonsai(
-                        ctx.clone(),
                         &repo,
                         "03b0589d9788870817d03ce7b87516648ed5b33a",
                     ),
@@ -566,7 +549,6 @@ mod test {
                 &repo,
                 vec![
                     string_to_bonsai(
-                        ctx.clone(),
                         &repo,
                         "03b0589d9788870817d03ce7b87516648ed5b33a",
                     ),

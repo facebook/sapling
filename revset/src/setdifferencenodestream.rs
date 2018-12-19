@@ -165,7 +165,7 @@ mod test {
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let nodehash = string_to_nodehash(hash);
-            let changeset = string_to_bonsai(ctx.clone(), &repo, hash);
+            let changeset = string_to_bonsai(&repo, hash);
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
@@ -224,11 +224,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        ctx.clone(),
-                        &repo,
-                        "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-                    ),
+                    string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 ],
                 nodestream,
             );
@@ -245,7 +241,7 @@ mod test {
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let nodehash = string_to_nodehash(hash);
-            let changeset = string_to_bonsai(ctx.clone(), &repo, hash);
+            let changeset = string_to_bonsai(&repo, hash);
             let mut nodestream = spawn(
                 SetDifferenceNodeStream::new(
                     ctx.clone(),
@@ -335,12 +331,10 @@ mod test {
                 &repo,
                 vec![
                     string_to_bonsai(
-                        ctx.clone(),
                         &repo,
                         "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
                     ),
                     string_to_bonsai(
-                        ctx.clone(),
                         &repo,
                         "d0a361e9022d226ae52f689667bd7d212a19cfe0",
                     ),
@@ -433,12 +427,10 @@ mod test {
                 &repo,
                 vec![
                     string_to_bonsai(
-                        ctx.clone(),
                         &repo,
                         "6120679e1fedb0b2f3717bbf042e5fd718763042",
                     ),
                     string_to_bonsai(
-                        ctx.clone(),
                         &repo,
                         "16839021e338500b3cf7c9b871c8a07351697d68",
                     ),
@@ -495,12 +487,10 @@ mod test {
                 &repo,
                 vec![
                     string_to_bonsai(
-                        ctx.clone(),
                         &repo,
                         "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
                     ),
                     string_to_bonsai(
-                        ctx.clone(),
                         &repo,
                         "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
                     ),

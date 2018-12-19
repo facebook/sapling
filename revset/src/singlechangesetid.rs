@@ -83,11 +83,7 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        ctx.clone(),
-                        &repo,
-                        "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                    ),
+                    string_to_bonsai(&repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
                 ].into_iter(),
                 changeset_stream,
             );
