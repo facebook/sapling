@@ -137,10 +137,16 @@ impl SingleRequest {
 /// the convenience of callers.
 #[derive(Eq, PartialEq)]
 pub struct GetbundleArgs {
+    /// List of space-delimited hex nodes of heads to retrieve
     pub heads: Vec<HgNodeHash>,
+    /// List of space-delimited hex nodes that the client has in common with the server
     pub common: Vec<HgNodeHash>,
+    /// Comma-delimited set of strings defining client bundle capabilities.
     pub bundlecaps: Vec<Vec<u8>>,
+    /// Comma-delimited list of strings of ``pushkey`` namespaces. For each namespace listed, a bundle2 part will be included with the content of that namespace.
     pub listkeys: Vec<Vec<u8>>,
+    /// phases: Boolean indicating whether phases data is requested
+    pub phases: bool,
 }
 
 impl Debug for GetbundleArgs {
@@ -162,6 +168,7 @@ impl Debug for GetbundleArgs {
             .field("common", &common)
             .field("bundlecaps", &bcaps)
             .field("listkeys", &listkeys)
+            .field("phases", &self.phases)
             .finish()
     }
 }

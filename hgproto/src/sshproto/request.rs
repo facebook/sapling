@@ -69,6 +69,16 @@ fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8]> {
     }
 }
 
+/// Assumption: input is complete
+/// We can't use 'integer' defined above as it reads until a non digit character
+named!(
+    boolean<bool>,
+    map_res!(take_while1!(is_digit), |s| -> Result<bool> {
+        let s = str::from_utf8(s)?;
+        Ok(u32::from_str(s)? != 0)
+    })
+);
+
 named!(
     batch_param_comma_separated<Bytes>,
     map_res!(
@@ -508,6 +518,7 @@ fn parse_with_params(
                 common: parseval_default(&kv, "common", hashlist)?,
                 bundlecaps: parseval_default(&kv, "bundlecaps", commavalues)?,
                 listkeys: parseval_default(&kv, "listkeys", commavalues)?,
+                phases: parseval_default(&kv, "phases", boolean)?,
             })))
         | command!("heads", Heads, parse_params, {})
         | command!("hello", Hello, parse_params, {})
@@ -1205,13 +1216,14 @@ mod test_parse {
                 common: vec![],
                 bundlecaps: vec![],
                 listkeys: vec![],
+                phases: false,
             })),
         );
 
         // with arguments
         let inp =
             "getbundle\n\
-             * 5\n\
+             * 6\n\
              heads 40\n\
              1111111111111111111111111111111111111111\
              common 81\n\
@@ -1220,6 +1232,8 @@ mod test_parse {
              cap1,CAP2,cap3\
              listkeys 9\n\
              key1,key2\
+             phases 1\n\
+             1\
              extra 5\n\
              extra";
         test_parse(
@@ -1229,6 +1243,7 @@ mod test_parse {
                 common: vec![hash_twos(), hash_threes()],
                 bundlecaps: vec![b"cap1".to_vec(), b"CAP2".to_vec(), b"cap3".to_vec()],
                 listkeys: vec![b"key1".to_vec(), b"key2".to_vec()],
+                phases: true,
             })),
         );
     }
