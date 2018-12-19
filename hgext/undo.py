@@ -174,6 +174,7 @@ def safelog(repo, command):
                 repo.ui.debug("can't make undolog folder in .hg\n")
                 return changes
             with lockmod.lock(repo.localvfs, "undolog/lock", desc="undolog", timeout=2):
+                repo.ui.log("undologlock", "lock acquired\n")
                 # developer config: undo._duringundologlock
                 if repo.ui.configbool("undo", "_duringundologlock"):
                     repo.hook("duringundologlock")

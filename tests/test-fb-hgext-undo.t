@@ -1,6 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > undo=
+  > extralog=$TESTDIR/extralog.py
   > [undo]
   > _duringundologlock=1
   > [experimental]
@@ -206,34 +207,14 @@ Test 'olddraft([NUM])' revset
   
   $ hg log -G -r 'olddraft(1) and public()' -T compact
 
-Test undolog lock
-  $ cat > $TESTTMP/noopupdate.py <<EOF
-  > from __future__ import absolute_import
-  > from mercurial import encoding, merge, registrar
-  > cmdtable = {}
-  > command = registrar.command(cmdtable)
-  > def uisetup(ui):
-  >     merge.update = lambda *args, **kwargs: None
-  > @command('noopupdate')
-  > def noopupdate(ui, repo):
-  >     """do nothing, but triggers an undolog write"""
-  >     merge.update(repo, repo['.'], False, False)
-  > EOF
-  $ hg noopupdate --config extensions.noopupdate=$TESTTMP/noopupdate.py --config hooks.duringundologlock="sleep 2" > /dev/null &
- give "hg noop" some time to reach the code obtaining the undolog lock
-  $ sleep 0.2
-
- "hg status" does not trigger undolog writing
-  $ hg status --time
-  time: real 0* (glob)
-
- "hg noopupdate" trigger undolog writing and it needs to wait
-  $ hg noopupdate --config extensions.noopupdate=$TESTTMP/noopupdate.py  --time
-  time: real [1-9]\..* (re)
+hg status does not trigger undolog writing
+  $ hg status --config extralog.events=undologlock
 
 hg undo command tests
-  $ hg undo
+  $ hg undo --config extralog.events=undologlock
+  undologlock: lock acquired
   undone to *, before ci -ma5 (glob)
+  undologlock: lock acquired
   $ hg log -G -T compact -l2
   @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
@@ -241,11 +222,13 @@ hg undo command tests
   o  7:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
   |    words
   ~
-  $ hg update 0a3dd3e15e65
+  $ hg update 0a3dd3e15e65 --config extralog.events=undologlock
+  undologlock: lock acquired
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark master)
+  undologlock: lock acquired
   $ hg undo
-  undone to *, before update 0a3dd3e15e65 (glob)
+  undone to *, before update 0a3dd3e15e65 --config extralog.events=undologlock (glob)
   $ hg log -G -T compact -l1
   @  8[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
@@ -347,7 +330,7 @@ hg undo --absolute tests
 
 hg undo --force tests
   $ hg debugundohistory -l 18
-  18: undo
+  18: undo --config extralog.events=undologlock
   19: ci -ma5
   20:  -- gap in log -- 
   21: commit -m words
@@ -463,8 +446,9 @@ checking split/divergence.
 
 File corruption handling
   $ echo 111corruptedrevlog > .hg/undolog/index.i
-  $ hg noopupdate --config extensions.noopupdate=$TESTTMP/noopupdate.py --debug
+  $ hg up . --debug
   caught revlog error. undolog/index.i was probably corrupted
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugundohistory -l
   0:  -- gap in log -- 
 
