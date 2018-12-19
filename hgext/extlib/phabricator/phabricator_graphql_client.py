@@ -14,6 +14,7 @@ class PhabricatorGraphQLClient(object):
         urllib,
         ph_cert,
         ph_oauth,
+        ph_cats,
         ph_user_name,
         source,
         host,
@@ -24,6 +25,7 @@ class PhabricatorGraphQLClient(object):
         self.urllib = urllib
         self.phabricator_certificate = ph_cert
         self.phabricator_oauth = ph_oauth
+        self.phabricator_cats = ph_cats
         self.user = ph_user_name
         self.__cert_time = 0
         self.graphql_url = host + "/graphql"
@@ -37,16 +39,23 @@ class PhabricatorGraphQLClient(object):
         """
         Make a graphql2 (OSS) request to phabricator data
         """
-        self._checkconnection(timeout)
-        if self.phabricator_oauth is None:
+        if self.phabricator_oauth is not None:
             data = {
-                "phabricator_token": self.__cert,
+                "access_token": self.phabricator_oauth,
+                "doc": request,
+                "variables": params,
+            }
+        elif self.phabricator_cats is not None:
+            data = {
+                "crypto_auth_tokens": self.phabricator_cats,
+                "cat_app": 197058370321847,
                 "doc": request,
                 "variables": params,
             }
         else:
+            self._checkconnection(timeout)
             data = {
-                "access_token": self.phabricator_oauth,
+                "phabricator_token": self.__cert,
                 "doc": request,
                 "variables": params,
             }

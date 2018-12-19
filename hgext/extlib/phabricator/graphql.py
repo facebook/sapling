@@ -43,6 +43,8 @@ class Client(object):
         self._user = None
         self._cert = None
         self._oauth = None
+        self._catslocation = None
+        self._cats = None
         self.ca_bundle = ca_bundle or True
         self._applyarcconfig(
             arcconfig.loadforpath(repodir), repo.ui.config("phabricator", "arcrc_host")
@@ -55,6 +57,7 @@ class Client(object):
                 phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(),
                 self._cert,
                 self._oauth,
+                self._cats,
                 self._user,
                 "phabricator",
                 self._host,
@@ -88,14 +91,27 @@ class Client(object):
         self._user = hostconfig.get("user", None)
         self._cert = hostconfig.get("cert", None)
         self._oauth = hostconfig.get("oauth", None)
+        self._catslocation = hostconfig.get("crypto_auth_tokens_location", None)
+        if self._catslocation is not None:
+            try:
+                with open(self._catslocation, "r") as cryptoauthtokensfile:
+                    cryptoauthtokensdict = json.load(cryptoauthtokensfile)
+                    self._cats = cryptoauthtokensdict.get("crypto_auth_tokens")
+            except Exception:
+                pass
 
-        if not self._user or (self._cert is None and self._oauth is None):
+        if not self._user or (
+            self._cert is None and self._oauth is None and self._cats is None
+        ):
             self._raisearcrcerror()
 
     @classmethod
     def _raisearcrcerror(cls):
         raise arcconfig.ArcConfigError(
-            "arcrc is missing user " "credentials. use " '"jf authenticate" to fix.'
+            "arcrc is missing user "
+            "credentials. use "
+            '"jf authenticate" to fix, '
+            "or ensure you are prepping your arcrc properly."
         )
 
     def _normalizerevisionnumbers(self, *revision_numbers):

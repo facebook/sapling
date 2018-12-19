@@ -115,7 +115,7 @@ so it tries to parse the (empty) arc config files.
   $ echo '{}' > .arcconfig
   $ hg log -T '{phabstatus}\n' -r .
   arcconfig configuration problem. No diff information can be provided.
-  Error info: arcrc is missing user credentials. use "jf authenticate" to fix.
+  Error info: arcrc is missing user credentials. use "jf authenticate" to fix, or ensure you are prepping your arcrc properly.
   Error
 
 Make sure we get an error message if .arcrc is not proper JSON (for example
