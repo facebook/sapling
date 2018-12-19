@@ -4,9 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-// XXX RepositoryId might want to be a short string like a Phabricator callsign.
-// TODO: (rain1) T31391673 move this to the mononoke-types crate
-
 /// Represents a repository. This ID is used throughout storage.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, Abomonation, Serialize)]
@@ -30,6 +27,12 @@ impl RepositoryId {
     pub fn prefix(&self) -> String {
         // Generate repo0001, repo0002, etc.
         format!("repo{:04}.", self.0)
+    }
+}
+
+impl asyncmemo::Weight for RepositoryId {
+    fn get_weight(&self) -> usize {
+        std::mem::size_of::<RepositoryId>()
     }
 }
 

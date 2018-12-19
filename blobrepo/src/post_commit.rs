@@ -12,8 +12,7 @@ use futures_ext::{asynchronize, BoxFuture, FutureExt};
 use scribe::ScribeClient;
 use serde_json;
 
-use mercurial_types::RepositoryId;
-use mononoke_types::{BonsaiChangeset, ChangesetId, Generation};
+use mononoke_types::{BonsaiChangeset, ChangesetId, Generation, RepositoryId};
 
 // This is a type system trick. Before we add the commit to the changesets table, we have all this
 // information...

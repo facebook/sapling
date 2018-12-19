@@ -11,7 +11,6 @@ extern crate context;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures_ext;
-extern crate mercurial_types;
 extern crate mononoke_types;
 extern crate sql;
 
@@ -21,8 +20,7 @@ use ascii::AsciiString;
 use context::CoreContext;
 use failure::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
-use mercurial_types::RepositoryId;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;

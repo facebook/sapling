@@ -15,7 +15,6 @@ extern crate tokio;
 extern crate blobstore;
 extern crate blobstore_sync_queue;
 extern crate context;
-extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
 

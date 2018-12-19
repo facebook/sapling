@@ -23,7 +23,7 @@ extern crate iobuf;
 #[macro_use]
 extern crate maplit;
 extern crate memcache;
-extern crate mercurial_types;
+extern crate mononoke_types;
 
 #[cfg(test)]
 #[macro_use]
@@ -43,7 +43,7 @@ use futures::{future::join_all, prelude::*};
 use futures_ext::{BoxFuture, FutureExt};
 use iobuf::IOBuf;
 use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
-use mercurial_types::RepositoryId;
+use mononoke_types::RepositoryId;
 
 pub use cachelib_utils::CachelibHandler;
 pub use memcache_utils::MemcacheHandler;

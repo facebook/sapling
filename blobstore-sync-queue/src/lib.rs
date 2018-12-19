@@ -12,7 +12,6 @@ extern crate futures;
 extern crate cloned;
 extern crate context;
 extern crate futures_ext;
-extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
 #[macro_use]
@@ -31,9 +30,8 @@ use cloned::cloned;
 use failure::{format_err, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::RepositoryId;
 use metaconfig::BlobstoreId;
-use mononoke_types::{DateTime, Timestamp};
+use mononoke_types::{DateTime, RepositoryId, Timestamp};
 
 use stats::Timeseries;
 

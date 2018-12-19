@@ -8,6 +8,7 @@ use hash::Blake2;
 use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
 
 use datetime::Timestamp;
+use repo::RepositoryId;
 use typed_hash::ChangesetId;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
@@ -66,4 +67,32 @@ impl ConvIr<Timestamp> for Timestamp {
 
 impl FromValue for Timestamp {
     type Intermediate = Timestamp;
+}
+
+impl From<RepositoryId> for Value {
+    fn from(repo_id: RepositoryId) -> Self {
+        Value::UInt(repo_id.id() as u64)
+    }
+}
+
+impl ConvIr<RepositoryId> for RepositoryId {
+    fn new(v: Value) -> FromValueResult<Self> {
+        match v {
+            Value::UInt(id) => Ok(RepositoryId::new(id as i32)),
+            Value::Int(id) => Ok(RepositoryId::new(id as i32)), // sqlite always produces `int`
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> Self {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for RepositoryId {
+    type Intermediate = RepositoryId;
 }

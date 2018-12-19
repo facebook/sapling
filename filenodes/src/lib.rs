@@ -34,8 +34,8 @@ mod caching;
 use context::CoreContext;
 use failure::{Error, Result};
 use futures_ext::{BoxFuture, BoxStream};
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath, RepositoryId};
-use mononoke_types::hash;
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
+use mononoke_types::{hash, RepositoryId};
 use quickcheck::{Arbitrary, Gen};
 
 pub use caching::CachingFilenodes;

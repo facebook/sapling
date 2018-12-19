@@ -14,8 +14,7 @@ use sql::Connection;
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use mercurial_types::RepositoryId;
-use mononoke_types::BlobstoreBytes;
+use mononoke_types::{BlobstoreBytes, RepositoryId};
 
 use errors::*;
 

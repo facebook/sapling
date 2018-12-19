@@ -19,9 +19,9 @@ use scribe_cxx::ScribeCxxClient;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PrefixBlobstore};
 use hooks::HookManager;
-use mercurial_types::RepositoryId;
 use metaconfig::{LfsParams, PushrebaseParams};
 use metaconfig::repoconfig::{RepoReadOnly, RepoType};
+use mononoke_types::RepositoryId;
 
 use errors::*;
 

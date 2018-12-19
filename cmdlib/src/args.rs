@@ -25,8 +25,8 @@ use slog_glog_fmt::default_drain as glog_drain;
 use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use hooks::HookManager;
-use mercurial_types::RepositoryId;
 use metaconfig::{ManifoldArgs, RepoConfigs, RepoReadOnly, RepoType};
+use mononoke_types::RepositoryId;
 use repo_client::{open_blobrepo, MononokeRepo};
 
 const CACHE_ARGS: &[(&str, &str)] = &[

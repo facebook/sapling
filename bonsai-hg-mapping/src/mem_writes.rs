@@ -7,8 +7,8 @@
 use context::CoreContext;
 use futures::{Future, future::ok};
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{HgChangesetId, RepositoryId};
-use mononoke_types::ChangesetId;
+use mercurial_types::HgChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 

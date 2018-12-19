@@ -19,7 +19,6 @@ extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
 extern crate futures_ext;
-extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
 extern crate sloggers;
@@ -35,6 +34,7 @@ extern crate hooks;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate metaconfig;
+extern crate mononoke_types;
 extern crate panichandler;
 extern crate repo_client;
 extern crate scuba_ext;

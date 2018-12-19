@@ -16,7 +16,6 @@ extern crate futures;
 
 extern crate changesets;
 extern crate context;
-extern crate mercurial_types_mocks;
 extern crate mononoke_types_mocks;
 
 use futures::Future;
@@ -24,8 +23,8 @@ use futures::Future;
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, SqlChangesets,
                  SqlConstructors};
 use context::CoreContext;
-use mercurial_types_mocks::repo::*;
 use mononoke_types_mocks::changesetid::*;
+use mononoke_types_mocks::repo::*;
 
 fn add_and_get<C: Changesets + 'static>(changesets: C) {
     let ctx = CoreContext::test_mock();

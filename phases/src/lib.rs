@@ -15,6 +15,7 @@ extern crate futures;
 extern crate futures_ext;
 extern crate iobuf;
 extern crate memcache;
+#[cfg(test)]
 extern crate mercurial_types;
 extern crate mononoke_types;
 extern crate reachabilityindex;
@@ -42,8 +43,7 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::RepositoryId;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use std::{fmt, str};
 use std::sync::Arc;
 use try_from::TryFrom;

@@ -55,7 +55,8 @@ use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::{HookExecution, HookManager};
 use hooks::lua_hook::LuaHook;
-use mercurial_types::{HgChangesetId, RepositoryId};
+use mercurial_types::HgChangesetId;
+use mononoke_types::RepositoryId;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 

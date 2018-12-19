@@ -15,9 +15,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use context::CoreContext;
-use mercurial_types::RepositoryId;
 use metaconfig::BlobstoreId;
-use mononoke_types::{BlobstoreBytes, DateTime};
+use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
 
 use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 

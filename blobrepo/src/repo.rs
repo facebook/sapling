@@ -51,12 +51,12 @@ use manifoldblob::ThriftManifoldBlob;
 use mercurial::file::File;
 use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileEnvelopeMut,
                       HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
-                      Manifest, RepoPath, RepositoryId, Type};
+                      Manifest, RepoPath, Type};
 use mercurial_types::manifest::Content;
 use metaconfig::RemoteBlobstoreArgs;
 use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
                      ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath,
-                     MPathElement, MononokeId, hash::Blake2, hash::Sha256};
+                     MPathElement, MononokeId, RepositoryId, hash::Blake2, hash::Sha256};
 use multiplexedblob::MultiplexedBlobstore;
 use rocksblob::Rocksblob;
 use rocksdb;

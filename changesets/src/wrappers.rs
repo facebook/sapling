@@ -10,8 +10,7 @@ use std::sync::Arc;
 
 use context::CoreContext;
 use futures_ext::BoxFuture;
-use mercurial_types::RepositoryId;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
 
 use {ChangesetEntry, ChangesetInsert, Changesets};
 use errors::*;

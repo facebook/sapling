@@ -21,11 +21,11 @@ use tokio::runtime::TaskExecutor;
 use api;
 use blobrepo::{BlobRepo, get_sha256_alias, get_sha256_alias_key};
 use context::CoreContext;
-use mercurial_types::{HgManifestId, RepositoryId};
+use mercurial_types::HgManifestId;
 use mercurial_types::manifest::Content;
 use metaconfig::repoconfig::RepoConfig;
 use metaconfig::repoconfig::RepoType::{BlobFiles, BlobRemote, BlobRocks};
-use mononoke_types::FileContents;
+use mononoke_types::{FileContents, RepositoryId};
 use reachabilityindex::{GenerationNumberBFS, ReachabilityIndex};
 
 use errors::ErrorKind;

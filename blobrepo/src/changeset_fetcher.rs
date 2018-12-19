@@ -11,8 +11,7 @@ use context::CoreContext;
 use failure::{err_msg, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::RepositoryId;
-use mononoke_types::{ChangesetId, Generation};
+use mononoke_types::{ChangesetId, Generation, RepositoryId};
 
 use futures_stats::Timed;
 use std::any::Any;
@@ -313,10 +312,10 @@ mod tests {
     use async_unit;
     use cachelib::{get_or_create_pool, init_cache_once, LruCacheConfig, LruCachePool};
     use changesets::{serialize_cs_entries, ChangesetEntry, ChangesetInsert};
-    use mercurial_types_mocks::repo::REPO_ZERO;
     use mononoke_types::BlobstoreBytes;
     use mononoke_types_mocks::changesetid::{FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID,
                                             TWOS_CSID};
+    use mononoke_types_mocks::repo::REPO_ZERO;
     use std::collections::HashMap;
     use std::sync::Mutex;
 

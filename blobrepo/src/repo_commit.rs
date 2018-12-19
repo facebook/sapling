@@ -24,11 +24,11 @@ use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
 use mercurial_types::{Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, HgNodeKey,
-                      HgParents, MPath, Manifest, RepoPath, RepositoryId, NULL_HASH};
+                      HgParents, MPath, Manifest, RepoPath, NULL_HASH};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
-use mononoke_types::{self, BonsaiChangeset, ChangesetId};
+use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
 
 use BlobRepo;
 use HgBlobChangeset;

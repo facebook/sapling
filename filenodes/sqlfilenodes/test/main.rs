@@ -17,6 +17,8 @@ extern crate futures;
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
+extern crate mononoke_types;
+extern crate mononoke_types_mocks;
 extern crate sqlfilenodes;
 extern crate tokio;
 
@@ -24,10 +26,11 @@ use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::future::Future;
 use futures_ext::StreamExt;
-use mercurial_types::{HgFileNodeId, RepoPath, RepositoryId};
+use mercurial_types::{HgFileNodeId, RepoPath};
 use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID,
                                       TWOS_FNID};
-use mercurial_types_mocks::repo::{REPO_ONE, REPO_ZERO};
+use mononoke_types::RepositoryId;
+use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 
 fn root_first_filenode() -> FilenodeInfo {

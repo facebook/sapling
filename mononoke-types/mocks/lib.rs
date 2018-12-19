@@ -17,3 +17,4 @@ pub mod changesetid;
 pub mod contentid;
 pub mod datetime;
 pub mod hash;
+pub mod repo;

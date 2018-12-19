@@ -44,9 +44,9 @@ use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
 use blobstore::{Blobstore, LazyMemblob, PrefixBlobstore};
 use context::CoreContext;
 use mercurial_types::{manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId,
-                      HgManifestId, HgParents, MPath, MPathElement, RepoPath, RepositoryId};
+                      HgManifestId, HgParents, MPath, MPathElement, RepoPath};
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents,
-                     MononokeId};
+                     MononokeId, RepositoryId};
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 
 #[macro_use]

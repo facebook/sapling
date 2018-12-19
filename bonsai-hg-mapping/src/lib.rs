@@ -45,8 +45,8 @@ pub use sql_ext::SqlConstructors;
 use context::CoreContext;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{HgChangesetId, HgNodeHash, RepositoryId};
-use mononoke_types::ChangesetId;
+use mercurial_types::{HgChangesetId, HgNodeHash};
+use mononoke_types::{ChangesetId, RepositoryId};
 use stats::Timeseries;
 
 mod caching;

@@ -16,7 +16,6 @@ extern crate context;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
-extern crate mercurial_types;
 extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
@@ -37,8 +36,7 @@ use blobrepo::alias::get_sha256;
 use changesets::SqlChangesets;
 use cmdlib::args;
 use context::CoreContext;
-use mercurial_types::RepositoryId;
-use mononoke_types::{ChangesetId, ContentId, FileChange, hash::Sha256};
+use mononoke_types::{ChangesetId, ContentId, FileChange, RepositoryId, hash::Sha256};
 
 #[derive(Debug, Clone)]
 enum Mode {

@@ -30,10 +30,10 @@ use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChanges
                         SqlBonsaiHgMapping, SqlConstructors};
 use context::CoreContext;
 use futures_ext::BoxFuture;
-use mercurial_types::RepositoryId;
 use mercurial_types_mocks::nodehash as hg;
-use mercurial_types_mocks::repo::REPO_ZERO;
+use mononoke_types::RepositoryId;
 use mononoke_types_mocks::changesetid as bonsai;
+use mononoke_types_mocks::repo::REPO_ZERO;
 
 use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
 

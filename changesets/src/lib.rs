@@ -29,7 +29,6 @@ extern crate changeset_entry_thrift;
 extern crate context;
 #[macro_use]
 extern crate futures_ext;
-extern crate mercurial_types;
 extern crate mononoke_types;
 #[cfg(test)]
 extern crate mononoke_types_mocks;
@@ -49,8 +48,7 @@ pub use sql_ext::SqlConstructors;
 use context::CoreContext;
 use futures::{stream, Future, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use mercurial_types::RepositoryId;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use rust_thrift::compact_protocol;
 use stats::Timeseries;
 

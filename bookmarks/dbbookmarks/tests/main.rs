@@ -17,8 +17,6 @@ extern crate dbbookmarks;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
-extern crate mercurial_types;
-extern crate mercurial_types_mocks;
 extern crate mononoke_types;
 extern crate mononoke_types_mocks;
 extern crate tokio;
@@ -27,8 +25,8 @@ use bookmarks::{Bookmark, BookmarkPrefix, Bookmarks};
 use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
 use futures::{Future, Stream};
-use mercurial_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
+use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 
 fn create_bookmark(book: &str) -> Bookmark {
     Bookmark::new(book.to_string()).unwrap()

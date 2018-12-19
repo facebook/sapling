@@ -13,9 +13,6 @@ extern crate context;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
-extern crate mercurial_types;
-#[cfg(test)]
-extern crate mercurial_types_mocks;
 extern crate mononoke_types;
 #[macro_use]
 extern crate sql;
@@ -31,8 +28,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use sql::Connection;
 pub use sql_ext::SqlConstructors;
 
-use mercurial_types::RepositoryId;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
 
 #[derive(Clone)]
 pub struct SqlBookmarks {

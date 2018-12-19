@@ -96,7 +96,6 @@ pub mod manifest_utils;
 pub mod blob;
 pub mod blobnode;
 pub mod changeset;
-pub mod repo;
 pub mod sql_types;
 pub mod flags;
 mod node;
@@ -114,7 +113,6 @@ pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
 pub use nodehash::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey,
                    NULL_CSID, NULL_HASH};
-pub use repo::RepositoryId;
 pub use utils::percent_encode;
 
 // Re-exports from mononoke-types. Eventually these should go away and everything should depend
@@ -140,11 +138,5 @@ impl asyncmemo::Weight for HgChangesetId {
 impl asyncmemo::Weight for HgFileNodeId {
     fn get_weight(&self) -> usize {
         std::mem::size_of::<HgFileNodeId>()
-    }
-}
-
-impl asyncmemo::Weight for RepositoryId {
-    fn get_weight(&self) -> usize {
-        std::mem::size_of::<RepositoryId>()
     }
 }

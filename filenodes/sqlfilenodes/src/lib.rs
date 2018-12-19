@@ -35,8 +35,8 @@ use sql::Connection;
 use stats::Timeseries;
 
 use filenodes::{FilenodeInfo, Filenodes};
-use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath, RepositoryId};
-use mononoke_types::hash;
+use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
+use mononoke_types::{hash, RepositoryId};
 pub use sql_ext::SqlConstructors;
 
 use errors::ErrorKind;
