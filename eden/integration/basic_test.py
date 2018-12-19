@@ -37,6 +37,8 @@ class BasicTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
         self.expected_mount_entries = {".eden", "adir", "bdir", "hello", "slink"}
+        if self.repo.get_type() == "hg":
+            self.expected_mount_entries.add(".hg")
 
     def test_version(self) -> None:
         output = self.eden.run_cmd("version", cwd=self.mount)
@@ -59,9 +61,8 @@ class BasicTest(testcase.EdenRepoTest):
         running_info = lines[1]
         self.assertTrue(running_info.startswith("Running: "))
 
-    def test_fileList(self) -> None:
-        entries = set(os.listdir(self.mount))
-        self.assertEqual(self.expected_mount_entries, entries)
+    def test_file_list(self) -> None:
+        self.assert_checkout_root_entries(self.expected_mount_entries)
 
         adir = os.path.join(self.mount, "adir")
         st = os.lstat(adir)
@@ -99,8 +100,7 @@ class BasicTest(testcase.EdenRepoTest):
         with open(filename, "w") as f:
             f.write("created\n")
 
-        entries = set(os.listdir(self.mount))
-        self.assertEqual(self.expected_mount_entries | {"notinrepo"}, entries)
+        self.assert_checkout_root_entries(self.expected_mount_entries | {"notinrepo"})
 
         with open(filename, "r") as f:
             self.assertEqual(f.read(), "created\n")
@@ -160,8 +160,7 @@ class BasicTest(testcase.EdenRepoTest):
         st = os.lstat(buckout)
         self.assertTrue(stat.S_ISDIR(st.st_mode))
 
-        entries = set(os.listdir(self.mount))
-        self.assertEqual(self.expected_mount_entries | {"buck-out"}, entries)
+        self.assert_checkout_root_entries(self.expected_mount_entries | {"buck-out"})
 
         # Prove that we can recursively build out a directory tree
         deep_name = os.path.join(buckout, "foo", "bar", "baz")
@@ -223,9 +222,7 @@ class BasicTest(testcase.EdenRepoTest):
         self.eden.run_unchecked("remove", "/root")
 
     def test_remove_checkout(self) -> None:
-        entries = set(os.listdir(self.mount))
-        self.assertEqual(self.expected_mount_entries, entries)
-
+        self.assert_checkout_root_entries(self.expected_mount_entries)
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
         self.eden.remove(self.mount)
@@ -235,9 +232,7 @@ class BasicTest(testcase.EdenRepoTest):
 
         self.eden.clone(self.repo_name, self.mount)
 
-        entries = set(os.listdir(self.mount))
-        self.assertEqual(self.expected_mount_entries, entries)
-
+        self.assert_checkout_root_entries(self.expected_mount_entries)
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
     def test_statvfs(self) -> None:

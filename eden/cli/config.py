@@ -404,7 +404,9 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client() as client:
             client.mount(mount_info)
 
-        self._run_post_clone_hooks(path, client_dir, checkout_config)
+        self._post_clone_checkout_setup(
+            Path(path), Path(client_dir), checkout_config, snapshot_id
+        )
 
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, os.path.basename(client_dir))
@@ -493,41 +495,24 @@ Do you want to run `eden mount %s` instead?"""
                     continue
                 raise
 
-    def _run_post_clone_hooks(
-        self, eden_mount_path: str, client_dir: str, checkout_config: CheckoutConfig
+    def _post_clone_checkout_setup(
+        self,
+        eden_mount_path: Path,
+        client_dir: Path,
+        checkout_config: CheckoutConfig,
+        commit_id: str,
     ) -> None:
         # First, check to see if the post-clone hook has been run successfully
         # before.
-        clone_success_path = os.path.join(client_dir, CLONE_SUCCEEDED)
-        is_initial_mount = not os.path.isfile(clone_success_path)
-        if is_initial_mount:
-            post_clone = os.path.join(checkout_config.hooks_path, "post-clone")
-            snapshot = self._get_snapshot(client_dir)
-            try:
-                subprocess.run(
-                    [
-                        post_clone,
-                        checkout_config.scm_type,
-                        eden_mount_path,
-                        checkout_config.path,
-                        snapshot,
-                    ],
-                    pass_fds=[1, 2],
-                    check=True,
-                )
-            except OSError as e:
-                if e.errno != errno.ENOENT:
-                    # TODO(T13448173): If clone fails, then we should roll back
-                    # the mount.
-                    raise
-                print_stderr(
-                    f'Did not run post-clone hook "{post_clone}" for '
-                    f"{checkout_config.path} because it was not found."
-                )
+        clone_success_path = client_dir / CLONE_SUCCEEDED
+        is_initial_mount = not clone_success_path.is_file()
+        if is_initial_mount and checkout_config.scm_type == "hg":
+            from . import hg_util
 
-        # "touch" the clone_success_path.
-        with open(clone_success_path, "a"):
-            os.utime(clone_success_path, None)
+            checkout = EdenCheckout(self, eden_mount_path, client_dir)
+            hg_util.setup_hg_dir(checkout, checkout_config, commit_id)
+
+        clone_success_path.touch()
 
     def _save_checkout_config(
         self, checkout_config: CheckoutConfig, config_path: str

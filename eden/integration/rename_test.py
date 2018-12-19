@@ -63,8 +63,7 @@ class RenameTest(testcase.EdenRepoTest):
             errno.ENOENT, context.exception.errno, msg="no longer visible as old name"
         )
 
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([".eden", "a-new-target", "adir", "slink"], entries)
+        self.assert_checkout_root_entries({".eden", "a-new-target", "adir", "slink"})
 
         with open(targetname, "r") as f:
             self.assertEqual("hola\n", f.read(), msg="materialized correct data")
@@ -74,8 +73,7 @@ class RenameTest(testcase.EdenRepoTest):
             # we rename it back to its old name.
             os.rename(targetname, hello)
 
-            entries = sorted(os.listdir(self.mount))
-            self.assertEqual([".eden", "adir", "hello", "slink"], entries)
+            self.assert_checkout_root_entries({".eden", "adir", "hello", "slink"})
 
             with open(hello, "r+") as write_f:
                 write_f.seek(0, os.SEEK_END)
@@ -101,8 +99,9 @@ class RenameTest(testcase.EdenRepoTest):
             errno.ENOENT, context.exception.errno, msg="no longer visible as old name"
         )
 
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([".eden", "adir", "hello", "overlay-b", "slink"], entries)
+        self.assert_checkout_root_entries(
+            {".eden", "adir", "hello", "overlay-b", "slink"}
+        )
 
         with open(to_name, "r") as f:
             self.assertEqual("overlay-a\n", f.read(), msg="holds correct data")
@@ -112,8 +111,9 @@ class RenameTest(testcase.EdenRepoTest):
             # we rename it back to its old name.
             os.rename(to_name, from_name)
 
-            entries = sorted(os.listdir(self.mount))
-            self.assertEqual([".eden", "adir", "hello", "overlay-a", "slink"], entries)
+            self.assert_checkout_root_entries(
+                {".eden", "adir", "hello", "overlay-a", "slink"}
+            )
 
             with open(from_name, "r+") as write_f:
                 write_f.seek(0, os.SEEK_END)
@@ -139,8 +139,7 @@ class RenameTest(testcase.EdenRepoTest):
             errno.ENOENT, context.exception.errno, msg="no longer visible as old name"
         )
 
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([".eden", "adir", "hello", "slink"], entries)
+        self.assert_checkout_root_entries({".eden", "adir", "hello", "slink"})
 
         with open(to_name, "r") as f:
             self.assertEqual("overlay-a\n", f.read(), msg="holds correct data")

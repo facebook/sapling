@@ -91,16 +91,6 @@ class FindExeClass(object):
         )
 
     @cached_property
-    def EDEN_POST_CLONE_HOOK(self) -> str:
-        return self._find_exe(
-            "post_clone_hook",
-            env="EDENFS_POST_CLONE_PATH",
-            candidates=[
-                os.path.join(self.BUCK_OUT, "gen/eden/hooks/hg/post-clone.par")
-            ],
-        )
-
-    @cached_property
     def FSATTR(self) -> str:
         return self._find_exe(
             "fsattr",

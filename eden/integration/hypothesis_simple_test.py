@@ -37,9 +37,8 @@ class HypothesisSimpleTest(testcase.EdenRepoTest):
         with open(filename, "w") as f:
             f.write("created\n")
 
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual(
-            sorted([".eden", "adir", "bdir", "hello", basename, "slink"]), entries
+        self.assert_checkout_root_entries(
+            {".eden", "adir", "bdir", "hello", basename, "slink"}
         )
 
         with open(filename, "r") as f:

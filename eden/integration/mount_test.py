@@ -59,8 +59,7 @@ class MountTest(testcase.EdenRepoTest):
         with open(filename, "w") as f:
             f.write("foo!\n")
 
-        entries = set(os.listdir(self.mount))
-        self.assertEqual(self.expected_mount_entries | {"overlayonly"}, entries)
+        self.assert_checkout_root_entries(self.expected_mount_entries | {"overlayonly"})
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
         # do a normal user-facing unmount, preserving state
@@ -74,8 +73,7 @@ class MountTest(testcase.EdenRepoTest):
         self.eden.run_cmd("mount", self.mount)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
-        entries = set(os.listdir(self.mount))
-        self.assertEqual(self.expected_mount_entries | {"overlayonly"}, entries)
+        self.assert_checkout_root_entries(self.expected_mount_entries | {"overlayonly"})
 
         with open(filename, "r") as f:
             self.assertEqual("foo!\n", f.read(), msg="overlay file is correct")
@@ -90,8 +88,7 @@ class MountTest(testcase.EdenRepoTest):
         self.eden.run_cmd("mount", self.mount)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([".eden", "adir", "bdir", "hello", "slink"], entries)
+        self.assert_checkout_root_entries({".eden", "adir", "bdir", "hello", "slink"})
 
     def test_unmount_succeeds_while_file_handle_is_open(self) -> None:
         fd = os.open(os.path.join(self.mount, "hello"), os.O_RDWR)

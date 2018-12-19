@@ -282,46 +282,6 @@ class CloneTest(testcase.EdenRepoTest):
             f"error: destination path {non_existent_dir} is not a directory\n", stderr
         )
 
-    def test_post_clone_hook(self) -> None:
-        edenrc = Path(self.home_dir) / ".edenrc"
-        hooks_dir = Path(self.tmp_dir) / "the_hooks"
-        os.mkdir(hooks_dir)
-
-        edenrc.write_text(
-            f"""\
-["repository {repo_name}"]
-path = "{self.repo.get_canonical_root()}"
-type = "{self.repo.get_type()}"
-hooks = "{hooks_dir}"
-"""
-        )
-
-        # Create a post-clone hook that has a visible side-effect every time it
-        # is run so we can verify that it is only run once.
-        hg_post_clone_hook = hooks_dir / "post-clone"
-        scratch_file = Path(self.tmp_dir) / "scratch_file"
-        scratch_file.write_text("ok")
-        hg_post_clone_hook.write_text(
-            f"""\
-#!/bin/bash
-CONTENTS=`cat "{scratch_file}"`
-echo -n "$1" >> "{scratch_file}"
-"""
-        )
-        hg_post_clone_hook.chmod(stat.S_IRWXU)
-
-        # Verify that the hook gets run as part of `eden clone`.
-        self.assertEqual("ok", scratch_file.read_text())
-        tmp = self.make_temporary_directory()
-        self.eden.clone(repo_name, tmp)
-        new_contents = "ok" + self.repo.get_type()
-        self.assertEqual(new_contents, scratch_file.read_text())
-
-        # Restart Eden and verify that post-clone is NOT run again.
-        self.eden.shutdown()
-        self.eden.start()
-        self.assertEqual(new_contents, scratch_file.read_text())
-
     def test_attempt_clone_invalid_repo_name(self) -> None:
         tmp = self.make_temporary_directory()
         repo_name = "repo-name-that-is-not-in-the-config"

@@ -19,8 +19,7 @@ import textwrap
 from textwrap import dedent
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-import toml
-from eden.integration.lib import find_executables, hgrepo, testcase
+from eden.integration.lib import hgrepo, testcase
 
 
 def get_default_hgrc() -> configparser.ConfigParser:
@@ -95,7 +94,6 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         self.eden.add_repository(self.backing_repo_name, self.backing_repo.path)
         # Edit the edenrc file to set up post-clone hooks that will correctly
         # populate the .hg directory inside the eden client.
-        self.amend_edenrc_before_clone()
         self.eden.clone(self.backing_repo_name, self.mount, allow_empty=True)
 
         # Now create the repository object that refers to the eden client
@@ -121,26 +119,6 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         raise NotImplementedError(
             "individual test classes must implement " "populate_backing_repo()"
         )
-
-    def amend_edenrc_before_clone(self) -> None:
-        # This is a poor man's version of the generate-hooks-dir script.
-        hooks_dir = os.path.join(self.tmp_dir, "the_hooks")
-        os.mkdir(hooks_dir)
-        post_clone_hook = os.path.join(hooks_dir, "post-clone")
-        os.symlink(find_executables.FindExe.EDEN_POST_CLONE_HOOK, post_clone_hook)
-
-        edenrc = os.path.join(os.environ["HOME"], ".edenrc")
-        toml_config = toml.load(edenrc)
-
-        # Set the hg.edenextension path to the empty string, so that
-        # we use the version of the eden extension built into hg.par
-        toml_config["hooks"] = {}
-        toml_config["hooks"]["hg.edenextension"] = ""
-
-        toml_config["repository %s" % self.backing_repo_name]["hooks"] = hooks_dir
-
-        with open(edenrc, "w") as f:
-            toml.dump(toml_config, f)
 
     def hg(
         self,

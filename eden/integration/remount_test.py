@@ -24,6 +24,10 @@ class RemountTest(testcase.EdenRepoTest):
         self.repo.symlink("slink", "hello")
         self.repo.commit("Initial commit.")
 
+    def _assert_mounted(self, mount_path: str) -> None:
+        expected_entries = {".eden", "adir", "hello", "slink"}
+        self.assert_checkout_root_entries(expected_entries, path=mount_path)
+
     def select_storage_engine(self) -> str:
         """ we need to persist data across restarts """
         return "sqlite"
@@ -37,12 +41,10 @@ class RemountTest(testcase.EdenRepoTest):
 
         # Verify that clients are remounted on startup
         for i in range(5):
-            entries = sorted(os.listdir(self.mount + "-" + str(i)))
-            self.assertEqual([".eden", "adir", "hello", "slink"], entries)
+            self._assert_mounted(f"{self.mount}-{i}")
 
         # Verify that default repo created by EdenRepoTestBase is remounted
-        entries = sorted(os.listdir(self.mount))
-        self.assertEqual([".eden", "adir", "hello", "slink"], entries)
+        self._assert_mounted(self.mount)
 
     def test_git_and_hg(self) -> None:
         # Create git and hg repositories for mounting
@@ -70,11 +72,12 @@ class RemountTest(testcase.EdenRepoTest):
         self.eden.start()
 
         # Verify that clients are remounted on startup
-        for name in repo_names.values():
+        for scm_type, name in repo_names.items():
             for i in range(3):
-                mount_path = os.path.join(self.mounts_dir, name + "-" + str(i))
-                entries = sorted(os.listdir(mount_path))
-                self.assertEqual([".eden", "hello"], entries)
+                mount_path = os.path.join(self.mounts_dir, f"{name}-{i}")
+                self.assert_checkout_root_entries(
+                    {".eden", "hello"}, mount_path, scm_type=scm_type
+                )
 
                 hello = os.path.join(mount_path, "hello")
                 with open(hello, "r") as f:
@@ -92,8 +95,7 @@ class RemountTest(testcase.EdenRepoTest):
 
         # Verify that clients that were still mounted at shutdown are remounted
         for i in range(5):
-            entries = sorted(os.listdir(self.mount + "-" + str(i)))
-            self.assertEqual([".eden", "adir", "hello", "slink"], entries)
+            self._assert_mounted(f"{self.mount}-{i}")
 
         # Verify that unmounted client is not remounted
         self.assertFalse(os.path.exists(self.mount))
@@ -119,15 +121,9 @@ class RemountTest(testcase.EdenRepoTest):
         self.assertEqual(expected_checkouts, checkouts)
 
         for i in range(5):
-            mount_path = self.mount + "-" + str(i)
             if i == 3:
                 continue
-            entries = sorted(os.listdir(mount_path))
-            self.assertEqual(
-                [".eden", "adir", "hello", "slink"],
-                entries,
-                f"incorrect entries in {mount_path!r}",
-            )
+            self._assert_mounted(f"{self.mount}-{i}")
 
         # Verify that unmounted clients are not remounted
         self.assertFalse(os.path.exists(self.mount))

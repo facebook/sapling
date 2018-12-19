@@ -16,7 +16,19 @@ import pathlib
 import time
 import typing
 import unittest
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.hypothesis import set_up_hypothesis
@@ -311,6 +323,26 @@ class EdenRepoTest(EdenTestCase):
         # we define it here.  (mypy knows that the method exists but cannot figure out
         # its return type for some reason.)
         return super().get_thrift_client()
+
+    def assert_checkout_root_entries(
+        self,
+        expected_entries: Set[str],
+        path: Union[str, pathlib.Path, None] = None,
+        scm_type: Optional[str] = None,
+    ) -> None:
+        """Verify that the contents of a checkout root directory are what we expect.
+
+        This automatically expects to find a ".hg" directory in the root of hg
+        checkouts.
+        """
+        checkout_root = pathlib.Path(path if path is not None else self.mount)
+        real_scm_type = scm_type if scm_type is not None else self.repo.get_type()
+        if real_scm_type == "hg":
+            expected_entries = expected_entries | {".hg"}
+        actual_entries = set(os.listdir(checkout_root))
+        self.assertEqual(
+            expected_entries, actual_entries, f"incorrect entries in {checkout_root}"
+        )
 
 
 def _replicate_test(

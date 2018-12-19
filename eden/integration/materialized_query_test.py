@@ -18,9 +18,6 @@ from facebook.eden.ttypes import FileInformationOrError
 from .lib import testcase
 
 
-INITIAL_SEQ = 6
-
-
 @testcase.eden_repo_test
 class MaterializedQueryTest(testcase.EdenRepoTest):
     """Check that materialization is represented correctly."""
@@ -44,8 +41,6 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
 
     def test_noEntries(self) -> None:
         pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
-        # setting up the .eden dir bumps the sequence number
-        self.assertEqual(INITIAL_SEQ, pos.sequenceNumber)
         self.assertNotEqual(0, pos.mountGeneration)
 
         changed = self.client.getFilesChangedSince(self.mount_path_bytes, pos)
@@ -116,7 +111,6 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
 
     def test_removeFile(self) -> None:
         initial_pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
-        self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
 
         os.unlink(os.path.join(self.mount, "adir", "file"))
         changed = self.client.getFilesChangedSince(self.mount_path_bytes, initial_pos)
@@ -126,7 +120,6 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
 
     def test_renameFile(self) -> None:
         initial_pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
-        self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
 
         os.rename(os.path.join(self.mount, "hello"), os.path.join(self.mount, "bye"))
         changed = self.client.getFilesChangedSince(self.mount_path_bytes, initial_pos)
@@ -136,13 +129,14 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
 
     def test_addFile(self) -> None:
         initial_pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
-        self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
+        # Record the initial journal position after we finish setting up the checkout.
+        initial_seq = initial_pos.sequenceNumber
 
         name = os.path.join(self.mount, "overlaid")
         with open(name, "w+") as f:
             pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
             self.assertEqual(
-                INITIAL_SEQ + 1,
+                initial_seq + 1,
                 pos.sequenceNumber,
                 msg="creating a file bumps the journal",
             )
@@ -165,7 +159,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
             self.mount_path_bytes
         )
         self.assertEqual(
-            INITIAL_SEQ + 2,
+            initial_seq + 2,
             pos_after_overlaid.sequenceNumber,
             msg="writing bumps the journal",
         )
@@ -183,7 +177,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         with open(name, "a") as f:
             pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
             self.assertEqual(
-                INITIAL_SEQ + 2,
+                initial_seq + 2,
                 pos.sequenceNumber,
                 msg="journal still in same place for append",
             )
@@ -191,7 +185,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
 
         pos = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.assertEqual(
-            INITIAL_SEQ + 3, pos.sequenceNumber, msg="appending bumps the journal"
+            initial_seq + 3, pos.sequenceNumber, msg="appending bumps the journal"
         )
 
         changed = self.client.getFilesChangedSince(

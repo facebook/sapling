@@ -22,9 +22,7 @@ import typing
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Type, TypeVar, Union
 
-import toml
 from eden.integration.lib import edenclient, hgrepo
-from eden.integration.lib.find_executables import FindExe
 from eden.integration.lib.temporary_directory import create_tmp_dir
 from eden.test_support.temporary_directory import cleanup_tmp_dir
 
@@ -170,19 +168,6 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         self.transient_dir.mkdir()
         self.etc_eden_dir.mkdir()
         self.home_dir.mkdir()
-
-        # Set up configuration and hooks inside the etc eden directory.
-        hooks_dir = self.etc_eden_dir / "hooks"
-        hooks_dir.mkdir()
-        os.symlink(FindExe.EDEN_POST_CLONE_HOOK, hooks_dir / "post-clone")
-        config_dir = self.etc_eden_dir / "config.d"
-        config_dir.mkdir()
-
-        # Set the hg.edenextension path to the empty string, so that
-        # we use the version of the eden extension built into hg.par
-        toml_config = {"hooks": {"hg.edenextension": ""}}
-        with (config_dir / "hooks").open("w") as f:
-            toml.dump(toml_config, f)
 
     def _emit_metadata(self) -> None:
         now = time.time()
