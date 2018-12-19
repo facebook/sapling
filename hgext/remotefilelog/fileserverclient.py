@@ -717,8 +717,8 @@ class fileserverclient(object):
             if missingids:
                 raise error.Abort(_("unable to download %d files") % len(missingids))
             fetchcost += time.time() - start
-            if self.ui.configbool("remotefilelog", "dolfsprefetch", True):
-                self._lfsprefetch(fileids)
+        if self.ui.configbool("remotefilelog", "dolfsprefetch", True):
+            self._lfsprefetch(fileids)
 
     def _lfsprefetch(self, fileids):
         if not _lfsmod or not util.safehasattr(self.repo.svfs, "lfslocalblobstore"):
