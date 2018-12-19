@@ -1005,6 +1005,8 @@ class Test(unittest.TestCase):
             vlog('# Handling keyboard interrupt')
             cleanup()
             raise
+        finally:
+            proc.fromchild.close()
 
         ret = proc.wait()
         if wifexited(ret):
