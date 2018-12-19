@@ -38,7 +38,7 @@ use ancestors::AncestorsNodeStream;
 use ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
 use intersectnodestream::IntersectNodeStream;
 use setdifferencenodestream::SetDifferenceNodeStream;
-use singlenodehash::SingleNodeHash;
+use singlechangesetid::single_changeset_id;
 use unionnodestream::UnionNodeStream;
 use validation::ValidateNodeStream;
 
@@ -142,9 +142,25 @@ impl RevsetSpec {
                 ctx.clone(),
                 match entry {
                     &RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),
-                    &RevsetEntry::SingleNode(Some(hash)) => {
-                        SingleNodeHash::new(ctx.clone(), hash, &*repo.clone()).boxed()
-                    }
+                    &RevsetEntry::SingleNode(Some(hash)) => repo.get_bonsai_from_hg(
+                        ctx.clone(),
+                        &HgChangesetId::new(hash),
+                    ).map({
+                            cloned!(hash);
+                            move |maybecsid| maybecsid.expect(&format!("unknown {}", hash))
+                        })
+                        .map({
+                            cloned!(ctx, repo);
+                            move |csid| {
+                                bonsai_nodestream_to_nodestream(
+                                    ctx.clone(),
+                                    &repo,
+                                    single_changeset_id(ctx.clone(), csid, &*repo.clone()).boxify(),
+                                )
+                            }
+                        })
+                        .flatten_stream()
+                        .boxify(),
                     &RevsetEntry::SetDifference => {
                         let keep = output.pop().expect("No keep for setdifference");
                         let remove = output.pop().expect("No remove for setdifference");
@@ -159,7 +175,7 @@ impl RevsetSpec {
                             &changeset_fetcher,
                             keep_input,
                             remove_input,
-                        ).boxed();
+                        ).boxify();
                         bonsai_nodestream_to_nodestream(ctx.clone(), &repo, nodestream)
                     }
                     &RevsetEntry::Union(size) => {
@@ -170,7 +186,7 @@ impl RevsetSpec {
                             output.split_off(idx),
                         );
                         let nodestream =
-                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs).boxed();
+                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs).boxify();
                         bonsai_nodestream_to_nodestream(ctx.clone(), &repo, nodestream)
                     }
                     &RevsetEntry::Intersect(size) => {
@@ -180,12 +196,12 @@ impl RevsetSpec {
                             ctx.clone(),
                             &repo.get_changeset_fetcher(),
                             nodestreams_to_bonsai_nodestreams(ctx.clone(), &repo, inputs),
-                        ).boxed();
+                        ).boxify();
                         bonsai_nodestream_to_nodestream(ctx.clone(), &repo.clone(), nodestream)
                     }
                 },
                 &repo.clone(),
-            ).boxed();
+            ).boxify();
             output.push(next_node);
         }
         assert!(
@@ -524,7 +540,7 @@ macro_rules! ancestors_check {
                         includes,
                         excludes,
                     )
-                    .boxed();
+                    .boxify();
 
                     let expected = bonsai_nodestream_to_nodestream(ctx.clone(), &repo, expected);
                     assert!(

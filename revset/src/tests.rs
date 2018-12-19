@@ -6,16 +6,16 @@
 
 use BonsaiNodeStream;
 use NodeStream;
-use SingleChangesetId;
 use blobrepo::{BlobRepo, ChangesetFetcher};
 use context::CoreContext;
 use failure::{err_msg, Error};
 use futures::{Future, Stream};
 use futures::executor::spawn;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::{ChangesetId, Generation};
+use singlechangesetid::single_changeset_id;
 use std::any::Any;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -210,6 +210,8 @@ pub fn get_single_bonsai_streams(
 ) -> Vec<Box<BonsaiNodeStream>> {
     hashes
         .iter()
-        .map(|hash| SingleChangesetId::new(ctx.clone(), string_to_nodehash(hash), &repo).boxed())
+        .map(|hash| {
+            single_changeset_id(ctx.clone(), string_to_bonsai(&repo.clone(), hash), &repo).boxify()
+        })
         .collect()
 }

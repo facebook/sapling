@@ -61,6 +61,7 @@ mod test {
     use async_unit;
     use context::CoreContext;
     use fixtures::linear;
+    use futures_ext::StreamExt;
     use std::sync::Arc;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
@@ -82,7 +83,7 @@ mod test {
                 vec![
                     string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
                 ].into_iter(),
-                nodestream.boxed(),
+                nodestream.boxify(),
             );
         });
     }
@@ -93,7 +94,7 @@ mod test {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
             let nodehash = string_to_nodehash("1000000000000000000000000000000000000000");
-            let nodestream = SingleNodeHash::new(ctx.clone(), nodehash, &repo).boxed();
+            let nodestream = SingleNodeHash::new(ctx.clone(), nodehash, &repo).boxify();
 
             assert_node_sequence(ctx, &repo, vec![].into_iter(), nodestream);
         });

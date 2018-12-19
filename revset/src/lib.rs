@@ -18,6 +18,8 @@ extern crate futures_ext;
 extern crate maplit;
 extern crate mercurial_types;
 extern crate mononoke_types;
+#[cfg(test)]
+extern crate mononoke_types_mocks;
 extern crate reachabilityindex;
 extern crate uniqueheap;
 
@@ -37,7 +39,7 @@ mod singlenodehash;
 pub use singlenodehash::SingleNodeHash;
 
 mod singlechangesetid;
-pub use singlechangesetid::SingleChangesetId;
+pub use singlechangesetid::single_changeset_id;
 
 mod setdifferencenodestream;
 pub use setdifferencenodestream::SetDifferenceNodeStream;

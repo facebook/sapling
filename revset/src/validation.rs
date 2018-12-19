@@ -81,6 +81,7 @@ mod test {
     use SingleNodeHash;
     use async_unit;
     use fixtures::linear;
+    use futures_ext::StreamExt;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
     use tests::assert_node_sequence;
@@ -97,7 +98,7 @@ mod test {
             let nodestream = SingleNodeHash::new(ctx.clone(), head_hash, &repo);
 
             let nodestream =
-                ValidateNodeStream::new(ctx.clone(), Box::new(nodestream), &repo).boxed();
+                ValidateNodeStream::new(ctx.clone(), Box::new(nodestream), &repo).boxify();
             assert_node_sequence(ctx, &repo, vec![head_hash], nodestream);
         });
     }
@@ -111,7 +112,7 @@ mod test {
             let repo = Arc::new(linear::getrepo(None));
             let mut nodestream =
                 ValidateNodeStream::new(ctx, Box::new(NotReadyEmptyStream::new(repeats)), &repo)
-                    .boxed();
+                    .boxify();
 
             // Keep polling until we should be done.
             for _ in 0..repeats + 1 {
@@ -139,7 +140,7 @@ mod test {
             let nodestream = SingleNodeHash::new(ctx.clone(), head_hash, &repo)
                 .chain(SingleNodeHash::new(ctx.clone(), head_hash, &repo));
 
-            let mut nodestream = ValidateNodeStream::new(ctx, Box::new(nodestream), &repo).boxed();
+            let mut nodestream = ValidateNodeStream::new(ctx, Box::new(nodestream), &repo).boxify();
 
             loop {
                 match nodestream.poll() {
@@ -167,7 +168,7 @@ mod test {
                 &repo,
             ));
 
-            let mut nodestream = ValidateNodeStream::new(ctx, Box::new(nodestream), &repo).boxed();
+            let mut nodestream = ValidateNodeStream::new(ctx, Box::new(nodestream), &repo).boxify();
 
             loop {
                 match nodestream.poll() {

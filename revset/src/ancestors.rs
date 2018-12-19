@@ -176,7 +176,7 @@ where
         }
     });
 
-    IntersectNodeStream::new(ctx, &Arc::new(changeset_fetcher), nodes_iter.into_iter()).boxed()
+    IntersectNodeStream::new(ctx, &Arc::new(changeset_fetcher), nodes_iter.into_iter()).boxify()
 }
 
 pub fn greatest_common_ancestor<I>(
@@ -213,7 +213,7 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-            ).boxed();
+            ).boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -245,7 +245,7 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
-            ).boxed();
+            ).boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -282,7 +282,7 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
-            ).boxed();
+            ).boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -312,7 +312,7 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(&repo, "c10443fa4198c6abad76dc6c69c1417b2e821508)"),
-            ).boxed();
+            ).boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),

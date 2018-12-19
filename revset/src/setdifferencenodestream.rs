@@ -120,7 +120,6 @@ impl Stream for SetDifferenceNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use SingleChangesetId;
     use UnionNodeStream;
     use async_unit;
     use blobrepo::ChangesetFetcher;
@@ -129,12 +128,14 @@ mod test {
     use fixtures::merge_even;
     use fixtures::merge_uneven;
     use futures::executor::spawn;
+    use futures_ext::StreamExt;
     use setcommon::NotReadyEmptyStream;
+    use singlechangesetid::single_changeset_id;
     use std::sync::Arc;
-    use tests::{string_to_bonsai, string_to_nodehash};
     use tests::TestChangesetFetcher;
     use tests::assert_changesets_sequence;
     use tests::get_single_bonsai_streams;
+    use tests::string_to_bonsai;
 
     #[test]
     fn difference_identical_node() {
@@ -144,13 +145,14 @@ mod test {
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+            let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
+            let changeset = string_to_bonsai(&repo, hash);
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
-                SingleChangesetId::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
-                SingleChangesetId::new(ctx.clone(), head_hash.clone(), &repo).boxed(),
-            ).boxed();
+                single_changeset_id(ctx.clone(), changeset.clone(), &repo).boxify(),
+                single_changeset_id(ctx.clone(), changeset.clone(), &repo).boxify(),
+            ).boxify();
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
     }
@@ -164,14 +166,13 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
-            let nodehash = string_to_nodehash(hash);
             let changeset = string_to_bonsai(&repo, hash);
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
-                SingleChangesetId::new(ctx.clone(), nodehash, &repo).boxed(),
+                single_changeset_id(ctx.clone(), changeset.clone(), &repo).boxify(),
                 Box::new(NotReadyEmptyStream::new(0)),
-            ).boxed();
+            ).boxify();
             assert_changesets_sequence(ctx.clone(), &repo, vec![changeset], nodestream);
         });
     }
@@ -184,14 +185,14 @@ mod test {
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
-            let nodehash = string_to_nodehash(hash);
+            let bcs_id = string_to_bonsai(&repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
                 Box::new(NotReadyEmptyStream::new(0)),
-                SingleChangesetId::new(ctx.clone(), nodehash, &repo).boxed(),
-            ).boxed();
+                single_changeset_id(ctx.clone(), bcs_id, &repo).boxify(),
+            ).boxify();
 
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
@@ -205,29 +206,18 @@ mod test {
             let changeset_fetcher: Arc<ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
+            let bcs_id_1 =
+                string_to_bonsai(&repo.clone(), "d0a361e9022d226ae52f689667bd7d212a19cfe0");
+            let bcs_id_2 =
+                string_to_bonsai(&repo.clone(), "3c15267ebf11807f3d772eb891272b911ec68759");
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
-                SingleChangesetId::new(
-                    ctx.clone(),
-                    string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                    &repo,
-                ).boxed(),
-                SingleChangesetId::new(
-                    ctx.clone(),
-                    string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
-                    &repo,
-                ).boxed(),
-            ).boxed();
+                single_changeset_id(ctx.clone(), bcs_id_1.clone(), &repo).boxify(),
+                single_changeset_id(ctx.clone(), bcs_id_2, &repo).boxify(),
+            ).boxify();
 
-            assert_changesets_sequence(
-                ctx.clone(),
-                &repo,
-                vec![
-                    string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                ],
-                nodestream,
-            );
+            assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_id_1], nodestream);
         });
     }
 
@@ -240,15 +230,16 @@ mod test {
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
-            let nodehash = string_to_nodehash(hash);
             let changeset = string_to_bonsai(&repo, hash);
             let mut nodestream = spawn(
                 SetDifferenceNodeStream::new(
                     ctx.clone(),
                     &changeset_fetcher,
-                    Box::new(RepoErrorStream { item: changeset }),
-                    SingleChangesetId::new(ctx.clone(), nodehash, &repo).boxed(),
-                ).boxed(),
+                    Box::new(RepoErrorStream {
+                        item: changeset.clone(),
+                    }),
+                    single_changeset_id(ctx.clone(), changeset, &repo).boxify(),
+                ).boxify(),
             );
 
             match nodestream.wait_stream() {
@@ -277,7 +268,7 @@ mod test {
                 &changeset_fetcher,
                 Box::new(NotReadyEmptyStream::new(repeats)),
                 Box::new(NotReadyEmptyStream::new(repeats)),
-            ).boxed();
+            ).boxify();
 
             // Keep polling until we should be done.
             for _ in 0..repeats + 1 {
@@ -313,31 +304,23 @@ mod test {
             );
 
             let nodestream =
-                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
+            let bcs_id =
+                string_to_bonsai(&repo.clone(), "3c15267ebf11807f3d772eb891272b911ec68759");
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
                 nodestream,
-                SingleChangesetId::new(
-                    ctx.clone(),
-                    string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
-                    &repo,
-                ).boxed(),
-            ).boxed();
+                single_changeset_id(ctx.clone(), bcs_id, &repo).boxify(),
+            ).boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        &repo,
-                        "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-                    ),
+                    string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                    string_to_bonsai(&repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 ],
                 nodestream,
             );
@@ -362,18 +345,16 @@ mod test {
                 ],
             );
             let nodestream =
-                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
+            let bcs_id =
+                string_to_bonsai(&repo.clone(), "3c15267ebf11807f3d772eb891272b911ec68759");
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
-                SingleChangesetId::new(
-                    ctx.clone(),
-                    string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
-                    &repo,
-                ).boxed(),
+                single_changeset_id(ctx.clone(), bcs_id, &repo).boxify(),
                 nodestream,
-            ).boxed();
+            ).boxify();
 
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
@@ -399,7 +380,7 @@ mod test {
             );
 
             let left_nodestream =
-                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
             // Everything from base to just before merge on one side
             let inputs = get_single_bonsai_streams(
@@ -413,27 +394,21 @@ mod test {
                 ],
             );
             let right_nodestream =
-                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
                 left_nodestream,
                 right_nodestream,
-            ).boxed();
+            ).boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        &repo,
-                        "6120679e1fedb0b2f3717bbf042e5fd718763042",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "16839021e338500b3cf7c9b871c8a07351697d68",
-                    ),
+                    string_to_bonsai(&repo, "6120679e1fedb0b2f3717bbf042e5fd718763042"),
+                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
                 ],
                 nodestream,
             );
@@ -459,7 +434,7 @@ mod test {
                 ],
             );
             let left_nodestream =
-                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
             // Everything from base to just before merge on one side
             let inputs = get_single_bonsai_streams(
@@ -473,14 +448,14 @@ mod test {
                 ],
             );
             let right_nodestream =
-                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxed();
+                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
                 left_nodestream,
                 right_nodestream,
-            ).boxed();
+            ).boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
