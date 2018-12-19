@@ -2,8 +2,6 @@
   > [extensions]
   > undo=
   > extralog=$TESTDIR/extralog.py
-  > [undo]
-  > _duringundologlock=1
   > [experimental]
   > evolution=createmarkers
   > [ui]

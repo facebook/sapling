@@ -49,11 +49,6 @@ else:
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("undo", "_duringundologlock", default=False)
-
 hint = registrar.hint()
 
 
@@ -175,9 +170,6 @@ def safelog(repo, command):
                 return changes
             with lockmod.lock(repo.localvfs, "undolog/lock", desc="undolog", timeout=2):
                 repo.ui.log("undologlock", "lock acquired\n")
-                # developer config: undo._duringundologlock
-                if repo.ui.configbool("undo", "_duringundologlock"):
-                    repo.hook("duringundologlock")
                 tr = lighttransaction(repo)
                 with tr:
                     changes = log(repo.filtered("visible"), command, tr)
