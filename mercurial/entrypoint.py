@@ -40,6 +40,15 @@ def run(binaryexecution):
         except NameError:
             pass
 
+    # Make available various deps that are either not new enough on the system
+    # or not provided by the system.  These include a newer version of IPython
+    # for `hg dbsh` and the thrift runtime for the eden extension
+    from mercurial import thirdparty
+
+    ipypath = os.path.join(os.path.dirname(thirdparty.__file__), "IPython.zip")
+    if ipypath not in sys.path and os.path.exists(ipypath):
+        sys.path.insert(0, ipypath)
+
     from mercurial import executionmodel
 
     executionmodel.setbinaryexecution(binaryexecution)

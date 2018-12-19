@@ -53,13 +53,6 @@ def debugshell(ui, repo, **opts):
             "\n repo: the repo object\n cl: repo.changelog\n mf: repo.manifestlog"
         )
 
-    # Use bundled IPython. It can be newer and more lightweight than the system
-    # package. For a buck build, the IPython dependency is included without
-    # using the zip.
-    ipypath = os.path.join(os.path.dirname(thirdparty.__file__), "IPython.zip")
-    if ipypath not in sys.path and os.path.exists(ipypath):
-        sys.path.insert(0, ipypath)
-
     _assignobjects(locals(), repo)
 
     # demandimport is incompatible with many IPython dependencies, both at
