@@ -1575,6 +1575,9 @@ class Test(unittest.TestCase):
             cleanup()
             raise
 
+        finally:
+            proc.fromchild.close()
+
         ret = proc.wait()
         if wifexited(ret):
             ret = os.WEXITSTATUS(ret)
