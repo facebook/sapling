@@ -637,6 +637,48 @@ class asset(object):
         return pjoin(builddir, self.destdir, ".ready")
 
 
+class fbsourcepylibrary(asset):
+    """ An asset available from inside fbsource only.
+    This is used to pull in python libraries from fbsource
+    and process them to fit our installation requirements.
+    "name" specifies the python package name for the library.
+    "path" is its location relative to the current location
+    in fbsource.
+    "excludes" is a list of paths relative to "path" that should
+    be excluded from the installation image. """
+
+    def __init__(self, name, path, excludes=None):
+        assert havefb, "can only build this internally at FB"
+        topname = "fbsource-" + name.replace("/", ".")
+        super(fbsourcepylibrary, self).__init__(name=name, destdir=topname)
+        self.path = path
+        self.excludes = excludes or []
+        self.pkgname = name
+
+    def _download(self):
+        # Nothing to download; already present in fbsource
+        pass
+
+    def _extract(self):
+        # Extraction is really just copying files.  We generate
+        # a directory with a name matching the pkgname as an intermediate
+        # step so that it resolves correctly at import time
+        topdir = pjoin(builddir, self.destdir)
+        ensureexists(topdir)
+        destpath = pjoin(topdir, self.pkgname)
+        shutil.copytree(self.path, destpath)
+        for root, dirs, files in os.walk(topdir):
+            if "__init__.py" not in files:
+                with open(pjoin(root, "__init__.py"), "w") as f:
+                    f.write("\n")
+        for name in self.excludes:
+            tryunlink(pjoin(topdir, name))
+
+    def _isready(self):
+        destpath = pjoin(builddir, self.destdir)
+        return os.path.exists(destpath)
+
+
 class fetchbuilddeps(Command):
     description = "download build depencencies"
     user_options = []
@@ -678,6 +720,18 @@ class fetchbuilddeps(Command):
             "https://files.pythonhosted.org/packages/cc/3e/29f92b7aeda5b078c86d14f550bf85cff809042e3429ace7af6193c3bc9f/typing-3.6.6-py2-none-any.whl",
             "https://files.pythonhosted.org/packages/2d/99/b2c4e9d5a30f6471e410a146232b4118e697fa3ffc06d6a65efde84debd0/futures-3.2.0-py2-none-any.whl",
         ]
+    ] + [
+        fbsourcepylibrary(
+            "thrift",
+            "../../thrift/lib/py",
+            excludes=[
+                "thrift/util/asyncio.py",
+                "thrift/util/inspect.py",
+                "thrift/server/TAsyncioServer.py",
+                "thrift/server/test/TAsyncioServerTest.py",
+                "thrift/util/tests/__init__.py",
+            ],
+        )
     ]
 
     assets = re2assets + pyassets
