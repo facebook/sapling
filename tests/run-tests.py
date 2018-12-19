@@ -803,7 +803,7 @@ CDATA_EVIL = re.compile(br"[\000-\010\013\014\016-\037]")
 # list in group 2, and the preceeding line output in group 1:
 #
 #   output..output (feature !)\n
-optline = re.compile(b"(.*) \((.+?) !\)\n$")
+optline = re.compile(b"(.*) \\((.+?) !\\)\n$")
 
 
 def cdatasafe(data):
@@ -3640,9 +3640,9 @@ class TestRunner(object):
             # installation layout put it in bin/ directly. Fix it
             with open(hgbat, "rb") as f:
                 data = f.read()
-            if b'"%~dp0..\python" "%~dp0hg" %*' in data:
+            if b'"%~dp0..\\python" "%~dp0hg" %*' in data:
                 data = data.replace(
-                    b'"%~dp0..\python" "%~dp0hg" %*', b'"%~dp0python" "%~dp0hg" %*'
+                    b'"%~dp0..\\python" "%~dp0hg" %*', b'"%~dp0python" "%~dp0hg" %*'
                 )
                 with open(hgbat, "wb") as f:
                     f.write(data)
