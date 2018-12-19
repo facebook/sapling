@@ -648,8 +648,11 @@ class fetchbuilddeps(Command):
         )
     ]
 
-    # The URLs are extracted from output of "pip2 download ipython"
-    ipythonassets = [
+    # To add a python package to this list, run "pip2 download PKG" and
+    # add the URL here.  URLs are added to LFS by running eg:
+    # ../../tools/lfs/lfs.py upload LOCAL-FILE -l fb/tools/.lfs-pointers
+    # where LOCAL-FILE is the file downloaded by "pip2 download PKG"
+    pyassets = [
         asset(url=url)
         for url in [
             "https://files.pythonhosted.org/packages/b0/88/d996ab8be22cea1eaa18baee3678a11265e18cf09974728d683c51102148/ipython-5.8.0-py2-none-any.whl",
@@ -671,10 +674,13 @@ class fetchbuilddeps(Command):
             "https://files.pythonhosted.org/packages/c5/db/e56e6b4bbac7c4a06de1c50de6fe1ef3810018ae11732a50f15f62c7d050/enum34-1.1.6-py2-none-any.whl",
             "https://files.pythonhosted.org/packages/89/8d/7aad74930380c8972ab282304a2ff45f3d4927108bb6693cabcc9fc6a099/win_unicode_console-0.5.zip",
             "https://files.pythonhosted.org/packages/4f/a6/728666f39bfff1719fc94c481890b2106837da9318031f71a8424b662e12/colorama-0.4.1-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/90/52/e20466b85000a181e1e144fd8305caf2cf475e2f9674e797b222f8105f5f/future-0.17.1.tar.gz",
+            "https://files.pythonhosted.org/packages/cc/3e/29f92b7aeda5b078c86d14f550bf85cff809042e3429ace7af6193c3bc9f/typing-3.6.6-py2-none-any.whl",
+            "https://files.pythonhosted.org/packages/2d/99/b2c4e9d5a30f6471e410a146232b4118e697fa3ffc06d6a65efde84debd0/futures-3.2.0-py2-none-any.whl",
         ]
     ]
 
-    assets = re2assets + ipythonassets
+    assets = re2assets + pyassets
 
     def initialize_options(self):
         pass
@@ -1157,7 +1163,7 @@ class buildpyzip(Command):
         fetchbuilddeps(self.distribution).run()
 
         # Directories of IPython dependencies
-        depdirs = [pjoin(builddir, a.destdir) for a in fetchbuilddeps.ipythonassets]
+        depdirs = [pjoin(builddir, a.destdir) for a in fetchbuilddeps.pyassets]
 
         # Perform a mtime check so we can skip building if possible
         if self.inplace:
@@ -1177,17 +1183,26 @@ class buildpyzip(Command):
         # writepy won't try to compile it and fail.
         tryunlink(pjoin(builddir, "pexpect-4.6.0-py2.py3-none-any/pexpect/_async.py"))
         with zipfile.PyZipFile(zippath, "w") as f:
-            for asset in fetchbuilddeps.ipythonassets:
+            for asset in fetchbuilddeps.pyassets:
                 # writepy only scans directories if it is a Python package
                 # (ex. with __init__.py). Therefore scan the top-level
                 # directories to get everything included.
                 extracteddir = pjoin(builddir, asset.destdir)
-                for name in os.listdir(extracteddir):
-                    if name == "setup.py":
-                        continue
-                    path = pjoin(extracteddir, name)
-                    if path.endswith(".py") or os.path.isdir(path):
-                        f.writepy(path)
+
+                def process_top_level(top):
+                    for name in os.listdir(top):
+                        if name == "setup.py":
+                            continue
+                        path = pjoin(top, name)
+                        if name == "src" and os.path.isdir(path):
+                            # eg: the "future" tarball has a top level src dir
+                            # that contains the python packages, recurse and
+                            # process those.
+                            process_top_level(path)
+                        elif path.endswith(".py") or os.path.isdir(path):
+                            f.writepy(path)
+
+                process_top_level(extracteddir)
 
 
 class buildhgextindex(Command):
