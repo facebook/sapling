@@ -515,7 +515,7 @@ CDATA_EVIL = re.compile(br"[\000-\010\013\014\016-\037]")
 # list in group 2, and the preceeding line output in group 1:
 #
 #   output..output (feature !)\n
-optline = re.compile(b'(.+) \((.+?) !\)\n$')
+optline = re.compile(b'(.+) \\((.+?) !\\)\n$')
 
 def cdatasafe(data):
     """Make a string safe to include in a CDATA block.
@@ -2676,8 +2676,8 @@ class TestRunner(object):
             f = open(hgbat, 'rb')
             data = f.read()
             f.close()
-            if b'"%~dp0..\python" "%~dp0hg" %*' in data:
-                data = data.replace(b'"%~dp0..\python" "%~dp0hg" %*',
+            if b'"%~dp0..\\python" "%~dp0hg" %*' in data:
+                data = data.replace(b'"%~dp0..\\python" "%~dp0hg" %*',
                                     b'"%~dp0python" "%~dp0hg" %*')
                 f = open(hgbat, 'wb')
                 f.write(data)
