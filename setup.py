@@ -679,6 +679,26 @@ class fbsourcepylibrary(asset):
         return os.path.exists(destpath)
 
 
+class edenpythrift(asset):
+    """ In this context, we are only interested in the `py/` subdir,
+    so we extract only that dir """
+
+    def _extract(self):
+        destdir = self.destdir
+        srcpath = pjoin(builddir, self.name)
+        destpath = pjoin(builddir, destdir)
+        assert os.path.isfile(srcpath), "%s is not downloaded properly" % srcpath
+        ensureempty(destpath)
+
+        with zipfile.ZipFile(srcpath, "r") as f:
+            for name in f.namelist():
+                if name.startswith("py/"):
+                    targetname = name[3:]  # strip off `py/` prefix
+                    ensureexists(os.path.dirname(pjoin(destpath, targetname)))
+                    with open(pjoin(destpath, targetname), "wb") as target:
+                        target.write(f.read(name))
+
+
 class fetchbuilddeps(Command):
     description = "download build depencencies"
     user_options = []
@@ -720,7 +740,8 @@ class fetchbuilddeps(Command):
             "https://files.pythonhosted.org/packages/cc/3e/29f92b7aeda5b078c86d14f550bf85cff809042e3429ace7af6193c3bc9f/typing-3.6.6-py2-none-any.whl",
             "https://files.pythonhosted.org/packages/2d/99/b2c4e9d5a30f6471e410a146232b4118e697fa3ffc06d6a65efde84debd0/futures-3.2.0-py2-none-any.whl",
         ]
-    ] + [
+    ]
+    pyassets += [
         fbsourcepylibrary(
             "thrift",
             "../../thrift/lib/py",
@@ -733,6 +754,10 @@ class fetchbuilddeps(Command):
             ],
         ),
         fbsourcepylibrary("eden", "../../eden/py"),
+        fbsourcepylibrary("eden/thrift", "../../eden/fs/service"),
+    ]
+    pyassets += [
+        edenpythrift(name="eden-rust-deps-103d4d2e849ab88e3d5213274e47911745a86922.zip")
     ]
 
     assets = re2assets + pyassets
