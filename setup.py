@@ -731,7 +731,8 @@ class fetchbuilddeps(Command):
                 "thrift/server/test/TAsyncioServerTest.py",
                 "thrift/util/tests/__init__.py",
             ],
-        )
+        ),
+        fbsourcepylibrary("eden", "../../eden/py"),
     ]
 
     assets = re2assets + pyassets
