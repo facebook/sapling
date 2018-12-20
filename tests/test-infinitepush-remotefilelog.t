@@ -110,3 +110,40 @@ Second client: pull new scratch commits and update to all of them
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up 2db33e8c1f93
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ cd ..
+
+First client: make a file whose name is a glob
+  $ cd shallow1
+  $ echo >> foo[bar]
+  $ hg commit -Aqm "Add foo[bar]"
+  $ echo >> foo[bar]
+  $ hg commit -Aqm "Edit foo[bar]"
+  $ hg push -r . --to scratch/regex --create
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: pushing 5 commits:
+  remote:     2d9cfa751213  scratchcommit
+  remote:     1c2153299e05  scratch commit with many files
+  remote:     2db33e8c1f93  scratch commit with deletion
+  remote:     2eea49d22494  Add foo[bar]
+  remote:     fc38aa914a17  Edit foo[bar]
+  $ cd ..
+
+Second client: pull regex file an make sure it is readable
+(only pull the first commit, to force a rebundle)
+  $ cd shallow2
+  $ hg pull -r 2eea49d22494
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 5 changes to 5 files
+  new changesets 2eea49d22494
+  (run 'hg update' to get a working copy)
+  $ hg log -r 2eea49d22494 --stat
+  remote: abort: data/foo[bar].i@cc31c19aff7d: no match found!
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  abort: error downloading file contents:
+  'connection closed early'
+  [255]
