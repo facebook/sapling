@@ -697,6 +697,10 @@ class fileserverclient(object):
                 ),
                 config="remotefilelog-ext",
             )
+        batchlfsdownloads = self.ui.configbool(
+            "remotefilelog", "_batchlfsdownloads", True
+        )
+        dolfsprefetch = self.ui.configbool("remotefilelog", "dolfsprefetch", True)
         if missingids:
             global fetches, fetched, fetchcost
             fetches += 1
@@ -717,7 +721,9 @@ class fileserverclient(object):
             if missingids:
                 raise error.Abort(_("unable to download %d files") % len(missingids))
             fetchcost += time.time() - start
-        if self.ui.configbool("remotefilelog", "dolfsprefetch", True):
+            if not batchlfsdownloads and dolfsprefetch:
+                self._lfsprefetch(fileids)
+        if batchlfsdownloads and dolfsprefetch:
             self._lfsprefetch(fileids)
 
     def _lfsprefetch(self, fileids):
