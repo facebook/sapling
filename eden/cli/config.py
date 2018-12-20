@@ -460,12 +460,6 @@ Do you want to run `eden mount %s` instead?"""
                 f.write(help_contents)
                 os.fchmod(f.fileno(), 0o444)
 
-        # Now make the directory read-only so that users and tools can't accidentally
-        # write files here while the checkout is unmounted.  This primarily helps ensure
-        # that build tools won't write to this directory if the directory is unmounted
-        # in the middle of a build.
-        os.chmod(path, 0o555)
-
     def _create_client_dir_for_path(self, clients_dir: str, path: str) -> str:
         """Tries to create a new subdirectory of clients_dir based on the
         basename of the specified path. Tries appending an increasing sequence
@@ -605,8 +599,8 @@ Do you want to run `eden mount %s` instead?"""
         # else.  We only delete these specific files for now rather than using
         # shutil.rmtree() to avoid deleting files we did not create.
         #
-        # We make the mount point read-only in "eden clone".
-        # Make it writable now so we can clean it up.
+        # Previous versions of Eden made the mount point directory read-only
+        # as part of "eden clone".  Make sure it is writable now so we can clean it up.
         os.chmod(path, 0o755)
         try:
             os.unlink(os.path.join(path, NOT_MOUNTED_README_PATH))
