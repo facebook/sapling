@@ -256,6 +256,20 @@ pub trait StreamExt: Stream {
     {
         Box::new(self)
     }
+
+    fn left_stream<B>(self) -> StreamEither<Self, B>
+    where
+        Self: Sized,
+    {
+        StreamEither::A(self)
+    }
+
+    fn right_stream<A>(self) -> StreamEither<A, Self>
+    where
+        Self: Sized,
+    {
+        StreamEither::B(self)
+    }
 }
 
 impl<T> StreamExt for T
@@ -312,6 +326,27 @@ impl<In: Stream> Stream for Enumerate<In> {
                 self.count += 1;
                 Ok(Async::Ready(Some((c, v))))
             }
+        }
+    }
+}
+
+pub enum StreamEither<A, B> {
+    A(A),
+    B(B),
+}
+
+impl<A, B> Stream for StreamEither<A, B>
+where
+    A: Stream,
+    B: Stream<Item = A::Item, Error = A::Error>,
+{
+    type Item = A::Item;
+    type Error = A::Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        match self {
+            StreamEither::A(a) => a.poll(),
+            StreamEither::B(b) => b.poll(),
         }
     }
 }
