@@ -88,7 +88,7 @@ def is_zombie_process(pid: int) -> bool:
             pieces = line.split()
             if len(pieces) > 2 and pieces[2] == b"Z":
                 return True
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
         pass
 
     return False
