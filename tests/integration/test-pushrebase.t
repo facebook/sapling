@@ -103,7 +103,7 @@ Push rebase fails with conflict
   pushing rev a0c9c5791058 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   remote: * pushrebase failed * (glob)
-  remote:     msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath([49] \"1\"), right: MPath([49] \"1\") }])"
+  remote:     msg: "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"1\"), right: MPath(\"1\") }])"
   remote: * backtrace* (glob)
   abort: * (glob)
   [255]
