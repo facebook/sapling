@@ -33,7 +33,7 @@
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use index::{self, Index, InsertKey, LeafValueIter};
+use index::{self, Index, InsertKey, LeafValueIter, PrefixIter};
 use lock::ScopedFileLock;
 use memmap::Mmap;
 use std::borrow::Cow;
@@ -181,6 +181,16 @@ pub struct LogLookupIter<'a> {
     inner_iter: LeafValueIter<'a>,
     errored: bool,
     log: &'a Log,
+}
+
+/// Iterator over keys and [LogLookupIter], filtered by an index prefix.
+///
+/// It is a wrapper around [index::PrefixIter].
+pub struct LogPrefixIter<'a> {
+    inner_iter: PrefixIter<'a>,
+    errored: bool,
+    log: &'a Log,
+    index: &'a Index,
 }
 
 /// Metadata about index names, logical [Log] and [Index] file lengths.
@@ -407,6 +417,48 @@ impl Log {
             let msg = format!("invalid index_id {} (len={})", index_id, self.indexes.len());
             Err(io::Error::new(io::ErrorKind::InvalidData, msg))
         }
+    }
+
+    /// Look up keys and entries using the given prefix.
+    /// The `index_id` is the index of `index_defs` passed to [Log::open].
+    ///
+    /// Return an iterator that yields `(key, iter)`, where `key` is the full
+    /// key, `iter` is [LogLookupIter] that allows iteration through matched
+    /// entries.
+    pub fn lookup_prefix<K: AsRef<[u8]>>(
+        &self,
+        index_id: usize,
+        prefix: K,
+    ) -> io::Result<LogPrefixIter> {
+        let index = self.indexes.get(index_id).unwrap();
+        let inner_iter = index.scan_prefix(prefix)?;
+        Ok(LogPrefixIter {
+            inner_iter,
+            errored: false,
+            log: self,
+            index,
+        })
+    }
+
+    /// Look up keys and entries using the given hex prefix.
+    /// The length of the hex string can be odd.
+    ///
+    /// Return an iterator that yields `(key, iter)`, where `key` is the full
+    /// key, `iter` is [LogLookupIter] that allows iteration through matched
+    /// entries.
+    pub fn lookup_prefix_hex<K: AsRef<[u8]>>(
+        &self,
+        index_id: usize,
+        hex_prefix: K,
+    ) -> io::Result<LogPrefixIter> {
+        let index = self.indexes.get(index_id).unwrap();
+        let inner_iter = index.scan_prefix_hex(hex_prefix)?;
+        Ok(LogPrefixIter {
+            inner_iter,
+            errored: false,
+            log: self,
+            index,
+        })
     }
 
     /// Return an iterator for all entries.
@@ -762,6 +814,31 @@ impl<'a> Iterator for LogIter<'a> {
     }
 }
 
+impl<'a> Iterator for LogPrefixIter<'a> {
+    type Item = io::Result<(Cow<'a, [u8]>, LogLookupIter<'a>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.errored {
+            return None;
+        }
+        match self.inner_iter.next() {
+            None => None,
+            Some(Err(err)) => {
+                self.errored = true;
+                Some(Err(err))
+            }
+            Some(Ok((key, link_offset))) => {
+                let iter = LogLookupIter {
+                    inner_iter: link_offset.values(self.index),
+                    errored: false,
+                    log: self.log,
+                };
+                Some(Ok((key, iter)))
+            }
+        }
+    }
+}
+
 impl LogMetadata {
     const HEADER: &'static [u8] = b"meta\0";
 
@@ -1047,6 +1124,47 @@ mod tests {
         let mut index_file = File::create(dir.path().join("index-x")).unwrap();
         index_file.write_all(&backup).expect("write");
         assert!(log.lookup(1, b"23").is_err());
+    }
+
+    #[test]
+    fn test_lookup_prefix() {
+        let dir = TempDir::new("log").unwrap();
+        let index_func = |data: &[u8]| vec![IndexOutput::Reference(0..(data.len() - 1) as u64)];
+        let mut log = Log::open(
+            dir.path(),
+            vec![
+                IndexDef {
+                    func: Box::new(index_func),
+                    name: "simple",
+                    lag_threshold: 0,
+                },
+            ],
+        ).unwrap();
+
+        let entries = vec![&b"aaa"[..], b"bb", b"bb"];
+
+        for entry in entries.iter() {
+            log.append(entry).unwrap();
+        }
+
+        // 0x61 == b'a'. 0x6 will match both keys: "aa" and "b".
+        // "aa" matches the value "aaa", "b" matches the entries ["bb", "bb"]
+        let mut iter = log.lookup_prefix_hex(0, b"6").unwrap();
+        assert_eq!(iter.next().unwrap().unwrap().0.as_ref(), b"aa");
+        assert_eq!(
+            iter.next()
+                .unwrap()
+                .unwrap()
+                .1
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap(),
+            vec![b"bb", b"bb"]
+        );
+        assert!(iter.next().is_none());
+
+        let mut iter = log.lookup_prefix(0, b"b").unwrap();
+        assert_eq!(iter.next().unwrap().unwrap().0.as_ref(), b"b");
+        assert!(iter.next().is_none());
     }
 
     #[test]
