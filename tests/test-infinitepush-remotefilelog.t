@@ -138,12 +138,16 @@ Second client: pull regex file an make sure it is readable
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 5 changes to 5 files
+  added 1 changesets with 6 changes to 6 files
   new changesets 2eea49d22494
   (run 'hg update' to get a working copy)
   $ hg log -r 2eea49d22494 --stat
-  remote: abort: data/foo[bar].i@cc31c19aff7d: no match found!
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
-  abort: error downloading file contents:
-  'connection closed early'
-  [255]
+  changeset:   3:2eea49d22494
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Add foo[bar]
+  
+   foo[bar] |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  

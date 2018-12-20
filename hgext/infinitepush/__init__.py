@@ -523,7 +523,7 @@ def _includefilelogstobundle(bundlecaps, bundlerepo, bundlerevs, ui):
     if not changedfiles:
         return bundlecaps
 
-    changedfiles = "\0".join(changedfiles)
+    changedfiles = "\0".join("path:%s" % p for p in changedfiles)
     newcaps = []
     appended = False
     for cap in bundlecaps or []:
