@@ -135,6 +135,8 @@ def cloudjoin(ui, repo, **opts):
     checkauthenticated(ui, repo, tokenlocator)
 
     workspacemanager = commitcloudutil.WorkspaceManager(repo)
+    if workspacemanager.workspace:
+        commitcloudutil.SubscriptionManager(repo).removesubscription()
     workspacemanager.setworkspace(opts.get("workspace"))
 
     highlightstatus(
