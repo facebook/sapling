@@ -96,6 +96,34 @@ pub(crate) fn base16_to_base256(base16: &Vec<u8>) -> Vec<u8> {
     bytes
 }
 
+/// Convert a single hex digit to base16 value.
+///
+/// Return 16 if the digit is invalid.
+#[inline]
+pub(crate) fn single_hex_to_base16(ch: u8) -> u8 {
+    // Does not depend on ASCII order (ex. b'1' - b'0' == 1).
+    // Compiler can turn this into a lookup table. It is fast when cached.
+    match ch {
+        b'0' => 0,
+        b'1' => 1,
+        b'2' => 2,
+        b'3' => 3,
+        b'4' => 4,
+        b'5' => 5,
+        b'6' => 6,
+        b'7' => 7,
+        b'8' => 8,
+        b'9' => 9,
+        b'a' | b'A' => 10,
+        b'b' | b'B' => 11,
+        b'c' | b'C' => 12,
+        b'd' | b'D' => 13,
+        b'e' | b'E' => 14,
+        b'f' | b'F' => 15,
+        _ => 16,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

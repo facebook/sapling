@@ -50,6 +50,7 @@
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use std::borrow::Cow;
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
 use std::io::{self, Seek, SeekFrom, Write};
@@ -60,7 +61,7 @@ use std::sync::Arc;
 
 use std::io::ErrorKind::InvalidData;
 
-use base16::Base16Iter;
+use base16::{Base16Iter, base16_to_base256, single_hex_to_base16};
 use checksum_table::ChecksumTable;
 use lock::ScopedFileLock;
 use utils::mmap_readonly;
@@ -407,7 +408,10 @@ impl RadixOffset {
     /// Return stored offset, or `Offset(0)` if that child does not exist.
     #[inline]
     fn child(self, index: &Index, i: u8) -> io::Result<Offset> {
-        debug_assert!(i < 16);
+        if i >= 16 {
+            let err = io::Error::new(InvalidData, format!("radix child index {} is invalid", i));
+            return Err(err);
+        }
         if self.is_dirty() {
             Ok(index.dirty_radixes[self.dirty_index()].offsets[i as usize])
         } else {
@@ -644,6 +648,126 @@ impl<'a> Iterator for LeafValueIter<'a> {
                     self.errored = true;
                     Some(Err(e))
                 }
+            }
+        }
+    }
+}
+
+/// Iterator returned by [Index::scan_prefix_base16].
+/// Provide access to full keys and values (as [LinkOffset]), sorted by key.
+pub struct PrefixIter<'a> {
+    index: &'a Index,
+
+    // Offsets and child index (current visiting, to be visited).
+    // Special child index CHILD_LINK means to check the LinkOffset.
+    // An empty stack means "stop iteration".
+    stack: Vec<(Offset, u8, u8)>,
+
+    // Prefix of the key (in base16 form)
+    prefix: Vec<u8>,
+}
+
+const CHILD_LINK: u8 = 255;
+
+impl<'a> PrefixIter<'a> {
+    fn new(index: &'a Index, start: Option<(Offset, Vec<u8>)>) -> Self {
+        let (stack, prefix) = match start {
+            Some((offset, prefix)) => (vec![(offset, 0, CHILD_LINK)], prefix),
+            None => (Vec::new(), Vec::new()),
+        };
+        PrefixIter {
+            index,
+            stack,
+            prefix,
+        }
+    }
+}
+
+impl<'a> Iterator for PrefixIter<'a> {
+    type Item = io::Result<(Cow<'a, [u8]>, LinkOffset)>;
+
+    /// Return the next key and corresponding [LinkOffset].
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.stack.is_empty() {
+            return None;
+        }
+
+        let (offset, _, child) = self.stack.pop().unwrap();
+        match offset.to_typed(&self.index.buf, &self.index.checksum) {
+            Ok(TypedOffset::Radix(radix)) => {
+                if child == 16 {
+                    return self.next();
+                }
+
+                // Prepare the next item to visit
+                let next_child = if child == CHILD_LINK { 0 } else { child + 1 };
+                self.stack.push((offset, child, next_child));
+
+                // Proceed with the current visit
+                if child == CHILD_LINK {
+                    // Examine the link offset at this Radix entry
+                    match radix.link_offset(self.index) {
+                        Ok(link_offset) => {
+                            if !link_offset.is_null() {
+                                // Reconstruct key. Collect base16 child stack (prefix + visiting),
+                                // then convert to base256.
+                                let mut prefix = self.prefix.clone();
+                                for (_offset, visiting, _next) in
+                                    self.stack.iter().take(self.stack.len() - 1).cloned()
+                                {
+                                    debug_assert!(visiting != CHILD_LINK);
+                                    prefix.push(visiting);
+                                }
+                                if prefix.len() & 1 == 1 {
+                                    // Odd-length key
+                                    Some(Err(InvalidData.into()))
+                                } else {
+                                    let key = base16_to_base256(&prefix);
+                                    Some(Ok((Cow::Owned(key), link_offset)))
+                                }
+                            } else {
+                                self.next()
+                            }
+                        }
+                        Err(err) => {
+                            self.stack.clear();
+                            Some(Err(err))
+                        }
+                    }
+                } else {
+                    // Examine a child entry
+                    debug_assert!(child < 16);
+                    match radix.child(self.index, child) {
+                        Ok(next_offset) => {
+                            if !next_offset.is_null() {
+                                self.stack.push((next_offset, CHILD_LINK, CHILD_LINK));
+                            }
+                            self.next()
+                        }
+                        Err(err) => {
+                            self.stack.clear();
+                            Some(Err(err))
+                        }
+                    }
+                }
+            }
+
+            Ok(TypedOffset::Leaf(leaf)) => {
+                // Meet a leaf. If key matches, return the link offset.
+                match leaf.key_and_link_offset(self.index) {
+                    Err(err) => {
+                        self.stack.clear();
+                        Some(Err(err))
+                    }
+                    Ok((stored_key, link_offset)) => {
+                        Some(Ok((Cow::Borrowed(stored_key), link_offset)))
+                    }
+                }
+            }
+
+            _ => {
+                self.stack.clear();
+                Some(Err(InvalidData.into()))
             }
         }
     }
@@ -1654,6 +1778,70 @@ impl Index {
         Ok(LinkOffset::default())
     }
 
+    /// Scan entries which match the given prefix in base16 form.
+    /// Return [PrefixIter] which allows accesses to keys and values.
+    pub fn scan_prefix_base16(
+        &self,
+        mut base16: impl Iterator<Item = u8>,
+    ) -> io::Result<PrefixIter> {
+        let mut offset: Offset = self.root.radix_offset.into();
+        let mut prefix_len = 0;
+        let mut prefix: Vec<u8> = Vec::new();
+
+        while !offset.is_null() {
+            // Read the entry at "offset"
+            match offset.to_typed(&self.buf, &self.checksum)? {
+                TypedOffset::Radix(radix) => {
+                    match base16.next() {
+                        None => {
+                            // The key ends at this Radix entry.
+                            return Ok(PrefixIter::new(self, Some((offset, prefix))));
+                        }
+                        Some(x) => {
+                            // Follow the `x`-th child in the Radix entry.
+                            prefix.push(x);
+                            prefix_len += 1;
+                            offset = radix.child(self, x)?;
+                        }
+                    }
+                }
+                TypedOffset::Leaf(leaf) => {
+                    // Meet a leaf. If key matches, return the link offset.
+                    let (stored_key, _link_offset) = leaf.key_and_link_offset(self)?;
+                    // Remaining key matches?
+                    let remaining: Vec<u8> = base16.collect();
+                    if Base16Iter::from_base256(&stored_key)
+                        .skip(prefix_len)
+                        .take(remaining.len())
+                        .eq(remaining.iter().cloned())
+                    {
+                        return Ok(PrefixIter::new(self, Some((offset, prefix))));
+                    } else {
+                        return Ok(PrefixIter::new(self, None));
+                    }
+                }
+                _ => return Err(InvalidData.into()),
+            }
+        }
+
+        // Not found
+        return Ok(PrefixIter::new(self, None));
+    }
+
+    /// Scan entries which match the given prefix in base256 form.
+    /// Return [PrefixIter] which allows accesses to keys and values.
+    pub fn scan_prefix<B: AsRef<[u8]>>(&self, prefix: B) -> io::Result<PrefixIter> {
+        self.scan_prefix_base16(Base16Iter::from_base256(&prefix))
+    }
+
+    /// Scan entries which match the given prefix in hex form.
+    /// Return [PrefixIter] which allows accesses to keys and values.
+    pub fn scan_prefix_hex<B: AsRef<[u8]>>(&self, prefix: B) -> io::Result<PrefixIter> {
+        // Invalid hex chars will be caught by `radix.child`
+        let base16 = prefix.as_ref().iter().cloned().map(single_hex_to_base16);
+        self.scan_prefix_base16(base16)
+    }
+
     /// Insert a key-value pair. The value will be the head of the linked list.
     /// That is, `get(key).values().first()` will return the newly inserted
     /// value.
@@ -2114,6 +2302,63 @@ mod tests {
         // Use 1 as checksum chunk size to make sure checksum check covers necessary bytes.
         opts.checksum_chunk_size(1);
         opts
+    }
+
+    #[test]
+    fn test_scan_prefix() {
+        let dir = TempDir::new("index").unwrap();
+        let mut index = open_opts().open(dir.path().join("a")).unwrap();
+        let keys: Vec<&[u8]> = vec![b"01", b"02", b"03", b"031", b"0410", b"042", b"05000"];
+        for (i, key) in keys.iter().enumerate() {
+            index.insert(key, i as u64).unwrap();
+        }
+
+        // Return keys with the given prefix. Also verify LinkOffsets.
+        let scan_keys = |prefix: &[u8]| -> Vec<Vec<u8>> {
+            index
+                .scan_prefix(prefix)
+                .unwrap()
+                .map(|v| {
+                    let (key, link_offset) = v.unwrap();
+                    let key = key.as_ref();
+                    // Verify link_offset is correct
+                    let ids: Vec<u64> = link_offset
+                        .values(&index)
+                        .collect::<io::Result<Vec<u64>>>()
+                        .unwrap();
+                    assert!(ids.len() == 1);
+                    assert_eq!(keys[ids[0] as usize], key);
+                    key.to_vec()
+                })
+                .collect()
+        };
+
+        assert_eq!(scan_keys(b"01"), vec![b"01"]);
+        assert!(scan_keys(b"010").is_empty());
+        assert_eq!(scan_keys(b"02"), vec![b"02"]);
+        assert!(scan_keys(b"020").is_empty());
+        assert_eq!(scan_keys(b"03"), vec![&b"03"[..], b"031"]);
+        assert_eq!(scan_keys(b"031"), vec![b"031"]);
+        assert!(scan_keys(b"032").is_empty());
+        assert_eq!(scan_keys(b"04"), vec![&b"0410"[..], b"042"]);
+        assert_eq!(scan_keys(b"041"), vec![b"0410"]);
+        assert_eq!(scan_keys(b"0410"), vec![b"0410"]);
+        assert!(scan_keys(b"04101").is_empty());
+        assert!(scan_keys(b"0412").is_empty());
+        assert_eq!(scan_keys(b"042"), vec![b"042"]);
+        assert!(scan_keys(b"0421").is_empty());
+        assert_eq!(scan_keys(b"05"), vec![b"05000"]);
+        assert_eq!(scan_keys(b"0500"), vec![b"05000"]);
+        assert_eq!(scan_keys(b"05000"), vec![b"05000"]);
+        assert!(scan_keys(b"051").is_empty());
+        assert_eq!(scan_keys(b"0"), keys);
+        assert_eq!(scan_keys(b""), keys);
+        assert!(scan_keys(b"1").is_empty());
+
+        // 0x30 = b'0'
+        assert_eq!(index.scan_prefix_hex(b"30").unwrap().count(), keys.len());
+        assert_eq!(index.scan_prefix_hex(b"3").unwrap().count(), keys.len());
+        assert_eq!(index.scan_prefix_hex(b"31").unwrap().count(), 0);
     }
 
     #[test]
