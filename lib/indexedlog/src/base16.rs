@@ -79,6 +79,23 @@ impl<'a, T: AsRef<[u8]>> Base16Iter<'a, T> {
     }
 }
 
+/// Convert base16 to base256. base16 must have 2 * N items.
+///
+/// Panic if base16 has 2 * N + 1 items.
+pub(crate) fn base16_to_base256(base16: &Vec<u8>) -> Vec<u8> {
+    assert!(base16.len() & 1 == 0);
+    let mut bytes = Vec::with_capacity(base16.len() / 2);
+    let mut next_byte: u8 = 0;
+    for (i, b16) in base16.iter().cloned().enumerate() {
+        if i & 1 == 0 {
+            next_byte = b16 << 4;
+        } else {
+            bytes.push(next_byte | b16);
+        }
+    }
+    bytes
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,6 +111,11 @@ mod tests {
                 v.capacity() == v.len() && v[..] == full[i..] &&
                     r.capacity() == r.len() && r[..] == rev[..(rev.len() - i)]
             })
+        }
+
+        fn check_roundtrip(src: Vec<u8>) -> bool {
+            let iter = Base16Iter::from_base256(&src);
+            base16_to_base256(&iter.collect::<Vec<u8>>()) == src
         }
     }
 
