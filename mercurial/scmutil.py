@@ -704,9 +704,12 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
 
     metadata is dictionary containing metadata to be stored in obsmarker if
     obsolescence is enabled.
+
+    Return the calculated 'moves' mapping that is from a single old node to a
+    single new node.
     """
     if not replacements and not moves:
-        return
+        return {}
 
     # translate mapping's other forms
     if not util.safehasattr(replacements, "items"):
@@ -806,6 +809,8 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
             tostrip = list(replacements)
             if tostrip:
                 repair.delayedstrip(repo.ui, repo, tostrip, operation)
+
+        return moves
 
 
 def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
