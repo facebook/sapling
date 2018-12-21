@@ -29,9 +29,9 @@ this extension.
 
 from __future__ import absolute_import
 
-import lz4
 from mercurial import error, extensions, localrepo, revlog, util
 from mercurial.i18n import _
+from mercurial.rust import lz4
 
 
 testedwith = "3.9.1"
@@ -68,32 +68,8 @@ def replaceclass(container, classname):
     return wrap
 
 
-try:
-    # newer python-lz4 has these functions deprecated as top-level ones,
-    # so we are trying to import from lz4.block first
-    from lz4 import block as lz4block
-
-    def _compresshc(*args, **kwargs):
-        return lz4block.compress(*args, mode="high_compression", **kwargs)
-
-    lz4compress = lz4block.compress
-    lz4compresshc = _compresshc
-    lz4decompress = lz4block.decompress
-    usable = localrepo.localrepository.openerreqs
-except (AttributeError, ImportError):
-    try:
-        lz4compress = lz4.compress
-        lz4compresshc = lz4.compressHC
-        lz4decompress = lz4.decompress
-        # don't crash horribly if invoked on an incompatible hg
-        usable = localrepo.localrepository.openerreqs
-    except (AttributeError, ImportError):
-
-        def lz4missing(eek):
-            raise error.Abort(_("the lz4revlog extension requires lz4 support"))
-
-        lz4compress = lz4compresshc = lz4decompress = lz4missing
-        usable = False
+lz4compresshc = lz4.compresshc
+lz4decompress = lz4.decompress
 
 
 def requirements(orig, repo):
@@ -104,8 +80,6 @@ def requirements(orig, repo):
 
 
 def uisetup(ui):
-    if not usable:
-        return
     if util.safehasattr(localrepo, "newreporequirements"):
         extensions.wrapfunction(localrepo, "newreporequirements", requirements)
     else:

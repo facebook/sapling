@@ -1,5 +1,3 @@
-${PYTHON:-python} -c 'import lz4' || exit 80
-
 CACHEDIR=$PWD/hgcache
 cat >> $HGRCPATH <<EOF
 [remotefilelog]

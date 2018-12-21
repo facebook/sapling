@@ -533,15 +533,13 @@ class mutabledatapack(basepack.mutablebasepack):
         # TODO: allow configurable compression
         delta = lz4compress(delta)
 
-        rawdata = "".join(
-            (
-                struct.pack("!H", len(name)),  # unsigned 2 byte int
-                name,
-                node,
-                deltabasenode,
-                struct.pack("!Q", len(delta)),  # unsigned 8 byte int
-                delta,
-            )
+        rawdata = "%s%s%s%s%s%s" % (
+            struct.pack("!H", len(name)),  # unsigned 2 byte int
+            name,
+            node,
+            deltabasenode,
+            struct.pack("!Q", len(delta)),  # unsigned 8 byte int
+            delta,
         )
 
         if self.VERSION == 1:

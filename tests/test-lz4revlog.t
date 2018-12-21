@@ -1,5 +1,3 @@
-#require lz4
-
   $ hg init a
   $ cd a
   $ echo a>a

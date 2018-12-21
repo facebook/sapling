@@ -179,6 +179,8 @@ def encodelist(l, sep=" "):
 
 
 def escapearg(plain):
+    if isinstance(plain, bytearray):
+        plain = bytes(plain)
     return (
         plain.replace(":", ":c")
         .replace(",", ":o")

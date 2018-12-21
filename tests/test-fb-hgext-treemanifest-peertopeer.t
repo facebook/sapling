@@ -73,10 +73,10 @@ Create client1 - it will have both server commits
   2 trees fetched over * (glob)
 
   $ ls .hg/store/packs/manifests
-  4b4694ea93f389701cc52b66a9ff390d280658c0.dataidx
-  4b4694ea93f389701cc52b66a9ff390d280658c0.datapack
   53e6d2d846d94f543bad25dcbaa1f753c3ce9fa6.histidx
   53e6d2d846d94f543bad25dcbaa1f753c3ce9fa6.histpack
+  b7cac023ec87107fd7c501085ba31c96485d802d.dataidx
+  b7cac023ec87107fd7c501085ba31c96485d802d.datapack
 
 Pushing with treemanifest disabled does not produce trees
 (disable demand import so treemanifest.py is forced to load)
@@ -144,8 +144,8 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   $ ls ../client2/.hg/store/packs/manifests
   700fb8a7918068e308a998d338d1689074118d07.histidx
   700fb8a7918068e308a998d338d1689074118d07.histpack
-  d09e0e79320feb0d1bcae4e0027b25b52d522e96.dataidx
-  d09e0e79320feb0d1bcae4e0027b25b52d522e96.datapack
+  d2b7bb314b43d876961a5d4791b54e2b2ef2bcd2.dataidx
+  d2b7bb314b43d876961a5d4791b54e2b2ef2bcd2.datapack
   $ mv ../client2/.hg/hgrc.bak ../client2/.hg/hgrc
   $ hg debughistorypack ../client2/.hg/store/packs/manifests/*histidx
   
@@ -187,10 +187,10 @@ Pulling between peers should send local trees but not remote trees
   $ ls_l .hg/store/packs/manifests
   -r--r--r--    1273 700fb8a7918068e308a998d338d1689074118d07.histidx
   -r--r--r--     274 700fb8a7918068e308a998d338d1689074118d07.histpack
-  -r--r--r--    1154 d09e0e79320feb0d1bcae4e0027b25b52d522e96.dataidx
-  -r--r--r--     414 d09e0e79320feb0d1bcae4e0027b25b52d522e96.datapack
+  -r--r--r--    1154 d2b7bb314b43d876961a5d4791b54e2b2ef2bcd2.dataidx
+  -r--r--r--     414 d2b7bb314b43d876961a5d4791b54e2b2ef2bcd2.datapack
   $ hg debugdatapack .hg/store/packs/manifests/*.datapack
-  .hg/store/packs/manifests/d09e0e79320feb0d1bcae4e0027b25b52d522e96:
+  .hg/store/packs/manifests/d2b7bb314b43d876961a5d4791b54e2b2ef2bcd2:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   23226e7a252c  000000000000  43            (missing)

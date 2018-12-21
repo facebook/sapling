@@ -228,7 +228,7 @@ def _loadfileblob(repo, cachepath, path, node):
             filectx = repo.filectx(path, fileid=node)
 
         text = createfileblob(filectx)
-        text = lz4wrapper.lzcompresshc(text)
+        text = lz4wrapper.lz4compresshc(text)
 
         # everything should be user & group read/writable
         oldumask = os.umask(0o002)
