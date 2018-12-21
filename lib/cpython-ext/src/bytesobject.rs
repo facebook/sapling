@@ -1,3 +1,8 @@
+// Copyright 2018 Facebook, Inc.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 use cpython::{PyObject as RustPyObject, Python as RustPythonGILGuard};
 use python27_sys::{PyBytesObject, PyBytes_Type, PyObject, PyTypeObject, PyVarObject, Py_ssize_t,
                    _PyObject_NewVar};
