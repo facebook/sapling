@@ -369,6 +369,11 @@ class datapacktestsbase(object):
         f.truncate(1)
         f.close()
 
+        # Re-create the store. Otherwise the behavior is kind of "undefined"
+        # because the size of mmap-ed memory isn't truncated automatically,
+        # and is filled by 0.
+        store = datapackstore(ui, packdir, self.iscdatapack, deletecorruptpacks=True)
+
         # Look for key again
         try:
             ui.pushbuffer(error=True)
