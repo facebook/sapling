@@ -13,4 +13,4 @@ extern crate quickcheck;
 
 mod lz4;
 
-pub use lz4::{compress, decompress};
+pub use lz4::{compress, decompress, decompress_into, decompress_size};

@@ -51,40 +51,56 @@ impl Drop for StreamEncoder {
     }
 }
 
-pub fn decompress(data: &[u8]) -> Result<Box<[u8]>, Error> {
-    // Consume the header
-    let mut cur = Cursor::new(data);
-    let max_decompressed_size = cur.read_u32::<LittleEndian>()? as usize;
-    if max_decompressed_size == 0 {
-        return Ok(Box::new([]));
+/// Read decompressed size from a u32 header.
+pub fn decompress_size(data: &[u8]) -> Result<usize, Error> {
+    if data.len() == 0 {
+        Ok(0)
+    } else {
+        let mut cur = Cursor::new(data);
+        let max_decompressed_size = cur.read_u32::<LittleEndian>()? as usize;
+        Ok(max_decompressed_size)
     }
+}
 
-    let data = &data[HEADER_LEN..];
-
+/// Decompress into a preallocated buffer. The size of `dest` must
+/// match what [decompress_size] returns.
+pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<(), Error> {
     let stream = StreamDecoder(unsafe { LZ4_createStreamDecode() });
     if stream.0.is_null() {
         return Err(LZ4Error {
             message: "Unable to construct lz4 stream decoder".to_string(),
         }.into());
     }
-    let source = data.as_ptr();
+    if dest.len() > 0 {
+        let data = &data[HEADER_LEN..];
+        let source = data.as_ptr();
+        let read: i32 = check_error(unsafe {
+            LZ4_decompress_safe_continue(
+                stream.0,
+                source,
+                dest.as_mut_ptr() as *mut u8,
+                data.len() as i32,
+                dest.len() as i32,
+            )
+        })?;
+        if read != dest.len() as i32 {
+            return Err(LZ4DecompressionError {
+                expected: dest.len(),
+                actual: read as usize,
+            }.into());
+        }
+    }
+    Ok(())
+}
+
+pub fn decompress(data: &[u8]) -> Result<Box<[u8]>, Error> {
+    let max_decompressed_size = decompress_size(data)?;
+    if max_decompressed_size == 0 {
+        return Ok(Vec::new().into_boxed_slice());
+    }
     let mut dest = Vec::<u8>::with_capacity(max_decompressed_size);
     unsafe { dest.set_len(max_decompressed_size) };
-    let read: i32 = check_error(unsafe {
-        LZ4_decompress_safe_continue(
-            stream.0,
-            source,
-            dest.as_mut_ptr() as *mut u8,
-            data.len() as i32,
-            dest.len() as i32,
-        )
-    })?;
-    if read != dest.len() as i32 {
-        return Err(LZ4DecompressionError {
-            expected: dest.len(),
-            actual: read as usize,
-        }.into());
-    }
+    decompress_into(data, &mut dest)?;
     Ok(dest.into_boxed_slice())
 }
 
