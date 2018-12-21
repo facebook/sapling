@@ -1,0 +1,21 @@
+[package]
+name = "lz4"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+
+[dependencies]
+lz4-pyframe = { path = "../../../lib/lz4-pyframe/" }
+cpython-failure = { path = "../../../lib/cpython-failure/" }
+
+[dependencies.cpython]
+version = "0.2"
+default-features = false
+features = ["extension-module-2-7"]
+
+[dependencies.python27-sys]
+version = "0.2"

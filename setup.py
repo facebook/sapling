@@ -2103,6 +2103,9 @@ rustextmodules = [
         "indexes", package="hgext.extlib", manifest="hgext/extlib/indexes/Cargo.toml"
     ),
     RustExtension(
+        "lz4", package="mercurial.rust", manifest="mercurial/rust/lz4/Cargo.toml"
+    ),
+    RustExtension(
         "matcher",
         package="mercurial.rust",
         manifest="mercurial/rust/matcher/Cargo.toml",
