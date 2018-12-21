@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from distutils.version import LooseVersion
 import contextlib
 import ctypes
 import ctypes.util
@@ -96,18 +95,6 @@ else:
     def sysstr(s):
         return s
 
-
-try:
-    import Cython
-except ImportError:
-    havecython = False
-else:
-    havecython = LooseVersion(Cython.__version__) >= LooseVersion("0.22")
-
-if not havecython:
-    raise RuntimeError("Cython >= 0.22 is required")
-
-from Cython.Build import cythonize
 
 # Attempt to guide users to a modern pip - this means that 2.6 users
 # should have a chance of getting a 4.2 release, and when we ratchet
@@ -207,7 +194,7 @@ from distutils.spawn import spawn, find_executable
 from distutils import file_util
 from distutils.errors import CCompilerError, DistutilsError, DistutilsExecError
 from distutils.sysconfig import get_python_inc, get_config_var
-from distutils.version import StrictVersion, LooseVersion
+from distutils.version import StrictVersion
 from distutils_rust import RustExtension, RustBinary, RustVendoredCrates, BuildRustExt
 import distutils
 
@@ -564,12 +551,15 @@ class asset(object):
         self.version = version
 
     def ensureready(self):
-        """Download and extract the asset to self.destdir"""
+        """Download and extract the asset to self.destdir. Return full path of
+        the directory containing extracted files.
+        """
         if not self._isready():
             self._download()
             self._extract()
             self._markready()
         assert self._isready(), "%r should be ready now" % self
+        return pjoin(builddir, self.destdir)
 
     def _download(self):
         destpath = pjoin(builddir, self.name)
@@ -1767,6 +1757,20 @@ extmodules = [
         extra_compile_args=filter(None, [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
     ),
 ]
+
+
+def cythonize(*args, **kwargs):
+    """Proxy to Cython.Build.cythonize. Download Cython on demand."""
+    cythonsrc = asset(
+        url="https://files.pythonhosted.org/packages/c1/f2/d1207fd0dfe5cb4dbb06a035eb127653821510d896ce952b5c66ca3dafa4/Cython-0.29.2.tar.gz"
+    )
+    path = cythonsrc.ensureready()
+    sys.path.insert(0, path)
+
+    from Cython.Build import cythonize
+
+    return cythonize(*args, **kwargs)
+
 
 # Cython modules
 # see http://cython.readthedocs.io/en/latest/src/reference/compilation.html
