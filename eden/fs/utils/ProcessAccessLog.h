@@ -30,6 +30,7 @@ class ProcessNameCache;
  */
 class ProcessAccessLog {
  public:
+  explicit ProcessAccessLog();
   explicit ProcessAccessLog(std::shared_ptr<ProcessNameCache> processNameCache);
   ~ProcessAccessLog();
 

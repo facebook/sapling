@@ -70,12 +70,8 @@ class FuseChannelTest : public ::testing::Test {
  protected:
   unique_ptr<FuseChannel, FuseChannelDeleter> createChannel(
       size_t numThreads = 2) {
-    return unique_ptr<FuseChannel, FuseChannelDeleter>(new FuseChannel(
-        fuse_.start(),
-        mountPath_,
-        numThreads,
-        &dispatcher_,
-        std::make_shared<ProcessNameCache>()));
+    return unique_ptr<FuseChannel, FuseChannelDeleter>(
+        new FuseChannel(fuse_.start(), mountPath_, numThreads, &dispatcher_));
   }
 
   FuseChannel::StopFuture performInit(

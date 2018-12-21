@@ -97,6 +97,12 @@ class FuseChannel {
       folly::File&& fuseDevice,
       AbsolutePathPiece mountPath,
       size_t numThreads,
+      Dispatcher* const dispatcher);
+
+  FuseChannel(
+      folly::File&& fuseDevice,
+      AbsolutePathPiece mountPath,
+      size_t numThreads,
       Dispatcher* const dispatcher,
       std::shared_ptr<ProcessNameCache> processNameCache);
 

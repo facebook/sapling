@@ -436,6 +436,17 @@ FuseChannel::FuseChannel(
     folly::File&& fuseDevice,
     AbsolutePathPiece mountPath,
     size_t numThreads,
+    Dispatcher* const dispatcher)
+    : FuseChannel{std::move(fuseDevice),
+                  std::move(mountPath),
+                  numThreads,
+                  dispatcher,
+                  /*processNameCache=*/nullptr} {}
+
+FuseChannel::FuseChannel(
+    folly::File&& fuseDevice,
+    AbsolutePathPiece mountPath,
+    size_t numThreads,
     Dispatcher* const dispatcher,
     std::shared_ptr<ProcessNameCache> processNameCache)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
