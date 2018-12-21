@@ -744,10 +744,13 @@ class fixupstate(object):
             # a summary for all files
             stats = chunkstats.values()
             applied, total = (sum(s[i] for s in stats) for i in (0, 1))
-            ui.write(
-                _n("%d of %d chunk applied\n", "%d of %d chunks applied\n", total)
-                % (applied, total)
-            )
+            if applied == 0:
+                ui.write(_("nothing applied\n"))
+            else:
+                ui.write(
+                    _n("%d of %d chunk applied\n", "%d of %d chunks applied\n", total)
+                    % (applied, total)
+                )
 
     def _commitstack(self):
         """make new commits. update self.finalnode, self.replacemap.
@@ -966,10 +969,8 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
             if ui.promptchoice("apply changes (yn)? $$ &Yes $$ &No", default=0):
                 raise error.Abort(_("absorb cancelled\n"))
         state.apply()
-        if state.commit():
-            state.printchunkstats()
-        elif not ui.quiet:
-            ui.write(_("nothing applied\n"))
+        state.commit()
+        state.printchunkstats()
     return state
 
 

@@ -588,4 +588,4 @@ Only with commit deletion:
   1 changeset affected
   d235271 append to a
   apply changes (yn)?  y
-  nothing applied
+  1 of 1 chunk applied
