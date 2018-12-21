@@ -419,6 +419,9 @@ def drawdag(repo, text, **opts):
         content = content.replace(br"\n", b"\n").replace(br"\1", b"\1")
         files[name][path] = content
 
+    # do not create default files? (ex. commit A has file "A")
+    defaultfiles = not any("drawdag.defaultfiles=false" in c for c in comments)
+
     committed = {None: node.nullid}  # {name: node}
 
     # for leaf nodes, try to find existing nodes in repo
@@ -529,8 +532,9 @@ def drawdag(repo, text, **opts):
                 if f not in pctxs[0].manifest():
                     added[f] = pctxs[1][f].data()
         else:
-            # If it's not a merge, add a single file
-            added[name] = name
+            # If it's not a merge, add a single file, if defaultfiles is set
+            if defaultfiles:
+                added[name] = name
         # add extra file contents in comments
         for path, content in files.get(name, {}).items():
             added[path] = content
