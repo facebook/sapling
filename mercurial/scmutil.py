@@ -724,15 +724,30 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
             # usually a split, take the one with biggest rev number
             newnode = next(unfi.set("max(%ln)", newnodes)).node()
         elif len(newnodes) == 0:
-            # move bookmark backwards
-            roots = list(unfi.set("max((::%n) - %ln)", oldnode, list(replacements)))
-            if roots:
-                newnode = roots[0].node()
-            else:
-                newnode = nullid
+            # Handle them in a second loop
+            continue
         else:
             newnode = newnodes[0]
         moves[oldnode] = newnode
+
+    # Move bookmarks pointing to stripped commits backwards.
+    # If hit a replaced node, use the replacement.
+    def movebackwards(node):
+        p1 = unfi.changelog.parents(node)[0]
+        if p1 == nullid:
+            return p1
+        elif p1 in moves:
+            return moves[p1]
+        elif p1 in replacements:
+            return movebackwards(p1)
+        else:
+            return p1
+
+    for oldnode, newnodes in replacements.items():
+        if oldnode in moves:
+            continue
+        assert len(newnodes) == 0
+        moves[oldnode] = movebackwards(oldnode)
 
     with repo.transaction("cleanup") as tr:
         # Move bookmarks
