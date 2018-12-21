@@ -1012,7 +1012,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
         ui.write(_("nothing to absorb\n"))
     elif not opts.get("dry_run"):
         if not opts.get("apply_changes"):
-            if ui.promptchoice("apply changes (yn)? $$ &Yes $$ &No", default=1):
+            if ui.promptchoice("apply changes (yn)? $$ &Yes $$ &No", default=0):
                 raise error.Abort(_("absorb cancelled\n"))
         state.apply()
         if state.commit():
