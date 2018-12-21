@@ -10,6 +10,7 @@ lto = true
 
 [dependencies]
 lz4-pyframe = { path = "../../../lib/lz4-pyframe/" }
+cpython-ext = { path = "../../../lib/cpython-ext/" }
 cpython-failure = { path = "../../../lib/cpython-failure/" }
 
 [dependencies.cpython]

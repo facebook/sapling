@@ -70,7 +70,9 @@ impl<T: Copy> SimplePyBuf<T> {
         // whitelist those two types. Beware that `PyBuffer_Check` won't guarnatee
         // its inner object is also immutable.
         unsafe {
-            if cpy::PyBytes_Check(obj.as_ptr()) == 0 && cpy::PyBuffer_Check(obj.as_ptr()) == 0 {
+            if cpy::PyByteArray_Check(obj.as_ptr()) == 0 && cpy::PyBytes_Check(obj.as_ptr()) == 0
+                && cpy::PyBuffer_Check(obj.as_ptr()) == 0
+            {
                 panic!("potentially unsafe type");
             }
 

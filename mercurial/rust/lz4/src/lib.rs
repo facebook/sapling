@@ -7,6 +7,7 @@
 
 #[macro_use]
 extern crate cpython;
+extern crate cpython_ext;
 extern crate cpython_failure;
 extern crate lz4_pyframe;
 extern crate python27_sys;
@@ -14,9 +15,10 @@ extern crate python27_sys;
 // FIXME: Share pybuf implementation across libraries.
 mod pybuf;
 
-use cpython::{exc, PyBytes, PyObject, PyResult, Python};
+use cpython::{exc, PyObject, PyResult, Python};
+use cpython_ext::{allocate_pybytes, boxed_slice_to_pyobj};
 use cpython_failure::ResultPyErrExt;
-use lz4_pyframe::{compress, decompress};
+use lz4_pyframe::{compress, decompress_into, decompress_size};
 use pybuf::SimplePyBuf;
 
 py_module_initializer!(lz4, initlz4, PyInit_lz4, |py, m| {
@@ -25,16 +27,19 @@ py_module_initializer!(lz4, initlz4, PyInit_lz4, |py, m| {
     Ok(())
 });
 
-fn compress_py(py: Python, data: PyObject) -> PyResult<PyBytes> {
+fn compress_py(py: Python, data: PyObject) -> PyResult<PyObject> {
     let data = SimplePyBuf::new(py, &data);
     compress(data.as_ref())
         .map_pyerr::<exc::RuntimeError>(py)
-        .map(|bytes| PyBytes::new(py, bytes.as_ref()))
+        .map(|bytes| boxed_slice_to_pyobj(py, bytes))
 }
 
-fn decompress_py(py: Python, data: PyObject) -> PyResult<PyBytes> {
+fn decompress_py(py: Python, data: PyObject) -> PyResult<PyObject> {
     let data = SimplePyBuf::new(py, &data);
-    decompress(data.as_ref())
+    let data = data.as_ref();
+    let size = decompress_size(data).map_pyerr::<exc::RuntimeError>(py)?;
+    let (obj, slice) = allocate_pybytes(py, size);
+    decompress_into(data, slice)
         .map_pyerr::<exc::RuntimeError>(py)
-        .map(|bytes| PyBytes::new(py, bytes.as_ref()))
+        .map(move |_| obj)
 }

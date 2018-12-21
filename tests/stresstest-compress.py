@@ -20,7 +20,7 @@ def roundtrip(size=None):
         size = struct.unpack(">I", b"\0" + os.urandom(3))[0]
     data = os.urandom(size)
     assert rustlz4.decompress(pylz4.compress(data)) == data
-    assert pylz4.decompress(rustlz4.compress(data)) == data
+    assert pylz4.decompress(buffer(rustlz4.compress(data))) == data
 
 
 def benchmark(data):
