@@ -21,14 +21,24 @@ def roundtrip(size=None):
     data = os.urandom(size)
     assert rustlz4.decompress(pylz4.compress(data)) == data
     assert pylz4.decompress(buffer(rustlz4.compress(data))) == data
+    assert rustlz4.decompress(pylz4.compressHC(data)) == data
+    assert pylz4.decompress(buffer(rustlz4.compresshc(data))) == data
 
 
-def benchmark(data):
+def benchmark(data, hcdata=None):
     number = 100
     size = len(data)
+    hcdata = hcdata or data
 
     for modname, func in [("pylz4", pylz4.compress), ("rustlz4", rustlz4.compress)]:
         timer = timeit.Timer(functools.partial(func, data))
+        elapsed = timer.timeit(number=number)
+        perf = size * number / elapsed / 1e6
+        name = "%s.%s" % (modname, func.__name__)
+        print("%24s: %8.2f MB/s" % (name, perf))
+
+    for modname, func in [("pylz4", pylz4.compressHC), ("rustlz4", rustlz4.compresshc)]:
+        timer = timeit.Timer(functools.partial(func, hcdata))
         elapsed = timer.timeit(number=number)
         perf = size * number / elapsed / 1e6
         name = "%s.%s" % (modname, func.__name__)
@@ -48,7 +58,7 @@ if __name__ == "__main__":
     print("Benchmarking (easy to compress data)...")
     benchmark(b"\0" * size)
     print("Benchmarking (hard to compress data)...")
-    benchmark(os.urandom(size))
+    benchmark(os.urandom(size), hcdata=os.urandom(size / 100))
 
     print("Testing roundtrips (Press Ctrl+C to stop)...")
     for i in range(256):

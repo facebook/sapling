@@ -5,12 +5,35 @@
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Error;
+use libc::{c_int, c_void};
 use lz4_sys::{LZ4StreamDecode, LZ4StreamEncode, LZ4_compressBound, LZ4_compress_continue,
               LZ4_createStream, LZ4_createStreamDecode, LZ4_decompress_safe_continue,
               LZ4_freeStream, LZ4_freeStreamDecode};
 use std::io::Cursor;
 
 const HEADER_LEN: usize = 4;
+
+// These function should be exported by lz4-sys. For now, we just declare them.
+// See https://github.com/lz4/lz4/blob/dev/lib/lz4hc.h
+//
+// int LZ4_compress_HC_continue (LZ4_streamHC_t* streamHCPtr, const char* src, char* dst, int
+//     srcSize, int maxDstSize);
+// LZ4_streamHC_t* LZ4_createStreamHC(void);
+// int LZ4_freeStreamHC (LZ4_streamHC_t* streamHCPtr);
+#[repr(C)]
+struct LZ4_streamHC_t(c_void);
+extern "C" {
+    fn LZ4_compress_HC_continue(
+        LZ4_stream: *mut LZ4_streamHC_t,
+        src: *const u8,
+        dst: *mut u8,
+        srcSize: c_int,
+        maxDstSize: c_int,
+    ) -> c_int;
+
+    fn LZ4_createStreamHC() -> *mut LZ4_streamHC_t;
+    fn LZ4_freeStreamHC(streamHCPtr: *mut LZ4_streamHC_t) -> c_int;
+}
 
 #[derive(Debug, Fail)]
 #[fail(display = "{:?}", message)]
@@ -59,6 +82,23 @@ pub fn decompress_size(data: &[u8]) -> Result<usize, Error> {
         let mut cur = Cursor::new(data);
         let max_decompressed_size = cur.read_u32::<LittleEndian>()? as usize;
         Ok(max_decompressed_size)
+    }
+}
+
+struct StreamEncoderHC(pub *mut LZ4_streamHC_t);
+impl StreamEncoderHC {
+    fn new() -> Self {
+        StreamEncoderHC(unsafe { LZ4_createStreamHC() })
+    }
+}
+impl Drop for StreamEncoderHC {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            let error = unsafe { LZ4_freeStreamHC(self.0) };
+            if error != 0 {
+                panic!("unable to free stream encoder");
+            }
+        }
     }
 }
 
@@ -136,6 +176,39 @@ pub fn compress(data: &[u8]) -> Result<Box<[u8]>, Error> {
     Ok(dest.into_boxed_slice())
 }
 
+pub fn compresshc(data: &[u8]) -> Result<Box<[u8]>, Error> {
+    let max_compressed_size = (check_error(unsafe { LZ4_compressBound(data.len() as i32) })?
+        + HEADER_LEN as i32) as usize;
+
+    let stream = StreamEncoderHC::new();
+    if stream.0.is_null() {
+        return Err(LZ4Error {
+            message: "unable to construct LZ4 stream encoder".to_string(),
+        }.into());
+    }
+
+    let source = data.as_ptr();
+    let mut dest = Vec::<u8>::with_capacity(max_compressed_size);
+    dest.write_u32::<LittleEndian>(data.len() as u32)?;
+
+    if data.len() > 0 {
+        unsafe { dest.set_len(max_compressed_size) };
+        let written: i32 = check_error(unsafe {
+            LZ4_compress_HC_continue(
+                stream.0,
+                source,
+                dest.as_mut_ptr().offset(HEADER_LEN as isize),
+                data.len() as c_int,
+                (max_compressed_size - HEADER_LEN) as c_int,
+            )
+        })?;
+        if written < dest.len() as i32 {
+            dest.truncate(written as usize + HEADER_LEN);
+        }
+    }
+    Ok(dest.into_boxed_slice())
+}
+
 fn check_error(result: i32) -> Result<i32, Error> {
     if result < 0 {
         return Err(LZ4Error {
@@ -153,8 +226,13 @@ mod tests {
     fn check_roundtrip<T: AsRef<[u8]>>(data: T) -> (Box<[u8]>, bool) {
         let data = data.as_ref();
         let compressed = compress(data).unwrap();
+        let compressedhc = compresshc(data).unwrap();
         let decompressed = decompress(&compressed).unwrap();
-        (compressed, data[..] == decompressed[..])
+        let decompressedhc = decompress(&compressedhc).unwrap();
+        (
+            compressed,
+            data[..] == decompressed[..] && data[..] == decompressedhc[..],
+        )
     }
 
     #[test]

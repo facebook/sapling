@@ -15,10 +15,11 @@ extern crate python27_sys;
 use cpython::{exc, PyObject, PyResult, Python};
 use cpython_ext::{allocate_pybytes, boxed_slice_to_pyobj, SimplePyBuf};
 use cpython_failure::ResultPyErrExt;
-use lz4_pyframe::{compress, decompress_into, decompress_size};
+use lz4_pyframe::{compress, compresshc, decompress_into, decompress_size};
 
 py_module_initializer!(lz4, initlz4, PyInit_lz4, |py, m| {
     m.add(py, "compress", py_fn!(py, compress_py(data: PyObject)))?;
+    m.add(py, "compresshc", py_fn!(py, compresshc_py(data: PyObject)))?;
     m.add(py, "decompress", py_fn!(py, decompress_py(data: PyObject)))?;
     Ok(())
 });
@@ -28,6 +29,13 @@ fn compress_py(py: Python, data: PyObject) -> PyResult<PyObject> {
     compress(data.as_ref())
         .map_pyerr::<exc::RuntimeError>(py)
         .map(|bytes| boxed_slice_to_pyobj(py, bytes))
+}
+
+fn compresshc_py(py: Python, data: PyObject) -> PyResult<PyObject> {
+    let data = SimplePyBuf::new(py, &data);
+    compresshc(data.as_ref())
+        .map_pyerr::<exc::RuntimeError>(py)
+        .map(|bytes| cpython_ext::boxed_slice_to_pyobj(py, bytes))
 }
 
 fn decompress_py(py: Python, data: PyObject) -> PyResult<PyObject> {

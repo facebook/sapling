@@ -6,6 +6,7 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 [dependencies]
 byteorder = "1"
 failure = "0"
+libc = "0.2"
 lz4-sys = "1"
 
 [dev-dependencies]
