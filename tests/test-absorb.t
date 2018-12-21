@@ -380,8 +380,6 @@ Test obsolete markers creation:
   $ cat >> $HGRCPATH << EOF
   > [experimental]
   > evolution=createmarkers
-  > [absorb]
-  > addnoise=1
   > EOF
 
   $ hg --config absorb.maxstacksize=3 sf -a
@@ -405,9 +403,9 @@ Test obsolete markers creation:
   28f10dc commit a 2
   2 of 2 chunks applied
   $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
-  6:3dfde4199b46 commit b 2 712d16a8f445834e36145408eabc1d29df05ec09
-  5:99cfab7da5ff commit b 1 74cfa6294160149d60adbf7582b99ce37a4597ec
-  4:fec2b3bd9e08 commit a 2 28f10dcf96158f84985358a2e5d5b3505ca69c22
+  6:cbc0c676ae8f commit b 2 
+  5:071dee819ad0 commit b 1 
+  4:4faf555e5598 commit a 2 
   0:f9a81da8dc53 commit a 1 
   $ hg absorb -a
   showing changes for a
@@ -419,10 +417,10 @@ Test obsolete markers creation:
   f9a81da commit a 1
   1 of 1 chunk applied
   $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
-  10:e1c8c1e030a4 commit b 2 3dfde4199b4610ea6e3c6fa9f5bdad8939d69524
-  9:816c30955758 commit b 1 99cfab7da5ffdaf3b9fc6643b14333e194d87f46
-  8:5867d584106b commit a 2 fec2b3bd9e0834b7cb6a564348a0058171aed811
-  7:8c76602baf10 commit a 1 f9a81da8dc53380ed91902e5b82c1b36255a4bd0
+  10:a478955a9e03 commit b 2 
+  9:7380d5e6fab8 commit b 1 
+  8:4472dd5179eb commit a 2 
+  7:6905bbb02e4e commit a 1 
 
 Test config option absorb.amendflags and running as a sub command of amend:
 
@@ -464,10 +462,10 @@ Test config option absorb.amendflags and running as a sub command of amend:
           @@ -1,0 +1,1 @@
           +INS
           @@ -2,0 +3,1 @@
-  e1c8c1e +END
+  a478955 +END
   
   1 changeset affected
-  e1c8c1e commit b 2
+  a478955 commit b 2
   apply changes (yn)?  y
   1 of 2 chunks applied
   
@@ -550,8 +548,8 @@ Remove lines may delete changesets:
   1154859 b12
   bfafb49 a12
   $ hg absorb -av | grep became
-  bfafb49242db: 1 file(s) changed, became 1a2de97fc652
-  115485984805: 2 file(s) changed, became 0c930dfab74c
+  bfafb49242db: 1 file(s) changed, became 259b86984766
+  115485984805: 2 file(s) changed, became bd7f2557c265
   30970dbf7b40: became empty and was dropped
   a393a58b9a85: became empty and was dropped
   $ hg log -T '{rev} {desc}\n' -Gp

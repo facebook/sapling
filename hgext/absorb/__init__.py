@@ -15,8 +15,6 @@ amend modified chunks into the corresponding non-public changesets.
     [absorb]
     # only check 50 recent non-public changesets at most
     maxstacksize = 50
-    # whether to add noise to new commits to avoid obsolescence cycle
-    addnoise = 1
     # make `amend --correlated` a shortcut to the main command
     amendflag = correlated
     # truncate descriptions after 50 characters
@@ -873,8 +871,6 @@ class fixupstate(object):
         """
         parents = p1 and (p1, node.nullid)
         extra = ctx.extra()
-        if self._useobsolete and self.ui.configbool("absorb", "addnoise", True):
-            extra["absorb_source"] = ctx.hex()
         mctx = overlaycontext(memworkingcopy, ctx, parents, extra=extra)
         # preserve phase
         with mctx.repo().ui.configoverride({("phases", "new-commit"): ctx.phase()}):
