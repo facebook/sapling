@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 lto = true
 
 [dependencies]
+cpython-ext = { path = "../../../lib/cpython-ext/" }
 zstd = "0.4.18"
 zstdelta = { path = "../../../lib/zstdelta/" }
 

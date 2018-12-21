@@ -7,14 +7,13 @@
 
 #[macro_use]
 extern crate cpython;
+extern crate cpython_ext;
 extern crate python27_sys;
 extern crate zstd;
 extern crate zstdelta;
 
-mod pybuf;
-
 use cpython::{exc, PyBytes, PyErr, PyObject, PyResult, Python};
-use pybuf::SimplePyBuf;
+use cpython_ext::SimplePyBuf;
 use std::io;
 use zstd::stream::{decode_all, encode_all};
 use zstdelta::{apply, diff};

@@ -12,14 +12,10 @@ extern crate cpython_failure;
 extern crate lz4_pyframe;
 extern crate python27_sys;
 
-// FIXME: Share pybuf implementation across libraries.
-mod pybuf;
-
 use cpython::{exc, PyObject, PyResult, Python};
-use cpython_ext::{allocate_pybytes, boxed_slice_to_pyobj};
+use cpython_ext::{allocate_pybytes, boxed_slice_to_pyobj, SimplePyBuf};
 use cpython_failure::ResultPyErrExt;
 use lz4_pyframe::{compress, decompress_into, decompress_size};
-use pybuf::SimplePyBuf;
 
 py_module_initializer!(lz4, initlz4, PyInit_lz4, |py, m| {
     m.add(py, "compress", py_fn!(py, compress_py(data: PyObject)))?;
