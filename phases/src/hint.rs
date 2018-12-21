@@ -13,7 +13,7 @@ use Phase;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use errors::*;
-use futures::{future, Future, Stream};
+use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::ChangesetId;
 use reachabilityindex::ReachabilityIndex;
@@ -50,9 +50,13 @@ impl PhasesHint {
                     let changeset_fetcher = repo.get_changeset_fetcher();
                     vecf.push(index.query_reachability(ctx, changeset_fetcher, public_cs, cs_id));
                 }
-                future::join_all(vecf)
+                stream::futures_unordered(vecf)
+                    .skip_while(|&x| future::ok(!x))
+                    .take(1)
+                    .collect()
             })
             .map(|vec| {
+                // vec should be size 0 or 1
                 // if the changeset is ancestor of some public bookmark, it is public
                 if vec.iter().any(|&x| x) {
                     Phase::Public
