@@ -571,3 +571,21 @@ Remove lines may delete changesets:
      +2
      +3
   
+Only with commit deletion:
+
+  $ newrepo
+  $ touch a
+  $ hg ci -m 'empty a' -A a
+  $ echo 1 >> a
+  $ hg ci -m 'append to a'
+  $ rm a
+  $ touch a
+  $ HGPLAIN=1 hg absorb
+  showing changes for a
+          @@ -0,1 +0,0 @@
+  d235271 -1
+  
+  1 changeset affected
+  d235271 append to a
+  apply changes (yn)?  y
+  nothing applied

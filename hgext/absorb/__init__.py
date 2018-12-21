@@ -713,15 +713,15 @@ class fixupstate(object):
     def commit(self):
         """commit changes. update self.finalnode, self.replacemap"""
         with self.repo.wlock(), self.repo.lock():
-            with self.repo.transaction("absorb") as tr:
+            with self.repo.transaction("absorb"):
                 self._commitstack()
-                self._movebookmarks(tr)
-                if self.repo["."].node() in self.replacemap:
-                    self._moveworkingdirectoryparent()
-                if self._useobsolete:
-                    self._obsoleteoldcommits()
-            if not self._useobsolete:  # strip must be outside transactions
-                self._stripoldcommits()
+                replacements = {
+                    old: [new] if new else [] for old, new in self.replacemap.items()
+                }
+                moves = scmutil.cleanupnodes(self.repo, replacements, "absorb")
+                newwd = moves.get(self.repo["."].node())
+                if newwd is not None:
+                    self._moveworkingdirectoryparent(newwd)
         return self.finalnode
 
     def printchunkstats(self):
@@ -810,32 +810,11 @@ class fixupstate(object):
                 result[fctx.path()] = newcontent
         return result
 
-    def _movebookmarks(self, tr):
-        repo = self.repo
-        needupdate = [
-            (name, self.replacemap[hsh])
-            for name, hsh in repo._bookmarks.iteritems()
-            if hsh in self.replacemap
-        ]
-        changes = []
-        for name, hsh in needupdate:
-            if hsh:
-                changes.append((name, hsh))
-                if self.ui.verbose:
-                    self.ui.write(
-                        _("moving bookmark %s to %s\n") % (name, node.hex(hsh))
-                    )
-            else:
-                changes.append((name, None))
-                if self.ui.verbose:
-                    self.ui.write(_("deleting bookmark %s\n") % name)
-        repo._bookmarks.applychanges(repo, tr, changes)
-
-    def _moveworkingdirectoryparent(self):
-        ctx = self.repo[self.finalnode]
+    def _moveworkingdirectoryparent(self, node):
         dirstate = self.repo.dirstate
+        ctx = self.repo[node]
         with dirstate.parentchange():
-            dirstate.rebuild(ctx.node(), ctx.manifest(), self.paths, exact=True)
+            dirstate.rebuild(node, ctx.manifest(), self.paths, exact=True)
 
     @staticmethod
     def _willbecomenoop(memworkingcopy, ctx, pctx=None):
@@ -875,30 +854,6 @@ class fixupstate(object):
         # preserve phase
         with mctx.repo().ui.configoverride({("phases", "new-commit"): ctx.phase()}):
             return mctx.commit()
-
-    @util.propertycache
-    def _useobsolete(self):
-        """() -> bool"""
-        return obsolete.isenabled(self.repo, obsolete.createmarkersopt)
-
-    def _obsoleteoldcommits(self):
-        relations = [
-            (self.repo[k], v and (self.repo[v],) or ())
-            for k, v in self.replacemap.iteritems()
-        ]
-        if relations:
-            obsolete.createmarkers(self.repo, relations)
-
-    def _stripoldcommits(self):
-        nodelist = self.replacemap.keys()
-        # make sure we don't strip innocent children
-        revs = self.repo.revs(
-            "%ln - (::(heads(%ln::)-%ln))", nodelist, nodelist, nodelist
-        )
-        tonode = self.repo.changelog.node
-        nodelist = [tonode(r) for r in revs]
-        if nodelist:
-            repair.strip(self.repo.ui, self.repo, nodelist)
 
 
 def _parsechunk(hunk):
