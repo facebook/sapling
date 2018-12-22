@@ -1109,14 +1109,6 @@ class buildembedded(Command):
         log.debug("copying main mercurial binary from %s" % bindir)
         copy_to(pjoin(bindir, sourcename), pjoin(dirtocopy, targetname))
 
-    def _copy_configs(self, dirtocopy):
-        """Copy the relevant config bits into an embedded directory"""
-        source = pjoin(
-            scriptdir, "fb", "staticfiles", "etc", "mercurial", "include_for_nupkg.rc"
-        )
-        target = pjoin(dirtocopy, "hgrc.d", "include.rc")
-        copy_to(source, target)
-
     def _copy_other(self, dirtocopy):
         """Copy misc files, which aren't main hg codebase"""
         tocopy = {
@@ -1149,8 +1141,6 @@ class buildembedded(Command):
         # has the first priority in dynamic linker search path.
         self._copy_py_lib(embdir)
         self._copy_hg_exe(embdir)
-        if havefb:
-            self._copy_configs(embdir)
         self._copy_other(embdir)
 
 
