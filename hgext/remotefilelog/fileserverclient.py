@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import functools
 import hashlib
 import io
 import itertools
@@ -227,7 +228,7 @@ def _getfilesbatch(remote, receivemissing, progresstick, missed, idmap, batchsiz
             file_ = idmap[m]
             node = m[-40:]
             progresstick(file_)
-            receivemissing(io.BytesIO("%d\n%s" % (len(r), r)), file_, node)
+            receivemissing(io.BytesIO("%d\n%s" % (len(r), r)), file_, node, m)
         return
     while missed:
         chunk, missed = missed[:batchsize], missed[batchsize:]
@@ -241,7 +242,7 @@ def _getfilesbatch(remote, receivemissing, progresstick, missed, idmap, batchsiz
             file_ = idmap[m]
             node = m[-40:]
             progresstick(file_)
-            receivemissing(io.BytesIO("%d\n%s" % (len(v), v)), file_, node)
+            receivemissing(io.BytesIO("%d\n%s" % (len(v), v)), file_, node, m)
 
 
 def _getfiles_optimistic(remote, receivemissing, progresstick, missed, idmap, step):
@@ -267,7 +268,7 @@ def _getfiles_optimistic(remote, receivemissing, progresstick, missed, idmap, st
             versionid = missingid[-40:]
             file = idmap[missingid]
             progresstick(file)
-            receivemissing(pipei, file, versionid)
+            receivemissing(pipei, file, versionid, missingid)
 
     # End the command
     pipeo.write("\n")
@@ -295,7 +296,7 @@ def _getfiles_threaded(remote, receivemissing, progresstick, missed, idmap, step
         versionid = missingid[-40:]
         file = idmap[missingid]
         progresstick(file)
-        receivemissing(pipei, file, versionid)
+        receivemissing(pipei, file, versionid, missingid)
 
     writerthread.join()
     # End the command
@@ -443,6 +444,7 @@ class fileserverclient(object):
                     # outputs
                     verbose = self.ui.verbose
                     self.ui.verbose = False
+                    draft = set()
                     try:
                         with self._connect() as conn:
                             remote = conn.peer
@@ -464,7 +466,7 @@ class fileserverclient(object):
                                     _getfiles = _getfiles_optimistic
                                 _getfiles(
                                     remote,
-                                    self.receivemissing,
+                                    functools.partial(self.receivemissing, draft),
                                     progresstick,
                                     missed,
                                     idmap,
@@ -480,7 +482,7 @@ class fileserverclient(object):
                                 )
                                 _getfilesbatch(
                                     remote,
-                                    self.receivemissing,
+                                    functools.partial(self.receivemissing, draft),
                                     progresstick,
                                     missed,
                                     idmap,
@@ -511,16 +513,17 @@ class fileserverclient(object):
                         self.ui.verbose = verbose
                     # send to memcache
                     if self.ui.configbool("remotefilelog", "updatesharedcache"):
-                        count[0] = len(missed)
-                        request = "set\n%d\n%s\n" % (count[0], "\n".join(missed))
-                        cache.request(request)
+                        upload = [n for n in missed if n not in draft]
+                        if upload:
+                            request = "set\n%d\n%s\n" % (len(upload), "\n".join(upload))
+                            cache.request(request)
 
                 # mark ourselves as a user of this cache
                 writedata.markrepo(self.repo.path)
             finally:
                 os.umask(oldumask)
 
-    def receivemissing(self, pipe, filename, node):
+    def receivemissing(self, draftset, pipe, filename, node, key):
         line = pipe.readline()[:-1]
         if not line:
             raise error.ResponseError(
@@ -533,8 +536,13 @@ class fileserverclient(object):
                 _("error downloading file contents:"),
                 _("only received %s of %s bytes") % (len(data), size),
             )
-
-        self.writedata.addremotefilelognode(filename, bin(node), lz4decompress(data))
+        data = lz4decompress(data)
+        mapping = shallowutil.ancestormap(data)
+        if any(
+            linknode == nullid for _p1, _p2, linknode, _copyfrom in mapping.values()
+        ):
+            draftset.add(key)
+        self.writedata.addremotefilelognode(filename, bin(node), data)
 
     def requestpack(self, fileids):
         """Requests the given file revisions from the server in a pack format.
