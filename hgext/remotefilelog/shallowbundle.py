@@ -312,7 +312,8 @@ class shallowcg1packer(changegroup.cg1packer):
         results = []
         for fnode in missing:
             fctx = repo.filectx(rlog.filename, fileid=fnode)
-            if fctx.linkrev() not in commonrevs:
+            linkrev = fctx.linkrev()
+            if linkrev == -1 or linkrev not in commonrevs:
                 results.append(fnode)
         return results
 
