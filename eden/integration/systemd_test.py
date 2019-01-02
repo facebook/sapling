@@ -97,6 +97,7 @@ class SystemdTest(
         self.assert_systemd_service_is_stopped(eden_dir=pathlib.Path(self.eden_dir))
         subprocess.call(
             [FindExe.EDEN_CLI]
+            # pyre-ignore[6]: T38220626
             + self.get_required_eden_cli_args()
             + [
                 "start",
