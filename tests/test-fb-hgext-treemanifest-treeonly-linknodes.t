@@ -65,13 +65,6 @@ Push commit 1 to the server
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  remote: transaction abort!
-  remote: rollback completed
-  remote: abort: 00changelog.i@e0ce6fd597a7: no node!
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
-
-BUG: We sent the bundle with the wrong manifest linknode
 
 Works ok with pushrebase.
   $ hg unhide 2

@@ -1894,19 +1894,22 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
         # Else LocalTrees
         return localmfstore and not localmfstore.getmissing([("", mfnode)])
 
+    linknodemap = {}
     for node in outgoing.missing:
         ctx = repo[node]
         mfnode = ctx.manifestnode()
         if shouldsend(mfnode):
             mfnodes.append(mfnode)
+            linknodemap.setdefault(mfnode, node)
     basectxs = repo.set("parents(roots(%ln))", outgoing.missing)
     for basectx in basectxs:
         basemfnodes.append(basectx.manifestnode())
+    linknodefixup = (set(outgoing.missing), linknodemap)
 
     # createtreepackpart is used to form bundles for normal pushes and pulls, so
     # we always pass depth=max here.
     packstream = generatepackstream(
-        repo, rootdir, mfnodes, basemfnodes, directories, TREE_DEPTH_MAX
+        repo, rootdir, mfnodes, basemfnodes, directories, TREE_DEPTH_MAX, linknodefixup
     )
     part = bundle2.bundlepart(partname, data=packstream)
     part.addparam("version", "1")
@@ -2084,7 +2087,9 @@ def _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories, depth):
     return bundler
 
 
-def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth):
+def generatepackstream(
+    repo, rootdir, mfnodes, basemfnodes, directories, depth, linknodefixup=None
+):
     """
     All size/len/counts are network order unsigned ints.
 
@@ -2097,6 +2102,10 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth):
     `directories` - The fullpath (not relative path) of directories underneath
     the rootdir that should be sent.
     `depth` - The depth from the root that should be sent.
+    `linknodefixup` - If not None, this is a pair of (validset, mapping) where
+    validset is a set of nodes that are valid linknodes, and mapping is a map
+    from root manifest node to the linknode that should be used for all new
+    trees in that manifest which don't have a valid linknode.
 
     Response format:
 
@@ -2129,10 +2138,14 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth):
     if missing:
         raise shallowutil.MissingNodesError(missing, "tree nodes missing on server")
 
-    return _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth)
+    return _generatepackstream(
+        repo, rootdir, mfnodes, basemfnodes, directories, depth, linknodefixup
+    )
 
 
-def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth):
+def _generatepackstream(
+    repo, rootdir, mfnodes, basemfnodes, directories, depth, linknodefixup
+):
     """A simple helper function for generatepackstream. This helper is a
     generator, while the main function is not, so we can execute the
     validation logic in the main function immediately without waiting for the
@@ -2177,6 +2190,10 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth)
         subtrees = cstore.treemanifest.walksubdirtrees(
             (rootdir, node), datastore, comparetrees=basetrees[:2], depth=depth
         )
+        rootlinknode = None
+        if linknodefixup is not None:
+            validlinknodes, linknodemap = linknodefixup
+            rootlinknode = linknodemap.get(node)
         for subname, subnode, subtext, x, x, x in subtrees:
             # Append data
             data = [(subnode, nullid, subtext)]
@@ -2184,12 +2201,10 @@ def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories, depth)
             # Append history
             # Only append first history for now, since the entire manifest
             # history is very long.
-            # Append data
-            data = [(subnode, nullid, subtext)]
-
-            # Append history
             histdata = historystore.getnodeinfo(subname, subnode)
             p1node, p2node, linknode, copyfrom = histdata
+            if rootlinknode is not None and linknode not in validlinknodes:
+                linknode = rootlinknode
             history = [(subnode, p1node, p2node, linknode, copyfrom)]
 
             for chunk in wirepack.sendpackpart(subname, history, data):
