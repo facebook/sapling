@@ -258,12 +258,12 @@ facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
   return facebook::fb303::cpp2::fb_status::ALIVE;
 }
 
-void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
-  auto helper = INSTRUMENT_THRIFT_CALL(INFO, info->get_mountPoint());
+void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
+  auto helper = INSTRUMENT_THRIFT_CALL(INFO, argument->get_mountPoint());
   try {
     auto initialConfig = ClientConfig::loadFromClientDirectory(
-        AbsolutePathPiece{info->mountPoint},
-        AbsolutePathPiece{info->edenClientPath});
+        AbsolutePathPiece{argument->mountPoint},
+        AbsolutePathPiece{argument->edenClientPath});
     server_->mount(std::move(initialConfig)).get();
   } catch (const EdenError& ex) {
     XLOG(ERR) << "Error :" << ex.what();
@@ -296,6 +296,7 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
     MountInfo info;
     info.mountPoint = edenMount->getPath().value();
     info.edenClientPath = edenMount->getConfig()->getClientDirectory().value();
+    info.state = edenMount->getState();
     results.push_back(info);
   }
 #else

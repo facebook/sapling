@@ -24,5 +24,8 @@ namespace eden {
 std::ostream& operator<<(std::ostream& os, ConflictType conflictType);
 std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict);
 std::ostream& operator<<(std::ostream& os, ScmFileStatus scmFileStatus);
+std::ostream& operator<<(std::ostream& os, MountState mountState);
+
+void toAppend(MountState conflictType, std::string* result);
 } // namespace eden
 } // namespace facebook

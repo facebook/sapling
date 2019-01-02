@@ -101,6 +101,8 @@ struct Owner {
  */
 class EdenMount {
  public:
+  using State = MountState;
+
   /**
    * Create a shared_ptr to an EdenMount.
    *
@@ -159,6 +161,17 @@ class EdenMount {
   folly::Future<SerializedInodeMap> shutdown(
       bool doTakeover,
       bool allowFuseNotStarted = false);
+
+  /**
+   * Get the current state of this mount.
+   *
+   * Note that the state may be changed by another thread immediately after this
+   * method is called, so this method should primarily only be used for
+   * debugging & diagnostics.
+   */
+  State getState() {
+    return state_.load(std::memory_order_acquire);
+  }
 
   /**
    * Get the FUSE channel for this mount point.
@@ -507,63 +520,6 @@ class EdenMount {
   class JournalDiffCallback;
 
   /**
-   * The current running state of the EdenMount.
-   *
-   * For now this primarily tracks the status of the shutdown process.
-   * In the future we may want to add other states to also track the status of
-   * the actual mount point in the kernel.  (e.g., a "STARTING" state before
-   * RUNNING for when the kernel mount point has not been fully set up yet, and
-   * an "UNMOUNTING" state if we have requested the kernel to unmount the mount
-   * point and that has not completed yet.  UNMOUNTING would occur between
-   * RUNNING and SHUT_DOWN.)  One possible downside of tracking
-   * STARTING/UNMOUNTING is that not every EdenMount object actually has a FUSE
-   * mount.  During unit tests we create EdenMount objects without ever
-   * actually mounting them in the kernel.
-   */
-  enum class State : uint32_t {
-    /**
-     * Freshly created.
-     */
-    UNINITIALIZED,
-
-    /**
-     * Starting to mount fuse.
-     */
-    STARTING,
-
-    /**
-     * The EdenMount is running normally.
-     */
-    RUNNING,
-
-    /**
-     * Encountered an error while starting fuse mount.
-     */
-    FUSE_ERROR,
-
-    /**
-     * EdenMount::shutdown() has been called, but it is not complete yet.
-     */
-    SHUTTING_DOWN,
-
-    /**
-     * EdenMount::shutdown() has completed, but there are still outstanding
-     * references so EdenMount::destroy() has not been called yet.
-     *
-     * When EdenMount::destroy() is called the object can be destroyed
-     * immediately.
-     */
-    SHUT_DOWN,
-
-    /**
-     * EdenMount::destroy() has been called, but the shutdown is not complete
-     * yet.  There are no remaining references to the EdenMount at this point,
-     * so when the shutdown completes it will be automatically destroyed.
-     */
-    DESTROYING
-  };
-
-  /**
    * Recursive method used for resolveSymlink() implementation
    */
   folly::Future<InodePtr>
@@ -773,5 +729,6 @@ class EdenMountDeleter {
     mount->destroy();
   }
 };
+
 } // namespace eden
 } // namespace facebook

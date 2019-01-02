@@ -41,6 +41,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
+#include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
@@ -408,7 +409,7 @@ void EdenMount::destroy() {
   }
 
   XLOG(FATAL) << "EdenMount::destroy() called on mount " << getPath()
-              << " in unexpected state " << static_cast<uint32_t>(oldState);
+              << " in unexpected state " << oldState;
 }
 
 Future<SerializedInodeMap> EdenMount::shutdown(
@@ -423,7 +424,7 @@ Future<SerializedInodeMap> EdenMount::shutdown(
       !doStateTransition(State::STARTING, State::SHUTTING_DOWN) &&
       !doStateTransition(State::FUSE_ERROR, State::SHUTTING_DOWN)) {
     EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "
-               << "state was " << static_cast<uint32_t>(state_.load());
+               << "state was " << getState();
   }
   return shutdownImpl(doTakeover);
 }

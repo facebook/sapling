@@ -40,7 +40,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   facebook::fb303::cpp2::fb_status getStatus() override;
 
-  void mount(std::unique_ptr<MountInfo> info) override;
+  void mount(std::unique_ptr<MountArgument> mount) override;
 
   void unmount(std::unique_ptr<std::string> mountPoint) override;
 

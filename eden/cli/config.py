@@ -398,7 +398,7 @@ Do you want to run `eden mount %s` instead?"""
         self._save_checkout_config(checkout_config, config_path)
 
         # Prepare to mount
-        mount_info = eden_ttypes.MountInfo(
+        mount_info = eden_ttypes.MountArgument(
             mountPoint=os.fsencode(path), edenClientPath=os.fsencode(client_dir)
         )
         with self.get_thrift_client() as client:
@@ -565,7 +565,7 @@ Do you want to run `eden mount %s` instead?"""
                 raise
 
         # Ask eden to mount the path
-        mount_info = eden_ttypes.MountInfo(
+        mount_info = eden_ttypes.MountArgument(
             mountPoint=os.fsencode(path), edenClientPath=os.fsencode(client_dir)
         )
         with self.get_thrift_client() as client:

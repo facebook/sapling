@@ -46,7 +46,53 @@ exception NoValueForKeyError {
   1: string key
 }
 
+/**
+ * The current running state of an EdenMount.
+ */
+enum MountState {
+  /**
+   * Freshly created.
+   */
+  UNINITIALIZED = 0,
+  /**
+   * Starting to mount fuse.
+   */
+  STARTING = 3,
+  /**
+   * The EdenMount is running normally.
+   */
+  RUNNING = 4,
+  /**
+   * Encountered an error while starting fuse mount.
+   */
+  FUSE_ERROR = 5,
+  /**
+   * EdenMount::shutdown() has been called, but it is not complete yet.
+   */
+  SHUTTING_DOWN = 6,
+  /**
+   * EdenMount::shutdown() has completed, but there are still outstanding
+   * references so EdenMount::destroy() has not been called yet.
+   *
+   * When EdenMount::destroy() is called the object can be destroyed
+   * immediately.
+   */
+  SHUT_DOWN = 7,
+  /**
+   * EdenMount::destroy() has been called, but the shutdown is not complete
+   * yet.  There are no remaining references to the EdenMount at this point,
+   * so when the shutdown completes it will be automatically destroyed.
+   */
+  DESTROYING = 8,
+} (cpp2.enum_type = 'uint32_t')
+
 struct MountInfo {
+  1: PathString mountPoint
+  2: PathString edenClientPath
+  3: MountState state
+}
+
+struct MountArgument {
   1: PathString mountPoint
   2: PathString edenClientPath
 }
@@ -468,7 +514,7 @@ struct TracePoint {
 
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
-  void mount(1: MountInfo info) throws (1: EdenError ex)
+  void mount(1: MountArgument info) throws (1: EdenError ex)
   void unmount(1: PathString mountPoint) throws (1: EdenError ex)
 
   /**
