@@ -114,14 +114,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .help("Don't prepend a prefix based on the repo id to the key"),
         );
 
-    let bonsai_fetch = SubCommand::with_name(CONTENT_FETCH)
+    let content_fetch = SubCommand::with_name(CONTENT_FETCH)
         .about("fetches content of the file or manifest from blobrepo")
         .args_from_usage(
             "<CHANGESET_ID>    'revision to fetch file from'
              <PATH>            'path to fetch'",
         );
 
-    let content_fetch = SubCommand::with_name(BONSAI_FETCH)
+    let bonsai_fetch = SubCommand::with_name(BONSAI_FETCH)
         .about("fetches content of the file or manifest from blobrepo")
         .args_from_usage("<HG_CHANGESET_OR_BOOKMARK>    'revision to fetch file from'");
 
