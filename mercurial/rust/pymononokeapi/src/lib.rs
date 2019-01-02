@@ -3,19 +3,17 @@
 
 #[macro_use]
 extern crate cpython;
+extern crate cpython_failure;
 extern crate encoding;
 extern crate failure;
 extern crate http;
 extern crate mononokeapi;
 
-mod errors;
-
-use cpython::{PyBytes, PyObject, PyResult};
+use cpython::{exc, PyBytes, PyObject, PyResult};
+use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
 use http::Uri;
 use mononokeapi::MononokeClient;
-
-use errors::IntoPyResult;
 
 py_module_initializer!(
     pymononokeapi,        // module name
@@ -36,18 +34,18 @@ py_class!(class PyMononokeClient |py| {
         host: &PyBytes,
         creds: Option<&PyBytes> = None
     ) -> PyResult<PyMononokeClient> {
-        let host = Uri::from_shared(host.data(py).into()).into_pyresult(py)?;
+        let host = Uri::from_shared(host.data(py).into()).map_pyerr::<exc::RuntimeError>(py)?;
         let creds = match creds {
-            Some(path) => Some(local_bytes_to_path(path.data(py)).into_pyresult(py)?),
+            Some(path) => Some(local_bytes_to_path(path.data(py)).map_pyerr::<exc::RuntimeError>(py)?),
             None => None,
         };
-        let client = MononokeClient::new(host, creds).into_pyresult(py)?;
+        let client = MononokeClient::new(host, creds).map_pyerr::<exc::RuntimeError>(py)?;
         PyMononokeClient::create_instance(py, client)
     }
 
     def health_check(&self) -> PyResult<PyObject> {
         self.client(py).health_check()
             .map(|()| py.None())
-            .into_pyresult(py)
+            .map_pyerr::<exc::RuntimeError>(py)
     }
 });
