@@ -7,7 +7,6 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include <gtest/gtest.h>
 #include <chrono>
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -18,6 +17,8 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GMock.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
 using namespace facebook::eden;
@@ -168,14 +169,32 @@ TEST(FuseTest, destroyWithInitRace) {
     // EdenMount was completely destroyed in this case.
   }
 
-  // The initFuture should complete successfully, since we know that
-  // FuseChannel sent the INIT response.
-  std::move(initFuture).get(250ms);
-  // The FUSE completion future should also be signalled when the FuseChannel
-  // is destroyed.
-  auto mountInfo = std::move(completionFuture).get(250ms);
-  // Since we just destroyed the EdenMount and the kernel-side of the FUSE
-  // channel was not stopped the returned MountInfo should contain the FUSE
-  // device.
-  EXPECT_TRUE(mountInfo.fuseFD);
+  // The EdenMount code will perform processing of the FUSE_INIT request in a
+  // separate thread.  It may or may not have finished processing initialization
+  // before we destroyed it.
+  //
+  // It performs more EdenMount initialization after sending the FUSE_INIT
+  // reply, so it my still have failed even though we saw the FUSE_INIT reply
+  // sent back to the kernel.
+  auto initFuseSuccessful = false;
+  try {
+    std::move(initFuture).get(250ms);
+    initFuseSuccessful = true;
+  } catch (const std::runtime_error& ex) {
+    EXPECT_THAT(
+        ex.what(),
+        ::testing::ContainsRegex(
+            "unable to transition mount .* to state RUNNING: "
+            "expected to be in state STARTING but actually in SHUT_DOWN"));
+  }
+
+  if (initFuseSuccessful) {
+    // The FUSE completion future should also be signalled when the FuseChannel
+    // is destroyed.
+    auto mountInfo = std::move(completionFuture).get(250ms);
+    // Since we just destroyed the EdenMount and the kernel-side of the FUSE
+    // channel was not stopped the returned MountInfo should contain the FUSE
+    // device.
+    EXPECT_TRUE(mountInfo.fuseFD);
+  }
 }

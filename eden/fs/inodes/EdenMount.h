@@ -469,6 +469,11 @@ class EdenMount {
 
   /**
    * Obtains a future that will complete once the fuse channel has wound down.
+   *
+   * This method may be called at any time, but the returned future will only be
+   * fulfilled if startFuse() completes successfully.  If startFuse() fails or
+   * is never called, the future returned by getFuseCompletionFuture() will
+   * never complete.
    */
   FOLLY_NODISCARD folly::Future<TakeoverData::MountInfo>
   getFuseCompletionFuture();
