@@ -37,11 +37,13 @@ function mononoke {
   "$MONONOKE_SERVER" "$@" --ca-pem "$TESTDIR/testcert.crt" \
   --private-key "$TESTDIR/testcert.key" \
   --cert "$TESTDIR/testcert.crt" \
+  --ssl-ticket-seeds "$TESTDIR/server.pem.seeds" \
   --debug \
-  --listening-host-port 127.0.0.1:"$MONONOKE_SOCKET" \
+  --listening-host-port "[::1]:$MONONOKE_SOCKET" \
   -P "$TESTTMP/mononoke-config" \
    --do-not-init-cachelib >> "$TESTTMP/mononoke.out" 2>&1 &
-  echo $! >> "$DAEMON_PIDS"
+  export MONONOKE_PID=$!
+  echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
 }
 
 # Wait until a Mononoke server is available for this repo.

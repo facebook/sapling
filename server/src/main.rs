@@ -76,6 +76,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             <cert>        --cert [PATH]                         'path to a file with certificate'
             <private_key> --private-key [PATH]                  'path to a file with private key'
             <ca_pem>      --ca-pem [PATH]                       'path to a file with CA certificate'
+            [ticket_seed] --ssl-ticket-seeds [PATH]             'path to a file with encryption keys for SSL tickets'
 
             -d, --debug                                          'print debug level output'
             --myrouter-port=[PORT]                               'port for local myrouter instance'
@@ -138,6 +139,10 @@ fn main() {
         let cert = matches.value_of("cert").unwrap().to_string();
         let private_key = matches.value_of("private_key").unwrap().to_string();
         let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
+        let ticket_seed = matches
+            .value_of("ssl-ticket-seeds")
+            .unwrap_or(secure_utils::fb_tls::SEED_PATH)
+            .to_string();
 
         let ssl = secure_utils::SslConfig {
             cert,
@@ -153,6 +158,15 @@ fn main() {
             None => None,
         };
 
+        let mut acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())
+            .expect("failed to build tls acceptor");
+        acceptor = secure_utils::fb_tls::tls_acceptor_builder(
+            root_log.clone(),
+            ssl.clone(),
+            acceptor,
+            ticket_seed,
+        ).expect("failed to build fb_tls acceptor");
+
         let (repo_listeners, ready) = repo_listener::create_repo_listeners(
             config.repos.into_iter(),
             myrouter_port,
@@ -160,7 +174,7 @@ fn main() {
             matches
                 .value_of("listening-host-port")
                 .expect("listening path must be specified"),
-            secure_utils::build_tls_acceptor(ssl).expect("failed to build tls acceptor"),
+            acceptor.build(),
             &TERMINATE_PROCESS,
         );
 

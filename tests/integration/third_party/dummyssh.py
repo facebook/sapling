@@ -10,7 +10,7 @@ os.chdir(os.getenv("TESTTMP"))
 if sys.argv[1] != "user@dummy":
     sys.exit(-1)
 
-os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get("LOCALIP", "127.0.0.1")
+os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get("LOCALIP", "[::1]")
 
 log = open("dummylog", "ab")
 log.write("Got arguments")
@@ -31,7 +31,7 @@ privatekey = os.path.join(os.getenv("TESTDIR"), "testcert.key")
 
 if "hgcli" in hgcmd:
     hgcmd += (
-        " --mononoke-path 127.0.0.1:"
+        " --mononoke-path [::1]:"
         + os.getenv("MONONOKE_SOCKET")
         + (" --cert %s --ca-pem %s --private-key %s --common-name localhost" % (cert, capem, privatekey))
     )
