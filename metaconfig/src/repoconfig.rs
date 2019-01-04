@@ -100,6 +100,9 @@ pub struct HookManagerParams {
 
     /// Weight limit for the hook manager result cache
     pub weightlimit: usize,
+
+    /// Wether to disable the acl checker or not (intended for testing purposes)
+    pub disable_acl_checker: bool,
 }
 
 impl Default for HookManagerParams {
@@ -107,6 +110,7 @@ impl Default for HookManagerParams {
         Self {
             entrylimit: 1024 * 1024,
             weightlimit: 100 * 1024 * 1024, // 100Mb
+            disable_acl_checker: false,
         }
     }
 }
@@ -497,6 +501,7 @@ impl RepoConfigs {
         let hook_manager_params = this.hook_manager_params.map(|params| HookManagerParams {
             entrylimit: params.entrylimit,
             weightlimit: params.weightlimit,
+            disable_acl_checker: params.disable_acl_checker,
         });
         let bookmarks = match this.bookmarks {
             Some(bookmarks) => Some(
@@ -686,6 +691,7 @@ mod test {
             [hook_manager_params]
             entrylimit=1234
             weightlimit=4321
+            disable_acl_checker=false
             [[remote_blobstore]]
             blobstore_id=0
             blobstore_type="manifold"
@@ -788,6 +794,7 @@ mod test {
                 hook_manager_params: Some(HookManagerParams {
                     entrylimit: 1234,
                     weightlimit: 4321,
+                    disable_acl_checker: false,
                 }),
                 bookmarks: Some(vec![
                     BookmarkParams {

@@ -124,6 +124,13 @@ fi
 rewritedates=false
 CONFIG
 
+cat >> repos/repo/server.toml <<CONFIG
+[hook_manager_params]
+entrylimit=1048576
+weightlimit=104857600
+disable_acl_checker=true
+CONFIG
+
 if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
   cat >> repos/repo/server.toml <<CONFIG
 [cache_warmup]
