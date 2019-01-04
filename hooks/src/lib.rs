@@ -125,12 +125,12 @@ impl HookManager {
             hook_manager_params.entrylimit,
             hook_manager_params.weightlimit,
         );
-        let reviewers_acl_checker = AclChecker::new(&Identity::from_groupname(
-            facebook::REVIEWERS_ACL_GROUP_NAME,
-        ));
 
         let reviewers_acl_checker = if !hook_manager_params.disable_acl_checker {
             // This can block, but not too big a deal as we create hook manager in server startup
+            let reviewers_acl_checker = AclChecker::new(&Identity::from_groupname(
+                facebook::REVIEWERS_ACL_GROUP_NAME,
+            ));
             let updated = reviewers_acl_checker.do_wait_updated(10000);
             if updated {
                 Some(reviewers_acl_checker)
