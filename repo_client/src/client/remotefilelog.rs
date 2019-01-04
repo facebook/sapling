@@ -9,7 +9,7 @@ use std::io::{Cursor, Write};
 use std::sync::Arc;
 
 use bytes::{Bytes, BytesMut};
-use futures::{stream, Future, IntoFuture, Stream, future::{ok, Either}};
+use futures::{stream, Future, IntoFuture, Stream, future::ok};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use pylz4;
 
@@ -19,7 +19,7 @@ use filenodes::FilenodeInfo;
 use context::CoreContext;
 use mercurial::file::File;
 use mercurial_types::{HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath,
-                      RepoPath, RevFlags, NULL_HASH};
+                      RepoPath, RevFlags, NULL_CSID, NULL_HASH};
 
 use metaconfig::LfsParams;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -254,35 +254,49 @@ fn get_file_history(
         move |(mut nodes, mut seen_nodes): (VecDeque<HgNodeHash>, HashSet<HgNodeHash>)| {
             let node = nodes.pop_front()?;
 
-            let fut = if let Some(filenode) = prefetched_history.get(&node) {
-                Either::A(Ok(filenode.clone()).into_future())
+            let filenode_fut = if let Some(filenode) = prefetched_history.get(&node) {
+                ok(filenode.clone()).left_future()
             } else {
-                Either::B(repo.get_filenode(ctx.clone(), &path, &node))
+                repo.get_filenode_opt(ctx.clone(), &path, &node)
+                    .and_then({
+                        cloned!(repo, ctx, path, node);
+                        move |filenode_opt| match filenode_opt {
+                            Some(filenode) => ok(filenode).left_future(),
+                            None => {
+                                // The filenode couldn't be found.  This may be because it is a
+                                // draft node, which doesn't get stored in the database.  Attempt
+                                // to reconstruct the filenode from the envelope.  Use `NULL_CSID`
+                                // to indicate a draft linknode.
+                                repo.get_filenode_from_envelope(ctx, &path, &node, &NULL_CSID)
+                                    .right_future()
+                            }
+                        }
+                    })
+                    .right_future()
             };
 
-            let fut = fut.and_then(move |filenode| {
+            let history = filenode_fut.and_then(move |filenode| {
                 let p1 = filenode.p1.map(|p| p.into_nodehash());
                 let p2 = filenode.p2.map(|p| p.into_nodehash());
                 let parents = HgParents::new(p1.as_ref(), p2.as_ref());
 
                 let linknode = filenode.linknode;
 
-                let copy = filenode
-                    .copyfrom
-                    .map(|(frompath, node)| (frompath, node.into_nodehash()));
-                let copy = match copy {
-                    Some((RepoPath::FilePath(copyto), rev)) => Some((copyto, rev)),
-                    Some((copyto, _)) => {
-                        return Err(ErrorKind::InconsistentCopyInfo(filenode.path, copyto).into())
+                let copyfrom = match filenode.copyfrom {
+                    Some((RepoPath::FilePath(frompath), node)) => {
+                        Some((frompath, node.into_nodehash()))
+                    }
+                    Some((frompath, _)) => {
+                        return Err(ErrorKind::InconsistentCopyInfo(filenode.path, frompath).into())
                     }
                     None => None,
                 };
 
                 nodes.extend(parents.into_iter().filter(|p| seen_nodes.insert(*p)));
-                Ok(((node, parents, linknode, copy), (nodes, seen_nodes)))
+                Ok(((node, parents, linknode, copyfrom), (nodes, seen_nodes)))
             });
 
-            Some(fut)
+            Some(history)
         },
     ).boxify()
 }

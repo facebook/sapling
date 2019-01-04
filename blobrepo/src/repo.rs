@@ -44,7 +44,7 @@ use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, 
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use delayblob::DelayBlob;
-use file::fetch_file_envelope;
+use file::{fetch_file_envelope, get_rename_from_envelope};
 use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ThriftManifoldBlob;
@@ -96,6 +96,7 @@ define_stats! {
     get_bonsai_from_hg: timeseries(RATE, SUM),
     update_bookmark_transaction: timeseries(RATE, SUM),
     get_linknode: timeseries(RATE, SUM),
+    get_linknode_opt: timeseries(RATE, SUM),
     get_all_filenodes: timeseries(RATE, SUM),
     get_generation_number: timeseries(RATE, SUM),
     get_generation_number_by_bonsai: timeseries(RATE, SUM),
@@ -966,16 +967,37 @@ impl BlobRepo {
         self.bookmarks.create_transaction(ctx, &self.repoid)
     }
 
+    pub fn get_linknode_opt(
+        &self,
+        ctx: CoreContext,
+        path: &RepoPath,
+        node: &HgNodeHash,
+    ) -> impl Future<Item = Option<HgChangesetId>, Error = Error> {
+        STATS::get_linknode_opt.add_value(1);
+        self.get_filenode_opt(ctx, path, node)
+            .map(|filenode_opt| filenode_opt.map(|filenode| filenode.linknode))
+    }
+
     pub fn get_linknode(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
         node: &HgNodeHash,
-    ) -> BoxFuture<HgChangesetId, Error> {
+    ) -> impl Future<Item = HgChangesetId, Error = Error> {
         STATS::get_linknode.add_value(1);
         self.get_filenode(ctx, path, node)
             .map(|filenode| filenode.linknode)
-            .boxify()
+    }
+
+    pub fn get_filenode_opt(
+        &self,
+        ctx: CoreContext,
+        path: &RepoPath,
+        node: &HgNodeHash,
+    ) -> impl Future<Item = Option<FilenodeInfo>, Error = Error> {
+        let path = path.clone();
+        let node = HgFileNodeId::new(*node);
+        self.filenodes.get_filenode(ctx, &path, &node, &self.repoid)
     }
 
     pub fn get_filenode(
@@ -983,15 +1005,55 @@ impl BlobRepo {
         ctx: CoreContext,
         path: &RepoPath,
         node: &HgNodeHash,
-    ) -> BoxFuture<FilenodeInfo, Error> {
-        let path = path.clone();
-        let node = HgFileNodeId::new(*node);
-        self.filenodes
-            .get_filenode(ctx, &path, &node, &self.repoid)
-            .and_then({
-                move |filenode| filenode.ok_or(ErrorKind::MissingFilenode(path, node).into())
+    ) -> impl Future<Item = FilenodeInfo, Error = Error> {
+        self.get_filenode_opt(ctx, path, node).and_then({
+            cloned!(path);
+            let node = HgFileNodeId::new(*node);
+            move |filenode| filenode.ok_or(ErrorKind::MissingFilenode(path, node).into())
+        })
+    }
+
+    pub fn get_filenode_from_envelope(
+        &self,
+        ctx: CoreContext,
+        path: &RepoPath,
+        node: &HgNodeHash,
+        linknode: &HgChangesetId,
+    ) -> impl Future<Item = FilenodeInfo, Error = Error> {
+        let store = self.get_blobstore();
+        fetch_file_envelope(ctx, &store, *node)
+            .with_context({
+                cloned!(path, node);
+                move |_| format!("While fetching filenode for {} {}", path, node)
             })
-            .boxify()
+            .from_err()
+            .and_then({
+                cloned!(path, node, linknode);
+                let filenode = HgFileNodeId::new(node);
+                move |envelope| {
+                    let (p1, p2) = {
+                        let (p1, p2) = envelope.parents();
+                        (
+                            p1.map(|p| HgFileNodeId::new(*p)),
+                            p2.map(|p| HgFileNodeId::new(*p)),
+                        )
+                    };
+                    let copyfrom = get_rename_from_envelope(envelope)
+                        .with_context({
+                            cloned!(path, node);
+                            move |_| format!("While parsing copy information for {} {}", path, node)
+                        })?
+                        .map(|(path, node)| (RepoPath::FilePath(path), HgFileNodeId::new(node)));
+                    Ok(FilenodeInfo {
+                        path,
+                        filenode,
+                        p1,
+                        p2,
+                        copyfrom,
+                        linknode,
+                    })
+                }
+            })
     }
 
     pub fn get_all_filenodes(

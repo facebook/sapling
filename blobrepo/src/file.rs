@@ -123,17 +123,7 @@ pub fn fetch_rename_from_blobstore(
     blobstore: &RepoBlobstore,
     node_id: HgNodeHash,
 ) -> impl Future<Item = Option<(MPath, HgNodeHash)>, Error = Error> {
-    fetch_file_envelope(ctx, blobstore, node_id).and_then(|envelope| {
-        let envelope = envelope.into_mut();
-
-        // This is a bit of a hack because metadata is not the complete file. However, it's
-        // equivalent to a zero-length file.
-        file::File::new(
-            envelope.metadata,
-            envelope.p1.as_ref(),
-            envelope.p2.as_ref(),
-        ).copied_from()
-    })
+    fetch_file_envelope(ctx, blobstore, node_id).and_then(get_rename_from_envelope)
 }
 
 pub fn fetch_file_envelope(
@@ -201,6 +191,20 @@ pub fn fetch_file_contents(
         })
         .with_context(|_| ErrorKind::FileContentsDeserializeFailed(blobstore_key))
         .from_err()
+}
+
+pub(crate) fn get_rename_from_envelope(
+    envelope: HgFileEnvelope,
+) -> Result<Option<(MPath, HgNodeHash)>, Error> {
+    let envelope = envelope.into_mut();
+
+    // This is a bit of a hack because metadata is not the complete file. However, it's
+    // equivalent to a zero-length file.
+    file::File::new(
+        envelope.metadata,
+        envelope.p1.as_ref(),
+        envelope.p2.as_ref(),
+    ).copied_from()
 }
 
 impl HgBlobEntry {

@@ -28,7 +28,7 @@ use bundle2_resolver;
 use context::CoreContext;
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2Item};
 use mercurial_types::{percent_encode, Entry, HgBlobNode, HgChangesetId, HgManifestId, HgNodeHash,
-                      MPath, RepoPath, Type, NULL_HASH};
+                      MPath, RepoPath, Type, NULL_CSID, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, CombinatorPruner,
                                       DeletedPruner, EntryStatus, FilePruner, Pruner,
                                       VisitedPruner};
@@ -1013,7 +1013,7 @@ fn fetch_treepack_part_input(
     );
 
     let linknode_fut =
-        repo.get_linknode(ctx.clone(), &repo_path, &entry.get_hash().into_nodehash())
+        repo.get_linknode_opt(ctx.clone(), &repo_path, &entry.get_hash().into_nodehash())
             .traced(
                 ctx.trace(),
                 "fetching linknode",
@@ -1072,7 +1072,7 @@ fn fetch_treepack_part_input(
         .join(content_fut)
         .join(validate_content)
         .map(|(val, ())| val)
-        .map(move |((parents, linknode), content)| {
+        .map(move |((parents, linknode_opt), content)| {
             let (p1, p2) = parents.get_nodes();
             parts::TreepackPartInput {
                 node: node.into_nodehash(),
@@ -1080,7 +1080,7 @@ fn fetch_treepack_part_input(
                 p2: p2.cloned(),
                 content,
                 name: entry.get_name().cloned(),
-                linknode: linknode.into_nodehash(),
+                linknode: linknode_opt.unwrap_or(NULL_CSID).into_nodehash(),
                 basepath,
             }
         })
