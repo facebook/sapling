@@ -24,7 +24,8 @@ use futures_stats::Timed;
 use getbundle_response;
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::{Details, ManifestContent};
-use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item};
+use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item,
+                        PartHeaderType};
 use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
                       NULL_HASH};
 use metaconfig::PushrebaseParams;
@@ -316,6 +317,7 @@ struct ChangegroupPush {
     filelogs: Filelogs,
     content_blobs: ContentBlobs,
     mparams: HashMap<String, Bytes>,
+    draft: bool,
 }
 
 struct CommonHeads {
@@ -490,6 +492,7 @@ impl Bundle2Resolver {
                 | Some(Bundle2Item::B2xInfinitepush(header, parts))
                 | Some(Bundle2Item::B2xRebase(header, parts)) => {
                     let part_id = header.part_id();
+                    let draft = *header.part_type() == PartHeaderType::B2xInfinitepush;
                     let (c, f) = split_changegroup(parts);
                     convert_to_revlog_changesets(c)
                         .collect()
@@ -518,6 +521,7 @@ impl Bundle2Resolver {
                                 filelogs,
                                 content_blobs,
                                 mparams: header.mparams().clone(),
+                                draft,
                             };
                             (Some(cg_push), bundle2)
                         })
@@ -650,6 +654,7 @@ impl Bundle2Resolver {
         let changesets = cg_push.changesets;
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
+        let draft = cg_push.draft;
 
         self.ctx
             .scuba()
@@ -674,6 +679,7 @@ impl Bundle2Resolver {
             filelogs: &Filelogs,
             manifests: &Manifests,
             content_blobs: &ContentBlobs,
+            draft: bool,
         ) -> BoxFuture<UploadedChangesets, Error> {
             let (p1, p2) = {
                 (
@@ -713,6 +719,7 @@ impl Bundle2Resolver {
                         // XXX pass content blobs to CreateChangeset here
                         cs_metadata,
                         must_check_case_conflicts: true,
+                        draft,
                     };
                     let scheduled_uploading = create_changeset.create(ctx, &repo, scuba_logger);
 
@@ -750,6 +757,7 @@ impl Bundle2Resolver {
                         &filelogs,
                         &manifests,
                         &content_blobs,
+                        draft,
                     )
                 },
             )

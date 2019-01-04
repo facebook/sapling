@@ -2180,6 +2180,8 @@ pub struct CreateChangeset {
     pub sub_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
     pub cs_metadata: ChangesetMetadata,
     pub must_check_case_conflicts: bool,
+    // draft changesets don't have their filenodes stored in the filenodes table
+    pub draft: bool,
 }
 
 impl CreateChangeset {
@@ -2199,6 +2201,7 @@ impl CreateChangeset {
             repo.blobstore.clone(),
             repo.repoid.clone(),
             scuba_logger.clone(),
+            self.draft,
         );
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
         let expected_nodeid = self.expected_nodeid;

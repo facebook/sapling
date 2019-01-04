@@ -128,6 +128,8 @@ struct UploadEntriesState {
     parents: HashSet<HgNodeKey>,
     blobstore: RepoBlobstore,
     repoid: RepositoryId,
+    /// Draft entries do not have their filenodes stored in the filenodes table.
+    draft: bool,
 }
 
 #[derive(Clone)]
@@ -141,6 +143,7 @@ impl UploadEntries {
         blobstore: RepoBlobstore,
         repoid: RepositoryId,
         scuba_logger: ScubaSampleBuilder,
+        draft: bool,
     ) -> Self {
         Self {
             scuba_logger,
@@ -150,6 +153,7 @@ impl UploadEntries {
                 parents: HashSet::new(),
                 blobstore,
                 repoid,
+                draft,
             })),
         }
     }
@@ -385,7 +389,7 @@ impl UploadEntries {
             })
         };
 
-        let filenodes = {
+        let upload_filenodes = {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
 
@@ -407,47 +411,53 @@ impl UploadEntries {
                 .add("filelogs_count", uploaded_filenodes_cnt)
                 .log_with_msg("Size of changeset", None);
 
-            let filenodeinfos =
-                stream::futures_unordered(uploaded_entries.into_iter().map(|(path, blobentry)| {
-                    blobentry.get_parents(ctx.clone()).and_then({
-                        cloned!(ctx);
-                        move |parents| {
-                            compute_copy_from_info(ctx, &path, &blobentry, &parents).map(
-                                move |copyfrom| {
-                                    let (p1, p2) = parents.get_nodes();
-                                    FilenodeInfo {
-                                        path,
-                                        filenode: HgFileNodeId::new(
-                                            blobentry.get_hash().into_nodehash(),
-                                        ),
-                                        p1: p1.cloned().map(HgFileNodeId::new),
-                                        p2: p2.cloned().map(HgFileNodeId::new),
-                                        copyfrom,
-                                        linknode: HgChangesetId::new(cs_id),
-                                    }
-                                },
-                            )
+            if inner.draft {
+                future::ok(()).left_future()
+            } else {
+                let filenodeinfos = stream::futures_unordered(uploaded_entries.into_iter().map(
+                    |(path, blobentry)| {
+                        blobentry.get_parents(ctx.clone()).and_then({
+                            cloned!(ctx);
+                            move |parents| {
+                                compute_copy_from_info(ctx, &path, &blobentry, &parents).map(
+                                    move |copyfrom| {
+                                        let (p1, p2) = parents.get_nodes();
+                                        FilenodeInfo {
+                                            path,
+                                            filenode: HgFileNodeId::new(
+                                                blobentry.get_hash().into_nodehash(),
+                                            ),
+                                            p1: p1.cloned().map(HgFileNodeId::new),
+                                            p2: p2.cloned().map(HgFileNodeId::new),
+                                            copyfrom,
+                                            linknode: HgChangesetId::new(cs_id),
+                                        }
+                                    },
+                                )
+                            }
+                        })
+                    },
+                )).boxify();
+
+                filenodes
+                    .add_filenodes(ctx, filenodeinfos, &inner.repoid)
+                    .timed({
+                        let mut scuba_logger = self.scuba_logger();
+                        move |stats, result| {
+                            if result.is_ok() {
+                                scuba_logger
+                                    .add_future_stats(&stats)
+                                    .log_with_msg("Upload filenodes", None);
+                            }
+                            Ok(())
                         }
                     })
-                })).boxify();
-
-            filenodes
-                .add_filenodes(ctx, filenodeinfos, &inner.repoid)
-                .timed({
-                    let mut scuba_logger = self.scuba_logger();
-                    move |stats, result| {
-                        if result.is_ok() {
-                            scuba_logger
-                                .add_future_stats(&stats)
-                                .log_with_msg("Upload filenodes", None);
-                        }
-                        Ok(())
-                    }
-                })
+                    .right_future()
+            }
         };
 
         parent_checks
-            .join3(required_checks, filenodes)
+            .join3(required_checks, upload_filenodes)
             .map(|_| ())
             .boxify()
     }

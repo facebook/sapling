@@ -332,6 +332,8 @@ impl UploadChangesets {
                     cs_metadata,
                     // Repositories can contain case conflicts - we still need to import them
                     must_check_case_conflicts: false,
+                    // Blobimported commits are always public
+                    draft: false,
                 };
                 let cshandle =
                     create_changeset.create(ctx.clone(), &blobrepo, ScubaSampleBuilder::with_discard());
