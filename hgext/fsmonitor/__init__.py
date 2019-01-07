@@ -945,38 +945,47 @@ def reposetup(ui, repo):
             )
             return
 
-    if repo.local():
-        # We don't work with subrepos either.
-        #
-        # if repo[None].substate can cause a dirstate parse, which is too
-        # slow. Instead, look for a file called hgsubstate,
-        if repo.wvfs.exists(".hgsubstate") or repo.wvfs.exists(".hgsub"):
-            return
+    # We only work with local repositories
+    if not repo.local():
+        return
 
-        fsmonitorstate = state.state(repo)
-        if fsmonitorstate.mode == "off":
-            return
+    # For Eden-backed repositories the eden extension already handles optimizing
+    # dirstate operations.  Let the eden extension manage the dirstate in this case.
+    if "eden" in repo.requirements:
+        return
 
-        try:
-            watchmanclient.createclientforrepo(repo)
-        except Exception as ex:
-            _handleunavailable(ui, fsmonitorstate, ex)
-            return
+    # We don't work with subrepos either.
+    #
+    # if repo[None].substate can cause a dirstate parse, which is too
+    # slow. Instead, look for a file called hgsubstate,
+    if repo.wvfs.exists(".hgsubstate") or repo.wvfs.exists(".hgsub"):
+        return
 
-        repo._fsmonitorstate = fsmonitorstate
+    # Check if fsmonitor is explicitly disabled for this repository
+    fsmonitorstate = state.state(repo)
+    if fsmonitorstate.mode == "off":
+        return
 
-        dirstate, cached = localrepo.isfilecached(repo, "dirstate")
-        if cached:
-            # at this point since fsmonitorstate wasn't present,
-            # repo.dirstate is not a fsmonitordirstate
-            makedirstate(repo, dirstate)
+    try:
+        watchmanclient.createclientforrepo(repo)
+    except Exception as ex:
+        _handleunavailable(ui, fsmonitorstate, ex)
+        return
 
-        class fsmonitorrepo(repo.__class__):
-            def status(self, *args, **kwargs):
-                orig = super(fsmonitorrepo, self).status
-                return overridestatus(orig, self, *args, **kwargs)
+    repo._fsmonitorstate = fsmonitorstate
 
-        repo.__class__ = fsmonitorrepo
+    dirstate, cached = localrepo.isfilecached(repo, "dirstate")
+    if cached:
+        # at this point since fsmonitorstate wasn't present,
+        # repo.dirstate is not a fsmonitordirstate
+        makedirstate(repo, dirstate)
+
+    class fsmonitorrepo(repo.__class__):
+        def status(self, *args, **kwargs):
+            orig = super(fsmonitorrepo, self).status
+            return overridestatus(orig, self, *args, **kwargs)
+
+    repo.__class__ = fsmonitorrepo
 
 
 @command("debugrefreshwatchmanclock")
