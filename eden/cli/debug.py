@@ -885,7 +885,8 @@ class DebugJournalCmd(Subcmd):
             raw_journal = client.debugGetRawJournal(params)
             if args.pattern:
                 flags = re.IGNORECASE if args.ignore_case else 0
-                pattern: Optional[Pattern] = re.compile(args.pattern, flags)
+                bytes_pattern = args.pattern.encode("utf-8")
+                pattern: Optional[Pattern[bytes]] = re.compile(bytes_pattern, flags)
             else:
                 pattern = None
             # debugGetRawJournal() returns the most recent entries first, but
@@ -897,7 +898,7 @@ class DebugJournalCmd(Subcmd):
 
 
 def print_raw_journal_deltas(
-    deltas: Iterator[DebugJournalDelta], pattern: Optional[Pattern]
+    deltas: Iterator[DebugJournalDelta], pattern: Optional[Pattern[bytes]]
 ) -> None:
     matcher: Callable[[bytes], bool] = (lambda x: True) if pattern is None else cast(
         Any, pattern.match
