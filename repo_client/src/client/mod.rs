@@ -80,9 +80,14 @@ fn format_nodes_list(nodes: &Vec<HgNodeHash>) -> String {
     nodes.iter().map(|node| format!("{}", node)).join(" ")
 }
 
-fn format_utf8_bytes_list<T: AsRef<[u8]>>(entries: &Vec<T>) -> String {
+// Generic for HashSet, Vec, etc...
+fn format_utf8_bytes_list<T, C>(entries: C) -> String
+where
+    T: AsRef<[u8]>,
+    C: IntoIterator<Item = T>,
+{
     entries
-        .iter()
+        .into_iter()
         .map(|entry| String::from_utf8_lossy(entry.as_ref()).into_owned())
         .join(",")
 }

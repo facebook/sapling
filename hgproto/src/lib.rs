@@ -142,7 +142,7 @@ pub struct GetbundleArgs {
     /// List of space-delimited hex nodes that the client has in common with the server
     pub common: Vec<HgNodeHash>,
     /// Comma-delimited set of strings defining client bundle capabilities.
-    pub bundlecaps: Vec<Vec<u8>>,
+    pub bundlecaps: HashSet<Vec<u8>>,
     /// Comma-delimited list of strings of ``pushkey`` namespaces. For each namespace listed, a bundle2 part will be included with the content of that namespace.
     pub listkeys: Vec<Vec<u8>>,
     /// phases: Boolean indicating whether phases data is requested
@@ -151,7 +151,7 @@ pub struct GetbundleArgs {
 
 impl Debug for GetbundleArgs {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let bcaps: Vec<_> = self.bundlecaps
+        let bcaps: HashSet<_> = self.bundlecaps
             .iter()
             .map(|s| String::from_utf8_lossy(&s))
             .collect();

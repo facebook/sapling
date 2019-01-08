@@ -516,7 +516,7 @@ fn parse_with_params(
                 // If those params are needed, they should be parsed here.
                 heads: parseval_default(&kv, "heads", hashlist)?,
                 common: parseval_default(&kv, "common", hashlist)?,
-                bundlecaps: parseval_default(&kv, "bundlecaps", commavalues)?,
+                bundlecaps: parseval_default(&kv, "bundlecaps", commavalues)?.into_iter().collect(),
                 listkeys: parseval_default(&kv, "listkeys", commavalues)?,
                 phases: parseval_default(&kv, "phases", boolean)?,
             })))
@@ -1214,7 +1214,7 @@ mod test_parse {
             Request::Single(SingleRequest::Getbundle(GetbundleArgs {
                 heads: vec![],
                 common: vec![],
-                bundlecaps: vec![],
+                bundlecaps: hashset![],
                 listkeys: vec![],
                 phases: false,
             })),
@@ -1241,7 +1241,7 @@ mod test_parse {
             Request::Single(SingleRequest::Getbundle(GetbundleArgs {
                 heads: vec![hash_ones()],
                 common: vec![hash_twos(), hash_threes()],
-                bundlecaps: vec![b"cap1".to_vec(), b"CAP2".to_vec(), b"cap3".to_vec()],
+                bundlecaps: hashset![b"cap1".to_vec(), b"CAP2".to_vec(), b"cap3".to_vec()],
                 listkeys: vec![b"key1".to_vec(), b"key2".to_vec()],
                 phases: true,
             })),
