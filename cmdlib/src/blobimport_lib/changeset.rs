@@ -18,6 +18,7 @@ use futures::sync::{mpsc, oneshot};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;
+use tracing::{trace_args, EventId, Traced};
 
 use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobChangeset,
                HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
@@ -242,6 +243,8 @@ impl UploadChangesets {
         let is_import_from_beggining = changeset.is_none() && skip.is_none();
         let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
 
+        let event_id = EventId::new();
+
         changesets
             .and_then({
                 cloned!(ctx, revlogrepo, blobrepo);
@@ -289,6 +292,7 @@ impl UploadChangesets {
                     revlogcs
                         .join3(rootmf, entries.collect())
                         .map(move |(cs, rootmf, entries)| (csid, cs, rootmf, entries))
+                        .traced_with_id(&ctx.trace(), "parse changeset from revlog", trace_args!(), event_id)
                 }
             })
             .map(move |(csid, cs, rootmf, entries)| {

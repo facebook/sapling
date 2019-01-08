@@ -6,18 +6,23 @@
 
 use std::cmp::min;
 use std::fs;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Result, ResultExt};
+use futures::{Future, IntoFuture};
+use futures_ext::FutureExt;
 use panichandler::{self, Fate};
+use scuba_ext::ScubaSampleBuilder;
 use slog::{Drain, Logger};
 use sloggers::Build;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::{Format, Severity, SourceLocation};
+use tracing::TraceContext;
+use upload_trace::{UploadTrace, manifold_thrift::thrift::RequestContext};
+use uuid::Uuid;
 
 use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
@@ -212,6 +217,48 @@ pub fn get_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
         }
         _other => unreachable!("unknown log style"),
     }
+}
+
+pub fn get_core_context<'a>(matches: &ArgMatches<'a>) -> CoreContext {
+    let session_uuid = Uuid::new_v4();
+    let trace = TraceContext::new(session_uuid, Instant::now());
+    let logger = get_logger(&matches);
+
+    CoreContext::new(
+        session_uuid,
+        logger.clone(),
+        ScubaSampleBuilder::with_discard(),
+        None,
+        trace.clone(),
+    )
+}
+
+pub fn upload_and_show_trace(ctx: CoreContext) -> impl Future<Item = (), Error = !> {
+    if !ctx.trace().is_enabled() {
+        debug!(ctx.logger(), "Trace is disabled");
+        return Ok(()).into_future().left_future();
+    }
+
+    let rc = RequestContext {
+        bucketName: "mononoke_prod".into(),
+        apiKey: "".into(),
+        ..Default::default()
+    };
+
+    ctx.trace()
+        .upload_to_manifold(rc)
+        .then(move |upload_res| {
+            match upload_res {
+                Err(err) => debug!(ctx.logger(), "Failed to upload trace: {:#?}", err),
+                Ok(()) => debug!(
+                    ctx.logger(),
+                    "Trace taken: https://our.intern.facebook.com/intern/mononoke/trace/{}",
+                    ctx.trace().id()
+                ),
+            }
+            Ok(())
+        })
+        .right_future()
 }
 
 pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {

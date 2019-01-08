@@ -30,6 +30,7 @@ extern crate serde_json;
 extern crate slog;
 #[macro_use]
 extern crate stats;
+extern crate tracing;
 extern crate uuid;
 
 extern crate heapsize;

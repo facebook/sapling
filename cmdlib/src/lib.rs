@@ -7,6 +7,7 @@
 //! Scaffolding that's generally useful to build CLI tools on top of Mononoke.
 
 #![deny(warnings)]
+#![feature(never_type)]
 
 extern crate ascii;
 extern crate bytes;
@@ -23,6 +24,9 @@ extern crate futures_ext;
 extern crate slog;
 extern crate sloggers;
 extern crate tokio;
+extern crate tracing;
+extern crate upload_trace;
+extern crate uuid;
 
 extern crate slog_glog_fmt;
 

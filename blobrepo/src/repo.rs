@@ -26,6 +26,7 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{Discard, Drain, Logger};
 use stats::Timeseries;
 use time_ext::DurationExt;
+use tracing::{trace_args, EventId, Traced};
 use uuid::Uuid;
 
 use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
@@ -2196,6 +2197,7 @@ impl CreateChangeset {
         // the final commit hash
         let uuid = Uuid::new_v4();
         scuba_logger.add("changeset_uuid", format!("{}", uuid));
+        let event_id = EventId::new();
 
         let entry_processor = UploadEntries::new(
             repo.blobstore.clone(),
@@ -2212,11 +2214,18 @@ impl CreateChangeset {
             &entry_processor,
             self.root_manifest,
             self.sub_entries,
-        ).context("While processing entries");
+        ).context("While processing entries")
+            .traced_with_id(&ctx.trace(), "uploading entries", trace_args!(), event_id);
 
         let parents_complete = extract_parents_complete(&self.p1, &self.p2);
         let parents_data = handle_parents(scuba_logger.clone(), self.p1, self.p2)
-            .context("While waiting for parents to upload data");
+            .context("While waiting for parents to upload data")
+            .traced_with_id(
+                &ctx.trace(),
+                "waiting for parents data",
+                trace_args!(),
+                event_id,
+            );
         let must_check_case_conflicts = self.must_check_case_conflicts.clone();
         let changeset = {
             let mut scuba_logger = scuba_logger.clone();
@@ -2291,6 +2300,7 @@ impl CreateChangeset {
                         changesets
                             .context("While computing changed files")
                             .and_then({
+                                cloned!(ctx);
                                 move |(blobcs, bonsai_cs)| {
                                     let fut: BoxFuture<
                                         (HgBlobChangeset, BonsaiChangeset),
@@ -2355,6 +2365,12 @@ impl CreateChangeset {
                                     )
                                 }
                             })
+                            .traced_with_id(
+                                &ctx.trace(),
+                                "uploading changeset",
+                                trace_args!(),
+                                event_id,
+                            )
                             .from_err()
                     }
                 })
@@ -2370,6 +2386,12 @@ impl CreateChangeset {
 
         let parents_complete = parents_complete
             .context("While waiting for parents to complete")
+            .traced_with_id(
+                &ctx.trace(),
+                "waiting for parents complete",
+                trace_args!(),
+                event_id,
+            )
             .timed({
                 let mut scuba_logger = scuba_logger.clone();
                 move |stats, result| {
@@ -2399,9 +2421,15 @@ impl CreateChangeset {
                         };
 
                         bonsai_hg_mapping
-                            .add(ctx, bonsai_hg_entry)
+                            .add(ctx.clone(), bonsai_hg_entry)
                             .map(move |_| (hg_cs, bonsai_cs))
                             .context("While inserting mapping")
+                            .traced_with_id(
+                                &ctx.trace(),
+                                "uploading bonsai hg mapping",
+                                trace_args!(),
+                                event_id,
+                            )
                     }
                 })
                 .and_then(move |(hg_cs, bonsai_cs)| {
@@ -2418,7 +2446,7 @@ impl CreateChangeset {
                     complete_changesets
                         .add(ctx.clone(), completion_record)
                         .and_then({
-                            cloned!(repo);
+                            cloned!(ctx, repo);
                             move |_| {
                                 repo.get_generation_number_by_bonsai(ctx, pc.get_changeset_id())
                                     .map(move |gen| {
@@ -2431,6 +2459,12 @@ impl CreateChangeset {
                         })
                         .map(|_| (bonsai_cs, hg_cs))
                         .context("While inserting into changeset table")
+                        .traced_with_id(
+                            &ctx.trace(),
+                            "uploading final changeset",
+                            trace_args!(),
+                            event_id,
+                        )
                 })
                 .with_context(move |_| {
                     format!(

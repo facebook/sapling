@@ -7,22 +7,24 @@
 #![deny(warnings)]
 
 extern crate clap;
+extern crate cloned;
 extern crate cmdlib;
-extern crate context;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate mercurial_types;
 #[macro_use]
 extern crate slog;
 extern crate tokio;
+extern crate tracing;
 
 use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::{App, Arg};
-use context::CoreContext;
+use cloned::cloned;
 use failure::{Result, SlogKVError};
 use futures::Future;
+use tracing::{trace_args, Traced};
 
 use cmdlib::{args, blobimport_lib::Blobimport};
 use mercurial_types::HgNodeHash;
@@ -58,11 +60,10 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
-    let ctx = CoreContext::test_mock();
-    let logger = args::get_logger(&matches);
+    let ctx = args::get_core_context(&matches);
 
     args::init_cachelib(&matches);
-    let repo = args::create_repo(ctx, &logger, &matches)?;
+    let repo = args::create_repo(ctx.clone(), &ctx.logger(), &matches)?;
     let blobrepo = Arc::new(repo.blobrepo().clone());
 
     let revlogrepo_path = matches
@@ -90,9 +91,8 @@ fn main() -> Result<()> {
     let no_bookmark = matches.is_present("no-bookmark");
 
     let blobimport = Blobimport {
-        // TODO(T37478150, luk) this is not a test use case, but I want to fix it properly later
-        ctx: CoreContext::test_mock(),
-        logger: logger.clone(),
+        ctx: ctx.clone(),
+        logger: ctx.logger().clone(),
         blobrepo,
         revlogrepo_path,
         changeset,
@@ -100,10 +100,15 @@ fn main() -> Result<()> {
         commits_limit,
         no_bookmark,
     }.import()
-        .map_err(move |err| {
-            error!(logger, "error while blobimporting"; SlogKVError(err));
-            ::std::process::exit(1);
-        });
+        .traced(ctx.trace(), "blobimport", trace_args!())
+        .map_err({
+            cloned!(ctx);
+            move |err| {
+                error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
+                ::std::process::exit(1);
+            }
+        })
+        .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result));
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     let result = runtime.block_on(blobimport);
