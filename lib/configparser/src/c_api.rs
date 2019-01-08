@@ -6,7 +6,6 @@
 //! This module exports some symbols to allow calling the config parser from C/C++
 use bytes::Bytes;
 use std::ffi::{CStr, OsStr};
-use std::fmt::Write;
 use std::os::raw::c_char;
 use std::path::Path;
 use std::ptr;
@@ -44,7 +43,7 @@ fn errors_to_bytes(errors: Vec<Error>) -> *mut Bytes {
         if idx > 0 {
             error_text.push_str("\n");
         }
-        write!(&mut error_text, "{}", err);
+        error_text.push_str(&err.to_string());
     }
 
     Box::into_raw(Box::new(error_text.into()))
