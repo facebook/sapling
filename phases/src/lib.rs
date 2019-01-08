@@ -15,7 +15,6 @@ extern crate futures;
 extern crate futures_ext;
 extern crate iobuf;
 extern crate memcache;
-#[cfg(test)]
 extern crate mercurial_types;
 extern crate mononoke_types;
 extern crate reachabilityindex;
@@ -43,6 +42,7 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use std::{fmt, str};
 use std::sync::Arc;
@@ -58,6 +58,15 @@ type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
 pub enum Phase {
     Draft,
     Public,
+}
+
+impl From<Phase> for HgPhase {
+    fn from(phase: Phase) -> HgPhase {
+        match phase {
+            Phase::Public => HgPhase::Public,
+            Phase::Draft => HgPhase::Draft,
+        }
+    }
 }
 
 impl fmt::Display for Phase {

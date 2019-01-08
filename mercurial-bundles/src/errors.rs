@@ -23,6 +23,7 @@ pub enum ErrorKind {
     #[fail(display = "unknown params for bundle2 part '{:?}': {:?}", _0, _1)]
     BundleUnknownPartParams(PartHeaderType, Vec<String>),
     #[fail(display = "error while generating listkey part")] ListkeyGeneration,
+    #[fail(display = "error while generating phase-heads part")] PhaseHeadsGeneration,
 }
 
 impl ErrorKind {

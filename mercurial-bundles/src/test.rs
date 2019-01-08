@@ -11,6 +11,7 @@ use std::io::{BufRead, BufReader, Cursor};
 use std::iter::Iterator;
 use std::str::FromStr;
 
+use futures::stream;
 use futures::stream::Stream;
 use futures_ext::BoxStream;
 use tokio::runtime::Runtime;
@@ -18,8 +19,9 @@ use tokio_io::AsyncRead;
 
 use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
 use async_compression::membuf::MemBuf;
-use mercurial_types::{HgNodeHash, MPath, RepoPath, NULL_HASH};
+use mercurial_types::{HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
+use parts::phases_part;
 use quickcheck::{QuickCheck, StdGen};
 use quickcheck::rand;
 
@@ -46,6 +48,18 @@ const MANIFEST1_HASH_STR: &str = "afcff2144f55cfa5d9b04ac4ed6598f26035aa77";
 const MANIFEST2_HASH_STR: &str = "aa93dc3435cbfecd0c4c245b80b2a0b9ed35a015";
 const ABC_HASH_STR: &str = "b80de5d138758541c5f05265ad144ab9fa86d1db";
 const DEF_HASH_STR: &str = "bb969a19e8853962b4347bea4c24796324f10d8b";
+
+#[derive(PartialEq)]
+struct ByteBuf<'a>(&'a [u8]);
+
+impl<'a> Debug for ByteBuf<'a> {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        for byte in self.0 {
+            fmt.write_fmt(format_args!(r"\x{:02x}", byte))?;
+        }
+        Ok(())
+    }
+}
 
 #[test]
 fn test_parse_bzip2() {
@@ -135,6 +149,42 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
 
     let (item, _stream) = runtime.block_on(stream.into_future()).unwrap();
     assert!(item.is_none());
+}
+
+#[test]
+fn test_phases_part_encording() {
+    let phases_entries = stream::iter_ok(vec![
+        (
+            HgNodeHash::from_bytes(b"bbbbbbbbbbbbbbbbbbbb").unwrap(),
+            HgPhase::Public,
+        ),
+        (
+            HgNodeHash::from_bytes(b"cccccccccccccccccccc").unwrap(),
+            HgPhase::Public,
+        ),
+        (
+            HgNodeHash::from_bytes(b"aaaaaaaaaaaaaaaaaaaa").unwrap(),
+            HgPhase::Draft,
+        ),
+    ]);
+
+    let cursor = Cursor::new(Vec::new());
+    let mut builder = Bundle2EncodeBuilder::new(cursor);
+    builder.set_compressor_type(None);
+
+    let part = phases_part(phases_entries).unwrap();
+    builder.add_part(part);
+
+    let mut cursor = Runtime::new().unwrap().block_on(builder.build()).unwrap();
+    cursor.set_position(0);
+    let buf = cursor.fill_buf().unwrap();
+
+    let res = b"HG20\x00\x00\x00\x0eCompression\x3dUN\x00\x00\x00\x12\x0bPHASE-HEADS\x00\x00\x00\x00\x00\x00\x00\x00\x00H\x00\x00\x00\x00bbbbbbbbbbbbbbbbbbbb\x00\x00\x00\x00cccccccccccccccccccc\x00\x00\x00\x01aaaaaaaaaaaaaaaaaaaa\x00\x00\x00\x00\x00\x00\x00\x00";
+    assert_eq!(
+        ByteBuf(buf),
+        ByteBuf(res),
+        "Compare phase-heads bundle2 part encoding against binary representation from mercurial"
+    );
 }
 
 #[test]

@@ -98,6 +98,7 @@ pub mod blobnode;
 pub mod changeset;
 pub mod sql_types;
 pub mod flags;
+pub mod phase;
 mod node;
 mod envelope;
 
@@ -113,6 +114,7 @@ pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
 pub use nodehash::{HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey,
                    NULL_CSID, NULL_HASH};
+pub use phase::HgPhase;
 pub use utils::percent_encode;
 
 // Re-exports from mononoke-types. Eventually these should go away and everything should depend

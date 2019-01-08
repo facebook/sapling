@@ -53,6 +53,10 @@ pub enum PartHeaderType {
     ReplyPushkey,
     /// Contains parameters that can be used by hooks
     Pushvars,
+    /// Contains phase heads part
+    /// Used in communicating phases between Mononoke and clients
+    /// Pushkey / Listkeys are not used to communicate phases
+    PhaseHeads,
     // RemoteChangegroup,       // We don't wish to support this functionality
     // CheckBookmarks,          // TODO Do we want to support this?
     // CheckHeads,              // TODO Do we want to support this?
@@ -65,7 +69,6 @@ pub enum PartHeaderType {
     // ErrorPushRaced,          // TODO Do we want to support this?
     // Pushkey,                 // TODO Do we want to support this?
     // Bookmarks,               // TODO Do we want to support this?
-    // PhaseHeads,              // TODO Do we want to support this?
     // ReplyPushkey,            // TODO Do we want to support this?
     // Obsmarkers,              // TODO Do we want to support this?
     // ReplyObsmarkers,         // TODO Do we want to support this?
@@ -90,6 +93,7 @@ impl PartHeaderType {
             "pushkey" => Ok(Pushkey),
             "reply:pushkey" => Ok(ReplyPushkey),
             "pushvars" => Ok(Pushvars),
+            "phase-heads" => Ok(PhaseHeads),
             bad => bail_msg!("unknown header type {}", bad),
         }
     }
@@ -111,6 +115,7 @@ impl PartHeaderType {
             Pushkey => "pushkey",
             Pushvars => "pushvars",
             ReplyPushkey => "reply:pushkey",
+            PhaseHeads => "phase-heads",
         }
     }
 }

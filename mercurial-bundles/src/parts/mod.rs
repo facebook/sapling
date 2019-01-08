@@ -6,11 +6,13 @@
 
 use std::fmt;
 
+use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes;
 use failure::prelude::*;
 use futures::{Future, Stream};
 use futures::stream::{iter_ok, once};
 use futures_ext::BoxFuture;
+use std::io::Write;
 
 use super::changegroup::{CgDeltaChunk, Part, Section};
 use super::changegroup::packer::CgPacker;
@@ -18,7 +20,8 @@ use super::wirepack;
 use super::wirepack::packer::WirePackPacker;
 
 use errors::*;
-use mercurial_types::{Delta, HgBlobNode, HgNodeHash, MPath, MPathElement, RepoPath, NULL_HASH};
+use mercurial_types::{Delta, HgBlobNode, HgNodeHash, HgPhase, MPath, MPathElement, RepoPath,
+                      NULL_HASH};
 use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderType;
 
@@ -45,6 +48,23 @@ where
 
     builder.set_data_future(fut);
 
+    Ok(builder)
+}
+
+pub fn phases_part<S>(phases_entries: S) -> Result<PartEncodeBuilder>
+where
+    S: Stream<Item = (HgNodeHash, HgPhase), Error = Error> + Send + 'static,
+{
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::PhaseHeads)?;
+    let payload = Vec::with_capacity(1024);
+    let fut = phases_entries
+        .fold(payload, |mut payload, (value, phase)| {
+            payload.write_u32::<BigEndian>(phase as u32)?;
+            payload.write(value.as_ref())?;
+            Ok::<_, Error>(payload)
+        })
+        .map_err(|err| Error::from(err.chain_err(ErrorKind::PhaseHeadsGeneration)));
+    builder.set_data_future(fut);
     Ok(builder)
 }
 
