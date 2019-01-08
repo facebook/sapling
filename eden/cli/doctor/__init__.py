@@ -9,7 +9,7 @@
 
 import os
 from textwrap import dedent
-from typing import List, Optional, Set
+from typing import List, Optional
 
 from eden.cli import config as config_mod, filesystem, mtab, process_finder, ui, version
 from eden.cli.config import EdenInstance
@@ -20,6 +20,7 @@ from . import (
     check_os,
     check_rogue_edenfs,
     check_stale_mounts,
+    check_using_nfs,
     check_watchman,
 )
 from .problem import (
@@ -173,6 +174,9 @@ def run_normal_checks(
 
         out.writeln(f"Checking {mount_path}")
         client_info = instance.get_client_info(mount_path)
+        check_using_nfs.check_using_nfs_path(
+            tracker, mount_path, client_info["client-dir"]
+        )
         check_watchman.check_active_mount(tracker, mount_path, watchman_info)
         check_bind_mounts.check_bind_mounts(
             tracker, mount_path, instance, client_info, mount_table, fs_util

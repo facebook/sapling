@@ -12,12 +12,14 @@ import collections
 import errno
 import io
 import os
+import re
 import stat
 import subprocess
 import typing
 import unittest
 from pathlib import Path
 from textwrap import dedent
+from types import SimpleNamespace
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Set, Tuple, Union
 from unittest.mock import call, patch
 
@@ -2597,3 +2599,144 @@ class OperatingSystemsCheckTest(DoctorTestBase):
                     typing.cast(EdenInstance, self.instance), bad_release
                 )
                 self.assertTrue(result)
+
+
+class NfsTest(DoctorTestBase):
+    @patch("eden.cli.doctor.check_using_nfs.is_nfs_mounted")
+    def test_nfs_mounted(self, mock_is_nfs_mounted):
+        mock_is_nfs_mounted.return_value = True
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        mount_dir = "mount_dir"
+        client_path = instance.create_test_mount(mount_dir)
+
+        dry_run = True
+        out = TestOutput()
+        exit_code = doctor.cure_what_ails_you(
+            instance,
+            dry_run,
+            instance.mount_table,
+            fs_util=filesystem.LinuxFsUtil(),
+            process_finder=FakeProcessFinder(),
+            out=out,
+        )
+        expected = unwrap(
+            f"""\
+            Checking {client_path}
+            <yellow>- Found problem:<reset>
+            /{mount_dir} which is used for mounting {client_path} is on a \\
+                NFS filesystem. Accessing files and directories in this \\
+                repository will be slow.
+            <yellow>Discovered 1 problem during --dry-run<reset>
+            """
+        )
+        self.assertEqual(expected, out.getvalue())
+        self.assertEqual(1, exit_code)
+
+    @patch("pathlib.Path.read_text")
+    @patch("eden.cli.doctor.check_using_nfs.is_nfs_mounted")
+    def test_no_nfs(self, mock_is_nfs_mounted, mock_path_read_text):
+        mock_is_nfs_mounted.side_effect = [False, False]
+        v = self.run_varying_nfs(mock_path_read_text)
+        out = unwrap(
+            f"""\
+            Checking {v.client_path}
+            <green>No issues detected.<reset>
+            """
+        )
+        self.assertEqual(mock_is_nfs_mounted.call_count, 2)
+        self.assertEqual(out, v.stdout)
+        self.assertEqual(0, v.exit_code)
+
+    @patch("pathlib.Path.read_text")
+    @patch("eden.cli.doctor.check_using_nfs.is_nfs_mounted")
+    def test_nfs_on_client_path(self, mock_is_nfs_mounted, mock_path_read_text):
+        mock_is_nfs_mounted.side_effect = [True, False]
+        v = self.run_varying_nfs(mock_path_read_text)
+        out = unwrap(
+            f"""\
+            Checking {v.client_path}
+            <yellow>- Found problem:<reset>
+            /{v.mount_dir} which is used for mounting {v.client_path} is on a \\
+                NFS filesystem. Accessing files and directories in this \\
+                repository will be slow.
+            <yellow>Discovered 1 problem during --dry-run<reset>
+            """
+        )
+        self.assertEqual(mock_is_nfs_mounted.call_count, 2)
+        self.assertEqual(out, v.stdout)
+        self.assertEqual(1, v.exit_code)
+
+    @patch("pathlib.Path.read_text")
+    @patch("eden.cli.doctor.check_using_nfs.is_nfs_mounted")
+    def test_nfs_on_shared_path(self, mock_is_nfs_mounted, mock_path_read_text):
+        mock_is_nfs_mounted.side_effect = [False, True]
+        v = self.run_varying_nfs(mock_path_read_text)
+        out = unwrap(
+            f"""\
+            Checking {v.client_path}
+            <yellow>- Found problem:<reset>
+            The Mercurial data directory for {v.client_path}/.hg/sharedpath \\
+            is at {v.shared_path} which is on a NFS filesystem. \\
+            Accessing files and directories in this repository will be slow.
+            <yellow>Discovered 1 problem during --dry-run<reset>
+            """
+        )
+        self.assertEqual(mock_is_nfs_mounted.call_count, 2)
+        self.assertEqual(out, v.stdout)
+        self.assertEqual(1, v.exit_code)
+
+    @patch("pathlib.Path.read_text")
+    @patch("eden.cli.doctor.check_using_nfs.is_nfs_mounted")
+    def test_nfs_on_client_path_and_shared_path(
+        self, mock_is_nfs_mounted, mock_path_read_text
+    ):
+        mock_is_nfs_mounted.side_effect = [True, True]
+        v = self.run_varying_nfs(mock_path_read_text)
+        out = unwrap(
+            f"""\
+            Checking {v.client_path}
+            <yellow>- Found problem:<reset>
+            /{v.mount_dir} which is used for mounting {v.client_path} is on a \\
+                NFS filesystem. Accessing files and directories in this \\
+                repository will be slow.
+            <yellow>- Found problem:<reset>
+            The Mercurial data directory for {v.client_path}/.hg/sharedpath \\
+            is at {v.shared_path} which is on a NFS filesystem. \\
+            Accessing files and directories in this repository will be slow.
+            <yellow>Discovered 2 problems during --dry-run<reset>
+            """
+        )
+        self.assertEqual(mock_is_nfs_mounted.call_count, 2)
+        self.assertEqual(out, v.stdout)
+        self.assertEqual(1, v.exit_code)
+
+    def run_varying_nfs(self, mock_path_read_text):
+        v = SimpleNamespace(mount_dir="mount_dir", shared_path="shared_path")
+        mock_path_read_text.return_value = v.shared_path
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        v.client_path = instance.create_test_mount(v.mount_dir)
+
+        dry_run = True
+        out = TestOutput()
+        v.exit_code = doctor.cure_what_ails_you(
+            instance,
+            dry_run,
+            instance.mount_table,
+            fs_util=filesystem.LinuxFsUtil(),
+            process_finder=FakeProcessFinder(),
+            out=out,
+        )
+        v.stdout = out.getvalue()
+        return v
+
+
+# Unwrap a triple quoted line
+def unwrap(s: str):
+    if s[:1] == "\n":
+        s = s[1:]
+    m = re.match("( *)", s)
+    if m is not None:
+        i = m.group(1)
+        s = re.sub("(?m)^" + i, "", s)
+    s = re.sub("\\\\\n *", "", s)
+    return s
