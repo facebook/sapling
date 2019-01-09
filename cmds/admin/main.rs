@@ -53,11 +53,9 @@ use futures::prelude::*;
 use futures::stream::iter_ok;
 use futures_ext::{BoxFuture, FutureExt};
 use manifoldblob::ManifoldBlob;
+use mercurial_types::{Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope,
+                      HgManifestEnvelope, HgManifestId, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
-use mercurial_types::{
-    Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope, HgManifestEnvelope,
-    HgManifestId, MPath, MPathElement, Manifest,
-};
 use mononoke_types::{BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, FileContents};
 use reachabilityindex::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 use revset::RangeNodeStream;
@@ -261,21 +259,19 @@ fn fetch_content(
 
     let all_but_last = iter_ok::<_, Error>(path.clone().into_iter().rev().skip(1).rev());
 
-    let folded: BoxFuture<_, Error> = mf
-        .and_then({
-            cloned!(ctx, logger);
-            move |mf| {
-                all_but_last.fold(mf, move |mf, element| {
-                    fetch_content_from_manifest(ctx.clone(), logger.clone(), mf, element).and_then(
-                        |content| match content {
-                            Content::Tree(mf) => Ok(mf),
-                            content => Err(format_err!("expected tree entry, found {:?}", content)),
-                        },
-                    )
-                })
-            }
-        })
-        .boxify();
+    let folded: BoxFuture<_, Error> = mf.and_then({
+        cloned!(ctx, logger);
+        move |mf| {
+            all_but_last.fold(mf, move |mf, element| {
+                fetch_content_from_manifest(ctx.clone(), logger.clone(), mf, element).and_then(
+                    |content| match content {
+                        Content::Tree(mf) => Ok(mf),
+                        content => Err(format_err!("expected tree entry, found {:?}", content)),
+                    },
+                )
+            })
+        }
+    }).boxify();
 
     let basename = path.basename().clone();
     folded
@@ -329,16 +325,11 @@ struct ChangesetDiff {
 
 #[derive(Serialize)]
 enum ChangesetAttrDiff {
-    #[serde(rename = "user")]
-    User(String, String),
-    #[serde(rename = "comments")]
-    Comments(String, String),
-    #[serde(rename = "manifest")]
-    Manifest(ManifestDiff),
-    #[serde(rename = "files")]
-    Files(Vec<String>, Vec<String>),
-    #[serde(rename = "extra")]
-    Extra(BTreeMap<String, String>, BTreeMap<String, String>),
+    #[serde(rename = "user")] User(String, String),
+    #[serde(rename = "comments")] Comments(String, String),
+    #[serde(rename = "manifest")] Manifest(ManifestDiff),
+    #[serde(rename = "files")] Files(Vec<String>, Vec<String>),
+    #[serde(rename = "extra")] Extra(BTreeMap<String, String>, BTreeMap<String, String>),
 }
 
 #[derive(Serialize)]
@@ -367,31 +358,30 @@ fn hg_manifest_diff(
         repo.get_root_entry(left),
         Some(repo.get_root_entry(right)),
         None,
-    )
-    .collect()
-    .map(|diffs| {
-        let diff = diffs.into_iter().fold(
-            ManifestDiff {
-                modified: Vec::new(),
-                deleted: Vec::new(),
-            },
-            |mut mdiff, diff| {
-                match diff {
-                    BonsaiDiffResult::Changed(path, ..)
-                    | BonsaiDiffResult::ChangedReusedId(path, ..) => {
-                        mdiff.modified.push(mpath_to_str(path))
-                    }
-                    BonsaiDiffResult::Deleted(path) => mdiff.deleted.push(mpath_to_str(path)),
-                };
-                mdiff
-            },
-        );
-        if diff.modified.is_empty() && diff.deleted.is_empty() {
-            None
-        } else {
-            Some(ChangesetAttrDiff::Manifest(diff))
-        }
-    })
+    ).collect()
+        .map(|diffs| {
+            let diff = diffs.into_iter().fold(
+                ManifestDiff {
+                    modified: Vec::new(),
+                    deleted: Vec::new(),
+                },
+                |mut mdiff, diff| {
+                    match diff {
+                        BonsaiDiffResult::Changed(path, ..)
+                        | BonsaiDiffResult::ChangedReusedId(path, ..) => {
+                            mdiff.modified.push(mpath_to_str(path))
+                        }
+                        BonsaiDiffResult::Deleted(path) => mdiff.deleted.push(mpath_to_str(path)),
+                    };
+                    mdiff
+                },
+            );
+            if diff.modified.is_empty() && diff.deleted.is_empty() {
+                None
+            } else {
+                Some(ChangesetAttrDiff::Manifest(diff))
+            }
+        })
 }
 
 fn hg_changeset_diff(
@@ -403,8 +393,7 @@ fn hg_changeset_diff(
     (
         repo.get_changeset_by_changesetid(ctx.clone(), left_id),
         repo.get_changeset_by_changesetid(ctx.clone(), right_id),
-    )
-        .into_future()
+    ).into_future()
         .and_then({
             cloned!(repo, left_id, right_id);
             move |(left, right)| {
@@ -585,8 +574,7 @@ fn main() -> Result<()> {
                         blobstore,
                         "manifold",
                         manifold_args.bucket.as_ref(),
-                    )
-                    .unwrap();
+                    ).unwrap();
                     let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
                     get_cache(ctx.clone(), &blobstore, key.clone(), mode)
                 }
@@ -595,12 +583,10 @@ fn main() -> Result<()> {
                         blobstore,
                         "manifold",
                         manifold_args.bucket.as_ref(),
-                    )
-                    .unwrap();
+                    ).unwrap();
                     get_cache(ctx.clone(), &blobstore, key.clone(), mode)
                 }
-            }
-            .map(move |value| {
+            }.map(move |value| {
                 println!("{:?}", value);
                 if let Some(value) = value {
                     let decode_as = decode_as.as_ref().and_then(|val| {
@@ -622,7 +608,7 @@ fn main() -> Result<()> {
                     }
                 }
             })
-            .boxify()
+                .boxify()
         }
         (BONSAI_FETCH, Some(sub_m)) => {
             let rev = sub_m.value_of("HG_CHANGESET_OR_BOOKMARK").unwrap();
@@ -675,8 +661,7 @@ fn main() -> Result<()> {
                             for entry in entries {
                                 let mut basename = String::from_utf8_lossy(
                                     entry.get_name().expect("empty basename found").as_bytes(),
-                                )
-                                .to_string();
+                                ).to_string();
                                 for _ in basename.len()..longest_len {
                                     basename.push(' ');
                                 }
@@ -777,11 +762,10 @@ fn main() -> Result<()> {
                                 &Arc::new(repo.clone()),
                                 start_cs,
                                 stop_cs,
-                            )
-                            .map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
-                            .buffered(100)
-                            .map(|cs| cs.to_hex().to_string())
-                            .collect()
+                            ).map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
+                                .buffered(100)
+                                .map(|cs| cs.to_hex().to_string())
+                                .collect()
                         }
                     })
                     .and_then(|css| {
@@ -848,30 +832,28 @@ fn main() -> Result<()> {
                     ctx,
                     &HgChangesetId::from_str(source_hash)
                         .expect("source hash is not valid hg changeset id"),
-                )
-                .and_then(move |maybebonsai| {
-                    match maybebonsai {
-                        Some(bonsai) => {
-                            println!("{}", bonsai);
+                ).and_then(move |maybebonsai| {
+                        match maybebonsai {
+                            Some(bonsai) => {
+                                println!("{}", bonsai);
+                            }
+                            None => {
+                                panic!("no matching mononoke id found");
+                            }
                         }
-                        None => {
-                            panic!("no matching mononoke id found");
-                        }
-                    }
-                    Ok(())
-                })
-                .boxify()
+                        Ok(())
+                    })
+                    .boxify()
             } else {
                 repo.get_hg_from_bonsai_changeset(
                     ctx,
                     ChangesetId::from_str(source_hash)
                         .expect("source hash is not valid mononoke id"),
-                )
-                .and_then(move |mercurial| {
-                    println!("{}", mercurial);
-                    Ok(())
-                })
-                .boxify()
+                ).and_then(move |mercurial| {
+                        println!("{}", mercurial);
+                        Ok(())
+                    })
+                    .boxify()
             }
         }
         _ => {
