@@ -38,7 +38,7 @@ use stats::*;
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
 use errors::*;
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
-use phases::Phases;
+use phases::{Phase, Phases};
 use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
@@ -845,7 +845,15 @@ impl Bundle2Resolver {
         let common = commonheads.heads;
         let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
 
-        let pushrebased_rev = repo.get_hg_from_bonsai_changeset(ctx.clone(), pushrebased_rev);
+        let pushrebased_rev =
+            // write phase as public for this commit
+            phases_hint.add(ctx.clone(), repo.clone(), pushrebased_rev.clone(), Phase::Public).and_then( {
+                cloned!(ctx, repo);
+                move |_| {
+                    repo.get_hg_from_bonsai_changeset(ctx, pushrebased_rev)
+                }
+            }
+        );
 
         let mut scuba_logger = self.ctx.scuba().clone();
         maybe_onto_head

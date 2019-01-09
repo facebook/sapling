@@ -35,8 +35,6 @@ pub fn create_getbundle_response(
         return Err(err_msg("no 'common' heads specified. Pull will be very inefficient. Please use hg clone instead"));
     }
 
-    let mut parts = vec![];
-
     let changesets_buffer_size = 1000; // TODO(stash): make it configurable
     let phases_buffer_size = 1000;
 
@@ -155,6 +153,8 @@ pub fn create_getbundle_response(
                 HgBlobNode::new(Bytes::from(v), revlogcs.p1(), revlogcs.p2()),
             ))
         });
+
+    let mut parts = vec![];
 
     parts.push(parts::changegroup_part(changelogentries));
 
