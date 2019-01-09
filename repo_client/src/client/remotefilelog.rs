@@ -6,7 +6,6 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Cursor, Write};
-use std::sync::Arc;
 
 use bytes::{Bytes, BytesMut};
 use futures::{stream, Future, IntoFuture, Stream, future::ok};
@@ -34,7 +33,7 @@ const METAKEYSIZE: &str = "s";
 /// of the file up to `node`
 pub fn create_remotefilelog_blob(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     node: HgNodeHash,
     path: MPath,
     lfs_params: LfsParams,
@@ -182,7 +181,7 @@ pub fn create_remotefilelog_blob(
 
 fn validate_content(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     path: MPath,
     actual: HgNodeHash,
     mut scuba_logger: ScubaSampleBuilder,
@@ -228,7 +227,7 @@ fn validate_content(
 
 fn get_file_history(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     startnode: HgNodeHash,
     path: MPath,
     prefetched_history: HashMap<HgNodeHash, FilenodeInfo>,

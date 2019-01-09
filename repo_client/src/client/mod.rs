@@ -823,7 +823,7 @@ impl HgCommands for RepoClient {
                     let repo = this.repo.clone();
                     create_remotefilelog_blob(
                         ctx.clone(),
-                        Arc::new(repo.blobrepo().clone()),
+                        repo.blobrepo().clone(),
                         node,
                         path.clone(),
                         repo.lfs_params().clone(),
