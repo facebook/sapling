@@ -153,6 +153,7 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
 
 #[test]
 fn test_phases_part_encording() {
+    let ctx = CoreContext::test_mock();
     let phases_entries = stream::iter_ok(vec![
         (
             HgNodeHash::from_bytes(b"bbbbbbbbbbbbbbbbbbbb").unwrap(),
@@ -172,7 +173,7 @@ fn test_phases_part_encording() {
     let mut builder = Bundle2EncodeBuilder::new(cursor);
     builder.set_compressor_type(None);
 
-    let part = phases_part(phases_entries).unwrap();
+    let part = phases_part(ctx.clone(), phases_entries).unwrap();
     builder.add_part(part);
 
     let mut cursor = Runtime::new().unwrap().block_on(builder.build()).unwrap();

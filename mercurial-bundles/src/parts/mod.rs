@@ -12,6 +12,7 @@ use failure::prelude::*;
 use futures::{Future, Stream};
 use futures::stream::{iter_ok, once};
 use futures_ext::BoxFuture;
+use futures_stats::Timed;
 use std::io::Write;
 
 use super::changegroup::{CgDeltaChunk, Part, Section};
@@ -19,11 +20,13 @@ use super::changegroup::packer::CgPacker;
 use super::wirepack;
 use super::wirepack::packer::WirePackPacker;
 
+use context::CoreContext;
 use errors::*;
 use mercurial_types::{Delta, HgBlobNode, HgNodeHash, HgPhase, MPath, MPathElement, RepoPath,
                       NULL_HASH};
 use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderType;
+use scuba_ext::ScubaSampleBuilderExt;
 
 pub fn listkey_part<N, S, K, V>(namespace: N, items: S) -> Result<PartEncodeBuilder>
 where
@@ -51,11 +54,12 @@ where
     Ok(builder)
 }
 
-pub fn phases_part<S>(phases_entries: S) -> Result<PartEncodeBuilder>
+pub fn phases_part<S>(ctx: CoreContext, phases_entries: S) -> Result<PartEncodeBuilder>
 where
     S: Stream<Item = (HgNodeHash, HgPhase), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::PhaseHeads)?;
+    let mut scuba_logger = ctx.scuba().clone();
     let payload = Vec::with_capacity(1024);
     let fut = phases_entries
         .fold(payload, |mut payload, (value, phase)| {
@@ -63,7 +67,15 @@ where
             payload.write(value.as_ref())?;
             Ok::<_, Error>(payload)
         })
-        .map_err(|err| Error::from(err.chain_err(ErrorKind::PhaseHeadsGeneration)));
+        .map_err(|err| Error::from(err.chain_err(ErrorKind::PhaseHeadsGeneration)))
+        .timed(move |stats, result| {
+            if result.is_ok() {
+                scuba_logger
+                    .add_future_stats(&stats)
+                    .log_with_msg("Phases calculated - Success", None);
+            }
+            Ok(())
+        });
     builder.set_data_future(fut);
     Ok(builder)
 }

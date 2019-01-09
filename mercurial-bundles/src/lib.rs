@@ -16,6 +16,7 @@ extern crate bytes;
 extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
+extern crate futures_stats;
 extern crate futures_trace;
 #[cfg(test)]
 #[macro_use]
@@ -49,6 +50,7 @@ extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 #[cfg(test)]
 extern crate partial_io;
+extern crate scuba_ext;
 
 pub mod bundle2;
 pub mod bundle2_encode;

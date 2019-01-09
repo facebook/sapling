@@ -68,7 +68,7 @@ pub fn create_getbundle_response(
                 }
             })
             .buffered(phases_buffer_size);
-        Some(parts::phases_part(items))
+        Some(parts::phases_part(ctx.clone(), items))
     } else {
         None
     };
