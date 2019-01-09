@@ -25,7 +25,7 @@ use std::sync::Arc;
 
 pub struct Tailer {
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     hook_manager: Arc<HookManager>,
     bookmark: Bookmark,
     last_rev_key: String,
@@ -37,14 +37,14 @@ impl Tailer {
     pub fn new(
         ctx: CoreContext,
         repo_name: String,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         config: RepoConfig,
         bookmark: Bookmark,
         manifold_client: ManifoldHttpClient,
         logger: Logger,
     ) -> Result<Tailer> {
-        let changeset_store = BlobRepoChangesetStore::new((*repo).clone());
-        let content_store = BlobRepoFileContentStore::new((*repo).clone());
+        let changeset_store = BlobRepoChangesetStore::new(repo.clone());
+        let content_store = BlobRepoFileContentStore::new(repo.clone());
 
         let mut hook_manager = HookManager::new(
             ctx.clone(),
@@ -77,7 +77,7 @@ impl Tailer {
 
     fn run_in_range0(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         hm: Arc<HookManager>,
         last_rev: HgNodeHash,
         end_rev: HgNodeHash,
@@ -215,7 +215,7 @@ impl Tailer {
 
 fn nodehash_to_bonsai(
     ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
+    repo: &BlobRepo,
     node: HgNodeHash,
 ) -> impl Future<Item = ChangesetId, Error = Error> {
     let hg_cs = HgChangesetId::new(node);
@@ -225,7 +225,7 @@ fn nodehash_to_bonsai(
 
 fn run_hooks_for_changeset(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     hm: Arc<HookManager>,
     bm: Bookmark,
     cs: ChangesetId,

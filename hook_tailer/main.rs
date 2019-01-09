@@ -66,7 +66,6 @@ use std::fmt;
 use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
 use tailer::Tailer;
 use tokio_timer::sleep;
@@ -122,8 +121,7 @@ fn main() -> Result<()> {
     let tailer = Tailer::new(
         ctx,
         repo_name.to_string(),
-        // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
-        Arc::new(blobrepo),
+        blobrepo,
         config.clone(),
         bookmark,
         manifold_client.clone(),
