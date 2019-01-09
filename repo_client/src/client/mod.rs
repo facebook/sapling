@@ -231,6 +231,7 @@ impl WireprotoLogger {
 
         if let Some(ref wireproto_scribe_category) = self.wireproto_scribe_category {
             let mut builder = ScubaSampleBuilder::with_discard();
+            builder.add_common_server_data();
             match self.args {
                 Some(ref args) => {
                     builder.add("args", args.to_string());
