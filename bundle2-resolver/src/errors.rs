@@ -16,6 +16,8 @@ use mononoke_types::ChangesetId;
 pub enum ErrorKind {
     #[fail(display = "Bonsai not found for hg changeset: {:?}", _0)]
     BonsaiNotFoundForHgChangeset(HgChangesetId),
+    #[fail(display = "Phase is undetermined for hg changeset: {:?}", _0)]
+    PhaseUnknownForHgChangeset(HgChangesetId),
     #[fail(display = "Malformed treemanifest part: {}", _0)] MalformedTreemanifestPart(String),
     #[fail(display = "Pushrebase onto bookmark not found: {:?}", _0)]
     PushrebaseBookmarkNotFound(Bookmark),

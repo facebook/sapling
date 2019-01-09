@@ -55,7 +55,6 @@ Clone the repo
   adding file changes
   added 1 changesets with 0 changes to 0 files
   server ignored bookmark master_bookmark update
-  remote: * DEBG Session with Mononoke started with uuid: * (glob)
 
 TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
 

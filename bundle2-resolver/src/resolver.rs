@@ -38,6 +38,7 @@ use stats::*;
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
 use errors::*;
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
+use phases::Phases;
 use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
@@ -59,6 +60,7 @@ pub fn resolve(
     bundle2: BoxStream<Bundle2Item, Error>,
     hook_manager: Arc<HookManager>,
     lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    phases_hint: Arc<Phases>,
 ) -> BoxFuture<Bytes, Error> {
     let resolver = Bundle2Resolver::new(ctx.clone(), repo, pushrebase, hook_manager);
 
@@ -67,7 +69,9 @@ pub fn resolve(
     resolver
         .maybe_resolve_commonheads(bundle2)
         .and_then(move |(commonheads, bundle2)| match commonheads {
-            Some(commonheads) => resolve_pushrebase(ctx, commonheads, resolver, bundle2, lca_hint),
+            Some(commonheads) => {
+                resolve_pushrebase(ctx, commonheads, resolver, bundle2, lca_hint, phases_hint)
+            }
             None => resolve_push(ctx, resolver, bundle2),
         })
         .boxify()
@@ -195,6 +199,7 @@ fn resolve_pushrebase(
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
     lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    phases_hint: Arc<Phases>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
         .maybe_resolve_pushvars(bundle2)
@@ -300,7 +305,14 @@ fn resolve_pushrebase(
             }
         })
         .and_then(move |(pushrebased_rev, onto)| {
-            resolver.prepare_pushrebase_response(ctx, commonheads, pushrebased_rev, onto, lca_hint)
+            resolver.prepare_pushrebase_response(
+                ctx,
+                commonheads,
+                pushrebased_rev,
+                onto,
+                lca_hint,
+                phases_hint,
+            )
         })
         .boxify()
 }
@@ -824,6 +836,7 @@ impl Bundle2Resolver {
         pushrebased_rev: ChangesetId,
         onto: Bookmark,
         lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+        phases_hint: Arc<Phases>,
     ) -> impl Future<Item = Bytes, Error = Error> {
         // Send to the client both pushrebased commit and current "onto" bookmark. Normally they
         // should be the same, however they might be different if bookmark
@@ -843,11 +856,11 @@ impl Bundle2Resolver {
                     heads.push(onto_head);
                 }
                 heads.push(pushrebased_rev);
-                getbundle_response::create_getbundle_response(ctx, repo, common, heads, lca_hint)
+                getbundle_response::create_getbundle_response(ctx, repo, common, heads, lca_hint, Some(phases_hint))
             })
             .and_then(|cg_part_builder| {
                 let compression = None;
-                create_bundle_stream(vec![cg_part_builder], compression)
+                create_bundle_stream(cg_part_builder, compression)
                     .collect()
                     .map(|chunks| {
                         let mut total_capacity = 0;

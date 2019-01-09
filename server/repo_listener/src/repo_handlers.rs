@@ -33,7 +33,7 @@ pub struct RepoHandler {
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
     pub lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
-    pub phases_hint: Arc<Phases + Send + Sync>,
+    pub phases_hint: Arc<Phases>,
 }
 
 pub fn repo_handlers(
@@ -144,7 +144,7 @@ pub fn repo_handlers(
                 None => ok(Arc::new(SkiplistIndex::new())).right_future(),
             };
 
-            let phases_hint: Arc<Phases + Send + Sync> = match config.repotype {
+            let phases_hint: Arc<Phases> = match config.repotype {
                 RepoType::BlobFiles(ref data_dir)
                 | RepoType::BlobRocks(ref data_dir)
                 | RepoType::TestBlobDelayRocks(ref data_dir, ..) => {

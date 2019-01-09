@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![cfg_attr(test, type_length_limit="2097152")]
+#![cfg_attr(test, type_length_limit = "2097152")]
 
 extern crate ascii;
 #[cfg(test)]
@@ -59,6 +59,7 @@ extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate metaconfig;
 extern crate mononoke_types;
+extern crate phases;
 
 mod changegroup;
 pub mod errors;

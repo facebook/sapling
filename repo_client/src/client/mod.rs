@@ -147,6 +147,7 @@ fn bundle2caps() -> String {
         ("treemanifestserver", vec!["True"]),
         ("b2x:rebase", vec![]),
         ("b2x:rebasepackpart", vec![]),
+        ("phases", vec!["heads"]),
     ];
 
     let mut encodedcaps = vec![];
@@ -172,7 +173,7 @@ pub struct RepoClient {
     // will be hash validated
     hash_validation_percentage: usize,
     lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
-    phases_hint: Arc<Phases + Send + Sync>,
+    phases_hint: Arc<Phases>,
 }
 
 // Logs wireproto requests both to scuba and scribe.
@@ -261,7 +262,7 @@ impl RepoClient {
         ctx: CoreContext,
         hash_validation_percentage: usize,
         lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
-        phases_hint: Arc<Phases + Send + Sync>,
+        phases_hint: Arc<Phases>,
     ) -> Self {
         RepoClient {
             repo,
@@ -288,7 +289,7 @@ impl RepoClient {
     fn create_bundle(&self, args: GetbundleArgs) -> Result<BoxStream<Bytes, Error>> {
         let blobrepo = self.repo.blobrepo();
         let mut bundle2_parts = vec![];
-        let cg_part_builder = bundle2_resolver::create_getbundle_response(
+        bundle2_parts.append(&mut bundle2_resolver::create_getbundle_response(
             self.ctx.clone(),
             blobrepo.clone(),
             args.common
@@ -300,8 +301,16 @@ impl RepoClient {
                 .map(|head| HgChangesetId::new(head))
                 .collect(),
             self.lca_hint.clone(),
-        )?;
-        bundle2_parts.push(cg_part_builder);
+            // TODO (liubovd): We will need to check that common phases exchange method is supported
+            // T38356449
+            if args.phases {
+                Some(self.phases_hint.clone())
+            } else {
+                None
+            },
+        )?);
+
+        // listkeys bookmarks part is added separately.
 
         // XXX Note that listkeys is NOT returned as a bundle2 capability -- see comment in
         // bundle2caps() for why.
@@ -757,6 +766,7 @@ impl HgCommands for RepoClient {
             stream,
             hook_manager,
             self.lca_hint.clone(),
+            self.phases_hint.clone(),
         );
 
         res.traced(self.ctx.trace(), ops::UNBUNDLE, trace_args!())
