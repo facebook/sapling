@@ -331,14 +331,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   size_t unloadChildrenLastAccessedBefore(const timespec& cutoff);
 
-  /**
-   * Load materialized children underneath this TreeInode.
-   *
-   * Returns a Future that completes once all materialized inodes have been
-   * loaded.
-   */
-  FOLLY_NODISCARD folly::Future<folly::Unit> loadMaterializedChildren();
-
   /*
    * Update a tree entry as part of a checkout operation.
    *

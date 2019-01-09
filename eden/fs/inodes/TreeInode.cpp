@@ -2957,51 +2957,6 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
   return future;
 }
 
-folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
-  std::vector<IncompleteInodeLoad> pendingLoads;
-  std::vector<Future<InodePtr>> inodeFutures;
-
-  {
-    auto contents = contents_.wlock();
-    if (!contents->isMaterialized()) {
-      return folly::makeFuture();
-    }
-
-    for (auto& entry : contents->entries) {
-      const auto& name = entry.first;
-      auto& ent = entry.second;
-      if (!ent.isMaterialized()) {
-        continue;
-      }
-
-      if (ent.getInode()) {
-        // Already loaded, most likely via prefetch
-        continue;
-      }
-
-      auto future =
-          loadChildLocked(contents->entries, name, ent, &pendingLoads);
-      inodeFutures.emplace_back(std::move(future));
-    }
-  }
-
-  // Hook up the pending load futures to properly complete the loading process
-  // then the futures are ready.  We can only do this after releasing the
-  // contents_ lock.
-  for (auto& load : pendingLoads) {
-    load.finish();
-  }
-
-  // Now add callbacks to the Inode futures so that we recurse into
-  // children directories when each child inode becomes ready.
-  std::vector<Future<folly::Unit>> results;
-  for (auto& future : inodeFutures) {
-    results.emplace_back(std::move(future).unit());
-  }
-
-  return folly::collectAll(results).unit();
-}
-
 namespace {
 
 /**
@@ -3303,7 +3258,39 @@ void TreeInode::prefetch() {
   }
 
   folly::via(getMount()->getThreadPool().get(), [self = inodePtrFromThis()] {
-    return self->loadMaterializedChildren();
+    std::vector<IncompleteInodeLoad> pendingLoads;
+    std::vector<Future<Unit>> inodeFutures;
+
+    {
+      auto contents = self->contents_.wlock();
+
+      for (auto& [name, entry] : contents->entries) {
+        if (entry.getInode()) {
+          // Already loaded
+          continue;
+        }
+
+        // TODO: It's probably excessive to actually load the inodes during
+        // prefetch. Ideally, all that's required here is to fetch the blob's
+        // metadata (if the entry is a file) or the tree's metadata (if the
+        // entry is a directory) so that future lookup() and stat() calls don't
+        // block on network or disk fetches. But, for now, Eden does not have
+        // tree metadata, so just load all of the children so that lookup()
+        // returns cheaply.
+        inodeFutures.emplace_back(
+            self->loadChildLocked(contents->entries, name, entry, &pendingLoads)
+                .unit());
+      }
+    }
+
+    // Hook up the pending load futures to properly complete the loading
+    // process then the futures are ready.  We can only do this after
+    // releasing the contents_ lock.
+    for (auto& load : pendingLoads) {
+      load.finish();
+    }
+
+    return folly::collectAll(inodeFutures).unit();
   });
 }
 
