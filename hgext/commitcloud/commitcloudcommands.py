@@ -429,6 +429,14 @@ def getdefaultrepoworkspace(ui, repo):
 def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
     """synchronize commits with the commit cloud service
     """
+    # external services can run cloud sync and require to check if
+    # auto sync is enabled
+    if opts.get("check_autosync_enabled") and not autosyncenabled(ui, repo):
+        highlightstatus(
+            ui, _("automatic backup and synchronization is currently disabled\n")
+        )
+        return 0
+
     repo.ignoreautobackup = True
     if opts.get("use_bgssh"):
         bgssh = ui.config("infinitepush", "bgssh")
@@ -478,14 +486,6 @@ def cloudsync(ui, repo, checkbackedup=None, cloudrefs=None, **opts):
 
 def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
     start = time.time()
-
-    # external services can run cloud sync and require to check if
-    # auto sync is enabled
-    if opts.get("check_autosync_enabled") and not autosyncenabled(ui, repo):
-        highlightstatus(
-            ui, _("automatic backup and synchronization is currently disabled\n")
-        )
-        return 0
 
     tokenlocator = commitcloudutil.TokenLocator(ui)
     reponame, workspace = getrepoworkspace(ui, repo)
