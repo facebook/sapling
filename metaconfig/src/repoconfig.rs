@@ -586,7 +586,6 @@ struct RawRepoConfig {
     scuba_table: Option<String>,
     delay_mean: Option<u64>,
     delay_stddev: Option<u64>,
-    io_thread_num: Option<usize>,
     cache_warmup: Option<RawCacheWarmupConfig>,
     bookmarks: Option<Vec<RawBookmarkConfig>>,
     hooks: Option<Vec<RawHookConfig>>,
