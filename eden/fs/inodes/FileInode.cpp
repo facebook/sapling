@@ -918,9 +918,5 @@ OverlayFileAccess* FileInode::getOverlayFileAccess(LockedState&) const {
   return getMount()->getOverlayFileAccess();
 }
 
-folly::Future<folly::Unit> FileInode::prefetch() {
-  return folly::unit;
-}
-
 } // namespace eden
 } // namespace facebook

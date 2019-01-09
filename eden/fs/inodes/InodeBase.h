@@ -118,15 +118,6 @@ class InodeBase {
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(int mask);
 
   /**
-   * Called when this Inode is retrieved so it has a chance to prefetch and
-   * cache any related objects.  prefetch() is called synchronously from
-   * EdenDispatcher::lookup, so the inode is responsible for scheduling work in
-   * the background as appropriate.  Note that the inode lifetime is guaranteed
-   * to be maintained until the resulting future is completed.
-   */
-  virtual folly::Future<folly::Unit> prefetch() = 0;
-
-  /**
    * Check if this Inode has been unlinked from its parent TreeInode.
    *
    * Once an inode is unlinked it is no longer part of the file system tree.

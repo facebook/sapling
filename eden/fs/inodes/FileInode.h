@@ -154,8 +154,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
   folly::Future<std::vector<std::string>> listxattr() override;
 
-  folly::Future<folly::Unit> prefetch() override;
-
   folly::Future<Hash> getSha1();
 
   /**

@@ -1724,6 +1724,14 @@ DirList TreeInode::readdir(DirList&& list, off_t off) {
   }
   updateAtime();
 
+  // It's very common for userspace to readdir() a directory to completion and
+  // serially stat() every entry. Since stat() returns a file's size and a
+  // directory's entry count in the st_nlink field, upon the first readdir for a
+  // given inode, fetch metadata for each entry in parallel. prefetch() may
+  // return early if the metadata for this inode's children has already been
+  // prefetched.
+  prefetch();
+
   // Possible offset values are:
   //   0: start at the beginning
   //   1: start after .
@@ -3288,9 +3296,15 @@ InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {
   return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }
 
-folly::Future<folly::Unit> TreeInode::prefetch() {
-  return folly::via(getMount()->getThreadPool().get())
-      .thenValue([this](auto&&) { return loadMaterializedChildren(); });
+void TreeInode::prefetch() {
+  bool expected = false;
+  if (!prefetched_.compare_exchange_strong(expected, true)) {
+    return;
+  }
+
+  folly::via(getMount()->getThreadPool().get(), [self = inodePtrFromThis()] {
+    return self->loadMaterializedChildren();
+  });
 }
 
 folly::Future<Dispatcher::Attr> TreeInode::setattr(

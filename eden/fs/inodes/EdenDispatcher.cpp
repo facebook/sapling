@@ -104,8 +104,6 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
         return folly::makeFutureWith([&]() { return inode->getattr(); })
             .thenTry([inode](folly::Try<Dispatcher::Attr> maybeAttr) {
               if (maybeAttr.hasValue()) {
-                // Preserve inode's life for the duration of the prefetch.
-                inode->prefetch().ensure([inode] {});
                 inode->incFuseRefcount();
                 return computeEntryParam(inode->getNodeId(), maybeAttr.value());
               } else {

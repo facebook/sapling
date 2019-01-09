@@ -122,7 +122,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
 
-  folly::Future<folly::Unit> prefetch() override;
   Dispatcher::Attr getAttrLocked(const DirContents& contents);
 
   /** Implements the InodeBase method used by the Dispatcher
@@ -465,6 +464,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   void updateAtime();
 
+  void prefetch();
+
   /**
    * Get a TreeInodePtr to ourself.
    *
@@ -653,6 +654,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   FOLLY_NODISCARD bool checkoutTryRemoveEmptyDir(CheckoutContext* ctx);
 
   folly::Synchronized<TreeInodeState> contents_;
+
+  /**
+   * Only prefetch blob metadata on the first readdir() of a loaded inode.
+   */
+  std::atomic<bool> prefetched_{false};
 };
 
 /**
