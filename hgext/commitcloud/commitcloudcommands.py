@@ -726,10 +726,10 @@ def _maybeupdateworkingcopy(ui, repo, currentnode):
             % (nodemod.short(currentnode), nodemod.short(destination)),
         )
         if ui.configbool("commitcloud", "updateonmove"):
-            return _update(ui, repo, destination)
+            if repo[destination].mutable():
+                return _update(ui, repo, destination)
         else:
             hintutil.trigger("commitcloud-update-on-move")
-            return 0
     else:
         highlightstatus(
             ui,
@@ -740,7 +740,7 @@ def _maybeupdateworkingcopy(ui, repo, currentnode):
             )
             % nodemod.short(currentnode),
         )
-        return 0
+    return 0
 
 
 @subcmd("recover", [] + pullopts + pushopts)
