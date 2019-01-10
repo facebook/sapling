@@ -351,12 +351,24 @@ class WorkspaceManager(object):
 
     @property
     def workspace(self):
-        """Current connected workspace (reads commitcloudrc file)"""
+        """Current connected workspace"""
+        return self._get("current_workspace")
+
+    @property
+    def disconnected(self):
+        """Whether the user has manually disconnected from commit cloud"""
+        disconnected = self._get("disconnected")
+        if disconnected is None or isinstance(disconnected, bool):
+            return disconnected
+        return util.parsebool(disconnected)
+
+    def _get(self, name):
+        """Read commitcloudrc file to get a value"""
         if self.repo.svfs.exists(self.filename):
             with self.repo.svfs.open(self.filename, r"rb") as f:
                 workspaceconfig = config.config()
                 workspaceconfig.read(self.filename, f)
-                return workspaceconfig.get("commitcloud", "current_workspace")
+                return workspaceconfig.get("commitcloud", name)
         else:
             return None
 
@@ -366,11 +378,13 @@ class WorkspaceManager(object):
         with self.repo.wlock(), self.repo.lock(), self.repo.svfs.open(
             self.filename, "w", atomictemp=True
         ) as f:
-            f.write("[commitcloud]\n" "current_workspace=%s\n" % workspace)
+            f.write("[commitcloud]\ncurrent_workspace=%s\n" % workspace)
 
     def clearworkspace(self):
-        with self.repo.wlock(), self.repo.lock():
-            self.repo.svfs.unlink(self.filename)
+        with self.repo.wlock(), self.repo.lock(), self.repo.svfs.open(
+            self.filename, "w", atomictemp=True
+        ) as f:
+            f.write("[commitcloud]\ndisconnected=true\n")
 
 
 class SubscriptionManager(object):

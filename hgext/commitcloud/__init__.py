@@ -169,11 +169,14 @@ def _smartlogbackupmessagemap(orig, ui, repo):
 
 
 def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None, **opts):
-    if commitcloudutil.getworkspacename(repo) is not None:
+    wmgr = commitcloudutil.WorkspaceManager(repo)
+    if wmgr.workspace is not None:
         return orig(ui, repo, dest, ["hg", "cloud", "sync"], **opts)
+    elif ui.configbool("commitcloud", "autocloudjoin") and not wmgr.disconnected:
+        # Only auto-join if the user has never connected before.  If they
+        # deliberately disconnected, don't automatically rejoin.
+        return orig(ui, repo, dest, ["hg", "cloud", "join"], **opts)
     else:
-        if ui.configbool("commitcloud", "autocloudjoin"):
-            return orig(ui, repo, dest, ["hg", "cloud", "join"], **opts)
         return orig(ui, repo, dest, command, **opts)
 
 
