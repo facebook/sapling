@@ -9,7 +9,6 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use dns_lookup::getnameinfo;
 use failure::{SlogKVError, prelude::*};
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
@@ -104,19 +103,9 @@ pub fn request_handler(
     };
 
     let mut scuba_logger = {
-        let client_hostname = match getnameinfo(&addr, 0) {
-            Ok((hostname, _)) => hostname,
-            Err(err) => {
-                warn!(
-                    conn_log,
-                    "failed to lookup hostname for address {}, reason: {:?}", addr, err
-                );
-                "".to_owned()
-            }
-        };
         scuba_logger
             .add_preamble(&preamble)
-            .add("client_hostname", client_hostname);
+            .add("client_ip", addr.to_string());
         scuba_logger
     };
 
