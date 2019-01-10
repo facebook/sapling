@@ -2,10 +2,6 @@ Create an ondisk bundlestore in .hg/scratchbranches
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ cp $HGRCPATH $TESTTMP/defaulthgrc
-  $ cat >> $HGRCPATH <<EOF
-  > [devel]
-  > legacy.exchange=phases bookmarks
-  > EOF
   $ setupcommon
   $ hg init master
   $ cd master
