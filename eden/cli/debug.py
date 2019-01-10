@@ -892,12 +892,12 @@ class DebugJournalCmd(Subcmd):
             # debugGetRawJournal() returns the most recent entries first, but
             # we want to display the oldest entries first, so we pass a reversed
             # iterator along.
-            print_raw_journal_deltas(reversed(raw_journal.allDeltas), pattern)
+            _print_raw_journal_deltas(reversed(raw_journal.allDeltas), pattern)
 
         return 0
 
 
-def print_raw_journal_deltas(
+def _print_raw_journal_deltas(
     deltas: Iterator[DebugJournalDelta], pattern: Optional[Pattern[bytes]]
 ) -> None:
     matcher: Callable[[bytes], bool] = (lambda x: True) if pattern is None else cast(
@@ -924,19 +924,30 @@ def print_raw_journal_deltas(
         for path in delta.uncleanPaths:
             entries.append(f"X {os.fsdecode(path)}")
 
-        if not entries:
-            continue
+        # Only print journal entries if they changed paths that matched the matcher
+        # or if they change the current working directory commit.
+        if entries or delta.fromPosition.snapshotHash != delta.toPosition.snapshotHash:
+            _print_journal_entry(delta, entries)
 
-        if delta.fromPosition.sequenceNumber != delta.toPosition.sequenceNumber:
-            print(
-                f"MERGE {delta.fromPosition.sequenceNumber}-"
-                f"{delta.toPosition.sequenceNumber}"
-            )
-        else:
-            print(f"DELTA {delta.fromPosition.sequenceNumber}")
 
-        entries.sort()
-        print("\n".join(entries))
+def _print_journal_entry(delta: DebugJournalDelta, entries: List[str]) -> None:
+    if delta.fromPosition.snapshotHash != delta.toPosition.snapshotHash:
+        from_commit = hash_str(delta.fromPosition.snapshotHash)
+        to_commit = hash_str(delta.toPosition.snapshotHash)
+        commit_ids = f"{from_commit} -> {to_commit}"
+    else:
+        commit_ids = hash_str(delta.toPosition.snapshotHash)
+
+    if delta.fromPosition.sequenceNumber != delta.toPosition.sequenceNumber:
+        print(
+            f"MERGE {delta.fromPosition.sequenceNumber}-"
+            f"{delta.toPosition.sequenceNumber} {commit_ids}"
+        )
+    else:
+        print(f"DELTA {delta.fromPosition.sequenceNumber} {commit_ids}")
+
+    entries.sort()
+    print("\n".join(entries))
 
 
 @debug_cmd("thrift", "Invoke a thrift function")
