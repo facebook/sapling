@@ -150,8 +150,7 @@ fn run_hook(
 }
 
 fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
-    let manifold_args = cmdlib::args::parse_manifold_args(matches);
-
+    let blobstore_args = cmdlib::args::parse_blobstore_args(matches);
     let myrouter_port = matches
         .value_of("myrouter-port")
         .expect("missing myrouter port")
@@ -166,7 +165,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
     });
     BlobRepo::new_remote_no_postcommit(
         logger.clone(),
-        &manifold_args.into(),
+        &blobstore_args,
         db_address,
         filenode_shards,
         RepositoryId::new(0),

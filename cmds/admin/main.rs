@@ -29,6 +29,7 @@ extern crate context;
 extern crate futures_ext;
 extern crate manifoldblob;
 extern crate mercurial_types;
+extern crate metaconfig;
 extern crate mononoke_types;
 extern crate reachabilityindex;
 extern crate revset;
@@ -56,6 +57,7 @@ use manifoldblob::ManifoldBlob;
 use mercurial_types::{Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope,
                       HgManifestEnvelope, HgManifestId, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
+use metaconfig::RemoteBlobstoreArgs;
 use mononoke_types::{BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, FileContents};
 use reachabilityindex::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 use revset::RangeNodeStream;
@@ -548,12 +550,17 @@ fn main() -> Result<()> {
     let matches = setup_app().get_matches();
 
     let logger = args::get_logger(&matches);
-    let manifold_args = args::parse_manifold_args(&matches);
+    let blobstore_args = args::parse_blobstore_args(&matches);
 
     let repo_id = args::get_repo_id(&matches);
 
     let future = match matches.subcommand() {
         (BLOBSTORE_FETCH, Some(sub_m)) => {
+            let manifold_args = match blobstore_args {
+                RemoteBlobstoreArgs::Manifold(args) => args,
+                bad => panic!("Unsupported blobstore: {:#?}", bad),
+            };
+
             let ctx = CoreContext::test_mock();
             let key = sub_m.value_of("KEY").unwrap().to_string();
             let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());

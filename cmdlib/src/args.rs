@@ -30,7 +30,7 @@ use slog_glog_fmt::default_drain as glog_drain;
 use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use hooks::HookManager;
-use metaconfig::{ManifoldArgs, RepoConfigs, RepoReadOnly, RepoType};
+use metaconfig::{ManifoldArgs, RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType};
 use mononoke_types::RepositoryId;
 use repo_client::{open_blobrepo, MononokeRepo};
 
@@ -552,13 +552,13 @@ fn open_repo_internal<'a>(
     ))
 }
 
-pub fn parse_manifold_args<'a>(matches: &ArgMatches<'a>) -> ManifoldArgs {
+pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> RemoteBlobstoreArgs {
     // The unwraps here are safe because default values have already been provided in mononoke_app
     // above.
-    ManifoldArgs {
+    RemoteBlobstoreArgs::Manifold(ManifoldArgs {
         bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
         prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
-    }
+    })
 }
 
 pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {
