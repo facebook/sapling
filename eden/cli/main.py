@@ -305,9 +305,16 @@ re-run `eden clone` with --allow-empty-repo"""
             print("edenfs daemon is not currently running.  Starting edenfs...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
-            exit_code = daemon.start_daemon(
-                instance, args.daemon_binary, args.edenfs_args
-            )
+            if instance.should_use_experimental_systemd_mode():
+                exit_code = daemon.start_systemd_service(
+                    instance=instance,
+                    daemon_binary=args.daemon_binary,
+                    edenfs_args=args.edenfs_args,
+                )
+            else:
+                exit_code = daemon.start_daemon(
+                    instance, args.daemon_binary, args.edenfs_args
+                )
             if exit_code != 0:
                 return exit_code
 

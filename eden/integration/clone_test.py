@@ -24,7 +24,11 @@ from .lib import edenclient, testcase
 from .lib.fake_edenfs import read_fake_edenfs_argv_file
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
-from .lib.service_test_case import ServiceTestCaseBase, service_test
+from .lib.service_test_case import (
+    ServiceTestCaseBase,
+    SystemdServiceTestCaseMarker,
+    service_test,
+)
 
 
 # This is the name of the default repository created by EdenRepoTestBase.
@@ -354,33 +358,10 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertEqual(custom_readme_text, readme_path.read_text())
 
 
-# TODO(T33122320): Integrate systemd and 'eden clone'.
-@service_test(skip_systemd=True)
-class CloneFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
+class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
         self.eden_dir = Path(self.make_temporary_directory())
-
-    def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
-        argv_file = self.eden_dir / "argv"
-        assert not argv_file.exists()
-        repo = self.make_dummy_hg_repo()
-        mount_path = Path(self.make_temporary_directory())
-
-        extra_daemon_args = ["--commandArgumentsLogFile", str(argv_file), "hello world"]
-        clone_process = self.spawn_clone(
-            repo_path=Path(repo.path),
-            mount_path=mount_path,
-            extra_args=["--daemon-args"] + extra_daemon_args,
-        )
-        wait_for_pexpect_process(clone_process)
-
-        argv = read_fake_edenfs_argv_file(argv_file)
-        self.assertEquals(
-            argv[-len(extra_daemon_args) :],
-            extra_daemon_args,
-            f"fake_edenfs should have received arguments verbatim\nargv: {argv}",
-        )
 
     def make_dummy_hg_repo(self) -> HgRepository:
         repo = HgRepository(path=self.make_temporary_directory())
@@ -411,3 +392,44 @@ class CloneFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         return pexpect.spawn(
             FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
         )
+
+
+@service_test
+class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
+    def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
+        argv_file = self.eden_dir / "argv"
+        assert not argv_file.exists()
+        repo = self.make_dummy_hg_repo()
+        mount_path = Path(self.make_temporary_directory())
+
+        extra_daemon_args = ["--commandArgumentsLogFile", str(argv_file), "hello world"]
+        clone_process = self.spawn_clone(
+            repo_path=Path(repo.path),
+            mount_path=mount_path,
+            extra_args=["--daemon-args"] + extra_daemon_args,
+        )
+        wait_for_pexpect_process(clone_process)
+
+        argv = read_fake_edenfs_argv_file(argv_file)
+        self.assertEquals(
+            argv[-len(extra_daemon_args) :],
+            extra_daemon_args,
+            f"fake_edenfs should have received arguments verbatim\nargv: {argv}",
+        )
+
+
+@service_test
+class CloneFakeEdenFSWithSystemdTest(
+    CloneFakeEdenFSTestBase, SystemdServiceTestCaseMarker
+):
+    def test_clone_starts_systemd_service(self) -> None:
+        repo = self.make_dummy_hg_repo()
+        mount_path = Path(self.make_temporary_directory())
+        clone_process = self.spawn_clone(
+            repo_path=Path(repo.path), mount_path=mount_path
+        )
+        clone_process.expect_exact(
+            "edenfs daemon is not currently running.  Starting edenfs..."
+        )
+        clone_process.expect_exact("Started edenfs")
+        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
