@@ -306,7 +306,7 @@ class SystemdUserServiceManagerMixin(metaclass=abc.ABCMeta):
         context_manager = temporary_systemd_user_service_manager()
         exit = context_manager.__exit__
         systemd = context_manager.__enter__()
-        self.addCleanup(lambda: exit(None, None, None))  # pyre-ignore (T36820067)
+        self.addCleanup(lambda: exit(None, None, None))
         return systemd
 
     def addCleanup(
@@ -425,6 +425,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
         # HACK(strager): Work around 'systemd --user' refusing to start if the
         # system is not managed by systemd.
         env["LD_PRELOAD"] = str(
+            # pyre-ignore[6]: T38947910
             pathlib.Path(FindExe.FORCE_SD_BOOTED).resolve(strict=True)
         )
         process = subprocess.Popen(

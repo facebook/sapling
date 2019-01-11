@@ -25,6 +25,7 @@ class EdenFSSystemdMixin(metaclass=abc.ABCMeta):
         assert self.systemd is None
         self.systemd = self.make_temporary_systemd_user_service_manager()
         self.systemd.enable_runtime_unit_from_file(
+            # pyre-ignore[6]: T38947910
             unit_file=pathlib.Path(FindExe.SYSTEMD_FB_EDENFS_SERVICE)
         )
         self.set_environment_variables(self.systemd.extra_env)

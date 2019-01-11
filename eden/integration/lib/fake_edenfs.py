@@ -40,6 +40,7 @@ class FakeEdenFS(typing.ContextManager[int]):
         ]
         if extra_arguments:
             command.extend(extra_arguments)
+        # pyre-ignore[6]: T38947910
         subprocess.check_call(command)
         return cls.from_existing_process(eden_dir=eden_dir)
 
@@ -66,6 +67,7 @@ class FakeEdenFS(typing.ContextManager[int]):
         if extra_arguments:
             command.append("--")
             command.extend(extra_arguments)
+        # pyre-ignore[6]: T38947910
         subprocess.check_call(command)
         return cls.from_existing_process(eden_dir=eden_dir)
 

@@ -394,7 +394,6 @@ class InodeCmd(Subcmd):
         with instance.get_thrift_client() as client:
             results = client.debugInodeStatus(bytes(checkout.path), bytes(rel_path))
 
-        # pyre-ignore[6]: T38219653
         out.write(b"%d loaded TreeInodes\n" % len(results))
         for inode_info in results:
             _print_inode_info(inode_info, out)
@@ -412,7 +411,6 @@ class FuseCallsCmd(Subcmd):
         with instance.get_thrift_client() as client:
             outstanding_call = client.debugOutstandingFuseCalls(bytes(checkout.path))
 
-        # pyre-ignore[6]: T38219653
         out.write(b"Number of outstanding Calls: %d\n" % len(outstanding_call))
         for count, call in enumerate(outstanding_call):
             out.write(b"Call %d\n" % (count + 1))

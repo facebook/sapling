@@ -49,7 +49,6 @@ class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
 
     def test_killed_daemon_is_not_running(self) -> None:
         with self.spawn_fake_edenfs(self.temp_dir) as daemon_pid:
-            # pyre-ignore[6]: T38216313
             os.kill(daemon_pid, signal.SIGKILL)
             wait_for_shutdown(pid=daemon_pid, timeout=5)
 

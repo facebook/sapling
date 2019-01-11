@@ -133,6 +133,7 @@ class DirectInvokeTest(unittest.TestCase):
         self._check_error(["restart"])
 
     def _check_error(self, args: List[str], err: Optional[str] = None) -> None:
+        # pyre-ignore[9]: T38947910
         cmd = [FindExe.EDEN_DAEMON]  # type: List[str]
         cmd.extend(args)
         out = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -269,6 +270,7 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         args = (
             ["--config-dir", str(eden_dir)]
             + self.get_required_eden_cli_args()
+            # pyre-ignore[6]: T38947910
             + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
         )
         if extra_args:
@@ -310,6 +312,7 @@ def run_eden_start_with_real_daemon(
     ]
     if eden_start_needs_allow_root_option(systemd=systemd):
         command.extend(["--", "--allowRoot"])
+    # pyre-ignore[6]: T38947910
     subprocess.check_call(command, env=env)
 
 

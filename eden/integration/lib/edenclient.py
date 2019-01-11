@@ -136,6 +136,7 @@ class EdenFS(object):
             A list of arguments to run Eden that can be used with
             subprocess.Popen() or subprocess.check_call().
         """
+        # pyre-ignore[9]: T38947910
         cmd = [FindExe.EDEN_CLI, "--config-dir", self._eden_dir]  # type: List[str]
         if self._etc_eden_dir:
             cmd += ["--etc-eden-dir", self._etc_eden_dir]
@@ -204,6 +205,7 @@ class EdenFS(object):
         if self._extra_args:
             extra_daemon_args.extend(self._extra_args)
 
+        # pyre-ignore[7]: T38947910
         return extra_daemon_args
 
     def _spawn(self, gdb: bool = False, takeover: bool = False) -> None:
@@ -211,7 +213,11 @@ class EdenFS(object):
             raise Exception("cannot start an already-running eden client")
 
         args = self._get_eden_args(
-            "daemon", "--daemon-binary", FindExe.EDEN_DAEMON, "--foreground"
+            "daemon",
+            "--daemon-binary",
+            # pyre-ignore[6]: T38947910
+            FindExe.EDEN_DAEMON,
+            "--foreground",
         )
 
         extra_daemon_args = self.get_extra_daemon_args()
@@ -300,6 +306,7 @@ class EdenFS(object):
         assert self._process is not None
 
         cmd = [FindExe.TAKEOVER_TOOL, "--edenDir", self._eden_dir]
+        # pyre-ignore[6]: T38947910
         subprocess.check_call(cmd)
 
         old_process = self._process

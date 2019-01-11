@@ -24,7 +24,18 @@ import time
 import types
 import typing
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
@@ -1031,7 +1042,7 @@ class EdenCheckout:
             # This is the checkout root
             return Path()
 
-        curdir: Path = path.parent
+        curdir = cast(Path, path.parent)
         path_parts = [path.name]
         while True:
             stat = curdir.lstat()

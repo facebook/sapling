@@ -287,7 +287,6 @@ class HgRepo(Repo):
         return f"HgRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})"
 
     def _run_hg(self, args: List[str]) -> bytes:
-        # pyre-ignore[6]: T38220626
         cmd = [self._hg_binary] + args
         out_bytes = subprocess.check_output(cmd, cwd=self.working_dir, env=self._env)
         out = typing.cast(bytes, out_bytes)

@@ -300,7 +300,6 @@ class ThriftCmd(Subcmd):
         with instance.get_thrift_client() as client:
             counters = client.getCounters()
 
-        # pyre-ignore[6]: T38219653
         thrift_counters = get_thrift_counters(counters)
         stats_print.write_table(thrift_counters, "Thrift Call", out)
 

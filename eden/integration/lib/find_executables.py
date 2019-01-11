@@ -194,6 +194,7 @@ class FindExeClass(object):
             return hg_bin
 
         # Fall back to the real hg binary
+        # pyre-ignore[7]: T38947910
         return self.HG_REAL
 
     def _find_hg_real(self) -> str:

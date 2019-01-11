@@ -57,6 +57,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         # We put the home directory inside the transient directory as well.
         self.home_dir = self.transient_dir / "home"
 
+    # pyre-ignore[9]: T32649448
     def __enter__(self: T) -> T:
         # pyre-ignore[7]: T38224037
         return self
@@ -491,9 +492,9 @@ def generate(snapshot_type: Type[T]) -> Iterator[T]:
     temporary directory that will be cleaned up when exiting the `with` context.
     """
     with create_tmp_dir() as tmpdir:
-        # pyre-ignore[29]: T38224174
         snapshot = snapshot_type(tmpdir)
         snapshot.generate()
+        # pyre-ignore[7]: T38224037
         yield snapshot
 
 

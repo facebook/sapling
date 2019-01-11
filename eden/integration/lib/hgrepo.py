@@ -79,7 +79,6 @@ class HgRepository(repobase.Repository):
         cwd: Optional[str] = None,
         check: bool = True
     ) -> subprocess.CompletedProcess:
-        # pyre-ignore[6]: T38220626
         cmd = [self.hg_bin] + list(args)
         env = self.hg_environment
         if hgeditor is not None:

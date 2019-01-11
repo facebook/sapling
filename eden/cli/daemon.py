@@ -55,7 +55,6 @@ def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bo
         timeout,
     )
     try:
-        # pyre-ignore[6]: T38216313
         os.kill(pid, signal.SIGKILL)
     except OSError as ex:
         if ex.errno == errno.ESRCH:

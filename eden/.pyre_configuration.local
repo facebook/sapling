@@ -1,7 +1,8 @@
 {
-  "targets": ["//eden/..."],
   "coverage": true,
-  "push_blocking": true,
   "differential": true,
-  "version": "ef2c5ee607f1f91da81803fce065050b0a0725c1"
+  "push_blocking": true,
+  "targets": [
+    "//eden/..."
+  ]
 }

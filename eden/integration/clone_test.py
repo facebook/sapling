@@ -319,6 +319,7 @@ class CloneTest(testcase.EdenRepoTest):
         clone_output = self.eden.run_cmd(
             "clone",
             "--daemon-binary",
+            # pyre-ignore[6]: T38947910
             FindExe.EDEN_DAEMON,
             self.repo.path,
             str(tmp),
@@ -379,6 +380,7 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
         args = (
             ["--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
+            # pyre-ignore[6]: T38947910
             + [
                 "clone",
                 "--daemon-binary",

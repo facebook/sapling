@@ -74,9 +74,7 @@ class EdenTestCase(
                 self.setUp = lambda: None  # type: ignore # (mypy issue 2427)
                 self.tearDown = lambda: None  # type: ignore # (mypy issue 2427)
                 self.setup_example = old_setUp
-                self.teardown_example = (
-                    lambda _: old_tearDown()  # pyre-ignore (T36820067)
-                )
+                self.teardown_example = lambda _: old_tearDown()
                 return super(EdenTestCase, self).run(result)
             finally:
                 self.setUp = old_setUp  # type: ignore # (mypy issue 2427)

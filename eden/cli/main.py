@@ -595,7 +595,6 @@ class ChownCmd(Subcmd):
         parser.add_argument("uid", metavar="uid", help="The uid to chown to", type=int)
         parser.add_argument("gid", metavar="gid", help="The gid to chown to", type=int)
 
-    # pyre-ignore[30]: T38219653
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         bindmounts: List[bytes] = []
@@ -1107,7 +1106,6 @@ re-open these files after Eden is restarted.
         print("Forcing a full restart...")
         if stop_timeout <= 0:
             print("Sending SIGTERM...")
-            # pyre-ignore[6]: T38216313
             os.kill(old_pid, signal.SIGTERM)
             self._wait_for_stop(instance, old_pid, timeout=5)
         else:
@@ -1135,7 +1133,6 @@ re-open these files after Eden is restarted.
                 )
             except Exception as ex:
                 print("Sending SIGTERM...")
-                # pyre-ignore[6]: T38216313
                 os.kill(pid, signal.SIGTERM)
         self._wait_for_stop(instance, pid, timeout)
 
@@ -1288,7 +1285,6 @@ def create_parser() -> argparse.ArgumentParser:
     subcmd_mod.add_subcommands(
         parser,
         subcmd.commands
-        # pyre-ignore[6]: T38220626
         + [
             debug_mod.DebugCmd,
             subcmd_mod.HelpCmd,
