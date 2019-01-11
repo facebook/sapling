@@ -345,7 +345,7 @@ def archive(
             write(name, 0o644, False, lambda: buildmetadata(ctx))
 
     if matchfn:
-        files = [f for f in ctx.manifest().keys() if matchfn(f)]
+        files = ctx.manifest().matches(matchfn).keys()
     else:
         files = ctx.manifest().keys()
     total = len(files)
