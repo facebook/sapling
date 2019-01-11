@@ -130,11 +130,18 @@ class FakeBackingStore : public BackingStore {
    */
   void discardOutstandingRequests();
 
+  /**
+   * Returns the number of times this hash has been queried by either getTree,
+   * getBlob, or getTreeForCommit.
+   */
+  size_t getAccessCount(const Hash& hash) const;
+
  private:
   struct Data {
     std::unordered_map<Hash, std::unique_ptr<StoredTree>> trees;
     std::unordered_map<Hash, std::unique_ptr<StoredBlob>> blobs;
     std::unordered_map<Hash, std::unique_ptr<StoredHash>> commits;
+    std::unordered_map<Hash, size_t> accessCounts;
   };
 
   static std::vector<TreeEntry> buildTreeEntries(

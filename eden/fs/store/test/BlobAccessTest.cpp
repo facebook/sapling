@@ -10,8 +10,10 @@
 #include "eden/fs/store/BlobAccess.h"
 #include <gtest/gtest.h>
 #include <chrono>
-#include "eden/fs/store/BlobCache.h"
-#include "eden/fs/testharness/FakeObjectStore.h"
+#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/StoreResult.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
 
 using namespace folly::literals;
 using namespace std::chrono_literals;
@@ -27,19 +29,56 @@ const auto blob3 = std::make_shared<Blob>(hash3, "333"_sp);
 const auto blob4 = std::make_shared<Blob>(hash4, "4444"_sp);
 const auto blob5 = std::make_shared<Blob>(hash5, "55555"_sp);
 const auto blob6 = std::make_shared<Blob>(hash6, "666666"_sp);
+
+/**
+ * These tests attempt to measure the number of hits to the backing store, so
+ * prevent anything from getting cached in the local store.
+ */
+class NullLocalStore final : public LocalStore {
+ public:
+  class NullWriteBatch final : public LocalStore::WriteBatch {
+   public:
+    void put(KeySpace, folly::ByteRange, folly::ByteRange) override {}
+    void put(KeySpace, folly::ByteRange, std::vector<folly::ByteRange>)
+        override {}
+    void flush() override {}
+  };
+
+  void close() override {}
+  void clearKeySpace(KeySpace) override {}
+  void compactKeySpace(KeySpace) override {}
+
+  StoreResult get(KeySpace, folly::ByteRange) const override {
+    return StoreResult{};
+  }
+
+  bool hasKey(KeySpace, folly::ByteRange) const override {
+    return false;
+  }
+
+  void put(KeySpace, folly::ByteRange, folly::ByteRange) override {}
+
+  std::unique_ptr<WriteBatch> beginWrite(size_t) override {
+    return std::make_unique<NullWriteBatch>();
+  }
+};
 } // namespace
 
 struct BlobAccessTest : ::testing::Test {
   BlobAccessTest()
-      : objectStore{std::make_shared<FakeObjectStore>()},
+      : localStore{std::make_shared<NullLocalStore>()},
+        backingStore{std::make_shared<FakeBackingStore>(localStore)},
+        objectStore{ObjectStore::create(localStore, backingStore)},
         blobCache{BlobCache::create(10, 0)},
         blobAccess{objectStore, blobCache} {
-    objectStore->addBlob(Blob{hash3, "333"_sp});
-    objectStore->addBlob(Blob{hash4, "4444"_sp});
-    objectStore->addBlob(Blob{hash5, "55555"_sp});
-    objectStore->addBlob(Blob{hash6, "666666"_sp});
+    backingStore->putBlob(hash3, "333"_sp)->setReady();
+    backingStore->putBlob(hash4, "4444"_sp)->setReady();
+    backingStore->putBlob(hash5, "55555"_sp)->setReady();
+    backingStore->putBlob(hash6, "666666"_sp)->setReady();
   }
-  std::shared_ptr<FakeObjectStore> objectStore;
+  std::shared_ptr<LocalStore> localStore;
+  std::shared_ptr<FakeBackingStore> backingStore;
+  std::shared_ptr<ObjectStore> objectStore;
   std::shared_ptr<BlobCache> blobCache;
   BlobAccess blobAccess;
 };
@@ -50,7 +89,7 @@ TEST_F(BlobAccessTest, remembers_blobs) {
 
   EXPECT_EQ(blob1, blob2);
   EXPECT_EQ(4, blob1->getSize());
-  EXPECT_EQ(1, objectStore->getAccessCount(hash4));
+  EXPECT_EQ(1, backingStore->getAccessCount(hash4));
 }
 
 TEST_F(BlobAccessTest, drops_blobs_when_size_is_exceeded) {
@@ -62,8 +101,8 @@ TEST_F(BlobAccessTest, drops_blobs_when_size_is_exceeded) {
   EXPECT_EQ(5, blob2->getSize());
   EXPECT_EQ(6, blob3->getSize());
 
-  EXPECT_EQ(1, objectStore->getAccessCount(hash5));
-  EXPECT_EQ(2, objectStore->getAccessCount(hash6));
+  EXPECT_EQ(1, backingStore->getAccessCount(hash5));
+  EXPECT_EQ(2, backingStore->getAccessCount(hash6));
 }
 
 TEST_F(BlobAccessTest, drops_oldest_blobs) {
@@ -72,21 +111,21 @@ TEST_F(BlobAccessTest, drops_oldest_blobs) {
 
   // Evicts hash3
   blobAccess.getBlob(hash5).get(0ms);
-  EXPECT_EQ(1, objectStore->getAccessCount(hash3));
-  EXPECT_EQ(1, objectStore->getAccessCount(hash4));
-  EXPECT_EQ(1, objectStore->getAccessCount(hash5));
+  EXPECT_EQ(1, backingStore->getAccessCount(hash3));
+  EXPECT_EQ(1, backingStore->getAccessCount(hash4));
+  EXPECT_EQ(1, backingStore->getAccessCount(hash5));
 
   // Evicts hash4 but not hash5
   blobAccess.getBlob(hash3).get(0ms);
   blobAccess.getBlob(hash5).get(0ms);
-  EXPECT_EQ(2, objectStore->getAccessCount(hash3));
-  EXPECT_EQ(1, objectStore->getAccessCount(hash4));
-  EXPECT_EQ(1, objectStore->getAccessCount(hash5));
+  EXPECT_EQ(2, backingStore->getAccessCount(hash3));
+  EXPECT_EQ(1, backingStore->getAccessCount(hash4));
+  EXPECT_EQ(1, backingStore->getAccessCount(hash5));
 
   // Evicts hash3
   blobAccess.getBlob(hash4).get(0ms);
   blobAccess.getBlob(hash5).get(0ms);
-  EXPECT_EQ(2, objectStore->getAccessCount(hash3));
-  EXPECT_EQ(2, objectStore->getAccessCount(hash4));
-  EXPECT_EQ(1, objectStore->getAccessCount(hash5));
+  EXPECT_EQ(2, backingStore->getAccessCount(hash3));
+  EXPECT_EQ(2, backingStore->getAccessCount(hash4));
+  EXPECT_EQ(1, backingStore->getAccessCount(hash5));
 }

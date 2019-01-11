@@ -10,6 +10,7 @@
 #include "FakeBackingStore.h"
 
 #include <folly/Format.h>
+#include <folly/MapUtil.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/ssl/OpenSSLHash.h>
@@ -38,7 +39,8 @@ FakeBackingStore::FakeBackingStore(std::shared_ptr<LocalStore> localStore)
 FakeBackingStore::~FakeBackingStore() {}
 
 Future<unique_ptr<Tree>> FakeBackingStore::getTree(const Hash& id) {
-  auto data = data_.rlock();
+  auto data = data_.wlock();
+  ++data->accessCounts[id];
   auto it = data->trees.find(id);
   if (it == data->trees.end()) {
     // Throw immediately, as opposed to returning a Future that contains an
@@ -54,7 +56,8 @@ Future<unique_ptr<Tree>> FakeBackingStore::getTree(const Hash& id) {
 }
 
 Future<unique_ptr<Blob>> FakeBackingStore::getBlob(const Hash& id) {
-  auto data = data_.rlock();
+  auto data = data_.wlock();
+  ++data->accessCounts[id];
   auto it = data->blobs.find(id);
   if (it == data->blobs.end()) {
     // Throw immediately, for the same reasons mentioned in getTree()
@@ -68,7 +71,8 @@ Future<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
     const Hash& commitID) {
   StoredHash* storedTreeHash;
   {
-    auto data = data_.rlock();
+    auto data = data_.wlock();
+    ++data->accessCounts[commitID];
     auto commitIter = data->commits.find(commitID);
     if (commitIter == data->commits.end()) {
       // Throw immediately, for the same reasons mentioned in getTree()
@@ -338,6 +342,10 @@ void FakeBackingStore::discardOutstandingRequests() {
   for (const auto& commit : data->commits) {
     commit.second->discardOutstandingRequests();
   }
+}
+
+size_t FakeBackingStore::getAccessCount(const Hash& hash) const {
+  return folly::get_default(data_.rlock()->accessCounts, hash, 0);
 }
 } // namespace eden
 } // namespace facebook
