@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import asyncio
 import errno
 import os
 import pathlib
@@ -215,19 +216,20 @@ def start_systemd_service(
 
     startup_log_path = service_config.startup_log_file_path
     startup_log_path.write_bytes(b"")
-    with forward_log_file(  # pyre-ignore (T37455202)
-        startup_log_path, sys.stderr.buffer
-    ) as log_forwarder:
-        with subprocess.Popen(
-            ["systemctl", "--user", "start", "--", service_name]
-        ) as start_process:
-            while True:
-                log_forwarder.poll()
-                exit_code = start_process.poll()
-                if exit_code is not None:
-                    log_forwarder.poll()
-                    return exit_code
-                time.sleep(0.1)
+    with forward_log_file(startup_log_path, sys.stderr.buffer) as log_forwarder:
+        loop = asyncio.get_event_loop()
+
+        async def start_service_async():
+            start_process = await asyncio.create_subprocess_exec(
+                "systemctl", "--user", "start", "--", service_name
+            )
+            return await start_process.wait()
+
+        start_task = loop.create_task(start_service_async())
+        loop.create_task(log_forwarder.poll_forever_async())
+        loop.run_until_complete(start_task)
+        log_forwarder.poll()
+        return start_task.result()
 
 
 def _get_daemon_args(

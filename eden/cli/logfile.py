@@ -6,6 +6,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import asyncio
 import contextlib
 import io
 import pathlib
@@ -35,6 +36,11 @@ class LogForwarder:
     def poll(self) -> None:
         self.__output_file.write(self.__follower.poll())
         self.__output_file.flush()
+
+    async def poll_forever_async(self) -> typing.NoReturn:
+        while True:
+            self.poll()
+            await asyncio.sleep(0.1)
 
 
 @contextlib.contextmanager
