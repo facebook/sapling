@@ -43,7 +43,7 @@ use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use cachelib;
 use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
-use dbbookmarks::SqlBookmarks;
+use dbbookmarks::CachedBookmarks;
 use delayblob::DelayBlob;
 use file::{fetch_file_envelope, get_rename_from_envelope};
 use fileblob::Fileblob;
@@ -240,7 +240,7 @@ impl BlobRepo {
         blobstore: Arc<Blobstore>,
         repoid: RepositoryId,
     ) -> Result<Self> {
-        let bookmarks = SqlBookmarks::with_sqlite_path(path.join("books"))
+        let bookmarks = CachedBookmarks::with_sqlite_path(path.join("books"))
             .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
         let filenodes = SqlFilenodes::with_sqlite_path(path.join("filenodes"))
             .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
@@ -270,7 +270,7 @@ impl BlobRepo {
     ) -> Result<Self> {
         Ok(Self::new(
             logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
-            Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
+            Arc::new(CachedBookmarks::with_sqlite_in_memory()?),
             blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
             Arc::new(SqlFilenodes::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
@@ -374,7 +374,7 @@ impl BlobRepo {
             &db_address,
         );
 
-        let bookmarks = SqlBookmarks::with_myrouter(&db_address, myrouter_port);
+        let bookmarks = CachedBookmarks::with_myrouter(&db_address, myrouter_port);
 
         let changesets = SqlChangesets::with_myrouter(&db_address, myrouter_port);
         let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
