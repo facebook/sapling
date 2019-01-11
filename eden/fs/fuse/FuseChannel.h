@@ -13,12 +13,12 @@
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
+#include <folly/synchronization/CallOnce.h>
 #include <stdlib.h>
 #include <sys/uio.h>
 #include <condition_variable>
 #include <iosfwd>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <thread>
 #include <unordered_map>
@@ -568,6 +568,7 @@ class FuseChannel {
    * All of this state uses locking or other synchronization.
    */
   std::atomic<bool> stop_{false};
+  folly::once_flag unmountLogFlag_;
   folly::Synchronized<State> state_;
   folly::Promise<StopFuture> initPromise_;
   folly::Promise<StopData> sessionCompletePromise_;

@@ -1101,6 +1101,9 @@ void FuseChannel::processSession() {
         continue;
       } else if (error == ENODEV) {
         // ENODEV means the filesystem was unmounted
+        folly::call_once(unmountLogFlag_, [this] {
+          XLOG(DBG3) << "received unmount event ENODEV on mount " << mountPath_;
+        });
         requestSessionExit(StopReason::UNMOUNTED);
         break;
       } else {
