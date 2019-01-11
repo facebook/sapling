@@ -944,8 +944,9 @@ def _print_journal_entry(delta: DebugJournalDelta, entries: List[str]) -> None:
     else:
         print(f"DELTA {delta.fromPosition.sequenceNumber} {commit_ids}")
 
-    entries.sort()
-    print("\n".join(entries))
+    if entries:
+        entries.sort()
+        print("  " + "\n  ".join(entries))
 
 
 @debug_cmd("thrift", "Invoke a thrift function")
