@@ -76,6 +76,12 @@ impl MutableDataPack {
         let data_filepath = base_filepath.with_extension("datapack");
         let index_filepath = base_filepath.with_extension("dataidx");
 
+        let mut perms = self.data_file.as_file().metadata()?.permissions();
+        perms.set_readonly(true);
+
+        self.data_file.as_file().set_permissions(perms.clone())?;
+        index_file.as_file().set_permissions(perms)?;
+
         self.data_file.persist(&data_filepath)?;
         index_file.persist(&index_filepath)?;
         Ok(base_filepath)

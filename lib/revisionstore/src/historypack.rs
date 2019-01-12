@@ -506,6 +506,12 @@ pub mod tests {
         {
             let mut file = File::open(&pack_path).unwrap();
             file.read_to_end(&mut buf).unwrap();
+
+            // After being closed the datapacks are read-only. Since the next part of the test
+            // corrupt it, let's make it writable.
+            let mut perms = file.metadata().unwrap().permissions();
+            perms.set_readonly(false);
+            file.set_permissions(perms).unwrap();
         }
         buf[0] = 0;
         OpenOptions::new()
