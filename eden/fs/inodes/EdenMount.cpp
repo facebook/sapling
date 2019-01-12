@@ -363,12 +363,33 @@ Future<Unit> EdenMount::performBindMounts() {
       });
 }
 
-bool EdenMount::doStateTransition(State expected, State newState) {
-  return state_.compare_exchange_strong(expected, newState);
+bool EdenMount::tryToTransitionState(State expected, State newState) {
+  return state_.compare_exchange_strong(
+      expected, newState, std::memory_order_acq_rel);
+}
+
+void EdenMount::transitionState(State expected, State newState) {
+  State found = expected;
+  if (!state_.compare_exchange_strong(
+          found, newState, std::memory_order_acq_rel)) {
+    throw std::runtime_error(folly::to<std::string>(
+        "unable to transition mount ",
+        getPath(),
+        " to state ",
+        newState,
+        ": expected to be in state ",
+        expected,
+        " but actually in ",
+        found));
+  }
+}
+
+void EdenMount::unconditionallySetState(State newState) noexcept {
+  state_.store(newState, std::memory_order_release);
 }
 
 void EdenMount::destroy() {
-  auto oldState = state_.exchange(State::DESTROYING);
+  auto oldState = state_.exchange(State::DESTROYING, std::memory_order_acq_rel);
   switch (oldState) {
     case State::UNINITIALIZED: {
       // The root inode may still be null here if we failed to load the root
@@ -419,10 +440,10 @@ Future<SerializedInodeMap> EdenMount::shutdown(
   // SHUTTING_DOWN or later states.  Confirm this is the case, and move to
   // SHUTTING_DOWN.
   if (!(allowFuseNotStarted &&
-        doStateTransition(State::UNINITIALIZED, State::SHUTTING_DOWN)) &&
-      !doStateTransition(State::RUNNING, State::SHUTTING_DOWN) &&
-      !doStateTransition(State::STARTING, State::SHUTTING_DOWN) &&
-      !doStateTransition(State::FUSE_ERROR, State::SHUTTING_DOWN)) {
+        tryToTransitionState(State::UNINITIALIZED, State::SHUTTING_DOWN)) &&
+      !tryToTransitionState(State::RUNNING, State::SHUTTING_DOWN) &&
+      !tryToTransitionState(State::STARTING, State::SHUTTING_DOWN) &&
+      !tryToTransitionState(State::FUSE_ERROR, State::SHUTTING_DOWN)) {
     EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "
                << "state was " << getState();
   }
@@ -441,7 +462,7 @@ Future<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
         // released the lock before the new edenfs process begins to take over
         // the mount point.
         overlay_->close();
-        state_.store(State::SHUT_DOWN);
+        unconditionallySetState(State::SHUT_DOWN);
         return inodeMap;
       });
 }
@@ -795,9 +816,8 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
 
 folly::Future<folly::Unit> EdenMount::startFuse() {
   return folly::makeFutureWith([&]() {
-    if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
-      throw std::runtime_error("mount point has already been started");
-    }
+    transitionState(
+        /*expected=*/State::UNINITIALIZED, /*newState=*/State::STARTING);
 
     return serverState_->getPrivHelper()
         ->fuseMount(getPath().stringPiece())
@@ -808,7 +828,7 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
                 fuseInitSuccessful(std::move(fuseCompleteFuture));
               })
               .onError([this](folly::exception_wrapper&& ew) {
-                doStateTransition(State::STARTING, State::FUSE_ERROR);
+                unconditionallySetState(State::FUSE_ERROR);
                 return makeFuture<folly::Unit>(std::move(ew));
               });
         });
@@ -816,9 +836,7 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
 }
 
 void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
-  if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
-    throw std::runtime_error("mount point has already been started");
-  }
+  transitionState(State::UNINITIALIZED, State::STARTING);
 
   createFuseChannel(std::move(takeoverData.fd));
 
@@ -827,7 +845,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
         channel_->initializeFromTakeover(takeoverData.connInfo);
     fuseInitSuccessful(std::move(fuseCompleteFuture));
   } catch (const std::exception& ex) {
-    doStateTransition(State::STARTING, State::FUSE_ERROR);
+    unconditionallySetState(State::FUSE_ERROR);
     throw;
   }
 }
@@ -846,7 +864,10 @@ void EdenMount::createFuseChannel(folly::File fuseDevice) {
 
 void EdenMount::fuseInitSuccessful(
     FuseChannel::StopFuture&& fuseCompleteFuture) {
-  doStateTransition(State::STARTING, State::RUNNING);
+  // Try to transition to the RUNNING state.
+  // This state transition could fail if shutdown() was called before we saw the
+  // FUSE_INIT message from the kernel.
+  transitionState(State::STARTING, State::RUNNING);
 
   std::move(fuseCompleteFuture)
       .via(serverState_->getThreadPool().get())

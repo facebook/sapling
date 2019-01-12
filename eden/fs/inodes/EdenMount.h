@@ -536,7 +536,21 @@ class EdenMount {
    * and returns boolean.
    * Otherwise the current state is left untouched and returns false.
    */
-  bool doStateTransition(State expected, State newState);
+  FOLLY_NODISCARD bool tryToTransitionState(State expected, State newState);
+
+  /**
+   * Transition from expected -> newState.
+   *
+   * Throws an error if the current state does not match the expected state.
+   */
+  void transitionState(State expected, State newState);
+
+  /**
+   * Unconditionally transition to a new state, regardless of the current state.
+   *
+   * This is primarily used for transitioning to error states.
+   */
+  void unconditionallySetState(State newState) noexcept;
 
   EdenMount(
       std::unique_ptr<ClientConfig> config,
