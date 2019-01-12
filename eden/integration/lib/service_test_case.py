@@ -34,6 +34,7 @@ class ServiceTestCaseBase(
 
     __etc_eden_dir: typing.Optional[pathlib.Path] = None
     __home_dir: typing.Optional[pathlib.Path] = None
+    __tmp_dir: typing.Optional[pathlib.Path] = None
 
     @abc.abstractmethod
     def spawn_fake_edenfs(
@@ -55,15 +56,23 @@ class ServiceTestCaseBase(
         ]
 
     @property
+    def tmp_dir(self) -> pathlib.Path:
+        if self.__tmp_dir is None:
+            self.__tmp_dir = pathlib.Path(self.make_temporary_directory())
+        return self.__tmp_dir
+
+    @property
     def etc_eden_dir(self) -> pathlib.Path:
         if self.__etc_eden_dir is None:
-            self.__etc_eden_dir = pathlib.Path(self.make_temporary_directory())
+            self.__etc_eden_dir = self.tmp_dir / "etc_eden"
+            self.__etc_eden_dir.mkdir()
         return self.__etc_eden_dir
 
     @property
     def home_dir(self) -> pathlib.Path:
         if self.__home_dir is None:
-            self.__home_dir = pathlib.Path(self.make_temporary_directory())
+            self.__home_dir = self.tmp_dir / "home"
+            self.__home_dir.mkdir()
         return self.__home_dir
 
 

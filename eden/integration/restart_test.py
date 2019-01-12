@@ -30,11 +30,12 @@ from .lib.service_test_case import (
 
 class RestartTestBase(ServiceTestCaseBase):
     def setUp(self) -> None:
-        self.tmp_dir = self.make_temporary_directory()
+        self.eden_dir = self.tmp_dir / "eden"
+        self.eden_dir.mkdir()
 
         def ensure_stopped() -> None:
             stop_cmd = (
-                [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir]
+                [FindExe.EDEN_CLI, "--config-dir", str(self.eden_dir)]
                 # pyre-ignore[6]: T38220626
                 + self.get_required_eden_cli_args()
                 + ["stop"]
@@ -46,7 +47,7 @@ class RestartTestBase(ServiceTestCaseBase):
 
     def _spawn_restart(self, *args: str) -> "pexpect.spawn[bytes]":
         restart_cmd = (
-            [FindExe.EDEN_CLI, "--config-dir", self.tmp_dir]
+            [FindExe.EDEN_CLI, "--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
             + ["restart", "--daemon-binary", FindExe.FAKE_EDENFS]
         )
@@ -58,14 +59,14 @@ class RestartTestBase(ServiceTestCaseBase):
         )
 
     def _start_fake_edenfs(self) -> int:
-        daemon = self.spawn_fake_edenfs(eden_dir=pathlib.Path(self.tmp_dir))
+        daemon = self.spawn_fake_edenfs(eden_dir=self.eden_dir)
         return daemon.process_id
 
 
 @service_test
 class RestartTest(RestartTestBase, PexpectAssertionMixin):
     def _check_edenfs_health(self) -> HealthStatus:
-        instance = EdenInstance(self.tmp_dir, etc_eden_dir=None, home_dir=None)
+        instance = EdenInstance(str(self.eden_dir), etc_eden_dir=None, home_dir=None)
         return instance.check_health()
 
     def test_restart_starts_edenfs_if_not_running(self) -> None:
@@ -82,7 +83,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         self.assertEqual(p.exitstatus, 0)
 
     def _get_thrift_client(self) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(self.tmp_dir)
+        return eden.thrift.create_thrift_client(str(self.eden_dir))
 
     def test_restart(self) -> None:
         self._start_fake_edenfs()
@@ -214,9 +215,8 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
 
         # Rename the thrift socket so that "eden restart" will not be able to
         # communicate with the existing daemon.
-        os.rename(
-            os.path.join(self.tmp_dir, eden.thrift.client.SOCKET_PATH),
-            os.path.join(self.tmp_dir, "old.socket"),
+        (self.eden_dir / eden.thrift.client.SOCKET_PATH).rename(
+            self.eden_dir / "old.socket"
         )
 
         # "eden restart" should not restart if it cannot confirm the current health of
@@ -265,13 +265,13 @@ class RestartWithSystemdTest(
         restart_process.expect_exact("Eden is not currently running.  Starting it...")
         restart_process.expect_exact("Started edenfs")
         self.assert_process_succeeds(restart_process)
-        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.tmp_dir))
+        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
 
     def test_service_is_active_after_full_eden_restart(self) -> None:
         self._start_fake_edenfs()
         restart_process = self._spawn_restart("--force")
         self.assert_process_succeeds(restart_process)
-        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.tmp_dir))
+        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
 
     def test_graceful_restart_is_not_supported_yet(self) -> None:
         self._start_fake_edenfs()
@@ -279,4 +279,4 @@ class RestartWithSystemdTest(
         restart_process.expect_exact("NotImplementedError")
         restart_process.expect_exact("eden restart --graceful")
         self.assert_process_fails(restart_process, 1)
-        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.tmp_dir))
+        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
