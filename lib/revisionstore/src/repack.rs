@@ -99,17 +99,31 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
 }
 
 pub fn repack_datapacks<'a>(
-    paths: impl Iterator<Item = &'a PathBuf>,
+    paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
 ) -> Result<PathBuf> {
+    let mut empty = true;
     let mut mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
 
-    for path in paths {
+    for path in paths.clone() {
         let data_pack = DataPack::new(&path)?;
         repack_datapack(&data_pack, &mut mut_pack)?;
+        empty = false;
     }
 
-    mut_pack.close()
+    if empty {
+        Ok(PathBuf::new())
+    } else {
+        let new_pack_path = mut_pack.close()?;
+        for path in paths {
+            let datapack = DataPack::new(&path)?;
+            if datapack.base_path() != new_pack_path {
+                datapack.delete()?;
+            }
+        }
+
+        Ok(new_pack_path)
+    }
 }
 
 fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryPack) -> Result<()> {
@@ -123,17 +137,31 @@ fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryP
 }
 
 pub fn repack_historypacks<'a>(
-    paths: impl Iterator<Item = &'a PathBuf>,
+    paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
 ) -> Result<PathBuf> {
+    let mut empty = true;
     let mut mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
 
-    for path in paths {
+    for path in paths.clone() {
         let history_pack = HistoryPack::new(path)?;
         repack_historypack(&history_pack, &mut mut_pack)?;
+        empty = false;
     }
 
-    mut_pack.close()
+    if empty {
+        Ok(PathBuf::new())
+    } else {
+        let new_pack_path = mut_pack.close()?;
+        for path in paths {
+            let history_pack = HistoryPack::new(path)?;
+            if history_pack.base_path() != new_pack_path {
+                history_pack.delete()?;
+            }
+        }
+
+        Ok(new_pack_path)
+    }
 }
 
 #[cfg(test)]
@@ -240,27 +268,37 @@ mod tests {
     }
 
     #[test]
+    fn test_repack_no_datapack() {
+        let tempdir = TempDir::new().unwrap();
+
+        let newpath = repack_datapacks(vec![].iter(), tempdir.path());
+        assert!(newpath.is_ok());
+        let newpath = newpath.unwrap();
+        assert_eq!(newpath.to_str(), Some(""));
+    }
+
+    #[test]
     fn test_repack_one_datapack() {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let revisions = vec![
-            (
-                Delta {
-                    data: Rc::new([1, 2, 3, 4]),
-                    base: None,
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
-                },
-                None,
-            ),
-        ];
+        let revisions = vec![(
+            Delta {
+                data: Rc::new([1, 2, 3, 4]),
+                base: None,
+                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+            },
+            None,
+        )];
 
         let pack = make_datapack(&tempdir, &revisions);
-        let newpath = repack_datapacks(vec![pack.pack_path().to_path_buf()].iter(), tempdir.path());
+        let newpath = repack_datapacks(vec![pack.base_path().to_path_buf()].iter(), tempdir.path());
         assert!(newpath.is_ok());
         let newpath2 = newpath.unwrap();
         assert_eq!(newpath2.with_extension("datapack"), pack.pack_path());
-        let newpack = DataPack::new(&newpath2).unwrap();
+        let datapack = DataPack::new(&newpath2);
+        assert!(datapack.is_ok());
+        let newpack = datapack.unwrap();
         assert_eq!(
             newpack.iter().collect::<Result<Vec<Key>>>().unwrap(),
             revisions
@@ -298,7 +336,7 @@ mod tests {
                 ),
             ];
             let pack = make_datapack(&tempdir, &rev);
-            let path = pack.pack_path().to_path_buf();
+            let path = pack.base_path().to_path_buf();
             revisions.push(rev);
             paths.push(path);
         }
@@ -325,7 +363,7 @@ mod tests {
 
         let pack = make_historypack(&tempdir, &nodes);
         let newpath =
-            repack_historypacks(vec![pack.pack_path().to_path_buf()].iter(), tempdir.path());
+            repack_historypacks(vec![pack.base_path().to_path_buf()].iter(), tempdir.path());
         assert!(newpath.is_ok());
         let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
 
@@ -346,7 +384,7 @@ mod tests {
         for _ in 0..2 {
             let (node, ancestor) = get_nodes(&mut rng);
             let pack = make_historypack(&tempdir, &node);
-            let path = pack.pack_path().to_path_buf();
+            let path = pack.base_path().to_path_buf();
 
             ancestors.extend(ancestor.into_iter());
             nodes.extend(node.into_iter());
