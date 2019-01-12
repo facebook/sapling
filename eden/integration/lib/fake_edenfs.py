@@ -14,6 +14,8 @@ import signal
 import subprocess
 import typing
 
+import eden.thrift
+
 from .find_executables import FindExe
 
 
@@ -89,10 +91,6 @@ class FakeEdenFS(typing.ContextManager[int]):
         return None
 
 
-def read_fake_edenfs_argv_file(argv_file: pathlib.Path) -> typing.List[str]:
-    try:
-        return list(argv_file.read_text().splitlines())
-    except FileNotFoundError as e:
-        raise Exception(
-            "fake_edenfs should have recognized the --commandArgumentsLogFile argument"
-        ) from e
+def get_fake_edenfs_argv(eden_dir: pathlib.Path) -> typing.List[str]:
+    with eden.thrift.create_thrift_client(str(eden_dir)) as client:
+        return client.getCommandLine().split("\0")

@@ -32,6 +32,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace std::literals::chrono_literals;
+using namespace folly::literals::string_piece_literals;
 using apache::thrift::ThriftServer;
 using facebook::fb303::cpp2::fb_status;
 using folly::EventBase;
@@ -49,10 +50,10 @@ DEFINE_string(
     cleanShutdownFile,
     "",
     "If set, create the given file when shutting down cleanly");
-DEFINE_string(
-    commandArgumentsLogFile,
-    "",
-    "If set, write argv to the given file before starting up");
+DEFINE_bool(
+    allowExtraArgs,
+    false,
+    "Do not error out if extra command line options were specified");
 DEFINE_bool(
     exitWithoutCleanupOnStop,
     false,
@@ -89,8 +90,6 @@ template <class Rep, class Ratio>
 std::string prettyPrint(
     std::chrono::duration<Rep, Ratio> duration,
     bool addSpace = true);
-
-void writeCommandArgumentsToLogIfNecessary(const std::vector<std::string>&);
 
 enum class StopBehavior {
   DoNothing,
@@ -152,6 +151,16 @@ class FakeEdenServer {
     cleanShutdownFile_ = path;
   }
 
+  string getCommandLine() const {
+    return commandLine_;
+  }
+  void setCommandLine(folly::StringPiece commandLine) {
+    // Note that setCommandLine() is not thread-safe.
+    // It should only be called immediately after construction of the
+    // FakeEdenServer, before it can be used from multiple threads.
+    commandLine_ = commandLine;
+  }
+
  private:
   void reportCleanShutdown() {
     if (cleanShutdownFile_) {
@@ -166,6 +175,7 @@ class FakeEdenServer {
   std::chrono::milliseconds getPidSleepDuration_{0ms};
   std::chrono::milliseconds stopSleepDuration_{0ms};
   std::optional<AbsolutePath> cleanShutdownFile_{};
+  string commandLine_;
 };
 
 class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
@@ -204,6 +214,10 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
         badOption();
       }
     }
+  }
+
+  void getCommandLine(string& result) override {
+    result = server_->getCommandLine();
   }
 
   int64_t getPid() override {
@@ -311,15 +325,13 @@ int main(int argc, char** argv) {
 
   auto init = folly::Init(&argc, &argv);
 
-  writeCommandArgumentsToLogIfNecessary(originalCommandArguments);
-
 #if EDEN_HAVE_SYSTEMD
   if (FLAGS_experimentalSystemd) {
     XLOG(INFO) << "Running in experimental systemd mode";
   }
 #endif
 
-  if (argc != 1 && FLAGS_commandArgumentsLogFile.empty()) {
+  if (argc != 1 && !FLAGS_allowExtraArgs) {
     fprintf(stderr, "error: unexpected trailing command line arguments\n");
     return 1;
   }
@@ -361,6 +373,7 @@ int main(int argc, char** argv) {
   }
 
   FakeEdenServer server;
+  server.setCommandLine(folly::join("\0"_sp, originalCommandArguments));
   if (!FLAGS_cleanShutdownFile.empty()) {
     server.setCleanShutdownFile(AbsolutePath{FLAGS_cleanShutdownFile});
   }
@@ -390,21 +403,6 @@ std::string prettyPrint(
       std::chrono::duration_cast<std::chrono::duration<double>>(duration);
   return folly::prettyPrint(
       durationInSeconds.count(), folly::PRETTY_TIME, addSpace);
-}
-
-void writeCommandArgumentsToLogIfNecessary(
-    const std::vector<std::string>& originalCommandArguments) {
-  const auto& path = FLAGS_commandArgumentsLogFile;
-  if (path.empty()) {
-    return;
-  }
-  auto file = std::ofstream{};
-  file.exceptions(std::ofstream::badbit | std::ofstream::failbit);
-  file.open(path);
-  std::copy(
-      originalCommandArguments.begin(),
-      originalCommandArguments.end(),
-      std::ostream_iterator<std::string>{file, "\n"});
 }
 
 } // namespace

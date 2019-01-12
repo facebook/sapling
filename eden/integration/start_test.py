@@ -23,7 +23,7 @@ from fb303.ttypes import fb_status
 
 from .lib import testcase
 from .lib.edenfs_systemd import EdenFSSystemdMixin
-from .lib.fake_edenfs import read_fake_edenfs_argv_file
+from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
 from .lib.service_test_case import ServiceTestCaseBase, service_test
@@ -193,21 +193,12 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         )
 
     def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
-        argv_file = self.eden_dir / "argv"
-        assert not argv_file.exists()
-
-        extra_daemon_args = [
-            "--commandArgumentsLogFile",
-            str(argv_file),
-            "--",
-            "hello world",
-            "--ignoredOption",
-        ]
+        extra_daemon_args = ["--allowExtraArgs", "--", "hello world", "--ignoredOption"]
         start_process = self.spawn_start(extra_args=["--"] + extra_daemon_args)
         wait_for_pexpect_process(start_process)
 
-        argv = read_fake_edenfs_argv_file(argv_file)
-        self.assertEquals(
+        argv = get_fake_edenfs_argv(self.eden_dir)
+        self.assertEqual(
             argv[-len(extra_daemon_args) :],
             extra_daemon_args,
             f"fake_edenfs should have received arguments verbatim\nargv: {argv}",
@@ -216,16 +207,12 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def test_daemon_command_arguments_should_forward_to_edenfs_without_leading_dashdash(
         self
     ) -> None:
-        argv_file = self.eden_dir / "argv"
-        assert not argv_file.exists()
-
         start_process = self.spawn_start(
             extra_args=[
                 "hello world",
                 "another fake_edenfs argument",
                 "--",
-                "--commandArgumentsLogFile",
-                str(argv_file),
+                "--allowExtraArgs",
                 "arg_after_dashdash",
             ]
         )
@@ -234,12 +221,11 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         expected_extra_daemon_args = [
             "hello world",
             "another fake_edenfs argument",
-            "--commandArgumentsLogFile",
-            str(argv_file),
+            "--allowExtraArgs",
             "arg_after_dashdash",
         ]
-        argv = read_fake_edenfs_argv_file(argv_file)
-        self.assertEquals(
+        argv = get_fake_edenfs_argv(self.eden_dir)
+        self.assertEqual(
             argv[-len(expected_extra_daemon_args) :],
             expected_extra_daemon_args,
             f"fake_edenfs should have received extra arguments\nargv: {argv}",
@@ -278,13 +264,6 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         return pexpect.spawn(
             FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
         )
-
-    def __read_argv_file(self, argv_file: pathlib.Path) -> typing.List[str]:
-        self.assertTrue(
-            argv_file.exists(),
-            f"fake_edenfs should have recognized the --commandArgumentsLogFile argument",
-        )
-        return list(argv_file.read_text().splitlines())
 
 
 def run_eden_start_with_real_daemon(

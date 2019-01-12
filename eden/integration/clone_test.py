@@ -21,7 +21,7 @@ from eden.cli import util
 from eden.integration.lib.hgrepo import HgRepository
 
 from .lib import edenclient, testcase
-from .lib.fake_edenfs import read_fake_edenfs_argv_file
+from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
 from .lib.service_test_case import (
@@ -399,12 +399,10 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
 @service_test
 class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
     def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
-        argv_file = self.eden_dir / "argv"
-        assert not argv_file.exists()
         repo = self.make_dummy_hg_repo()
         mount_path = Path(self.make_temporary_directory())
 
-        extra_daemon_args = ["--commandArgumentsLogFile", str(argv_file), "hello world"]
+        extra_daemon_args = ["--allowExtraArgs", "hello world"]
         clone_process = self.spawn_clone(
             repo_path=Path(repo.path),
             mount_path=mount_path,
@@ -412,7 +410,7 @@ class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
         )
         wait_for_pexpect_process(clone_process)
 
-        argv = read_fake_edenfs_argv_file(argv_file)
+        argv = get_fake_edenfs_argv(self.eden_dir)
         self.assertEquals(
             argv[-len(extra_daemon_args) :],
             extra_daemon_args,
