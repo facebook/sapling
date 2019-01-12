@@ -37,6 +37,9 @@ def check_shared_path(tracker: ProblemTracker, mount_path: str) -> None:
         dst_shared_path = shared_path.read_text()
     except (FileNotFoundError, IsADirectoryError):
         return
+    except Exception as e:
+        tracker.add_problem(Problem(f"Failed to read .hg/sharedpath: {e}"))
+        return
 
     if is_nfs_mounted(dst_shared_path):
         msg = (

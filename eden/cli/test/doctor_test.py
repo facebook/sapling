@@ -2601,6 +2601,30 @@ class OperatingSystemsCheckTest(DoctorTestBase):
                 self.assertTrue(result)
 
 
+class CorruptHgTest(DoctorTestBase):
+    def test_unreadable_hg_shared_path_is_a_problem(self) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout_path = instance.create_test_mount("test_mount", scm_type="hg")
+
+        sharedpath_path = Path(checkout_path) / ".hg" / "sharedpath"
+        sharedpath_path.symlink_to(sharedpath_path.name)
+
+        dry_run = True
+        out = TestOutput()
+        doctor.cure_what_ails_you(
+            typing.cast(EdenInstance, instance),
+            dry_run,
+            instance.mount_table,
+            fs_util=filesystem.LinuxFsUtil(),
+            process_finder=FakeProcessFinder(),
+            out=out,
+        )
+        self.assertIn(
+            "Failed to read .hg/sharedpath: [Errno 40] Too many levels of symbolic links",
+            out.getvalue(),
+        )
+
+
 class NfsTest(DoctorTestBase):
     @patch("eden.cli.doctor.check_using_nfs.is_nfs_mounted")
     def test_nfs_mounted(self, mock_is_nfs_mounted):
