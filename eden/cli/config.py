@@ -153,6 +153,16 @@ class EdenInstance:
         # files rather than always using ~/local/.eden
         self._config_dir = config_dir or os.path.join(self._home_dir, "local", ".eden")
 
+        # Use os.path.realpath() to resolve any symlinks in the config directory
+        # location.
+        #
+        # This is particularly important when starting edenfs, since edenfs in some
+        # cases will try to access this path as root (e.g., when creating bind mounts).
+        # In some cases this path may traverse symlinks that are readable as the
+        # original user but not as root: this can happen if the user has a home
+        # directory on NFS, which may not be readable as root.
+        self._config_dir = os.path.realpath(self._config_dir)
+
     def __repr__(self) -> str:
         return f"EdenInstance({self._config_dir!r})"
 

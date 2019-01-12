@@ -231,6 +231,65 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
             f"fake_edenfs should have received extra arguments\nargv: {argv}",
         )
 
+    def test_eden_start_resolves_explicit_config_dir_symlinks(self) -> None:
+        # Test resolution of symlinks in the Eden state directectory when the
+        # --config-dir argument is specified to the Eden CLI.
+        link1 = self.tmp_dir / "link1"
+        link2 = self.tmp_dir / "link2"
+        link1.symlink_to(self.eden_dir, target_is_directory=True)
+        link2.symlink_to(link1)
+        self._test_eden_start_resolves_config_symlinks(link2, self.eden_dir)
+
+    def test_eden_start_resolves_auto_config_dir_symlinks(self) -> None:
+        # Test resolution of symlinks in the Eden state directectory if we don't specify
+        # --config-dir and let the Eden CLI automatically figure out the location.
+        # This is how Eden normally runs in practice most of the time.
+        #
+        # Set up symlinks in the home directory location normally used by Eden.
+        home_local_dir = self.home_dir / "local"
+        data_dir = self.tmp_dir / "data"
+        data_dir.mkdir()
+        home_local_dir.symlink_to(data_dir, target_is_directory=True)
+
+        resolved_eden_dir = data_dir / ".eden"
+        self._test_eden_start_resolves_config_symlinks(None, resolved_eden_dir)
+
+    def _test_eden_start_resolves_config_symlinks(
+        self, input_path: Optional[pathlib.Path], resolved_path: pathlib.Path
+    ) -> None:
+        # Test that the eden CLI resolves symlinks in the Eden state directory path.
+        #
+        # These must be resolved by the CLI and not the edenfs process: in some cases
+        # where the symlinks are on an NFS mount point they can be resolved by the user
+        # but not by root.  The edenfs privhelper process runs as root, so it may not be
+        # able to resolve these symlinks.  Making sure the symlinks are fully resolved
+        # by the CLI enables Eden to still work in these situations.
+        if input_path is not None:
+            config_dir_args = ["--config-dir", str(input_path)]
+        else:
+            config_dir_args = []
+        args = (
+            self.get_required_eden_cli_args()
+            + config_dir_args
+            # pyre-ignore: T38947910
+            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
+        )
+        start_process: pexpect.spawn[str] = pexpect.spawn(
+            FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
+        )
+        wait_for_pexpect_process(start_process)
+
+        argv = get_fake_edenfs_argv(resolved_path)
+        self.assert_eden_dir(argv, resolved_path)
+
+    def assert_eden_dir(self, argv: List[str], expected: pathlib.Path) -> None:
+        try:
+            index = argv.index("--edenDir")
+        except ValueError:
+            self.fail(f"--edenDir not present in arguments: {argv}")
+        actual_config_dir = argv[index + 1]
+        self.assertEqual(str(expected), actual_config_dir, f"bad config dir: {argv}")
+
     def test_eden_start_fails_if_edenfs_is_already_running(self) -> None:
         self.skip_if_systemd("TODO(T33122320)")
         with self.spawn_fake_edenfs(self.eden_dir) as daemon_pid:
