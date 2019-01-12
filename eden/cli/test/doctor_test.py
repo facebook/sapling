@@ -2602,26 +2602,41 @@ class OperatingSystemsCheckTest(DoctorTestBase):
 
 
 class CorruptHgTest(DoctorTestBase):
-    def test_unreadable_hg_shared_path_is_a_problem(self) -> None:
-        instance = FakeEdenInstance(self.make_temporary_directory())
-        checkout_path = instance.create_test_mount("test_mount", scm_type="hg")
+    def setUp(self) -> None:
+        self.instance = FakeEdenInstance(self.make_temporary_directory())
+        self.checkout_path = Path(
+            self.instance.create_test_mount("test_mount", scm_type="hg")
+        )
 
-        sharedpath_path = Path(checkout_path) / ".hg" / "sharedpath"
+    def test_unreadable_hg_shared_path_is_a_problem(self) -> None:
+        sharedpath_path = self.checkout_path / ".hg" / "sharedpath"
         sharedpath_path.symlink_to(sharedpath_path.name)
 
-        dry_run = True
         out = TestOutput()
-        doctor.cure_what_ails_you(
-            typing.cast(EdenInstance, instance),
-            dry_run,
-            instance.mount_table,
-            fs_util=filesystem.LinuxFsUtil(),
-            process_finder=FakeProcessFinder(),
-            out=out,
-        )
+        self.cure_what_ails_you(out=out)
         self.assertIn(
             "Failed to read .hg/sharedpath: [Errno 40] Too many levels of symbolic links",
             out.getvalue(),
+        )
+
+    def test_truncated_hg_dirstate_is_a_problem(self) -> None:
+        dirstate_path = self.checkout_path / ".hg" / "dirstate"
+        os.truncate(dirstate_path, dirstate_path.stat().st_size - 1)
+
+        out = TestOutput()
+        self.cure_what_ails_you(out=out)
+        self.assertIn(f"Unable to read {dirstate_path}", out.getvalue())
+        self.assertIn("Reached EOF while ", out.getvalue())
+
+    def cure_what_ails_you(self, out: TestOutput) -> int:
+        dry_run = True
+        return doctor.cure_what_ails_you(
+            typing.cast(EdenInstance, self.instance),
+            dry_run,
+            self.instance.mount_table,
+            fs_util=filesystem.LinuxFsUtil(),
+            process_finder=FakeProcessFinder(),
+            out=out,
         )
 
 

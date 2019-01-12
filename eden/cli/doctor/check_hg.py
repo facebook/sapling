@@ -33,6 +33,9 @@ def check_snapshot_dirstate_consistency(
         else:
             tracker.add_problem(Problem(f"Unable to access {path}/.hg/dirstate: {ex}"))
         return
+    except eden.dirstate.DirstateParseException as ex:
+        tracker.add_problem(Problem(f"Unable to read {path}/.hg/dirstate: {ex}"))
+        return
 
     p1_hex = binascii.hexlify(parents[0]).decode("utf-8")
     p2_hex = binascii.hexlify(parents[1]).decode("utf-8")
