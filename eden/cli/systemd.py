@@ -69,6 +69,8 @@ class EdenFSSystemdServiceConfig:
                 self.__extra_edenfs_arguments
             ),
         }
+        # pyre-ignore: T32649448
+        self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
         self.config_file_path.write_bytes(SystemdEnvironmentFile.dumps(variables))
 
     @staticmethod
