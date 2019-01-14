@@ -18,8 +18,10 @@ use futures_ext::{BoxFuture, FutureExt};
 use blobrepo::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 
-use helpers::{advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists,
-              fetch_generation_and_join, get_parents};
+use helpers::{
+    advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists,
+    fetch_generation_and_join, get_parents,
+};
 use index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
 use skiplist_thrift;
 
@@ -106,7 +108,8 @@ pub fn deserialize_skiplist_map(bytes: Bytes) -> Result<HashMap<ChangesetId, Ski
     let map: HashMap<_, skiplist_thrift::SkiplistNodeType> =
         compact_protocol::deserialize(&bytes).map_err(SyncFailure::new)?;
 
-    let v: Result<Vec<_>> = map.into_iter()
+    let v: Result<Vec<_>> = map
+        .into_iter()
         .map(|(cs_id, skiplist_thrift)| {
             ChangesetId::from_thrift(cs_id).map(|cs_id| {
                 SkiplistNodeType::from_thrift(skiplist_thrift)
@@ -223,10 +226,11 @@ fn find_nodes_to_index(
                                 changeset_fetcher.clone(),
                                 curr_layer,
                                 curr_seen,
-                            ).map(move |(next_layer, next_seen)| {
+                            )
+                            .map(move |(next_layer, next_seen)| {
                                 Loop::Continue((next_layer, next_seen, curr_depth - 1))
                             })
-                                .boxify()
+                            .boxify()
                         }
                     },
                 )
@@ -362,8 +366,9 @@ fn query_reachability_with_generation_hints(
                                 dst_hash_gen,
                             )
                         }
-                    })).map(|parent_results| parent_results.into_iter().any(|x| x))
-                        .boxify();
+                    }))
+                    .map(|parent_results| parent_results.into_iter().any(|x| x))
+                    .boxify();
                 }
             }
         }
@@ -533,9 +538,11 @@ fn move_skippable_nodes(
                         no_skiplist_edges.push(cs_id);
                     }
                 }
-                SkiplistNodeType::ParentEdges(edges) => for edge_pair in edges {
-                    node_frontier.insert(*edge_pair);
-                },
+                SkiplistNodeType::ParentEdges(edges) => {
+                    for edge_pair in edges {
+                        node_frontier.insert(*edge_pair);
+                    }
+                }
             }
         } else {
             no_skiplist_edges.push(cs_id);
@@ -621,20 +628,24 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
             self.skip_list_edges.clone(),
             node_frontier,
             gen,
-        ).boxify()
+        )
+        .boxify()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
 
     use async_unit;
     use blobrepo::BlobRepo;
     use chashmap::CHashMap;
     use context::CoreContext;
-    use futures::stream::Stream;
     use futures::stream::iter_ok;
+    use futures::stream::Stream;
 
     use super::*;
     use fixtures::branch_wide;
@@ -794,8 +805,10 @@ mod test {
                         ctx.clone(),
                         &repo,
                         "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-                    ) {
-                    let skip_edges: Vec<_> = sli.get_skip_edges(node)
+                    )
+                {
+                    let skip_edges: Vec<_> = sli
+                        .get_skip_edges(node)
                         .unwrap()
                         .into_iter()
                         .map(|(node, _)| node)
@@ -840,7 +853,8 @@ mod test {
             // - d0a3
             // - 2d7d
 
-            let skip_edges: Vec<_> = sli.get_skip_edges(master_node)
+            let skip_edges: Vec<_> = sli
+                .get_skip_edges(master_node)
                 .unwrap()
                 .into_iter()
                 .map(|(node, _)| node)
@@ -955,7 +969,8 @@ mod test {
                 .wait()
                 .unwrap();
             for node in branch_1.into_iter() {
-                let skip_edges: Vec<_> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli
+                    .get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -963,7 +978,8 @@ mod test {
                 assert!(skip_edges.contains(&root_node));
             }
             for node in branch_2.into_iter() {
-                let skip_edges: Vec<_> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli
+                    .get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -1074,10 +1090,12 @@ mod test {
                 repo.get_changeset_fetcher(),
                 branch_1_head,
                 100,
-            ).wait()
-                .unwrap();
+            )
+            .wait()
+            .unwrap();
             for node in branch_1.into_iter() {
-                let skip_edges: Vec<_> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli
+                    .get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -1093,10 +1111,12 @@ mod test {
                 repo.get_changeset_fetcher(),
                 branch_2_head,
                 100,
-            ).wait()
-                .unwrap();
+            )
+            .wait()
+            .unwrap();
             for node in branch_2.into_iter() {
-                let skip_edges: Vec<_> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli
+                    .get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -1163,7 +1183,8 @@ mod test {
             assert!(sli.is_node_indexed(b2));
 
             for node in vec![b1, b2, b1_1, b1_2, b2_1, b2_2].into_iter() {
-                let skip_edges: Vec<_> = sli.get_skip_edges(node)
+                let skip_edges: Vec<_> = sli
+                    .get_skip_edges(node)
                     .unwrap()
                     .into_iter()
                     .map(|(node, _)| node)
@@ -1317,7 +1338,6 @@ mod test {
 
                 #[test]
                 fn all_indexed() {
-
                     let ctx = CoreContext::test_mock();
                     let repo = Arc::new($repo::getrepo(None));
                     let sli = SkiplistIndex::new();
@@ -1326,7 +1346,8 @@ mod test {
                         let heads = repo.get_bonsai_heads_maybe_stale(ctx.clone()).collect();
                         let heads = run_future(&mut runtime, heads).unwrap();
                         for head in heads {
-                            let f = sli.add_node(ctx.clone(),repo.get_changeset_fetcher(), head, 100);
+                            let f =
+                                sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), head, 100);
                             run_future(&mut runtime, f).unwrap();
                         }
                     }
@@ -1334,7 +1355,7 @@ mod test {
                     $test_name(&mut runtime, ctx, repo, sli);
                 }
             }
-        }
+        };
     }
 
     fn query_reachability_to_higher_gen_is_false(
@@ -1539,7 +1560,8 @@ mod test {
                 commit_after_merge,
                 10,
             ),
-        ).unwrap();
+        )
+        .unwrap();
         let f = query_reachability_with_generation_hints(
             ctx.clone(),
             repo.get_changeset_fetcher(),
@@ -1588,7 +1610,7 @@ mod test {
         (node, gen): (ChangesetId, Generation),
         max_gen: Generation,
     ) -> BoxFuture<NodeFrontier, Error> {
-        let initial_frontier = hashmap!{gen => hashset!{node}};
+        let initial_frontier = hashmap! {gen => hashset!{node}};
         let initial_frontier = NodeFrontier::new(initial_frontier);
         process_frontier(
             ctx,
@@ -1596,7 +1618,8 @@ mod test {
             skip_list_edges,
             initial_frontier,
             max_gen,
-        ).boxify()
+        )
+        .boxify()
     }
 
     fn advance_node_linear(
@@ -1798,8 +1821,9 @@ mod test {
                 vec![
                     branch_1.get(gen).unwrap().clone(),
                     branch_2.get(gen).unwrap().clone(),
-                ].into_iter()
-                    .collect(),
+                ]
+                .into_iter()
+                .collect(),
             );
             let f = advance_node_forward(
                 ctx.clone(),
@@ -1978,8 +2002,9 @@ mod test {
                 vec![
                     branch_1.get(gen).unwrap().clone(),
                     branch_2.get(gen).unwrap().clone(),
-                ].into_iter()
-                    .collect(),
+                ]
+                .into_iter()
+                .collect(),
             );
             let f = advance_node_forward(
                 ctx.clone(),
@@ -2070,17 +2095,18 @@ mod test {
             "49f53ab171171b3180e125b918bd1cf0af7e5449",
         );
 
-        let advance_to_root_futures = vec![b1_1, b1_2, b2_1, b2_2].into_iter().map(
-            move |branch_tip| {
-                advance_node_forward(
-                    ctx.clone(),
-                    repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    (branch_tip, Generation::new(3)),
-                    Generation::new(1),
-                )
-            },
-        );
+        let advance_to_root_futures =
+            vec![b1_1, b1_2, b2_1, b2_2]
+                .into_iter()
+                .map(move |branch_tip| {
+                    advance_node_forward(
+                        ctx.clone(),
+                        repo.get_changeset_fetcher(),
+                        sli.skip_list_edges.clone(),
+                        (branch_tip, Generation::new(3)),
+                        Generation::new(1),
+                    )
+                });
         let advanced_frontiers = join_all(advance_to_root_futures);
         let advanced_frontiers = run_future(runtime, advanced_frontiers).unwrap();
         let mut expected_root_frontier_map = HashMap::new();
