@@ -552,3 +552,15 @@ Do a repack where the new pack reuses a delta from the old pack
   $ hg cat -r . new_file
   new commit
 
+# Verify that temporary datapacks are removed
+  $ touch -a --date="2019-01-01" $TESTTMP/hgcache/master/packs/foo.datapack-tmp
+  $ find $CACHEDIR -type f | sort
+  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
+  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  $TESTTMP/hgcache/master/packs/foo.datapack-tmp
+  $TESTTMP/hgcache/master/packs/repacklock
+  $ hg repack
+  $ find $CACHEDIR -type f | sort
+  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
+  $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  $TESTTMP/hgcache/master/packs/repacklock

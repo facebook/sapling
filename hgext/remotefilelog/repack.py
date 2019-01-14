@@ -469,6 +469,7 @@ def _runrepack(
         history,
         fullhistory,
         category,
+        packpath,
         gc=garbagecollect,
         isold=isold,
         options=options,
@@ -547,6 +548,38 @@ def keepset(repo, keyfn, lastkeepkeys=None):
     return keepkeys
 
 
+def _cleanuptemppacks(ui, packpath):
+    """In some situations, temporary pack files are left around unecessarily
+    using disk space. We've even seen cases where some users had 170GB+ worth
+    of these. Let's remove these.
+    """
+    extensions = [
+        datapack.PACKSUFFIX + "-tmp",
+        datapack.INDEXSUFFIX + "-tmp",
+        historypack.PACKSUFFIX + "-tmp",
+        historypack.INDEXSUFFIX + "-tmp",
+    ]
+
+    def _shouldhold(f):
+        """Newish files shouldn't be removed as they could be used by another
+        running command.
+        """
+        stat = os.lstat(f)
+        return time.gmtime(stat.st_atime + 24 * 3600) > time.gmtime()
+
+    with progress.spinner(ui, _("cleaning old temporary files")):
+        for f in os.listdir(packpath):
+            f = os.path.join(packpath, f)
+            if _shouldhold(f):
+                continue
+            for ext in extensions:
+                if f.endswith(ext):
+                    try:
+                        util.unlink(f)
+                    except Exception:
+                        pass
+
+
 class repacker(object):
     """Class for orchestrating the repack of data and history information into a
     new format.
@@ -559,6 +592,7 @@ class repacker(object):
         history,
         fullhistory,
         category,
+        packpath,
         gc=False,
         isold=None,
         options=None,
@@ -572,6 +606,7 @@ class repacker(object):
         self.garbagecollect = gc
         self.options = options
         self.sharedstr = _("shared") if shared else _("local")
+        self.packpath = packpath
         if self.garbagecollect:
             if not isold:
                 raise ValueError("Function 'isold' is not properly specified")
@@ -588,6 +623,8 @@ class repacker(object):
             timeout=0,
         ):
             self.repo.hook("prerepack")
+
+            _cleanuptemppacks(self.repo.ui, self.packpath)
 
             # Populate ledger from source
             with progress.spinner(
