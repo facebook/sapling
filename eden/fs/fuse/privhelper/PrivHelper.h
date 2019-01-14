@@ -19,7 +19,7 @@ class EventBase;
 class File;
 template <typename T>
 class Future;
-class Unit;
+struct Unit;
 } // namespace folly
 
 namespace facebook {
