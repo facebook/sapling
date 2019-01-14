@@ -15,7 +15,6 @@ extern crate futures_ext;
 
 extern crate blobrepo;
 extern crate context;
-#[cfg(test)]
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;

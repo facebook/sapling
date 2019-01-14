@@ -91,6 +91,10 @@ impl NodeFrontier {
             .insert(node);
     }
 
+    pub fn get_all_changesets_for_gen_num(&self, gen: Generation) -> Option<&HashSet<ChangesetId>> {
+        self.gen_map.get(&gen)
+    }
+
     pub fn is_empty(&self) -> bool {
         self.gen_map.is_empty()
     }

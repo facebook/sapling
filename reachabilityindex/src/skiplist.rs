@@ -320,110 +320,6 @@ fn lazy_index_node(
     }
 }
 
-/// Query for reachability between two node hashes, assuming knowledge of their generation numbers.
-/// Assumes that the nodes exist in the repo if their generation numbers have been successfully
-/// computed ahead of time.
-fn query_reachability_with_generation_hints(
-    ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
-    skip_list_edges: Arc<SkiplistEdgeMapping>,
-    src_hash_gen: (ChangesetId, Generation),
-    dst_hash_gen: (ChangesetId, Generation),
-) -> BoxFuture<bool, Error> {
-    if src_hash_gen.0 == dst_hash_gen.0 {
-        ok(true).boxify()
-    } else if src_hash_gen.1 <= dst_hash_gen.1 {
-        ok(false).boxify()
-    } else {
-        if let Some(skip_node_guard) = skip_list_edges.mapping.get(&src_hash_gen.0) {
-            let skip_node = &*skip_node_guard;
-            match skip_node {
-                SkiplistNodeType::SkipEdges(edges) => {
-                    let best_edge = edges
-                        .iter()
-                        .take_while(|edge_pair| edge_pair.1 >= dst_hash_gen.1)
-                        .last()
-                        .cloned();
-                    if let Some(edge_pair) = best_edge {
-                        return query_reachability_with_generation_hints(
-                            ctx.clone(),
-                            changeset_fetcher.clone(),
-                            skip_list_edges.clone(),
-                            edge_pair,
-                            dst_hash_gen,
-                        );
-                    }
-                }
-                SkiplistNodeType::ParentEdges(parent_edges) => {
-                    cloned!(skip_list_edges);
-                    return join_all(parent_edges.clone().into_iter().map({
-                        move |parent_gen_pair| {
-                            query_reachability_with_generation_hints(
-                                ctx.clone(),
-                                changeset_fetcher.clone(),
-                                skip_list_edges.clone(),
-                                parent_gen_pair,
-                                dst_hash_gen,
-                            )
-                        }
-                    }))
-                    .map(|parent_results| parent_results.into_iter().any(|x| x))
-                    .boxify();
-                }
-            }
-        }
-
-        changeset_fetcher
-            .get_parents(ctx.clone(), src_hash_gen.0)
-            .and_then({
-                cloned!(ctx, changeset_fetcher);
-                |parent_changesets| {
-                    changesets_with_generation_numbers(ctx, changeset_fetcher, parent_changesets)
-                }
-            })
-            .and_then(move |parent_edges| {
-                join_all(parent_edges.into_iter().map({
-                    move |parent_gen_pair| {
-                        query_reachability_with_generation_hints(
-                            ctx.clone(),
-                            changeset_fetcher.clone(),
-                            skip_list_edges.clone(),
-                            parent_gen_pair,
-                            dst_hash_gen,
-                        )
-                    }
-                }))
-            })
-            .map(|parent_results| parent_results.into_iter().any(|x| x))
-            .boxify()
-    }
-}
-
-fn query_reachability(
-    ctx: CoreContext,
-    changeset_fetcher: Arc<ChangesetFetcher>,
-    skip_list_edges: Arc<SkiplistEdgeMapping>,
-    src_hash: ChangesetId,
-    dst_hash: ChangesetId,
-) -> BoxFuture<bool, Error> {
-    fetch_generation_and_join(ctx.clone(), changeset_fetcher.clone(), src_hash)
-        .join(fetch_generation_and_join(
-            ctx.clone(),
-            changeset_fetcher.clone(),
-            dst_hash,
-        ))
-        .and_then(move |(src_hash_gen, dst_hash_gen)| {
-            query_reachability_with_generation_hints(
-                ctx,
-                changeset_fetcher,
-                skip_list_edges,
-                src_hash_gen,
-                dst_hash_gen,
-            )
-        })
-        .boxify()
-}
-
 impl SkiplistIndex {
     pub fn new() -> Self {
         SkiplistIndex {
@@ -500,16 +396,42 @@ impl ReachabilityIndex for SkiplistIndex {
         &self,
         ctx: CoreContext,
         changeset_fetcher: Arc<ChangesetFetcher>,
-        src: ChangesetId,
-        dst: ChangesetId,
+        maybe_descendant_hash: ChangesetId,
+        maybe_ancestor_hash: ChangesetId,
     ) -> BoxFuture<bool, Error> {
-        query_reachability(
-            ctx,
-            changeset_fetcher,
-            self.skip_list_edges.clone(),
-            src,
-            dst,
+        cloned!(self.skip_list_edges);
+        fetch_generation_and_join(
+            ctx.clone(),
+            changeset_fetcher.clone(),
+            maybe_descendant_hash,
         )
+        .join(fetch_generation_and_join(
+            ctx.clone(),
+            changeset_fetcher.clone(),
+            maybe_ancestor_hash,
+        ))
+        .and_then(
+            move |(maybe_descendant_hash_gen, maybe_ancestor_hash_gen)| {
+                let (maybe_descendant_hash, maybe_descendant_gen) = maybe_descendant_hash_gen;
+                let (maybe_ancestor_hash, maybe_ancestor_gen) = maybe_ancestor_hash_gen;
+                process_frontier(
+                    ctx,
+                    changeset_fetcher,
+                    skip_list_edges,
+                    NodeFrontier::new(
+                        hashmap! {maybe_descendant_gen => hashset!{maybe_descendant_hash}},
+                    ),
+                    maybe_ancestor_gen,
+                )
+                .map(move |frontier| {
+                    match frontier.get_all_changesets_for_gen_num(maybe_ancestor_gen) {
+                        Some(cs_ids) => cs_ids.contains(&maybe_ancestor_hash),
+                        None => false,
+                    }
+                })
+            },
+        )
+        .boxify()
     }
 }
 
@@ -1311,14 +1233,8 @@ mod test {
         ordered_hashes_oldest_to_newest.reverse();
         // indexing doesn't even take place if the query can conclude true or false right away
 
-        for (i, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
-            let f = query_reachability_with_generation_hints(
-                ctx.clone(),
-                repo.get_changeset_fetcher(),
-                sli.skip_list_edges.clone(),
-                (node, Generation::new(i as u64 + 1)),
-                (node, Generation::new(i as u64 + 1)),
-            );
+        for (_, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
+            let f = sli.query_reachability(ctx.clone(), repo.get_changeset_fetcher(), node, node);
             assert!(run_future(runtime, f).unwrap());
         }
     }
@@ -1413,12 +1329,11 @@ mod test {
             let src_node = ordered_hashes_oldest_to_newest.get(i).unwrap();
             for j in i + 1..ordered_hashes_oldest_to_newest.len() {
                 let dst_node = ordered_hashes_oldest_to_newest.get(j).unwrap();
-                let f = query_reachability_with_generation_hints(
+                let f = sli.query_reachability(
                     ctx.clone(),
                     repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
-                    (*src_node, Generation::new(i as u64 + 1)),
-                    (*dst_node, Generation::new(j as u64 + 1)),
+                    *src_node,
+                    *dst_node,
                 );
                 assert!(!run_future(runtime, f).unwrap());
             }
@@ -1449,13 +1364,7 @@ mod test {
             &repo,
             "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
         );
-        let f = query_reachability_with_generation_hints(
-            ctx.clone(),
-            cs_fetcher.clone(),
-            sli.skip_list_edges.clone(),
-            (src_node, Generation::new(8)),
-            (dst_node, Generation::new(1)),
-        );
+        let f = sli.query_reachability(ctx.clone(), cs_fetcher.clone(), src_node, dst_node);
         assert!(run_future(&mut runtime, f).unwrap());
         let ordered_hashes = vec![
             string_to_bonsai(
@@ -1519,13 +1428,7 @@ mod test {
 
         // Make sure that we don't use changeset fetcher anymore, because everything is
         // indexed
-        let f = query_reachability_with_generation_hints(
-            ctx.clone(),
-            cs_fetcher,
-            sli.skip_list_edges.clone(),
-            (src_node, Generation::new(8)),
-            (dst_node, Generation::new(1)),
-        );
+        let f = sli.query_reachability(ctx.clone(), cs_fetcher, src_node, dst_node);
 
         assert!(run_future(&mut runtime, f).unwrap());
 
@@ -1562,12 +1465,11 @@ mod test {
             ),
         )
         .unwrap();
-        let f = query_reachability_with_generation_hints(
+        let f = sli.query_reachability(
             ctx.clone(),
             repo.get_changeset_fetcher(),
-            sli.skip_list_edges.clone(),
-            (commit_after_merge, Generation::new(8)),
-            (merge_node, Generation::new(7)),
+            commit_after_merge,
+            merge_node,
         );
         assert!(run_future(runtime, f).unwrap());
 
@@ -1578,12 +1480,11 @@ mod test {
             "1700524113b1a3b1806560341009684b4378660b",
         );
         // performing this query should index all the nodes inbetween
-        let f = query_reachability_with_generation_hints(
+        let f = sli.query_reachability(
             ctx.clone(),
             repo.get_changeset_fetcher(),
-            sli.skip_list_edges.clone(),
-            (merge_node, Generation::new(7)),
-            (dst_node, Generation::new(1)),
+            merge_node,
+            dst_node,
         );
         assert!(run_future(runtime, f).unwrap());
 
@@ -1593,13 +1494,7 @@ mod test {
             &repo,
             "1700524113b1a3b1806560341009684b4378660b",
         );
-        let f = query_reachability_with_generation_hints(
-            ctx,
-            repo.get_changeset_fetcher(),
-            sli.skip_list_edges.clone(),
-            (merge_node, Generation::new(7)),
-            (dst_node, Generation::new(1)),
-        );
+        let f = sli.query_reachability(ctx, repo.get_changeset_fetcher(), merge_node, dst_node);
         assert!(run_future(runtime, f).unwrap());
     }
 
