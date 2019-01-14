@@ -63,6 +63,7 @@ test bisect-sparse
   $ hg ci -Aqm 'bad  9'
 
   $ hg sparse include sparse-included-file
+  $ hg sparse exclude sparse-excluded-file
 
 verify bisect skips empty sparse commits (2,3)
 
@@ -228,6 +229,60 @@ New test set
   
 
 
+
+
+
+
+Empty case with --command flag: all commits are skipped
+
+#  test fails now
+#
+#  18 <- known bad - - -
+#  |                   |
+#  |                 nothing
+#  |                 changes
+#  |                   |
+#  17 <- introduce bug -       <- 1 iter: skipping as bad
+#  |
+#  16 - - - - - - - - -        <- 1 iter: skipping as good
+#  |                  |
+#  |                nothing
+#  |                changes
+#  |                  |
+#  15 <- known good - -
+#  |
+
+  $ echo "known good" > sparse-new-excluded-file
+  $ echo "known good" > sparse-included-file
+  $ hg sparse include sparse-new-excluded-file
+  $ hg ci -Aqm 'known good - 15'
+
+  $ echo "empty good" > sparse-new-excluded-file
+  $ hg ci -Aqm 'empty good - 16'
+
+  $ echo "empty bad" > sparse-new-excluded-file
+  $ echo "empty bad" > sparse-included-file
+  $ hg ci -Aqm 'empty bad - 17'
+
+  $ echo "known bad" > sparse-new-excluded-file
+  $ hg ci -Aqm 'known bad - 18'
+
+  $ hg sparse exclude sparse-new-excluded-file
+
+  $ hg bisect --reset
+  $ hg bisect -g 15
+  $ hg bisect -c "test $(hg log -r . -T '{rev}') -lt 17"
+  changeset 18:ddea298cfd5a: bad
+  Skipping changeset 16:8654dd939818 as there are no changes inside
+  the sparse profile from the known good changeset 15:6e74f05c0613
+  Skipping changeset 17:9ca8d13c5161 as there are no changes inside
+  the sparse profile from the known bad changeset 18:ddea298cfd5a
+  The first bad revision is:
+  changeset:   16:8654dd939818
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     empty good - 16
+  
 
 
 
