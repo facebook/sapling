@@ -1047,6 +1047,9 @@ the sparse profile from the known %s changeset %d:%s\n"
                     node, changesets, bgood = sparseskip(
                         node, changesets, bgood, badnode, goodnode
                     )
+                    if changesets == 0:
+                        nodes = [node]
+                        break
 
                 mayupdate(repo, node, show_stats=False)
         finally:

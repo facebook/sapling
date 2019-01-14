@@ -235,8 +235,6 @@ New test set
 
 Empty case with --command flag: all commits are skipped
 
-#  test fails now
-#
 #  18 <- known bad - - -
 #  |                   |
 #  |                 nothing
@@ -278,10 +276,10 @@ Empty case with --command flag: all commits are skipped
   Skipping changeset 17:9ca8d13c5161 as there are no changes inside
   the sparse profile from the known bad changeset 18:ddea298cfd5a
   The first bad revision is:
-  changeset:   16:8654dd939818
+  changeset:   17:9ca8d13c5161
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     empty good - 16
+  summary:     empty bad - 17
   
 
 
