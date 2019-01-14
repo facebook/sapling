@@ -23,7 +23,7 @@ extern crate tokio;
 
 use bookmarks::{Bookmark, BookmarkPrefix, Bookmarks};
 use context::CoreContext;
-use dbbookmarks::{CachedBookmarks, SqlConstructors};
+use dbbookmarks::{SqlBookmarks, SqlConstructors};
 use futures::{Future, Stream};
 use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
@@ -39,7 +39,7 @@ fn create_prefix(book: &str) -> BookmarkPrefix {
 #[test]
 fn test_simple_unconditional_set_get() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_correct = create_bookmark("book");
     let name_incorrect = create_bookmark("book2");
 
@@ -66,7 +66,7 @@ fn test_simple_unconditional_set_get() {
 #[test]
 fn test_multi_unconditional_set_get() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
     let name_2 = create_bookmark("book2");
 
@@ -94,7 +94,7 @@ fn test_multi_unconditional_set_get() {
 #[test]
 fn test_unconditional_set_same_bookmark() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -117,7 +117,7 @@ fn test_unconditional_set_same_bookmark() {
 #[test]
 fn test_simple_create() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -136,7 +136,7 @@ fn test_simple_create() {
 #[test]
 fn test_create_already_existing() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -151,7 +151,7 @@ fn test_create_already_existing() {
 #[test]
 fn test_create_change_same_bookmark() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -190,7 +190,7 @@ fn test_create_change_same_bookmark() {
 #[test]
 fn test_simple_update_bookmark() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -213,7 +213,7 @@ fn test_simple_update_bookmark() {
 #[test]
 fn test_update_non_existent_bookmark() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -224,7 +224,7 @@ fn test_update_non_existent_bookmark() {
 #[test]
 fn test_update_existing_bookmark_with_incorrect_commit() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -239,7 +239,7 @@ fn test_update_existing_bookmark_with_incorrect_commit() {
 #[test]
 fn test_force_delete() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -281,7 +281,7 @@ fn test_force_delete() {
 #[test]
 fn test_delete() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -307,7 +307,7 @@ fn test_delete() {
 #[test]
 fn test_delete_incorrect_hash() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);
@@ -329,7 +329,7 @@ fn test_delete_incorrect_hash() {
 #[test]
 fn test_list_by_prefix() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book1");
     let name_2 = create_bookmark("book2");
 
@@ -372,7 +372,7 @@ fn test_list_by_prefix() {
 #[test]
 fn test_create_different_repos() {
     let ctx = CoreContext::test_mock();
-    let bookmarks = CachedBookmarks::with_sqlite_in_memory().unwrap();
+    let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
     let name_1 = create_bookmark("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone(), &REPO_ZERO);

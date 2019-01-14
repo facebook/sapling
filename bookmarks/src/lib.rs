@@ -97,12 +97,6 @@ impl BookmarkPrefix {
     pub fn is_empty(&self) -> bool {
         self.bookmark_prefix.is_empty()
     }
-
-    pub fn is_prefix_of(&self, book: &Bookmark) -> bool {
-        book.bookmark
-            .as_str()
-            .starts_with(self.bookmark_prefix.as_str())
-    }
 }
 
 pub trait Bookmarks: Send + Sync + 'static {
