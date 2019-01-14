@@ -301,23 +301,6 @@ class EdenInstance:
     def get_default_hooks_path(self) -> str:
         return os.path.join(self._etc_eden_dir, "hooks")
 
-    def create_no_such_repository_exception(self, name: str) -> Exception:
-        """Creates an exception that says no repository is configured with the
-        specified name and suggests other repos that are defined in this Eden instance.
-        """
-        repos = []
-        prefix = "repository "
-        config = self._loadConfig()
-        for key in config:
-            if key.startswith(prefix):
-                repos.append(key[len(prefix) :])
-        msg = f'No repository configured named "{name}".'
-        if repos:
-            repos.sort()
-            all_repos = ", ".join(map(lambda r: f'"{r}"', repos))
-            msg += f" Try one of: {all_repos}."
-        return Exception(msg)
-
     def get_mount_paths(self) -> Iterable[str]:
         """Return the paths of the set mount points stored in config.json"""
         return self._get_directory_map().keys()
