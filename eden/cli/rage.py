@@ -36,10 +36,8 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
         debug_mod.do_buildinfo(instance, out)
         out.write(b"uptime: ")
         debug_mod.do_uptime(instance, out)
-        print_eden_doctor_report(instance, out)
-    else:
-        out.write(b"Eden is not running. Some debug info will be omitted.\n")
 
+    print_eden_doctor_report(instance, out)
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
 
