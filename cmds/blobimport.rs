@@ -64,8 +64,6 @@ fn main() -> Result<()> {
     let ctx = args::get_core_context(&matches);
 
     args::init_cachelib(&matches);
-    let repo = args::create_repo(ctx.clone(), &ctx.logger(), &matches)?;
-    let blobrepo = Arc::new(repo.blobrepo().clone());
 
     let revlogrepo_path = matches
         .value_of("INPUT")
@@ -91,26 +89,30 @@ fn main() -> Result<()> {
 
     let no_bookmark = matches.is_present("no-bookmark");
 
-    let blobimport = Blobimport {
-        ctx: ctx.clone(),
-        logger: ctx.logger().clone(),
-        blobrepo,
-        revlogrepo_path,
-        changeset,
-        skip,
-        commits_limit,
-        no_bookmark,
-    }
-    .import()
-    .traced(ctx.trace(), "blobimport", trace_args!())
-    .map_err({
-        cloned!(ctx);
-        move |err| {
-            error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
-            ::std::process::exit(1);
-        }
-    })
-    .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result));
+    let blobimport =
+        args::create_repo(ctx.clone(), &ctx.logger(), &matches).and_then(move |repo| {
+            let blobrepo = Arc::new(repo.blobrepo().clone());
+            Blobimport {
+                ctx: ctx.clone(),
+                logger: ctx.logger().clone(),
+                blobrepo,
+                revlogrepo_path,
+                changeset,
+                skip,
+                commits_limit,
+                no_bookmark,
+            }
+            .import()
+            .traced(ctx.trace(), "blobimport", trace_args!())
+            .map_err({
+                cloned!(ctx);
+                move |err| {
+                    error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
+                    ::std::process::exit(1);
+                }
+            })
+            .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result))
+        });
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     let result = runtime.block_on(blobimport);

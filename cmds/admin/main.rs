@@ -632,31 +632,36 @@ fn main() -> Result<()> {
             .boxify()
         }
         (BONSAI_FETCH, Some(sub_m)) => {
-            let rev = sub_m.value_of("HG_CHANGESET_OR_BOOKMARK").unwrap();
+            let rev = sub_m
+                .value_of("HG_CHANGESET_OR_BOOKMARK")
+                .unwrap()
+                .to_string();
 
             args::init_cachelib(&matches);
 
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
 
-            let repo = args::open_repo(ctx.clone(), &logger, &matches)?;
-            fetch_bonsai_changeset(ctx, rev, repo.blobrepo())
+            args::open_repo(ctx.clone(), &logger, &matches)
+                .and_then(move |repo| fetch_bonsai_changeset(ctx, &rev, repo.blobrepo()))
                 .map(|bcs| {
                     println!("{:?}", bcs);
                 })
                 .boxify()
         }
         (CONTENT_FETCH, Some(sub_m)) => {
-            let rev = sub_m.value_of("CHANGESET_ID").unwrap();
-            let path = sub_m.value_of("PATH").unwrap();
+            let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
+            let path = sub_m.value_of("PATH").unwrap().to_string();
 
             args::init_cachelib(&matches);
 
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
 
-            let repo = args::open_repo(ctx.clone(), &logger, &matches)?;
-            fetch_content(ctx, logger.clone(), repo.blobrepo(), rev, path)
+            args::open_repo(ctx.clone(), &logger, &matches)
+                .and_then(move |repo| {
+                    fetch_content(ctx, logger.clone(), repo.blobrepo(), &rev, &path)
+                })
                 .and_then(|content| {
                     match content {
                         Content::Executable(_) => {
@@ -701,13 +706,13 @@ fn main() -> Result<()> {
                 .boxify()
         }
         (BOOKMARKS, Some(sub_m)) => {
+            args::init_cachelib(&matches);
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
-
-            args::init_cachelib(&matches);
-            let repo = args::open_repo(ctx.clone(), &logger, &matches)?;
-
-            bookmarks_manager::handle_command(ctx, &repo.blobrepo(), sub_m, logger)
+            let repo_fut = args::open_repo(ctx.clone(), &logger, &matches)
+                .map(|repo| repo.blobrepo().clone())
+                .boxify();
+            bookmarks_manager::handle_command(ctx, repo_fut, sub_m, logger)
         }
         (HG_CHANGESET, Some(sub_m)) => match sub_m.subcommand() {
             (HG_CHANGESET_DIFF, Some(sub_m)) => {
@@ -724,14 +729,14 @@ fn main() -> Result<()> {
                     .and_then(HgChangesetId::from_str);
 
                 args::init_cachelib(&matches);
-                let repo = args::open_repo(ctx.clone(), &logger, &matches)?
-                    .blobrepo()
-                    .clone();
-
-                (left_cs, right_cs)
-                    .into_future()
-                    .and_then(move |(left_cs, right_cs)| {
-                        hg_changeset_diff(ctx, repo, &left_cs, &right_cs)
+                args::open_repo(ctx.clone(), &logger, &matches)
+                    .and_then(move |repo| {
+                        let repo = repo.blobrepo().clone();
+                        (left_cs, right_cs)
+                            .into_future()
+                            .and_then(move |(left_cs, right_cs)| {
+                                hg_changeset_diff(ctx, repo, &left_cs, &right_cs)
+                            })
                     })
                     .and_then(|diff| {
                         serde_json::to_writer(io::stdout(), &diff)
@@ -754,47 +759,48 @@ fn main() -> Result<()> {
                 let ctx = CoreContext::test_mock();
 
                 args::init_cachelib(&matches);
-                let repo = args::open_repo(ctx.clone(), &logger, &matches)?
-                    .blobrepo()
-                    .clone();
-                let ctx = CoreContext::test_mock();
-
-                (start_cs, stop_cs)
-                    .into_future()
-                    .and_then({
-                        cloned!(ctx, repo);
-                        move |(start_cs, stop_cs)| {
-                            (
-                                repo.get_bonsai_from_hg(ctx.clone(), &start_cs),
-                                repo.get_bonsai_from_hg(ctx, &stop_cs),
-                            )
-                        }
-                    })
-                    .and_then(|(start_cs_opt, stop_cs_opt)| {
-                        (
-                            start_cs_opt.ok_or(err_msg("failed to resolve changeset")),
-                            stop_cs_opt.ok_or(err_msg("failed to resovle changeset")),
-                        )
-                    })
-                    .and_then({
-                        cloned!(repo);
-                        move |(start_cs, stop_cs)| {
-                            RangeNodeStream::new(
-                                ctx.clone(),
-                                &Arc::new(repo.clone()),
-                                start_cs,
-                                stop_cs,
-                            )
-                            .map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
-                            .buffered(100)
-                            .map(|cs| cs.to_hex().to_string())
-                            .collect()
-                        }
-                    })
-                    .and_then(|css| {
-                        serde_json::to_writer(io::stdout(), &css)
-                            .map(|_| ())
-                            .map_err(Error::from)
+                args::open_repo(ctx.clone(), &logger, &matches)
+                    .and_then(move |repo| {
+                        let repo = repo.blobrepo().clone();
+                        (start_cs, stop_cs)
+                            .into_future()
+                            .and_then({
+                                cloned!(ctx, repo);
+                                move |(start_cs, stop_cs)| {
+                                    (
+                                        repo.get_bonsai_from_hg(ctx.clone(), &start_cs),
+                                        repo.get_bonsai_from_hg(ctx, &stop_cs),
+                                    )
+                                }
+                            })
+                            .and_then(|(start_cs_opt, stop_cs_opt)| {
+                                (
+                                    start_cs_opt.ok_or(err_msg("failed to resolve changeset")),
+                                    stop_cs_opt.ok_or(err_msg("failed to resovle changeset")),
+                                )
+                            })
+                            .and_then({
+                                cloned!(repo);
+                                move |(start_cs, stop_cs)| {
+                                    RangeNodeStream::new(
+                                        ctx.clone(),
+                                        &Arc::new(repo.clone()),
+                                        start_cs,
+                                        stop_cs,
+                                    )
+                                    .map(move |cs| {
+                                        repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
+                                    })
+                                    .buffered(100)
+                                    .map(|cs| cs.to_hex().to_string())
+                                    .collect()
+                                }
+                            })
+                            .and_then(|css| {
+                                serde_json::to_writer(io::stdout(), &css)
+                                    .map(|_| ())
+                                    .map_err(Error::from)
+                            })
                     })
                     .boxify()
             }
@@ -805,29 +811,34 @@ fn main() -> Result<()> {
         },
         (SKIPLIST, Some(sub_m)) => match sub_m.subcommand() {
             (SKIPLIST_BUILD, Some(sub_m)) => {
+                let key = sub_m
+                    .value_of("BLOBSTORE_KEY")
+                    .expect("blobstore key is not specified")
+                    .to_string();
+
                 args::init_cachelib(&matches);
                 let ctx = CoreContext::test_mock();
-                let repo = args::open_repo(ctx.clone(), &logger, &matches)?
-                    .blobrepo()
-                    .clone();
-
-                build_skiplist_index(ctx, repo, sub_m.value_of("BLOBSTORE_KEY").unwrap(), logger)
+                args::open_repo(ctx.clone(), &logger, &matches)
+                    .and_then(move |repo| {
+                        let repo = repo.blobrepo().clone();
+                        build_skiplist_index(ctx, repo, key, logger)
+                    })
+                    .boxify()
             }
             (SKIPLIST_READ, Some(sub_m)) => {
+                let key = sub_m
+                    .value_of("BLOBSTORE_KEY")
+                    .expect("blobstore key is not specified")
+                    .to_string();
+
                 args::init_cachelib(&matches);
                 let ctx = CoreContext::test_mock();
-                let repo = args::open_repo(ctx.clone(), &logger, &matches)?
-                    .blobrepo()
-                    .clone();
-
-                read_skiplist_index(
-                    ctx.clone(),
-                    repo,
-                    sub_m
-                        .value_of("BLOBSTORE_KEY")
-                        .expect("blobstore key is not specified"),
-                    logger,
-                )
+                args::open_repo(ctx.clone(), &logger, &matches)
+                    .and_then(move |repo| {
+                        let repo = repo.blobrepo().clone();
+                        read_skiplist_index(ctx.clone(), repo, key, logger)
+                    })
+                    .boxify()
             }
             _ => {
                 println!("{}", sub_m.usage());
@@ -835,8 +846,8 @@ fn main() -> Result<()> {
             }
         },
         (HASH_CONVERT, Some(sub_m)) => {
-            let source_hash = sub_m.value_of("HASH").unwrap();
-            let source = sub_m.value_of("from").unwrap();
+            let source_hash = sub_m.value_of("HASH").unwrap().to_string();
+            let source = sub_m.value_of("from").unwrap().to_string();
             let target = sub_m.value_of("to").unwrap();
             // Check that source and target are different types.
             assert_eq!(
@@ -847,39 +858,41 @@ fn main() -> Result<()> {
             args::init_cachelib(&matches);
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
-            let repo = args::open_repo(ctx.clone(), &logger, &matches)?
-                .blobrepo()
-                .clone();
-            if source == "hg" {
-                repo.get_bonsai_from_hg(
-                    ctx,
-                    &HgChangesetId::from_str(source_hash)
-                        .expect("source hash is not valid hg changeset id"),
-                )
-                .and_then(move |maybebonsai| {
-                    match maybebonsai {
-                        Some(bonsai) => {
-                            println!("{}", bonsai);
-                        }
-                        None => {
-                            panic!("no matching mononoke id found");
-                        }
+            args::open_repo(ctx.clone(), &logger, &matches)
+                .and_then(move |repo| {
+                    let repo = repo.blobrepo().clone();
+                    if source == "hg" {
+                        repo.get_bonsai_from_hg(
+                            ctx,
+                            &HgChangesetId::from_str(&source_hash)
+                                .expect("source hash is not valid hg changeset id"),
+                        )
+                        .and_then(move |maybebonsai| {
+                            match maybebonsai {
+                                Some(bonsai) => {
+                                    println!("{}", bonsai);
+                                }
+                                None => {
+                                    panic!("no matching mononoke id found");
+                                }
+                            }
+                            Ok(())
+                        })
+                        .left_future()
+                    } else {
+                        repo.get_hg_from_bonsai_changeset(
+                            ctx,
+                            ChangesetId::from_str(&source_hash)
+                                .expect("source hash is not valid mononoke id"),
+                        )
+                        .and_then(move |mercurial| {
+                            println!("{}", mercurial);
+                            Ok(())
+                        })
+                        .right_future()
                     }
-                    Ok(())
                 })
                 .boxify()
-            } else {
-                repo.get_hg_from_bonsai_changeset(
-                    ctx,
-                    ChangesetId::from_str(source_hash)
-                        .expect("source hash is not valid mononoke id"),
-                )
-                .and_then(move |mercurial| {
-                    println!("{}", mercurial);
-                    Ok(())
-                })
-                .boxify()
-            }
         }
         _ => {
             println!("{}", matches.usage());

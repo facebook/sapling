@@ -94,7 +94,7 @@ fn main() -> Result<()> {
 
     // TODO(luk): This is not a test use case, fix it in next diffs
     let ctx = CoreContext::test_mock();
-    let repo = args::open_repo(ctx.clone(), &logger, &matches)?;
+    let repo = args::open_repo(ctx.clone(), &logger, &matches).map(|repo| repo.blobrepo().clone());
 
     let config = config::get_config(&matches).expect("getting configuration failed");
     let start_points = get_start_points(&matches);
@@ -110,19 +110,22 @@ fn main() -> Result<()> {
     // matter much.
     let (end_sender, end_receiver) = ::std::sync::mpsc::channel();
 
-    // The future::lazy is to ensure that bonsai_verify (which calls tokio::spawn) is called after
-    // tokio::run, not before.
-    let verify_fut = future::lazy({
+    let verify_fut = {
         let logger = logger.clone();
         let valid = valid.clone();
         let invalid = invalid.clone();
         let errors = errors.clone();
         let ignored = ignored.clone();
-        move || {
+        repo
+            .map_err({
+                let logger = logger.clone();
+                move |err| { error!(logger, "ERROR: Failed to create repo: {}", err); }
+            })
+            .and_then(move |repo| {
             let bonsai_verify = BonsaiMFVerify {
                 ctx: ctx.clone(),
                 logger: logger.clone(),
-                repo: repo.blobrepo().clone(),
+                repo,
                 follow_limit,
                 ignores: config.ignores.into_iter().collect(),
                 broken_merges_before: config.broken_merges_before,
@@ -215,10 +218,10 @@ fn main() -> Result<()> {
             })
             // collect to turn the stream into a future that will finish when the stream is done
             .collect()
-            // discard to drop results since they've already been reported
-            .discard()
-        }
-    });
+        })
+        // discard to drop results since they've already been reported
+        .discard()
+    };
 
     tokio::run(verify_fut);
 

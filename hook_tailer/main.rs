@@ -51,7 +51,7 @@ use failure::Result;
 use futures::future::Future;
 use futures::stream::repeat;
 use futures::Stream;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::HgNodeHash;
@@ -79,14 +79,17 @@ fn main() -> Result<()> {
     panichandler::set_panichandler(panichandler::Fate::Abort);
 
     let matches = setup_app().get_matches();
-    let repo_name = matches.value_of("repo_name").unwrap();
+    let repo_name = matches.value_of("repo_name").unwrap().to_string();
     let logger = setup_logger(&matches, repo_name.to_string());
     info!(logger, "Hook tailer is starting");
     let configs = get_config(&matches)?;
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = Bookmark::new(bookmark_name).unwrap();
-    let err: Error = ErrorKind::NoSuchRepo(repo_name.into()).into();
-    let config = configs.repos.get(repo_name).ok_or(err)?;
+    let err: Error = ErrorKind::NoSuchRepo(repo_name.clone()).into();
+    let config = configs.repos.get(&repo_name).ok_or(err)?;
+    let init_revision = matches.value_of("init_revision").map(String::from);
+    let continuous = matches.is_present("continuous");
+    let limit = cmdlib::args::get_u64(&matches, "limit", 1000);
 
     cmdlib::args::init_cachelib(&matches);
 
@@ -103,7 +106,7 @@ fn main() -> Result<()> {
         config.repotype.clone(),
         RepositoryId::new(config.repoid),
         myrouter_port,
-    )?;
+    );
 
     let rc = RequestContext {
         bucket_name: "mononoke_prod".into(),
@@ -115,57 +118,61 @@ fn main() -> Result<()> {
 
     let manifold_client = ManifoldHttpClient::new(id, rc)?;
 
-    // TODO(T37478150, luk) This is not a test case, will be fixed in later diffs
-    let ctx = CoreContext::test_mock();
+    let fut = blobrepo.and_then({
+        cloned!(logger, config);
+        move |blobrepo| {
+            // TODO(T37478150, luk) This is not a test case, will be fixed in later diffs
+            let ctx = CoreContext::test_mock();
 
-    let tailer = Tailer::new(
-        ctx,
-        repo_name.to_string(),
-        blobrepo,
-        config.clone(),
-        bookmark,
-        manifold_client.clone(),
-        logger.clone(),
-    )?;
-
-    let fut = match matches.value_of("init_revision") {
-        Some(init_rev) => {
-            info!(
+            let tailer = try_boxfuture!(Tailer::new(
+                ctx,
+                repo_name,
+                blobrepo,
+                config.clone(),
+                bookmark,
+                manifold_client.clone(),
                 logger.clone(),
-                "Initial revision specified as argument {}", init_rev
-            );
-            let hash = HgNodeHash::from_str(init_rev)?;
-            let bytes = hash.as_bytes().into();
-            manifold_client
-                .write(tailer.get_last_rev_key(), bytes)
-                .map(|_| ())
-                .boxify()
-        }
-        None => futures::future::ok(()).boxify(),
-    };
+            ));
 
-    let fut = if matches.is_present("continuous") {
-        // Tail new commits and run hooks on them
-        let logger = logger.clone();
-        fut.then(|_| {
-            repeat(()).for_each(move |()| {
-                let fut = tailer.run();
-                process_hook_results(fut, logger.clone()).and_then(|()| {
-                    sleep(Duration::new(10, 0))
-                        .map_err(|err| format_err!("Tokio timer error {:?}", err))
+            let fut = match init_revision {
+                Some(init_rev) => {
+                    info!(
+                        logger.clone(),
+                        "Initial revision specified as argument {}", init_rev
+                    );
+                    let hash = try_boxfuture!(HgNodeHash::from_str(&init_rev));
+                    let bytes = hash.as_bytes().into();
+                    manifold_client
+                        .write(tailer.get_last_rev_key(), bytes)
+                        .map(|_| ())
+                        .boxify()
+                }
+                None => futures::future::ok(()).boxify(),
+            };
+
+            if continuous {
+                // Tail new commits and run hooks on them
+                let logger = logger.clone();
+                fut.then(|_| {
+                    repeat(()).for_each(move |()| {
+                        let fut = tailer.run();
+                        process_hook_results(fut, logger.clone()).and_then(|()| {
+                            sleep(Duration::new(10, 0))
+                                .map_err(|err| format_err!("Tokio timer error {:?}", err))
+                        })
+                    })
                 })
-            })
-        })
-        .left_future()
-    } else {
-        let limit = cmdlib::args::get_u64(&matches, "limit", 1000);
-        let logger = logger.clone();
-        fut.then(move |_| {
-            let fut = tailer.run_with_limit(limit);
-            process_hook_results(fut, logger)
-        })
-        .right_future()
-    };
+                .boxify()
+            } else {
+                let logger = logger.clone();
+                fut.then(move |_| {
+                    let fut = tailer.run_with_limit(limit);
+                    process_hook_results(fut, logger)
+                })
+                .boxify()
+            }
+        }
+    });
 
     tokio::run(fut.map(|_| ()).map_err(move |err| {
         error!(logger, "Failed to run tailer {:?}", err);

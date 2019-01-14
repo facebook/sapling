@@ -11,8 +11,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use clap::{App, Arg, ArgMatches};
-use failure::{err_msg, Result, ResultExt};
+use failure::{err_msg, Error, Result, ResultExt};
 use futures::{Future, IntoFuture};
+use futures_ext::BoxFuture;
 use futures_ext::FutureExt;
 use panichandler::{self, Fate};
 use scuba_ext::ScubaSampleBuilder;
@@ -298,7 +299,7 @@ pub fn create_repo<'a>(
     ctx: CoreContext,
     logger: &Logger,
     matches: &ArgMatches<'a>,
-) -> Result<MononokeRepo> {
+) -> BoxFuture<MononokeRepo, Error> {
     open_repo_internal(ctx, logger, matches, true)
 }
 
@@ -308,7 +309,7 @@ pub fn open_repo<'a>(
     ctx: CoreContext,
     logger: &Logger,
     matches: &ArgMatches<'a>,
-) -> Result<MononokeRepo> {
+) -> BoxFuture<MononokeRepo, Error> {
     open_repo_internal(ctx, logger, matches, false)
 }
 
@@ -516,10 +517,10 @@ fn open_repo_internal<'a>(
     logger: &Logger,
     matches: &ArgMatches<'a>,
     create: bool,
-) -> Result<MononokeRepo> {
+) -> BoxFuture<MononokeRepo, Error> {
     let repo_id = get_repo_id(matches);
 
-    let (reponame, repotype) = find_repo_type(matches)?;
+    let (reponame, repotype) = try_boxfuture!(find_repo_type(matches));
     info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
     let logger = match repotype {
         RepoType::BlobFiles(ref data_dir) => {
@@ -541,22 +542,25 @@ fn open_repo_internal<'a>(
     };
 
     let myrouter_port = parse_myrouter_port(matches);
+    open_blobrepo(logger.clone(), repotype.clone(), repo_id, myrouter_port)
+        .map(move |blobrepo| {
+            let hook_manager =
+                HookManager::new_with_blobrepo(ctx, Default::default(), blobrepo.clone(), logger);
 
-    let blobrepo = open_blobrepo(logger.clone(), repotype.clone(), repo_id, myrouter_port)?;
-    let hook_manager =
-        HookManager::new_with_blobrepo(ctx, Default::default(), blobrepo.clone(), logger);
-    // TODO fixup imports
-    Ok(MononokeRepo::new(
-        blobrepo,
-        &Default::default(),
-        Arc::new(hook_manager),
-        None,
-        // TODO(anastasiya) T35014200, condiser non default value for LFS repos
-        Default::default(),
-        "".to_string(),
-        // TODO(simonfar) T36381758 make repo readonly for services that don't need to write
-        RepoReadOnly::ReadWrite,
-    ))
+            // TODO fixup imports
+            MononokeRepo::new(
+                blobrepo,
+                &Default::default(),
+                Arc::new(hook_manager),
+                None,
+                // TODO(anastasiya) T35014200, condiser non default value for LFS repos
+                Default::default(),
+                "".to_string(),
+                // TODO(simonfar) T36381758 make repo readonly for services that don't need to write
+                RepoReadOnly::ReadWrite,
+            )
+        })
+        .boxify()
 }
 
 pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> RemoteBlobstoreArgs {

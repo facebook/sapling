@@ -62,7 +62,7 @@ use slog_glog_fmt::default_drain as glog_drain;
 
 fn run_hook(
     args: Vec<String>,
-    repo_creator: fn(&Logger, &ArgMatches) -> BlobRepo,
+    repo_creator: fn(&Logger, &ArgMatches) -> BoxFuture<BlobRepo, Error>,
 ) -> BoxFuture<HookExecution, Error> {
     // Define command line args and parse command line
     let matches = cmdlib::args::add_cachelib_args(
@@ -103,7 +103,7 @@ fn run_hook(
         "percs" => false,
         _ => panic!("Invalid hook type"),
     };
-    let revstr = matches.value_of("REV").unwrap();
+    let revstr = matches.value_of("REV").unwrap().to_string();
     let repo = repo_creator(&logger, &matches);
 
     let mut file = File::open(hook_file).expect("Unable to open the hook file");
@@ -115,42 +115,45 @@ fn run_hook(
     println!("Hook file is {} revision is {:?}", hook_file, revstr);
     println!("Hook code is {}", code);
     println!("==============================");
-    let mut hook_manager =
-        HookManager::new_with_blobrepo(ctx.clone(), Default::default(), repo.clone(), logger);
-    let hook = LuaHook {
-        name: String::from("testhook"),
-        code,
-    };
-    if file_hook {
-        hook_manager.register_file_hook("testhook", Arc::new(hook), None);
-    } else {
-        hook_manager.register_changeset_hook("testhook", Arc::new(hook), None);
-    }
-    let bookmark = Bookmark::new("testbm").unwrap();
-    hook_manager.set_hooks_for_bookmark(bookmark.clone(), vec!["testhook".to_string()]);
-    let id = try_boxfuture!(HgChangesetId::from_str(revstr));
-    if file_hook {
-        hook_manager
-            .run_file_hooks_for_bookmark(ctx, id, &bookmark, None)
-            .map(|executions| {
-                for execution in executions.iter() {
-                    if let (_, HookExecution::Rejected(_)) = execution {
-                        println!("Returning the first failed hook");
-                        return execution.1.clone();
+    repo.and_then(move |repo| {
+        let mut hook_manager =
+            HookManager::new_with_blobrepo(ctx.clone(), Default::default(), repo.clone(), logger);
+        let hook = LuaHook {
+            name: String::from("testhook"),
+            code,
+        };
+        if file_hook {
+            hook_manager.register_file_hook("testhook", Arc::new(hook), None);
+        } else {
+            hook_manager.register_changeset_hook("testhook", Arc::new(hook), None);
+        }
+        let bookmark = Bookmark::new("testbm").unwrap();
+        hook_manager.set_hooks_for_bookmark(bookmark.clone(), vec!["testhook".to_string()]);
+        let id = try_boxfuture!(HgChangesetId::from_str(&revstr));
+        if file_hook {
+            hook_manager
+                .run_file_hooks_for_bookmark(ctx, id, &bookmark, None)
+                .map(|executions| {
+                    for execution in executions.iter() {
+                        if let (_, HookExecution::Rejected(_)) = execution {
+                            println!("Returning the first failed hook");
+                            return execution.1.clone();
+                        }
                     }
-                }
-                executions.get(0).unwrap().1.clone()
-            })
-            .boxify()
-    } else {
-        hook_manager
-            .run_changeset_hooks_for_bookmark(ctx, id, &bookmark, None)
-            .map(|executions| executions.get(0).unwrap().1.clone())
-            .boxify()
-    }
+                    executions.get(0).unwrap().1.clone()
+                })
+                .boxify()
+        } else {
+            hook_manager
+                .run_changeset_hooks_for_bookmark(ctx, id, &bookmark, None)
+                .map(|executions| executions.get(0).unwrap().1.clone())
+                .boxify()
+        }
+    })
+    .boxify()
 }
 
-fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
+fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BoxFuture<BlobRepo, Error> {
     let blobstore_args = cmdlib::args::parse_blobstore_args(matches);
     let myrouter_port = matches
         .value_of("myrouter-port")
@@ -172,7 +175,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
         RepositoryId::new(0),
         myrouter_port,
     )
-    .expect("failed to create blobrepo instance")
+    .boxify()
 }
 
 // It all starts here
@@ -195,6 +198,7 @@ fn main() -> Result<()> {
 mod test {
     use super::*;
 
+    use futures::future;
     use std::fs::File;
     use tempdir::TempDir;
 
@@ -320,7 +324,7 @@ mod test {
         code: String,
         changeset_id: String,
         run_file: bool,
-        repo_creator: fn(&Logger, &ArgMatches) -> BlobRepo,
+        repo_creator: fn(&Logger, &ArgMatches) -> BoxFuture<BlobRepo, Error>,
     ) -> Result<HookExecution> {
         let dir = TempDir::new("runhook").unwrap();
         let file_path = dir.path().join("testhook.lua");
@@ -340,12 +344,12 @@ mod test {
         run_hook(args, repo_creator).wait()
     }
 
-    fn test_blobrepo(_logger: &Logger, _matches: &ArgMatches) -> BlobRepo {
-        fixtures::linear::getrepo(None)
+    fn test_blobrepo(_logger: &Logger, _matches: &ArgMatches) -> BoxFuture<BlobRepo, Error> {
+        future::ok(fixtures::linear::getrepo(None)).boxify()
     }
 
-    fn test_many_files_dirs(_logger: &Logger, _matches: &ArgMatches) -> BlobRepo {
-        fixtures::many_files_dirs::getrepo(None)
+    fn test_many_files_dirs(_logger: &Logger, _matches: &ArgMatches) -> BoxFuture<BlobRepo, Error> {
+        future::ok(fixtures::many_files_dirs::getrepo(None)).boxify()
     }
 
 }

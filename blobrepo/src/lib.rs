@@ -52,6 +52,7 @@ extern crate fileblob;
 extern crate filenodes;
 #[macro_use]
 extern crate futures_ext;
+extern crate glusterblob;
 extern crate manifoldblob;
 #[cfg(test)]
 #[macro_use]
@@ -91,10 +92,9 @@ mod repo_commit;
 mod utils;
 
 pub use alias::*;
-pub use errors::*;
-
 pub use changeset::{HgBlobChangeset, HgChangesetContent};
 pub use changeset_fetcher::ChangesetFetcher;
+pub use errors::*;
 pub use file::HgBlobEntry;
 pub use manifest::BlobManifest;
 pub use repo::{

@@ -75,137 +75,143 @@ pub fn repo_handlers(
 
             let ready_handle = ready.create_handle(reponame.as_ref());
 
+            let root_log = root_log.clone();
             let logger = root_log.new(o!("repo" => reponame.clone()));
             let repoid = RepositoryId::new(config.repoid);
-            let blobrepo = try_boxfuture!(open_blobrepo(
+
+            open_blobrepo(
                 logger.clone(),
                 config.repotype.clone(),
                 repoid,
                 myrouter_port,
-            ));
+            )
+            .and_then(move |blobrepo| {
+                let hook_manager_params = match config.hook_manager_params.clone() {
+                    Some(hook_manager_params) => hook_manager_params,
+                    None => Default::default(),
+                };
 
-            let hook_manager_params = match config.hook_manager_params.clone() {
-                Some(hook_manager_params) => hook_manager_params,
-                None => Default::default(),
-            };
+                let mut hook_manager = HookManager::new_with_blobrepo(
+                    ctx.clone(),
+                    hook_manager_params,
+                    blobrepo.clone(),
+                    logger,
+                );
 
-            let mut hook_manager = HookManager::new_with_blobrepo(
-                ctx.clone(),
-                hook_manager_params,
-                blobrepo.clone(),
-                logger,
-            );
+                info!(root_log, "Loading hooks");
+                try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
 
-            info!(root_log, "Loading hooks");
-            try_boxfuture!(load_hooks(&mut hook_manager, config.clone()));
-
-            let streaming_clone = match config.repotype {
-                RepoType::BlobRemote { ref db_address, .. } => {
-                    Some(try_boxfuture!(streaming_clone(
-                        blobrepo.clone(),
-                        &db_address,
-                        myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
-                        repoid
-                    )))
-                }
-                _ => None,
-            };
-
-            let repo = MononokeRepo::new(
-                blobrepo,
-                &config.pushrebase,
-                Arc::new(hook_manager),
-                streaming_clone,
-                config.lfs.clone(),
-                reponame.clone(),
-                config.readonly,
-            );
-
-            let listen_log = root_log.new(o!("repo" => reponame.clone()));
-            let mut scuba_logger = ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
-            scuba_logger.add_common_server_data();
-            let hash_validation_percentage = config.hash_validation_percentage.clone();
-            let wireproto_scribe_category = config.wireproto_scribe_category.clone();
-
-            let skip_index = match config.skiplist_index_blobstore_key.clone() {
-                Some(skiplist_index_blobstore_key) => {
-                    let blobstore = repo.blobrepo().get_blobstore();
-                    blobstore
-                        .get(ctx.clone(), skiplist_index_blobstore_key)
-                        .and_then(|maybebytes| {
-                            let map = match maybebytes {
-                                Some(bytes) => {
-                                    let bytes = bytes.into_bytes();
-                                    try_boxfuture!(deserialize_skiplist_map(bytes))
-                                }
-                                None => HashMap::new(),
-                            };
-                            ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map))).boxify()
-                        })
-                        .left_future()
-                }
-                None => ok(Arc::new(SkiplistIndex::new())).right_future(),
-            };
-
-            let repotype = config.repotype.clone();
-
-            // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
-            let initial_warmup = ensure_myrouter_ready.and_then({
-                cloned!(ctx, reponame, listen_log);
-                let blobrepo = repo.blobrepo().clone();
-                move |()| {
-                    cache_warmup(ctx, Arc::new(blobrepo), config.cache_warmup, listen_log)
-                        .chain_err(format!("while warming up cache for repo: {}", reponame))
-                        .from_err()
-                }
-            });
-
-            ready_handle
-                .wait_for(initial_warmup.and_then(|()| skip_index))
-                .map({
-                    cloned!(root_log);
-                    move |skip_index| {
-                        info!(root_log, "Repo warmup for {} complete", reponame);
-
-                        // initialize phases hint from the skip index
-                        let phases_hint: Arc<Phases> = match repotype {
-                            RepoType::BlobFiles(ref data_dir)
-                            | RepoType::BlobRocks(ref data_dir)
-                            | RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
-                                let storage = Arc::new(
-                                    SqlPhases::with_sqlite_path(data_dir.join("phases"))
-                                        .expect("unable to initialize sqlite db for phases"),
-                                );
-                                Arc::new(HintPhases::new(storage, skip_index.clone()))
-                            }
-                            RepoType::BlobRemote { ref db_address, .. } => {
-                                let storage = Arc::new(SqlPhases::with_myrouter(
-                                    &db_address,
-                                    myrouter_port
-                                        .expect("myrouter_port not provided for BlobRemote repo"),
-                                ));
-                                Arc::new(CachingHintPhases::new(storage, skip_index.clone()))
-                            }
-                        };
-
-                        // initialize lca hint from the skip index
-                        let lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync> = skip_index;
-
-                        (
-                            reponame,
-                            RepoHandler {
-                                logger: listen_log,
-                                scuba: scuba_logger,
-                                wireproto_scribe_category,
-                                repo,
-                                hash_validation_percentage,
-                                lca_hint,
-                                phases_hint,
-                            },
-                        )
+                let streaming_clone = match config.repotype {
+                    RepoType::BlobRemote { ref db_address, .. } => {
+                        Some(try_boxfuture!(streaming_clone(
+                            blobrepo.clone(),
+                            &db_address,
+                            myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
+                            repoid
+                        )))
                     }
-                })
-                .boxify()
+                    _ => None,
+                };
+
+                let repo = MononokeRepo::new(
+                    blobrepo,
+                    &config.pushrebase,
+                    Arc::new(hook_manager),
+                    streaming_clone,
+                    config.lfs.clone(),
+                    reponame.clone(),
+                    config.readonly,
+                );
+
+                let listen_log = root_log.new(o!("repo" => reponame.clone()));
+                let mut scuba_logger =
+                    ScubaSampleBuilder::with_opt_table(config.scuba_table.clone());
+                scuba_logger.add_common_server_data();
+                let hash_validation_percentage = config.hash_validation_percentage.clone();
+                let wireproto_scribe_category = config.wireproto_scribe_category.clone();
+
+                let skip_index = match config.skiplist_index_blobstore_key.clone() {
+                    Some(skiplist_index_blobstore_key) => {
+                        let blobstore = repo.blobrepo().get_blobstore();
+                        blobstore
+                            .get(ctx.clone(), skiplist_index_blobstore_key)
+                            .and_then(|maybebytes| {
+                                let map = match maybebytes {
+                                    Some(bytes) => {
+                                        let bytes = bytes.into_bytes();
+                                        try_boxfuture!(deserialize_skiplist_map(bytes))
+                                    }
+                                    None => HashMap::new(),
+                                };
+                                ok(Arc::new(SkiplistIndex::new_with_skiplist_graph(map))).boxify()
+                            })
+                            .left_future()
+                    }
+                    None => ok(Arc::new(SkiplistIndex::new())).right_future(),
+                };
+
+                let repotype = config.repotype.clone();
+
+                // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
+                let initial_warmup = ensure_myrouter_ready.and_then({
+                    cloned!(ctx, reponame, listen_log);
+                    let blobrepo = repo.blobrepo().clone();
+                    move |()| {
+                        cache_warmup(ctx, Arc::new(blobrepo), config.cache_warmup, listen_log)
+                            .chain_err(format!("while warming up cache for repo: {}", reponame))
+                            .from_err()
+                    }
+                });
+
+                ready_handle
+                    .wait_for(initial_warmup.and_then(|()| skip_index))
+                    .map({
+                        cloned!(root_log);
+                        move |skip_index| {
+                            info!(root_log, "Repo warmup for {} complete", reponame);
+
+                            // initialize phases hint from the skip index
+                            let phases_hint: Arc<Phases> = match repotype {
+                                RepoType::BlobFiles(ref data_dir)
+                                | RepoType::BlobRocks(ref data_dir)
+                                | RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
+                                    let storage = Arc::new(
+                                        SqlPhases::with_sqlite_path(data_dir.join("phases"))
+                                            .expect("unable to initialize sqlite db for phases"),
+                                    );
+                                    Arc::new(HintPhases::new(storage, skip_index.clone()))
+                                }
+                                RepoType::BlobRemote { ref db_address, .. } => {
+                                    let storage = Arc::new(SqlPhases::with_myrouter(
+                                        &db_address,
+                                        myrouter_port.expect(
+                                            "myrouter_port not provided for BlobRemote repo",
+                                        ),
+                                    ));
+                                    Arc::new(CachingHintPhases::new(storage, skip_index.clone()))
+                                }
+                            };
+
+                            // initialize lca hint from the skip index
+                            let lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync> = skip_index;
+
+                            (
+                                reponame,
+                                RepoHandler {
+                                    logger: listen_log,
+                                    scuba: scuba_logger,
+                                    wireproto_scribe_category,
+                                    repo,
+                                    hash_validation_percentage,
+                                    lca_hint,
+                                    phases_hint,
+                                },
+                            )
+                        }
+                    })
+                    .boxify()
+            })
+            .boxify()
         })
         .collect();
 

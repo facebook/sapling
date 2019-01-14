@@ -49,10 +49,18 @@ use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, 
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use delayblob::DelayBlob;
+use errors::*;
+use file::{
+    fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
+    fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_size_from_blobstore,
+    fetch_raw_filenode_bytes, fetch_rename_from_blobstore, HgBlobEntry,
+};
 use file::{fetch_file_envelope, get_rename_from_envelope};
 use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
+use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
+use memory_manifest::MemoryRootManifest;
 use mercurial::file::File;
 use mercurial_types::manifest::Content;
 use mercurial_types::{
@@ -66,19 +74,11 @@ use mononoke_types::{
     MononokeId, RepositoryId,
 };
 use multiplexedblob::MultiplexedBlobstore;
+use post_commit::{self, PostCommitQueue};
+use repo_commit::*;
 use rocksblob::Rocksblob;
 use rocksdb;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
-
-use errors::*;
-use file::{
-    fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
-    fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_size_from_blobstore,
-    fetch_raw_filenode_bytes, fetch_rename_from_blobstore, HgBlobEntry,
-};
-use memory_manifest::MemoryRootManifest;
-use post_commit::{self, PostCommitQueue};
-use repo_commit::*;
 use BlobManifest;
 use HgBlobChangeset;
 
@@ -306,21 +306,23 @@ impl BlobRepo {
         repoid: RepositoryId,
         myrouter_port: u16,
         scribe: C,
-    ) -> Result<Self>
+    ) -> impl Future<Item = Self, Error = Error>
     where
         C: ScribeClient + Sync + Send + 'static,
     {
-        let mut repo = Self::new_remote_no_postcommit(
+        Self::new_remote_no_postcommit(
             logger,
             args,
             db_address,
             filenode_shards,
             repoid,
             myrouter_port,
-        )?;
-        let category = format!("mononoke_commits");
-        repo.postcommit_queue = Arc::new(post_commit::LogToScribe::new(scribe, category));
-        Ok(repo)
+        )
+        .map(|mut repo| {
+            let category = format!("mononoke_commits");
+            repo.postcommit_queue = Arc::new(post_commit::LogToScribe::new(scribe, category));
+            repo
+        })
     }
 
     pub fn new_remote_no_postcommit(
@@ -330,34 +332,48 @@ impl BlobRepo {
         filenode_shards: Option<usize>,
         repoid: RepositoryId,
         myrouter_port: u16,
-    ) -> Result<Self> {
+    ) -> impl Future<Item = Self, Error = Error> {
+        // recursively construct blobstore from arguments
         fn eval_remote_args(
-            args: &RemoteBlobstoreArgs,
+            args: RemoteBlobstoreArgs,
             repoid: RepositoryId,
-            queue: &Arc<BlobstoreSyncQueue>,
-        ) -> Result<Arc<Blobstore>> {
+            queue: Arc<BlobstoreSyncQueue>,
+        ) -> BoxFuture<Arc<Blobstore>, Error> {
             match args {
                 RemoteBlobstoreArgs::Manifold(manifold_args) => {
-                    let blobstore = ThriftManifoldBlob::new(manifold_args.bucket.clone())?;
-                    let blobstore =
-                        PrefixBlobstore::new(blobstore, format!("flat/{}", manifold_args.prefix));
-                    Ok(Arc::new(blobstore))
+                    let blobstore: Arc<Blobstore> = Arc::new(PrefixBlobstore::new(
+                        try_boxfuture!(ThriftManifoldBlob::new(manifold_args.bucket.clone())),
+                        format!("flat/{}", manifold_args.prefix),
+                    ));
+                    future::ok(blobstore).boxify()
+                }
+                RemoteBlobstoreArgs::Gluster(args) => {
+                    Glusterblob::with_smc(args.tier, args.export, args.basepath)
+                        .map(|blobstore| -> Arc<Blobstore> { Arc::new(blobstore) })
+                        .boxify()
                 }
                 RemoteBlobstoreArgs::Multiplexed(args) => {
-                    let mut blobstores = Vec::new();
-                    for (blobstore_id, arg) in args {
-                        blobstores.push((*blobstore_id, eval_remote_args(arg, repoid, queue)?));
-                    }
-                    if blobstores.len() == 1 {
-                        let (_, blobstore) = blobstores.into_iter().next().unwrap();
-                        Ok(blobstore)
-                    } else {
-                        Ok(Arc::new(MultiplexedBlobstore::new(
-                            repoid,
-                            blobstores,
-                            queue.clone(),
-                        )))
-                    }
+                    let blobstores: Vec<_> = args
+                        .into_iter()
+                        .map(|(blobstore_id, arg)| {
+                            eval_remote_args(arg, repoid, queue.clone())
+                                .map(move |blobstore| (blobstore_id, blobstore))
+                        })
+                        .collect();
+                    future::join_all(blobstores)
+                        .map(move |blobstores| {
+                            if blobstores.len() == 1 {
+                                let (_, blobstore) = blobstores.into_iter().next().unwrap();
+                                blobstore
+                            } else {
+                                Arc::new(MultiplexedBlobstore::new(
+                                    repoid,
+                                    blobstores,
+                                    queue.clone(),
+                                ))
+                            }
+                        })
+                        .boxify()
                 }
             }
         }
@@ -365,71 +381,75 @@ impl BlobRepo {
         let blobstore_sync_queue: Arc<BlobstoreSyncQueue> = Arc::new(
             SqlBlobstoreSyncQueue::with_myrouter(&db_address, myrouter_port),
         );
-        let blobstore = eval_remote_args(args, repoid, &blobstore_sync_queue)?;
-        let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
-        let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
-            ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
-        ))?);
-        let presence_pool =
-            Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
-                ErrorKind::MissingCachePool("blobstore-presence".to_string()),
+        eval_remote_args(args.clone(), repoid, blobstore_sync_queue).and_then(move |blobstore| {
+            let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
+            let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
+                ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
             ))?);
-        let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
+            let presence_pool =
+                Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
+                    ErrorKind::MissingCachePool("blobstore-presence".to_string()),
+                ))?);
+            let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
 
-        let filenodes = match filenode_shards {
-            Some(shards) => SqlFilenodes::with_sharded_myrouter(&db_address, myrouter_port, shards),
-            None => SqlFilenodes::with_myrouter(&db_address, myrouter_port),
-        };
-        let filenodes = CachingFilenodes::new(
-            Arc::new(filenodes),
-            cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
-                "filenodes".to_string(),
-            )))?,
-            "sqlfilenodes",
-            &db_address,
-        );
+            let filenodes = match filenode_shards {
+                Some(shards) => {
+                    SqlFilenodes::with_sharded_myrouter(&db_address, myrouter_port, shards)
+                }
+                None => SqlFilenodes::with_myrouter(&db_address, myrouter_port),
+            };
+            let filenodes = CachingFilenodes::new(
+                Arc::new(filenodes),
+                cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
+                    "filenodes".to_string(),
+                )))?,
+                "sqlfilenodes",
+                &db_address,
+            );
 
-        let bookmarks = SqlBookmarks::with_myrouter(&db_address, myrouter_port);
+            let bookmarks = SqlBookmarks::with_myrouter(&db_address, myrouter_port);
 
-        let changesets = SqlChangesets::with_myrouter(&db_address, myrouter_port);
-        let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
-            ErrorKind::MissingCachePool("changesets".to_string()),
-        ))?;
-        let changesets = CachingChangests::new(Arc::new(changesets), changesets_cache_pool.clone());
-        let changesets = Arc::new(changesets);
+            let changesets = SqlChangesets::with_myrouter(&db_address, myrouter_port);
+            let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
+                ErrorKind::MissingCachePool("changesets".to_string()),
+            ))?;
+            let changesets =
+                CachingChangests::new(Arc::new(changesets), changesets_cache_pool.clone());
+            let changesets = Arc::new(changesets);
 
-        let bonsai_hg_mapping = SqlBonsaiHgMapping::with_myrouter(&db_address, myrouter_port);
-        let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
-            Arc::new(bonsai_hg_mapping),
-            cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(
-                ErrorKind::MissingCachePool("bonsai_hg_mapping".to_string()),
-            ))?,
-        );
+            let bonsai_hg_mapping = SqlBonsaiHgMapping::with_myrouter(&db_address, myrouter_port);
+            let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
+                Arc::new(bonsai_hg_mapping),
+                cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(
+                    ErrorKind::MissingCachePool("bonsai_hg_mapping".to_string()),
+                ))?,
+            );
 
-        let changeset_fetcher_factory = {
-            cloned!(blobstore, changesets, repoid);
-            move || {
-                let res: Arc<ChangesetFetcher + Send + Sync> =
-                    Arc::new(CachingChangesetFetcher::new(
-                        changesets.clone(),
-                        repoid.clone(),
-                        changesets_cache_pool.clone(),
-                        blobstore.clone(),
-                    ));
-                res
-            }
-        };
-        Ok(Self::new_with_changeset_fetcher_factory(
-            logger,
-            Arc::new(bookmarks),
-            blobstore,
-            Arc::new(filenodes),
-            changesets,
-            Arc::new(bonsai_hg_mapping),
-            repoid,
-            Arc::new(post_commit::Discard::new()),
-            Arc::new(changeset_fetcher_factory),
-        ))
+            let changeset_fetcher_factory = {
+                cloned!(blobstore, changesets, repoid);
+                move || {
+                    let res: Arc<ChangesetFetcher + Send + Sync> =
+                        Arc::new(CachingChangesetFetcher::new(
+                            changesets.clone(),
+                            repoid.clone(),
+                            changesets_cache_pool.clone(),
+                            blobstore.clone(),
+                        ));
+                    res
+                }
+            };
+            Ok(Self::new_with_changeset_fetcher_factory(
+                logger,
+                Arc::new(bookmarks),
+                blobstore,
+                Arc::new(filenodes),
+                changesets,
+                Arc::new(bonsai_hg_mapping),
+                repoid,
+                Arc::new(post_commit::Discard::new()),
+                Arc::new(changeset_fetcher_factory),
+            ))
+        })
     }
 
     /// Convert this BlobRepo instance into one that only does writes in memory.

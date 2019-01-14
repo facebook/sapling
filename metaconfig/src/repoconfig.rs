@@ -30,6 +30,17 @@ pub struct ManifoldArgs {
     pub prefix: String,
 }
 
+/// Arguments for settings up a Gluster blobstore
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GlusterArgs {
+    /// Gluster tier
+    pub tier: String,
+    /// Nfs export name
+    pub export: String,
+    /// Content prefix path
+    pub basepath: String,
+}
+
 /// Configuration of a single repository
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RepoConfig {
@@ -199,6 +210,8 @@ impl Default for LfsParams {
 pub enum RemoteBlobstoreArgs {
     /// Manifold arguments
     Manifold(ManifoldArgs),
+    /// Gluster blobstore arguemnts
+    Gluster(GlusterArgs),
     /// Multiplexed
     Multiplexed(HashMap<BlobstoreId, RemoteBlobstoreArgs>),
 }
@@ -206,6 +219,12 @@ pub enum RemoteBlobstoreArgs {
 impl From<ManifoldArgs> for RemoteBlobstoreArgs {
     fn from(manifold_args: ManifoldArgs) -> Self {
         RemoteBlobstoreArgs::Manifold(manifold_args)
+    }
+}
+
+impl From<GlusterArgs> for RemoteBlobstoreArgs {
+    fn from(gluster_args: GlusterArgs) -> Self {
+        RemoteBlobstoreArgs::Gluster(gluster_args)
     }
 }
 
@@ -466,6 +485,23 @@ impl RepoConfigs {
                             };
                             RemoteBlobstoreArgs::Manifold(manifold_args)
                         }
+                        RawBlobstoreType::Gluster => {
+                            let tier = blobstore.gluster_tier.ok_or(ErrorKind::InvalidConfig(
+                                "gluster tier must be specified".into(),
+                            ))?;
+                            let export = blobstore.gluster_export.ok_or(
+                                ErrorKind::InvalidConfig("gluster bucket must be specified".into()),
+                            )?;
+                            let basepath =
+                                blobstore.gluster_basepath.ok_or(ErrorKind::InvalidConfig(
+                                    "gluster basepath must be specified".into(),
+                                ))?;
+                            RemoteBlobstoreArgs::Gluster(GlusterArgs {
+                                tier,
+                                export,
+                                basepath,
+                            })
+                        }
                     };
                     if blobstores.insert(blobstore.blobstore_id, args).is_some() {
                         return Err(ErrorKind::InvalidConfig(
@@ -642,8 +678,13 @@ struct RawHookConfig {
 struct RawRemoteBlobstoreConfig {
     blobstore_type: RawBlobstoreType,
     blobstore_id: BlobstoreId,
+    // required manifold arguments
     manifold_bucket: Option<String>,
     manifold_prefix: Option<String>,
+    // required gluster arguments
+    gluster_tier: Option<String>,
+    gluster_export: Option<String>,
+    gluster_basepath: Option<String>,
 }
 
 /// Types of repositories supported
@@ -664,6 +705,8 @@ enum RawRepoType {
 enum RawBlobstoreType {
     #[serde(rename = "manifold")]
     Manifold,
+    #[serde(rename = "gluster")]
+    Gluster,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -680,7 +723,6 @@ struct RawLfsParams {
 #[cfg(test)]
 mod test {
     use super::*;
-
     use mercurial_types::FileType;
     use std::fs::{create_dir_all, write};
     use tempdir::TempDir;
@@ -709,9 +751,10 @@ mod test {
             manifold_bucket="bucket"
             [[remote_blobstore]]
             blobstore_id=1
-            blobstore_type="manifold"
-            manifold_bucket="anotherbucket"
-            manifold_prefix="someprefix"
+            blobstore_type="gluster"
+            gluster_tier="mononoke.gluster.tier"
+            gluster_export="groot"
+            gluster_basepath="mononoke/glusterblob-test"
             [[bookmarks]]
             name="master"
             [[bookmarks.hooks]]
@@ -770,9 +813,10 @@ mod test {
             bucket: "bucket".into(),
             prefix: "".into(),
         };
-        let second_manifold_args = ManifoldArgs {
-            bucket: "anotherbucket".into(),
-            prefix: "someprefix".into(),
+        let second_gluster_args = GlusterArgs {
+            tier: "mononoke.gluster.tier".into(),
+            export: "groot".into(),
+            basepath: "mononoke/glusterblob-test".into(),
         };
         let mut blobstores = HashMap::new();
         blobstores.insert(
@@ -781,7 +825,7 @@ mod test {
         );
         blobstores.insert(
             BlobstoreId::new(1),
-            RemoteBlobstoreArgs::Manifold(second_manifold_args),
+            RemoteBlobstoreArgs::Gluster(second_gluster_args),
         );
         let blobstores_args = RemoteBlobstoreArgs::Multiplexed(blobstores);
 

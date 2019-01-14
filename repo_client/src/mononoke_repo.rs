@@ -9,6 +9,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use failure::err_msg;
+use futures::{future, Future, IntoFuture};
+use futures_ext::FutureExt;
 use rand::distributions::{Distribution, LogNormal};
 use rand::prelude::*;
 use rand_hc::Hc128Rng;
@@ -107,27 +109,40 @@ pub fn open_blobrepo(
     repotype: RepoType,
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
-) -> Result<BlobRepo> {
+) -> impl Future<Item = BlobRepo, Error = Error> {
     use metaconfig::repoconfig::RepoType::*;
-
-    let blobrepo = match repotype {
-        BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
-        BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
+    match repotype {
+        BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)
+            .into_future()
+            .left_future(),
+        BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)
+            .into_future()
+            .left_future(),
         BlobRemote {
             ref blobstores_args,
             ref db_address,
             ref filenode_shards,
-        } => BlobRepo::new_remote_scribe_commits(
-            logger,
-            blobstores_args,
-            db_address.clone(),
-            filenode_shards.clone(),
-            repoid,
-            myrouter_port.ok_or(err_msg(
-                "Missing myrouter port, unable to open BlobRemote repo",
-            ))?,
-            ScribeCxxClient::new(),
-        )?,
+        } => {
+            let myrouter_port = match myrouter_port {
+                None => {
+                    return future::err(err_msg(
+                        "Missing myrouter port, unable to open BlobRemote repo",
+                    ))
+                    .left_future();
+                }
+                Some(myrouter_port) => myrouter_port,
+            };
+            BlobRepo::new_remote_scribe_commits(
+                logger,
+                blobstores_args,
+                db_address.clone(),
+                filenode_shards.clone(),
+                repoid,
+                myrouter_port,
+                ScribeCxxClient::new(),
+            )
+            .right_future()
+        }
         TestBlobDelayRocks(ref path, mean, stddev) => {
             // We take in an arithmetic mean and stddev, and deduce a log normal
             let mean = mean as f64 / 1_000_000.0;
@@ -163,11 +178,11 @@ pub fn open_blobrepo(
                 3, // put
                 2, // is_present
                 2, // assert_present
-            )?
+            )
+            .into_future()
+            .left_future()
         }
-    };
-
-    Ok(blobrepo)
+    }
 }
 
 pub fn streaming_clone(
