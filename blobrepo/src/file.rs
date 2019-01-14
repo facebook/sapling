@@ -13,11 +13,13 @@ use futures_ext::{BoxFuture, FutureExt};
 use super::alias::get_sha256;
 
 use mercurial::file;
-use mercurial_types::{FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash,
-                      HgParents, MPath, MPathElement};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::HgEntryId;
-use mononoke_types::{ContentId, FileContents, MononokeId, hash::Sha256};
+use mercurial_types::{
+    FileType, HgBlob, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath,
+    MPathElement,
+};
+use mononoke_types::{hash::Sha256, ContentId, FileContents, MononokeId};
 
 use blobstore::Blobstore;
 use context::CoreContext;
@@ -204,7 +206,8 @@ pub(crate) fn get_rename_from_envelope(
         envelope.metadata,
         envelope.p1.as_ref(),
         envelope.p2.as_ref(),
-    ).copied_from()
+    )
+    .copied_from()
 }
 
 impl HgBlobEntry {

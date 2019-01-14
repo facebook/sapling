@@ -31,7 +31,10 @@ mod config;
 
 use std::process;
 use std::result;
-use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 
 use clap::{App, Arg, ArgMatches};
 use failure::DisplayChain;
@@ -221,12 +224,7 @@ fn main() -> Result<()> {
 
     let end_points: Vec<_> = end_receiver.into_iter().collect();
     process::exit(summarize(
-        logger,
-        end_points,
-        valid,
-        invalid,
-        errors,
-        ignored,
+        logger, end_points, valid, invalid, errors, ignored,
     ));
 }
 

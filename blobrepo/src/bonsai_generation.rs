@@ -8,20 +8,21 @@ use std::collections::BTreeMap;
 
 use blobstore::Blobstore;
 use failure::prelude::*;
-use futures::{IntoFuture, Stream};
 use futures::future::{join_all, Future};
+use futures::{IntoFuture, Stream};
 use futures_ext::FutureExt;
 
 use bonsai_utils;
 use context::CoreContext;
 use mercurial_types::{Changeset, HgFileNodeId, HgManifestId, HgNodeHash, MPath};
-use mononoke_types::{BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange,
-                     MononokeId};
+use mononoke_types::{
+    BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
+};
 use repo::RepoBlobstore;
 
+use errors::*;
 use BlobRepo;
 use HgBlobChangeset;
-use errors::*;
 
 /// Creates bonsai changeset from already created HgBlobChangeset.
 pub fn create_bonsai_changeset_object(
@@ -64,7 +65,8 @@ pub fn create_bonsai_changeset_object(
                 message,
                 extra,
                 file_changes,
-            }.freeze()
+            }
+            .freeze()
         }
     })
 }
@@ -194,7 +196,8 @@ fn get_copy_info(
                                             _ => None,
                                         })
                                 }
-                            })).map(move |res| (res, repopath))
+                            }))
+                            .map(move |res| (res, repopath))
                         })
                         .and_then(move |(copied_from_bonsai_commits, repopath)| {
                             let copied_from: Vec<_> = copied_from_bonsai_commits
@@ -210,7 +213,8 @@ fn get_copy_info(
                                     from_node: nodehash,
                                     to_path: repopath.clone(),
                                     to_node: copyfromnode,
-                                }.into()),
+                                }
+                                .into()),
                             }
                         })
                         .boxify()

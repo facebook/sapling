@@ -22,7 +22,10 @@ extern crate slog;
 extern crate tokio;
 
 use std::cmp;
-use std::sync::{Arc, atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT}};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT},
+    Arc,
+};
 
 use clap::{App, Arg};
 use failure::{Error, Result};
@@ -31,12 +34,12 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 use tokio::prelude::stream::iter_ok;
 
-use blobrepo::BlobRepo;
 use blobrepo::alias::get_sha256;
+use blobrepo::BlobRepo;
 use changesets::SqlChangesets;
 use cmdlib::args;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, ContentId, FileChange, RepositoryId, hash::Sha256};
+use mononoke_types::{hash::Sha256, ChangesetId, ContentId, FileChange, RepositoryId};
 
 #[derive(Debug, Clone)]
 enum Mode {
@@ -91,7 +94,8 @@ impl AliasVerification {
         self.blobrepo
             .get_bonsai_changeset(ctx, bcs_id)
             .map(|bcs| {
-                let file_changes: Vec<_> = bcs.file_changes()
+                let file_changes: Vec<_> = bcs
+                    .file_changes()
                     .map(|(_, file_change)| file_change.cloned())
                     .collect();
                 file_changes
@@ -150,10 +154,9 @@ impl AliasVerification {
         self.blobrepo
             .get_file_content_id_by_alias(ctx.clone(), alias)
             .then(move |result| match result {
-                Ok(content_id_from_blobstore) => {
-                    av.check_alias_blob(alias, content_id, content_id_from_blobstore)
-                        .left_future()
-                }
+                Ok(content_id_from_blobstore) => av
+                    .check_alias_blob(alias, content_id, content_id_from_blobstore)
+                    .left_future(),
                 Err(_) => {
                     // the blob with alias is not found
                     av.process_missing_alias_blob(ctx, alias, content_id)

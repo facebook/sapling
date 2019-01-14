@@ -19,8 +19,8 @@ use scribe_cxx::ScribeCxxClient;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PrefixBlobstore};
 use hooks::HookManager;
-use metaconfig::{LfsParams, PushrebaseParams};
 use metaconfig::repoconfig::{RepoReadOnly, RepoType};
+use metaconfig::{LfsParams, PushrebaseParams};
 use mononoke_types::RepositoryId;
 
 use errors::*;
@@ -157,10 +157,7 @@ pub fn open_blobrepo(
                 Duration::new(seconds, nanos)
             };
             BlobRepo::new_rocksdb_delayed(
-                logger,
-                &path,
-                repoid,
-                delay_gen,
+                logger, &path, repoid, delay_gen,
                 // Roundtrips to the server - i.e. how many delays to apply
                 2, // get
                 3, // put

@@ -8,7 +8,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use failure::prelude::*;
-use futures::{Future, future::{self, ok}};
+use futures::{
+    future::{self, ok},
+    Future,
+};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 use sql::myrouter;
@@ -16,7 +19,7 @@ use sql::myrouter;
 use blobstore::Blobstore;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
-use hooks::{HookManager, hook_loader::load_hooks};
+use hooks::{hook_loader::load_hooks, HookManager};
 use metaconfig::repoconfig::{RepoConfig, RepoType};
 use mononoke_types::RepositoryId;
 use phases::{CachingHintPhases, HintPhases, Phases, SqlConstructors, SqlPhases};
@@ -158,7 +161,7 @@ pub fn repo_handlers(
             });
 
             ready_handle
-.wait_for(initial_warmup.and_then(|()| skip_index))
+                .wait_for(initial_warmup.and_then(|()| skip_index))
                 .map({
                     cloned!(root_log);
                     move |skip_index| {
@@ -178,7 +181,8 @@ pub fn repo_handlers(
                             RepoType::BlobRemote { ref db_address, .. } => {
                                 let storage = Arc::new(SqlPhases::with_myrouter(
                                     &db_address,
-                                    myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
+                                    myrouter_port
+                                        .expect("myrouter_port not provided for BlobRemote repo"),
                                 ));
                                 Arc::new(CachingHintPhases::new(storage, skip_index.clone()))
                             }

@@ -17,11 +17,11 @@ use futures_ext::FutureExt;
 use panichandler::{self, Fate};
 use scuba_ext::ScubaSampleBuilder;
 use slog::{Drain, Logger};
-use sloggers::Build;
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::{Format, Severity, SourceLocation};
+use sloggers::Build;
 use tracing::TraceContext;
-use upload_trace::{UploadTrace, manifold_thrift::thrift::RequestContext};
+use upload_trace::{manifold_thrift::thrift::RequestContext, UploadTrace};
 use uuid::Uuid;
 
 use cachelib;
@@ -156,19 +156,21 @@ impl MononokeApp {
         app = add_cachelib_args(app, self.hide_advanced_args);
 
         if self.local_instances {
-            app = app.arg(
-                Arg::with_name("blobstore")
-                    .long("blobstore")
-                    .value_name("TYPE")
-                    .possible_values(&["files", "rocksdb", "manifold"])
-                    .default_value("manifold")
-                    .help("blobstore type"),
-            ).arg(
-                Arg::with_name("data-dir")
-                    .long("data-dir")
-                    .value_name("DIR")
-                    .help("local data directory (used for local blobstores)"),
-            );
+            app = app
+                .arg(
+                    Arg::with_name("blobstore")
+                        .long("blobstore")
+                        .value_name("TYPE")
+                        .possible_values(&["files", "rocksdb", "manifold"])
+                        .default_value("manifold")
+                        .help("blobstore type"),
+                )
+                .arg(
+                    Arg::with_name("data-dir")
+                        .long("data-dir")
+                        .value_name("DIR")
+                        .help("local data directory (used for local blobstores)"),
+                );
         }
 
         app
@@ -462,19 +464,23 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
     cachelib::get_or_create_pool(
         "blobstore-presence",
         get_usize(matches, "presence-cache-size", available_space / 20),
-    ).unwrap();
+    )
+    .unwrap();
     cachelib::get_or_create_pool(
         "changesets",
         get_usize(matches, "changesets-cache-size", available_space / 20),
-    ).unwrap();
+    )
+    .unwrap();
     cachelib::get_or_create_pool(
         "filenodes",
         get_usize(matches, "filenodes-cache-size", available_space / 20),
-    ).unwrap();
+    )
+    .unwrap();
     cachelib::get_or_create_pool(
         "bonsai_hg_mapping",
         get_usize(matches, "idmapping-cache-size", available_space / 20),
-    ).unwrap();
+    )
+    .unwrap();
     cachelib::get_or_create_pool(
         "blobstore-blobs",
         get_usize(
@@ -482,7 +488,8 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
             "blob-cache-size",
             cachelib::get_available_space().unwrap(),
         ),
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 fn find_repo_type<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoType)> {

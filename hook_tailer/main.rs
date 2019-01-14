@@ -48,9 +48,9 @@ use clap::{App, ArgMatches};
 use context::CoreContext;
 use failure::Error;
 use failure::Result;
-use futures::Stream;
 use futures::future::Future;
 use futures::stream::repeat;
+use futures::Stream;
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
 use manifold::{ManifoldHttpClient, RequestContext};
@@ -132,8 +132,7 @@ fn main() -> Result<()> {
         Some(init_rev) => {
             info!(
                 logger.clone(),
-                "Initial revision specified as argument {}",
-                init_rev
+                "Initial revision specified as argument {}", init_rev
             );
             let hash = HgNodeHash::from_str(init_rev)?;
             let bytes = hash.as_bytes().into();
@@ -156,14 +155,16 @@ fn main() -> Result<()> {
                         .map_err(|err| format_err!("Tokio timer error {:?}", err))
                 })
             })
-        }).left_future()
+        })
+        .left_future()
     } else {
         let limit = cmdlib::args::get_u64(&matches, "limit", 1000);
         let logger = logger.clone();
         fut.then(move |_| {
             let fut = tailer.run_with_limit(limit);
             process_hook_results(fut, logger)
-        }).right_future()
+        })
+        .right_future()
     };
 
     tokio::run(fut.map(|_| ()).map_err(move |err| {
@@ -213,7 +214,8 @@ fn process_hook_results(
         info!(logger, "==== Changeset hooks stat: {} ====", cs_hooks_stat);
 
         ()
-    }).boxify()
+    })
+    .boxify()
 }
 
 struct HookExecutionStat {
@@ -310,5 +312,6 @@ fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "No such repo '{}'", _0)] NoSuchRepo(String),
+    #[fail(display = "No such repo '{}'", _0)]
+    NoSuchRepo(String),
 }

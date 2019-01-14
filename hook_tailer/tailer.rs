@@ -14,7 +14,9 @@ use failure::Error;
 use failure::Result;
 use futures::{Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
-use hooks::{BlobRepoChangesetStore, BlobRepoFileContentStore, HookManager, hook_loader::load_hooks};
+use hooks::{
+    hook_loader::load_hooks, BlobRepoChangesetStore, BlobRepoFileContentStore, HookManager,
+};
 use manifold::{ManifoldHttpClient, PayloadRange};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use metaconfig::repoconfig::RepoConfig;
@@ -129,7 +131,8 @@ impl Tailer {
         let bm = self.bookmark.clone();
         let hm = self.hook_manager.clone();
 
-        let bm_rev = self.repo
+        let bm_rev = self
+            .repo
             .get_bookmark(ctx.clone(), &bm)
             .and_then({
                 cloned!(bm);
@@ -253,7 +256,10 @@ fn run_hooks_for_changeset(
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "No such bookmark '{}'", _0)] NoSuchBookmark(Bookmark),
-    #[fail(display = "Cannot find last revision in blobstore")] NoLastRevision,
-    #[fail(display = "Cannot find bonsai for {}", _0)] BonsaiNotFound(HgChangesetId),
+    #[fail(display = "No such bookmark '{}'", _0)]
+    NoSuchBookmark(Bookmark),
+    #[fail(display = "Cannot find last revision in blobstore")]
+    NoLastRevision,
+    #[fail(display = "Cannot find bonsai for {}", _0)]
+    BonsaiNotFound(HgChangesetId),
 }

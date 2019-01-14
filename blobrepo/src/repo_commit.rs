@@ -8,12 +8,13 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use failure::{err_msg, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
-              prelude::*};
-use futures::IntoFuture;
+use failure::{
+    err_msg, prelude::*, Compat, Error, FutureFailureErrorExt, Result, StreamFailureErrorExt,
+};
 use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
+use futures::IntoFuture;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -23,19 +24,21 @@ use blobstore::Blobstore;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
 use mercurial::file;
-use mercurial_types::{Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, HgNodeKey,
-                      HgParents, MPath, Manifest, RepoPath, NULL_HASH};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
+use mercurial_types::{
+    Changeset, Entry, HgChangesetId, HgEntryId, HgNodeHash, HgNodeKey, HgParents, MPath, Manifest,
+    RepoPath, NULL_HASH,
+};
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
 
-use BlobRepo;
-use HgBlobChangeset;
 use changeset::HgChangesetContent;
 use errors::*;
 use file::HgBlobEntry;
 use repo::{ChangesetMetadata, RepoBlobstore};
+use BlobRepo;
+use HgBlobChangeset;
 
 define_stats! {
     prefix = "mononoke.blobrepo_commit";
@@ -79,7 +82,8 @@ impl ChangesetHandle {
     }
 
     pub fn ready_cs_handle(ctx: CoreContext, repo: Arc<BlobRepo>, hg_cs: HgChangesetId) -> Self {
-        let bonsai_cs = repo.get_bonsai_from_hg(ctx.clone(), &hg_cs)
+        let bonsai_cs = repo
+            .get_bonsai_from_hg(ctx.clone(), &hg_cs)
             .and_then(move |bonsai_id| {
                 bonsai_id.ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs).into())
             })
@@ -94,7 +98,8 @@ impl ChangesetHandle {
         let fut = bonsai_cs.join(cs);
         Self {
             can_be_parent: can_be_parent.shared(),
-            completion_future: fut.map_err(Error::compat)
+            completion_future: fut
+                .map_err(Error::compat)
                 .inspect(move |(bonsai_cs, hg_cs)| {
                     let _ = trigger.send((
                         bonsai_cs.get_changeset_id(),
@@ -186,7 +191,8 @@ impl UploadEntries {
                             None => {
                                 return future::err(err_msg(
                                     "internal error: unexpected empty MPath",
-                                )).boxify()
+                                ))
+                                .boxify();
                             }
                         };
                         let path = match entry.get_type() {
@@ -241,7 +247,8 @@ impl UploadEntries {
         if entry.get_type() != manifest::Type::Tree {
             return future::err(
                 ErrorKind::NotAManifest(entry.get_hash().into_nodehash(), entry.get_type()).into(),
-            ).boxify();
+            )
+            .boxify();
         }
         {
             let mut inner = self.inner.lock().expect("Lock poisoned");
@@ -437,7 +444,8 @@ impl UploadEntries {
                             }
                         })
                     },
-                )).boxify();
+                ))
+                .boxify();
 
                 filenodes
                     .add_filenodes(ctx, filenodeinfos, &inner.repoid)
@@ -557,13 +565,14 @@ pub fn compute_changed_files(
                     .collect::<HashSet<MPath>>()
             })
             .boxify(),
-    }.map(|files| {
+    }
+    .map(|files| {
         let mut files: Vec<MPath> = files.into_iter().collect();
         files.sort_unstable_by(mercurial_mpath_comparator);
 
         files
     })
-        .boxify()
+    .boxify()
 }
 
 fn compute_added_files(
@@ -588,7 +597,8 @@ fn compute_added_files(
             }
         }
         _ => None,
-    }).collect()
+    })
+    .collect()
 }
 
 /// Checks if new commit (or to be precise, it's manifest) introduces any new case conflicts
@@ -624,12 +634,15 @@ pub fn check_case_conflicts(
             Some(parent_root_mf) => {
                 let mut case_conflict_checks = stream::FuturesUnordered::new();
                 for f in added_files {
-                    case_conflict_checks.push(repo.check_case_conflict_in_manifest(
-                        ctx.clone(),
-                        &parent_root_mf,
-                        &child_root_mf,
-                        f.clone(),
-                    ).map(move |add_conflict| (add_conflict, f)));
+                    case_conflict_checks.push(
+                        repo.check_case_conflict_in_manifest(
+                            ctx.clone(),
+                            &parent_root_mf,
+                            &child_root_mf,
+                            f.clone(),
+                        )
+                        .map(move |add_conflict| (add_conflict, f)),
+                    );
                 }
 
                 case_conflict_checks
@@ -698,8 +711,10 @@ pub fn process_entries(
             None => future::ok((
                 manifest::EmptyManifest.boxed(),
                 HgManifestId::new(NULL_HASH),
-            )).boxify(),
-            Some(root_hash) => repo.get_manifest_by_nodeid(ctx, &HgManifestId::new(root_hash))
+            ))
+            .boxify(),
+            Some(root_hash) => repo
+                .get_manifest_by_nodeid(ctx, &HgManifestId::new(root_hash))
                 .context("While fetching root manifest")
                 .from_err()
                 .map(move |m| (m, HgManifestId::new(root_hash)))
@@ -722,16 +737,19 @@ pub fn extract_parents_complete(
 ) -> BoxFuture<SharedItem<()>, SharedError<Compat<Error>>> {
     match (p1.as_ref(), p2.as_ref()) {
         (None, None) => future::ok(()).shared().boxify(),
-        (Some(p), None) | (None, Some(p)) => p.completion_future
+        (Some(p), None) | (None, Some(p)) => p
+            .completion_future
             .clone()
             .and_then(|_| future::ok(()).shared())
             .boxify(),
-        (Some(p1), Some(p2)) => p1.completion_future
+        (Some(p1), Some(p2)) => p1
+            .completion_future
             .clone()
             .join(p2.completion_future.clone())
             .and_then(|_| future::ok(()).shared())
             .boxify(),
-    }.boxify()
+    }
+    .boxify()
 }
 
 pub fn handle_parents(

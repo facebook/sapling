@@ -17,9 +17,11 @@ use context::CoreContext;
 use mercurial;
 use mercurial::changeset::Extra;
 use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::{Changeset, HgBlobNode, HgChangesetEnvelope, HgChangesetEnvelopeMut,
-                      HgNodeHash, HgParents, MPath};
 use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
+use mercurial_types::{
+    Changeset, HgBlobNode, HgChangesetEnvelope, HgChangesetEnvelopeMut, HgNodeHash, HgParents,
+    MPath,
+};
 use mononoke_types::DateTime;
 
 use errors::*;

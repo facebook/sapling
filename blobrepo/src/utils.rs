@@ -75,11 +75,12 @@ impl IncompleteFilenodes {
         let filenodes = {
             let mut filenodes = self.filenodes.lock().expect("lock poisoned");
             mem::replace(&mut *filenodes, Vec::new())
-        }.into_iter()
-            .map({
-                cloned!(cs_id);
-                move |node_info| node_info.with_linknode(cs_id)
-            });
+        }
+        .into_iter()
+        .map({
+            cloned!(cs_id);
+            move |node_info| node_info.with_linknode(cs_id)
+        });
         repo.get_filenodes()
             .add_filenodes(ctx, stream::iter_ok(filenodes).boxify(), &repo.get_repoid())
             .map(move |_| cs_id)
@@ -105,7 +106,8 @@ where
     let mut marks = HashMap::new();
     let mut stack = Vec::new();
     let mut output = Vec::new();
-    for node in dag.iter()
+    for node in dag
+        .iter()
         .flat_map(|(n, ns)| iter::once(n).chain(ns))
         .collect::<HashSet<_>>()
     {
@@ -146,19 +148,19 @@ mod test {
 
     #[test]
     fn sort_topological_test() {
-        let res = sort_topological(&hashmap!{1 => vec![2]});
+        let res = sort_topological(&hashmap! {1 => vec![2]});
         assert_eq!(Some(vec![1, 2]), res);
 
-        let res = sort_topological(&hashmap!{1 => vec![1]});
+        let res = sort_topological(&hashmap! {1 => vec![1]});
         assert_eq!(None, res);
 
-        let res = sort_topological(&hashmap!{1 => vec![2], 2 => vec![3]});
+        let res = sort_topological(&hashmap! {1 => vec![2], 2 => vec![3]});
         assert_eq!(Some(vec![1, 2, 3]), res);
 
-        let res = sort_topological(&hashmap!{1 => vec![2, 3], 2 => vec![3]});
+        let res = sort_topological(&hashmap! {1 => vec![2, 3], 2 => vec![3]});
         assert_eq!(Some(vec![1, 2, 3]), res);
 
-        let res = sort_topological(&hashmap!{1 => vec![2, 3], 2 => vec![4], 3 => vec![4]});
+        let res = sort_topological(&hashmap! {1 => vec![2, 3], 2 => vec![4], 3 => vec![4]});
         assert!(Some(vec![1, 2, 3, 4]) == res || Some(vec![1, 3, 2, 4]) == res);
     }
 }

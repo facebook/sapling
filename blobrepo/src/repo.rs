@@ -14,11 +14,11 @@ use std::time::Duration;
 use std::usize;
 
 use bytes::Bytes;
-use failure::{Error, FutureFailureErrorExt, FutureFailureExt, Result, prelude::*};
-use futures::IntoFuture;
+use failure::{prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
 use futures::future::{self, loop_fn, ok, Either, Future, Loop};
 use futures::stream::{FuturesUnordered, Stream};
 use futures::sync::oneshot;
+use futures::IntoFuture;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{FutureStats, Timed};
 use scribe::ScribeClient;
@@ -33,12 +33,16 @@ use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_
 use super::changeset::HgChangesetContent;
 use super::changeset_fetcher::{CachingChangesetFetcher, ChangesetFetcher, SimpleChangesetFetcher};
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
-use blobstore::{new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob,
-                MemWritesBlobstore, PrefixBlobstore};
+use blobstore::{
+    new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob, MemWritesBlobstore,
+    PrefixBlobstore,
+};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds,
-                        CachingBonsaiHgMapping, SqlBonsaiHgMapping};
+use bonsai_hg_mapping::{
+    BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
+    SqlBonsaiHgMapping,
+};
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use cachelib;
 use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
@@ -50,28 +54,33 @@ use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use manifoldblob::ThriftManifoldBlob;
 use mercurial::file::File;
-use mercurial_types::{Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileEnvelopeMut,
-                      HgFileNodeId, HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
-                      Manifest, RepoPath, Type};
 use mercurial_types::manifest::Content;
+use mercurial_types::{
+    Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileEnvelopeMut, HgFileNodeId,
+    HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Manifest, RepoPath, Type,
+};
 use metaconfig::RemoteBlobstoreArgs;
-use mononoke_types::{Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
-                     ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath,
-                     MPathElement, MononokeId, RepositoryId, hash::Blake2, hash::Sha256};
+use mononoke_types::{
+    hash::Blake2, hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
+    ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath, MPathElement,
+    MononokeId, RepositoryId,
+};
 use multiplexedblob::MultiplexedBlobstore;
 use rocksblob::Rocksblob;
 use rocksdb;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 
-use BlobManifest;
-use HgBlobChangeset;
 use errors::*;
-use file::{fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
-           fetch_file_contents, fetch_file_size_from_blobstore, fetch_raw_filenode_bytes,
-           fetch_rename_from_blobstore, HgBlobEntry, fetch_file_content_sha256_from_blobstore};
+use file::{
+    fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
+    fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_size_from_blobstore,
+    fetch_raw_filenode_bytes, fetch_rename_from_blobstore, HgBlobEntry,
+};
 use memory_manifest::MemoryRootManifest;
 use post_commit::{self, PostCommitQueue};
 use repo_commit::*;
+use BlobManifest;
+use HgBlobChangeset;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
@@ -272,12 +281,18 @@ impl BlobRepo {
             logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
             Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
             blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
-            Arc::new(SqlFilenodes::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
-            Arc::new(SqlChangesets::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?),
-            Arc::new(SqlBonsaiHgMapping::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?),
+            Arc::new(
+                SqlFilenodes::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?,
+            ),
+            Arc::new(
+                SqlChangesets::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?,
+            ),
+            Arc::new(
+                SqlBonsaiHgMapping::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
+            ),
             RepositoryId::new(0),
             Arc::new(post_commit::Discard::new()),
         ))
@@ -748,7 +763,8 @@ impl BlobRepo {
 
         self.get_bonsai_from_hg(ctx.clone(), &changesetid)
             .and_then(move |maybebonsai| match maybebonsai {
-                Some(bonsai) => repo.changesets
+                Some(bonsai) => repo
+                    .changesets
                     .get(ctx, repoid, bonsai)
                     .map(|res| res.is_some())
                     .left_future(),
@@ -893,7 +909,8 @@ impl BlobRepo {
                 let repo = self.clone();
                 move |cs_opt| match cs_opt {
                     None => future::ok(None).left_future(),
-                    Some(cs) => repo.get_hg_from_bonsai_changeset(ctx, cs)
+                    Some(cs) => repo
+                        .get_hg_from_bonsai_changeset(ctx, cs)
                         .map(|cs| Some(cs))
                         .right_future(),
                 }
@@ -1097,7 +1114,8 @@ impl BlobRepo {
 
         self.get_bonsai_from_hg(ctx.clone(), &cs)
             .and_then(move |maybebonsai| match maybebonsai {
-                Some(bonsai) => repo.changesets
+                Some(bonsai) => repo
+                    .changesets
                     .get(ctx, repoid, bonsai)
                     .map(|res| res.map(|res| Generation::new(res.gen)))
                     .left_future(),
@@ -1251,13 +1269,15 @@ impl BlobRepo {
                     .right_future()
             }
             _ => future::ok(None).left_future(),
-        }.and_then({
+        }
+        .and_then({
             let repo = self.clone();
             let change = change.cloned();
             let path = path.clone();
 
             move |maybe_entry| match maybe_entry {
-                None => repo.store_file_change(ctx, p1, p2, &path, change.as_ref())
+                None => repo
+                    .store_file_change(ctx, p1, p2, &path, change.as_ref())
                     .right_future(),
                 _ => future::ok(maybe_entry).left_future(),
             }
@@ -1279,7 +1299,8 @@ impl BlobRepo {
             Some(change) => {
                 let copy_from_fut = match change.copy_from() {
                     None => future::ok(None).left_future(),
-                    Some((path, bcs_id)) => self.get_hg_from_bonsai_changeset(ctx.clone(), *bcs_id)
+                    Some((path, bcs_id)) => self
+                        .get_hg_from_bonsai_changeset(ctx.clone(), *bcs_id)
                         .and_then({
                             cloned!(ctx, repo);
                             move |cs_id| repo.get_changeset_by_changesetid(ctx, &cs_id)
@@ -1403,11 +1424,13 @@ impl BlobRepo {
                                 // this has been deleted and it's no longer a conflict.
                                 let mut check_futs = vec![];
                                 for fullpath in potential_conflicts {
-                                    let check_fut = repo.find_path_in_manifest(
-                                        ctx.clone(),
-                                        fullpath,
-                                        child_mf_id.clone(),
-                                    ).map(|content| content.is_some());
+                                    let check_fut = repo
+                                        .find_path_in_manifest(
+                                            ctx.clone(),
+                                            fullpath,
+                                            child_mf_id.clone(),
+                                        )
+                                        .map(|content| content.is_some());
                                     check_futs.push(check_fut);
                                 }
 
@@ -1477,11 +1500,13 @@ impl BlobRepo {
                 None => None,
                 Some(Content::Tree(manifest)) => match manifest.lookup(&basename) {
                     None => None,
-                    Some(entry) => if let Type::File(t) = entry.get_type() {
-                        Some((t, HgFileNodeId::new(entry.get_hash().into_nodehash())))
-                    } else {
-                        None
-                    },
+                    Some(entry) => {
+                        if let Type::File(t) = entry.get_type() {
+                            Some((t, HgFileNodeId::new(entry.get_hash().into_nodehash())))
+                        } else {
+                            None
+                        }
+                    }
                 },
                 Some(_) => None,
             }
@@ -1503,7 +1528,8 @@ impl BlobRepo {
             IncompleteFilenodes::new(),
             p1.as_ref(),
             p2.as_ref(),
-        ).and_then({
+        )
+        .and_then({
             let repo = self.clone();
             let manifest_p1 = manifest_p1.cloned();
             let manifest_p2 = manifest_p2.cloned();
@@ -1573,7 +1599,7 @@ impl BlobRepo {
                     })
             }
         })
-            .boxify()
+        .boxify()
     }
 
     pub fn get_hg_from_bonsai_changeset(
@@ -1888,7 +1914,8 @@ impl UploadHgFileContents {
                     },
                 };
 
-                let upload_fut = repo.upload_blob(ctx, contents_blob, alias_key)
+                let upload_fut = repo
+                    .upload_blob(ctx, contents_blob, alias_key)
                     .map(|_content_id| ())
                     .timed({
                         let logger = repo.logger.clone();
@@ -1992,7 +2019,8 @@ impl UploadHgFileEntry {
                                     RepoPath::FilePath(path),
                                     node_id,
                                     computed_node_id,
-                                ).into(),
+                                )
+                                .into(),
                             ));
                         }
                         node_id
@@ -2139,9 +2167,11 @@ pub fn save_bonsai_changesets(
                         move |_| {
                             repo.get_generation_number_by_bonsai(ctx, pc.get_changeset_id())
                                 .map(move |gen| {
-                                    pc.complete(gen.expect(
-                                        "Just inserted changeset has no generation number",
-                                    ))
+                                    pc.complete(
+                                        gen.expect(
+                                            "Just inserted changeset has no generation number",
+                                        ),
+                                    )
                                 })
                         }
                     }),
@@ -2156,14 +2186,16 @@ pub fn save_bonsai_changesets(
         loop_fn(
             bonsai_complete_futs.into_iter(),
             move |mut futs| match futs.next() {
-                Some(fut) => fut.and_then({
-                    cloned!(postcommit_queue);
-                    move |pc| {
-                        postcommit_queue
-                            .queue_commit(pc)
-                            .map(|_| Loop::Continue(futs))
-                    }
-                }).left_future(),
+                Some(fut) => fut
+                    .and_then({
+                        cloned!(postcommit_queue);
+                        move |pc| {
+                            postcommit_queue
+                                .queue_commit(pc)
+                                .map(|_| Loop::Continue(futs))
+                        }
+                    })
+                    .left_future(),
                 None => ok(Loop::Break(())).right_future(),
             },
         )
@@ -2214,8 +2246,9 @@ impl CreateChangeset {
             &entry_processor,
             self.root_manifest,
             self.sub_entries,
-        ).context("While processing entries")
-            .traced_with_id(&ctx.trace(), "uploading entries", trace_args!(), event_id);
+        )
+        .context("While processing entries")
+        .traced_with_id(&ctx.trace(), "uploading entries", trace_args!(), event_id);
 
         let parents_complete = extract_parents_complete(&self.p1, &self.p2);
         let parents_data = handle_parents(scuba_logger.clone(), self.p1, self.p2)
@@ -2252,7 +2285,8 @@ impl CreateChangeset {
                                 ctx.clone(),
                                 repo.clone(),
                                 &parent_manifest_hashes,
-                            ).and_then({
+                            )
+                            .and_then({
                                 cloned!(ctx);
                                 move |(p1_manifest, p2_manifest)| {
                                     compute_changed_files(
@@ -2263,7 +2297,7 @@ impl CreateChangeset {
                                     )
                                 }
                             })
-                                .boxify()
+                            .boxify()
                         };
 
                         let p1_mf = parent_manifest_hashes.get(0).cloned();
@@ -2273,7 +2307,8 @@ impl CreateChangeset {
                                 repo.clone(),
                                 root_hash.clone(),
                                 p1_mf,
-                            ).left_future()
+                            )
+                            .left_future()
                         } else {
                             future::ok(()).right_future()
                         };
@@ -2293,7 +2328,8 @@ impl CreateChangeset {
                                         parent_manifest_hashes,
                                         bonsai_parents,
                                         repo.clone(),
-                                    ).map(|bonsai_cs| (hg_cs, bonsai_cs))
+                                    )
+                                    .map(|bonsai_cs| (hg_cs, bonsai_cs))
                                 }
                             });
 
@@ -2302,63 +2338,69 @@ impl CreateChangeset {
                             .and_then({
                                 cloned!(ctx);
                                 move |(blobcs, bonsai_cs)| {
-                                    let fut: BoxFuture<
-                                        (HgBlobChangeset, BonsaiChangeset),
-                                        Error,
-                                    > = (move || {
-                                        let bonsai_blob = bonsai_cs.clone().into_blob();
-                                        let bcs_id = bonsai_blob.id().clone();
+                                    let fut: BoxFuture<(HgBlobChangeset, BonsaiChangeset), Error> =
+                                        (move || {
+                                            let bonsai_blob = bonsai_cs.clone().into_blob();
+                                            let bcs_id = bonsai_blob.id().clone();
 
-                                        let cs_id = blobcs.get_changeset_id().into_nodehash();
-                                        let manifest_id = *blobcs.manifestid();
+                                            let cs_id = blobcs.get_changeset_id().into_nodehash();
+                                            let manifest_id = *blobcs.manifestid();
 
-                                        if let Some(expected_nodeid) = expected_nodeid {
-                                            if cs_id != expected_nodeid {
-                                                return future::err(
-                                                    ErrorKind::InconsistentChangesetHash(
-                                                        expected_nodeid,
-                                                        cs_id,
-                                                        blobcs,
-                                                    ).into(),
-                                                ).boxify();
+                                            if let Some(expected_nodeid) = expected_nodeid {
+                                                if cs_id != expected_nodeid {
+                                                    return future::err(
+                                                        ErrorKind::InconsistentChangesetHash(
+                                                            expected_nodeid,
+                                                            cs_id,
+                                                            blobcs,
+                                                        )
+                                                        .into(),
+                                                    )
+                                                    .boxify();
+                                                }
                                             }
-                                        }
 
-                                        scuba_logger
-                                            .add("changeset_id", format!("{}", cs_id))
-                                            .log_with_msg("Changeset uuid to hash mapping", None);
-                                        // NOTE(luk): an attempt was made in D8187210 to split the
-                                        // upload_entries signal into upload_entries and
-                                        // processed_entries and to signal_parent_ready after
-                                        // upload_entries, so that one doesn't need to wait for the
-                                        // entries to be processed. There were no performance gains
-                                        // from that experiment
-                                        //
-                                        // We deliberately eat this error - this is only so that
-                                        // another changeset can start verifying data in the blob
-                                        // store while we verify this one
-                                        let _ =
-                                            signal_parent_ready.send((bcs_id, cs_id, manifest_id));
+                                            scuba_logger
+                                                .add("changeset_id", format!("{}", cs_id))
+                                                .log_with_msg(
+                                                    "Changeset uuid to hash mapping",
+                                                    None,
+                                                );
+                                            // NOTE(luk): an attempt was made in D8187210 to split the
+                                            // upload_entries signal into upload_entries and
+                                            // processed_entries and to signal_parent_ready after
+                                            // upload_entries, so that one doesn't need to wait for the
+                                            // entries to be processed. There were no performance gains
+                                            // from that experiment
+                                            //
+                                            // We deliberately eat this error - this is only so that
+                                            // another changeset can start verifying data in the blob
+                                            // store while we verify this one
+                                            let _ = signal_parent_ready.send((
+                                                bcs_id,
+                                                cs_id,
+                                                manifest_id,
+                                            ));
 
-                                        let bonsai_cs_fut = save_bonsai_changeset_object(
-                                            ctx.clone(),
-                                            blobstore.clone(),
-                                            bonsai_cs.clone(),
-                                        );
+                                            let bonsai_cs_fut = save_bonsai_changeset_object(
+                                                ctx.clone(),
+                                                blobstore.clone(),
+                                                bonsai_cs.clone(),
+                                            );
 
-                                        blobcs
-                                            .save(ctx.clone(), blobstore)
-                                            .join(bonsai_cs_fut)
-                                            .context("While writing to blobstore")
-                                            .join(
-                                                entry_processor
-                                                    .finalize(ctx, filenodes, cs_id)
-                                                    .context("While finalizing processing"),
-                                            )
-                                            .from_err()
-                                            .map(move |_| (blobcs, bonsai_cs))
-                                            .boxify()
-                                    })();
+                                            blobcs
+                                                .save(ctx.clone(), blobstore)
+                                                .join(bonsai_cs_fut)
+                                                .context("While writing to blobstore")
+                                                .join(
+                                                    entry_processor
+                                                        .finalize(ctx, filenodes, cs_id)
+                                                        .context("While finalizing processing"),
+                                                )
+                                                .from_err()
+                                                .map(move |_| (blobcs, bonsai_cs))
+                                                .boxify()
+                                        })();
 
                                     fut.context(
                                         "While creating and verifying Changeset for blobstore",

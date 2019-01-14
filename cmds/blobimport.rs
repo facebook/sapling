@@ -53,7 +53,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .arg(
             Arg::from_usage(
                 "--commits-limit [LIMIT] 'import only LIMIT first commits from revlog repo'",
-            ).conflicts_with("changeset"),
+            )
+            .conflicts_with("changeset"),
         )
 }
 
@@ -99,16 +100,17 @@ fn main() -> Result<()> {
         skip,
         commits_limit,
         no_bookmark,
-    }.import()
-        .traced(ctx.trace(), "blobimport", trace_args!())
-        .map_err({
-            cloned!(ctx);
-            move |err| {
-                error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
-                ::std::process::exit(1);
-            }
-        })
-        .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result));
+    }
+    .import()
+    .traced(ctx.trace(), "blobimport", trace_args!())
+    .map_err({
+        cloned!(ctx);
+        move |err| {
+            error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
+            ::std::process::exit(1);
+        }
+    })
+    .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result));
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     let result = runtime.block_on(blobimport);

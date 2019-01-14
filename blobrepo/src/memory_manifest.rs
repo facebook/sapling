@@ -19,17 +19,19 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 
 use context::CoreContext;
-use mercurial_types::{Entry, HgFileNodeId, HgManifestId, HgNodeHash, MPath, MPathElement,
-                      Manifest, RepoPath, Type};
 use mercurial_types::manifest::Content;
+use mercurial_types::{
+    Entry, HgFileNodeId, HgManifestId, HgNodeHash, MPath, MPathElement, Manifest, RepoPath, Type,
+};
 use mononoke_types::{FileContents, FileType};
 
 use file::HgBlobEntry;
-use repo::{RepoBlobstore, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
-           UploadHgTreeEntry};
+use repo::{
+    RepoBlobstore, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
+};
 
-use super::BlobRepo;
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
+use super::BlobRepo;
 use errors::*;
 use manifest::BlobManifest;
 
@@ -244,7 +246,8 @@ impl MemoryManifestEntry {
                                                 "\0{}{}\n",
                                                 entry.get_hash().into_nodehash(),
                                                 entry.get_type().manifest_suffix(),
-                                            ).expect("Writing to memory failed!");
+                                            )
+                                            .expect("Writing to memory failed!");
                                         });
 
                                         let upload_manifest = UploadHgTreeEntry {
@@ -261,7 +264,7 @@ impl MemoryManifestEntry {
                                             .flatten()
                                             .map(move |(entry, path)| {
                                                 incomplete_filenodes.add(IncompleteFilenodeInfo {
-                                                    path: path,
+                                                    path,
                                                     filenode: HgFileNodeId::new(
                                                         entry.get_hash().into_nodehash(),
                                                     ),
@@ -352,9 +355,9 @@ impl MemoryManifestEntry {
                                         .expect("Unnamed entry in a manifest")
                                         .clone();
                                     let memory_entry = match entry.get_type() {
-                                        Type::Tree => Self::convert_treenode(&entry
-                                            .get_hash()
-                                            .into_nodehash()),
+                                        Type::Tree => Self::convert_treenode(
+                                            &entry.get_hash().into_nodehash(),
+                                        ),
                                         _ => MemoryManifestEntry::Blob(HgBlobEntry::new(
                                             blobstore.clone(),
                                             name.clone(),
@@ -462,13 +465,15 @@ impl MemoryManifestEntry {
     ) -> BoxFuture<Self, Error> {
         use self::MemoryManifestEntry::*;
         if self.is_modified() {
-            return self.save(
-                ctx.clone(),
-                &blobstore,
-                &logger,
-                &incomplete_filenodes,
-                repo_path.clone(),
-            ).map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
+            return self
+                .save(
+                    ctx.clone(),
+                    &blobstore,
+                    &logger,
+                    &incomplete_filenodes,
+                    repo_path.clone(),
+                )
+                .map(|entry| Self::convert_treenode(&entry.get_hash().into_nodehash()))
                 .and_then(move |saved| {
                     saved.merge_with_conflicts(
                         ctx,
@@ -555,7 +560,9 @@ impl MemoryManifestEntry {
                 let my_changes = my_changes.lock().expect("lock poisoned");
                 let other_changes = other_changes.lock().expect("lock poisoned");
                 // Two identical manifests, neither one modified
-                if my_id.is_some() && my_id == other_id && my_changes.is_empty()
+                if my_id.is_some()
+                    && my_id == other_id
+                    && my_changes.is_empty()
                     && other_changes.is_empty()
                 {
                     future::ok(self.clone()).boxify()
@@ -583,7 +590,8 @@ impl MemoryManifestEntry {
                         .boxify()
                 }
             }
-        }.boxify()
+        }
+        .boxify()
     }
 
     // Only for use in find_mut_helper
@@ -596,10 +604,7 @@ impl MemoryManifestEntry {
                     match entry {
                         MemoryManifestEntry::MemTree {
                             base_manifest_id, ..
-                        } if !modified =>
-                        {
-                            *base_manifest_id
-                        }
+                        } if !modified => *base_manifest_id,
                         MemoryManifestEntry::Blob(blob) if blob.get_type() == Type::Tree => {
                             Some(blob.get_hash().into_nodehash())
                         }
@@ -712,18 +717,16 @@ impl MemoryManifestEntry {
                             } else {
                                 future::ok(()).boxify()
                             }
-                        }.and_then({
+                        }
+                        .and_then({
                             cloned!(ctx);
                             move |_| {
                                 let mut changes = entry_changes.lock().expect("lock poisoned");
-                                Self::find_mut_helper(&mut changes, element).find_mut(
-                                    ctx,
-                                    path,
-                                    blobstore,
-                                )
+                                Self::find_mut_helper(&mut changes, element)
+                                    .find_mut(ctx, path, blobstore)
                             }
                         })
-                            .boxify()
+                        .boxify()
                     }
                     _ => future::ok(None).boxify(),
                 }
@@ -779,29 +782,29 @@ impl MemoryManifestEntry {
             entries: Vec<HgBlobEntry>,
         ) -> impl Future<Item = Option<(FileType, FileContents)>, Error = Error> + Send {
             if let Some(Type::File(file_type)) = entries.first().map(move |e| e.get_type()) {
-                let fut = future::join_all(
-                    entries.into_iter().map(move |e| e.get_content(ctx.clone())),
-                ).map(move |content| {
-                    let mut iter = content.iter();
-                    if let Some(first) = iter.next() {
-                        if iter.all(|other| match (first, other) {
-                            (Content::File(c0), Content::File(c1))
-                            | (Content::Executable(c0), Content::Executable(c1))
-                            | (Content::Symlink(c0), Content::Symlink(c1)) => c0 == c1,
-                            _ => false,
-                        }) {
-                            return match first {
-                                Content::Executable(file_content)
-                                | Content::File(file_content)
-                                | Content::Symlink(file_content) => {
-                                    Some((file_type, file_content.clone()))
-                                }
-                                _ => unreachable!(),
+                let fut =
+                    future::join_all(entries.into_iter().map(move |e| e.get_content(ctx.clone())))
+                        .map(move |content| {
+                            let mut iter = content.iter();
+                            if let Some(first) = iter.next() {
+                                if iter.all(|other| match (first, other) {
+                                    (Content::File(c0), Content::File(c1))
+                                    | (Content::Executable(c0), Content::Executable(c1))
+                                    | (Content::Symlink(c0), Content::Symlink(c1)) => c0 == c1,
+                                    _ => false,
+                                }) {
+                                    return match first {
+                                        Content::Executable(file_content)
+                                        | Content::File(file_content)
+                                        | Content::Symlink(file_content) => {
+                                            Some((file_type, file_content.clone()))
+                                        }
+                                        _ => unreachable!(),
+                                    };
+                                };
                             };
-                        };
-                    };
-                    None
-                });
+                            None
+                        });
                 Either::A(fut)
             } else {
                 Either::B(future::ok(None))
@@ -830,16 +833,16 @@ impl MemoryManifestEntry {
                     let upload_entry = UploadHgFileEntry {
                         upload_node_id: UploadHgNodeHash::Generate,
                         contents: UploadHgFileContents::RawBytes(file_content.into_bytes()),
-                        file_type: file_type,
+                        file_type,
                         p1: p1.clone(),
                         p2: p2.clone(),
-                        path: path,
+                        path,
                     };
                     let (_, upload_future) = try_boxfuture!(upload_entry.upload(ctx, &repo));
                     upload_future
                         .map(move |(entry, path)| {
                             incomplete_filenodes.add(IncompleteFilenodeInfo {
-                                path: path,
+                                path,
                                 filenode: HgFileNodeId::new(entry.get_hash().into_nodehash()),
                                 p1: p1.map(|h| HgFileNodeId::new(h)),
                                 p2: p2.map(|h| HgFileNodeId::new(h)),
@@ -876,7 +879,8 @@ impl MemoryManifestEntry {
                                     child,
                                     repo.clone(),
                                     incomplete_filenodes.clone(),
-                                ).map({
+                                )
+                                .map({
                                     let name = name.clone();
                                     move |v| v.map(|v| (name, v))
                                 })
@@ -971,12 +975,14 @@ impl MemoryRootManifest {
                 repo,
                 incomplete_filenodes,
                 MemoryManifestEntry::empty_tree(),
-            )).boxify(),
+            ))
+            .boxify(),
             (Some(p), None) | (None, Some(p)) => future::ok(Self::create(
                 repo,
                 incomplete_filenodes,
                 MemoryManifestEntry::convert_treenode(p),
-            )).boxify(),
+            ))
+            .boxify(),
             (Some(p1), Some(p2)) => Self::create_conflict(
                 ctx,
                 repo,

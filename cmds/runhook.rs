@@ -53,8 +53,8 @@ use context::CoreContext;
 use failure::{Error, Result};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use hooks::{HookExecution, HookManager};
 use hooks::lua_hook::LuaHook;
+use hooks::{HookExecution, HookManager};
 use mercurial_types::HgChangesetId;
 use mononoke_types::RepositoryId;
 use slog::{Drain, Level, Logger};
@@ -77,7 +77,8 @@ fn run_hook(
                 "-p, --myrouter-port=[PORT] 'port for local myrouter instance'\n",
             )),
         false, /* hide_advanced_args */
-    ).get_matches_from(args);
+    )
+    .get_matches_from(args);
 
     cmdlib::args::init_cachelib(&matches);
 
@@ -170,7 +171,8 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BlobRepo {
         filenode_shards,
         RepositoryId::new(0),
         myrouter_port,
-    ).expect("failed to create blobrepo instance")
+    )
+    .expect("failed to create blobrepo instance")
 }
 
 // It all starts here

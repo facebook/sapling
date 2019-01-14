@@ -38,8 +38,10 @@ pub struct Config {
 impl Config {
     fn new(config_serde: ConfigSerde) -> Result<Self> {
         let broken_merges_before = match config_serde.broken_merges_before {
-            Some(dt) => Some(DateTime::from_rfc3339(&dt.to_string())
-                .context("error while parsing broken_merges_before")?),
+            Some(dt) => Some(
+                DateTime::from_rfc3339(&dt.to_string())
+                    .context("error while parsing broken_merges_before")?,
+            ),
             None => None,
         };
 

@@ -14,8 +14,8 @@ use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
 use context::CoreContext;
-use mercurial_types::{Entry, FileType, HgBlob, HgManifestEnvelope, MPathElement, Manifest, Type};
 use mercurial_types::nodehash::{HgEntryId, HgManifestId, HgNodeHash, NULL_HASH};
+use mercurial_types::{Entry, FileType, HgBlob, HgManifestEnvelope, MPathElement, Manifest, Type};
 
 use blobstore::Blobstore;
 
@@ -166,8 +166,9 @@ impl BlobManifest {
                 p2: None,
                 computed_node_id: NULL_HASH,
                 content: ManifestContent::new_empty(),
-            })).into_future()
-                .boxify()
+            }))
+            .into_future()
+            .boxify()
         } else {
             fetch_manifest_envelope_opt(ctx, &blobstore, manifestid.into_nodehash())
                 .and_then({
@@ -231,7 +232,8 @@ impl Manifest for BlobManifest {
                     path.clone(),
                     d.entryid().into_nodehash(),
                     d.flag(),
-                ).boxed()
+                )
+                .boxed()
             }
         })
     }
@@ -245,7 +247,8 @@ impl Manifest for BlobManifest {
                     path,
                     d.entryid().into_nodehash(),
                     d.flag(),
-                ).boxed()
+                )
+                .boxed()
             }
         });
         Box::new(list_iter)
@@ -276,10 +279,7 @@ impl Details {
             }
         };
 
-        Ok(Details {
-            entryid: entryid,
-            flag: flag,
-        })
+        Ok(Details { entryid, flag })
     }
 
     pub fn entryid(&self) -> &HgEntryId {

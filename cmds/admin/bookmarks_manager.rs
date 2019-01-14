@@ -92,7 +92,8 @@ fn handle_get<'a>(
     let json_flag: bool = args.is_present("json");
 
     match changeset_type {
-        "hg" => repo.get_bookmark(ctx, &bookmark)
+        "hg" => repo
+            .get_bookmark(ctx, &bookmark)
             .and_then(move |cs| {
                 let changeset_id_str = cs.expect("bookmark could not be found").to_string();
                 let output = format_output(json_flag, changeset_id_str, "hg");

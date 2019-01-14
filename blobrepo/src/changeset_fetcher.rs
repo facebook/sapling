@@ -17,7 +17,7 @@ use futures_stats::Timed;
 use std::any::Any;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex, atomic::AtomicUsize, atomic::Ordering};
+use std::sync::{atomic::AtomicUsize, atomic::Ordering, Arc, Mutex};
 use std::time::Duration;
 
 /// Trait that knows how to fetch DAG info about commits. Primary user is revsets
@@ -180,7 +180,8 @@ impl CachingChangesetFetcher {
 
     fn fill_cache(&self, ctx: CoreContext, gen_num: u64) -> impl Future<Item = (), Error = Error> {
         let blobstore_cache_key = self.get_blobstore_cache_key(gen_num);
-        if !self.already_fetched_blobs
+        if !self
+            .already_fetched_blobs
             .lock()
             .unwrap()
             .contains(&blobstore_cache_key)
@@ -233,28 +234,29 @@ impl CachingChangesetFetcher {
                 self.cache_misses.fetch_add(1, Ordering::Relaxed);
                 self.changesets.get(ctx.clone(), repo_id, cs_id)
             }
-        }).and_then(move |maybe_cs| maybe_cs.ok_or_else(|| err_msg(format!("{} not found", cs_id))))
-            .and_then({
-                let cs_fetcher = self.clone();
-                move |cs| {
-                    if cs_fetcher.too_many_cache_misses() {
-                        cs_fetcher
-                            .fill_cache(ctx, cs.gen)
-                            .map(|()| cs)
-                            .left_future()
-                    } else {
-                        future::ok(cs).right_future()
-                    }
+        })
+        .and_then(move |maybe_cs| maybe_cs.ok_or_else(|| err_msg(format!("{} not found", cs_id))))
+        .and_then({
+            let cs_fetcher = self.clone();
+            move |cs| {
+                if cs_fetcher.too_many_cache_misses() {
+                    cs_fetcher
+                        .fill_cache(ctx, cs.gen)
+                        .map(|()| cs)
+                        .left_future()
+                } else {
+                    future::ok(cs).right_future()
                 }
-            })
-            .timed(move |stats, _| {
-                let mut maxlatency_value = max_request_latency.lock().expect("poisoned lock");
-                if stats.completion_time > *maxlatency_value {
-                    *maxlatency_value = stats.completion_time
-                }
+            }
+        })
+        .timed(move |stats, _| {
+            let mut maxlatency_value = max_request_latency.lock().expect("poisoned lock");
+            if stats.completion_time > *maxlatency_value {
+                *maxlatency_value = stats.completion_time
+            }
 
-                Ok(())
-            })
+            Ok(())
+        })
     }
 }
 
@@ -313,8 +315,9 @@ mod tests {
     use cachelib::{get_or_create_pool, init_cache_once, LruCacheConfig, LruCachePool};
     use changesets::{serialize_cs_entries, ChangesetEntry, ChangesetInsert};
     use mononoke_types::BlobstoreBytes;
-    use mononoke_types_mocks::changesetid::{FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID,
-                                            TWOS_CSID};
+    use mononoke_types_mocks::changesetid::{
+        FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
+    };
     use mononoke_types_mocks::repo::REPO_ZERO;
     use std::collections::HashMap;
     use std::sync::Mutex;
@@ -499,10 +502,7 @@ mod tests {
             let blobstore_get_counter = Arc::new(AtomicUsize::new(0));
             let blobstore = Arc::new(TestBlobstore::new(blobstore_get_counter.clone()));
             let cs_fetcher = CachingChangesetFetcher::new_with_opts(
-                cs,
-                REPO_ZERO,
-                cache_pool,
-                blobstore,
+                cs, REPO_ZERO, cache_pool, blobstore,
                 0, /* will try to go to blobstore on every fetch */
                 2, /* 0, 2, 4 etc gen numbers  might have a cache entry */
             );
@@ -580,10 +580,7 @@ mod tests {
 
             let blobstore = Arc::new(blobstore);
             let cs_fetcher = CachingChangesetFetcher::new_with_opts(
-                cs,
-                REPO_ZERO,
-                cache_pool,
-                blobstore,
+                cs, REPO_ZERO, cache_pool, blobstore,
                 0, /* will try to go to blobstore on every fetch */
                 2, /* 0, 2, 4 etc gen numbers  might have a cache entry */
             );

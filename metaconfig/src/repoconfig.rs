@@ -10,7 +10,10 @@
 use bookmarks::Bookmark;
 use errors::*;
 use failure::ResultExt;
-use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
+use sql::mysql_async::{
+    prelude::{ConvIr, FromValue},
+    FromValueError, Value,
+};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read};
@@ -318,7 +321,8 @@ impl RepoConfigs {
                 let e: Error = ErrorKind::InvalidFileStructure(format!(
                     "invalid repo path {:?}",
                     repo_config_path
-                )).into();
+                ))
+                .into();
                 e
             })?;
         let reponame = reponame.to_string();
@@ -328,7 +332,8 @@ impl RepoConfigs {
             return Err(ErrorKind::InvalidFileStructure(format!(
                 "expected file server.toml in {}",
                 repo_config_path.to_string_lossy()
-            )).into());
+            ))
+            .into());
         }
 
         fn read_file(path: &Path) -> Result<Vec<u8>> {
@@ -465,7 +470,8 @@ impl RepoConfigs {
                     if blobstores.insert(blobstore.blobstore_id, args).is_some() {
                         return Err(ErrorKind::InvalidConfig(
                             "blobstore identifiers are not unique".into(),
-                        ).into());
+                        )
+                        .into());
                     }
                 }
 
@@ -528,7 +534,8 @@ impl RepoConfigs {
             hooks_opt = None;
         }
 
-        let pushrebase = this.pushrebase
+        let pushrebase = this
+            .pushrebase
             .map(|raw| {
                 let default = PushrebaseParams::default();
                 PushrebaseParams {
@@ -642,16 +649,21 @@ struct RawRemoteBlobstoreConfig {
 /// Types of repositories supported
 #[derive(Clone, Debug, Deserialize)]
 enum RawRepoType {
-    #[serde(rename = "blob:files")] Files,
-    #[serde(rename = "blob:rocks")] BlobRocks,
-    #[serde(rename = "blob:remote")] BlobRemote,
-    #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,
+    #[serde(rename = "blob:files")]
+    Files,
+    #[serde(rename = "blob:rocks")]
+    BlobRocks,
+    #[serde(rename = "blob:remote")]
+    BlobRemote,
+    #[serde(rename = "blob:testdelay")]
+    TestBlobDelayRocks,
 }
 
 /// Types of blobstores supported
 #[derive(Clone, Debug, Deserialize)]
 enum RawBlobstoreType {
-    #[serde(rename = "manifold")] Manifold,
+    #[serde(rename = "manifold")]
+    Manifold,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -795,16 +807,14 @@ mod test {
                     weightlimit: 4321,
                     disable_acl_checker: false,
                 }),
-                bookmarks: Some(vec![
-                    BookmarkParams {
-                        bookmark: Bookmark::new("master").unwrap(),
-                        hooks: Some(vec![
-                            "hook1".to_string(),
-                            "hook2".to_string(),
-                            "rust:rusthook".to_string(),
-                        ]),
-                    },
-                ]),
+                bookmarks: Some(vec![BookmarkParams {
+                    bookmark: Bookmark::new("master").unwrap(),
+                    hooks: Some(vec![
+                        "hook1".to_string(),
+                        "hook2".to_string(),
+                        "rust:rusthook".to_string(),
+                    ]),
+                }]),
                 hooks: Some(vec![
                     HookParams {
                         name: "hook1".to_string(),
