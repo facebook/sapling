@@ -595,22 +595,8 @@ optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
         errno, "failed to read ", RelativePathPiece{path});
   }
 
-  // Removing header and deserializing the contents
-  if (serializedData.size() < kHeaderLength) {
-    // Something Wrong with the file(may be corrupted)
-    folly::throwSystemErrorExplicit(
-        EIO,
-        "Overlay file ",
-        RelativePathPiece{path},
-        " is too short for header: size=",
-        serializedData.size());
-  }
-
-  StringPiece header{serializedData, 0, kHeaderLength};
-  // validate header and get the timestamps
-  parseHeader(header, kHeaderIdentifierDir);
-
   StringPiece contents{serializedData};
+  validateHeader(inodeNumber, contents, kHeaderIdentifierDir);
   contents.advance(kHeaderLength);
 
   return CompactSerializer::deserialize<overlay::OverlayDir>(contents);
@@ -628,12 +614,12 @@ std::array<uint8_t, Overlay::kHeaderLength> Overlay::createHeader(
   appender.writeBE(version);
   // The overlay header used to store timestamps for inodes but that has since
   // been moved to the InodeMetadataTable. Write zeroes instead.
-  appender.writeBE<uint64_t>(0);  // atime.tv_sec
-  appender.writeBE<uint64_t>(0);  // atime.tv_nsec
-  appender.writeBE<uint64_t>(0);  // ctime.tv_sec
-  appender.writeBE<uint64_t>(0);  // ctime.tv_nsec
-  appender.writeBE<uint64_t>(0);  // mtime.tv_sec
-  appender.writeBE<uint64_t>(0);  // mtime.tv_nsec
+  appender.writeBE<uint64_t>(0); // atime.tv_sec
+  appender.writeBE<uint64_t>(0); // atime.tv_nsec
+  appender.writeBE<uint64_t>(0); // ctime.tv_sec
+  appender.writeBE<uint64_t>(0); // ctime.tv_nsec
+  appender.writeBE<uint64_t>(0); // mtime.tv_sec
+  appender.writeBE<uint64_t>(0); // mtime.tv_nsec
   auto paddingSize = kHeaderLength - header.length();
   appender.ensure(paddingSize);
   memset(appender.writableData(), 0, paddingSize);
@@ -661,8 +647,7 @@ folly::File Overlay::openFile(
         localDir_);
   }
 
-  StringPiece header{contents};
-  parseHeader(header, headerId);
+  validateHeader(inodeNumber, contents, headerId);
   return file;
 }
 
@@ -823,10 +808,23 @@ folly::File Overlay::createOverlayFile(
   return createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
 }
 
-void Overlay::parseHeader(
-    folly::StringPiece header,
+void Overlay::validateHeader(
+    InodeNumber inodeNumber,
+    folly::StringPiece contents,
     folly::StringPiece headerId) {
-  IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{header});
+  if (contents.size() < kHeaderLength) {
+    // Something wrong with the file (may be corrupted)
+    folly::throwSystemErrorExplicit(
+        EIO,
+        "Overlay file (inode ",
+        inodeNumber,
+        ") is too short for header: size=",
+        contents.size(),
+        " expected headerId=",
+        headerId);
+  }
+
+  IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{contents});
   folly::io::Cursor cursor(&buf);
 
   // Validate header identifier
@@ -847,12 +845,12 @@ void Overlay::parseHeader(
 
   // Eden used to store timestamps in the Overlay entry's header, but they're
   // no longer used. Read them anyway and throw an exception on error.
-  cursor.readBE<uint64_t>();  // atime.tv_sec
-  cursor.readBE<uint64_t>();  // atime.tv_nsec
-  cursor.readBE<uint64_t>();  // ctime.tv_sec
-  cursor.readBE<uint64_t>();  // ctime.tv_nsec
-  cursor.readBE<uint64_t>();  // mtime.tv_sec
-  cursor.readBE<uint64_t>();  // mtime.tv_nsec
+  cursor.readBE<uint64_t>(); // atime.tv_sec
+  cursor.readBE<uint64_t>(); // atime.tv_nsec
+  cursor.readBE<uint64_t>(); // ctime.tv_sec
+  cursor.readBE<uint64_t>(); // ctime.tv_nsec
+  cursor.readBE<uint64_t>(); // mtime.tv_sec
+  cursor.readBE<uint64_t>(); // mtime.tv_nsec
 }
 
 void Overlay::gcThread() noexcept {

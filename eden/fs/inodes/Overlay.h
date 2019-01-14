@@ -243,10 +243,11 @@ class Overlay {
   static InodePath getFilePath(InodeNumber inodeNumber);
 
   /**
-   * Parses, validates and reads Timestamps from the header.
+   * Validates an entry's header.
    */
-  static void parseHeader(
-      folly::StringPiece header,
+  static void validateHeader(
+      InodeNumber inodeNumber,
+      folly::StringPiece contents,
       folly::StringPiece headerId);
 
   void gcThread() noexcept;
