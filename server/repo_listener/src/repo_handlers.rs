@@ -124,7 +124,7 @@ pub fn repo_handlers(
             let hash_validation_percentage = config.hash_validation_percentage.clone();
             let wireproto_scribe_category = config.wireproto_scribe_category.clone();
 
-            let lca_hint = match config.skiplist_index_blobstore_key.clone() {
+            let skip_index = match config.skiplist_index_blobstore_key.clone() {
                 Some(skiplist_index_blobstore_key) => {
                     let blobstore = repo.blobrepo().get_blobstore();
                     blobstore
@@ -144,24 +144,7 @@ pub fn repo_handlers(
                 None => ok(Arc::new(SkiplistIndex::new())).right_future(),
             };
 
-            let phases_hint: Arc<Phases> = match config.repotype {
-                RepoType::BlobFiles(ref data_dir)
-                | RepoType::BlobRocks(ref data_dir)
-                | RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
-                    let storage = Arc::new(
-                        SqlPhases::with_sqlite_path(data_dir.join("phases"))
-                            .expect("unable to initialize sqlite db for phases"),
-                    );
-                    Arc::new(HintPhases::new(storage))
-                }
-                RepoType::BlobRemote { ref db_address, .. } => {
-                    let storage = Arc::new(SqlPhases::with_myrouter(
-                        &db_address,
-                        myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
-                    ));
-                    Arc::new(CachingHintPhases::new(storage))
-                }
-            };
+            let repotype = config.repotype.clone();
 
             // TODO (T32873881): Arc<BlobRepo> should become BlobRepo
             let initial_warmup = ensure_myrouter_ready.and_then({
@@ -175,11 +158,35 @@ pub fn repo_handlers(
             });
 
             ready_handle
-                .wait_for(initial_warmup.join(lca_hint).map(|((), lca_hint)| lca_hint))
+.wait_for(initial_warmup.and_then(|()| skip_index))
                 .map({
                     cloned!(root_log);
-                    move |lca_hint| {
+                    move |skip_index| {
                         info!(root_log, "Repo warmup for {} complete", reponame);
+
+                        // initialize phases hint from the skip index
+                        let phases_hint: Arc<Phases> = match repotype {
+                            RepoType::BlobFiles(ref data_dir)
+                            | RepoType::BlobRocks(ref data_dir)
+                            | RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
+                                let storage = Arc::new(
+                                    SqlPhases::with_sqlite_path(data_dir.join("phases"))
+                                        .expect("unable to initialize sqlite db for phases"),
+                                );
+                                Arc::new(HintPhases::new(storage, skip_index.clone()))
+                            }
+                            RepoType::BlobRemote { ref db_address, .. } => {
+                                let storage = Arc::new(SqlPhases::with_myrouter(
+                                    &db_address,
+                                    myrouter_port.expect("myrouter_port not provided for BlobRemote repo"),
+                                ));
+                                Arc::new(CachingHintPhases::new(storage, skip_index.clone()))
+                            }
+                        };
+
+                        // initialize lca hint from the skip index
+                        let lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync> = skip_index;
+
                         (
                             reponame,
                             RepoHandler {

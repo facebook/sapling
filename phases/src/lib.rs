@@ -35,7 +35,7 @@ mod errors;
 pub use errors::*;
 
 mod hint;
-pub use hint::PhasesHint;
+pub use hint::PhasesReachabilityHint;
 
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
@@ -44,12 +44,16 @@ use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
-use std::{fmt, str};
+use reachabilityindex::SkiplistIndex;
 use std::sync::Arc;
+use std::{fmt, str};
 use try_from::TryFrom;
 
+use sql::mysql_async::{
+    prelude::{ConvIr, FromValue},
+    FromValueError, Value,
+};
 use sql::Connection;
-use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
 pub use sql_ext::SqlConstructors;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
@@ -92,7 +96,8 @@ impl TryFrom<iobuf::IOBuf> for Phase {
                 format!(
                     "Conversion error from IOBuf to Phase, received {} bytes",
                     v.len()
-                ).into(),
+                )
+                .into(),
             )),
         }
     }
@@ -155,7 +160,7 @@ pub trait Phases: Send + Sync {
 
 pub struct HintPhases {
     phases_store: Arc<Phases>, // phases_store is the underlying persistent storage (db)
-    phases_hint: PhasesHint,   // phases_hint for slow path calculation
+    phases_reachability_hint: PhasesReachabilityHint, // phases_reachability_hint for slow path calculation
 }
 
 #[derive(Clone)]
@@ -165,7 +170,7 @@ pub struct SqlPhases {
     read_master_connection: Connection,
 }
 
-queries!{
+queries! {
     write InsertPhase(values: (repo_id: RepositoryId, cs_id: ChangesetId, phase: Phase)) {
         none,
         mysql("INSERT INTO phases (repo_id, cs_id, phase) VALUES {values} ON DUPLICATE KEY UPDATE phase = VALUES(phase)")
@@ -211,8 +216,9 @@ impl Phases for SqlPhases {
         InsertPhase::query(
             &self.write_connection,
             &[(&repo.get_repoid(), &cs_id, &phase)],
-        ).map(move |result| result.affected_rows() >= 1)
-            .boxify()
+        )
+        .map(move |result| result.affected_rows() >= 1)
+        .boxify()
     }
 
     /// Retrieve the phase specified by this commit from the table, if available.
@@ -229,10 +235,10 @@ impl Phases for SqlPhases {
 }
 
 impl HintPhases {
-    pub fn new(phases_store: Arc<Phases>) -> Self {
+    pub fn new(phases_store: Arc<Phases>, skip_index: Arc<SkiplistIndex>) -> Self {
         Self {
             phases_store,
-            phases_hint: PhasesHint::new(),
+            phases_reachability_hint: PhasesReachabilityHint::new(skip_index),
         }
     }
 }
@@ -264,7 +270,7 @@ impl Phases for HintPhases {
         repo: BlobRepo,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<Phase>, Error> {
-        cloned!(self.phases_store, self.phases_hint);
+        cloned!(self.phases_store, self.phases_reachability_hint);
         // Try to fetch from the underlying storage.
         phases_store
             .get(ctx.clone(), repo.clone(), cs_id)
@@ -274,7 +280,7 @@ impl Phases for HintPhases {
                     return future::ok(maybe_phase).left_future();
                 }
                 // Not found. Calculate using the slow path.
-                phases_hint
+                phases_reachability_hint
                     .get(ctx.clone(), repo.clone(), cs_id)
                     .and_then(move |phase| {
                         if phase == Phase::Public {
@@ -362,7 +368,8 @@ mod tests {
     }
 
     fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark, cs_id: &str) {
-        let head = repo.get_bonsai_from_hg(ctx.clone(), &HgChangesetId::from_str(cs_id).unwrap())
+        let head = repo
+            .get_bonsai_from_hg(ctx.clone(), &HgChangesetId::from_str(cs_id).unwrap())
             .wait()
             .unwrap()
             .unwrap();
@@ -400,7 +407,8 @@ mod tests {
         let repo = linear::getrepo(None);
 
         // delete all existing bookmarks
-        for (bookmark, _) in repo.get_bonsai_bookmarks(ctx.clone())
+        for (bookmark, _) in repo
+            .get_bonsai_bookmarks(ctx.clone())
             .collect()
             .wait()
             .unwrap()
@@ -416,36 +424,62 @@ mod tests {
             "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
         );
 
-        let public_commit = repo.get_bonsai_from_hg(
-            ctx.clone(),
-            &HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0").unwrap(),
-        ).wait()
+        let public_commit = repo
+            .get_bonsai_from_hg(
+                ctx.clone(),
+                &HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0").unwrap(),
+            )
+            .wait()
             .unwrap()
             .unwrap();
 
-        let other_public_commit = repo.get_bonsai_from_hg(
-            ctx.clone(),
-            &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-        ).wait()
+        let other_public_commit = repo
+            .get_bonsai_from_hg(
+                ctx.clone(),
+                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+            )
+            .wait()
             .unwrap()
             .unwrap();
 
-        let draft_commit = repo.get_bonsai_from_hg(
-            ctx.clone(),
-            &HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").unwrap(),
-        ).wait()
+        let draft_commit = repo
+            .get_bonsai_from_hg(
+                ctx.clone(),
+                &HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").unwrap(),
+            )
+            .wait()
             .unwrap()
             .unwrap();
 
-        let other_draft_commit = repo.get_bonsai_from_hg(
-            ctx.clone(),
-            &HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
-        ).wait()
+        let other_draft_commit = repo
+            .get_bonsai_from_hg(
+                ctx.clone(),
+                &HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
+            )
+            .wait()
+            .unwrap()
+            .unwrap();
+
+        let public_bookmark_commit = repo
+            .get_bonsai_from_hg(
+                ctx.clone(),
+                &HgChangesetId::from_str("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").unwrap(),
+            )
+            .wait()
             .unwrap()
             .unwrap();
 
         let phases_store = Arc::new(SqlPhases::with_sqlite_in_memory().unwrap());
-        let hint_phases = HintPhases::new(phases_store.clone());
+        let hint_phases = HintPhases::new(phases_store.clone(), Arc::new(SkiplistIndex::new()));
+
+        assert_eq!(
+            hint_phases
+                .get(ctx.clone(), repo.clone(), public_bookmark_commit)
+                .wait()
+                .unwrap(),
+            Some(Phase::Public),
+            "slow path: get phase for a Public commit which is also a public bookmark"
+        );
 
         assert_eq!(
             hint_phases

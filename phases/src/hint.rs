@@ -9,7 +9,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use Phase;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use errors::*;
@@ -18,17 +17,17 @@ use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::ChangesetId;
 use reachabilityindex::ReachabilityIndex;
 use reachabilityindex::SkiplistIndex;
+use std::sync::Arc;
+use Phase;
 
 #[derive(Clone)]
-pub struct PhasesHint {
-    index: SkiplistIndex,
+pub struct PhasesReachabilityHint {
+    index: Arc<SkiplistIndex>,
 }
 
-impl PhasesHint {
-    pub fn new() -> Self {
-        Self {
-            index: SkiplistIndex::new(),
-        }
+impl PhasesReachabilityHint {
+    pub fn new(skip_index: Arc<SkiplistIndex>) -> Self {
+        Self { index: skip_index }
     }
 
     /// Retrieve the phase specified by this commit, if the commit exists
@@ -46,6 +45,10 @@ impl PhasesHint {
             .and_then(move |vec| {
                 let mut vecf = Vec::new();
                 for (_, public_cs) in vec {
+                    if public_cs == cs_id {
+                        return future::ok(vec![true]).left_future();
+                    }
+
                     cloned!(ctx, index);
                     let changeset_fetcher = repo.get_changeset_fetcher();
                     vecf.push(index.query_reachability(ctx, changeset_fetcher, public_cs, cs_id));
@@ -54,6 +57,7 @@ impl PhasesHint {
                     .skip_while(|&x| future::ok(!x))
                     .take(1)
                     .collect()
+                    .right_future()
             })
             .map(|vec| {
                 // vec should be size 0 or 1

@@ -4,7 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use {Phase, Phases, PhasesHint};
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use errors::*;
@@ -12,10 +11,12 @@ use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
+use reachabilityindex::SkiplistIndex;
 use stats::Timeseries;
 use std::sync::Arc;
 use std::time::Duration;
 use try_from::TryInto;
+use {Phase, Phases, PhasesReachabilityHint};
 
 // Memcache constants, should be changed when we want to invalidate memcache
 // entries
@@ -38,17 +39,17 @@ pub fn get_cache_key(repo_id: &RepositoryId, cs_id: &ChangesetId) -> String {
 
 pub struct CachingHintPhases {
     phases_store: Arc<Phases>, // phases_store is the underlying persistent storage (db)
-    phases_hint: PhasesHint,   // phases_hint for slow path calculation
-    memcache: MemcacheClient,  // Memcache Client for temporary caching
+    phases_reachability_hint: PhasesReachabilityHint, // phases_reachability_hint for slow path calculation
+    memcache: MemcacheClient,                         // Memcache Client for temporary caching
     keygen: KeyGen,
 }
 
 impl CachingHintPhases {
-    pub fn new(phases_store: Arc<Phases>) -> Self {
+    pub fn new(phases_store: Arc<Phases>, skip_index: Arc<SkiplistIndex>) -> Self {
         let key_prefix = "scm.mononoke.phases";
         Self {
             phases_store,
-            phases_hint: PhasesHint::new(),
+            phases_reachability_hint: PhasesReachabilityHint::new(skip_index),
             memcache: MemcacheClient::new(),
             keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
         }
@@ -106,7 +107,7 @@ impl Phases for CachingHintPhases {
             self.keygen,
             self.memcache,
             self.phases_store,
-            self.phases_hint
+            self.phases_reachability_hint
         );
         let repo_id = repo.get_repoid();
         // Look up in the memcache.
@@ -129,7 +130,7 @@ impl Phases for CachingHintPhases {
                             }
                             // The phase is not found. Try to calculate it.
                             // It will be error if calculation failed.
-                            None => phases_hint
+                            None => phases_reachability_hint
                                 .get(ctx.clone(), repo.clone(), cs_id)
                                 .and_then(move |phase| {
                                     // The phase is calculated. Refresh memcache.
