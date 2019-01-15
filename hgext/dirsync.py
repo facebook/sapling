@@ -29,6 +29,15 @@ arbitrary number of directories::
     projectY.dir1 = otherpath/dir1
     projectY.dir2 = foo/bar
     projectY.dir3 = foo/goo/hoo
+
+If you wish to exclude a subdirectory from being synced, for every rule in a group,
+create a rule for the subdirectory and prefix it with "exclude":
+
+        [dirsync]
+        projectX.dir1 = dir1/foo
+        exclude.projectX.dir1 = dir1/foo/bar
+        projectX.dir2 = dir2/dir1/foo
+        exclude.projectX.dir2 = dir2/dir1/foo/bar
 """
 
 from __future__ import absolute_import
@@ -49,6 +58,7 @@ from mercurial.i18n import _
 
 
 testedwith = "ships-with-fb-hgext"
+EXCLUDE_PATHS = "exclude"
 
 _disabled = [False]
 
@@ -99,6 +109,11 @@ def getconfigs(repo):
 
 
 def getmirrors(maps, filename):
+    if EXCLUDE_PATHS in maps:
+        for subdir in maps[EXCLUDE_PATHS]:
+            if filename.startswith(subdir):
+                return []
+
     for key, mirrordirs in maps.iteritems():
         for subdir in mirrordirs:
             if filename.startswith(subdir):

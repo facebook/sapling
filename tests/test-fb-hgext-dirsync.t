@@ -687,3 +687,62 @@ Rule order matters. Only the first one gets executed.
   $ hg commit -m 'order test' -A a
   adding a/c/1
   mirrored adding 'a/c/1' to 'c/1'
+
+Test excluding a subdirectory from dirsync
+  $ hg init $TESTTMP/exclusion
+  $ cd $TESTTMP/exclusion
+  $ cat >> .hgdirsync <<'EOF'
+  > a.dir1 = a/
+  > exclude.a.dir1 = a/excl
+  > a.dir2 = b/
+  > exclude.a.dir2 = b/excl
+  > EOF
+  $ mkdir -p a/c
+  $ mkdir -p a/excl
+  $ echo 1 > a/c/1
+  $ echo 2 > a/excl/2
+  $ hg commit -m 'exclusion test' -A a
+  adding a/c/1
+  adding a/excl/2
+  mirrored adding 'a/c/1' to 'b/c/1'
+
+Test that excludes override all other rules
+  $ hg init $TESTTMP/exclusion-override
+  $ cd $TESTTMP/exclusion-override
+  $ cat >> .hgdirsync <<'EOF'
+  > a.dir1 = a/
+  > exclude.a.dir1 = a/excl
+  > a.dir2 = b/
+  > exclude.a.dir2 = b/excl
+  > b.dir1 = a/
+  > b.dir2 = b/
+  > c.dir1 = a/excl/foo
+  > c.dir2 = b/excl/foo
+  > EOF
+  $ mkdir -p a/c
+  $ mkdir -p a/excl/foo
+  $ echo 1 > a/c/1
+  $ echo 2 > a/excl/foo/2
+  $ hg commit -m 'exclusion test' -A a
+  adding a/c/1
+  adding a/excl/foo/2
+  mirrored adding 'a/c/1' to 'b/c/1'
+
+Test that excludes only work when specified for every destination
+  $ hg init $TESTTMP/exclusion-total
+  $ cd $TESTTMP/exclusion-total
+  $ cat >> .hgdirsync <<'EOF'
+  > a.dir1 = a/
+  > a.dir2 = b/
+  > exclude.a.dir2 = b/excl
+  > EOF
+  $ mkdir -p a/c
+  $ mkdir -p a/excl
+  $ echo 1 > a/c/1
+  $ echo 2 > a/excl/2
+  $ hg commit -m 'exclusion test' -A a
+  adding a/c/1
+  adding a/excl/2
+  mirrored adding 'a/c/1' to 'b/c/1'
+  mirrored adding 'a/excl/2' to 'b/excl/2'
+
