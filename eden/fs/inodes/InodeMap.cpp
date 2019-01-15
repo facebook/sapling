@@ -321,12 +321,7 @@ void InodeMap::startChildLookup(
     auto bug = EDEN_BUG() << "parent inode " << parent->getNodeId() << " of ("
                           << childName << ", " << childInodeNumber
                           << ") does not refer to a tree";
-    auto ew = bug.toException();
-    auto promises = extractPendingPromises(childInodeNumber);
-    for (auto& promise : promises) {
-      promise.setException(ew);
-    }
-    return;
+    return inodeLoadFailed(childInodeNumber, bug.toException());
   }
 
   if (isUnlinked) {

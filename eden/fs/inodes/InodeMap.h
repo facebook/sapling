@@ -357,7 +357,7 @@ class InodeMap {
   PromiseVector inodeLoadComplete(InodeBase* inode);
 
   /**
-   * inodeLoadFailed() should only be called by TreeInode.
+   * inodeLoadFailed() should only be called by TreeInode (or startChildLookup)
    *
    * This should be called when an attempt to load a child inode fails.
    */

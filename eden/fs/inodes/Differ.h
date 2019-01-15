@@ -31,7 +31,7 @@ char scmStatusCodeChar(ScmFileStatus code);
 std::ostream& operator<<(std::ostream& os, const ScmStatus& status);
 
 folly::Future<std::unique_ptr<ScmStatus>>
-diffMountForStatus(const EdenMount* mount, Hash commitHash, bool listIgnored);
+diffMountForStatus(const EdenMount& mount, Hash commitHash, bool listIgnored);
 
 } // namespace eden
 } // namespace facebook

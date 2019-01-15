@@ -932,7 +932,7 @@ EdenServiceHandler::future_getScmStatus(
 
   auto mount = server_->getMount(*mountPoint);
   auto hash = hashFromThrift(*commitHash);
-  return helper.wrapFuture(diffMountForStatus(mount.get(), hash, listIgnored));
+  return helper.wrapFuture(diffMountForStatus(*mount, hash, listIgnored));
 #else
   NOT_IMPLEMENTED();
 #endif // !EDEN_WIN
