@@ -114,19 +114,12 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     revmap = meta.revmap
     if partial:
         try:
-            # we can't use meta.lastpulled here because we are bootstraping the
-            # lastpulled and want to keep the cached value on disk during a
-            # partial rebuild
-            foundpartialinfo = False
-            youngestpath = os.path.join(meta.metapath, "lastpulled")
-            if os.path.exists(youngestpath):
-                youngest = util.load(youngestpath)
-                lasthash = revmap.lasthash
-                if len(revmap) > 0 and lasthash:
-                    startrev = repo[lasthash].rev() + 1
-                    branchinfo = util.load(meta.branch_info_file)
-                    foundpartialinfo = True
-            if not foundpartialinfo:
+            youngest = revmap.lastpulled
+            lasthash = revmap.lasthash
+            if len(revmap) > 0 and lasthash:
+                startrev = repo[lasthash].rev() + 1
+                branchinfo = util.load(meta.branch_info_file)
+            else:
                 ui.status("missing some metadata -- doing a full rebuild\n")
                 partial = False
         except IOError as err:
