@@ -13,7 +13,7 @@ use path::MPath;
 use thrift;
 use typed_hash::{ChangesetId, ContentId};
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
 pub struct FileChange {
     content_id: ContentId,
     file_type: FileType,

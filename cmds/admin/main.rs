@@ -60,7 +60,10 @@ use mercurial_types::{
     HgManifestId, MPath, MPathElement, Manifest,
 };
 use metaconfig::RemoteBlobstoreArgs;
-use mononoke_types::{BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, FileContents};
+use mononoke_types::{
+    BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange,
+    FileContents,
+};
 use reachabilityindex::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 use revset::RangeNodeStream;
 use rust_thrift::compact_protocol;
@@ -124,7 +127,10 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 
     let bonsai_fetch = SubCommand::with_name(BONSAI_FETCH)
         .about("fetches content of the file or manifest from blobrepo")
-        .args_from_usage("<HG_CHANGESET_OR_BOOKMARK>    'revision to fetch file from'");
+        .args_from_usage(
+            r#"<HG_CHANGESET_OR_BOOKMARK>    'revision to fetch file from'
+                          --json            'if provided json will be returned'"#,
+        );
 
     let hg_changeset = SubCommand::with_name(HG_CHANGESET)
         .about("mercural changeset level queries")
@@ -641,33 +647,41 @@ fn main() -> Result<()> {
 
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
+            let json_flag = sub_m.is_present("json");
 
             args::open_repo(ctx.clone(), &logger, &matches)
                 .and_then(move |repo| fetch_bonsai_changeset(ctx, &rev, repo.blobrepo()))
-                .map(|bcs| {
-                    println!(
-                        "BonsaiChangesetId: {} \n\
-                         Author: {} \n\
-                         Message: {} \n\
-                         FileChanges:",
-                        bcs.get_changeset_id(),
-                        bcs.author(),
-                        bcs.message().lines().next().unwrap_or("")
-                    );
+                .map(move |bcs| {
+                    if json_flag {
+                        match serde_json::to_string(&SerializableBonsaiChangeset::from(bcs)) {
+                            Ok(json) => println!("{}", json),
+                            Err(e) => println!("{}", e),
+                        }
+                    } else {
+                        println!(
+                            "BonsaiChangesetId: {} \n\
+                             Author: {} \n\
+                             Message: {} \n\
+                             FileChanges:",
+                            bcs.get_changeset_id(),
+                            bcs.author(),
+                            bcs.message().lines().next().unwrap_or("")
+                        );
 
-                    for (path, file_change) in bcs.file_changes() {
-                        match file_change {
-                            Some(file_change) => match file_change.copy_from() {
-                                Some(_) => {
-                                    println!("\t COPY/MOVE: {} {}", path, file_change.content_id())
-                                }
-                                None => println!(
-                                    "\t ADDED/MODIFIED: {} {}",
-                                    path,
-                                    file_change.content_id()
-                                ),
-                            },
-                            None => println!("\t REMOVED: {}", path),
+                        for (path, file_change) in bcs.file_changes() {
+                            match file_change {
+                                Some(file_change) => match file_change.copy_from() {
+                                    Some(_) => {
+                                        println!("\t COPY/MOVE: {} {}", path, file_change.content_id())
+                                    }
+                                    None => println!(
+                                        "\t ADDED/MODIFIED: {} {}",
+                                        path,
+                                        file_change.content_id()
+                                    ),
+                                },
+                                None => println!("\t REMOVED: {}", path),
+                            }
                         }
                     }
                 })
@@ -959,6 +973,62 @@ fn detect_decode(key: &str, logger: &Logger) -> Option<&'static str> {
             "key" => key,
         );
         None
+    }
+}
+
+#[derive(Serialize)]
+pub struct SerializableBonsaiChangeset {
+    pub parents: Vec<ChangesetId>,
+    pub author: String,
+    pub author_date: DateTime,
+    pub committer: Option<String>,
+    // XXX should committer date always be recorded? If so, it should probably be a
+    // monotonically increasing value:
+    // max(author date, max(committer date of parents) + epsilon)
+    pub committer_date: Option<DateTime>,
+    pub message: String,
+    pub extra: BTreeMap<String, Vec<u8>>,
+    pub file_changes: BTreeMap<String, Option<FileChange>>,
+}
+
+impl From<BonsaiChangeset> for SerializableBonsaiChangeset {
+    fn from(bonsai: BonsaiChangeset) -> Self {
+        let mut parents = Vec::new();
+        parents.extend(bonsai.parents());
+
+        let author = bonsai.author().to_string();
+        let author_date = bonsai.author_date().clone();
+
+        let committer = bonsai.committer().map(|s| s.to_string());
+        let committer_date = bonsai.committer_date().cloned();
+
+        let message = bonsai.message().to_string();
+
+        let extra = bonsai
+            .extra()
+            .map(|(k, v)| (k.to_string(), v.to_vec()))
+            .collect();
+
+        let file_changes = bonsai
+            .file_changes()
+            .map(|(k, v)| {
+                (
+                    String::from_utf8(k.to_vec()).expect("Found invalid UTF-8"),
+                    v.cloned(),
+                )
+            })
+            .collect();
+
+        SerializableBonsaiChangeset {
+            parents,
+            author,
+            author_date,
+            committer,
+            committer_date,
+            message,
+            extra,
+            file_changes,
+        }
     }
 }
 

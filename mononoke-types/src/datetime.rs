@@ -12,7 +12,7 @@ use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use errors::*;
 use thrift;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, Serialize, PartialEq, PartialOrd)]
 pub struct DateTime(ChronoDateTime<FixedOffset>);
 
 impl DateTime {
