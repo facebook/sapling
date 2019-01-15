@@ -18,6 +18,7 @@ use sql::mysql_async::{
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read};
+use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 use std::str;
 use toml;
@@ -40,6 +41,15 @@ pub struct GlusterArgs {
     pub export: String,
     /// Content prefix path
     pub basepath: String,
+}
+
+/// Arguments for setting up a Mysql blobstore.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MysqlBlobstoreArgs {
+    /// Name of the Mysql shardmap to use
+    pub shardmap: String,
+    /// Number of shards in the Mysql shardmap
+    pub shard_num: NonZeroUsize,
 }
 
 /// Configuration of a single repository
@@ -213,6 +223,8 @@ pub enum RemoteBlobstoreArgs {
     Manifold(ManifoldArgs),
     /// Gluster blobstore arguemnts
     Gluster(GlusterArgs),
+    /// Mysql blobstore arguments
+    Mysql(MysqlBlobstoreArgs),
     /// Multiplexed
     Multiplexed(HashMap<BlobstoreId, RemoteBlobstoreArgs>),
 }
@@ -503,6 +515,29 @@ impl RepoConfigs {
                                 basepath,
                             })
                         }
+                        RawBlobstoreType::Mysql => {
+                            let shardmap = blobstore.mysql_shardmap.ok_or(
+                                ErrorKind::InvalidConfig("mysql shardmap must be specified".into()),
+                            )?;
+                            let shard_num = blobstore
+                                .mysql_shard_num
+                                .and_then(|shard_num| {
+                                    if shard_num > 0 {
+                                        NonZeroUsize::new(shard_num as usize)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .ok_or(ErrorKind::InvalidConfig(
+                                    "mysql shard num must be specified and an interger larger \
+                                     than 0"
+                                        .into(),
+                                ))?;
+                            RemoteBlobstoreArgs::Mysql(MysqlBlobstoreArgs {
+                                shardmap,
+                                shard_num,
+                            })
+                        }
                     };
                     if blobstores.insert(blobstore.blobstore_id, args).is_some() {
                         return Err(ErrorKind::InvalidConfig(
@@ -686,6 +721,9 @@ struct RawRemoteBlobstoreConfig {
     gluster_tier: Option<String>,
     gluster_export: Option<String>,
     gluster_basepath: Option<String>,
+    // required mysql arguments
+    mysql_shardmap: Option<String>,
+    mysql_shard_num: Option<i32>,
 }
 
 /// Types of repositories supported
@@ -710,6 +748,8 @@ enum RawBlobstoreType {
     Manifold,
     #[serde(rename = "gluster")]
     Gluster,
+    #[serde(rename = "mysql")]
+    Mysql,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -854,14 +894,16 @@ mod test {
                     weightlimit: 4321,
                     disable_acl_checker: false,
                 }),
-                bookmarks: Some(vec![BookmarkParams {
-                    bookmark: Bookmark::new("master").unwrap(),
-                    hooks: Some(vec![
-                        "hook1".to_string(),
-                        "hook2".to_string(),
-                        "rust:rusthook".to_string(),
-                    ]),
-                }]),
+                bookmarks: Some(vec![
+                    BookmarkParams {
+                        bookmark: Bookmark::new("master").unwrap(),
+                        hooks: Some(vec![
+                            "hook1".to_string(),
+                            "hook2".to_string(),
+                            "rust:rusthook".to_string(),
+                        ]),
+                    },
+                ]),
                 hooks: Some(vec![
                     HookParams {
                         name: "hook1".to_string(),

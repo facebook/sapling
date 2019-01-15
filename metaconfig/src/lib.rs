@@ -35,7 +35,9 @@ extern crate mononoke_types;
 pub mod errors;
 pub mod repoconfig;
 
-pub use repoconfig::{BlobstoreId, CacheWarmupParams, LfsParams, ManifoldArgs, PushrebaseParams,
-                     RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType};
+pub use repoconfig::{
+    BlobstoreId, CacheWarmupParams, LfsParams, ManifoldArgs, MysqlBlobstoreArgs, PushrebaseParams,
+    RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType,
+};
 
 pub use errors::{Error, ErrorKind};

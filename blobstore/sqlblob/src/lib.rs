@@ -21,6 +21,9 @@ extern crate rand;
 extern crate rust_thrift;
 #[macro_use]
 extern crate sql;
+extern crate sql_ext;
+#[cfg(test)]
+extern crate tokio;
 extern crate twox_hash;
 
 extern crate sqlblob_thrift;
@@ -37,6 +40,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
+use sql_ext::{create_myrouter_connections, PoolSizeConfig, SqlConnections};
 use std::fmt;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
@@ -69,6 +73,64 @@ pub struct Sqlblob {
 }
 
 impl Sqlblob {
+    pub fn with_myrouter(
+        repo_id: RepositoryId,
+        shardmap: impl ToString,
+        port: u16,
+        shard_num: NonZeroUsize,
+    ) -> Self {
+        struct Cons {
+            write_connection: Vec<Connection>,
+            read_connection: Vec<Connection>,
+            read_master_connection: Vec<Connection>,
+        }
+
+        let cons = Cons {
+            write_connection: Vec::with_capacity(shard_num.get()),
+            read_connection: Vec::with_capacity(shard_num.get()),
+            read_master_connection: Vec::with_capacity(shard_num.get()),
+        };
+
+        let cons = (1..=shard_num.get()).fold(cons, |mut cons, shard_id| {
+            let SqlConnections {
+                write_connection,
+                read_connection,
+                read_master_connection,
+            } = create_myrouter_connections(
+                format!("{}.{}", shardmap.to_string(), shard_id),
+                port,
+                PoolSizeConfig::for_sharded_connection(),
+            );
+
+            cons.write_connection.push(write_connection);
+            cons.read_connection.push(read_connection);
+            cons.read_master_connection.push(read_master_connection);
+
+            cons
+        });
+
+        let write_connection = Arc::new(cons.write_connection);
+        let read_connection = Arc::new(cons.read_connection);
+        let read_master_connection = Arc::new(cons.read_master_connection);
+
+        Self {
+            data_store: DataSqlStore::new(
+                repo_id,
+                shard_num,
+                write_connection.clone(),
+                read_connection.clone(),
+                read_master_connection.clone(),
+            ),
+            chunk_store: ChunkSqlStore::new(
+                repo_id,
+                shard_num,
+                write_connection,
+                read_connection,
+                read_master_connection,
+            ),
+        }
+    }
+
     pub fn with_sqlite_in_memory(repo_id: RepositoryId) -> Result<Self> {
         Self::with_sqlite(repo_id, |_| {
             let con = SqliteConnection::open_in_memory()?;
@@ -214,6 +276,7 @@ impl Blobstore for Sqlblob {
 mod tests {
     use super::*;
     use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
+    use tokio;
 
     #[test]
     fn read_write() {

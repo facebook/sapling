@@ -4,31 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{BTreeMap, HashMap};
-use std::convert::From;
-use std::iter::FromIterator;
-use std::path::Path;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::time::Duration;
-use std::usize;
-
-use bytes::Bytes;
-use failure::{prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
-use futures::future::{self, loop_fn, ok, Either, Future, Loop};
-use futures::stream::{FuturesUnordered, Stream};
-use futures::sync::oneshot;
-use futures::IntoFuture;
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_stats::{FutureStats, Timed};
-use scribe::ScribeClient;
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use slog::{Discard, Drain, Logger};
-use stats::Timeseries;
-use time_ext::DurationExt;
-use tracing::{trace_args, EventId, Traced};
-use uuid::Uuid;
-
 use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
 use super::changeset::HgChangesetContent;
 use super::changeset_fetcher::{CachingChangesetFetcher, ChangesetFetcher, SimpleChangesetFetcher};
@@ -44,12 +19,14 @@ use bonsai_hg_mapping::{
     SqlBonsaiHgMapping,
 };
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
+use bytes::Bytes;
 use cachelib;
 use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use delayblob::DelayBlob;
 use errors::*;
+use failure::{prelude::*, Error, FutureFailureErrorExt, FutureFailureExt, Result};
 use file::{
     fetch_file_content_from_blobstore, fetch_file_content_id_from_blobstore,
     fetch_file_content_sha256_from_blobstore, fetch_file_contents, fetch_file_size_from_blobstore,
@@ -58,6 +35,12 @@ use file::{
 use file::{fetch_file_envelope, get_rename_from_envelope};
 use fileblob::Fileblob;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
+use futures::future::{self, loop_fn, ok, Either, Future, Loop};
+use futures::stream::{FuturesUnordered, Stream};
+use futures::sync::oneshot;
+use futures::IntoFuture;
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_stats::{FutureStats, Timed};
 use glusterblob::Glusterblob;
 use manifoldblob::ThriftManifoldBlob;
 use memory_manifest::MemoryRootManifest;
@@ -78,8 +61,23 @@ use post_commit::{self, PostCommitQueue};
 use repo_commit::*;
 use rocksblob::Rocksblob;
 use rocksdb;
+use scribe::ScribeClient;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use slog::{Discard, Drain, Logger};
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
+use stats::Timeseries;
+use std::collections::{BTreeMap, HashMap};
+use std::convert::From;
+use std::iter::FromIterator;
+use std::path::Path;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
+use std::usize;
+use time_ext::DurationExt;
+use tracing::{trace_args, EventId, Traced};
+use uuid::Uuid;
 use BlobManifest;
 use HgBlobChangeset;
 
@@ -345,6 +343,7 @@ impl BlobRepo {
         fn eval_remote_args(
             args: RemoteBlobstoreArgs,
             repoid: RepositoryId,
+            myrouter_port: u16,
             queue: Arc<BlobstoreSyncQueue>,
         ) -> BoxFuture<Arc<Blobstore>, Error> {
             match args {
@@ -360,11 +359,20 @@ impl BlobRepo {
                         .map(|blobstore| -> Arc<Blobstore> { Arc::new(blobstore) })
                         .boxify()
                 }
+                RemoteBlobstoreArgs::Mysql(ref args) => {
+                    let blobstore: Arc<Blobstore> = Arc::new(Sqlblob::with_myrouter(
+                        repoid,
+                        &args.shardmap,
+                        myrouter_port,
+                        args.shard_num,
+                    ));
+                    future::ok(blobstore).boxify()
+                }
                 RemoteBlobstoreArgs::Multiplexed(args) => {
                     let blobstores: Vec<_> = args
                         .into_iter()
                         .map(|(blobstore_id, arg)| {
-                            eval_remote_args(arg, repoid, queue.clone())
+                            eval_remote_args(arg, repoid, myrouter_port, queue.clone())
                                 .map(move |blobstore| (blobstore_id, blobstore))
                         })
                         .collect();
@@ -389,75 +397,79 @@ impl BlobRepo {
         let blobstore_sync_queue: Arc<BlobstoreSyncQueue> = Arc::new(
             SqlBlobstoreSyncQueue::with_myrouter(&db_address, myrouter_port),
         );
-        eval_remote_args(args.clone(), repoid, blobstore_sync_queue).and_then(move |blobstore| {
-            let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
-            let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::from(
-                ErrorKind::MissingCachePool("blobstore-blobs".to_string()),
-            ))?);
-            let presence_pool =
-                Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
-                    ErrorKind::MissingCachePool("blobstore-presence".to_string()),
-                ))?);
-            let blobstore = Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
+        eval_remote_args(args.clone(), repoid, myrouter_port, blobstore_sync_queue).and_then(
+            move |blobstore| {
+                let blobstore = new_memcache_blobstore(blobstore, "multiplexed", "")?;
+                let blob_pool = Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(
+                    Error::from(ErrorKind::MissingCachePool("blobstore-blobs".to_string())),
+                )?);
+                let presence_pool =
+                    Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::from(
+                        ErrorKind::MissingCachePool("blobstore-presence".to_string()),
+                    ))?);
+                let blobstore =
+                    Arc::new(new_cachelib_blobstore(blobstore, blob_pool, presence_pool));
 
-            let filenodes = match filenode_shards {
-                Some(shards) => {
-                    SqlFilenodes::with_sharded_myrouter(&db_address, myrouter_port, shards)
-                }
-                None => SqlFilenodes::with_myrouter(&db_address, myrouter_port),
-            };
-            let filenodes = CachingFilenodes::new(
-                Arc::new(filenodes),
-                cachelib::get_pool("filenodes").ok_or(Error::from(ErrorKind::MissingCachePool(
-                    "filenodes".to_string(),
-                )))?,
-                "sqlfilenodes",
-                &db_address,
-            );
+                let filenodes = match filenode_shards {
+                    Some(shards) => {
+                        SqlFilenodes::with_sharded_myrouter(&db_address, myrouter_port, shards)
+                    }
+                    None => SqlFilenodes::with_myrouter(&db_address, myrouter_port),
+                };
+                let filenodes = CachingFilenodes::new(
+                    Arc::new(filenodes),
+                    cachelib::get_pool("filenodes").ok_or(Error::from(
+                        ErrorKind::MissingCachePool("filenodes".to_string()),
+                    ))?,
+                    "sqlfilenodes",
+                    &db_address,
+                );
 
-            let bookmarks = SqlBookmarks::with_myrouter(&db_address, myrouter_port);
+                let bookmarks = SqlBookmarks::with_myrouter(&db_address, myrouter_port);
 
-            let changesets = SqlChangesets::with_myrouter(&db_address, myrouter_port);
-            let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
-                ErrorKind::MissingCachePool("changesets".to_string()),
-            ))?;
-            let changesets =
-                CachingChangests::new(Arc::new(changesets), changesets_cache_pool.clone());
-            let changesets = Arc::new(changesets);
+                let changesets = SqlChangesets::with_myrouter(&db_address, myrouter_port);
+                let changesets_cache_pool = cachelib::get_pool("changesets").ok_or(Error::from(
+                    ErrorKind::MissingCachePool("changesets".to_string()),
+                ))?;
+                let changesets =
+                    CachingChangests::new(Arc::new(changesets), changesets_cache_pool.clone());
+                let changesets = Arc::new(changesets);
 
-            let bonsai_hg_mapping = SqlBonsaiHgMapping::with_myrouter(&db_address, myrouter_port);
-            let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
-                Arc::new(bonsai_hg_mapping),
-                cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(
-                    ErrorKind::MissingCachePool("bonsai_hg_mapping".to_string()),
-                ))?,
-            );
+                let bonsai_hg_mapping =
+                    SqlBonsaiHgMapping::with_myrouter(&db_address, myrouter_port);
+                let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
+                    Arc::new(bonsai_hg_mapping),
+                    cachelib::get_pool("bonsai_hg_mapping").ok_or(Error::from(
+                        ErrorKind::MissingCachePool("bonsai_hg_mapping".to_string()),
+                    ))?,
+                );
 
-            let changeset_fetcher_factory = {
-                cloned!(blobstore, changesets, repoid);
-                move || {
-                    let res: Arc<ChangesetFetcher + Send + Sync> =
-                        Arc::new(CachingChangesetFetcher::new(
-                            changesets.clone(),
-                            repoid.clone(),
-                            changesets_cache_pool.clone(),
-                            blobstore.clone(),
-                        ));
-                    res
-                }
-            };
-            Ok(Self::new_with_changeset_fetcher_factory(
-                logger,
-                Arc::new(bookmarks),
-                blobstore,
-                Arc::new(filenodes),
-                changesets,
-                Arc::new(bonsai_hg_mapping),
-                repoid,
-                Arc::new(post_commit::Discard::new()),
-                Arc::new(changeset_fetcher_factory),
-            ))
-        })
+                let changeset_fetcher_factory = {
+                    cloned!(blobstore, changesets, repoid);
+                    move || {
+                        let res: Arc<ChangesetFetcher + Send + Sync> =
+                            Arc::new(CachingChangesetFetcher::new(
+                                changesets.clone(),
+                                repoid.clone(),
+                                changesets_cache_pool.clone(),
+                                blobstore.clone(),
+                            ));
+                        res
+                    }
+                };
+                Ok(Self::new_with_changeset_fetcher_factory(
+                    logger,
+                    Arc::new(bookmarks),
+                    blobstore,
+                    Arc::new(filenodes),
+                    changesets,
+                    Arc::new(bonsai_hg_mapping),
+                    repoid,
+                    Arc::new(post_commit::Discard::new()),
+                    Arc::new(changeset_fetcher_factory),
+                ))
+            },
+        )
     }
 
     /// Convert this BlobRepo instance into one that only does writes in memory.
@@ -2313,8 +2325,7 @@ impl CreateChangeset {
                                 ctx.clone(),
                                 repo.clone(),
                                 &parent_manifest_hashes,
-                            )
-                            .and_then({
+                            ).and_then({
                                 cloned!(ctx);
                                 move |(p1_manifest, p2_manifest)| {
                                     compute_changed_files(
@@ -2325,7 +2336,7 @@ impl CreateChangeset {
                                     )
                                 }
                             })
-                            .boxify()
+                                .boxify()
                         };
 
                         let p1_mf = parent_manifest_hashes.get(0).cloned();
@@ -2335,8 +2346,7 @@ impl CreateChangeset {
                                 repo.clone(),
                                 root_hash.clone(),
                                 p1_mf,
-                            )
-                            .left_future()
+                            ).left_future()
                         } else {
                             future::ok(()).right_future()
                         };
@@ -2356,8 +2366,7 @@ impl CreateChangeset {
                                         parent_manifest_hashes,
                                         bonsai_parents,
                                         repo.clone(),
-                                    )
-                                    .map(|bonsai_cs| (hg_cs, bonsai_cs))
+                                    ).map(|bonsai_cs| (hg_cs, bonsai_cs))
                                 }
                             });
 
@@ -2366,17 +2375,19 @@ impl CreateChangeset {
                             .and_then({
                                 cloned!(ctx);
                                 move |(blobcs, bonsai_cs)| {
-                                    let fut: BoxFuture<(HgBlobChangeset, BonsaiChangeset), Error> =
-                                        (move || {
-                                            let bonsai_blob = bonsai_cs.clone().into_blob();
-                                            let bcs_id = bonsai_blob.id().clone();
+                                    let fut: BoxFuture<
+                                        (HgBlobChangeset, BonsaiChangeset),
+                                        Error,
+                                    > = (move || {
+                                        let bonsai_blob = bonsai_cs.clone().into_blob();
+                                        let bcs_id = bonsai_blob.id().clone();
 
-                                            let cs_id = blobcs.get_changeset_id().into_nodehash();
-                                            let manifest_id = *blobcs.manifestid();
+                                        let cs_id = blobcs.get_changeset_id().into_nodehash();
+                                        let manifest_id = *blobcs.manifestid();
 
-                                            if let Some(expected_nodeid) = expected_nodeid {
-                                                if cs_id != expected_nodeid {
-                                                    return future::err(
+                                        if let Some(expected_nodeid) = expected_nodeid {
+                                            if cs_id != expected_nodeid {
+                                                return future::err(
                                                         ErrorKind::InconsistentChangesetHash(
                                                             expected_nodeid,
                                                             cs_id,
@@ -2385,50 +2396,44 @@ impl CreateChangeset {
                                                         .into(),
                                                     )
                                                     .boxify();
-                                                }
                                             }
+                                        }
 
-                                            scuba_logger
-                                                .add("changeset_id", format!("{}", cs_id))
-                                                .log_with_msg(
-                                                    "Changeset uuid to hash mapping",
-                                                    None,
-                                                );
-                                            // NOTE(luk): an attempt was made in D8187210 to split the
-                                            // upload_entries signal into upload_entries and
-                                            // processed_entries and to signal_parent_ready after
-                                            // upload_entries, so that one doesn't need to wait for the
-                                            // entries to be processed. There were no performance gains
-                                            // from that experiment
-                                            //
-                                            // We deliberately eat this error - this is only so that
-                                            // another changeset can start verifying data in the blob
-                                            // store while we verify this one
-                                            let _ = signal_parent_ready.send((
-                                                bcs_id,
-                                                cs_id,
-                                                manifest_id,
-                                            ));
+                                        scuba_logger
+                                            .add("changeset_id", format!("{}", cs_id))
+                                            .log_with_msg("Changeset uuid to hash mapping", None);
+                                        // NOTE(luk): an attempt was made in D8187210 to split the
+                                        // upload_entries signal into upload_entries and
+                                        // processed_entries and to signal_parent_ready after
+                                        // upload_entries, so that one doesn't need to wait for the
+                                        // entries to be processed. There were no performance gains
+                                        // from that experiment
+                                        //
+                                        // We deliberately eat this error - this is only so that
+                                        // another changeset can start verifying data in the blob
+                                        // store while we verify this one
+                                        let _ =
+                                            signal_parent_ready.send((bcs_id, cs_id, manifest_id));
 
-                                            let bonsai_cs_fut = save_bonsai_changeset_object(
-                                                ctx.clone(),
-                                                blobstore.clone(),
-                                                bonsai_cs.clone(),
-                                            );
+                                        let bonsai_cs_fut = save_bonsai_changeset_object(
+                                            ctx.clone(),
+                                            blobstore.clone(),
+                                            bonsai_cs.clone(),
+                                        );
 
-                                            blobcs
-                                                .save(ctx.clone(), blobstore)
-                                                .join(bonsai_cs_fut)
-                                                .context("While writing to blobstore")
-                                                .join(
-                                                    entry_processor
-                                                        .finalize(ctx, filenodes, cs_id)
-                                                        .context("While finalizing processing"),
-                                                )
-                                                .from_err()
-                                                .map(move |_| (blobcs, bonsai_cs))
-                                                .boxify()
-                                        })();
+                                        blobcs
+                                            .save(ctx.clone(), blobstore)
+                                            .join(bonsai_cs_fut)
+                                            .context("While writing to blobstore")
+                                            .join(
+                                                entry_processor
+                                                    .finalize(ctx, filenodes, cs_id)
+                                                    .context("While finalizing processing"),
+                                            )
+                                            .from_err()
+                                            .map(move |_| (blobcs, bonsai_cs))
+                                            .boxify()
+                                    })();
 
                                     fut.context(
                                         "While creating and verifying Changeset for blobstore",

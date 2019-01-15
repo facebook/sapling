@@ -6,6 +6,7 @@
 
 use std::cmp::min;
 use std::fs;
+use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -31,7 +32,9 @@ use slog_glog_fmt::default_drain as glog_drain;
 use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use hooks::HookManager;
-use metaconfig::{ManifoldArgs, RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType};
+use metaconfig::{
+    ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType,
+};
 use mononoke_types::RepositoryId;
 use repo_client::{open_blobrepo, MononokeRepo};
 
@@ -142,6 +145,22 @@ impl MononokeApp {
                     .default_value(default_manifold_prefix)
                     .help("manifold prefix"),
             )
+
+            .arg(
+                Arg::with_name("mysql-blobstore-shardmap")
+                    .long("mysql-blobstore-shardmap")
+                    .value_name("SHARDMAP")
+                    .help("mysql blobstore shardmap, if provided mysql is used instead of \
+                           manifold"),
+            )
+            .arg(
+                Arg::with_name("mysql-blobstore-shard-num")
+                    .long("mysql-blobstore-shard-num")
+                    .value_name("SHARD_NUM")
+                    .default_value("100")
+                    .help("mysql blobstore shard num"),
+            )
+
             .arg(
                 Arg::with_name("db-address")
                     .long("db-address")
@@ -569,10 +588,22 @@ fn open_repo_internal<'a>(
 pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> RemoteBlobstoreArgs {
     // The unwraps here are safe because default values have already been provided in mononoke_app
     // above.
-    RemoteBlobstoreArgs::Manifold(ManifoldArgs {
-        bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
-        prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
-    })
+    match matches.value_of("mysql-blobstore-shardmap") {
+        Some(shardmap) => RemoteBlobstoreArgs::Mysql(MysqlBlobstoreArgs {
+            shardmap: shardmap.to_string(),
+            shard_num: matches
+                .value_of("mysql-blobstore-shard-num")
+                .unwrap()
+                .parse::<usize>()
+                .ok()
+                .and_then(NonZeroUsize::new)
+                .expect("Provided mysql-blobstore-shard-num must be int larger than 0"),
+        }),
+        None => RemoteBlobstoreArgs::Manifold(ManifoldArgs {
+            bucket: matches.value_of("manifold-bucket").unwrap().to_string(),
+            prefix: matches.value_of("manifold-prefix").unwrap().to_string(),
+        }),
+    }
 }
 
 pub fn parse_myrouter_port<'a>(matches: &ArgMatches<'a>) -> Option<u16> {
