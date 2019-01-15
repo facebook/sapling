@@ -17,13 +17,13 @@ use fbwhoami::FbWhoAmI;
 use mononoke_types::BlobstoreBytes;
 use stats::Timeseries;
 
+use dummy::DummyLease;
+use memcache_lock_thrift::LockState;
 use Blobstore;
 use CacheBlobstore;
 use CacheOps;
 use CountedBlobstore;
 use LeaseOps;
-use dummy_lease::DummyLease;
-use memcache_lock_thrift::LockState;
 
 define_stats! {
     prefix = "mononoke.blobstore.memcache";
@@ -89,21 +89,26 @@ fn mc_raw_put(
 }
 
 impl MemcacheOps {
-    pub fn new<S>(backing_store_name: S, backing_store_params: S) -> Result<Self, Error>
-    where
-        S: AsRef<str>,
-    {
+    pub fn new(
+        backing_store_name: impl ToString,
+        backing_store_params: impl ToString,
+    ) -> Result<Self, Error> {
         let hostname = FbWhoAmI::new()?
             .get_name()
             .ok_or(err_msg("No hostname in fbwhoami"))?
             .to_string();
 
-        let backing_store_name = backing_store_name.as_ref();
-        let blob_key = "scm.mononoke.blobstore.".to_string() + backing_store_name.as_ref() + "."
-            + backing_store_params.as_ref();
-        let presence_key = "scm.mononoke.blobstore.presence.".to_string()
-            + backing_store_name.as_ref() + "."
-            + backing_store_params.as_ref();
+        let blob_key = format!(
+            "scm.mononoke.blobstore.{}.{}",
+            backing_store_name.to_string(),
+            backing_store_params.to_string()
+        );
+
+        let presence_key = format!(
+            "scm.mononoke.blobstore.presence.{}.{}",
+            backing_store_name.to_string(),
+            backing_store_params.to_string()
+        );
 
         Ok(Self {
             memcache: MemcacheClient::new(),
@@ -144,14 +149,13 @@ impl MemcacheOps {
     }
 }
 
-pub fn new_memcache_blobstore<T, S>(
+pub fn new_memcache_blobstore<T>(
     blobstore: T,
-    backing_store_name: S,
-    backing_store_params: S,
+    backing_store_name: impl ToString,
+    backing_store_params: impl ToString,
 ) -> Result<CountedBlobstore<CacheBlobstore<MemcacheOps, MemcacheOps, T>>, Error>
 where
     T: Blobstore + Clone,
-    S: AsRef<str>,
 {
     let cache_ops = MemcacheOps::new(backing_store_name, backing_store_params)?;
     Ok(CountedBlobstore::new(
@@ -160,14 +164,13 @@ where
     ))
 }
 
-pub fn new_memcache_blobstore_no_lease<T, S>(
+pub fn new_memcache_blobstore_no_lease<T>(
     blobstore: T,
-    backing_store_name: S,
-    backing_store_params: S,
+    backing_store_name: impl ToString,
+    backing_store_params: impl ToString,
 ) -> Result<CountedBlobstore<CacheBlobstore<MemcacheOps, DummyLease, T>>, Error>
 where
     T: Blobstore + Clone,
-    S: AsRef<str>,
 {
     let cache_ops = MemcacheOps::new(backing_store_name, backing_store_params)?;
     Ok(CountedBlobstore::new(

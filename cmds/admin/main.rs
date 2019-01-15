@@ -597,7 +597,7 @@ fn main() -> Result<()> {
                     let blobstore = new_memcache_blobstore(
                         blobstore,
                         "manifold",
-                        manifold_args.bucket.as_ref(),
+                        manifold_args.bucket,
                     )
                     .unwrap();
                     let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
@@ -607,7 +607,7 @@ fn main() -> Result<()> {
                     let blobstore = new_memcache_blobstore(
                         blobstore,
                         "manifold",
-                        manifold_args.bucket.as_ref(),
+                        manifold_args.bucket,
                     )
                     .unwrap();
                     get_cache(ctx.clone(), &blobstore, key.clone(), mode)

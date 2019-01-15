@@ -92,7 +92,7 @@ pub trait LeaseOps: fmt::Debug + Send + Sync + 'static {
 
 impl<C> CacheOps for Arc<C>
 where
-    C: CacheOps,
+    C: ?Sized + CacheOps,
 {
     fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreBytes>, ()> {
         self.as_ref().get(key)
@@ -124,6 +124,50 @@ where
     }
 }
 
+pub struct CacheOpsUtil {}
+
+impl CacheOpsUtil {
+    pub fn get<C: CacheOps>(
+        cache: &C,
+        key: &str,
+    ) -> impl Future<Item = Option<BlobstoreBytes>, Error = Error> + Send {
+        cache.get(key).or_else(|_| Ok(None))
+    }
+
+    pub fn put_closure<C: CacheOps + Clone>(
+        cache: &C,
+        key: &str,
+    ) -> impl Fn(Option<BlobstoreBytes>) -> Option<BlobstoreBytes> {
+        let key = key.to_string();
+        let cache = cache.clone();
+
+        move |value| {
+            if let Some(ref value) = value {
+                tokio::spawn(cache.put(&key, value.clone()));
+            }
+            value
+        }
+    }
+
+    pub fn put<C: CacheOps + Clone>(
+        cache: &C,
+        key: &str,
+        value: BlobstoreBytes,
+    ) -> impl Future<Item = (), Error = Error> + Send {
+        let key = key.to_string();
+        let cache = cache.clone();
+
+        future::lazy(move || cache.put(&key, value).or_else(|_| Ok(()).into_future()))
+    }
+
+    pub fn is_present<C: CacheOps>(
+        cache: &C,
+        key: &str,
+    ) -> impl Future<Item = bool, Error = Error> + Send {
+        cache.check_present(key).or_else(|_| Ok(false))
+    }
+}
+
 /// A caching layer over a blobstore, using a cache defined by its CacheOps. The idea is that
 /// generic code that any caching layer needs is defined here, while code that's cache-specific
 /// goes into CacheOps
@@ -151,43 +195,6 @@ where
             cache,
             lease,
         }
-    }
-
-    fn cache_get(
-        &self,
-        key: &str,
-    ) -> impl Future<Item = Option<BlobstoreBytes>, Error = Error> + Send {
-        self.cache.get(key).or_else(|_| Ok(None))
-    }
-
-    fn cache_put_closure(
-        &self,
-        key: &str,
-    ) -> impl FnOnce(Option<BlobstoreBytes>) -> Option<BlobstoreBytes> {
-        let key = key.to_string();
-        let cache = self.cache.clone();
-
-        move |value| {
-            if let Some(ref value) = value {
-                tokio::spawn(cache.put(&key, value.clone()));
-            }
-            value
-        }
-    }
-
-    fn cache_put(
-        &self,
-        key: &str,
-        value: BlobstoreBytes,
-    ) -> impl Future<Item = (), Error = Error> + Send {
-        let key = key.to_string();
-        let cache = self.cache.clone();
-
-        future::lazy(move || cache.put(&key, value).or_else(|_| Ok(()).into_future()))
-    }
-
-    fn cache_is_present(&self, key: &str) -> impl Future<Item = bool, Error = Error> + Send {
-        self.cache.check_present(key).or_else(|_| Ok(false))
     }
 
     fn take_put_lease(&self, key: &str) -> impl Future<Item = bool, Error = Error> + Send {
@@ -230,8 +237,8 @@ where
     T: Blobstore + Clone,
 {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        let cache_get = self.cache_get(&key);
-        let cache_put = self.cache_put_closure(&key);
+        let cache_get = CacheOpsUtil::get(&self.cache, &key);
+        let cache_put = CacheOpsUtil::put_closure(&self.cache, &key);
         let blobstore_get = future::lazy({
             let blobstore = self.blobstore.clone();
             move || blobstore.get(ctx, key)
@@ -252,7 +259,7 @@ where
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
         let can_put = self.take_put_lease(&key);
-        let cache_put = self.cache_put(&key, value.clone())
+        let cache_put = CacheOpsUtil::put(&self.cache, &key, value.clone())
             .join(future::lazy({
                 let lease = self.lease.clone();
                 let key = key.clone();
@@ -283,7 +290,7 @@ where
     }
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
-        let cache_check = self.cache_is_present(&key);
+        let cache_check = CacheOpsUtil::is_present(&self.cache, &key);
         let blobstore_check = future::lazy({
             let blobstore = self.blobstore.clone();
             move || blobstore.is_present(ctx, key)
@@ -312,7 +319,7 @@ where
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        let cache_get = self.cache_get(&key);
+        let cache_get = CacheOpsUtil::get(&self.cache, &key);
         let blobstore_get = self.blobstore.get(ctx, key);
 
         cache_get
@@ -327,7 +334,7 @@ where
     }
 
     fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.cache_get(&key).boxify()
+        CacheOpsUtil::get(&self.cache, &key).boxify()
     }
 }
 

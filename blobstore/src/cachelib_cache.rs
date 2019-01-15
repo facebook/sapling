@@ -15,11 +15,11 @@ use futures_ext::{BoxFuture, FutureExt};
 use locking_cache::CacheOps;
 use mononoke_types::BlobstoreBytes;
 
-use Blobstore;
 use counted_blobstore::CountedBlobstore;
-use dummy_lease::DummyLease;
+use dummy::DummyLease;
 use in_process_lease::InProcessLease;
 use locking_cache::CacheBlobstore;
+use Blobstore;
 
 /// A caching layer over an existing blobstore, backed by cachelib
 #[derive(Clone)]

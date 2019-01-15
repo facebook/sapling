@@ -7,7 +7,9 @@
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 
-use LeaseOps;
+use mononoke_types::BlobstoreBytes;
+
+use {CacheOps, LeaseOps};
 
 /// A dummy implementation of LeaseOps that meets the letter of the spec, but uselessly
 #[derive(Clone, Debug)]
@@ -24,5 +26,23 @@ impl LeaseOps for DummyLease {
 
     fn release_lease(&self, _key: &str, _put_success: bool) -> BoxFuture<(), ()> {
         Ok(()).into_future().boxify()
+    }
+}
+
+/// A dummy implementation of CacheOps that meets the letter of the spec, but uselessly
+#[derive(Clone, Debug)]
+pub struct DummyCache {}
+
+impl CacheOps for DummyCache {
+    fn get(&self, _key: &str) -> BoxFuture<Option<BlobstoreBytes>, ()> {
+        Ok(None).into_future().boxify()
+    }
+
+    fn put(&self, _key: &str, _value: BlobstoreBytes) -> BoxFuture<(), ()> {
+        Ok(()).into_future().boxify()
+    }
+
+    fn check_present(&self, _key: &str) -> BoxFuture<bool, ()> {
+        Ok(false).into_future().boxify()
     }
 }
