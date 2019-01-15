@@ -5,8 +5,6 @@
 
 #![deny(warnings)]
 
-pub use failure::Error;
-
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(
@@ -33,5 +31,3 @@ pub enum ErrorKind {
     #[fail(display = "error while decoding watchman pdu {}", _0)]
     WatchmanError(String),
 }
-
-pub type Result<T> = ::std::result::Result<T, Error>;

@@ -3,10 +3,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use failure::Fallible;
 use serde;
 use serde_json;
 use std::path::{Path, PathBuf};
-use watchman_client::error::*;
 use watchman_client::queries::*;
 use watchman_client::transport::Transport;
 
@@ -34,7 +34,7 @@ where
 
     /// Ask watchman to start following the files in the repo_path
 
-    pub fn watch_project(&mut self) -> Result<WatchProjectResponse> {
+    pub fn watch_project(&mut self) -> Fallible<WatchProjectResponse> {
         self.transport.watch_project(&self.repo_path)
     }
 
@@ -46,7 +46,7 @@ where
         sync_timeout: Option<u32>,             // should come from config
         empty_on_fresh_instance: Option<bool>, // should come from config
         clock: Option<String>,
-    ) -> Result<QueryResponse> {
+    ) -> Fallible<QueryResponse> {
         self.transport.query(
             QueryRequestParams {
                 sync_timeout,
@@ -75,7 +75,7 @@ where
         sync_timeout: Option<u32>,             // should come from config
         empty_on_fresh_instance: Option<bool>, // should come from config
         clock: Option<String>,
-    ) -> Result<QueryResponse> {
+    ) -> Fallible<QueryResponse> {
         self.transport.query(
             QueryRequestParams {
                 sync_timeout,
@@ -94,7 +94,7 @@ where
 
     /// Dispatching the state-enter and state-leave signals for hg.filemerge to the watchman service
 
-    pub fn state_filemerge_enter<P: AsRef<Path>>(&mut self, path: P) -> Result<StateEnterResponse>
+    pub fn state_filemerge_enter<P: AsRef<Path>>(&mut self, path: P) -> Fallible<StateEnterResponse>
     where
         P: serde::Serialize,
     {
@@ -105,7 +105,7 @@ where
         self.transport.state_enter(params, &self.repo_path)
     }
 
-    pub fn state_filemerge_leave<P: AsRef<Path>>(&mut self, path: P) -> Result<StateLeaveResponse>
+    pub fn state_filemerge_leave<P: AsRef<Path>>(&mut self, path: P) -> Fallible<StateLeaveResponse>
     where
         P: serde::Serialize,
     {
@@ -123,7 +123,7 @@ where
         &mut self,
         state_name: &'static str,
         state_meta: serde_json::Value,
-    ) -> Result<StateEnterResponse> {
+    ) -> Fallible<StateEnterResponse> {
         let params = StateEnterParams {
             name: Some(state_name.into()),
             metadata: Some(state_meta),
@@ -135,7 +135,7 @@ where
         &mut self,
         state_name: &'static str,
         state_meta: serde_json::Value,
-    ) -> Result<StateLeaveResponse> {
+    ) -> Fallible<StateLeaveResponse> {
         let params = StateLeaveParams {
             name: Some(state_name.into()),
             metadata: Some(state_meta),
