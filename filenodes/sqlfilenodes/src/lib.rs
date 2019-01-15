@@ -38,6 +38,7 @@ use filenodes::{FilenodeInfo, Filenodes};
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use mononoke_types::{hash, RepositoryId};
 pub use sql_ext::SqlConstructors;
+use sql_ext::{create_myrouter_connections, PoolSizeConfig, SqlConnections};
 
 use errors::ErrorKind;
 
@@ -179,17 +180,19 @@ impl SqlFilenodes {
         let shards = 1..=shard_count;
 
         shards.fold(new, |mut new, shard_id| {
-            let mut builder = sql::myrouter::Builder::new();
-            builder
-                .tier(format!("{}.{}", tier.to_string(), shard_id))
-                .port(port);
+            let SqlConnections {
+                write_connection,
+                read_connection,
+                read_master_connection,
+            } = create_myrouter_connections(
+                format!("{}.{}", tier.to_string(), shard_id),
+                port,
+                PoolSizeConfig::for_sharded_connection(),
+            );
 
-            builder.tie_break(sql::myrouter::TieBreak::SLAVE_FIRST);
-            new.read_connection.push(builder.build_read_only());
-
-            builder.service_type(sql::myrouter::ServiceType::MASTER);
-            new.read_master_connection.push(builder.build_read_only());
-            new.write_connection.push(builder.build_read_write());
+            new.write_connection.push(write_connection);
+            new.read_connection.push(read_connection);
+            new.read_master_connection.push(read_master_connection);
 
             new
         })
