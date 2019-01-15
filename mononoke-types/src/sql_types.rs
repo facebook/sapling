@@ -4,11 +4,14 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use hash::Blake2;
-use sql::mysql_async::{FromValueError, Value, prelude::{ConvIr, FromValue}};
-
 use datetime::Timestamp;
+use hash::Blake2;
 use repo::RepositoryId;
+use sql::mysql_async::{
+    from_value_opt,
+    prelude::{ConvIr, FromValue},
+    FromValueError, Value,
+};
 use typed_hash::ChangesetId;
 
 type FromValueResult<T> = ::std::result::Result<T, FromValueError>;
@@ -50,10 +53,7 @@ impl From<Timestamp> for Value {
 
 impl ConvIr<Timestamp> for Timestamp {
     fn new(v: Value) -> FromValueResult<Self> {
-        match v {
-            Value::Int(ts) => Ok(Timestamp::from_timestamp_nanos(ts)),
-            v => Err(FromValueError(v)),
-        }
+        Ok(Timestamp::from_timestamp_nanos(from_value_opt(v)?))
     }
 
     fn commit(self) -> Self {
@@ -77,11 +77,7 @@ impl From<RepositoryId> for Value {
 
 impl ConvIr<RepositoryId> for RepositoryId {
     fn new(v: Value) -> FromValueResult<Self> {
-        match v {
-            Value::UInt(id) => Ok(RepositoryId::new(id as i32)),
-            Value::Int(id) => Ok(RepositoryId::new(id as i32)), // sqlite always produces `int`
-            v => Err(FromValueError(v)),
-        }
+        Ok(RepositoryId::new(from_value_opt(v)?))
     }
 
     fn commit(self) -> Self {

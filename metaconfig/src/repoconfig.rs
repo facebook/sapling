@@ -11,6 +11,7 @@ use bookmarks::Bookmark;
 use errors::*;
 use failure::ResultExt;
 use sql::mysql_async::{
+    from_value_opt,
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
@@ -247,11 +248,7 @@ impl From<BlobstoreId> for Value {
 
 impl ConvIr<BlobstoreId> for BlobstoreId {
     fn new(v: Value) -> std::result::Result<Self, FromValueError> {
-        match v {
-            Value::UInt(id) => Ok(BlobstoreId(id)),
-            Value::Int(id) => Ok(BlobstoreId(id as u64)), // sqlite always produces `int`
-            _ => Err(FromValueError(v)),
-        }
+        Ok(BlobstoreId(from_value_opt(v)?))
     }
     fn commit(self) -> Self {
         self
