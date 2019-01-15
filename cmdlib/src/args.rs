@@ -276,10 +276,9 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {
 pub fn open_sql_changesets(matches: &ArgMatches) -> Result<SqlChangesets> {
     let (_, repo_type) = find_repo_type(matches)?;
     match repo_type {
-        RepoType::BlobFiles(ref data_dir) => {
-            SqlChangesets::with_sqlite_path(data_dir.join("changesets"))
-        }
-        RepoType::BlobRocks(ref data_dir) => {
+        RepoType::BlobFiles(ref data_dir)
+        | RepoType::BlobRocks(ref data_dir)
+        | RepoType::BlobSqlite(ref data_dir) => {
             SqlChangesets::with_sqlite_path(data_dir.join("changesets"))
         }
         RepoType::BlobRemote { ref db_address, .. } => {
@@ -530,6 +529,10 @@ fn open_repo_internal<'a>(
         RepoType::BlobRocks(ref data_dir) => {
             setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
             logger.new(o!["BlobRepo:Rocksdb" => data_dir.to_string_lossy().into_owned()])
+        }
+        RepoType::BlobSqlite(ref data_dir) => {
+            setup_repo_dir(&data_dir, create).expect("Setting up sqlite blobrepo failed");
+            logger.new(o!["BlobRepo:Sqlite" => data_dir.to_string_lossy().into_owned()])
         }
         RepoType::BlobRemote {
             ref blobstores_args,

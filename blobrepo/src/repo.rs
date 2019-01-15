@@ -78,6 +78,7 @@ use post_commit::{self, PostCommitQueue};
 use repo_commit::*;
 use rocksblob::Rocksblob;
 use rocksdb;
+use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use BlobManifest;
 use HgBlobChangeset;
@@ -238,6 +239,13 @@ impl BlobRepo {
             is_present_roundtrips,
             assert_present_roundtrips,
         );
+
+        Self::new_local(logger, path, Arc::new(blobstore), repoid)
+    }
+
+    pub fn new_sqlite(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
+        let blobstore = Sqlblob::with_sqlite_path(repoid, path.join("blobs"))
+            .chain_err(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
 
         Self::new_local(logger, path, Arc::new(blobstore), repoid)
     }

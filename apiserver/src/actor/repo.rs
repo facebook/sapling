@@ -19,21 +19,21 @@ use sql::myrouter;
 use tokio::runtime::TaskExecutor;
 
 use api;
-use blobrepo::{BlobRepo, get_sha256_alias, get_sha256_alias_key};
+use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
 use context::CoreContext;
-use mercurial_types::HgManifestId;
 use mercurial_types::manifest::Content;
+use mercurial_types::HgManifestId;
 use metaconfig::repoconfig::RepoConfig;
-use metaconfig::repoconfig::RepoType::{BlobFiles, BlobRemote, BlobRocks};
+use metaconfig::repoconfig::RepoType::{BlobFiles, BlobRemote, BlobRocks, BlobSqlite};
 use mononoke_types::{FileContents, RepositoryId};
 use reachabilityindex::{GenerationNumberBFS, ReachabilityIndex};
 
 use errors::ErrorKind;
 use from_string as FS;
 
-use super::{MononokeRepoQuery, MononokeRepoResponse};
 use super::lfs::{build_response, BatchRequest};
 use super::model::{Entry, EntryWithSizeAndContentHash};
+use super::{MononokeRepoQuery, MononokeRepoResponse};
 
 pub struct MononokeRepo {
     repo: Arc<BlobRepo>,
@@ -54,6 +54,9 @@ impl MononokeRepo {
                 .into_future()
                 .left_future(),
             BlobRocks(path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid)
+                .into_future()
+                .left_future(),
+            BlobSqlite(path) => BlobRepo::new_sqlite(logger.clone(), &path, repoid)
                 .into_future()
                 .left_future(),
             BlobRemote {

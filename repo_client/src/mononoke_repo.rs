@@ -4,30 +4,25 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::fmt::{self, Debug};
-use std::sync::Arc;
-use std::time::Duration;
-
+use blobrepo::BlobRepo;
+use blobstore::{Blobstore, PrefixBlobstore};
+use client::streaming_clone::SqlStreamingChunksFetcher;
+use errors::*;
 use failure::err_msg;
 use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
-use rand::distributions::{Distribution, LogNormal};
-use rand::prelude::*;
-use rand_hc::Hc128Rng;
-use slog::Logger;
-
-use scribe_cxx::ScribeCxxClient;
-
-use blobrepo::BlobRepo;
-use blobstore::{Blobstore, PrefixBlobstore};
 use hooks::HookManager;
 use metaconfig::repoconfig::{RepoReadOnly, RepoType};
 use metaconfig::{LfsParams, PushrebaseParams};
 use mononoke_types::RepositoryId;
-
-use errors::*;
-
-use client::streaming_clone::SqlStreamingChunksFetcher;
+use rand::distributions::{Distribution, LogNormal};
+use rand::prelude::*;
+use rand_hc::Hc128Rng;
+use scribe_cxx::ScribeCxxClient;
+use slog::Logger;
+use std::fmt::{self, Debug};
+use std::sync::Arc;
+use std::time::Duration;
 
 struct LogNormalGenerator {
     rng: Hc128Rng,
@@ -111,11 +106,15 @@ pub fn open_blobrepo(
     myrouter_port: Option<u16>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     use metaconfig::repoconfig::RepoType::*;
+
     match repotype {
         BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)
             .into_future()
             .left_future(),
         BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)
+            .into_future()
+            .left_future(),
+        BlobSqlite(ref path) => BlobRepo::new_sqlite(logger, &path, repoid)
             .into_future()
             .left_future(),
         BlobRemote {

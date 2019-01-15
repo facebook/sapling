@@ -276,6 +276,9 @@ pub enum RepoType {
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database
     BlobRocks(PathBuf),
+    /// Blob repository with path pointing to on-disk files with data. The files are stored in a
+    /// Sqlite database
+    BlobSqlite(PathBuf),
     /// Blob repository with path pointing to the directory where a server socket is going to be.
     BlobRemote {
         /// Remote blobstores arguments
@@ -463,6 +466,7 @@ impl RepoConfigs {
         let repotype = match this.repotype {
             RawRepoType::Files => RepoType::BlobFiles(get_path(&this)?),
             RawRepoType::BlobRocks => RepoType::BlobRocks(get_path(&this)?),
+            RawRepoType::BlobSqlite => RepoType::BlobSqlite(get_path(&this)?),
             RawRepoType::BlobRemote => {
                 let remote_blobstores = this.remote_blobstore.ok_or(ErrorKind::InvalidConfig(
                     "remote blobstores must be specified".into(),
@@ -694,6 +698,8 @@ enum RawRepoType {
     Files,
     #[serde(rename = "blob:rocks")]
     BlobRocks,
+    #[serde(rename = "blob:sqlite")]
+    BlobSqlite,
     #[serde(rename = "blob:remote")]
     BlobRemote,
     #[serde(rename = "blob:testdelay")]

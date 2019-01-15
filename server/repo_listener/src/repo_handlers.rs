@@ -174,7 +174,8 @@ pub fn repo_handlers(
                             let phases_hint: Arc<Phases> = match repotype {
                                 RepoType::BlobFiles(ref data_dir)
                                 | RepoType::BlobRocks(ref data_dir)
-                                | RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
+                                | RepoType::TestBlobDelayRocks(ref data_dir, ..)
+                                | RepoType::BlobSqlite(ref data_dir) => {
                                     let storage = Arc::new(
                                         SqlPhases::with_sqlite_path(data_dir.join("phases"))
                                             .expect("unable to initialize sqlite db for phases"),
