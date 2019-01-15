@@ -20,20 +20,17 @@ extern crate sql_ext;
 #[macro_use]
 extern crate stats;
 
-use std::sync::Arc;
-
-use context::CoreContext;
-use sql::Connection;
-pub use sql_ext::SqlConstructors;
-
 use cloned::cloned;
+use context::CoreContext;
 use failure::{format_err, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use metaconfig::BlobstoreId;
 use mononoke_types::{DateTime, RepositoryId, Timestamp};
-
+use sql::Connection;
+pub use sql_ext::SqlConstructors;
 use stats::Timeseries;
+use std::sync::Arc;
 
 define_stats! {
     prefix = "mononoke.blobstore_sync_queue";
@@ -74,6 +71,7 @@ pub trait BlobstoreSyncQueue: Send + Sync {
     fn iter(
         &self,
         ctx: CoreContext,
+        repo_id: RepositoryId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error>;
@@ -96,10 +94,11 @@ impl BlobstoreSyncQueue for Arc<BlobstoreSyncQueue> {
     fn iter(
         &self,
         ctx: CoreContext,
+        repo_id: RepositoryId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
-        (**self).iter(ctx, older_than, limit)
+        (**self).iter(ctx, repo_id, older_than, limit)
     }
 
     fn del(&self, ctx: CoreContext, entries: Vec<BlobstoreSyncQueueEntry>) -> BoxFuture<(), Error> {
@@ -147,7 +146,7 @@ queries! {
          FROM blobstore_sync_queue"
     }
 
-    read GetRangeOfEntries(older_than: Timestamp, limit: usize) -> (
+    read GetRangeOfEntries(repo_id: RepositoryId, older_than: Timestamp, limit: usize) -> (
         RepositoryId,
         String,
         BlobstoreId,
@@ -156,7 +155,8 @@ queries! {
     ) {
         "SELECT repo_id, blobstore_key, blobstore_id, add_timestamp, id
          FROM blobstore_sync_queue
-         WHERE add_timestamp >= {older_than}
+         WHERE repo_id = {repo_id}
+         AND add_timestamp <= {older_than}
          ORDER BY id
          LIMIT {limit}"
     }
@@ -208,33 +208,40 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         InsertEntry::query(
             &self.write_connection,
             &[(&repo_id, &blobstore_key, &blobstore_id, &timestamp.into())],
-        ).map(|result| result.affected_rows() == 1)
-            .boxify()
+        )
+        .map(|result| result.affected_rows() == 1)
+        .boxify()
     }
 
     fn iter(
         &self,
         _ctx: CoreContext,
+        repo_id: RepositoryId,
         older_than: DateTime,
         limit: usize,
     ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
         STATS::iters.add_value(1);
         // query
-        GetRangeOfEntries::query(&self.read_master_connection, &older_than.into(), &limit)
-            .map(|rows| {
-                rows.into_iter()
-                    .map(|(repo_id, blobstore_key, blobstore_id, timestamp, id)| {
-                        BlobstoreSyncQueueEntry {
-                            repo_id,
-                            blobstore_key,
-                            blobstore_id,
-                            timestamp: timestamp.into(),
-                            id: Some(id),
-                        }
-                    })
-                    .collect()
-            })
-            .boxify()
+        GetRangeOfEntries::query(
+            &self.read_master_connection,
+            &repo_id,
+            &older_than.into(),
+            &limit,
+        )
+        .map(|rows| {
+            rows.into_iter()
+                .map(|(repo_id, blobstore_key, blobstore_id, timestamp, id)| {
+                    BlobstoreSyncQueueEntry {
+                        repo_id,
+                        blobstore_key,
+                        blobstore_id,
+                        timestamp: timestamp.into(),
+                        id: Some(id),
+                    }
+                })
+                .collect()
+        })
+        .boxify()
     }
 
     fn del(

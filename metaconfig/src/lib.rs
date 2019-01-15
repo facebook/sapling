@@ -37,7 +37,7 @@ pub mod repoconfig;
 
 pub use repoconfig::{
     BlobstoreId, CacheWarmupParams, LfsParams, ManifoldArgs, MysqlBlobstoreArgs, PushrebaseParams,
-    RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType,
+    RemoteBlobstoreArgs, RepoConfig, RepoConfigs, RepoReadOnly, RepoType,
 };
 
 pub use errors::{Error, ErrorKind};

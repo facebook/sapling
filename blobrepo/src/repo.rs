@@ -359,10 +359,10 @@ impl BlobRepo {
                         .map(|blobstore| -> Arc<Blobstore> { Arc::new(blobstore) })
                         .boxify()
                 }
-                RemoteBlobstoreArgs::Mysql(ref args) => {
+                RemoteBlobstoreArgs::Mysql(args) => {
                     let blobstore: Arc<Blobstore> = Arc::new(Sqlblob::with_myrouter(
                         repoid,
-                        &args.shardmap,
+                        args.shardmap,
                         myrouter_port,
                         args.shard_num,
                     ));

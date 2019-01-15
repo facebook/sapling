@@ -511,14 +511,18 @@ pub fn init_cachelib<'a>(matches: &ArgMatches<'a>) {
     .unwrap();
 }
 
-fn find_repo_type<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoType)> {
-    let repo_id = get_repo_id(matches);
-
+pub fn read_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     let config_path = matches
         .value_of("mononoke-config-path")
         .expect("Mononoke config path must be specified");
 
-    let configs = RepoConfigs::read_configs(config_path)?;
+    RepoConfigs::read_configs(config_path)
+}
+
+fn find_repo_type<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoType)> {
+    let repo_id = get_repo_id(matches);
+
+    let configs = read_configs(matches)?;
     let repo_config = configs
         .repos
         .into_iter()

@@ -53,10 +53,16 @@ fn test_simple() {
     assert_eq!(entries.len(), 2);
 
     // iter
-    let some_entries = rt.block_on(queue.iter(ctx.clone(), t0, 1))
+    let some_entries = rt
+        .block_on(queue.iter(ctx.clone(), repo_id, t1, 1))
         .expect("DateTime range iteration faield");
     assert_eq!(some_entries.len(), 1);
-    let entries = rt.block_on(queue.iter(ctx.clone(), t0, 100))
+    let some_entries = rt
+        .block_on(queue.iter(ctx.clone(), repo_id, t0, 100))
+        .expect("DateTime range iteration faield");
+    assert_eq!(some_entries.len(), 1);
+    let entries = rt
+        .block_on(queue.iter(ctx.clone(), repo_id, t1, 100))
         .expect("Iterating over entries failed");
     assert_eq!(entries.len(), 2);
 
@@ -67,7 +73,8 @@ fn test_simple() {
         .expect("Failed to remove entries");
 
     // iter
-    let entries = rt.block_on(queue.iter(ctx.clone(), t0, 100))
+    let entries = rt
+        .block_on(queue.iter(ctx.clone(), repo_id, t1, 100))
         .expect("Iterating over entries failed");
     assert_eq!(entries.len(), 0)
 }
