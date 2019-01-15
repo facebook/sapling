@@ -4,6 +4,7 @@ set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+find_package(glog CONFIG REQUIRED)
 find_package(folly CONFIG REQUIRED)
 find_package(fizz CONFIG REQUIRED)
 find_package(wangle CONFIG REQUIRED)
