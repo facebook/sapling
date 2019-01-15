@@ -5,9 +5,10 @@
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use memmap::{Mmap, MmapOptions};
-use std::fs::File;
 use std::fs::remove_file;
+use std::fs::File;
 use std::io::{Cursor, Read, Write};
+use std::mem::drop;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -38,7 +39,8 @@ impl HistoryPackVersion {
             _ => Err(HistoryPackError(format!(
                 "invalid history pack version number '{:?}'",
                 value
-            )).into()),
+            ))
+            .into()),
         }
     }
 }
@@ -183,12 +185,12 @@ impl HistoryPack {
 
         let index_path = path.with_extension("histidx");
         Ok(HistoryPack {
-            mmap: mmap,
-            version: version,
+            mmap,
+            version,
             index: HistoryIndex::new(&index_path)?,
             base_path: Arc::new(base_path),
-            pack_path: pack_path,
-            index_path: index_path,
+            pack_path,
+            index_path,
         })
     }
 
@@ -241,11 +243,13 @@ impl HistoryStore for HistoryPack {
             key,
             |k, _seen| self.get_node_info(k),
             AncestorTraversal::Partial,
-        ).collect()
+        )
+        .collect()
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
-        Ok(keys.iter()
+        Ok(keys
+            .iter()
             .filter(|k| self.index.get_node_entry(k).is_err())
             .map(|k| k.clone())
             .collect())
@@ -264,7 +268,12 @@ impl IterableStore for HistoryPack {
 }
 
 impl Repackable for HistoryPack {
-    fn delete(&self) -> Result<()> {
+    fn delete(self) -> Result<()> {
+        // On some platforms, removing a file can fail if it's still opened or mapped, let's make
+        // sure we close and unmap them before deletion.
+        drop(self.mmap);
+        drop(self.index);
+
         let result1 = remove_file(&self.pack_path);
         let result2 = remove_file(&self.index_path);
         // Only check for errors after both have run. That way if pack_path doesn't exist,

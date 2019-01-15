@@ -75,13 +75,14 @@
 use byteorder::{BigEndian, ReadBytesExt};
 use lz4_pyframe::decompress;
 use memmap::{Mmap, MmapOptions};
-use std::{fmt, result};
 use std::cell::RefCell;
 use std::fs::{remove_file, File};
 use std::io::{Cursor, Read};
+use std::mem::drop;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::{fmt, result};
 
 use dataindex::{DataIndex, DeltaBaseOffset};
 use datastore::{DataStore, Delta, Metadata};
@@ -230,7 +231,8 @@ impl<'a> DataEntry<'a> {
 
 impl<'a> fmt::Debug for DataEntry<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
-        let delta = self.delta()
+        let delta = self
+            .delta()
             .unwrap_or_else(|e| Rc::from(format!("{:?}", e).as_ref()));
         write!(
             f,
@@ -265,12 +267,12 @@ impl DataPack {
         let version = DataPackVersion::new(mmap[0])?;
         let index_path = path.with_extension("dataidx");
         Ok(DataPack {
-            mmap: mmap,
-            version: version,
+            mmap,
+            version,
             index: DataIndex::new(&index_path)?,
             base_path: Arc::new(base_path),
-            pack_path: pack_path,
-            index_path: index_path,
+            pack_path,
+            index_path,
         })
     }
 
@@ -344,7 +346,8 @@ impl DataStore for DataPack {
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
-        Ok(keys.iter()
+        Ok(keys
+            .iter()
             .filter(|k| self.index.get_entry(k.node()).is_err())
             .map(|k| k.clone())
             .collect())
@@ -358,7 +361,12 @@ impl IterableStore for DataPack {
 }
 
 impl Repackable for DataPack {
-    fn delete(&self) -> Result<()> {
+    fn delete(self) -> Result<()> {
+        // On some platforms, removing a file can fail if it's still opened or mapped, let's make
+        // sure we close and unmap them before deletion.
+        drop(self.mmap);
+        drop(self.index);
+
         let result1 = remove_file(&self.pack_path);
         let result2 = remove_file(&self.index_path);
         // Only check for errors after both have run. That way if pack_path doesn't exist,

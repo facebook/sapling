@@ -14,7 +14,7 @@ use revisionstore::repack::{RepackOutputType, RepackResult, Repackable};
 
 pub trait RepackablePyExt {
     fn mark_ledger(&self, py: Python, py_store: &PyObject, ledger: &PyObject) -> PyResult<()>;
-    fn cleanup(&self, py: Python, ledger: &PyObject) -> PyResult<()>;
+    fn cleanup(self, py: Python, ledger: &PyObject) -> PyResult<()>;
 }
 
 impl<T: Repackable> RepackablePyExt for T {
@@ -35,7 +35,7 @@ impl<T: Repackable> RepackablePyExt for T {
         Ok(())
     }
 
-    fn cleanup(&self, py: Python, ledger: &PyObject) -> PyResult<()> {
+    fn cleanup(self, py: Python, ledger: &PyObject) -> PyResult<()> {
         let py_entries = ledger.getattr(py, "entries")?;
         let packed_entries = py_entries.cast_as::<PyDict>(py)?;
 

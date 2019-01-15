@@ -52,7 +52,7 @@ impl RepackResult {
 }
 
 pub trait Repackable: IterableStore {
-    fn delete(&self) -> Result<()>;
+    fn delete(self) -> Result<()>;
     fn id(&self) -> &Arc<PathBuf>;
     fn kind(&self) -> RepackOutputType;
 
@@ -69,7 +69,10 @@ pub trait Repackable: IterableStore {
         )
     }
 
-    fn cleanup(&self, result: &RepackResult) -> Result<()> {
+    fn cleanup(self, result: &RepackResult) -> Result<()>
+    where
+        Self: Sized,
+    {
         let owned_keys = self.iter().collect::<Result<HashSet<Key>>>()?;
         if owned_keys.is_subset(result.packed_keys())
             && !result.created_packs().contains(self.id().as_ref())
@@ -173,17 +176,18 @@ mod tests {
     use historystore::Ancestors;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
-    use std::cell::RefCell;
     use std::collections::HashMap;
     use std::rc::Rc;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use tempfile::TempDir;
     use types::node::Node;
 
+    #[derive(Clone)]
     struct FakeStore {
         pub kind: RepackOutputType,
         pub id: Arc<PathBuf>,
         pub keys: Vec<Key>,
-        pub deleted: RefCell<bool>,
+        pub deleted: Rc<AtomicBool>,
     }
 
     impl IterableStore for FakeStore {
@@ -193,9 +197,8 @@ mod tests {
     }
 
     impl Repackable for FakeStore {
-        fn delete(&self) -> Result<()> {
-            let mut deleted = self.deleted.borrow_mut();
-            *deleted = true;
+        fn delete(self) -> Result<()> {
+            self.deleted.store(true, Ordering::Release);
             Ok(())
         }
 
@@ -211,6 +214,7 @@ mod tests {
     #[test]
     fn test_repackable() {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let is_deleted = Rc::new(AtomicBool::new(false));
         let store = FakeStore {
             kind: RepackOutputType::Data,
             id: Arc::new(PathBuf::from("foo/bar")),
@@ -218,7 +222,7 @@ mod tests {
                 Key::new(Box::new([0]), Node::random(&mut rng)),
                 Key::new(Box::new([0]), Node::random(&mut rng)),
             ],
-            deleted: RefCell::new(false),
+            deleted: is_deleted.clone(),
         };
 
         let mut marked: Vec<(Arc<PathBuf>, RepackOutputType, Key)> = vec![];
@@ -233,6 +237,8 @@ mod tests {
             ]
         );
 
+        let store2 = store.clone();
+
         // Test cleanup where the packed keys don't some store keys
         let mut packed_keys = HashSet::new();
         packed_keys.insert(store.keys[0].clone());
@@ -243,7 +249,9 @@ mod tests {
                 created_packs.clone(),
             ))
             .unwrap();
-        assert_eq!(*store.deleted.borrow(), false);
+        assert_eq!(is_deleted.load(Ordering::Acquire), false);
+
+        let store = store2.clone();
 
         // Test cleanup where all keys are packe but created includes this store
         packed_keys.insert(store.keys[1].clone());
@@ -254,7 +262,9 @@ mod tests {
                 created_packs.clone(),
             ))
             .unwrap();
-        assert_eq!(*store.deleted.borrow(), false);
+        assert_eq!(is_deleted.load(Ordering::Acquire), false);
+
+        let store = store2.clone();
 
         // Test cleanup where all keys are packed and created doesn't include this store
         created_packs.clear();
@@ -264,7 +274,7 @@ mod tests {
                 created_packs.clone(),
             ))
             .unwrap();
-        assert_eq!(*store.deleted.borrow(), true);
+        assert_eq!(is_deleted.load(Ordering::Acquire), true);
     }
 
     #[test]
