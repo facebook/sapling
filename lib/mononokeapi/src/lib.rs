@@ -15,11 +15,11 @@ extern crate tokio;
 #[cfg(test)]
 extern crate users;
 
-use failure::Error;
+use failure::{Error, Fallible};
 use futures::{Future, Stream};
 use http::uri::{PathAndQuery, Uri};
-use hyper::{Body, Client};
 use hyper::client::HttpConnector;
+use hyper::{Body, Client};
 use hyper_tls::HttpsConnector;
 use native_tls::{Identity, TlsConnector};
 use openssl::{pkcs12::Pkcs12, pkey::PKey, x509::X509};
@@ -28,8 +28,6 @@ use tokio::runtime::Runtime;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-
-type Result<T> = std::result::Result<T, Error>;
 
 mod paths {
     use super::*;
@@ -66,7 +64,7 @@ impl MononokeClient {
     /// via a proxy (e.g., through a VIP). As such, users must pass valid client credentials
     /// to the client constructor. (Specifically, a path to a PEM file containing the client
     /// certificate and private key.)
-    pub fn new<P: AsRef<Path>>(base_uri: Uri, client_creds: Option<P>) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(base_uri: Uri, client_creds: Option<P>) -> Fallible<Self> {
         let creds = match client_creds {
             Some(path) => Some(read_credentials(path)?),
             None => None,
@@ -78,7 +76,7 @@ impl MononokeClient {
     /// Hit the API server's /health_check endpoint.
     /// Returns Ok(()) if the expected response is received, or an Error otherwise
     /// (e.g., if there was a connection problem or an unexpected repsonse).
-    pub fn health_check(&self) -> Result<()> {
+    pub fn health_check(&self) -> Fallible<()> {
         let uri = self.build_uri(&paths::HEALTH_CHECK)?;
         let fut = self.client.get(uri).map_err(Error::from).and_then(|res| {
             let status = res.status();
@@ -105,7 +103,7 @@ impl MononokeClient {
 
     /// Construct a URI using this client's configured hostport as the
     /// base URI. The scheme will always be HTTPS.
-    fn build_uri(&self, path: &PathAndQuery) -> Result<Uri> {
+    fn build_uri(&self, path: &PathAndQuery) -> Fallible<Uri> {
         let mut parts = self.base_uri.clone().into_parts();
         parts.path_and_query = Some(path.clone());
         Ok(Uri::from_parts(parts)?)
@@ -115,7 +113,7 @@ impl MononokeClient {
 /// Read an X.509 certificate and private key from a PEM file and
 /// convert them to a native_tls::Identity. Both the certificate
 /// and key must be in the same PEM file.
-fn read_credentials(path: impl AsRef<Path>) -> Result<Identity> {
+fn read_credentials(path: impl AsRef<Path>) -> Fallible<Identity> {
     let mut pem_bytes = Vec::new();
     File::open(path)?.read_to_end(&mut pem_bytes)?;
 
@@ -138,7 +136,7 @@ fn read_credentials(path: impl AsRef<Path>) -> Result<Identity> {
 /// (certificate + private key) which, if provided, will be used for TLS mutual authentication.
 fn build_client(
     client_id: Option<Identity>,
-) -> Result<Client<HttpsConnector<HttpConnector>, Body>> {
+) -> Fallible<Client<HttpsConnector<HttpConnector>, Body>> {
     let mut builder = TlsConnector::builder();
     if let Some(id) = client_id {
         let _ = builder.identity(id);
@@ -172,7 +170,8 @@ mod tests {
     fn get_creds_path() -> PathBuf {
         let uid = get_current_uid();
         let user = get_user_by_uid(uid).expect(&format!("uid {} not found", uid));
-        let name = user.name()
+        let name = user
+            .name()
             .to_str()
             .expect(&format!("username {:?} is not valid UTF-8", user.name()));
         PathBuf::from(format!(
@@ -183,7 +182,7 @@ mod tests {
 
     #[test]
     #[ignore] // Talks to production Mononoke; ignore by default.
-    fn health_check() -> Result<()> {
+    fn health_check() -> Fallible<()> {
         init_client().health_check()
     }
 }
