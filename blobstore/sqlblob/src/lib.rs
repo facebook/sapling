@@ -22,15 +22,16 @@ extern crate rust_thrift;
 #[macro_use]
 extern crate sql;
 extern crate sql_ext;
-#[cfg(test)]
 extern crate tokio;
 extern crate twox_hash;
 
 extern crate sqlblob_thrift;
 
+mod cache;
 mod store;
 
-use blobstore::Blobstore;
+use blobstore::{dummy::DummyCache, Blobstore, MemcacheOps};
+use cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
 use cloned::cloned;
 use context::CoreContext;
 use failure::{format_err, Error, Result};
@@ -70,6 +71,8 @@ fn i32_to_non_zero_usize(val: i32) -> Option<NonZeroUsize> {
 pub struct Sqlblob {
     data_store: DataSqlStore,
     chunk_store: ChunkSqlStore,
+    data_cache: SqlblobCacheOps<DataCacheTranslator>,
+    chunk_cache: SqlblobCacheOps<ChunkCacheTranslator>,
 }
 
 impl Sqlblob {
@@ -128,6 +131,20 @@ impl Sqlblob {
                 read_connection,
                 read_master_connection,
             ),
+            data_cache: SqlblobCacheOps::new(
+                Arc::new(
+                    MemcacheOps::new("sqlblob.data", repo_id.id())
+                        .expect("failed to create MemcacheOps"),
+                ),
+                DataCacheTranslator::new(repo_id),
+            ),
+            chunk_cache: SqlblobCacheOps::new(
+                Arc::new(
+                    MemcacheOps::new("sqlblob.chunk", repo_id.id())
+                        .expect("failed to create MemcacheOps"),
+                ),
+                ChunkCacheTranslator::new(repo_id),
+            ),
         }
     }
 
@@ -177,6 +194,14 @@ impl Sqlblob {
                 cons.clone(),
                 cons,
             ),
+            data_cache: SqlblobCacheOps::new(
+                Arc::new(DummyCache {}),
+                DataCacheTranslator::new(repo_id),
+            ),
+            chunk_cache: SqlblobCacheOps::new(
+                Arc::new(DummyCache {}),
+                ChunkCacheTranslator::new(repo_id),
+            ),
         })
     }
 
@@ -193,16 +218,46 @@ impl fmt::Debug for Sqlblob {
 
 impl Blobstore for Sqlblob {
     fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        cloned!(self.data_store, self.chunk_store);
+        cloned!(
+            self.data_store,
+            self.chunk_store,
+            self.data_cache,
+            self.chunk_cache
+        );
 
-        data_store
+        self.data_cache
             .get(&key)
+            .and_then({
+                cloned!(data_store, data_cache, key);
+                move |maybe_value| match maybe_value {
+                    Some(value) => Ok(Some(value)).into_future().left_future(),
+                    None => data_store
+                        .get(&key)
+                        .map(move |maybe_entry| {
+                            maybe_entry.map(|entry| data_cache.put(&key, entry))
+                        })
+                        .right_future(),
+                }
+            })
             .and_then(move |maybe_entry| match maybe_entry {
                 None => Ok(None).into_future().left_future(),
                 Some(DataEntry::Data(value)) => Ok(Some(value)).into_future().left_future(),
                 Some(DataEntry::InChunk(num_of_chunks)) => {
                     let chunk_fut: Vec<_> = (0..num_of_chunks.get() as u32)
-                        .map(move |chunk_id| chunk_store.get(&key, chunk_id))
+                        .map(move |chunk_id| {
+                            cloned!(chunk_store, chunk_cache, key);
+                            chunk_cache
+                                .get(&(key.clone(), chunk_id))
+                                .and_then(move |maybe_chunk| match maybe_chunk {
+                                    Some(chunk) => Ok(chunk).into_future().left_future(),
+                                    None => chunk_store
+                                        .get(&key, chunk_id)
+                                        .map(move |chunk| {
+                                            chunk_cache.put(&(key.clone(), chunk_id), chunk)
+                                        })
+                                        .right_future(),
+                                })
+                        })
                         .collect();
 
                     join_all(chunk_fut)
