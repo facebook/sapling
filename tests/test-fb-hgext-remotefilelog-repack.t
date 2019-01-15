@@ -553,7 +553,7 @@ Do a repack where the new pack reuses a delta from the old pack
   new commit
 
 # Verify that temporary datapacks are removed
-  $ touch -a --date="2019-01-01" $TESTTMP/hgcache/master/packs/foo.datapack-tmp
+  $ touch -a -t 201901010000 $TESTTMP/hgcache/master/packs/foo.datapack-tmp
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
   $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
