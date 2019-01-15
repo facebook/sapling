@@ -22,6 +22,8 @@ extern crate rust_thrift;
 #[macro_use]
 extern crate sql;
 extern crate sql_ext;
+#[macro_use]
+extern crate stats;
 extern crate tokio;
 extern crate twox_hash;
 
@@ -42,6 +44,7 @@ use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{create_myrouter_connections, PoolSizeConfig, SqlConnections};
+use stats::Timeseries;
 use std::fmt;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
@@ -54,6 +57,12 @@ const MAX_KEY_SIZE: usize = 200;
 // does, but leave some extra bytes for metadata
 const CHUNK_SIZE: usize = MEMCACHE_VALUE_MAX_SIZE - 1000;
 const SQLITE_SHARD_NUM: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(100) };
+
+define_stats! {
+    prefix = "mononoke.blobstore.sqlblob";
+    data_cache_hit_permille: timeseries(AVG, COUNT),
+    chunk_cache_hit_permille: timeseries(AVG, COUNT),
+}
 
 enum DataEntry {
     Data(BlobstoreBytes),
@@ -230,13 +239,19 @@ impl Blobstore for Sqlblob {
             .and_then({
                 cloned!(data_store, data_cache, key);
                 move |maybe_value| match maybe_value {
-                    Some(value) => Ok(Some(value)).into_future().left_future(),
-                    None => data_store
-                        .get(&key)
-                        .map(move |maybe_entry| {
-                            maybe_entry.map(|entry| data_cache.put(&key, entry))
-                        })
-                        .right_future(),
+                    Some(value) => {
+                        STATS::data_cache_hit_permille.add_value(1000);
+                        Ok(Some(value)).into_future().left_future()
+                    }
+                    None => {
+                        STATS::data_cache_hit_permille.add_value(0);
+                        data_store
+                            .get(&key)
+                            .map(move |maybe_entry| {
+                                maybe_entry.map(|entry| data_cache.put(&key, entry))
+                            })
+                            .right_future()
+                    }
                 }
             })
             .and_then(move |maybe_entry| match maybe_entry {
@@ -249,13 +264,19 @@ impl Blobstore for Sqlblob {
                             chunk_cache
                                 .get(&(key.clone(), chunk_id))
                                 .and_then(move |maybe_chunk| match maybe_chunk {
-                                    Some(chunk) => Ok(chunk).into_future().left_future(),
-                                    None => chunk_store
-                                        .get(&key, chunk_id)
-                                        .map(move |chunk| {
-                                            chunk_cache.put(&(key.clone(), chunk_id), chunk)
-                                        })
-                                        .right_future(),
+                                    Some(chunk) => {
+                                        STATS::chunk_cache_hit_permille.add_value(1000);
+                                        Ok(chunk).into_future().left_future()
+                                    }
+                                    None => {
+                                        STATS::chunk_cache_hit_permille.add_value(0);
+                                        chunk_store
+                                            .get(&key, chunk_id)
+                                            .map(move |chunk| {
+                                                chunk_cache.put(&(key.clone(), chunk_id), chunk)
+                                            })
+                                            .right_future()
+                                    }
                                 })
                         })
                         .collect();
