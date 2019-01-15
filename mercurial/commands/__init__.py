@@ -4972,7 +4972,8 @@ def pull(ui, repo, source="default", **opts):
 
     Returns 0 on success, 1 if ``--update`` was specified but the update had unresolved conflicts.
     """
-    treestate.onpull(ui, repo)
+    if ui.configbool("pull", "automigrate"):
+        repo.automigrate()
 
     opts = pycompat.byteskwargs(opts)
     if ui.configbool("commands", "update.requiredest") and opts.get("update"):

@@ -699,23 +699,23 @@ def reprflags(flags):
     )
 
 
-def onpull(ui, repo):
+def automigrate(repo):
     if "eden" in repo.requirements:
         return
-    if not repo.ui.configbool("treestate", "migrateonpull"):
+    if not repo.ui.configbool("treestate", "automigrate"):
         return
     version = repo.ui.configint("format", "dirstate")
     current = currentversion(repo)
     if current == version:
         return
     elif current > version:
-        ui.status(_("downgrading dirstate format...\n"))
+        repo.ui.status(_("downgrading dirstate format...\n"))
     elif current < version:
-        ui.status(
+        repo.ui.status(
             _(
                 "please wait while we migrate dirstate format to version %s\n"
                 "this will make your hg commands faster...\n"
             )
             % version
         )
-    migrate(ui, repo, version)
+    migrate(repo.ui, repo, version)

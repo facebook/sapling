@@ -54,6 +54,7 @@ from . import (
     subrepo,
     tags as tagsmod,
     transaction,
+    treestate,
     txnutil,
     util,
     vfs as vfsmod,
@@ -2593,6 +2594,14 @@ class localrepository(object):
         finally:
             fp.close()
         return self.pathto(fp.name[len(self.root) + 1 :])
+
+    def automigrate(self):
+        """perform potentially expensive in-place migrations
+
+        Called during pull if pull.automigrate is true
+        """
+        # Migrate treestate
+        treestate.automigrate(self)
 
 
 # used to avoid circular references so destructors work

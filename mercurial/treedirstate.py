@@ -15,7 +15,7 @@ import string
 import struct
 import time
 
-from mercurial import error, node, pycompat, registrar, treestate, txnutil, util
+from mercurial import error, node, pycompat, treestate, txnutil, util
 from mercurial.i18n import _
 from mercurial.rust import treestate as rusttreestate
 
@@ -23,10 +23,6 @@ from mercurial.rust import treestate as rusttreestate
 dirstateheader = b"########################treedirstate####"
 treedirstateversion = 1
 treefileprefix = "dirstate.tree."
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-configitem("treedirstate", "migrateonpull", default=False)
 
 # Sentinel length value for when a nonnormalset or otherparentset is absent.
 setabsent = 0xFFFFFFFF

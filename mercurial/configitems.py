@@ -404,6 +404,7 @@ coreconfigitem(
 coreconfigitem("progress", "refresh", default=0.1)
 coreconfigitem("progress", "renderer", default="classic")
 coreconfigitem("progress", "width", default=dynamicdefault)
+coreconfigitem("pull", "automigrate", default=True)
 coreconfigitem("push", "pushvars.server", default=True)
 coreconfigitem("server", "bookmarks-pushkey-compat", default=True)
 coreconfigitem("server", "bundle1", default=True)

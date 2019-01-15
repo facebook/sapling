@@ -1790,6 +1790,13 @@ have a definite end point.
     Enables debug mode for progress bars.  Progress output will be printed line
     by line for each item that is processed.
 
+``pull``
+--------
+
+``automigrate``
+    Perform potentially expensive automatic migration to new formats and
+    configurations at the start of pull commands. (default: True)
+
 ``rebase``
 ----------
 
@@ -2067,8 +2074,10 @@ See :hg:`help templates` for details.
 ``treestate``
 -------------
 
-``migrateonpull``
-    Migrate dirstate format to ``format.dirstate`` on pull (default: false).
+``automigrate``
+    Migrate dirstate format to ``format.dirstate`` during automigration (e.g.
+    on pull).
+    (default: false).
 
 ``mingcage``
     Seconds. Only files older than that would be garbage collected.

@@ -171,7 +171,7 @@ Test downgrade on pull
   $ hg rm dir3/file3
   $ grep treedirstate .hg/requires
   treedirstate
-  $ hg pull --config treestate.migrateonpull=true --config format.dirstate=0
+  $ hg pull --config treestate.automigrate=true --config format.dirstate=0
   downgrading dirstate format...
   pulling from $TESTTMP/repo (glob)
   searching for changes
@@ -190,7 +190,7 @@ Test downgrade on pull
 
 Test upgrade on pull
 
-  $ hg pull --config treestate.migrateonpull=true --config format.dirstate=1
+  $ hg pull --config treestate.automigrate=true --config format.dirstate=1
   please wait while we migrate dirstate format to version 1
   this will make your hg commands faster...
   pulling from $TESTTMP/repo (glob)
@@ -207,8 +207,4 @@ Test upgrade on pull
   a   0         -1 * newfile (glob)
   $ grep treedirstate .hg/requires
   treedirstate
-  $ hg pull --config treedirstate.upgradeonpull=true
-  pulling from $TESTTMP/repo (glob)
-  searching for changes
-  no changes found
 
