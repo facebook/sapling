@@ -20,6 +20,9 @@ extern crate mononoke_types;
 extern crate reachabilityindex;
 extern crate tokio;
 extern crate try_from;
+#[cfg(test)]
+#[macro_use]
+extern crate maplit;
 
 #[macro_use]
 extern crate sql;
@@ -40,11 +43,12 @@ pub use hint::PhasesReachabilityHint;
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::{future, Future};
+use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use reachabilityindex::SkiplistIndex;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fmt, str};
 use try_from::TryFrom;
@@ -136,6 +140,12 @@ impl ConvIr<Phase> for Phase {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct PhasesMapping {
+    pub calculated: HashMap<ChangesetId, Phase>,
+    pub unknown: Vec<ChangesetId>,
+}
+
 /// Interface to storage of phases in Mononoke
 pub trait Phases: Send + Sync {
     /// Add a new entry to the phases.
@@ -149,6 +159,14 @@ pub trait Phases: Send + Sync {
         phase: Phase,
     ) -> BoxFuture<bool, Error>;
 
+    /// Add new several entries to the phases.
+    fn add_all(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        phases: Vec<(ChangesetId, Phase)>,
+    ) -> BoxFuture<(), Error>;
+
     /// Retrieve the phase specified by this commit, if available.
     fn get(
         &self,
@@ -156,6 +174,14 @@ pub trait Phases: Send + Sync {
         repo: BlobRepo,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<Phase>, Error>;
+
+    /// Retrieve the phase for list of commits, if available.
+    fn get_all(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        cs_ids: Vec<ChangesetId>,
+    ) -> BoxFuture<PhasesMapping, Error>;
 }
 
 pub struct HintPhases {
@@ -182,6 +208,16 @@ queries! {
 
     read SelectPhase(repo_id: RepositoryId, cs_id: ChangesetId) -> (Phase) {
         "SELECT phase FROM phases WHERE repo_id = {repo_id} AND cs_id = {cs_id}"
+    }
+
+    read SelectPhases(
+        repo_id: RepositoryId,
+        >list cs_ids: ChangesetId
+    ) -> (ChangesetId, Phase) {
+        "SELECT cs_id, phase
+         FROM phases
+         WHERE repo_id = {repo_id}
+           AND cs_id IN {cs_ids}"
     }
 }
 
@@ -221,6 +257,28 @@ impl Phases for SqlPhases {
         .boxify()
     }
 
+    /// Add new several entries to the phases.
+    fn add_all(
+        &self,
+        _ctx: CoreContext,
+        repo: BlobRepo,
+        phases: Vec<(ChangesetId, Phase)>,
+    ) -> BoxFuture<(), Error> {
+        if phases.is_empty() {
+            return future::ok(()).boxify();
+        }
+        let repo_id = &repo.get_repoid();
+        InsertPhase::query(
+            &self.write_connection,
+            &phases
+                .iter()
+                .map(|(cs_id, phase)| (repo_id, cs_id, phase))
+                .collect::<Vec<_>>(),
+        )
+        .map(|_| ())
+        .boxify()
+    }
+
     /// Retrieve the phase specified by this commit from the table, if available.
     fn get(
         &self,
@@ -231,6 +289,35 @@ impl Phases for SqlPhases {
         SelectPhase::query(&self.read_connection, &repo.get_repoid(), &cs_id)
             .map(move |rows| rows.into_iter().next().map(|row| row.0))
             .boxify()
+    }
+
+    /// Retrieve the phase for list of commits, if available.
+    fn get_all(
+        &self,
+        _ctx: CoreContext,
+        repo: BlobRepo,
+        cs_ids: Vec<ChangesetId>,
+    ) -> BoxFuture<PhasesMapping, Error> {
+        SelectPhases::query(
+            &self.read_connection,
+            &repo.get_repoid(),
+            &cs_ids.iter().collect::<Vec<_>>(),
+        )
+        .map(move |rows| {
+            let calculated = rows
+                .into_iter()
+                .map(|row| (row.0, row.1))
+                .collect::<HashMap<_, _>>();
+            let unknown = cs_ids
+                .into_iter()
+                .filter(|cs_id| !calculated.contains_key(cs_id))
+                .collect();
+            PhasesMapping {
+                calculated,
+                unknown,
+            }
+        })
+        .boxify()
     }
 }
 
@@ -262,37 +349,102 @@ impl Phases for HintPhases {
         }
     }
 
+    /// Add several new entries to the underlying storage.
+    fn add_all(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        phases: Vec<(ChangesetId, Phase)>,
+    ) -> BoxFuture<(), Error> {
+        // Refresh the underlying persistent storage (currently for public commits only).
+        self.phases_store.add_all(
+            ctx,
+            repo,
+            phases
+                .into_iter()
+                .filter(|(_, phase)| phase == &Phase::Public)
+                .collect(),
+        )
+    }
+
     /// Retrieve the phase specified by this commit, if available.
-    /// If not available recalculate it if possible.
+    /// If phases are not available for some of the commits, they will be recalculated.
+    /// If recalculation failed error will be returned.
     fn get(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
         cs_id: ChangesetId,
     ) -> BoxFuture<Option<Phase>, Error> {
+        self.get_all(ctx, repo, vec![cs_id])
+            .map(move |mut phases_mapping| phases_mapping.calculated.remove(&cs_id))
+            .boxify()
+    }
+
+    /// Get phases for the list of commits.
+    /// If phases are not available for some of the commits, they will be recalculated.
+    /// If recalculation failed error will be returned.
+    /// Uknown is always returned empty.
+    fn get_all(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        cs_ids: Vec<ChangesetId>,
+    ) -> BoxFuture<PhasesMapping, Error> {
         cloned!(self.phases_store, self.phases_reachability_hint);
         // Try to fetch from the underlying storage.
         phases_store
-            .get(ctx.clone(), repo.clone(), cs_id)
-            .and_then(move |maybe_phase| {
-                // Found
-                if maybe_phase.is_some() {
-                    return future::ok(maybe_phase).left_future();
-                }
-                // Not found. Calculate using the slow path.
-                phases_reachability_hint
-                    .get(ctx.clone(), repo.clone(), cs_id)
-                    .and_then(move |phase| {
-                        if phase == Phase::Public {
-                            phases_store
-                                .add(ctx, repo, cs_id, phase.clone())
-                                .map(|_| Some(phase))
-                                .left_future()
-                        } else {
-                            future::ok(Some(phase)).right_future()
+            .get_all(ctx.clone(), repo.clone(), cs_ids)
+            .and_then(move |phases_mapping| {
+                // For not found part calculate phases using the phases_reachability_hint.
+                // Bookmarks are required (only if not_found_in_db is not empty). Fetch them once.
+                let not_found_in_db = phases_mapping.unknown;
+                let found_in_db = phases_mapping.calculated;
+                let bookmarks_fut = if not_found_in_db.is_empty() {
+                    future::ok(vec![]).left_future()
+                } else {
+                    repo.get_bonsai_bookmarks(ctx.clone())
+                        .map(|(_, cs_id)| cs_id)
+                        .collect()
+                        .right_future()
+                };
+
+                bookmarks_fut
+                    .and_then({
+                        let changeset_fetcher = repo.get_changeset_fetcher().clone();
+                        let ctx = ctx.clone();
+                        move |bookmarks| {
+                            phases_reachability_hint.get_all(
+                                ctx,
+                                changeset_fetcher,
+                                not_found_in_db,
+                                bookmarks,
+                            )
                         }
                     })
-                    .right_future()
+                    .and_then(move |mut calculated| {
+                        // Refresh newly calculated phases in the underlying storage (public commits only).
+                        let add_to_db = calculated
+                            .iter()
+                            .filter_map(|(cs_id, phase)| {
+                                if phase == &Phase::Public {
+                                    Some((cs_id.clone(), phase.clone()))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+
+                        // Join the found in the db and calculated into the returned result.
+                        calculated.extend(found_in_db);
+
+                        phases_store
+                            .add_all(ctx, repo, add_to_db)
+                            .map(move |_| PhasesMapping {
+                                calculated,
+                                unknown: vec![],
+                            })
+                    })
             })
             .boxify()
     }
@@ -351,6 +503,18 @@ mod tests {
                 .expect("Get phase failed"),
             None,
             "sql: get phase for non existing changeset"
+        );
+
+        assert_eq!(
+            phases
+                .get_all(ctx.clone(), repo.clone(), vec![ONES_CSID, TWOS_CSID])
+                .wait()
+                .expect("Get phase failed"),
+            PhasesMapping {
+                calculated: hashmap! {ONES_CSID => Phase::Public},
+                unknown: vec![TWOS_CSID],
+            },
+            "sql: get phase for non existing changeset and existing changeset"
         );
     }
 
@@ -515,6 +679,32 @@ mod tests {
                 .unwrap(),
             Some(Phase::Draft),
             "slow path: get phase for other Draft commit"
+        );
+
+        assert_eq!(
+            hint_phases
+                .get_all(
+                    ctx.clone(),
+                    repo.clone(),
+                    vec![
+                        public_commit,
+                        other_public_commit,
+                        draft_commit,
+                        other_draft_commit
+                    ]
+                )
+                .wait()
+                .unwrap(),
+            PhasesMapping {
+                calculated: hashmap! {
+                    public_commit => Phase::Public,
+                    other_public_commit => Phase::Public,
+                    draft_commit => Phase::Draft,
+                    other_draft_commit => Phase::Draft
+                },
+                unknown: vec![],
+            },
+            "slow path: get phases for set of commits"
         );
 
         assert_eq!(

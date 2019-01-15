@@ -7,7 +7,7 @@
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use errors::*;
-use futures::{future, Future};
+use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -16,7 +16,7 @@ use stats::Timeseries;
 use std::sync::Arc;
 use std::time::Duration;
 use try_from::TryInto;
-use {Phase, Phases, PhasesReachabilityHint};
+use {Phase, Phases, PhasesMapping, PhasesReachabilityHint};
 
 // Memcache constants, should be changed when we want to invalidate memcache
 // entries
@@ -95,8 +95,19 @@ impl Phases for CachingHintPhases {
             .boxify()
     }
 
+    /// Add several new entries to the underlying storage.
+    fn add_all(
+        &self,
+        _ctx: CoreContext,
+        _repo: BlobRepo,
+        _phases: Vec<(ChangesetId, Phase)>,
+    ) -> BoxFuture<(), Error> {
+        unimplemented!();
+    }
+
     /// Retrieve the phase specified by this commit, if available.
-    /// If not available recalculate it if possible.
+    /// If phases are not available for some of the commits, they will be recalculated.
+    /// If recalculation failed error will be returned.
     fn get(
         &self,
         ctx: CoreContext,
@@ -121,44 +132,66 @@ impl Phases for CachingHintPhases {
                 phases_store
                     .get(ctx.clone(), repo.clone(), cs_id)
                     .and_then(move |maybe_phase| {
-                        match maybe_phase {
+                        if let Some(phase) = maybe_phase {
                             // The phase is found. Refresh memcache and return the value.
-                            Some(phase) => {
-                                set_phase_to_memcache(&memcache, &keygen, &repo_id, &cs_id, &phase)
-                                    .map(move |_| Some(phase))
-                                    .left_future()
-                            }
-                            // The phase is not found. Try to calculate it.
-                            // It will be error if calculation failed.
-                            None => phases_reachability_hint
-                                .get(ctx.clone(), repo.clone(), cs_id)
-                                .and_then(move |phase| {
-                                    // The phase is calculated. Refresh memcache.
-                                    set_phase_to_memcache(
-                                        &memcache,
-                                        &keygen,
-                                        &repo_id,
-                                        &cs_id,
-                                        &phase,
-                                    ).and_then(move |_| {
-                                        // Update the underlying storage (currently public commits only).
-                                        // Return the phase.
-                                        if phase == Phase::Public {
-                                            phases_store
-                                                .add(ctx, repo, cs_id, phase.clone())
-                                                .map(|_| Some(phase))
-                                                .left_future()
-                                        } else {
-                                            future::ok(Some(phase)).right_future()
-                                        }
-                                    })
-                                })
-                                .right_future(),
+                            return set_phase_to_memcache(
+                                &memcache, &keygen, &repo_id, &cs_id, &phase,
+                            )
+                            .map(move |_| Some(phase))
+                            .left_future();
                         }
+                        // The phase is not found. Try to calculate it.
+                        // It will be error if calculation failed.
+                        // Bookmarks are required.
+                        repo.get_bonsai_bookmarks(ctx.clone())
+                            .map(|(_, cs_id)| cs_id)
+                            .collect()
+                            .and_then(move |bookmarks| {
+                                phases_reachability_hint
+                                    .get(
+                                        ctx.clone(),
+                                        repo.clone().get_changeset_fetcher(),
+                                        cs_id,
+                                        bookmarks,
+                                    )
+                                    .and_then(move |phase| {
+                                        // The phase is calculated. Refresh memcache.
+                                        set_phase_to_memcache(
+                                            &memcache, &keygen, &repo_id, &cs_id, &phase,
+                                        )
+                                        .and_then(
+                                            move |_| {
+                                                // Update the underlying storage (currently public commits only).
+                                                // Return the phase.
+                                                if phase == Phase::Public {
+                                                    phases_store
+                                                        .add(ctx, repo, cs_id, phase.clone())
+                                                        .map(|_| Some(phase))
+                                                        .left_future()
+                                                } else {
+                                                    future::ok(Some(phase)).right_future()
+                                                }
+                                            },
+                                        )
+                                    })
+                            })
+                            .right_future()
                     })
                     .right_future()
             })
             .boxify()
+    }
+
+    /// Retrieve the phase specified by this commit, if available.
+    /// If phases are not available for some of the commits, they will be recalculated.
+    /// If recalculation failed error will be returned.
+    fn get_all(
+        &self,
+        _ctx: CoreContext,
+        _repo: BlobRepo,
+        _cs_ids: Vec<ChangesetId>,
+    ) -> BoxFuture<PhasesMapping, Error> {
+        unimplemented!();
     }
 }
 
