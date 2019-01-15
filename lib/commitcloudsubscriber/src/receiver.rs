@@ -3,7 +3,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use error::*;
+use failure::Fallible;
 use serde_json;
 use std::collections::HashMap;
 use std::net::{SocketAddr, TcpListener};
@@ -58,7 +58,7 @@ impl TcpReceiverService {
         self
     }
 
-    pub fn serve(self) -> Result<thread::JoinHandle<Result<()>>> {
+    pub fn serve(self) -> Fallible<thread::JoinHandle<Fallible<()>>> {
         let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], self.port)))?;
         Ok(thread::spawn(move || {
             info!("Starting CommitCloud TcpReceiverService");

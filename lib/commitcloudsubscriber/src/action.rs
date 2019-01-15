@@ -4,6 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use error::*;
+use failure::Fallible;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Instant;
@@ -17,7 +18,7 @@ impl CloudSyncTrigger {
         retries: u32,
         version: Option<u64>,
         try_direct_fetching: bool,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         let mut version_args = vec![];
         if let Some(version) = version {
             version_args.append(&mut vec![

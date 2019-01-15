@@ -5,7 +5,6 @@
 
 #![deny(warnings)]
 
-pub use failure::Error;
 use std::fmt;
 
 #[derive(Debug, Fail)]
@@ -36,5 +35,3 @@ impl fmt::Display for CommitCloudHttpError {
         )
     }
 }
-
-pub type Result<T> = ::std::result::Result<T, Error>;

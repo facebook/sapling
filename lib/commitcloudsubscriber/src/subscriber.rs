@@ -7,6 +7,7 @@ use action::CloudSyncTrigger;
 use config::CommitCloudConfig;
 use error::*;
 use eventsource::reqwest::Client;
+use failure::Fallible;
 use receiver::CommandName::{self, CommitCloudCancelSubscriptions, CommitCloudRestartSubscriptions,
                             CommitCloudStartSubscriptions};
 use reqwest::Url;
@@ -132,7 +133,7 @@ pub struct WorkspaceSubscriberService {
 }
 
 impl WorkspaceSubscriberService {
-    pub fn new(config: &CommitCloudConfig) -> Result<WorkspaceSubscriberService> {
+    pub fn new(config: &CommitCloudConfig) -> Fallible<WorkspaceSubscriberService> {
         Ok(WorkspaceSubscriberService {
             notification_url: config
                 .notification_url
@@ -198,7 +199,7 @@ impl WorkspaceSubscriberService {
         actions
     }
 
-    pub fn serve(self) -> Result<thread::JoinHandle<Result<()>>> {
+    pub fn serve(self) -> Fallible<thread::JoinHandle<Fallible<()>>> {
         self.channel.0.send(CommitCloudStartSubscriptions)?;
         Ok(thread::spawn(move || {
             info!("Starting CommitCloud WorkspaceSubscriberService");
@@ -264,13 +265,13 @@ impl WorkspaceSubscriberService {
     /// It starts all the requested subscriptions by simply runing a separate thread for each one
     /// All threads keep checking the interrupt flag and join gracefully if it is restart or stop
 
-    fn run_subscriptions(&self, access_token: util::Token) -> Result<Vec<thread::JoinHandle<()>>> {
+    fn run_subscriptions(&self, access_token: util::Token) -> Fallible<Vec<thread::JoinHandle<()>>> {
         util::read_subscriptions(&self.connected_subscribers_path)?
             .into_iter()
             .map(|(subscription, repo_roots)| {
                 self.run_subscription(access_token.clone(), subscription, repo_roots)
             })
-            .collect::<Result<Vec<thread::JoinHandle<()>>>>()
+            .collect::<Fallible<Vec<thread::JoinHandle<()>>>>()
     }
 
     /// Helper function to run a single subscription
@@ -280,7 +281,7 @@ impl WorkspaceSubscriberService {
         access_token: util::Token,
         subscription: Subscription,
         repo_roots: Vec<PathBuf>,
-    ) -> Result<thread::JoinHandle<()>> {
+    ) -> Fallible<thread::JoinHandle<()>> {
         let mut notification_url = Url::parse(&self.notification_url)?;
         let service_url = Url::parse(&self.service_url)?;
 
