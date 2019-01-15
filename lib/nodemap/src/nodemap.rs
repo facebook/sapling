@@ -3,8 +3,9 @@
 use std::ops::Range;
 use std::path::Path;
 
+use failure::Fallible;
 use indexedlog::log::{IndexDef, IndexOutput, Log};
-use types::errors::{KeyError, Result};
+use types::errors::KeyError;
 use types::node::Node;
 
 #[derive(Debug, Fail)]
@@ -26,7 +27,7 @@ pub struct NodeMap {
 }
 
 impl NodeMap {
-    pub fn open(dir: impl AsRef<Path>) -> Result<Self> {
+    pub fn open(dir: impl AsRef<Path>) -> Fallible<Self> {
         // Update the index every 100KB, i.e. every 256 entries
         let lag = 100 * 1024;
         let first_index = |_data: &[u8]| vec![IndexOutput::Reference(0..20)];
@@ -50,26 +51,26 @@ impl NodeMap {
         })
     }
 
-    pub fn flush(&mut self) -> Result<()> {
+    pub fn flush(&mut self) -> Fallible<()> {
         Ok(self.log.flush()?)
     }
 
-    pub fn add(&mut self, first: &Node, second: &Node) -> Result<()> {
+    pub fn add(&mut self, first: &Node, second: &Node) -> Fallible<()> {
         let mut buf = Vec::with_capacity(40);
         buf.extend_from_slice(first.as_ref());
         buf.extend_from_slice(second.as_ref());
         self.log.append(buf).map_err(|e| e.into())
     }
 
-    pub fn lookup_by_first(&self, first: &Node) -> Result<Option<Node>> {
+    pub fn lookup_by_first(&self, first: &Node) -> Fallible<Option<Node>> {
         self.lookup(first, 0, 20..40)
     }
 
-    pub fn lookup_by_second(&self, second: &Node) -> Result<Option<Node>> {
+    pub fn lookup_by_second(&self, second: &Node) -> Fallible<Option<Node>> {
         self.lookup(second, 1, 0..20)
     }
 
-    fn lookup(&self, key: &Node, index_id: usize, range: Range<usize>) -> Result<Option<Node>> {
+    fn lookup(&self, key: &Node, index_id: usize, range: Range<usize>) -> Fallible<Option<Node>> {
         let mut lookup_iter = self.log.lookup(index_id, key)?;
         Ok(match lookup_iter.next() {
             Some(result) => Some(Node::from_slice(&result?[range])?),
@@ -77,7 +78,7 @@ impl NodeMap {
         })
     }
 
-    pub fn iter<'a>(&'a self) -> Result<Box<Iterator<Item = Result<(Node, Node)>> + 'a>> {
+    pub fn iter<'a>(&'a self) -> Fallible<Box<Iterator<Item = Fallible<(Node, Node)>> + 'a>> {
         let iter = self.log.iter().map(move |entry| match entry {
             Ok(data) => {
                 let mut first = self.log.index_func(0, &data)?;
@@ -141,7 +142,7 @@ mod tests {
 
             }
 
-            let actual_pairs = map.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
+            let actual_pairs = map.iter().unwrap().collect::<Fallible<Vec<_>>>().unwrap();
             actual_pairs == pairs
         }
     }

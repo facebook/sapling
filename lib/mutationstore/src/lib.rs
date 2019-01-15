@@ -38,10 +38,10 @@ extern crate types;
 extern crate vlqencoding;
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use failure::Fallible;
 use indexedlog::log::{IndexDef, IndexOutput, Log};
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
-use types::errors::Result;
 use types::node::{Node, ReadNodeExt, WriteNodeExt};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
@@ -100,7 +100,7 @@ impl MutationEntryOrigin {
         }
     }
 
-    pub fn from_id(id: u8) -> Result<Self> {
+    pub fn from_id(id: u8) -> Fallible<Self> {
         match id {
             ORIGIN_COMMIT => Ok(MutationEntryOrigin::Commit),
             ORIGIN_OBSMARKER => Ok(MutationEntryOrigin::Obsmarker),
@@ -111,7 +111,7 @@ impl MutationEntryOrigin {
 }
 
 impl MutationEntry {
-    pub fn serialize(&self, w: &mut Write) -> Result<()> {
+    pub fn serialize(&self, w: &mut Write) -> Fallible<()> {
         w.write_u8(self.origin.get_id())?;
         w.write_node(&self.succ)?;
         w.write_vlq(self.preds.len())?;
@@ -138,7 +138,7 @@ impl MutationEntry {
         Ok(())
     }
 
-    pub fn deserialize(r: &mut Read) -> Result<Self> {
+    pub fn deserialize(r: &mut Read) -> Fallible<Self> {
         let origin = MutationEntryOrigin::from_id(r.read_u8()?)?;
         let succ = r.read_node()?;
         let pred_count = r.read_vlq()?;
@@ -191,7 +191,7 @@ const INDEX_SUCC: usize = 1;
 const INDEX_SPLIT: usize = 2;
 
 impl MutationStore {
-    pub fn open(path: impl AsRef<Path>) -> Result<MutationStore> {
+    pub fn open(path: impl AsRef<Path>) -> Fallible<MutationStore> {
         let node_len = Node::len();
         let succ_start = 1usize;
         let pred_count_start = succ_start + node_len;
@@ -253,19 +253,19 @@ impl MutationStore {
         })
     }
 
-    pub fn add(&mut self, entry: &MutationEntry) -> Result<()> {
+    pub fn add(&mut self, entry: &MutationEntry) -> Fallible<()> {
         let mut buf = Vec::with_capacity(DEFAULT_ENTRY_SIZE);
         entry.serialize(&mut buf)?;
         self.log.append(buf.as_slice())?;
         Ok(())
     }
 
-    pub fn flush(&mut self) -> Result<()> {
+    pub fn flush(&mut self) -> Fallible<()> {
         self.log.flush()?;
         Ok(())
     }
 
-    pub fn get_successors_sets(&self, node: Node) -> Result<Vec<Vec<Node>>> {
+    pub fn get_successors_sets(&self, node: Node) -> Fallible<Vec<Vec<Node>>> {
         let mut successors_sets = Vec::new();
         for entry in self.log.lookup(INDEX_PRED, &node)? {
             let mutation_entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
@@ -276,7 +276,7 @@ impl MutationStore {
         Ok(successors_sets)
     }
 
-    pub fn get_predecessors(&self, node: Node) -> Result<Vec<Node>> {
+    pub fn get_predecessors(&self, node: Node) -> Fallible<Vec<Node>> {
         let mut lookup = self.log
             .lookup(INDEX_SUCC, &node)?
             .chain(self.log.lookup(INDEX_SPLIT, &node)?);
@@ -289,7 +289,7 @@ impl MutationStore {
         Ok(predecessors)
     }
 
-    pub fn get_split_head(&self, node: Node) -> Result<Option<MutationEntry>> {
+    pub fn get_split_head(&self, node: Node) -> Fallible<Option<MutationEntry>> {
         let mutation_entry = match self.log.lookup(INDEX_SPLIT, &node)?.next() {
             Some(entry) => Some(MutationEntry::deserialize(&mut Cursor::new(entry?))?),
             None => None,
@@ -297,7 +297,7 @@ impl MutationStore {
         Ok(mutation_entry)
     }
 
-    pub fn get(&self, succ: Node) -> Result<Option<MutationEntry>> {
+    pub fn get(&self, succ: Node) -> Fallible<Option<MutationEntry>> {
         let mutation_entry = match self.log.lookup(INDEX_SUCC, &succ)?.next() {
             Some(entry) => Some(MutationEntry::deserialize(&mut Cursor::new(entry?))?),
             None => None,

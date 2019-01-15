@@ -1,5 +1,5 @@
 // Copyright Facebook, Inc. 2018
-use errors::Result;
+use failure::Fallible;
 use std::fmt::{self, Debug, Display};
 use std::io::{self, Read, Write};
 
@@ -38,7 +38,7 @@ impl Node {
         20
     }
 
-    pub fn from_slice(bytes: &[u8]) -> Result<Self> {
+    pub fn from_slice(bytes: &[u8]) -> Fallible<Self> {
         if bytes.len() != NODE_LEN {
             return Err(NodeError(format!("invalid node length {:?}", bytes.len())).into());
         }
@@ -49,7 +49,7 @@ impl Node {
     }
 
     // Taken from Mononoke
-    pub fn from_str(s: &str) -> Result<Self> {
+    pub fn from_str(s: &str) -> Fallible<Self> {
         if s.len() != 40 {
             return Err(NodeError(format!("invalid string length {:?}", s.len())).into());
         }

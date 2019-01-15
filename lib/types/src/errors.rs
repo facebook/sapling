@@ -4,9 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::{Backtrace, Context, Error, Fail};
-use std::{fmt, result};
-
-pub type Result<T> = result::Result<T, Error>;
+use std::fmt;
 
 #[derive(Debug)]
 pub struct KeyError(Error);
