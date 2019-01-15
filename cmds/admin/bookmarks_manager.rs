@@ -4,16 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use blobrepo::BlobRepo;
+use bookmarks::Bookmark;
 use clap::{App, Arg, ArgMatches, SubCommand};
+use context::CoreContext;
 use failure::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use serde_json::to_string_pretty;
 use slog::Logger;
-
-use blobrepo::BlobRepo;
-use bookmarks::Bookmark;
-use context::CoreContext;
 
 const SET_CMD: &'static str = "set";
 const GET_CMD: &'static str = "get";
