@@ -28,6 +28,10 @@ pub trait DataStore {
     fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>>;
     fn get_meta(&self, key: &Key) -> Result<Metadata>;
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>>;
+
+    fn contains(&self, key: &Key) -> Result<bool> {
+        Ok(self.get_missing(&[key.clone()])?.is_empty())
+    }
 }
 
 impl Metadata {

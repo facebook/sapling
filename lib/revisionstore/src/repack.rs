@@ -89,7 +89,7 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
         let key = k?;
         let chain = data_pack.get_delta_chain(&key)?;
         for delta in chain.iter() {
-            if mut_pack.get_delta(&delta.key).is_ok() {
+            if mut_pack.contains(&delta.key)? {
                 break;
             }
 
