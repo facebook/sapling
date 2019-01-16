@@ -17,6 +17,7 @@ use datastore::{DataStore, Delta, Metadata};
 use failure::Error;
 use key::Key;
 use lz4_pyframe::compress;
+use packwriter::PackWriter;
 use tempfile::NamedTempFile;
 use types::node::Node;
 
@@ -25,7 +26,7 @@ use error::Result;
 pub struct MutableDataPack {
     version: DataPackVersion,
     dir: PathBuf,
-    data_file: NamedTempFile,
+    data_file: PackWriter<NamedTempFile>,
     mem_index: HashMap<Node, DeltaLocation>,
     hasher: Sha1,
 }
@@ -49,18 +50,18 @@ impl MutableDataPack {
             ));
         }
 
-        let mut data_file = NamedTempFile::new_in(&dir)?;
+        let mut data_file = PackWriter::new(NamedTempFile::new_in(&dir)?);
         let mut hasher = Sha1::new();
         let version_u8: u8 = version.clone().into();
         data_file.write_u8(version_u8)?;
         hasher.input(&[version_u8]);
 
         Ok(MutableDataPack {
-            version: version,
+            version,
             dir: dir.to_path_buf(),
-            data_file: data_file,
+            data_file,
             mem_index: HashMap::new(),
-            hasher: hasher,
+            hasher,
         })
     }
 
@@ -68,7 +69,7 @@ impl MutableDataPack {
     /// The mutable datapack is no longer usable after being closed.
     pub fn close(mut self) -> Result<PathBuf> {
         // Compute the index
-        let mut index_file = NamedTempFile::new_in(&self.dir)?;
+        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
         DataIndex::write(&mut index_file, &self.mem_index)?;
 
         // Persist the temp files
@@ -76,13 +77,17 @@ impl MutableDataPack {
         let data_filepath = base_filepath.with_extension("datapack");
         let index_filepath = base_filepath.with_extension("dataidx");
 
-        let mut perms = self.data_file.as_file().metadata()?.permissions();
+        let data_file = self.data_file.into_inner()?;
+
+        let mut perms = data_file.as_file().metadata()?.permissions();
         perms.set_readonly(true);
 
-        self.data_file.as_file().set_permissions(perms.clone())?;
+        data_file.as_file().set_permissions(perms.clone())?;
+
+        let index_file = index_file.into_inner()?;
         index_file.as_file().set_permissions(perms)?;
 
-        self.data_file.persist(&data_filepath)?;
+        data_file.persist(&data_filepath)?;
         index_file.persist(&index_filepath)?;
         Ok(base_filepath)
     }
@@ -96,7 +101,7 @@ impl MutableDataPack {
             return Err(MutableDataPackError("v0 data pack cannot store metadata".into()).into());
         }
 
-        let offset = self.data_file.as_ref().metadata()?.len();
+        let offset = self.data_file.bytes_written();
 
         let compressed = compress(&delta.data)?;
 
@@ -126,7 +131,7 @@ impl MutableDataPack {
 
         let delta_location = DeltaLocation {
             delta_base: delta.base.as_ref().map_or(None, |k| Some(k.node().clone())),
-            offset: offset,
+            offset,
             size: buf.len() as u64,
         };
         self.mem_index
@@ -139,7 +144,10 @@ impl MutableDataPack {
             MutableDataPackError(format!("Unable to find key {:?} in mutable datapack", key))
                 .into(),
         )?;
-        let mut file = &self.data_file;
+        // Make sure the buffers are empty so the reads below are consistent with what is being
+        // written.
+        self.data_file.flush_inner()?;
+        let mut file = self.data_file.get_mut();
 
         let mut data = Vec::with_capacity(location.size as usize);
         unsafe { data.set_len(location.size as usize) };

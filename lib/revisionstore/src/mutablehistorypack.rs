@@ -18,6 +18,7 @@ use historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
 use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
+use packwriter::PackWriter;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Mutable History Pack Error: {:?}", _0)]
@@ -35,11 +36,12 @@ impl MutableHistoryPack {
             return Err(MutableHistoryPackError(format!(
                 "cannot create mutable historypack in non-directory '{:?}'",
                 dir
-            )).into());
+            ))
+            .into());
         }
 
         Ok(MutableHistoryPack {
-            version: version,
+            version,
             dir: dir.to_path_buf(),
             mem_index: HashMap::new(),
         })
@@ -50,7 +52,8 @@ impl MutableHistoryPack {
         //     self.mem_index.entry(key.name()).or_insert_with(|| HashMap::new())
         // To get the inner map, then insert our new NodeInfo. Unfortunately it requires
         // key.name().clone() though. So we have to do it the long way to avoid the allocation.
-        let entries = self.mem_index
+        let entries = self
+            .mem_index
             .entry(Box::from(key.name()))
             .or_insert_with(|| HashMap::new());
         entries.insert(key.clone(), info.clone());
@@ -60,7 +63,7 @@ impl MutableHistoryPack {
     /// Closes the mutable historypack, returning the path of the final immutable historypack on disk.
     /// The mutable historypack is no longer usable after being closed.
     pub fn close(self) -> Result<PathBuf> {
-        let mut data_file = NamedTempFile::new_in(&self.dir)?;
+        let mut data_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
         let mut hasher = Sha1::new();
 
         // Write the header
@@ -74,7 +77,7 @@ impl MutableHistoryPack {
 
         // Write the historypack
         let mut section_buf = Vec::new();
-        let mut section_offset = data_file.as_ref().metadata()?.len();
+        let mut section_offset = data_file.bytes_written();
         // - In sorted order for deterministic hashes.
         let mut keys = self.mem_index.keys().collect::<Vec<&Box<[u8]>>>();
         keys.sort_unstable();
@@ -101,7 +104,7 @@ impl MutableHistoryPack {
         }
 
         // Compute the index
-        let mut index_file = NamedTempFile::new_in(&self.dir)?;
+        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
         HistoryIndex::write(&mut index_file, &file_sections, &nodes)?;
 
         // Persist the temp files
@@ -109,10 +112,14 @@ impl MutableHistoryPack {
         let data_filepath = base_filepath.with_extension("histpack");
         let index_filepath = base_filepath.with_extension("histidx");
 
+        let data_file = data_file.into_inner()?;
+
         let mut perms = data_file.as_file().metadata()?.permissions();
         perms.set_readonly(true);
 
         data_file.as_file().set_permissions(perms.clone())?;
+
+        let index_file = index_file.into_inner()?;
         index_file.as_file().set_permissions(perms)?;
 
         data_file.persist(&data_filepath)?;
