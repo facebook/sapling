@@ -170,7 +170,7 @@ pub fn repack_historypacks<'a>(
 
 /// List all the pack files in the directory `dir` that ends with `extension`.
 pub fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
-    Ok(fs::read_dir(dir)?
+    let mut dirents = fs::read_dir(dir)?
         .filter_map(|e| match e {
             Err(_) => None,
             Ok(entry) => {
@@ -182,7 +182,9 @@ pub fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
                 }
             }
         })
-        .collect())
+        .collect::<Vec<PathBuf>>();
+    dirents.sort_unstable();
+    Ok(dirents)
 }
 
 /// Select all the packs from `packs` that needs to be repacked during an incremental repack.

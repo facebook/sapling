@@ -80,7 +80,7 @@
 
   $ hg repack --incremental
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
-  -r--------     253 cb1606d7b86739ecd5dba52b338390df38af0992.datapack
+  -r--------     253 3bf5dfc3af16ed3945192b4a0d53a8188aa2187b.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
   -r--------     336 3b65e3071e408ff050835eba9d2662d0c5ea51db.histpack
 
