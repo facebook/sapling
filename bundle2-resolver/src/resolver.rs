@@ -10,24 +10,27 @@ use std::ops::AddAssign;
 use std::sync::Arc;
 
 use ascii::AsciiString;
-use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset,
-               HgBlobEntry};
+use blobrepo::{
+    BlobRepo, ChangesetHandle, ChangesetMetadata, ContentBlobInfo, CreateChangeset, HgBlobEntry,
+};
 use bookmarks::{Bookmark, Transaction};
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use failure::{err_msg, Compat, FutureFailureErrorExt, StreamFailureErrorExt};
-use futures::{Future, IntoFuture, Stream};
 use futures::future::{self, err, ok, Shared};
 use futures::stream;
+use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::Timed;
 use getbundle_response;
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::{Details, ManifestContent};
-use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item,
-                        PartHeaderType};
-use mercurial_types::{HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath,
-                      NULL_HASH};
+use mercurial_bundles::{
+    create_bundle_stream, parts, Bundle2EncodeBuilder, Bundle2Item, PartHeaderType,
+};
+use mercurial_types::{
+    HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
+};
 use metaconfig::PushrebaseParams;
 use mononoke_types::ChangesetId;
 use pushrebase;
@@ -181,8 +184,8 @@ fn resolve_push(
                         .map(move |()| (changegroup_id, bookmark_ids))
                         .boxify()
                 })()
-                    .context("While updating Bookmarks")
-                    .from_err()
+                .context("While updating Bookmarks")
+                .from_err()
             }
         })
         .and_then(move |(changegroup_id, bookmark_ids)| {
@@ -383,7 +386,8 @@ impl BonsaiBookmarkPush {
         (
             bonsai_from_hg_opt(ctx.clone(), repo, old),
             bonsai_from_hg_opt(ctx, repo, new),
-        ).into_future()
+        )
+            .into_future()
             .map(move |(old, new)| BonsaiBookmarkPush {
                 part_id,
                 name,
@@ -514,7 +518,8 @@ impl Bundle2Resolver {
                                 repo.clone(),
                                 convert_to_revlog_filelog(ctx.clone(), repo, f),
                                 UploadBlobsType::EnsureNoDuplicates,
-                            ).map(move |upload_map| {
+                            )
+                            .map(move |upload_map| {
                                 let mut filelogs = HashMap::new();
                                 let mut content_blobs = HashMap::new();
                                 for (node_key, (cbinfo, file_upload)) in upload_map {
@@ -523,8 +528,8 @@ impl Bundle2Resolver {
                                 }
                                 (changesets, filelogs, content_blobs)
                             })
-                                .context("While uploading File Blobs")
-                                .from_err()
+                            .context("While uploading File Blobs")
+                            .from_err()
                         })
                         .map(move |(changesets, filelogs, content_blobs)| {
                             let cg_push = ChangegroupPush {
@@ -556,12 +561,10 @@ impl Bundle2Resolver {
         next_item(bundle2)
             .and_then(move |(newpart, bundle2)| match newpart {
                 Some(Bundle2Item::Pushkey(header, emptypart)) => {
-                    let namespace = try_boxfuture!(
-                        header
-                            .mparams()
-                            .get("namespace")
-                            .ok_or(format_err!("pushkey: `namespace` parameter is not set"))
-                    );
+                    let namespace = try_boxfuture!(header
+                        .mparams()
+                        .get("namespace")
+                        .ok_or(format_err!("pushkey: `namespace` parameter is not set")));
 
                     let pushkey = match &namespace[..] {
                         b"phases" => Pushkey::Phases,
@@ -584,7 +587,8 @@ impl Bundle2Resolver {
                             return err(format_err!(
                                 "pushkey: unexpected namespace: {:?}",
                                 namespace
-                            )).boxify()
+                            ))
+                            .boxify();
                         }
                     };
 
@@ -611,17 +615,16 @@ impl Bundle2Resolver {
         next_item(bundle2)
             .and_then(move |(b2xtreegroup2, bundle2)| match b2xtreegroup2 {
                 Some(Bundle2Item::B2xTreegroup2(_, parts))
-                | Some(Bundle2Item::B2xRebasePack(_, parts)) => {
-                    upload_hg_blobs(
-                        ctx,
-                        repo,
-                        TreemanifestBundle2Parser::new(parts),
-                        UploadBlobsType::IgnoreDuplicates,
-                    ).context("While uploading Manifest Blobs")
-                        .from_err()
-                        .map(move |manifests| (manifests, bundle2))
-                        .boxify()
-                }
+                | Some(Bundle2Item::B2xRebasePack(_, parts)) => upload_hg_blobs(
+                    ctx,
+                    repo,
+                    TreemanifestBundle2Parser::new(parts),
+                    UploadBlobsType::IgnoreDuplicates,
+                )
+                .context("While uploading Manifest Blobs")
+                .from_err()
+                .map(move |manifests| (manifests, bundle2))
+                .boxify(),
                 _ => err(format_err!("Expected Bundle2 B2xTreegroup2")).boxify(),
             })
             .context("While resolving B2xTreegroup2")
@@ -644,7 +647,8 @@ impl Bundle2Resolver {
                     None => Ok(((), bundle2)).into_future().boxify(),
                     _ => err(format_err!(
                         "Expected B2xInfinitepushBookmarks or end of the stream"
-                    )).boxify(),
+                    ))
+                    .boxify(),
                 },
             )
             .context("While resolving B2xInfinitepushBookmarks")
@@ -778,8 +782,9 @@ impl Bundle2Resolver {
                     uploaded_changesets
                         .into_iter()
                         .map(|(_, cs)| cs.get_completed_changeset()),
-                ).map_err(Error::from)
-                    .for_each(|_| Ok(()))
+                )
+                .map_err(Error::from)
+                .for_each(|_| Ok(()))
             })
             .chain_err(ErrorKind::WhileUploadingData(changesets_hashes))
             .from_err()
@@ -864,7 +869,14 @@ impl Bundle2Resolver {
                     heads.push(onto_head);
                 }
                 heads.push(pushrebased_rev);
-                getbundle_response::create_getbundle_response(ctx, repo, common, heads, lca_hint, Some(phases_hint))
+                getbundle_response::create_getbundle_response(
+                    ctx,
+                    repo,
+                    common,
+                    heads,
+                    lca_hint,
+                    Some(phases_hint),
+                )
             })
             .and_then(|cg_part_builder| {
                 let compression = None;
@@ -908,8 +920,10 @@ impl Bundle2Resolver {
         mut maybe_resolve: Func,
     ) -> BoxFuture<(Vec<T>, BoxStream<Bundle2Item, Error>), Error>
     where
-        Func: FnMut(&Self, BoxStream<Bundle2Item, Error>)
-            -> BoxFuture<(Option<T>, BoxStream<Bundle2Item, Error>), Error>
+        Func: FnMut(
+                &Self,
+                BoxStream<Bundle2Item, Error>,
+            ) -> BoxFuture<(Option<T>, BoxStream<Bundle2Item, Error>), Error>
             + Send
             + 'static,
         T: Send + 'static,
@@ -923,7 +937,8 @@ impl Bundle2Resolver {
                     future::Loop::Continue((result, bundle2))
                 }
             })
-        }).boxify()
+        })
+        .boxify()
     }
 
     fn pushrebase(
@@ -956,21 +971,22 @@ impl Bundle2Resolver {
             self.pushrebase.clone(),
             onto_bookmark.clone(),
             changesets,
-        ).map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
-            .timed({
-                let mut scuba_logger = self.ctx.scuba().clone();
-                move |stats, result| {
-                    if let Ok(res) = result {
-                        scuba_logger
-                            .add_future_stats(&stats)
-                            .add("pushrebase_retry_num", res.retry_num)
-                            .log_with_msg("Pushrebase finished", None);
-                    }
-                    Ok(())
+        )
+        .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
+        .timed({
+            let mut scuba_logger = self.ctx.scuba().clone();
+            move |stats, result| {
+                if let Ok(res) = result {
+                    scuba_logger
+                        .add_future_stats(&stats)
+                        .add("pushrebase_retry_num", res.retry_num)
+                        .log_with_msg("Pushrebase finished", None);
                 }
-            })
-            .map(|res| res.head)
-            .boxify()
+                Ok(())
+            }
+        })
+        .map(|res| res.head)
+        .boxify()
     }
 
     fn run_hooks(
@@ -1004,16 +1020,15 @@ impl Bundle2Resolver {
             .and_then(|res| {
                 let (cs_hook_results, file_hook_results): (Vec<_>, Vec<_>) =
                     res.into_iter().unzip();
-                let cs_hook_failures: Vec<
-                    (ChangesetHookExecutionID, HookExecution),
-                > = cs_hook_results
-                    .into_iter()
-                    .flatten()
-                    .filter(|(_, exec)| match exec {
-                        HookExecution::Accepted => false,
-                        HookExecution::Rejected(_) => true,
-                    })
-                    .collect();
+                let cs_hook_failures: Vec<(ChangesetHookExecutionID, HookExecution)> =
+                    cs_hook_results
+                        .into_iter()
+                        .flatten()
+                        .filter(|(_, exec)| match exec {
+                            HookExecution::Accepted => false,
+                            HookExecution::Rejected(_) => true,
+                        })
+                        .collect();
                 let file_hook_failures: Vec<(FileHookExecutionID, HookExecution)> =
                     file_hook_results
                         .into_iter()
@@ -1140,9 +1155,10 @@ impl NewBlobs {
             hash: manifest_root_id.clone().into_nodehash(),
         };
 
-        let &(ref manifest_content, ref p1, ref p2, ref manifest_root) = manifests
-            .get(&root_key)
-            .ok_or_else(|| format_err!("Missing root tree manifest"))?;
+        let &(ref manifest_content, ref p1, ref p2, ref manifest_root) =
+            manifests
+                .get(&root_key)
+                .ok_or_else(|| format_err!("Missing root tree manifest"))?;
 
         let (entries, content_blobs, counters) = Self::walk_helper(
             &RepoPath::root(),
@@ -1234,16 +1250,15 @@ impl NewBlobs {
                             .from_err()
                             .boxify(),
                     );
-                    let (mut walked_entries, mut walked_cbinfos, sub_counters) =
-                        Self::walk_helper(
-                            &key.path,
-                            manifest_content,
-                            get_manifest_parent_content(manifests, key.path.clone(), p1.clone()),
-                            get_manifest_parent_content(manifests, key.path.clone(), p2.clone()),
-                            manifests,
-                            filelogs,
-                            content_blobs,
-                        )?;
+                    let (mut walked_entries, mut walked_cbinfos, sub_counters) = Self::walk_helper(
+                        &key.path,
+                        manifest_content,
+                        get_manifest_parent_content(manifests, key.path.clone(), p1.clone()),
+                        get_manifest_parent_content(manifests, key.path.clone(), p2.clone()),
+                        manifests,
+                        filelogs,
+                        content_blobs,
+                    )?;
                     entries.append(&mut walked_entries);
                     cbinfos.append(&mut walked_cbinfos);
                     counters += sub_counters;
