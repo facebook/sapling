@@ -350,3 +350,129 @@ Test crdump not dumping binaries
   null
   null
 #endif
+
+Test non-ASCII characters
+
+  $ echo x > X
+  $ HGENCODING=utf-8 hg commit -Aqm "Méssage în únicode"
+  $ HGENCODING=utf-8 hg book -r . "unusúal-bøøkmàrk"
+  $ hg debugcrdump -r .
+  {
+      "commits": [
+          {
+              "binary_files": [],
+              "bookmarks": [
+                  "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
+              ],
+              "date": [
+                  0,
+                  0
+              ],
+              "desc": "M\u00e9ssage \u00een \u00fanicode",
+              "files": [
+                  "X"
+              ],
+              "node": "4d5bdcf868416c46f75e4a118b69d8022325bcda",
+              "p1": {
+                  "differential_revision": "",
+                  "node": "e3a67aeeade9ad9e292f1762f8f075a8322042b7"
+              },
+              "patch_file": "4d5bdcf868416c46f75e4a118b69d8022325bcda.patch",
+              "public_base": {
+                  "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
+              },
+              "user": "test"
+          }
+      ],
+      "output_directory": "*" (glob)
+  }
+  $ hg debugcrdump -r . --encoding=utf-8
+  {
+      "commits": [
+          {
+              "binary_files": [],
+              "bookmarks": [
+                  "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
+              ],
+              "date": [
+                  0,
+                  0
+              ],
+              "desc": "M\u00e9ssage \u00een \u00fanicode",
+              "files": [
+                  "X"
+              ],
+              "node": "4d5bdcf868416c46f75e4a118b69d8022325bcda",
+              "p1": {
+                  "differential_revision": "",
+                  "node": "e3a67aeeade9ad9e292f1762f8f075a8322042b7"
+              },
+              "patch_file": "4d5bdcf868416c46f75e4a118b69d8022325bcda.patch",
+              "public_base": {
+                  "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
+              },
+              "user": "test"
+          }
+      ],
+      "output_directory": "*" (glob)
+  }
+  $ hg debugcrdump -r . --encoding=iso-8859-1
+  {
+      "commits": [
+          {
+              "binary_files": [],
+              "bookmarks": [
+                  "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
+              ],
+              "date": [
+                  0,
+                  0
+              ],
+              "desc": "M\u00e9ssage \u00een \u00fanicode",
+              "files": [
+                  "X"
+              ],
+              "node": "4d5bdcf868416c46f75e4a118b69d8022325bcda",
+              "p1": {
+                  "differential_revision": "",
+                  "node": "e3a67aeeade9ad9e292f1762f8f075a8322042b7"
+              },
+              "patch_file": "4d5bdcf868416c46f75e4a118b69d8022325bcda.patch",
+              "public_base": {
+                  "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
+              },
+              "user": "test"
+          }
+      ],
+      "output_directory": "*" (glob)
+  }
+  $ hg debugcrdump -r . --encoding=ascii
+  {
+      "commits": [
+          {
+              "binary_files": [],
+              "bookmarks": [
+                  "unus\u00faal-b\u00f8\u00f8km\u00e0rk"
+              ],
+              "date": [
+                  0,
+                  0
+              ],
+              "desc": "M\u00e9ssage \u00een \u00fanicode",
+              "files": [
+                  "X"
+              ],
+              "node": "4d5bdcf868416c46f75e4a118b69d8022325bcda",
+              "p1": {
+                  "differential_revision": "",
+                  "node": "e3a67aeeade9ad9e292f1762f8f075a8322042b7"
+              },
+              "patch_file": "4d5bdcf868416c46f75e4a118b69d8022325bcda.patch",
+              "public_base": {
+                  "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
+              },
+              "user": "test"
+          }
+      ],
+      "output_directory": "*" (glob)
+  }

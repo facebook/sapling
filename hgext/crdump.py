@@ -13,7 +13,7 @@ import shutil
 import tempfile
 from os import path
 
-from mercurial import error, extensions, obsutil, phases, registrar, scmutil
+from mercurial import encoding, error, extensions, obsutil, phases, registrar, scmutil
 from mercurial.i18n import _
 from mercurial.node import hex
 
@@ -120,11 +120,11 @@ def crdump(ui, repo, *revs, **opts):
             rdata = {
                 "node": hex(ctx.node()),
                 "date": map(int, ctx.date()),
-                "desc": ctx.description(),
+                "desc": encoding.fromlocal(ctx.description()),
                 "files": ctx.files(),
                 "p1": {"node": ctx.parents()[0].hex()},
-                "user": ctx.user(),
-                "bookmarks": ctx.bookmarks(),
+                "user": encoding.fromlocal(ctx.user()),
+                "bookmarks": map(encoding.fromlocal, ctx.bookmarks()),
             }
             if ctx.parents()[0].phase() != phases.public:
                 # we need this only if parent is in the same draft stack
