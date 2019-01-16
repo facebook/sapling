@@ -358,7 +358,8 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     const auto& name = iter.first;
     const auto& value = iter.second;
 
-    bool isMaterialized = !value.__isset.hash || value.hash.empty();
+    bool isMaterialized =
+        !value.__isset.hash || value.hash_ref().value_unchecked().empty();
     InodeNumber ino;
     if (value.inodeNumber) {
       ino = InodeNumber::fromThrift(value.inodeNumber);
@@ -370,7 +371,8 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     if (isMaterialized) {
       result.emplace(PathComponentPiece{name}, value.mode, ino);
     } else {
-      auto hash = Hash{folly::ByteRange{folly::StringPiece{value.hash}}};
+      auto hash = Hash{folly::ByteRange{
+          folly::StringPiece{value.hash_ref().value_unchecked()}}};
       result.emplace(PathComponentPiece{name}, value.mode, ino, hash);
     }
   }

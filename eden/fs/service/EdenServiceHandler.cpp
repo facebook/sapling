@@ -335,7 +335,8 @@ void EdenServiceHandler::resetParentCommits(
   ParentCommits edenParents;
   edenParents.parent1() = hashFromThrift(parents->parent1);
   if (parents->__isset.parent2) {
-    edenParents.parent2() = hashFromThrift(parents->parent2);
+    edenParents.parent2() =
+        hashFromThrift(parents->parent2_ref().value_unchecked());
   }
   auto edenMount = server_->getMount(*mountPoint);
   edenMount->resetParents(edenParents);
