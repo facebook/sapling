@@ -35,9 +35,6 @@ pub use intersectnodestream::IntersectNodeStream;
 mod unionnodestream;
 pub use unionnodestream::UnionNodeStream;
 
-mod singlenodehash;
-pub use singlenodehash::SingleNodeHash;
-
 mod singlechangesetid;
 pub use singlechangesetid::single_changeset_id;
 
@@ -65,6 +62,7 @@ pub use range::RangeNodeStream;
 use uniqueheap::UniqueHeap;
 
 pub use test::*;
+
 #[cfg(test)]
 mod test {
     pub extern crate ascii;

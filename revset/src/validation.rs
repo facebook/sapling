@@ -4,50 +4,45 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashSet;
-use std::sync::Arc;
-
-use blobrepo::BlobRepo;
+use blobrepo::ChangesetFetcher;
 use context::CoreContext;
 use failure::Error;
 use futures::stream::Stream;
 use futures::{Async, Poll};
-use mercurial_types::HgNodeHash;
+use futures_ext::StreamExt;
+use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-
-use setcommon::{add_generations, InputStream};
-use NodeStream;
+use setcommon::{add_generations_by_bonsai, BonsaiInputStream};
+use std::collections::HashSet;
+use std::sync::Arc;
+use BonsaiNodeStream;
 
 /// A wrapper around a NodeStream that asserts that the two revset invariants hold:
 /// 1. The generation number never increases
 /// 2. No hash is seen twice
 /// This uses memory proportional to the number of hashes in the revset.
 pub struct ValidateNodeStream {
-    wrapped: InputStream,
+    wrapped: BonsaiInputStream,
     last_generation: Option<Generation>,
-    seen_hashes: HashSet<HgNodeHash>,
+    seen_hashes: HashSet<ChangesetId>,
 }
 
 impl ValidateNodeStream {
     pub fn new(
         ctx: CoreContext,
-        wrapped: Box<NodeStream>,
-        repo: &Arc<BlobRepo>,
+        wrapped: Box<BonsaiNodeStream>,
+        changeset_fetcher: &Arc<ChangesetFetcher>,
     ) -> ValidateNodeStream {
         ValidateNodeStream {
-            wrapped: add_generations(ctx, wrapped, repo.clone()),
+            wrapped: add_generations_by_bonsai(ctx, wrapped, changeset_fetcher.clone()).boxify(),
             last_generation: None,
             seen_hashes: HashSet::new(),
         }
     }
-
-    pub fn boxed(self) -> Box<NodeStream> {
-        Box::new(self)
-    }
 }
 
 impl Stream for ValidateNodeStream {
-    type Item = HgNodeHash;
+    type Item = ChangesetId;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -82,24 +77,25 @@ mod test {
     use fixtures::linear;
     use futures_ext::StreamExt;
     use setcommon::NotReadyEmptyStream;
+    use single_changeset_id;
     use std::sync::Arc;
-    use tests::assert_node_sequence;
-    use tests::string_to_nodehash;
-    use SingleNodeHash;
+    use tests::{assert_changesets_sequence, string_to_bonsai, TestChangesetFetcher};
 
     #[test]
     fn validate_accepts_single_node() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+            let head_csid = string_to_bonsai(&repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
 
-            let nodestream = SingleNodeHash::new(ctx.clone(), head_hash, &repo);
+            let nodestream = single_changeset_id(ctx.clone(), head_csid.clone(), &repo).boxify();
 
             let nodestream =
-                ValidateNodeStream::new(ctx.clone(), Box::new(nodestream), &repo).boxify();
-            assert_node_sequence(ctx, &repo, vec![head_hash], nodestream);
+                ValidateNodeStream::new(ctx.clone(), nodestream, &changeset_fetcher).boxify();
+            assert_changesets_sequence(ctx, &repo, vec![head_csid], nodestream);
         });
     }
 
@@ -110,9 +106,15 @@ mod test {
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
             let repo = Arc::new(linear::getrepo(None));
-            let mut nodestream =
-                ValidateNodeStream::new(ctx, Box::new(NotReadyEmptyStream::new(repeats)), &repo)
-                    .boxify();
+
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let mut nodestream = ValidateNodeStream::new(
+                ctx,
+                Box::new(NotReadyEmptyStream::new(repeats)),
+                &changeset_fetcher,
+            )
+            .boxify();
 
             // Keep polling until we should be done.
             for _ in 0..repeats + 1 {
@@ -136,11 +138,14 @@ mod test {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
-            let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
-            let nodestream = SingleNodeHash::new(ctx.clone(), head_hash, &repo)
-                .chain(SingleNodeHash::new(ctx.clone(), head_hash, &repo));
+            let head_csid = string_to_bonsai(&repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+            let nodestream = single_changeset_id(ctx.clone(), head_csid.clone(), &repo)
+                .chain(single_changeset_id(ctx.clone(), head_csid.clone(), &repo));
 
-            let mut nodestream = ValidateNodeStream::new(ctx, Box::new(nodestream), &repo).boxify();
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let mut nodestream =
+                ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();
 
             loop {
                 match nodestream.poll() {
@@ -158,18 +163,20 @@ mod test {
             let ctx = CoreContext::test_mock();
             let repo = Arc::new(linear::getrepo(None));
 
-            let nodestream = SingleNodeHash::new(
+            let nodestream = single_changeset_id(
                 ctx.clone(),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
+                string_to_bonsai(&repo, "cb15ca4a43a59acff5388cea9648c162afde8372").clone(),
                 &repo,
             )
-            .chain(SingleNodeHash::new(
+            .chain(single_changeset_id(
                 ctx.clone(),
-                string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
+                string_to_bonsai(&repo, "3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,
             ));
-
-            let mut nodestream = ValidateNodeStream::new(ctx, Box::new(nodestream), &repo).boxify();
+            let changeset_fetcher: Arc<ChangesetFetcher> =
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let mut nodestream =
+                ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();
 
             loop {
                 match nodestream.poll() {

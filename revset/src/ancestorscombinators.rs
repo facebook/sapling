@@ -4,7 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::hash_set::IntoIter;
 /// Union and intersection can be made more efficient if the streams are uninterrupted streams of
 /// ancestors. For example:
 ///
@@ -23,6 +22,7 @@ use std::collections::hash_set::IntoIter;
 ///
 /// The stream below aims to solve the aforementioned problems. It's primary usage is in
 /// Mercurial pull to find commits that need to be sent to a client.
+use std::collections::hash_set::IntoIter;
 use std::collections::{BTreeMap, HashSet};
 use std::iter::{self, FromIterator};
 use std::sync::Arc;
