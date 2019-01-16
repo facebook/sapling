@@ -24,6 +24,7 @@ from mercurial.i18n import _
 from mercurial.node import nullid, short
 
 from . import constants, contentstore, datapack, historypack, metadatastore, shallowutil
+from ..extlib.pyrevisionstore import repackdatapacks, repackhistpacks
 from ..extutil import flock, runshellcommand
 
 
@@ -614,6 +615,9 @@ class repacker(object):
             self.keepkeys = keepset(repo, lambda f, n: (f, n))
             self.isold = isold
 
+    def _userustrepack(self):
+        return self.repo.ui.configbool("remotefilelog", "userustrepack", False)
+
     def run(self, packpath, targetdata, targethistory):
         ledger = repackledger()
 
@@ -625,6 +629,16 @@ class repacker(object):
             self.repo.hook("prerepack")
 
             _cleanuptemppacks(self.repo.ui, self.packpath)
+
+            if self._userustrepack():
+                try:
+                    repackdatapacks(packpath, targetdata.opener.base)
+                    repackhistpacks(packpath, targethistory.opener.base)
+                    return
+                except Exception as e:
+                    self.repo.ui.warn(
+                        _("warning: rust repack failed, fallback to python: %s\n") % e
+                    )
 
             # Populate ledger from source
             with progress.spinner(

@@ -55,6 +55,7 @@ Configs:
     for it to be considered for an incremental history repack.
     ``remotefilelog.history.repacksizelimit`` the maximum total size of pack
     files to include in an incremental history repack.
+    ``remotefilelog.userustrepack`` use rust based repack implementation.
     ``remotefilelog.dolfsprefetch`` means that fileserverclient's prefetch
     will also cause lfs prefetch to happen. This is True by default.
     ``remotefilelog.updatesharedcache`` is used to prevent writing data to the

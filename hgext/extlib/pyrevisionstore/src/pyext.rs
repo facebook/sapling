@@ -7,6 +7,10 @@ use cpython::{
 use encoding;
 use std::cell::{Ref, RefCell};
 
+use failure::Error;
+use std::fs;
+use std::path::{Path, PathBuf};
+
 use datastorepyext::DataStorePyExt;
 use historystorepyext::HistoryStorePyExt;
 use pythondatastore::PythonDataStore;
@@ -14,6 +18,7 @@ use pythonutil::to_pyerr;
 use repackablepyext::RepackablePyExt;
 use revisionstore::datapack::DataPack;
 use revisionstore::historypack::HistoryPack;
+use revisionstore::repack::{repack_datapacks, repack_historypacks};
 
 py_module_initializer!(
     pyrevisionstore,        // module name
@@ -24,9 +29,68 @@ py_module_initializer!(
         m.add_class::<datastore>(py)?;
         m.add_class::<datapack>(py)?;
         m.add_class::<historypack>(py)?;
+        m.add(
+            py,
+            "repackdatapacks",
+            py_fn!(py, repackdata(packpath: PyBytes, outdir: PyBytes)),
+        )?;
+        m.add(
+            py,
+            "repackhistpacks",
+            py_fn!(py, repackhist(packpath: PyBytes, outdir: PyBytes)),
+        )?;
         Ok(())
     }
 );
+
+/// List all the pack files in the directory `dir` that ends with `extension`.
+fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>, Error> {
+    Ok(fs::read_dir(dir)?
+        .filter_map(|e| match e {
+            Err(_) => None,
+            Ok(entry) => {
+                let entrypath = entry.path();
+                if entrypath.extension() == Some(extension.as_ref()) {
+                    Some(entrypath.with_extension(""))
+                } else {
+                    None
+                }
+            }
+        })
+        .collect())
+}
+
+/// Helper function to de-serialize and re-serialize from and to Python objects.
+fn repack_pywrapper(
+    py: Python,
+    packpath: PyBytes,
+    outdir_py: PyBytes,
+    repacker: impl FnOnce(PathBuf, PathBuf) -> Result<PathBuf, Error>,
+) -> PyResult<PyBytes> {
+    let path =
+        encoding::local_bytes_to_path(packpath.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+
+    let outdir =
+        encoding::local_bytes_to_path(outdir_py.data(py)).map_err(|e| to_pyerr(py, &e.into()))?;
+    repacker(path.to_path_buf(), outdir.to_path_buf())
+        .and_then(|p| Ok(PyBytes::new(py, &encoding::path_to_local_bytes(&p)?)))
+        .map_err(|e| to_pyerr(py, &e.into()))
+}
+
+/// Merge all the datapacks into one big datapack. Returns the fullpath of the resulting datapack.
+fn repackdata(py: Python, packpath: PyBytes, outdir_py: PyBytes) -> PyResult<PyBytes> {
+    repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
+        repack_datapacks(list_packs(&dir, "datapack")?.iter(), &outdir)
+    })
+}
+
+/// Merge all the history packs into one big historypack. Returns the fullpath of the resulting
+/// histpack.
+fn repackhist(py: Python, packpath: PyBytes, outdir_py: PyBytes) -> PyResult<PyBytes> {
+    repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
+        repack_historypacks(list_packs(&dir, "histpack")?.iter(), &outdir)
+    })
+}
 
 py_class!(class datastore |py| {
     data store: Box<DataStorePyExt + Send>;
