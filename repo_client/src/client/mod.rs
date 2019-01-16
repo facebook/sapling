@@ -401,9 +401,10 @@ impl RepoClient {
                 move |entry| used_hashes.insert(*entry.0.get_hash())
             })
             .map({
-                let ctx = self.prepared_ctx(ops::GETTREEPACK, None);
+                cloned!(self.ctx);
                 let blobrepo = self.repo.blobrepo().clone();
                 move |(entry, basepath)| {
+                    ctx.perf_counters().increment_counter("gettreepack_num_treepacks");
                     fetch_treepack_part_input(
                         ctx.clone(),
                         &blobrepo,
@@ -803,10 +804,22 @@ impl HgCommands for RepoClient {
 
         self.gettreepack_untimed(params)
             .traced(self.ctx.trace(), ops::GETTREEPACK, trace_args!())
-            .timed(move |stats, _| {
-                STATS::gettreepack_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-                wireproto_logger.finish_stream_wireproto_processing(&stats);
-                Ok(())
+            .inspect({
+                cloned!(self.ctx);
+                move |bytes| {
+                    ctx.perf_counters()
+                        .add_to_counter("gettreepack_response_size", bytes.len() as i64);
+                }
+            })
+            .timed({
+                cloned!(self.ctx);
+                move |stats, _| {
+                    STATS::gettreepack_ms
+                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx);
+                    wireproto_logger.finish_stream_wireproto_processing(&stats);
+                    Ok(())
+                }
             })
             .boxify()
     }
