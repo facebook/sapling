@@ -39,3 +39,10 @@ pub mod mutablehistorypack;
 pub mod repack;
 pub mod uniondatastore;
 pub mod unionhistorystore;
+
+pub use datapack::{DataEntry, DataPack, DataPackVersion};
+pub use datastore::{DataStore, Delta, Metadata};
+pub use historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
+pub use historystore::{Ancestors, HistoryStore, NodeInfo};
+pub use mutabledatapack::MutableDataPack;
+pub use mutablehistorypack::MutableHistoryPack;
