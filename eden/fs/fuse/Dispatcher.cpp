@@ -30,7 +30,11 @@ Dispatcher::Attr::Attr(const struct stat& st, uint64_t timeout)
     : st(st), timeout_seconds(timeout) {}
 
 fuse_attr_out Dispatcher::Attr::asFuseAttr() const {
-  fuse_attr_out result;
+  // Ensure that we initialize the members to zeroes;
+  // This is important on macOS where there are a couple
+  // of additional fields (notably `flags`) that influence
+  // file accessibility.
+  fuse_attr_out result{};
 
   result.attr.ino = st.st_ino;
   result.attr.size = st.st_size;
