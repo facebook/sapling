@@ -10,7 +10,7 @@ Invalid syntax: no value
   hg: parse error: "$TESTTMP/.hg/hgrc":
    --> 1:11
     |
-  1 | novaluekey
+  1 | novaluekey\xe2\x90\x8a (esc)
     |           ^---
     |
     = expected equal_sign
@@ -25,7 +25,7 @@ Invalid syntax: no key
   hg: parse error: "$TESTTMP/.hg/hgrc":
    --> 1:1
     |
-  1 | =nokeyvalue
+  1 | =nokeyvalue\xe2\x90\x8a (esc)
     | ^---
     |
     = expected EOI, new_line, config_name, left_bracket, comment_line, or directive
@@ -40,7 +40,7 @@ Test hint about invalid syntax from leading white space
   hg: parse error: "$TESTTMP/.hg/hgrc":
    --> 1:2
     |
-  1 |  key=value
+  1 |  key=value\xe2\x90\x8a (esc)
     |  ^---
     |
     = expected EOI or new_line
@@ -54,7 +54,7 @@ Test hint about invalid syntax from leading white space
   hg: parse error: "$TESTTMP/.hg/hgrc":
    --> 1:2
     |
-  1 |  [section]
+  1 |  [section]\xe2\x90\x8a (esc)
     |  ^---
     |
     = expected EOI or new_line

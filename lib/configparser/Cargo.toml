@@ -8,8 +8,8 @@ dirs = "1.0.4"
 failure = "0.1.2"
 failure_derive = "0.1.2"
 indexmap = "1.0.1"
-pest = "2.0.1"
-pest_derive = "2.0.1"
+pest = "2.1.0"
+pest_derive = "2.1.0"
 shellexpand = "1.0.0"
 
 [dev-dependencies]

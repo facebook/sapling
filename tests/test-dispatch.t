@@ -93,7 +93,7 @@ However, we can't prevent it from loading extensions and configs:
   hg: parse error: "$TESTTMP/a/badrepo/.hg/hgrc":
    --> 1:15
     |
-  1 | invalid-syntax
+  1 | invalid-syntax\xe2\x90\x8a (esc)
     |               ^---
     |
     = expected equal_sign

@@ -21,7 +21,7 @@
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", None, None, None)
-  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset'] (glob)
+  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> cfg.parse("[c]\nx=1", "parse")
   []
   >>> cfg.set("d", "y", "2", "set1")
@@ -56,7 +56,7 @@ Section whitelist
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", ["a"], None, None)
-  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset'] (glob)
+  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.sections())
   ['a']
 
@@ -65,7 +65,7 @@ Section remap
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", None, {'a': 'x'}.items(), None)
-  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset'] (glob)
+  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.sections())
   ['x', 'b']
 
@@ -74,7 +74,7 @@ Config whitelist
   >>> from mercurial.rust import config
   >>> cfg = config.config()
   >>> cfg.readpath("a.rc", "readpath", None, None, [('a', 'y')])
-  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\n  |  ^---\n  |\n  = expected include or unset'] (glob)
+  ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.get('a', 'y'))
   None
   >>> print(cfg.get('a', 'x'))

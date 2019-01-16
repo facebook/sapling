@@ -19,7 +19,7 @@ Basic syntax error
   hg: parse error: "$TESTTMP/hgrc":
    --> 1:8
     |
-  1 | invalid
+  1 | invalid\xe2\x90\x8a (esc)
     |        ^---
     |
     = expected equal_sign
@@ -63,7 +63,7 @@ issue1829: wrong indentation
   hg: parse error: "$TESTTMP/hgrc":
    --> 2:3
     |
-  2 |   x = y
+  2 |   x = y\xe2\x90\x8a (esc)
     |   ^---
     |
     = expected EOI or new_line
