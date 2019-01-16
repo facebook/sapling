@@ -48,7 +48,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use reachabilityindex::SkiplistIndex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 use std::sync::Arc;
 use std::{fmt, str};
 use try_from::TryFrom;
@@ -140,7 +141,7 @@ impl ConvIr<Phase> for Phase {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct PhasesMapping {
     pub calculated: HashMap<ChangesetId, Phase>,
     pub unknown: Vec<ChangesetId>,
@@ -298,6 +299,9 @@ impl Phases for SqlPhases {
         repo: BlobRepo,
         cs_ids: Vec<ChangesetId>,
     ) -> BoxFuture<PhasesMapping, Error> {
+        if cs_ids.is_empty() {
+            return future::ok(Default::default()).boxify();
+        }
         SelectPhases::query(
             &self.read_connection,
             &repo.get_repoid(),
@@ -418,7 +422,7 @@ impl Phases for HintPhases {
                                 ctx,
                                 changeset_fetcher,
                                 not_found_in_db,
-                                bookmarks,
+                                Arc::new(HashSet::from_iter(bookmarks.into_iter())),
                             )
                         }
                     })

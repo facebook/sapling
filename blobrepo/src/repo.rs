@@ -103,6 +103,7 @@ define_stats! {
     get_bookmarks: timeseries(RATE, SUM),
     get_bookmarks_maybe_stale: timeseries(RATE, SUM),
     get_bonsai_from_hg: timeseries(RATE, SUM),
+    get_hg_bonsai_mapping: timeseries(RATE, SUM),
     update_bookmark_transaction: timeseries(RATE, SUM),
     get_linknode: timeseries(RATE, SUM),
     get_linknode_opt: timeseries(RATE, SUM),
@@ -1131,6 +1132,24 @@ impl BlobRepo {
         STATS::get_bonsai_from_hg.add_value(1);
         self.bonsai_hg_mapping
             .get_bonsai_from_hg(ctx, self.repoid, *hg_cs_id)
+    }
+
+    // Returns only the mapping for valid Hg Changesets that are known to the server
+    pub fn get_hg_bonsai_mapping(
+        &self,
+        ctx: CoreContext,
+        hg_cs_id: Vec<HgChangesetId>,
+    ) -> BoxFuture<Vec<(HgChangesetId, ChangesetId)>, Error> {
+        STATS::get_hg_bonsai_mapping.add_value(1);
+        self.bonsai_hg_mapping
+            .get(ctx, self.repoid, BonsaiOrHgChangesetIds::Hg(hg_cs_id))
+            .map(|result| {
+                result
+                    .into_iter()
+                    .map(|entry| (entry.hg_cs_id, entry.bcs_id))
+                    .collect()
+            })
+            .boxify()
     }
 
     pub fn get_bonsai_changeset(

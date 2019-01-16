@@ -7,7 +7,7 @@
 use bytes::Bytes;
 use errors::*;
 use failure::err_msg;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 use std::sync::Arc;
 
@@ -15,8 +15,8 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use futures::{stream, Future, Stream};
 use mercurial::{self, RevlogChangeset};
-use mercurial_bundles::{parts, part_encode::PartEncodeBuilder};
-use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};
+use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
+use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, HgNodeHash, HgPhase, NULL_CSID};
 use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
@@ -36,37 +36,13 @@ pub fn create_getbundle_response(
     }
 
     let changesets_buffer_size = 1000; // TODO(stash): make it configurable
-    let phases_buffer_size = 1000;
 
     let phases_part = if let Some(phases_hint) = phases_hint {
         // Phases were requested
-        // Calculate phases for the heads.
-        // Ignore common because phases might have been changed.
-        // TODO (liubovd): if client is pulling non-public changesets, we need to find
-        // intermediate public heads and send phases for them as well similar to
-        // _getbundlephasespart in mercurial/exchange.py
-        // This is to solve the cases when you have a local stack but some public bookmark was been moved to part of it.
-
-        let items = stream::iter_ok(heads.clone().into_iter())
-            .map({
-                cloned!(ctx, blobrepo, phases_hint);
-                move |node| {
-                    cloned!(ctx, blobrepo, phases_hint);
-                    blobrepo
-                        .get_bonsai_from_hg(ctx.clone(), &node)
-                        .and_then(move |maybe_bonsai| {
-                            maybe_bonsai.ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node).into())
-                        })
-                        .and_then(move |bonsai| phases_hint.get(ctx, blobrepo, bonsai))
-                        .and_then(move |maybe_phase| {
-                            maybe_phase.ok_or(ErrorKind::PhaseUnknownForHgChangeset(node).into())
-                        })
-                        // transform data in a format used by the encoding function
-                        .map(move |phase| (node.into_nodehash(), HgPhase::from(phase)))
-                }
-            })
-            .buffered(phases_buffer_size);
-        Some(parts::phases_part(ctx.clone(), items))
+        Some(parts::phases_part(
+            ctx.clone(),
+            prepare_phases_stream(ctx.clone(), blobrepo.clone(), heads.clone(), phases_hint),
+        ))
     } else {
         None
     };
@@ -183,4 +159,45 @@ fn hg_to_bonsai_stream(
         })
         .buffered(100)
         .collect()
+}
+
+/// Calculate phases for the heads.
+/// Ignore common because phases might have been changed.
+/// TODO (liubovd): if client is pulling non-public changesets, we need to find
+/// intermediate public heads and send phases for them as well similar to
+/// _getbundlephasespart in mercurial/exchange.py
+/// This is to solve the cases when you have a local stack but some public bookmark was been moved to part of it.
+fn prepare_phases_stream(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    heads: Vec<HgChangesetId>,
+    phases_hint: Arc<Phases>,
+) -> impl Stream<Item = (HgNodeHash, HgPhase), Error = Error> {
+    repo.get_hg_bonsai_mapping(ctx.clone(), heads)
+        .and_then({
+            cloned!(ctx, repo);
+            move |hg_bonsai_mapping| {
+                // convert to bonsai => hg hash map that we will later use
+                // skip heads that are not known by the server
+                let bonsai_node_mapping: HashMap<ChangesetId, HgNodeHash> = hg_bonsai_mapping
+                    .into_iter()
+                    .map(|(hg_cs_id, bonsai)| (bonsai, hg_cs_id.into_nodehash()))
+                    .collect();
+                // calculate phases
+                phases_hint
+                    .get_all(ctx, repo, bonsai_node_mapping.keys().cloned().collect())
+                    .map(move |phases_mapping| (phases_mapping, bonsai_node_mapping))
+            }
+        })
+        .map(move |(phases_mapping, bonsai_node_mapping)| {
+            // transform data in a format used by the encoding function
+            let calculated: Vec<(HgNodeHash, HgPhase)> = phases_mapping
+                .calculated
+                .into_iter()
+                .map(|(bonsai, phase)| (bonsai_node_mapping[&bonsai], HgPhase::from(phase)))
+                .collect();
+
+            stream::iter_ok(calculated)
+        })
+        .flatten_stream()
 }

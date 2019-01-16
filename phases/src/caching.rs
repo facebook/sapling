@@ -13,7 +13,8 @@ use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
 use reachabilityindex::SkiplistIndex;
 use stats::Timeseries;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 use std::sync::Arc;
 use std::time::Duration;
 use try_from::TryInto;
@@ -208,7 +209,7 @@ impl Phases for CachingHintPhases {
                                         ctx,
                                         changeset_fetcher,
                                         not_found_in_db,
-                                        bookmarks,
+                                        Arc::new(HashSet::from_iter(bookmarks.into_iter())),
                                     )
                                 }
                             })
