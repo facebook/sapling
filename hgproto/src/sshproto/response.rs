@@ -7,12 +7,13 @@
 use std::fmt::Display;
 use std::io::{self, Write};
 
-use bytes::{BufMut, Bytes, BytesMut};
-use futures::stream;
+use bytes::{Bytes, BytesMut};
+use futures::{stream, Stream};
 use futures_ext::StreamExt;
+use itertools::Itertools;
 
-use {batch, Response, SingleResponse};
 use handler::OutputStream;
+use {batch, Response, SingleResponse};
 
 fn separated<I, W>(write: &mut W, iter: I, sep: &str) -> io::Result<()>
 where
@@ -36,31 +37,40 @@ where
 }
 
 pub fn encode(response: Response) -> OutputStream {
-    let mut out = BytesMut::new();
     match response {
         Response::Batch(resps) => {
-            let escaped_results: Vec<_> = resps
-                .into_iter()
-                .map(|resp| batch::escape(&encode_cmd(resp)))
-                .collect();
-            let escaped_results = Bytes::from(escaped_results.join(&b';'));
-            out.reserve(10 + escaped_results.len());
-            out.put_slice(format!("{}\n", escaped_results.len()).as_bytes());
-            out.put(escaped_results)
+            let separator = Bytes::from(&b";"[..]);
+            let escaped_results = resps.into_iter().map(move |resp| {
+                Bytes::from(batch::escape(&encode_cmd(resp)))
+            });
+
+            let separated_results = escaped_results.intersperse(separator);
+            let separated_results: Vec<_> = separated_results.collect();
+            let mut len = 0;
+            for res in separated_results.iter() {
+                len += res.len();
+            }
+            let len = format!("{}\n", len);
+            let len = stream::once(Ok(Bytes::from(len.as_bytes())));
+
+            len.chain(stream::iter_ok(separated_results.into_iter())).boxify()
         }
-        Response::Single(resp) => encode_single(resp, &mut out),
+        Response::Single(resp) => encode_single(resp),
     }
-    stream::once(Ok(out.freeze())).boxify()
 }
 
-fn encode_single(response: SingleResponse, out: &mut BytesMut) {
+fn encode_single(response: SingleResponse) -> OutputStream {
     let is_stream = response.is_stream();
     let res = encode_cmd(response);
-    out.reserve(10 + res.len());
-    if !is_stream {
-        out.put_slice(format!("{}\n", res.len()).as_bytes());
+    if is_stream {
+        stream::once(Ok(res)).boxify()
+    } else {
+        stream::iter_ok(vec![
+            Bytes::from(format!("{}\n", res.len()).as_bytes()),
+            res,
+        ])
+        .boxify()
     }
-    out.put(res);
 }
 
 /// Encode the result of an individual command completion. This is used by both

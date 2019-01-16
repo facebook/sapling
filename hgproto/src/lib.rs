@@ -34,6 +34,7 @@ extern crate nom;
 
 extern crate context;
 extern crate futures_ext;
+extern crate itertools;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
