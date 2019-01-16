@@ -24,7 +24,12 @@ from mercurial.i18n import _
 from mercurial.node import nullid, short
 
 from . import constants, contentstore, datapack, historypack, metadatastore, shallowutil
-from ..extlib.pyrevisionstore import repackdatapacks, repackhistpacks
+from ..extlib.pyrevisionstore import (
+    repackdatapacks,
+    repackhistpacks,
+    repackincrementaldatapacks,
+    repackincrementalhistpacks,
+)
 from ..extutil import flock, runshellcommand
 
 
@@ -632,8 +637,13 @@ class repacker(object):
 
             if self._userustrepack():
                 try:
-                    repackdatapacks(packpath, targetdata.opener.base)
-                    repackhistpacks(packpath, targethistory.opener.base)
+                    if self.history == self.fullhistory:
+                        # full repack
+                        repackdatapacks(packpath, targetdata.opener.base)
+                        repackhistpacks(packpath, targethistory.opener.base)
+                    else:
+                        repackincrementaldatapacks(packpath, targetdata.opener.base)
+                        repackincrementalhistpacks(packpath, targethistory.opener.base)
                     return
                 except Exception as e:
                     self.repo.ui.warn(

@@ -8,7 +8,6 @@ use encoding;
 use std::cell::{Ref, RefCell};
 
 use failure::Error;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use datastorepyext::DataStorePyExt;
@@ -18,7 +17,9 @@ use pythonutil::to_pyerr;
 use repackablepyext::RepackablePyExt;
 use revisionstore::datapack::DataPack;
 use revisionstore::historypack::HistoryPack;
-use revisionstore::repack::{repack_datapacks, repack_historypacks};
+use revisionstore::repack::{
+    filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks,
+};
 
 py_module_initializer!(
     pyrevisionstore,        // module name
@@ -36,29 +37,28 @@ py_module_initializer!(
         )?;
         m.add(
             py,
+            "repackincrementaldatapacks",
+            py_fn!(
+                py,
+                incremental_repackdata(packpath: PyBytes, outdir: PyBytes)
+            ),
+        )?;
+        m.add(
+            py,
             "repackhistpacks",
             py_fn!(py, repackhist(packpath: PyBytes, outdir: PyBytes)),
+        )?;
+        m.add(
+            py,
+            "repackincrementalhistpacks",
+            py_fn!(
+                py,
+                incremental_repackhist(packpath: PyBytes, outdir: PyBytes)
+            ),
         )?;
         Ok(())
     }
 );
-
-/// List all the pack files in the directory `dir` that ends with `extension`.
-fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>, Error> {
-    Ok(fs::read_dir(dir)?
-        .filter_map(|e| match e {
-            Err(_) => None,
-            Ok(entry) => {
-                let entrypath = entry.path();
-                if entrypath.extension() == Some(extension.as_ref()) {
-                    Some(entrypath.with_extension(""))
-                } else {
-                    None
-                }
-            }
-        })
-        .collect())
-}
 
 /// Helper function to de-serialize and re-serialize from and to Python objects.
 fn repack_pywrapper(
@@ -89,6 +89,26 @@ fn repackdata(py: Python, packpath: PyBytes, outdir_py: PyBytes) -> PyResult<PyB
 fn repackhist(py: Python, packpath: PyBytes, outdir_py: PyBytes) -> PyResult<PyBytes> {
     repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
         repack_historypacks(list_packs(&dir, "histpack")?.iter(), &outdir)
+    })
+}
+
+/// Perform an incremental repack of data packs.
+fn incremental_repackdata(py: Python, packpath: PyBytes, outdir_py: PyBytes) -> PyResult<PyBytes> {
+    repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
+        repack_datapacks(
+            filter_incrementalpacks(list_packs(&dir, "datapack")?, "datapack")?.iter(),
+            &outdir,
+        )
+    })
+}
+
+/// Perform an incremental repack of history packs.
+fn incremental_repackhist(py: Python, packpath: PyBytes, outdir_py: PyBytes) -> PyResult<PyBytes> {
+    repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
+        repack_historypacks(
+            filter_incrementalpacks(list_packs(&dir, "histpack")?, "histpack")?.iter(),
+            &outdir,
+        )
     })
 }
 

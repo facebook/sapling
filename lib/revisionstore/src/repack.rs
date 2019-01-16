@@ -12,6 +12,7 @@ use key::Key;
 use mutabledatapack::MutableDataPack;
 use mutablehistorypack::MutableHistoryPack;
 use std::collections::HashSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -165,6 +166,61 @@ pub fn repack_historypacks<'a>(
 
         Ok(new_pack_path)
     }
+}
+
+/// List all the pack files in the directory `dir` that ends with `extension`.
+pub fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
+    Ok(fs::read_dir(dir)?
+        .filter_map(|e| match e {
+            Err(_) => None,
+            Ok(entry) => {
+                let entrypath = entry.path();
+                if entrypath.extension() == Some(extension.as_ref()) {
+                    Some(entrypath.with_extension(""))
+                } else {
+                    None
+                }
+            }
+        })
+        .collect())
+}
+
+/// Select all the packs from `packs` that needs to be repacked during an incremental repack.
+///
+/// The filtering is fairly basic and is intended to reduce the fragmentation of pack files.
+pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<PathBuf>> {
+    // XXX: Read these from the configuration.
+    let repackmaxpacksize = 4 * 1024 * 1024 * 1024;
+    let repacksizelimit = 100 * 1024 * 1024;
+
+    let mut packssizes = packs
+        .into_iter()
+        .map(|p| {
+            let size = p
+                .with_extension(extension)
+                .metadata()
+                .and_then(|m| Ok(m.len()))
+                .unwrap_or(u64::max_value());
+            (p, size)
+        })
+        .collect::<Vec<(PathBuf, u64)>>();
+
+    // Sort by file size in increasing order
+    packssizes.sort_unstable_by(|a, b| a.1.cmp(&b.1));
+
+    let mut accumulated_sizes = 0;
+    Ok(packssizes
+        .into_iter()
+        .take_while(|e| {
+            if e.1 > repacksizelimit || e.1 + accumulated_sizes > repackmaxpacksize {
+                false
+            } else {
+                accumulated_sizes += e.1;
+                true
+            }
+        })
+        .map(|e| e.0)
+        .collect())
 }
 
 #[cfg(test)]
