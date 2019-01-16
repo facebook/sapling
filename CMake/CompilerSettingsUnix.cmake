@@ -1,4 +1,4 @@
-set(CMAKE_CXX_FLAGS_COMMON "-g -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_COMMON "-g -Wall -Wextra -Wno-deprecated -Wno-deprecated-declarations")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_COMMON}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_COMMON} -O3")
 
@@ -11,7 +11,7 @@ function(apply_eden_compile_options_to_target THETARGET)
       -Werror
       -Wall
       -Wno-deprecated
-      -Wdeprecated-declarations
+      -Wno-deprecated-declarations
       -Wno-error=deprecated-declarations
       -Wno-sign-compare
       -Wno-unused
