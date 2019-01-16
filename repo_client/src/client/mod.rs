@@ -683,17 +683,20 @@ impl HgCommands for RepoClient {
         });
         let value = json!(vec![value]);
         let mut wireproto_logger = self.wireproto_logger(ops::GETBUNDLE, Some(value));
+        cloned!(self.ctx);
 
         match self.create_bundle(args) {
             Ok(res) => res.boxify(),
             Err(err) => stream::once(Err(err)).boxify(),
-        }.traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
-            .timed(move |stats, _| {
-                STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-                wireproto_logger.finish_stream_wireproto_processing(&stats);
-                Ok(())
-            })
-            .boxify()
+        }
+        .traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
+        .timed(move |stats, _| {
+            STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
+            wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx);
+            wireproto_logger.finish_stream_wireproto_processing(&stats);
+            Ok(())
+        })
+        .boxify()
     }
 
     // @wireprotocommand('hello')
@@ -783,6 +786,9 @@ impl HgCommands for RepoClient {
 
         res.traced(self.ctx.trace(), ops::UNBUNDLE, trace_args!())
             .timed(move |stats, _| {
+                if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
+                    scuba_logger.add("extra_context", counters);
+                }
                 scuba_logger
                     .add_future_stats(&stats)
                     .log_with_msg("Command processed", None);

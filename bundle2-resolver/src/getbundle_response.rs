@@ -71,7 +71,7 @@ pub fn create_getbundle_response(
     );
 
     let changeset_fetcher = blobrepo.get_changeset_fetcher();
-    let nodestosend = heads
+    let nodes_to_send = heads
         .join(excludes)
         .map({
             cloned!(ctx);
@@ -88,12 +88,19 @@ pub fn create_getbundle_response(
         .flatten_stream();
 
     // TODO(stash): avoid collecting all the changelogs in the vector - T25767311
-    let nodestosend = nodestosend
+    let nodes_to_send = nodes_to_send
         .collect()
+        .inspect({
+            cloned!(ctx);
+            move |nodes| {
+                ctx.perf_counters()
+                    .add_to_counter("getbundle_num_commits", nodes.len() as i64);
+            }
+        })
         .map(|nodes| stream::iter_ok(nodes.into_iter().rev()))
         .flatten_stream();
 
-    let changelogentries = nodestosend
+    let changelogentries = nodes_to_send
         .map({
             cloned!(blobrepo);
             move |bonsai| {
