@@ -209,13 +209,12 @@ impl WireprotoLogger {
         };
         logger.scuba_logger.add("command", logger.wireproto_command);
 
-        logger.args = args;
-        if let Some(ref args) = logger.args {
-            let args = args.to_string();
-            // Scuba does not support too long columns, we have to trim it
-            let limit = ::std::cmp::min(args.len(), 1000);
-            logger.scuba_logger.add("command_args", &args[..limit]);
+        if let Some(args) = args.clone() {
+            if let Ok(args) = serde_json::to_string(&args) {
+                logger.add_trimmed_scuba_field("command_args", args);
+            }
         }
+        logger.args = args;
 
         logger.scuba_logger.log_with_msg("Start processing", None);
         logger
@@ -223,6 +222,12 @@ impl WireprotoLogger {
 
     fn set_args(&mut self, args: Option<serde_json::Value>) {
         self.args = args;
+    }
+
+    fn add_trimmed_scuba_field(&mut self, args_name: &str, args: String) {
+        // Scuba does not support columns that are too long, we have to trim it
+        let limit = ::std::cmp::min(args.len(), 1000);
+        self.scuba_logger.add(args_name, &args[..limit]);
     }
 
     fn finish_stream_wireproto_processing(&mut self, stats: &StreamStats) {
