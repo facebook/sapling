@@ -36,6 +36,7 @@ pub mod key;
 pub mod loosefile;
 pub mod mutabledatapack;
 pub mod mutablehistorypack;
+pub mod packwriter;
 pub mod repack;
 pub mod uniondatastore;
 pub mod unionhistorystore;
