@@ -846,7 +846,8 @@ void FuseChannel::fuseWorkerThread() noexcept {
     // If we are the last thread to stop and there are no more requests
     // outstanding then invoke sessionComplete().  If we are the last thread
     // but there are still outstanding requests we will invoke
-    // sessionComplete() when finishRequest() is called for the last request.
+    // sessionComplete() when we process the final stage of the request
+    // processing for the last request.
     if (state->stoppedThreads == numThreads_ && state->requests.empty()) {
       sessionComplete(std::move(state));
     }
@@ -1179,30 +1180,10 @@ void FuseChannel::processSession() {
       case FUSE_INTERRUPT: {
         // no reply is required
         XLOG(DBG7) << "FUSE_INTERRUPT";
-        const auto in = reinterpret_cast<const fuse_interrupt_in*>(arg);
-
-        // Look up the fuse request; if we find it and the context
-        // is still alive, ctx will be set to it
-        std::shared_ptr<folly::RequestContext> ctx;
-
-        {
-          const auto state = state_.wlock();
-          const auto requestIter = state->requests.find(in->unique);
-          if (requestIter != state->requests.end()) {
-            ctx = requestIter->second.lock();
-          }
-        }
-
-        // If we found an existing request, temporarily activate that request
-        // context so that we can test whether the request is definitely a fuse
-        // request; if so, interrupt it.
-        if (ctx) {
-          const RequestContextScopeGuard guard(ctx);
-          if (RequestData::isFuseRequest()) {
-            RequestData::get().interrupt();
-          }
-        }
-
+        // Ignore it: we don't have a reliable way to guarantee
+        // that interrupting functions correctly.
+        // In addition, the kernel (certainly on macOS) may recycle
+        // ids too quickly for us to safely track by `unique` id.
         break;
       }
 
@@ -1234,30 +1215,41 @@ void FuseChannel::processSession() {
           RequestContextScopeGuard requestContextGuard;
 
           auto& request = RequestData::create(this, *header, dispatcher_);
+          uint64_t requestId;
           {
             // Save a weak reference to this new request context.
-            // We'll need this to process FUSE_INTERRUPT requests.
+            // We use this to enable getOutstandingRequests() for debugging
+            // purposes, as well as to determine when all requests are done.
+            // We allocate our own request Id for this purpose, as the
+            // kernel may recycle `unique` values more quickly than the
+            // lifecycle of our state here.
             auto state = state_.wlock();
+            requestId = state->nextRequestId++;
             state->requests.emplace(
-                header->unique,
+                requestId,
                 std::weak_ptr<folly::RequestContext>(
                     RequestContext::saveContext()));
           }
           const auto& entry = handlerIter->second;
 
-          // We cannot hold the state_ lock while invoking entry.
-          //
-          // This means that the call to .setRequestFuture() may be running
-          // concurrently with the handling of a FUSE_INTERRUPT for this
-          // request on another thread which will call .interrupt().
-          //
-          // These methods are internally synchronised to make this safe
-          // so we don't need to reacquire state_ lock after calling the
-          // handler.
-          request.setRequestFuture(folly::makeFutureWith([&] {
-            request.startRequest(dispatcher_->getStats(), entry.histogram);
-            return (this->*entry.handler)(&request.getReq(), arg);
-          }));
+          request
+              .catchErrors(folly::makeFutureWith([&] {
+                request.startRequest(dispatcher_->getStats(), entry.histogram);
+                return (this->*entry.handler)(&request.getReq(), arg);
+              }))
+              .ensure([this, requestId] {
+                auto state = state_.wlock();
+
+                // Remove the request from the map
+                state->requests.erase(requestId);
+
+                // We may be complete; check to see if all requests are
+                // done and whether there are any threads remaining.
+                if (state->requests.empty() &&
+                    state->stoppedThreads == numThreads_) {
+                  sessionComplete(std::move(state));
+                }
+              });
           break;
         }
 
@@ -1287,18 +1279,6 @@ void FuseChannel::processSession() {
         break;
       }
     }
-  }
-}
-
-void FuseChannel::finishRequest(const fuse_in_header& header) {
-  // Remove the current request from the map.
-  auto state = state_.wlock();
-  state->requests.erase(header.unique);
-
-  // We may be complete; check to see if all requests are
-  // done and whether there are any threads remaining.
-  if (state->requests.empty() && state->stoppedThreads == numThreads_) {
-    sessionComplete(std::move(state));
   }
 }
 

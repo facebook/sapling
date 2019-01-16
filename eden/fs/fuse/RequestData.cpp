@@ -28,24 +28,6 @@ RequestData::RequestData(
     Dispatcher* dispatcher)
     : channel_(channel), fuseHeader_(fuseHeader), dispatcher_(dispatcher) {}
 
-RequestData::~RequestData() {
-  channel_->finishRequest(fuseHeader_);
-}
-
-void RequestData::interrupt() {
-  // Set the flag to indicate that an interrupt has been requested.
-  // If the existing value indicates that the request has finished launching
-  // and has not yet been cancelled then we are safe to cancel it.
-  // Otherwise, the thread launching the request will be responsible for
-  // interrupting it after it finishes launching the operation inside
-  // setRequestFuture().
-  auto oldValue = interruptFlag_.fetch_or(
-      kInterruptRequestedFlag, std::memory_order_acq_rel);
-  if (oldValue == kInterrupterInitialisedFlag) {
-    interrupter_.cancel();
-  }
-}
-
 bool RequestData::isFuseRequest() {
   return folly::RequestContext::get()->getContextData(kKey) != nullptr;
 }

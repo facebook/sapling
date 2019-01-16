@@ -42,7 +42,6 @@ class RequestData : public folly::RequestData {
       FuseChannel* channel,
       const fuse_in_header& fuseHeader,
       Dispatcher* dispatcher);
-  ~RequestData();
   static RequestData& get();
   static RequestData& create(
       FuseChannel* channel,
@@ -73,29 +72,6 @@ class RequestData : public folly::RequestData {
   // throw. The caller is responsible to verify that the fuse_in_header is valid
   // by checking if (fuseHeader.opcode != 0)
   const fuse_in_header& examineReq() const;
-
-  /** Register the future chain associated with this request so that
-   * we can cancel it when we receive an interrupt.
-   * This function will append error handling to the future chain by
-   * passing it to catchErrors() prior to registering the cancellation
-   * handler.
-   */
-  template <typename FUTURE>
-  void setRequestFuture(FUTURE&& fut) {
-    this->interrupter_ = this->catchErrors(std::forward<FUTURE>(fut));
-
-    // Flag that the interrupter_ member has been initialised and that
-    // the operation can now be interrupted. If the previous value of the
-    // flag indicates that an interrupt was requested concurrently with this
-    // operation before we could finish launching it then we should interrupt
-    // it now.
-    auto oldValue = interruptFlag_.fetch_or(
-        kInterrupterInitialisedFlag, std::memory_order_acq_rel);
-    CHECK_EQ(0, oldValue & kInterrupterInitialisedFlag);
-    if (oldValue & kInterruptRequestedFlag) {
-      this->interrupter_.cancel();
-    }
-  }
 
   /** Append error handling clauses to a future chain
    * These clauses result in reporting a fuse request error back to the
@@ -133,27 +109,6 @@ class RequestData : public folly::RequestData {
 
   // Don't send a reply, just release req_
   void replyNone();
-
-  // Notify this request about EINTR.  This causes the future to be
-  // cancel()'d and may result in it stopping what it was doing
-  // before it is complete.
-  void interrupt();
-
- private:
-  folly::Future<folly::Unit> interrupter_;
-
-  // This atomic variable is a set of two flags is used to decide the race
-  // between the thread calling setRequestFuture() to register the future that
-  // will complete when the request completes, and another thread concurrently
-  // calling interrupt() when handling a FUSE_INTERRUPT request that comes in
-  // before we finish launching the corresponding request.
-  //
-  // bit 0 - set if interrupter_ has been initialised.
-  // bit 1 - set if a request has been made to interrupt the operation.
-  std::atomic<std::uint8_t> interruptFlag_{0};
-
-  static constexpr std::uint8_t kInterrupterInitialisedFlag = 1;
-  static constexpr std::uint8_t kInterruptRequestedFlag = 2;
 };
 
 } // namespace eden

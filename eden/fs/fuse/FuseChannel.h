@@ -288,14 +288,6 @@ class FuseChannel {
   }
 
   /**
-   * Called by RequestData when it releases state for the current
-   * request.  It is used to update the requests map and is
-   * used to trigger the sessionCompletePromise_ if we're
-   * shutting down.
-   */
-  void finishRequest(const fuse_in_header& header);
-
-  /**
    * Function to get outstanding fuse requests.
    */
   std::vector<fuse_in_header> getOutstandingRequests();
@@ -313,6 +305,7 @@ class FuseChannel {
    * and therefore requires synchronization.
    */
   struct State {
+    uint64_t nextRequestId{1};
     std::unordered_map<uint64_t, std::weak_ptr<folly::RequestContext>> requests;
     std::vector<std::thread> workerThreads;
 
