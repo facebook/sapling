@@ -367,6 +367,8 @@ void FuseChannel::replyError(const fuse_in_header& request, int errorCode) {
   err.len = sizeof(err);
   err.error = -errorCode;
   err.unique = request.unique;
+  XLOG(DBG7) << "replyError unique=" << err.unique << " error=" << errorCode
+             << " " << folly::errnoStr(errorCode);
   auto res = write(fuseDevice_.fd(), &err, sizeof(err));
   if (res != sizeof(err)) {
     if (res < 0) {
@@ -1136,10 +1138,11 @@ void FuseChannel::processSession() {
     const auto* header = reinterpret_cast<fuse_in_header*>(buf.data());
     const uint8_t* arg = reinterpret_cast<const uint8_t*>(header + 1);
 
-    XLOG(DBG7) << "fuse request opcode=" << header->opcode
-               << " unique=" << header->unique << " len=" << header->len
-               << " nodeid=" << header->nodeid << " uid=" << header->uid
-               << " gid=" << header->gid << " pid=" << header->pid;
+    XLOG(DBG7) << "fuse request opcode=" << header->opcode << " "
+               << fuseOpcodeName(header->opcode) << " unique=" << header->unique
+               << " len=" << header->len << " nodeid=" << header->nodeid
+               << " uid=" << header->uid << " gid=" << header->gid
+               << " pid=" << header->pid;
 
     // Sanity check to ensure that the request wasn't from ourself.
     //
