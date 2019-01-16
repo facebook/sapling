@@ -21,7 +21,6 @@ use mercurial_types::{HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgPar
                       RepoPath, RevFlags, NULL_CSID, NULL_HASH};
 
 use metaconfig::LfsParams;
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use tracing::Traced;
 
 use errors::*;
@@ -37,7 +36,6 @@ pub fn create_remotefilelog_blob(
     node: HgNodeHash,
     path: MPath,
     lfs_params: LfsParams,
-    scuba_logger: ScubaSampleBuilder,
     validate_hash: bool,
 ) -> BoxFuture<Bytes, Error> {
     let trace_args = trace_args!("node" => node.to_string(), "path" => path.to_string());
@@ -160,7 +158,7 @@ pub fn create_remotefilelog_blob(
         .traced(ctx.trace(), "fetching file history", trace_args);
 
     let validate_content = if validate_hash {
-        validate_content(ctx, repo.clone(), path, node, scuba_logger).left_future()
+        validate_content(ctx, repo.clone(), path, node).left_future()
     } else {
         ok(()).right_future()
     };
@@ -184,7 +182,6 @@ fn validate_content(
     repo: BlobRepo,
     path: MPath,
     actual: HgNodeHash,
-    mut scuba_logger: ScubaSampleBuilder,
 ) -> impl Future<Item = (), Error = Error> {
     let file_content = repo.get_file_content(ctx.clone(), &actual);
     let repopath = RepoPath::FilePath(path.clone());
@@ -211,11 +208,6 @@ fn validate_content(
             if actual == expected {
                 Ok(())
             } else {
-                let error_msg = format!(
-                    "getfiles: {} expected: {} actual: {}",
-                    path, expected, actual
-                );
-                scuba_logger.log_with_msg("Data corruption", Some(error_msg));
                 Err(ErrorKind::DataCorruption {
                     path: repopath,
                     expected,

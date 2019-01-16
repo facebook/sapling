@@ -230,6 +230,12 @@ impl WireprotoLogger {
         self.scuba_logger.add(args_name, &args[..limit]);
     }
 
+    fn add_perf_counters_from_ctx(&mut self, key: &str, ctx: CoreContext) {
+        if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
+            self.add_trimmed_scuba_field(key, counters);
+        }
+    }
+
     fn finish_stream_wireproto_processing(&mut self, stats: &StreamStats) {
         self.scuba_logger
             .add_stream_stats(&stats)
@@ -830,11 +836,6 @@ impl HgCommands for RepoClient {
             .map({
                 cloned!(self.ctx);
                 move |(node, path)| {
-                    let args = format!("node: {}, path: {}", node, path);
-                    // Logs info about processing of a single file to scuba
-                    let mut scuba_logger =
-                        this.prepared_ctx(ops::GETFILES, Some(args)).scuba().clone();
-
                     let repo = this.repo.clone();
                     create_remotefilelog_blob(
                         ctx.clone(),
@@ -842,36 +843,59 @@ impl HgCommands for RepoClient {
                         node,
                         path.clone(),
                         repo.lfs_params().clone(),
-                        scuba_logger.clone(),
                         validate_hash,
-                    ).traced(
+                    )
+                    .traced(
                         this.ctx.trace(),
                         ops::GETFILES,
                         trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
                     )
-                        .timed(move |stats, _| {
+                    .timed({
+                        cloned!(ctx);
+                        move |stats, _| {
                             STATS::getfiles_ms
                                 .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                            scuba_logger
-                                .add_future_stats(&stats)
-                                .log_with_msg("Command processed", None);
+                            let completion_time =
+                                stats.completion_time.as_millis_unchecked() as i64;
+                            ctx.perf_counters()
+                                .set_max_counter("getfiles_max_latency", completion_time);
                             Ok(())
-                        })
+                        }
+                    })
                 }
             })
             .buffered(getfiles_buffer_size)
-            .timed(move |stats, _| {
-                let getfiles_params = getfiles_params.lock().unwrap();
-                let mut encoded_params = vec![];
-                for (node, path) in getfiles_params.iter() {
-                    encoded_params.push(vec![
-                        format!("{}", node),
-                        String::from_utf8_lossy(&path.to_vec()).to_string(),
-                    ]);
+            .inspect({
+                cloned!(self.ctx);
+                move |bytes| {
+                    let len = bytes.len() as i64;
+                    ctx.perf_counters().add_to_counter("getfiles_response_size", len);
+                    ctx.perf_counters().set_max_counter("getfiles_max_file_size", len);
                 }
-                wireproto_logger.set_args(Some(json!{encoded_params}));
-                wireproto_logger.finish_stream_wireproto_processing(&stats);
-                Ok(())
+            })
+            .timed({
+                cloned!(self.ctx);
+                move |stats, _| {
+                    let encoded_params = {
+                        let getfiles_params = getfiles_params.lock().unwrap();
+                        let mut encoded_params = vec![];
+                        for (node, path) in getfiles_params.iter() {
+                            encoded_params.push(vec![
+                                format!("{}", node),
+                                String::from_utf8_lossy(&path.to_vec()).to_string(),
+                            ]);
+                        }
+                        encoded_params
+                    };
+
+                    ctx.perf_counters()
+                        .add_to_counter("getfiles_num_files", stats.count as i64);
+
+                    wireproto_logger.set_args(Some(json! {encoded_params}));
+                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx);
+                    wireproto_logger.finish_stream_wireproto_processing(&stats);
+                    Ok(())
+                }
             })
             .boxify()
     }
