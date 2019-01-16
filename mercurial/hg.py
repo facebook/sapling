@@ -19,6 +19,7 @@ from . import (
     cmdutil,
     destutil,
     discovery,
+    edenfs,
     error,
     exchange,
     extensions,
@@ -804,6 +805,9 @@ def clone(
 
 
 def _showstats(repo, stats, quietempty=False):
+    if edenfs.requirement in repo.requirements:
+        return _eden_showstats(repo, stats, quietempty)
+
     if quietempty and not any(stats):
         return
     repo.ui.status(
@@ -813,6 +817,19 @@ def _showstats(repo, stats, quietempty=False):
         )
         % stats
     )
+
+
+def _eden_showstats(repo, stats, quietempty=False):
+    # We hide the updated and removed counts, because they are not accurate
+    # with eden.  One of the primary goals of eden is that the entire working
+    # directory does not need to be accessed or traversed on update operations.
+    (updated, merged, removed, unresolved) = stats
+    if merged or unresolved:
+        repo.ui.status(
+            _("%d files merged, %d files unresolved\n") % (merged, unresolved)
+        )
+    elif not quietempty:
+        repo.ui.status(_("update complete\n"))
 
 
 def updaterepo(repo, node, overwrite, updatecheck=None):

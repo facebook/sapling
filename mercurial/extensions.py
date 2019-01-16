@@ -33,6 +33,7 @@ _ignoreextensions = {
     "children",
     "color",
     "configwarn",
+    "eden",
     "factotum",
     "fastpartialmatch",
     "fbsparse",

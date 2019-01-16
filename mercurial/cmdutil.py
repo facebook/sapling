@@ -21,6 +21,7 @@ from . import (
     crecord as crecordmod,
     dagop,
     dirstateguard,
+    edenfs,
     encoding,
     error,
     formatter,
@@ -3230,6 +3231,9 @@ def forget(ui, repo, match, prefix, explicitonly):
 
 
 def files(ui, ctx, m, fm, fmt, subrepos):
+    if (ctx.rev() is None) and (edenfs.requirement in ctx.repo().requirements):
+        return eden_files(ui, ctx, m, fm, fmt)
+
     rev = ctx.rev()
     ret = 1
     ds = ctx.repo().dirstate
@@ -3255,6 +3259,26 @@ def files(ui, ctx, m, fm, fmt, subrepos):
                     ret = 0
             except error.LookupError:
                 ui.status(_("skipping missing subrepository: %s\n") % m.abs(subpath))
+
+    return ret
+
+
+def eden_files(ui, ctx, m, fm, fmt):
+    # The default files() function code looks up the dirstate entry for ever
+    # single matched file.  This is unnecessary in most cases, and will trigger
+    # a lot of thrift calls to Eden.  We have augmented the Eden dirstate with
+    # a function that can return only non-removed files without requiring
+    # looking up every single match.
+    ret = 1
+    ds = ctx.repo().dirstate
+    for f in sorted(ds.non_removed_matches(m)):
+        fm.startitem()
+        if ui.verbose:
+            fc = ctx[f]
+            fm.write("size flags", "% 10d % 1s ", fc.size(), fc.flags())
+        fm.data(abspath=f)
+        fm.write("path", fmt, m.rel(f))
+        ret = 0
 
     return ret
 

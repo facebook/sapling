@@ -14,6 +14,7 @@ import struct
 
 from . import (
     copies,
+    edenfs,
     error,
     extensions,
     filemerge,
@@ -2013,9 +2014,56 @@ def update(
 
     Return the same tuple as applyupdates().
     """
+
     # This function used to find the default destination if node was None, but
     # that's now in destutil.py.
     assert node is not None
+
+    if edenfs.requirement in repo.requirements:
+        if matcher is not None and not matcher.always():
+            why_not_eden = "We don't support doing a partial update through eden yet."
+        elif branchmerge:
+            # TODO: We potentially should support handling this scenario ourself in
+            # the future.  For now we simply haven't investigated what the correct
+            # semantics are in this case.
+            why_not_eden = 'branchmerge is "truthy:" %s.' % branchmerge
+        elif ancestor is not None:
+            # TODO: We potentially should support handling this scenario ourself in
+            # the future.  For now we simply haven't investigated what the correct
+            # semantics are in this case.
+            why_not_eden = "ancestor is not None: %s." % ancestor
+        elif wc is not None and wc.isinmemory():
+            # In memory merges do not operate on the working directory,
+            # so we don't need to ask eden to change the working directory state
+            # at all, and can use the vanilla merge logic in this case.
+            why_not_eden = "merge is in-memory"
+        else:
+            # TODO: We probably also need to set why_not_eden if there are
+            # subrepositories.  (Personally I might vote for just not supporting
+            # subrepos in eden.)
+            why_not_eden = None
+
+        if why_not_eden:
+            repo.ui.debug(
+                "falling back to non-eden update code path: %s\n" % why_not_eden
+            )
+        else:
+            from . import eden_update
+
+            return eden_update.update(
+                repo,
+                node,
+                branchmerge,
+                force,
+                ancestor,
+                mergeancestor,
+                labels,
+                matcher,
+                mergeforce,
+                updatecheck,
+                wc,
+            )
+
     if not branchmerge and not force:
         # TODO: remove the default once all callers that pass branchmerge=False
         # and force=False pass a value for updatecheck. We may want to allow

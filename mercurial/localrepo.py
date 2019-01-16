@@ -27,6 +27,7 @@ from . import (
     dirstate,
     dirstateguard,
     discovery,
+    edenfs,
     encoding,
     error,
     exchange,
@@ -352,6 +353,7 @@ class localrepository(object):
         REVLOGV2_REQUIREMENT,
     }
     _basesupported = supportedformats | {
+        edenfs.requirement,
         "store",
         "fncache",
         "shared",
@@ -852,6 +854,9 @@ class localrepository(object):
 
     @repofilecache(localpaths=["dirstate"])
     def dirstate(self):
+        if edenfs.requirement in self.requirements:
+            return self._eden_dirstate
+
         istreestate = "treestate" in self.requirements
         istreedirstate = "treedirstate" in self.requirements
 
@@ -863,6 +868,19 @@ class localrepository(object):
             istreestate=istreestate,
             istreedirstate=istreedirstate,
         )
+
+    @util.propertycache
+    def _eden_dirstate(self):
+        # Disable demand import when pulling in the thrift runtime,
+        # as it attempts to import missing modules and changes behavior
+        # based on what it finds.  Demand import masks those and causes
+        # obscure and false import errors at runtime.
+        import hgdemandimport
+
+        with hgdemandimport.disabled():
+            from . import eden_dirstate as dirstate_reimplementation
+
+        return dirstate_reimplementation.eden_dirstate(self, self.ui, self.root)
 
     def _dirstatevalidate(self, node):
         try:
@@ -1764,6 +1782,11 @@ class localrepository(object):
         rereads the dirstate. Use dirstate.invalidate() if you want to
         explicitly read the dirstate again (i.e. restoring it to a previous
         known good state)."""
+        # eden_dirstate has its own invalidation logic.
+        if edenfs.requirement in self.requirements:
+            self.dirstate.invalidate()
+            return
+
         if hasunfilteredcache(self, "dirstate"):
             for k in self.dirstate._filecache:
                 try:

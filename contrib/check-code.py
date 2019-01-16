@@ -552,6 +552,15 @@ switch_slashes tag_refname tags_file their_heads todo_total to_export to_pass
 to_store total_bytes tree_sha tunnel_host tv_sec_ofs upstream_names
 upstream_tips uptodate_annotated_tags url_scheme uuid_re version_info
 without_newline
+
+action_type added_files clean_files conflict_paths
+create_clone_of_internal_map create_eden_dirstate deleted_files display_mode
+eden_files explicit_matches get_merge_string get_merge_string ignored_files
+manifest_entry max_to_show merge_state merge_str modified_files
+non_removed_matches nonnormal_copy num_remaining orig_pack orig_unpack
+parent_mf readlink_retry_estale removed_files to_remove total_conflicts
+unknown_files unsure_files why_not_eden wrap_pack wrap_unpack
+
 """.split()
 
 # ported from check-commit
