@@ -6,16 +6,16 @@
 
 use blobrepo::ChangesetFetcher;
 use context::CoreContext;
-use futures::{Async, Poll};
 use futures::stream::Stream;
+use futures::{Async, Poll};
 use mononoke_types::{ChangesetId, Generation};
 use std::boxed::Box;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use BonsaiNodeStream;
 use errors::*;
 use setcommon::*;
+use BonsaiNodeStream;
 
 pub struct SetDifferenceNodeStream {
     keep_input: BonsaiInputStream,
@@ -120,7 +120,6 @@ impl Stream for SetDifferenceNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use UnionNodeStream;
     use async_unit;
     use blobrepo::ChangesetFetcher;
     use context::CoreContext;
@@ -132,10 +131,11 @@ mod test {
     use setcommon::NotReadyEmptyStream;
     use singlechangesetid::single_changeset_id;
     use std::sync::Arc;
-    use tests::TestChangesetFetcher;
     use tests::assert_changesets_sequence;
     use tests::get_single_bonsai_streams;
     use tests::string_to_bonsai;
+    use tests::TestChangesetFetcher;
+    use UnionNodeStream;
 
     #[test]
     fn difference_identical_node() {
@@ -152,7 +152,8 @@ mod test {
                 &changeset_fetcher,
                 single_changeset_id(ctx.clone(), changeset.clone(), &repo).boxify(),
                 single_changeset_id(ctx.clone(), changeset.clone(), &repo).boxify(),
-            ).boxify();
+            )
+            .boxify();
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
     }
@@ -172,7 +173,8 @@ mod test {
                 &changeset_fetcher,
                 single_changeset_id(ctx.clone(), changeset.clone(), &repo).boxify(),
                 Box::new(NotReadyEmptyStream::new(0)),
-            ).boxify();
+            )
+            .boxify();
             assert_changesets_sequence(ctx.clone(), &repo, vec![changeset], nodestream);
         });
     }
@@ -192,7 +194,8 @@ mod test {
                 &changeset_fetcher,
                 Box::new(NotReadyEmptyStream::new(0)),
                 single_changeset_id(ctx.clone(), bcs_id, &repo).boxify(),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
@@ -215,7 +218,8 @@ mod test {
                 &changeset_fetcher,
                 single_changeset_id(ctx.clone(), bcs_id_1.clone(), &repo).boxify(),
                 single_changeset_id(ctx.clone(), bcs_id_2, &repo).boxify(),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_id_1], nodestream);
         });
@@ -239,7 +243,8 @@ mod test {
                         item: changeset.clone(),
                     }),
                     single_changeset_id(ctx.clone(), changeset, &repo).boxify(),
-                ).boxify(),
+                )
+                .boxify(),
             );
 
             match nodestream.wait_stream() {
@@ -268,7 +273,8 @@ mod test {
                 &changeset_fetcher,
                 Box::new(NotReadyEmptyStream::new(repeats)),
                 Box::new(NotReadyEmptyStream::new(repeats)),
-            ).boxify();
+            )
+            .boxify();
 
             // Keep polling until we should be done.
             for _ in 0..repeats + 1 {
@@ -313,7 +319,8 @@ mod test {
                 &changeset_fetcher,
                 nodestream,
                 single_changeset_id(ctx.clone(), bcs_id, &repo).boxify(),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -354,7 +361,8 @@ mod test {
                 &changeset_fetcher,
                 single_changeset_id(ctx.clone(), bcs_id, &repo).boxify(),
                 nodestream,
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
@@ -401,7 +409,8 @@ mod test {
                 &changeset_fetcher,
                 left_nodestream,
                 right_nodestream,
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -455,20 +464,15 @@ mod test {
                 &changeset_fetcher,
                 left_nodestream,
                 right_nodestream,
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        &repo,
-                        "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-                    ),
+                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
+                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
                 ],
                 nodestream,
             );

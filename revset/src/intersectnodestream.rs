@@ -6,28 +6,26 @@
 
 use blobrepo::ChangesetFetcher;
 use context::CoreContext;
+use futures::stream::Stream;
 use futures::Async;
 use futures::Poll;
-use futures::stream::Stream;
 use mononoke_types::{ChangesetId, Generation};
 use std::boxed::Box;
-use std::collections::HashMap;
 use std::collections::hash_map::IntoIter;
+use std::collections::HashMap;
 use std::iter::IntoIterator;
 use std::mem::replace;
 use std::sync::Arc;
 
-use BonsaiNodeStream;
 use errors::*;
 use setcommon::*;
+use BonsaiNodeStream;
 
 pub struct IntersectNodeStream {
-    inputs: Vec<
-        (
-            BonsaiInputStream,
-            Poll<Option<(ChangesetId, Generation)>, Error>,
-        ),
-    >,
+    inputs: Vec<(
+        BonsaiInputStream,
+        Poll<Option<(ChangesetId, Generation)>, Error>,
+    )>,
     current_generation: Option<Generation>,
     accumulator: HashMap<ChangesetId, usize>,
     drain: Option<IntoIter<ChangesetId, usize>>,
@@ -60,7 +58,8 @@ impl IntersectNodeStream {
 
     fn update_current_generation(&mut self) {
         if all_inputs_ready(&self.inputs) {
-            self.current_generation = self.inputs
+            self.current_generation = self
+                .inputs
                 .iter()
                 .filter_map(|&(_, ref state)| match state {
                     &Ok(Async::Ready(Some((_, gen_id)))) => Some(gen_id),
@@ -146,12 +145,14 @@ impl Stream for IntersectNodeStream {
             }
 
             match self.current_generation {
-                None => if self.accumulator.is_empty() {
-                    self.update_current_generation();
-                } else {
-                    let full_accumulator = replace(&mut self.accumulator, HashMap::new());
-                    self.drain = Some(full_accumulator.into_iter());
-                },
+                None => {
+                    if self.accumulator.is_empty() {
+                        self.update_current_generation();
+                    } else {
+                        let full_accumulator = replace(&mut self.accumulator, HashMap::new());
+                        self.drain = Some(full_accumulator.into_iter());
+                    }
+                }
                 Some(_) => self.accumulate_nodes(),
             }
             // If we cannot ever output another node, we're done.
@@ -165,8 +166,6 @@ impl Stream for IntersectNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use BonsaiNodeStream;
-    use UnionNodeStream;
     use async_unit;
     use context::CoreContext;
     use fixtures::linear;
@@ -177,10 +176,12 @@ mod test {
     use setcommon::NotReadyEmptyStream;
     use singlechangesetid::single_changeset_id;
     use std::sync::Arc;
-    use tests::TestChangesetFetcher;
     use tests::assert_changesets_sequence;
     use tests::get_single_bonsai_streams;
     use tests::string_to_bonsai;
+    use tests::TestChangesetFetcher;
+    use BonsaiNodeStream;
+    use UnionNodeStream;
 
     #[test]
     fn intersect_identical_node() {
@@ -444,9 +445,10 @@ mod test {
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![
-                    string_to_bonsai(&repo, "03b0589d9788870817d03ce7b87516648ed5b33a"),
-                ],
+                vec![string_to_bonsai(
+                    &repo,
+                    "03b0589d9788870817d03ce7b87516648ed5b33a",
+                )],
                 nodestream.boxify(),
             );
         });
@@ -497,12 +499,10 @@ mod test {
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![
-                    string_to_bonsai(
-                        &repo,
-                        "03b0589d9788870817d03ce7b87516648ed5b33a",
-                    ),
-                ],
+                vec![string_to_bonsai(
+                    &repo,
+                    "03b0589d9788870817d03ce7b87516648ed5b33a",
+                )],
                 nodestream,
             );
         });

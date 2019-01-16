@@ -4,17 +4,17 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
 use std::collections::hash_set::IntoIter;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::iter;
 use std::mem::replace;
 use std::sync::Arc;
 
 use failure::{err_msg, prelude::*};
 
-use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
+use futures::{Async, Poll};
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
@@ -61,22 +61,23 @@ fn make_pending(
                     (child, parents)
                 })
                 .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
-        }.map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
-            .flatten_stream()
-            .and_then(move |(child, parent_hash)| {
-                repo.get_generation_number_by_bonsai(ctx.clone(), &parent_hash)
-                    .and_then(move |genopt| {
-                        genopt.ok_or_else(|| err_msg(format!("{} not found", parent_hash)))
-                    })
-                    .map(move |gen_id| ParentChild {
-                        child,
-                        parent: HashGen {
-                            hash: parent_hash,
-                            generation: gen_id,
-                        },
-                    })
-                    .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
-            }),
+        }
+        .map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
+        .flatten_stream()
+        .and_then(move |(child, parent_hash)| {
+            repo.get_generation_number_by_bonsai(ctx.clone(), &parent_hash)
+                .and_then(move |genopt| {
+                    genopt.ok_or_else(|| err_msg(format!("{} not found", parent_hash)))
+                })
+                .map(move |gen_id| ParentChild {
+                    child,
+                    parent: HashGen {
+                        hash: parent_hash,
+                        generation: gen_id,
+                    },
+                })
+                .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
+        }),
     )
 }
 
@@ -218,19 +219,22 @@ impl Stream for RangeNodeStream {
         // Convert the tree of children that are ancestors of the end node into
         // the drain to output
         match self.output_nodes {
-            Some(ref mut nodes) => if !nodes.is_empty() {
-                let highest_generation = *nodes.keys().max().expect("Non-empty map has no keys");
-                let current_generation = nodes
-                    .remove(&highest_generation)
-                    .expect("Highest generation doesn't exist");
-                self.drain = Some(current_generation.into_iter());
-                return Ok(Async::Ready(Some(
-                    self.drain
-                        .as_mut()
-                        .and_then(|drain| drain.next())
-                        .expect("Cannot create a generation without at least one node hash"),
-                )));
-            },
+            Some(ref mut nodes) => {
+                if !nodes.is_empty() {
+                    let highest_generation =
+                        *nodes.keys().max().expect("Non-empty map has no keys");
+                    let current_generation = nodes
+                        .remove(&highest_generation)
+                        .expect("Highest generation doesn't exist");
+                    self.drain = Some(current_generation.into_iter());
+                    return Ok(Async::Ready(Some(
+                        self.drain
+                            .as_mut()
+                            .and_then(|drain| drain.next())
+                            .expect("Cannot create a generation without at least one node hash"),
+                    )));
+                }
+            }
             _ => panic!("No output_nodes"),
         }
         Ok(Async::Ready(None))
@@ -276,7 +280,8 @@ mod test {
                     &repo,
                     "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
                 ),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -328,7 +333,8 @@ mod test {
                     &repo,
                     "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
                 ),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -365,14 +371,17 @@ mod test {
                     &repo,
                     "d0a361e9022d226ae52f689667bd7d212a19cfe0",
                 ),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![
-                    string_to_bonsai(ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-                ],
+                vec![string_to_bonsai(
+                    ctx,
+                    &repo,
+                    "d0a361e9022d226ae52f689667bd7d212a19cfe0",
+                )],
                 nodestream,
             );
         })
@@ -398,7 +407,8 @@ mod test {
                     &repo,
                     "d0a361e9022d226ae52f689667bd7d212a19cfe0",
                 ),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         })
@@ -423,7 +433,8 @@ mod test {
                     &repo,
                     "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
                 ),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -465,7 +476,8 @@ mod test {
                     &repo,
                     "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
                 ),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),

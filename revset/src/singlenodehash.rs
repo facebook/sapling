@@ -9,11 +9,11 @@ use std::boxed::Box;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use failure::Error;
-use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::Stream;
-use mercurial_types::HgNodeHash;
+use futures::{Async, Poll};
 use mercurial_types::nodehash::HgChangesetId;
+use mercurial_types::HgNodeHash;
 
 use NodeStream;
 
@@ -80,9 +80,10 @@ mod test {
             assert_node_sequence(
                 ctx,
                 &repo,
-                vec![
-                    string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
-                ].into_iter(),
+                vec![string_to_nodehash(
+                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+                )]
+                .into_iter(),
                 nodestream.boxify(),
             );
         });

@@ -8,11 +8,17 @@ use super::tests::TestChangesetFetcher;
 
 use async_unit;
 use failure::Error;
-use futures::{stream, Future, Stream, future::{join_all, ok}};
 use futures::executor::spawn;
+use futures::{
+    future::{join_all, ok},
+    stream, Future, Stream,
+};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
+use quickcheck::rand::{
+    distributions::{range::Range, Sample},
+    thread_rng, Rng,
+};
 use quickcheck::{quickcheck, Arbitrary, Gen};
-use quickcheck::rand::{thread_rng, Rng, distributions::{Sample, range::Range}};
 use std::collections::HashSet;
 use std::iter::Iterator;
 use std::sync::Arc;
@@ -32,8 +38,6 @@ use fixtures::merge_uneven;
 use fixtures::unshared_merge_even;
 use fixtures::unshared_merge_uneven;
 
-use BonsaiNodeStream;
-use NodeStream;
 use ancestors::AncestorsNodeStream;
 use ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
 use intersectnodestream::IntersectNodeStream;
@@ -41,6 +45,8 @@ use setdifferencenodestream::SetDifferenceNodeStream;
 use singlechangesetid::single_changeset_id;
 use unionnodestream::UnionNodeStream;
 use validation::ValidateNodeStream;
+use BonsaiNodeStream;
+use NodeStream;
 
 #[derive(Clone, Copy, Debug)]
 enum RevsetEntry {
@@ -142,10 +148,9 @@ impl RevsetSpec {
                 ctx.clone(),
                 match entry {
                     &RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),
-                    &RevsetEntry::SingleNode(Some(hash)) => repo.get_bonsai_from_hg(
-                        ctx.clone(),
-                        &HgChangesetId::new(hash),
-                    ).map({
+                    &RevsetEntry::SingleNode(Some(hash)) => repo
+                        .get_bonsai_from_hg(ctx.clone(), &HgChangesetId::new(hash))
+                        .map({
                             cloned!(hash);
                             move |maybecsid| maybecsid.expect(&format!("unknown {}", hash))
                         })
@@ -175,7 +180,8 @@ impl RevsetSpec {
                             &changeset_fetcher,
                             keep_input,
                             remove_input,
-                        ).boxify();
+                        )
+                        .boxify();
                         bonsai_nodestream_to_nodestream(ctx.clone(), &repo, nodestream)
                     }
                     &RevsetEntry::Union(size) => {
@@ -196,12 +202,14 @@ impl RevsetSpec {
                             ctx.clone(),
                             &repo.get_changeset_fetcher(),
                             nodestreams_to_bonsai_nodestreams(ctx.clone(), &repo, inputs),
-                        ).boxify();
+                        )
+                        .boxify();
                         bonsai_nodestream_to_nodestream(ctx.clone(), &repo.clone(), nodestream)
                     }
                 },
                 &repo.clone(),
-            ).boxify();
+            )
+            .boxify();
             output.push(next_node);
         }
         assert!(

@@ -10,13 +10,13 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use failure::Error;
-use futures::{Async, Poll};
 use futures::stream::Stream;
+use futures::{Async, Poll};
 use mercurial_types::HgNodeHash;
 use mononoke_types::Generation;
 
-use NodeStream;
 use setcommon::{add_generations, InputStream};
+use NodeStream;
 
 /// A wrapper around a NodeStream that asserts that the two revset invariants hold:
 /// 1. The generation number never increases
@@ -78,7 +78,6 @@ impl Stream for ValidateNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use SingleNodeHash;
     use async_unit;
     use fixtures::linear;
     use futures_ext::StreamExt;
@@ -86,6 +85,7 @@ mod test {
     use std::sync::Arc;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
+    use SingleNodeHash;
 
     #[test]
     fn validate_accepts_single_node() {
@@ -162,7 +162,8 @@ mod test {
                 ctx.clone(),
                 string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
                 &repo,
-            ).chain(SingleNodeHash::new(
+            )
+            .chain(SingleNodeHash::new(
                 ctx.clone(),
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,

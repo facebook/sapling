@@ -266,7 +266,8 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
                                     bcs_id,
                                 },
                                 entry,
-                            ).into()),
+                            )
+                            .into()),
                             None => Err(ErrorKind::RaceConditionWithDelete(entry).into()),
                         })
                         .right_future()

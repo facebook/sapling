@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::collections::hash_set::IntoIter;
 /// Union and intersection can be made more efficient if the streams are uninterrupted streams of
 /// ancestors. For example:
 ///
@@ -23,14 +24,13 @@
 /// The stream below aims to solve the aforementioned problems. It's primary usage is in
 /// Mercurial pull to find commits that need to be sent to a client.
 use std::collections::{BTreeMap, HashSet};
-use std::collections::hash_set::IntoIter;
 use std::iter::{self, FromIterator};
 use std::sync::Arc;
 
 use failure::prelude::*;
-use futures::{Async, IntoFuture, Poll};
 use futures::future::{ok, Future};
 use futures::stream::{self, iter_ok, Stream};
+use futures::{Async, IntoFuture, Poll};
 use futures_ext::{BoxFuture, FutureExt, SelectAll, StreamExt};
 
 use blobrepo::ChangesetFetcher;
@@ -39,10 +39,10 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier};
 
-use BonsaiNodeStream;
-use UniqueHeap;
 use errors::*;
 use setcommon::*;
+use BonsaiNodeStream;
+use UniqueHeap;
 
 /// As the name suggests, it's a difference of unions of ancestors of nodes.
 /// In mercurial revset's terms it's (::A) - (::B), where A and B are sets of nodes.
@@ -175,54 +175,57 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
             ctx.clone(),
             stream::iter_ok(excludes.into_iter()).boxify(),
             changeset_fetcher.clone(),
-        ).collect()
-            .join(
-                add_generations_by_bonsai(
-                    ctx.clone(),
-                    stream::iter_ok(hashes.into_iter()).boxify(),
-                    changeset_fetcher.clone(),
-                ).collect(),
+        )
+        .collect()
+        .join(
+            add_generations_by_bonsai(
+                ctx.clone(),
+                stream::iter_ok(hashes.into_iter()).boxify(),
+                changeset_fetcher.clone(),
             )
-            .map({
-                let changeset_fetcher = changeset_fetcher.clone();
-                move |(exclude_generations, hashes_generations)| {
-                    let mut next_generation = BTreeMap::new();
-                    let current_exclude_generation = exclude_generations
-                        .iter()
-                        .map(|(_node, gen)| gen)
-                        .max()
-                        .cloned();
-                    let mut sorted_unique_generations = UniqueHeap::new();
-                    for (hash, generation) in hashes_generations {
-                        next_generation
-                            .entry(generation.clone())
-                            .or_insert_with(HashSet::new)
-                            .insert(hash);
-                        // insert into our sorted list of generations
-                        sorted_unique_generations.push(generation);
-                    }
-
-                    Self {
-                        ctx,
-                        changeset_fetcher: changeset_fetcher.clone(),
-                        lca_hint_index,
-                        next_generation,
-                        // Start with a fake state - maximum generation number and no entries
-                        // for it (see drain below)
-                        current_generation: Generation::max_gen(),
-                        pending_changesets: SelectAll::new(),
-                        exclude_ancestors_future: ok(NodeFrontier::from_iter(exclude_generations))
-                            .boxify(),
-                        current_exclude_generation,
-                        drain: hashset!{}.into_iter().peekable(),
-                        sorted_unique_generations,
-                    }.boxify()
+            .collect(),
+        )
+        .map({
+            let changeset_fetcher = changeset_fetcher.clone();
+            move |(exclude_generations, hashes_generations)| {
+                let mut next_generation = BTreeMap::new();
+                let current_exclude_generation = exclude_generations
+                    .iter()
+                    .map(|(_node, gen)| gen)
+                    .max()
+                    .cloned();
+                let mut sorted_unique_generations = UniqueHeap::new();
+                for (hash, generation) in hashes_generations {
+                    next_generation
+                        .entry(generation.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(hash);
+                    // insert into our sorted list of generations
+                    sorted_unique_generations.push(generation);
                 }
-            })
-            .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed))
-            .from_err()
-            .flatten_stream()
-            .boxify()
+
+                Self {
+                    ctx,
+                    changeset_fetcher: changeset_fetcher.clone(),
+                    lca_hint_index,
+                    next_generation,
+                    // Start with a fake state - maximum generation number and no entries
+                    // for it (see drain below)
+                    current_generation: Generation::max_gen(),
+                    pending_changesets: SelectAll::new(),
+                    exclude_ancestors_future: ok(NodeFrontier::from_iter(exclude_generations))
+                        .boxify(),
+                    current_exclude_generation,
+                    drain: hashset! {}.into_iter().peekable(),
+                    sorted_unique_generations,
+                }
+                .boxify()
+            }
+        })
+        .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed))
+        .from_err()
+        .flatten_stream()
+        .boxify()
     }
 
     // Poll if a particular node should be excluded from the output.
@@ -290,10 +293,12 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
     }
 
     fn update_generation(&mut self) {
-        let highest_generation = self.sorted_unique_generations
+        let highest_generation = self
+            .sorted_unique_generations
             .pop()
             .expect("Expected a non empty heap of generations");
-        let new_generation = self.next_generation
+        let new_generation = self
+            .next_generation
             .remove(&highest_generation)
             .expect("Highest generation doesn't exist");
         self.current_generation = highest_generation;
@@ -375,16 +380,15 @@ mod test {
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
                 vec![],
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(ctx.clone(), &repo, vec![], stream);
 
-            let excludes = vec![
-                string_to_bonsai(
-                    &repo,
-                    "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-                ),
-            ];
+            let excludes = vec![string_to_bonsai(
+                &repo,
+                "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+            )];
 
             let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 ctx.clone(),
@@ -392,7 +396,8 @@ mod test {
                 Arc::new(SkiplistIndex::new()),
                 vec![],
                 excludes,
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(ctx.clone(), &repo, vec![], stream);
         });
@@ -410,26 +415,24 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
-                vec![
-                    string_to_bonsai(
-                        &repo,
-                        "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-                    ),
-                ],
-                vec![
-                    string_to_bonsai(
-                        &repo,
-                        "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-                    ),
-                ],
-            ).boxify();
+                vec![string_to_bonsai(
+                    &repo,
+                    "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
+                )],
+                vec![string_to_bonsai(
+                    &repo,
+                    "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+                )],
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![
-                    string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                ],
+                vec![string_to_bonsai(
+                    &repo,
+                    "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
+                )],
                 nodestream,
             );
         });
@@ -447,13 +450,16 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
-                vec![
-                    string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                ],
-                vec![
-                    string_to_bonsai(&repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                ],
-            ).boxify();
+                vec![string_to_bonsai(
+                    &repo,
+                    "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+                )],
+                vec![string_to_bonsai(
+                    &repo,
+                    "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+                )],
+            )
+            .boxify();
 
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
         });
@@ -475,7 +481,8 @@ mod test {
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
                     string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
                 ],
-            ).boxify();
+            )
+            .boxify();
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
@@ -508,14 +515,16 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
-                vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
-                ],
+                vec![string_to_bonsai(
+                    &repo,
+                    "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+                )],
                 vec![
                     string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
                     string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
                 ],
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -542,50 +551,29 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 Arc::new(SkiplistIndex::new()),
-                vec![
-                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
-                ],
-                vec![
-                    string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
-                ],
-            ).boxify();
+                vec![string_to_bonsai(
+                    &repo,
+                    "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
+                )],
+                vec![string_to_bonsai(
+                    &repo,
+                    "16839021e338500b3cf7c9b871c8a07351697d68",
+                )],
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        &repo,
-                        "6d0c1c30df4acb4e64cb4c4868d4c974097da055",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "264f01429683b3dd8042cb3979e8bf37007118bc",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "5d43888a3c972fe68c224f93d41b30e9f888df7c",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "bc7b4d0f858c19e2474b03e442b8495fd7aeef33",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "795b8133cf375f6d68d27c6c23db24cd5d0cd00f",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "b65231269f651cfe784fd1d97ef02a049a37b8a0",
-                    ),
+                    string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
+                    string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
+                    string_to_bonsai(&repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+                    string_to_bonsai(&repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                    string_to_bonsai(&repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                    string_to_bonsai(&repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_bonsai(&repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0"),
                     string_to_bonsai(&repo, "d7542c9db7f4c77dab4b315edd328edf1514952f"),
                 ],
                 nodestream,

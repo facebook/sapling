@@ -6,29 +6,27 @@
 
 use blobrepo::ChangesetFetcher;
 use context::CoreContext;
+use futures::stream::Stream;
 use futures::Async;
 use futures::Poll;
-use futures::stream::Stream;
 use mononoke_types::{ChangesetId, Generation};
 use std::boxed::Box;
-use std::collections::HashSet;
 use std::collections::hash_set::IntoIter;
+use std::collections::HashSet;
 use std::iter::IntoIterator;
 use std::mem::replace;
 use std::sync::Arc;
 
 use failure::Error;
 
-use BonsaiNodeStream;
 use setcommon::*;
+use BonsaiNodeStream;
 
 pub struct UnionNodeStream {
-    inputs: Vec<
-        (
-            BonsaiInputStream,
-            Poll<Option<(ChangesetId, Generation)>, Error>,
-        ),
-    >,
+    inputs: Vec<(
+        BonsaiInputStream,
+        Poll<Option<(ChangesetId, Generation)>, Error>,
+    )>,
     current_generation: Option<Generation>,
     accumulator: HashSet<ChangesetId>,
     drain: Option<IntoIter<ChangesetId>>,
@@ -69,7 +67,8 @@ impl UnionNodeStream {
 
     fn update_current_generation(&mut self) {
         if all_inputs_ready(&self.inputs) {
-            self.current_generation = self.inputs
+            self.current_generation = self
+                .inputs
                 .iter()
                 .filter_map(|&(_, ref state)| match state {
                     &Ok(Async::Ready(Some((_, gen_id)))) => Some(gen_id),
@@ -136,12 +135,14 @@ impl Stream for UnionNodeStream {
             }
 
             match self.current_generation {
-                None => if self.accumulator.is_empty() {
-                    self.update_current_generation();
-                } else {
-                    let full_accumulator = replace(&mut self.accumulator, HashSet::new());
-                    self.drain = Some(full_accumulator.into_iter());
-                },
+                None => {
+                    if self.accumulator.is_empty() {
+                        self.update_current_generation();
+                    } else {
+                        let full_accumulator = replace(&mut self.accumulator, HashSet::new());
+                        self.drain = Some(full_accumulator.into_iter());
+                    }
+                }
                 Some(_) => self.accumulate_nodes(),
             }
             // If we cannot ever output another node, we're done.
@@ -155,7 +156,6 @@ impl Stream for UnionNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use BonsaiNodeStream;
     use async_unit;
     use context::CoreContext;
     use errors::ErrorKind;
@@ -165,10 +165,11 @@ mod test {
     use setcommon::{NotReadyEmptyStream, RepoErrorStream};
     use singlechangesetid::single_changeset_id;
     use std::sync::Arc;
-    use tests::TestChangesetFetcher;
     use tests::assert_changesets_sequence;
     use tests::get_single_bonsai_streams;
     use tests::string_to_bonsai;
+    use tests::TestChangesetFetcher;
+    use BonsaiNodeStream;
 
     #[test]
     fn union_identical_node() {
@@ -421,22 +422,10 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(
-                        &repo,
-                        "49f53ab171171b3180e125b918bd1cf0af7e5449",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "4685e9e62e4885d477ead6964a7600c750e39b03",
-                    ),
-                    string_to_bonsai(
-                        &repo,
-                        "9e8521affb7f9d10e9551a99c526e69909042b20",
-                    ),
+                    string_to_bonsai(&repo, "49f53ab171171b3180e125b918bd1cf0af7e5449"),
+                    string_to_bonsai(&repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12"),
+                    string_to_bonsai(&repo, "4685e9e62e4885d477ead6964a7600c750e39b03"),
+                    string_to_bonsai(&repo, "9e8521affb7f9d10e9551a99c526e69909042b20"),
                 ],
                 nodestream,
             );

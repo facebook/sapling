@@ -8,27 +8,27 @@
 // Have a Vec of current generation nodes - as they're output, push their parents onto the next
 // generation Vec. Once current generation Vec is empty, rotate.
 
-use std::collections::{BTreeMap, HashSet};
 use std::collections::hash_set::IntoIter;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
 use failure::prelude::*;
 
-use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::{iter_ok, Stream};
+use futures::{Async, Poll};
 use futures_ext::StreamExt;
 
-use UniqueHeap;
 use blobrepo::{BlobRepo, ChangesetFetcher};
 use context::CoreContext;
-use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_types::{ChangesetId, Generation};
+use UniqueHeap;
 
+use errors::*;
 use BonsaiNodeStream;
 use IntersectNodeStream;
-use errors::*;
 
 pub struct AncestorsNodeStream {
     ctx: CoreContext,
@@ -77,7 +77,7 @@ impl AncestorsNodeStream {
         changeset_fetcher: &Arc<ChangesetFetcher>,
         hash: ChangesetId,
     ) -> Self {
-        let node_set: HashSet<ChangesetId> = hashset!{hash};
+        let node_set: HashSet<ChangesetId> = hashset! {hash};
         AncestorsNodeStream {
             ctx: ctx.clone(),
             changeset_fetcher: changeset_fetcher.clone(),
@@ -129,10 +129,12 @@ impl Stream for AncestorsNodeStream {
             return Ok(Async::Ready(None));
         }
 
-        let highest_generation = self.sorted_unique_generations
+        let highest_generation = self
+            .sorted_unique_generations
             .pop()
             .expect("Expected a non empty heap of generations");
-        let current_generation = self.next_generation
+        let current_generation = self
+            .next_generation
             .remove(&highest_generation)
             .expect("Highest generation doesn't exist");
         self.pending_changesets = make_pending(
@@ -198,8 +200,8 @@ mod test {
     use fixtures::linear;
     use fixtures::merge_uneven;
     use fixtures::unshared_merge_uneven;
-    use tests::{string_to_bonsai, string_to_nodehash, TestChangesetFetcher};
     use tests::assert_changesets_sequence;
+    use tests::{string_to_bonsai, string_to_nodehash, TestChangesetFetcher};
 
     #[test]
     fn linear_ancestors() {
@@ -213,7 +215,8 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(&repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -245,7 +248,8 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(&repo, "6d0c1c30df4acb4e64cb4c4868d4c974097da055"),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -282,7 +286,8 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(&repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -312,7 +317,8 @@ mod test {
                 ctx.clone(),
                 &changeset_fetcher,
                 string_to_bonsai(&repo, "c10443fa4198c6abad76dc6c69c1417b2e821508)"),
-            ).boxify();
+            )
+            .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
@@ -384,9 +390,10 @@ mod test {
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![
-                    string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
-                ],
+                vec![string_to_bonsai(
+                    &repo,
+                    "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
+                )],
                 nodestream,
             );
         });
@@ -412,9 +419,10 @@ mod test {
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![
-                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                ],
+                vec![string_to_bonsai(
+                    &repo,
+                    "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+                )],
                 nodestream,
             );
         });
@@ -440,9 +448,10 @@ mod test {
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![
-                    string_to_bonsai(&repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
-                ],
+                vec![string_to_bonsai(
+                    &repo,
+                    "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
+                )],
                 nodestream,
             );
         });

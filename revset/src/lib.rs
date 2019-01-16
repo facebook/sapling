@@ -76,6 +76,6 @@ mod test {
 #[cfg(not(test))]
 mod test {}
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod quickchecks;
+#[cfg(test)]
+mod tests;

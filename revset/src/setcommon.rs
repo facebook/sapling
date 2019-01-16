@@ -9,18 +9,18 @@ use context::CoreContext;
 use failure::prelude::*;
 use futures::future::Future;
 use futures::stream::Stream;
-use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_types::{ChangesetId, Generation};
 use std::boxed::Box;
 #[cfg(test)]
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use BonsaiNodeStream;
-use NodeStream;
 use errors::*;
 use failure::{err_msg, Error};
+use BonsaiNodeStream;
+use NodeStream;
 
 use futures::{Async, Poll};
 
@@ -90,7 +90,7 @@ pub struct NotReadyEmptyStream<T> {
 impl<T> NotReadyEmptyStream<T> {
     pub fn new(poll_count: usize) -> Self {
         Self {
-            poll_count: poll_count,
+            poll_count,
             __phantom: PhantomData,
         }
     }

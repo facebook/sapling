@@ -4,16 +4,14 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use BonsaiNodeStream;
-use NodeStream;
 use blobrepo::{BlobRepo, ChangesetFetcher};
 use context::CoreContext;
 use failure::{err_msg, Error};
-use futures::{Future, Stream};
 use futures::executor::spawn;
+use futures::{Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use mercurial_types::HgNodeHash;
 use mercurial_types::nodehash::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_types::{ChangesetId, Generation};
 use singlechangesetid::single_changeset_id;
 use std::any::Any;
@@ -21,6 +19,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::str::FromStr;
 use std::sync::Arc;
+use BonsaiNodeStream;
+use NodeStream;
 
 pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
     HgNodeHash::from_str(hash).expect("Can't turn string to HgNodeHash")
@@ -92,7 +92,8 @@ pub fn assert_node_sequence<I>(
             continue;
         }
 
-        let expected_generation = repo.clone()
+        let expected_generation = repo
+            .clone()
             .get_generation_number(ctx.clone(), &HgChangesetId::new(expected))
             .wait()
             .expect("Unexpected error");
@@ -108,7 +109,8 @@ pub fn assert_node_sequence<I>(
                 break;
             }
 
-            let node_generation = repo.clone()
+            let node_generation = repo
+                .clone()
                 .get_generation_number(ctx.clone(), &HgChangesetId::new(expected))
                 .wait()
                 .expect("Unexpected error");
@@ -156,7 +158,8 @@ pub fn assert_changesets_sequence<I>(
             continue;
         }
 
-        let expected_generation = repo.clone()
+        let expected_generation = repo
+            .clone()
             .get_generation_number_by_bonsai(ctx.clone(), &expected)
             .wait()
             .expect("Unexpected error");
@@ -172,7 +175,8 @@ pub fn assert_changesets_sequence<I>(
                 break;
             }
 
-            let node_generation = repo.clone()
+            let node_generation = repo
+                .clone()
                 .get_generation_number_by_bonsai(ctx.clone(), &expected)
                 .wait()
                 .expect("Unexpected error");
