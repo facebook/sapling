@@ -67,7 +67,7 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 
-use actix_web::{server, App, HttpRequest, HttpResponse, Json, State, http::header};
+use actix_web::{http::header, server, App, HttpRequest, HttpResponse, Json, State};
 use clap::Arg;
 use failure::Result;
 use futures::Future;
@@ -257,7 +257,7 @@ fn upload_large_file(
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::UploadLargeFile {
             oid: info.oid.clone(),
-            body: body,
+            body,
         },
     })
 }
@@ -362,7 +362,8 @@ fn main() -> Result<()> {
                     .help("port for local myrouter instance"),
             ),
         false, /* hide_advanced_args */
-    ).get_matches();
+    )
+    .get_matches();
     cmdlib::args::init_cachelib(&matches);
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
@@ -481,31 +482,32 @@ fn main() -> Result<()> {
             .scope("/{repo}", |repo| {
                 repo.resource("/raw/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_raw_file)
-                }).resource(
-                        "/is_ancestor/{proposed_ancestor}/{proposed_descendent}",
-                        |r| r.method(http::Method::GET).with_async(is_ancestor),
-                    )
-                    .resource("/list/{changeset}/{path:.*}", |r| {
-                        r.method(http::Method::GET).with_async(list_directory)
-                    })
-                    .resource("/blob/{hash}", |r| {
-                        r.method(http::Method::GET).with_async(get_blob_content)
-                    })
-                    .resource("/tree/{hash}", |r| {
-                        r.method(http::Method::GET).with_async(get_tree)
-                    })
-                    .resource("/changeset/{hash}", |r| {
-                        r.method(http::Method::GET).with_async(get_changeset)
-                    })
-                    .resource("/lfs/download/{oid}", |r| {
-                        r.method(http::Method::GET).with_async(download_large_file)
-                    })
-                    .resource("/objects/batch", |r| {
-                        r.method(http::Method::POST).with_async(lfs_batch)
-                    })
-                    .resource("/lfs/upload/{oid}", |r| {
-                        r.method(http::Method::PUT).with_async(upload_large_file)
-                    })
+                })
+                .resource(
+                    "/is_ancestor/{proposed_ancestor}/{proposed_descendent}",
+                    |r| r.method(http::Method::GET).with_async(is_ancestor),
+                )
+                .resource("/list/{changeset}/{path:.*}", |r| {
+                    r.method(http::Method::GET).with_async(list_directory)
+                })
+                .resource("/blob/{hash}", |r| {
+                    r.method(http::Method::GET).with_async(get_blob_content)
+                })
+                .resource("/tree/{hash}", |r| {
+                    r.method(http::Method::GET).with_async(get_tree)
+                })
+                .resource("/changeset/{hash}", |r| {
+                    r.method(http::Method::GET).with_async(get_changeset)
+                })
+                .resource("/lfs/download/{oid}", |r| {
+                    r.method(http::Method::GET).with_async(download_large_file)
+                })
+                .resource("/objects/batch", |r| {
+                    r.method(http::Method::POST).with_async(lfs_batch)
+                })
+                .resource("/lfs/upload/{oid}", |r| {
+                    r.method(http::Method::PUT).with_async(upload_large_file)
+                })
             })
     });
 
