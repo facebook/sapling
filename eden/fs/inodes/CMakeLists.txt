@@ -17,5 +17,6 @@ target_link_libraries(
     eden_store
     eden_config
     eden_utils
+    eden_takeover_thrift
     eden_tracing
 )
