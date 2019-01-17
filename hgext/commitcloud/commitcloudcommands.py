@@ -491,6 +491,9 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
     reponame, workspace = getrepoworkspace(ui, repo)
     serv = service.get(ui, tokenlocator.token)
     highlightstatus(ui, _("synchronizing '%s' with '%s'\n") % (reponame, workspace))
+    commitcloudutil.writesyncprogress(
+        repo, "starting synchronizing with '%s'" % workspace
+    )
 
     def directfetching(heads):
         def unbundleall(bundlefiles):
@@ -614,7 +617,25 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             allpushed = (not newheads) and (localbookmarks == localsyncedbookmarks)
 
             failedheads = []
+            unfi = repo.unfiltered()
             if not allpushed:
+                oldheads = list(
+                    set(lastsyncstate.heads) - set(lastsyncstate.omittedheads)
+                )
+                backingup = [
+                    nodemod.hex(n)
+                    for n in unfi.nodes("draft() & ::%ls - ::%ls", newheads, oldheads)
+                ]
+                if len(backingup) == 1:
+                    commitcloudutil.writesyncprogress(
+                        repo, "backing up %s" % backingup[0][:12], backingup=backingup
+                    )
+                else:
+                    commitcloudutil.writesyncprogress(
+                        repo,
+                        "backing up %d commits" % len(backingup),
+                        backingup=backingup,
+                    )
                 newheads, failedheads = infinitepush.pushbackupbundlestacks(
                     ui, repo, getconnection, newheads
                 )
@@ -623,7 +644,6 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
                 pushfailures |= set(failedheads)
                 # Some heads failed to be pushed.  Work out what is actually
                 # available on the server
-                unfi = repo.unfiltered()
                 localheads = [
                     ctx.hex()
                     for ctx in unfi.set(
@@ -677,6 +697,9 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
             )
 
             # Update the cloud heads, bookmarks and obsmarkers.
+            commitcloudutil.writesyncprogress(
+                repo, "finishing synchronizing with '%s'" % workspace
+            )
             synced, cloudrefs = serv.updatereferences(
                 reponame,
                 workspace,
@@ -699,6 +722,7 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
                 if obsmarkers:
                     commitcloudutil.clearsyncingobsmarkers(repo)
 
+    commitcloudutil.writesyncprogress(repo)
     elapsed = time.time() - start
     highlightdebug(ui, _("cloudsync completed in %0.2f sec\n") % elapsed)
     if pushfailures:
@@ -727,6 +751,15 @@ def _maybeupdateworkingcopy(ui, repo, currentnode):
         )
         if ui.configbool("commitcloud", "updateonmove"):
             if repo[destination].mutable():
+                commitcloudutil.writesyncprogress(
+                    repo,
+                    "updating %s from %s to %s"
+                    % (
+                        repo.wvfs.base,
+                        nodemod.short(currentnode),
+                        nodemod.short(destination),
+                    ),
+                )
                 return _update(ui, repo, destination)
         else:
             hintutil.trigger("commitcloud-update-on-move")
@@ -783,6 +816,15 @@ def _applycloudchanges(
     else:
         omittedheads = []
     omittedbookmarks = []
+
+    if len(newheads) > 1:
+        commitcloudutil.writesyncprogress(
+            repo, "pulling %d new heads" % len(newheads), newheads=newheads
+        )
+    elif len(newheads) == 1:
+        commitcloudutil.writesyncprogress(
+            repo, "pulling %s" % nodemod.short(newheads[0]), newheads=newheads
+        )
 
     if newheads and not directfetchingfn:
         # Replace the exchange pullbookmarks function with one which updates the
@@ -1119,7 +1161,7 @@ def backuplockcheck(ui, repo):
             etime = commitcloudutil.getprocessetime(lockinfo)
             if etime:
                 minutes, seconds = divmod(etime, 60)
-                etimemsg = _(" (pid %s on %s, running for %d min %d sec)") % (
+                etimemsg = _("\n(pid %s on %s, running for %d min %d sec)") % (
                     lockinfo.uniqueid,
                     lockinfo.namespace,
                     minutes,
@@ -1127,8 +1169,10 @@ def backuplockcheck(ui, repo):
                 )
             else:
                 etimemsg = ""
+            bgstep = commitcloudutil.getsyncprogress(repo) or "synchronizing"
             highlightstatus(
-                ui, _("background cloud sync is in progress%s\n") % etimemsg
+                ui,
+                _("background cloud sync is in progress: %s%s\n") % (bgstep, etimemsg),
             )
 
 

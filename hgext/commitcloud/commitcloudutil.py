@@ -6,7 +6,9 @@
 from __future__ import absolute_import
 
 # Standard Library
+import errno
 import hashlib
+import json
 import os
 import socket
 from subprocess import PIPE, Popen
@@ -576,3 +578,36 @@ def getprocessetime(locker):
             return etimesec
     except Exception:
         return None
+
+
+# Sync progress reporting
+# Progress reports for ongoing syncs are written to a file (protected by the
+# infinitepush backup lock). This file contains JSON format data of the form:
+# {
+#    "step": "description of the current step",
+#    "data": { ... }
+# }
+# The "data" dict may contain:
+#    "newheads", a list of commit hashes of the heads of new commits that are
+#    being pulled into the repo
+#    "backingup", a list of commit hashes of commits that are being backed up
+_syncprogress = "commitcloudsyncprogress"
+
+
+def writesyncprogress(repo, step=None, **kwargs):
+    if step is None:
+        repo.sharedvfs.tryunlink(_syncprogress)
+    else:
+        with repo.sharedvfs.open(_syncprogress, "w", atomictemp=True) as f:
+            data = {"step": str(step), "data": kwargs}
+            json.dump(data, f)
+
+
+def getsyncprogress(repo):
+    try:
+        data = json.load(repo.sharedvfs.open(_syncprogress))
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise
+    else:
+        return data.get("step")

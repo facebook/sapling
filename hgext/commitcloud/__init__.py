@@ -248,6 +248,7 @@ def extsetup(ui):
     commitcloudcommands.infinitepushbackup = infinitepushbackup
 
     localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._obsmarkerssyncing)
+    localrepo.localrepository._wlockfreeprefix.add(commitcloudutil._syncprogress)
     localrepo.localrepository._lockfreeprefix.add(state.SyncState.prefix)
 
 
