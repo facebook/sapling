@@ -359,7 +359,9 @@ class _gitlfsremote(object):
         else:
             oids = transfer(objects)
 
-        with progress.bar(self.ui, topic, _("bytes"), total=total) as prog:
+        with progress.bar(
+            self.ui, topic, _("bytes"), total=total, formatfunc=util.bytecount
+        ) as prog:
             for _one, oid in oids:
                 prog.value += sizes[oid]
                 if self.ui.verbose:
