@@ -95,6 +95,7 @@ Show debug commands if there are no other candidates
   debugdirstate
   debugdiscovery
   debugdrawdag
+  debugedenimporthelper
   debugextensions
   debugfilerevision
   debugfileset
@@ -290,6 +291,7 @@ Show all commands + options
   debugdirstate: nodates, datesort, json
   debugdiscovery: old, nonheads, rev, ssh, remotecmd, insecure
   debugdrawdag: print
+  debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, fetch-tree
   debugextensions: excludedefault, template
   debugfilerevision: rev, include, exclude
   debugfileset: rev
