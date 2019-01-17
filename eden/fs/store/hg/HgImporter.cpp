@@ -71,6 +71,13 @@ DEFINE_string(
     "",
     "The path to the mercurial import helper script");
 
+DEFINE_string(hgPath, "hg", "The path to the mercurial executable");
+
+DEFINE_bool(
+    hgImportUseDebugSubcommand,
+    false,
+    "Use `hg debugedenimporthelper` rather than hgImportHelper");
+
 DEFINE_string(
     hgPythonPath,
     "",
@@ -191,17 +198,23 @@ HgImporter::HgImporter(
     LocalStore* store,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath}, store_{store} {
-  auto importHelper = importHelperScript.has_value()
-      ? importHelperScript.value()
-      : getImportHelperPath();
+  std::vector<string> cmd;
+
+  if (FLAGS_hgImportUseDebugSubcommand) {
+    cmd.push_back(FLAGS_hgPath);
+    cmd.push_back("debugedenimporthelper");
+  } else {
+    auto importHelper = importHelperScript.has_value()
+        ? importHelperScript.value()
+        : getImportHelperPath();
+    cmd.push_back(importHelper.value());
+  }
+
+  cmd.push_back(repoPath.value().str());
 
 #ifndef EDEN_WIN
-  std::vector<string> cmd = {
-      importHelper.value(),
-      repoPath.value().str(),
-      "--out-fd",
-      folly::to<string>(HELPER_PIPE_FD),
-  };
+  cmd.push_back("--out-fd");
+  cmd.push_back(folly::to<string>(HELPER_PIPE_FD));
 
   // In the future, it might be better to use some other arbitrary fd for
   // output from the helper process, rather than stdout (just in case anything
@@ -237,14 +250,10 @@ HgImporter::HgImporter(
     throw std::runtime_error("Failed to set the handle attributes");
   }
 
-  std::vector<string> cmd = {
-      importHelper.value(),
-      repoPath.value().str(),
-      "--out-fd",
-      folly::to<string>((int)childOutPipe->writeHandle),
-      "--in-fd",
-      folly::to<string>((int)childInPipe->readHandle),
-  };
+  cmd.push_back("--out-fd");
+  cmd.push_back(folly::to<string>((int)childOutPipe->writeHandle));
+  cmd.push_back("--in-fd");
+  cmd.push_back(folly::to<string>((int)childInPipe->readHandle));
 
   helper_.createSubprocess(
       cmd, std::move(childInPipe), std::move(childOutPipe));

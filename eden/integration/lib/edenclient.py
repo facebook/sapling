@@ -181,6 +181,11 @@ class EdenFS(object):
             self._storage_engine,
             "--hgImportHelper",
             FindExe.EDEN_HG_IMPORT_HELPER,
+            "--hgPath",
+            FindExe.HG_REAL,
+            # FIXME: find a way to introduce this into the test matrix so
+            # that we can test the old and the new way of using the importer
+            "--hgImportUseDebugSubcommand",
             # Disable falling back to importing mercurial data using
             # flatmanifest when the repository supports treemanifest.
             # If an error occurs importing treemanifest data in a test this is
