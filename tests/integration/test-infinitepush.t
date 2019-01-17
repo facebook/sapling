@@ -4,6 +4,13 @@ setup configuration
   $ setup_common_config
   $ cd $TESTTMP
 
+setup common configuration for these tests
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > infinitepush=
+  > infinitepushbackup=
+  > EOF
+
 setup repo
 
   $ hginit_treemanifest repo-hg
@@ -36,8 +43,6 @@ Do infinitepush (aka commit cloud) push
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > infinitepush=
-  > infinitepushbackup=
   > remotenames=
   > [infinitepush]
   > server=False
@@ -99,13 +104,13 @@ Do infinitepush (aka commit cloud) push
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
-  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 47da8b81097c
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  (run 'hg update' to get a working copy)
   $ hgmn up -q 47da8b81097c
   $ cat newfile
   new
@@ -161,12 +166,12 @@ Pushbackup also works
   pulling from ssh://user@dummy/repo
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   searching for changes
-  no changes found
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
   new changesets 95cad53aab1b
+  (run 'hg update' to get a working copy)
   $ hgmn up -q 95cad53aab1b0b33ecee
   $ cat aa
   aa
