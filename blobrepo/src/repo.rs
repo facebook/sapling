@@ -6,7 +6,7 @@
 
 use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
 use super::changeset::HgChangesetContent;
-use super::changeset_fetcher::{CachingChangesetFetcher, ChangesetFetcher, SimpleChangesetFetcher};
+use super::changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
 use blobstore::{
     new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob, MemWritesBlobstore,
@@ -446,15 +446,11 @@ impl BlobRepo {
                 );
 
                 let changeset_fetcher_factory = {
-                    cloned!(blobstore, changesets, repoid);
+                    cloned!(changesets, repoid);
                     move || {
-                        let res: Arc<ChangesetFetcher + Send + Sync> =
-                            Arc::new(CachingChangesetFetcher::new(
-                                changesets.clone(),
-                                repoid.clone(),
-                                changesets_cache_pool.clone(),
-                                blobstore.clone(),
-                            ));
+                        let res: Arc<ChangesetFetcher + Send + Sync> = Arc::new(
+                            SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
+                        );
                         res
                     }
                 };
