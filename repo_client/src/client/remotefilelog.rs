@@ -185,7 +185,7 @@ fn validate_content(
 ) -> impl Future<Item = (), Error = Error> {
     let file_content = repo.get_file_content(ctx.clone(), &actual);
     let repopath = RepoPath::FilePath(path.clone());
-    let filenode = repo.get_filenode(ctx, &repopath, &actual);
+    let filenode = get_maybe_draft_filenode(ctx, repo, repopath.clone(), actual);
 
     file_content
         .join(filenode)
@@ -212,7 +212,8 @@ fn validate_content(
                     path: repopath,
                     expected,
                     actual,
-                }.into())
+                }
+                .into())
             }
         })
 }
@@ -248,21 +249,7 @@ fn get_file_history(
             let filenode_fut = if let Some(filenode) = prefetched_history.get(&node) {
                 ok(filenode.clone()).left_future()
             } else {
-                repo.get_filenode_opt(ctx.clone(), &path, &node)
-                    .and_then({
-                        cloned!(repo, ctx, path, node);
-                        move |filenode_opt| match filenode_opt {
-                            Some(filenode) => ok(filenode).left_future(),
-                            None => {
-                                // The filenode couldn't be found.  This may be because it is a
-                                // draft node, which doesn't get stored in the database.  Attempt
-                                // to reconstruct the filenode from the envelope.  Use `NULL_CSID`
-                                // to indicate a draft linknode.
-                                repo.get_filenode_from_envelope(ctx, &path, &node, &NULL_CSID)
-                                    .right_future()
-                            }
-                        }
-                    })
+                get_maybe_draft_filenode(ctx.clone(), repo.clone(), path.clone(), node)
                     .right_future()
             };
 
@@ -278,7 +265,7 @@ fn get_file_history(
                         Some((frompath, node.into_nodehash()))
                     }
                     Some((frompath, _)) => {
-                        return Err(ErrorKind::InconsistentCopyInfo(filenode.path, frompath).into())
+                        return Err(ErrorKind::InconsistentCopyInfo(filenode.path, frompath).into());
                     }
                     None => None,
                 };
@@ -289,5 +276,28 @@ fn get_file_history(
 
             Some(history)
         },
-    ).boxify()
+    )
+    .boxify()
+}
+
+fn get_maybe_draft_filenode(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    path: RepoPath,
+    node: HgNodeHash,
+) -> impl Future<Item = FilenodeInfo, Error = Error> {
+    repo.get_filenode_opt(ctx.clone(), &path, &node).and_then({
+        cloned!(repo, ctx, path, node);
+        move |filenode_opt| match filenode_opt {
+            Some(filenode) => ok(filenode).left_future(),
+            None => {
+                // The filenode couldn't be found.  This may be because it is a
+                // draft node, which doesn't get stored in the database.  Attempt
+                // to reconstruct the filenode from the envelope.  Use `NULL_CSID`
+                // to indicate a draft linknode.
+                repo.get_filenode_from_envelope(ctx, &path, &node, &NULL_CSID)
+                    .right_future()
+            }
+        }
+    })
 }

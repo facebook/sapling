@@ -111,6 +111,7 @@ path="$TESTTMP/repo"
 repotype="$REPOTYPE"
 repoid=0
 enabled=true
+hash_validation_percentage=100
 CONFIG
 
 if [[ -v READ_ONLY_REPO ]]; then

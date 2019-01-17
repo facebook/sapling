@@ -45,14 +45,13 @@ extern crate mononoke_types;
 extern crate mononoke_types_thrift;
 extern crate pylz4;
 
-pub mod revlog;
-pub mod manifest;
 pub mod changeset;
-pub mod revlogrepo;
-pub mod file;
-pub mod stockbookmarks;
-pub mod symlink;
 mod errors;
+pub mod file;
+pub mod manifest;
+pub mod revlog;
+pub mod revlogrepo;
+pub mod stockbookmarks;
 pub use errors::*;
 
 pub use changeset::RevlogChangeset;

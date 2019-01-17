@@ -13,7 +13,7 @@ use bytes::Bytes;
 use itertools::Itertools;
 
 use mercurial_types::{HgBlob, HgBlobNode, HgNodeHash, MPath};
-use mononoke_types::{FileContents, hash::Sha256};
+use mononoke_types::{hash::Sha256, FileContents};
 
 use errors::*;
 
@@ -37,12 +37,6 @@ impl File {
     #[inline]
     pub fn data_only<B: Into<HgBlob>>(blob: B) -> Self {
         Self::new(blob, None, None)
-    }
-
-    // HgBlobNode should probably go away eventually, probably? So mark this private.
-    #[inline]
-    pub(crate) fn from_blobnode(node: HgBlobNode) -> Self {
-        File { node }
     }
 
     // Note that this function drops empty metadata. For lossless preservation, use the metadata
@@ -104,10 +98,6 @@ impl File {
     }
 
     pub fn copied_from(&self) -> Result<Option<(MPath, HgNodeHash)>> {
-        if !self.node.maybe_copied() {
-            return Ok(None);
-        }
-
         let buf = self.node.as_blob().as_slice();
 
         Self::get_copied_from(&Self::parse_meta(buf))
@@ -119,7 +109,8 @@ impl File {
         copy_rev_key: &'static [u8],
     ) -> Result<Option<(MPath, HgNodeHash)>> {
         let path = meta.get(copy_path_key).cloned().map(MPath::new);
-        let nodeid = meta.get(copy_rev_key)
+        let nodeid = meta
+            .get(copy_rev_key)
             .and_then(|rev| str::from_utf8(rev).ok())
             .and_then(|rev| rev.parse().ok());
         match (path, nodeid) {
@@ -144,12 +135,14 @@ impl File {
         T: Write,
     {
         match copy_from {
-            None => if file_contents.starts_with(META_MARKER) {
-                // If the file contents starts with META_MARKER, the metadata must be
-                // written out to avoid ambiguity.
-                buf.write_all(META_MARKER)?;
-                buf.write_all(META_MARKER)?;
-            },
+            None => {
+                if file_contents.starts_with(META_MARKER) {
+                    // If the file contents starts with META_MARKER, the metadata must be
+                    // written out to avoid ambiguity.
+                    buf.write_all(META_MARKER)?;
+                    buf.write_all(META_MARKER)?;
+                }
+            }
             Some((path, version)) => {
                 buf.write_all(META_MARKER)?;
                 buf.write_all(COPY_PATH_KEY)?;
@@ -183,16 +176,6 @@ impl File {
         let data = self.node.as_blob().as_inner();
         let (_, off) = Self::extract_meta(data);
         FileContents::Bytes(data.slice_from(off))
-    }
-
-    pub fn size(&self) -> usize {
-        // XXX This doesn't really help because the HgBlobNode will have already been constructed
-        // with the content so a size-only query will have already done too much work.
-        if self.node.maybe_copied() {
-            self.content().len()
-        } else {
-            self.node.size()
-        }
     }
 
     pub fn get_lfs_content(&self) -> Result<LFSContent> {
@@ -493,7 +476,8 @@ mod test {
             Some(&(MPath::new("foo").unwrap(), ONES_HASH)),
             &file_contents,
             &mut out,
-        ).expect("Vec::write_all should succeed");
+        )
+        .expect("Vec::write_all should succeed");
         assert_eq!(
             out.as_slice(),
             &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\n\x01\n"[..]
@@ -515,7 +499,8 @@ mod test {
             Some(&(MPath::new("foo").unwrap(), ONES_HASH)),
             &file_contents,
             &mut out,
-        ).expect("Vec::write_all should succeed");
+        )
+        .expect("Vec::write_all should succeed");
         assert_eq!(
             out.as_slice(),
             &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\n\x01\n"[..]
@@ -568,7 +553,8 @@ mod test {
                 version: "https://git-lfs.github.com/spec/v1".to_string(),
                 oid: Sha256::from_str(
                     "27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97"
-                ).unwrap(),
+                )
+                .unwrap(),
                 size: 17,
                 copy_from: None,
             }
@@ -620,9 +606,9 @@ mod test {
 
     #[test]
     fn test_roundtrip_lfs_content() {
-        let oid = Sha256::from_str(
-            "27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97",
-        ).unwrap();
+        let oid =
+            Sha256::from_str("27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97")
+                .unwrap();
         let size = 10;
 
         let generated_file = File::generate_lfs_file(oid, size).unwrap();
