@@ -830,7 +830,10 @@ def gc(ui, *args, **opts):
 
     # gc client cache
     for cachepath in cachepaths:
-        gcclient(ui, cachepath)
+        try:
+            gcclient(ui, cachepath)
+        except Exception as e:
+            ui.warn(_("warning: can't gc cache: %s: %s\n") % (cachepath, e))
 
     # gc server cache
     for repo in repos:
