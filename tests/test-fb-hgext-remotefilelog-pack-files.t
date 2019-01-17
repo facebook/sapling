@@ -231,5 +231,9 @@
    A: bin=0 lnk=0 flag=2000 size=11 copied='' chain=7d8ad6217b8a
   $ hg debugfilerev -r 1
   1c06a42dc98f: Move A -> B
-  abort: cannot parse git-lfs text: '\x01\ncopy: A\ncopyrev: 7d8ad6217b8a0a84c51ed4c918430f828dc955d4\n\x01\nversion https://git-lfs.github.com/spec/v1\noid sha256:14695c25e95ee562d4fbd4962d01a65602b0af06c3e31ad8b9e97cecbe9de6aa\nsize 11\nx-hg-copy A\nx-hg-copyrev 7d8ad6217b8a0a84c51ed4c918430f828dc955d4\nx-is-binary 0\n'!
-  [255]
+   B: bin=0 lnk=0 flag=2000 size=11 copied='A' chain=bf5e569e3cba
+  $ hg log -f B -G -T '{desc}\n'
+  @  Move A -> B
+  |
+  o  A
+  

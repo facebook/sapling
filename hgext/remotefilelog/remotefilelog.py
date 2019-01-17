@@ -187,29 +187,17 @@ class remotefilelog(object):
             # information. It's *incompatible* with datapack meta, which is
             # about file size and revlog flags.
             meta, metaoffset = _metatuple
-            if flags == revlog.REVIDX_DEFAULT_FLAGS:
-                # For non-LFS text, remove hg filelog metadata
-                blobtext = rawtext[metaoffset:]
-            else:
-                # For LFS text, which does not contain the filelog metadata,
-                # do not mangle it.
-                blobtext = rawtext
         else:
             # Not from self.addrevision, but something else (repo._filecommit)
-            # calls addrawrevision directly. remotefilelog needs to get and
-            # strip filelog metadata.
-            meta, blobtext = shallowutil.parsemeta(rawtext, flags)
+            # calls addrawrevision directly. remotefilelog needs to get the
+            # copy metadata via parsing it.
+            meta, unused = shallowutil.parsemeta(rawtext, flags)
 
         if self.repo.ui.configbool("remotefilelog", "packlocaldata"):
             dpack, hpack = self.repo.fileslog.getmutablelocalpacks()
 
-            # Packs expect the data to contain the copy from prefix header
-            meta = meta or {}
-            hashtext = shallowutil.createrevlogtext(
-                blobtext, meta.get("copy"), meta.get("copyrev")
-            )
             dpackmeta = {constants.METAKEYFLAG: flags}
-            dpack.add(self.filename, node, revlog.nullid, hashtext, metadata=dpackmeta)
+            dpack.add(self.filename, node, revlog.nullid, rawtext, metadata=dpackmeta)
 
             copyfrom = ""
             realp1node = p1
@@ -218,8 +206,15 @@ class remotefilelog(object):
                 realp1node = bin(meta["copyrev"])
             hpack.add(self.filename, node, realp1node, p2, linknode, copyfrom)
         else:
+            # The loose file format doesn't expect the copy metadata header, so
+            # let's strip it for non-lfs files.
+            filetext = rawtext
+            if flags == revlog.REVIDX_DEFAULT_FLAGS:
+                # For non-LFS text, remove hg filelog metadata
+                unused, filetext = shallowutil.parsemeta(rawtext, flags)
+
             writestore = self.repo.fileslog.loosefilewritestore
-            data = self._createfileblob(blobtext, meta, flags, p1, p2, node, linknode)
+            data = self._createfileblob(filetext, meta, flags, p1, p2, node, linknode)
             # All loose file writes go through the localcontent store
             writestore.addremotefilelognode(self.filename, node, data)
 
