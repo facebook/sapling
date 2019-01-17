@@ -166,7 +166,7 @@ fn upload_blob_aliases() {
         run_future(future).unwrap();
 
         let expected_content =
-            "content.blake2.07ccc95f3ee9252a9e1dbdeaef59844d6aabd9dcf911fa29f542e891a4c5e90a";
+            "content.blake2.8d53819fadd0306a42cef7a9a9ac6814120efaaaedddb77d41d53a8e65e91bd0";
 
         let contents = run_future(prefixed_blobstore.get(ctx.clone(), alias_key.to_string()))
             .unwrap()

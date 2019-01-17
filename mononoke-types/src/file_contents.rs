@@ -85,15 +85,15 @@ impl BlobstoreValue for FileContents {
     type Key = ContentId;
 
     fn into_blob(self) -> ContentBlob {
+        let mut context = ContentIdContext::new();
+        context.update(self.as_bytes());
+        let id = context.finish();
         let thrift = self.into_thrift();
         let data = compact_protocol::serialize(&thrift);
-        let mut context = ContentIdContext::new();
-        context.update(&data);
-        let id = context.finish();
         Blob::new(id, data)
     }
 
-    fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
+    fn from_blob(blob: ContentBlob) -> Result<Self> {
         // TODO (T27336549) stop using SyncFailure once thrift is converted to failure
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
             .map_err(SyncFailure::new)

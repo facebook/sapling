@@ -102,6 +102,9 @@
   new changesets 0db8825b9792
   (run 'hg update' to get a working copy)
 
+  $ ls $TESTTMP/repo/blobs | grep "alias.content" | wc -l
+  0
+
   $ hgmn update -r master_bookmark -v
   remote: * DEBG Session with Mononoke started with uuid: * (glob)
   resolving manifests
@@ -112,7 +115,6 @@
   calling hook update.prefetch: hgext.remotefilelog.wcpprefetch
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-
 # Check that alias.sha1.hgfilenode -> sha256.file_content is generated
-  $ ls $TESTTMP/repo/blobs | grep "alias.content.blake2.012adc56e51db8dde54a982024b9c2bec84a3c906302b6ca693b7fa7b13e2ae4" | wc -l
+  $ ls $TESTTMP/repo/blobs | grep "alias.content" | wc -l
   1
