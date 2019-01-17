@@ -31,7 +31,7 @@ use context::CoreContext;
 use failure::prelude::*;
 use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
-use sql::Connection;
+use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use stats::Timeseries;
 
 use filenodes::{FilenodeInfo, Filenodes};
@@ -42,12 +42,14 @@ use sql_ext::{create_myrouter_connections, PoolSizeConfig, SqlConnections};
 
 use errors::ErrorKind;
 
+use std::sync::Arc;
+
 const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
 
 pub struct SqlFilenodes {
-    write_connection: Vec<Connection>,
-    read_connection: Vec<Connection>,
-    read_master_connection: Vec<Connection>,
+    write_connection: Arc<Vec<Connection>>,
+    read_connection: Arc<Vec<Connection>>,
+    read_master_connection: Arc<Vec<Connection>>,
 }
 
 define_stats! {
@@ -139,15 +141,23 @@ queries! {
         tonode: HgFileNodeId,
         is_tree: i8,
     ) -> (Vec<u8>, HgFileNodeId) {
-        "SELECT paths.path, fromnode
+        "SELECT frompath_hash, fromnode
          FROM fixedcopyinfo
-         JOIN paths
-           ON fixedcopyinfo.repo_id = paths.repo_id
-          AND fixedcopyinfo.frompath_hash = paths.path_hash
          WHERE fixedcopyinfo.repo_id = {repo_id}
            AND fixedcopyinfo.topath_hash = {topath_hash}
            AND fixedcopyinfo.tonode = {tonode}
            AND fixedcopyinfo.is_tree = {is_tree}
+         LIMIT 1"
+    }
+
+    read SelectPath(
+        repo_id: RepositoryId,
+        path_hash: Vec<u8>,
+    ) -> (Vec<u8>) {
+        "SELECT path
+         FROM paths
+         WHERE paths.repo_id = {repo_id}
+           AND paths.path_hash = {path_hash}
          LIMIT 1"
     }
 }
@@ -159,9 +169,9 @@ impl SqlConstructors for SqlFilenodes {
         read_master_connection: Connection,
     ) -> Self {
         Self {
-            write_connection: vec![write_connection],
-            read_connection: vec![read_connection],
-            read_master_connection: vec![read_master_connection],
+            write_connection: Arc::new(vec![write_connection]),
+            read_connection: Arc::new(vec![read_connection]),
+            read_master_connection: Arc::new(vec![read_master_connection]),
         }
     }
 
@@ -172,14 +182,12 @@ impl SqlConstructors for SqlFilenodes {
 
 impl SqlFilenodes {
     pub fn with_sharded_myrouter(tier: impl ToString, port: u16, shard_count: usize) -> Self {
-        let new = Self {
-            write_connection: Vec::with_capacity(shard_count),
-            read_connection: Vec::with_capacity(shard_count),
-            read_master_connection: Vec::with_capacity(shard_count),
-        };
+        let mut write_connections = vec![];
+        let mut read_connections = vec![];
+        let mut read_master_connections = vec![];
         let shards = 1..=shard_count;
 
-        shards.fold(new, |mut new, shard_id| {
+        for shard_id in shards {
             let SqlConnections {
                 write_connection,
                 read_connection,
@@ -190,11 +198,37 @@ impl SqlFilenodes {
                 PoolSizeConfig::for_sharded_connection(),
             );
 
-            new.write_connection.push(write_connection);
-            new.read_connection.push(read_connection);
-            new.read_master_connection.push(read_master_connection);
+            write_connections.push(write_connection);
+            read_connections.push(read_connection);
+            read_master_connections.push(read_master_connection);
+        }
 
-            new
+        Self {
+            write_connection: Arc::new(write_connections),
+            read_connection: Arc::new(read_connections),
+            read_master_connection: Arc::new(read_master_connections),
+        }
+    }
+
+    pub fn with_sharded_sqlite(shard_count: usize) -> Result<Self> {
+        let mut read_connection = vec![];
+        let mut read_master_connection = vec![];
+        let mut write_connection = vec![];
+
+        for _ in 0..shard_count {
+            let con = SqliteConnection::open_in_memory()?;
+            con.execute_batch(Self::get_up_query())?;
+            let con = Connection::with_sqlite(con);
+
+            read_connection.push(con.clone());
+            read_master_connection.push(con.clone());
+            write_connection.push(con);
+        }
+
+        Ok(Self {
+            write_connection: Arc::new(write_connection),
+            read_connection: Arc::new(read_connection),
+            read_master_connection: Arc::new(read_master_connection),
         })
     }
 }
@@ -241,15 +275,27 @@ impl Filenodes for SqlFilenodes {
         cloned!(self.read_master_connection, path, filenode, repo_id);
         let pwh = PathWithHash::from_repo_path(&path);
 
-        select_filenode(&self.read_connection, &path, &filenode, &pwh, &repo_id)
-            .and_then(move |maybe_filenode_info| match maybe_filenode_info {
-                Some(filenode_info) => Ok(Some(filenode_info)).into_future().boxify(),
-                None => {
-                    STATS::gets_master.add_value(1);
-                    select_filenode(&read_master_connection, &path, &filenode, &pwh, &repo_id)
-                }
-            })
-            .boxify()
+        select_filenode(
+            self.read_connection.clone(),
+            &path,
+            &filenode,
+            &pwh,
+            &repo_id,
+        )
+        .and_then(move |maybe_filenode_info| match maybe_filenode_info {
+            Some(filenode_info) => Ok(Some(filenode_info)).into_future().boxify(),
+            None => {
+                STATS::gets_master.add_value(1);
+                select_filenode(
+                    read_master_connection.clone(),
+                    &path,
+                    &filenode,
+                    &pwh,
+                    &repo_id,
+                )
+            }
+        })
+        .boxify()
     }
 
     fn get_all_filenodes(
@@ -274,7 +320,7 @@ impl Filenodes for SqlFilenodes {
             let mut futs = vec![];
             for (filenode, linknode, p1, p2, has_copyinfo) in filenode_rows {
                 futs.push(convert_to_filenode_info(
-                    &read_connection,
+                    read_connection.clone(),
                     path.clone(),
                     filenode,
                     &pwh,
@@ -408,7 +454,7 @@ fn insert_filenodes(
 }
 
 fn select_filenode(
-    connections: &Vec<Connection>,
+    connections: Arc<Vec<Connection>>,
     path: &RepoPath,
     filenode: &HgFileNodeId,
     pwh: &PathWithHash,
@@ -423,7 +469,7 @@ fn select_filenode(
         .and_then({
             move |rows| match rows.into_iter().next() {
                 Some((linknode, p1, p2, has_copyinfo)) => convert_to_filenode_info(
-                    &connections,
+                    connections,
                     path,
                     filenode,
                     &pwh,
@@ -442,13 +488,15 @@ fn select_filenode(
 }
 
 fn select_copydata(
-    connections: &Vec<Connection>,
+    connections: Arc<Vec<Connection>>,
     path: &RepoPath,
     filenode: &HgFileNodeId,
     pwh: &PathWithHash,
     repo_id: &RepositoryId,
 ) -> BoxFuture<(RepoPath, HgFileNodeId), Error> {
-    let connection = &connections[pwh.shard_number(connections.len())];
+    let shard_number = connections.len();
+    let cloned_connections = connections.clone();
+    let connection = &connections[pwh.shard_number(shard_number)];
     SelectCopyinfo::query(connection, repo_id, &pwh.hash, filenode, &pwh.is_tree)
         .and_then({
             cloned!(path, filenode);
@@ -457,6 +505,22 @@ fn select_copydata(
                     .into_iter()
                     .next()
                     .ok_or(ErrorKind::CopydataNotFound(filenode, path).into())
+            }
+        })
+        .and_then({
+            cloned!(path, repo_id);
+            move |(frompathhash, fromnode)| {
+                let shard_num = PathWithHash::shard_number_by_hash(&frompathhash, shard_number);
+                let another_shard_connection = &cloned_connections[shard_num];
+                SelectPath::query(another_shard_connection, &repo_id, &frompathhash).and_then(
+                    move |maybe_path| {
+                        maybe_path
+                            .into_iter()
+                            .next()
+                            .ok_or(ErrorKind::FromPathNotFound(path.clone()).into())
+                            .map(|path| (path.0, fromnode))
+                    },
+                )
             }
         })
         .and_then({
@@ -469,7 +533,7 @@ fn select_copydata(
 }
 
 fn convert_to_filenode_info(
-    connections: &Vec<Connection>,
+    connections: Arc<Vec<Connection>>,
     path: RepoPath,
     filenode: HgFileNodeId,
     pwh: &PathWithHash,
@@ -538,10 +602,13 @@ impl PathWithHash {
     }
 
     fn shard_number(&self, shard_count: usize) -> usize {
+        Self::shard_number_by_hash(&self.hash, shard_count)
+    }
+
+    fn shard_number_by_hash(hash: &Vec<u8>, shard_count: usize) -> usize {
         // We don't need crypto strength here - we're just turning a potentially large hash into
         // a shard number.
-        let raw_shard_number = self
-            .hash
+        let raw_shard_number = hash
             .iter()
             .fold(0usize, |hash, byte| hash.rotate_left(8) ^ (*byte as usize));
 

@@ -31,4 +31,9 @@ pub enum ErrorKind {
         _0
     )]
     FailRangeFetch(RepoPath),
+    #[fail(
+        display = "Internal error: failure while fetching copy source path for {}",
+        _0
+    )]
+    FromPathNotFound(RepoPath),
 }

@@ -176,376 +176,387 @@ fn assert_all_filenodes(
     assert_eq!(&res, expected);
 }
 
-fn create_db() -> SqlFilenodes {
+fn create_unsharded_db() -> SqlFilenodes {
     SqlFilenodes::with_sqlite_in_memory().unwrap()
 }
 
-mod test {
-    use super::*;
+fn create_sharded_db() -> SqlFilenodes {
+    SqlFilenodes::with_sharded_sqlite(16).unwrap()
+}
 
-    #[test]
-    fn test_simple_filenode_insert_and_get() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
+macro_rules! filenodes_tests {
+    ($test_suite_name:ident, $create_db:ident) => {
+        mod $test_suite_name {
+            use super::*;
 
-            do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &ONES_FNID,
-                &REPO_ZERO,
-                root_first_filenode(),
-            );
+            #[test]
+            fn test_simple_filenode_insert_and_get() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
 
-            assert_no_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &TWOS_FNID,
-                &REPO_ZERO,
-            );
-            assert_no_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &ONES_FNID,
-                &REPO_ONE,
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        root_first_filenode(),
+                    );
 
-    #[test]
-    fn test_insert_identical_in_batch() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
-            do_add_filenodes(
-                ctx.clone(),
-                filenodes,
-                vec![root_first_filenode(), root_first_filenode()],
-                &REPO_ZERO,
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+                    assert_no_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                    );
+                    assert_no_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ONE,
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-    #[test]
-    fn test_filenode_insert_twice() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
-            do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
-            do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
-            Ok(())
-        }).expect("test failed");
-    }
+            #[test]
+            fn test_insert_identical_in_batch() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
+                    do_add_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        vec![root_first_filenode(), root_first_filenode()],
+                        &REPO_ZERO,
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-    #[test]
-    fn test_insert_filenode_with_parent() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
-            do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
-            do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), &REPO_ZERO);
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &ONES_FNID,
-                &REPO_ZERO,
-                root_first_filenode(),
-            );
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &TWOS_FNID,
-                &REPO_ZERO,
-                root_second_filenode(),
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+            #[test]
+            fn test_filenode_insert_twice() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
+                    Ok(())
+                }).expect("test failed");
+            }
 
-    #[test]
-    fn test_insert_root_filenode_with_two_parents() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
-            do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
-            do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), &REPO_ZERO);
-            do_add_filenode(ctx.clone(), filenodes, root_merge_filenode(), &REPO_ZERO);
+            #[test]
+            fn test_insert_filenode_with_parent() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), &REPO_ZERO);
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        root_first_filenode(),
+                    );
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        root_second_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &THREES_FNID,
-                &REPO_ZERO,
-                root_merge_filenode(),
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+            #[test]
+            fn test_insert_root_filenode_with_two_parents() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), &REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, root_merge_filenode(), &REPO_ZERO);
 
-    #[test]
-    fn test_insert_file_filenode() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
-            do_add_filenode(ctx.clone(), filenodes, file_a_first_filenode(), &REPO_ZERO);
-            do_add_filenode(ctx.clone(), filenodes, file_b_first_filenode(), &REPO_ZERO);
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &THREES_FNID,
+                        &REPO_ZERO,
+                        root_merge_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-            assert_no_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::file("non-existent").unwrap(),
-                &ONES_FNID,
-                &REPO_ZERO,
-            );
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::file("a").unwrap(),
-                &ONES_FNID,
-                &REPO_ZERO,
-                file_a_first_filenode(),
-            );
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::file("b").unwrap(),
-                &TWOS_FNID,
-                &REPO_ZERO,
-                file_b_first_filenode(),
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+            #[test]
+            fn test_insert_file_filenode() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
+                    do_add_filenode(ctx.clone(), filenodes, file_a_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, file_b_first_filenode(), &REPO_ZERO);
 
-    #[test]
-    fn test_insert_different_repo() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
-            do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
-            do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), &REPO_ONE);
+                    assert_no_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::file("non-existent").unwrap(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                    );
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::file("a").unwrap(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        file_a_first_filenode(),
+                    );
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::file("b").unwrap(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        file_b_first_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &ONES_FNID,
-                &REPO_ZERO,
-                root_first_filenode(),
-            );
+            #[test]
+            fn test_insert_different_repo() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), &REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), &REPO_ONE);
 
-            assert_no_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &ONES_FNID,
-                &REPO_ONE,
-            );
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        root_first_filenode(),
+                    );
 
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &TWOS_FNID,
-                &REPO_ONE,
-                root_second_filenode(),
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+                    assert_no_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ONE,
+                    );
 
-    #[test]
-    fn test_insert_parent_and_child_in_same_batch() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &TWOS_FNID,
+                        &REPO_ONE,
+                        root_second_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-            do_add_filenodes(
-                ctx.clone(),
-                filenodes,
-                vec![root_first_filenode(), root_second_filenode()],
-                &REPO_ZERO,
-            );
+            #[test]
+            fn test_insert_parent_and_child_in_same_batch() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
 
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &ONES_FNID,
-                &REPO_ZERO,
-                root_first_filenode(),
-            );
+                    do_add_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        vec![root_first_filenode(), root_second_filenode()],
+                        &REPO_ZERO,
+                    );
 
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::root(),
-                &TWOS_FNID,
-                &REPO_ZERO,
-                root_second_filenode(),
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &ONES_FNID,
+                        &REPO_ZERO,
+                        root_first_filenode(),
+                    );
 
-    #[test]
-    fn insert_copied_file() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::root(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        root_second_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-            do_add_filenodes(
-                ctx.clone(),
-                filenodes,
-                vec![copied_from_filenode(), copied_filenode()],
-                &REPO_ZERO,
-            );
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::file("copiedto").unwrap(),
-                &TWOS_FNID,
-                &REPO_ZERO,
-                copied_filenode(),
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+            #[test]
+            fn insert_copied_file() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
 
-    #[test]
-    fn insert_same_copied_file() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
+                    do_add_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        vec![copied_from_filenode(), copied_filenode()],
+                        &REPO_ZERO,
+                    );
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::file("copiedto").unwrap(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        copied_filenode(),
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-            do_add_filenodes(
-                ctx.clone(),
-                filenodes,
-                vec![copied_from_filenode()],
-                &REPO_ZERO,
-            );
-            do_add_filenodes(
-                ctx.clone(),
-                filenodes,
-                vec![copied_filenode(), copied_filenode()],
-                &REPO_ZERO,
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+            #[test]
+            fn insert_same_copied_file() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
 
-    #[test]
-    fn insert_copied_file_to_different_repo() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
+                    do_add_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        vec![copied_from_filenode()],
+                        &REPO_ZERO,
+                    );
+                    do_add_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        vec![copied_filenode(), copied_filenode()],
+                        &REPO_ZERO,
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-            let copied = FilenodeInfo {
-                path: RepoPath::file("copiedto").unwrap(),
-                filenode: TWOS_FNID,
-                p1: None,
-                p2: None,
-                copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
-                linknode: TWOS_CSID,
-            };
+            #[test]
+            fn insert_copied_file_to_different_repo() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
 
-            let notcopied = FilenodeInfo {
-                path: RepoPath::file("copiedto").unwrap(),
-                filenode: TWOS_FNID,
-                p1: None,
-                p2: None,
-                copyfrom: None,
-                linknode: TWOS_CSID,
-            };
+                    let copied = FilenodeInfo {
+                        path: RepoPath::file("copiedto").unwrap(),
+                        filenode: TWOS_FNID,
+                        p1: None,
+                        p2: None,
+                        copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
+                        linknode: TWOS_CSID,
+                    };
 
-            do_add_filenodes(
-                ctx.clone(),
-                filenodes,
-                vec![copied_from_filenode(), copied.clone()],
-                &REPO_ZERO,
-            );
-            do_add_filenodes(ctx.clone(), filenodes, vec![notcopied.clone()], &REPO_ONE);
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::file("copiedto").unwrap(),
-                &TWOS_FNID,
-                &REPO_ZERO,
-                copied,
-            );
+                    let notcopied = FilenodeInfo {
+                        path: RepoPath::file("copiedto").unwrap(),
+                        filenode: TWOS_FNID,
+                        p1: None,
+                        p2: None,
+                        copyfrom: None,
+                        linknode: TWOS_CSID,
+                    };
 
-            assert_filenode(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::file("copiedto").unwrap(),
-                &TWOS_FNID,
-                &REPO_ONE,
-                notcopied,
-            );
-            Ok(())
-        }).expect("test failed");
-    }
+                    do_add_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        vec![copied_from_filenode(), copied.clone()],
+                        &REPO_ZERO,
+                    );
+                    do_add_filenodes(ctx.clone(), filenodes, vec![notcopied.clone()], &REPO_ONE);
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::file("copiedto").unwrap(),
+                        &TWOS_FNID,
+                        &REPO_ZERO,
+                        copied,
+                    );
 
-    #[test]
-    fn get_all_filenodes() {
-        async_unit::tokio_unit_test(|| -> Result<_, !> {
-            let ctx = CoreContext::test_mock();
-            let filenodes = &create_db();
-            let root_filenodes = vec![
-                root_first_filenode(),
-                root_second_filenode(),
-                root_merge_filenode(),
-            ];
-            do_add_filenodes(
-                ctx.clone(),
-                filenodes,
-                vec![
-                    root_first_filenode(),
-                    root_second_filenode(),
-                    root_merge_filenode(),
-                ],
-                &REPO_ZERO,
-            );
-            do_add_filenodes(
-                ctx.clone(),
-                filenodes,
-                vec![file_a_first_filenode(), file_b_first_filenode()],
-                &REPO_ZERO,
-            );
+                    assert_filenode(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::file("copiedto").unwrap(),
+                        &TWOS_FNID,
+                        &REPO_ONE,
+                        notcopied,
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
 
-            assert_all_filenodes(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::RootPath,
-                &REPO_ZERO,
-                &root_filenodes,
-            );
+            #[test]
+            fn get_all_filenodes() {
+                async_unit::tokio_unit_test(|| -> Result<_, !> {
+                    let ctx = CoreContext::test_mock();
+                    let filenodes = &$create_db();
+                    let root_filenodes = vec![
+                        root_first_filenode(),
+                        root_second_filenode(),
+                        root_merge_filenode(),
+                    ];
+                    do_add_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        vec![
+                            root_first_filenode(),
+                            root_second_filenode(),
+                            root_merge_filenode(),
+                        ],
+                        &REPO_ZERO,
+                    );
+                    do_add_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        vec![file_a_first_filenode(), file_b_first_filenode()],
+                        &REPO_ZERO,
+                    );
 
-            assert_all_filenodes(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::file("a").unwrap(),
-                &REPO_ZERO,
-                &vec![file_a_first_filenode()],
-            );
+                    assert_all_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::RootPath,
+                        &REPO_ZERO,
+                        &root_filenodes,
+                    );
 
-            assert_all_filenodes(
-                ctx.clone(),
-                filenodes,
-                &RepoPath::file("b").unwrap(),
-                &REPO_ZERO,
-                &vec![file_b_first_filenode()],
-            );
-            Ok(())
-        }).expect("test failed");
+                    assert_all_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::file("a").unwrap(),
+                        &REPO_ZERO,
+                        &vec![file_a_first_filenode()],
+                    );
+
+                    assert_all_filenodes(
+                        ctx.clone(),
+                        filenodes,
+                        &RepoPath::file("b").unwrap(),
+                        &REPO_ZERO,
+                        &vec![file_b_first_filenode()],
+                    );
+                    Ok(())
+                }).expect("test failed");
+            }
+        }
     }
 }
+
+filenodes_tests!(unsharded_test, create_unsharded_db);
+filenodes_tests!(sharded_test, create_sharded_db);
