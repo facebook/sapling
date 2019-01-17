@@ -51,9 +51,21 @@ exception NoValueForKeyError {
  */
 enum MountState {
   /**
-   * Freshly created.
+   * The EdenMount object has been constructed but has not started
+   * initializing.
    */
   UNINITIALIZED = 0,
+  /**
+   * The mount point is currently initializing and loading necessary state
+   * (such as the root directory contents) before it can ask the kernel to
+   * mount it.
+   */
+  INITIALIZING = 1,
+  /**
+   * The mount point has loaded its local state needed to start mounting
+   * but has not actually started mounting yet.
+   */
+  INITIALIZED = 2,
   /**
    * Starting to mount fuse.
    */

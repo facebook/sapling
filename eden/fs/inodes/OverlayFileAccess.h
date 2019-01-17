@@ -30,8 +30,9 @@ class Overlay;
  */
 class OverlayFileAccess {
  public:
-  explicit OverlayFileAccess(Overlay* overlay);
+  OverlayFileAccess();
   ~OverlayFileAccess();
+  void initialize(Overlay* overlay);
 
   /**
    * Creates a new empty file in the overlay.
@@ -153,7 +154,7 @@ class OverlayFileAccess {
    */
   EntryPtr getEntryForInode(InodeNumber);
 
-  Overlay* const overlay_;
+  Overlay* overlay_ = nullptr;
   folly::Synchronized<State> state_;
 };
 

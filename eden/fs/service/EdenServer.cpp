@@ -774,18 +774,23 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto objectStore = ObjectStore::create(getLocalStore(), backingStore);
 
 #if EDEN_WIN
+  // Create the EdenMount object and insert the mount into the mountPoints_ map.
   auto edenMount = EdenMount::create(
       std::move(initialConfig), std::move(objectStore), serverState_);
-  edenMount->start();
   addToMountPoints(edenMount);
+  edenMount->start();
   return makeFuture<std::shared_ptr<EdenMount>>(std::move(edenMount));
 
 #else
+  // Create the EdenMount object and insert the mount into the mountPoints_ map.
   auto edenMount = EdenMount::create(
       std::move(initialConfig),
       std::move(objectStore),
       blobCache_,
       serverState_);
+  addToMountPoints(edenMount);
+
+  // Now actually begin starting the mount point
   const bool doTakeover = optionalTakeover.has_value();
   auto initFuture = edenMount->initialize(
       optionalTakeover ? std::make_optional(optionalTakeover->inodeMap)
@@ -796,7 +801,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                   edenMount,
                   optionalTakeover =
                       std::move(optionalTakeover)](auto&&) mutable {
-        addToMountPoints(edenMount);
 
         return (optionalTakeover ? performTakeoverFuseStart(
                                        edenMount, std::move(*optionalTakeover))

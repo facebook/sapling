@@ -209,8 +209,6 @@ EdenMount::EdenMount(
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
-      overlay_{std::make_unique<Overlay>(config_->getOverlayPath())},
-      overlayFileAccess_{overlay_.get()},
       bindMounts_{config_->getBindMounts()},
       mountGeneration_{globalProcessGeneration | ++mountGeneration},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
@@ -220,6 +218,13 @@ EdenMount::EdenMount(
 
 folly::Future<folly::Unit> EdenMount::initialize(
     const std::optional<SerializedInodeMap>& takeover) {
+  transitionState(State::UNINITIALIZED, State::INITIALIZING);
+
+  // Open the overlay.  This acquires the overlay lock and makes sure
+  // that no other process is using this mount.
+  overlay_ = std::make_unique<Overlay>(config_->getOverlayPath());
+  overlayFileAccess_.initialize(overlay_.get());
+
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
   parentInfo_.wlock()->parents.setParents(*parents);
 
@@ -240,8 +245,8 @@ folly::Future<folly::Unit> EdenMount::initialize(
 
   CHECK(overlay_->hasInitializedNextInodeNumber());
 
-  return createRootInode(*parents).thenValue(
-      [this, parents, takeover](TreeInodePtr initTreeNode) {
+  return createRootInode(*parents)
+      .thenValue([this, parents, takeover](TreeInodePtr initTreeNode) {
         if (takeover) {
           inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
         } else {
@@ -258,6 +263,9 @@ folly::Future<folly::Unit> EdenMount::initialize(
         delta->toHash = parents->parent1();
         journal_.addDelta(std::move(delta));
         return setupDotEden(getRootInode());
+      })
+      .thenValue([this](auto&&) {
+        transitionState(State::INITIALIZING, State::INITIALIZED);
       });
 }
 
@@ -391,7 +399,8 @@ void EdenMount::unconditionallySetState(State newState) noexcept {
 void EdenMount::destroy() {
   auto oldState = state_.exchange(State::DESTROYING, std::memory_order_acq_rel);
   switch (oldState) {
-    case State::UNINITIALIZED: {
+    case State::UNINITIALIZED:
+    case State::INITIALIZING: {
       // The root inode may still be null here if we failed to load the root
       // inode.  In this case just delete ourselves immediately since we don't
       // have any inodes to unload.  shutdownImpl() requires the root inode be
@@ -406,6 +415,7 @@ void EdenMount::destroy() {
       }
       return;
     }
+    case State::INITIALIZED:
     case State::RUNNING:
     case State::STARTING:
     case State::FUSE_ERROR: {
@@ -440,7 +450,9 @@ Future<SerializedInodeMap> EdenMount::shutdown(
   // SHUTTING_DOWN or later states.  Confirm this is the case, and move to
   // SHUTTING_DOWN.
   if (!(allowFuseNotStarted &&
-        tryToTransitionState(State::UNINITIALIZED, State::SHUTTING_DOWN)) &&
+        (tryToTransitionState(State::UNINITIALIZED, State::SHUTTING_DOWN) ||
+         tryToTransitionState(State::INITIALIZING, State::SHUTTING_DOWN) ||
+         tryToTransitionState(State::INITIALIZED, State::SHUTTING_DOWN))) &&
       !tryToTransitionState(State::RUNNING, State::SHUTTING_DOWN) &&
       !tryToTransitionState(State::STARTING, State::SHUTTING_DOWN) &&
       !tryToTransitionState(State::FUSE_ERROR, State::SHUTTING_DOWN)) {
@@ -817,7 +829,7 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
 folly::Future<folly::Unit> EdenMount::startFuse() {
   return folly::makeFutureWith([&]() {
     transitionState(
-        /*expected=*/State::UNINITIALIZED, /*newState=*/State::STARTING);
+        /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);
 
     return serverState_->getPrivHelper()
         ->fuseMount(getPath().stringPiece())
@@ -836,7 +848,7 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
 }
 
 void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
-  transitionState(State::UNINITIALIZED, State::STARTING);
+  transitionState(State::INITIALIZED, State::STARTING);
 
   createFuseChannel(std::move(takeoverData.fd));
 

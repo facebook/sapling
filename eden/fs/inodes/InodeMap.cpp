@@ -525,6 +525,13 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
                << " unloadedCount=" << data->unloadedInodes_.size();
   }
 
+  // If an error occurs during mount point initialization, shutdown() can be
+  // called in some cases even if InodeMap::initialize() was never called.
+  // Just return immediately in this case.
+  if (!root_) {
+    return folly::makeFuture(SerializedInodeMap{});
+  }
+
   // Walk from the root of the tree down, finding all unreferenced inodes,
   // and immediately destroy them.
   //
