@@ -29,7 +29,7 @@ mod errors;
 
 use context::CoreContext;
 use failure::prelude::*;
-use futures::{Future, IntoFuture, Stream, future::join_all};
+use futures::{future::join_all, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use sql::Connection;
 use stats::Timeseries;
@@ -267,27 +267,28 @@ impl Filenodes for SqlFilenodes {
             &repo_id,
             &pwh.hash,
             &pwh.is_tree,
-        ).chain_err(ErrorKind::FailRangeFetch(path.clone()))
-            .from_err()
-            .and_then(move |filenode_rows| {
-                let mut futs = vec![];
-                for (filenode, linknode, p1, p2, has_copyinfo) in filenode_rows {
-                    futs.push(convert_to_filenode_info(
-                        &read_connection,
-                        path.clone(),
-                        filenode,
-                        &pwh,
-                        repo_id,
-                        linknode,
-                        p1,
-                        p2,
-                        has_copyinfo,
-                    ))
-                }
+        )
+        .chain_err(ErrorKind::FailRangeFetch(path.clone()))
+        .from_err()
+        .and_then(move |filenode_rows| {
+            let mut futs = vec![];
+            for (filenode, linknode, p1, p2, has_copyinfo) in filenode_rows {
+                futs.push(convert_to_filenode_info(
+                    &read_connection,
+                    path.clone(),
+                    filenode,
+                    &pwh,
+                    repo_id,
+                    linknode,
+                    p1,
+                    p2,
+                    has_copyinfo,
+                ))
+            }
 
-                join_all(futs)
-            })
-            .boxify()
+            join_all(futs)
+        })
+        .boxify()
     }
 }
 
@@ -431,8 +432,9 @@ fn select_filenode(
                     p1,
                     p2,
                     has_copyinfo,
-                ).map(Some)
-                    .boxify(),
+                )
+                .map(Some)
+                .boxify(),
                 None => Ok(None).into_future().boxify(),
             }
         })
@@ -538,7 +540,8 @@ impl PathWithHash {
     fn shard_number(&self, shard_count: usize) -> usize {
         // We don't need crypto strength here - we're just turning a potentially large hash into
         // a shard number.
-        let raw_shard_number = self.hash
+        let raw_shard_number = self
+            .hash
             .iter()
             .fold(0usize, |hash, byte| hash.rotate_left(8) ^ (*byte as usize));
 
