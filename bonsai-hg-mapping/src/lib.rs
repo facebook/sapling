@@ -43,7 +43,7 @@ use sql::Connection;
 pub use sql_ext::SqlConstructors;
 
 use context::CoreContext;
-use futures::{Future, IntoFuture};
+use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -351,6 +351,9 @@ fn select_mapping(
     cs_id: &BonsaiOrHgChangesetIds,
 ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
     cloned!(repo_id, cs_id);
+    if cs_id.is_empty() {
+        return future::ok(vec![]).boxify();
+    }
 
     let rows_fut = match cs_id {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
