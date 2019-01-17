@@ -4,12 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobrepo::{BlobRepo, ChangesetFetcher};
+use blobrepo::ChangesetFetcher;
 use context::CoreContext;
-use failure::prelude::*;
 use futures::future::Future;
 use futures::stream::Stream;
-use mercurial_types::nodehash::HgChangesetId;
+#[cfg(test)]
 use mercurial_types::HgNodeHash;
 use mononoke_types::{ChangesetId, Generation};
 use std::boxed::Box;
@@ -18,31 +17,13 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use errors::*;
-use failure::{err_msg, Error};
+use failure::Error;
 use BonsaiNodeStream;
-use NodeStream;
 
 use futures::{Async, Poll};
 
 type GenericStream<T> = Box<Stream<Item = (T, Generation), Error = Error> + 'static + Send>;
-pub type InputStream = GenericStream<HgNodeHash>;
 pub type BonsaiInputStream = GenericStream<ChangesetId>;
-
-pub fn add_generations(
-    ctx: CoreContext,
-    stream: Box<NodeStream>,
-    repo: Arc<BlobRepo>,
-) -> InputStream {
-    let stream = stream.and_then(move |node_hash| {
-        repo.get_generation_number(ctx.clone(), &HgChangesetId::new(node_hash))
-            .and_then(move |genopt| {
-                genopt.ok_or_else(|| err_msg(format!("{} not found", node_hash)))
-            })
-            .map(move |gen_id| (node_hash, gen_id))
-            .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
-    });
-    Box::new(stream)
-}
 
 pub fn add_generations_by_bonsai(
     ctx: CoreContext,
