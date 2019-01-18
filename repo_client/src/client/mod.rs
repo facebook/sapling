@@ -12,11 +12,12 @@ use std::iter::FromIterator;
 use std::mem;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
 use futures::{future, stream, stream::empty, Async, Future, IntoFuture, Poll, Stream};
-use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt, StreamTimeoutError};
 use futures_stats::{StreamStats, Timed, TimedStreamTrait};
 use itertools::Itertools;
 use stats::Histogram;
@@ -41,6 +42,8 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use scribe::ScribeClient;
 use scuba_ext::{ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt};
 use serde_json;
+use tokio::timer::timeout::Error as TimeoutError;
+use tokio::util::FutureExt as TokioFutureExt;
 use tracing::Traced;
 
 use blobrepo::BlobRepo;
@@ -93,6 +96,24 @@ where
         .into_iter()
         .map(|entry| String::from_utf8_lossy(entry.as_ref()).into_owned())
         .join(",")
+}
+
+fn timeout_duration() -> Duration {
+    Duration::from_secs(15 * 60)
+}
+
+fn process_timeout_error(err: TimeoutError<Error>) -> Error {
+    match err.into_inner() {
+        Some(err) => err,
+        None => err_msg("timeout"),
+    }
+}
+
+fn process_stream_timeout_error(err: StreamTimeoutError) -> Error {
+    match err {
+        StreamTimeoutError::Error(err) => err,
+        StreamTimeoutError::Timeout => err_msg("timeout"),
+    }
 }
 
 fn wireprotocaps() -> Vec<String> {
@@ -525,6 +546,8 @@ impl HgCommands for RepoClient {
                     .collect()
             })
             .collect()
+            .timeout(timeout_duration())
+            .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::BETWEEN, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
@@ -548,6 +571,8 @@ impl HgCommands for RepoClient {
             .collect()
             .map(|v| v.into_iter().collect())
             .from_err()
+            .timeout(timeout_duration())
+            .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::HEADS, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
@@ -620,6 +645,8 @@ impl HgCommands for RepoClient {
         };
 
         lookup_fut
+            .timeout(timeout_duration())
+            .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
@@ -660,6 +687,8 @@ impl HgCommands for RepoClient {
                 .collect();
             known_nodes
         })
+        .timeout(timeout_duration())
+        .map_err(process_timeout_error)
         .traced(self.ctx.trace(), ops::KNOWN, trace_args!())
         .timed(move |stats, known_nodes| {
             if let Ok(known) = known_nodes {
@@ -698,6 +727,8 @@ impl HgCommands for RepoClient {
             Ok(res) => res.boxify(),
             Err(err) => stream::once(Err(err)).boxify(),
         }
+        .whole_stream_timeout(timeout_duration())
+        .map_err(process_stream_timeout_error)
         .traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
             STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
@@ -720,6 +751,8 @@ impl HgCommands for RepoClient {
         let mut scuba_logger = self.prepared_ctx(ops::HELLO, None).scuba().clone();
 
         future::ok(res)
+            .timeout(timeout_duration())
+            .map_err(process_timeout_error)
             .traced(self.ctx.trace(), ops::HELLO, trace_args!())
             .timed(move |stats, _| {
                 scuba_logger
@@ -750,6 +783,8 @@ impl HgCommands for RepoClient {
                         .map(|(name, value)| (Vec::from(name.to_string()), value));
                     HashMap::from_iter(bookiter)
                 })
+                .timeout(timeout_duration())
+                .map_err(process_timeout_error)
                 .traced(self.ctx.trace(), ops::LISTKEYS, trace_args!())
                 .timed(move |stats, _| {
                     scuba_logger
@@ -792,7 +827,9 @@ impl HgCommands for RepoClient {
             self.phases_hint.clone(),
         );
 
-        res.traced(self.ctx.trace(), ops::UNBUNDLE, trace_args!())
+        res.timeout(timeout_duration())
+            .map_err(process_timeout_error)
+            .traced(self.ctx.trace(), ops::UNBUNDLE, trace_args!())
             .timed(move |stats, _| {
                 if let Ok(counters) = serde_json::to_string(&ctx.perf_counters()) {
                     scuba_logger.add("extra_context", counters);
@@ -817,6 +854,8 @@ impl HgCommands for RepoClient {
         let mut wireproto_logger = self.wireproto_logger(ops::GETTREEPACK, Some(args));
 
         self.gettreepack_untimed(params)
+            .whole_stream_timeout(timeout_duration())
+            .map_err(process_stream_timeout_error)
             .traced(self.ctx.trace(), ops::GETTREEPACK, trace_args!())
             .inspect({
                 cloned!(self.ctx);
@@ -902,6 +941,8 @@ impl HgCommands for RepoClient {
                         .set_max_counter("getfiles_max_file_size", len);
                 }
             })
+            .whole_stream_timeout(timeout_duration())
+            .map_err(process_stream_timeout_error)
             .timed({
                 cloned!(self.ctx);
                 move |stats, _| {
@@ -989,6 +1030,8 @@ impl HgCommands for RepoClient {
                 }
             })
             .flatten_stream()
+            .whole_stream_timeout(timeout_duration())
+            .map_err(process_stream_timeout_error)
             .boxify()
     }
 }

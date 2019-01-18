@@ -26,6 +26,7 @@ extern crate tokio_threadpool;
 use bytes::Bytes;
 use futures::sync::{mpsc, oneshot};
 use futures::{future, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
+use tokio::timer::Delay;
 use tokio_io::codec::{Decoder, Encoder};
 use tokio_io::AsyncWrite;
 use tokio_threadpool::blocking;
@@ -47,6 +48,8 @@ pub use bytes_stream::{BytesStream, BytesStreamFuture};
 pub use futures_ordered::{futures_ordered, FuturesOrdered};
 pub use select_all::{select_all, SelectAll};
 pub use stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
+
+use std::time::{Duration, Instant};
 
 /// Map `Item` and `Error` to `()`
 ///
@@ -266,6 +269,18 @@ pub trait StreamExt: Stream {
     {
         StreamEither::B(self)
     }
+
+    // It's different from tokio::timer::Timeout in that it sets a timeout on the whole Stream,
+    // not just on a single Stream item
+    fn whole_stream_timeout(self, duration: Duration) -> StreamWithTimeout<Self>
+    where
+        Self: Sized,
+    {
+        StreamWithTimeout {
+            stream: self,
+            delay: Delay::new(Instant::now() + duration),
+        }
+    }
 }
 
 impl<T> StreamExt for T where T: Stream {}
@@ -434,6 +449,42 @@ impl<In: Stream> Stream for ReturnRemainder<In> {
         }
 
         Ok(Async::Ready(maybe_item))
+    }
+}
+
+pub enum StreamTimeoutError {
+    Error(failure::Error),
+    Timeout,
+}
+
+pub struct StreamWithTimeout<S> {
+    delay: Delay,
+    stream: S,
+}
+
+impl<S: Stream<Error = failure::Error>> Stream for StreamWithTimeout<S> {
+    type Item = S::Item;
+    type Error = StreamTimeoutError;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        match self.delay.poll() {
+            Ok(Async::Ready(())) => {
+                return Err(StreamTimeoutError::Timeout);
+            }
+            Err(err) => {
+                return Err(StreamTimeoutError::Error(failure::err_msg(format!(
+                    "internal error: timeout failed {}",
+                    err
+                ))));
+            }
+            _ => {}
+        };
+
+        match self.stream.poll() {
+            Ok(Async::Ready(item)) => Ok(Async::Ready(item)),
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Err(err) => Err(StreamTimeoutError::Error(err)),
+        }
     }
 }
 
@@ -848,5 +899,41 @@ mod test {
             let res = rx.collect().wait().unwrap();
             assert_eq!(res.len(), messages_num);
         })
+    }
+
+    #[test]
+    fn whole_stream_timeout_test() {
+        use futures::Stream;
+        use std::sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        };
+        use tokio::timer::Interval;
+
+        let count = Arc::new(AtomicUsize::new(0));
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let f = Interval::new(Instant::now(), Duration::new(1, 0))
+            .map({
+                let count = count.clone();
+                move |item| {
+                    count.fetch_add(1, Ordering::Relaxed);
+                    item
+                }
+            })
+            .map_err(|_| failure::err_msg("error"))
+            .take(10)
+            .whole_stream_timeout(Duration::new(3, 0))
+            .collect();
+
+        let res = runtime.block_on(f);
+        assert!(res.is_err());
+        match res {
+            Err(StreamTimeoutError::Timeout) => {}
+            _ => {
+                panic!("expected timeout");
+            }
+        };
+
+        assert!(count.load(Ordering::Relaxed) < 5);
     }
 }

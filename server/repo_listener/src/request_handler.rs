@@ -7,7 +7,7 @@
 use std::mem;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use failure::{prelude::*, SlogKVError};
 use futures::{Future, Sink, Stream};
@@ -17,7 +17,6 @@ use slog_kvfilter::KVFilter;
 use slog_term;
 use stats::Histogram;
 use time_ext::DurationExt;
-use tokio::util::FutureExt as TokioFutureExt;
 use tracing::{TraceContext, Traced};
 use uuid::Uuid;
 
@@ -146,13 +145,7 @@ pub fn request_handler(
 
     // If we got an error at this point, then catch it and print a message
     endres
-        // Don't wait for more that 15 mins for a request
-        .timeout(Duration::from_secs(15 * 60))
-        .traced(
-            &trace,
-            "wireproto request",
-            trace_args!(),
-        )
+        .traced(&trace, "wireproto request", trace_args!())
         .timed(move |stats, result| {
             let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
             let wireproto_calls = mem::replace(&mut *wireproto_calls, Vec::new());
@@ -164,31 +157,16 @@ pub fn request_handler(
 
             match result {
                 Ok(_) => scuba_logger.log_with_msg("Request finished - Success", None),
-                Err(err) => if err.is_inner() {
+                Err(err) => {
                     scuba_logger.log_with_msg("Request finished - Failure", format!("{:#?}", err));
-                } else if err.is_elapsed() {
-                    scuba_logger.log_with_msg("Request finished - Timeout", None);
-                } else {
-                    scuba_logger.log_with_msg(
-                        "Request finished - Unexpected timer error",
-                        format!("{:#?}", err),
-                    );
-                },
+                }
             }
             scuba_logger.log_with_trace(&trace)
         })
         .map_err(move |err| {
-            if err.is_inner() {
-                error!(ctx.logger(), "Command failed";
-                SlogKVError(err.into_inner().unwrap()),
-                "remote" => "true");
-            } else if err.is_elapsed() {
-                error!(ctx.logger(), "Timeout while handling request";
-                "remote" => "true");
-            } else {
-                crit!(ctx.logger(), "Unexpected error";
-                SlogKVError(err.into_timer().unwrap().into()),
-                "remote" => "true");
-            }
+            error!(ctx.logger(), "Command failed";
+                SlogKVError(err),
+                "remote" => "true"
+            );
         })
 }
