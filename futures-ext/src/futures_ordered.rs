@@ -51,10 +51,7 @@ where
 {
     let mut elems = iter.into_iter();
     let current = next_future(&mut elems);
-    FuturesOrdered {
-        elems: elems,
-        current: current,
-    }
+    FuturesOrdered { elems, current }
 }
 
 impl<I> Stream for FuturesOrdered<I>
@@ -106,9 +103,9 @@ where
 mod test {
     use std::result;
 
-    use futures::{Future, Sink, Stream};
     use futures::sync::mpsc;
     use futures::task;
+    use futures::{Future, Sink, Stream};
     use tokio;
 
     use super::*;
@@ -139,7 +136,7 @@ mod test {
     fn delayed_future<T>(v: T, tx: mpsc::Sender<T>, count: usize) -> DelayedFuture<T> {
         DelayedFuture {
             send: Some((v, tx)),
-            count: count,
+            count,
         }
     }
 

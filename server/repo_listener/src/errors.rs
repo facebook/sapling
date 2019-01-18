@@ -8,6 +8,8 @@ pub use failure::{Error, Result, ResultExt};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "connection does not start with preamble")] NoConnectionPreamble,
-    #[fail(display = "connection error while reading preamble")] ConnectionError,
+    #[fail(display = "connection does not start with preamble")]
+    NoConnectionPreamble,
+    #[fail(display = "connection error while reading preamble")]
+    ConnectionError,
 }

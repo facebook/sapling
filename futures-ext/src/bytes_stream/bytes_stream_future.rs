@@ -43,7 +43,8 @@ where
     type Error = (Dec::Error, BytesStream<S>);
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let mut inner = self.inner
+        let mut inner = self
+            .inner
             .take()
             .expect("calling poll after future completed");
         match inner.poll() {

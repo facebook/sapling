@@ -49,7 +49,8 @@ where
 
     fn poll(&mut self) -> Poll<Self::Item, S::Error> {
         loop {
-            match self.stream
+            match self
+                .stream
                 .as_mut()
                 .expect("CollectNoConsume future polled after completion")
                 .poll()

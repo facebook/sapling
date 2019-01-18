@@ -11,8 +11,8 @@ use std::io::{self, BufRead, Read};
 
 use bytes::{BufMut, Bytes, BytesMut};
 use futures::{Async, Poll, Stream};
-use tokio_io::AsyncRead;
 use tokio_io::codec::Decoder;
+use tokio_io::AsyncRead;
 
 pub use self::bytes_stream_future::BytesStreamFuture;
 
@@ -123,11 +123,7 @@ where
     }
 }
 
-impl<S> AsyncRead for BytesStream<S>
-where
-    S: Stream<Item = Bytes, Error = io::Error>,
-{
-}
+impl<S> AsyncRead for BytesStream<S> where S: Stream<Item = Bytes, Error = io::Error> {}
 
 impl<S> BufRead for BytesStream<S>
 where

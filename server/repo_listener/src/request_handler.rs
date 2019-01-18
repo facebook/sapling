@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use failure::{SlogKVError, prelude::*};
+use failure::{prelude::*, SlogKVError};
 use futures::{Future, Sink, Stream};
 use futures_stats::Timed;
 use slog::{self, Drain, Level, Logger};
@@ -88,13 +88,15 @@ pub fn request_handler(
         let client_drain = KVFilter::new(client_drain, Level::Critical).only_pass_any_on_all_keys(
             (hashmap! {
                 "remote".into() => hashset!["true".into(), "remote_only".into()],
-            }).into(),
+            })
+            .into(),
         );
 
         let server_drain = KVFilter::new(logger, Level::Critical).always_suppress_any(
             (hashmap! {
                 "remote".into() => hashset!["remote_only".into()],
-            }).into(),
+            })
+            .into(),
         );
 
         // Don't fail logging if the client goes away

@@ -28,8 +28,8 @@ where
     Enc: Encoder<Item = In::Item>,
 {
     LayeredEncoder {
-        inp: inp,
-        enc: enc,
+        inp,
+        enc,
         eof: false,
         buf: BytesMut::with_capacity(INITIAL_CAPACITY),
     }

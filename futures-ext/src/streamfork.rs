@@ -4,9 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::{Async, AsyncSink, Future, Poll};
-use futures::stream::{Fuse, Stream};
 use futures::sink::Sink;
+use futures::stream::{Fuse, Stream};
+use futures::{Async, AsyncSink, Future, Poll};
 
 /// Fork a Stream into two
 ///
@@ -30,7 +30,7 @@ where
         inp: Some(inp.fuse()),
         out1: Out::new(out1),
         out2: Out::new(out2),
-        pred: pred,
+        pred,
     }
 }
 
@@ -165,8 +165,8 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::Future;
     use futures::stream::iter_ok;
+    use futures::Future;
 
     #[test]
     fn simple() {

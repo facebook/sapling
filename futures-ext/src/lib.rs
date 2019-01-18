@@ -24,19 +24,19 @@ extern crate tokio_io;
 extern crate tokio_threadpool;
 
 use bytes::Bytes;
-use futures::{future, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
 use futures::sync::{mpsc, oneshot};
-use tokio_io::AsyncWrite;
+use futures::{future, Async, AsyncSink, Future, IntoFuture, Poll, Sink, Stream};
 use tokio_io::codec::{Decoder, Encoder};
+use tokio_io::AsyncWrite;
 use tokio_threadpool::blocking;
 
-use std::{io as std_io, fmt::Debug};
+use std::{fmt::Debug, io as std_io};
 
 mod bytes_stream;
 mod futures_ordered;
 mod select_all;
-mod streamfork;
 mod stream_wrappers;
+mod streamfork;
 
 pub mod decode;
 pub mod encode;
@@ -137,11 +137,7 @@ pub trait FutureExt: Future + Sized {
     }
 }
 
-impl<T> FutureExt for T
-where
-    T: Future,
-{
-}
+impl<T> FutureExt for T where T: Future {}
 
 pub trait StreamExt: Stream {
     /// Fork elements in a stream out to two sinks, depending on a predicate
@@ -272,11 +268,7 @@ pub trait StreamExt: Stream {
     }
 }
 
-impl<T> StreamExt for T
-where
-    T: Stream,
-{
-}
+impl<T> StreamExt for T where T: Stream {}
 
 pub trait StreamLayeredExt: Stream<Item = Bytes> {
     fn decode<Dec>(self, decoder: Dec) -> decode::LayeredDecode<Self, Dec>
@@ -305,10 +297,7 @@ pub struct Enumerate<In> {
 
 impl<In> Enumerate<In> {
     fn new(inner: In) -> Self {
-        Enumerate {
-            inner: inner,
-            count: 0,
-        }
+        Enumerate { inner, count: 0 }
     }
 }
 
@@ -435,7 +424,8 @@ impl<In: Stream> Stream for ReturnRemainder<In> {
         };
 
         if maybe_item.is_none() {
-            let inner = self.inner
+            let inner = self
+                .inner
                 .take()
                 .expect("inner was just polled, should be some");
             let send = self.send.take().expect("send is None iff inner is None");
@@ -456,13 +446,15 @@ impl<In: Stream> Stream for ReturnRemainder<In> {
 /// is returned.
 #[macro_export]
 macro_rules! handle_nb {
-    ($e:expr) => (match $e {
-        Ok(t) => Ok(::futures::Async::Ready(t)),
-        Err(ref e) if e.kind() == ::std::io::ErrorKind::WouldBlock => {
-            Ok(::futures::Async::NotReady)
+    ($e:expr) => {
+        match $e {
+            Ok(t) => Ok(::futures::Async::Ready(t)),
+            Err(ref e) if e.kind() == ::std::io::ErrorKind::WouldBlock => {
+                Ok(::futures::Async::NotReady)
+            }
+            Err(e) => Err(e),
         }
-        Err(e) => Err(e),
-    })
+    };
 }
 
 /// Macro that can be used like `?` operator, but in the context where the expected return type is
@@ -470,10 +462,12 @@ macro_rules! handle_nb {
 /// converted into BoxFuture.
 #[macro_export]
 macro_rules! try_boxfuture {
-    ($e:expr) => (match $e {
-        Ok(t) => t,
-        Err(e) => return ::futures::future::err(e.into()).boxify(),
-    })
+    ($e:expr) => {
+        match $e {
+            Ok(t) => t,
+            Err(e) => return ::futures::future::err(e.into()).boxify(),
+        }
+    };
 }
 
 /// Macro that can be used like `?` operator, but in the context where the expected return type is
@@ -481,10 +475,12 @@ macro_rules! try_boxfuture {
 /// converted into BoxStream.
 #[macro_export]
 macro_rules! try_boxstream {
-    ($e:expr) => (match $e {
-        Ok(t) => t,
-        Err(e) => return ::futures::stream::once(Err(e.into())).boxify(),
-    })
+    ($e:expr) => {
+        match $e {
+            Ok(t) => t,
+            Err(e) => return ::futures::stream::once(Err(e.into())).boxify(),
+        }
+    };
 }
 
 /// Macro that can be used like ensure! macro from failure crate, but in the context where the
@@ -650,9 +646,9 @@ mod test {
 
     use std::time::{self, Duration};
 
-    use futures::Stream;
     use futures::stream;
     use futures::sync::mpsc;
+    use futures::Stream;
 
     #[derive(Debug)]
     struct MyErr;

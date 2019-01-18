@@ -59,6 +59,6 @@ mod client;
 mod errors;
 mod mononoke_repo;
 
-pub use client::RepoClient;
 pub use client::streaming_clone::SqlStreamingChunksFetcher;
+pub use client::RepoClient;
 pub use mononoke_repo::{open_blobrepo, streaming_clone, MononokeRepo};

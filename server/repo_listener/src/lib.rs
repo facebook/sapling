@@ -58,8 +58,8 @@ extern crate sshrelay;
 
 mod connection_acceptor;
 mod errors;
-mod request_handler;
 mod repo_handlers;
+mod request_handler;
 
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};

@@ -7,13 +7,16 @@
 use std::collections::HashMap;
 use std::io;
 use std::net::SocketAddr;
-use std::sync::{Arc, atomic::{AtomicBool, AtomicUsize, Ordering}};
+use std::sync::{
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+    Arc,
+};
 use std::time::Duration;
 
 use bytes::Bytes;
 use failure::{err_msg, SlogKVError};
-use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures::sync::mpsc;
+use futures::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use openssl::ssl::SslAcceptor;
 use slog::{Drain, Level, Logger};
@@ -198,27 +201,32 @@ where
                 }
             };
 
-            let stdin = rd.filter_map(|s| {
-                if s.stream() == SshStream::Stdin {
-                    Some(s.data())
-                } else {
-                    None
-                }
-            }).boxify();
+            let stdin = rd
+                .filter_map(|s| {
+                    if s.stream() == SshStream::Stdin {
+                        Some(s.data())
+                    } else {
+                        None
+                    }
+                })
+                .boxify();
 
             let (stdout, stderr) = {
                 let (otx, orx) = mpsc::channel(1);
                 let (etx, erx) = mpsc::channel(1);
 
-                let orx = orx.map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
+                let orx = orx
+                    .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
                     .flatten()
                     .map(|v| SshMsg::new(SshStream::Stdout, v));
-                let erx = erx.map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
+                let erx = erx
+                    .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
                     .flatten()
                     .map(|v| SshMsg::new(SshStream::Stderr, v));
 
                 // Glue them together
-                let fwd = orx.select(erx)
+                let fwd = orx
+                    .select(erx)
                     .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
                     .forward(wr);
 

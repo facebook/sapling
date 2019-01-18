@@ -26,8 +26,8 @@ where
     Dec: Decoder,
 {
     LayeredDecode {
-        input: input,
-        decoder: decoder,
+        input,
+        decoder,
         // 8KB is a reasonable default
         buf: BytesMut::with_capacity(8 * 1024),
         eof: false,
@@ -142,12 +142,15 @@ mod test {
         let dec = decode(inp, decoder);
         let out = Vec::new();
 
-        let xfer = dec.map_err(|err| -> () {
-            panic!("bad = {}", err);
-        }).forward(out);
+        let xfer = dec
+            .map_err(|err| -> () {
+                panic!("bad = {}", err);
+            })
+            .forward(out);
 
         let (_, out) = runtime.block_on(xfer).unwrap();
-        let out = out.into_iter()
+        let out = out
+            .into_iter()
             .flat_map(|x| x.as_ref().to_vec())
             .collect::<Vec<_>>();
         assert_eq!(out, b"hello, world!");
@@ -159,19 +162,22 @@ mod test {
 
         let decoder = NetstringDecoder::new();
 
-        let inp = stream::iter_ok::<_, io::Error>(vec![
-            Bytes::from("13:hello, world!,".repeat(5000).as_bytes()),
-        ]);
+        let inp = stream::iter_ok::<_, io::Error>(vec![Bytes::from(
+            "13:hello, world!,".repeat(5000).as_bytes(),
+        )]);
 
         let dec = decode(inp, decoder);
         let out = Vec::new();
 
-        let xfer = dec.map_err(|err| -> () {
-            panic!("bad = {}", err);
-        }).forward(out);
+        let xfer = dec
+            .map_err(|err| -> () {
+                panic!("bad = {}", err);
+            })
+            .forward(out);
 
         let (_, out) = runtime.block_on(xfer).unwrap();
-        let out = out.into_iter()
+        let out = out
+            .into_iter()
             .flat_map(|x| x.as_ref().to_vec())
             .collect::<Vec<_>>();
 
@@ -192,12 +198,15 @@ mod test {
         let dec = decode(inp, decoder);
         let out = Vec::new();
 
-        let xfer = dec.map_err(|err| -> () {
-            panic!("bad = {}", err);
-        }).forward(out);
+        let xfer = dec
+            .map_err(|err| -> () {
+                panic!("bad = {}", err);
+            })
+            .forward(out);
 
         let (_, out) = runtime.block_on(xfer).unwrap();
-        let out = out.into_iter()
+        let out = out
+            .into_iter()
             .flat_map(|x| x.as_ref().to_vec())
             .collect::<Vec<_>>();
         assert_eq!(out, b"hello, world!");
