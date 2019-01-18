@@ -883,7 +883,7 @@ def _applycloudchanges(
 
     # Also update infinitepush state.  These new heads are already backed up,
     # otherwise the server wouldn't have told us about them.
-    recordbackup(ui, repo, cloudrefs.heads)
+    recordbackup(ui, repo, newheads)
 
 
 def _checkomissions(ui, repo, lastsyncstate):

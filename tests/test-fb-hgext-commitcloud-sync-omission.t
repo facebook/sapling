@@ -338,6 +338,10 @@ Second client syncs that in, but still leaves the old commits missing
       ff52de2f760c67fa6f89273ca7f770396a3c81c4
       46f8775ee5d479eed945b5186929bd046f116176
 
+Commit cloud keeps infinitepush backup state up-to-date.  Ensure it hasn't included the omitted head.
+  $ grep d16408588b2d047410f99c45e425bf97923e28f2 .hg/infinitepushbackupstate
+  [1]
+
 First client add a new commit to the old stack
   $ cd ../client1
   $ hg up 2
