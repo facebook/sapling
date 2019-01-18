@@ -9,6 +9,7 @@
 
 import abc
 import configparser
+import io
 import os
 import unittest
 from typing import Dict, List, Optional
@@ -303,6 +304,36 @@ experimental_systemd = false
 """
         )
         self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
+
+    def test_printed_config_is_valid_toml(self) -> None:
+        self.write_user_config(
+            """
+[clone]
+default-revision = "master"
+"""
+        )
+
+        printed_config = io.StringIO()
+        self.get_config().print_full_config(file=printed_config)
+        printed_config.seek(0)
+        parsed_config = toml.load(printed_config)
+
+        self.assertIn("clone", parsed_config)
+        self.assertEqual(parsed_config["clone"].get("default-revision"), "master")
+
+    def test_printed_config_expands_variables(self) -> None:
+        self.write_user_config(
+            """
+["repository fbsource"]
+type = "hg"
+path = "/data/users/${USER}/fbsource"
+"""
+        )
+
+        printed_config = io.StringIO()
+        self.get_config().print_full_config(file=printed_config)
+
+        self.assertIn("/data/users/bob/fbsource", printed_config.getvalue())
 
     def get_config(self) -> EdenInstance:
         return EdenInstance(

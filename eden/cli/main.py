@@ -418,7 +418,7 @@ class ConfigCmd(Subcmd):
                 # mirrors `git config --get invalid`; just exit with code 1
                 return 1
         else:
-            instance.print_full_config()
+            instance.print_full_config(file=sys.stdout)
         return 0
 
 

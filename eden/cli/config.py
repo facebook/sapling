@@ -246,12 +246,12 @@ class EdenInstance:
             pass
         return False
 
-    def print_full_config(self) -> None:
+    def print_full_config(self, file: typing.TextIO) -> None:
         parser = self._loadConfig()
+        data: Dict[str, Dict[str, str]] = {}
         for section in parser.sections():
-            print("[%s]" % section)
-            for k, v in parser.items(section):
-                print("%s=%s" % (k, v))
+            data[section] = {k: v for k, v in parser.items(section)}
+        toml.dump(data, file)  # pyre-ignore[T39129461]
 
     def find_config_for_alias(self, alias: str) -> Optional[CheckoutConfig]:
         """Looks through the existing config files and searches for a
