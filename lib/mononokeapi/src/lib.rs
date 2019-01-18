@@ -7,54 +7,47 @@ extern crate futures;
 extern crate http;
 extern crate hyper;
 extern crate hyper_tls;
-#[macro_use]
-extern crate lazy_static;
 extern crate native_tls;
 extern crate openssl;
 extern crate tokio;
+extern crate url;
 #[cfg(test)]
 extern crate users;
 
 use failure::{Error, Fallible};
 use futures::{Future, Stream};
-use http::uri::{PathAndQuery, Uri};
+use http::uri::Uri;
 use hyper::client::HttpConnector;
 use hyper::{Body, Client};
 use hyper_tls::HttpsConnector;
 use native_tls::{Identity, TlsConnector};
 use openssl::{pkcs12::Pkcs12, pkey::PKey, x509::X509};
 use tokio::runtime::Runtime;
+use url::Url;
 
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
 mod paths {
-    use super::*;
-
-    lazy_static! {
-        pub static ref HEALTH_CHECK: PathAndQuery = PathAndQuery::from_static("/health_check");
-    }
+    pub const HEALTH_CHECK: &str = "/health_check";
 }
 
 /// An HTTP client for the Mononoke API server.
 ///
 /// # Example
 /// ```no_run
-/// extern crate http;
 /// extern crate mononokeapi;
-///
-/// use http::Uri;
 /// use mononokeapi::MononokeClient;
 ///
-/// let uri = Uri::from_static("https://mononoke-api.internal.tfbnw.net");
+/// let url = "https://mononoke-api.internal.tfbnw.net";
 /// let creds = Some("/var/facebook/credentials/user/x509/user.pem");
-/// let client = MononokeClient::new(uri, creds).unwrap();
+/// let client = MononokeClient::new(url, creds).unwrap();
 /// client.health_check().expect("health check failed");
 /// ```
 pub struct MononokeClient {
     client: Client<HttpsConnector<HttpConnector>, Body>,
-    base_uri: Uri,
+    base_url: Url,
 }
 
 impl MononokeClient {
@@ -64,20 +57,25 @@ impl MononokeClient {
     /// via a proxy (e.g., through a VIP). As such, users must pass valid client credentials
     /// to the client constructor. (Specifically, a path to a PEM file containing the client
     /// certificate and private key.)
-    pub fn new<P: AsRef<Path>>(base_uri: Uri, client_creds: Option<P>) -> Fallible<Self> {
+    pub fn new<P: AsRef<Path>>(base_url: &str, client_creds: Option<P>) -> Fallible<Self> {
+        let base_url = Url::parse(base_url)?;
         let creds = match client_creds {
             Some(path) => Some(read_credentials(path)?),
             None => None,
         };
         let client = build_client(creds)?;
-        Ok(Self { client, base_uri })
+        Ok(Self { client, base_url })
     }
 
     /// Hit the API server's /health_check endpoint.
     /// Returns Ok(()) if the expected response is received, or an Error otherwise
     /// (e.g., if there was a connection problem or an unexpected repsonse).
     pub fn health_check(&self) -> Fallible<()> {
-        let uri = self.build_uri(&paths::HEALTH_CHECK)?;
+        let uri = self
+            .base_url
+            .join(paths::HEALTH_CHECK)?
+            .as_str()
+            .parse::<Uri>()?;
         let fut = self.client.get(uri).map_err(Error::from).and_then(|res| {
             let status = res.status();
             res.into_body()
@@ -99,14 +97,6 @@ impl MononokeClient {
         ensure!(body == "I_AM_ALIVE", "Unexpected response: {:?}", &body);
 
         Ok(())
-    }
-
-    /// Construct a URI using this client's configured hostport as the
-    /// base URI. The scheme will always be HTTPS.
-    fn build_uri(&self, path: &PathAndQuery) -> Fallible<Uri> {
-        let mut parts = self.base_uri.clone().into_parts();
-        parts.path_and_query = Some(path.clone());
-        Ok(Uri::from_parts(parts)?)
     }
 }
 
@@ -162,9 +152,8 @@ mod tests {
     const HOST: &str = "https://mononoke-api.internal.tfbnw.net";
 
     fn init_client() -> MononokeClient {
-        let uri = Uri::from_static(HOST);
         let creds = Some(get_creds_path());
-        MononokeClient::new(uri, creds).expect("failed to initialize client")
+        MononokeClient::new(HOST, creds).expect("failed to initialize client")
     }
 
     fn get_creds_path() -> PathBuf {
