@@ -30,13 +30,15 @@ set(CMAKE_CXX_STANDARD 17)
 include(CompilerSettingsUnix)
 include(EdenConfigChecks)
 include(ThriftCppLibrary)
+include(FBMercurialFeatures)
+
+include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
+
+add_subdirectory(common)
+add_subdirectory(eden/fs)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/eden-config.h
 )
 
-include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
-
-add_subdirectory(common)
-add_subdirectory(eden/fs)

@@ -11,6 +11,7 @@ find_package(wangle CONFIG REQUIRED)
 find_package(FBThrift CONFIG REQUIRED)
 find_package(Yarpl MODULE REQUIRED)
 find_package(GMock MODULE REQUIRED)
+find_package(OpenSSL MODULE REQUIRED)
 
 find_package(SELinux)
 set(EDEN_HAVE_SELINUX ${SELINUX_FOUND})
@@ -33,6 +34,7 @@ find_package(cpptoml REQUIRED)
 # We currently do not have treemanifest support in the opensource build
 set(EDEN_HAVE_HG_TREEMANIFEST OFF)
 set(EDEN_WIN_NO_RUST_DATAPACK ON)
+set(EDEN_WIN_NOMONONOKE ON)
 
 # TODO(strager): Support systemd in the opensource build.
 set(EDEN_HAVE_SYSTEMD OFF)
