@@ -239,7 +239,7 @@ impl WireprotoLogger {
         }
     }
 
-    fn finish_stream_wireproto_processing(&mut self, stats: &StreamStats) {
+    fn finish_stream_wireproto_processing(&mut self, stats: &StreamStats, ctx: CoreContext) {
         self.scuba_logger
             .add_stream_stats(&stats)
             .log_with_msg("Command processed", None);
@@ -258,6 +258,7 @@ impl WireprotoLogger {
             builder.add("command", self.wireproto_command);
             builder.add("duration", stats.completion_time.as_millis_unchecked());
             builder.add("source_control_server_type", "mononoke");
+            builder.add("mononoke_session_uuid", ctx.session().to_string());
             builder.add("reponame", self.reponame.as_str());
 
             // We can't really do anything with the errors, so let's ignore it
@@ -700,8 +701,8 @@ impl HgCommands for RepoClient {
         .traced(self.ctx.trace(), ops::GETBUNDLE, trace_args!())
         .timed(move |stats, _| {
             STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-            wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx);
-            wireproto_logger.finish_stream_wireproto_processing(&stats);
+            wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+            wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
             Ok(())
         })
         .boxify()
@@ -829,8 +830,8 @@ impl HgCommands for RepoClient {
                 move |stats, _| {
                     STATS::gettreepack_ms
                         .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx);
-                    wireproto_logger.finish_stream_wireproto_processing(&stats);
+                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
                     Ok(())
                 }
             })
@@ -920,8 +921,8 @@ impl HgCommands for RepoClient {
                         .add_to_counter("getfiles_num_files", stats.count as i64);
 
                     wireproto_logger.set_args(Some(json! {encoded_params}));
-                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx);
-                    wireproto_logger.finish_stream_wireproto_processing(&stats);
+                    wireproto_logger.add_perf_counters_from_ctx("extra_context", ctx.clone());
+                    wireproto_logger.finish_stream_wireproto_processing(&stats, ctx);
                     Ok(())
                 }
             })
