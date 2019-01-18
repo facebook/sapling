@@ -8,7 +8,6 @@
 
 use std::convert::TryFrom;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -45,7 +44,7 @@ pub fn get_nodehash(hash: &str) -> Result<HgNodeHash, ErrorKind> {
 pub fn string_to_bookmark_changeset_id(
     ctx: CoreContext,
     node_string: String,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
 ) -> BoxFuture<HgChangesetId, ErrorKind> {
     get_bookmark(node_string.clone())
         .into_future()

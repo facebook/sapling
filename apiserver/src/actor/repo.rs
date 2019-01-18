@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use std::convert::TryInto;
-use std::sync::Arc;
 
 use bytes::Bytes;
 use failure::{err_msg, Error};
@@ -36,7 +35,7 @@ use super::model::{Entry, EntryWithSizeAndContentHash};
 use super::{MononokeRepoQuery, MononokeRepoResponse};
 
 pub struct MononokeRepo {
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     logger: Logger,
     executor: TaskExecutor,
 }
@@ -66,8 +65,9 @@ impl MononokeRepo {
             } => match myrouter_port {
                 None => Err(err_msg(
                     "Missing myrouter port, unable to open BlobRemote repo",
-                )).into_future()
-                    .left_future(),
+                ))
+                .into_future()
+                .left_future(),
                 Some(myrouter_port) => myrouter::wait_for_myrouter(myrouter_port, &db_address)
                     .and_then({
                         cloned!(db_address, filenode_shards, logger, blobstores_args);
@@ -90,9 +90,9 @@ impl MononokeRepo {
         };
 
         repo.map(|repo| Self {
-            repo: Arc::new(repo),
-            logger: logger,
-            executor: executor,
+            repo,
+            logger,
+            executor,
         })
     }
 

@@ -8,8 +8,6 @@
 
 pub mod errors;
 
-use std::sync::Arc;
-
 use failure::Error;
 use futures::Future;
 
@@ -25,7 +23,7 @@ use crate::errors::ErrorKind;
 
 pub fn get_content_by_path(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     changesetid: HgChangesetId,
     path: Option<MPath>,
 ) -> impl Future<Item = Content, Error = Error> {
@@ -44,7 +42,7 @@ pub fn get_content_by_path(
 
 pub fn get_changeset_by_bookmark(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     bookmark: Bookmark,
 ) -> impl Future<Item = HgChangesetId, Error = Error> {
     repo.get_bookmark(ctx, &bookmark)
