@@ -19,7 +19,11 @@ from typing import Dict, List, NoReturn, Optional, Tuple, Union
 
 from .config import EdenInstance
 from .logfile import forward_log_file
-from .systemd import EdenFSSystemdServiceConfig, edenfs_systemd_service_name
+from .systemd import (
+    EdenFSSystemdServiceConfig,
+    SystemdNotConfiguredError,
+    edenfs_systemd_service_name,
+)
 from .util import ShutdownError, poll_until, print_stderr
 
 
@@ -220,16 +224,22 @@ def start_systemd_service(
         loop = asyncio.get_event_loop()
 
         async def start_service_async():
+            if "XDG_RUNTIME_DIR" not in os.environ:
+                raise SystemdNotConfiguredError()
             start_process = await asyncio.create_subprocess_exec(
                 "systemctl", "--user", "start", "--", service_name
             )
             return await start_process.wait()
 
-        start_task = loop.create_task(start_service_async())
-        loop.create_task(log_forwarder.poll_forever_async())
-        loop.run_until_complete(start_task)
-        log_forwarder.poll()
-        return start_task.result()
+        try:
+            start_task = loop.create_task(start_service_async())
+            loop.create_task(log_forwarder.poll_forever_async())
+            loop.run_until_complete(start_task)
+            log_forwarder.poll()
+            return start_task.result()
+        except SystemdNotConfiguredError as e:
+            print_stderr(f"error: {e}")
+            return 1
 
 
 def _get_daemon_args(

@@ -151,8 +151,9 @@ class SystemdTest(
         self.unset_environment_variable("XDG_RUNTIME_DIR")
 
         start_process = self.spawn_start_with_fake_edenfs()
-        # TODO(strager): Improve this message.
-        start_process.expect_exact("Failed to connect to bus: Connection refused")
+        start_process.expect_exact(
+            "error: The XDG_RUNTIME_DIR environment variable is not set"
+        )
 
     def spawn_start_with_fake_edenfs(
         self, extra_args: typing.Sequence[str] = ()

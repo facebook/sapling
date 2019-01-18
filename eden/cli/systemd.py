@@ -372,3 +372,11 @@ def _truncated_at_null_byte(data: bytes) -> bytes:
     if end_of_file_index == -1:
         return data
     return data[:end_of_file_index]
+
+
+class SystemdNotConfiguredError(Exception):
+    def __str__(self) -> str:
+        return (
+            "The XDG_RUNTIME_DIR environment variable is not set, but it is "
+            "required to communicate with the systemd user manager"
+        )
