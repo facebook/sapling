@@ -6,19 +6,6 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate cloned;
-
-extern crate blobrepo;
-extern crate bookmarks;
-extern crate context;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate mercurial_types;
-extern crate mononoke_types;
-
 pub mod errors;
 
 use std::sync::Arc;
@@ -28,12 +15,13 @@ use futures::Future;
 
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
+use cloned::cloned;
 use context::CoreContext;
-use mercurial_types::{Changeset, HgChangesetId};
 use mercurial_types::manifest::Content;
+use mercurial_types::{Changeset, HgChangesetId};
 use mononoke_types::MPath;
 
-use errors::ErrorKind;
+use crate::errors::ErrorKind;
 
 pub fn get_content_by_path(
     ctx: CoreContext,
