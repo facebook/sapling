@@ -31,7 +31,7 @@ class FakeEdenFS(typing.ContextManager[int]):
         extra_arguments: typing.Optional[typing.Sequence[str]] = None,
     ) -> "FakeEdenFS":
         command = [
-            FindExe.FAKE_EDENFS,
+            typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
             "--configPath",
             str(home_dir / ".edenrc"),
             "--edenDir",
@@ -42,7 +42,6 @@ class FakeEdenFS(typing.ContextManager[int]):
         ]
         if extra_arguments:
             command.extend(extra_arguments)
-        # pyre-ignore[6]: T38947910
         subprocess.check_call(command)
         return cls.from_existing_process(eden_dir=eden_dir)
 
@@ -55,7 +54,7 @@ class FakeEdenFS(typing.ContextManager[int]):
         extra_arguments: typing.Optional[typing.Sequence[str]] = None,
     ) -> "FakeEdenFS":
         command = [
-            FindExe.EDEN_CLI,
+            typing.cast(str, FindExe.EDEN_CLI),  # T38947910
             "--config-dir",
             str(eden_dir),
             "--etc-eden-dir",
@@ -64,12 +63,11 @@ class FakeEdenFS(typing.ContextManager[int]):
             str(home_dir),
             "start",
             "--daemon-binary",
-            FindExe.FAKE_EDENFS,
+            typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
         ]
         if extra_arguments:
             command.append("--")
             command.extend(extra_arguments)
-        # pyre-ignore[6]: T38947910
         subprocess.check_call(command)
         return cls.from_existing_process(eden_dir=eden_dir)
 

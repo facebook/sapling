@@ -56,8 +56,12 @@ class SystemdTest(
                 start_process.expect_exact("Started edenfs")
 
         test(start_args=["--", "--allowRoot"])
-        # pyre-ignore[6]: T38947910
-        test(start_args=["--daemon-binary", FindExe.FAKE_EDENFS])
+        test(
+            start_args=[
+                "--daemon-binary",
+                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+            ]
+        )
 
     # TODO(T33122320): Delete this test when systemd is properly integrated.
     def test_eden_start_with_systemd_disabled_does_not_say_systemd_mode_is_enabled(
@@ -81,17 +85,23 @@ class SystemdTest(
                 )
 
         test(start_args=["--", "--allowRoot"])
-        # pyre-ignore[6]: T38947910
-        test(start_args=["--daemon-binary", FindExe.FAKE_EDENFS])
+        test(
+            start_args=[
+                "--daemon-binary",
+                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+            ]
+        )
 
     def test_eden_start_starts_systemd_service(self) -> None:
         self.set_up_edenfs_systemd_service()
         subprocess.check_call(
-            # pyre-ignore[6]: T38947910
-            [FindExe.EDEN_CLI]
-            # pyre-ignore[6]: T38220626
+            [typing.cast(str, FindExe.EDEN_CLI)]  # T38947910
             + self.get_required_eden_cli_args()
-            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
+            + [
+                "start",
+                "--daemon-binary",
+                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+            ]
         )
         self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.eden_dir))
 
@@ -99,14 +109,12 @@ class SystemdTest(
         self.set_up_edenfs_systemd_service()
         self.assert_systemd_service_is_stopped(eden_dir=pathlib.Path(self.eden_dir))
         subprocess.call(
-            # pyre-ignore[6]: T38947910
-            [FindExe.EDEN_CLI]
-            # pyre-ignore[6]: T38220626
+            [typing.cast(str, FindExe.EDEN_CLI)]  # T38947910
             + self.get_required_eden_cli_args()
             + [
                 "start",
                 "--daemon-binary",
-                FindExe.FAKE_EDENFS,
+                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
                 "--",
                 "--failDuringStartup",
             ]

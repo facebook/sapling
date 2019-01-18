@@ -16,6 +16,7 @@ import distutils.spawn
 import logging
 import os
 import sys
+import typing
 from typing import Callable, Dict, List, Optional, Type
 
 from libfb.py import pathutils
@@ -194,8 +195,7 @@ class FindExeClass(object):
             return hg_bin
 
         # Fall back to the real hg binary
-        # pyre-ignore[7]: T38947910
-        return self.HG_REAL
+        return typing.cast(str, self.HG_REAL)  # T38947910
 
     def _find_hg_real(self) -> str:
         # If HG_REAL_BIN is set in the environment, use that.

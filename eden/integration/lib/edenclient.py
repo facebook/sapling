@@ -14,6 +14,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
+import typing
 from types import TracebackType
 from typing import Any, Dict, List, Optional, Union, cast
 
@@ -136,8 +137,11 @@ class EdenFS(object):
             A list of arguments to run Eden that can be used with
             subprocess.Popen() or subprocess.check_call().
         """
-        # pyre-ignore[9]: T38947910
-        cmd = [FindExe.EDEN_CLI, "--config-dir", self._eden_dir]  # type: List[str]
+        cmd = [
+            typing.cast(str, FindExe.EDEN_CLI),  # T38947910
+            "--config-dir",
+            self._eden_dir,
+        ]
         if self._etc_eden_dir:
             cmd += ["--etc-eden-dir", self._etc_eden_dir]
         if self._home_dir:
@@ -180,9 +184,9 @@ class EdenFS(object):
             "--local_storage_engine_unsafe",
             self._storage_engine,
             "--hgImportHelper",
-            FindExe.EDEN_HG_IMPORT_HELPER,
+            typing.cast(str, FindExe.EDEN_HG_IMPORT_HELPER),  # T38947910
             "--hgPath",
-            FindExe.HG_REAL,
+            typing.cast(str, FindExe.HG_REAL),  # T38947910
             # FIXME: find a way to introduce this into the test matrix so
             # that we can test the old and the new way of using the importer
             "--hgImportUseDebugSubcommand",
@@ -210,7 +214,6 @@ class EdenFS(object):
         if self._extra_args:
             extra_daemon_args.extend(self._extra_args)
 
-        # pyre-ignore[7]: T38947910
         return extra_daemon_args
 
     def _spawn(self, gdb: bool = False, takeover: bool = False) -> None:
@@ -220,8 +223,7 @@ class EdenFS(object):
         args = self._get_eden_args(
             "daemon",
             "--daemon-binary",
-            # pyre-ignore[6]: T38947910
-            FindExe.EDEN_DAEMON,
+            typing.cast(str, FindExe.EDEN_DAEMON),  # T38947910
             "--foreground",
         )
 
@@ -310,8 +312,11 @@ class EdenFS(object):
         """
         assert self._process is not None
 
-        cmd = [FindExe.TAKEOVER_TOOL, "--edenDir", self._eden_dir]
-        # pyre-ignore[6]: T38947910
+        cmd = [
+            typing.cast(str, FindExe.TAKEOVER_TOOL),  # T38947910
+            "--edenDir",
+            self._eden_dir,
+        ]
         subprocess.check_call(cmd)
 
         old_process = self._process

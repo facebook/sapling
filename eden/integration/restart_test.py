@@ -35,12 +35,14 @@ class RestartTestBase(ServiceTestCaseBase):
 
         def ensure_stopped() -> None:
             stop_cmd = (
-                [FindExe.EDEN_CLI, "--config-dir", str(self.eden_dir)]
-                # pyre-ignore[6]: T38220626
+                [
+                    typing.cast(str, FindExe.EDEN_CLI),  # T38947910
+                    "--config-dir",
+                    str(self.eden_dir),
+                ]
                 + self.get_required_eden_cli_args()
                 + ["stop"]
             )
-            # pyre-ignore: T38947910
             subprocess.call(stop_cmd)
 
         self.addCleanup(ensure_stopped)

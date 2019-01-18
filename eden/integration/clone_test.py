@@ -12,6 +12,7 @@ import os
 import stat
 import subprocess
 import sys
+import typing
 from pathlib import Path
 from textwrap import dedent
 from typing import Optional, Sequence, Set
@@ -319,8 +320,7 @@ class CloneTest(testcase.EdenRepoTest):
         clone_output = self.eden.run_cmd(
             "clone",
             "--daemon-binary",
-            # pyre-ignore[6]: T38947910
-            FindExe.EDEN_DAEMON,
+            typing.cast(str, FindExe.EDEN_DAEMON),  # T38947910
             self.repo.path,
             str(tmp),
             "--daemon-args",
@@ -380,11 +380,10 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
         args = (
             ["--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
-            # pyre-ignore[6]: T38947910
             + [
                 "clone",
                 "--daemon-binary",
-                FindExe.FAKE_EDENFS,
+                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
                 str(repo_path),
                 str(mount_path),
             ]

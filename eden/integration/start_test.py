@@ -133,8 +133,7 @@ class DirectInvokeTest(unittest.TestCase):
         self._check_error(["restart"])
 
     def _check_error(self, args: List[str], err: Optional[str] = None) -> None:
-        # pyre-ignore[9]: T38947910
-        cmd = [FindExe.EDEN_DAEMON]  # type: List[str]
+        cmd = [typing.cast(str, FindExe.EDEN_DAEMON)]  # T38947910
         cmd.extend(args)
         out = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(os.EX_USAGE, out.returncode)
@@ -271,8 +270,11 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         args = (
             self.get_required_eden_cli_args()
             + config_dir_args
-            # pyre-ignore: T38947910
-            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
+            + [
+                "start",
+                "--daemon-binary",
+                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+            ]
         )
         start_process: pexpect.spawn[str] = pexpect.spawn(
             FindExe.EDEN_CLI, args, encoding="utf-8", logfile=sys.stderr
@@ -315,8 +317,11 @@ class StartFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
         args = (
             ["--config-dir", str(eden_dir)]
             + self.get_required_eden_cli_args()
-            # pyre-ignore[6]: T38947910
-            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
+            + [
+                "start",
+                "--daemon-binary",
+                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+            ]
         )
         if extra_args:
             args.extend(extra_args)
@@ -337,7 +342,7 @@ def run_eden_start_with_real_daemon(
     else:
         env.pop("EDEN_EXPERIMENTAL_SYSTEMD", None)
     command = [
-        FindExe.EDEN_CLI,
+        typing.cast(str, FindExe.EDEN_CLI),  # T38947910
         "--config-dir",
         str(eden_dir),
         "--etc-eden-dir",
@@ -346,11 +351,10 @@ def run_eden_start_with_real_daemon(
         str(home_dir),
         "start",
         "--daemon-binary",
-        FindExe.EDEN_DAEMON,
+        typing.cast(str, FindExe.EDEN_DAEMON),  # T38947910
     ]
     if eden_start_needs_allow_root_option(systemd=systemd):
         command.extend(["--", "--allowRoot"])
-    # pyre-ignore[6]: T38947910
     subprocess.check_call(command, env=env)
 
 
