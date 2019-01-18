@@ -35,8 +35,12 @@
 
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h> // @manual
+#include <IOKit/kext/KextManager.h> // @manual
 #include <fuse_ioctl.h> // @manual
 #include <fuse_mount.h> // @manual
+#include <grp.h> // @manual
+#include <sys/sysctl.h> // @manual
 #endif
 
 using folly::checkUnixError;
@@ -92,11 +96,90 @@ void PrivHelperServer::initPartial(folly::File&& socket, uid_t uid, gid_t gid) {
 #ifdef __APPLE__
 namespace {
 
+// Fetches the value of a sysctl by name.
+// The result is assumed to be a string.
+std::string getSysCtlByName(const char* name, size_t size) {
+  std::string buffer(size, 0);
+  size_t returnedSize = size - 1;
+  auto ret = sysctlbyname(name, &buffer[0], &returnedSize, nullptr, 0);
+  if (ret != 0) {
+    folly::throwSystemError("failed to retrieve sysctl ", name);
+  }
+  buffer.resize(returnedSize);
+  return buffer;
+}
+
+std::pair<int, int> determineMacOsVersion() {
+  auto version = getSysCtlByName("kern.osproductversion", 64);
+
+  int major, minor, patch;
+  if (sscanf(version.c_str(), "%d.%d.%d", &major, &minor, &patch) != 3) {
+    folly::throwSystemErrorExplicit(
+        EINVAL, "failed to parse kern.osproductversion string ", version);
+  }
+
+  return std::make_pair(major, minor);
+}
+
+std::string computeKextPath() {
+  auto version = determineMacOsVersion();
+  return folly::to<std::string>(
+      OSXFUSE_EXTENSIONS_PATH,
+      "/",
+      version.first,
+      ".",
+      version.second,
+      "/",
+      OSXFUSE_KEXT_NAME);
+}
+
+// Returns true if the system already knows about the fuse filesystem stuff
+bool isFuseKextLoaded() {
+  struct vfsconf vfc;
+  return getvfsbyname(OSXFUSE_NAME, &vfc) == 0;
+}
+
+void ensureFuseKextIsLoaded() {
+  if (isFuseKextLoaded()) {
+    return;
+  }
+  auto kextPathString = computeKextPath();
+
+  CFStringRef kextPath = CFStringCreateWithCString(
+      kCFAllocatorDefault, kextPathString.c_str(), kCFStringEncodingUTF8);
+  SCOPE_EXIT {
+    CFRelease(kextPath);
+  };
+
+  CFURLRef kextUrl = CFURLCreateWithFileSystemPath(
+      kCFAllocatorDefault, kextPath, kCFURLPOSIXPathStyle, true);
+  SCOPE_EXIT {
+    CFRelease(kextUrl);
+  };
+
+  auto ret = KextManagerLoadKextWithURL(kextUrl, NULL);
+
+  if (ret != kOSReturnSuccess) {
+    folly::throwSystemErrorExplicit(
+        ENOENT, "Failed to load ", kextPathString, ": error code ", ret);
+  }
+
+  // libfuse uses a sysctl to update the kext's idea of the admin group,
+  // so we do too!
+  auto adminGroup = getgrnam(MACOSX_ADMIN_GROUP_NAME);
+  if (adminGroup) {
+    int gid = adminGroup->gr_gid;
+    sysctlbyname(OSXFUSE_SYSCTL_TUNABLES_ADMIN, NULL, NULL, &gid, sizeof(gid));
+  }
+}
+
 // The osxfuse kernel doesn't automatically assign a device, so we have
 // to loop through the different units and attempt to allocate them,
 // one by one.  Returns the fd and its unit number on success, throws
 // an exception on error.
 std::pair<folly::File, int> allocateFuseDevice() {
+  ensureFuseKextIsLoaded();
+
   int fd = -1;
   const int nDevices = OSXFUSE_NDEVICES;
   int dindex;

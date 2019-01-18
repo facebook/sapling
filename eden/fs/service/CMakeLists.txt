@@ -38,3 +38,12 @@ target_link_libraries(
     ${YARPL_LIBRARIES}
     Folly::folly
 )
+
+if (APPLE)
+  target_link_libraries(
+    eden_service
+    PUBLIC
+    "-framework CoreFoundation"
+    "-framework IOKit"
+  )
+endif()
