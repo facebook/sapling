@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex};
 
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
-use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream, stream::empty};
+use futures::{future, stream, stream::empty, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{select_all, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{StreamStats, Timed, TimedStreamTrait};
 use itertools::Itertools;
@@ -27,11 +27,14 @@ use bookmarks::Bookmark;
 use bundle2_resolver;
 use context::CoreContext;
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2Item};
-use mercurial_types::{percent_encode, Entry, HgBlobNode, HgChangesetId, HgManifestId, HgNodeHash,
-                      MPath, RepoPath, Type, NULL_CSID, NULL_HASH};
-use mercurial_types::manifest_utils::{changed_entry_stream_with_pruner, CombinatorPruner,
-                                      DeletedPruner, EntryStatus, FilePruner, Pruner,
-                                      VisitedPruner};
+use mercurial_types::manifest_utils::{
+    changed_entry_stream_with_pruner, CombinatorPruner, DeletedPruner, EntryStatus, FilePruner,
+    Pruner, VisitedPruner,
+};
+use mercurial_types::{
+    percent_encode, Entry, HgBlobNode, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath,
+    Type, NULL_CSID, NULL_HASH,
+};
 use phases::Phases;
 use rand;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -260,7 +263,8 @@ impl WireprotoLogger {
             // We can't really do anything with the errors, so let's ignore it
             let sample = builder.get_sample();
             if let Ok(sample_json) = sample.to_json() {
-                let _ = self.scribe_client
+                let _ = self
+                    .scribe_client
                     .offer(&wireproto_scribe_category, &sample_json.to_string());
             }
         }
@@ -378,7 +382,8 @@ impl RepoClient {
                     CombinatorPruner::new(default_pruner.clone(), visited_pruner.clone()),
                     fetchdepth,
                 )
-            })).boxify()
+            }))
+            .boxify()
         } else {
             match params.mfnodes.get(0) {
                 Some(mfnode) => get_changed_manifests_stream(
@@ -404,7 +409,8 @@ impl RepoClient {
                 cloned!(self.ctx);
                 let blobrepo = self.repo.blobrepo().clone();
                 move |(entry, basepath)| {
-                    ctx.perf_counters().increment_counter("gettreepack_num_treepacks");
+                    ctx.perf_counters()
+                        .increment_counter("gettreepack_num_treepacks");
                     fetch_treepack_part_input(
                         ctx.clone(),
                         &blobrepo,
@@ -465,7 +471,7 @@ impl HgCommands for RepoClient {
                     ctx,
                     repo: repo.clone(),
                     n: top,
-                    bottom: bottom,
+                    bottom,
                     wait_cs: None,
                 }
             }
@@ -644,7 +650,8 @@ impl HgCommands for RepoClient {
         ({
             let ref_nodes: Vec<_> = nodes.iter().collect();
             blobrepo.many_changesets_exists(self.ctx.clone(), &ref_nodes[..])
-        }).map(move |cs| {
+        })
+        .map(move |cs| {
             let cs: HashSet<_> = cs.into_iter().collect();
             let known_nodes: Vec<_> = nodes
                 .into_iter()
@@ -652,23 +659,24 @@ impl HgCommands for RepoClient {
                 .collect();
             known_nodes
         })
-            .traced(self.ctx.trace(), ops::KNOWN, trace_args!())
-            .timed(move |stats, known_nodes| {
-                if let Ok(known) = known_nodes {
-                    let extra_context = json!({
-                        "num_known": known.len(),
-                        "num_unknown": nodes_len - known.len(),
-                    }).to_string();
+        .traced(self.ctx.trace(), ops::KNOWN, trace_args!())
+        .timed(move |stats, known_nodes| {
+            if let Ok(known) = known_nodes {
+                let extra_context = json!({
+                    "num_known": known.len(),
+                    "num_unknown": nodes_len - known.len(),
+                })
+                .to_string();
 
-                    scuba_logger.add("extra_context", extra_context);
-                }
+                scuba_logger.add("extra_context", extra_context);
+            }
 
-                scuba_logger
-                    .add_future_stats(&stats)
-                    .log_with_msg("Command processed", None);
-                Ok(())
-            })
-            .boxify()
+            scuba_logger
+                .add_future_stats(&stats)
+                .log_with_msg("Command processed", None);
+            Ok(())
+        })
+        .boxify()
     }
 
     // @wireprotocommand('getbundle', '*')
@@ -752,8 +760,7 @@ impl HgCommands for RepoClient {
         } else {
             info!(
                 self.ctx.logger(),
-                "unsupported listkeys namespace: {}",
-                namespace
+                "unsupported listkeys namespace: {}", namespace
             );
             future::ok(HashMap::new()).boxify()
         }
@@ -888,8 +895,10 @@ impl HgCommands for RepoClient {
                 cloned!(self.ctx);
                 move |bytes| {
                     let len = bytes.len() as i64;
-                    ctx.perf_counters().add_to_counter("getfiles_response_size", len);
-                    ctx.perf_counters().set_max_counter("getfiles_max_file_size", len);
+                    ctx.perf_counters()
+                        .add_to_counter("getfiles_response_size", len);
+                    ctx.perf_counters()
+                        .set_max_counter("getfiles_max_file_size", len);
                 }
             })
             .timed({
@@ -1076,16 +1085,16 @@ fn fetch_treepack_part_input(
         ),
     );
 
-    let linknode_fut =
-        repo.get_linknode_opt(ctx.clone(), &repo_path, &entry.get_hash().into_nodehash())
-            .traced(
-                ctx.trace(),
-                "fetching linknode",
-                trace_args!(
+    let linknode_fut = repo
+        .get_linknode_opt(ctx.clone(), &repo_path, &entry.get_hash().into_nodehash())
+        .traced(
+            ctx.trace(),
+            "fetching linknode",
+            trace_args!(
                 "node" => node.to_string(),
                 "path" => path.to_string()
             ),
-            );
+        );
 
     let content_fut = entry
         .get_raw_content(ctx.clone())
@@ -1123,7 +1132,8 @@ fn fetch_treepack_part_input(
                         path,
                         expected,
                         actual,
-                    }.into())
+                    }
+                    .into())
                 }
             })
             .left_future()

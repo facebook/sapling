@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Cursor, Write};
 
 use bytes::{Bytes, BytesMut};
-use futures::{stream, Future, IntoFuture, Stream, future::ok};
+use futures::{future::ok, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use pylz4;
 
@@ -17,8 +17,10 @@ use filenodes::FilenodeInfo;
 
 use context::CoreContext;
 use mercurial::file::File;
-use mercurial_types::{HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath,
-                      RepoPath, RevFlags, NULL_CSID, NULL_HASH};
+use mercurial_types::{
+    HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath, RepoPath, RevFlags,
+    NULL_CSID, NULL_HASH,
+};
 
 use metaconfig::LfsParams;
 use tracing::Traced;
@@ -41,7 +43,8 @@ pub fn create_remotefilelog_blob(
     let trace_args = trace_args!("node" => node.to_string(), "path" => path.to_string());
 
     // raw_content includes copy information
-    let raw_content_bytes = repo.get_file_size(ctx.clone(), &HgFileNodeId::new(node))
+    let raw_content_bytes = repo
+        .get_file_size(ctx.clone(), &HgFileNodeId::new(node))
         .map({
             move |file_size| match lfs_params.threshold {
                 Some(threshold) => (file_size <= threshold, file_size),
@@ -101,15 +104,15 @@ pub fn create_remotefilelog_blob(
     // Do bulk prefetch of the filenodes first. That saves lots of db roundtrips.
     // Prefetched filenodes are used as a cache. If filenode is not in the cache, then it will
     // be fetched again.
-    let prefetched_filenodes =
-        repo.get_all_filenodes(ctx.clone(), RepoPath::FilePath(path.clone()))
-            .map(move |filenodes| {
-                filenodes
-                    .into_iter()
-                    .map(|filenode| (filenode.filenode.into_nodehash(), filenode))
-                    .collect()
-            })
-            .traced(ctx.trace(), "prefetching file history", trace_args.clone());
+    let prefetched_filenodes = repo
+        .get_all_filenodes(ctx.clone(), RepoPath::FilePath(path.clone()))
+        .map(move |filenodes| {
+            filenodes
+                .into_iter()
+                .map(|filenode| (filenode.filenode.into_nodehash(), filenode))
+                .collect()
+        })
+        .traced(ctx.trace(), "prefetching file history", trace_args.clone());
 
     let file_history_bytes = prefetched_filenodes
         .and_then({
