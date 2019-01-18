@@ -89,7 +89,146 @@ void PrivHelperServer::initPartial(folly::File&& socket, uid_t uid, gid_t gid) {
   folly::checkPosixError(chdir("/"), "privhelper failed to chdir(/)");
 }
 
+#ifdef __APPLE__
+namespace {
+
+// The osxfuse kernel doesn't automatically assign a device, so we have
+// to loop through the different units and attempt to allocate them,
+// one by one.  Returns the fd and its unit number on success, throws
+// an exception on error.
+std::pair<folly::File, int> allocateFuseDevice() {
+  int fd = -1;
+  const int nDevices = OSXFUSE_NDEVICES;
+  int dindex;
+  for (dindex = 0; dindex < nDevices; dindex++) {
+    auto devName = folly::to<std::string>("/dev/osxfuse", dindex);
+    fd = folly::openNoInt(devName.c_str(), O_RDWR | O_CLOEXEC);
+    if (fd >= 0) {
+      return std::make_pair(folly::File{fd, true}, dindex);
+    }
+
+    if (errno == EBUSY) {
+      continue;
+    }
+    if (errno == ENODEV || errno == ENOENT) {
+      throwSystemError(
+          "failed to open ",
+          devName,
+          ": make sure the osxfuse kernel module is loaded");
+    } else {
+      throwSystemError("failed to open ", devName);
+    }
+  }
+
+  throwSystemError(
+      "unable to allocate an osxfuse device, "
+      "either all instances are busy or the kernel module is not loaded");
+}
+
+template <typename T, std::size_t Size>
+void checkedSnprintf(
+    T (&buf)[Size],
+    FOLLY_PRINTF_FORMAT const char* format,
+    ...) FOLLY_PRINTF_FORMAT_ATTR(2, 3);
+
+template <typename T, std::size_t Size>
+void checkedSnprintf(
+    T (&buf)[Size],
+    FOLLY_PRINTF_FORMAT const char* format,
+    ...) {
+  va_list ap;
+  va_start(ap, format);
+  SCOPE_EXIT {
+    va_end(ap);
+  };
+
+  auto rc = vsnprintf(buf, Size, format, ap);
+
+  if (rc <= 0 || static_cast<size_t>(rc) >= Size) {
+    throw std::runtime_error(folly::to<std::string>(
+        "string exceeds buffer size in snprintf.  Format string was ", format));
+  }
+}
+
+} // namespace
+#endif
+
 folly::File PrivHelperServer::fuseMount(const char* mountPath) {
+#ifdef __APPLE__
+  auto [fuseDev, dindex] = allocateFuseDevice();
+
+  fuse_mount_args args{};
+  auto canonicalPath = realpath(mountPath, NULL);
+  if (!canonicalPath) {
+    folly::throwSystemError("failed to realpath ", mountPath);
+  }
+  SCOPE_EXIT {
+    free(canonicalPath);
+  };
+  if (strlen(canonicalPath) >= sizeof(args.mntpath) - 1) {
+    folly::throwSystemErrorExplicit(
+        EINVAL, "mount path ", canonicalPath, " is too large for args.mntpath");
+  }
+  strcpy(args.mntpath, canonicalPath);
+
+  // The most important part of the osxfuse mount protocol is to prove
+  // to the mount() syscall that we own an opened unit.  We do this by
+  // copying the rdev from the fd and by performing a magic ioctl to
+  // get a magic cookie and putting both of those values into the
+  // fuse_mount_args struct.
+  struct stat st;
+  checkUnixError(fstat(fuseDev.fd(), &st));
+  args.rdev = st.st_rdev;
+
+  checkUnixError(
+      ioctl(fuseDev.fd(), FUSEDEVIOCGETRANDOM, &args.random),
+      "failed negotiation with ioctl FUSEDEVIOCGETRANDOM");
+
+  // We get to set some metadata for for mounted volume
+  checkedSnprintf(args.fsname, "eden@" OSXFUSE_DEVICE_BASENAME "%d", dindex);
+  args.altflags |= FUSE_MOPT_FSNAME;
+
+  checkedSnprintf(args.volname, OSXFUSE_VOLNAME_FORMAT, dindex);
+  args.altflags |= FUSE_MOPT_VOLNAME;
+
+  checkedSnprintf(args.fstypename, "%s", "eden");
+  args.altflags |= FUSE_MOPT_FSTYPENAME;
+
+  // And some misc other options...
+
+  args.blocksize = FUSE_DEFAULT_BLOCKSIZE;
+  args.altflags |= FUSE_MOPT_BLOCKSIZE;
+
+  args.daemon_timeout = FUSE_DEFAULT_DAEMON_TIMEOUT;
+  args.altflags |= FUSE_MOPT_DAEMON_TIMEOUT;
+
+  // maximum iosize for reading or writing.  We want to allow a much
+  // larger default than osxfuse normally provides so that clients
+  // can minimize the number of read(2)/write(2) calls needed to
+  // write a given chunk of data.
+  args.iosize = 1024 * 1024;
+  args.altflags |= FUSE_MOPT_IOSIZE;
+
+  // We want normal unix permissions semantics; do not blanket deny
+  // access to !owner.  Do not send access(2) calls to userspace.
+  args.altflags |= FUSE_MOPT_ALLOW_OTHER | FUSE_MOPT_DEFAULT_PERMISSIONS;
+
+  // SIP causes a number of getxattr requests for properties named
+  // com.apple.rootless to be generated as part of stat(2)ing files.
+  // setting NO_APPLEXATTR makes the kext handle those attribute gets
+  // by returning an error, and avoids sending the request to userspace.
+  args.altflags |= FUSE_MOPT_NO_APPLEXATTR;
+
+  // We don't want (and can't track) apple double files in the repo,
+  // so tell the kernel to skip that stuff.
+  args.altflags |= FUSE_MOPT_NO_APPLEDOUBLE;
+
+  int mountFlags = MNT_NOSUID;
+  checkUnixError(
+      mount(OSXFUSE_NAME, args.mntpath, mountFlags, &args), "failed to mount");
+  return std::move(fuseDev);
+
+#else
   // We manually call open() here rather than using the folly::File()
   // constructor just so we can emit a slightly more helpful message on error.
   const char* devName = "/dev/fuse";
@@ -128,17 +267,25 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   int rc = mount("edenfs", mountPath, type, mountFlags, mountOpts.c_str());
   checkUnixError(rc, "failed to mount");
   return fuseDev;
+#endif
 }
 
 void PrivHelperServer::bindMount(
     const char* clientPath,
     const char* mountPath) {
+#ifdef __APPLE__
+  throw std::runtime_error("this system does not support bind mounts");
+#else
   const int rc =
       mount(clientPath, mountPath, /*type*/ nullptr, MS_BIND, /*data*/ nullptr);
   checkUnixError(rc, "failed to mount");
+#endif
 }
 
 void PrivHelperServer::fuseUnmount(const char* mountPath) {
+#ifdef __APPLE__
+  auto rc = unmount(mountPath, MNT_FORCE);
+#else
   // UMOUNT_NOFOLLOW prevents us from following symlinks.
   // This is needed for security, to ensure that we are only unmounting mount
   // points that we originally mounted.  (The processUnmountMsg() call checks
@@ -163,6 +310,7 @@ void PrivHelperServer::fuseUnmount(const char* mountPath) {
   // down.
   const int umountFlags = UMOUNT_NOFOLLOW | MNT_FORCE | MNT_DETACH;
   const auto rc = umount2(mountPath, umountFlags);
+#endif
   if (rc != 0) {
     const int errnum = errno;
     // EINVAL simply means the path is no longer mounted.
