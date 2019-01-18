@@ -121,6 +121,55 @@ class SystemdTest(
         )
         self.assert_systemd_service_is_failed(eden_dir=pathlib.Path(self.eden_dir))
 
+    def test_eden_start_reports_service_failure_if_edenfs_fails_during_startup(
+        self
+    ) -> None:
+        self.set_up_edenfs_systemd_service()
+        start_process = self.spawn_start_with_fake_edenfs(
+            extra_args=["--", "--failDuringStartup"]
+        )
+        start_process.expect(
+            r"Job for fb-edenfs@.+?\.service failed because "
+            r"the control process exited with error code"
+        )
+        # TODO(strager): Remove this message. journalctl is unreliable and
+        # unhelpful for users.
+        start_process.expect_exact("journalctl")
+
+    def test_eden_start_reports_error_if_systemd_is_not_running(self) -> None:
+        self.set_up_edenfs_systemd_service()
+        systemd = self.systemd
+        assert systemd is not None
+        systemd.exit()
+
+        start_process = self.spawn_start_with_fake_edenfs()
+        # TODO(strager): Improve this message.
+        start_process.expect_exact("Failed to connect to bus: Connection refused")
+
+    def test_eden_start_reports_error_if_systemd_environment_is_missing(self) -> None:
+        self.set_up_edenfs_systemd_service()
+        self.unset_environment_variable("XDG_RUNTIME_DIR")
+
+        start_process = self.spawn_start_with_fake_edenfs()
+        # TODO(strager): Improve this message.
+        start_process.expect_exact("Failed to connect to bus: Connection refused")
+
+    def spawn_start_with_fake_edenfs(
+        self, extra_args: typing.Sequence[str] = ()
+    ) -> "pexpect.spawn[str]":
+        return pexpect.spawn(
+            FindExe.EDEN_CLI,
+            self.get_required_eden_cli_args()
+            + [
+                "start",
+                "--daemon-binary",
+                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+            ]
+            + list(extra_args),
+            encoding="utf-8",
+            logfile=sys.stderr,
+        )
+
     def get_required_eden_cli_args(self) -> typing.List[str]:
         return [
             "--config-dir",

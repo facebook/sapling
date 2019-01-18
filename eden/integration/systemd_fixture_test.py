@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import errno
 import os
 import os.path
 import pathlib
@@ -15,6 +16,7 @@ import time
 import typing
 import unittest
 
+from eden.cli.daemon import did_process_exit
 from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
@@ -24,6 +26,7 @@ from .lib.systemd import (
     SystemdUnitName,
     SystemdUserServiceManager,
     SystemdUserServiceManagerMixin,
+    temporary_systemd_user_service_manager,
 )
 
 
@@ -57,6 +60,22 @@ class TemporarySystemdUserServiceManagerTest(
             f"systemd should be managing no interesting units\n"
             f"All units: {unit_names}",
         )
+
+    def test_manager_process_id_is_valid(self) -> None:
+        with temporary_systemd_user_service_manager() as systemd:
+            self.assertTrue(does_process_exist(systemd.process_id))
+
+    def test_closing_manager_kills_process(self) -> None:
+        with temporary_systemd_user_service_manager() as systemd:
+            process_id = systemd.process_id
+        self.assertFalse(does_process_exist(process_id))
+
+    def test_exit_kills_manager(self) -> None:
+        systemd = self.make_temporary_systemd_user_service_manager()
+        process_id = systemd.process_id
+        systemd.exit()
+        self.assertFalse(systemd.is_alive())
+        self.assertTrue(did_process_exit(process_id))
 
 
 class TemporarySystemdUserServiceManagerIsolationTest(
@@ -194,10 +213,15 @@ class SystemdServiceTest(
         self.assertRegex(
             repr(service),
             r"^SystemdService\("
-            r"unit_name='my-test-unit\.service', "
+            r".*"
+            r"unit_name='my-test-unit\.service'"
+            r".*"
             r"systemd=SystemdUserServiceManager\("
+            r".*"
             r"xdg_runtime_dir=PosixPath\('\S+'\)"
+            r".*"
             r"\)"
+            r".*"
             r"\)",
         )
 
@@ -339,3 +363,16 @@ def get_resolved_process_exe_or_error(
         return get_process_exe(process_id).resolve()
     except OSError as e:
         return e
+
+
+def does_process_exist(process_id: int) -> bool:
+    try:
+        os.kill(process_id, 0)
+    except OSError as ex:
+        if ex.errno == errno.ESRCH:
+            return False
+        if ex.errno == errno.EPERM:
+            return True
+        raise ex
+    else:
+        return True

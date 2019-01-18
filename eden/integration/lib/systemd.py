@@ -37,13 +37,22 @@ SystemdUnitName = str
 class SystemdUserServiceManager:
     """A running 'systemd --user' process manageable using 'systemctl --user'."""
 
-    def __init__(self, xdg_runtime_dir: pathlib.Path) -> None:
+    def __init__(
+        self, xdg_runtime_dir: pathlib.Path, process_id: typing.Optional[ProcessID]
+    ) -> None:
         super().__init__()
         self.__xdg_runtime_dir = xdg_runtime_dir
+        self.__process_id = process_id
 
     @property
     def xdg_runtime_dir(self) -> pathlib.Path:
         return self.__xdg_runtime_dir
+
+    @property
+    def process_id(self) -> ProcessID:
+        if self.__process_id is None:
+            raise NotImplementedError()
+        return self.__process_id
 
     def is_alive(self) -> bool:
         result = self._systemctl.run(
@@ -160,6 +169,9 @@ class SystemdUserServiceManager:
     def get_service(self, unit_name: SystemdUnitName) -> "SystemdService":
         return SystemdService(unit_name=unit_name, systemd=self)
 
+    def exit(self) -> None:
+        self._systemctl.check_call(["start", "exit.target"])
+
     @property
     def env(self) -> typing.Dict[str, str]:
         env = dict(os.environ)
@@ -182,7 +194,10 @@ class SystemdUserServiceManager:
 
     def __repr__(self) -> str:
         return (
-            f"SystemdUserServiceManager(xdg_runtime_dir={repr(self.xdg_runtime_dir)})"
+            f"SystemdUserServiceManager("
+            f"xdg_runtime_dir={repr(self.xdg_runtime_dir)}, "
+            f"process_id={self.process_id}"
+            f")"
         )
 
 
@@ -218,6 +233,9 @@ class SystemdService:
 
     def query_sub_state(self) -> str:
         return self.__query_property("SubState").decode("utf-8")
+
+    def query_main_process_id(self) -> typing.Optional[ProcessID]:
+        return ProcessID(self.__query_property("MainPID"))
 
     def query_cgroup(self) -> LinuxCgroup:
         return LinuxCgroup(self.__query_property("ControlGroup"))
@@ -344,7 +362,7 @@ def temporary_systemd_user_service_manager() -> typing.Iterator[
     with create_tmp_dir() as xdg_runtime_dir:
         if should_create_managed():
             parent_systemd = SystemdUserServiceManager(
-                xdg_runtime_dir=_get_current_xdg_runtime_dir()
+                xdg_runtime_dir=_get_current_xdg_runtime_dir(), process_id=None
             )
             with _transient_managed_systemd_user_service_manager(
                 xdg_runtime_dir=xdg_runtime_dir,
@@ -385,7 +403,10 @@ def _transient_managed_systemd_user_service_manager(
         },
         extra_env={"XDG_RUNTIME_DIR": str(xdg_runtime_dir)},
     )
-    child_systemd = SystemdUserServiceManager(xdg_runtime_dir=xdg_runtime_dir)
+    child_systemd = SystemdUserServiceManager(
+        xdg_runtime_dir=xdg_runtime_dir,
+        process_id=child_systemd_service.query_main_process_id(),
+    )
     try:
         yield child_systemd
     finally:
@@ -488,7 +509,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
     def __enter__(self) -> SystemdUserServiceManager:
         systemd_process = self.start_systemd_process()
         child_systemd = SystemdUserServiceManager(
-            xdg_runtime_dir=self.__xdg_runtime_dir
+            xdg_runtime_dir=self.__xdg_runtime_dir, process_id=systemd_process.pid
         )
         self.wait_until_systemd_is_alive(systemd_process, child_systemd)
         return child_systemd
