@@ -1,14 +1,7 @@
 // Copyright 2018 Facebook, Inc.
 //! pymononokeapi - Python bindings for the Rust `mononokeapi` crate
 
-#[macro_use]
-extern crate cpython;
-extern crate cpython_failure;
-extern crate encoding;
-extern crate failure;
-extern crate mononokeapi;
-
-use cpython::{exc, PyBytes, PyObject, PyResult};
+use cpython::*;
 use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
 use mononokeapi::MononokeClient;
