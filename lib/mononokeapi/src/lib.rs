@@ -1,20 +1,7 @@
 // Copyright Facebook, Inc. 2018
 //! mononokeapi - A Mononoke API server client library for Mercurial
 
-#[macro_use]
-extern crate failure;
-extern crate futures;
-extern crate http;
-extern crate hyper;
-extern crate hyper_tls;
-extern crate native_tls;
-extern crate openssl;
-extern crate tokio;
-extern crate url;
-#[cfg(test)]
-extern crate users;
-
-use failure::{Error, Fallible};
+use failure::{ensure, Error, Fallible};
 use futures::{Future, Stream};
 use http::uri::Uri;
 use hyper::client::HttpConnector;
@@ -25,9 +12,7 @@ use openssl::{pkcs12::Pkcs12, pkey::PKey, x509::X509};
 use tokio::runtime::Runtime;
 use url::Url;
 
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+use std::{fs::File, io::Read, path::Path};
 
 mod paths {
     pub const HEALTH_CHECK: &str = "/health_check";
