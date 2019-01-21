@@ -23,6 +23,7 @@ extern crate blobrepo;
 extern crate blobstore;
 extern crate bonsai_utils;
 extern crate bookmarks;
+extern crate changesets;
 extern crate cmdlib;
 extern crate context;
 #[macro_use]
@@ -41,10 +42,11 @@ extern crate tokio;
 
 mod bookmarks_manager;
 
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, ChangesetFetcher};
 use blobstore::{new_memcache_blobstore, Blobstore, CacheBlobstoreExt, PrefixBlobstore};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::Bookmark;
+use changesets::{ChangesetEntry, Changesets, SqlChangesets};
 use clap::{App, Arg, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
@@ -62,7 +64,7 @@ use mercurial_types::{
 use metaconfig::RemoteBlobstoreArgs;
 use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange,
-    FileContents,
+    FileContents, Generation, RepositoryId,
 };
 use reachabilityindex::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 use revset::RangeNodeStream;
@@ -467,31 +469,115 @@ fn hg_changeset_diff(
         })
 }
 
+fn fetch_all_changesets(
+    ctx: CoreContext,
+    repo_id: RepositoryId,
+    sqlchangesets: Arc<SqlChangesets>,
+) -> impl Future<Item = Vec<ChangesetEntry>, Error = Error> {
+    let num_sql_fetches = 10000;
+    sqlchangesets
+        .get_changesets_ids_bounds(repo_id.clone())
+        .map(move |(maybe_lower_bound, maybe_upper_bound)| {
+            let lower_bound = maybe_lower_bound.expect("changesets table is empty");
+            let upper_bound = maybe_upper_bound.expect("changesets table is empty");
+            let step = (upper_bound - lower_bound) / num_sql_fetches;
+            let step = ::std::cmp::max(100, step);
+
+            iter_ok(
+                (lower_bound..upper_bound)
+                    .step_by(step as usize)
+                    .map(move |i| (i, i + step)),
+            )
+        })
+        .flatten_stream()
+        .and_then(move |(lower_bound, upper_bound)| {
+            sqlchangesets
+                .get_list_bs_cs_id_in_range(repo_id, lower_bound, upper_bound)
+                .collect()
+                .and_then({
+                    cloned!(ctx, sqlchangesets);
+                    move |ids| {
+                        sqlchangesets
+                            .get_many(ctx, repo_id, ids)
+                            .map(|v| iter_ok(v.into_iter()))
+                    }
+                })
+        })
+        .flatten()
+        .collect()
+}
+
+#[derive(Clone)]
+struct InMemoryChangesetFetcher {
+    fetched_changesets: Arc<HashMap<ChangesetId, ChangesetEntry>>,
+    inner: Arc<ChangesetFetcher>,
+}
+
+impl ChangesetFetcher for InMemoryChangesetFetcher {
+    fn get_generation_number(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Generation, Error> {
+        match self.fetched_changesets.get(&cs_id) {
+            Some(cs_entry) => ok(Generation::new(cs_entry.gen)).boxify(),
+            None => self.inner.get_generation_number(ctx, cs_id),
+        }
+    }
+
+    fn get_parents(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Vec<ChangesetId>, Error> {
+        match self.fetched_changesets.get(&cs_id) {
+            Some(cs_entry) => ok(cs_entry.parents.clone()).boxify(),
+            None => self.inner.get_parents(ctx, cs_id),
+        }
+    }
+}
+
 fn build_skiplist_index<S: ToString>(
     ctx: CoreContext,
     repo: BlobRepo,
     key: S,
     logger: Logger,
+    sql_changesets: SqlChangesets,
 ) -> BoxFuture<(), Error> {
     let blobstore = repo.get_blobstore();
     let skiplist_depth = 16;
     let max_index_depth = 2000000000;
     let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
-    let cs_fetcher = repo.get_changeset_fetcher();
     let key = key.to_string();
+
+    let cs_fetcher = fetch_all_changesets(ctx.clone(), repo.get_repoid(), Arc::new(sql_changesets))
+        .map({
+            let changeset_fetcher = repo.get_changeset_fetcher();
+            move |fetched_changesets| {
+                let fetched_changesets: HashMap<_, _> = fetched_changesets
+                    .into_iter()
+                    .map(|cs_entry| (cs_entry.cs_id, cs_entry))
+                    .collect();
+                InMemoryChangesetFetcher {
+                    fetched_changesets: Arc::new(fetched_changesets),
+                    inner: changeset_fetcher,
+                }
+            }
+        });
 
     repo.get_bonsai_heads_maybe_stale(ctx.clone())
         .collect()
+        .join(cs_fetcher)
         .and_then({
             cloned!(ctx);
-            move |heads| {
+            move |(heads, cs_fetcher)| {
                 loop_fn(
                     (heads.into_iter(), skiplist_index),
                     move |(mut heads, skiplist_index)| match heads.next() {
                         Some(head) => {
                             let f = skiplist_index.add_node(
                                 ctx.clone(),
-                                cs_fetcher.clone(),
+                                Arc::new(cs_fetcher.clone()),
                                 head,
                                 max_index_depth,
                             );
@@ -504,11 +590,15 @@ fn build_skiplist_index<S: ToString>(
                 )
             }
         })
-        .inspect(|skiplist_index| {
-            println!(
-                "build {} skiplist nodes",
-                skiplist_index.indexed_node_count()
-            );
+        .inspect({
+            cloned!(logger);
+            move |skiplist_index| {
+                info!(
+                    logger,
+                    "build {} skiplist nodes",
+                    skiplist_index.indexed_node_count()
+                );
+            }
         })
         .map(|skiplist_index| {
             // We store only latest skip entry (i.e. entry with the longest jump)
@@ -594,22 +684,16 @@ fn main() -> Result<()> {
                 }
                 (None, true) => blobstore.get(ctx, key.clone()).boxify(),
                 (Some(mode), false) => {
-                    let blobstore = new_memcache_blobstore(
-                        blobstore,
-                        "manifold",
-                        manifold_args.bucket,
-                    )
-                    .unwrap();
+                    let blobstore =
+                        new_memcache_blobstore(blobstore, "manifold", manifold_args.bucket)
+                            .unwrap();
                     let blobstore = PrefixBlobstore::new(blobstore, repo_id.prefix());
                     get_cache(ctx.clone(), &blobstore, key.clone(), mode)
                 }
                 (Some(mode), true) => {
-                    let blobstore = new_memcache_blobstore(
-                        blobstore,
-                        "manifold",
-                        manifold_args.bucket,
-                    )
-                    .unwrap();
+                    let blobstore =
+                        new_memcache_blobstore(blobstore, "manifold", manifold_args.bucket)
+                            .unwrap();
                     get_cache(ctx.clone(), &blobstore, key.clone(), mode)
                 }
             }
@@ -671,9 +755,11 @@ fn main() -> Result<()> {
                         for (path, file_change) in bcs.file_changes() {
                             match file_change {
                                 Some(file_change) => match file_change.copy_from() {
-                                    Some(_) => {
-                                        println!("\t COPY/MOVE: {} {}", path, file_change.content_id())
-                                    }
+                                    Some(_) => println!(
+                                        "\t COPY/MOVE: {} {}",
+                                        path,
+                                        file_change.content_id()
+                                    ),
                                     None => println!(
                                         "\t ADDED/MODIFIED: {} {}",
                                         path,
@@ -856,10 +942,12 @@ fn main() -> Result<()> {
 
                 args::init_cachelib(&matches);
                 let ctx = CoreContext::test_mock();
-                args::open_repo(ctx.clone(), &logger, &matches)
-                    .and_then(move |repo| {
+                let sql_changesets = args::open_sql_changesets(&matches);
+                let repo = args::open_repo(ctx.clone(), &logger, &matches);
+                repo.join(sql_changesets)
+                    .and_then(move |(repo, sql_changesets)| {
                         let repo = repo.blobrepo().clone();
-                        build_skiplist_index(ctx, repo, key, logger)
+                        build_skiplist_index(ctx, repo, key, logger, sql_changesets)
                     })
                     .boxify()
             }
@@ -941,7 +1029,7 @@ fn main() -> Result<()> {
     let debug = matches.is_present("debug");
 
     tokio::run(future.map_err(move |err| {
-        println!("{}", err);
+        println!("{:?}", err);
         if debug {
             println!("\n============ DEBUG ERROR ============");
             println!("{:#?}", err);
