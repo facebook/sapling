@@ -28,4 +28,13 @@ impl Changesets for Arc<Changesets> {
     ) -> BoxFuture<Option<ChangesetEntry>, Error> {
         (**self).get(ctx, repo_id, cs_id)
     }
+
+    fn get_many(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
+        (**self).get_many(ctx, repo_id, cs_ids)
+    }
 }

@@ -91,6 +91,16 @@ impl Changesets for CachingChangests {
                 .boxify()
         })
     }
+
+    fn get_many(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+        cs_id: Vec<ChangesetId>,
+    ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
+        // TODO(stash): T39204057 add caching
+        self.changesets.get_many(ctx, repo_id, cs_id)
+    }
 }
 
 // Local error type to help with proper logging metrics
