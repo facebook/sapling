@@ -11,6 +11,7 @@ use cloned::cloned;
 use failure::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use scuba::ScubaClient;
 
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
@@ -32,6 +33,7 @@ impl MultiplexedBlobstore {
         repo_id: RepositoryId,
         blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
         queue: Arc<BlobstoreSyncQueue>,
+        scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         let put_handler = Arc::new(QueueBlobstorePutHandler {
             repo_id,
@@ -39,7 +41,11 @@ impl MultiplexedBlobstore {
         });
         Self {
             repo_id,
-            blobstore: Arc::new(MultiplexedBlobstoreBase::new(blobstores, put_handler)),
+            blobstore: Arc::new(MultiplexedBlobstoreBase::new(
+                blobstores,
+                put_handler,
+                scuba_logger,
+            )),
             queue,
         }
     }

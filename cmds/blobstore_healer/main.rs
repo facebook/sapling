@@ -77,7 +77,7 @@ fn maybe_schedule_healer_for_repo(
     let (db_address, blobstores_args) = match config.repotype {
         RepoType::BlobRemote {
             ref db_address,
-            blobstores_args: RemoteBlobstoreArgs::Multiplexed(ref blobstores),
+            blobstores_args: RemoteBlobstoreArgs::Multiplexed { ref blobstores, .. },
             ..
         } => (db_address.clone(), blobstores.clone()),
         _ => bail_msg!("Repo doesn't use Multiplexed blobstore"),
@@ -110,7 +110,7 @@ fn maybe_schedule_healer_for_repo(
                     ));
                     blobstores.insert(id, ok(blobstore).boxify());
                 }
-                RemoteBlobstoreArgs::Multiplexed(_) => {
+                RemoteBlobstoreArgs::Multiplexed { .. } => {
                     bail_msg!("Unsupported nested Multiplexed blobstore")
                 }
             }

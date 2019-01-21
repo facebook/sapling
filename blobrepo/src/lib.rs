@@ -67,6 +67,7 @@ extern crate multiplexedblob;
 extern crate rocksblob;
 extern crate rocksdb;
 extern crate scribe;
+extern crate scuba;
 extern crate scuba_ext;
 extern crate sqlblob;
 extern crate sqlfilenodes;

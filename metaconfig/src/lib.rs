@@ -12,6 +12,7 @@
 
 extern crate bookmarks;
 extern crate bytes;
+extern crate scuba;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;

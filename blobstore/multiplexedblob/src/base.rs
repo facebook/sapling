@@ -5,19 +5,29 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
+use std::env;
 use std::fmt;
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
+use std::time::Duration;
 
 use cloned::cloned;
 use failure::{Error, Fail};
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_stats::Timed;
+use scuba::{ScubaClient, ScubaSample};
+use time_ext::DurationExt;
 use tokio::executor::spawn;
 
 use blobstore::Blobstore;
 use context::CoreContext;
 use metaconfig::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
+
+const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
 
 #[derive(Fail, Debug, Clone)]
 pub enum ErrorKind {
@@ -42,28 +52,68 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
 pub struct MultiplexedBlobstoreBase {
     blobstores: Arc<[(BlobstoreId, Arc<Blobstore>)]>,
     handler: Arc<MultiplexedBlobstorePutHandler>,
+    scuba_logger: Option<Arc<ScubaClient>>,
 }
 
 impl MultiplexedBlobstoreBase {
     pub fn new(
         blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
         handler: Arc<MultiplexedBlobstorePutHandler>,
+        scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         Self {
             blobstores: blobstores.into(),
             handler,
+            scuba_logger,
         }
     }
 }
 
 impl Blobstore for MultiplexedBlobstoreBase {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        let requests = self.blobstores
+        let requests = self
+            .blobstores
             .iter()
             .map(|&(blobstore_id, ref blobstore)| {
                 blobstore
                     .get(ctx.clone(), key.clone())
-                    .map_err(move |error| (blobstore_id, error))
+                    .map_err({
+                        cloned!(blobstore_id);
+                        move |error| (blobstore_id, error)
+                    })
+                    .timed({
+                        let session = ctx.session().clone();
+                        cloned!(self.scuba_logger);
+                        move |stats, result| {
+                            // It won't log slow failed blobstores and because of that the
+                            // results might be skewed.
+                            if let Ok(Some(data)) = result {
+                                if let Some(scuba_logger) = scuba_logger {
+                                    let mut sample = ScubaSample::new();
+                                    sample
+                                        .add("operation", "get")
+                                        .add("blobstore_id", blobstore_id)
+                                        .add("size", data.len())
+                                        .add(
+                                            "completion_time",
+                                            stats.completion_time.as_micros_unchecked(),
+                                        );
+                                    if let Ok(smc_tier) = env::var("SMC_TIERS") {
+                                        sample.add("server_tier", smc_tier);
+                                    }
+                                    if let Ok(tw_task_id) = env::var("TW_TASK_ID") {
+                                        sample.add("tw_task_id", tw_task_id);
+                                    }
+                                    // logging session uuid only for slow requests
+                                    if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
+                                        sample.add("session", session.to_string());
+                                    }
+                                    scuba_logger.log(&sample);
+                                }
+                            }
+                            future::ok(())
+                        }
+                    })
             })
             .collect();
         let state = (
@@ -98,10 +148,13 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     }
                 }
             })
-        }).boxify()
+        })
+        .boxify()
     }
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+        let size = value.len();
+        let write_order = Arc::new(AtomicUsize::new(0));
         let requests = self.blobstores.iter().map(|(blobstore_id, blobstore)| {
             blobstore
                 .put(ctx.clone(), key.clone(), value.clone())
@@ -109,20 +162,55 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     cloned!(ctx, key, blobstore_id, self.handler);
                     move |_| handler.on_put(ctx, blobstore_id, key)
                 })
+                .timed({
+                    let session = ctx.session().clone();
+                    cloned!(blobstore_id, write_order, size, self.scuba_logger);
+                    move |stats, result| {
+                        if let Some(scuba_logger) = scuba_logger {
+                            let mut sample = ScubaSample::new();
+                            sample
+                                .add("operation", "put")
+                                .add("blobstore_id", blobstore_id)
+                                .add("size", size)
+                                .add(
+                                    "completion_time",
+                                    stats.completion_time.as_micros_unchecked(),
+                                );
+                            match result {
+                                Ok(_) => sample
+                                    .add("write_order", write_order.fetch_add(1, Ordering::SeqCst)),
+                                Err(error) => sample.add("error", error.to_string()),
+                            };
+                            if let Ok(smc_tier) = env::var("SMC_TIERS") {
+                                sample.add("server_tier", smc_tier);
+                            }
+                            if let Ok(tw_task_id) = env::var("TW_TASK_ID") {
+                                sample.add("tw_task_id", tw_task_id);
+                            }
+                            // logging session uuid only for slow requests
+                            if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
+                                sample.add("session", session.to_string());
+                            }
+                            scuba_logger.log(&sample);
+                        }
+                        future::ok(())
+                    }
+                })
         });
 
         future::select_ok(requests)
             .map(|(_, requests)| {
-                let requests_fut = future::join_all(
-                    requests.into_iter().map(|request| request.then(|_| Ok(()))),
-                ).map(|_| ());
+                let requests_fut =
+                    future::join_all(requests.into_iter().map(|request| request.then(|_| Ok(()))))
+                        .map(|_| ());
                 spawn(requests_fut);
             })
             .boxify()
     }
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
-        let requests = self.blobstores
+        let requests = self
+            .blobstores
             .iter()
             .map(|&(blobstore_id, ref blobstore)| {
                 blobstore
@@ -162,7 +250,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     }
                 }
             })
-        }).boxify()
+        })
+        .boxify()
     }
 }
 

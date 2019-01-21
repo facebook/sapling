@@ -10,6 +10,7 @@
 use bookmarks::Bookmark;
 use errors::*;
 use failure::ResultExt;
+use scuba::ScubaValue;
 use sql::mysql_async::{
     from_value_opt,
     prelude::{ConvIr, FromValue},
@@ -226,7 +227,12 @@ pub enum RemoteBlobstoreArgs {
     /// Mysql blobstore arguments
     Mysql(MysqlBlobstoreArgs),
     /// Multiplexed
-    Multiplexed(HashMap<BlobstoreId, RemoteBlobstoreArgs>),
+    Multiplexed {
+        /// Scuba table for tracking performance of blobstore operations
+        scuba_table: Option<String>,
+        /// Multiplexed blobstores
+        blobstores: HashMap<BlobstoreId, RemoteBlobstoreArgs>,
+    },
 }
 
 impl From<ManifoldArgs> for RemoteBlobstoreArgs {
@@ -272,6 +278,12 @@ impl ConvIr<BlobstoreId> for BlobstoreId {
 
 impl FromValue for BlobstoreId {
     type Intermediate = BlobstoreId;
+}
+
+impl From<BlobstoreId> for ScubaValue {
+    fn from(blobstore_id: BlobstoreId) -> Self {
+        ScubaValue::from(blobstore_id.0 as i64)
+    }
 }
 
 /// Types of repositories supported
@@ -551,7 +563,10 @@ impl RepoConfigs {
                     let (_, args) = blobstores.into_iter().next().unwrap();
                     args
                 } else {
-                    RemoteBlobstoreArgs::Multiplexed(blobstores)
+                    RemoteBlobstoreArgs::Multiplexed {
+                        scuba_table: this.blobstore_scuba_table,
+                        blobstores,
+                    }
                 };
 
                 RepoType::BlobRemote {
@@ -663,6 +678,7 @@ struct RawRepoConfig {
     db_address: Option<String>,
     filenode_shards: Option<usize>,
     scuba_table: Option<String>,
+    blobstore_scuba_table: Option<String>,
     delay_mean: Option<u64>,
     delay_stddev: Option<u64>,
     cache_warmup: Option<RawCacheWarmupConfig>,
@@ -780,6 +796,7 @@ mod test {
             generation_cache_size=1048576
             repoid=0
             scuba_table="scuba_table"
+            blobstore_scuba_table="blobstore_scuba_table"
             skiplist_index_blobstore_key="skiplist_key"
             [cache_warmup]
             bookmark="master"
@@ -830,6 +847,7 @@ mod test {
             repotype="blob:files"
             repoid=1
             scuba_table="scuba_table"
+            blobstore_scuba_table="blobstore_scuba_table"
             wireproto_scribe_category="category"
         "#;
 
@@ -870,7 +888,10 @@ mod test {
             BlobstoreId::new(1),
             RemoteBlobstoreArgs::Gluster(second_gluster_args),
         );
-        let blobstores_args = RemoteBlobstoreArgs::Multiplexed(blobstores);
+        let blobstores_args = RemoteBlobstoreArgs::Multiplexed {
+            scuba_table: Some("blobstore_scuba_table".to_string()),
+            blobstores,
+        };
 
         let mut repos = HashMap::new();
         repos.insert(
@@ -894,16 +915,14 @@ mod test {
                     weightlimit: 4321,
                     disable_acl_checker: false,
                 }),
-                bookmarks: Some(vec![
-                    BookmarkParams {
-                        bookmark: Bookmark::new("master").unwrap(),
-                        hooks: Some(vec![
-                            "hook1".to_string(),
-                            "hook2".to_string(),
-                            "rust:rusthook".to_string(),
-                        ]),
-                    },
-                ]),
+                bookmarks: Some(vec![BookmarkParams {
+                    bookmark: Bookmark::new("master").unwrap(),
+                    hooks: Some(vec![
+                        "hook1".to_string(),
+                        "hook2".to_string(),
+                        "rust:rusthook".to_string(),
+                    ]),
+                }]),
                 hooks: Some(vec![
                     HookParams {
                         name: "hook1".to_string(),

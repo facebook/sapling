@@ -11,9 +11,9 @@ use std::sync::{Arc, Mutex};
 
 use async_unit;
 use failure::{err_msg, Error};
-use futures::Async;
 use futures::future::{Future, IntoFuture};
 use futures::sync::oneshot;
+use futures::Async;
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobstore::Blobstore;
@@ -134,6 +134,7 @@ fn base() {
                 (BlobstoreId::new(1), bs1.clone()),
             ],
             log.clone(),
+            None,
         );
         let ctx = CoreContext::test_mock();
 
@@ -274,6 +275,7 @@ fn multiplexed() {
             repoid,
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             queue.clone(),
+            None,
         );
 
         // non-existing key when one blobstore failing

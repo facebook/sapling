@@ -62,6 +62,7 @@ use repo_commit::*;
 use rocksblob::Rocksblob;
 use rocksdb;
 use scribe::ScribeClient;
+use scuba::ScubaClient;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{Discard, Drain, Logger};
 use sqlblob::Sqlblob;
@@ -369,8 +370,11 @@ impl BlobRepo {
                     ));
                     future::ok(blobstore).boxify()
                 }
-                RemoteBlobstoreArgs::Multiplexed(args) => {
-                    let blobstores: Vec<_> = args
+                RemoteBlobstoreArgs::Multiplexed {
+                    scuba_table,
+                    blobstores,
+                } => {
+                    let blobstores: Vec<_> = blobstores
                         .into_iter()
                         .map(|(blobstore_id, arg)| {
                             eval_remote_args(arg, repoid, myrouter_port, queue.clone())
@@ -387,6 +391,7 @@ impl BlobRepo {
                                     repoid,
                                     blobstores,
                                     queue.clone(),
+                                    scuba_table.map(|table| Arc::new(ScubaClient::new(table))),
                                 ))
                             }
                         })
@@ -2340,7 +2345,8 @@ impl CreateChangeset {
                                 ctx.clone(),
                                 repo.clone(),
                                 &parent_manifest_hashes,
-                            ).and_then({
+                            )
+                            .and_then({
                                 cloned!(ctx);
                                 move |(p1_manifest, p2_manifest)| {
                                     compute_changed_files(
@@ -2351,7 +2357,7 @@ impl CreateChangeset {
                                     )
                                 }
                             })
-                                .boxify()
+                            .boxify()
                         };
 
                         let p1_mf = parent_manifest_hashes.get(0).cloned();
@@ -2361,7 +2367,8 @@ impl CreateChangeset {
                                 repo.clone(),
                                 root_hash.clone(),
                                 p1_mf,
-                            ).left_future()
+                            )
+                            .left_future()
                         } else {
                             future::ok(()).right_future()
                         };
@@ -2381,7 +2388,8 @@ impl CreateChangeset {
                                         parent_manifest_hashes,
                                         bonsai_parents,
                                         repo.clone(),
-                                    ).map(|bonsai_cs| (hg_cs, bonsai_cs))
+                                    )
+                                    .map(|bonsai_cs| (hg_cs, bonsai_cs))
                                 }
                             });
 
@@ -2390,19 +2398,17 @@ impl CreateChangeset {
                             .and_then({
                                 cloned!(ctx);
                                 move |(blobcs, bonsai_cs)| {
-                                    let fut: BoxFuture<
-                                        (HgBlobChangeset, BonsaiChangeset),
-                                        Error,
-                                    > = (move || {
-                                        let bonsai_blob = bonsai_cs.clone().into_blob();
-                                        let bcs_id = bonsai_blob.id().clone();
+                                    let fut: BoxFuture<(HgBlobChangeset, BonsaiChangeset), Error> =
+                                        (move || {
+                                            let bonsai_blob = bonsai_cs.clone().into_blob();
+                                            let bcs_id = bonsai_blob.id().clone();
 
-                                        let cs_id = blobcs.get_changeset_id().into_nodehash();
-                                        let manifest_id = *blobcs.manifestid();
+                                            let cs_id = blobcs.get_changeset_id().into_nodehash();
+                                            let manifest_id = *blobcs.manifestid();
 
-                                        if let Some(expected_nodeid) = expected_nodeid {
-                                            if cs_id != expected_nodeid {
-                                                return future::err(
+                                            if let Some(expected_nodeid) = expected_nodeid {
+                                                if cs_id != expected_nodeid {
+                                                    return future::err(
                                                         ErrorKind::InconsistentChangesetHash(
                                                             expected_nodeid,
                                                             cs_id,
@@ -2411,44 +2417,50 @@ impl CreateChangeset {
                                                         .into(),
                                                     )
                                                     .boxify();
+                                                }
                                             }
-                                        }
 
-                                        scuba_logger
-                                            .add("changeset_id", format!("{}", cs_id))
-                                            .log_with_msg("Changeset uuid to hash mapping", None);
-                                        // NOTE(luk): an attempt was made in D8187210 to split the
-                                        // upload_entries signal into upload_entries and
-                                        // processed_entries and to signal_parent_ready after
-                                        // upload_entries, so that one doesn't need to wait for the
-                                        // entries to be processed. There were no performance gains
-                                        // from that experiment
-                                        //
-                                        // We deliberately eat this error - this is only so that
-                                        // another changeset can start verifying data in the blob
-                                        // store while we verify this one
-                                        let _ =
-                                            signal_parent_ready.send((bcs_id, cs_id, manifest_id));
+                                            scuba_logger
+                                                .add("changeset_id", format!("{}", cs_id))
+                                                .log_with_msg(
+                                                    "Changeset uuid to hash mapping",
+                                                    None,
+                                                );
+                                            // NOTE(luk): an attempt was made in D8187210 to split the
+                                            // upload_entries signal into upload_entries and
+                                            // processed_entries and to signal_parent_ready after
+                                            // upload_entries, so that one doesn't need to wait for the
+                                            // entries to be processed. There were no performance gains
+                                            // from that experiment
+                                            //
+                                            // We deliberately eat this error - this is only so that
+                                            // another changeset can start verifying data in the blob
+                                            // store while we verify this one
+                                            let _ = signal_parent_ready.send((
+                                                bcs_id,
+                                                cs_id,
+                                                manifest_id,
+                                            ));
 
-                                        let bonsai_cs_fut = save_bonsai_changeset_object(
-                                            ctx.clone(),
-                                            blobstore.clone(),
-                                            bonsai_cs.clone(),
-                                        );
+                                            let bonsai_cs_fut = save_bonsai_changeset_object(
+                                                ctx.clone(),
+                                                blobstore.clone(),
+                                                bonsai_cs.clone(),
+                                            );
 
-                                        blobcs
-                                            .save(ctx.clone(), blobstore)
-                                            .join(bonsai_cs_fut)
-                                            .context("While writing to blobstore")
-                                            .join(
-                                                entry_processor
-                                                    .finalize(ctx, filenodes, cs_id)
-                                                    .context("While finalizing processing"),
-                                            )
-                                            .from_err()
-                                            .map(move |_| (blobcs, bonsai_cs))
-                                            .boxify()
-                                    })();
+                                            blobcs
+                                                .save(ctx.clone(), blobstore)
+                                                .join(bonsai_cs_fut)
+                                                .context("While writing to blobstore")
+                                                .join(
+                                                    entry_processor
+                                                        .finalize(ctx, filenodes, cs_id)
+                                                        .context("While finalizing processing"),
+                                                )
+                                                .from_err()
+                                                .map(move |_| (blobcs, bonsai_cs))
+                                                .boxify()
+                                        })();
 
                                     fut.context(
                                         "While creating and verifying Changeset for blobstore",
