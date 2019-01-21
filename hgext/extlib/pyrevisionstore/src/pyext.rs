@@ -8,7 +8,7 @@ use encoding;
 use std::cell::{Ref, RefCell};
 
 use failure::Error;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use datastorepyext::DataStorePyExt;
 use historystorepyext::HistoryStorePyExt;

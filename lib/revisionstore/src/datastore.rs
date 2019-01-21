@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use error::Result;
+use failure::Fallible;
 use key::Key;
 use std::io::{Cursor, Write};
 use std::rc::Rc;
@@ -23,19 +23,19 @@ pub struct Metadata {
 }
 
 pub trait DataStore {
-    fn get(&self, key: &Key) -> Result<Vec<u8>>;
-    fn get_delta(&self, key: &Key) -> Result<Delta>;
-    fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>>;
-    fn get_meta(&self, key: &Key) -> Result<Metadata>;
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>>;
+    fn get(&self, key: &Key) -> Fallible<Vec<u8>>;
+    fn get_delta(&self, key: &Key) -> Fallible<Delta>;
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>>;
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata>;
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>>;
 
-    fn contains(&self, key: &Key) -> Result<bool> {
+    fn contains(&self, key: &Key) -> Fallible<bool> {
         Ok(self.get_missing(&[key.clone()])?.is_empty())
     }
 }
 
 impl Metadata {
-    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+    pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
         let mut buf = vec![];
         if let Some(flags) = self.flags {
             Metadata::write_meta(b'f', flags, &mut buf)?;
@@ -49,14 +49,14 @@ impl Metadata {
         Ok(())
     }
 
-    fn write_meta<T: Write>(flag: u8, value: u64, writer: &mut T) -> Result<()> {
+    fn write_meta<T: Write>(flag: u8, value: u64, writer: &mut T) -> Fallible<()> {
         writer.write_u8(flag as u8)?;
         writer.write_u16::<BigEndian>(u64_to_bin_len(value))?;
         u64_to_bin(value, writer)?;
         Ok(())
     }
 
-    pub fn read(cur: &mut Cursor<&[u8]>) -> Result<Metadata> {
+    pub fn read(cur: &mut Cursor<&[u8]>) -> Fallible<Metadata> {
         let metadata_len = cur.read_u32::<BigEndian>()? as u64;
         let mut size: Option<u64> = None;
         let mut flags: Option<u64> = None;
@@ -100,7 +100,7 @@ fn u64_to_bin_len(value: u64) -> u16 {
 }
 
 /// Converts an integer into a buffer using a special format used in the datapack format.
-fn u64_to_bin<T: Write>(value: u64, writer: &mut T) -> Result<()> {
+fn u64_to_bin<T: Write>(value: u64, writer: &mut T) -> Fallible<()> {
     let mut value = value;
     let mut buf = [0; 8];
     let len = u64_to_bin_len(value) as usize;

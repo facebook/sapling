@@ -9,7 +9,7 @@
 /// offset of the earliest node with that prefix. If a fanout slot has no nodes, it's value is set
 /// to the value of the last valid offset, or 0 if there is none.
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use error::Result;
+use failure::Fallible;
 use std::io::{Cursor, Write};
 use std::option::Option;
 use types::node::Node;
@@ -25,7 +25,7 @@ const LARGE_RAW_SIZE: usize = 262144; // LARGE_FANOUT_LENGTH * sizeof(u32)
 #[fail(display = "Fanout Table Error: {:?}", _0)]
 struct FanoutTableError(String);
 
-fn get_fanout_index(table_size: usize, node: &Node) -> Result<u64> {
+fn get_fanout_index(table_size: usize, node: &Node) -> Fallible<u64> {
     let mut cursor = Cursor::new(node.as_ref());
     match table_size {
         SMALL_RAW_SIZE => Ok(cursor.read_u8()? as u64),
@@ -41,7 +41,7 @@ pub struct FanoutTable {}
 impl FanoutTable {
     /// Returns the (start, end) search bounds indicated by the fanout table. If end is None, then
     /// search to the end of the index.
-    pub fn get_bounds(table: &[u8], node: &Node) -> Result<(usize, Option<usize>)> {
+    pub fn get_bounds(table: &[u8], node: &Node) -> Fallible<(usize, Option<usize>)> {
         // Get the integer equivalent of the first few bytes of the node.
         let index = get_fanout_index(table.len(), node)?;
 
@@ -81,7 +81,7 @@ impl FanoutTable {
         node_iter: &mut I,
         entry_size: usize,
         mut locations: Option<&mut Vec<u32>>,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         let fanout_raw_size = match fanout_factor {
             SMALL_FANOUT_FACTOR => SMALL_RAW_SIZE,
             LARGE_FANOUT_FACTOR => LARGE_RAW_SIZE,

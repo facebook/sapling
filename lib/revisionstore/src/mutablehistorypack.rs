@@ -6,6 +6,7 @@
 use byteorder::WriteBytesExt;
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
+use failure::Fallible;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::Write;
 use std::iter::FromIterator;
@@ -13,7 +14,6 @@ use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
 use ancestors::{AncestorIterator, AncestorTraversal};
-use error::Result;
 use historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
 use historystore::{Ancestors, HistoryStore, NodeInfo};
@@ -31,7 +31,7 @@ pub struct MutableHistoryPack {
 }
 
 impl MutableHistoryPack {
-    pub fn new(dir: &Path, version: HistoryPackVersion) -> Result<Self> {
+    pub fn new(dir: &Path, version: HistoryPackVersion) -> Fallible<Self> {
         if !dir.is_dir() {
             return Err(MutableHistoryPackError(format!(
                 "cannot create mutable historypack in non-directory '{:?}'",
@@ -47,7 +47,7 @@ impl MutableHistoryPack {
         })
     }
 
-    pub fn add(&mut self, key: &Key, info: &NodeInfo) -> Result<()> {
+    pub fn add(&mut self, key: &Key, info: &NodeInfo) -> Fallible<()> {
         // Ideally we could use something like:
         //     self.mem_index.entry(key.name()).or_insert_with(|| HashMap::new())
         // To get the inner map, then insert our new NodeInfo. Unfortunately it requires
@@ -62,7 +62,7 @@ impl MutableHistoryPack {
 
     /// Closes the mutable historypack, returning the path of the final immutable historypack on disk.
     /// The mutable historypack is no longer usable after being closed.
-    pub fn close(self) -> Result<PathBuf> {
+    pub fn close(self) -> Fallible<PathBuf> {
         let mut data_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
         let mut hasher = Sha1::new();
 
@@ -134,7 +134,7 @@ impl MutableHistoryPack {
         node_map: &HashMap<Key, NodeInfo>,
         section_offset: usize,
         nodes: &mut HashMap<&'a Box<[u8]>, HashMap<Key, NodeLocation>>,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         let mut node_locations = HashMap::<Key, NodeLocation>::with_capacity(node_map.len());
 
         // Write section header
@@ -178,7 +178,7 @@ impl MutableHistoryPack {
     }
 }
 
-fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Result<Vec<(&Key, &NodeInfo)>> {
+fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Fallible<Vec<(&Key, &NodeInfo)>> {
     // Sorts the given keys into newest-first topological order
     let mut roots = Vec::<&Key>::new();
 
@@ -244,7 +244,7 @@ fn topo_sort(node_map: &HashMap<Key, NodeInfo>) -> Result<Vec<(&Key, &NodeInfo)>
 }
 
 impl HistoryStore for MutableHistoryPack {
-    fn get_ancestors(&self, key: &Key) -> Result<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
         AncestorIterator::new(
             key,
             |k, _seen| self.get_node_info(k),
@@ -252,7 +252,7 @@ impl HistoryStore for MutableHistoryPack {
         ).collect()
     }
 
-    fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         Ok(self.mem_index
             .get(key.name())
             .ok_or(MutableHistoryPackError(format!(
@@ -267,7 +267,7 @@ impl HistoryStore for MutableHistoryPack {
             .clone())
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys.iter()
             .filter(|k| match self.mem_index.get(k.name()) {
                 Some(e) => e.get(k).is_none(),

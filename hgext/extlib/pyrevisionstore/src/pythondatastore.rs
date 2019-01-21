@@ -5,11 +5,11 @@
 
 use cpython::{FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python,
               PythonObject};
+use failure::Fallible;
 use pyerror::pyerr_to_error;
 use pythonutil::{bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key,
                  to_key};
 use revisionstore::datastore::{DataStore, Delta, Metadata};
-use revisionstore::error::Result;
 use revisionstore::key::Key;
 
 pub struct PythonDataStore {
@@ -28,7 +28,7 @@ impl PythonDataStore {
 unsafe impl Send for PythonDataStore {}
 
 impl DataStore for PythonDataStore {
-    fn get(&self, key: &Key) -> Result<Vec<u8>> {
+    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
@@ -43,7 +43,7 @@ impl DataStore for PythonDataStore {
         Ok(py_bytes.data(py).to_vec())
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
@@ -71,7 +71,7 @@ impl DataStore for PythonDataStore {
         })
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
@@ -83,11 +83,11 @@ impl DataStore for PythonDataStore {
         let deltas = py_list
             .iter(py)
             .map(|b| from_tuple_to_delta(py, &b).map_err(|e| pyerr_to_error(py, e).into()))
-            .collect::<Result<Vec<Delta>>>()?;
+            .collect::<Fallible<Vec<Delta>>>()?;
         Ok(deltas)
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyBytes::new(py, key.name());
@@ -109,7 +109,7 @@ impl DataStore for PythonDataStore {
         })
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -126,7 +126,7 @@ impl DataStore for PythonDataStore {
         let missing = py_list
             .iter(py)
             .map(|k| from_tuple_to_key(py, &k).map_err(|e| pyerr_to_error(py, e).into()))
-            .collect::<Result<Vec<Key>>>()?;
+            .collect::<Fallible<Vec<Key>>>()?;
         Ok(missing)
     }
 }

@@ -1,5 +1,5 @@
 // Copyright Facebook, Inc. 2019
-use error::Result;
+use failure::Fallible;
 use std::cell::{RefCell, RefMut};
 use std::fmt::Debug;
 use std::io::{self, BufWriter, Write};
@@ -19,7 +19,7 @@ impl<T: 'static + Write + Debug + Send + Sync> PackWriter<T> {
     }
 
     /// Flush the buffered data to the underlying writer.
-    pub fn flush_inner(&self) -> Result<()> {
+    pub fn flush_inner(&self) -> Fallible<()> {
         let ret = self.data.try_borrow_mut()?.flush()?;
         Ok(ret)
     }
@@ -37,7 +37,7 @@ impl<T: 'static + Write + Debug + Send + Sync> PackWriter<T> {
     }
 
     /// Flush the buffered data and return the underlying writer.
-    pub fn into_inner(self) -> Result<T> {
+    pub fn into_inner(self) -> Fallible<T> {
         let ret = self.data.into_inner().into_inner()?;
         Ok(ret)
     }

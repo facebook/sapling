@@ -13,7 +13,8 @@ use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
 
-use error::{KeyError, Result};
+use error::KeyError;
+use failure::Fallible;
 use fanouttable::FanoutTable;
 use historypack::HistoryPackVersion;
 use key::Key;
@@ -34,7 +35,7 @@ struct HistoryIndexOptions {
 }
 
 impl HistoryIndexOptions {
-    pub fn read<T: Read>(reader: &mut T) -> Result<HistoryIndexOptions> {
+    pub fn read<T: Read>(reader: &mut T) -> Fallible<HistoryIndexOptions> {
         let version = reader.read_u8()?;
         let version = match version {
             0 => HistoryPackVersion::Zero,
@@ -57,7 +58,7 @@ impl HistoryIndexOptions {
         Ok(HistoryIndexOptions { version, large })
     }
 
-    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+    pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
         writer.write_u8(match self.version {
             HistoryPackVersion::Zero => 0,
             HistoryPackVersion::One => 1,
@@ -89,7 +90,7 @@ pub(crate) struct FileIndexEntry {
 const FILE_ENTRY_LEN: usize = 44;
 
 impl FileIndexEntry {
-    pub fn read(buf: &[u8]) -> Result<Self> {
+    pub fn read(buf: &[u8]) -> Fallible<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
         let node_slice: &[u8] = buf.get_err(0..20)?;
@@ -102,7 +103,7 @@ impl FileIndexEntry {
         })
     }
 
-    fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+    fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
         writer.write_all(self.node.as_ref())?;
         writer.write_u64::<BigEndian>(self.file_section_offset)?;
         writer.write_u64::<BigEndian>(self.file_section_size)?;
@@ -120,7 +121,7 @@ pub(crate) struct NodeIndexEntry {
 const NODE_ENTRY_LEN: usize = 28;
 
 impl NodeIndexEntry {
-    pub fn read(buf: &[u8]) -> Result<Self> {
+    pub fn read(buf: &[u8]) -> Fallible<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
         let node_slice: &[u8] = buf.get_err(0..20)?;
@@ -130,7 +131,7 @@ impl NodeIndexEntry {
         })
     }
 
-    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+    pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
         writer.write_all(self.node.as_ref())?;
         writer.write_u64::<BigEndian>(self.offset)?;
         Ok(())
@@ -146,7 +147,7 @@ pub(crate) struct HistoryIndex {
 }
 
 impl HistoryIndex {
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new(path: &Path) -> Fallible<Self> {
         let file = File::open(path)?;
         let len = file.metadata()?.len();
         if len < 1 {
@@ -185,7 +186,7 @@ impl HistoryIndex {
         writer: &mut T,
         file_sections: &[(&Box<[u8]>, FileSectionLocation)],
         nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         // Write header
         let options = HistoryIndexOptions {
             version: HistoryPackVersion::One,
@@ -196,7 +197,7 @@ impl HistoryIndex {
         let mut file_sections: Vec<(&Box<[u8]>, Node, FileSectionLocation)> = file_sections
             .iter()
             .map(|e| Ok((e.0, sha1(&e.0), e.1.clone())))
-            .collect::<Result<Vec<(&Box<[u8]>, Node, FileSectionLocation)>>>()?;
+            .collect::<Fallible<Vec<(&Box<[u8]>, Node, FileSectionLocation)>>>()?;
         // They must be written in sorted order so they can be bisected.
         file_sections.sort_by_key(|x| x.1);
 
@@ -227,7 +228,7 @@ impl HistoryIndex {
         options: &HistoryIndexOptions,
         file_sections: &Vec<(&Box<[u8]>, Node, FileSectionLocation)>,
         nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         // For each file, keep track of where its node index will start.
         // The first ones starts after the header, fanout, file count, file section, and node count.
         let mut node_offset: usize = 2 + FanoutTable::get_size(options.large) + 8
@@ -272,7 +273,7 @@ impl HistoryIndex {
         writer: &mut T,
         nodes: &HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>>,
         file_name: &Box<[u8]>,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         // Write the filename
         writer.write_u16::<BigEndian>(file_name.len() as u16)?;
         writer.write_all(file_name)?;
@@ -295,7 +296,7 @@ impl HistoryIndex {
         Ok(())
     }
 
-    pub fn get_file_entry(&self, key: &Key) -> Result<FileIndexEntry> {
+    pub fn get_file_entry(&self, key: &Key) -> Fallible<FileIndexEntry> {
         let filename_node = sha1(key.name());
         let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), &filename_node)?;
         let start = start + self.index_start;
@@ -307,7 +308,7 @@ impl HistoryIndex {
         self.read_file_entry((start + entry_offset) - self.index_start)
     }
 
-    pub fn get_node_entry(&self, key: &Key) -> Result<NodeIndexEntry> {
+    pub fn get_node_entry(&self, key: &Key) -> Fallible<NodeIndexEntry> {
         let file_entry = self.get_file_entry(&key)?;
 
         let start = file_entry.node_index_offset as usize + 2 + key.name().len();
@@ -319,22 +320,22 @@ impl HistoryIndex {
         self.read_node_entry((start + entry_offset) - self.index_start)
     }
 
-    fn read_file_entry(&self, offset: usize) -> Result<FileIndexEntry> {
+    fn read_file_entry(&self, offset: usize) -> Fallible<FileIndexEntry> {
         FileIndexEntry::read(self.read_data(offset, FILE_ENTRY_LEN)?)
     }
 
-    fn read_node_entry(&self, offset: usize) -> Result<NodeIndexEntry> {
+    fn read_node_entry(&self, offset: usize) -> Fallible<NodeIndexEntry> {
         NodeIndexEntry::read(self.read_data(offset, NODE_ENTRY_LEN)?)
     }
 
-    fn read_data(&self, offset: usize, size: usize) -> Result<&[u8]> {
+    fn read_data(&self, offset: usize, size: usize) -> Fallible<&[u8]> {
         let offset = offset + self.index_start;
         Ok(self.mmap.get_err(offset..offset + size)?)
     }
 
     // These two binary_search_* functions are very similar, but I couldn't find a way to unify
     // them without using macros.
-    fn binary_search_files(&self, key: &Node, slice: &[u8]) -> Result<usize> {
+    fn binary_search_files(&self, key: &Node, slice: &[u8]) -> Fallible<usize> {
         let size = slice.len() / FILE_ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
         let slice: &[[u8; FILE_ENTRY_LEN]] = unsafe {
@@ -352,7 +353,7 @@ impl HistoryIndex {
         }
     }
 
-    fn binary_search_nodes(&self, key: &Node, slice: &[u8]) -> Result<usize> {
+    fn binary_search_nodes(&self, key: &Node, slice: &[u8]) -> Fallible<usize> {
         let size = slice.len() / NODE_ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
         let slice: &[[u8; NODE_ENTRY_LEN]] = unsafe {

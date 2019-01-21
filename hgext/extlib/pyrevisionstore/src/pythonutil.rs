@@ -5,10 +5,10 @@
 
 use cpython::{exc, FromPyObject, PyBytes, PyErr, PyObject, PyResult, PyTuple, Python,
               PythonObject, ToPyObject};
-use failure::Error;
+use failure::{Error, Fallible};
 use pyerror::pyerr_to_error;
 use revisionstore::datastore::Delta;
-use revisionstore::error::{KeyError, Result};
+use revisionstore::error::KeyError;
 use revisionstore::key::Key;
 use types::node::Node;
 
@@ -90,6 +90,6 @@ pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
     Ok(to_key(py, &name, &node))
 }
 
-pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Result<PyBytes> {
+pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Fallible<PyBytes> {
     PyBytes::extract(py, &tuple.get_item(py, index)).map_err(|e| pyerr_to_error(py, e))
 }

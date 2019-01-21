@@ -1,9 +1,10 @@
 // Copyright Facebook, Inc. 2018
 // Union history store
+use failure::Fallible;
 use std::rc::Rc;
 
 use ancestors::{AncestorTraversal, BatchedAncestorIterator};
-use error::{KeyError, Result};
+use error::KeyError;
 use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
 use unionstore::UnionStore;
@@ -21,7 +22,7 @@ impl From<UnionHistoryStoreError> for KeyError {
 }
 
 impl UnionHistoryStore {
-    fn get_partial_ancestors(&self, key: &Key) -> Result<Ancestors> {
+    fn get_partial_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
         for store in self {
             match store.get_ancestors(key) {
                 Ok(res) => return Ok(res),
@@ -40,7 +41,7 @@ impl UnionHistoryStore {
 }
 
 impl HistoryStore for UnionHistoryStore {
-    fn get_ancestors(&self, key: &Key) -> Result<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
         BatchedAncestorIterator::new(
             key,
             |k, _seen| self.get_partial_ancestors(k),
@@ -48,7 +49,7 @@ impl HistoryStore for UnionHistoryStore {
         ).collect()
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.into_iter()
             .fold(initial_keys, |missing_keys, store| match missing_keys {
@@ -57,7 +58,7 @@ impl HistoryStore for UnionHistoryStore {
             })
     }
 
-    fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         for store in self {
             match store.get_node_info(key) {
                 Ok(res) => return Ok(res),
@@ -98,29 +99,29 @@ mod tests {
     }
 
     impl HistoryStore for EmptyHistoryStore {
-        fn get_ancestors(&self, _key: &Key) -> Result<Ancestors> {
+        fn get_ancestors(&self, _key: &Key) -> Fallible<Ancestors> {
             Err(KeyError::from(EmptyHistoryStoreError).into())
         }
 
-        fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+        fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
 
-        fn get_node_info(&self, _key: &Key) -> Result<NodeInfo> {
+        fn get_node_info(&self, _key: &Key) -> Fallible<NodeInfo> {
             Err(KeyError::from(EmptyHistoryStoreError).into())
         }
     }
 
     impl HistoryStore for BadHistoryStore {
-        fn get_ancestors(&self, _key: &Key) -> Result<Ancestors> {
+        fn get_ancestors(&self, _key: &Key) -> Fallible<Ancestors> {
             Err(BadHistoryStoreError.into())
         }
 
-        fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
+        fn get_missing(&self, _keys: &[Key]) -> Fallible<Vec<Key>> {
             Err(BadHistoryStoreError.into())
         }
 
-        fn get_node_info(&self, _key: &Key) -> Result<NodeInfo> {
+        fn get_node_info(&self, _key: &Key) -> Fallible<NodeInfo> {
             Err(BadHistoryStoreError.into())
         }
     }

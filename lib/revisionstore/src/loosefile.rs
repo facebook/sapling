@@ -7,7 +7,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::rc::Rc;
 
-use error::{KeyError, Result};
+use error::KeyError;
+use failure::Fallible;
 use historystore::{Ancestors, NodeInfo};
 use key::Key;
 use types::node::Node;
@@ -28,14 +29,14 @@ pub struct LooseFile {
     pub ancestors: Ancestors,
 }
 
-fn read_file(spath: &str) -> Result<Vec<u8>> {
+fn read_file(spath: &str) -> Fallible<Vec<u8>> {
     let mut file = File::open(&spath)?;
     let mut file_content = Vec::new();
     file.read_to_end(&mut file_content)?;
     Ok(file_content)
 }
 
-fn atoi(content: &[u8]) -> Result<(usize, usize)> {
+fn atoi(content: &[u8]) -> Fallible<(usize, usize)> {
     let mut ret = 0;
     for i in 0..content.len() {
         let si = content[i] as char;
@@ -59,7 +60,7 @@ impl LooseFile {
         }
     }
 
-    pub fn from_content(content: &Vec<u8>) -> Result<Self> {
+    pub fn from_content(content: &Vec<u8>) -> Fallible<Self> {
         let (textsize, size) = atoi(&content)?;
         let mut start = size + 1;
         let text = content[start..start + textsize].to_vec();
@@ -89,7 +90,7 @@ impl LooseFile {
         ))
     }
 
-    pub fn from_file(spath: &str) -> Result<Self> {
+    pub fn from_file(spath: &str) -> Fallible<Self> {
         let content = read_file(spath)?;
         LooseFile::from_content(&content)
     }

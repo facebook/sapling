@@ -10,7 +10,8 @@ use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
 
-use error::{KeyError, Result};
+use error::KeyError;
+use failure::Fallible;
 use fanouttable::FanoutTable;
 use sliceext::SliceExt;
 use types::node::Node;
@@ -94,7 +95,7 @@ pub enum DeltaBaseOffset {
 }
 
 impl DeltaBaseOffset {
-    fn new(value: i32) -> Result<Self> {
+    fn new(value: i32) -> Fallible<Self> {
         if value >= 0 {
             Ok(DeltaBaseOffset::Offset(value as u32))
         } else if value == -1 {
@@ -116,7 +117,7 @@ impl DeltaBaseOffset {
 }
 
 impl IndexEntry {
-    pub fn read(buf: &[u8]) -> Result<Self> {
+    pub fn read(buf: &[u8]) -> Fallible<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(20);
         let node_slice: &[u8] = buf.get_err(0..20)?;
@@ -133,7 +134,7 @@ impl IndexEntry {
         ))
     }
 
-    fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+    fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
         writer.write_all(self.node().as_ref())?;
         writer.write_i32::<BigEndian>(self.delta_base_offset().to_i32())?;
         writer.write_u64::<BigEndian>(self.pack_entry_offset())?;
@@ -143,7 +144,7 @@ impl IndexEntry {
 }
 
 impl DataIndexOptions {
-    pub fn read<T: Read>(reader: &mut T) -> Result<DataIndexOptions> {
+    pub fn read<T: Read>(reader: &mut T) -> Fallible<DataIndexOptions> {
         let version = reader.read_u8()?;
         if version > 1 {
             return Err(DataIndexError(format!("unsupported version '{:?}'", version)).into());
@@ -160,7 +161,7 @@ impl DataIndexOptions {
         Ok(DataIndexOptions { version, large })
     }
 
-    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+    pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
         writer.write_u8(self.version)?;
         writer.write_u8(if self.large { 0b10000000 } else { 0 })?;
         Ok(())
@@ -174,7 +175,7 @@ pub struct DataIndex {
 }
 
 impl DataIndex {
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new(path: &Path) -> Fallible<Self> {
         let file = File::open(path)?;
         let len = file.metadata()?.len();
         if len < 1 {
@@ -201,7 +202,7 @@ impl DataIndex {
         })
     }
 
-    pub fn write<T: Write>(writer: &mut T, values: &HashMap<Node, DeltaLocation>) -> Result<()> {
+    pub fn write<T: Write>(writer: &mut T, values: &HashMap<Node, DeltaLocation>) -> Fallible<()> {
         // Write header
         let options = DataIndexOptions {
             version: 1,
@@ -252,7 +253,7 @@ impl DataIndex {
         Ok(())
     }
 
-    pub fn get_entry(&self, node: &Node) -> Result<IndexEntry> {
+    pub fn get_entry(&self, node: &Node) -> Fallible<IndexEntry> {
         let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), node)?;
         let start = start + self.index_start;
         let end = match end {
@@ -264,13 +265,13 @@ impl DataIndex {
         self.read_entry((start + entry_offset) - self.index_start)
     }
 
-    pub fn read_entry(&self, offset: usize) -> Result<IndexEntry> {
+    pub fn read_entry(&self, offset: usize) -> Fallible<IndexEntry> {
         let offset = offset + self.index_start;
         let raw_entry = self.mmap.get_err(offset..offset + ENTRY_LEN)?;
         IndexEntry::read(raw_entry)
     }
 
-    fn binary_search(&self, key: &Node, slice: &[u8]) -> Result<usize> {
+    fn binary_search(&self, key: &Node, slice: &[u8]) -> Fallible<usize> {
         let size = slice.len() / ENTRY_LEN;
         // Cast the slice into an array of entry buffers so we can bisect across them
         let slice: &[[u8; ENTRY_LEN]] =

@@ -82,11 +82,11 @@ use std::mem::drop;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use std::{fmt, result};
+use std::fmt;
 
 use dataindex::{DataIndex, DeltaBaseOffset};
 use datastore::{DataStore, Delta, Metadata};
-use error::Result;
+use failure::Fallible;
 use key::Key;
 use repack::{IterableStore, RepackOutputType, Repackable};
 use sliceext::SliceExt;
@@ -123,7 +123,7 @@ pub struct DataEntry<'a> {
 }
 
 impl DataPackVersion {
-    fn new(value: u8) -> Result<Self> {
+    fn new(value: u8) -> Fallible<Self> {
         match value {
             0 => Ok(DataPackVersion::Zero),
             1 => Ok(DataPackVersion::One),
@@ -144,7 +144,7 @@ impl From<DataPackVersion> for u8 {
 }
 
 impl<'a> DataEntry<'a> {
-    pub fn new(buf: &'a [u8], offset: u64, version: DataPackVersion) -> Result<Self> {
+    pub fn new(buf: &'a [u8], offset: u64, version: DataPackVersion) -> Fallible<Self> {
         let mut cur = Cursor::new(buf);
         cur.set_position(offset);
 
@@ -215,7 +215,7 @@ impl<'a> DataEntry<'a> {
         &self.delta_base
     }
 
-    pub fn delta(&self) -> Result<Rc<[u8]>> {
+    pub fn delta(&self) -> Fallible<Rc<[u8]>> {
         let mut cell = self.data.borrow_mut();
         if cell.is_none() {
             *cell = Some(Rc::<[u8]>::from(decompress(&self.compressed_data)?));
@@ -230,7 +230,7 @@ impl<'a> DataEntry<'a> {
 }
 
 impl<'a> fmt::Debug for DataEntry<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let delta = self
             .delta()
             .unwrap_or_else(|e| Rc::from(format!("{:?}", e).as_ref()));
@@ -251,7 +251,7 @@ impl<'a> fmt::Debug for DataEntry<'a> {
 }
 
 impl DataPack {
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new(path: &Path) -> Fallible<Self> {
         let base_path = PathBuf::from(path);
         let pack_path = path.with_extension("datapack");
         let file = File::open(&pack_path)?;
@@ -280,7 +280,7 @@ impl DataPack {
         self.mmap.len()
     }
 
-    pub fn read_entry(&self, offset: u64) -> Result<DataEntry> {
+    pub fn read_entry(&self, offset: u64) -> Fallible<DataEntry> {
         DataEntry::new(self.mmap.as_ref(), offset, self.version.clone())
     }
 
@@ -298,13 +298,13 @@ impl DataPack {
 }
 
 impl DataStore for DataPack {
-    fn get(&self, _key: &Key) -> Result<Vec<u8>> {
+    fn get(&self, _key: &Key) -> Fallible<Vec<u8>> {
         Err(format_err!(
             "DataPack doesn't support raw get(), only getdeltachain"
         ))
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
         let entry = self.index.get_entry(key.node())?;
         let data_entry = self.read_entry(entry.pack_entry_offset())?;
 
@@ -317,7 +317,7 @@ impl DataStore for DataPack {
         })
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_entry = self.index.get_entry(key.node())?;
         loop {
@@ -340,12 +340,12 @@ impl DataStore for DataPack {
         Ok(chain)
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
         let index_entry = self.index.get_entry(key.node())?;
         Ok(self.read_entry(index_entry.pack_entry_offset())?.metadata)
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
             .filter(|k| self.index.get_entry(k.node()).is_err())
@@ -355,13 +355,13 @@ impl DataStore for DataPack {
 }
 
 impl IterableStore for DataPack {
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = Result<Key>> + 'a> {
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
         Box::new(DataPackIterator::new(self))
     }
 }
 
 impl Repackable for DataPack {
-    fn delete(self) -> Result<()> {
+    fn delete(self) -> Fallible<()> {
         // On some platforms, removing a file can fail if it's still opened or mapped, let's make
         // sure we close and unmap them before deletion.
         drop(self.mmap);
@@ -400,7 +400,7 @@ impl<'a> DataPackIterator<'a> {
 }
 
 impl<'a> Iterator for DataPackIterator<'a> {
-    type Item = Result<Key>;
+    type Item = Fallible<Key>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.offset as usize >= self.pack.len() {
@@ -649,7 +649,7 @@ pub mod tests {
 
         let pack = make_datapack(&tempdir, &revisions);
         assert_eq!(
-            pack.iter().collect::<Result<Vec<Key>>>().unwrap(),
+            pack.iter().collect::<Fallible<Vec<Key>>>().unwrap(),
             revisions
                 .iter()
                 .map(|d| d.0.key.clone())
@@ -702,7 +702,7 @@ pub mod tests {
             }
 
             let pack = make_datapack(&tempdir, &revisions);
-            let same = pack.iter().collect::<Result<Vec<Key>>>().unwrap()
+            let same = pack.iter().collect::<Fallible<Vec<Key>>>().unwrap()
                 == revisions
                     .iter()
                     .map(|d| d.0.key.clone())

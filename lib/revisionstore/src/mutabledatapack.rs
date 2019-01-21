@@ -14,14 +14,12 @@ use crypto::sha1::Sha1;
 use dataindex::{DataIndex, DeltaLocation};
 use datapack::{DataEntry, DataPackVersion};
 use datastore::{DataStore, Delta, Metadata};
-use failure::Error;
+use failure::{Error, Fallible};
 use key::Key;
 use lz4_pyframe::compress;
 use packwriter::PackWriter;
 use tempfile::NamedTempFile;
 use types::node::Node;
-
-use error::Result;
 
 pub struct MutableDataPack {
     version: DataPackVersion,
@@ -42,7 +40,7 @@ impl MutableDataPack {
     /// when close() is called, at which point the MutableDataPack is consumed. If
     /// close() is not called, the temporary file is cleaned up when the object is
     /// release.
-    pub fn new(dir: &Path, version: DataPackVersion) -> Result<Self> {
+    pub fn new(dir: &Path, version: DataPackVersion) -> Fallible<Self> {
         if !dir.is_dir() {
             return Err(format_err!(
                 "cannot create mutable datapack in non-directory '{:?}'",
@@ -67,7 +65,7 @@ impl MutableDataPack {
 
     /// Closes the mutable datapack, returning the path of the final immutable datapack on disk.
     /// The mutable datapack is no longer usable after being closed.
-    pub fn close(mut self) -> Result<PathBuf> {
+    pub fn close(mut self) -> Fallible<PathBuf> {
         // Compute the index
         let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
         DataIndex::write(&mut index_file, &self.mem_index)?;
@@ -93,7 +91,7 @@ impl MutableDataPack {
     }
 
     /// Adds the given entry to the mutable datapack.
-    pub fn add(&mut self, delta: &Delta, metadata: Option<Metadata>) -> Result<()> {
+    pub fn add(&mut self, delta: &Delta, metadata: Option<Metadata>) -> Fallible<()> {
         if delta.key.name().len() >= u16::MAX as usize {
             return Err(MutableDataPackError("delta name is longer than 2^16".into()).into());
         }
@@ -139,7 +137,7 @@ impl MutableDataPack {
         Ok(())
     }
 
-    fn read_entry(&self, key: &Key) -> Result<(Delta, Metadata)> {
+    fn read_entry(&self, key: &Key) -> Fallible<(Delta, Metadata)> {
         let location: &DeltaLocation = self.mem_index.get(key.node()).ok_or::<Error>(
             MutableDataPackError(format!("Unable to find key {:?} in mutable datapack", key))
                 .into(),
@@ -172,19 +170,19 @@ impl MutableDataPack {
 }
 
 impl DataStore for MutableDataPack {
-    fn get(&self, _key: &Key) -> Result<Vec<u8>> {
+    fn get(&self, _key: &Key) -> Fallible<Vec<u8>> {
         Err(
             MutableDataPackError("DataPack doesn't support raw get(), only getdeltachain".into())
                 .into(),
         )
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Delta> {
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
         let (delta, _metadata) = self.read_entry(&key)?;
         Ok(delta)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Result<Vec<Delta>> {
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_key = Some(key.clone());
         while let Some(key) = next_key {
@@ -196,12 +194,12 @@ impl DataStore for MutableDataPack {
         Ok(chain)
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Metadata> {
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
         let (_, metadata) = self.read_entry(&key)?;
         Ok(metadata)
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys.iter()
             .filter(|k| self.mem_index.get(k.node()).is_none())
             .map(|k| k.clone())

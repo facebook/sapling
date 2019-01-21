@@ -8,7 +8,8 @@
 //! header file RevisionStore.h in the top level of this crate.
 use datapack::DataPack;
 use datastore::DataStore;
-use error::{KeyError, Result};
+use error::KeyError;
+use failure::Fallible;
 use key::Key;
 use std::collections::HashMap;
 use std::ffi::{CStr, OsStr};
@@ -87,7 +88,7 @@ impl DataPackUnion {
         ScanResult::ChangesDetected
     }
 
-    fn scan_dir(packs: &mut HashMap<PathBuf, Rc<DataPack>>, path: &Path) -> Result<usize> {
+    fn scan_dir(packs: &mut HashMap<PathBuf, Rc<DataPack>>, path: &Path) -> Fallible<usize> {
         let mut num_changed = 0;
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -104,7 +105,7 @@ impl DataPackUnion {
     }
 
     /// Lookup Key. If the key is missing, scan for changes in the pack files and try once more.
-    fn get(&mut self, key: &Key) -> Result<Vec<u8>> {
+    fn get(&mut self, key: &Key) -> Fallible<Vec<u8>> {
         match self.store.get(key) {
             Ok(data) => return Ok(data),
             Err(e) => match e.downcast_ref::<KeyError>() {
@@ -160,7 +161,7 @@ pub extern "C" fn revisionstore_datapackunion_free(store: *mut DataPackUnion) {
 }
 
 /// Construct an instance of Key from the provided ffi parameters
-fn make_key(name: *const u8, name_len: usize, node: *const u8, node_len: usize) -> Result<Key> {
+fn make_key(name: *const u8, name_len: usize, node: *const u8, node_len: usize) -> Fallible<Key> {
     debug_assert!(!name.is_null());
     debug_assert!(!node.is_null());
 
@@ -180,7 +181,7 @@ fn datapackunion_get_impl(
     name_len: usize,
     node: *const u8,
     node_len: usize,
-) -> Result<Vec<u8>> {
+) -> Fallible<Vec<u8>> {
     debug_assert!(!store.is_null());
     let store = unsafe { &mut *store };
     let key = make_key(name, name_len, node, node_len)?;

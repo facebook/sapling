@@ -3,10 +3,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use failure::Fallible;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::Iterator;
 
-use error::Result;
 use historystore::{Ancestors, NodeInfo};
 use key::Key;
 
@@ -19,14 +19,14 @@ pub enum AncestorTraversal {
     Complete,
 }
 
-pub struct AncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> {
+pub struct AncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> {
     traversal: AncestorTraversal,
     get_more: T,
     seen: HashSet<Key>,
     queue: VecDeque<Key>,
 }
 
-pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> {
+pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> {
     traversal: AncestorTraversal,
     get_more: T,
     seen: HashSet<Key>,
@@ -34,7 +34,7 @@ pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestor
     pending_infos: HashMap<Key, NodeInfo>,
 }
 
-impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> AncestorIterator<T> {
+impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> AncestorIterator<T> {
     pub fn new(key: &Key, get_more: T, traversal: AncestorTraversal) -> Self {
         let mut iter = AncestorIterator {
             traversal: traversal,
@@ -51,7 +51,7 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> AncestorIterator<T> {
     }
 }
 
-impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> BatchedAncestorIterator<T> {
+impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> BatchedAncestorIterator<T> {
     pub fn new(key: &Key, get_more: T, traversal: AncestorTraversal) -> Self {
         let mut iter = BatchedAncestorIterator {
             traversal: traversal,
@@ -69,8 +69,8 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> BatchedAncestorIterator<T>
     }
 }
 
-impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> Iterator for AncestorIterator<T> {
-    type Item = Result<(Key, NodeInfo)>;
+impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> Iterator for AncestorIterator<T> {
+    type Item = Fallible<(Key, NodeInfo)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(current) = self.queue.pop_front() {
@@ -104,8 +104,8 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Result<NodeInfo>> Iterator for AncestorIterat
     }
 }
 
-impl<T: Fn(&Key, &HashSet<Key>) -> Result<Ancestors>> Iterator for BatchedAncestorIterator<T> {
-    type Item = Result<(Key, NodeInfo)>;
+impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> Iterator for BatchedAncestorIterator<T> {
+    type Item = Fallible<(Key, NodeInfo)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(current) = self.queue.pop_front() {
@@ -199,7 +199,7 @@ mod tests {
             &tip,
             |k, _seen| Ok(ancestors.get(&k).unwrap().clone()),
             AncestorTraversal::Complete,
-        ).collect::<Result<Ancestors>>()
+        ).collect::<Fallible<Ancestors>>()
             .unwrap();
         assert_eq!(ancestors, found_ancestors);
     }
@@ -223,7 +223,7 @@ mod tests {
                 Ok(k_ancestors)
             },
             AncestorTraversal::Complete,
-        ).collect::<Result<Ancestors>>()
+        ).collect::<Fallible<Ancestors>>()
             .unwrap();
         assert_eq!(ancestors, found_ancestors);
     }
@@ -270,7 +270,7 @@ mod tests {
             &tip,
             |k, _seen| Ok(ancestors.get(&k).unwrap().clone()),
             AncestorTraversal::Complete,
-        ).collect::<Result<Ancestors>>()
+        ).collect::<Fallible<Ancestors>>()
             .unwrap();
         assert_eq!(ancestors, found_ancestors);
     }

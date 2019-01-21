@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use ancestors::{AncestorIterator, AncestorTraversal};
-use error::Result;
+use failure::Fallible;
 use historyindex::HistoryIndex;
 use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
@@ -32,7 +32,7 @@ pub enum HistoryPackVersion {
 }
 
 impl HistoryPackVersion {
-    fn new(value: u8) -> Result<Self> {
+    fn new(value: u8) -> Fallible<Self> {
         match value {
             0 => Ok(HistoryPackVersion::Zero),
             1 => Ok(HistoryPackVersion::One),
@@ -69,7 +69,7 @@ pub struct HistoryEntry<'a> {
     pub copy_from: Option<&'a [u8]>,
 }
 
-fn read_slice<'a, 'b>(cur: &'a mut Cursor<&[u8]>, buf: &'b [u8], size: usize) -> Result<&'b [u8]> {
+fn read_slice<'a, 'b>(cur: &'a mut Cursor<&[u8]>, buf: &'b [u8], size: usize) -> Fallible<&'b [u8]> {
     let start = cur.position() as usize;
     let end = start + size;
     let file_name = buf.get_err(start..end)?;
@@ -78,7 +78,7 @@ fn read_slice<'a, 'b>(cur: &'a mut Cursor<&[u8]>, buf: &'b [u8], size: usize) ->
 }
 
 impl<'a> FileSectionHeader<'a> {
-    pub(crate) fn read(buf: &[u8]) -> Result<FileSectionHeader> {
+    pub(crate) fn read(buf: &[u8]) -> Fallible<FileSectionHeader> {
         let mut cur = Cursor::new(buf);
         let file_name_len = cur.read_u16::<BigEndian>()? as usize;
         let file_name = read_slice(&mut cur, &buf, file_name_len)?;
@@ -87,7 +87,7 @@ impl<'a> FileSectionHeader<'a> {
         Ok(FileSectionHeader { file_name, count })
     }
 
-    pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
+    pub fn write<T: Write>(&self, writer: &mut T) -> Fallible<()> {
         writer.write_u16::<BigEndian>(self.file_name.len() as u16)?;
         writer.write_all(self.file_name)?;
         writer.write_u32::<BigEndian>(self.count)?;
@@ -96,7 +96,7 @@ impl<'a> FileSectionHeader<'a> {
 }
 
 impl<'a> HistoryEntry<'a> {
-    pub(crate) fn read(buf: &[u8]) -> Result<HistoryEntry> {
+    pub(crate) fn read(buf: &[u8]) -> Fallible<HistoryEntry> {
         let mut cur = Cursor::new(buf);
         let mut node_buf: [u8; 20] = Default::default();
 
@@ -138,7 +138,7 @@ impl<'a> HistoryEntry<'a> {
         p2: &Node,
         linknode: &Node,
         copy_from: &Option<&[u8]>,
-    ) -> Result<()> {
+    ) -> Fallible<()> {
         writer.write_all(node.as_ref())?;
         writer.write_all(p1.as_ref())?;
         writer.write_all(p2.as_ref())?;
@@ -165,7 +165,7 @@ pub struct HistoryPack {
 }
 
 impl HistoryPack {
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new(path: &Path) -> Fallible<Self> {
         let base_path = PathBuf::from(path);
         let pack_path = path.with_extension("histpack");
         let file = File::open(&pack_path)?;
@@ -210,15 +210,15 @@ impl HistoryPack {
         &self.index_path
     }
 
-    fn read_file_section_header(&self, offset: u64) -> Result<FileSectionHeader> {
+    fn read_file_section_header(&self, offset: u64) -> Fallible<FileSectionHeader> {
         FileSectionHeader::read(&self.mmap.as_ref().get_err(offset as usize..)?)
     }
 
-    fn read_history_entry(&self, offset: u64) -> Result<HistoryEntry> {
+    fn read_history_entry(&self, offset: u64) -> Fallible<HistoryEntry> {
         HistoryEntry::read(&self.mmap.as_ref().get_err(offset as usize..)?)
     }
 
-    fn read_node_info(&self, key: &Key, offset: u64) -> Result<NodeInfo> {
+    fn read_node_info(&self, key: &Key, offset: u64) -> Fallible<NodeInfo> {
         let entry = self.read_history_entry(offset)?;
         assert_eq!(&entry.node, key.node());
         let p1 = Key::new(
@@ -238,7 +238,7 @@ impl HistoryPack {
 }
 
 impl HistoryStore for HistoryPack {
-    fn get_ancestors(&self, key: &Key) -> Result<Ancestors> {
+    fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
         AncestorIterator::new(
             key,
             |k, _seen| self.get_node_info(k),
@@ -247,7 +247,7 @@ impl HistoryStore for HistoryPack {
         .collect()
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
         Ok(keys
             .iter()
             .filter(|k| self.index.get_node_entry(k).is_err())
@@ -255,20 +255,20 @@ impl HistoryStore for HistoryPack {
             .collect())
     }
 
-    fn get_node_info(&self, key: &Key) -> Result<NodeInfo> {
+    fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
         let node_location = self.index.get_node_entry(key)?;
         self.read_node_info(key, node_location.offset)
     }
 }
 
 impl IterableStore for HistoryPack {
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = Result<Key>> + 'a> {
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
         Box::new(HistoryPackIterator::new(self))
     }
 }
 
 impl Repackable for HistoryPack {
-    fn delete(self) -> Result<()> {
+    fn delete(self) -> Fallible<()> {
         // On some platforms, removing a file can fail if it's still opened or mapped, let's make
         // sure we close and unmap them before deletion.
         drop(self.mmap);
@@ -311,7 +311,7 @@ impl<'a> HistoryPackIterator<'a> {
 }
 
 impl<'a> Iterator for HistoryPackIterator<'a> {
-    type Item = Result<Key>;
+    type Item = Fallible<Key>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.current_remaining == 0 && (self.offset as usize) < self.pack.len() {
@@ -491,7 +491,7 @@ pub mod tests {
 
         let mut keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
         keys.sort_unstable();
-        let mut iter_keys = pack.iter().collect::<Result<Vec<Key>>>().unwrap();
+        let mut iter_keys = pack.iter().collect::<Fallible<Vec<Key>>>().unwrap();
         iter_keys.sort_unstable();
         assert_eq!(iter_keys, keys,);
     }

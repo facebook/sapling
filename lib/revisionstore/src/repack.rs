@@ -5,7 +5,7 @@
 
 use datapack::{DataPack, DataPackVersion};
 use datastore::DataStore;
-use error::Result;
+use failure::Fallible;
 use historypack::{HistoryPack, HistoryPackVersion};
 use historystore::HistoryStore;
 use key::Key;
@@ -23,7 +23,7 @@ pub enum RepackOutputType {
 }
 
 pub trait IterableStore {
-    fn iter<'a>(&'a self) -> Box<Iterator<Item = Result<Key>> + 'a>;
+    fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a>;
 }
 
 pub struct RepackResult {
@@ -53,7 +53,7 @@ impl RepackResult {
 }
 
 pub trait Repackable: IterableStore {
-    fn delete(self) -> Result<()>;
+    fn delete(self) -> Fallible<()>;
     fn id(&self) -> &Arc<PathBuf>;
     fn kind(&self) -> RepackOutputType;
 
@@ -61,7 +61,7 @@ pub trait Repackable: IterableStore {
     /// came from and what type it is (data vs history).
     fn repack_iter<'a>(
         &'a self,
-    ) -> Box<Iterator<Item = Result<(Arc<PathBuf>, RepackOutputType, Key)>> + 'a> {
+    ) -> Box<Iterator<Item = Fallible<(Arc<PathBuf>, RepackOutputType, Key)>> + 'a> {
         let id = self.id().clone();
         let kind = self.kind().clone();
         Box::new(
@@ -70,11 +70,11 @@ pub trait Repackable: IterableStore {
         )
     }
 
-    fn cleanup(self, result: &RepackResult) -> Result<()>
+    fn cleanup(self, result: &RepackResult) -> Fallible<()>
     where
         Self: Sized,
     {
-        let owned_keys = self.iter().collect::<Result<HashSet<Key>>>()?;
+        let owned_keys = self.iter().collect::<Fallible<HashSet<Key>>>()?;
         if owned_keys.is_subset(result.packed_keys())
             && !result.created_packs().contains(self.id().as_ref())
         {
@@ -85,7 +85,7 @@ pub trait Repackable: IterableStore {
     }
 }
 
-fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Result<()> {
+fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Fallible<()> {
     for k in data_pack.iter() {
         let key = k?;
         let chain = data_pack.get_delta_chain(&key)?;
@@ -105,7 +105,7 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
 pub fn repack_datapacks<'a>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
-) -> Result<PathBuf> {
+) -> Fallible<PathBuf> {
     let mut empty = true;
     let mut mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
 
@@ -130,7 +130,7 @@ pub fn repack_datapacks<'a>(
     }
 }
 
-fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryPack) -> Result<()> {
+fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryPack) -> Fallible<()> {
     for k in history_pack.iter() {
         let key = k?;
         let node = history_pack.get_node_info(&key)?;
@@ -143,7 +143,7 @@ fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryP
 pub fn repack_historypacks<'a>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     outdir: &Path,
-) -> Result<PathBuf> {
+) -> Fallible<PathBuf> {
     let mut empty = true;
     let mut mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
 
@@ -169,7 +169,7 @@ pub fn repack_historypacks<'a>(
 }
 
 /// List all the pack files in the directory `dir` that ends with `extension`.
-pub fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
+pub fn list_packs(dir: &Path, extension: &str) -> Fallible<Vec<PathBuf>> {
     let mut dirents = fs::read_dir(dir)?
         .filter_map(|e| match e {
             Err(_) => None,
@@ -190,7 +190,7 @@ pub fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
 /// Select all the packs from `packs` that needs to be repacked during an incremental repack.
 ///
 /// The filtering is fairly basic and is intended to reduce the fragmentation of pack files.
-pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<PathBuf>> {
+pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Fallible<Vec<PathBuf>> {
     // XXX: Read these from the configuration.
     let repackmaxpacksize = 4 * 1024 * 1024 * 1024;
     let repacksizelimit = 100 * 1024 * 1024;
@@ -249,13 +249,13 @@ mod tests {
     }
 
     impl IterableStore for FakeStore {
-        fn iter<'a>(&'a self) -> Box<Iterator<Item = Result<Key>> + 'a> {
+        fn iter<'a>(&'a self) -> Box<Iterator<Item = Fallible<Key>> + 'a> {
             Box::new(self.keys.iter().map(|k| Ok(k.clone())))
         }
     }
 
     impl Repackable for FakeStore {
-        fn delete(self) -> Result<()> {
+        fn delete(self) -> Fallible<()> {
             self.deleted.store(true, Ordering::Release);
             Ok(())
         }
@@ -368,7 +368,7 @@ mod tests {
         assert!(datapack.is_ok());
         let newpack = datapack.unwrap();
         assert_eq!(
-            newpack.iter().collect::<Result<Vec<Key>>>().unwrap(),
+            newpack.iter().collect::<Fallible<Vec<Key>>>().unwrap(),
             revisions
                 .iter()
                 .map(|d| d.0.key.clone())
@@ -413,7 +413,7 @@ mod tests {
         assert!(newpath.is_ok());
         let newpack = DataPack::new(&newpath.unwrap()).unwrap();
         assert_eq!(
-            newpack.iter().collect::<Result<Vec<Key>>>().unwrap(),
+            newpack.iter().collect::<Fallible<Vec<Key>>>().unwrap(),
             revisions
                 .iter()
                 .flatten()
