@@ -89,7 +89,7 @@ Joining:
   your repo is not connected to any workspace
   use 'hg cloud join --help' for more details
   [255]
-  $ hg cloud join -w 'user/test/feature'
+  $ hg cloud join -w feature
   #commitcloud this repository is now connected to the 'user/test/feature' workspace for the 'server' repo
   #commitcloud synchronizing 'server' with 'user/test/feature'
   #commitcloud commits synchronized

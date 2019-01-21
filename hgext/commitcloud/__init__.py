@@ -136,7 +136,7 @@ from mercurial import (
 )
 from mercurial.i18n import _
 
-from . import commitcloudcommands, commitcloudcommon, commitcloudutil, state
+from . import commitcloudcommands, commitcloudcommon, commitcloudutil, state, workspace
 
 
 cmdtable = commitcloudcommands.cmdtable
@@ -158,7 +158,7 @@ configitem("commitcloud", "autocloudjoin", default=False)
 
 
 def _smartlogbackupmessagemap(orig, ui, repo):
-    if commitcloudutil.getworkspacename(repo):
+    if workspace.currentworkspace(repo):
         return {
             "inprogress": "syncing",
             "pending": "sync pending",
@@ -169,10 +169,11 @@ def _smartlogbackupmessagemap(orig, ui, repo):
 
 
 def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None, **opts):
-    wmgr = commitcloudutil.WorkspaceManager(repo)
-    if wmgr.workspace is not None:
+    if workspace.currentworkspace(repo):
         return orig(ui, repo, dest, ["hg", "cloud", "sync"], **opts)
-    elif ui.configbool("commitcloud", "autocloudjoin") and not wmgr.disconnected:
+    elif ui.configbool("commitcloud", "autocloudjoin") and not workspace.disconnected(
+        repo
+    ):
         # Only auto-join if the user has never connected before.  If they
         # deliberately disconnected, don't automatically rejoin.
         return orig(ui, repo, dest, ["hg", "cloud", "join"], **opts)
@@ -181,7 +182,7 @@ def _dobackgroundcloudsync(orig, ui, repo, dest=None, command=None, **opts):
 
 
 def _smartlogbackuphealthcheckmsg(orig, ui, repo, **opts):
-    if commitcloudutil.getworkspacename(repo):
+    if workspace.currentworkspace(repo):
         commitcloudutil.SubscriptionManager(repo).checksubscription()
         commitcloudcommands.backuplockcheck(ui, repo)
         hintutil.trigger("commitcloud-old-commits", repo)
@@ -190,7 +191,7 @@ def _smartlogbackuphealthcheckmsg(orig, ui, repo, **opts):
 
 
 def _smartlogbackupsuggestion(orig, ui, repo):
-    if commitcloudutil.getworkspacename(repo):
+    if workspace.currentworkspace(repo):
         commitcloudcommon.highlightstatus(
             ui,
             _(
@@ -206,8 +207,8 @@ def _smartlogbackupsuggestion(orig, ui, repo):
 
 @hint("commitcloud-old-commits")
 def _smartlogomittedcommitsmsg(repo):
-    workspace = commitcloudutil.getworkspacename(repo)
-    lastsyncstate = state.SyncState(repo, workspace)
+    workspacename = workspace.currentworkspace(repo)
+    lastsyncstate = state.SyncState(repo, workspacename)
     if lastsyncstate.omittedheads or lastsyncstate.omittedbookmarks:
         return _(
             "some older commits or bookmarks have not been synced to this repo\n"

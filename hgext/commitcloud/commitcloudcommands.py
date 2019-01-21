@@ -35,7 +35,7 @@ from mercurial import (
 # Mercurial
 from mercurial.i18n import _
 
-from . import commitcloudcommon, commitcloudutil, service, state
+from . import commitcloudcommon, commitcloudutil, service, state, workspace
 
 
 cmdtable = {}
@@ -48,15 +48,6 @@ infinitepushbackup = None
 # This must match the name from infinitepushbackup in order to maintain
 # mutual exclusivity with infinitepushbackups.
 _backuplockname = "infinitepushbackup.lock"
-
-workspaceopts = [
-    (
-        "w",
-        "workspace",
-        "",
-        _("workspace to join (default: 'user/<username>/default') (ADVANCED)"),
-    )
-]
 
 pullopts = [
     (
@@ -121,7 +112,7 @@ subcmd = cloud.subcommand(
 )
 
 
-@subcmd("join|connect", [] + workspaceopts + pullopts + pushopts)
+@subcmd("join|connect", [] + workspace.workspaceopts + pullopts + pushopts)
 def cloudjoin(ui, repo, **opts):
     """connect the local repository to commit cloud
 
@@ -134,10 +125,12 @@ def cloudjoin(ui, repo, **opts):
     tokenlocator = commitcloudutil.TokenLocator(ui)
     checkauthenticated(ui, repo, tokenlocator)
 
-    workspacemanager = commitcloudutil.WorkspaceManager(repo)
-    if workspacemanager.workspace:
+    workspacename = workspace.parseworkspace(ui, repo, **opts)
+    if workspacename is None:
+        workspacename = workspace.defaultworkspace(ui)
+    if workspace.currentworkspace(repo):
         commitcloudutil.SubscriptionManager(repo).removesubscription()
-    workspacemanager.setworkspace(opts.get("workspace"))
+    workspace.setworkspace(repo, workspacename)
 
     highlightstatus(
         ui,
@@ -145,12 +138,12 @@ def cloudjoin(ui, repo, **opts):
             "this repository is now connected to the '%s' "
             "workspace for the '%s' repo\n"
         )
-        % (workspacemanager.workspace, workspacemanager.reponame),
+        % (workspacename, commitcloudutil.getreponame(repo)),
     )
     cloudsync(ui, repo, checkbackedup=True, **opts)
 
 
-@subcmd("rejoin|reconnect", [] + workspaceopts + pullopts + pushopts)
+@subcmd("rejoin|reconnect", [] + workspace.workspaceopts + pullopts + pushopts)
 def cloudrejoin(ui, repo, **opts):
     """reconnect the local repository to commit cloud
 
@@ -168,15 +161,18 @@ def cloudrejoin(ui, repo, **opts):
         try:
             serv = service.get(ui, token)
             serv.check()
-            reponame, workspace = getdefaultrepoworkspace(ui, repo)
-            if opts.get("workspace"):
-                workspace = opts.get("workspace")
+            reponame = commitcloudutil.getreponame(repo)
+            workspacename = workspace.parseworkspace(ui, repo, **opts)
+            if workspacename is None:
+                workspacename = workspace.currentworkspace(repo)
+            if workspacename is None:
+                workspacename = workspace.defaultworkspace(ui)
             highlightstatus(
                 ui,
                 _("trying to reconnect to the '%s' workspace for the '%s' repo\n")
-                % (workspace, reponame),
+                % (workspacename, reponame),
             )
-            cloudrefs = serv.getreferences(reponame, workspace, 0)
+            cloudrefs = serv.getreferences(reponame, workspacename, 0)
             if cloudrefs.version == 0:
                 highlightstatus(
                     ui,
@@ -189,7 +185,7 @@ def cloudrejoin(ui, repo, **opts):
                         _("learn more about Commit Cloud at %s\n") % educationpage
                     )
             else:
-                commitcloudutil.WorkspaceManager(repo).setworkspace(workspace)
+                workspace.setworkspace(repo, workspacename)
                 highlightstatus(ui, _("the repository is now reconnected\n"))
                 cloudsync(ui, repo, checkbackedup=True, cloudrefs=cloudrefs, **opts)
             return
@@ -211,13 +207,13 @@ def cloudleave(ui, repo, **opts):
     repositories.
     """
     # do no crash on run cloud leave multiple times
-    if not commitcloudutil.getworkspacename(repo):
+    if not workspace.currentworkspace(repo):
         highlightstatus(
             ui, _("this repository has been already disconnected from commit cloud\n")
         )
         return
     commitcloudutil.SubscriptionManager(repo).removesubscription()
-    commitcloudutil.WorkspaceManager(repo).clearworkspace()
+    workspace.clearworkspace(repo)
     highlightstatus(ui, _("this repository is now disconnected from commit cloud\n"))
 
 
@@ -254,18 +250,7 @@ def cloudauth(ui, repo, **opts):
             authenticate(ui, repo, tokenlocator)
 
 
-@subcmd(
-    "smartlog|sl",
-    [
-        (
-            "u",
-            "user",
-            "",
-            _("short username to fetch smartlog view for (default workspace)"),
-        )
-    ]
-    + workspaceopts,
-)
+@subcmd("smartlog|sl", workspace.workspaceopts)
 def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     """get smartlog view for the default workspace of the given user
 
@@ -273,28 +258,23 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     the command provides a simple view as a list of draft commits.
     """
 
-    workspacemanager = commitcloudutil.WorkspaceManager(repo)
-    reponame = workspacemanager.reponame
-    username = opts.get("user")
-
-    if username:
-        workspace = workspacemanager.getdefaultworkspacename(username)
-    else:
-        if opts.get("workspace"):
-            workspace = opts.get("workspace")
-        else:
-            workspace = workspacemanager.defaultworkspace
+    reponame = commitcloudutil.getreponame(repo)
+    workspacename = workspace.parseworkspace(ui, repo, **opts)
+    if workspacename is None:
+        workspacename = workspace.currentworkspace(repo)
+    if workspacename is None:
+        workspacename = workspace.defaultworkspace(ui)
 
     highlightstatus(
         ui,
         _("searching draft commits for the '%s' workspace for the '%s' repo\n")
-        % (workspace, reponame),
+        % (workspacename, reponame),
     )
 
     serv = service.get(ui, commitcloudutil.TokenLocator(ui).token)
 
     with progress.spinner(ui, _("fetching")):
-        revdag = serv.getsmartlog(reponame, workspace, repo)
+        revdag = serv.getsmartlog(reponame, workspacename, repo)
 
     ui.status(_("Smartlog:\n\n"))
 
@@ -313,22 +293,9 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
 
 
-@subcmd(
-    "supersmartlog|ssl",
-    [
-        (
-            "u",
-            "user",
-            "",
-            _("short username to fetch smartlog view for (default workspace)"),
-        )
-    ]
-    + workspaceopts,
-)
+@subcmd("supersmartlog|ssl", workspace.workspaceopts)
 def cloudsupersmartlog(ui, repo, **opts):
-    """get super smartlog view for the give workspace
-    """
-
+    """get super smartlog view for the given workspace"""
     cloudsmartlog(ui, repo, "ssl_cloud", **opts)
 
 
@@ -365,31 +332,6 @@ def checkauthenticated(ui, repo, tokenlocator):
         else:
             return
     authenticate(ui, repo, tokenlocator)
-
-
-def getrepoworkspace(ui, repo):
-    """get the workspace identity for the currently joined workspace"""
-    workspacemanager = commitcloudutil.WorkspaceManager(repo)
-    reponame = workspacemanager.reponame
-    if not reponame:
-        raise commitcloudcommon.ConfigurationError(ui, _("unknown repo"))
-
-    workspace = workspacemanager.workspace
-    if not workspace:
-        raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))
-
-    return reponame, workspace
-
-
-def getdefaultrepoworkspace(ui, repo):
-    """get default workspace identity
-       repo may be not joined to this workspace yet
-    """
-    workspacemanager = commitcloudutil.WorkspaceManager(repo)
-    reponame = workspacemanager.reponame
-    if not reponame:
-        raise commitcloudcommon.ConfigurationError(ui, _("unknown repo"))
-    return reponame, workspacemanager.defaultworkspace
 
 
 @subcmd(
@@ -488,11 +430,14 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
     start = time.time()
 
     tokenlocator = commitcloudutil.TokenLocator(ui)
-    reponame, workspace = getrepoworkspace(ui, repo)
+    reponame = commitcloudutil.getreponame(repo)
+    workspacename = workspace.currentworkspace(repo)
+    if workspacename is None:
+        raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))
     serv = service.get(ui, tokenlocator.token)
-    highlightstatus(ui, _("synchronizing '%s' with '%s'\n") % (reponame, workspace))
+    highlightstatus(ui, _("synchronizing '%s' with '%s'\n") % (reponame, workspacename))
     commitcloudutil.writesyncprogress(
-        repo, "starting synchronizing with '%s'" % workspace
+        repo, "starting synchronizing with '%s'" % workspacename
     )
 
     def directfetching(heads):
@@ -516,7 +461,7 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
                     )
                 )
 
-    lastsyncstate = state.SyncState(repo, workspace)
+    lastsyncstate = state.SyncState(repo, workspacename)
 
     # external services can run cloud sync and know the lasest version
     version = opts.get("workspace_version")
@@ -536,9 +481,9 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
         # sync, use 0 as the last version to get a fresh copy of the full state.
         if maxage != lastsyncstate.maxage:
             fetchversion = 0
-        cloudrefs = serv.getreferences(reponame, workspace, fetchversion)
+        cloudrefs = serv.getreferences(reponame, workspacename, fetchversion)
 
-    pushrevspec = calcpushrevfilter(ui, repo, workspace, opts)
+    pushrevspec = calcpushrevfilter(ui, repo, workspacename, opts)
     synced = False
     pushfailures = set()
     while not synced:
@@ -698,11 +643,11 @@ def _docloudsync(ui, repo, checkbackedup=False, cloudrefs=None, **opts):
 
             # Update the cloud heads, bookmarks and obsmarkers.
             commitcloudutil.writesyncprogress(
-                repo, "finishing synchronizing with '%s'" % workspace
+                repo, "finishing synchronizing with '%s'" % workspacename
             )
             synced, cloudrefs = serv.updatereferences(
                 reponame,
-                workspace,
+                workspacename,
                 lastsyncstate.version,
                 lastsyncstate.heads,
                 newcloudheads,
@@ -784,8 +729,10 @@ def cloudrecover(ui, repo, **opts):
     the repository from scratch.
     """
     highlightstatus(ui, "clearing local commit cloud cache\n")
-    _, workspace = getrepoworkspace(ui, repo)
-    state.SyncState.erasestate(repo, workspace)
+    workspacename = workspace.currentworkspace(repo)
+    if workspacename is None:
+        raise commitcloudcommon.WorkspaceError(ui, _("undefined workspace"))
+    state.SyncState.erasestate(repo, workspacename)
     cloudsync(ui, repo, checkbackedup=True, **opts)
 
 
@@ -1176,7 +1123,7 @@ def backuplockcheck(ui, repo):
             )
 
 
-def calcpushrevfilter(ui, repo, workspace, opts):
+def calcpushrevfilter(ui, repo, workspacename, opts):
     """build a filter to figure out what unsynced commits to send to the server
 
     This allows `cloud sync` to skip some local commits on any machine if configured
@@ -1188,7 +1135,7 @@ def calcpushrevfilter(ui, repo, workspace, opts):
         revspec = opts.get("push_revs")
     # configuration options (effective for the default workspace only)
     # (will be intersection)
-    elif workspace == getdefaultrepoworkspace(ui, repo)[1]:
+    elif workspacename == workspace.defaultworkspace(ui):
         collect = []
         if ui.configbool("commitcloud", "user_commits_only"):
             collect.append("author(%s)" % util.emailuser(ui.username()))

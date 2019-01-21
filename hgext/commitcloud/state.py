@@ -23,22 +23,22 @@ class SyncState(object):
     prefix = "commitcloudstate."
 
     @classmethod
-    def _filename(cls, workspace):
+    def _filename(cls, workspacename):
         # make a unique valid filename
         return (
             cls.prefix
-            + "".join(x for x in workspace if x.isalnum())
-            + ".%s" % (hashlib.sha256(workspace).hexdigest()[0:5])
+            + "".join(x for x in workspacename if x.isalnum())
+            + ".%s" % (hashlib.sha256(workspacename).hexdigest()[0:5])
         )
 
     @classmethod
-    def erasestate(cls, repo, workspace):
-        filename = cls._filename(workspace)
+    def erasestate(cls, repo, workspacename):
+        filename = cls._filename(workspacename)
         # clean up the current state in force recover mode
         repo.svfs.tryunlink(filename)
 
-    def __init__(self, repo, workspace):
-        self.filename = self._filename(workspace)
+    def __init__(self, repo, workspacename):
+        self.filename = self._filename(workspacename)
         self.repo = repo
         if repo.svfs.exists(self.filename):
             with repo.svfs.open(self.filename, "r") as f:

@@ -25,7 +25,7 @@ from mercurial import (
 )
 from mercurial.i18n import _
 
-from . import commitcloudcommon
+from . import commitcloudcommon, workspace
 
 
 SERVICE = "commitcloud"
@@ -310,85 +310,6 @@ class TokenLocator(object):
             self._settokentofile(token)
 
 
-class WorkspaceManager(object):
-    """
-    Set / get current workspace for Commit Cloud
-    """
-
-    filename = "commitcloudrc"
-
-    def __init__(self, repo):
-        self.ui = repo.ui
-        self.repo = repo
-
-    def _getdefaultworkspacename(self):
-        """
-        Workspace naming convention:
-        section/section_name/workspace_name
-            where section is one of ('user', 'group', 'team', 'project')
-        Examples:
-            team/source_control/shared
-            user/<username>/default
-            project/commit_cloud/default
-        """
-        username = self.ui.username()
-        domain = self.ui.config("commitcloud", "email_domain")
-        return "user/" + util.emaildomainuser(username, domain) + "/default"
-
-    def getdefaultworkspacename(self, user):
-        return "user/" + user + "/default"
-
-    @property
-    def reponame(self):
-        return self.ui.config(
-            "remotefilelog",
-            "reponame",
-            os.path.basename(self.ui.config("paths", "default")),
-        )
-
-    @property
-    def defaultworkspace(self):
-        """Default workspace name"""
-        return self._getdefaultworkspacename()
-
-    @property
-    def workspace(self):
-        """Current connected workspace"""
-        return self._get("current_workspace")
-
-    @property
-    def disconnected(self):
-        """Whether the user has manually disconnected from commit cloud"""
-        disconnected = self._get("disconnected")
-        if disconnected is None or isinstance(disconnected, bool):
-            return disconnected
-        return util.parsebool(disconnected)
-
-    def _get(self, name):
-        """Read commitcloudrc file to get a value"""
-        if self.repo.svfs.exists(self.filename):
-            with self.repo.svfs.open(self.filename, r"rb") as f:
-                workspaceconfig = config.config()
-                workspaceconfig.read(self.filename, f)
-                return workspaceconfig.get("commitcloud", name)
-        else:
-            return None
-
-    def setworkspace(self, workspace=None):
-        if not workspace:
-            workspace = self._getdefaultworkspacename()
-        with self.repo.wlock(), self.repo.lock(), self.repo.svfs.open(
-            self.filename, "w", atomictemp=True
-        ) as f:
-            f.write("[commitcloud]\ncurrent_workspace=%s\n" % workspace)
-
-    def clearworkspace(self):
-        with self.repo.wlock(), self.repo.lock(), self.repo.svfs.open(
-            self.filename, "w", atomictemp=True
-        ) as f:
-            f.write("[commitcloud]\ndisconnected=true\n")
-
-
 class SubscriptionManager(object):
 
     dirname = ".commitcloud"
@@ -397,9 +318,8 @@ class SubscriptionManager(object):
     def __init__(self, repo):
         self.ui = repo.ui
         self.repo = repo
-        workspacemanager = WorkspaceManager(self.repo)
-        self.workspace = workspacemanager.workspace
-        self.repo_name = workspacemanager.reponame
+        self.workspacename = workspace.currentworkspace(repo)
+        self.repo_name = getreponame(repo)
         self.repo_root = self.repo.path
         self.vfs = vfsmod.vfs(
             _gethomevfs(self.ui, "connected_subscribers_path").join(
@@ -407,7 +327,7 @@ class SubscriptionManager(object):
             )
         )
         self.filename_unique = hashlib.sha256(
-            "\0".join([self.repo_root, self.repo_name, self.workspace])
+            "\0".join([self.repo_root, self.repo_name, self.workspacename])
         ).hexdigest()[:32]
         self.subscription_enabled = self.ui.configbool(
             "commitcloud", "subscription_enabled"
@@ -424,7 +344,7 @@ class SubscriptionManager(object):
             with self.vfs.open(self.filename_unique, "w") as configfile:
                 configfile.write(
                     ("[commitcloud]\nworkspace=%s\nrepo_name=%s\nrepo_root=%s\n")
-                    % (self.workspace, self.repo_name, self.repo_root)
+                    % (self.workspacename, self.repo_name, self.repo_root)
                 )
                 self._restart_service_subscriptions()
         else:
@@ -462,6 +382,18 @@ class SubscriptionManager(object):
                 self._warn_service_not_running()
         finally:
             s.close()
+
+
+def getreponame(repo):
+    """get the configured reponame for this repo"""
+    reponame = repo.ui.config(
+        "remotefilelog",
+        "reponame",
+        os.path.basename(repo.ui.config("paths", "default")),
+    )
+    if not reponame:
+        raise commitcloudcommon.ConfigurationError(repo.ui, _("unknown repo"))
+    return reponame
 
 
 # Obsmarker syncing.
@@ -527,10 +459,6 @@ def getsyncingobsmarkers(repo):
 def clearsyncingobsmarkers(repo):
     """Clears all syncing obsmarkers.  The caller must hold the backup lock."""
     repo.sharedvfs.unlink(_obsmarkerssyncing)
-
-
-def getworkspacename(repo):
-    return WorkspaceManager(repo).workspace
 
 
 def getremotepath(repo, ui, dest):
