@@ -40,10 +40,14 @@ extern crate rust_thrift;
 extern crate scuba_ext;
 extern crate secure_utils;
 extern crate serde;
+extern crate tracing;
+extern crate uuid;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate slog;
+extern crate futures_stats;
+extern crate serde_json;
 extern crate slog_async;
 extern crate slog_glog_fmt;
 extern crate slog_logview;
@@ -436,6 +440,13 @@ fn main() -> Result<()> {
     } else {
         None
     };
+
+    let scuba_table = if with_scuba {
+        Some(config::SCUBA_TABLE.into())
+    } else {
+        None
+    };
+
     let use_ssl = ssl_acceptor.is_some();
     let sys = actix::System::new("mononoke-apiserver");
     let executor = runtime.executor();
@@ -444,11 +455,18 @@ fn main() -> Result<()> {
         repo_configs,
         myrouter_port,
         executor,
+        scuba_table.clone(),
     ))?;
     let mononoke = Arc::new(mononoke);
 
     if let Ok(port) = thrift_port {
-        thrift::make_thrift(thrift_logger, host.to_string(), port, mononoke.clone());
+        thrift::make_thrift(
+            thrift_logger,
+            host.to_string(),
+            port,
+            mononoke.clone(),
+            scuba_table.clone(),
+        );
     }
 
     let state = HttpServerState {
@@ -463,11 +481,10 @@ fn main() -> Result<()> {
             .middleware({
                 if with_scuba {
                     middleware::ScubaMiddleware::new(
-                        Some(config::SCUBA_TABLE.into()),
-                        actix_logger.clone(),
+                        scuba_table.clone(),
                     )
                 } else {
-                    middleware::ScubaMiddleware::new(None, actix_logger.clone())
+                    middleware::ScubaMiddleware::new(None)
                 }
             })
             .route(

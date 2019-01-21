@@ -8,17 +8,15 @@ use actix_web::{HttpRequest, HttpResponse};
 use actix_web::error::Result;
 use actix_web::middleware::{Finished, Middleware, Started};
 use scuba_ext::ScubaSampleBuilder;
-use slog::Logger;
 
 use super::response_time::ResponseTime;
 
 pub struct ScubaMiddleware {
     scuba: ScubaSampleBuilder,
-    logger: Logger,
 }
 
 impl ScubaMiddleware {
-    pub fn new(table_name: Option<String>, logger: Logger) -> ScubaMiddleware {
+    pub fn new(table_name: Option<String>) -> ScubaMiddleware {
         let mut scuba = if let Some(table_name) = table_name {
             ScubaSampleBuilder::new(table_name)
         } else {
@@ -27,7 +25,7 @@ impl ScubaMiddleware {
 
         scuba.add_common_server_data();
 
-        ScubaMiddleware { scuba, logger }
+        ScubaMiddleware { scuba }
     }
 }
 
@@ -45,8 +43,10 @@ impl<S> Middleware<S> for ScubaMiddleware {
             }
         }
 
-        scuba.add("method", req.method().to_string());
-        scuba.add("path", req.path());
+        scuba
+            .add("type", "http")
+            .add("method", req.method().to_string())
+            .add("path", req.path());
         req.extensions_mut().insert(scuba);
 
         self.start_timer(req);
@@ -65,11 +65,7 @@ impl<S> Middleware<S> for ScubaMiddleware {
                 scuba.add("response_time", time);
             }
 
-            if scuba.is_discard() {
-                debug!(self.logger, "scuba: {:?}", scuba);
-            } else {
-                scuba.log();
-            }
+            scuba.log();
         }
 
         Finished::Done
