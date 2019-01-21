@@ -40,6 +40,7 @@ extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
 extern crate panichandler;
+extern crate phases;
 extern crate repo_client;
 extern crate scuba_ext;
 

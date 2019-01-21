@@ -36,6 +36,7 @@ use metaconfig::{
     ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType,
 };
 use mononoke_types::RepositoryId;
+use phases::SqlPhases;
 use repo_client::{open_blobrepo, MononokeRepo};
 
 const CACHE_ARGS: &[(&str, &str)] = &[
@@ -292,23 +293,30 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {
     RepositoryId::new(repo_id as i32)
 }
 
-pub fn open_sql_changesets(matches: &ArgMatches) -> Result<SqlChangesets> {
+fn open_sql<T>(matches: &ArgMatches, name: &'static str) -> Result<T>
+where
+    T: SqlConstructors,
+{
     let (_, repo_type) = find_repo_type(matches)?;
     match repo_type {
         RepoType::BlobFiles(ref data_dir)
         | RepoType::BlobRocks(ref data_dir)
-        | RepoType::BlobSqlite(ref data_dir) => {
-            SqlChangesets::with_sqlite_path(data_dir.join("changesets"))
-        }
+        | RepoType::TestBlobDelayRocks(ref data_dir, ..)
+        | RepoType::BlobSqlite(ref data_dir) => T::with_sqlite_path(data_dir.join(name)),
         RepoType::BlobRemote { ref db_address, .. } => {
             let myrouter_port =
                 parse_myrouter_port(matches).expect("myrouter port provided is not provided");
-            Ok(SqlChangesets::with_myrouter(&db_address, myrouter_port))
-        }
-        RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
-            SqlChangesets::with_sqlite_path(data_dir.join("changesets"))
+            Ok(T::with_myrouter(&db_address, myrouter_port))
         }
     }
+}
+
+pub fn open_sql_changesets(matches: &ArgMatches) -> Result<SqlChangesets> {
+    open_sql::<SqlChangesets>(matches, "changesets")
+}
+
+pub fn open_sql_phases(matches: &ArgMatches) -> Result<SqlPhases> {
+    open_sql::<SqlPhases>(matches, "phases")
 }
 
 /// Create a new `MononokeRepo` -- for local instances, expect its contents to be empty.

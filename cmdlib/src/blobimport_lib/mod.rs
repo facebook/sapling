@@ -21,6 +21,7 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use mercurial::RevlogRepo;
 use mercurial_types::HgNodeHash;
+use phases::Phases;
 
 use self::changeset::UploadChangesets;
 
@@ -33,6 +34,7 @@ pub struct Blobimport {
     pub skip: Option<usize>,
     pub commits_limit: Option<usize>,
     pub no_bookmark: bool,
+    pub phases_store: Arc<Phases>,
 }
 
 impl Blobimport {
@@ -46,6 +48,7 @@ impl Blobimport {
             skip,
             commits_limit,
             no_bookmark,
+            phases_store,
         } = self;
 
         let stale_bookmarks = {
@@ -62,6 +65,7 @@ impl Blobimport {
             changeset,
             skip,
             commits_limit,
+            phases_store,
         }.upload()
             .enumerate()
             .map({

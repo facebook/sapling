@@ -20,13 +20,16 @@ use scuba_ext::ScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;
 use tracing::{trace_args, EventId, Traced};
 
-use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobChangeset,
-               HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
-               UploadHgTreeEntry};
+use blobrepo::{
+    BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobChangeset, HgBlobEntry,
+    UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
+};
 use mercurial::{manifest, RevlogChangeset, RevlogEntry, RevlogRepo};
-use mercurial_types::{HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
-                      NULL_HASH};
+use mercurial_types::{
+    HgBlob, HgChangesetId, HgManifestId, HgNodeHash, MPath, RepoPath, Type, NULL_HASH,
+};
 use mononoke_types::BonsaiChangeset;
+use phases::{Phase, Phases};
 
 const CONCURRENT_CHANGESETS: usize = 100;
 const CONCURRENT_BLOB_UPLOADS_PER_CHANGESET: usize = 100;
@@ -77,7 +80,8 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
         .and_then({
             let revlog_repo = revlog_repo.clone();
             move |cs| {
-                let mut parents = cs.parents()
+                let mut parents = cs
+                    .parents()
                     .into_iter()
                     .map(HgChangesetId::new)
                     .map(|csid| {
@@ -163,7 +167,8 @@ fn upload_entry(
         None => {
             return future::err(err_msg(
                 "internal error: joined root path with root manifest",
-            )).boxify()
+            ))
+            .boxify();
         }
         Some(path) => path,
     };
@@ -212,6 +217,7 @@ pub struct UploadChangesets {
     pub changeset: Option<HgNodeHash>,
     pub skip: Option<usize>,
     pub commits_limit: Option<usize>,
+    pub phases_store: Arc<Phases>,
 }
 
 impl UploadChangesets {
@@ -223,6 +229,7 @@ impl UploadChangesets {
             changeset,
             skip,
             commits_limit,
+            phases_store,
         } = self;
 
         let changesets = match changeset {
@@ -342,10 +349,17 @@ impl UploadChangesets {
                 let cshandle =
                     create_changeset.create(ctx.clone(), &blobrepo, ScubaSampleBuilder::with_discard());
                 parent_changeset_handles.insert(csid, cshandle.clone());
+
+                cloned!(ctx, phases_store);
+                let blobrepo = (*blobrepo).clone();
+
+                // Uploading changeset and populate phases
+                // We know they are public.
                 oneshot::spawn(cshandle
                     .get_completed_changeset()
                     .with_context(move |_| format!("While uploading changeset: {}", csid))
                     .from_err(), &DefaultExecutor::current())
+                    .and_then(move |shared| phases_store.add(ctx, blobrepo, shared.0.get_changeset_id(), Phase::Public).map(move |_| shared))
                     .boxify()
             })
             // This is the number of changesets to upload in parallel. Keep it small to keep the database

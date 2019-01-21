@@ -89,6 +89,8 @@ fn main() -> Result<()> {
 
     let no_bookmark = matches.is_present("no-bookmark");
 
+    let phases_store = Arc::new(args::open_sql_phases(&matches)?);
+
     let blobimport =
         args::create_repo(ctx.clone(), &ctx.logger(), &matches).and_then(move |repo| {
             let blobrepo = Arc::new(repo.blobrepo().clone());
@@ -101,6 +103,7 @@ fn main() -> Result<()> {
                 skip,
                 commits_limit,
                 no_bookmark,
+                phases_store,
             }
             .import()
             .traced(ctx.trace(), "blobimport", trace_args!())
