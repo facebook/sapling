@@ -22,10 +22,11 @@ def run(binaryexecution):
     if sys.path[0] != libdir:
         sys.path.insert(0, libdir)
 
-    if filedir in sys.path:
-        # the directory of entrypoint.py is mercurial/
-        # and it should not be present in sys.path, as we use absolute_import
-        sys.path.remove(filedir)
+    for element in list(sys.path):
+        if os.path.realpath(filedir) == os.path.realpath(element):
+            # the directory of entrypoint.py is mercurial/
+            # and it should not be present in sys.path, as we use absolute_import
+            sys.path.remove(element)
 
     import hgdemandimport
 
