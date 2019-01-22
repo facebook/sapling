@@ -275,13 +275,14 @@ class EdenInstance:
         else:
             bind_mounts = {}
 
-        if "type" not in repo_data:
+        scm_type = repo_data.get("type", fallback="")
+        if not scm_type:
             raise Exception(f'repository "{alias}" missing key "type".')
-        scm_type = repo_data["type"]
         if scm_type not in SUPPORTED_REPOS:
             raise Exception(f'repository "{alias}" has unsupported type.')
 
-        if "path" not in repo_data:
+        path = repo_data.get("path", fallback="")
+        if not path:
             raise Exception(f'repository "{alias}" missing key "path".')
 
         default_revision = (
@@ -291,7 +292,7 @@ class EdenInstance:
         )
 
         return CheckoutConfig(
-            path=repo_data["path"],
+            path=path,
             scm_type=scm_type,
             hooks_path=repo_data.get("hooks") or self.get_default_hooks_path(),
             bind_mounts=bind_mounts,

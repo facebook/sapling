@@ -245,6 +245,79 @@ class TomlConfigTest(
         self.assertEqual(cc.bind_mounts, {})
         self.assertEqual(cc.default_revision, "master")
 
+    def test_missing_type_option_in_repository_is_an_error(self) -> None:
+        self.write_user_config(
+            """
+["repository myrepo"]
+path = "/tmp/myrepo"
+"""
+        )
+        with self.assertRaises(Exception) as expectation:
+            cfg = self.get_config()
+            cfg.find_config_for_alias("myrepo")
+        self.assertEqual(
+            str(expectation.exception), 'repository "myrepo" missing key "type".'
+        )
+
+    def test_invalid_type_option_in_repository_is_an_error(self) -> None:
+        self.write_user_config(
+            """
+["repository myrepo"]
+type = "invalidrepotype"
+path = "/tmp/myrepo"
+"""
+        )
+        with self.assertRaises(Exception) as expectation:
+            cfg = self.get_config()
+            cfg.find_config_for_alias("myrepo")
+        self.assertEqual(
+            str(expectation.exception), 'repository "myrepo" has unsupported type.'
+        )
+
+    def test_empty_type_option_in_repository_is_an_error(self) -> None:
+        self.write_user_config(
+            """
+["repository myrepo"]
+type = ""
+path = "/tmp/myrepo"
+"""
+        )
+        with self.assertRaises(Exception) as expectation:
+            cfg = self.get_config()
+            cfg.find_config_for_alias("myrepo")
+        self.assertEqual(
+            str(expectation.exception), 'repository "myrepo" missing key "type".'
+        )
+
+    def test_missing_path_option_in_repository_is_an_error(self) -> None:
+        self.write_user_config(
+            """
+["repository myrepo"]
+type = "hg"
+"""
+        )
+        with self.assertRaises(Exception) as expectation:
+            cfg = self.get_config()
+            cfg.find_config_for_alias("myrepo")
+        self.assertEqual(
+            str(expectation.exception), 'repository "myrepo" missing key "path".'
+        )
+
+    def test_empty_path_option_in_repository_is_an_error(self) -> None:
+        self.write_user_config(
+            """
+["repository myrepo"]
+type = "hg"
+path = ""
+"""
+        )
+        with self.assertRaises(Exception) as expectation:
+            cfg = self.get_config()
+            cfg.find_config_for_alias("myrepo")
+        self.assertEqual(
+            str(expectation.exception), 'repository "myrepo" missing key "path".'
+        )
+
     def test_toml_error(self) -> None:
         self.copy_config_files()
 
