@@ -118,9 +118,21 @@ impl From<ChangesetId> for BonsaiOrHgChangesetIds {
     }
 }
 
+impl From<Vec<ChangesetId>> for BonsaiOrHgChangesetIds {
+    fn from(cs_ids: Vec<ChangesetId>) -> Self {
+        BonsaiOrHgChangesetIds::Bonsai(cs_ids)
+    }
+}
+
 impl From<HgChangesetId> for BonsaiOrHgChangesetIds {
     fn from(cs_id: HgChangesetId) -> Self {
         BonsaiOrHgChangesetIds::Hg(vec![cs_id])
+    }
+}
+
+impl From<Vec<HgChangesetId>> for BonsaiOrHgChangesetIds {
+    fn from(cs_ids: Vec<HgChangesetId>) -> Self {
+        BonsaiOrHgChangesetIds::Hg(cs_ids)
     }
 }
 

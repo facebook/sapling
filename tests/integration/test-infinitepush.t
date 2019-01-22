@@ -318,14 +318,13 @@ Check phases on another side (for pull command and pull -r)
   added 2 changesets with 0 changes to 0 files (+1 heads)
   adding remote bookmark test_release_1.0.0
   new changesets 500658c138a4:eca836c7c651
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
-# Note: For this case phases are not returned correctly (see TODO in implementation)
-# phase for test_release_1.0.0 is incorrect
   $ tglogp
   o  4: eca836c7c651 draft 'change on top of the release'
   |
-  o  3: 500658c138a4 draft 'feature release' test_release_1.0.0
+  o  3: 500658c138a4 public 'feature release' test_release_1.0.0
   |
   | @  2: 95cad53aab1b public 'newrepo' master_bookmark
   | |

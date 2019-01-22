@@ -13,7 +13,7 @@ use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
 use reachabilityindex::SkiplistIndex;
 use stats::Timeseries;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::sync::Arc;
 use std::time::Duration;
@@ -303,25 +303,18 @@ fn get_phases_from_memcache(
     }))
     .collect()
     .map(|vec| {
-        let unknown = vec
-            .iter()
-            .filter_map(|(cs_id, maybephase)| {
-                if maybephase.is_some() {
-                    None
-                } else {
-                    Some(cs_id.clone())
-                }
-            })
-            .collect::<Vec<_>>();
-
-        let calculated = vec
+        // split to unknown and calculated
+        let (unknown, calculated): (Vec<_>, Vec<_>) = vec
             .into_iter()
-            .filter_map(|(cs_id, maybephase)| maybephase.map(|phase| (cs_id, phase)))
-            .collect::<HashMap<_, _>>();
+            .partition(|(_, maybephase)| maybephase.is_none());
 
         PhasesMapping {
-            calculated,
-            unknown,
+            calculated: calculated
+                .into_iter()
+                .filter_map(|(cs_id, somephase)| somephase.map(|phase| (cs_id, phase)))
+                .collect(),
+
+            unknown: unknown.into_iter().map(|(cs_id, _)| cs_id).collect(),
         }
     })
 }

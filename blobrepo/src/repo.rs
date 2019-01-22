@@ -1135,15 +1135,16 @@ impl BlobRepo {
             .get_bonsai_from_hg(ctx, self.repoid, *hg_cs_id)
     }
 
-    // Returns only the mapping for valid Hg Changesets that are known to the server
+    // Returns only the mapping for valid changests that are known to the server.
+    // Result may not contain all the ids from the input.
     pub fn get_hg_bonsai_mapping(
         &self,
         ctx: CoreContext,
-        hg_cs_id: Vec<HgChangesetId>,
+        bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds>,
     ) -> BoxFuture<Vec<(HgChangesetId, ChangesetId)>, Error> {
         STATS::get_hg_bonsai_mapping.add_value(1);
         self.bonsai_hg_mapping
-            .get(ctx, self.repoid, BonsaiOrHgChangesetIds::Hg(hg_cs_id))
+            .get(ctx, self.repoid, bonsai_or_hg_cs_ids.into())
             .map(|result| {
                 result
                     .into_iter()

@@ -13,11 +13,12 @@ use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::{stream, Future, Stream};
+use futures::{future, stream, Future, Stream};
+use futures_ext::{BoxFuture, FutureExt};
 use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
 use mercurial_types::{Changeset, HgBlobNode, HgChangesetId, HgNodeHash, HgPhase, NULL_CSID};
-use phases::Phases;
+use phases::{Phase, Phases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 
@@ -169,42 +170,144 @@ fn hg_to_bonsai_stream(
 }
 
 /// Calculate phases for the heads.
-/// Ignore common because phases might have been changed.
-/// TODO (liubovd): if client is pulling non-public changesets, we need to find
-/// intermediate public heads and send phases for them as well similar to
-/// _getbundlephasespart in mercurial/exchange.py
-/// This is to solve the cases when you have a local stack but some public bookmark was been moved to part of it.
+/// If client is pulling non-public changesets phases for public roots should be included.
 fn prepare_phases_stream(
     ctx: CoreContext,
     repo: BlobRepo,
     heads: Vec<HgChangesetId>,
     phases_hint: Arc<Phases>,
 ) -> impl Stream<Item = (HgNodeHash, HgPhase), Error = Error> {
-    repo.get_hg_bonsai_mapping(ctx.clone(), heads)
-        .and_then({
-            cloned!(ctx, repo);
-            move |hg_bonsai_mapping| {
-                // convert to bonsai => hg hash map that we will later use
-                // skip heads that are not known by the server
-                let bonsai_node_mapping: HashMap<ChangesetId, HgNodeHash> = hg_bonsai_mapping
+    // create 'bonsai changesetid' => 'hg changesetid' hash map that will be later used
+    // heads that are not known by the server will be skipped
+    let mapping_fut =
+        repo.get_hg_bonsai_mapping(ctx.clone(), heads)
+            .map(move |hg_bonsai_mapping| {
+                hg_bonsai_mapping
                     .into_iter()
-                    .map(|(hg_cs_id, bonsai)| (bonsai, hg_cs_id.into_nodehash()))
-                    .collect();
-                // calculate phases
-                phases_hint
-                    .get_all(ctx, repo, bonsai_node_mapping.keys().cloned().collect())
-                    .map(move |phases_mapping| (phases_mapping, bonsai_node_mapping))
-            }
-        })
-        .map(move |(phases_mapping, bonsai_node_mapping)| {
-            // transform data in a format used by the encoding function
-            let calculated: Vec<(HgNodeHash, HgPhase)> = phases_mapping
-                .calculated
-                .into_iter()
-                .map(|(bonsai, phase)| (bonsai_node_mapping[&bonsai], HgPhase::from(phase)))
+                    .map(|(hg_cs_id, bonsai)| (bonsai, hg_cs_id))
+                    .collect::<HashMap<ChangesetId, HgChangesetId>>()
+            });
+
+    // calculate phases for the heads
+    let heads_phases_fut = mapping_fut.and_then({
+        cloned!(ctx, repo, phases_hint);
+        move |bonsai_node_mapping| {
+            phases_hint
+                .get_all(ctx, repo, bonsai_node_mapping.keys().cloned().collect())
+                .map(move |phases_mapping| (phases_mapping.calculated, bonsai_node_mapping))
+        }
+    });
+
+    // calculate public roots if client is pulling non-public changesets
+    // and join the result together
+    heads_phases_fut
+        .and_then(move |(heads_phases, bonsai_node_mapping)| {
+            // select draft heads
+            let drafts = heads_phases
+                .iter()
+                .filter_map(|(cs_id, phase)| {
+                    if phase == &Phase::Draft {
+                        Some(cs_id.clone())
+                    } else {
+                        None
+                    }
+                })
                 .collect();
 
-            stream::iter_ok(calculated)
+            // find the public roots for the draft heads
+            let pub_roots_future =
+                calculate_public_roots(ctx.clone(), repo.clone(), drafts, phases_hint).and_then(
+                    move |bonsais| {
+                        repo.get_hg_bonsai_mapping(ctx, bonsais.into_iter().collect::<Vec<_>>())
+                    },
+                );
+
+            // merge the phases for heads and public roots together and transform the result in a format used by the encoding function
+            pub_roots_future.map(move |public_roots| {
+                let phases = heads_phases
+                    .into_iter()
+                    .map(|(bonsai, phase)| {
+                        (
+                            bonsai_node_mapping[&bonsai].into_nodehash(),
+                            HgPhase::from(phase),
+                        )
+                    })
+                    .chain(
+                        public_roots
+                            .into_iter()
+                            .map(|(hg_cs_id, _)| (hg_cs_id.into_nodehash(), HgPhase::Public)),
+                    )
+                    .collect::<Vec<_>>();
+
+                stream::iter_ok(phases.into_iter())
+            })
         })
         .flatten_stream()
+}
+
+/// Calculate public roots for the set of draft changesets
+fn calculate_public_roots(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    drafts: HashSet<ChangesetId>,
+    phases_hint: Arc<Phases>,
+) -> BoxFuture<HashSet<ChangesetId>, Error> {
+    future::loop_fn(
+        (drafts, HashSet::new(), HashSet::new()),
+        move |(drafts, mut public, mut visited)| {
+            // nothing more to calculate
+            if drafts.is_empty() {
+                return future::ok(future::Loop::Break(public)).left_future();
+            }
+
+            // calculate parents
+            let vecf: Vec<_> = drafts
+                .into_iter()
+                .map(|bonsai| repo.get_changeset_parents_by_bonsai(ctx.clone(), &bonsai))
+                .collect();
+
+            // join them together and filter already processed
+            let parents_fut = stream::futures_unordered(vecf)
+                .collect()
+                .map(move |parents| {
+                    let parents = parents
+                        .into_iter()
+                        .flat_map(|array| array.into_iter())
+                        .filter(|bonsai| !visited.contains(bonsai))
+                        .collect::<HashSet<_>>();
+                    // update visited hashset
+                    visited.extend(parents.iter().cloned());
+                    (parents, visited)
+                });
+
+            // calculated phases
+            let phases_fut = parents_fut.and_then({
+                cloned!(ctx, repo, phases_hint);
+                move |(parents, visited)| {
+                    phases_hint
+                        .get_all(ctx, repo, parents.into_iter().collect())
+                        .map(move |phases_mapping| (phases_mapping.calculated, visited))
+                }
+            });
+
+            // return public roots and continue calculation for the remaining drafts
+            phases_fut
+                .and_then(|(calculated, visited)| {
+                    // split by phase
+                    let (new_public, new_drafts): (Vec<_>, Vec<_>) = calculated
+                        .into_iter()
+                        .partition(|(_, phase)| phase == &Phase::Public);
+                    // update found public changests
+                    public.extend(new_public.into_iter().map(|(cs_id, _)| cs_id));
+                    // continue for the new drafts
+                    future::ok(future::Loop::Continue((
+                        new_drafts.into_iter().map(|(cs_id, _)| cs_id).collect(),
+                        public,
+                        visited,
+                    )))
+                })
+                .right_future()
+        },
+    )
+    .boxify()
 }
