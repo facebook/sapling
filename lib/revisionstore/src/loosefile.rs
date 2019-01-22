@@ -3,11 +3,12 @@
 // hg/hgext/remotefilelog/remotefilelog.py:_createfileblob()
 // into the size of text, text and ancestors information.
 
+use bytes::Bytes;
 use failure::{Fail, Fallible};
 
 use types::node::Node;
 
-use std::{fs::File, io::prelude::*, rc::Rc};
+use std::{fs::File, io::prelude::*};
 
 use crate::error::KeyError;
 use crate::historystore::{Ancestors, NodeInfo};
@@ -25,7 +26,7 @@ impl From<LooseFileError> for KeyError {
 
 pub struct LooseFile {
     pub size: usize,
-    pub text: Rc<Box<[u8]>>,
+    pub text: Bytes,
     pub ancestors: Ancestors,
 }
 
@@ -52,7 +53,7 @@ fn atoi(content: &[u8]) -> Fallible<(usize, usize)> {
 }
 
 impl LooseFile {
-    pub fn new(size: usize, text: Rc<Box<[u8]>>, ancestors: Ancestors) -> Self {
+    pub fn new(size: usize, text: Bytes, ancestors: Ancestors) -> Self {
         LooseFile {
             size,
             text,
@@ -60,10 +61,11 @@ impl LooseFile {
         }
     }
 
-    pub fn from_content(content: &Vec<u8>) -> Fallible<Self> {
-        let (textsize, size) = atoi(&content)?;
+    pub fn from_content(content: impl AsRef<[u8]>) -> Fallible<Self> {
+        let content = content.as_ref();
+        let (textsize, size) = atoi(content)?;
         let mut start = size + 1;
-        let text = content[start..start + textsize].to_vec();
+        let text = content[start..start + textsize].into();
         start += textsize;
         let mut ancestors: Ancestors = Ancestors::new();
         while start + 80 < content.len() {
@@ -83,11 +85,7 @@ impl LooseFile {
             }
             start += 1;
         }
-        Ok(LooseFile::new(
-            textsize,
-            Rc::new(text.into_boxed_slice()),
-            ancestors,
-        ))
+        Ok(LooseFile::new(textsize, text, ancestors))
     }
 
     pub fn from_file(spath: &str) -> Fallible<Self> {
