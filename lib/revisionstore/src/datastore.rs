@@ -4,18 +4,16 @@
 // GNU General Public License version 2 or any later version.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use bytes::Bytes;
 use failure::{format_err, Fallible};
 
-use std::{
-    io::{Cursor, Write},
-    rc::Rc,
-};
+use std::io::{Cursor, Write};
 
 use crate::key::Key;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Delta {
-    pub data: Rc<[u8]>,
+    pub data: Bytes,
     pub base: Option<Key>,
     pub key: Key,
 }

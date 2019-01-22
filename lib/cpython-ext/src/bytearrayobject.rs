@@ -4,8 +4,9 @@
 // GNU General Public License version 2 or any later version.
 
 use cpython::{PyObject as RustPyObject, Python as RustPythonGILGuard};
-use python27_sys::{PyByteArray_Size, PyByteArray_Type, PyObject, PyTypeObject, Py_ssize_t,
-                   _PyObject_New};
+use python27_sys::{
+    PyByteArray_Size, PyByteArray_Type, PyObject, PyTypeObject, Py_ssize_t, _PyObject_New,
+};
 use std::mem;
 use std::os::raw::c_int;
 

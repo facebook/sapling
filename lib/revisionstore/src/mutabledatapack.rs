@@ -215,22 +215,25 @@ impl DataStore for MutableDataPack {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use bytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
-    use std::fs;
-    use std::fs::File;
-    use std::io::Read;
-    use std::rc::Rc;
+    use tempfile::tempdir;
+
+    use std::{
+        fs::{self, File},
+        io::Read,
+    };
 
     use crate::key::Key;
-    use tempfile::tempdir;
 
     #[test]
     fn test_basic_creation() {
         let tempdir = tempdir().unwrap();
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
-            data: Rc::new([0, 1, 2]),
+            data: Bytes::from(&[0, 1, 2][..]),
             base: None,
             key: Key::new(Box::new([]), Default::default()),
         };
@@ -264,7 +267,7 @@ mod tests {
             let mut mutdatapack =
                 MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
             let delta = Delta {
-                data: Rc::new([0, 1, 2]),
+                data: Bytes::from(&[0, 1, 2][..]),
                 base: None,
                 key: Key::new(Box::new([]), Default::default()),
             };
@@ -281,13 +284,13 @@ mod tests {
         let tempdir = tempdir().unwrap();
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
-            data: Rc::new([0, 1, 2]),
+            data: Bytes::from(&[0, 1, 2][..]),
             base: None,
             key: Key::new(Box::new([]), Node::random(&mut rng)),
         };
         mutdatapack.add(&delta, None).unwrap();
         let delta2 = Delta {
-            data: Rc::new([0, 1, 2]),
+            data: Bytes::from(&[0, 1, 2][..]),
             base: Some(Key::new(Box::new([]), delta.key.node().clone())),
             key: Key::new(Box::new([]), Node::random(&mut rng)),
         };
@@ -307,13 +310,13 @@ mod tests {
 
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
-            data: Rc::new([0, 1, 2]),
+            data: Bytes::from(&[0, 1, 2][..]),
             base: None,
             key: Key::new(Box::new([]), Node::random(&mut rng)),
         };
         mutdatapack.add(&delta, None).unwrap();
         let delta2 = Delta {
-            data: Rc::new([0, 1, 2]),
+            data: Bytes::from(&[0, 1, 2][..]),
             base: None,
             key: Key::new(Box::new([]), Node::random(&mut rng)),
         };
@@ -345,7 +348,7 @@ mod tests {
 
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
         let delta = Delta {
-            data: Rc::new([0, 1, 2]),
+            data: Bytes::from(&[0, 1, 2][..]),
             base: None,
             key: Key::new(Box::new([]), Default::default()),
         };

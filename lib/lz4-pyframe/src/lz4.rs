@@ -138,18 +138,18 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Fallible<()> {
     Ok(())
 }
 
-pub fn decompress(data: &[u8]) -> Fallible<Box<[u8]>> {
+pub fn decompress(data: &[u8]) -> Fallible<Vec<u8>> {
     let max_decompressed_size = decompress_size(data)?;
     if max_decompressed_size == 0 {
-        return Ok(Vec::new().into_boxed_slice());
+        return Ok(Vec::new());
     }
     let mut dest = Vec::<u8>::with_capacity(max_decompressed_size);
     unsafe { dest.set_len(max_decompressed_size) };
     decompress_into(data, &mut dest)?;
-    Ok(dest.into_boxed_slice())
+    Ok(dest)
 }
 
-pub fn compress(data: &[u8]) -> Fallible<Box<[u8]>> {
+pub fn compress(data: &[u8]) -> Fallible<Vec<u8>> {
     let max_compressed_size = (check_error(unsafe { LZ4_compressBound(data.len() as i32) })?
         + HEADER_LEN as i32) as usize;
 
@@ -179,10 +179,10 @@ pub fn compress(data: &[u8]) -> Fallible<Box<[u8]>> {
             dest.truncate(written as usize + HEADER_LEN);
         }
     }
-    Ok(dest.into_boxed_slice())
+    Ok(dest)
 }
 
-pub fn compresshc(data: &[u8]) -> Fallible<Box<[u8]>> {
+pub fn compresshc(data: &[u8]) -> Fallible<Vec<u8>> {
     let max_compressed_size = (check_error(unsafe { LZ4_compressBound(data.len() as i32) })?
         + HEADER_LEN as i32) as usize;
 
@@ -213,7 +213,7 @@ pub fn compresshc(data: &[u8]) -> Fallible<Box<[u8]>> {
             dest.truncate(written as usize + HEADER_LEN);
         }
     }
-    Ok(dest.into_boxed_slice())
+    Ok(dest)
 }
 
 fn check_error(result: i32) -> Fallible<i32> {
@@ -233,7 +233,7 @@ mod tests {
 
     use quickcheck::quickcheck;
 
-    fn check_roundtrip<T: AsRef<[u8]>>(data: T) -> (Box<[u8]>, bool) {
+    fn check_roundtrip<T: AsRef<[u8]>>(data: T) -> (Vec<u8>, bool) {
         let data = data.as_ref();
         let compressed = compress(data).unwrap();
         let compressedhc = compresshc(data).unwrap();
@@ -257,7 +257,7 @@ mod tests {
     fn test_empty() {
         let data = &b"";
         let (compressed, roundtrips) = check_roundtrip(&data);
-        assert_eq!(compressed, vec![0u8, 0, 0, 0].into_boxed_slice());
+        assert_eq!(compressed, &[0u8, 0, 0, 0][..]);
         assert!(roundtrips);
     }
 
@@ -271,7 +271,7 @@ mod tests {
 
         // But decompress to their original form.
         let decompressed = decompress(&compressed).unwrap();
-        assert_eq!(data, decompressed.as_ref());
+        assert_eq!(data, &*decompressed);
     }
 
     quickcheck! {

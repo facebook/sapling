@@ -236,6 +236,7 @@ pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Fall
 mod tests {
     use super::*;
 
+    use bytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
@@ -365,7 +366,7 @@ mod tests {
 
         let revisions = vec![(
             Delta {
-                data: Rc::new([1, 2, 3, 4]),
+                data: Bytes::from(&[1u8, 2, 3, 4][..]),
                 base: None,
                 key: Key::new(Box::new([0]), Node::random(&mut rng)),
             },
@@ -401,7 +402,7 @@ mod tests {
             let rev = vec![
                 (
                     Delta {
-                        data: Rc::new([1, 2, 3, 4]),
+                        data: Bytes::from(&[1, 2, 3, 4][..]),
                         base: None,
                         key: base.clone(),
                     },
@@ -409,7 +410,7 @@ mod tests {
                 ),
                 (
                     Delta {
-                        data: Rc::new([1, 2, 3, 4]),
+                        data: Bytes::from(&[1, 2, 3, 4][..]),
                         base: Some(base),
                         key: Key::new(Box::new([0]), Node::random(&mut rng)),
                     },
