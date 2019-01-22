@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Error, Fail};
+use failure::{Fail, Fallible};
 use libc::{c_int, c_void};
 use lz4_sys::{
     LZ4StreamDecode, LZ4StreamEncode, LZ4_compressBound, LZ4_compress_continue, LZ4_createStream,
@@ -78,7 +78,7 @@ impl Drop for StreamEncoder {
 }
 
 /// Read decompressed size from a u32 header.
-pub fn decompress_size(data: &[u8]) -> Result<usize, Error> {
+pub fn decompress_size(data: &[u8]) -> Fallible<usize> {
     if data.len() == 0 {
         Ok(0)
     } else {
@@ -107,7 +107,7 @@ impl Drop for StreamEncoderHC {
 
 /// Decompress into a preallocated buffer. The size of `dest` must
 /// match what [decompress_size] returns.
-pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<(), Error> {
+pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Fallible<()> {
     let stream = StreamDecoder(unsafe { LZ4_createStreamDecode() });
     if stream.0.is_null() {
         return Err(LZ4Error {
@@ -138,7 +138,7 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn decompress(data: &[u8]) -> Result<Box<[u8]>, Error> {
+pub fn decompress(data: &[u8]) -> Fallible<Box<[u8]>> {
     let max_decompressed_size = decompress_size(data)?;
     if max_decompressed_size == 0 {
         return Ok(Vec::new().into_boxed_slice());
@@ -149,7 +149,7 @@ pub fn decompress(data: &[u8]) -> Result<Box<[u8]>, Error> {
     Ok(dest.into_boxed_slice())
 }
 
-pub fn compress(data: &[u8]) -> Result<Box<[u8]>, Error> {
+pub fn compress(data: &[u8]) -> Fallible<Box<[u8]>> {
     let max_compressed_size = (check_error(unsafe { LZ4_compressBound(data.len() as i32) })?
         + HEADER_LEN as i32) as usize;
 
@@ -182,7 +182,7 @@ pub fn compress(data: &[u8]) -> Result<Box<[u8]>, Error> {
     Ok(dest.into_boxed_slice())
 }
 
-pub fn compresshc(data: &[u8]) -> Result<Box<[u8]>, Error> {
+pub fn compresshc(data: &[u8]) -> Fallible<Box<[u8]>> {
     let max_compressed_size = (check_error(unsafe { LZ4_compressBound(data.len() as i32) })?
         + HEADER_LEN as i32) as usize;
 
@@ -216,7 +216,7 @@ pub fn compresshc(data: &[u8]) -> Result<Box<[u8]>, Error> {
     Ok(dest.into_boxed_slice())
 }
 
-fn check_error(result: i32) -> Result<i32, Error> {
+fn check_error(result: i32) -> Fallible<i32> {
     if result < 0 {
         return Err(LZ4Error {
             message: format!("lz4 failed with error '{:?}'", result),
