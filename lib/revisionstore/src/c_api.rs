@@ -171,7 +171,7 @@ fn make_key(name: *const u8, name_len: usize, node: *const u8, node_len: usize) 
     debug_assert!(!node.is_null());
 
     let name = unsafe { slice::from_raw_parts(name, name_len) };
-    let name = name.to_vec().into_boxed_slice();
+    let name = name.to_vec();
 
     let node = unsafe { slice::from_raw_parts(node, node_len) };
     let node = Node::from_slice(node)?;

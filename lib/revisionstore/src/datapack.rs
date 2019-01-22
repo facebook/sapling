@@ -414,7 +414,7 @@ impl<'a> Iterator for DataPackIterator<'a> {
         Some(match entry {
             Ok(ref e) => {
                 self.offset = e.next_offset;
-                Ok(Key::new(Box::from(e.filename), e.node))
+                Ok(Key::new(e.filename.to_vec(), e.node))
             }
             Err(e) => Err(e),
         })
@@ -461,8 +461,8 @@ pub mod tests {
         let revisions = vec![(
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                key: Key::new(vec![0], Node::random(&mut rng)),
             },
             None,
         )];
@@ -472,7 +472,7 @@ pub mod tests {
             assert_eq!(missing.len(), 0);
         }
 
-        let not = Key::new(Box::new([1]), Node::random(&mut rng));
+        let not = Key::new(vec![1], Node::random(&mut rng));
         let missing = pack.get_missing(&vec![not.clone()]).unwrap();
         assert_eq!(missing, vec![not.clone()]);
     }
@@ -486,16 +486,16 @@ pub mod tests {
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                    key: Key::new(vec![0], Node::random(&mut rng)),
                 },
                 None,
             ),
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                    key: Key::new(vec![0], Node::random(&mut rng)),
                 },
                 Some(Metadata {
                     size: Some(1000),
@@ -524,16 +524,16 @@ pub mod tests {
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                    key: Key::new(vec![0], Node::random(&mut rng)),
                 },
                 None,
             ),
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                    key: Key::new(vec![0], Node::random(&mut rng)),
                 },
                 None,
             ),
@@ -555,16 +555,16 @@ pub mod tests {
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                    key: Key::new(vec![0], Node::random(&mut rng)),
                 },
                 None,
             ),
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                    key: Key::new(vec![0], Node::random(&mut rng)),
                 },
                 None,
             ),
@@ -585,8 +585,8 @@ pub mod tests {
         let mut revisions = vec![(
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                key: Key::new(vec![0], Node::random(&mut rng)),
             },
             None,
         )];
@@ -595,7 +595,7 @@ pub mod tests {
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
                 base: Some(base0),
-                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                key: Key::new(vec![0], Node::random(&mut rng)),
             },
             None,
         ));
@@ -604,7 +604,7 @@ pub mod tests {
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
                 base: Some(base1),
-                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                key: Key::new(vec![0], Node::random(&mut rng)),
             },
             None,
         ));
@@ -636,16 +636,16 @@ pub mod tests {
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                    key: Key::new(vec![0], Node::random(&mut rng)),
                 },
                 None,
             ),
             (
                 Delta {
                     data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                    base: Some(Key::new(vec![0], Node::random(&mut rng))),
+                    key: Key::new(vec![0], Node::random(&mut rng)),
                 },
                 None,
             ),
@@ -670,7 +670,7 @@ pub mod tests {
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
                 base: None,
-                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                key: Key::new(vec![0], Node::random(&mut rng)),
             },
             None,
         )];

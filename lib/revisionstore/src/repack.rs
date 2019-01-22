@@ -291,8 +291,8 @@ mod tests {
             kind: RepackOutputType::Data,
             id: Arc::new(PathBuf::from("foo/bar")),
             keys: vec![
-                Key::new(Box::new([0]), Node::random(&mut rng)),
-                Key::new(Box::new([0]), Node::random(&mut rng)),
+                Key::new(vec![0], Node::random(&mut rng)),
+                Key::new(vec![0], Node::random(&mut rng)),
             ],
             deleted: is_deleted.clone(),
         };
@@ -368,7 +368,7 @@ mod tests {
             Delta {
                 data: Bytes::from(&[1u8, 2, 3, 4][..]),
                 base: None,
-                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                key: Key::new(vec![0], Node::random(&mut rng)),
             },
             None,
         )];
@@ -398,7 +398,7 @@ mod tests {
         let mut paths = Vec::new();
 
         for _ in 0..2 {
-            let base = Key::new(Box::new([0]), Node::random(&mut rng));
+            let base = Key::new(vec![0], Node::random(&mut rng));
             let rev = vec![
                 (
                     Delta {
@@ -412,7 +412,7 @@ mod tests {
                     Delta {
                         data: Bytes::from(&[1, 2, 3, 4][..]),
                         base: Some(base),
-                        key: Key::new(Box::new([0]), Node::random(&mut rng)),
+                        key: Key::new(vec![0], Node::random(&mut rng)),
                     },
                     None,
                 ),

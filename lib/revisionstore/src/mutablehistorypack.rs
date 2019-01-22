@@ -308,7 +308,7 @@ mod tests {
         let tempdir = tempdir().unwrap();
         let mut muthistorypack =
             MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
-        let null_key = Key::new(Box::from([]), Node::null_id().clone());
+        let null_key = Key::new(Vec::new(), Node::null_id().clone());
 
         let chain_count = 2;
         let chain_len = 3;
@@ -329,7 +329,7 @@ mod tests {
                     null_key.clone()
                 };
 
-                let key = Key::new(Box::from([]), Node::random(&mut rng));
+                let key = Key::new(Vec::new(), Node::random(&mut rng));
                 let info = NodeInfo {
                     parents: [p1, p2],
                     linknode: Node::random(&mut rng),

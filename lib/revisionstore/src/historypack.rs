@@ -230,13 +230,13 @@ impl HistoryPack {
         let entry = self.read_history_entry(offset)?;
         assert_eq!(&entry.node, key.node());
         let p1 = Key::new(
-            Box::from(match entry.copy_from {
-                Some(value) => value,
-                None => key.name(),
-            }),
+            match entry.copy_from {
+                Some(value) => value.to_vec(),
+                None => key.name().to_vec(),
+            },
             entry.p1.clone(),
         );
-        let p2 = Key::new(Box::from(key.name()), entry.p2.clone());
+        let p2 = Key::new(key.name().to_vec(), entry.p2.clone());
 
         Ok(NodeInfo {
             parents: [p1, p2],
@@ -350,10 +350,7 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
                     Some(v) => 2 + v.len() as u64,
                     None => 2,
                 };
-                Ok(Key::new(
-                    self.current_name.clone().into_boxed_slice(),
-                    e.node,
-                ))
+                Ok(Key::new(self.current_name.clone(), e.node))
             }
             Err(e) => Err(e),
         })
@@ -388,8 +385,8 @@ pub mod tests {
     }
 
     pub fn get_nodes(mut rng: &mut ChaChaRng) -> (HashMap<Key, NodeInfo>, HashMap<Key, Ancestors>) {
-        let file1 = Box::new([1, 2, 3]);
-        let file2 = Box::new([1, 2, 3, 4, 5]);
+        let file1 = vec![1, 2, 3];
+        let file2 = vec![1, 2, 3, 4, 5];
         let null = Node::null_id();
         let node1 = Node::random(&mut rng);
         let node2 = Node::random(&mut rng);
@@ -486,7 +483,7 @@ pub mod tests {
         let pack = make_historypack(&tempdir, &nodes);
 
         let mut test_keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
-        let missing_key = Key::new(Box::new([9]), Node::random(&mut rng));
+        let missing_key = Key::new(vec![9], Node::random(&mut rng));
         test_keys.push(missing_key.clone());
 
         let missing = pack.get_missing(&test_keys[..]).unwrap();

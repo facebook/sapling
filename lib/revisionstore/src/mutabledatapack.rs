@@ -235,7 +235,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Box::new([]), Default::default()),
+            key: Key::new(Vec::new(), Default::default()),
         };
         mutdatapack.add(&delta, None).expect("add");
         let datapackbase = mutdatapack.close().expect("close");
@@ -269,7 +269,7 @@ mod tests {
             let delta = Delta {
                 data: Bytes::from(&[0, 1, 2][..]),
                 base: None,
-                key: Key::new(Box::new([]), Default::default()),
+                key: Key::new(Vec::new(), Default::default()),
             };
             mutdatapack.add(&delta, None).expect("add");
         }
@@ -286,13 +286,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Box::new([]), Node::random(&mut rng)),
+            key: Key::new(Vec::new(), Node::random(&mut rng)),
         };
         mutdatapack.add(&delta, None).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
-            base: Some(Key::new(Box::new([]), delta.key.node().clone())),
-            key: Key::new(Box::new([]), Node::random(&mut rng)),
+            base: Some(Key::new(Vec::new(), delta.key.node().clone())),
+            key: Key::new(Vec::new(), Node::random(&mut rng)),
         };
         mutdatapack.add(&delta2, None).unwrap();
 
@@ -312,13 +312,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Box::new([]), Node::random(&mut rng)),
+            key: Key::new(Vec::new(), Node::random(&mut rng)),
         };
         mutdatapack.add(&delta, None).unwrap();
         let delta2 = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Box::new([]), Node::random(&mut rng)),
+            key: Key::new(Vec::new(), Node::random(&mut rng)),
         };
         let meta2 = Metadata {
             flags: Some(2),
@@ -335,7 +335,7 @@ mod tests {
         assert_eq!(found_meta, meta2);
 
         // Requesting a non-existent metadata
-        let not = Key::new(Box::new([1]), Node::random(&mut rng));
+        let not = Key::new(vec![1], Node::random(&mut rng));
         mutdatapack
             .get_meta(&not)
             .expect_err("expected error for non existent node");
@@ -350,11 +350,11 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
-            key: Key::new(Box::new([]), Default::default()),
+            key: Key::new(Vec::new(), Default::default()),
         };
         mutdatapack.add(&delta, None).unwrap();
 
-        let not = Key::new(Box::new([1]), Node::random(&mut rng));
+        let not = Key::new(vec![1], Node::random(&mut rng));
         let missing = mutdatapack
             .get_missing(&vec![delta.key.clone(), not.clone()])
             .unwrap();

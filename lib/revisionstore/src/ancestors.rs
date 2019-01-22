@@ -157,13 +157,13 @@ mod tests {
 
         let mut ancestors = Ancestors::new();
         let keys = vec![
-            Key::new(Box::from([]), Node::random(&mut rng)),
-            Key::new(Box::from([]), Node::random(&mut rng)),
-            Key::new(Box::from([]), Node::random(&mut rng)),
-            Key::new(Box::from([]), Node::random(&mut rng)),
+            Key::new(Vec::new(), Node::random(&mut rng)),
+            Key::new(Vec::new(), Node::random(&mut rng)),
+            Key::new(Vec::new(), Node::random(&mut rng)),
+            Key::new(Vec::new(), Node::random(&mut rng)),
         ];
 
-        let null_key = Key::new(Box::from([]), Node::null_id().clone());
+        let null_key = Key::new(Vec::new(), Node::null_id().clone());
 
         // Build a simple diamond graph
         ancestors.insert(
@@ -247,10 +247,10 @@ mod tests {
         let mut ancestors = Ancestors::new();
         let mut keys = vec![];
         for _ in 0..size {
-            keys.push(Key::new(Box::from([]), Node::random(&mut rng)));
+            keys.push(Key::new(Vec::new(), Node::random(&mut rng)));
         }
 
-        let null_key = Key::new(Box::from([]), Node::null_id().clone());
+        let null_key = Key::new(Vec::new(), Node::null_id().clone());
 
         // Build a mergey history where commit N has parents N-1 and N-2
         for i in 0..size {

@@ -8,13 +8,13 @@ use types::node::Node;
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Key {
     // Name is usually a file or directory path
-    name: Box<[u8]>,
+    name: Vec<u8>,
     // Node is always a 20 byte hash. This will be changed to a fix length array later.
     node: Node,
 }
 
 impl Key {
-    pub fn new(name: Box<[u8]>, node: Node) -> Self {
+    pub fn new(name: Vec<u8>, node: Node) -> Self {
         Key { name, node }
     }
 
@@ -33,6 +33,6 @@ use quickcheck;
 #[cfg(test)]
 impl quickcheck::Arbitrary for Key {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        Key::new(Vec::arbitrary(g).into_boxed_slice(), Node::arbitrary(g))
+        Key::new(Vec::arbitrary(g), Node::arbitrary(g))
     }
 }

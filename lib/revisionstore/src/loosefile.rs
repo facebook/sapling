@@ -70,11 +70,11 @@ impl LooseFile {
         let mut ancestors: Ancestors = Ancestors::new();
         while start + 80 < content.len() {
             let node: Node = Node::from_slice(&content[start..start + 20])?;
-            let key: Key = Key::new(Box::new([5u8; 3]), node);
+            let key: Key = Key::new(vec![5u8; 3], node);
             let p0: Node = Node::from_slice(&content[start + 20..start + 40])?;
-            let k0: Key = Key::new(Box::new([0u8; 3]), p0);
+            let k0: Key = Key::new(vec![0u8; 3], p0);
             let p1: Node = Node::from_slice(&content[start + 40..start + 60])?;
-            let k1: Key = Key::new(Box::new([1u8; 3]), p1);
+            let k1: Key = Key::new(vec![1u8; 3], p1);
             let parents: [Key; 2] = [k0, k1];
             let linknode: Node = Node::from_slice(&content[start + 60..start + 80])?;
             let nodeinfo = NodeInfo { parents, linknode };

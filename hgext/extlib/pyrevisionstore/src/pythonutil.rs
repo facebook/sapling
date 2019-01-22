@@ -61,7 +61,7 @@ pub fn from_delta_to_tuple(py: Python, delta: &Delta) -> PyObject {
         None => from_key(
             py,
             &Key::new(
-                delta.key.name().to_vec().into_boxed_slice(),
+                delta.key.name().to_vec(),
                 Node::null_id().clone(),
             ),
         ),

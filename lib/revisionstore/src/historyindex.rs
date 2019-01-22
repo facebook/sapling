@@ -498,7 +498,7 @@ mod tests {
                 file_sections.push((name_slice, location.clone()));
                 let mut node_map: HashMap<Key, NodeLocation> = HashMap::new();
                 for (key, node_location) in nodes.iter() {
-                    let key = Key::new(name_slice.clone(), key.node().clone());
+                    let key = Key::new(name_slice.to_vec(), key.node().clone());
                     node_map.insert(key, node_location.clone());
                 }
                 file_nodes.insert(name_slice, node_map);
@@ -508,7 +508,7 @@ mod tests {
 
             // Lookup each file section
             for &(ref name, ref location) in file_sections.iter() {
-                let entry = index.get_file_entry(&Key::new((*name).clone(), Node::null_id().clone())).unwrap();
+                let entry = index.get_file_entry(&Key::new(name.to_vec(), Node::null_id().clone())).unwrap();
                 assert_eq!(location.offset, entry.file_section_offset);
                 assert_eq!(location.size, entry.file_section_size);
             }
