@@ -80,6 +80,7 @@ from __future__ import absolute_import
 import os
 import time
 import traceback
+from contextlib import contextmanager
 
 from mercurial import (
     bundle2,
@@ -798,6 +799,19 @@ def filelogrevset(orig, repo, subset, x):
     return smartset.baseset([r for r in subset if r in s])
 
 
+@contextmanager
+def openrepo(ui, repopath):
+    repo = None
+    try:
+        repo = hg.peer(ui, {}, repopath)
+        yield repo
+    except error.RepoError:
+        yield None
+    finally:
+        if repo:
+            repo.close()
+
+
 @command("gc", [], _("hg gc [REPO...]"), norepo=True)
 def gc(ui, *args, **opts):
     """garbage collect the client and server filelog caches
@@ -816,17 +830,14 @@ def gc(ui, *args, **opts):
         repopaths.append(pwd)
 
     repopaths.extend(args)
-    repos = []
     for repopath in repopaths:
-        try:
-            repo = hg.peer(ui, {}, repopath)
-            repos.append(repo)
+        with openrepo(ui, repopath) as repo:
+            if repo is None:
+                continue
 
             repocache = shallowutil.getcachepath(repo.ui, allowempty=True)
             if repocache:
                 cachepaths.add(repocache)
-        except error.RepoError:
-            pass
 
     # gc client cache
     for cachepath in cachepaths:
@@ -836,11 +847,17 @@ def gc(ui, *args, **opts):
             ui.warn(_("warning: can't gc cache: %s: %s\n") % (cachepath, e))
 
     # gc server cache
-    for repo in repos:
-        try:
-            remotefilelogserver.gcserver(ui, repo._repo)
-        except Exception as e:
-            ui.warn(_("warning: can't gc repository: %s: %s\n") % (repo._repo.root, e))
+    for repopath in repopaths:
+        with openrepo(ui, repopath) as repo:
+            if repo is None:
+                continue
+
+            try:
+                remotefilelogserver.gcserver(ui, repo._repo)
+            except Exception as e:
+                ui.warn(
+                    _("warning: can't gc repository: %s: %s\n") % (repo._repo.root, e)
+                )
 
 
 def gcclient(ui, cachepath):
@@ -872,50 +889,50 @@ def gcclient(ui, cachepath):
                 ui.warn(_("warning: malformed path: %r:%s\n") % (path, e))
                 traceback.print_exc()
                 continue
-            try:
-                peer = hg.peer(ui, {}, path)
-                repo = peer._repo
-            except error.RepoError:
-                continue
 
-            validrepos.append(path)
-
-            # Protect against any repo or config changes that have happened
-            # since this repo was added to the repos file. We'd rather this loop
-            # succeed and too much be deleted, than the loop fail and nothing
-            # gets deleted.
-            if shallowrepo.requirement not in repo.requirements:
-                continue
-
-            if not util.safehasattr(repo, "name"):
-                ui.warn(_("repo %s is a misconfigured remotefilelog repo\n") % path)
-                continue
-
-            # If garbage collection on repack and repack on hg gc are enabled
-            # then loose files are repacked and garbage collected.
-            # Otherwise regular garbage collection is performed.
-            repackonhggc = repo.ui.configbool("remotefilelog", "repackonhggc")
-            gcrepack = repo.ui.configbool("remotefilelog", "gcrepack")
-            if repackonhggc and gcrepack:
-                try:
-                    repackmod.incrementalrepack(repo)
-                    filesrepacked = True
+            with openrepo(ui, path) as peer:
+                if peer is None:
                     continue
-                except (IOError, repackmod.RepackAlreadyRunning):
-                    # If repack cannot be performed due to not enough disk space
-                    # continue doing garbage collection of loose files w/o
-                    # repack
-                    pass
+                repo = peer._repo
 
-            reponame = repo.name
-            if not sharedcache:
-                sharedcache = repo.fileslog.sharedstore
+                validrepos.append(path)
 
-            # Compute a keepset which is not garbage collected
-            def keyfn(fname, fnode):
-                return fileserverclient.getcachekey(reponame, fname, hex(fnode))
+                # Protect against any repo or config changes that have happened
+                # since this repo was added to the repos file. We'd rather this loop
+                # succeed and too much be deleted, than the loop fail and nothing
+                # gets deleted.
+                if shallowrepo.requirement not in repo.requirements:
+                    continue
 
-            keepkeys = repackmod.keepset(repo, keyfn=keyfn, lastkeepkeys=keepkeys)
+                if not util.safehasattr(repo, "name"):
+                    ui.warn(_("repo %s is a misconfigured remotefilelog repo\n") % path)
+                    continue
+
+                # If garbage collection on repack and repack on hg gc are enabled
+                # then loose files are repacked and garbage collected.
+                # Otherwise regular garbage collection is performed.
+                repackonhggc = repo.ui.configbool("remotefilelog", "repackonhggc")
+                gcrepack = repo.ui.configbool("remotefilelog", "gcrepack")
+                if repackonhggc and gcrepack:
+                    try:
+                        repackmod.incrementalrepack(repo)
+                        filesrepacked = True
+                        continue
+                    except (IOError, repackmod.RepackAlreadyRunning):
+                        # If repack cannot be performed due to not enough disk space
+                        # continue doing garbage collection of loose files w/o
+                        # repack
+                        pass
+
+                reponame = repo.name
+                if not sharedcache:
+                    sharedcache = repo.fileslog.sharedstore
+
+                # Compute a keepset which is not garbage collected
+                def keyfn(fname, fnode):
+                    return fileserverclient.getcachekey(reponame, fname, hex(fnode))
+
+                keepkeys = repackmod.keepset(repo, keyfn=keyfn, lastkeepkeys=keepkeys)
 
     # write list of valid repos back
     oldumask = os.umask(0o002)
