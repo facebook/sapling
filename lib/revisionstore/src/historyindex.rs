@@ -140,6 +140,7 @@ impl NodeIndexEntry {
 
 pub(crate) struct HistoryIndex {
     mmap: Mmap,
+    #[allow(dead_code)]
     version: HistoryPackVersion,
     fanout_size: usize,
     index_start: usize,

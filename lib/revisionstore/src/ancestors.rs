@@ -27,6 +27,7 @@ pub struct AncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> {
 }
 
 pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> {
+    #[allow(dead_code)]
     traversal: AncestorTraversal,
     get_more: T,
     seen: HashSet<Key>,

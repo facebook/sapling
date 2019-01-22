@@ -157,6 +157,7 @@ impl<'a> HistoryEntry<'a> {
 
 pub struct HistoryPack {
     mmap: Mmap,
+    #[allow(dead_code)]
     version: HistoryPackVersion,
     index: HistoryIndex,
     base_path: Arc<PathBuf>,
