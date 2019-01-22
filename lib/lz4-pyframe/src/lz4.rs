@@ -4,11 +4,12 @@
 // GNU General Public License version 2 or any later version.
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::Error;
+use failure::{Error, Fail};
 use libc::{c_int, c_void};
-use lz4_sys::{LZ4StreamDecode, LZ4StreamEncode, LZ4_compressBound, LZ4_compress_continue,
-              LZ4_createStream, LZ4_createStreamDecode, LZ4_decompress_safe_continue,
-              LZ4_freeStream, LZ4_freeStreamDecode};
+use lz4_sys::{
+    LZ4StreamDecode, LZ4StreamEncode, LZ4_compressBound, LZ4_compress_continue, LZ4_createStream,
+    LZ4_createStreamDecode, LZ4_decompress_safe_continue, LZ4_freeStream, LZ4_freeStreamDecode,
+};
 use std::io::Cursor;
 
 const HEADER_LEN: usize = 4;
@@ -42,9 +43,11 @@ pub struct LZ4Error {
 }
 
 #[derive(Fail, Debug)]
-#[fail(display = "lz4 decompressed data does not match expected length. \
-                  Expected '{:?}' vs Actual '{:?}'",
-       expected, actual)]
+#[fail(
+    display = "lz4 decompressed data does not match expected length. \
+               Expected '{:?}' vs Actual '{:?}'",
+    expected, actual
+)]
 pub struct LZ4DecompressionError {
     expected: usize,
     actual: usize,
@@ -109,7 +112,8 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<(), Error> {
     if stream.0.is_null() {
         return Err(LZ4Error {
             message: "Unable to construct lz4 stream decoder".to_string(),
-        }.into());
+        }
+        .into());
     }
     if dest.len() > 0 {
         let data = &data[HEADER_LEN..];
@@ -127,7 +131,8 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<(), Error> {
             return Err(LZ4DecompressionError {
                 expected: dest.len(),
                 actual: read as usize,
-            }.into());
+            }
+            .into());
         }
     }
     Ok(())
@@ -152,7 +157,8 @@ pub fn compress(data: &[u8]) -> Result<Box<[u8]>, Error> {
     if stream.0.is_null() {
         return Err(LZ4Error {
             message: "unable to construct LZ4 stream encoder".to_string(),
-        }.into());
+        }
+        .into());
     }
 
     let source = data.as_ptr();
@@ -184,7 +190,8 @@ pub fn compresshc(data: &[u8]) -> Result<Box<[u8]>, Error> {
     if stream.0.is_null() {
         return Err(LZ4Error {
             message: "unable to construct LZ4 stream encoder".to_string(),
-        }.into());
+        }
+        .into());
     }
 
     let source = data.as_ptr();
@@ -213,7 +220,8 @@ fn check_error(result: i32) -> Result<i32, Error> {
     if result < 0 {
         return Err(LZ4Error {
             message: format!("lz4 failed with error '{:?}'", result),
-        }.into());
+        }
+        .into());
     }
 
     Ok(result)
@@ -222,6 +230,8 @@ fn check_error(result: i32) -> Result<i32, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
 
     fn check_roundtrip<T: AsRef<[u8]>>(data: T) -> (Box<[u8]>, bool) {
         let data = data.as_ref();

@@ -2,6 +2,7 @@
 name = "lz4-pyframe"
 version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+edition = "2018"
 
 [dependencies]
 byteorder = "1"
