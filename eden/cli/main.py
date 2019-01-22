@@ -407,16 +407,16 @@ re-run `eden clone` with --allow-empty-repo"""
 @subcmd("config", "Query Eden configuration")
 class ConfigCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--get", help="Name of value to get")
+        parser.add_argument(
+            "--get", help="Name of value to get (deprecated; does not work anymore)"
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         if args.get:
-            try:
-                print(instance.get_config_value(args.get))
-            except (KeyError, ValueError):
-                # mirrors `git config --get invalid`; just exit with code 1
-                return 1
+            raise NotImplementedError(
+                "The 'eden config --get' feature has been removed"
+            )
         else:
             instance.print_full_config(file=sys.stdout)
         return 0
