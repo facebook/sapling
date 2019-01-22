@@ -53,14 +53,14 @@ impl IndexEntry {
         pack_entry_size: u64,
     ) -> Self {
         IndexEntry {
-            node: node,
+            node,
             delta_base_offset: match delta_base_offset {
                 DeltaBaseOffset::FullText => 0xffffffff,
                 DeltaBaseOffset::Missing => 0xfffffffe,
                 DeltaBaseOffset::Offset(value) => value,
             },
-            pack_entry_offset: pack_entry_offset,
-            pack_entry_size: pack_entry_size,
+            pack_entry_offset,
+            pack_entry_size,
         }
     }
 
@@ -155,7 +155,7 @@ impl DataIndexOptions {
             0b10000000 => true,
             0 => false,
             _ => {
-                return Err(DataIndexError(format!("invalid data index '{:?}'", raw_config)).into())
+                return Err(DataIndexError(format!("invalid data index '{:?}'", raw_config)).into());
             }
         };
         Ok(DataIndexOptions { version, large })
@@ -182,7 +182,8 @@ impl DataIndex {
             return Err(DataIndexError(format!(
                 "empty dataidx '{:?}' is invalid",
                 path.to_str().unwrap_or("<unknown>")
-            )).into());
+            ))
+            .into());
         }
 
         let mmap = unsafe { MmapOptions::new().len(len as usize).map(&file)? };
@@ -235,15 +236,15 @@ impl DataIndex {
         // Write index
         writer.write_u64::<BigEndian>(values.len() as u64)?;
         for &(node, value) in values.iter() {
-            let delta_base_offset = value.delta_base.map_or(
-                DeltaBaseOffset::FullText,
-                |delta_base| {
-                    nodelocations
-                        .get(&delta_base)
-                        .map(|x| DeltaBaseOffset::Offset(*x as u32))
-                        .unwrap_or(DeltaBaseOffset::Missing)
-                },
-            );
+            let delta_base_offset =
+                value
+                    .delta_base
+                    .map_or(DeltaBaseOffset::FullText, |delta_base| {
+                        nodelocations
+                            .get(&delta_base)
+                            .map(|x| DeltaBaseOffset::Offset(*x as u32))
+                            .unwrap_or(DeltaBaseOffset::Missing)
+                    });
 
             let entry = IndexEntry::new(node.clone(), delta_base_offset, value.offset, value.size);
 
@@ -280,7 +281,8 @@ impl DataIndex {
             Ok(offset) => Ok(offset * ENTRY_LEN),
             Err(_offset) => Err(KeyError::new(
                 DataIndexError(format!("no node {:?} in slice", key)).into(),
-            ).into()),
+            )
+            .into()),
         }
     }
 
@@ -349,13 +351,11 @@ mod tests {
         let index = make_index(&values);
 
         let other = Node::random(&mut rng);
-        assert!(
-            index
-                .get_entry(&other)
-                .unwrap_err()
-                .downcast_ref::<KeyError>()
-                .is_some()
-        )
+        assert!(index
+            .get_entry(&other)
+            .unwrap_err()
+            .downcast_ref::<KeyError>()
+            .is_some())
     }
 
     quickcheck! {

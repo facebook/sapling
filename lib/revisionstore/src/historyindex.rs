@@ -41,7 +41,9 @@ impl HistoryIndexOptions {
             0 => HistoryPackVersion::Zero,
             1 => HistoryPackVersion::One,
             _ => {
-                return Err(HistoryIndexError(format!("unsupported version '{:?}'", version)).into())
+                return Err(
+                    HistoryIndexError(format!("unsupported version '{:?}'", version)).into(),
+                );
             }
         };
 
@@ -52,7 +54,7 @@ impl HistoryIndexOptions {
             _ => {
                 return Err(
                     HistoryIndexError(format!("invalid history index '{:?}'", raw_config)).into(),
-                )
+                );
             }
         };
         Ok(HistoryIndexOptions { version, large })
@@ -155,7 +157,8 @@ impl HistoryIndex {
             return Err(HistoryIndexError(format!(
                 "empty histidx '{:?}' is invalid",
                 path.to_str().unwrap_or("<unknown>")
-            )).into());
+            ))
+            .into());
         }
 
         let mmap = unsafe { MmapOptions::new().len(len as usize).map(&file)? };
@@ -232,8 +235,11 @@ impl HistoryIndex {
     ) -> Fallible<()> {
         // For each file, keep track of where its node index will start.
         // The first ones starts after the header, fanout, file count, file section, and node count.
-        let mut node_offset: usize = 2 + FanoutTable::get_size(options.large) + 8
-            + (file_sections.len() * FILE_ENTRY_LEN) + 8;
+        let mut node_offset: usize = 2
+            + FanoutTable::get_size(options.large)
+            + 8
+            + (file_sections.len() * FILE_ENTRY_LEN)
+            + 8;
         let mut node_count = 0;
 
         // Write out the file section entries
@@ -243,13 +249,15 @@ impl HistoryIndex {
                 return Err(HistoryIndexError(format!(
                     "file '{:?}' was specified twice",
                     file_name
-                )).into());
+                ))
+                .into());
             }
             seen_files.insert(&file_name);
 
-            let file_nodes: &HashMap<Key, NodeLocation> = nodes.get(file_name).ok_or_else(|| {
-                HistoryIndexError(format!("unable to find nodes for {:?}", file_name))
-            })?;
+            let file_nodes: &HashMap<Key, NodeLocation> =
+                nodes.get(file_name).ok_or_else(|| {
+                    HistoryIndexError(format!("unable to find nodes for {:?}", file_name))
+                })?;
             let node_section_size = file_nodes.len() * NODE_ENTRY_LEN;
             FileIndexEntry {
                 node: file_hash.clone(),
@@ -257,7 +265,8 @@ impl HistoryIndex {
                 file_section_size: section_location.size,
                 node_index_offset: node_offset as u32,
                 node_index_size: node_section_size as u32,
-            }.write(writer)?;
+            }
+            .write(writer)?;
 
             // Keep track of the current node index offset
             node_offset += 2 + file_name.len() + node_section_size;
@@ -291,7 +300,8 @@ impl HistoryIndex {
             NodeIndexEntry {
                 node: key.node().clone(),
                 offset: location.offset,
-            }.write(writer)?;
+            }
+            .write(writer)?;
         }
 
         Ok(())
@@ -301,7 +311,8 @@ impl HistoryIndex {
         let filename_node = sha1(key.name());
         let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), &filename_node)?;
         let start = start + self.index_start;
-        let end = end.map(|pos| pos + self.index_start)
+        let end = end
+            .map(|pos| pos + self.index_start)
             .unwrap_or(self.index_end);
 
         let buf = self.mmap.get_err(start..end)?;
@@ -350,7 +361,8 @@ impl HistoryIndex {
             Ok(offset) => Ok(offset * FILE_ENTRY_LEN),
             Err(_offset) => Err(KeyError::new(
                 HistoryIndexError(format!("no node {:?} in slice", key)).into(),
-            ).into()),
+            )
+            .into()),
         }
     }
 
@@ -368,7 +380,8 @@ impl HistoryIndex {
             Ok(offset) => Ok(offset * NODE_ENTRY_LEN),
             Err(_offset) => Err(KeyError::new(
                 HistoryIndexError(format!("no node {:?} in slice", key)).into(),
-            ).into()),
+            )
+            .into()),
         }
     }
 

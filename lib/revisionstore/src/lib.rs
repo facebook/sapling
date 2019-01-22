@@ -21,8 +21,8 @@ extern crate rand_chacha;
 
 mod ancestors;
 mod dataindex;
-mod historyindex;
 mod fanouttable;
+mod historyindex;
 mod sliceext;
 mod unionstore;
 

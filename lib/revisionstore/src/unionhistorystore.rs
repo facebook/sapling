@@ -36,7 +36,8 @@ impl UnionHistoryStore {
         Err(KeyError::from(UnionHistoryStoreError(format!(
             "No ancestors found for key {:?}",
             key
-        ))).into())
+        )))
+        .into())
     }
 }
 
@@ -46,7 +47,8 @@ impl HistoryStore for UnionHistoryStore {
             key,
             |k, _seen| self.get_partial_ancestors(k),
             AncestorTraversal::Complete,
-        ).collect()
+        )
+        .collect()
     }
 
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
@@ -72,7 +74,8 @@ impl HistoryStore for UnionHistoryStore {
         Err(KeyError::from(UnionHistoryStoreError(format!(
             "No NodeInfo found for key {:?}",
             key
-        ))).into())
+        )))
+        .into())
     }
 }
 

@@ -27,7 +27,8 @@ impl<'a, T> SliceExt<'a, T> for &'a [T] {
                 "slice (len {:?}) too short to read range {:?}",
                 self.len(),
                 range
-            )).into()
+            ))
+            .into()
         })
     }
 }

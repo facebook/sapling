@@ -130,7 +130,10 @@ pub fn repack_datapacks<'a>(
     }
 }
 
-fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryPack) -> Fallible<()> {
+fn repack_historypack(
+    history_pack: &HistoryPack,
+    mut_pack: &mut MutableHistoryPack,
+) -> Fallible<()> {
     for k in history_pack.iter() {
         let key = k?;
         let node = history_pack.get_node_info(&key)?;

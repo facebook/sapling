@@ -76,13 +76,13 @@ use byteorder::{BigEndian, ReadBytesExt};
 use lz4_pyframe::decompress;
 use memmap::{Mmap, MmapOptions};
 use std::cell::RefCell;
+use std::fmt;
 use std::fs::{remove_file, File};
 use std::io::{Cursor, Read};
 use std::mem::drop;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use std::fmt;
 
 use dataindex::{DataIndex, DeltaBaseOffset};
 use datastore::{DataStore, Delta, Metadata};
@@ -393,7 +393,7 @@ struct DataPackIterator<'a> {
 impl<'a> DataPackIterator<'a> {
     pub fn new(pack: &'a DataPack) -> Self {
         DataPackIterator {
-            pack: pack,
+            pack,
             offset: 1, // Start after the header byte
         }
     }
@@ -450,16 +450,14 @@ pub mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let revisions = vec![
-            (
-                Delta {
-                    data: Rc::new([1, 2, 3, 4]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
-                },
-                None,
-            ),
-        ];
+        let revisions = vec![(
+            Delta {
+                data: Rc::new([1, 2, 3, 4]),
+                base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+            },
+            None,
+        )];
         let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref _metadata) in revisions.iter() {
             let missing = pack.get_missing(&[delta.key.clone()]).unwrap();
@@ -576,16 +574,14 @@ pub mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let mut revisions = vec![
-            (
-                Delta {
-                    data: Rc::new([1, 2, 3, 4]),
-                    base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
-                },
-                None,
-            ),
-        ];
+        let mut revisions = vec![(
+            Delta {
+                data: Rc::new([1, 2, 3, 4]),
+                base: Some(Key::new(Box::new([0]), Node::random(&mut rng))),
+                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+            },
+            None,
+        )];
         let base0 = revisions[0].0.key.clone();
         revisions.push((
             Delta {
@@ -662,16 +658,14 @@ pub mod tests {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = TempDir::new().unwrap();
 
-        let revisions = vec![
-            (
-                Delta {
-                    data: Rc::new([1, 2, 3, 4]),
-                    base: None,
-                    key: Key::new(Box::new([0]), Node::random(&mut rng)),
-                },
-                None,
-            ),
-        ];
+        let revisions = vec![(
+            Delta {
+                data: Rc::new([1, 2, 3, 4]),
+                base: None,
+                key: Key::new(Box::new([0]), Node::random(&mut rng)),
+            },
+            None,
+        )];
 
         let pack = make_datapack(&tempdir, &revisions);
         assert_eq!(

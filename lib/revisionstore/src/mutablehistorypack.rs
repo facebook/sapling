@@ -141,7 +141,8 @@ impl MutableHistoryPack {
         FileSectionHeader {
             file_name: &file_name,
             count: node_map.len() as u32,
-        }.write(writer)?;
+        }
+        .write(writer)?;
 
         // Sort the nodes in topological order (ancestors first), as required by the histpack spec
         let node_map = topo_sort(node_map)?;
@@ -249,11 +250,13 @@ impl HistoryStore for MutableHistoryPack {
             key,
             |k, _seen| self.get_node_info(k),
             AncestorTraversal::Partial,
-        ).collect()
+        )
+        .collect()
     }
 
     fn get_node_info(&self, key: &Key) -> Fallible<NodeInfo> {
-        Ok(self.mem_index
+        Ok(self
+            .mem_index
             .get(key.name())
             .ok_or(MutableHistoryPackError(format!(
                 "key '{:?}' not present in mutable history pack",
@@ -268,7 +271,8 @@ impl HistoryStore for MutableHistoryPack {
     }
 
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        Ok(keys.iter()
+        Ok(keys
+            .iter()
             .filter(|k| match self.mem_index.get(k.name()) {
                 Some(e) => e.get(k).is_none(),
                 None => true,

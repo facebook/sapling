@@ -88,7 +88,8 @@ impl FanoutTable {
             _ => {
                 return Err(FanoutTableError(
                     format!("invalid fanout factor ({:?})", fanout_factor).into(),
-                ).into())
+                )
+                .into());
             }
         };
         let fanout_table_length = match fanout_factor {
@@ -97,7 +98,8 @@ impl FanoutTable {
             _ => {
                 return Err(FanoutTableError(
                     format!("invalid fanout factor ({:?})", fanout_factor).into(),
-                ).into())
+                )
+                .into());
             }
         };
 
@@ -149,7 +151,7 @@ mod tests {
 
     fn make_node(first: u8, second: u8, third: u8, fourth: u8) -> Node {
         let buf = [
-            first, second, third, fourth, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            first, second, third, fourth, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         Node::from(&buf)
     }
@@ -174,7 +176,8 @@ mod tests {
             &mut nodes.iter(),
             size_of::<u32>() as usize,
             Some(&mut locations),
-        ).expect("fanout write");
+        )
+        .expect("fanout write");
         assert_eq!(SMALL_RAW_SIZE, buf.len());
 
         let table = buf.as_ref();
@@ -220,7 +223,8 @@ mod tests {
             &mut nodes.iter(),
             size_of::<u32>() as usize,
             Some(&mut locations),
-        ).expect("fanout write");
+        )
+        .expect("fanout write");
         assert_eq!(LARGE_RAW_SIZE, buf.len());
 
         let table = buf.as_ref();
@@ -257,7 +261,8 @@ mod tests {
             &mut nodes.iter(),
             size_of::<u32>() as usize,
             Some(&mut locations),
-        ).expect("fanout write");
+        )
+        .expect("fanout write");
         assert_eq!(SMALL_RAW_SIZE, buf.len());
 
         let table = buf.as_ref();
@@ -289,7 +294,8 @@ mod tests {
             &mut nodes.iter(),
             size_of::<u32>() as usize,
             Some(&mut locations),
-        ).expect("fanout write");
+        )
+        .expect("fanout write");
         assert_eq!(SMALL_RAW_SIZE, buf.len());
 
         let table = buf.as_ref();
@@ -315,7 +321,7 @@ mod tests {
         );
     }
 
-    quickcheck!{
+    quickcheck! {
         fn test_random_nodes(fanout: u8, nodes: Vec<Node>) -> bool {
             let mut nodes = nodes;
             nodes.sort();

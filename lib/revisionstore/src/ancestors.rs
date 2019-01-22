@@ -38,8 +38,8 @@ pub struct BatchedAncestorIterator<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancest
 impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> AncestorIterator<T> {
     pub fn new(key: &Key, get_more: T, traversal: AncestorTraversal) -> Self {
         let mut iter = AncestorIterator {
-            traversal: traversal,
-            get_more: get_more,
+            traversal,
+            get_more,
             seen: HashSet::new(),
             queue: VecDeque::new(),
         };
@@ -55,8 +55,8 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<NodeInfo>> AncestorIterator<T> {
 impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> BatchedAncestorIterator<T> {
     pub fn new(key: &Key, get_more: T, traversal: AncestorTraversal) -> Self {
         let mut iter = BatchedAncestorIterator {
-            traversal: traversal,
-            get_more: get_more,
+            traversal,
+            get_more,
             seen: HashSet::new(),
             queue: VecDeque::new(),
             pending_infos: HashMap::new(),
@@ -113,9 +113,11 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> Iterator for BatchedAnce
             if !self.pending_infos.contains_key(&current) {
                 match (self.get_more)(&current, &self.seen) {
                     Err(e) => return Some(Err(e)),
-                    Ok(partial_ancestors) => for (key, node_info) in partial_ancestors.iter() {
-                        self.pending_infos.insert(key.clone(), node_info.clone());
-                    },
+                    Ok(partial_ancestors) => {
+                        for (key, node_info) in partial_ancestors.iter() {
+                            self.pending_infos.insert(key.clone(), node_info.clone());
+                        }
+                    }
                 };
             }
 
@@ -131,7 +133,8 @@ impl<T: Fn(&Key, &HashSet<Key>) -> Fallible<Ancestors>> Iterator for BatchedAnce
                 Some(Err(AncestorIteratorError(format!(
                     "expected {:?} ancestor",
                     current
-                )).into()))
+                ))
+                .into()))
             }
         } else {
             None
@@ -200,8 +203,9 @@ mod tests {
             &tip,
             |k, _seen| Ok(ancestors.get(&k).unwrap().clone()),
             AncestorTraversal::Complete,
-        ).collect::<Fallible<Ancestors>>()
-            .unwrap();
+        )
+        .collect::<Fallible<Ancestors>>()
+        .unwrap();
         assert_eq!(ancestors, found_ancestors);
     }
 
@@ -224,8 +228,9 @@ mod tests {
                 Ok(k_ancestors)
             },
             AncestorTraversal::Complete,
-        ).collect::<Fallible<Ancestors>>()
-            .unwrap();
+        )
+        .collect::<Fallible<Ancestors>>()
+        .unwrap();
         assert_eq!(ancestors, found_ancestors);
     }
 
@@ -271,8 +276,9 @@ mod tests {
             &tip,
             |k, _seen| Ok(ancestors.get(&k).unwrap().clone()),
             AncestorTraversal::Complete,
-        ).collect::<Fallible<Ancestors>>()
-            .unwrap();
+        )
+        .collect::<Fallible<Ancestors>>()
+        .unwrap();
         assert_eq!(ancestors, found_ancestors);
     }
 }

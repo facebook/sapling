@@ -69,7 +69,11 @@ pub struct HistoryEntry<'a> {
     pub copy_from: Option<&'a [u8]>,
 }
 
-fn read_slice<'a, 'b>(cur: &'a mut Cursor<&[u8]>, buf: &'b [u8], size: usize) -> Fallible<&'b [u8]> {
+fn read_slice<'a, 'b>(
+    cur: &'a mut Cursor<&[u8]>,
+    buf: &'b [u8],
+    size: usize,
+) -> Fallible<&'b [u8]> {
     let start = cur.position() as usize;
     let end = start + size;
     let file_name = buf.get_err(start..end)?;
@@ -303,7 +307,7 @@ struct HistoryPackIterator<'a> {
 impl<'a> HistoryPackIterator<'a> {
     pub fn new(pack: &'a HistoryPack) -> Self {
         HistoryPackIterator {
-            pack: pack,
+            pack,
             offset: 1, // Start after the header byte
             current_name: vec![],
             current_remaining: 0,

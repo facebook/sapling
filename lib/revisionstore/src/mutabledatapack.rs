@@ -200,7 +200,8 @@ impl DataStore for MutableDataPack {
     }
 
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
-        Ok(keys.iter()
+        Ok(keys
+            .iter()
             .filter(|k| self.mem_index.get(k.node()).is_none())
             .map(|k| k.clone())
             .collect())

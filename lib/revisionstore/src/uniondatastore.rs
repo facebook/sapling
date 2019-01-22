@@ -40,16 +40,21 @@ impl UnionDataStore {
         Err(KeyError::from(UnionDataStoreError(format!(
             "No delta chain found for key {:?}",
             key
-        ))).into())
+        )))
+        .into())
     }
 }
 
 impl DataStore for UnionDataStore {
     fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
         let delta_chain = self.get_delta_chain(key)?;
-        let (basetext, deltas) = delta_chain.split_last().ok_or(KeyError::from(
-            UnionDataStoreError(format!("No delta chain for key {:?}", key)),
-        ))?;
+        let (basetext, deltas) =
+            delta_chain
+                .split_last()
+                .ok_or(KeyError::from(UnionDataStoreError(format!(
+                    "No delta chain for key {:?}",
+                    key
+                ))))?;
 
         let deltas: Vec<&[u8]> = deltas
             .iter()
@@ -74,7 +79,8 @@ impl DataStore for UnionDataStore {
         Err(KeyError::from(UnionDataStoreError(format!(
             "No delta found for key {:?}",
             key
-        ))).into())
+        )))
+        .into())
     }
 
     fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
@@ -110,7 +116,8 @@ impl DataStore for UnionDataStore {
         Err(KeyError::from(UnionDataStoreError(format!(
             "No metadata found for key {:?}",
             key
-        ))).into())
+        )))
+        .into())
     }
 
     fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
