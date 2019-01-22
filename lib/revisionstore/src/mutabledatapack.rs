@@ -6,7 +6,7 @@
 use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::{Error, Fallible};
+use failure::{format_err, Error, Fail, Fallible};
 use tempfile::NamedTempFile;
 
 use lz4_pyframe::compress;
@@ -19,11 +19,11 @@ use std::{
     u16,
 };
 
-use dataindex::{DataIndex, DeltaLocation};
-use datapack::{DataEntry, DataPackVersion};
-use datastore::{DataStore, Delta, Metadata};
-use key::Key;
-use packwriter::PackWriter;
+use crate::dataindex::{DataIndex, DeltaLocation};
+use crate::datapack::{DataEntry, DataPackVersion};
+use crate::datastore::{DataStore, Delta, Metadata};
+use crate::key::Key;
+use crate::packwriter::PackWriter;
 
 pub struct MutableDataPack {
     version: DataPackVersion,
@@ -222,7 +222,7 @@ mod tests {
     use std::io::Read;
     use std::rc::Rc;
 
-    use key::Key;
+    use crate::key::Key;
     use tempfile::tempdir;
 
     #[test]

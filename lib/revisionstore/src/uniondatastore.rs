@@ -1,15 +1,15 @@
 // Copyright Facebook, Inc. 2018
 // Union data store
-use failure::{err_msg, Fallible};
+use failure::{err_msg, Fail, Fallible};
 
 use std::rc::Rc;
 
 use mpatch::mpatch::get_full_text;
 
-use datastore::{DataStore, Delta, Metadata};
-use error::KeyError;
-use key::Key;
-use unionstore::UnionStore;
+use crate::datastore::{DataStore, Delta, Metadata};
+use crate::error::KeyError;
+use crate::key::Key;
+use crate::unionstore::UnionStore;
 
 pub type UnionDataStore = UnionStore<Rc<DataStore>>;
 
@@ -131,6 +131,8 @@ impl DataStore for UnionDataStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
 
     struct BadDataStore;
 

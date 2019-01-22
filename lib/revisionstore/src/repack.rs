@@ -12,13 +12,13 @@ use std::{
     sync::Arc,
 };
 
-use datapack::{DataPack, DataPackVersion};
-use datastore::DataStore;
-use historypack::{HistoryPack, HistoryPackVersion};
-use historystore::HistoryStore;
-use key::Key;
-use mutabledatapack::MutableDataPack;
-use mutablehistorypack::MutableHistoryPack;
+use crate::datapack::{DataPack, DataPackVersion};
+use crate::datastore::DataStore;
+use crate::historypack::{HistoryPack, HistoryPackVersion};
+use crate::historystore::HistoryStore;
+use crate::key::Key;
+use crate::mutabledatapack::MutableDataPack;
+use crate::mutablehistorypack::MutableHistoryPack;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RepackOutputType {
@@ -235,17 +235,23 @@ pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Fall
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datapack::tests::make_datapack;
-    use datastore::Delta;
-    use historypack::tests::{get_nodes, make_historypack};
-    use historystore::Ancestors;
+
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
-    use std::collections::HashMap;
-    use std::rc::Rc;
-    use std::sync::atomic::{AtomicBool, Ordering};
     use tempfile::TempDir;
+
     use types::node::Node;
+
+    use std::{
+        collections::HashMap,
+        rc::Rc,
+        sync::atomic::{AtomicBool, Ordering},
+    };
+
+    use crate::datapack::tests::make_datapack;
+    use crate::datastore::Delta;
+    use crate::historypack::tests::{get_nodes, make_historypack};
+    use crate::historystore::Ancestors;
 
     #[derive(Clone)]
     struct FakeStore {

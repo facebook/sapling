@@ -6,7 +6,7 @@
 use byteorder::WriteBytesExt;
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::Fallible;
+use failure::{Fail, Fallible};
 use tempfile::NamedTempFile;
 
 use std::{
@@ -16,12 +16,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use ancestors::{AncestorIterator, AncestorTraversal};
-use historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
-use historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
-use historystore::{Ancestors, HistoryStore, NodeInfo};
-use key::Key;
-use packwriter::PackWriter;
+use crate::ancestors::{AncestorIterator, AncestorTraversal};
+use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
+use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
+use crate::historystore::{Ancestors, HistoryStore, NodeInfo};
+use crate::key::Key;
+use crate::packwriter::PackWriter;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Mutable History Pack Error: {:?}", _0)]
@@ -288,14 +288,17 @@ impl HistoryStore for MutableHistoryPack {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
     use rand::Rng;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::tempdir;
 
-    use historypack::HistoryPack;
-    use repack::IterableStore;
     use types::node::Node;
+
+    use crate::historypack::HistoryPack;
+    use crate::repack::IterableStore;
 
     #[test]
     fn test_topo_order() {

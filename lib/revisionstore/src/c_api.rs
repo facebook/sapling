@@ -21,11 +21,11 @@ use std::{
     slice,
 };
 
-use datapack::DataPack;
-use datastore::DataStore;
-use error::KeyError;
-use key::Key;
-use uniondatastore::UnionDataStore;
+use crate::datapack::DataPack;
+use crate::datastore::DataStore;
+use crate::error::KeyError;
+use crate::key::Key;
+use crate::uniondatastore::UnionDataStore;
 
 pub struct DataPackUnion {
     paths: Vec<PathBuf>,

@@ -1,14 +1,14 @@
 // Copyright Facebook, Inc. 2018
 // Union history store
-use failure::Fallible;
+use failure::{Fail, Fallible};
 
 use std::rc::Rc;
 
-use ancestors::{AncestorTraversal, BatchedAncestorIterator};
-use error::KeyError;
-use historystore::{Ancestors, HistoryStore, NodeInfo};
-use key::Key;
-use unionstore::UnionStore;
+use crate::ancestors::{AncestorTraversal, BatchedAncestorIterator};
+use crate::error::KeyError;
+use crate::historystore::{Ancestors, HistoryStore, NodeInfo};
+use crate::key::Key;
+use crate::unionstore::UnionStore;
 
 pub type UnionHistoryStore = UnionStore<Rc<HistoryStore>>;
 
@@ -83,6 +83,8 @@ impl HistoryStore for UnionHistoryStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
 
     struct BadHistoryStore;
 

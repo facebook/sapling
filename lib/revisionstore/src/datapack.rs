@@ -73,7 +73,7 @@
 //! ```
 //! [1]: new in version 1.
 use byteorder::{BigEndian, ReadBytesExt};
-use failure::Fallible;
+use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
 use lz4_pyframe::decompress;
@@ -90,11 +90,11 @@ use std::{
     sync::Arc,
 };
 
-use dataindex::{DataIndex, DeltaBaseOffset};
-use datastore::{DataStore, Delta, Metadata};
-use key::Key;
-use repack::{IterableStore, RepackOutputType, Repackable};
-use sliceext::SliceExt;
+use crate::dataindex::{DataIndex, DeltaBaseOffset};
+use crate::datastore::{DataStore, Delta, Metadata};
+use crate::key::Key;
+use crate::repack::{IterableStore, RepackOutputType, Repackable};
+use crate::sliceext::SliceExt;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Datapack Error: {:?}", _0)]
@@ -424,12 +424,16 @@ impl<'a> Iterator for DataPackIterator<'a> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use datastore::{Delta, Metadata};
-    use mutabledatapack::MutableDataPack;
+
+    use quickcheck::quickcheck;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
+
     use types::node::Node;
+
+    use crate::datastore::{Delta, Metadata};
+    use crate::mutabledatapack::MutableDataPack;
 
     pub fn make_datapack(tempdir: &TempDir, deltas: &Vec<(Delta, Option<Metadata>)>) -> DataPack {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
@@ -503,7 +507,7 @@ pub mod tests {
         let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref metadata) in revisions.iter() {
             let meta = pack.get_meta(&delta.key).unwrap();
-            let mut metadata = match metadata {
+            let metadata = match metadata {
                 &Some(ref m) => m.clone(),
                 &None => Default::default(),
             };

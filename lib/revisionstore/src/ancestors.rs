@@ -3,15 +3,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure::Fallible;
+use failure::{Fail, Fallible};
 
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     iter::Iterator,
 };
 
-use historystore::{Ancestors, NodeInfo};
-use key::Key;
+use crate::historystore::{Ancestors, NodeInfo};
+use crate::key::Key;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Ancestor Iterator Error: {:?}", _0)]

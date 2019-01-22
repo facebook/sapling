@@ -9,7 +9,7 @@ use types::node::Node;
 
 use std::collections::HashMap;
 
-use key::Key;
+use crate::key::Key;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct NodeInfo {

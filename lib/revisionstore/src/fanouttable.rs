@@ -9,7 +9,7 @@
 /// offset of the earliest node with that prefix. If a fanout slot has no nodes, it's value is set
 /// to the value of the last valid offset, or 0 if there is none.
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible;
+use failure::{Fail, Fallible};
 
 use types::node::Node;
 
@@ -151,6 +151,9 @@ impl FanoutTable {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
+
     use std::mem::size_of;
 
     fn make_node(first: u8, second: u8, third: u8, fourth: u8) -> Node {

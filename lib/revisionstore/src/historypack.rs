@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible;
+use failure::{format_err, Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
 use types::node::Node;
@@ -17,12 +17,12 @@ use std::{
     sync::Arc,
 };
 
-use ancestors::{AncestorIterator, AncestorTraversal};
-use historyindex::HistoryIndex;
-use historystore::{Ancestors, HistoryStore, NodeInfo};
-use key::Key;
-use repack::{IterableStore, RepackOutputType, Repackable};
-use sliceext::SliceExt;
+use crate::ancestors::{AncestorIterator, AncestorTraversal};
+use crate::historyindex::HistoryIndex;
+use crate::historystore::{Ancestors, HistoryStore, NodeInfo};
+use crate::key::Key;
+use crate::repack::{IterableStore, RepackOutputType, Repackable};
+use crate::sliceext::SliceExt;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Historypack Error: {:?}", _0)]
@@ -363,13 +363,18 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
-    use std::collections::HashMap;
-    use std::fs::{File, OpenOptions};
     use tempfile::TempDir;
 
-    use mutablehistorypack::MutableHistoryPack;
+    use std::{
+        collections::HashMap,
+        fs::{File, OpenOptions},
+    };
+
+    use crate::mutablehistorypack::MutableHistoryPack;
 
     pub fn make_historypack(tempdir: &TempDir, nodes: &HashMap<Key, NodeInfo>) -> HistoryPack {
         let mut mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();

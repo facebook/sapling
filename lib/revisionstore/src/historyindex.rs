@@ -6,7 +6,7 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use failure::Fallible;
+use failure::{Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
 use types::node::Node;
@@ -19,11 +19,11 @@ use std::{
     path::Path,
 };
 
-use error::KeyError;
-use fanouttable::FanoutTable;
-use historypack::HistoryPackVersion;
-use key::Key;
-use sliceext::SliceExt;
+use crate::error::KeyError;
+use crate::fanouttable::FanoutTable;
+use crate::historypack::HistoryPackVersion;
+use crate::key::Key;
+use crate::sliceext::SliceExt;
 
 #[derive(Debug, Fail)]
 #[fail(display = "HistoryIndex Error: {:?}", _0)]
@@ -427,6 +427,8 @@ impl quickcheck::Arbitrary for NodeLocation {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
     use tempfile::NamedTempFile;
 
     fn make_index(

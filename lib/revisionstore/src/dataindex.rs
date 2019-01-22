@@ -4,7 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible;
+use failure::{Fail, Fallible};
 use memmap::{Mmap, MmapOptions};
 
 use types::node::Node;
@@ -16,9 +16,9 @@ use std::{
     path::Path,
 };
 
-use error::KeyError;
-use fanouttable::FanoutTable;
-use sliceext::SliceExt;
+use crate::error::KeyError;
+use crate::fanouttable::FanoutTable;
+use crate::sliceext::SliceExt;
 
 const ENTRY_LEN: usize = 40;
 const SMALL_FANOUT_CUTOFF: usize = 8192; // 2^16 / 8
@@ -298,6 +298,8 @@ impl DataIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::NamedTempFile;

@@ -61,9 +61,11 @@ impl<T: Write> Write for PackWriter<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use byteorder::{ReadBytesExt, WriteBytesExt};
-    use std::io::{Seek, SeekFrom};
     use tempfile::tempfile;
+
+    use std::io::{Seek, SeekFrom};
 
     #[test]
     fn test_bytes_written() {

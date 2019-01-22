@@ -4,14 +4,14 @@
 // GNU General Public License version 2 or any later version.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fallible;
+use failure::{format_err, Fallible};
 
 use std::{
     io::{Cursor, Write},
     rc::Rc,
 };
 
-use key::Key;
+use crate::key::Key;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Delta {
@@ -133,6 +133,7 @@ fn bin_to_u64(buf: &[u8]) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::quickcheck;
 
     fn roundtrip_meta_serialize(meta: &Metadata) {
         let mut buf = vec![];

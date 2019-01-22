@@ -3,15 +3,15 @@
 // hg/hgext/remotefilelog/remotefilelog.py:_createfileblob()
 // into the size of text, text and ancestors information.
 
-use failure::Fallible;
+use failure::{Fail, Fallible};
 
 use types::node::Node;
 
 use std::{fs::File, io::prelude::*, rc::Rc};
 
-use error::KeyError;
-use historystore::{Ancestors, NodeInfo};
-use key::Key;
+use crate::error::KeyError;
+use crate::historystore::{Ancestors, NodeInfo};
+use crate::key::Key;
 
 #[derive(Debug, Fail)]
 #[fail(display = "LooseFile Error: {:?}", _0)]
@@ -99,6 +99,8 @@ impl LooseFile {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use quickcheck::quickcheck;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
 
