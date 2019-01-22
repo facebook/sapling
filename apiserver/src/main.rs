@@ -135,7 +135,7 @@ fn get_raw_file(
     state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetRawFile {
-            changeset: info.changeset.clone(),
+            revision: info.changeset.clone(),
             path: info.path.clone(),
         },
     })
@@ -165,7 +165,7 @@ fn list_directory(
     state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::ListDirectory {
-            changeset: info.changeset.clone(),
+            revision: info.changeset.clone(),
             path: info.path.clone(),
         },
     })
@@ -199,7 +199,7 @@ fn get_changeset(
     state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetChangeset {
-            hash: info.hash.clone(),
+            revision: info.hash.clone(),
         },
     })
 }

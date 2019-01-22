@@ -11,7 +11,7 @@ use failure::Error;
 
 use http::uri::Uri;
 
-use apiserver_thrift::types::MononokeGetRawParams;
+use apiserver_thrift::types::{MononokeGetChangesetParams, MononokeGetRawParams};
 
 use super::lfs::BatchRequest;
 
@@ -19,11 +19,11 @@ use super::lfs::BatchRequest;
 pub enum MononokeRepoQuery {
     GetRawFile {
         path: String,
-        changeset: String,
+        revision: String,
     },
     ListDirectory {
         path: String,
-        changeset: String,
+        revision: String,
     },
     GetBlobContent {
         hash: String,
@@ -32,7 +32,7 @@ pub enum MononokeRepoQuery {
         hash: String,
     },
     GetChangeset {
-        hash: String,
+        revision: String,
     },
     IsAncestor {
         proposed_ancestor: String,
@@ -65,7 +65,20 @@ impl TryFrom<MononokeGetRawParams> for MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::GetRawFile {
                 path: String::from_utf8(params.path)?,
-                changeset: params.changeset,
+                revision: params.changeset,
+            },
+        })
+    }
+}
+
+impl TryFrom<MononokeGetChangesetParams> for MononokeQuery {
+    type Error = Error;
+
+    fn try_from(params: MononokeGetChangesetParams) -> Result<MononokeQuery, Self::Error> {
+        Ok(MononokeQuery {
+            repo: params.repo,
+            kind: MononokeRepoQuery::GetChangeset {
+                revision: params.revision,
             },
         })
     }

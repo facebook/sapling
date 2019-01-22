@@ -20,7 +20,25 @@ struct MononokeGetRawParams {
   3: binary path,
 }
 
+struct MononokeGetChangesetParams {
+    1: string repo,
+    3: string revision,
+}
+
+struct MononokeChangeset {
+  1: string commit_hash,
+  2: string message,
+  3: i64 date,
+  4: string author,
+  5: list<string> parents
+  6: map<string, binary> extra,
+}
+
+
 service MononokeAPIService extends fb303.FacebookService {
   binary get_raw(1: MononokeGetRawParams params)
+    throws (1: MononokeAPIException e),
+
+  MononokeChangeset get_changeset(1: MononokeGetChangesetParams param)
     throws (1: MononokeAPIException e),
 }

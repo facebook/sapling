@@ -12,8 +12,10 @@ use std::sync::Arc;
 
 use futures_ext::BoxFuture;
 
-use apiserver_thrift::client::{MononokeAPIService, make_MononokeAPIService};
-use apiserver_thrift::types;
+use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
+use apiserver_thrift::types::{
+    MononokeChangeset, MononokeGetChangesetParams, MononokeGetRawParams,
+};
 use srclient::SRChannelBuilder;
 
 pub struct MononokeAPIClient {
@@ -34,15 +36,23 @@ impl MononokeAPIClient {
 
     pub fn get_raw(
         &self,
-        changeset: String,
+        revision: String,
         path: String,
     ) -> BoxFuture<Vec<u8>, apiserver_thrift::errors::Error> {
-        use self::types::MononokeGetRawParams;
-
         self.inner.get_raw(&MononokeGetRawParams {
             repo: self.repo.clone(),
-            changeset: changeset,
+            changeset: revision,
             path: path.into_bytes(),
+        })
+    }
+
+    pub fn get_changeset(
+        &self,
+        revision: String,
+    ) -> BoxFuture<MononokeChangeset, apiserver_thrift::errors::Error> {
+        self.inner.get_changeset(&MononokeGetChangesetParams {
+            repo: self.repo.clone(),
+            revision,
         })
     }
 }

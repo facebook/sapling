@@ -8,12 +8,14 @@ use std::convert::TryInto;
 use std::sync::Arc;
 
 use apiserver_thrift::server::MononokeApiservice;
-use apiserver_thrift::services::mononoke_apiservice::GetRawExn;
-use apiserver_thrift::types::MononokeGetRawParams;
+use apiserver_thrift::services::mononoke_apiservice::{GetChangesetExn, GetRawExn};
+use apiserver_thrift::types::{
+    MononokeChangeset, MononokeGetChangesetParams, MononokeGetRawParams,
+};
 use errors::ErrorKind;
 use failure::err_msg;
 use futures::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::BoxFuture;
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
@@ -64,7 +66,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                 String::from_utf8(params.path.clone())
                     .unwrap_or("Invalid UTF-8 in path".to_string()),
             )
-            .add("changeset", params.changeset.clone());
+            .add("revision", params.changeset.clone());
 
         params
             .try_into()
@@ -81,13 +83,69 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                 ))),
             })
             .map_err(move |e| GetRawExn::e(e.into()))
-            .boxify()
             .timed({
                 move |stats, resp| {
                     scuba
                         .add_future_stats(&stats)
                         .add("response_time", stats.completion_time.as_micros_unchecked())
                         .add("response_size", resp.map(|vec| vec.len()).unwrap_or(0));
+
+                    scuba.log();
+
+                    Ok(())
+                }
+            })
+    }
+
+    fn get_changeset(
+        &self,
+        params: MononokeGetChangesetParams,
+    ) -> BoxFuture<MononokeChangeset, GetChangesetExn> {
+        let mut scuba = self.scuba_builder.clone();
+
+        scuba
+            .add_common_server_data()
+            .add("type", "thrift")
+            .add("method", "get_changeset")
+            .add(
+                "params",
+                serde_json::to_string(&params)
+                    .unwrap_or("Error converting request to json".to_string()),
+            )
+            .add("revision", params.revision.clone());
+
+        params
+            .try_into()
+            .into_future()
+            .from_err()
+            .and_then({
+                cloned!(self.addr);
+                move |param| addr.send_query(param)
+            })
+            .and_then(|resp: MononokeRepoResponse| match resp {
+                MononokeRepoResponse::GetChangeset { changeset } => {
+                    Ok(MononokeChangeset::from(changeset))
+                }
+                _ => Err(ErrorKind::InternalError(err_msg(
+                    "Actor returned wrong response type to query".to_string(),
+                ))),
+            })
+            .map_err(move |e| GetChangesetExn::e(e.into()))
+            .timed({
+                move |stats, resp| {
+                    scuba
+                        .add(
+                            "response_size",
+                            resp.map(|resp| {
+                                resp.commit_hash.as_bytes().len()
+                                    + resp.message.len()
+                                    + resp.author.as_bytes().len()
+                                    + 8 // 8 bytes for the date as i64
+                            })
+                            .unwrap_or(0),
+                        )
+                        .add_future_stats(&stats)
+                        .add("response_time", stats.completion_time.as_micros_unchecked());
 
                     scuba.log();
 

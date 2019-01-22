@@ -339,11 +339,11 @@ impl MononokeRepo {
         use MononokeRepoQuery::*;
 
         match msg {
-            GetRawFile { changeset, path } => self.get_raw_file(ctx, changeset, path),
+            GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path),
             GetBlobContent { hash } => self.get_blob_content(ctx, hash),
-            ListDirectory { changeset, path } => self.list_directory(ctx, changeset, path),
+            ListDirectory { revision, path } => self.list_directory(ctx, revision, path),
             GetTree { hash } => self.get_tree(ctx, hash),
-            GetChangeset { hash } => self.get_changeset(ctx, hash),
+            GetChangeset { revision } => self.get_changeset(ctx, revision),
             IsAncestor {
                 proposed_ancestor,
                 proposed_descendent,

@@ -6,26 +6,32 @@
 
 // This file defines all types can be serialized into JSON
 
-use std::convert::TryFrom;
+use std::convert::{Into, TryFrom};
 use std::str;
 
 use chrono::{DateTime, FixedOffset};
 use failure::{err_msg, Error};
 
+use apiserver_thrift::types::MononokeChangeset;
 use blobrepo::HgBlobChangeset;
 use context::CoreContext;
 use futures::prelude::*;
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
-use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, Type};
 use mercurial_types::hash::Sha1;
 use mercurial_types::manifest::Content;
+use mercurial_types::{Changeset as HgChangeset, Entry as HgEntry, Type};
+use std::collections::BTreeMap;
 
 #[derive(Serialize)]
 pub enum FileType {
-    #[serde(rename = "file")] File,
-    #[serde(rename = "tree")] Tree,
-    #[serde(rename = "executable")] Executable,
-    #[serde(rename = "symlink")] Symlink,
+    #[serde(rename = "file")]
+    File,
+    #[serde(rename = "tree")]
+    Tree,
+    #[serde(rename = "executable")]
+    Executable,
+    #[serde(rename = "symlink")]
+    Symlink,
 }
 
 impl From<Type> for FileType {
@@ -82,12 +88,10 @@ impl EntryWithSizeAndContentHash {
         ctx: CoreContext,
         entry: Box<HgEntry + Sync>,
     ) -> BoxFuture<Self, Error> {
-        let name = try_boxfuture!(
-            entry
-                .get_name()
-                .map(|name| name.to_bytes())
-                .ok_or_else(|| err_msg("HgEntry has no name!?"))
-        );
+        let name = try_boxfuture!(entry
+            .get_name()
+            .map(|name| name.to_bytes())
+            .ok_or_else(|| err_msg("HgEntry has no name!?")));
         // FIXME: json cannot represent non-UTF8 file names
         let name = try_boxfuture!(String::from_utf8(name));
         let ttype = entry.get_type().into();
@@ -115,32 +119,63 @@ impl EntryWithSizeAndContentHash {
                     Content::Tree(_) => None,
                 },
             })
-        })).boxify()
+        }))
+        .boxify()
     }
 }
 
 #[derive(Serialize)]
 pub struct Changeset {
+    commit_hash: String,
     manifest: String,
     comment: String,
     date: DateTime<FixedOffset>,
     author: String,
+    parents: Vec<String>,
+    extra: BTreeMap<String, Vec<u8>>,
 }
 
 impl TryFrom<HgBlobChangeset> for Changeset {
     type Error = str::Utf8Error;
 
     fn try_from(changeset: HgBlobChangeset) -> Result<Changeset, Self::Error> {
+        let commit_hash = changeset.get_changeset_id().to_hex().to_string();
         let manifest = changeset.manifestid().to_string();
         let comment = str::from_utf8(changeset.comments())?.to_string();
         let date = changeset.time().into_chrono();
         let author = str::from_utf8(changeset.user())?.to_string();
+        let parents: Vec<_> = vec![changeset.p1(), changeset.p2()]
+            .into_iter()
+            .flat_map(|p| p.map(|p| p.to_hex().to_string()))
+            .collect();
+
+        let extra = changeset
+            .extra()
+            .iter()
+            .map(|(v1, v2)| (String::from_utf8_lossy(v1).into_owned(), v2.to_vec()))
+            .collect();
 
         Ok(Changeset {
+            commit_hash,
             manifest,
             comment,
             date,
             author,
+            parents,
+            extra,
         })
+    }
+}
+
+impl From<Changeset> for MononokeChangeset {
+    fn from(changeset: Changeset) -> Self {
+        Self {
+            commit_hash: changeset.commit_hash,
+            message: changeset.comment,
+            date: changeset.date.timestamp(),
+            author: changeset.author,
+            parents: changeset.parents,
+            extra: changeset.extra,
+        }
     }
 }
