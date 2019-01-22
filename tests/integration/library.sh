@@ -420,16 +420,27 @@ function aliasverify() {
 }
 
 
-showgraph() {
+function showgraph() {
   hg log --graph -T "{rev} {node|short} {desc|firstline}" | sed \$d
 }
 
 
-tglog() {
+function tglog() {
   hg log -G -T "{rev}: {node|short} '{desc}' {bookmarks} {branches}" "$@"
 }
 
 
-tglogp() {
+function tglogp() {
   hg log -G -T "{rev}: {node|short} {phase} '{desc}' {bookmarks} {branches}" "$@"
+}
+
+# Without rev
+function tglogpnr() {
+  hg log -G -T "{node|short} {phase} '{desc}' {bookmarks} {branches}" "$@"
+}
+
+function mkcommit() {
+   echo "$1" > "$1"
+   hg add "$1"
+   hg ci -m "$1"
 }
