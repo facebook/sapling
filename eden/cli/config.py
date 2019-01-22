@@ -263,38 +263,38 @@ class EdenInstance:
         """
         parser = self._loadConfig()
         repository_header = f"repository {alias}"
-        if repository_header not in parser:
+        if not parser.has_section(repository_header):
             return None
-        repo_data = parser[repository_header]
 
         bind_mounts_header = f"bindmounts {alias}"
-        if bind_mounts_header in parser:
+        if parser.has_section(bind_mounts_header):
             # Convert the ConfigParser section into a dict so it is JSON
             # serializable for the `eden info` command.
-            bind_mounts = dict(parser[bind_mounts_header].items())
+            bind_mounts = dict(parser.items(bind_mounts_header))
         else:
             bind_mounts = {}
 
-        scm_type = repo_data.get("type", fallback="")
+        scm_type = parser.get(repository_header, "type", fallback="")
         if not scm_type:
             raise Exception(f'repository "{alias}" missing key "type".')
         if scm_type not in SUPPORTED_REPOS:
             raise Exception(f'repository "{alias}" has unsupported type.')
 
-        path = repo_data.get("path", fallback="")
+        path = parser.get(repository_header, "path", fallback="")
         if not path:
             raise Exception(f'repository "{alias}" missing key "path".')
 
         default_revision = (
-            repo_data.get("default-revision")
-            or (parser["clone"]["default-revision"] if "clone" in parser else None)
+            parser.get(repository_header, "default-revision", fallback="")
+            or parser.get("clone", "default-revision", fallback="")
             or DEFAULT_REVISION[scm_type]
         )
 
         return CheckoutConfig(
             path=path,
             scm_type=scm_type,
-            hooks_path=repo_data.get("hooks") or self.get_default_hooks_path(),
+            hooks_path=parser.get(repository_header, "hooks", fallback="")
+            or self.get_default_hooks_path(),
             bind_mounts=bind_mounts,
             default_revision=default_revision,
         )
@@ -910,9 +910,6 @@ class ConfigUpdater(object):
 
     def sections(self) -> List[str]:
         return self.config.sections()
-
-    def __getitem__(self, key: str) -> Mapping[str, Any]:
-        return self.config[key]
 
     def __setitem__(self, key: str, value: Dict[str, Any]) -> None:
         self.config[key] = value
