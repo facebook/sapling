@@ -94,6 +94,14 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
                 stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
             )
 
+    def test_stop_kill(self) -> None:
+        with self.spawn_fake_edenfs(self.eden_dir, ["--ignoreStop"]):
+            # Run "eden stop --kill"
+            # This should attempt to kill edenfs immediately with SIGKILL.
+            stop_process = self.spawn_stop(["--kill", "--timeout", "1"])
+            stop_process.expect_exact("Terminated edenfs with SIGKILL")
+            self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
+
     def test_async_stop_stops_daemon_eventually(self) -> None:
         with self.spawn_fake_edenfs(self.eden_dir) as daemon_pid:
             stop_process = self.spawn_stop(["--timeout", "0"])

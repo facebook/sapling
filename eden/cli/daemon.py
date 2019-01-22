@@ -27,19 +27,13 @@ from .systemd import (
 from .util import ShutdownError, poll_until, print_stderr
 
 
-def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bool:
-    """
-    Wait for a process to exit.
+def wait_for_process_exit(pid: int, timeout: float) -> bool:
+    """Wait for the specified process ID to exit.
 
-    If it does not exit within `timeout` seconds kill it with SIGKILL.
-    Returns True if the process exited on its own or False if it only exited
-    after SIGKILL.
-
-    Throws a ShutdownError if we failed to kill the process with SIGKILL
-    (either because we failed to send the signal, or if the process still did
-    not exit within kill_timeout seconds after sending SIGKILL).
+    Returns True if the process exits within the specified timeout, and False if the
+    timeout expires while the process is still alive.
     """
-    # Wait until the process exits on its own.
+
     def process_exited() -> Optional[bool]:
         if did_process_exit(pid):
             return True
@@ -50,7 +44,23 @@ def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bo
         poll_until(process_exited, timeout=timeout)
         return True
     except TimeoutError:
-        pass
+        return False
+
+
+def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bool:
+    """Wait for a process to exit.
+
+    If it does not exit within `timeout` seconds kill it with SIGKILL.
+    Returns True if the process exited on its own or False if it only exited
+    after SIGKILL.
+
+    Throws a ShutdownError if we failed to kill the process with SIGKILL
+    (either because we failed to send the signal, or if the process still did
+    not exit within kill_timeout seconds after sending SIGKILL).
+    """
+    # Wait until the process exits on its own.
+    if wait_for_process_exit(pid, timeout):
+        return True
 
     # client.shutdown() failed to terminate the process within the specified
     # timeout.  Take a more aggressive approach by sending SIGKILL.
@@ -59,6 +69,21 @@ def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bo
         "within {} seconds. Attempting SIGKILL.",
         timeout,
     )
+    sigkill_process(pid, timeout=kill_timeout)
+    return False
+
+
+def sigkill_process(pid: int, timeout: float = 5.0) -> None:
+    """Send SIGKILL to a process, and wait for it to exit.
+
+    If timeout is greater than 0, this waits for the process to exit after sending the
+    signal.  Throws a ShutdownError exception if the process does not exit within the
+    specified timeout.
+
+    Returns successfully if the specified process did not exist in the first place.
+    This is done to handle situations where the process exited on its own just before we
+    could send SIGKILL.
+    """
     try:
         os.kill(pid, signal.SIGKILL)
     except OSError as ex:
@@ -66,7 +91,7 @@ def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bo
             # The process exited before the SIGKILL was received.
             # Treat this just like a normal shutdown since it exited on its
             # own.
-            return True
+            return
         elif ex.errno == errno.EPERM:
             raise ShutdownError(
                 "Received EPERM when sending SIGKILL. "
@@ -75,13 +100,13 @@ def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bo
         else:
             raise
 
-    try:
-        poll_until(process_exited, timeout=kill_timeout)
-        return False
-    except TimeoutError:
+    if timeout <= 0:
+        return
+
+    if not wait_for_process_exit(pid, timeout):
         raise ShutdownError(
             "edenfs process {} did not terminate within {} seconds of "
-            "sending SIGKILL.".format(pid, kill_timeout)
+            "sending SIGKILL.".format(pid, timeout)
         )
 
 

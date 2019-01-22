@@ -1214,9 +1214,23 @@ class StopCmd(Subcmd):
             "then SIGKILL will be sent. If timeout is 0, then do not wait at "
             "all and do not send SIGKILL.",
         )
+        parser.add_argument(
+            "--kill",
+            action="store_true",
+            default=False,
+            help="Forcibly kill edenfs with SIGKILL, rather than attempting to "
+            "shut down cleanly.  Not that Eden will normally need to re-scan its "
+            "data the next time it starts after an unclean shutdown.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
+        if args.kill:
+            return self._kill(instance, args)
+        else:
+            return self._stop(instance, args)
+
+    def _stop(self, instance: EdenInstance, args: argparse.Namespace) -> int:
         pid = None
         try:
             try:
@@ -1250,6 +1264,24 @@ class StopCmd(Subcmd):
             else:
                 print_stderr("Terminated edenfs with SIGKILL.")
                 return SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
+        except ShutdownError as ex:
+            print_stderr("Error: " + str(ex))
+            return SHUTDOWN_EXIT_CODE_ERROR
+
+    def _kill(self, instance: EdenInstance, args: argparse.Namespace) -> int:
+        # Get the pid from the lock file rather than trying to query it over thrift.
+        # If the user is forcibly trying to kill Eden we assume something is probably
+        # wrong to start with and the thrift server might not be functional for some
+        # reason.
+        pid = check_health_using_lockfile(str(instance.state_dir)).pid
+        if pid is None:
+            print_stderr("error: edenfs is not running")
+            return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
+
+        try:
+            daemon.sigkill_process(pid, timeout=args.timeout)
+            print_stderr("Terminated edenfs with SIGKILL.")
+            return SHUTDOWN_EXIT_CODE_NORMAL
         except ShutdownError as ex:
             print_stderr("Error: " + str(ex))
             return SHUTDOWN_EXIT_CODE_ERROR
