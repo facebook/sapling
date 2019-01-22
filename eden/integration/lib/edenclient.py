@@ -283,14 +283,17 @@ class EdenFS(object):
         self.shutdown()
         self.start()
 
+    def get_pid_via_thrift(self):
+        with self.get_thrift_client() as client:
+            return client.getPid()
+
     def graceful_restart(self, timeout: float = 30) -> None:
         assert self._process is not None
         # Get the process ID of the old edenfs process.
         # Note that this is not necessarily self._process.pid, since the eden
         # CLI may have spawned eden using sudo, and self._process may refer to
         # a sudo parent process.
-        with self.get_thrift_client() as client:
-            old_pid = client.getPid()
+        old_pid = self.get_pid_via_thrift()
 
         old_process = self._process
         self._process = None

@@ -97,23 +97,29 @@ def poll_until(
         time.sleep(interval)
 
 
+def get_pid_using_lockfile(config_dir: str) -> int:
+    """Read the pid from the Eden lockfile, throwing an exception upon failure.
+    """
+    lockfile = os.path.join(config_dir, LOCK_FILE)
+    with open(lockfile, "r") as f:
+        lockfile_contents = f.read()
+    return int(lockfile_contents.rstrip())
+
+
 def check_health_using_lockfile(config_dir: str) -> HealthStatus:
     """Make a best-effort to produce a HealthStatus based on the PID in the
     Eden lockfile.
     """
-    lockfile = os.path.join(config_dir, LOCK_FILE)
     try:
-        with open(lockfile, "r") as f:
-            lockfile_contents = f.read()
-        pid = lockfile_contents.rstrip()
-        int(pid)  # Throw if this does not parse as an integer.
+        # Throws if it does not parse as an int.
+        pid = get_pid_using_lockfile(config_dir)
     except Exception:
         # If we cannot read the PID from the lockfile for any reason, return
         # DEAD.
         return _create_dead_health_status()
 
     try:
-        stdout = subprocess.check_output(["ps", "-p", pid, "-o", "comm="])
+        stdout = subprocess.check_output(["ps", "-p", str(pid), "-o", "comm="])
     except subprocess.CalledProcessError:
         # If there is no process with the specified id, return DEAD.
         return _create_dead_health_status()
@@ -128,7 +134,7 @@ def check_health_using_lockfile(config_dir: str) -> HealthStatus:
     if os.path.basename(comm) in ("edenfs", "fake_edenfs"):
         return HealthStatus(
             fb_status.STOPPED,
-            int(pid),
+            pid,
             "Eden's Thrift server does not appear to be "
             "running, but the process is still alive ("
             "PID=%s)." % pid,

@@ -13,6 +13,8 @@ import sys
 import threading
 from typing import Dict
 
+from eden.cli.util import get_pid_using_lockfile
+
 from .lib import testcase
 
 
@@ -222,6 +224,15 @@ class TakeoverTest(testcase.EdenRepoTest):
             stop.set()
             for thread in threads:
                 thread.join()
+
+    def test_takeover_updates_process_id_in_lock_file(self) -> None:
+        self.assertEqual(
+            self.eden.get_pid_via_thrift(), get_pid_using_lockfile(self.eden.eden_dir)
+        )
+        self.eden.graceful_restart()
+        self.assertEqual(
+            self.eden.get_pid_via_thrift(), get_pid_using_lockfile(self.eden.eden_dir)
+        )
 
     def test_takeover_preserves_inode_numbers_for_open_nonmaterialized_files(
         self

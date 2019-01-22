@@ -278,14 +278,18 @@ class EdenServer : private TakeoverHandler {
   EdenServer(EdenServer const&) = delete;
   EdenServer& operator=(EdenServer const&) = delete;
 
-  // Schedules a timer to flush stats (and reschedule itself).
-  // We should have at most one of these pending at a time.
-  // Must be called only from the eventBase thread.
+  /**
+   * Schedules a timer to flush stats (and reschedule itself).
+   * We should have at most one of these pending at a time.
+   * Must be called only from the eventBase thread.
+   */
   void scheduleFlushStats();
 
-  // Schedule a call to unloadInodes() to happen after timeout
-  // has expired.
-  // Must be called only from the eventBase thread.
+  /**
+   * Schedule a call to unloadInodes() to happen after timeout
+   * has expired.
+   * Must be called only from the eventBase thread.
+   */
   void scheduleInodeUnload(std::chrono::milliseconds timeout);
 
   // Perform unloading of inodes based on their last access time
@@ -308,6 +312,12 @@ class EdenServer : private TakeoverHandler {
    * create the lock file, out of disk space, etc).
    */
   FOLLY_NODISCARD bool acquireEdenLock();
+
+  /**
+   * Write the current process ID follow by a newline to the given lock file
+   * fd.
+   */
+  void writePidToLockFile(int id);
 
   void prepareThriftAddress();
 

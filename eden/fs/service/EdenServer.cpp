@@ -445,6 +445,7 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
 
     // Take over the eden lock file and the thrift server socket.
     lockFile_ = std::move(takeoverData.lockFile);
+    writePidToLockFile(lockFile_.fd());
     server_->useExistingSocket(takeoverData.thriftSocket.release());
 #else
     NOT_IMPLEMENTED();
@@ -1047,13 +1048,16 @@ bool EdenServer::acquireEdenLock() {
     return false;
   }
 
-  // Write the PID (with a newline) to the lockfile.
-  const int fd = lockFile_.fd();
-  folly::ftruncateNoInt(fd, /* len */ 0);
-  const auto pidContents = folly::to<std::string>(getpid(), "\n");
-  folly::writeNoInt(fd, pidContents.data(), pidContents.size());
+  writePidToLockFile(lockFile_.fd());
 
   return true;
+}
+
+void EdenServer::writePidToLockFile(int fd) {
+  // Write the PID (with a newline) to the lockfile.
+  folly::ftruncateNoInt(fd, /* len */ 0);
+  const auto pidContents = folly::to<std::string>(getpid(), "\n");
+  folly::pwriteNoInt(fd, pidContents.data(), pidContents.size(), 0);
 }
 
 void EdenServer::prepareThriftAddress() {
