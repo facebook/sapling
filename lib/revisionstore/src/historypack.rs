@@ -4,22 +4,25 @@
 // GNU General Public License version 2 or any later version.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use failure::Fallible;
 use memmap::{Mmap, MmapOptions};
-use std::fs::remove_file;
-use std::fs::File;
-use std::io::{Cursor, Read, Write};
-use std::mem::drop;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+
+use types::node::Node;
+
+use std::{
+    fs::{remove_file, File},
+    io::{Cursor, Read, Write},
+    mem::drop,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use ancestors::{AncestorIterator, AncestorTraversal};
-use failure::Fallible;
 use historyindex::HistoryIndex;
 use historystore::{Ancestors, HistoryStore, NodeInfo};
 use key::Key;
 use repack::{IterableStore, RepackOutputType, Repackable};
 use sliceext::SliceExt;
-use types::node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Historypack Error: {:?}", _0)]

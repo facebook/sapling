@@ -1,17 +1,15 @@
 // Copyright Facebook, Inc. 2018
 // Union data store
-extern crate mpatch;
+use failure::{err_msg, Fallible};
 
 use std::rc::Rc;
 
-use failure::{err_msg, Fallible};
+use mpatch::mpatch::get_full_text;
 
 use datastore::{DataStore, Delta, Metadata};
 use error::KeyError;
 use key::Key;
 use unionstore::UnionStore;
-
-use self::mpatch::mpatch::get_full_text;
 
 pub type UnionDataStore = UnionStore<Rc<DataStore>>;
 

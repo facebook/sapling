@@ -3,18 +3,22 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use failure::Fallible;
+
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+
 use datapack::{DataPack, DataPackVersion};
 use datastore::DataStore;
-use failure::Fallible;
 use historypack::{HistoryPack, HistoryPackVersion};
 use historystore::HistoryStore;
 use key::Key;
 use mutabledatapack::MutableDataPack;
 use mutablehistorypack::MutableHistoryPack;
-use std::collections::HashSet;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RepackOutputType {

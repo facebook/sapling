@@ -5,9 +5,13 @@
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fallible;
+
+use std::{
+    io::{Cursor, Write},
+    rc::Rc,
+};
+
 use key::Key;
-use std::io::{Cursor, Write};
-use std::rc::Rc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Delta {

@@ -3,15 +3,15 @@
 // hg/hgext/remotefilelog/remotefilelog.py:_createfileblob()
 // into the size of text, text and ancestors information.
 
-use std::fs::File;
-use std::io::prelude::*;
-use std::rc::Rc;
+use failure::Fallible;
+
+use types::node::Node;
+
+use std::{fs::File, io::prelude::*, rc::Rc};
 
 use error::KeyError;
-use failure::Fallible;
 use historystore::{Ancestors, NodeInfo};
 use key::Key;
-use types::node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "LooseFile Error: {:?}", _0)]

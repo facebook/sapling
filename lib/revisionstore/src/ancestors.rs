@@ -4,8 +4,11 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Fallible;
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::iter::Iterator;
+
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    iter::Iterator,
+};
 
 use historystore::{Ancestors, NodeInfo};
 use key::Key;

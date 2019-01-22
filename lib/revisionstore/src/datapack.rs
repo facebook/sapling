@@ -73,24 +73,28 @@
 //! ```
 //! [1]: new in version 1.
 use byteorder::{BigEndian, ReadBytesExt};
-use lz4_pyframe::decompress;
+use failure::Fallible;
 use memmap::{Mmap, MmapOptions};
-use std::cell::RefCell;
-use std::fmt;
-use std::fs::{remove_file, File};
-use std::io::{Cursor, Read};
-use std::mem::drop;
-use std::path::{Path, PathBuf};
-use std::rc::Rc;
-use std::sync::Arc;
+
+use lz4_pyframe::decompress;
+use types::node::Node;
+
+use std::{
+    cell::RefCell,
+    fmt,
+    fs::{remove_file, File},
+    io::{Cursor, Read},
+    mem::drop,
+    path::{Path, PathBuf},
+    rc::Rc,
+    sync::Arc,
+};
 
 use dataindex::{DataIndex, DeltaBaseOffset};
 use datastore::{DataStore, Delta, Metadata};
-use failure::Fallible;
 use key::Key;
 use repack::{IterableStore, RepackOutputType, Repackable};
 use sliceext::SliceExt;
-use types::node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Datapack Error: {:?}", _0)]

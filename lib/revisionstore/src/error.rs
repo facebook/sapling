@@ -4,6 +4,7 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::{Backtrace, Context, Error, Fail};
+
 use std::fmt;
 
 #[derive(Debug)]

@@ -3,23 +3,27 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashMap;
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
-use std::u16;
-
 use byteorder::{BigEndian, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
+use failure::{Error, Fallible};
+use tempfile::NamedTempFile;
+
+use lz4_pyframe::compress;
+use types::node::Node;
+
+use std::{
+    collections::HashMap,
+    io::{Read, Seek, SeekFrom, Write},
+    path::{Path, PathBuf},
+    u16,
+};
+
 use dataindex::{DataIndex, DeltaLocation};
 use datapack::{DataEntry, DataPackVersion};
 use datastore::{DataStore, Delta, Metadata};
-use failure::{Error, Fallible};
 use key::Key;
-use lz4_pyframe::compress;
 use packwriter::PackWriter;
-use tempfile::NamedTempFile;
-use types::node::Node;
 
 pub struct MutableDataPack {
     version: DataPackVersion,

@@ -8,6 +8,7 @@ extern crate crypto;
 extern crate failure;
 extern crate lz4_pyframe;
 extern crate memmap;
+extern crate mpatch;
 extern crate tempfile;
 extern crate types;
 

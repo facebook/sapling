@@ -6,20 +6,24 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
+use failure::Fallible;
 use memmap::{Mmap, MmapOptions};
-use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
-use std::fs::File;
-use std::io::{Cursor, Read, Write};
-use std::path::Path;
+
+use types::node::Node;
+
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    fs::File,
+    io::{Cursor, Read, Write},
+    path::Path,
+};
 
 use error::KeyError;
-use failure::Fallible;
 use fanouttable::FanoutTable;
 use historypack::HistoryPackVersion;
 use key::Key;
 use sliceext::SliceExt;
-use types::node::Node;
 
 #[derive(Debug, Fail)]
 #[fail(display = "HistoryIndex Error: {:?}", _0)]

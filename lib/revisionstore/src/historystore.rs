@@ -4,10 +4,12 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Fallible;
-use key::Key;
+
 use types::node::Node;
 
 use std::collections::HashMap;
+
+use key::Key;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct NodeInfo {

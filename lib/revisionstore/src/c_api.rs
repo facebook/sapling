@@ -6,20 +6,25 @@
 //! This module exports some concrete implementations of the revisionstore
 //! API for use from C++ code.  The exports in this file match up to the C++
 //! header file RevisionStore.h in the top level of this crate.
+use failure::Fallible;
+
+use types::node::Node;
+
+use std::{
+    collections::HashMap,
+    ffi::{CStr, OsStr},
+    fs,
+    os::raw::c_char,
+    path::{Path, PathBuf},
+    ptr,
+    rc::Rc,
+    slice,
+};
+
 use datapack::DataPack;
 use datastore::DataStore;
 use error::KeyError;
-use failure::Fallible;
 use key::Key;
-use std::collections::HashMap;
-use std::ffi::{CStr, OsStr};
-use std::fs;
-use std::os::raw::c_char;
-use std::path::{Path, PathBuf};
-use std::ptr;
-use std::rc::Rc;
-use std::slice;
-use types::node::Node;
 use uniondatastore::UnionDataStore;
 
 pub struct DataPackUnion {

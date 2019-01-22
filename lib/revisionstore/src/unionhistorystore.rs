@@ -1,6 +1,7 @@
 // Copyright Facebook, Inc. 2018
 // Union history store
 use failure::Fallible;
+
 use std::rc::Rc;
 
 use ancestors::{AncestorTraversal, BatchedAncestorIterator};

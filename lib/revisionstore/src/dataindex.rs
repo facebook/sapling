@@ -4,17 +4,21 @@
 // GNU General Public License version 2 or any later version.
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use failure::Fallible;
 use memmap::{Mmap, MmapOptions};
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{Cursor, Read, Write};
-use std::path::Path;
+
+use types::node::Node;
+
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{Cursor, Read, Write},
+    path::Path,
+};
 
 use error::KeyError;
-use failure::Fallible;
 use fanouttable::FanoutTable;
 use sliceext::SliceExt;
-use types::node::Node;
 
 const ENTRY_LEN: usize = 40;
 const SMALL_FANOUT_CUTOFF: usize = 8192; // 2^16 / 8

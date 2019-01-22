@@ -4,8 +4,8 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Fallible;
-use std::fmt::Debug;
-use std::slice::SliceIndex;
+
+use std::{fmt::Debug, slice::SliceIndex};
 
 #[derive(Debug, Fail)]
 #[fail(display = "SliceOutOfBounds Error: {:?}", _0)]

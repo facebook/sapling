@@ -7,11 +7,14 @@ use byteorder::WriteBytesExt;
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use failure::Fallible;
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::io::Write;
-use std::iter::FromIterator;
-use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
+
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    io::Write,
+    iter::FromIterator,
+    path::{Path, PathBuf},
+};
 
 use ancestors::{AncestorIterator, AncestorTraversal};
 use historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};

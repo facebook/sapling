@@ -1,8 +1,7 @@
 // Copyright Facebook, Inc. 2018
 // Union store
 
-use std::cell::RefCell;
-use std::vec::IntoIter;
+use std::{cell::RefCell, vec::IntoIter};
 
 pub struct UnionStore<T> {
     stores: RefCell<Vec<T>>,
