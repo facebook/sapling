@@ -4,7 +4,7 @@
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
-use mononokeapi::MononokeClient;
+use mononokeapi::{MononokeApi, MononokeClient};
 
 use std::str;
 
