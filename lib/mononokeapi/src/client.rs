@@ -1,6 +1,6 @@
 // Copyright Facebook, Inc. 2019
 
-use failure::Fallible;
+use failure::{bail, Fallible};
 use hyper::client::HttpConnector;
 use hyper::{Body, Client};
 use hyper_tls::HttpsConnector;
@@ -8,40 +8,87 @@ use native_tls::{Identity, TlsConnector};
 use openssl::{pkcs12::Pkcs12, pkey::PKey, x509::X509};
 use url::Url;
 
-use std::{fs::File, io::Read, path::Path};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
+
+#[derive(Default)]
+pub struct MononokeClientBuilder {
+    base_url: Option<Url>,
+    client_creds: Option<PathBuf>,
+}
+
+impl MononokeClientBuilder {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    /// Base URL of the Mononoke API server host.
+    pub fn base_url(mut self, url: Url) -> Self {
+        self.base_url = Some(url);
+        self
+    }
+
+    /// Parse an arbitrary string as the base URL.
+    /// Fails if the string is not a valid URL.
+    pub fn base_url_str(self, url: &str) -> Fallible<Self> {
+        let url = Url::parse(url)?;
+        Ok(self.base_url(url))
+    }
+
+    /// Set client credentials (X.509 client certificate + private key) for TLS
+    /// mutual authentication. If not set, TLS mutual authentication will not be
+    /// used.
+    pub fn client_creds(mut self, path: impl AsRef<Path>) -> Self {
+        self.client_creds = Some(path.as_ref().to_path_buf());
+        self
+    }
+
+    /// Optionally set client credentials (X.509 client certificate + private key)
+    /// for TLS mutual authentication. Takes an Option, allowing for the option to
+    /// be unset by passing None.
+    pub fn client_creds_opt<P: AsRef<Path>>(mut self, path: Option<P>) -> Self {
+        self.client_creds = path.map(|p| p.as_ref().to_path_buf());
+        self
+    }
+
+    pub fn build(self) -> Fallible<MononokeClient> {
+        let base_url = match self.base_url {
+            Some(url) => url,
+            None => bail!("No base URL specified"),
+        };
+
+        let creds = match self.client_creds {
+            Some(path) => Some(read_credentials(path)?),
+            None => None,
+        };
+        let client = build_hyper_client(creds)?;
+
+        Ok(MononokeClient { client, base_url })
+    }
+}
 
 /// An HTTP client for the Mononoke API server.
 ///
 /// # Example
 /// ```no_run
-/// use mononokeapi::{MononokeApi, MononokeClient};
+/// use failure::Fallible;
+/// use mononokeapi::{MononokeApi, MononokeClient, MononokeClientBuilder};
 ///
-/// let url = "https://mononoke-api.internal.tfbnw.net";
-/// let creds = Some("/var/facebook/credentials/user/x509/user.pem");
-/// let client = MononokeClient::new(url, creds).unwrap();
-/// client.health_check().expect("health check failed");
+/// fn main() -> Fallible<()> {
+///     let client = MononokeClientBuilder::new()
+///         .base_url_str("https://mononoke-api.internal.tfbnw.net")?
+///         .client_creds("/var/facebook/credentials/user/x509/user.pem")
+///         .build()?;
+///
+///     client.health_check()
+/// }
 /// ```
 pub struct MononokeClient {
     pub(crate) client: Client<HttpsConnector<HttpConnector>, Body>,
     pub(crate) base_url: Url,
-}
-
-impl MononokeClient {
-    /// Initialize a new MononokeClient.
-    ///
-    /// The Mononoke API server requires TLS mutual authentication when being accessed
-    /// via a proxy (e.g., through a VIP). As such, users must pass valid client credentials
-    /// to the client constructor. (Specifically, a path to a PEM file containing the client
-    /// certificate and private key.)
-    pub fn new<P: AsRef<Path>>(base_url: &str, client_creds: Option<P>) -> Fallible<Self> {
-        let base_url = Url::parse(base_url)?;
-        let creds = match client_creds {
-            Some(path) => Some(read_credentials(path)?),
-            None => None,
-        };
-        let client = build_client(creds)?;
-        Ok(Self { client, base_url })
-    }
 }
 
 /// Read an X.509 certificate and private key from a PEM file and
@@ -68,7 +115,7 @@ fn read_credentials(path: impl AsRef<Path>) -> Fallible<Identity> {
 
 /// Build a hyper::Client that supports HTTPS. Optionally takes a client identity
 /// (certificate + private key) which, if provided, will be used for TLS mutual authentication.
-fn build_client(
+fn build_hyper_client(
     client_id: Option<Identity>,
 ) -> Fallible<Client<HttpsConnector<HttpConnector>, Body>> {
     let mut builder = TlsConnector::builder();

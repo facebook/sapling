@@ -4,7 +4,7 @@
 use cpython::*;
 use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
-use mononokeapi::{MononokeApi, MononokeClient};
+use mononokeapi::{MononokeApi, MononokeClient, MononokeClientBuilder};
 
 use std::str;
 
@@ -24,15 +24,22 @@ py_class!(class PyMononokeClient |py| {
 
     def __new__(
         _cls,
-        host: &PyBytes,
-        creds: Option<&PyBytes> = None
+        base_url: &PyBytes,
+        client_creds: Option<&PyBytes> = None
     ) -> PyResult<PyMononokeClient> {
-        let host = str::from_utf8(host.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
-        let creds = match creds {
+        let base_url = str::from_utf8(base_url.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
+        let client_creds = match client_creds {
             Some(path) => Some(local_bytes_to_path(path.data(py)).map_pyerr::<exc::RuntimeError>(py)?),
             None => None,
         };
-        let client = MononokeClient::new(host, creds).map_pyerr::<exc::RuntimeError>(py)?;
+
+        let client = MononokeClientBuilder::new()
+            .base_url_str(base_url)
+            .map_pyerr::<exc::RuntimeError>(py)?
+            .client_creds_opt(client_creds)
+            .build()
+            .map_pyerr::<exc::RuntimeError>(py)?;
+
         PyMononokeClient::create_instance(py, client)
     }
 

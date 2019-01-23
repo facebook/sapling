@@ -58,10 +58,15 @@ mod tests {
 
     use std::path::PathBuf;
 
+    use crate::MononokeClientBuilder;
+
     const HOST: &str = "http://127.0.0.1:8000/";
 
-    fn init_client() -> MononokeClient {
-        MononokeClient::new(HOST, Some(get_creds_path())).expect("failed to initialize client")
+    fn configure_client() -> Fallible<MononokeClient> {
+        MononokeClientBuilder::new()
+            .base_url_str(HOST)?
+            .client_creds(get_creds_path())
+            .build()
     }
 
     fn get_creds_path() -> PathBuf {
@@ -80,6 +85,6 @@ mod tests {
     #[test]
     #[ignore] // Talks to production Mononoke; ignore by default.
     fn health_check() -> Fallible<()> {
-        init_client().health_check()
+        configure_client()?.health_check()
     }
 }

@@ -5,4 +5,4 @@ mod api;
 mod client;
 
 pub use crate::api::MononokeApi;
-pub use crate::client::MononokeClient;
+pub use crate::client::{MononokeClient, MononokeClientBuilder};
