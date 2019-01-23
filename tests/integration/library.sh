@@ -415,6 +415,7 @@ function aliasverify() {
   mode=$1
   shift 1
   GLOG_minloglevel=2 $MONONOKE_ALIAS_VERIFY --repo_id 0 \
+     --do-not-init-cachelib \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
      --mode "$mode" "$@"
 }
