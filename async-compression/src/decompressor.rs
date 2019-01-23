@@ -50,7 +50,7 @@ where
                 DecompressorType::Bzip2 => Box::new(BzDecoder::new(r)),
                 DecompressorType::Gzip => Box::new(GzDecoder::new(r)),
                 DecompressorType::OverreadingZstd => Box::new(
-                    ZstdDecoder::new(r).expect("ZstdDecoder failed to create. Are we OOM?"),
+                    ZstdDecoder::with_buffer(r).expect("ZstdDecoder failed to create. Are we OOM?"),
                 ),
             },
         }
