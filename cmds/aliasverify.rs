@@ -310,8 +310,6 @@ fn main() -> Result<()> {
     let logger = args::get_logger(&matches);
 
     args::init_cachelib(&matches);
-    let blobrepo = args::open_repo(ctx.clone(), &logger, &matches)
-        .map(|repo| Arc::new(repo.blobrepo().clone()));
     let sqlchangesets = Arc::new(args::open_sql_changesets(&matches)?);
 
     let mode = match matches.value_of("mode").expect("no default on mode") {
@@ -332,7 +330,9 @@ fn main() -> Result<()> {
 
     let repoid = args::get_repo_id(&matches);
 
+    let blobrepo = args::open_repo(&logger, &matches);
     let aliasimport = blobrepo.and_then(move |blobrepo| {
+        let blobrepo = Arc::new(blobrepo);
         AliasVerification::new(logger, blobrepo, repoid, sqlchangesets, mode).verify_all(
             ctx,
             step,

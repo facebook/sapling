@@ -733,8 +733,8 @@ fn main() -> Result<()> {
             let ctx = CoreContext::test_mock();
             let json_flag = sub_m.is_present("json");
 
-            args::open_repo(ctx.clone(), &logger, &matches)
-                .and_then(move |repo| fetch_bonsai_changeset(ctx, &rev, repo.blobrepo()))
+            args::open_repo(&logger, &matches)
+                .and_then(move |blobrepo| fetch_bonsai_changeset(ctx, &rev, &blobrepo))
                 .map(move |bcs| {
                     if json_flag {
                         match serde_json::to_string(&SerializableBonsaiChangeset::from(bcs)) {
@@ -782,9 +782,9 @@ fn main() -> Result<()> {
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
 
-            args::open_repo(ctx.clone(), &logger, &matches)
-                .and_then(move |repo| {
-                    fetch_content(ctx, logger.clone(), repo.blobrepo(), &rev, &path)
+            args::open_repo(&logger, &matches)
+                .and_then(move |blobrepo| {
+                    fetch_content(ctx, logger.clone(), &blobrepo, &rev, &path)
                 })
                 .and_then(|content| {
                     match content {
@@ -833,9 +833,7 @@ fn main() -> Result<()> {
             args::init_cachelib(&matches);
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
-            let repo_fut = args::open_repo(ctx.clone(), &logger, &matches)
-                .map(|repo| repo.blobrepo().clone())
-                .boxify();
+            let repo_fut = args::open_repo(&logger, &matches).boxify();
             bookmarks_manager::handle_command(ctx, repo_fut, sub_m, logger)
         }
         (HG_CHANGESET, Some(sub_m)) => match sub_m.subcommand() {
@@ -853,9 +851,8 @@ fn main() -> Result<()> {
                     .and_then(HgChangesetId::from_str);
 
                 args::init_cachelib(&matches);
-                args::open_repo(ctx.clone(), &logger, &matches)
+                args::open_repo(&logger, &matches)
                     .and_then(move |repo| {
-                        let repo = repo.blobrepo().clone();
                         (left_cs, right_cs)
                             .into_future()
                             .and_then(move |(left_cs, right_cs)| {
@@ -883,9 +880,8 @@ fn main() -> Result<()> {
                 let ctx = CoreContext::test_mock();
 
                 args::init_cachelib(&matches);
-                args::open_repo(ctx.clone(), &logger, &matches)
+                args::open_repo(&logger, &matches)
                     .and_then(move |repo| {
-                        let repo = repo.blobrepo().clone();
                         (start_cs, stop_cs)
                             .into_future()
                             .and_then({
@@ -943,10 +939,9 @@ fn main() -> Result<()> {
                 args::init_cachelib(&matches);
                 let ctx = CoreContext::test_mock();
                 let sql_changesets = args::open_sql_changesets(&matches);
-                let repo = args::open_repo(ctx.clone(), &logger, &matches);
+                let repo = args::open_repo(&logger, &matches);
                 repo.join(sql_changesets)
                     .and_then(move |(repo, sql_changesets)| {
-                        let repo = repo.blobrepo().clone();
                         build_skiplist_index(ctx, repo, key, logger, sql_changesets)
                     })
                     .boxify()
@@ -959,11 +954,8 @@ fn main() -> Result<()> {
 
                 args::init_cachelib(&matches);
                 let ctx = CoreContext::test_mock();
-                args::open_repo(ctx.clone(), &logger, &matches)
-                    .and_then(move |repo| {
-                        let repo = repo.blobrepo().clone();
-                        read_skiplist_index(ctx.clone(), repo, key, logger)
-                    })
+                args::open_repo(&logger, &matches)
+                    .and_then(move |repo| read_skiplist_index(ctx.clone(), repo, key, logger))
                     .boxify()
             }
             _ => {
@@ -984,9 +976,8 @@ fn main() -> Result<()> {
             args::init_cachelib(&matches);
             // TODO(T37478150, luk) This is not a test case, fix it up in future diffs
             let ctx = CoreContext::test_mock();
-            args::open_repo(ctx.clone(), &logger, &matches)
+            args::open_repo(&logger, &matches)
                 .and_then(move |repo| {
-                    let repo = repo.blobrepo().clone();
                     if source == "hg" {
                         repo.get_bonsai_from_hg(
                             ctx,

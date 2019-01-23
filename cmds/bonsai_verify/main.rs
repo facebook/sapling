@@ -94,7 +94,7 @@ fn main() -> Result<()> {
 
     // TODO(luk): This is not a test use case, fix it in next diffs
     let ctx = CoreContext::test_mock();
-    let repo = args::open_repo(ctx.clone(), &logger, &matches).map(|repo| repo.blobrepo().clone());
+    let repo = args::open_repo(&logger, &matches);
 
     let config = config::get_config(&matches).expect("getting configuration failed");
     let start_points = get_start_points(&matches);

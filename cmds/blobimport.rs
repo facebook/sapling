@@ -91,31 +91,30 @@ fn main() -> Result<()> {
 
     let phases_store = Arc::new(args::open_sql_phases(&matches)?);
 
-    let blobimport =
-        args::create_repo(ctx.clone(), &ctx.logger(), &matches).and_then(move |repo| {
-            let blobrepo = Arc::new(repo.blobrepo().clone());
-            Blobimport {
-                ctx: ctx.clone(),
-                logger: ctx.logger().clone(),
-                blobrepo,
-                revlogrepo_path,
-                changeset,
-                skip,
-                commits_limit,
-                no_bookmark,
-                phases_store,
+    let blobimport = args::create_repo(&ctx.logger(), &matches).and_then(move |repo| {
+        let blobrepo = Arc::new(repo.clone());
+        Blobimport {
+            ctx: ctx.clone(),
+            logger: ctx.logger().clone(),
+            blobrepo,
+            revlogrepo_path,
+            changeset,
+            skip,
+            commits_limit,
+            no_bookmark,
+            phases_store,
+        }
+        .import()
+        .traced(ctx.trace(), "blobimport", trace_args!())
+        .map_err({
+            cloned!(ctx);
+            move |err| {
+                error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
+                ::std::process::exit(1);
             }
-            .import()
-            .traced(ctx.trace(), "blobimport", trace_args!())
-            .map_err({
-                cloned!(ctx);
-                move |err| {
-                    error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
-                    ::std::process::exit(1);
-                }
-            })
-            .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result))
-        });
+        })
+        .then(move |result| args::upload_and_show_trace(ctx).then(move |_| result))
+    });
 
     let mut runtime = tokio::runtime::Runtime::new()?;
     let result = runtime.block_on(blobimport);

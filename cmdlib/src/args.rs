@@ -8,13 +8,11 @@ use std::cmp::min;
 use std::fs;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Error, Result, ResultExt};
 use futures::{Future, IntoFuture};
-use futures_ext::BoxFuture;
 use futures_ext::FutureExt;
 use panichandler::{self, Fate};
 use scuba_ext::ScubaSampleBuilder;
@@ -29,15 +27,13 @@ use uuid::Uuid;
 use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
+use blobrepo::BlobRepo;
 use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
-use hooks::HookManager;
-use metaconfig::{
-    ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoConfigs, RepoReadOnly, RepoType,
-};
+use metaconfig::{ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoConfigs, RepoType};
 use mononoke_types::RepositoryId;
 use phases::SqlPhases;
-use repo_client::{open_blobrepo, MononokeRepo};
+use repo_client::open_blobrepo;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -319,24 +315,22 @@ pub fn open_sql_phases(matches: &ArgMatches) -> Result<SqlPhases> {
     open_sql::<SqlPhases>(matches, "phases")
 }
 
-/// Create a new `MononokeRepo` -- for local instances, expect its contents to be empty.
+/// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
 #[inline]
 pub fn create_repo<'a>(
-    ctx: CoreContext,
     logger: &Logger,
     matches: &ArgMatches<'a>,
-) -> BoxFuture<MononokeRepo, Error> {
-    open_repo_internal(ctx, logger, matches, true)
+) -> impl Future<Item = BlobRepo, Error = Error> {
+    open_repo_internal(logger, matches, true)
 }
 
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
 #[inline]
 pub fn open_repo<'a>(
-    ctx: CoreContext,
     logger: &Logger,
     matches: &ArgMatches<'a>,
-) -> BoxFuture<MononokeRepo, Error> {
-    open_repo_internal(ctx, logger, matches, false)
+) -> impl Future<Item = BlobRepo, Error = Error> {
+    open_repo_internal(logger, matches, false)
 }
 
 pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: bool) -> Result<()> {
@@ -543,11 +537,10 @@ fn find_repo_type<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoType)> {
 }
 
 fn open_repo_internal<'a>(
-    ctx: CoreContext,
     logger: &Logger,
     matches: &ArgMatches<'a>,
     create: bool,
-) -> BoxFuture<MononokeRepo, Error> {
+) -> impl Future<Item = BlobRepo, Error = Error> {
     let repo_id = get_repo_id(matches);
 
     let (reponame, repotype) = try_boxfuture!(find_repo_type(matches));
@@ -576,25 +569,7 @@ fn open_repo_internal<'a>(
     };
 
     let myrouter_port = parse_myrouter_port(matches);
-    open_blobrepo(logger.clone(), repotype.clone(), repo_id, myrouter_port)
-        .map(move |blobrepo| {
-            let hook_manager =
-                HookManager::new_with_blobrepo(ctx, Default::default(), blobrepo.clone(), logger);
-
-            // TODO fixup imports
-            MononokeRepo::new(
-                blobrepo,
-                &Default::default(),
-                Arc::new(hook_manager),
-                None,
-                // TODO(anastasiya) T35014200, condiser non default value for LFS repos
-                Default::default(),
-                "".to_string(),
-                // TODO(simonfar) T36381758 make repo readonly for services that don't need to write
-                RepoReadOnly::ReadWrite,
-            )
-        })
-        .boxify()
+    open_blobrepo(logger.clone(), repotype.clone(), repo_id, myrouter_port).boxify()
 }
 
 pub fn parse_blobstore_args<'a>(matches: &ArgMatches<'a>) -> RemoteBlobstoreArgs {
