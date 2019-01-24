@@ -119,7 +119,11 @@ int main(int argc, char** argv) {
   TestDispatcher dispatcher(&stats, identity);
 
   std::unique_ptr<FuseChannel, FuseChannelDeleter> channel(new FuseChannel(
-      std::move(fuseDevice), mountPath, FLAGS_numFuseThreads, &dispatcher));
+      std::move(fuseDevice),
+      mountPath,
+      FLAGS_numFuseThreads,
+      &dispatcher,
+      std::make_shared<ProcessNameCache>()));
 
   XLOG(INFO) << "Starting FUSE...";
   auto completionFuture = channel->initialize().get();

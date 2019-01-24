@@ -61,24 +61,6 @@ using std::unique_ptr;
 using std::vector;
 using std::chrono::system_clock;
 
-#if defined(__linux__)
-// T38417129 Eden deadlock in ProcessAccessLog
-#define EDEN_WORK_AROUND_T38417129
-#endif
-
-namespace {
-constexpr bool kDefaultFuseEnableProcessNameCache =
-#if defined(EDEN_WORK_AROUND_T38417129)
-    false
-#else
-    true
-#endif
-    ;
-} // namespace
-DEFINE_bool(
-    fuseEnableProcessNameCache,
-    kDefaultFuseEnableProcessNameCache,
-    "Look up process names during FUSE activity for 'eden top'");
 DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 
 namespace facebook {
@@ -863,15 +845,12 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 }
 
 void EdenMount::createFuseChannel(folly::File fuseDevice) {
-  auto processNameCache = FLAGS_fuseEnableProcessNameCache
-      ? serverState_->getProcessNameCache()
-      : nullptr;
   channel_.reset(new FuseChannel(
       std::move(fuseDevice),
       getPath(),
       FLAGS_fuseNumThreads,
       dispatcher_.get(),
-      processNameCache));
+      serverState_->getProcessNameCache()));
 }
 
 void EdenMount::fuseInitSuccessful(

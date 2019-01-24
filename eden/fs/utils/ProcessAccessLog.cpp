@@ -108,11 +108,11 @@ void ProcessAccessLog::Bucket::merge(const Bucket& other) {
   }
 }
 
-ProcessAccessLog::ProcessAccessLog() : ProcessAccessLog{nullptr} {}
-
 ProcessAccessLog::ProcessAccessLog(
     std::shared_ptr<ProcessNameCache> processNameCache)
-    : processNameCache_{std::move(processNameCache)} {}
+    : processNameCache_{std::move(processNameCache)} {
+  CHECK(processNameCache_) << "Process name cache is mandatory";
+}
 
 ProcessAccessLog::~ProcessAccessLog() {
   for (auto& tlb : threadLocalBucketPtr.accessAllThreads()) {
@@ -139,22 +139,20 @@ void ProcessAccessLog::recordAccess(pid_t pid) {
 
   bool isNewPid = tlb->add(secondsSinceEpoch, pid);
 
-  if (processNameCache_) {
-    // Many processes are short-lived, so grab the executable name during the
-    // access. We could potentially get away with grabbing executable names a
-    // bit later on another thread, but we'll only readlink() once per pid.
+  // Many processes are short-lived, so grab the executable name during the
+  // access. We could potentially get away with grabbing executable names a
+  // bit later on another thread, but we'll only readlink() once per pid.
 
-    // Sometimes we receive requests from pid 0. Record the access,
-    // but don't try to look up a name.
-    if (pid) {
-      // Since recordAccess is called a lot by latency- and throughput-sensitive
-      // code, only try to lookup and cache the process name if we haven't seen
-      // it this thread-second.
-      if (isNewPid) {
-        // It's a bit unfortunate that ProcessNameCache maintains its own
-        // SharedMutex, but it will be shared with thrift counters.
-        processNameCache_->add(pid);
-      }
+  // Sometimes we receive requests from pid 0. Record the access,
+  // but don't try to look up a name.
+  if (pid) {
+    // Since recordAccess is called a lot by latency- and throughput-sensitive
+    // code, only try to lookup and cache the process name if we haven't seen
+    // it this thread-second.
+    if (isNewPid) {
+      // It's a bit unfortunate that ProcessNameCache maintains its own
+      // SharedMutex, but it will be shared with thrift counters.
+      processNameCache_->add(pid);
     }
   }
 }
@@ -181,8 +179,9 @@ std::unordered_map<pid_t, size_t> ProcessAccessLog::getAllAccesses(
   }
 
   Bucket bucket;
-  uint64_t count = std::min(static_cast<uint64_t>(allBuckets.size()),
-                            static_cast<uint64_t>(secondCount));
+  uint64_t count = std::min(
+      static_cast<uint64_t>(allBuckets.size()),
+      static_cast<uint64_t>(secondCount));
   for (auto iter = allBuckets.end() - count; iter != allBuckets.end(); ++iter) {
     bucket.merge(*iter);
   }

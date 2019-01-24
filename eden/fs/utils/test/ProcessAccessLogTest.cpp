@@ -23,7 +23,7 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 
 TEST(ProcessAccessLog, emptyLogHasNoAccesses) {
-  auto log = ProcessAccessLog{};
+  auto log = ProcessAccessLog{std::make_shared<ProcessNameCache>()};
   EXPECT_THAT(log.getAllAccesses(1s), ElementsAre());
 }
 
@@ -37,7 +37,7 @@ TEST(ProcessAccessLog, accessAddsProcessToProcessNameCache) {
 
 TEST(ProcessAccessLog, accessIncrementsAccessCount) {
   auto pid = pid_t{42};
-  auto log = ProcessAccessLog{};
+  auto log = ProcessAccessLog{std::make_shared<ProcessNameCache>()};
   log.recordAccess(pid);
   log.recordAccess(pid);
   log.recordAccess(pid);
