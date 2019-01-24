@@ -22,6 +22,7 @@ import threading
 import types
 import typing
 
+from eden.cli.daemon import wait_for_process_exit
 from eden.cli.util import poll_until
 
 from .find_executables import FindExe
@@ -170,7 +171,10 @@ class SystemdUserServiceManager:
         return SystemdService(unit_name=unit_name, systemd=self)
 
     def exit(self) -> None:
+        process_id = self.process_id
         self._systemctl.check_call(["start", "exit.target"])
+        if not wait_for_process_exit(process_id, timeout=60):
+            raise TimeoutError()
 
     @property
     def env(self) -> typing.Dict[str, str]:
