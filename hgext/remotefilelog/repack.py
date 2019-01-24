@@ -620,6 +620,58 @@ class repacker(object):
             self.keepkeys = keepset(repo, lambda f, n: (f, n))
             self.isold = isold
 
+    def _runpythonrepack(self, ledger, packpath, targetdata, targethistory, options):
+        # Populate ledger from source
+        with progress.spinner(
+            self.repo.ui,
+            _("scanning for %s %s to repack") % (self.sharedstr, self.unit),
+        ) as prog:
+            ledger.prog = prog
+            self.data.markledger(ledger, options=options)
+            self.history.markledger(ledger, options=options)
+            ledger.prog = None
+
+        # Run repack
+        self.repackdata(ledger, targetdata)
+        self.repackhistory(ledger, targethistory)
+
+        # Flush renames in the directory
+        util.syncdir(packpath)
+
+        # Call cleanup on each non-corrupt source
+        for source in ledger.sources:
+            if source not in ledger.corruptsources:
+                source.cleanup(ledger)
+
+        # Call other cleanup functions
+        for cleanup in ledger.cleanup:
+            cleanup(self.repo.ui)
+
+    def _runrustrepack(self, ledger, packpath, targetdata, targethistory):
+        if not (self.options and self.options.get(constants.OPTION_LOOSEONLY)):
+            try:
+                if not (self.options and self.options.get(constants.OPTION_PACKSONLY)):
+                    options = dict(self.options)
+                    options[constants.OPTION_LOOSEONLY] = True
+                    self._runpythonrepack(
+                        ledger, packpath, targetdata, targethistory, options
+                    )
+
+                if self.history == self.fullhistory:
+                    # full repack
+                    repackdatapacks(packpath, targetdata.opener.base)
+                    repackhistpacks(packpath, targethistory.opener.base)
+                else:
+                    repackincrementaldatapacks(packpath, targetdata.opener.base)
+                    repackincrementalhistpacks(packpath, targethistory.opener.base)
+                return
+            except Exception as e:
+                self.repo.ui.warn(
+                    _("warning: rust repack failed, fallback to python: %s\n") % e
+                )
+
+        self._runpythonrepack(ledger, packpath, targetdata, targethistory, self.options)
+
     def _userustrepack(self):
         return self.repo.ui.configbool("remotefilelog", "userustrepack", False)
 
@@ -636,45 +688,11 @@ class repacker(object):
             _cleanuptemppacks(self.repo.ui, self.packpath)
 
             if self._userustrepack():
-                try:
-                    if self.history == self.fullhistory:
-                        # full repack
-                        repackdatapacks(packpath, targetdata.opener.base)
-                        repackhistpacks(packpath, targethistory.opener.base)
-                    else:
-                        repackincrementaldatapacks(packpath, targetdata.opener.base)
-                        repackincrementalhistpacks(packpath, targethistory.opener.base)
-                    return
-                except Exception as e:
-                    self.repo.ui.warn(
-                        _("warning: rust repack failed, fallback to python: %s\n") % e
-                    )
-
-            # Populate ledger from source
-            with progress.spinner(
-                self.repo.ui,
-                _("scanning for %s %s to repack") % (self.sharedstr, self.unit),
-            ) as prog:
-                ledger.prog = prog
-                self.data.markledger(ledger, options=self.options)
-                self.history.markledger(ledger, options=self.options)
-                ledger.prog = None
-
-            # Run repack
-            self.repackdata(ledger, targetdata)
-            self.repackhistory(ledger, targethistory)
-
-            # Flush renames in the directory
-            util.syncdir(packpath)
-
-            # Call cleanup on each non-corrupt source
-            for source in ledger.sources:
-                if source not in ledger.corruptsources:
-                    source.cleanup(ledger)
-
-            # Call other cleanup functions
-            for cleanup in ledger.cleanup:
-                cleanup(self.repo.ui)
+                self._runrustrepack(ledger, packpath, targetdata, targethistory)
+            else:
+                self._runpythonrepack(
+                    ledger, packpath, targetdata, targethistory, self.options
+                )
 
     def _chainorphans(self, ui, filename, nodes, orphans, deltabases):
         """Reorderes ``orphans`` into a single chain inside ``nodes`` and
