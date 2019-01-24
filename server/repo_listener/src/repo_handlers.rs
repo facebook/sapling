@@ -35,7 +35,7 @@ pub struct RepoHandler {
     pub wireproto_scribe_category: Option<String>,
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
-    pub lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    pub lca_hint: Arc<LeastCommonAncestorsHint>,
     pub phases_hint: Arc<Phases>,
 }
 
@@ -194,7 +194,7 @@ pub fn repo_handlers(
                             };
 
                             // initialize lca hint from the skip index
-                            let lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync> = skip_index;
+                            let lca_hint: Arc<LeastCommonAncestorsHint> = skip_index;
 
                             (
                                 reponame,

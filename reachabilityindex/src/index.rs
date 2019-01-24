@@ -130,7 +130,7 @@ pub trait ReachabilityIndex {
 }
 
 /// Trait for any method supporting computing an "LCA hint"
-pub trait LeastCommonAncestorsHint {
+pub trait LeastCommonAncestorsHint: Send + Sync {
     /// Return a Future for an advanced frontier of ancestors from a set of nodes.
     /// Given a set "nodes", and a maximum generation "gen",
     /// return a set of nodes "C" which satisfies:

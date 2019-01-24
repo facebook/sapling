@@ -29,7 +29,7 @@ pub fn create_getbundle_response(
     blobrepo: BlobRepo,
     common: Vec<HgChangesetId>,
     heads: Vec<HgChangesetId>,
-    lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    lca_hint: Arc<LeastCommonAncestorsHint>,
     phases_hint: Option<Arc<Phases>>,
 ) -> Result<Vec<PartEncodeBuilder>> {
     if common.is_empty() {

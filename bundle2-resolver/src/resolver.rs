@@ -62,7 +62,7 @@ pub fn resolve(
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
     hook_manager: Arc<HookManager>,
-    lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    lca_hint: Arc<LeastCommonAncestorsHint>,
     phases_hint: Arc<Phases>,
 ) -> BoxFuture<Bytes, Error> {
     let resolver = Bundle2Resolver::new(ctx.clone(), repo, pushrebase, hook_manager);
@@ -201,7 +201,7 @@ fn resolve_pushrebase(
     commonheads: CommonHeads,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
-    lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    lca_hint: Arc<LeastCommonAncestorsHint>,
     phases_hint: Arc<Phases>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
@@ -840,7 +840,7 @@ impl Bundle2Resolver {
         commonheads: CommonHeads,
         pushrebased_rev: ChangesetId,
         onto: Bookmark,
-        lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+        lca_hint: Arc<LeastCommonAncestorsHint>,
         phases_hint: Arc<Phases>,
     ) -> impl Future<Item = Bytes, Error = Error> {
         // Send to the client both pushrebased commit and current "onto" bookmark. Normally they

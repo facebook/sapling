@@ -196,7 +196,7 @@ pub struct RepoClient {
     // Percent of returned entries (filelogs, manifests, changesets) which content
     // will be hash validated
     hash_validation_percentage: usize,
-    lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    lca_hint: Arc<LeastCommonAncestorsHint>,
     phases_hint: Arc<Phases>,
 }
 
@@ -298,7 +298,7 @@ impl RepoClient {
         repo: MononokeRepo,
         ctx: CoreContext,
         hash_validation_percentage: usize,
-        lca_hint: Arc<LeastCommonAncestorsHint + Send + Sync>,
+        lca_hint: Arc<LeastCommonAncestorsHint>,
         phases_hint: Arc<Phases>,
     ) -> Self {
         RepoClient {

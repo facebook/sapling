@@ -89,7 +89,7 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     // - Max generation number in "C" is <= gen
     // - Any ancestor of "nodes" with generation <= gen is also an ancestor of "C"
     // It's used to move `exclude` NodeFrontier
-    lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
+    lca_hint_index: Arc<LeastCommonAncestorsHint>,
 
     // Nodes that we know about, grouped by generation.
     next_generation: BTreeMap<Generation, HashSet<ChangesetId>>,
@@ -149,7 +149,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new(
         ctx: CoreContext,
         changeset_fetcher: &Arc<ChangesetFetcher>,
-        lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
+        lca_hint_index: Arc<LeastCommonAncestorsHint>,
         hash: ChangesetId,
     ) -> Box<BonsaiNodeStream> {
         Self::new_with_excludes(ctx, changeset_fetcher, lca_hint_index, vec![hash], vec![])
@@ -158,7 +158,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new_union(
         ctx: CoreContext,
         changeset_fetcher: &Arc<ChangesetFetcher>,
-        lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
+        lca_hint_index: Arc<LeastCommonAncestorsHint>,
         hashes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
         Self::new_with_excludes(ctx, changeset_fetcher, lca_hint_index, hashes, vec![])
@@ -167,7 +167,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new_with_excludes(
         ctx: CoreContext,
         changeset_fetcher: &Arc<ChangesetFetcher>,
-        lca_hint_index: Arc<LeastCommonAncestorsHint + Send + Sync>,
+        lca_hint_index: Arc<LeastCommonAncestorsHint>,
         hashes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
     ) -> Box<BonsaiNodeStream> {
