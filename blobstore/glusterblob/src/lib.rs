@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![feature(duration_as_u128)]
+#![feature(int_to_from_bytes)] // stable 1.32
 
 #[macro_use]
 extern crate stats;
@@ -639,5 +640,38 @@ mod test {
         fn qc_mangle_roundtrip(s: String) -> bool {
             s == keydemangle(&*keymangle(&*s))
         }
+    }
+
+    #[test]
+    #[ignore] // don't want to spam the blobstore
+    fn test_roundtrip() {
+        const TIER: &str = "gluster.prod.flash.prn.cell003";
+        const EXPORT: &str = "groot";
+        const BASEPATH: &str = "mononoke.glusterblob.unit";
+
+        let ccx = CoreContext::test_mock();
+
+        let fut = futures::lazy(move || {
+            let key = format!("key-{}", rand::random::<u32>());
+            let data = (0..8192).map(|_| rand::random::<u8>()).collect::<Vec<u8>>();
+            let data = BlobstoreBytes::from_bytes(data);
+
+            Glusterblob::with_smc(TIER, EXPORT, BASEPATH)
+                .and_then({
+                    cloned!(ccx, key, data);
+                    move |ctxt| ctxt.put(ccx, key, data).map(|()| ctxt)
+                })
+                .and_then({
+                    cloned!(ccx, key);
+                    move |ctxt| ctxt.get(ccx, key)
+                })
+                .map(|ret| ret == Some(data))
+        });
+
+        match tokio::runtime::Runtime::new().unwrap().block_on(fut) {
+            Ok(true) => println!("all OK"),
+            Ok(false) => panic!("data mismatch"),
+            Err(err) => panic!("Error: {:?}", err),
+        };
     }
 }
