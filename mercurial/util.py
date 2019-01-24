@@ -4100,6 +4100,53 @@ def safename(f, tag, ctx, others=None):
 
 
 class ring(object):
+    """
+    FIFO Ringbuffer
+
+    >>> r = ring(5)
+    >>> r.items()
+    []
+    >>> r.push(1)
+    >>> r.push(2)
+    >>> r.push(3)
+    >>> r.push(4)
+    >>> len(r)
+    4
+    >>> r.items()
+    [1, 2, 3, 4]
+    >>> r.pop()
+    1
+    >>> r.items()
+    [2, 3, 4]
+    >>> r.push(5)
+    >>> r.push(6)
+    >>> r.push(7)
+    >>> r.items()
+    [3, 4, 5, 6, 7]
+    >>> len(r)
+    5
+    >>> r[0]
+    3
+    >>> r[-1]
+    7
+    >>> r.pop()
+    3
+    >>> r.pop()
+    4
+    >>> r.pop()
+    5
+    >>> r.pop()
+    6
+    >>> r.items()
+    [7]
+    >>> r.pop()
+    7
+    >>> r.pop()
+    Traceback (most recent call last):
+        ...
+    IndexError
+    """
+
     def __init__(self, maxsize):
         self._maxsize = maxsize
         self._data = [None] * maxsize
@@ -4130,6 +4177,7 @@ class ring(object):
             raise IndexError
         item = self._data[self._offset]
         self._offset = (self._offset + 1) % self._maxsize
+        self._len -= 1
         return item
 
     def items(self):
@@ -4137,7 +4185,7 @@ class ring(object):
         if end <= self._maxsize:
             return self._data[self._offset : end]
         else:
-            head = self._data[self.offset : self._maxsize]
+            head = self._data[self._offset : self._maxsize]
             tail = self._data[: (end % self._maxsize)]
             return head + tail
 
