@@ -13,6 +13,7 @@ from typing import List, Optional
 
 from eden.cli import config as config_mod, filesystem, mtab, process_finder, ui, version
 from eden.cli.config import EdenInstance
+from fb303.ttypes import fb_status
 
 from . import (
     check_bind_mounts,
@@ -64,7 +65,13 @@ def cure_what_ails_you(
     check_rogue_edenfs.check_many_edenfs_are_running(fixer, process_finder)
 
     status = instance.check_health()
-    if not status.is_healthy():
+    if status.status == fb_status.ALIVE:
+        run_normal_checks(fixer, instance, out, mount_table, fs_util)
+    elif status.status == fb_status.STARTING:
+        fixer.add_problem(EdenfsStarting())
+    elif status.status == fb_status.STOPPING:
+        fixer.add_problem(EdenfsStopping())
+    elif status.status == fb_status.DEAD:
         run_edenfs_not_healthy_checks(
             fixer, instance, out, status, mount_table, fs_util
         )
@@ -72,7 +79,7 @@ def cure_what_ails_you(
             out.writeln("Eden is not in use.")
             return 0
     else:
-        run_normal_checks(fixer, instance, out, mount_table, fs_util)
+        fixer.add_problem(EdenfsUnexpectedStatus(status))
 
     if fixer.num_problems == 0:
         out.writeln("No issues detected.", fg=out.GREEN)
@@ -136,6 +143,31 @@ class EdenfsNotHealthy(Problem):
         super().__init__(
             "Eden is not running.", remediation="To start Eden, run:\n\n    eden start"
         )
+
+
+class EdenfsStarting(Problem):
+    def __init__(self) -> None:
+        remediation = '''\
+Please wait for edenfs to finish starting.
+If Eden seems to be taking too long to start you can try restarting it
+with "eden restart"'''
+        super().__init__("Eden is currently still starting.", remediation=remediation)
+
+
+class EdenfsStopping(Problem):
+    def __init__(self) -> None:
+        remediation = """\
+Either wait for edenfs to exit, or to forcibly kill Eden, run:
+
+    eden stop --kill"""
+        super().__init__("Eden is currently shutting down.", remediation=remediation)
+
+
+class EdenfsUnexpectedStatus(Problem):
+    def __init__(self, status: config_mod.HealthStatus) -> None:
+        msg = f"Unexpected health status reported by edenfs: {status}"
+        remediation = 'You can try restarting Eden by running "eden restart"'
+        super().__init__(msg, remediation=remediation)
 
 
 def run_normal_checks(

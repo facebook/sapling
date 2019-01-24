@@ -78,6 +78,12 @@ class TakeoverServer;
  */
 class EdenServer : private TakeoverHandler {
  public:
+  enum class RunState {
+    STARTING,
+    RUNNING,
+    SHUTTING_DOWN,
+  };
+
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
   using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
 
@@ -87,6 +93,17 @@ class EdenServer : private TakeoverHandler {
       std::shared_ptr<const EdenConfig> edenConfig);
 
   virtual ~EdenServer();
+
+  /**
+   * Get the server's current status.
+   *
+   * This is primarily used for diagnostic purposes.
+   * Note that the status may change immediately after this method returns, so
+   * the value may be out of date by the time the caller can use it.
+   */
+  RunState getStatus() const {
+    return runningState_.rlock()->state;
+  }
 
   /**
    * Prepare to run the EdenServer.
@@ -398,11 +415,6 @@ class EdenServer : private TakeoverHandler {
 
 #endif // !EDEN_WIN
 
-  enum class RunState {
-    STARTING,
-    RUNNING,
-    SHUTTING_DOWN,
-  };
   /**
    * Information about whether the EdenServer is starting, running, or shutting
    * down, including whether it is performing a graceful restart.

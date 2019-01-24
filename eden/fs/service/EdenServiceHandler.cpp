@@ -7,7 +7,8 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "EdenServiceHandler.h"
+#include "eden/fs/service/EdenServiceHandler.h"
+
 #include <folly/Conv.h>
 #include <folly/CppAttributes.h>
 #include <folly/FileUtil.h>
@@ -21,8 +22,7 @@
 #include <folly/stop_watch.h>
 #include <folly/system/Shell.h>
 #include <optional>
-#include "common/stats/ServiceData.h"
-#include "eden/fs/config/ClientConfig.h"
+
 #ifdef EDEN_WIN
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/win/fs/utils/stub.h" // @manual
@@ -42,6 +42,8 @@
 #include "eden/fs/utils/ProcessNameCache.h"
 #endif // EDEN_WIN
 
+#include "common/stats/ServiceData.h"
+#include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -55,6 +57,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/tracing/Tracing.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/StatTimes.h"
 
@@ -255,7 +258,17 @@ EdenServiceHandler::EdenServiceHandler(EdenServer* server)
 
 facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG4);
-  return facebook::fb303::cpp2::fb_status::ALIVE;
+  auto status = server_->getStatus();
+  switch (status) {
+    case EdenServer::RunState::STARTING:
+      return facebook::fb303::cpp2::fb_status::STARTING;
+    case EdenServer::RunState::RUNNING:
+      return facebook::fb303::cpp2::fb_status::ALIVE;
+    case EdenServer::RunState::SHUTTING_DOWN:
+      return facebook::fb303::cpp2::fb_status::STOPPING;
+  }
+  EDEN_BUG() << "unexpected EdenServer status " << static_cast<int>(status);
+  return facebook::fb303::cpp2::fb_status::WARNING;
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {

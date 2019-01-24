@@ -281,7 +281,9 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor.check_watchman._call_watchman")
     @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman):
-        instance = FakeEdenInstance(self.make_temporary_directory(), is_healthy=False)
+        instance = FakeEdenInstance(
+            self.make_temporary_directory(), status=fb_status.DEAD
+        )
 
         out = TestOutput()
         dry_run = False
@@ -300,7 +302,9 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.cli.doctor.check_watchman._call_watchman")
     @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_edenfs_not_running(self, mock_get_roots_for_nuclide, mock_watchman):
-        instance = FakeEdenInstance(self.make_temporary_directory(), is_healthy=False)
+        instance = FakeEdenInstance(
+            self.make_temporary_directory(), status=fb_status.DEAD
+        )
         instance.create_test_mount("eden-mount")
 
         out = TestOutput()
@@ -322,6 +326,80 @@ Eden is not running.
 To start Eden, run:
 
     eden start
+
+<yellow>1 issue requires manual attention.<reset>
+Ask in the Eden Users group if you need help fixing issues with Eden:
+https://fb.facebook.com/groups/eden.users/
+"""
+            ),
+            out.getvalue(),
+        )
+        self.assertEqual(1, exit_code)
+
+    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
+    def test_edenfs_starting(self, mock_get_roots_for_nuclide, mock_watchman):
+        instance = FakeEdenInstance(
+            self.make_temporary_directory(), status=fb_status.STARTING
+        )
+        instance.create_test_mount("eden-mount")
+
+        out = TestOutput()
+        dry_run = False
+        exit_code = doctor.cure_what_ails_you(
+            instance,
+            dry_run,
+            FakeMountTable(),
+            fs_util=filesystem.LinuxFsUtil(),
+            process_finder=FakeProcessFinder(),
+            out=out,
+        )
+
+        self.assertEqual(
+            dedent(
+                """\
+<yellow>- Found problem:<reset>
+Eden is currently still starting.
+Please wait for edenfs to finish starting.
+If Eden seems to be taking too long to start you can try restarting it
+with "eden restart"
+
+<yellow>1 issue requires manual attention.<reset>
+Ask in the Eden Users group if you need help fixing issues with Eden:
+https://fb.facebook.com/groups/eden.users/
+"""
+            ),
+            out.getvalue(),
+        )
+        self.assertEqual(1, exit_code)
+
+    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
+    def test_edenfs_stopping(self, mock_get_roots_for_nuclide, mock_watchman):
+        instance = FakeEdenInstance(
+            self.make_temporary_directory(), status=fb_status.STOPPING
+        )
+        instance.create_test_mount("eden-mount")
+
+        out = TestOutput()
+        dry_run = False
+        exit_code = doctor.cure_what_ails_you(
+            instance,
+            dry_run,
+            FakeMountTable(),
+            fs_util=filesystem.LinuxFsUtil(),
+            process_finder=FakeProcessFinder(),
+            out=out,
+        )
+
+        self.assertEqual(
+            dedent(
+                """\
+<yellow>- Found problem:<reset>
+Eden is currently shutting down.
+Either wait for edenfs to exit, or to forcibly kill Eden, run:
+
+    eden stop --kill
 
 <yellow>1 issue requires manual attention.<reset>
 Ask in the Eden Users group if you need help fixing issues with Eden:
@@ -1200,7 +1278,7 @@ class BindMountsCheckTest(DoctorTestBase):
 
     def setUp(self) -> None:
         tmp_dir = self.make_temporary_directory()
-        self.instance = FakeEdenInstance(tmp_dir, is_healthy=True)
+        self.instance = FakeEdenInstance(tmp_dir)
 
         self.dot_eden_path = os.path.join(tmp_dir, ".eden")
         self.clients_path = os.path.join(self.dot_eden_path, "clients")
@@ -2247,13 +2325,13 @@ class FakeEdenInstance:
     def __init__(
         self,
         tmp_dir: str,
-        is_healthy: bool = True,
+        status: fb_status = fb_status.ALIVE,
         build_info: Optional[Dict[str, str]] = None,
         config: Optional[Dict[str, str]] = None,
     ) -> None:
         self._tmp_dir = tmp_dir
         self._mount_paths: Dict[str, collections.OrderedDict] = {}
-        self._is_healthy = is_healthy
+        self._status = status
         self._build_info = build_info if build_info else {}
         self._config = config if config else {}
         self._fake_client = FakeClient()
@@ -2275,7 +2353,7 @@ class FakeEdenInstance:
         """
         Define a configured mount.
 
-        If active is True and is_healthy was set to True when creating the FakeClient
+        If active is True and status was set to ALIVE when creating the FakeClient
         then the mount will appear as a normal active mount.  It will be reported in the
         thrift results and the mount table, and the mount directory will be populated
         with a .hg/ or .git/ subdirectory.
@@ -2306,7 +2384,7 @@ class FakeEdenInstance:
             ]
         )
 
-        if self._is_healthy and active:
+        if active and self._status == fb_status.ALIVE:
             # Report the mount in /proc/mounts
             dev_id = self._next_dev_id
             self._next_dev_id += 1
@@ -2362,13 +2440,12 @@ class FakeEdenInstance:
         return self._mount_paths.keys()
 
     def mount(self, path: str) -> int:
-        assert self._is_healthy
+        assert self._status in (fb_status.ALIVE, fb_status.STARTING, fb_status.STOPPING)
         assert path in self._mount_paths
         return 0
 
     def check_health(self) -> HealthStatus:
-        status = fb_status.ALIVE if self._is_healthy else fb_status.STOPPED
-        return HealthStatus(status, pid=None, detail="")
+        return HealthStatus(self._status, pid=None, detail="")
 
     def get_client_info(self, mount_path: str) -> collections.OrderedDict:
         return self._mount_paths[mount_path]
