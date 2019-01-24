@@ -18,7 +18,6 @@ import subprocess
 import typing
 import unittest
 from pathlib import Path
-from textwrap import dedent
 from types import SimpleNamespace
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Set, Tuple, Union
 from unittest.mock import call, patch
@@ -319,8 +318,7 @@ https://fb.facebook.com/groups/eden.users/
         )
 
         self.assertEqual(
-            dedent(
-                """\
+            """\
 <yellow>- Found problem:<reset>
 Eden is not running.
 To start Eden, run:
@@ -330,8 +328,7 @@ To start Eden, run:
 <yellow>1 issue requires manual attention.<reset>
 Ask in the Eden Users group if you need help fixing issues with Eden:
 https://fb.facebook.com/groups/eden.users/
-"""
-            ),
+""",
             out.getvalue(),
         )
         self.assertEqual(1, exit_code)
@@ -356,8 +353,7 @@ https://fb.facebook.com/groups/eden.users/
         )
 
         self.assertEqual(
-            dedent(
-                """\
+            """\
 <yellow>- Found problem:<reset>
 Eden is currently still starting.
 Please wait for edenfs to finish starting.
@@ -367,8 +363,7 @@ with "eden restart"
 <yellow>1 issue requires manual attention.<reset>
 Ask in the Eden Users group if you need help fixing issues with Eden:
 https://fb.facebook.com/groups/eden.users/
-"""
-            ),
+""",
             out.getvalue(),
         )
         self.assertEqual(1, exit_code)
@@ -393,8 +388,7 @@ https://fb.facebook.com/groups/eden.users/
         )
 
         self.assertEqual(
-            dedent(
-                """\
+            """\
 <yellow>- Found problem:<reset>
 Eden is currently shutting down.
 Either wait for edenfs to exit, or to forcibly kill Eden, run:
@@ -404,8 +398,7 @@ Either wait for edenfs to exit, or to forcibly kill Eden, run:
 <yellow>1 issue requires manual attention.<reset>
 Ask in the Eden Users group if you need help fixing issues with Eden:
 https://fb.facebook.com/groups/eden.users/
-"""
-            ),
+""",
             out.getvalue(),
         )
         self.assertEqual(1, exit_code)
@@ -891,19 +884,17 @@ Fixing Eden to point to parent commit {snapshot_hex}...\
     def test_edenfs_when_installed_and_running_differ(self, mock_gierv):
         fixer, out = self._test_edenfs_version(mock_gierv, "20171120-246561")
         self.assertEqual(
-            dedent(
-                """\
-    <yellow>- Found problem:<reset>
-    The version of Eden that is installed on your machine is:
-        fb-eden-20171120-246561.x86_64
-    but the version of Eden that is currently running is:
-        fb-eden-20171213-165642.x86_64
+            """\
+<yellow>- Found problem:<reset>
+The version of Eden that is installed on your machine is:
+    fb-eden-20171120-246561.x86_64
+but the version of Eden that is currently running is:
+    fb-eden-20171213-165642.x86_64
 
-    Consider running `eden restart` to migrate to the newer version, which
-    may have important bug fixes or performance improvements.
+Consider running `eden restart` to migrate to the newer version, which
+may have important bug fixes or performance improvements.
 
-                """
-            ),
+""",
             out,
         )
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
