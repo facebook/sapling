@@ -52,7 +52,7 @@ pub fn diff(base: &[u8], data: &[u8]) -> io::Result<Vec<u8>> {
         chainLog: ZSTD_CHAINLOG_MIN, // useless using "fast" strategy
         hashLog: hlog,
         searchLog: ZSTD_SEARCHLOG_MIN, // useless using "fast" strategy
-        minMatch: 7,               // level 1 default (see ZSTD_defaultCParameters)
+        searchLength: 7,               // level 1 default (see ZSTD_defaultCParameters)
         targetLength: 0, // enable huffman compression of literals (for "fast" strategy)
         strategy: ZSTD_strategy::ZSTD_fast,
     };
