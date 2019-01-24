@@ -12,9 +12,9 @@
 #include <folly/Synchronized.h>
 #include <folly/container/F14Set.h>
 #include <folly/futures/Promise.h>
+#include <folly/synchronization/LifoSem.h>
 #include <sys/types.h>
 #include <chrono>
-#include <condition_variable>
 #include <map>
 #include <string>
 #include <vector>
@@ -84,8 +84,8 @@ class ProcessNameCache {
 
   const std::chrono::nanoseconds expiry_;
   const std::chrono::steady_clock::time_point startPoint_;
-  folly::Synchronized<State, std::mutex> state_;
-  std::condition_variable cv_;
+  folly::Synchronized<State> state_;
+  folly::LifoSem sem_;
   std::thread workerThread_;
 };
 

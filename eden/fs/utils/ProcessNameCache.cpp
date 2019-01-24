@@ -61,8 +61,8 @@ ProcessNameCache::ProcessNameCache(std::chrono::nanoseconds expiry)
 }
 
 ProcessNameCache::~ProcessNameCache() {
-  state_.lock()->workerThreadShouldStop = true;
-  cv_.notify_one();
+  state_.wlock()->workerThreadShouldStop = true;
+  sem_.post();
   workerThread_.join();
 }
 
@@ -104,32 +104,33 @@ void ProcessNameCache::add(pid_t pid) {
 
   auto now = std::chrono::steady_clock::now() - startPoint_;
 
-  // If there's a way to hook up std::condition_variable with
-  // folly::Synchronized's folly::SharedMutex, this could use
-  // tryRlockCheckBeforeUpdate which might be more efficient.
-  {
-    auto state = state_.lock();
+  tryRlockCheckBeforeUpdate<folly::Unit>(
+      state_,
+      [&](const auto& state) -> std::optional<folly::Unit> {
+        auto entry = folly::get_ptr(state.names, pid);
+        if (entry) {
+          entry->lastAccess.store(now, std::memory_order_seq_cst);
+          return folly::unit;
+        }
+        return std::nullopt;
+      },
+      [&](auto& wlock) -> folly::Unit {
+        auto [iter, inserted] = wlock->addQueue.insert(pid);
+        wlock.unlock();
+        if (inserted) {
+          sem_.post();
+        }
 
-    auto entry = folly::get_ptr(state->names, pid);
-    if (entry) {
-      entry->lastAccess.store(now, std::memory_order_seq_cst);
-      return;
-    }
-
-    auto [iter, inserted] = state->addQueue.insert(pid);
-    if (!inserted) {
-      return;
-    }
-  }
-  cv_.notify_one();
+        return folly::unit;
+      });
 }
 
 std::map<pid_t, std::string> ProcessNameCache::getAllProcessNames() {
   auto [promise, future] =
       folly::makePromiseContract<std::map<pid_t, std::string>>();
 
-  state_.lock()->getQueue.emplace_back(std::move(promise));
-  cv_.notify_one();
+  state_.wlock()->getQueue.emplace_back(std::move(promise));
+  sem_.post();
 
   return std::move(future).get();
 }
@@ -159,13 +160,10 @@ void ProcessNameCache::processActions() {
     addQueue.clear();
     getQueue.clear();
 
-    {
-      auto state = state_.lock();
-      while (!state->workerThreadShouldStop && state->addQueue.empty() &&
-             state->getQueue.empty()) {
-        cv_.wait(state.getUniqueLock());
-      }
+    sem_.wait();
 
+    {
+      auto state = state_.wlock();
       if (state->workerThreadShouldStop) {
         // Shutdown is only initiated by the destructor and since gets
         // are blocking, this implies no gets can be pending.
@@ -176,6 +174,13 @@ void ProcessNameCache::processActions() {
 
       addQueue.swap(state->addQueue);
       getQueue.swap(state->getQueue);
+    }
+
+    // sem_.wait() consumed one count, but we know addQueue.size() +
+    // getQueue.size() + (maybe done) were added. Since we will process all
+    // entries at once, rather than waking repeatedly, consume the rest.
+    if (addQueue.size() + getQueue.size()) {
+      (void)sem_.tryWait(addQueue.size() + getQueue.size() - 1);
     }
 
     // Process all additions before any gets so none are missed. It does mean
@@ -196,7 +201,7 @@ void ProcessNameCache::processActions() {
 
     // Now insert any new names into the synchronized data structure.
     if (!addedNames.empty()) {
-      auto state = state_.lock();
+      auto state = state_.wlock();
       for (auto& [pid, name] : addedNames) {
         state->names.emplace(pid, ProcessName{std::move(name), now});
       }
@@ -213,13 +218,13 @@ void ProcessNameCache::processActions() {
       }
     }
 
-    if (getQueue.size()) {
+    if (!getQueue.empty()) {
       // TODO: There are a few possible optimizations here, but get() is so
       // rare that they're not worth worrying about.
       std::map<pid_t, std::string> allProcessNames;
 
       {
-        auto state = state_.lock();
+        auto state = state_.wlock();
         clearExpired(now, *state);
         for (const auto& [pid, name] : state->names) {
           allProcessNames[pid] = name.name;
