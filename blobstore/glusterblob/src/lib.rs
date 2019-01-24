@@ -4,25 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate blobstore;
-extern crate bytes;
-extern crate cloned;
-extern crate context;
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate libnfs_async;
-extern crate mononoke_types;
-#[cfg(test)]
-extern crate quickcheck;
-extern crate rand;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate smc;
-extern crate twox_hash;
-
 use std::fmt;
 use std::hash::Hasher;
 use std::io;
@@ -30,12 +11,13 @@ use std::path::{Path, PathBuf};
 
 use bytes::{BigEndian, ByteOrder};
 use cloned::cloned;
-use failure::{format_err, Error};
+use failure_ext::{format_err, Error};
 use futures::future;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
 use libnfs_async::{AsyncNfsContext, Mode, OFlag};
 use rand::prelude::*;
+use serde_derive::{Deserialize, Serialize};
 use twox_hash::{XxHash, XxHash32};
 
 use blobstore::Blobstore;
@@ -118,7 +100,8 @@ impl Glusterblob {
             Err(format_err!("No hosts specified"))
         } else {
             Ok(hosts)
-        }.into_future();
+        }
+        .into_future();
 
         hosts.and_then(move |hosts| {
             let ctxts = hosts.into_iter().map({
@@ -194,7 +177,8 @@ impl Glusterblob {
                 cloned!(self.ctxt, path);
                 move |found| match found {
                     Some(_) => Ok(path).into_future().left_future(),
-                    None => ctxt.mkpath(path.clone(), DIRMODE)
+                    None => ctxt
+                        .mkpath(path.clone(), DIRMODE)
                         .map(move |()| path)
                         .right_future(),
                 }
@@ -209,7 +193,7 @@ impl Glusterblob {
 }
 
 impl fmt::Debug for Glusterblob {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Glusterblob")
             .field("host", &self.host)
             .field("export", &self.host)
