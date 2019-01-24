@@ -52,7 +52,7 @@ namespace {
 class PrivHelperClientImpl : public PrivHelper,
                              private UnixSocket::ReceiveCallback,
                              private UnixSocket::SendCallback,
-                             private EventBase::LoopCallback {
+                             private EventBase::OnDestructionCallback {
  public:
   PrivHelperClientImpl(File&& conn, pid_t helperPid)
       : helperPid_(helperPid),
@@ -73,23 +73,14 @@ class PrivHelperClientImpl : public PrivHelper,
       state->eventBase = eventBase;
       state->status = Status::RUNNING;
     }
-    eventBase->runOnDestruction(this);
+    eventBase->runOnDestruction(*this);
     conn_->attachEventBase(eventBase);
     conn_->setReceiveCallback(this);
   }
 
   void detachEventBase() override {
-    {
-      auto state = state_.wlock();
-      if (state->status != Status::RUNNING) {
-        return;
-      }
-      state->status = Status::NOT_STARTED;
-      state->eventBase = nullptr;
-    }
-    conn_->clearReceiveCallback();
-    conn_->detachEventBase();
-    cancelLoopCallback();
+    detachWithinEventBaseDestructor();
+    cancel();
   }
 
   Future<File> fuseMount(folly::StringPiece mountPath) override;
@@ -146,7 +137,7 @@ class PrivHelperClientImpl : public PrivHelper,
       eventBase->runImmediatelyOrRunInEventBaseThreadAndWait([this] {
         conn_->clearReceiveCallback();
         conn_->detachEventBase();
-        cancelLoopCallback();
+        cancel();
       });
     }
     // Make sure the socket is closed, and fail any outstanding requests.
@@ -287,11 +278,11 @@ class PrivHelperClientImpl : public PrivHelper,
         "error sending to privhelper process: ", folly::exceptionStr(ew))));
   }
 
-  void runLoopCallback() noexcept override {
-    // Our loop callback is run when the EventBase is destroyed.
+  void onEventBaseDestruction() noexcept override {
+    // This callback is run when the EventBase is destroyed.
     // Detach from the EventBase.  We may be restarted later if
     // attachEventBase() is called again later to attach us to a new EventBase.
-    detachEventBase();
+    detachWithinEventBaseDestructor();
   }
 
   void handleSocketError(const std::exception& ex) {
@@ -326,6 +317,21 @@ class PrivHelperClientImpl : public PrivHelper,
     for (auto& entry : pending) {
       entry.second.setException(ex);
     }
+  }
+
+  // Separated out from detachEventBase() since it is not safe to cancel() an
+  // EventBase::OnDestructionCallback within the callback itself.
+  void detachWithinEventBaseDestructor() noexcept {
+    {
+      auto state = state_.wlock();
+      if (state->status != Status::RUNNING) {
+        return;
+      }
+      state->status = Status::NOT_STARTED;
+      state->eventBase = nullptr;
+    }
+    conn_->clearReceiveCallback();
+    conn_->detachEventBase();
   }
 
   const pid_t helperPid_{0};

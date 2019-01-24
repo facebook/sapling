@@ -32,7 +32,7 @@ namespace eden {
  * for updates that match certain criteria.
  */
 
-class StreamingSubscriber : private folly::EventBase::LoopCallback {
+class StreamingSubscriber : private folly::EventBase::OnDestructionCallback {
  public:
   using Callback = std::unique_ptr<apache::thrift::StreamingHandlerCallback<
       std::unique_ptr<JournalPosition>>>;
@@ -64,14 +64,14 @@ class StreamingSubscriber : private folly::EventBase::LoopCallback {
    * This is ensured by only ever calling it via the schedule() method. */
   void journalUpdated();
 
-  /** We implement LoopCallback so that we can get notified when the
+  /** We implement OnDestructionCallback so that we can get notified when the
    * eventBase is about to be destroyed.  The other option for lifetime
    * management is KeepAlive tokens but those are not suitable for us
    * because we rely on the thrift eventBase threads terminating their
    * loops before we trigger our shutdown code.  KeepAlive tokens block
    * that from happening.  The next best thing is to get notified of
    * destruction and then atomically reconcile our state. */
-  void runLoopCallback() noexcept override;
+  void onEventBaseDestruction() noexcept override;
 
   struct State {
     Callback callback;

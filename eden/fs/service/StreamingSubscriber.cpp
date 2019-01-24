@@ -19,7 +19,7 @@ namespace eden {
 StreamingSubscriber::State::State(StreamingSubscriber::Callback callback)
     : callback(std::move(callback)) {}
 
-void StreamingSubscriber::runLoopCallback() noexcept {
+void StreamingSubscriber::onEventBaseDestruction() noexcept {
   auto state = state_.wlock();
   if (state->callback) {
     // We're called on the eventBase thread so we can call these
@@ -45,7 +45,7 @@ void StreamingSubscriber::subscribe(
     auto state = self->state_.wlock();
 
     // Arrange to be told when the eventBase is about to be destroyed
-    state->callback->getEventBase()->runOnDestruction(self.get());
+    state->callback->getEventBase()->runOnDestruction(*self);
     state->subscriberId =
         edenMount->getJournal().registerSubscriber([self] { schedule(self); });
   }
@@ -62,6 +62,9 @@ StreamingSubscriber::StreamingSubscriber(
       state_(folly::in_place, std::move(callback)) {}
 
 StreamingSubscriber::~StreamingSubscriber() {
+  // Cancel the EventBase::OnDestructionCallback
+  cancel();
+
   auto state = state_.wlock();
   // If the eventBase is still live then we should tear down the peer
   if (state->callback) {
