@@ -65,7 +65,7 @@ mod tests {
     fn configure_client() -> Fallible<MononokeClient> {
         MononokeClientBuilder::new()
             .base_url_str(HOST)?
-            .client_creds(get_creds_path())
+            .client_creds(get_creds_path())?
             .build()
     }
 

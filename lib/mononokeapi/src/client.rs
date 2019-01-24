@@ -6,18 +6,15 @@ use hyper::{Body, Client};
 use hyper_tls::HttpsConnector;
 use native_tls::{Identity, TlsConnector};
 use openssl::{pkcs12::Pkcs12, pkey::PKey, x509::X509};
+use same_file::is_same_file;
 use url::Url;
 
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, io::Read, path::Path};
 
 #[derive(Default)]
 pub struct MononokeClientBuilder {
     base_url: Option<Url>,
-    client_creds: Option<PathBuf>,
+    client_id: Option<Identity>,
 }
 
 impl MononokeClientBuilder {
@@ -38,19 +35,24 @@ impl MononokeClientBuilder {
         Ok(self.base_url(url))
     }
 
-    /// Set client credentials (X.509 client certificate + private key) for TLS
-    /// mutual authentication. If not set, TLS mutual authentication will not be
-    /// used.
-    pub fn client_creds(mut self, path: impl AsRef<Path>) -> Self {
-        self.client_creds = Some(path.as_ref().to_path_buf());
-        self
+    /// Convenience function for setting client credentials when the certificate and
+    /// private key are in the same PEM file.
+    pub fn client_creds(self, cert_and_key: impl AsRef<Path>) -> Fallible<Self> {
+        self.client_creds2(cert_and_key.as_ref(), cert_and_key.as_ref())
     }
 
-    /// Optionally set client credentials (X.509 client certificate + private key)
-    /// for TLS mutual authentication. Takes an Option, allowing for the option to
-    /// be unset by passing None.
-    pub fn client_creds_opt<P: AsRef<Path>>(mut self, path: Option<P>) -> Self {
-        self.client_creds = path.map(|p| p.as_ref().to_path_buf());
+    /// Set client credentials by providing paths to a PEM encoded X.509 client certificate
+    /// and a PEM encoded private key. These credentials are used for TLS mutual authentication;
+    /// if not set, mutual authentication will not be used.
+    pub fn client_creds2(self, cert: impl AsRef<Path>, key: impl AsRef<Path>) -> Fallible<Self> {
+        Ok(self.client_id(Some(read_identity(cert, key)?)))
+    }
+
+    /// Directly set the client credentials with a native_tls::Identity rather than
+    /// parsing them from a PEM file. If None is specified, TLS mutual authentication will
+    /// be disabled.
+    pub fn client_id(mut self, id: Option<Identity>) -> Self {
+        self.client_id = id;
         self
     }
 
@@ -59,12 +61,7 @@ impl MononokeClientBuilder {
             Some(url) => url,
             None => bail!("No base URL specified"),
         };
-
-        let creds = match self.client_creds {
-            Some(path) => Some(read_credentials(path)?),
-            None => None,
-        };
-        let client = build_hyper_client(creds)?;
+        let client = build_hyper_client(self.client_id)?;
 
         Ok(MononokeClient { client, base_url })
     }
@@ -80,7 +77,7 @@ impl MononokeClientBuilder {
 /// fn main() -> Fallible<()> {
 ///     let client = MononokeClientBuilder::new()
 ///         .base_url_str("https://mononoke-api.internal.tfbnw.net")?
-///         .client_creds("/var/facebook/credentials/user/x509/user.pem")
+///         .client_creds_combined("/var/facebook/credentials/user/x509/user.pem")?
 ///         .build()?;
 ///
 ///     client.health_check()
@@ -91,16 +88,27 @@ pub struct MononokeClient {
     pub(crate) base_url: Url,
 }
 
-/// Read an X.509 certificate and private key from a PEM file and
-/// convert them to a native_tls::Identity. Both the certificate
-/// and key must be in the same PEM file.
-fn read_credentials(path: impl AsRef<Path>) -> Fallible<Identity> {
-    let mut pem_bytes = Vec::new();
-    File::open(path)?.read_to_end(&mut pem_bytes)?;
+fn read_bytes(path: impl AsRef<Path>) -> Fallible<Vec<u8>> {
+    let mut buf = Vec::new();
+    File::open(path)?.read_to_end(&mut buf)?;
+    Ok(buf)
+}
 
-    // Read the X.509 certificate and private key from the PEM file.
-    let cert = X509::from_pem(&pem_bytes)?;
-    let key = PKey::private_key_from_pem(&pem_bytes)?;
+/// Read an X.509 certificate and private key from PEM files and
+/// convert them to a native_tls::Identity. If both paths refer
+/// to the same file, it is only read once.
+fn read_identity(cert_path: impl AsRef<Path>, key_path: impl AsRef<Path>) -> Fallible<Identity> {
+    let cert_pem = read_bytes(&cert_path)?;
+    let cert = X509::from_pem(&cert_pem)?;
+
+    // The certificate and key might be in same PEM file, in which
+    // case, don't duplicate the read.
+    let key = if is_same_file(&cert_path, &key_path)? {
+        PKey::private_key_from_pem(&cert_pem)?
+    } else {
+        let key_pem = read_bytes(&key_path)?;
+        PKey::private_key_from_pem(&key_pem)?
+    };
 
     // Build a DER-encoded PKCS#12 archive, since that's what native_tls accepts.
     // The password is intentionally set to the empty string because the archive

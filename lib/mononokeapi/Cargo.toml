@@ -12,6 +12,7 @@ hyper-tls = "0.3.1"
 lazy_static = "1.2.0"
 native-tls = "0.2.2"
 openssl = "0.10.15"
+same-file = "1.0.4"
 tokio = "0.1.11"
 url = "1.7.2"
 
