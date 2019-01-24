@@ -4,10 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![feature(duration_as_u128)]
+
+#[macro_use]
+extern crate stats;
+
 use std::fmt;
 use std::hash::Hasher;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use bytes::{BigEndian, ByteOrder};
 use cloned::cloned;
@@ -15,14 +21,26 @@ use failure_ext::{format_err, Error};
 use futures::future;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_stats::Timed;
 use libnfs_async::{AsyncNfsContext, Mode, OFlag};
 use rand::prelude::*;
 use serde_derive::{Deserialize, Serialize};
+use stats::{Histogram, Timeseries};
 use twox_hash::{XxHash, XxHash32};
 
 use blobstore::Blobstore;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
+
+define_stats_struct! {
+    GlusterStats("scm.mononoke.gluster.{}", host: String),
+    get_us: histogram(1000, 1000, 1000_000; P 50; P 90; P 99),
+    get_failed: timeseries(COUNT, RATE),
+    put_us: histogram(1000, 1000, 1000_000; P 50; P 90; P 99),
+    put_failed: timeseries(COUNT, RATE),
+    is_present_us: histogram(1000, 1000, 1000_000; P 50; P 90; P 99),
+    is_present_failed: timeseries(COUNT, RATE),
+}
 
 // UID and GID we're using for file ownership and permissions checking.
 const UID: u32 = 0;
@@ -46,6 +64,7 @@ pub struct Glusterblob {
     host: String,
     export: String,
     basepath: PathBuf,
+    stats: Arc<GlusterStats>,
 }
 
 impl Glusterblob {
@@ -114,9 +133,10 @@ impl Glusterblob {
                 .from_err() // io::Error -> Error
                 .map(move |(ctxt, host)| Glusterblob {
                     ctxt,
-                    host,
+                    host: host.clone(),
                     export,
                     basepath,
+                    stats: Arc::new(GlusterStats::new(host)),
                 })
         })
     }
@@ -213,11 +233,13 @@ impl Blobstore for Glusterblob {
         // If it opens OK, then stat to get the size of the file, and try to read it in a single
         // read. Fail if its a short (or long) read.
         // TODO: do multiple reads to get whole file.
-        let data = self.ctxt
+        let data = self
+            .ctxt
             .open(datapath, OFlag::O_RDONLY)
             .then(missing_is_none)
             .and_then(|found| match found {
-                Some(fh) => fh.fstat()
+                Some(fh) => fh
+                    .fstat()
                     .map(move |st| (st.nfs_size, fh))
                     .and_then(|(sz, fh)| fh.read(sz).map(move |v| (v, sz)))
                     .and_then(|(vec, sz)| {
@@ -235,7 +257,8 @@ impl Blobstore for Glusterblob {
                 None => Ok(None).into_future().left_future(),
             });
 
-        let meta = self.ctxt
+        let meta = self
+            .ctxt
             .open(metapath, OFlag::O_RDONLY)
             .then(missing_is_none)
             .and_then(|found| match found {
@@ -276,6 +299,18 @@ impl Blobstore for Glusterblob {
                     Ok(Some(data))
                 }
             })
+            .timed({
+                cloned!(self.stats);
+                move |futst, res| {
+                    match res {
+                        Ok(_) => stats
+                            .get_us
+                            .add_value(futst.completion_time.as_micros() as i64),
+                        Err(_) => stats.get_failed.add_value(1),
+                    }
+                    Ok(())
+                }
+            })
             .from_err()
             .boxify()
     }
@@ -301,11 +336,13 @@ impl Blobstore for Glusterblob {
                         .expect("json serialization of metadata failed");
 
                     // Create, write to tmpfile, fsync and rename the data file
-                    let data = ctxt.create(
-                        tmpfile.clone(),
-                        OFlag::O_CREAT | OFlag::O_EXCL | OFlag::O_WRONLY,
-                        FILEMODE,
-                    ).and_then(move |fh| {
+                    let data = ctxt
+                        .create(
+                            tmpfile.clone(),
+                            OFlag::O_CREAT | OFlag::O_EXCL | OFlag::O_WRONLY,
+                            FILEMODE,
+                        )
+                        .and_then(move |fh| {
                             let sz = value.len();
                             fh.write(value.as_bytes().to_vec())
                                 .map(move |written| (fh, sz, written))
@@ -320,8 +357,9 @@ impl Blobstore for Glusterblob {
                                             "key {}: short data write: wanted {} wrote {}",
                                             key, wanted, written
                                         ),
-                                    )).into_future()
-                                        .left_future()
+                                    ))
+                                    .into_future()
+                                    .left_future()
                                 } else {
                                     fh.fsync().right_future()
                                 }
@@ -333,11 +371,13 @@ impl Blobstore for Glusterblob {
                         });
 
                     // Create, write to tmpfile, fsync and rename the metadata file
-                    let meta = ctxt.create(
-                        tmpmeta.clone(),
-                        OFlag::O_CREAT | OFlag::O_EXCL | OFlag::O_WRONLY,
-                        FILEMODE,
-                    ).and_then(move |fh| {
+                    let meta = ctxt
+                        .create(
+                            tmpmeta.clone(),
+                            OFlag::O_CREAT | OFlag::O_EXCL | OFlag::O_WRONLY,
+                            FILEMODE,
+                        )
+                        .and_then(move |fh| {
                             let expected = metavec.len();
                             fh.write(metavec).map(move |wrote| (fh, wrote, expected))
                         })
@@ -351,8 +391,9 @@ impl Blobstore for Glusterblob {
                                             "key {}: short write for metadata wrote {} expected {}",
                                             key, wrote, expected
                                         ),
-                                    )).into_future()
-                                        .left_future()
+                                    ))
+                                    .into_future()
+                                    .left_future()
                                 } else {
                                     fh.fsync().right_future()
                                 }
@@ -366,6 +407,18 @@ impl Blobstore for Glusterblob {
                     //     What if it races with a parallel put to the same key?
                     // XXX Look for existing files?
                     data.join(meta).map(|((), ())| ()).from_err().boxify()
+                }
+            })
+            .timed({
+                cloned!(self.stats);
+                move |futst, res| {
+                    match res {
+                        Ok(_) => stats
+                            .put_us
+                            .add_value(futst.completion_time.as_micros() as i64),
+                        Err(_) => stats.put_failed.add_value(1),
+                    };
+                    Ok(())
                 }
             })
             .from_err()
@@ -387,6 +440,18 @@ impl Blobstore for Glusterblob {
         check_data
             .join(check_meta)
             .map(|(data, meta)| data.is_some() && meta.is_some())
+            .timed({
+                cloned!(self.stats);
+                move |futst, res| {
+                    match res {
+                        Ok(_) => stats
+                            .is_present_us
+                            .add_value(futst.completion_time.as_micros() as i64),
+                        Err(_) => stats.is_present_failed.add_value(1),
+                    };
+                    Ok(())
+                }
+            })
             .from_err()
             .boxify()
     }
