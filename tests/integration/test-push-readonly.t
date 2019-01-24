@@ -72,6 +72,16 @@ create new commit in repo2 and check that push fails
   list of changesets:
   bb0985934a0f8a493887892173b68940ceb40b4f
   sending unbundle command
+  bundle2-output-bundle: "HG20", 3 parts total
+  bundle2-output-part: "replycaps" 229 bytes payload
+  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
+  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   remote: * ERRO Command failed, remote: true, error: Repo is marked as read-only, root_cause: RepoReadOnly, backtrace: , session_uuid: * (glob)
-  abort: unexpected response: empty string
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
+
+Try to bypass the check
+  $ hgmn push --force --config treemanifest.treeonly=True ssh://user@dummy/repo --pushvars "BYPASS_READONLY=true"
+  pushing to ssh://user@dummy/repo
+  remote: * DEBG Session with Mononoke started with uuid: * (glob)
+  searching for changes

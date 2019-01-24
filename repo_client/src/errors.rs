@@ -23,6 +23,4 @@ pub enum ErrorKind {
         expected: HgNodeHash,
         actual: HgNodeHash,
     },
-    #[fail(display = "Repo is marked as read-only")]
-    RepoReadOnly,
 }

@@ -54,7 +54,6 @@ use self::streaming_clone::RevlogStreamingChunks;
 
 use errors::*;
 use hooks::HookManager;
-use metaconfig::repoconfig::RepoReadOnly;
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 
 const MAX_NODES_TO_LOG: usize = 5;
@@ -809,10 +808,6 @@ impl HgCommands for RepoClient {
         stream: BoxStream<Bundle2Item, Error>,
         hook_manager: Arc<HookManager>,
     ) -> HgCommandRes<Bytes> {
-        if self.repo.readonly() == RepoReadOnly::ReadOnly {
-            return future::err(ErrorKind::RepoReadOnly.into()).boxify();
-        }
-
         let ctx = self.prepared_ctx(ops::UNBUNDLE, None);
         let mut scuba_logger = ctx.scuba().clone();
 
@@ -825,6 +820,7 @@ impl HgCommands for RepoClient {
             hook_manager,
             self.lca_hint.clone(),
             self.phases_hint.clone(),
+            self.repo.readonly(),
         );
 
         res.timeout(timeout_duration())

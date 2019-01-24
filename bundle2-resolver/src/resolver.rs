@@ -31,7 +31,7 @@ use mercurial_bundles::{
 use mercurial_types::{
     HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
 };
-use metaconfig::PushrebaseParams;
+use metaconfig::{repoconfig::RepoReadOnly, PushrebaseParams};
 use mononoke_types::ChangesetId;
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -64,18 +64,43 @@ pub fn resolve(
     hook_manager: Arc<HookManager>,
     lca_hint: Arc<LeastCommonAncestorsHint>,
     phases_hint: Arc<Phases>,
+    readonly: RepoReadOnly,
 ) -> BoxFuture<Bytes, Error> {
     let resolver = Bundle2Resolver::new(ctx.clone(), repo, pushrebase, hook_manager);
 
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
     resolver
-        .maybe_resolve_commonheads(bundle2)
-        .and_then(move |(commonheads, bundle2)| match commonheads {
-            Some(commonheads) => {
-                resolve_pushrebase(ctx, commonheads, resolver, bundle2, lca_hint, phases_hint)
+        .maybe_resolve_pushvars(bundle2)
+        .and_then(move |(maybe_pushvars, bundle2)| {
+            let mut bypass_readonly = false;
+            // check the bypass condition
+            if let Some(ref pushvars) = maybe_pushvars {
+                bypass_readonly =
+                    pushvars.get("BYPASS_READONLY") == Some(&Bytes::from("true".as_bytes()))
             }
-            None => resolve_push(ctx, resolver, bundle2),
+            // force the readonly check
+            if readonly == RepoReadOnly::ReadOnly && !bypass_readonly {
+                return future::err(ErrorKind::RepoReadOnly.into()).left_future();
+            }
+            resolver
+                .maybe_resolve_commonheads(bundle2)
+                .and_then(move |(commonheads, bundle2)| {
+                    if let Some(commonheads) = commonheads {
+                        resolve_pushrebase(
+                            ctx,
+                            commonheads,
+                            resolver,
+                            bundle2,
+                            maybe_pushvars,
+                            lca_hint,
+                            phases_hint,
+                        )
+                    } else {
+                        resolve_push(ctx, resolver, bundle2)
+                    }
+                })
+                .right_future()
         })
         .boxify()
 }
@@ -201,57 +226,49 @@ fn resolve_pushrebase(
     commonheads: CommonHeads,
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
+    maybe_pushvars: Option<HashMap<String, Bytes>>,
     lca_hint: Arc<LeastCommonAncestorsHint>,
     phases_hint: Arc<Phases>,
 ) -> BoxFuture<Bytes, Error> {
     resolver
-        .maybe_resolve_pushvars(bundle2)
+        .resolve_b2xtreegroup2(ctx.clone(), bundle2)
         .and_then({
             cloned!(ctx, resolver);
-            move |(maybe_pushvars, bundle2)| {
-                resolver
-                    .resolve_b2xtreegroup2(ctx, bundle2)
-                    .map(move |(manifests, bundle2)| (manifests, maybe_pushvars, bundle2))
-            }
-        })
-        .and_then({
-            cloned!(ctx, resolver);
-            move |(manifests, maybe_pushvars, bundle2)| {
+            move |(manifests, bundle2)| {
                 resolver
                     .maybe_resolve_changegroup(ctx, bundle2)
-                    .map(move |(cg_push, bundle2)| (cg_push, manifests, maybe_pushvars, bundle2))
+                    .map(move |(cg_push, bundle2)| (cg_push, manifests, bundle2))
             }
         })
-        .and_then(|(cg_push, manifests, maybe_pushvars, bundle2)| {
+        .and_then(|(cg_push, manifests, bundle2)| {
             cg_push
                 .ok_or(err_msg("Empty pushrebase"))
                 .into_future()
-                .map(move |cg_push| (cg_push, manifests, maybe_pushvars, bundle2))
+                .map(move |cg_push| (cg_push, manifests, bundle2))
         })
-        .and_then(|(cg_push, manifests, maybe_pushvars, bundle2)| {
+        .and_then(|(cg_push, manifests, bundle2)| {
             match cg_push.mparams.get("onto").cloned() {
                 Some(onto_bookmark) => {
                     let v = Vec::from(onto_bookmark.as_ref());
                     let onto_bookmark = String::from_utf8(v)?;
                     let onto_bookmark = Bookmark::new(onto_bookmark)?;
-
-                    Ok((onto_bookmark, cg_push, manifests, maybe_pushvars, bundle2))
+                    Ok((onto_bookmark, cg_push, manifests, bundle2))
                 }
                 None => Err(err_msg("onto is not specified")),
             }
         })
         .and_then({
             cloned!(ctx, resolver);
-            move |(onto, cg_push, manifests, maybe_pushvars, bundle2)| {
+            move |(onto, cg_push, manifests, bundle2)| {
                 let changesets = cg_push.changesets.clone();
                 resolver
                     .upload_changesets(ctx, cg_push, manifests)
-                    .map(move |()| (changesets, onto, maybe_pushvars, bundle2))
+                    .map(move |()| (changesets, onto, bundle2))
             }
         })
         .and_then({
             cloned!(resolver);
-            move |(changesets, onto, maybe_pushvars, bundle2)| {
+            move |(changesets, onto, bundle2)| {
                 resolver
                     .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
                     .and_then({
@@ -267,14 +284,14 @@ fn resolve_pushrebase(
 
                             resolver
                                 .ensure_stream_finished(bundle2)
-                                .map(move |()| (changesets, bookmark_pushes, maybe_pushvars, onto))
+                                .map(move |()| (changesets, bookmark_pushes, onto))
                         }
                     })
             }
         })
         .and_then({
             cloned!(ctx, resolver);
-            move |(changesets, bookmark_pushes, maybe_pushvars, onto)| {
+            move |(changesets, bookmark_pushes, onto)| {
                 resolver
                     .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &onto)
                     .map_err(|err| match err {
