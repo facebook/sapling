@@ -36,3 +36,21 @@ TEST(ProcessNameCache, expireMyPidsName) {
   auto results = processNameCache.getAllProcessNames();
   EXPECT_EQ(0, results.size());
 }
+
+TEST(ProcessNameCache, addFromMultipleThreads) {
+  ProcessNameCache processNameCache;
+
+  size_t kThreadCount = 32;
+  std::vector<std::thread> threads;
+  threads.reserve(kThreadCount);
+  for (size_t i = 0; i < kThreadCount; ++i) {
+    threads.emplace_back([&] { processNameCache.add(getpid()); });
+  }
+
+  auto results = processNameCache.getAllProcessNames();
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+  EXPECT_EQ(1, results.size());
+}

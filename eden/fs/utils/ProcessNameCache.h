@@ -10,10 +10,14 @@
 #pragma once
 
 #include <folly/Synchronized.h>
+#include <folly/container/F14Set.h>
+#include <folly/futures/Promise.h>
 #include <sys/types.h>
 #include <chrono>
+#include <condition_variable>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace facebook {
 namespace eden {
@@ -27,9 +31,12 @@ class ProcessNameCache {
   explicit ProcessNameCache(
       std::chrono::nanoseconds expiry = std::chrono::minutes{5});
 
+  ~ProcessNameCache();
+
   /**
    * Records a reference to a pid. This is called by performance-critical code.
-   * Refreshes the expiry on the given pid.
+   * Refreshes the expiry on the given pid. The process name is read
+   * asynchronously on a background thread.
    *
    * If possible, the caller should avoid calling add() with a series of
    * redundant pids.
@@ -63,15 +70,23 @@ class ProcessNameCache {
     std::unordered_map<pid_t, ProcessName> names;
 
     // Allows periodic flushing of the expired names without quadratic-time
-    // insertion.
+    // insertion. waterLevel grows twice as fast as names.size() can, and when
+    // it exceeds names.size(), the name set is pruned.
     size_t waterLevel = 0;
+
+    bool workerThreadShouldStop = false;
+    folly::F14FastSet<pid_t> addQueue;
+    std::vector<folly::Promise<std::map<pid_t, std::string>>> getQueue;
   };
 
   void clearExpired(std::chrono::steady_clock::duration now, State& state);
+  void processActions();
 
   const std::chrono::nanoseconds expiry_;
   const std::chrono::steady_clock::time_point startPoint_;
-  folly::Synchronized<State> state_;
+  folly::Synchronized<State, std::mutex> state_;
+  std::condition_variable cv_;
+  std::thread workerThread_;
 };
 
 namespace detail {
