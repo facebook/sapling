@@ -18,6 +18,7 @@ use failure::{Error, Fail};
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
+use lazy_static::lazy_static;
 use scuba::{ScubaClient, ScubaSample};
 use time_ext::DurationExt;
 use tokio::executor::spawn;
@@ -28,6 +29,26 @@ use metaconfig::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
+
+lazy_static! {
+    static ref TW_STATS: Vec<(&'static str, String)> = {
+        let mut stats = Vec::new();
+        if let (Ok(cluster), Ok(user), Ok(name)) = (
+            env::var("TW_JOB_CLUSTER"),
+            env::var("TW_JOB_USER"),
+            env::var("TW_JOB_NAME"),
+        ) {
+            stats.push(("tw_handle", format!("{}/{}/{}", cluster, user, name)));
+        };
+        if let Ok(smc_tier) = env::var("SMC_TIERS") {
+            stats.push(("server_tier", smc_tier));
+        }
+        if let Ok(tw_task_id) = env::var("TW_TASK_ID") {
+            stats.push(("tw_task_id", tw_task_id));
+        }
+        stats
+    };
+}
 
 #[derive(Fail, Debug, Clone)]
 pub enum ErrorKind {
@@ -98,11 +119,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                             "completion_time",
                                             stats.completion_time.as_micros_unchecked(),
                                         );
-                                    if let Ok(smc_tier) = env::var("SMC_TIERS") {
-                                        sample.add("server_tier", smc_tier);
-                                    }
-                                    if let Ok(tw_task_id) = env::var("TW_TASK_ID") {
-                                        sample.add("tw_task_id", tw_task_id);
+                                    for (key, value) in TW_STATS.iter() {
+                                        sample.add(*key, value.clone());
                                     }
                                     // logging session uuid only for slow requests
                                     if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
@@ -181,11 +199,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                     .add("write_order", write_order.fetch_add(1, Ordering::SeqCst)),
                                 Err(error) => sample.add("error", error.to_string()),
                             };
-                            if let Ok(smc_tier) = env::var("SMC_TIERS") {
-                                sample.add("server_tier", smc_tier);
-                            }
-                            if let Ok(tw_task_id) = env::var("TW_TASK_ID") {
-                                sample.add("tw_task_id", tw_task_id);
+                            for (key, value) in TW_STATS.iter() {
+                                sample.add(*key, value.clone());
                             }
                             // logging session uuid only for slow requests
                             if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
