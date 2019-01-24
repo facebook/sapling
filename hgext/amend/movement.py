@@ -366,7 +366,7 @@ def _findstackbottom(ui, repo):
     """Find the lowest non-public ancestor of the current changeset."""
     if repo["."].phase() == phases.public:
         raise error.Abort(_("current changeset is public"))
-    return repo.revs("::. & draft()").first()
+    return repo.revs("draft() & ::.").first()
 
 
 def _showchangesets(ui, repo, contexts=None, revs=None):
