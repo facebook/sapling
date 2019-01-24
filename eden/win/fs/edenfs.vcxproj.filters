@@ -143,6 +143,9 @@
     <ClCompile Include="..\..\fs\model\git\GitBlob.cpp">
       <Filter>fs\Model\Git</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\fs\utils\Bug.cpp">
+      <Filter>fs\Util</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\fs\utils\Clock.cpp">
       <Filter>fs\Util</Filter>
     </ClCompile>
@@ -381,6 +384,9 @@
     </ClInclude>
     <ClInclude Include="..\..\fs\model\git\GitBlob.h">
       <Filter>fs\Model\Git</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fs\utils\Bug.h">
+      <Filter>fs\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\fs\utils\Clock.h">
       <Filter>fs\Util</Filter>
