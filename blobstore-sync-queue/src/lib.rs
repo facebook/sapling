@@ -68,6 +68,13 @@ impl BlobstoreSyncQueueEntry {
 pub trait BlobstoreSyncQueue: Send + Sync {
     fn add(&self, ctx: CoreContext, entry: BlobstoreSyncQueueEntry) -> BoxFuture<bool, Error>;
 
+    /// Returns list of entries that consist of two groups of entries:
+    /// 1. Group with at most `limit` entries that are older than `older_than`
+    /// 2. Group of entries whose `blobstore_key` can be found in group (1)
+    ///
+    /// As a result the caller gets a reasonably limited slice of BlobstoreSyncQueue entries that
+    /// are all related, so that the caller doesn't need to fetch more data from BlobstoreSyncQueue
+    /// to process the sync queue.
     fn iter(
         &self,
         ctx: CoreContext,
@@ -153,12 +160,18 @@ queries! {
         Timestamp,
         u64,
     ) {
-        "SELECT repo_id, blobstore_key, blobstore_id, add_timestamp, id
+        "SELECT repo_id, blobstore_sync_queue.blobstore_key, blobstore_id, add_timestamp, id
          FROM blobstore_sync_queue
-         WHERE repo_id = {repo_id}
-         AND add_timestamp <= {older_than}
-         ORDER BY id
-         LIMIT {limit}"
+         JOIN (
+               SELECT DISTINCT blobstore_key
+               FROM blobstore_sync_queue
+               WHERE repo_id = {repo_id}
+                 AND add_timestamp <= {older_than}
+               ORDER BY id
+               LIMIT {limit}
+         ) b
+         ON blobstore_sync_queue.blobstore_key = b.blobstore_key
+         WHERE repo_id = {repo_id}"
     }
 
     read GetByKey(repo_id: RepositoryId, key: String) -> (
