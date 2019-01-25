@@ -6,7 +6,18 @@
 use failure::Fallible;
 use tempfile::NamedTempFile;
 
-use std::path::PathBuf;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+use std::{fs::Permissions, path::PathBuf};
+
+/// Mark the permission as read-only for user-group-other.
+fn make_readonly(perms: &mut Permissions) {
+    if cfg!(unix) {
+        perms.set_mode(0o444);
+    } else {
+        perms.set_readonly(true);
+    }
+}
 
 pub trait MutablePack {
     /// Make the data and index pack files with the data added to it. Also returns the fullpath of
@@ -29,7 +40,7 @@ pub trait MutablePack {
         let (packfile, indexfile, base_filepath) = self.build_files()?;
 
         let mut perms = packfile.as_file().metadata()?.permissions();
-        perms.set_readonly(true);
+        make_readonly(&mut perms);
 
         packfile.as_file().set_permissions(perms.clone())?;
         indexfile.as_file().set_permissions(perms)?;
