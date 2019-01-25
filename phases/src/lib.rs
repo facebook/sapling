@@ -49,7 +49,6 @@ use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use reachabilityindex::SkiplistIndex;
 use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
 use std::sync::Arc;
 use std::{fmt, str};
 use try_from::TryFrom;
@@ -145,6 +144,8 @@ impl ConvIr<Phase> for Phase {
 pub struct PhasesMapping {
     pub calculated: HashMap<ChangesetId, Phase>,
     pub unknown: Vec<ChangesetId>,
+    // filled if bookmarks are known or were fetched during calculation
+    pub maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
 }
 
 /// Interface to storage of phases in Mononoke
@@ -182,6 +183,16 @@ pub trait Phases: Send + Sync {
         ctx: CoreContext,
         repo: BlobRepo,
         cs_ids: Vec<ChangesetId>,
+    ) -> BoxFuture<PhasesMapping, Error>;
+
+    /// Retrieve the phase for list of commits, if available.
+    /// Accept optional bookmarks. Use this API if bookmarks are known.
+    fn get_all_with_bookmarks(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        cs_ids: Vec<ChangesetId>,
+        maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
     ) -> BoxFuture<PhasesMapping, Error>;
 }
 
@@ -319,9 +330,28 @@ impl Phases for SqlPhases {
             PhasesMapping {
                 calculated,
                 unknown,
+                ..Default::default()
             }
         })
         .boxify()
+    }
+
+    /// Retrieve the phase for list of commits, if available.
+    /// Accept optional bookmarks. Use this API if bookmarks are known.
+    /// Bookmarks are not used, pass them as is.
+    fn get_all_with_bookmarks(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        cs_ids: Vec<ChangesetId>,
+        maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
+    ) -> BoxFuture<PhasesMapping, Error> {
+        self.get_all(ctx, repo, cs_ids)
+            .map(|mut phases_mapping| {
+                phases_mapping.maybe_public_heads = maybe_public_heads;
+                phases_mapping
+            })
+            .boxify()
     }
 }
 
@@ -395,60 +425,92 @@ impl Phases for HintPhases {
         repo: BlobRepo,
         cs_ids: Vec<ChangesetId>,
     ) -> BoxFuture<PhasesMapping, Error> {
+        self.get_all_with_bookmarks(ctx, repo, cs_ids, None)
+    }
+
+    /// Get phases for the list of commits.
+    /// Accept optional bookmarks heads. Use this API if bookmarks are known.
+    /// If phases are not available for some of the commits, they will be recalculated.
+    /// If recalculation failed an error will be returned.
+    /// Returns:
+    /// phases_mapping::calculated          - phases hash map
+    /// phases_mapping::unknown             - always empty
+    /// phases_mapping::maybe_public_heads  - if bookmarks heads were fetched during calculation
+    ///                                   or passed to this function they will be filled in.
+    fn get_all_with_bookmarks(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        cs_ids: Vec<ChangesetId>,
+        maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
+    ) -> BoxFuture<PhasesMapping, Error> {
         cloned!(self.phases_store, self.phases_reachability_hint);
         // Try to fetch from the underlying storage.
         phases_store
             .get_all(ctx.clone(), repo.clone(), cs_ids)
             .and_then(move |phases_mapping| {
                 // For not found part calculate phases using the phases_reachability_hint.
-                // Bookmarks are required (only if not_found_in_db is not empty). Fetch them once.
                 let not_found_in_db = phases_mapping.unknown;
                 let found_in_db = phases_mapping.calculated;
-                let bookmarks_fut = if not_found_in_db.is_empty() {
-                    future::ok(vec![]).left_future()
+
+                // Public heads are required (only if not_found_in_db is not empty).
+                // Fetch them once or reuse known.
+                // Pass them to the response, so they can be reused.
+                let public_heads_fut = if maybe_public_heads.is_some() {
+                    future::ok(maybe_public_heads).boxify() // known
+                } else if not_found_in_db.is_empty() {
+                    future::ok(None).boxify() // not needed
                 } else {
-                    repo.get_bonsai_bookmarks(ctx.clone())
+                    repo.get_bonsai_bookmarks(ctx.clone()) // calculate
                         .map(|(_, cs_id)| cs_id)
                         .collect()
-                        .right_future()
+                        .map(move |bookmarks| Some(Arc::new(bookmarks.into_iter().collect())))
+                        .boxify()
                 };
 
-                bookmarks_fut
-                    .and_then({
-                        let changeset_fetcher = repo.get_changeset_fetcher().clone();
-                        let ctx = ctx.clone();
-                        move |bookmarks| {
-                            phases_reachability_hint.get_all(
-                                ctx,
-                                changeset_fetcher,
-                                not_found_in_db,
-                                Arc::new(HashSet::from_iter(bookmarks.into_iter())),
-                            )
+                let calculated_fut = {
+                    cloned!(ctx, repo);
+                    public_heads_fut.and_then(move |maybe_public_heads| {
+                        if let Some(ref public_heads) = maybe_public_heads {
+                            phases_reachability_hint
+                                .get_all(
+                                    ctx,
+                                    repo.get_changeset_fetcher(),
+                                    not_found_in_db,
+                                    public_heads.clone(),
+                                )
+                                .left_future()
+                        } else {
+                            future::ok(HashMap::new()).right_future()
                         }
+                        .map(move |calculated| (calculated, maybe_public_heads))
                     })
-                    .and_then(move |mut calculated| {
-                        // Refresh newly calculated phases in the underlying storage (public commits only).
-                        let add_to_db = calculated
-                            .iter()
-                            .filter_map(|(cs_id, phase)| {
-                                if phase == &Phase::Public {
-                                    Some((cs_id.clone(), phase.clone()))
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
+                };
 
-                        // Join the found in the db and calculated into the returned result.
-                        calculated.extend(found_in_db);
+                calculated_fut.and_then(move |(mut calculated, maybe_public_heads)| {
+                    // Refresh newly calculated phases in the underlying storage (public commits only).
+                    let add_to_db = calculated
+                        .iter()
+                        .filter_map(|(cs_id, phase)| {
+                            if phase == &Phase::Public {
+                                Some((cs_id.clone(), phase.clone()))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
 
-                        phases_store
-                            .add_all(ctx, repo, add_to_db)
-                            .map(move |_| PhasesMapping {
-                                calculated,
-                                unknown: vec![],
-                            })
-                    })
+                    // Join the found in the db and calculated into the returned result.
+                    calculated.extend(found_in_db);
+
+                    phases_store
+                        .add_all(ctx, repo, add_to_db)
+                        .map(move |_| PhasesMapping {
+                            calculated,
+                            unknown: vec![],
+                            maybe_public_heads,
+                        })
+                })
             })
             .boxify()
     }
@@ -517,6 +579,7 @@ mod tests {
             PhasesMapping {
                 calculated: hashmap! {ONES_CSID => Phase::Public},
                 unknown: vec![TWOS_CSID],
+                ..Default::default()
             },
             "sql: get phase for non existing changeset and existing changeset"
         );
@@ -707,6 +770,9 @@ mod tests {
                     other_draft_commit => Phase::Draft
                 },
                 unknown: vec![],
+                maybe_public_heads: Some(Arc::new(hashset! {
+                    public_bookmark_commit
+                }))
             },
             "slow path: get phases for set of commits"
         );

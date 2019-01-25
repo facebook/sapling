@@ -194,14 +194,17 @@ fn prepare_phases_stream(
         move |bonsai_node_mapping| {
             phases_hint
                 .get_all(ctx, repo, bonsai_node_mapping.keys().cloned().collect())
-                .map(move |phases_mapping| (phases_mapping.calculated, bonsai_node_mapping))
+                .map(move |phases_mapping| (phases_mapping, bonsai_node_mapping))
         }
     });
 
     // calculate public roots if client is pulling non-public changesets
     // and join the result together
     heads_phases_fut
-        .and_then(move |(heads_phases, bonsai_node_mapping)| {
+        .and_then(move |(phases_mapping, bonsai_node_mapping)| {
+            let heads_phases = phases_mapping.calculated;
+            let maybe_public_heads = phases_mapping.maybe_public_heads;
+
             // select draft heads
             let drafts = heads_phases
                 .iter()
@@ -215,12 +218,16 @@ fn prepare_phases_stream(
                 .collect();
 
             // find the public roots for the draft heads
-            let pub_roots_future =
-                calculate_public_roots(ctx.clone(), repo.clone(), drafts, phases_hint).and_then(
-                    move |bonsais| {
-                        repo.get_hg_bonsai_mapping(ctx, bonsais.into_iter().collect::<Vec<_>>())
-                    },
-                );
+            let pub_roots_future = calculate_public_roots(
+                ctx.clone(),
+                repo.clone(),
+                drafts,
+                phases_hint,
+                maybe_public_heads,
+            )
+            .and_then(move |bonsais| {
+                repo.get_hg_bonsai_mapping(ctx, bonsais.into_iter().collect::<Vec<_>>())
+            });
 
             // merge the phases for heads and public roots together and transform the result in a format used by the encoding function
             pub_roots_future.map(move |public_roots| {
@@ -251,12 +258,19 @@ fn calculate_public_roots(
     repo: BlobRepo,
     drafts: HashSet<ChangesetId>,
     phases_hint: Arc<Phases>,
+    maybe_public_heads: Option<Arc<HashSet<ChangesetId>>>,
 ) -> BoxFuture<HashSet<ChangesetId>, Error> {
     future::loop_fn(
-        (drafts, HashSet::new(), HashSet::new()),
-        move |(drafts, mut public, mut visited)| {
+        (maybe_public_heads, drafts, HashSet::new(), HashSet::new()),
+        move |(maybe_public_heads, drafts, mut public, mut visited)| {
+            // just precaution: if there are no public heads in the repo at all
+            let no_public_heads = if let Some(ref public_heads) = maybe_public_heads {
+                public_heads.is_empty()
+            } else {
+                false
+            };
             // nothing more to calculate
-            if drafts.is_empty() {
+            if drafts.is_empty() || no_public_heads {
                 return future::ok(future::Loop::Break(public)).left_future();
             }
 
@@ -285,14 +299,21 @@ fn calculate_public_roots(
                 cloned!(ctx, repo, phases_hint);
                 move |(parents, visited)| {
                     phases_hint
-                        .get_all(ctx, repo, parents.into_iter().collect())
-                        .map(move |phases_mapping| (phases_mapping.calculated, visited))
+                        .get_all_with_bookmarks(
+                            ctx,
+                            repo,
+                            parents.into_iter().collect(),
+                            maybe_public_heads,
+                        )
+                        .map(move |phases_mapping| (phases_mapping, visited))
                 }
             });
 
             // return public roots and continue calculation for the remaining drafts
             phases_fut
-                .and_then(|(calculated, visited)| {
+                .and_then(|(phases_mapping, visited)| {
+                    let calculated = phases_mapping.calculated;
+                    let maybe_public_heads = phases_mapping.maybe_public_heads;
                     // split by phase
                     let (new_public, new_drafts): (Vec<_>, Vec<_>) = calculated
                         .into_iter()
@@ -301,6 +322,7 @@ fn calculate_public_roots(
                     public.extend(new_public.into_iter().map(|(cs_id, _)| cs_id));
                     // continue for the new drafts
                     future::ok(future::Loop::Continue((
+                        maybe_public_heads,
                         new_drafts.into_iter().map(|(cs_id, _)| cs_id).collect(),
                         public,
                         visited,
