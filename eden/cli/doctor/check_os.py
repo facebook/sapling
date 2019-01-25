@@ -44,9 +44,14 @@ def _os_is_kernel_version_too_old(instance: EdenInstance, release: str) -> bool:
         return False
     if min_kernel_version is None:
         return False
-    return _parse_os_kernel_version(release) < _parse_os_kernel_version(
-        min_kernel_version
-    )
+    try:
+        return _parse_os_kernel_version(release) < _parse_os_kernel_version(
+            min_kernel_version
+        )
+    except ValueError:
+        # If the kernel version failed to parse because one of the
+        # components wasn't an int, whatever.
+        return False
 
 
 def _os_is_bad_release(instance: EdenInstance, release: str) -> bool:

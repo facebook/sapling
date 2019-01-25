@@ -2668,6 +2668,12 @@ class OperatingSystemsCheckTest(DoctorTestBase):
                 )
                 self.assertTrue(result)
 
+    def test_custom_kernel_names(self) -> None:
+        custom_name = "4.16.18-custom_byme_3744_g7833bc918498"
+        instance = typing.cast(EdenInstance, self.instance)
+        self.assertFalse(check_os._os_is_kernel_version_too_old(instance, custom_name))
+        self.assertFalse(check_os._os_is_bad_release(instance, custom_name))
+
 
 class CorruptHgTest(DoctorTestBase):
     def setUp(self) -> None:
