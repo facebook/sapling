@@ -15,8 +15,8 @@ use slog_term;
 use dns_lookup::lookup_addr;
 use libc::c_ulong;
 use openssl::ssl::{SslConnector, SslMethod};
-use tokio_io::AsyncRead;
 use tokio_io::codec::{FramedRead, FramedWrite};
+use tokio_io::AsyncRead;
 use tokio_openssl::{SslConnectorExt, SslStream};
 use uuid;
 
@@ -43,13 +43,17 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
         if let Some(repo) = main.value_of("repository") {
             let mononoke_path = sub.value_of("mononoke-path").unwrap();
 
-            let cert = sub.value_of("cert")
+            let cert = sub
+                .value_of("cert")
                 .expect("certificate file is not specified");
-            let private_key = sub.value_of("private-key")
+            let private_key = sub
+                .value_of("private-key")
                 .expect("private key file is not specified");
-            let ca_pem = sub.value_of("ca-pem")
+            let ca_pem = sub
+                .value_of("ca-pem")
                 .expect("Cental authority pem file is not specified");
-            let common_name = sub.value_of("common-name")
+            let common_name = sub
+                .value_of("common-name")
                 .expect("expected SSL common name of the Mononoke server");
             let is_remote_proxy = main.is_present("remote-proxy");
             let scuba_table = main.value_of("scuba-table");
@@ -63,7 +67,8 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> BoxFuture<(), Error> {
                 ssl_common_name: common_name,
                 is_remote_proxy,
                 scuba_table,
-            }.run();
+            }
+            .run();
         }
         return future::err(format_err!("Missing repository")).boxify();
     }
@@ -182,30 +187,28 @@ impl<'a> StdioRelay<'a> {
 
             // add root certificate
 
-            try_boxfuture!(
-                connector
-                    .cert_store_mut()
-                    .add_cert(try_boxfuture!(read_x509(self.ca_pem)))
-                    .or_else(|err| {
-                        let mut failed = true;
-                        {
-                            let errors = err.errors();
-                            if errors.len() == 1 {
-                                if errors[0].code() == X509_R_CERT_ALREADY_IN_HASH_TABLE {
-                                    // Do not fail if certificate has already been added since it's
-                                    // not really an error
-                                    failed = false;
-                                }
+            try_boxfuture!(connector
+                .cert_store_mut()
+                .add_cert(try_boxfuture!(read_x509(self.ca_pem)))
+                .or_else(|err| {
+                    let mut failed = true;
+                    {
+                        let errors = err.errors();
+                        if errors.len() == 1 {
+                            if errors[0].code() == X509_R_CERT_ALREADY_IN_HASH_TABLE {
+                                // Do not fail if certificate has already been added since it's
+                                // not really an error
+                                failed = false;
                             }
                         }
-                        if failed {
-                            let err: Error = err.into();
-                            Err(err)
-                        } else {
-                            Ok(())
-                        }
-                    })
-            );
+                    }
+                    if failed {
+                        let err: Error = err.into();
+                        Err(err)
+                    } else {
+                        Ok(())
+                    }
+                }));
 
             connector.build()
         };
@@ -244,20 +247,22 @@ impl<'a> StdioRelay<'a> {
 
             // A task to copy from the socket, then use streamfork() to split the
             // input between stdout and stderr.
-            let stdout_future = rx.streamfork(
-                // a sink each for stdout and stderr, prefixed with With to remove the
-                // SshMsg framing and expose the raw data
-                stdout.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
-                stderr.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
-                |msg| -> Result<bool> {
-                    // Select a sink based on the stream
-                    match msg.stream() {
-                        SshStream::Stdout => Ok(false),
-                        SshStream::Stderr => Ok(true),
-                        bad => bail_msg!("Bad stream: {:?}", bad),
-                    }
-                },
-            ).map(|_| ());
+            let stdout_future = rx
+                .streamfork(
+                    // a sink each for stdout and stderr, prefixed with With to remove the
+                    // SshMsg framing and expose the raw data
+                    stdout.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
+                    stderr.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
+                    |msg| -> Result<bool> {
+                        // Select a sink based on the stream
+                        match msg.stream() {
+                            SshStream::Stdout => Ok(false),
+                            SshStream::Stderr => Ok(true),
+                            bad => bail_msg!("Bad stream: {:?}", bad),
+                        }
+                    },
+                )
+                .map(|_| ());
 
             stdout_future
                 .select(stdin_future)

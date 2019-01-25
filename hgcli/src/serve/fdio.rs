@@ -10,13 +10,13 @@
 //! sink (implements std::io::Write) to an async Stream or Sink.
 //! The async portion is implemented with a `futures::sync::mpsc`
 //! bounded channel pair.
-use std::thread;
 use std::io::{self, Read, Write};
+use std::thread;
 
 use bytes::Bytes;
-use futures::{Future, Sink, Stream};
 use futures::sync::mpsc::{channel, Receiver, Sender};
-use futures_ext::{StreamExt, BoxStream};
+use futures::{Future, Sink, Stream};
+use futures_ext::{BoxStream, StreamExt};
 
 const BUFSZ: usize = 8192;
 const NUMBUFS: usize = 50000;
@@ -33,7 +33,7 @@ where
 {
     /// Construct an adapter for a synchronous source.
     pub fn new(reader: R) -> Self {
-        Reader { reader: reader }
+        Reader { reader }
     }
 
     /// Return an async Stream containing chunks of data read from the
@@ -106,7 +106,7 @@ where
 {
     /// Construct an adapter for a synchronous sink.
     pub fn new(writer: W) -> Self {
-        Writer { writer: writer }
+        Writer { writer }
     }
 
     /// Construct an async Sink
