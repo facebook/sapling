@@ -71,22 +71,32 @@ pub fn resolve(
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
     resolver
-        .maybe_resolve_pushvars(bundle2)
-        .and_then(move |(maybe_pushvars, bundle2)| {
-            let mut bypass_readonly = false;
-            // check the bypass condition
-            if let Some(ref pushvars) = maybe_pushvars {
-                bypass_readonly =
-                    pushvars.get("BYPASS_READONLY").map(|s| s.to_ascii_lowercase()) == Some("true".into())
+        .maybe_resolve_commonheads(bundle2)
+        .and_then({
+            cloned!(resolver);
+            move |(commonheads, bundle2)| {
+                resolver.maybe_resolve_pushvars(bundle2).and_then(
+                    move |(maybe_pushvars, bundle2)| {
+                        let mut bypass_readonly = false;
+                        // check the bypass condition
+                        if let Some(ref pushvars) = maybe_pushvars {
+                            bypass_readonly = pushvars
+                                .get("BYPASS_READONLY")
+                                .map(|s| s.to_ascii_lowercase())
+                                == Some("true".into());
+                        }
+                        // force the readonly check
+                        if readonly == RepoReadOnly::ReadOnly && !bypass_readonly {
+                            future::err(ErrorKind::RepoReadOnly.into()).left_future()
+                        } else {
+                            future::ok((maybe_pushvars, commonheads, bundle2)).right_future()
+                        }
+                    },
+                )
             }
-            // force the readonly check
-            if readonly == RepoReadOnly::ReadOnly && !bypass_readonly {
-                return future::err(ErrorKind::RepoReadOnly.into()).left_future();
-            }
-            resolver
-                .maybe_resolve_commonheads(bundle2)
-                .and_then(move |(commonheads, bundle2)| {
-                    if let Some(commonheads) = commonheads {
+        })
+        .and_then(move |(maybe_pushvars, commonheads, bundle2)| {
+            if let Some(commonheads) = commonheads {
                         resolve_pushrebase(
                             ctx,
                             commonheads,
@@ -99,8 +109,6 @@ pub fn resolve(
                     } else {
                         resolve_push(ctx, resolver, bundle2)
                     }
-                })
-                .right_future()
         })
         .boxify()
 }
