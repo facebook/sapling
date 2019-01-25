@@ -198,6 +198,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                     self.ui.debug("%s\n" % json.dumps(cleandict(data), indent=4))
                 return data
             except httplib.HTTPException as e:
+                self.connection.close()
                 self.connection.connect()
             except (socket.timeout, socket.gaierror) as e:
                 raise error.Abort(
