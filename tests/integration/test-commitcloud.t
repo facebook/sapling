@@ -1,6 +1,7 @@
   $ . $TESTDIR/library.sh
 
 setup configuration
+  $ export READ_ONLY_REPO=1
   $ setup_common_config
   $ cd $TESTTMP
 

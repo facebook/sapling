@@ -142,13 +142,15 @@ Pushbackup also works
   47da8b81097c5534f3eb7947a8764dd323cffe3d
   95cad53aab1b0b33eceee14473b3983312721529
   sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 3 parts total
+  bundle2-output-bundle: "HG20", (1 params) 4 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
+  bundle2-output-part: "pushvars" (params: 0 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 2 parts total
+  bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
+  bundle2-output-part: "pushvars" (params: 0 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   backup complete
   heads added: 95cad53aab1b0b33eceee14473b3983312721529
@@ -199,8 +201,9 @@ Pushbackup that pushes only bookmarks
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey stream-preferred stream_option streamreqs=generaldelta,lz4revlog,revlogv1 treeonly bundle2=HG20%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads
   remote: 1
   sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 2 parts total
+  bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
+  bundle2-output-part: "pushvars" (params: 0 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   backup complete
   heads added:  (re)

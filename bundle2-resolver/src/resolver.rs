@@ -77,7 +77,7 @@ pub fn resolve(
             // check the bypass condition
             if let Some(ref pushvars) = maybe_pushvars {
                 bypass_readonly =
-                    pushvars.get("BYPASS_READONLY") == Some(&Bytes::from("true".as_bytes()))
+                    pushvars.get("BYPASS_READONLY").map(|s| s.to_ascii_lowercase()) == Some("true".into())
             }
             // force the readonly check
             if readonly == RepoReadOnly::ReadOnly && !bypass_readonly {
