@@ -434,6 +434,7 @@ pub mod tests {
 
     use crate::datastore::{Delta, Metadata};
     use crate::mutabledatapack::MutableDataPack;
+    use crate::mutablepack::MutablePack;
 
     pub fn make_datapack(tempdir: &TempDir, deltas: &Vec<(Delta, Option<Metadata>)>) -> DataPack {
         let mut mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();

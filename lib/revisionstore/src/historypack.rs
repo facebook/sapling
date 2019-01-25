@@ -372,6 +372,7 @@ pub mod tests {
     };
 
     use crate::mutablehistorypack::MutableHistoryPack;
+    use crate::mutablepack::MutablePack;
 
     pub fn make_historypack(tempdir: &TempDir, nodes: &HashMap<Key, NodeInfo>) -> HistoryPack {
         let mut mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();

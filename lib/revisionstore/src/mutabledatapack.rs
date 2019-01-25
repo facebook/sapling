@@ -23,6 +23,7 @@ use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};
 use crate::datastore::{DataStore, Delta, Metadata};
 use crate::key::Key;
+use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
 
 pub struct MutableDataPack {
@@ -65,33 +66,6 @@ impl MutableDataPack {
             mem_index: HashMap::new(),
             hasher,
         })
-    }
-
-    /// Closes the mutable datapack, returning the path of the final immutable datapack on disk.
-    /// The mutable datapack is no longer usable after being closed.
-    pub fn close(mut self) -> Fallible<PathBuf> {
-        // Compute the index
-        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
-        DataIndex::write(&mut index_file, &self.mem_index)?;
-
-        // Persist the temp files
-        let base_filepath = self.dir.join(&self.hasher.result_str());
-        let data_filepath = base_filepath.with_extension("datapack");
-        let index_filepath = base_filepath.with_extension("dataidx");
-
-        let data_file = self.data_file.into_inner()?;
-
-        let mut perms = data_file.as_file().metadata()?.permissions();
-        perms.set_readonly(true);
-
-        data_file.as_file().set_permissions(perms.clone())?;
-
-        let index_file = index_file.into_inner()?;
-        index_file.as_file().set_permissions(perms)?;
-
-        data_file.persist(&data_filepath)?;
-        index_file.persist(&index_filepath)?;
-        Ok(base_filepath)
     }
 
     /// Adds the given entry to the mutable datapack.
@@ -170,6 +144,23 @@ impl MutableDataPack {
             },
             entry.metadata().clone(),
         ))
+    }
+}
+
+impl MutablePack for MutableDataPack {
+    fn build_files(mut self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
+        DataIndex::write(&mut index_file, &self.mem_index)?;
+
+        Ok((
+            self.data_file.into_inner()?,
+            index_file.into_inner()?,
+            self.dir.join(&self.hasher.result_str()),
+        ))
+    }
+
+    fn extension(&self) -> &'static str {
+        "data"
     }
 }
 

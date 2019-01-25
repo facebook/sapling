@@ -21,6 +21,7 @@ use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
 use crate::historystore::{Ancestors, HistoryStore, NodeInfo};
 use crate::key::Key;
+use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
 
 #[derive(Debug, Fail)]
@@ -61,73 +62,6 @@ impl MutableHistoryPack {
             .or_insert_with(|| HashMap::new());
         entries.insert(key.clone(), info.clone());
         Ok(())
-    }
-
-    /// Closes the mutable historypack, returning the path of the final immutable historypack on disk.
-    /// The mutable historypack is no longer usable after being closed.
-    pub fn close(self) -> Fallible<PathBuf> {
-        let mut data_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
-        let mut hasher = Sha1::new();
-
-        // Write the header
-        let version_u8: u8 = self.version.clone().into();
-        data_file.write_u8(version_u8)?;
-        hasher.input(&[version_u8]);
-
-        // Store data for the index
-        let mut file_sections: Vec<(&Box<[u8]>, FileSectionLocation)> = Default::default();
-        let mut nodes: HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>> = Default::default();
-
-        // Write the historypack
-        let mut section_buf = Vec::new();
-        let mut section_offset = data_file.bytes_written();
-        // - In sorted order for deterministic hashes.
-        let mut keys = self.mem_index.keys().collect::<Vec<&Box<[u8]>>>();
-        keys.sort_unstable();
-        for file_name in keys {
-            let node_map = self.mem_index.get(file_name).unwrap();
-            self.write_section(
-                &mut section_buf,
-                file_name,
-                node_map,
-                section_offset as usize,
-                &mut nodes,
-            )?;
-            hasher.input(&section_buf);
-            data_file.write_all(&mut section_buf)?;
-
-            let section_location = FileSectionLocation {
-                offset: section_offset,
-                size: section_buf.len() as u64,
-            };
-            file_sections.push((file_name, section_location));
-
-            section_offset += section_buf.len() as u64;
-            section_buf.clear();
-        }
-
-        // Compute the index
-        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
-        HistoryIndex::write(&mut index_file, &file_sections, &nodes)?;
-
-        // Persist the temp files
-        let base_filepath = self.dir.join(&hasher.result_str());
-        let data_filepath = base_filepath.with_extension("histpack");
-        let index_filepath = base_filepath.with_extension("histidx");
-
-        let data_file = data_file.into_inner()?;
-
-        let mut perms = data_file.as_file().metadata()?.permissions();
-        perms.set_readonly(true);
-
-        data_file.as_file().set_permissions(perms.clone())?;
-
-        let index_file = index_file.into_inner()?;
-        index_file.as_file().set_permissions(perms)?;
-
-        data_file.persist(&data_filepath)?;
-        index_file.persist(&index_filepath)?;
-        Ok(base_filepath)
     }
 
     fn write_section<'a>(
@@ -179,6 +113,64 @@ impl MutableHistoryPack {
 
         nodes.insert(file_name, node_locations);
         Ok(())
+    }
+}
+
+impl MutablePack for MutableHistoryPack {
+    fn build_files(self) -> Fallible<(NamedTempFile, NamedTempFile, PathBuf)> {
+        let mut data_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
+        let mut hasher = Sha1::new();
+
+        // Write the header
+        let version_u8: u8 = self.version.clone().into();
+        data_file.write_u8(version_u8)?;
+        hasher.input(&[version_u8]);
+
+        // Store data for the index
+        let mut file_sections: Vec<(&Box<[u8]>, FileSectionLocation)> = Default::default();
+        let mut nodes: HashMap<&Box<[u8]>, HashMap<Key, NodeLocation>> = Default::default();
+
+        // Write the historypack
+        let mut section_buf = Vec::new();
+        let mut section_offset = data_file.bytes_written();
+        // - In sorted order for deterministic hashes.
+        let mut keys = self.mem_index.keys().collect::<Vec<&Box<[u8]>>>();
+        keys.sort_unstable();
+        for file_name in keys {
+            let node_map = self.mem_index.get(file_name).unwrap();
+            self.write_section(
+                &mut section_buf,
+                file_name,
+                node_map,
+                section_offset as usize,
+                &mut nodes,
+            )?;
+            hasher.input(&section_buf);
+            data_file.write_all(&mut section_buf)?;
+
+            let section_location = FileSectionLocation {
+                offset: section_offset,
+                size: section_buf.len() as u64,
+            };
+            file_sections.push((file_name, section_location));
+
+            section_offset += section_buf.len() as u64;
+            section_buf.clear();
+        }
+
+        // Compute the index
+        let mut index_file = PackWriter::new(NamedTempFile::new_in(&self.dir)?);
+        HistoryIndex::write(&mut index_file, &file_sections, &nodes)?;
+
+        Ok((
+            data_file.into_inner()?,
+            index_file.into_inner()?,
+            self.dir.join(hasher.result_str()),
+        ))
+    }
+
+    fn extension(&self) -> &'static str {
+        "hist"
     }
 }
 
