@@ -33,15 +33,13 @@ class MountTest(testcase.EdenRepoTest):
         mount2 = os.path.join(self.mounts_dir, "mount2")
         self.eden.clone(self.repo_name, mount2)
         self.assertEqual(
-            {self.mount: self.eden.CLIENT_ACTIVE, mount2: self.eden.CLIENT_ACTIVE},
-            self.eden.list_cmd(),
+            {self.mount: "RUNNING", mount2: "RUNNING"}, self.eden.list_cmd_simple()
         )
 
         # Now unmount it
         self.eden.run_cmd("unmount", mount2)
         self.assertEqual(
-            {self.mount: self.eden.CLIENT_ACTIVE, mount2: self.eden.CLIENT_INACTIVE},
-            self.eden.list_cmd(),
+            {self.mount: "RUNNING", mount2: "NOT_RUNNING"}, self.eden.list_cmd_simple()
         )
         # The Eden README telling users what to do if their mount point is not mounted
         # should be present in the original mount point directory.
@@ -49,7 +47,7 @@ class MountTest(testcase.EdenRepoTest):
 
         # Now use "eden remove" to destroy mount2
         self.eden.remove(mount2)
-        self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, self.eden.list_cmd())
+        self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
         self.assertFalse(os.path.exists(mount2))
 
     def test_unmount_remount(self) -> None:

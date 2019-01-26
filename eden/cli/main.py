@@ -17,14 +17,14 @@ import subprocess
 import sys
 import typing
 from pathlib import Path
-from typing import Any, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import eden.thrift
 import thrift.transport
 from eden.cli.util import check_health_using_lockfile
 from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
-from facebook.eden.ttypes import GlobParams
+from facebook.eden.ttypes import GlobParams, MountInfo as ThriftMountInfo, MountState
 from fb303.ttypes import fb_status
 
 from . import (
@@ -43,11 +43,12 @@ from . import (
     subcmd as subcmd_mod,
     top as top_mod,
     trace as trace_mod,
+    ui,
     util,
     version as version_mod,
 )
 from .cmd_util import get_eden_instance, require_checkout
-from .config import EdenInstance
+from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr
 
@@ -175,30 +176,119 @@ class RepositoryCmd(Subcmd):
         return 0
 
 
+class ListMountInfo(typing.NamedTuple):
+    path: Path
+    data_dir: Path
+    state: Optional[MountState]
+    configured: bool
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        return {
+            "data_dir": str(self.data_dir),
+            "state": MountState._VALUES_TO_NAMES.get(self.state)
+            if self.state is not None
+            else "NOT_RUNNING",
+            "configured": self.configured,
+        }
+
+
 @subcmd("list", "List available checkouts")
 class ListCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--json",
+            action="store_true",
+            default=False,
+            help="Print the output in JSON format",
+        )
+
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
+        mounts = self.get_mounts(instance)
+        out = ui.get_output()
+        if args.json:
+            self.print_mounts_json(out, mounts)
+        else:
+            self.print_mounts(out, mounts)
+        return 0
+
+    @classmethod
+    def get_mounts(cls, instance: EdenInstance) -> Dict[Path, ListMountInfo]:
         try:
             with instance.get_thrift_client() as client:
-                active_mount_points: Set[Optional[str]] = {
-                    os.fsdecode(mount.mountPoint) for mount in client.listMounts()
-                }
+                thrift_mounts = client.listMounts()
         except EdenNotRunningError:
-            active_mount_points = set()
+            thrift_mounts = []
 
-        config_mount_points = set(instance.get_mount_paths())
+        config_mounts = instance.get_checkouts()
+        return cls.combine_mount_info(thrift_mounts, config_mounts)
 
-        for path in sorted(active_mount_points | config_mount_points):
-            assert path is not None
-            if path not in config_mount_points:
-                print(f"{path} (unconfigured)")
-            elif path in active_mount_points:
-                print(path)
+    @staticmethod
+    def combine_mount_info(
+        thrift_mounts: List[ThriftMountInfo], config_checkouts: List[EdenCheckout]
+    ) -> Dict[Path, ListMountInfo]:
+        mount_points: Dict[Path, ListMountInfo] = {}
+
+        for thrift_mount in thrift_mounts:
+            path = Path(os.fsdecode(thrift_mount.mountPoint))
+            # Older versions of Eden did not report the state field.
+            # If it is missing, set it to RUNNING.
+            state = (
+                thrift_mount.state
+                if thrift_mount.state is not None
+                else MountState.RUNNING
+            )
+            data_dir = Path(os.fsdecode(thrift_mount.edenClientPath))
+            mount_points[path] = ListMountInfo(
+                path=path, data_dir=data_dir, state=state, configured=False
+            )
+
+        # Add all mount points listed in the config that were not reported
+        # in the thrift call.
+        for checkout in config_checkouts:
+            mount_info = mount_points.get(checkout.path, None)
+            if mount_info is not None:
+                mount_points[checkout.path] = mount_info._replace(configured=True)
             else:
-                print(f"{path} (not mounted)")
-        return 0
+                mount_points[checkout.path] = ListMountInfo(
+                    path=checkout.path,
+                    data_dir=checkout.state_dir,
+                    state=None,
+                    configured=True,
+                )
+
+        return mount_points
+
+    @staticmethod
+    def print_mounts_json(
+        out: ui.Output, mount_points: Dict[Path, ListMountInfo]
+    ) -> None:
+        data = {
+            str(mount.path): mount.to_json_dict() for mount in mount_points.values()
+        }
+        json_str = json.dumps(data, sort_keys=True, indent=2)
+        out.writeln(json_str)
+
+    @staticmethod
+    def print_mounts(out: ui.Output, mount_points: Dict[Path, ListMountInfo]) -> None:
+        for path, mount_info in sorted(mount_points.items()):
+            if not mount_info.configured:
+                suffix = " (unconfigured)"
+            else:
+                suffix = ""
+
+            if mount_info.state is None:
+                state_str = " (not mounted)"
+            elif mount_info.state == MountState.RUNNING:
+                # For normally running mount points don't print any state information.
+                # We only show the state if the mount is in an unusual state.
+                state_str = ""
+            else:
+                state_name = MountState._VALUES_TO_NAMES[mount_info.state]
+                state_str = f" ({state_name})"
+
+            out.writeln(f"{path}{state_str}{suffix}")
 
 
 class RepoError(Exception):

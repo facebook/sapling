@@ -306,11 +306,9 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertFalse(self.eden.is_healthy())
 
         # Check `eden list`.
-        list_output = self.eden.list_cmd()
+        list_output = self.eden.list_cmd_simple()
         self.assertEqual(
-            {self.mount: self.eden.CLIENT_INACTIVE},
-            list_output,
-            msg="Eden should have one mount.",
+            {self.mount: "NOT_RUNNING"}, list_output, msg="Eden should have one mount."
         )
 
         extra_daemon_args = self.eden.get_extra_daemon_args()
@@ -328,12 +326,11 @@ class CloneTest(testcase.EdenRepoTest):
         )
         self.assertIn("Starting edenfs", clone_output)
         self.assertTrue(self.eden.is_healthy(), msg="clone should start Eden.")
-        mount_points = {
-            self.mount: self.eden.CLIENT_ACTIVE,
-            str(tmp): self.eden.CLIENT_ACTIVE,
-        }
+        mount_points = {self.mount: "RUNNING", str(tmp): "RUNNING"}
         self.assertEqual(
-            mount_points, self.eden.list_cmd(), msg="Eden should have two mounts."
+            mount_points,
+            self.eden.list_cmd_simple(),
+            msg="Eden should have two mounts.",
         )
         self.assertEqual("hola\n", (tmp / "hello").read_text())
 

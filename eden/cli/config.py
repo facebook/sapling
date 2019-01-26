@@ -799,6 +799,18 @@ Do you want to run `eden mount %s` instead?"""
 
         return self._get_checkout_config(client_dir)
 
+    def get_checkouts(self) -> List["EdenCheckout"]:
+        """Return information about all configured checkouts defined in Eden's
+        configuration file."""
+        dir_map = self._get_directory_map()
+        checkouts: List[EdenCheckout] = []
+        clients_dir = Path(self._get_clients_dir())
+        for mount_path, client_name in dir_map.items():
+            checkout_data_dir = clients_dir / client_name
+            checkouts.append(EdenCheckout(self, Path(mount_path), checkout_data_dir))
+
+        return checkouts
+
     def _get_directory_map(self) -> Dict[str, str]:
         """
         Parse config.json which holds a mapping of mount paths to their

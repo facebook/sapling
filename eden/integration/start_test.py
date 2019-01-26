@@ -33,7 +33,7 @@ from .lib.systemd import SystemdUserServiceManagerMixin
 class StartTest(testcase.EdenTestCase):
     def test_start_if_necessary(self) -> None:
         # Confirm there are no checkouts configured, then stop edenfs
-        checkouts = self.eden.list_cmd()
+        checkouts = self.eden.list_cmd_simple()
         self.assertEqual({}, checkouts)
         self.assertTrue(self.eden.is_healthy())
         self.eden.shutdown()
@@ -56,8 +56,8 @@ class StartTest(testcase.EdenTestCase):
         checkout_dir = os.path.join(self.mounts_dir, "test_checkout")
         self.eden.clone(repo.path, checkout_dir)
 
-        checkouts = self.eden.list_cmd()
-        self.assertEqual({checkout_dir: self.eden.CLIENT_ACTIVE}, checkouts)
+        checkouts = self.eden.list_cmd_simple()
+        self.assertEqual({checkout_dir: "RUNNING"}, checkouts)
 
         # Stop edenfs
         self.eden.shutdown()

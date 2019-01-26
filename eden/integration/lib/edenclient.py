@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import json
 import logging
 import os
 import pathlib
@@ -345,35 +346,31 @@ class EdenFS(object):
         """
         return self.run_cmd("repository")
 
-    CLIENT_ACTIVE = "active"
-    CLIENT_INACTIVE = "inactive"
-    CLIENT_UNCONFIGURED = "unconfigured"
-
-    def list_cmd(self) -> Dict[str, str]:
+    def list_cmd(self) -> Dict[str, Dict[str, Any]]:
         """
-        Executes "eden list" to list the client directories,
-        and returns the output as a dictionary of { client_path -> status }
-
-        The status can be one of the CLIENT_ACTIVE, CLIENT_INACTIVE, or
-        CLIENT_UNCONFIGURED constants.
-        'active', 'inactive', or 'unconfigured'
+        Executes "eden list --json" to list the Eden checkouts and returns the result as
+        a dictionary.
         """
-        lines = self.run_cmd("list").splitlines()
+        data = self.run_cmd("list", "--json")
+        return json.loads(data)
 
-        results = {}
-        inactive_suffix = " (not mounted)"
-        unconfigured_suffix = " (unconfigured)"
-        for line in lines:
-            if line.endswith(inactive_suffix):
-                path = line[: -len(inactive_suffix)]
-                status = self.CLIENT_INACTIVE
-            elif line.endswith(unconfigured_suffix):
-                path = line[: -len(unconfigured_suffix)]
-                status = self.CLIENT_UNCONFIGURED
-            else:
-                path = line
-                status = self.CLIENT_ACTIVE
-            results[path] = status
+    def list_cmd_simple(self) -> Dict[str, str]:
+        """
+        Executes "eden list --json" to list the Eden checkouts and returns the result in
+        a simplified format that can be more easily used in test case assertions.
+
+        The result is a dictionary of { mount_path: status }
+        The status is a string containing one of the MountState names, or "NOT_RUNNING"
+        if the mount is not running.  If the mount is known to the running edenfs
+        instance but not listed in the configuration file, " (unconfigured)" will be
+        appended to the status string.
+        """
+        results: Dict[str, str] = {}
+        for path, mount_info in self.list_cmd().items():
+            status_str = mount_info["state"]
+            if not mount_info["configured"]:
+                status_str += " (unconfigured)"
+            results[path] = status_str
 
         return results
 

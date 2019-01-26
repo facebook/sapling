@@ -24,16 +24,16 @@ class RCTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     def test_eden_list(self) -> None:
-        mounts = self.eden.list_cmd()
-        self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
+        mounts = self.eden.run_cmd("list")
+        self.assertEqual(f"{self.mount}\n", mounts)
 
         self.eden.remove(self.mount)
-        mounts = self.eden.list_cmd()
-        self.assertEqual({}, mounts, msg="There should be 0 mount paths after remove")
+        mounts = self.eden.run_cmd("list")
+        self.assertEqual("", mounts, msg="There should be 0 mount paths after remove")
 
         self.eden.clone(self.repo_name, self.mount)
-        mounts = self.eden.list_cmd()
-        self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
+        mounts = self.eden.run_cmd("list")
+        self.assertEqual(f"{self.mount}\n", mounts)
 
     def test_unmount_rmdir(self) -> None:
         clients = os.path.join(self.eden_dir, "clients")
@@ -42,14 +42,14 @@ class RCTest(testcase.EdenRepoTest):
         test_client_dir = os.path.join(clients, client_names[0])
 
         # Eden list command uses keys of directory map to get mount paths
-        mounts = self.eden.list_cmd()
-        self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
+        mounts = self.eden.list_cmd_simple()
+        self.assertEqual({self.mount: "RUNNING"}, mounts)
 
         self.eden.remove(self.mount)
         self.assertFalse(os.path.isdir(test_client_dir))
 
         # Check that _remove_path_from_directory_map in remove is successful
-        mounts = self.eden.list_cmd()
+        mounts = self.eden.list_cmd_simple()
         self.assertEqual({}, mounts, msg="There should be 0 paths in the directory map")
 
         self.eden.clone(self.repo_name, self.mount)
@@ -58,9 +58,9 @@ class RCTest(testcase.EdenRepoTest):
             msg="Client name should be restored verbatim because \
                              it should be a function of the mount point",
         )
-        mounts = self.eden.list_cmd()
+        mounts = self.eden.list_cmd_simple()
         self.assertEqual(
-            {self.mount: self.eden.CLIENT_ACTIVE},
+            {self.mount: "RUNNING"},
             mounts,
             msg="The client directory should have been restored",
         )

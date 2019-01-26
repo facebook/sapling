@@ -101,6 +101,7 @@ class RemountTest(testcase.EdenRepoTest):
         self.assertFalse(os.path.exists(self.mount))
 
     def test_restart_twice(self) -> None:
+        self.maxDiff = None
         self._clone_checkouts(5)
 
         self.eden.shutdown()
@@ -114,9 +115,9 @@ class RemountTest(testcase.EdenRepoTest):
         self.eden.start()
 
         # Verify that clients that were still mounted at shutdown are remounted
-        checkouts = self.eden.list_cmd()
+        checkouts = self.eden.list_cmd_simple()
         expected_checkouts = {
-            f"{self.mount}-{i}": self.eden.CLIENT_ACTIVE for i in range(5) if i != 3
+            f"{self.mount}-{i}": "RUNNING" for i in range(5) if i != 3
         }
         self.assertEqual(expected_checkouts, checkouts)
 
