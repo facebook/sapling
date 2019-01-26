@@ -125,18 +125,20 @@ class TomlConfigTest(
 
     def assert_core_config(self, cfg: EdenInstance) -> None:
         self.assertEqual(
-            cfg.get_config_value("rage.reporter"),
+            cfg.get_config_value("rage.reporter", default=""),
             'arc paste --title "eden rage from $(hostname)" --conduit-uri=https://phabricator.intern.facebook.com/api/',
         )
         self.assertEqual(
-            cfg.get_config_value("core.ignoreFile"),
+            cfg.get_config_value("core.ignoreFile", default=""),
             f"/home/{self._user}/.gitignore-override",
         )
         self.assertEqual(
-            cfg.get_config_value("core.systemIgnoreFile"), "/etc/eden/gitignore"
+            cfg.get_config_value("core.systemIgnoreFile", default=""),
+            "/etc/eden/gitignore",
         )
         self.assertEqual(
-            cfg.get_config_value("core.edenDirectory"), f"/home/{self._user}/.eden"
+            cfg.get_config_value("core.edenDirectory", default=""),
+            f"/home/{self._user}/.eden",
         )
 
     def assert_git_repo_config(self, cfg: EdenInstance) -> None:
@@ -190,14 +192,16 @@ class TomlConfigTest(
         self.assertEqual(cfg.get_repository_list(), exp_repos)
 
         self.assertEqual(
-            cfg.get_config_value("rage.reporter"),
+            cfg.get_config_value("rage.reporter", default=""),
             'arc paste --title "eden rage from $(hostname)" --conduit-uri=https://phabricator.intern.facebook.com/api/',
         )
         self.assertEqual(
-            cfg.get_config_value("core.ignoreFile"), f"/home/{self._user}/.gitignore"
+            cfg.get_config_value("core.ignoreFile", default=""),
+            f"/home/{self._user}/.gitignore",
         )
         self.assertEqual(
-            cfg.get_config_value("core.systemIgnoreFile"), "/etc/eden/gitignore"
+            cfg.get_config_value("core.systemIgnoreFile", default=""),
+            "/etc/eden/gitignore",
         )
         cc = cfg.find_config_for_alias("fbsource")
         assert cc is not None
@@ -326,6 +330,40 @@ path = ""
         cfg = self.get_config()
         with self.assertRaises(toml.decoder.TomlDecodeError):
             cfg._loadConfig()
+
+    def test_get_config_value_returns_default_if_section_is_missing(self) -> None:
+        self.assertEqual(
+            self.get_config().get_config_value(
+                "missing_section.test_option", default="test default"
+            ),
+            "test default",
+        )
+
+    def test_get_config_value_returns_default_if_option_is_missing(self) -> None:
+        self.write_user_config(
+            """[test_section]
+other_option = "test value"
+"""
+        )
+        self.assertEqual(
+            self.get_config().get_config_value(
+                "test_section.missing_option", default="test default"
+            ),
+            "test default",
+        )
+
+    def test_get_config_value_returns_value_for_string_option(self) -> None:
+        self.write_user_config(
+            """[test_section]
+test_option = "test value"
+"""
+        )
+        self.assertEqual(
+            self.get_config().get_config_value(
+                "test_section.test_option", default="test default"
+            ),
+            "test value",
+        )
 
     def test_experimental_systemd_is_disabled_by_default(self) -> None:
         self.assertFalse(self.get_config().should_use_experimental_systemd_mode())

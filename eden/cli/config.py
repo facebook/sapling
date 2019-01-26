@@ -222,13 +222,10 @@ class EdenInstance:
                 result.append(header[1])
         return sorted(result)
 
-    def get_config_value(self, key: str) -> str:
+    def get_config_value(self, key: str, default: str) -> str:
         parser = self._loadConfig()
         section, option = key.split(".", 1)
-        try:
-            return parser.get(section, option)
-        except (configparser.NoOptionError, configparser.NoSectionError) as exc:
-            raise KeyError(str(exc))
+        return parser.get(section, option, fallback=default)
 
     def should_use_experimental_systemd_mode(self) -> bool:
         # TODO(T33122320): Delete this environment variable when systemd is properly
@@ -239,11 +236,12 @@ class EdenInstance:
         if env_var_value == "0":
             return False
 
-        try:
-            if self.get_config_value("service.experimental_systemd") == "True":
-                return True
-        except KeyError:
-            pass
+        if (
+            self.get_config_value("service.experimental_systemd", default="False")
+            == "True"
+        ):
+            return True
+
         return False
 
     def print_full_config(self, file: typing.TextIO) -> None:

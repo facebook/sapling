@@ -74,11 +74,9 @@ def setup_hg_dir(
 
 
 def _get_hgrc_data(instance: config_mod.EdenInstance, backing_hg_dir: Path) -> str:
-    try:
-        extra_hgrc = instance.get_config_value("hg.extra_hgrc")
-    except KeyError:
-        # Provide a sensible default if nothing was explicitly configured.
-        extra_hgrc = _DEFAULT_EXTRA_HGRC_CONTENTS
+    extra_hgrc = instance.get_config_value(
+        "hg.extra_hgrc", default=_DEFAULT_EXTRA_HGRC_CONTENTS
+    )
 
     if extra_hgrc and extra_hgrc[-1] != "\n":
         extra_hgrc += "\n"

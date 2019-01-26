@@ -38,11 +38,10 @@ def _parse_os_kernel_version(version: str) -> Tuple[int, ...]:
 
 
 def _os_is_kernel_version_too_old(instance: EdenInstance, release: str) -> bool:
-    try:
-        min_kernel_version = instance.get_config_value("doctor.minimum-kernel-version")
-    except KeyError:
-        return False
-    if min_kernel_version is None:
+    min_kernel_version = instance.get_config_value(
+        "doctor.minimum-kernel-version", default=""
+    )
+    if not min_kernel_version:
         return False
     try:
         return _parse_os_kernel_version(release) < _parse_os_kernel_version(
@@ -55,13 +54,10 @@ def _os_is_kernel_version_too_old(instance: EdenInstance, release: str) -> bool:
 
 
 def _os_is_bad_release(instance: EdenInstance, release: str) -> bool:
-    try:
-        known_bad_kernel_versions = instance.get_config_value(
-            "doctor.known-bad-kernel-versions"
-        )
-    except KeyError:
-        return False
-    if known_bad_kernel_versions is None:
+    known_bad_kernel_versions = instance.get_config_value(
+        "doctor.known-bad-kernel-versions", default=""
+    )
+    if not known_bad_kernel_versions:
         return False
     for regex in known_bad_kernel_versions.split(","):
         if re.search(regex, release):

@@ -1262,12 +1262,8 @@ class RageCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        rage_processor = None
         instance = get_eden_instance(args)
-        try:
-            rage_processor = instance.get_config_value("rage.reporter")
-        except KeyError:
-            pass
+        rage_processor = instance.get_config_value("rage.reporter", default="")
 
         proc: Optional[subprocess.Popen] = None
         if rage_processor and not args.stdout:

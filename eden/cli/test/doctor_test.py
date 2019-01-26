@@ -2424,8 +2424,8 @@ class FakeEdenInstance:
     def get_thrift_client(self) -> FakeClient:
         return self._fake_client
 
-    def get_config_value(self, key: str) -> str:
-        return self._config[key]
+    def get_config_value(self, key: str, default: str) -> str:
+        return self._config.get(key, default)
 
 
 class FakeProcessFinder(process_finder.LinuxProcessFinder):
