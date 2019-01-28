@@ -64,7 +64,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   void run();
 
  private:
-  void initLogging();
   void cleanupMountPoints();
 
   // UnixSocket::ReceiveCallback methods
