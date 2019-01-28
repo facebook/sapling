@@ -157,7 +157,7 @@ pub trait StreamExt: Stream {
         out1: Out1,
         out2: Out2,
         pred: F,
-    ) -> streamfork::Forker<Self, Out1, Out2, F>
+    ) -> streamfork::Forker<Self, Out1, Out2, F, E>
     where
         Self: Sized,
         Out1: Sink<SinkItem = Self::Item>,

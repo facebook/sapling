@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::env::var;
+use std::io as std_io;
 use std::net::{IpAddr, SocketAddr};
 
 use bytes::Bytes;
@@ -265,6 +266,23 @@ impl<'a> StdioRelay<'a> {
                 .map(|_| ());
 
             stdout_future
+                .then(|res| {
+                    match res {
+                        Ok(res) => Ok(res),
+                        Err(err) => {
+                            // TODO(stash): T39586884 "Connection reset" can happen in case
+                            // of error on the Mononoke server
+                            let res = err_downcast_ref!(
+                                err,
+                                ioerr: std_io::Error => ioerr.kind() == ::std::io::ErrorKind::ConnectionReset,
+                            );
+                            match res {
+                                Some(true) => Ok(()),
+                                _ => Err(err),
+                            }
+                        }
+                    }
+                })
                 .select(stdin_future)
                 .map(|_| ())
                 .map_err(|(err, _)| err)
