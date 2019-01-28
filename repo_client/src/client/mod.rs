@@ -1054,7 +1054,8 @@ fn get_changed_manifests_stream(
         trace_args!(),
     );
 
-    let root_entry_stream = stream::once(Ok((repo.get_root_entry(&mfid), rootpath.clone())));
+    let entry: Box<Entry + Sync> = Box::new(repo.get_root_entry(&mfid));
+    let root_entry_stream = stream::once(Ok((entry, rootpath.clone())));
 
     if max_depth == 1 {
         return root_entry_stream.boxify();

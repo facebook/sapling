@@ -374,8 +374,8 @@ fn hg_manifest_diff(
 ) -> impl Future<Item = Option<ChangesetAttrDiff>, Error = Error> {
     bonsai_diff(
         ctx,
-        repo.get_root_entry(left),
-        Some(repo.get_root_entry(right)),
+        Box::new(repo.get_root_entry(left)),
+        Some(Box::new(repo.get_root_entry(right))),
         None,
     )
     .collect()

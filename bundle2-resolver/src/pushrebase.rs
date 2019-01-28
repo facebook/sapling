@@ -348,7 +348,7 @@ fn find_changed_files_between_manfiests(
         .and_then({
             cloned!(ctx);
             move |(d_mf, a_mf)| {
-                bonsai_diff(ctx, d_mf, Some(a_mf), None)
+                bonsai_diff(ctx, Box::new(d_mf), Some(Box::new(a_mf)), None)
                     .map(|diff| match diff {
                         BonsaiDiffResult::Changed(path, ..)
                         | BonsaiDiffResult::ChangedReusedId(path, ..)

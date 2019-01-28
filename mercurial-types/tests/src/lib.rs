@@ -447,7 +447,7 @@ fn test_recursive_entry_stream() {
         let manifestid = cs.manifestid();
 
         let root_entry = repo.get_root_entry(&manifestid);
-        let fut = recursive_entry_stream(ctx.clone(), None, root_entry).collect();
+        let fut = recursive_entry_stream(ctx.clone(), None, Box::new(root_entry)).collect();
         let res = fut.wait().unwrap();
 
         let mut actual = hashset![];

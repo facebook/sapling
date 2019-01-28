@@ -14,7 +14,7 @@ use futures_ext::FutureExt;
 
 use bonsai_utils;
 use context::CoreContext;
-use mercurial_types::{Changeset, HgFileNodeId, HgManifestId, HgNodeHash, MPath};
+use mercurial_types::{Changeset, Entry, HgFileNodeId, HgManifestId, HgNodeHash, MPath};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
 };
@@ -93,14 +93,15 @@ fn find_file_changes(
     repo: BlobRepo,
     bonsai_parents: Vec<ChangesetId>,
 ) -> impl Future<Item = BTreeMap<MPath, Option<FileChange>>, Error = Error> {
-    let root_entry = repo.get_root_entry(cs.manifestid());
+    let root_entry = Box::new(repo.get_root_entry(cs.manifestid()));
 
     let p1_root_entry = parent_manifests
         .get(0)
-        .map(|root_mf| repo.get_root_entry(root_mf));
-    let p2_root_entry = parent_manifests
-        .get(1)
-        .map(|root_mf| repo.get_root_entry(root_mf));
+        .map(|root_mf| -> Box<Entry + Sync> { Box::new(repo.get_root_entry(root_mf)) });
+    let p2_root_entry: Option<Box<Entry + Sync>> = parent_manifests.get(1).map(|root_mf| {
+        let entry: Box<Entry + Sync> = Box::new(repo.get_root_entry(root_mf));
+        entry
+    });
 
     bonsai_utils::bonsai_diff(ctx.clone(), root_entry, p1_root_entry, p2_root_entry)
         .map(move |changed_file| match changed_file {

@@ -65,7 +65,7 @@ fn blobstore_and_filenodes_warmup(
                 info!(logger, "starting precaching");
                 let rootpath = None;
                 let mut i = 0;
-                recursive_entry_stream(ctx.clone(), rootpath, root_entry)
+                recursive_entry_stream(ctx.clone(), rootpath, Box::new(root_entry))
                     .filter(|&(ref _path, ref entry)| entry.get_type() == Type::Tree)
                     .map(move |(path, entry)| {
                         let hash = entry.get_hash();

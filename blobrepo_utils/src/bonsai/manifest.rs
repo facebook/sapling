@@ -394,5 +394,5 @@ fn make_entry(repo: &BlobRepo, diff_result: &BonsaiDiffResult) -> Option<HgBlobE
 #[inline]
 fn get_root_entry(repo: &BlobRepo, changeset: &HgBlobChangeset) -> Box<Entry + Sync> {
     let manifest_id = changeset.manifestid();
-    repo.get_root_entry(manifest_id)
+    Box::new(repo.get_root_entry(manifest_id))
 }

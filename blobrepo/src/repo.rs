@@ -934,9 +934,9 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn get_root_entry(&self, manifestid: &HgManifestId) -> Box<Entry + Sync> {
+    pub fn get_root_entry(&self, manifestid: &HgManifestId) -> HgBlobEntry {
         STATS::get_root_entry.add_value(1);
-        Box::new(HgBlobEntry::new_root(self.blobstore.clone(), *manifestid))
+        HgBlobEntry::new_root(self.blobstore.clone(), *manifestid)
     }
 
     pub fn get_bookmark(

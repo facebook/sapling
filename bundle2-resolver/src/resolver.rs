@@ -761,6 +761,7 @@ impl Bundle2Resolver {
                 &manifests,
                 &filelogs,
                 &content_blobs,
+                repo.clone(),
             ));
 
             p1.join(p2)
@@ -1179,6 +1180,7 @@ impl NewBlobs {
         manifests: &Manifests,
         filelogs: &Filelogs,
         content_blobs: &ContentBlobs,
+        repo: Arc<BlobRepo>,
     ) -> Result<Self> {
         if manifest_root_id.into_nodehash() == NULL_HASH {
             // If manifest root id is NULL_HASH then there is no content in this changest
@@ -1194,31 +1196,37 @@ impl NewBlobs {
             hash: manifest_root_id.clone().into_nodehash(),
         };
 
-        let &(ref manifest_content, ref p1, ref p2, ref manifest_root) =
-            manifests
-                .get(&root_key)
-                .ok_or_else(|| format_err!("Missing root tree manifest"))?;
+        let (entries, content_blobs, root_manifest) = match manifests.get(&root_key) {
+            Some((ref manifest_content, ref p1, ref p2, ref manifest_root)) => {
+                let (entries, content_blobs, counters) = Self::walk_helper(
+                    &RepoPath::root(),
+                    &manifest_content,
+                    get_manifest_parent_content(manifests, RepoPath::root(), p1.clone()),
+                    get_manifest_parent_content(manifests, RepoPath::root(), p2.clone()),
+                    manifests,
+                    filelogs,
+                    content_blobs,
+                )?;
+                STATS::per_changeset_manifests_count.add_value(counters.manifests_count as i64);
+                STATS::per_changeset_filelogs_count.add_value(counters.filelogs_count as i64);
+                STATS::per_changeset_content_blobs_count
+                    .add_value(counters.content_blobs_count as i64);
+                let root_manifest = manifest_root
+                    .clone()
+                    .map(|it| Some((*it).clone()))
+                    .from_err()
+                    .boxify();
 
-        let (entries, content_blobs, counters) = Self::walk_helper(
-            &RepoPath::root(),
-            &manifest_content,
-            get_manifest_parent_content(manifests, RepoPath::root(), p1.clone()),
-            get_manifest_parent_content(manifests, RepoPath::root(), p2.clone()),
-            manifests,
-            filelogs,
-            content_blobs,
-        )?;
-
-        STATS::per_changeset_manifests_count.add_value(counters.manifests_count as i64);
-        STATS::per_changeset_filelogs_count.add_value(counters.filelogs_count as i64);
-        STATS::per_changeset_content_blobs_count.add_value(counters.content_blobs_count as i64);
+                (entries, content_blobs, root_manifest)
+            }
+            None => {
+                let entry = (repo.get_root_entry(&manifest_root_id), RepoPath::RootPath);
+                (vec![], vec![], future::ok(Some(entry)).boxify())
+            }
+        };
 
         Ok(Self {
-            root_manifest: manifest_root
-                .clone()
-                .map(|it| Some((*it).clone()))
-                .from_err()
-                .boxify(),
+            root_manifest,
             sub_entries: stream::futures_unordered(entries)
                 .with_context(move |_| {
                     format!(
