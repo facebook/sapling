@@ -213,7 +213,7 @@
   uncompressed size of bundle content:
        201 (changelog)
        286  inconsistent_file
-  remote: * ERRO Command failed, remote: true, error: Error while uploading data for changesets, hashes: [HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf))], root_cause: SharedError { (glob)
+  remote: * ERRO Command failed, remote: true, error: Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(df4af074ec72d3695dfa50278202119bb9766fcf)))], root_cause: SharedError { (glob)
   remote:     error: Compat {
   remote:         error: SharedError { error: Compat { error: InconsistentEntryHash(FilePath(MPath("inconsistent_file")), HgNodeHash(Sha1(6179aa960f78800a0b879d461ea56c5bb17f468c)), HgNodeHash(Sha1(1c509d1a5c8ac7f7b8ac25dc417fca3acb882258))) } }
   remote:          (re)
