@@ -72,7 +72,7 @@
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
 
 # Check that alias.sha1.hgfilenode -> sha256.file_content is not generated
   $ ls $TESTTMP/repo/blobs | grep "alias.content.blake2" | wc -l

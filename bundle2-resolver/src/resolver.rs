@@ -290,16 +290,35 @@ fn resolve_pushrebase(
                                 })
                                 .collect();
 
+                            if bookmark_pushes.len() != 1 {
+                                return future::err(format_err!(
+                                    "Too many pushkey parts: {:?}",
+                                    bookmark_pushes
+                                )).boxify();
+                            }
+
+                            let bookmark_push_part_id = match bookmark_pushes.get(0) {
+                                Some(bk_push) if bk_push.name != onto => {
+                                    return future::err(format_err!(
+                                        "allowed only pushes of {} bookmark: {:?}",
+                                        onto, bookmark_pushes
+                                    )).boxify();
+                                }
+                                Some(bk_push) => Some(bk_push.part_id),
+                                None => None
+                            };
+
                             resolver
                                 .ensure_stream_finished(bundle2)
-                                .map(move |()| (changesets, bookmark_pushes, onto))
+                                .map(move |()| (changesets, bookmark_push_part_id, onto))
+                                .boxify()
                         }
                     })
             }
         })
         .and_then({
             cloned!(ctx, resolver);
-            move |(changesets, bookmark_pushes, onto)| {
+            move |(changesets, bookmark_push_part_id, onto)| {
                 resolver
                     .run_hooks(ctx.clone(), changesets.clone(), maybe_pushvars, &onto)
                     .map_err(|err| match err {
@@ -327,12 +346,12 @@ fn resolve_pushrebase(
                     })
                     .and_then(move |()| {
                         resolver
-                            .pushrebase(ctx, changesets.clone(), bookmark_pushes, &onto)
-                            .map(|pushrebased_rev| (pushrebased_rev, onto))
+                            .pushrebase(ctx, changesets.clone(), &onto)
+                            .map(move |pushrebased_rev| (pushrebased_rev, onto, bookmark_push_part_id))
                     })
             }
         })
-        .and_then(move |(pushrebased_rev, onto)| {
+        .and_then(move |(pushrebased_rev, onto, bookmark_push_part_id)| {
             resolver.prepare_pushrebase_response(
                 ctx,
                 commonheads,
@@ -340,6 +359,7 @@ fn resolve_pushrebase(
                 onto,
                 lca_hint,
                 phases_hint,
+                bookmark_push_part_id,
             )
         })
         .boxify()
@@ -867,6 +887,7 @@ impl Bundle2Resolver {
         onto: Bookmark,
         lca_hint: Arc<LeastCommonAncestorsHint>,
         phases_hint: Arc<Phases>,
+        bookmark_push_part_id: Option<PartId>,
     ) -> impl Future<Item = Bytes, Error = Error> {
         // Send to the client both pushrebased commit and current "onto" bookmark. Normally they
         // should be the same, however they might be different if bookmark
@@ -884,6 +905,11 @@ impl Bundle2Resolver {
                 }
             }
         );
+
+        let bookmark_reply_part = match bookmark_push_part_id {
+            Some(part_id) => Some(try_boxfuture!(parts::replypushkey_part(true, part_id))),
+            None => None,
+        };
 
         let mut scuba_logger = self.ctx.scuba().clone();
         maybe_onto_head
@@ -903,7 +929,8 @@ impl Bundle2Resolver {
                     Some(phases_hint),
                 )
             })
-            .and_then(|cg_part_builder| {
+            .and_then(move |mut cg_part_builder| {
+                cg_part_builder.extend(bookmark_reply_part.into_iter());
                 let compression = None;
                 create_bundle_stream(cg_part_builder, compression)
                     .collect()
@@ -970,25 +997,12 @@ impl Bundle2Resolver {
         &self,
         ctx: CoreContext,
         changesets: Changesets,
-        bookmark_pushes: Vec<BookmarkPush>,
         onto_bookmark: &Bookmark,
     ) -> impl Future<Item = ChangesetId, Error = Error> {
         let changesets: Vec<_> = changesets
             .into_iter()
             .map(|(node, _)| HgChangesetId::new(node))
             .collect();
-
-        let incorrect_bookmark_pushes: Vec<_> = bookmark_pushes
-            .iter()
-            .filter(|bp| &bp.name != onto_bookmark)
-            .collect();
-
-        if !incorrect_bookmark_pushes.is_empty() {
-            try_boxfuture!(Err(err_msg(format!(
-                "allowed only pushes of {} bookmark: {:?}",
-                onto_bookmark, bookmark_pushes
-            ))))
-        }
 
         pushrebase::do_pushrebase(
             ctx,

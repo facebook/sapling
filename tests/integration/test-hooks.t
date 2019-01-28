@@ -91,7 +91,6 @@ Clone the repo
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark -q
-  server ignored bookmark master_bookmark update
 
 Delete a file, make sure that file_size_hook is not called on deleted files
   $ hgmn up -q tip
@@ -105,12 +104,11 @@ Delete a file, make sure that file_size_hook is not called on deleted files
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
 
 Add OWNERS file, then delete it. Make sure deletion is not allowed
   $ touch OWNERS && hg add OWNERS && hg ci -m 'add OWNERS'
   $ hgmn push -r . --to master_bookmark -q
-  server ignored bookmark master_bookmark update
   $ hg rm OWNERS
   $ hg ci -m 'remove OWNERS'
   $ hgmn push -r . --to master_bookmark
@@ -138,12 +136,11 @@ Bypass owners check
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
 
 Add OWNERS2 file. This time bypass it with pushvars
   $ touch OWNERS2 && hg ci -Aqm 'add OWNERS2'
   $ hgmn push -r . --to master_bookmark -q
-  server ignored bookmark master_bookmark update
   $ hg rm OWNERS2
   $ hg ci -m 'remove OWNERS2'
   $ hgmn push -r . --to master_bookmark
@@ -164,7 +161,7 @@ Add OWNERS2 file. This time bypass it with pushvars
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
 
 Send large file
   $ hg up -q 0
@@ -191,7 +188,7 @@ Bypass large file hook
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
 
 Send large file inside a directory
   $ hg up -q 0

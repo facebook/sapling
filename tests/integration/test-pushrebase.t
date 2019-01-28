@@ -54,7 +54,7 @@ Clone the repo
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
 
 TODO(stash): pushrebase of a merge commit, pushrebase over a merge commit
 
@@ -119,7 +119,7 @@ Push stack
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
   $ hgmn up -q master_bookmark
   $ hg sl -r ":"
   @  changeset:   8:6398085ceb9d

@@ -95,7 +95,7 @@
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
 
 # 6.1 Rename file
   $ hg mv lfs-largefile-for-rename lfs-largefile-renamed
@@ -115,7 +115,7 @@
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
 
 # Fail to push if LFS blob is not uploaded to the server
   $ cat >> .hg/hgrc << EOF

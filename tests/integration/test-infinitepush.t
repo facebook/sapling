@@ -379,7 +379,7 @@ Test phases with pushrebase
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  server ignored bookmark master_bookmark update
+  updating bookmark master_bookmark
 
   $ tglogp
   o  6: 2bea0b154d91 public 'new feature on top of master'
