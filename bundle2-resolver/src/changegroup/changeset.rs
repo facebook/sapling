@@ -10,7 +10,7 @@ use futures_ext::{BoxStream, StreamExt};
 use bytes::Bytes;
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, HgBlob, HgBlobNode, HgNodeHash, NULL_HASH};
+use mercurial_types::{delta, HgBlob, HgBlobNode, HgChangesetId, NULL_HASH};
 
 use errors::*;
 
@@ -21,7 +21,7 @@ pub struct ChangesetDeltaed {
 
 pub fn convert_to_revlog_changesets<S>(
     deltaed: S,
-) -> BoxStream<(HgNodeHash, RevlogChangeset), Error>
+) -> BoxStream<(HgChangesetId, RevlogChangeset), Error>
 where
     S: Stream<Item = ChangesetDeltaed, Error = Error> + Send + 'static,
 {
@@ -42,7 +42,7 @@ where
             );
 
             Ok((
-                chunk.node,
+                HgChangesetId::new(chunk.node),
                 RevlogChangeset::new(HgBlobNode::new(
                     HgBlob::from(Bytes::from(delta::apply(b"", &chunk.delta)?)),
                     chunk.p1.into_option().as_ref(),
@@ -57,9 +57,10 @@ where
 mod tests {
     use super::*;
 
-    use futures::Future;
     use futures::stream::iter_ok;
+    use futures::Future;
     use itertools::equal;
+    use mercurial_types::HgNodeHash;
 
     enum CheckResult {
         ExpectedOk(bool),
@@ -102,7 +103,7 @@ mod tests {
             .wait();
 
         if base == NULL_HASH && node == linknode {
-            ExpectedOk(equal(result.unwrap(), vec![(node, cs)]))
+            ExpectedOk(equal(result.unwrap(), vec![(HgChangesetId::new(node), cs)]))
         } else {
             ExpectedErr(result.is_err())
         }

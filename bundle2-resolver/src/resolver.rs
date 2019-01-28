@@ -46,11 +46,11 @@ use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
-type Changesets = Vec<(HgNodeHash, RevlogChangeset)>;
+type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
-type UploadedChangesets = HashMap<HgNodeHash, ChangesetHandle>;
+type UploadedChangesets = HashMap<HgChangesetId, ChangesetHandle>;
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
@@ -97,18 +97,18 @@ pub fn resolve(
         })
         .and_then(move |(maybe_pushvars, commonheads, bundle2)| {
             if let Some(commonheads) = commonheads {
-                        resolve_pushrebase(
-                            ctx,
-                            commonheads,
-                            resolver,
-                            bundle2,
-                            maybe_pushvars,
-                            lca_hint,
-                            phases_hint,
-                        )
-                    } else {
-                        resolve_push(ctx, resolver, bundle2)
-                    }
+                resolve_pushrebase(
+                    ctx,
+                    commonheads,
+                    resolver,
+                    bundle2,
+                    maybe_pushvars,
+                    lca_hint,
+                    phases_hint,
+                )
+            } else {
+                resolve_push(ctx, resolver, bundle2)
+            }
         })
         .boxify()
 }
@@ -254,8 +254,8 @@ fn resolve_pushrebase(
                 .into_future()
                 .map(move |cg_push| (cg_push, manifests, bundle2))
         })
-        .and_then(|(cg_push, manifests, bundle2)| {
-            match cg_push.mparams.get("onto").cloned() {
+        .and_then(
+            |(cg_push, manifests, bundle2)| match cg_push.mparams.get("onto").cloned() {
                 Some(onto_bookmark) => {
                     let v = Vec::from(onto_bookmark.as_ref());
                     let onto_bookmark = String::from_utf8(v)?;
@@ -263,8 +263,8 @@ fn resolve_pushrebase(
                     Ok((onto_bookmark, cg_push, manifests, bundle2))
                 }
                 None => Err(err_msg("onto is not specified")),
-            }
-        })
+            },
+        )
         .and_then({
             cloned!(ctx, resolver);
             move |(onto, cg_push, manifests, bundle2)| {
@@ -294,18 +294,21 @@ fn resolve_pushrebase(
                                 return future::err(format_err!(
                                     "Too many pushkey parts: {:?}",
                                     bookmark_pushes
-                                )).boxify();
+                                ))
+                                .boxify();
                             }
 
                             let bookmark_push_part_id = match bookmark_pushes.get(0) {
                                 Some(bk_push) if bk_push.name != onto => {
                                     return future::err(format_err!(
                                         "allowed only pushes of {} bookmark: {:?}",
-                                        onto, bookmark_pushes
-                                    )).boxify();
+                                        onto,
+                                        bookmark_pushes
+                                    ))
+                                    .boxify();
                                 }
                                 Some(bk_push) => Some(bk_push.part_id),
-                                None => None
+                                None => None,
                             };
 
                             resolver
@@ -345,9 +348,9 @@ fn resolve_pushrebase(
                         RunHooksError::Error(err) => err,
                     })
                     .and_then(move |()| {
-                        resolver
-                            .pushrebase(ctx, changesets.clone(), &onto)
-                            .map(move |pushrebased_rev| (pushrebased_rev, onto, bookmark_push_part_id))
+                        resolver.pushrebase(ctx, changesets.clone(), &onto).map(
+                            move |pushrebased_rev| (pushrebased_rev, onto, bookmark_push_part_id),
+                        )
                     })
             }
         })
@@ -734,7 +737,7 @@ impl Bundle2Resolver {
             ctx: CoreContext,
             repo: Arc<BlobRepo>,
             scuba_logger: ScubaSampleBuilder,
-            node: HgNodeHash,
+            node: HgChangesetId,
             revlog_cs: RevlogChangeset,
             mut uploaded_changesets: UploadedChangesets,
             filelogs: &Filelogs,
@@ -771,7 +774,7 @@ impl Bundle2Resolver {
                         comments: String::from_utf8(revlog_cs.comments().into())?,
                     };
                     let create_changeset = CreateChangeset {
-                        expected_nodeid: Some(node),
+                        expected_nodeid: Some(node.into_nodehash()),
                         expected_files: Some(Vec::from(revlog_cs.files())),
                         p1,
                         p2,
@@ -999,17 +1002,15 @@ impl Bundle2Resolver {
         changesets: Changesets,
         onto_bookmark: &Bookmark,
     ) -> impl Future<Item = ChangesetId, Error = Error> {
-        let changesets: Vec<_> = changesets
-            .into_iter()
-            .map(|(node, _)| HgChangesetId::new(node))
-            .collect();
-
         pushrebase::do_pushrebase(
             ctx,
             self.repo.clone(),
             self.pushrebase.clone(),
             onto_bookmark.clone(),
-            changesets,
+            changesets
+                .into_iter()
+                .map(|(hg_cs_id, _)| hg_cs_id)
+                .collect(),
         )
         .map_err(|err| err_msg(format!("pushrebase failed {:?}", err)))
         .timed({
@@ -1036,8 +1037,7 @@ impl Bundle2Resolver {
         onto_bookmark: &Bookmark,
     ) -> BoxFuture<(), RunHooksError> {
         let mut futs = stream::FuturesUnordered::new();
-        for (cs_id, _) in changesets {
-            let hg_cs_id = HgChangesetId::new(cs_id.clone());
+        for (hg_cs_id, _) in changesets {
             futs.push(
                 self.hook_manager
                     .run_changeset_hooks_for_bookmark(
@@ -1128,7 +1128,7 @@ fn get_parent(
 ) -> impl Future<Item = Option<ChangesetHandle>, Error = Error> {
     let res = match p {
         None => None,
-        Some(p) => match map.get(&p) {
+        Some(p) => match map.get(&HgChangesetId::new(p)) {
             None => Some(ChangesetHandle::ready_cs_handle(
                 ctx,
                 Arc::new(repo.clone()),

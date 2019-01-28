@@ -9,7 +9,7 @@ use std::collections::HashSet;
 pub use failure::prelude::*;
 
 use bookmarks::Bookmark;
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 
 #[derive(Debug, Fail)]
@@ -26,7 +26,7 @@ pub enum ErrorKind {
         display = "Error while uploading data for changesets, hashes: {:?}",
         _0
     )]
-    WhileUploadingData(Vec<HgNodeHash>),
+    WhileUploadingData(Vec<HgChangesetId>),
     #[fail(
         display = "No common root found between: bookmark:{:?} roots:{:?}",
         _0, _1
