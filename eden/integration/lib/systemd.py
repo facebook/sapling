@@ -430,11 +430,8 @@ class _TransientUnmanagedSystemdUserServiceManager:
     This class does not work if a user systemd instance is already running.
     """
 
-    # pyre-ignore[13]: T38223649
     __cleanups: contextlib.ExitStack
-    # pyre-ignore[13]: T38223649
     __lifetime_duration: int
-    # pyre-ignore[13]: T38223649
     __xdg_runtime_dir: pathlib.Path
 
     def __init__(self, xdg_runtime_dir: pathlib.Path, lifetime_duration: int) -> None:

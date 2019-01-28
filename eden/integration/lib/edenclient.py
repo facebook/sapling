@@ -28,7 +28,6 @@ from .find_executables import FindExe
 class EdenFS(object):
     """Manages an instance of the eden fuse server."""
 
-    # pyre-ignore[13]: T38223649
     _eden_dir: str
 
     def __init__(

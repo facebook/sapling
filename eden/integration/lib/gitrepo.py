@@ -139,7 +139,7 @@ class GitRepository(repobase.Repository):
             args = ["commit", "-F", msgf.name]
             if amend:
                 args.append("--amend")
-            # pyre-ignore[18, 6]: Global name `git_commit_env` is undefined.
+            # pyre-ignore[18]: Global name `git_commit_env` is undefined.
             self.git(*args, env=git_commit_env)
 
         # Get the commit ID and return it

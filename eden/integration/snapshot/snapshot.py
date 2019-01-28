@@ -57,9 +57,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         # We put the home directory inside the transient directory as well.
         self.home_dir = self.transient_dir / "home"
 
-    # pyre-ignore[9]: T32649448
     def __enter__(self: T) -> T:
-        # pyre-ignore[7]: T38224037
         return self
 
     def __exit__(

@@ -128,7 +128,6 @@ class ExpectedFileSet(collections.abc.Mapping):
         key = Path(path)
         del self._entries[key]
 
-    # pyre-fixme[2]: Parameter `path` must have a type other than `Any`.
     def __contains__(self, path: object) -> bool:
         if isinstance(path, str):
             key = Path(path)
@@ -280,7 +279,6 @@ def _enumerate_directory_helper(
         # Current versions of typeshed don't know about the follow_symlinks argument,
         # so ignore type errors on the next line.
         stat_info: os.stat_result = entry.stat(follow_symlinks=False)  # type: ignore
-        # pyre-ignore[6]: T38224368
         entry_path: Path = rel_path / entry.name
         results[entry_path] = stat_info
         if stat_mod.S_ISDIR(stat_info.st_mode):

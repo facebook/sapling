@@ -4,6 +4,5 @@
   "push_blocking": true,
   "targets": [
     "//eden/..."
-  ],
-  "version": "e323569582d9a83056561bb9f38273ee68e81fe9"
+  ]
 }
