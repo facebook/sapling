@@ -94,7 +94,7 @@ pub struct PushrebaseSuccessResult {
 /// Returns updated bookmark value.
 pub fn do_pushrebase(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     config: PushrebaseParams,
     onto_bookmark: Bookmark,
     pushed_set: Vec<HgChangesetId>,
@@ -126,7 +126,8 @@ pub fn do_pushrebase(
                         /* reject_merges */ false,
                     ),
                     fetch_bonsai_range(ctx.clone(), &repo, root, head),
-                ).into_future()
+                )
+                    .into_future()
                     .and_then(move |(client_cf, client_bcs)| {
                         rebase_in_loop(
                             ctx,
@@ -145,7 +146,7 @@ pub fn do_pushrebase(
 
 fn rebase_in_loop(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     config: PushrebaseParams,
     onto_bookmark: Bookmark,
     head: ChangesetId,
@@ -190,7 +191,8 @@ fn rebase_in_loop(
                                 head,
                                 bookmark_val,
                                 onto_bookmark,
-                            ).map(move |update_res| match update_res {
+                            )
+                            .map(move |update_res| match update_res {
                                 Some(result) => Loop::Break(PushrebaseSuccessResult {
                                     head: result,
                                     retry_num,
@@ -201,27 +203,27 @@ fn rebase_in_loop(
                 }
             })
         },
-    ).boxify()
+    )
+    .boxify()
 }
 
 fn do_rebase(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     config: PushrebaseParams,
     root: ChangesetId,
     head: ChangesetId,
     bookmark_val: ChangesetId,
     onto_bookmark: Bookmark,
 ) -> impl Future<Item = Option<ChangesetId>, Error = PushrebaseError> {
-    create_rebased_changesets(ctx.clone(), repo.clone(), config, root, head, bookmark_val)
-        .and_then({
-            move |new_head| try_update_bookmark(ctx, &repo, &onto_bookmark, bookmark_val, new_head)
-        })
+    create_rebased_changesets(ctx.clone(), repo.clone(), config, root, head, bookmark_val).and_then(
+        { move |new_head| try_update_bookmark(ctx, &repo, &onto_bookmark, bookmark_val, new_head) },
+    )
 }
 
 fn fetch_bonsai_changesets(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     commit_ids: Vec<HgChangesetId>,
 ) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
     join_all(commit_ids.into_iter().map(move |hg_cs| {
@@ -279,7 +281,7 @@ fn find_roots(
 
 fn find_closest_root(
     ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
+    repo: &BlobRepo,
     config: PushrebaseParams,
     bookmark: Bookmark,
     roots: Vec<ChangesetId>,
@@ -301,7 +303,8 @@ fn find_closest_root(
                         None => err(PushrebaseError::Error(
                             ErrorKind::PushrebaseNoCommonRoot(bookmark.clone(), roots.clone())
                                 .into(),
-                        )).left_future(),
+                        ))
+                        .left_future(),
                         Some(id) => {
                             if roots.contains(&id) {
                                 ok(Loop::Break(id)).left_future()
@@ -324,7 +327,7 @@ fn find_closest_root(
 /// find changed files by comparing manifests of `ancestor` and `descendant`
 fn find_changed_files_between_manfiests(
     ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
+    repo: &BlobRepo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
@@ -363,12 +366,12 @@ fn find_changed_files_between_manfiests(
 // from larger generation number to smaller
 fn fetch_bonsai_range(
     ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
+    repo: &BlobRepo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
 ) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
     cloned!(repo);
-    RangeNodeStream::new(ctx.clone(), &repo, ancestor, descendant)
+    RangeNodeStream::new(ctx.clone(), &Arc::new(repo.clone()), ancestor, descendant)
         .map(move |id| repo.get_bonsai_changeset(ctx.clone(), id))
         .buffered(100)
         .collect()
@@ -377,13 +380,13 @@ fn fetch_bonsai_range(
 
 fn find_changed_files(
     ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
+    repo: &BlobRepo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
     reject_merges: bool,
 ) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
     cloned!(repo);
-    RangeNodeStream::new(ctx.clone(), &repo, ancestor, descendant)
+    RangeNodeStream::new(ctx.clone(), &Arc::new(repo.clone()), ancestor, descendant)
         .map({
             cloned!(ctx, repo);
             move |bcs_id| {
@@ -402,10 +405,11 @@ fn find_changed_files(
                 .map(move |(id, bcs)| {
                     let parents: Vec<_> = bcs.parents().collect();
                     match *parents {
-                        [] | [_] => ok(bcs.file_changes()
+                        [] | [_] => ok(bcs
+                            .file_changes()
                             .map(|(path, _)| path.clone())
                             .collect::<Vec<MPath>>())
-                            .left_future(),
+                        .left_future(),
                         [p0_id, p1_id] => {
                             if reject_merges {
                                 return err(PushrebaseError::RebaseOverMerge).left_future();
@@ -414,10 +418,11 @@ fn find_changed_files(
                                 (Some(_), Some(_)) => {
                                     // both parents are in the rebase set, so we can just take
                                     // filechanges from bonsai changeset
-                                    ok(bcs.file_changes()
+                                    ok(bcs
+                                        .file_changes()
                                         .map(|(path, _)| path.clone())
                                         .collect::<Vec<MPath>>())
-                                        .left_future()
+                                    .left_future()
                                 }
                                 (Some(p_id), None) | (None, Some(p_id)) => {
                                     // one of the parents is not in the rebase set, to calculate
@@ -428,7 +433,8 @@ fn find_changed_files(
                                         &repo,
                                         id,
                                         *p_id,
-                                    ).right_future()
+                                    )
+                                    .right_future()
                                 }
                                 (None, None) => panic!(
                                     "`RangeNodeStream` produced invalid result for: ({}, {})",
@@ -505,7 +511,7 @@ fn intersect_changed_files(
 
 fn get_bookmark_value(
     ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
+    repo: &BlobRepo,
     bookmark_name: &Bookmark,
 ) -> impl Future<Item = ChangesetId, Error = PushrebaseError> {
     repo.get_bonsai_bookmark(ctx, bookmark_name)
@@ -522,7 +528,7 @@ fn get_bookmark_value(
 
 fn create_rebased_changesets(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     config: PushrebaseParams,
     root: ChangesetId,
     head: ChangesetId,
@@ -537,7 +543,7 @@ fn create_rebased_changesets(
 
         // rebased_set already sorted in reverse topological order, which guarantees
         // that all required nodes will be updated by the time they are needed
-        let mut remapping = hashmap!{ root => onto };
+        let mut remapping = hashmap! { root => onto };
         let mut rebased = Vec::new();
         for bcs_old in rebased_set {
             let id_old = bcs_old.get_changeset_id();
@@ -551,7 +557,7 @@ fn create_rebased_changesets(
 
         // XXX: This can potentially be slow for long stacks. To speed it up we can write
         // all bonsai changests at once
-        save_bonsai_changesets(rebased, ctx, (*repo).clone())
+        save_bonsai_changesets(rebased, ctx, repo)
             .map(move |_| remapping.get(&head).cloned().unwrap_or(head))
             .from_err()
             .right_future()
@@ -564,7 +570,8 @@ fn rebase_changeset(
     date: Option<&DateTime>,
 ) -> Result<BonsaiChangeset> {
     let mut bcs = bcs.into_mut();
-    bcs.parents = bcs.parents
+    bcs.parents = bcs
+        .parents
         .into_iter()
         .map(|p| remapping.get(&p).cloned().unwrap_or(p))
         .collect();
@@ -576,7 +583,8 @@ fn rebase_changeset(
 
     // Copy information in bonsai changeset contains a commit parent. So parent changes, then
     // copy information for all copied/moved files needs to be updated
-    bcs.file_changes = bcs.file_changes
+    bcs.file_changes = bcs
+        .file_changes
         .into_iter()
         .map(|(path, file_change_opt)| {
             (
@@ -601,11 +609,11 @@ fn rebase_changeset(
 // Order - from lowest generation number to highest
 fn find_rebased_set(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     root: ChangesetId,
     head: ChangesetId,
 ) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
-    RangeNodeStream::new(ctx.clone(), &repo, root, head)
+    RangeNodeStream::new(ctx.clone(), &Arc::new(repo.clone()), root, head)
         .map({
             cloned!(repo);
             move |bcs_id| repo.get_bonsai_changeset(ctx.clone(), bcs_id)
@@ -624,7 +632,7 @@ fn find_rebased_set(
 
 fn try_update_bookmark(
     ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
+    repo: &BlobRepo,
     bookmark_name: &Bookmark,
     old_value: ChangesetId,
     new_value: ChangesetId,
@@ -651,7 +659,8 @@ mod tests {
 
     fn set_bookmark(ctx: CoreContext, repo: BlobRepo, book: &Bookmark, cs_id: &str) {
         let head = HgChangesetId::from_str(cs_id).unwrap();
-        let head = repo.get_bonsai_from_hg(ctx.clone(), &head)
+        let head = repo
+            .get_bonsai_from_hg(ctx.clone(), &head)
             .wait()
             .unwrap()
             .unwrap();
@@ -672,7 +681,8 @@ mod tests {
             let repo = linear::getrepo(None);
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-            let p = repo.get_bonsai_from_hg(ctx.clone(), &root)
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), &root)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -684,11 +694,12 @@ mod tests {
                 parents,
                 store_files(
                     ctx.clone(),
-                    btreemap!{"file" => Some("content")},
+                    btreemap! {"file" => Some("content")},
                     repo.clone(),
                 ),
             );
-            let hg_cs = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+            let hg_cs = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                 .wait()
                 .unwrap();
 
@@ -700,7 +711,7 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            do_pushrebase(ctx, Arc::new(repo), Default::default(), book, vec![hg_cs])
+            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs])
                 .wait()
                 .expect("pushrebase failed");
         });
@@ -713,7 +724,8 @@ mod tests {
             let repo = linear::getrepo(None);
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-            let p = repo.get_bonsai_from_hg(ctx.clone(), &root)
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), &root)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -723,7 +735,7 @@ mod tests {
                 vec![p],
                 store_files(
                     ctx.clone(),
-                    btreemap!{"file" => Some("content")},
+                    btreemap! {"file" => Some("content")},
                     repo.clone(),
                 ),
             );
@@ -733,13 +745,13 @@ mod tests {
                 vec![bcs_id_1],
                 store_files(
                     ctx.clone(),
-                    btreemap!{"file2" => Some("content")},
+                    btreemap! {"file2" => Some("content")},
                     repo.clone(),
                 ),
             );
 
             assert_eq!(
-                find_changed_files(ctx.clone(), &Arc::new(repo.clone()), p, bcs_id_2, false)
+                find_changed_files(ctx.clone(), &repo.clone(), p, bcs_id_2, false)
                     .wait()
                     .unwrap(),
                 make_paths(&["file", "file2"]),
@@ -753,19 +765,16 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            let hg_cs_1 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+            let hg_cs_1 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
                 .wait()
                 .unwrap();
-            let hg_cs_2 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+            let hg_cs_2 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
                 .wait()
                 .unwrap();
-            do_pushrebase(
-                ctx,
-                Arc::new(repo),
-                Default::default(),
-                book,
-                vec![hg_cs_1, hg_cs_2],
-            ).wait()
+            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs_1, hg_cs_2])
+                .wait()
                 .expect("pushrebase failed");
         });
     }
@@ -777,7 +786,8 @@ mod tests {
             let repo = linear::getrepo(None);
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-            let p = repo.get_bonsai_from_hg(ctx.clone(), &root)
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), &root)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -787,7 +797,7 @@ mod tests {
                 vec![p],
                 store_files(
                     ctx.clone(),
-                    btreemap!{"file" => Some("content")},
+                    btreemap! {"file" => Some("content")},
                     repo.clone(),
                 ),
             );
@@ -800,11 +810,11 @@ mod tests {
                 repo.clone(),
             );
 
-            let file_changes = btreemap!{rename.0 => rename.1};
+            let file_changes = btreemap! {rename.0 => rename.1};
             let bcs_id_2 = create_commit(ctx.clone(), repo.clone(), vec![bcs_id_1], file_changes);
 
             assert_eq!(
-                find_changed_files(ctx.clone(), &Arc::new(repo.clone()), p, bcs_id_2, false)
+                find_changed_files(ctx.clone(), &repo.clone(), p, bcs_id_2, false)
                     .wait()
                     .unwrap(),
                 make_paths(&["file", "file_renamed"]),
@@ -818,19 +828,16 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            let hg_cs_1 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+            let hg_cs_1 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
                 .wait()
                 .unwrap();
-            let hg_cs_2 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+            let hg_cs_2 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
                 .wait()
                 .unwrap();
-            do_pushrebase(
-                ctx,
-                Arc::new(repo),
-                Default::default(),
-                book,
-                vec![hg_cs_1, hg_cs_2],
-            ).wait()
+            do_pushrebase(ctx, repo, Default::default(), book, vec![hg_cs_1, hg_cs_2])
+                .wait()
                 .expect("pushrebase failed");
         });
     }
@@ -854,20 +861,23 @@ mod tests {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = linear::getrepo(None);
-            let repo_arc = Arc::new(repo.clone());
             let config = PushrebaseParams::default();
 
-            let root0 = repo.get_bonsai_from_hg(
-                ctx.clone(),
-                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-            ).wait()
+            let root0 = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                )
+                .wait()
                 .unwrap()
                 .unwrap();
 
-            let root1 = repo.get_bonsai_from_hg(
-                ctx.clone(),
-                &HgChangesetId::from_str("607314ef579bd2407752361ba1b0c1729d08b281").unwrap(),
-            ).wait()
+            let root1 = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    &HgChangesetId::from_str("607314ef579bd2407752361ba1b0c1729d08b281").unwrap(),
+                )
+                .wait()
                 .unwrap()
                 .unwrap();
 
@@ -877,7 +887,7 @@ mod tests {
                 vec![root0],
                 store_files(
                     ctx.clone(),
-                    btreemap!{"f0" => Some("f0"), "files" => None},
+                    btreemap! {"f0" => Some("f0"), "files" => None},
                     repo.clone(),
                 ),
             );
@@ -885,13 +895,13 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 vec![bcs_id_1, root1],
-                store_files(ctx.clone(), btreemap!{"f1" => Some("f1")}, repo.clone()),
+                store_files(ctx.clone(), btreemap! {"f1" => Some("f1")}, repo.clone()),
             );
             let bcs_id_3 = create_commit(
                 ctx.clone(),
                 repo.clone(),
                 vec![bcs_id_2],
-                store_files(ctx.clone(), btreemap!{"f2" => Some("f2")}, repo.clone()),
+                store_files(ctx.clone(), btreemap! {"f2" => Some("f2")}, repo.clone()),
             );
 
             let book = Bookmark::new("master").unwrap();
@@ -901,10 +911,12 @@ mod tests {
                 &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
-            let bcs_id_master = repo.get_bonsai_from_hg(
-                ctx.clone(),
-                &HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
-            ).wait()
+            let bcs_id_master = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    &HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
+                )
+                .wait()
                 .unwrap()
                 .unwrap();
 
@@ -912,45 +924,49 @@ mod tests {
             assert_eq!(
                 find_closest_root(
                     ctx.clone(),
-                    &repo_arc,
+                    &repo,
                     config.clone(),
                     book.clone(),
                     vec![root0, root1]
-                ).wait()
-                    .unwrap(),
+                )
+                .wait()
+                .unwrap(),
                 root,
             );
 
             assert_eq!(
-                find_changed_files(ctx.clone(), &repo_arc, root, bcs_id_3, false)
+                find_changed_files(ctx.clone(), &repo, root, bcs_id_3, false)
                     .wait()
                     .unwrap(),
                 make_paths(&["f0", "f1", "f2"]),
             );
 
-            let hg_cs_1 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+            let hg_cs_1 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
                 .wait()
                 .unwrap();
-            let hg_cs_2 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+            let hg_cs_2 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
                 .wait()
                 .unwrap();
-            let hg_cs_3 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
+            let hg_cs_3 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
                 .wait()
                 .unwrap();
             let bcs_id_rebased = do_pushrebase(
                 ctx.clone(),
-                repo_arc.clone(),
+                repo.clone(),
                 config,
                 book,
                 vec![hg_cs_1, hg_cs_2, hg_cs_3],
-            ).wait()
-                .expect("pushrebase failed");
+            )
+            .wait()
+            .expect("pushrebase failed");
 
             // should only rebase {bcs2, bcs3}
-            let rebased =
-                find_rebased_set(ctx, repo_arc.clone(), bcs_id_master, bcs_id_rebased.head)
-                    .wait()
-                    .unwrap();
+            let rebased = find_rebased_set(ctx, repo, bcs_id_master, bcs_id_rebased.head)
+                .wait()
+                .unwrap();
             assert_eq!(rebased.len(), 2);
             let bcs2 = &rebased[0];
             let bcs3 = &rebased[1];
@@ -964,7 +980,7 @@ mod tests {
             // bcs2 parents cotains old bcs1 and old master bookmark
             assert_eq!(
                 bcs2.parents().cloned().collect::<HashSet<_>>(),
-                hashset!{ bcs_id_1, bcs_id_master },
+                hashset! { bcs_id_1, bcs_id_master },
             );
         });
     }
@@ -974,10 +990,12 @@ mod tests {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = linear::getrepo(None);
-            let root = repo.get_bonsai_from_hg(
-                ctx.clone(),
-                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-            ).wait()
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                )
+                .wait()
                 .unwrap()
                 .unwrap();
 
@@ -985,7 +1003,7 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 vec![root],
-                store_files(ctx.clone(), btreemap!{"f0" => Some("f0")}, repo.clone()),
+                store_files(ctx.clone(), btreemap! {"f0" => Some("f0")}, repo.clone()),
             );
             let bcs_id_2 = create_commit(
                 ctx.clone(),
@@ -993,7 +1011,7 @@ mod tests {
                 vec![bcs_id_1],
                 store_files(
                     ctx.clone(),
-                    btreemap!{"9/file" => Some("file")},
+                    btreemap! {"9/file" => Some("file")},
                     repo.clone(),
                 ),
             );
@@ -1001,7 +1019,7 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 vec![bcs_id_2],
-                store_files(ctx.clone(), btreemap!{"f1" => Some("f1")}, repo.clone()),
+                store_files(ctx.clone(), btreemap! {"f1" => Some("f1")}, repo.clone()),
             );
 
             let book = Bookmark::new("master").unwrap();
@@ -1012,32 +1030,34 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            let hg_cs_1 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+            let hg_cs_1 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
                 .wait()
                 .unwrap();
-            let hg_cs_2 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+            let hg_cs_2 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
                 .wait()
                 .unwrap();
-            let hg_cs_3 = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
+            let hg_cs_3 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
                 .wait()
                 .unwrap();
             let result = do_pushrebase(
                 ctx,
-                Arc::new(repo),
+                repo,
                 Default::default(),
                 book,
                 vec![hg_cs_1, hg_cs_2, hg_cs_3],
-            ).wait();
+            )
+            .wait();
             match result {
                 Err(PushrebaseError::Conflicts(conflicts)) => {
                     assert_eq!(
                         conflicts,
-                        vec![
-                            PushrebaseConflict {
-                                left: MPath::new("9").unwrap(),
-                                right: MPath::new("9/file").unwrap(),
-                            },
-                        ],
+                        vec![PushrebaseConflict {
+                            left: MPath::new("9").unwrap(),
+                            right: MPath::new("9/file").unwrap(),
+                        },],
                     );
                 }
                 _ => panic!("push-rebase should have failed with conflict"),
@@ -1050,10 +1070,12 @@ mod tests {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = linear::getrepo(None);
-            let root = repo.get_bonsai_from_hg(
-                ctx.clone(),
-                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-            ).wait()
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                )
+                .wait()
                 .unwrap()
                 .unwrap();
 
@@ -1061,19 +1083,27 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 vec![root],
-                store_files(ctx.clone(), btreemap!{"FILE" => Some("file")}, repo.clone()),
+                store_files(
+                    ctx.clone(),
+                    btreemap! {"FILE" => Some("file")},
+                    repo.clone(),
+                ),
             );
             let bcs_id_2 = create_commit(
                 ctx.clone(),
                 repo.clone(),
                 vec![bcs_id_1],
-                store_files(ctx.clone(), btreemap!{"FILE" => None}, repo.clone()),
+                store_files(ctx.clone(), btreemap! {"FILE" => None}, repo.clone()),
             );
             let bcs_id_3 = create_commit(
                 ctx.clone(),
                 repo.clone(),
                 vec![bcs_id_2],
-                store_files(ctx.clone(), btreemap!{"file" => Some("file")}, repo.clone()),
+                store_files(
+                    ctx.clone(),
+                    btreemap! {"file" => Some("file")},
+                    repo.clone(),
+                ),
             );
             let hgcss = vec![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
@@ -1095,7 +1125,7 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            do_pushrebase(ctx, Arc::new(repo), Default::default(), book, hgcss)
+            do_pushrebase(ctx, repo, Default::default(), book, hgcss)
                 .wait()
                 .expect("push-rebase failed");
         })
@@ -1106,10 +1136,12 @@ mod tests {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = linear::getrepo(None);
-            let root = repo.get_bonsai_from_hg(
-                ctx.clone(),
-                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-            ).wait()
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                )
+                .wait()
                 .unwrap()
                 .unwrap();
 
@@ -1119,7 +1151,7 @@ mod tests {
                 vec![root],
                 store_files(
                     ctx.clone(),
-                    btreemap!{"DIR/a" => Some("a"), "DIR/b" => Some("b")},
+                    btreemap! {"DIR/a" => Some("a"), "DIR/b" => Some("b")},
                     repo.clone(),
                 ),
             );
@@ -1129,7 +1161,7 @@ mod tests {
                 vec![bcs_id_1],
                 store_files(
                     ctx.clone(),
-                    btreemap!{"dir/a" => Some("a"), "DIR/a" => None, "DIR/b" => None},
+                    btreemap! {"dir/a" => Some("a"), "DIR/a" => None, "DIR/b" => None},
                     repo.clone(),
                 ),
             );
@@ -1150,7 +1182,7 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            do_pushrebase(ctx, Arc::new(repo), Default::default(), book, hgcss)
+            do_pushrebase(ctx, repo, Default::default(), book, hgcss)
                 .wait()
                 .expect("push-rebase failed");
         })
@@ -1161,10 +1193,12 @@ mod tests {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = linear::getrepo(None);
-            let root = repo.get_bonsai_from_hg(
-                ctx.clone(),
-                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-            ).wait()
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                )
+                .wait()
                 .unwrap()
                 .unwrap();
 
@@ -1179,7 +1213,7 @@ mod tests {
                     vec![head],
                     store_files(
                         ctx.clone(),
-                        btreemap!{file.as_ref() => Some(content.as_ref())},
+                        btreemap! {file.as_ref() => Some(content.as_ref())},
                         repo.clone(),
                     ),
                 );
@@ -1191,8 +1225,9 @@ mod tests {
                 bcss.iter()
                     .map(|bcs| repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs))
                     .collect::<Vec<_>>(),
-            ).wait()
-                .unwrap();
+            )
+            .wait()
+            .unwrap();
             let book = Bookmark::new("master").unwrap();
             set_bookmark(
                 ctx.clone(),
@@ -1200,28 +1235,31 @@ mod tests {
                 &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
-            let repo_arc = Arc::new(repo.clone());
+            let repo_arc = repo.clone();
             do_pushrebase(
                 ctx.clone(),
                 repo_arc.clone(),
                 Default::default(),
                 book.clone(),
                 hgcss,
-            ).wait()
-                .expect("pushrebase failed");
+            )
+            .wait()
+            .expect("pushrebase failed");
 
             let bcs = create_commit(
                 ctx.clone(),
                 repo.clone(),
                 vec![root],
-                store_files(ctx.clone(), btreemap!{"file" => Some("data")}, repo.clone()),
+                store_files(
+                    ctx.clone(),
+                    btreemap! {"file" => Some("data")},
+                    repo.clone(),
+                ),
             );
-            let hgcss = vec![
-                repo_arc
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                    .wait()
-                    .unwrap(),
-            ];
+            let hgcss = vec![repo_arc
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
+                .wait()
+                .unwrap()];
 
             // try rebase with small recursion limit
             let config = PushrebaseParams {
@@ -1234,7 +1272,8 @@ mod tests {
                 config,
                 book.clone(),
                 hgcss.clone(),
-            ).wait();
+            )
+            .wait();
             match result {
                 Err(PushrebaseError::RootTooFarBehind) => (),
                 _ => panic!("push-rebase should have failed because root too far behind"),
@@ -1255,10 +1294,12 @@ mod tests {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = linear::getrepo(None);
-            let root = repo.get_bonsai_from_hg(
-                ctx.clone(),
-                &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-            ).wait()
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+                )
+                .wait()
                 .unwrap()
                 .unwrap();
             let book = Bookmark::new("master").unwrap();
@@ -1266,13 +1307,16 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 vec![root],
-                store_files(ctx.clone(), btreemap!{"file" => Some("data")}, repo.clone()),
+                store_files(
+                    ctx.clone(),
+                    btreemap! {"file" => Some("data")},
+                    repo.clone(),
+                ),
             );
-            let hgcss = vec![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                    .wait()
-                    .unwrap(),
-            ];
+            let hgcss = vec![repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
+                .wait()
+                .unwrap()];
 
             set_bookmark(
                 ctx.clone(),
@@ -1286,12 +1330,13 @@ mod tests {
             };
             let bcs_keep_date = do_pushrebase(
                 ctx.clone(),
-                Arc::new(repo.clone()),
+                repo.clone(),
                 config,
                 book.clone(),
                 hgcss.clone(),
-            ).wait()
-                .expect("push-rebase failed");
+            )
+            .wait()
+            .expect("push-rebase failed");
 
             set_bookmark(
                 ctx.clone(),
@@ -1303,16 +1348,17 @@ mod tests {
                 rewritedates: true,
                 ..Default::default()
             };
-            let bcs_rewrite_date =
-                do_pushrebase(ctx.clone(), Arc::new(repo.clone()), config, book, hgcss)
-                    .wait()
-                    .expect("push-rebase failed");
+            let bcs_rewrite_date = do_pushrebase(ctx.clone(), repo.clone(), config, book, hgcss)
+                .wait()
+                .expect("push-rebase failed");
 
             let bcs = repo.get_bonsai_changeset(ctx.clone(), bcs).wait().unwrap();
-            let bcs_keep_date = repo.get_bonsai_changeset(ctx.clone(), bcs_keep_date.head)
+            let bcs_keep_date = repo
+                .get_bonsai_changeset(ctx.clone(), bcs_keep_date.head)
                 .wait()
                 .unwrap();
-            let bcs_rewrite_date = repo.get_bonsai_changeset(ctx.clone(), bcs_rewrite_date.head)
+            let bcs_rewrite_date = repo
+                .get_bonsai_changeset(ctx.clone(), bcs_rewrite_date.head)
                 .wait()
                 .unwrap();
 
@@ -1326,10 +1372,12 @@ mod tests {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
             let repo = many_files_dirs::getrepo(None);
-            let root = repo.get_bonsai_from_hg(
-                ctx.clone(),
-                &HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap(),
-            ).wait()
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    &HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap(),
+                )
+                .wait()
                 .unwrap()
                 .unwrap();
 
@@ -1339,15 +1387,14 @@ mod tests {
                 vec![root],
                 store_files(
                     ctx.clone(),
-                    btreemap!{"Dir1/file_1_in_dir1" => Some("data")},
+                    btreemap! {"Dir1/file_1_in_dir1" => Some("data")},
                     repo.clone(),
                 ),
             );
-            let hgcss = vec![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                    .wait()
-                    .unwrap(),
-            ];
+            let hgcss = vec![repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
+                .wait()
+                .unwrap()];
 
             let book = Bookmark::new("master").unwrap();
             set_bookmark(
@@ -1357,7 +1404,7 @@ mod tests {
                 "2f866e7e549760934e31bf0420a873f65100ad63",
             );
 
-            let result = do_pushrebase(ctx, Arc::new(repo), Default::default(), book, hgcss).wait();
+            let result = do_pushrebase(ctx, repo, Default::default(), book, hgcss).wait();
             match result {
                 Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
                     assert_eq!(conflict, MPath::new("Dir1/file_1_in_dir1").unwrap())
@@ -1405,16 +1452,19 @@ mod tests {
 
             let root_hg =
                 &HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-            let root_cs = repo.get_changeset_by_changesetid(ctx.clone(), &root_hg)
+            let root_cs = repo
+                .get_changeset_by_changesetid(ctx.clone(), &root_hg)
                 .wait()
                 .unwrap();
-            let root_1_id = repo.find_file_in_manifest(ctx.clone(), &path_1, *root_cs.manifestid())
+            let root_1_id = repo
+                .find_file_in_manifest(ctx.clone(), &path_1, *root_cs.manifestid())
                 .wait()
                 .unwrap()
                 .unwrap();
 
             // crate filechange with with same content as "1" but set executable bit
-            let root = repo.get_bonsai_from_hg(ctx.clone(), root_hg)
+            let root = repo
+                .get_bonsai_from_hg(ctx.clone(), root_hg)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -1438,13 +1488,12 @@ mod tests {
                 ctx.clone(),
                 repo.clone(),
                 vec![root],
-                btreemap!{path_1.clone() => Some(file_1_exec.clone())},
+                btreemap! {path_1.clone() => Some(file_1_exec.clone())},
             );
-            let hgcss = vec![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                    .wait()
-                    .unwrap(),
-            ];
+            let hgcss = vec![repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
+                .wait()
+                .unwrap()];
 
             let book = Bookmark::new("master").unwrap();
             set_bookmark(
@@ -1454,15 +1503,11 @@ mod tests {
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             );
 
-            let result = do_pushrebase(
-                ctx.clone(),
-                Arc::new(repo.clone()),
-                Default::default(),
-                book,
-                hgcss,
-            ).wait()
+            let result = do_pushrebase(ctx.clone(), repo.clone(), Default::default(), book, hgcss)
+                .wait()
                 .expect("pushrebase failed");
-            let result_bcs = repo.get_bonsai_changeset(ctx.clone(), result.head)
+            let result_bcs = repo
+                .get_bonsai_changeset(ctx.clone(), result.head)
                 .wait()
                 .unwrap();
             let file_1_result = result_bcs
@@ -1473,17 +1518,19 @@ mod tests {
                 .unwrap();
             assert_eq!(file_1_result, &file_1_exec);
 
-            let result_hg = repo.get_hg_from_bonsai_changeset(ctx.clone(), result.head)
+            let result_hg = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
                 .wait()
                 .unwrap();
-            let result_cs = repo.get_changeset_by_changesetid(ctx.clone(), &result_hg)
+            let result_cs = repo
+                .get_changeset_by_changesetid(ctx.clone(), &result_hg)
                 .wait()
                 .unwrap();
-            let result_1_id =
-                repo.find_file_in_manifest(ctx.clone(), &path_1, *result_cs.manifestid())
-                    .wait()
-                    .unwrap()
-                    .unwrap();
+            let result_1_id = repo
+                .find_file_in_manifest(ctx.clone(), &path_1, *result_cs.manifestid())
+                .wait()
+                .unwrap()
+                .unwrap();
 
             // `result_1_id` should be equal to `root_1_id`, because executable flag
             // is not a part of file envelope
@@ -1498,7 +1545,8 @@ mod tests {
             let repo = linear::getrepo(None);
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-            let p = repo.get_bonsai_from_hg(ctx.clone(), &root)
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), &root)
                 .wait()
                 .unwrap()
                 .unwrap();
@@ -1522,18 +1570,19 @@ mod tests {
                     parents.clone(),
                     store_files(
                         ctx.clone(),
-                        btreemap!{ f.as_ref() => Some("content")},
+                        btreemap! { f.as_ref() => Some("content")},
                         repo.clone(),
                     ),
                 );
-                let hg_cs = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                let hg_cs = repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                     .wait()
                     .unwrap();
 
                 let fut = spawn_future(
                     do_pushrebase(
                         ctx.clone(),
-                        Arc::new(repo.clone()),
+                        repo.clone(),
                         Default::default(),
                         book.clone(),
                         vec![hg_cs],

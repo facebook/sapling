@@ -813,7 +813,7 @@ impl HgCommands for RepoClient {
 
         let res = bundle2_resolver::resolve(
             ctx.with_logger_kv(o!("command" => "unbundle")),
-            Arc::new(self.repo.blobrepo().clone()),
+            self.repo.blobrepo().clone(),
             self.repo.pushrebase_params().clone(),
             heads,
             stream,

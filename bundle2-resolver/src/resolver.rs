@@ -57,7 +57,7 @@ type UploadedChangesets = HashMap<HgChangesetId, ChangesetHandle>;
 /// It returns a Future that contains the response that should be send back to the requester.
 pub fn resolve(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     pushrebase: PushrebaseParams,
     _heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
@@ -410,12 +410,12 @@ struct BonsaiBookmarkPush {
 impl BonsaiBookmarkPush {
     fn new(
         ctx: CoreContext,
-        repo: &Arc<BlobRepo>,
+        repo: &BlobRepo,
         bookmark_push: BookmarkPush,
     ) -> impl Future<Item = BonsaiBookmarkPush, Error = Error> + Send {
         fn bonsai_from_hg_opt(
             ctx: CoreContext,
-            repo: &Arc<BlobRepo>,
+            repo: &BlobRepo,
             cs_id: Option<HgChangesetId>,
         ) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
             match cs_id {
@@ -449,7 +449,7 @@ impl BonsaiBookmarkPush {
 #[derive(Clone)]
 struct Bundle2Resolver {
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     pushrebase: PushrebaseParams,
     hook_manager: Arc<HookManager>,
 }
@@ -457,7 +457,7 @@ struct Bundle2Resolver {
 impl Bundle2Resolver {
     fn new(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         pushrebase: PushrebaseParams,
         hook_manager: Arc<HookManager>,
     ) -> Self {
@@ -563,8 +563,8 @@ impl Bundle2Resolver {
                         .and_then(move |changesets| {
                             upload_hg_blobs(
                                 ctx.clone(),
-                                repo.clone(),
-                                convert_to_revlog_filelog(ctx.clone(), repo, f),
+                                Arc::new(repo.clone()),
+                                convert_to_revlog_filelog(ctx.clone(), Arc::new(repo), f),
                                 UploadBlobsType::EnsureNoDuplicates,
                             )
                             .map(move |upload_map| {
@@ -665,7 +665,7 @@ impl Bundle2Resolver {
                 Some(Bundle2Item::B2xTreegroup2(_, parts))
                 | Some(Bundle2Item::B2xRebasePack(_, parts)) => upload_hg_blobs(
                     ctx,
-                    repo,
+                    Arc::new(repo),
                     TreemanifestBundle2Parser::new(parts),
                     UploadBlobsType::IgnoreDuplicates,
                 )
@@ -735,7 +735,7 @@ impl Bundle2Resolver {
 
         fn upload_changeset(
             ctx: CoreContext,
-            repo: Arc<BlobRepo>,
+            repo: BlobRepo,
             scuba_logger: ScubaSampleBuilder,
             node: HgChangesetId,
             revlog_cs: RevlogChangeset,
@@ -896,7 +896,7 @@ impl Bundle2Resolver {
         // Send to the client both pushrebased commit and current "onto" bookmark. Normally they
         // should be the same, however they might be different if bookmark
         // suddenly moved before current pushrebase finished.
-        let repo: BlobRepo = (*self.repo).clone();
+        let repo = self.repo.clone();
         let common = commonheads.heads;
         let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
 
@@ -1180,7 +1180,7 @@ impl NewBlobs {
         manifests: &Manifests,
         filelogs: &Filelogs,
         content_blobs: &ContentBlobs,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
     ) -> Result<Self> {
         if manifest_root_id.into_nodehash() == NULL_HASH {
             // If manifest root id is NULL_HASH then there is no content in this changest
