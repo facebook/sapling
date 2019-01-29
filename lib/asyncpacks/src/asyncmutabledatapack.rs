@@ -11,7 +11,7 @@ use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
 use cloned::cloned;
-use revisionstore::{key::Key, DataPackVersion, Delta, Metadata, MutableDataPack, MutablePack};
+use revisionstore::{DataPackVersion, Delta, Metadata, MutableDataPack, MutablePack};
 
 struct AsyncMutableDataPackInner {
     data: MutableDataPack,
@@ -98,7 +98,7 @@ mod tests {
     use tempfile::tempdir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::{DataPack, DataStore};
+    use revisionstore::{DataPack, DataStore, Key};
 
     #[test]
     fn test_add() {

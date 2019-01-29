@@ -7,7 +7,7 @@ use futures::future::poll_fn;
 use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
-use revisionstore::{key::Key, DataPack, Delta};
+use revisionstore::DataPack;
 
 use crate::asyncdatastore::AsyncDataStore;
 
@@ -34,7 +34,7 @@ mod tests {
     use tempfile::TempDir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::{DataPackVersion, Metadata, MutableDataPack, MutablePack};
+    use revisionstore::{DataPackVersion, Delta, Key, Metadata, MutableDataPack, MutablePack};
     use types::node::Node;
 
     fn make_datapack(
