@@ -18,6 +18,13 @@ import struct
 import sys
 import time
 
+
+try:
+    from edenscm import compat
+except ImportError:
+    pass
+
+
 import mercurial.error
 import mercurial.hg
 import mercurial.node

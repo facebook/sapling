@@ -46,7 +46,7 @@
 
 #if EDEN_HAVE_HG_TREEMANIFEST
 // Needed for MissingKeyError
-#include "hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
+#include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
 #endif // EDEN_HAVE_HG_TREEMANIFEST
 
 using folly::ByteRange;

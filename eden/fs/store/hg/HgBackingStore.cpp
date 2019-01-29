@@ -31,8 +31,8 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #if EDEN_HAVE_HG_TREEMANIFEST
-#include "hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
-#include "hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
+#include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//scm/hg:datapack
+#include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//scm/hg:datapack
 #ifndef EDEN_WIN_NO_RUST_DATAPACK
 #include "scm/hg/lib/configparser/ConfigParser.h"
 #endif
