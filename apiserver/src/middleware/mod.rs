@@ -5,8 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 mod response_time;
-mod slogger;
 mod scuba;
+mod slogger;
 
 pub use self::scuba::ScubaMiddleware;
 pub use self::slogger::SLogger;

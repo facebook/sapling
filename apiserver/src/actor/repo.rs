@@ -8,9 +8,9 @@ use std::convert::TryInto;
 
 use bytes::Bytes;
 use failure::{err_msg, Error};
-use futures::{Future, IntoFuture};
 use futures::future::join_all;
 use futures::sync::oneshot;
+use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use http::uri::Uri;
 use slog::Logger;
@@ -317,13 +317,11 @@ impl MononokeRepo {
         req: BatchRequest,
         lfs_url: Option<Uri>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let lfs_address = try_boxfuture!(
-            lfs_url.ok_or(ErrorKind::InvalidInput(
-                "Lfs batch request is not allowed, host address is missing in HttpRequest header"
-                    .to_string(),
-                None
-            ))
-        );
+        let lfs_address = try_boxfuture!(lfs_url.ok_or(ErrorKind::InvalidInput(
+            "Lfs batch request is not allowed, host address is missing in HttpRequest header"
+                .to_string(),
+            None
+        )));
 
         let response = build_response(repo_name, req, lfs_address);
         Ok(MononokeRepoResponse::LfsBatch { response })

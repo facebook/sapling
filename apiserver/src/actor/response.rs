@@ -56,12 +56,8 @@ impl Responder for MononokeRepoResponse {
 
         match self {
             GetRawFile { content } | GetBlobContent { content } => Ok(binary_response(content)),
-            ListDirectory { files } => {
-                Json(files.collect::<Vec<_>>()).respond_to(req)
-            }
-            GetTree{files}=> {
-                Json(files).respond_to(req)
-            }
+            ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
+            GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),
             IsAncestor { answer } => Ok(binary_response({
                 if answer {

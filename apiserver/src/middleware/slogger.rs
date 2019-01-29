@@ -4,9 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use actix_web::{HttpRequest, HttpResponse};
 use actix_web::error::Result;
 use actix_web::middleware::{Finished, Middleware, Started};
+use actix_web::{HttpRequest, HttpResponse};
 use slog::Logger;
 
 use super::response_time::ResponseTime;
@@ -17,7 +17,7 @@ pub struct SLogger {
 
 impl SLogger {
     pub fn new(logger: Logger) -> SLogger {
-        SLogger { logger: logger }
+        SLogger { logger }
     }
 }
 

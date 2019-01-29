@@ -480,9 +480,7 @@ fn main() -> Result<()> {
             .middleware(middleware::SLogger::new(actix_logger.clone()))
             .middleware({
                 if with_scuba {
-                    middleware::ScubaMiddleware::new(
-                        scuba_table.clone(),
-                    )
+                    middleware::ScubaMiddleware::new(scuba_table.clone())
                 } else {
                     middleware::ScubaMiddleware::new(None)
                 }

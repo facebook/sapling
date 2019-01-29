@@ -20,8 +20,10 @@ use http::uri::Uri;
 
 #[derive(Debug, Serialize, Deserialize)]
 enum OperationType {
-    #[serde(rename = "upload")] Upload,
-    #[serde(rename = "download")] Download,
+    #[serde(rename = "upload")]
+    Upload,
+    #[serde(rename = "download")]
+    Download,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -63,8 +65,10 @@ struct ActionDesc {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 enum Action {
-    #[serde(rename = "upload")] Upload(ActionDesc),
-    #[serde(rename = "download")] Download(ActionDesc),
+    #[serde(rename = "upload")]
+    Upload(ActionDesc),
+    #[serde(rename = "download")]
+    Download(ActionDesc),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -117,7 +121,8 @@ fn get_response_obj(
 }
 
 pub fn build_response(repo: String, req: BatchRequest, address: Uri) -> BatchResponse {
-    let response_objects: Vec<ResponseObject> = req.objects
+    let response_objects: Vec<ResponseObject> = req
+        .objects
         .iter()
         .map(|file| match req.operation {
             OperationType::Upload => get_response_obj(&repo, file, &address, &get_upload_obj),

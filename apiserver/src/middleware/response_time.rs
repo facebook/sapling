@@ -6,8 +6,8 @@
 
 use std::time::Instant;
 
-use actix_web::HttpRequest;
 use actix_web::middleware::Middleware;
+use actix_web::HttpRequest;
 use time_ext::DurationExt;
 
 #[derive(Clone)]

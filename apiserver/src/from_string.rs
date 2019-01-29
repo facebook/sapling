@@ -17,7 +17,7 @@ use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use mononoke_types::{MPath, hash::Sha256};
+use mononoke_types::{hash::Sha256, MPath};
 
 use errors::ErrorKind;
 

@@ -7,9 +7,9 @@
 use std::fmt;
 
 use actix::MailboxError;
-use actix_web::HttpResponse;
 use actix_web::error::ResponseError;
 use actix_web::http::StatusCode;
+use actix_web::HttpResponse;
 use failure::{Error, Fail};
 use futures::Canceled;
 
@@ -64,7 +64,8 @@ impl ErrorKind {
             NotFound(..) | InvalidInput(..) | InternalError(_) => {
                 ErrorResponse::APIErrorResponse(APIErrorResponse {
                     message: self.to_string(),
-                    causes: self.causes()
+                    causes: self
+                        .causes()
                         .skip(1)
                         .map(|cause| cause.to_string())
                         .collect(),
@@ -112,7 +113,8 @@ impl ResponseError for ErrorKind {
                 ErrorKind::InternalError(err) => err_downcast_ref! {
                     err,
                     err: ErrorKind => err,
-                }.unwrap_or(self),
+                }
+                .unwrap_or(self),
                 _ => self,
             }
         };
@@ -186,9 +188,9 @@ impl From<ReachabilityIndexError> for ErrorKind {
             CheckExistenceFailed(s, t) => {
                 ErrorKind::NotFound(s.clone(), Some(CheckExistenceFailed(s, t).into()))
             }
-            e @ GenerationFetchFailed(_) | e @ ParentsFetchFailed(_) | e @ UknownSkiplistThriftEncoding => {
-                ErrorKind::InternalError(e.into())
-            }
+            e @ GenerationFetchFailed(_)
+            | e @ ParentsFetchFailed(_)
+            | e @ UknownSkiplistThriftEncoding => ErrorKind::InternalError(e.into()),
         }
     }
 }
