@@ -20,11 +20,11 @@ from fb303.ttypes import fb_status
 
 from . import (
     check_bind_mounts,
+    check_filesystems,
     check_hg,
     check_os,
     check_rogue_edenfs,
     check_stale_mounts,
-    check_using_nfs,
     check_watchman,
 )
 from .problem import (
@@ -137,6 +137,7 @@ def run_edenfs_not_healthy_checks(
     check_stale_mounts.check_for_stale_mounts(tracker, mount_table)
 
     configured_mounts = instance.get_mount_paths()
+    check_filesystems.check_disk_usage(tracker, list(configured_mounts), instance)
     if configured_mounts:
         tracker.add_problem(EdenfsNotHealthy())
 
@@ -228,9 +229,12 @@ def run_normal_checks(
 
         checkout_info.configured_state_dir = configured_checkout.state_dir
 
-    check_using_nfs.check_eden_directory(tracker, instance)
+    check_filesystems.check_eden_directory(tracker, instance)
     check_stale_mounts.check_for_stale_mounts(tracker, mount_table)
     check_edenfs_version(tracker, instance)
+    check_filesystems.check_disk_usage(
+        tracker, list(instance.get_mount_paths()), instance
+    )
 
     watchman_info = check_watchman.pre_check()
 
@@ -323,7 +327,7 @@ def check_running_mount(
         # Most of them rely on values from the configuration.
         return
 
-    check_using_nfs.check_using_nfs_path(tracker, checkout.path)
+    check_filesystems.check_using_nfs_path(tracker, checkout.path)
     check_watchman.check_active_mount(tracker, str(checkout.path), watchman_info)
     check_bind_mounts.check_bind_mounts(tracker, checkout, mount_table, fs_util)
 
