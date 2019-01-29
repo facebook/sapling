@@ -23,17 +23,6 @@ from typing import (
 from .configinterpolator import EdenConfigInterpolator
 
 
-# Convert the passed EdenConfigParser to a raw dictionary (without interpolation)
-# Useful for updating configuration files in different formats.
-def config_to_raw_dict(config: "EdenConfigParser") -> collections.OrderedDict:
-    rslt = collections.OrderedDict()  # type: collections.OrderedDict
-    for section in config.sections():
-        rslt[section] = collections.OrderedDict()
-        for k, v in config.items(section, raw=True):
-            rslt[section][k] = v
-    return rslt
-
-
 ConfigValue = str
 ConfigSectionName = str
 ConfigOptionName = str
@@ -57,40 +46,37 @@ class EdenConfigParser:
             for option, value in options.items():
                 self._sections[section][option] = self._make_storable_value(value)
 
+    # Convert the passed EdenConfigParser to a raw dictionary (without
+    # interpolation)
+    # Useful for updating configuration files in different formats.
+    def to_raw_dict(self) -> collections.OrderedDict:
+        rslt = collections.OrderedDict()  # type: collections.OrderedDict
+        for section, options in self._sections.items():
+            rslt[section] = collections.OrderedDict(options)
+        return rslt
+
     def sections(self) -> List[ConfigSectionName]:
         return list(self._sections.keys())
 
-    def items(
-        self, section: ConfigSectionName, raw: bool = False
-    ) -> List[Tuple[ConfigOptionName, ConfigValue]]:
+    def get_section_str_to_str(self, section: ConfigSectionName) -> Mapping[str, str]:
         options = self._sections.get(section)
         if options is None:
             raise configparser.NoSectionError(section)
-        return [
-            (
-                option,
-                self._interpolate_value_if_necessary(
-                    raw=raw, section=section, option=option, value=value
-                ),
-            )
+        return {
+            option: self._interpolate_value(section=section, option=option, value=value)
             for option, value in options.items()
-        ]
+        }
 
-    def get(
-        self,
-        section: ConfigSectionName,
-        option: ConfigOptionName,
-        fallback: ConfigValue,
-    ) -> ConfigValue:
+    def get_str(
+        self, section: ConfigSectionName, option: ConfigOptionName, default: str
+    ) -> str:
         options = self._sections.get(section)
         if options is None:
-            return fallback
+            return default
         if option not in options:
-            return fallback
+            return default
         value = options[option]
-        return self._interpolate_value_if_necessary(
-            raw=False, section=section, option=option, value=value
-        )
+        return self._interpolate_value(section=section, option=option, value=value)
 
     def has_section(self, section: ConfigSectionName) -> bool:
         return section in self._sections
@@ -115,18 +101,12 @@ class EdenConfigParser:
     ) -> MutableMapping[ConfigSectionName, Mapping[ConfigOptionName, ConfigValue]]:
         return {}
 
-    def _interpolate_value_if_necessary(
-        self,
-        raw: bool,
-        section: ConfigSectionName,
-        option: ConfigOptionName,
-        value: ConfigValue,
+    def _interpolate_value(
+        self, section: ConfigSectionName, option: ConfigOptionName, value: ConfigValue
     ) -> ConfigValue:
-        if not raw:
-            value = self._interpolator.before_get(
-                self._parser, section, option, value, self._defaults
-            )
-        return value
+        return self._interpolator.before_get(
+            self._parser, section, option, value, self._defaults
+        )
 
     def _make_storable_value(self, value: Any) -> ConfigValue:
         # TODO(strager): Avoid converting values to strings.

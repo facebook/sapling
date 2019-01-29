@@ -222,7 +222,7 @@ class EdenInstance:
     def get_config_value(self, key: str, default: str) -> str:
         parser = self._loadConfig()
         section, option = key.split(".", 1)
-        return parser.get(section, option, fallback=default)
+        return parser.get_str(section, option, default=default)
 
     def should_use_experimental_systemd_mode(self) -> bool:
         # TODO(T33122320): Delete this environment variable when systemd is properly
@@ -243,9 +243,9 @@ class EdenInstance:
 
     def print_full_config(self, file: typing.TextIO) -> None:
         parser = self._loadConfig()
-        data: Dict[str, Dict[str, str]] = {}
+        data: Dict[str, Mapping[str, str]] = {}
         for section in parser.sections():
-            data[section] = {k: v for k, v in parser.items(section)}
+            data[section] = parser.get_section_str_to_str(section)
         toml.dump(data, file)  # pyre-ignore[T39129461]
 
     def find_config_for_alias(self, alias: str) -> Optional[CheckoutConfig]:
@@ -265,30 +265,30 @@ class EdenInstance:
         if parser.has_section(bind_mounts_header):
             # Convert the EdenConfigParser section into a dict so it is JSON
             # serializable for the `eden info` command.
-            bind_mounts = dict(parser.items(bind_mounts_header))
+            bind_mounts = dict(parser.get_section_str_to_str(bind_mounts_header))
         else:
             bind_mounts = {}
 
-        scm_type = parser.get(repository_header, "type", fallback="")
+        scm_type = parser.get_str(repository_header, "type", default="")
         if not scm_type:
             raise Exception(f'repository "{alias}" missing key "type".')
         if scm_type not in SUPPORTED_REPOS:
             raise Exception(f'repository "{alias}" has unsupported type.')
 
-        path = parser.get(repository_header, "path", fallback="")
+        path = parser.get_str(repository_header, "path", default="")
         if not path:
             raise Exception(f'repository "{alias}" missing key "path".')
 
         default_revision = (
-            parser.get(repository_header, "default-revision", fallback="")
-            or parser.get("clone", "default-revision", fallback="")
+            parser.get_str(repository_header, "default-revision", default="")
+            or parser.get_str("clone", "default-revision", default="")
             or DEFAULT_REVISION[scm_type]
         )
 
         return CheckoutConfig(
             path=path,
             scm_type=scm_type,
-            hooks_path=parser.get(repository_header, "hooks", fallback="")
+            hooks_path=parser.get_str(repository_header, "hooks", default="")
             or self.get_default_hooks_path(),
             bind_mounts=bind_mounts,
             default_revision=default_revision,
@@ -972,7 +972,7 @@ class ConfigUpdater(object):
             "w", dir=dirname, prefix=prefix, delete=False
         )
         try:
-            toml_config = configutil.config_to_raw_dict(self.config)
+            toml_config = self.config.to_raw_dict()
             toml_data = toml.dumps(typing.cast(Mapping[str, Any], toml_config))
             tmpf.write(toml_data)
             tmpf.close()
