@@ -4,19 +4,20 @@
 // GNU General Public License version 2 or any later version.
 
 use failure::Fallible;
-use tempfile::NamedTempFile;
-
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::{fs::Permissions, path::PathBuf};
+use tempfile::NamedTempFile;
 
 /// Mark the permission as read-only for user-group-other.
+#[cfg(not(unix))]
 fn make_readonly(perms: &mut Permissions) {
-    if cfg!(unix) {
-        perms.set_mode(0o444);
-    } else {
-        perms.set_readonly(true);
-    }
+    perms.set_readonly(true);
+}
+
+#[cfg(unix)]
+fn make_readonly(perms: &mut Permissions) {
+    perms.set_mode(0o444);
 }
 
 pub trait MutablePack {
