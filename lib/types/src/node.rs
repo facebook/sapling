@@ -5,6 +5,7 @@ use std::{
 };
 
 use failure::{Fail, Fallible};
+use serde_derive::{Deserialize, Serialize};
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;
@@ -21,7 +22,17 @@ const HEX_CHARS: &[u8] = b"0123456789abcdef";
 
 /// A 20-byte identifier, often a hash. Nodes are used to uniquely identify
 /// commits, file versions, and many other things.
-#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Clone,
+    Copy,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    Deserialize
+)]
 pub struct Node([u8; 20]);
 
 /// The nullid (0x00) is used throughout Mercurial to represent "None".
