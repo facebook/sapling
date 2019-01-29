@@ -10,25 +10,35 @@
 import subprocess
 from pathlib import Path
 
+from eden.cli.config import EdenInstance
 from eden.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
 
 
-def check_using_nfs_path(
-    tracker: ProblemTracker, mount_path: str, client_dir: str
-) -> None:
-    check_client_dir(tracker, mount_path, client_dir)
+def check_using_nfs_path(tracker: ProblemTracker, mount_path: str) -> None:
     check_shared_path(tracker, mount_path)
 
 
-def check_client_dir(tracker: ProblemTracker, mount_path: str, client_dir: str) -> None:
-    if is_nfs_mounted(client_dir):
-        msg = (
-            f"{client_dir} which is used for mounting {mount_path}"
-            f" is on a NFS filesystem."
-            f" Accessing files and directories in this repository will be slow."
-        )
-        problem = UsingNfs(msg)
-        tracker.add_problem(problem)
+def check_eden_directory(tracker: ProblemTracker, instance: EdenInstance) -> None:
+    if not is_nfs_mounted(str(instance.state_dir)):
+        return
+
+    msg = (
+        f"Eden's state directory is on an NFS file system: {instance.state_dir}\n"
+        f"  This will likely cause performance problems and/or other errors."
+    )
+
+    # On FB devservers the default Eden state directory path is ~/local/.eden
+    # Normally ~/local is expected to be a symlink to local disk (for users who are
+    # still using NFS home directories in the first place).  The most common cause of
+    # the Eden state directory being on NFS is for users that somehow have a regular
+    # directory at ~/local rather than a symlink.  Suggest checking this as a
+    # remediation.
+    remediation = (
+        "The most common cause for this is if your ~/local symlink does not point "
+        "to local disk.  Make sure that ~/local is a symlink pointing to local disk "
+        "and then restart Eden."
+    )
+    tracker.add_problem(Problem(msg, remediation))
 
 
 def check_shared_path(tracker: ProblemTracker, mount_path: str) -> None:
@@ -47,20 +57,8 @@ def check_shared_path(tracker: ProblemTracker, mount_path: str) -> None:
             f" {dst_shared_path} which is on a NFS filesystem."
             f" Accessing files and directories in this repository will be slow."
         )
-        problem = UsingNfs(msg)
+        problem = Problem(msg, severity=ProblemSeverity.ADVICE)
         tracker.add_problem(problem)
-
-
-class UsingNfs(Problem):
-    def __init__(self, description: str) -> None:
-        self._description = description
-        self._remediation = None
-
-    def description(self) -> str:
-        return self._description
-
-    def severity(self) -> ProblemSeverity:
-        return ProblemSeverity.ADVICE
 
 
 def is_nfs_mounted(path: str) -> bool:

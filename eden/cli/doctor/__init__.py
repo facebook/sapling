@@ -184,6 +184,7 @@ def run_normal_checks(
             if mount.mountPoint is not None
         ]
 
+    check_using_nfs.check_eden_directory(tracker, instance)
     check_active_mounts(tracker, active_mount_points, mount_table)
     check_stale_mounts.check_for_stale_mounts(tracker, mount_table)
     check_edenfs_version(tracker, instance)
@@ -206,9 +207,7 @@ def run_normal_checks(
 
         out.writeln(f"Checking {mount_path}")
         client_info = instance.get_client_info(mount_path)
-        check_using_nfs.check_using_nfs_path(
-            tracker, mount_path, client_info["client-dir"]
-        )
+        check_using_nfs.check_using_nfs_path(tracker, mount_path)
         check_watchman.check_active_mount(tracker, mount_path, watchman_info)
         check_bind_mounts.check_bind_mounts(
             tracker, mount_path, instance, client_info, mount_table, fs_util
