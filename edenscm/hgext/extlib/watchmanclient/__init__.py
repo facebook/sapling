@@ -137,6 +137,23 @@ class client(object):
             if "unable to resolve root" in ex.msg:
                 raise WatchmanNoRoot(self._root, ex.msg)
             raise Unavailable(ex.msg)
+        except pywatchman.SocketConnectError as ex:
+            # If fsmonitor.sockpath was specified in the configuration, we will
+            # have skipped running `watchman get-sockname` which has the
+            # consequence of not starting the watchman server up if it happens
+            # to have been stopped.
+            # Rather than just throwing up our hands in that situation, let's
+            # clear the pre-configured sockpath so that the client will probe
+            # and start it up.
+            if not self._ui.config("fsmonitor", "sockpath") or self._sockpath is None:
+                # Either sockpath wasn't configured, or we already tried clearing
+                # it out, so let's propagate this error.
+                raise Unavailable(str(ex))
+            # Recurse and retry the command, and hopefully it will
+            # start the server this time.
+            self._sockpath = None
+            self._watchmanclient = None
+            return self._command(*args)
         except pywatchman.WatchmanError as ex:
             raise Unavailable(str(ex))
 
