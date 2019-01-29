@@ -170,7 +170,7 @@ class EdenInstance:
     def state_dir(self) -> Path:
         return Path(self._config_dir)
 
-    def _loadConfig(self) -> configparser.ConfigParser:
+    def _loadConfig(self) -> configutil.EdenConfigParser:
         """ to facilitate templatizing a centrally deployed config, we
             allow a limited set of env vars to be expanded.
             ${HOME} will be replaced by the user's home dir,
@@ -183,12 +183,9 @@ class EdenInstance:
             if self._interpolate_dict is not None
             else {"USER": os.environ.get("USER", ""), "HOME": self._home_dir}
         )
-        parser = configparser.ConfigParser(
+        parser = configutil.EdenConfigParser(
             interpolation=configinterpolator.EdenConfigInterpolator(defaults)
         )
-        # ConfigParser should not convert case
-        # use setattr() to satisfy mypy https://github.com/python/mypy/issues/2427
-        setattr(parser, "optionxform", str)
         for f in self.get_rc_files():
             try:
                 toml_cfg = _load_toml_config(f)
@@ -211,7 +208,7 @@ class EdenInstance:
         return result
 
     def get_repository_list(
-        self, parser: Union[configparser.ConfigParser, "ConfigUpdater", None] = None
+        self, parser: Union[configutil.EdenConfigParser, "ConfigUpdater", None] = None
     ) -> List[str]:
         result = []
         if not parser:
@@ -266,7 +263,7 @@ class EdenInstance:
 
         bind_mounts_header = f"bindmounts {alias}"
         if parser.has_section(bind_mounts_header):
-            # Convert the ConfigParser section into a dict so it is JSON
+            # Convert the EdenConfigParser section into a dict so it is JSON
             # serializable for the `eden info` command.
             bind_mounts = dict(parser.items(bind_mounts_header))
         else:
@@ -886,10 +883,7 @@ class ConfigUpdater(object):
         self.path = path
         self._lock_path = self.path + ".lock"
         self._lock_file: Optional[typing.TextIO] = None
-        self.config = configparser.ConfigParser()
-        # ConfigParser should not convert case
-        # use setattr() to satisfy mypy https://github.com/python/mypy/issues/2427
-        setattr(self.config, "optionxform", str)
+        self.config = configutil.EdenConfigParser()
 
         # Acquire a lock.
         # This makes sure that another process can't modify the config in the
