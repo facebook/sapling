@@ -281,7 +281,7 @@ def _preimportmodules():
         "undo",
     ]
     for name in coremods:
-        __import__("mercurial.%s" % name)
+        __import__("edenscm.mercurial.%s" % name)
     for extname in extmods:
         extensions.preimport(extname)
 
