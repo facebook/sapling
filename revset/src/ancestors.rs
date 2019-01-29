@@ -19,10 +19,8 @@ use futures::stream::{iter_ok, Stream};
 use futures::{Async, Poll};
 use futures_ext::StreamExt;
 
-use blobrepo::{BlobRepo, ChangesetFetcher};
+use blobrepo::ChangesetFetcher;
 use context::CoreContext;
-use mercurial_types::nodehash::HgChangesetId;
-use mercurial_types::HgNodeHash;
 use mononoke_types::{ChangesetId, Generation};
 use UniqueHeap;
 
@@ -151,31 +149,15 @@ impl Stream for AncestorsNodeStream {
 
 pub fn common_ancestors<I>(
     ctx: CoreContext,
-    repo: &BlobRepo,
     changeset_fetcher: Arc<ChangesetFetcher>,
     nodes: I,
 ) -> Box<BonsaiNodeStream>
 where
-    I: IntoIterator<Item = HgNodeHash>,
+    I: IntoIterator<Item = ChangesetId>,
 {
     let nodes_iter = nodes.into_iter().map({
-        cloned!(ctx, changeset_fetcher, repo);
-        move |node| {
-            let node = HgChangesetId::new(node);
-            repo.get_bonsai_from_hg(ctx.clone(), &node)
-                .and_then({
-                    cloned!(node);
-                    move |maybe_node| {
-                        maybe_node.ok_or(ErrorKind::BonsaiMappingNotFound(node).into())
-                    }
-                })
-                .map({
-                    cloned!(ctx, changeset_fetcher);
-                    move |node| AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, node)
-                })
-                .flatten_stream()
-                .boxify()
-        }
+        cloned!(ctx, changeset_fetcher);
+        move |node| AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, node).boxify()
     });
 
     IntersectNodeStream::new(ctx, &Arc::new(changeset_fetcher), nodes_iter.into_iter()).boxify()
@@ -183,14 +165,13 @@ where
 
 pub fn greatest_common_ancestor<I>(
     ctx: CoreContext,
-    repo: &BlobRepo,
     changeset_fetcher: Arc<ChangesetFetcher>,
     nodes: I,
 ) -> Box<BonsaiNodeStream>
 where
-    I: IntoIterator<Item = HgNodeHash>,
+    I: IntoIterator<Item = ChangesetId>,
 {
-    Box::new(common_ancestors(ctx, repo, changeset_fetcher, nodes).take(1))
+    Box::new(common_ancestors(ctx, changeset_fetcher, nodes).take(1))
 }
 
 #[cfg(test)]
@@ -201,7 +182,7 @@ mod test {
     use fixtures::merge_uneven;
     use fixtures::unshared_merge_uneven;
     use tests::assert_changesets_sequence;
-    use tests::{string_to_bonsai, string_to_nodehash, TestChangesetFetcher};
+    use tests::{string_to_bonsai, TestChangesetFetcher};
 
     #[test]
     fn linear_ancestors() {
@@ -359,11 +340,10 @@ mod test {
 
             let nodestream = greatest_common_ancestor(
                 ctx.clone(),
-                &repo,
                 changeset_fetcher,
                 vec![
-                    string_to_nodehash("64011f64aaf9c2ad2e674f57c033987da4016f51"),
-                    string_to_nodehash("1700524113b1a3b1806560341009684b4378660b"),
+                    string_to_bonsai(&repo, "64011f64aaf9c2ad2e674f57c033987da4016f51"),
+                    string_to_bonsai(&repo, "1700524113b1a3b1806560341009684b4378660b"),
                 ],
             );
             assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
@@ -380,11 +360,10 @@ mod test {
 
             let nodestream = greatest_common_ancestor(
                 ctx.clone(),
-                &repo,
                 changeset_fetcher,
                 vec![
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                 ],
             );
             assert_changesets_sequence(
@@ -409,11 +388,10 @@ mod test {
 
             let nodestream = greatest_common_ancestor(
                 ctx.clone(),
-                &repo,
                 changeset_fetcher,
                 vec![
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
                 ],
             );
             assert_changesets_sequence(
@@ -438,11 +416,10 @@ mod test {
 
             let nodestream = common_ancestors(
                 ctx.clone(),
-                &repo,
                 changeset_fetcher,
                 vec![
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_bonsai(&repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a"),
                 ],
             );
             assert_changesets_sequence(
@@ -467,11 +444,10 @@ mod test {
 
             let nodestream = common_ancestors(
                 ctx.clone(),
-                &repo,
                 changeset_fetcher,
                 vec![
-                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                    string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+                    string_to_bonsai(&repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_bonsai(&repo, "264f01429683b3dd8042cb3979e8bf37007118bc"),
                 ],
             );
             assert_changesets_sequence(
