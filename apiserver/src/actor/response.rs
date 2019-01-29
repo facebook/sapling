@@ -9,6 +9,7 @@ use std::result::Result;
 use actix_web;
 use actix_web::{Body, HttpRequest, HttpResponse, Json, Responder};
 use bytes::Bytes;
+use std::collections::BTreeMap;
 
 use super::lfs::BatchResponse;
 use super::model::{Changeset, Entry, EntryWithSizeAndContentHash};
@@ -28,6 +29,9 @@ pub enum MononokeRepoResponse {
     },
     GetChangeset {
         changeset: Changeset,
+    },
+    GetBranches {
+        branches: BTreeMap<String, String>,
     },
     IsAncestor {
         answer: bool,
@@ -59,6 +63,7 @@ impl Responder for MononokeRepoResponse {
             ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),
+            GetBranches { branches } => Json(branches).respond_to(req),
             IsAncestor { answer } => Ok(binary_response({
                 if answer {
                     "true".into()

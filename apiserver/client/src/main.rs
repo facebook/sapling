@@ -47,6 +47,17 @@ fn get_changeset(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(
         .boxify()
 }
 
+fn get_branches(client: MononokeAPIClient) -> BoxFuture<(), ()> {
+    client
+        .get_branches()
+        .and_then(|r| {
+            Ok(serde_json::to_string(&r).unwrap_or("Error converting request to json".to_string()))
+        })
+        .map_err(|e| eprintln!("error: {}", e))
+        .map(|res| println!("{}", res))
+        .boxify()
+}
+
 fn main() -> Result<(), ()> {
     let matches = App::new("Mononoke API Server Thrift client")
         .about("Send requests to Mononoke API Server thrift port")
@@ -98,6 +109,7 @@ fn main() -> Result<(), ()> {
                         .required(true),
                 ),
         )
+        .subcommand(SubCommand::with_name("get_branches").about("get all branches"))
         .get_matches();
 
     let tier = matches.value_of("tier").expect("must provide tier name");
@@ -110,6 +122,8 @@ fn main() -> Result<(), ()> {
         cat(client, matches)
     } else if let Some(matches) = matches.subcommand_matches("get_changeset") {
         get_changeset(client, matches)
+    } else if let Some(_) = matches.subcommand_matches("get_branches") {
+        get_branches(client)
     } else {
         Ok(()).into_future().boxify()
     };

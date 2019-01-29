@@ -11,7 +11,9 @@ use failure::Error;
 
 use http::uri::Uri;
 
-use apiserver_thrift::types::{MononokeGetChangesetParams, MononokeGetRawParams};
+use apiserver_thrift::types::{
+    MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
+};
 
 use super::lfs::BatchRequest;
 
@@ -34,6 +36,7 @@ pub enum MononokeRepoQuery {
     GetChangeset {
         revision: String,
     },
+    GetBranches,
     IsAncestor {
         proposed_ancestor: String,
         proposed_descendent: String,
@@ -80,6 +83,17 @@ impl TryFrom<MononokeGetChangesetParams> for MononokeQuery {
             kind: MononokeRepoQuery::GetChangeset {
                 revision: params.revision,
             },
+        })
+    }
+}
+
+impl TryFrom<MononokeGetBranchesParams> for MononokeQuery {
+    type Error = Error;
+
+    fn try_from(params: MononokeGetBranchesParams) -> Result<MononokeQuery, Self::Error> {
+        Ok(MononokeQuery {
+            repo: params.repo,
+            kind: MononokeRepoQuery::GetBranches,
         })
     }
 }

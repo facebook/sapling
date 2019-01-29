@@ -10,6 +10,7 @@ use bytes::Bytes;
 use failure::{err_msg, Error};
 use futures::future::join_all;
 use futures::sync::oneshot;
+use futures::Stream;
 use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use http::uri::Uri;
@@ -268,6 +269,18 @@ impl MononokeRepo {
             .boxify()
     }
 
+    fn get_branches(&self, ctx: CoreContext) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        self.repo
+            .get_bookmarks_maybe_stale(ctx)
+            .map(|(bookmark, changesetid)| (bookmark.to_string(), changesetid.to_hex().to_string()))
+            .collect()
+            .map(|vec| MononokeRepoResponse::GetBranches {
+                branches: vec.into_iter().collect(),
+            })
+            .from_err()
+            .boxify()
+    }
+
     fn download_large_file(
         &self,
         ctx: CoreContext,
@@ -342,6 +355,7 @@ impl MononokeRepo {
             ListDirectory { revision, path } => self.list_directory(ctx, revision, path),
             GetTree { hash } => self.get_tree(ctx, hash),
             GetChangeset { revision } => self.get_changeset(ctx, revision),
+            GetBranches => self.get_branches(ctx),
             IsAncestor {
                 proposed_ancestor,
                 proposed_descendent,
