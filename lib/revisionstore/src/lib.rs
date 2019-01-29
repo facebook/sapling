@@ -29,6 +29,7 @@ pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
 pub use crate::datastore::{DataStore, Delta, Metadata};
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
 pub use crate::historystore::{Ancestors, HistoryStore, NodeInfo};
+pub use crate::key::Key;
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
 pub use crate::mutablepack::MutablePack;
