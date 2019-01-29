@@ -4,29 +4,36 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
+use apiserver_thrift::MononokeRevision::UnknownField;
 use bytes::Bytes;
+use errors::ErrorKind;
 use failure::Error;
-
 use http::uri::Uri;
 
 use apiserver_thrift::types::{
     MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
-    MononokeListDirectoryParams,
+    MononokeListDirectoryParams, MononokeRevision,
 };
 
 use super::lfs::BatchRequest;
 
 #[derive(Debug)]
+pub enum Revision {
+    CommitHash(String),
+    Bookmark(String),
+}
+
+#[derive(Debug)]
 pub enum MononokeRepoQuery {
     GetRawFile {
         path: String,
-        revision: String,
+        revision: Revision,
     },
     ListDirectory {
         path: String,
-        revision: String,
+        revision: Revision,
     },
     GetBlobContent {
         hash: String,
@@ -35,7 +42,7 @@ pub enum MononokeRepoQuery {
         hash: String,
     },
     GetChangeset {
-        revision: String,
+        revision: Revision,
     },
     GetBranches,
     IsAncestor {
@@ -65,11 +72,13 @@ impl TryFrom<MononokeGetRawParams> for MononokeQuery {
     type Error = Error;
 
     fn try_from(params: MononokeGetRawParams) -> Result<MononokeQuery, Self::Error> {
-        Ok(MononokeQuery {
-            repo: params.repo,
+        let repo = params.repo;
+        let path = String::from_utf8(params.path)?;
+        params.revision.try_into().map(|rev| MononokeQuery {
+            repo,
             kind: MononokeRepoQuery::GetRawFile {
-                path: String::from_utf8(params.path)?,
-                revision: params.changeset,
+                path,
+                revision: rev,
             },
         })
     }
@@ -79,11 +88,10 @@ impl TryFrom<MononokeGetChangesetParams> for MononokeQuery {
     type Error = Error;
 
     fn try_from(params: MononokeGetChangesetParams) -> Result<MononokeQuery, Self::Error> {
-        Ok(MononokeQuery {
-            repo: params.repo,
-            kind: MononokeRepoQuery::GetChangeset {
-                revision: params.revision,
-            },
+        let repo = params.repo;
+        params.revision.try_into().map(|rev| MononokeQuery {
+            repo,
+            kind: MononokeRepoQuery::GetChangeset { revision: rev },
         })
     }
 }
@@ -103,12 +111,30 @@ impl TryFrom<MononokeListDirectoryParams> for MononokeQuery {
     type Error = Error;
 
     fn try_from(params: MononokeListDirectoryParams) -> Result<MononokeQuery, Self::Error> {
-        Ok(MononokeQuery {
-            repo: params.repo,
+        let repo = params.repo;
+        let path = String::from_utf8(params.path)?;
+        params.revision.try_into().map(|rev| MononokeQuery {
+            repo,
             kind: MononokeRepoQuery::ListDirectory {
-                path: String::from_utf8(params.path)?,
-                revision: params.revision,
+                path,
+                revision: rev,
             },
         })
+    }
+}
+
+impl TryFrom<MononokeRevision> for Revision {
+    type Error = Error;
+
+    fn try_from(rev: MononokeRevision) -> Result<Revision, Error> {
+        match rev {
+            MononokeRevision::commit_hash(hash) => Ok(Revision::CommitHash(hash)),
+            MononokeRevision::bookmark(bookmark) => Ok(Revision::Bookmark(bookmark)),
+            UnknownField(_) => Err(ErrorKind::InvalidInput(
+                format!("Invalid MononokeRevision {:?}", rev),
+                None,
+            )
+            .into()),
+        }
     }
 }

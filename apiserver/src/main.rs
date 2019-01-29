@@ -86,7 +86,9 @@ use tokio::runtime::Runtime;
 use metaconfig::RepoConfigs;
 use scuba_ext::ScubaSampleBuilder;
 
-use actor::{BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse};
+use actor::{
+    BatchRequest, Mononoke, MononokeQuery, MononokeRepoQuery, MononokeRepoResponse, Revision,
+};
 use errors::ErrorKind;
 
 mod config {
@@ -135,7 +137,7 @@ fn get_raw_file(
     state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetRawFile {
-            revision: info.changeset.clone(),
+            revision: Revision::CommitHash(info.changeset.clone()),
             path: info.path.clone(),
         },
     })
@@ -165,7 +167,7 @@ fn list_directory(
     state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::ListDirectory {
-            revision: info.changeset.clone(),
+            revision: Revision::CommitHash(info.changeset.clone()),
             path: info.path.clone(),
         },
     })
@@ -199,7 +201,7 @@ fn get_changeset(
     state.mononoke.send_query(MononokeQuery {
         repo: info.repo.clone(),
         kind: MononokeRepoQuery::GetChangeset {
-            revision: info.hash.clone(),
+            revision: Revision::CommitHash(info.hash.clone()),
         },
     })
 }

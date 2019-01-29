@@ -14,7 +14,9 @@ use apiserver_thrift::services::mononoke_apiservice::{
 use apiserver_thrift::types::{
     MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBranchesParams,
     MononokeGetChangesetParams, MononokeGetRawParams, MononokeListDirectoryParams,
+    MononokeRevision,
 };
+use apiserver_thrift::MononokeRevision::UnknownField;
 use errors::ErrorKind;
 use failure::err_msg;
 use futures::{Future, IntoFuture};
@@ -56,7 +58,7 @@ impl MononokeAPIServiceImpl {
         method: &str,
         params_json: &K,
         path: Vec<u8>,
-        revision: String,
+        revision: Option<MononokeRevision>,
     ) -> ScubaSampleBuilder {
         let mut scuba = self.scuba_builder.clone();
         scuba
@@ -71,8 +73,18 @@ impl MononokeAPIServiceImpl {
             .add(
                 "path",
                 String::from_utf8(path).unwrap_or("Invalid UTF-8 in path".to_string()),
-            )
-            .add("revision", revision);
+            );
+
+        if let Some(rev) = revision {
+            let rev = match rev {
+                MononokeRevision::commit_hash(hash) => hash,
+                MononokeRevision::bookmark(bookmark) => bookmark,
+                UnknownField(_) => "Not a valid MononokeRevision".to_string(),
+            };
+
+            scuba.add("revision", rev);
+        }
+
         scuba
     }
 }
@@ -83,7 +95,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             "get_raw",
             &params,
             params.path.clone(),
-            params.changeset.clone(),
+            Some(params.revision.clone()),
         );
 
         params
@@ -123,7 +135,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             "get_changeset",
             &params,
             Vec::new(),
-            params.revision.clone(),
+            Some(params.revision.clone()),
         );
 
         params
@@ -170,8 +182,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
         &self,
         params: MononokeGetBranchesParams,
     ) -> BoxFuture<MononokeBranches, GetBranchesExn> {
-        let mut scuba =
-            self.create_scuba_logger("get_branches", &params, Vec::new(), String::new());
+        let mut scuba = self.create_scuba_logger("get_branches", &params, Vec::new(), None);
 
         params
             .try_into()
@@ -219,7 +230,7 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
             "get_branches",
             &params,
             params.path.clone(),
-            params.revision.clone(),
+            Some(params.revision.clone()),
         );
 
         params

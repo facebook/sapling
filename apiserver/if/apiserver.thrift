@@ -14,15 +14,31 @@ exception MononokeAPIException {
   2: string reason,
 }
 
+union MononokeRevision {
+  1: string commit_hash,
+  #Not yet supported, do not use
+  2: string bookmark,
+}
+
 struct MononokeGetRawParams {
   1: string repo,
-  2: string changeset,
+  2: MononokeRevision revision,
   3: binary path,
 }
 
 struct MononokeGetChangesetParams {
     1: string repo,
-    3: string revision,
+    3: MononokeRevision revision,
+}
+
+struct MononokeGetBranchesParams{
+  1: string repo,
+}
+
+struct MononokeListDirectoryParams{
+  1: string repo,
+  2: MononokeRevision revision,
+  3: binary path,
 }
 
 struct MononokeChangeset {
@@ -40,16 +56,6 @@ struct MononokeBranches {
 
 struct MononokeDirectory {
   1: list<MononokeFile> files,
-}
-
-struct MononokeGetBranchesParams{
-  1: string repo,
-}
-
-struct MononokeListDirectoryParams{
-  1: string repo,
-  2: string revision,
-  3: binary path,
 }
 
 struct MononokeFile {

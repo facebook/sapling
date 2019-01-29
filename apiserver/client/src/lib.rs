@@ -16,6 +16,7 @@ use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
 use apiserver_thrift::types::{
     MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBranchesParams,
     MononokeGetChangesetParams, MononokeGetRawParams, MononokeListDirectoryParams,
+    MononokeRevision,
 };
 use srclient::SRChannelBuilder;
 
@@ -42,7 +43,7 @@ impl MononokeAPIClient {
     ) -> BoxFuture<Vec<u8>, apiserver_thrift::errors::Error> {
         self.inner.get_raw(&MononokeGetRawParams {
             repo: self.repo.clone(),
-            changeset: revision,
+            revision: MononokeRevision::commit_hash(revision),
             path: path.into_bytes(),
         })
     }
@@ -53,7 +54,7 @@ impl MononokeAPIClient {
     ) -> BoxFuture<MononokeChangeset, apiserver_thrift::errors::Error> {
         self.inner.get_changeset(&MononokeGetChangesetParams {
             repo: self.repo.clone(),
-            revision,
+            revision: MononokeRevision::commit_hash(revision),
         })
     }
 
@@ -70,7 +71,7 @@ impl MononokeAPIClient {
     ) -> BoxFuture<MononokeDirectory, apiserver_thrift::errors::Error> {
         self.inner.list_directory(&MononokeListDirectoryParams {
             repo: self.repo.clone(),
-            revision,
+            revision: MononokeRevision::commit_hash(revision),
             path: path.into_bytes(),
         })
     }

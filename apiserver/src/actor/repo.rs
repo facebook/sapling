@@ -33,11 +33,10 @@ use from_string as FS;
 
 use super::lfs::{build_response, BatchRequest};
 use super::model::{Entry, EntryWithSizeAndContentHash};
-use super::{MononokeRepoQuery, MononokeRepoResponse};
+use super::{MononokeRepoQuery, MononokeRepoResponse, Revision};
 
 pub struct MononokeRepo {
     repo: BlobRepo,
-    logger: Logger,
     executor: TaskExecutor,
 }
 
@@ -90,26 +89,27 @@ impl MononokeRepo {
                 .left_future(),
         };
 
-        repo.map(|repo| Self {
-            repo,
-            logger,
-            executor,
-        })
+        repo.map(|repo| Self { repo, executor })
+    }
+
+    fn get_hash_from_revision(&self, revision: Revision) -> String {
+        match revision {
+            Revision::CommitHash(hash) => hash,
+            //TODO: T39372106 resolve bookmark to hash
+            Revision::Bookmark(_) => panic!("Bookmarks not yet supported"),
+        }
     }
 
     fn get_raw_file(
         &self,
         ctx: CoreContext,
-        changeset: String,
+        revision: Revision,
         path: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        debug!(
-            self.logger,
-            "Retrieving file content of {} at changeset {}.", path, changeset
-        );
+        let hash = self.get_hash_from_revision(revision);
 
         let mpath = try_boxfuture!(FS::get_mpath(path.clone()));
-        let changesetid = try_boxfuture!(FS::get_changeset_id(changeset));
+        let changesetid = try_boxfuture!(FS::get_changeset_id(hash));
         let repo = self.repo.clone();
 
         api::get_content_by_path(ctx, repo, changesetid, Some(mpath))
@@ -207,15 +207,16 @@ impl MononokeRepo {
     fn list_directory(
         &self,
         ctx: CoreContext,
-        changeset: String,
+        revision: Revision,
         path: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let hash = self.get_hash_from_revision(revision);
         let mpath = if path.is_empty() {
             None
         } else {
             Some(try_boxfuture!(FS::get_mpath(path.clone())))
         };
-        let changesetid = try_boxfuture!(FS::get_changeset_id(changeset));
+        let changesetid = try_boxfuture!(FS::get_changeset_id(hash));
         let repo = self.repo.clone();
 
         api::get_content_by_path(ctx, repo, changesetid, mpath)
@@ -257,8 +258,9 @@ impl MononokeRepo {
     fn get_changeset(
         &self,
         ctx: CoreContext,
-        hash: String,
+        revision: Revision,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let hash = self.get_hash_from_revision(revision);
         let changesetid = try_boxfuture!(FS::get_changeset_id(hash));
 
         self.repo

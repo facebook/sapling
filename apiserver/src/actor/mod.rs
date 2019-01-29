@@ -27,7 +27,7 @@ use metaconfig::repoconfig::RepoConfigs;
 use errors::ErrorKind;
 
 pub use self::lfs::BatchRequest;
-pub use self::query::{MononokeQuery, MononokeRepoQuery};
+pub use self::query::{MononokeQuery, MononokeRepoQuery, Revision};
 pub use self::repo::MononokeRepo;
 pub use self::response::MononokeRepoResponse;
 
