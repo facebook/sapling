@@ -1,7 +1,10 @@
 // Copyright Facebook, Inc. 2018
-use failure::Fallible;
-use std::fmt::{self, Debug, Display};
-use std::io::{self, Read, Write};
+use std::{
+    fmt::{self, Debug, Display},
+    io::{self, Read, Write},
+};
+
+use failure::{Fail, Fallible};
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;
@@ -183,7 +186,7 @@ impl<R: Read + ?Sized> ReadNodeExt for R {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck;
+use quickcheck::quickcheck;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for Node {
