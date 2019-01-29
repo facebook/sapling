@@ -12,7 +12,7 @@ $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
 PYFILES:=$(shell find mercurial hgext doc -name '*.py' 2>/dev/null)
-DOCFILES=mercurial/help/*.txt
+DOCFILES=edenscm/mercurial/help/*.txt
 export LANGUAGE=C
 export LC_ALL=C
 TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
@@ -149,14 +149,14 @@ format-c:
 update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
-	$(PYTHON) i18n/hggettext mercurial/commands.py \
-	  hgext/*.py hgext/*/__init__.py \
-	  mercurial/fileset.py mercurial/revset.py \
-	  mercurial/templatefilters.py mercurial/templatekw.py \
-	  mercurial/templater.py \
-	  mercurial/filemerge.py \
-	  mercurial/hgweb/webcommands.py \
-	  mercurial/util.py \
+	$(PYTHON) i18n/hggettext edenscm/mercurial/commands.py \
+	  edenscm/hgext/*.py edenscm/hgext/*/__init__.py \
+	  edenscm/mercurial/fileset.py edenscm/mercurial/revset.py \
+	  edenscm/mercurial/templatefilters.py edenscm/mercurial/templatekw.py \
+	  edenscm/mercurial/templater.py \
+	  edenscm/mercurial/filemerge.py \
+	  edenscm/mercurial/hgweb/webcommands.py \
+	  edenscm/mercurial/util.py \
 	  $(DOCFILES) > i18n/hg.pot.tmp
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string

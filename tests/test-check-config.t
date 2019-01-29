@@ -24,7 +24,7 @@ Sanity check check-config.py
   > EOF
 
   $ cat > files << EOF
-  > mercurial/help/config.txt
+  > edenscm/mercurial/help/config.txt
   > $TESTTMP/testfile.py
   > EOF
 

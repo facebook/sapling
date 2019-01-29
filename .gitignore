@@ -45,17 +45,17 @@ doc/*.[0-9].{x,ht}ml
 MANIFEST
 MANIFEST.in
 patches
-mercurial/__modulepolicy__.py
-mercurial/__version__.py
-mercurial/hgpythonlib.h
-mercurial.egg-info
+edenscm/mercurial/__modulepolicy__.py
+edenscm/mercurial/__version__.py
+edenscm/mercurial/hgpythonlib.h
+edenscm/mercurial.egg-info
 .DS_Store
 tags
 cscope.*
 .idea/
 .asv/
 i18n/hg.pot
-mercurial/locale/*/LC_MESSAGES/hg.mo
+edenscm/mercurial/locale/*/LC_MESSAGES/hg.mo
 hgext/__index__.py
 hgext/clindex.c
 hgext/extlib/linelog.c
@@ -64,7 +64,7 @@ hgext/traceprof.cpp
 hgext/extlib/litemmap.c
 
 # Build output
-build/
+build
 debbuild/
 rpmbuild/
 

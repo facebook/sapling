@@ -33,9 +33,10 @@ else:
                 python = env.get("PYTHON_SYS_EXECUTABLE")
                 if python and python != sys.executable:
                     import subprocess
+
                     p = subprocess.Popen([python] + sys.argv)
                     sys.exit(p.wait())
 
-from mercurial import entrypoint
+from edenscm.mercurial import entrypoint
 
 entrypoint.run(False)

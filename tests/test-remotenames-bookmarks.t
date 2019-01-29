@@ -1,5 +1,3 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext/remotenames.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > remotenames=

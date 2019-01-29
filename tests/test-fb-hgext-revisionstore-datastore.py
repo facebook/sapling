@@ -7,7 +7,7 @@ import shutil
 import tempfile
 import unittest
 
-import mercurial.ui
+import edenscm.mercurial.ui as uimod
 import silenttestrunner
 from hgext.extlib.pyrevisionstore import datastore
 from hgext.remotefilelog import constants
@@ -40,7 +40,7 @@ class datastoretests(unittest.TestCase):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
-        packer = mutabledatapack(mercurial.ui.ui(), packdir, version=1)
+        packer = mutabledatapack(uimod.ui(), packdir, version=1)
 
         for filename, node, base, content, meta in revisions:
             packer.add(filename, node, base, content, metadata=meta)
@@ -53,7 +53,7 @@ class datastoretests(unittest.TestCase):
         revisions = [("foo", self.getFakeHash(), nullid, "content", None)]
         self.createPack(packdir, revisions=revisions)
 
-        pystore = unioncontentstore(datapackstore(mercurial.ui.ui(), packdir))
+        pystore = unioncontentstore(datapackstore(uimod.ui(), packdir))
 
         ruststore = datastore(pystore)
 
@@ -70,7 +70,7 @@ class datastoretests(unittest.TestCase):
         ]
         self.createPack(packdir, revisions=revisions)
 
-        pystore = unioncontentstore(datapackstore(mercurial.ui.ui(), packdir))
+        pystore = unioncontentstore(datapackstore(uimod.ui(), packdir))
 
         ruststore = datastore(pystore)
 
@@ -88,7 +88,7 @@ class datastoretests(unittest.TestCase):
         ]
         self.createPack(packdir, revisions=revisions)
 
-        pystore = unioncontentstore(datapackstore(mercurial.ui.ui(), packdir))
+        pystore = unioncontentstore(datapackstore(uimod.ui(), packdir))
 
         ruststore = datastore(pystore)
 
@@ -105,7 +105,7 @@ class datastoretests(unittest.TestCase):
         revisions = [("foo", self.getFakeHash(), nullid, "content", None)]
         self.createPack(packdir, revisions=revisions)
 
-        pystore = unioncontentstore(datapackstore(mercurial.ui.ui(), packdir))
+        pystore = unioncontentstore(datapackstore(uimod.ui(), packdir))
 
         ruststore = datastore(pystore)
 

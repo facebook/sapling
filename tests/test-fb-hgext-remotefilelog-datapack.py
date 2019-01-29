@@ -11,7 +11,7 @@ import tempfile
 import time
 import unittest
 
-import mercurial.ui
+import edenscm.mercurial.ui as uimod
 import silenttestrunner
 from hgext.extlib.pyrevisionstore import datapack as rustdatapack
 from hgext.remotefilelog import constants
@@ -66,7 +66,7 @@ class datapacktestsbase(object):
         if packdir is None:
             packdir = self.makeTempDir()
 
-        packer = mutabledatapack(mercurial.ui.ui(), packdir, version=version)
+        packer = mutabledatapack(uimod.ui(), packdir, version=version)
 
         for args in revisions:
             filename, node, base, content = args[0:4]
@@ -305,7 +305,7 @@ class datapacktestsbase(object):
             # Ensures that we are not keeping everything in the cache.
             DEFAULTCACHESIZE = numpacks / 2
 
-        store = testdatapackstore(mercurial.ui.ui(), packdir, self.iscdatapack)
+        store = testdatapackstore(uimod.ui(), packdir, self.iscdatapack)
 
         random.shuffle(deltachains)
         for randomchain in deltachains:
@@ -353,7 +353,7 @@ class datapacktestsbase(object):
 
             deltachains.append(chain)
 
-        ui = mercurial.ui.ui()
+        ui = uimod.ui()
         store = datapackstore(ui, packdir, self.iscdatapack, deletecorruptpacks=True)
 
         key = (deltachains[0][0][0], deltachains[0][0][1])
@@ -409,7 +409,7 @@ class datapacktestsbase(object):
         """Tests that the data written into a mutabledatapack can be read out
         before it has been finalized."""
         packdir = self.makeTempDir()
-        packer = mutabledatapack(mercurial.ui.ui(), packdir, version=1)
+        packer = mutabledatapack(uimod.ui(), packdir, version=1)
 
         # Add some unused first revision for noise
         packer.add("qwert", self.getFakeHash(), self.getFakeHash(), "qwertcontent")

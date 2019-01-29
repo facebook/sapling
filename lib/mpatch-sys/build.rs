@@ -7,7 +7,7 @@ extern crate cc;
 
 fn main() {
     cc::Build::new()
-        .file("../../mercurial/mpatch.c")
+        .file("../../edenscm/mercurial/mpatch.c")
         .include("../../")
         .compile("mpatch");
 }

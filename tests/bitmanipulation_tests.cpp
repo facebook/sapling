@@ -2,7 +2,7 @@
 #include <folly/portability/GTest.h>
 
 #include <array>
-#include "mercurial/bitmanipulation.h"
+#include "edenscm/mercurial/bitmanipulation.h"
 
 namespace {
 // This is basically like std::make_array<char>(), but uses memcpy to avoid

@@ -1,7 +1,7 @@
-import mercurial
+import edenscm.mercurial as mercurial
 import test_hgsubversion_util
-from hgext.hgsubversion import stupid
-from mercurial import commands
+from edenscm.hgext.hgsubversion import stupid
+from edenscm.mercurial import commands
 
 
 class TestPullFallback(test_hgsubversion_util.TestBase):

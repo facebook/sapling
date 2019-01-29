@@ -2,7 +2,7 @@ bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "hggit=$TESTDIR/../hgext/hggit" >> $HGRCPATH
+  $ echo "hggit=" >> $HGRCPATH
   $ echo "[git]" >> $HGRCPATH
   $ echo "branch_bookmark_suffix=_bookmark" >> $HGRCPATH
 

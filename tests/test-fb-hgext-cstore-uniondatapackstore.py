@@ -7,7 +7,7 @@ import shutil
 import tempfile
 import unittest
 
-import mercurial.ui
+import edenscm.mercurial.ui as uimod
 import silenttestrunner
 from hgext.extlib.cstore import datapackstore, uniondatapackstore
 from hgext.remotefilelog.datapack import datapack, mutabledatapack
@@ -39,7 +39,7 @@ class uniondatapackstoretests(unittest.TestCase):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
-        packer = mutabledatapack(mercurial.ui.ui(), packdir)
+        packer = mutabledatapack(uimod.ui(), packdir)
 
         for filename, node, base, content in revisions:
             packer.add(filename, node, base, content)
@@ -181,7 +181,7 @@ class uniondatastorepythontests(uniondatapackstoretests):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
-        packer = mutabledatapack(mercurial.ui.ui(), packdir)
+        packer = mutabledatapack(uimod.ui(), packdir)
 
         for filename, node, base, content in revisions:
             packer.add(filename, node, base, content)

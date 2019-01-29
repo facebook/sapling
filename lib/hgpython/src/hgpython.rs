@@ -4,7 +4,6 @@ use cpython::{exc, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
 use encoding::{osstring_to_local_cstring, path_to_local_bytes, path_to_local_cstring};
 use python::{py_finalize, py_init_threads, py_initialize, py_set_argv, py_set_no_site_flag,
              py_set_program_name, py_set_python_home};
-
 use std;
 use std::ffi::{CString, OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -14,9 +13,9 @@ use std::path::{Path, PathBuf};
 const HGPYENTRYPOINT_MOD: &str = "entrypoint";
 /// A path to the entrypoint module in the installation of Python/Mercurial
 #[cfg(target_family = "unix")]
-const ENTRYPOINT_IN_INSTALLATION: &str = "mercurial/entrypoint.py";
+const ENTRYPOINT_IN_INSTALLATION: &str = "edenscm/mercurial/entrypoint.py";
 #[cfg(target_family = "windows")]
-const ENTRYPOINT_IN_INSTALLATION: &str = "mercurial\\entrypoint.py";
+const ENTRYPOINT_IN_INSTALLATION: &str = "edenscm\\mercurial\\entrypoint.py";
 
 /// A default path to the zipped Python/Mercurial library for the
 /// embedded case
@@ -44,22 +43,22 @@ const EMBEDDED_LIBRARY: &str = "lib\\library.zip";
 /// to be handled separately.
 /// # Behavior
 /// This struct is pretty flexible in terms of what it can work with. All
-/// the decision making is around finding the location of `mercurial/entrypoint.py`
+/// the decision making is around finding the location of `edenscm/mercurial/entrypoint.py`
 /// file, which is a place to pass control to. Here are the list of candidates
 /// for this file:
-/// - `BIANRY_LOCATION/lib/library.zip/mercurial/entrypoint.py`
-/// - `BINARY_LOCATION/mercurial/entrypotint.py`
-/// - `mercurial/entrypoint.py` under each of directories, supplied at compile
-///   time via the `HGPYENTRYPOINTSEARCHPATH` environment variable
+/// - `BIANRY_LOCATION/lib/library.zip/edenscm/mercurial/entrypoint.py`
+/// - `BINARY_LOCATION/edenscm/mercurial/entrypotint.py`
+/// - `edenscm/mercurial/entrypoint.py` under each of directories, supplied at
+///   compile time via the `HGPYENTRYPOINTSEARCHPATH` environment variable
 /// - a few hardcoded locations
 /// The reason so many locations are investigated is because this binary is
 /// intended to work in many scenarios:
 /// - from repo after `make local` on all platforms, when non-embedded workings
-///   are neede and `mercurial/entrypoint.py` lives alongside the main binary
+///   are neede and `edenscm/mercurial/entrypoint.py` lives alongside the main binary
 /// - installed on Window, when lib/library.zip lives alongsige with the main binary
-/// - installed on *NIX, when `mercurail/entrypoint.py` lives in `site-packages`
+/// - installed on *NIX, when `edenscm/mercurail/entrypoint.py` lives in `site-packages`
 ///   of the main Python installation
-/// - installed on *NIX, when `mercurial/entrypoint.py` lives in some non-standard
+/// - installed on *NIX, when `edenscm/mercurial/entrypoint.py` lives in some non-standard
 ///   location
 pub struct HgPython {
     embedded: bool,

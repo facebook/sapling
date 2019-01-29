@@ -1,8 +1,8 @@
-SOURCES=$(notdir $(wildcard ../mercurial/help/*.[0-9].txt))
+SOURCES=$(notdir $(wildcard ../edenscm/mercurial/help/*.[0-9].txt))
 MAN=$(SOURCES:%.txt=%)
 HTML=$(SOURCES:%.txt=%.html)
-GENDOC=gendoc.py ../mercurial/commands/*.py ../mercurial/help.py \
-	../mercurial/help/*.txt ../hgext/*.py ../hgext/*/__init__.py
+GENDOC=gendoc.py ../edenscm/mercurial/commands/*.py ../edenscm/mercurial/help.py \
+	../edenscm/mercurial/help/*.txt ../edenscm/hgext/*.py ../edenscm/hgext/*/__init__.py
 PREFIX=/usr/local
 MANDIR=$(PREFIX)/share/man
 INSTALL=install -c -m 644

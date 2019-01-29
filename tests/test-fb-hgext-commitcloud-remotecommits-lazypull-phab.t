@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > amend =
-  > arcconfig=$TESTDIR/../hgext/extlib/phabricator/arcconfig.py
+  > arcconfig=$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py
   > arcdiff=
   > commitcloud =
   > infinitepush =

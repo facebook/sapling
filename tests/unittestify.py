@@ -63,7 +63,7 @@ def prepareargsenv(runtestsdir, port=None):
     if watchman:
         args += ["--with-watchman", watchman]
     # set HGDATAPATH
-    datapath = os.path.join(runtestsdir, "../mercurial")
+    datapath = os.path.join(runtestsdir, "../edenscm/mercurial")
     env["HGDATAPATH"] = datapath
     # set HGPYTHONPATH since PYTHONPATH might be discarded
     pythonpath = os.pathsep.join([runtestsdir])

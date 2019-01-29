@@ -16,7 +16,7 @@ test sparse interaction with other extensions
 
 Test integration with simplecache for profile reads
 
-  $ $PYTHON -c 'import hgext.simplecache' || exit 80
+  $ $PYTHON -c 'import edenscm.hgext.simplecache' || exit 80
   $ printf "[include]\nfoo\n" > .hgsparse
   $ hg add .hgsparse
   $ hg commit -qm 'Add profile'

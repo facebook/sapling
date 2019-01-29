@@ -146,7 +146,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   > 
   > def hgdirectory(relpath):
   >     '''generator of tracked files, rooted at relpath'''
-  >     hgdir = "%s/../mercurial" % (testdir)
+  >     hgdir = "%s/../edenscm/mercurial" % (testdir)
   >     args = ['hg', '--cwd', hgdir, 'files', relpath]
   >     proc = subprocess.Popen(args, stdout=subprocess.PIPE,
   >                             stderr=subprocess.PIPE)

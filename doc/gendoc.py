@@ -17,6 +17,7 @@ import textwrap
 os.environ["HGMODULEPOLICY"] = "allow"
 # import from the live mercurial repo
 sys.path.insert(0, "..")
+from edenscm import compat
 from mercurial import demandimport
 
 demandimport.enable()

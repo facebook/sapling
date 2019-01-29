@@ -208,7 +208,7 @@ TODO: Make this test compatibile with obsstore enabled.
 test the file size limit by changing it to something really small
   $ cat > ../sizelimit.py <<EOF
   > from __future__ import absolute_import
-  > import hgext.remotefilelog.remotefilelog as remotefilelog
+  > import edenscm.hgext.remotefilelog.remotefilelog as remotefilelog
   > 
   > def uisetup(ui):
   >     remotefilelog._maxentrysize = ui.configint('sizelimit', 'sizelimit')

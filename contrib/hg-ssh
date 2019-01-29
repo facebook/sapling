@@ -37,7 +37,7 @@ import sys
 # enable importing on demand to reduce startup time
 import hgdemandimport ; hgdemandimport.enable()
 
-from mercurial import (
+from edenscm.mercurial import (
     dispatch,
 )
 

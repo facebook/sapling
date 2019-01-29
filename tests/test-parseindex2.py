@@ -10,8 +10,8 @@ import struct
 import subprocess
 import sys
 
-from mercurial import policy
-from mercurial.node import nullid, nullrev
+from edenscm.mercurial import policy
+from edenscm.mercurial.node import nullid, nullrev
 
 
 parsers = policy.importmod(r"parsers")
