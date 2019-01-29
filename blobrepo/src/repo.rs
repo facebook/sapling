@@ -978,13 +978,14 @@ impl BlobRepo {
         STATS::get_bookmarks_maybe_stale.add_value(1);
         self.bookmarks
             .list_by_prefix_maybe_stale(ctx.clone(), &BookmarkPrefix::empty(), &self.repoid)
-            .and_then({
+            .map({
                 let repo = self.clone();
                 move |(bm, cs)| {
                     repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
                         .map(move |cs| (bm, cs))
                 }
             })
+            .buffer_unordered(100)
             .boxify()
     }
 
