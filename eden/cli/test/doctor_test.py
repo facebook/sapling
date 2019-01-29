@@ -28,7 +28,7 @@ import eden.cli.ui
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.cli import filesystem, mtab, process_finder, util
-from eden.cli.config import EdenInstance, HealthStatus
+from eden.cli.config import CheckoutConfig, EdenCheckout, EdenInstance, HealthStatus
 from eden.cli.doctor import (
     check_bind_mounts,
     check_hg,
@@ -905,7 +905,7 @@ may have important bug fixes or performance improvements.
         edenfs_path1 = instance.create_test_mount("path1")
         edenfs_path2 = instance.create_test_mount("path2")
         # Remove path2 from the list of mounts in the instance
-        del instance._mount_paths[edenfs_path2]
+        instance.remove_checkout_configuration(edenfs_path2)
 
         dry_run = False
         out = TestOutput()
@@ -921,11 +921,18 @@ may have important bug fixes or performance improvements.
         self.assertEqual(
             f"""\
 Checking {edenfs_path1}
-<green>No issues detected.<reset>
+Checking {edenfs_path2}
+<yellow>- Found problem:<reset>
+Checkout {edenfs_path2} is running but not listed in Eden's configuration file.
+Running "eden unmount {edenfs_path2}" will unmount this checkout.
+
+<yellow>1 issue requires manual attention.<reset>
+Ask in the Eden Users group if you need help fixing issues with Eden:
+https://fb.facebook.com/groups/eden.users/
 """,
             out.getvalue(),
         )
-        self.assertEqual(0, exit_code)
+        self.assertEqual(1, exit_code)
 
     def test_remount_checkouts(self) -> None:
         exit_code, out, mounts = self._test_remount_checkouts(  # type: ignore
@@ -933,11 +940,12 @@ Checking {edenfs_path1}
         )
         self.assertEqual(
             f"""\
+Checking {mounts[0]}
+Checking {mounts[1]}
 <yellow>- Found problem:<reset>
 {mounts[1]} is not currently mounted
 Remounting {mounts[1]}...<green>fixed<reset>
 
-Checking {mounts[0]}
 <yellow>Successfully fixed 1 problem.<reset>
 """,
             out,
@@ -950,11 +958,12 @@ Checking {mounts[0]}
         )
         self.assertEqual(
             f"""\
+Checking {mounts[0]}
+Checking {mounts[1]}
 <yellow>- Found problem:<reset>
 {mounts[1]} is not currently mounted
 Would remount {mounts[1]}
 
-Checking {mounts[0]}
 <yellow>Discovered 1 problem during --dry-run<reset>
 """,
             out,
@@ -1015,6 +1024,7 @@ Checking {mounts[0]}
         self.assertEqual(
             out.getvalue(),
             f"""\
+Checking {mount}
 <yellow>- Found problem:<reset>
 {mount} is not currently mounted
 Remounting {mount}...<green>fixed<reset>
@@ -1248,10 +1258,7 @@ class BindMountsCheckTest(DoctorTestBase):
         tmp_dir = self.make_temporary_directory()
         self.instance = FakeEdenInstance(tmp_dir)
 
-        self.dot_eden_path = os.path.join(tmp_dir, ".eden")
-        self.clients_path = os.path.join(self.dot_eden_path, "clients")
-
-        self.fbsource_client = os.path.join(self.clients_path, "fbsource")
+        self.fbsource_client = os.path.join(self.instance.clients_path, "fbsource")
         self.fbsource_bind_mounts = os.path.join(self.fbsource_client, "bind-mounts")
         self.edenfs_path1 = self.instance.create_test_mount(
             "path1",
@@ -1260,7 +1267,7 @@ class BindMountsCheckTest(DoctorTestBase):
                 "fbandroid-buck-out": "fbandroid/buck-out",
                 "buck-out": "buck-out",
             },
-            client_dir=self.fbsource_client,
+            client_name="fbsource",
             setup_path=False,
         )
 
@@ -1283,13 +1290,13 @@ class BindMountsCheckTest(DoctorTestBase):
         fixer, out = self.create_fixer(dry_run)
         if fs_util is None:
             fs_util = FakeFsUtil()
-        check_bind_mounts.check_bind_mounts(
-            fixer,
-            self.edenfs_path1,
+        checkout = EdenCheckout(
             typing.cast(EdenInstance, self.instance),
-            self.instance.get_client_info(self.edenfs_path1),
-            mount_table=mount_table,
-            fs_util=fs_util,
+            Path(self.edenfs_path1),
+            Path(self.fbsource_client),
+        )
+        check_bind_mounts.check_bind_mounts(
+            fixer, checkout, mount_table=mount_table, fs_util=fs_util
         )
         return fixer, out.getvalue()
 
@@ -2289,6 +2296,12 @@ class FakeClient:
         return None
 
 
+class FakeCheckout(NamedTuple):
+    state_dir: str
+    config: CheckoutConfig
+    snapshot: str
+
+
 class FakeEdenInstance:
     def __init__(
         self,
@@ -2298,13 +2311,18 @@ class FakeEdenInstance:
         config: Optional[Dict[str, str]] = None,
     ) -> None:
         self._tmp_dir = tmp_dir
-        self._mount_paths: Dict[str, collections.OrderedDict] = {}
         self._status = status
         self._build_info = build_info if build_info else {}
         self._config = config if config else {}
         self._fake_client = FakeClient()
 
         self._eden_dir = Path(self._tmp_dir) / "eden"
+        self.clients_path = os.path.join(self._eden_dir, "clients")
+
+        # A map from mount path --> FakeCheckout
+        self._checkouts_by_path: Dict[str, FakeCheckout] = {}
+        # A map from checkout state directory --> FakeCheckout
+        self._checkouts_by_client_dir: Dict[str, FakeCheckout] = {}
 
         self.mount_table = FakeMountTable()
         self._next_dev_id = 10
@@ -2318,7 +2336,7 @@ class FakeEdenInstance:
         path: str,
         snapshot: Optional[str] = None,
         bind_mounts: Optional[Dict[str, str]] = None,
-        client_dir: Optional[str] = None,
+        client_name: Optional[str] = None,
         scm_type: str = "hg",
         active: bool = True,
         setup_path: bool = True,
@@ -2338,25 +2356,29 @@ class FakeEdenInstance:
         Returns the absolute path to the mount directory.
         """
         full_path = os.path.join(self._tmp_dir, path)
-        if full_path in self._mount_paths:
+        if full_path in self._checkouts_by_path:
             raise Exception(f"duplicate mount definition: {full_path}")
 
         if snapshot is None:
             snapshot = "1" * 40
         if bind_mounts is None:
             bind_mounts = {}
-        if client_dir is None:
-            client_dir = "/" + path.replace("/", "_")
+        if client_name is None:
+            client_name = path.replace("/", "_")
 
-        self._mount_paths[full_path] = collections.OrderedDict(
-            [
-                ("bind-mounts", bind_mounts),
-                ("mount", full_path),
-                ("scm_type", scm_type),
-                ("snapshot", snapshot),
-                ("client-dir", client_dir),
-            ]
+        state_dir = os.path.join(self.clients_path, client_name)
+        assert full_path not in self._checkouts_by_path
+        assert state_dir not in self._checkouts_by_client_dir
+        config = CheckoutConfig(
+            path=full_path,
+            scm_type=scm_type,
+            hooks_path="",
+            bind_mounts=bind_mounts,
+            default_revision=snapshot,
         )
+        checkout = FakeCheckout(state_dir=state_dir, config=config, snapshot=snapshot)
+        self._checkouts_by_path[full_path] = checkout
+        self._checkouts_by_client_dir[state_dir] = checkout
 
         if active and self._status == fb_status.ALIVE:
             # Report the mount in /proc/mounts
@@ -2370,6 +2392,7 @@ class FakeEdenInstance:
             self._fake_client._mounts.append(
                 eden_ttypes.MountInfo(
                     mountPoint=os.fsencode(full_path),
+                    edenClientPath=os.fsencode(state_dir),
                     state=eden_ttypes.MountState.RUNNING,
                 )
             )
@@ -2383,6 +2406,12 @@ class FakeEdenInstance:
                     os.mkdir(os.path.join(full_path, ".git"))
 
         return full_path
+
+    def remove_checkout_configuration(self, mount_path: str) -> None:
+        """Update the state to make it look like the specified mount path is still
+        actively mounted but not configured on disk."""
+        mount = self._checkouts_by_path.pop(mount_path)
+        del self._checkouts_by_client_dir[mount.state_dir]
 
     def _setup_hg_path(
         self,
@@ -2411,18 +2440,27 @@ class FakeEdenInstance:
             eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
 
     def get_mount_paths(self) -> Iterable[str]:
-        return self._mount_paths.keys()
+        return self._checkouts_by_path.keys()
 
     def mount(self, path: str) -> int:
         assert self._status in (fb_status.ALIVE, fb_status.STARTING, fb_status.STOPPING)
-        assert path in self._mount_paths
+        assert path in self._checkouts_by_path
         return 0
 
     def check_health(self) -> HealthStatus:
         return HealthStatus(self._status, pid=None, detail="")
 
     def get_client_info(self, mount_path: str) -> collections.OrderedDict:
-        return self._mount_paths[mount_path]
+        checkout = self._checkouts_by_path[mount_path]
+        return collections.OrderedDict(
+            [
+                ("bind-mounts", checkout.config.bind_mounts),
+                ("mount", mount_path),
+                ("scm_type", checkout.config.scm_type),
+                ("snapshot", checkout.snapshot),
+                ("client-dir", checkout.state_dir),
+            ]
+        )
 
     def get_server_build_info(self) -> Dict[str, str]:
         return dict(self._build_info)
@@ -2430,8 +2468,32 @@ class FakeEdenInstance:
     def get_thrift_client(self) -> FakeClient:
         return self._fake_client
 
+    def get_checkouts(self) -> List[EdenCheckout]:
+        results: List[EdenCheckout] = []
+        for state_dir, checkout in self._checkouts_by_client_dir.items():
+            results.append(
+                EdenCheckout(
+                    typing.cast(EdenInstance, self),
+                    Path(checkout.config.path),
+                    Path(state_dir),
+                )
+            )
+        return results
+
     def get_config_value(self, key: str, default: str) -> str:
         return self._config.get(key, default)
+
+    def _get_checkout_config(self, client_dir: str) -> CheckoutConfig:
+        return self._get_checkout_by_client_dir(client_dir).config
+
+    def _get_snapshot(self, client_dir: str) -> str:
+        return self._get_checkout_by_client_dir(client_dir).snapshot
+
+    def _get_checkout_by_client_dir(self, client_dir: str) -> FakeCheckout:
+        try:
+            return self._checkouts_by_client_dir[client_dir]
+        except KeyError:
+            raise FileNotFoundError(os.path.join(client_dir, "config.toml"))
 
 
 class FakeProcessFinder(process_finder.LinuxProcessFinder):

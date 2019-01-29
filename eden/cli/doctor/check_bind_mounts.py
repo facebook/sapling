@@ -13,29 +13,27 @@ import os
 import stat
 
 from eden.cli import filesystem, mtab
-from eden.cli.config import EdenInstance
+from eden.cli.config import EdenCheckout
 from eden.cli.doctor.problem import FixableProblem, Problem, ProblemTracker
 
 
 def check_bind_mounts(
     tracker: ProblemTracker,
-    mount_path: str,
-    instance: EdenInstance,
-    client_info: collections.OrderedDict,
+    checkout: EdenCheckout,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
 ) -> None:
     """Check that bind mounts exist and have different device IDs than the top-level
     checkout mount path, to confirm that they are mounted."""
+    mount_path = str(checkout.path)
     try:
         checkout_path_stat = mount_table.lstat(mount_path)
     except OSError as ex:
         tracker.add_problem(Problem(f"Failed to stat eden mount: {mount_path}: {ex}"))
         return
 
-    client_dir = client_info["client-dir"]
-    client_bind_mount_dir = os.path.join(client_dir, "bind-mounts")
-    bind_mounts = client_info["bind-mounts"]
+    client_bind_mount_dir = str(checkout.state_dir / "bind-mounts")
+    bind_mounts = checkout.get_config().bind_mounts
 
     # Create a dictionary of client paths : mount paths
     # Client directory eg. /data/users/bob/.eden/clients/fbsource-eden/bind-mounts

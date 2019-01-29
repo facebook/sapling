@@ -994,6 +994,7 @@ class EdenCheckout:
         self.instance = instance
         self.path = path
         self.state_dir = state_dir
+        self._config: Optional[CheckoutConfig] = None
 
     def __repr__(self) -> str:
         return f"EdenCheckout({self.instance!r}, {self.path!r}, {self.state_dir!r})"
@@ -1053,6 +1054,15 @@ class EdenCheckout:
 
             path_parts.append(curdir.name)
             curdir = typing.cast(Path, curdir.parent)
+
+    def get_config(self) -> CheckoutConfig:
+        if self._config is None:
+            self._config = self.instance._get_checkout_config(str(self.state_dir))
+        return self._config
+
+    def get_snapshot(self) -> str:
+        """Return the hex version of the parent hash in the SNAPSHOT file."""
+        return self.instance._get_snapshot(str(self.state_dir))
 
 
 def find_eden(

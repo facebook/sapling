@@ -14,7 +14,7 @@ from eden.cli.config import EdenInstance
 from eden.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
 
 
-def check_using_nfs_path(tracker: ProblemTracker, mount_path: str) -> None:
+def check_using_nfs_path(tracker: ProblemTracker, mount_path: Path) -> None:
     check_shared_path(tracker, mount_path)
 
 
@@ -41,8 +41,8 @@ def check_eden_directory(tracker: ProblemTracker, instance: EdenInstance) -> Non
     tracker.add_problem(Problem(msg, remediation))
 
 
-def check_shared_path(tracker: ProblemTracker, mount_path: str) -> None:
-    shared_path = Path(mount_path) / ".hg" / "sharedpath"
+def check_shared_path(tracker: ProblemTracker, mount_path: Path) -> None:
+    shared_path = mount_path / ".hg" / "sharedpath"
     try:
         dst_shared_path = shared_path.read_text()
     except (FileNotFoundError, IsADirectoryError):

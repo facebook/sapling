@@ -8,11 +8,14 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+import shlex
+from pathlib import Path
 from textwrap import dedent
-from typing import List, Optional
+from typing import Dict, Optional
 
 from eden.cli import config as config_mod, filesystem, mtab, process_finder, ui, version
-from eden.cli.config import EdenInstance
+from eden.cli.config import EdenCheckout, EdenInstance
+from facebook.eden.ttypes import MountState
 from fb303.ttypes import fb_status
 
 from . import (
@@ -170,6 +173,31 @@ class EdenfsUnexpectedStatus(Problem):
         super().__init__(msg, remediation=remediation)
 
 
+class CheckoutInfo:
+    def __init__(
+        self,
+        instance: EdenInstance,
+        path: Path,
+        running_state_dir: Optional[Path] = None,
+        configured_state_dir: Optional[Path] = None,
+        state: Optional[MountState] = None,
+    ):
+        self.instance = instance
+        self.path = path
+        self.running_state_dir = running_state_dir
+        self.configured_state_dir = configured_state_dir
+        self.state = state
+
+    def get_checkout(self) -> EdenCheckout:
+        state_dir = (
+            self.running_state_dir
+            if self.running_state_dir is not None
+            else self.configured_state_dir
+        )
+        assert state_dir is not None
+        return EdenCheckout(self.instance, self.path, state_dir)
+
+
 def run_normal_checks(
     tracker: ProblemTracker,
     instance: EdenInstance,
@@ -177,53 +205,168 @@ def run_normal_checks(
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
 ) -> None:
+    checkouts: Dict[Path, CheckoutInfo] = {}
+    # Get information about the checkouts currently known to the running edenfs process
     with instance.get_thrift_client() as client:
-        active_mount_points: List[str] = [
-            os.fsdecode(mount.mountPoint)
-            for mount in client.listMounts()
-            if mount.mountPoint is not None
-        ]
+        for mount in client.listMounts():
+            path = Path(os.fsdecode(mount.mountPoint))
+            checkout = CheckoutInfo(
+                instance,
+                path,
+                running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
+                state=mount.state,
+            )
+            checkouts[path] = checkout
+
+    # Get information about the checkouts listed in the config file
+    for configured_checkout in instance.get_checkouts():
+        checkout_info = checkouts.get(configured_checkout.path, None)
+        if checkout_info is None:
+            checkout_info = CheckoutInfo(instance, configured_checkout.path)
+            checkout_info.configured_state_dir = configured_checkout.state_dir
+            checkouts[checkout_info.path] = checkout_info
+
+        checkout_info.configured_state_dir = configured_checkout.state_dir
 
     check_using_nfs.check_eden_directory(tracker, instance)
-    check_active_mounts(tracker, active_mount_points, mount_table)
     check_stale_mounts.check_for_stale_mounts(tracker, mount_table)
     check_edenfs_version(tracker, instance)
 
     watchman_info = check_watchman.pre_check()
 
-    configured_mounts = list(instance.get_mount_paths())
-    configured_mounts.sort()
-    for mount_path in configured_mounts:
-        if mount_path not in active_mount_points:
-            tracker.add_problem(CheckoutNotMounted(instance, mount_path))
-
-    for mount_path in sorted(active_mount_points):
-        if mount_path not in configured_mounts:
-            # TODO: if there are mounts in active_mount_points that aren't in
-            # configured_mounts, should we try to add them to the config?
-            # I've only seen this happen in the wild if a clone fails partway,
-            # for example, if a post-clone hook fails.
-            continue
-
-        out.writeln(f"Checking {mount_path}")
-        client_info = instance.get_client_info(mount_path)
-        check_using_nfs.check_using_nfs_path(tracker, mount_path)
-        check_watchman.check_active_mount(tracker, mount_path, watchman_info)
-        check_bind_mounts.check_bind_mounts(
-            tracker, mount_path, instance, client_info, mount_table, fs_util
-        )
-
-        if client_info["scm_type"] == "hg":
-            snapshot_hex = client_info["snapshot"]
-            check_hg.check_snapshot_dirstate_consistency(
-                tracker, instance, mount_path, snapshot_hex
+    for path, checkout in sorted(checkouts.items()):
+        out.writeln(f"Checking {path}")
+        try:
+            check_mount(tracker, checkout, mount_table, fs_util, watchman_info)
+        except Exception as ex:
+            tracker.add_problem(
+                Problem(f"unexpected error while checking {path}: {ex}")
             )
 
 
+def check_mount(
+    tracker: ProblemTracker,
+    checkout: CheckoutInfo,
+    mount_table: mtab.MountTable,
+    fs_util: filesystem.FsUtil,
+    watchman_info: check_watchman.WatchmanCheckInfo,
+) -> None:
+    if checkout.state is None:
+        # This checkout is configured but not currently running.
+        tracker.add_problem(CheckoutNotMounted(checkout))
+    elif checkout.state == MountState.RUNNING:
+        check_running_mount(tracker, checkout, mount_table, fs_util, watchman_info)
+    elif checkout.state in (
+        MountState.UNINITIALIZED,
+        MountState.INITIALIZING,
+        MountState.INITIALIZED,
+        MountState.STARTING,
+    ):
+        tracker.add_problem(
+            Problem(
+                f"Checkout {checkout.path} is currently starting up.",
+                f"If this checkout does not successfully finish starting soon, "
+                'try running "eden restart"',
+                severity=ProblemSeverity.ADVICE,
+            )
+        )
+    elif checkout.state in (
+        MountState.SHUTTING_DOWN,
+        MountState.SHUT_DOWN,
+        MountState.DESTROYING,
+    ):
+        tracker.add_problem(
+            Problem(
+                f"Checkout {checkout.path} is currently shutting down.",
+                f"If this checkout does not successfully finish shutting down soon, "
+                'try running "eden restart"',
+            )
+        )
+    elif checkout.state == MountState.FUSE_ERROR:
+        # TODO: We could potentially try automatically unmounting and remounting.
+        # In general mounts shouldn't remain in this state for long, so we probably
+        # don't need to worry too much about this case.
+        tracker.add_problem(
+            Problem(f"Checkout {checkout.path} encountered a FUSE error while mounting")
+        )
+    else:
+        tracker.add_problem(
+            Problem(
+                f"edenfs reports that checkout {checkout.path} is in "
+                "unknown state {checkout.state}"
+            )
+        )
+
+
+def check_running_mount(
+    tracker: ProblemTracker,
+    checkout_info: CheckoutInfo,
+    mount_table: mtab.MountTable,
+    fs_util: filesystem.FsUtil,
+    watchman_info: check_watchman.WatchmanCheckInfo,
+) -> None:
+    if checkout_info.configured_state_dir is None:
+        tracker.add_problem(CheckoutNotConfigured(checkout_info))
+        return
+    elif checkout_info.configured_state_dir != checkout_info.running_state_dir:
+        tracker.add_problem(CheckoutConfigurationMismatch(checkout_info))
+        return
+
+    checkout = checkout_info.get_checkout()
+    try:
+        config = checkout.get_config()
+    except Exception as ex:
+        tracker.add_problem(
+            Problem(f"error parsing the configuration for {checkout_info.path}: {ex}")
+        )
+        # Just skip the remaining checks.
+        # Most of them rely on values from the configuration.
+        return
+
+    check_using_nfs.check_using_nfs_path(tracker, checkout.path)
+    check_watchman.check_active_mount(tracker, str(checkout.path), watchman_info)
+    check_bind_mounts.check_bind_mounts(tracker, checkout, mount_table, fs_util)
+
+    if config.scm_type == "hg":
+        snapshot_hex = checkout.get_snapshot()
+        check_hg.check_snapshot_dirstate_consistency(
+            tracker, checkout.instance, str(checkout.path), snapshot_hex
+        )
+
+
+class CheckoutNotConfigured(Problem):
+    def __init__(self, checkout_info: CheckoutInfo) -> None:
+        msg = (
+            f"Checkout {checkout_info.path} is running but not "
+            "listed in Eden's configuration file."
+        )
+        # TODO: Maybe we could use some better suggestions here, depending on
+        # common cases that might lead to this situation.  (At the moment I believe this
+        # can occur if `eden clone` fails to set up the .hg directory after mounting.)
+        quoted_path = shlex.quote(str(checkout_info.path))
+        remediation = (
+            f'Running "eden unmount {quoted_path}" will unmount this checkout.'
+        )
+        super().__init__(msg, remediation)
+
+
+class CheckoutConfigurationMismatch(Problem):
+    def __init__(self, checkout_info: CheckoutInfo) -> None:
+        msg = f"""\
+The running configuration for {checkout_info.path} is different than "
+the on-disk state in Eden's configuration file:
+- Running state directory:    {checkout_info.running_state_dir}
+- Configured state directory: {checkout_info.configured_state_dir}"""
+        remediation = f"""\
+Running `eden restart` will cause Eden to restart and use the data from the
+on-disk configuration."""
+        super().__init__(msg, remediation)
+
+
 class CheckoutNotMounted(FixableProblem):
-    def __init__(self, instance: EdenInstance, mount_path: str) -> None:
-        self._instance = instance
-        self._mount_path = mount_path
+    def __init__(self, checkout_info: CheckoutInfo) -> None:
+        self._instance = checkout_info.instance
+        self._mount_path = checkout_info.path
 
     def description(self) -> str:
         return f"{self._mount_path} is not currently mounted"
@@ -236,7 +379,7 @@ class CheckoutNotMounted(FixableProblem):
 
     def perform_fix(self) -> None:
         try:
-            self._instance.mount(self._mount_path)
+            self._instance.mount(str(self._mount_path))
         except Exception as ex:
             if "is too short for header" in str(ex):
                 raise Exception(
@@ -254,20 +397,6 @@ you may be able to restore it from your system backup.
 To remove the corrupted repo, run: `eden rm {self._mount_path}`"""
                 )
             raise
-
-
-def check_active_mounts(
-    tracker: ProblemTracker,
-    active_mount_points: List[str],
-    mount_table: mtab.MountTable,
-) -> None:
-    for amp in active_mount_points:
-        try:
-            mount_table.lstat(amp).st_dev
-        except OSError as ex:
-            tracker.add_problem(
-                Problem(f"Failed to lstat active eden mount {amp}: {ex}")
-            )
 
 
 class StaleWorkingDirectory(Problem):
