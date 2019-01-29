@@ -82,7 +82,7 @@ Do infinitepush (aka commit cloud) push
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" 283 bytes payload
-  bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
+  bundle2-output-part: "B2X:INFINITEPUSH" (params: 1 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   bundle2-input-bundle: 1 params no-transaction
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
@@ -144,13 +144,13 @@ Pushbackup also works
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 4 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
-  bundle2-output-part: "pushvars" (params: 0 advisory) empty payload
-  bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
+  bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
+  bundle2-output-part: "B2X:INFINITEPUSH" (params: 1 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
-  bundle2-output-part: "pushvars" (params: 0 advisory) empty payload
+  bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   backup complete
   heads added: 95cad53aab1b0b33eceee14473b3983312721529
@@ -203,7 +203,7 @@ Pushbackup that pushes only bookmarks
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
-  bundle2-output-part: "pushvars" (params: 0 advisory) empty payload
+  bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   backup complete
   heads added:  (re)

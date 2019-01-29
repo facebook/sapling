@@ -31,6 +31,7 @@ DUMMYSSH_TARGET = '//scm/mononoke/tests/integration:dummyssh'
 BINARY_HG_TARGET = '//scm/hg:hg'
 MONONOKE_HGCLI_TARGET = '//scm/mononoke/hgcli:hgcli'
 MONONOKE_SERVER_TARGET = '//scm/mononoke:mononoke'
+FACEBOOK_HOOKS_TARGET = '//scm/mononoke/facebook/hooks:hooks'
 
 
 @click.command()
@@ -122,6 +123,11 @@ def run(
     add_to_environ('MONONOKE_APISERVER', MONONOKE_APISERVER_TARGET)
     add_to_environ('MONONOKE_HGCLI', MONONOKE_HGCLI_TARGET)
     add_to_environ('MONONOKE_SERVER', MONONOKE_SERVER_TARGET)
+    add_to_environ(
+        'FACEBOOK_HOOKS',
+        FACEBOOK_HOOKS_TARGET,
+        pathutils.BuildRuleTypes.FILEGROUP
+    )
 
     # Provide an output directory so that we don't write to a xar's read-only
     # filesystem.
