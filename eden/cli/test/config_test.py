@@ -21,6 +21,8 @@ from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .. import config as config_mod, configutil, util
 from ..config import EdenInstance
+from ..configinterpolator import EdenConfigInterpolator
+from ..configutil import EdenConfigParser, UnexpectedType
 
 
 def get_toml_test_file_invalid():
@@ -446,6 +448,19 @@ path = "/data/users/${USER}/fbsource"
 
         self.assertIn("/data/users/bob/fbsource", printed_config.getvalue())
 
+    def test_printed_config_writes_booleans_as_booleans(self) -> None:
+        self.write_user_config(
+            """
+[service]
+experimental_systemd = true
+"""
+        )
+
+        printed_config = io.StringIO()
+        self.get_config().print_full_config(file=printed_config)
+
+        self.assertRegex(printed_config.getvalue(), r"experimental_systemd\s*=\s*true")
+
     def get_config(self) -> EdenInstance:
         return EdenInstance(
             self._state_dir, self._etc_eden_dir, self._home_dir, self._interpolate_dict
@@ -455,3 +470,135 @@ path = "/data/users/${USER}/fbsource"
         path = os.path.join(self._home_dir, ".edenrc")
         with open(path, "w") as text_file:
             text_file.write(content)
+
+
+class EdenConfigParserTest(unittest.TestCase):
+    unsupported_value = {"dict of string to string": ""}
+
+    def test_loading_config_with_unsupported_type_is_not_an_error(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"test_option": self.unsupported_value}})
+
+    def test_querying_bool_returns_bool(self) -> None:
+        for value in [True, False]:
+            with self.subTest(value=value):
+                parser = EdenConfigParser()
+                parser.read_dict({"test_section": {"test_option": value}})
+                self.assertEqual(
+                    parser.get_bool("test_section", "test_option", default=True), value
+                )
+                self.assertEqual(
+                    parser.get_bool("test_section", "test_option", default=False), value
+                )
+
+    def test_querying_bool_with_non_boolean_value_fails(self) -> None:
+        for value in ["not a boolean", "", "true", "True", 0]:
+            with self.subTest(value=value):
+                parser = EdenConfigParser()
+                parser.read_dict({"test_section": {"test_option": value}})
+                with self.assertRaises(UnexpectedType) as expectation:
+                    parser.get_bool("test_section", "test_option", default=False)
+                self.assertEqual(expectation.exception.section, "test_section")
+                self.assertEqual(expectation.exception.option, "test_option")
+                self.assertEqual(expectation.exception.value, value)
+                self.assertEqual(expectation.exception.expected_type, bool)
+
+    def test_querying_bool_with_value_of_unsupported_type_fails(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"test_option": self.unsupported_value}})
+        with self.assertRaises(UnexpectedType) as expectation:
+            parser.get_bool("test_section", "test_option", default=False)
+        self.assertEqual(expectation.exception.section, "test_section")
+        self.assertEqual(expectation.exception.option, "test_option")
+        self.assertEqual(expectation.exception.value, self.unsupported_value)
+        self.assertEqual(expectation.exception.expected_type, bool)
+
+    def test_querying_str_with_non_string_value_fails(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"test_option": True}})
+        with self.assertRaises(UnexpectedType) as expectation:
+            parser.get_str("test_section", "test_option", default="")
+        self.assertEqual(expectation.exception.section, "test_section")
+        self.assertEqual(expectation.exception.option, "test_option")
+        self.assertEqual(expectation.exception.value, True)
+        self.assertEqual(expectation.exception.expected_type, str)
+
+    def test_querying_section_str_to_str_returns_mapping(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"a": "a value", "b": "b value"}})
+        section = parser.get_section_str_to_str("test_section")
+        self.assertCountEqual(section, {"a", "b"})
+        self.assertEqual(section["a"], "a value")
+        self.assertEqual(section["b"], "b value")
+
+    def test_querying_section_str_to_any_fails_if_option_has_unsupported_type(
+        self
+    ) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"unsupported": self.unsupported_value}})
+        with self.assertRaises(UnexpectedType) as expectation:
+            parser.get_section_str_to_any("test_section")
+        self.assertEqual(expectation.exception.section, "test_section")
+        self.assertEqual(expectation.exception.option, "unsupported")
+        self.assertEqual(expectation.exception.value, self.unsupported_value)
+        self.assertIsNone(expectation.exception.expected_type)
+
+    def test_querying_section_str_to_any_interpolates_options(self) -> None:
+        parser = EdenConfigParser(
+            interpolation=EdenConfigInterpolator({"USER": "alice"})
+        )
+        parser.read_dict({"test_section": {"test_option": "hello ${USER}"}})
+        section = parser.get_section_str_to_any("test_section")
+        self.assertEqual(section.get("test_option"), "hello alice")
+
+    def test_querying_section_str_to_str_with_non_string_value_fails(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"a": False}})
+        with self.assertRaises(UnexpectedType) as expectation:
+            parser.get_section_str_to_str("test_section")
+        self.assertEqual(expectation.exception.section, "test_section")
+        self.assertEqual(expectation.exception.option, "a")
+        self.assertEqual(expectation.exception.value, False)
+        self.assertEqual(expectation.exception.expected_type, str)
+
+    def test_querying_section_str_to_str_of_missing_section_fails(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"a": "a value"}})
+        with self.assertRaises(configparser.NoSectionError) as expectation:
+            parser.get_section_str_to_str("not_test_section")
+        section: str = expectation.exception.section  # type: ignore
+        self.assertEqual(section, "not_test_section")
+
+    def test_unexpected_type_error_messages_are_helpful(self) -> None:
+        self.assertEqual(
+            'Expected boolean for service.experimental_systemd, but got string: "true"',
+            str(
+                UnexpectedType(
+                    section="service",
+                    option="experimental_systemd",
+                    value="true",
+                    expected_type=bool,
+                )
+            ),
+        )
+
+        self.assertEqual(
+            "Expected string for repository myrepo.path, but got boolean: true",
+            str(
+                UnexpectedType(
+                    section="repository myrepo",
+                    option="path",
+                    value=True,
+                    expected_type=str,
+                )
+            ),
+        )
+
+        self.assertRegex(
+            str(
+                UnexpectedType(
+                    section="section", option="option", value={}, expected_type=None
+                )
+            ),
+            r"^Unexpected dict for section.option: \{\s*\}$",
+        )

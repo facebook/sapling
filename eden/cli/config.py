@@ -233,9 +233,8 @@ class EdenInstance:
         if env_var_value == "0":
             return False
 
-        if (
-            self.get_config_value("service.experimental_systemd", default="False")
-            == "True"
+        if self._loadConfig().get_bool(
+            "service", "experimental_systemd", default=False
         ):
             return True
 
@@ -245,7 +244,7 @@ class EdenInstance:
         parser = self._loadConfig()
         data: Dict[str, Mapping[str, str]] = {}
         for section in parser.sections():
-            data[section] = parser.get_section_str_to_str(section)
+            data[section] = parser.get_section_str_to_any(section)
         toml.dump(data, file)  # pyre-ignore[T39129461]
 
     def find_config_for_alias(self, alias: str) -> Optional[CheckoutConfig]:

@@ -18,19 +18,29 @@ from typing import (
     MutableMapping,
     Optional,
     Tuple,
+    Type,
+    TypeVar,
+    Union,
 )
+
+import toml
 
 from .configinterpolator import EdenConfigInterpolator
 
 
-ConfigValue = str
+ConfigValue = Union[bool, str]
 ConfigSectionName = str
 ConfigOptionName = str
+_UnsupportedValue = Any
+
+_TConfigValue = TypeVar("_TConfigValue", bound=ConfigValue)
 
 
 class EdenConfigParser:
     _interpolator: configparser.Interpolation
-    _sections: DefaultDict[ConfigSectionName, Dict[ConfigOptionName, ConfigValue]]
+    _sections: DefaultDict[
+        ConfigSectionName, Dict[ConfigOptionName, Union[ConfigValue, _UnsupportedValue]]
+    ]
 
     def __init__(self, interpolation: Optional[EdenConfigInterpolator] = None) -> None:
         super().__init__()
@@ -43,8 +53,7 @@ class EdenConfigParser:
         self, dictionary: Mapping[ConfigSectionName, Mapping[ConfigOptionName, Any]]
     ) -> None:
         for section, options in dictionary.items():
-            for option, value in options.items():
-                self._sections[section][option] = self._make_storable_value(value)
+            self._sections[section].update(options)
 
     # Convert the passed EdenConfigParser to a raw dictionary (without
     # interpolation)
@@ -58,25 +67,83 @@ class EdenConfigParser:
     def sections(self) -> List[ConfigSectionName]:
         return list(self._sections.keys())
 
+    def get_section_str_to_any(self, section: ConfigSectionName) -> Mapping[str, Any]:
+        options = self._get_raw_section(section)
+        return {
+            option: self._interpolate_value(
+                section=section,
+                option=option,
+                value=self._ensure_value_is_supported(
+                    section=section, option=option, value=value
+                ),
+            )
+            for option, value in options.items()
+        }
+
     def get_section_str_to_str(self, section: ConfigSectionName) -> Mapping[str, str]:
+        options = self._get_raw_section(section)
+        return {
+            option: self._value_with_type(
+                section=section, option=option, value=value, expected_type=str
+            )
+            for option, value in options.items()
+        }
+
+    def _get_raw_section(
+        self, section: ConfigSectionName
+    ) -> Mapping[ConfigSectionName, Union[ConfigValue, _UnsupportedValue]]:
         options = self._sections.get(section)
         if options is None:
             raise configparser.NoSectionError(section)
-        return {
-            option: self._interpolate_value(section=section, option=option, value=value)
-            for option, value in options.items()
-        }
+        return options
+
+    def get_bool(
+        self, section: ConfigSectionName, option: ConfigOptionName, default: bool
+    ) -> bool:
+        return self._get(section, option, default=default, expected_type=bool)
 
     def get_str(
         self, section: ConfigSectionName, option: ConfigOptionName, default: str
     ) -> str:
+        return self._get(section, option, default=default, expected_type=str)
+
+    def _get(
+        self,
+        section: ConfigSectionName,
+        option: ConfigOptionName,
+        default: _TConfigValue,
+        expected_type: Type[_TConfigValue],
+    ) -> _TConfigValue:
         options = self._sections.get(section)
         if options is None:
             return default
         if option not in options:
             return default
         value = options[option]
-        return self._interpolate_value(section=section, option=option, value=value)
+        return self._value_with_type(
+            section=section, option=option, value=value, expected_type=expected_type
+        )
+
+    def _value_with_type(
+        self,
+        section: ConfigSectionName,
+        option: ConfigOptionName,
+        value: Union[ConfigValue, _UnsupportedValue],
+        expected_type: Type[_TConfigValue],
+    ) -> _TConfigValue:
+        # TODO(T39124448): Remove Pyre workaround; use isinstance directly.
+        is_instance = isinstance
+        if not is_instance(value, expected_type):
+            expected_type_temp: Type[ConfigValue] = expected_type  # type: ignore
+            raise UnexpectedType(
+                section=section,
+                option=option,
+                value=value,
+                expected_type=expected_type_temp,
+            )
+        return self._interpolate_value(  # type: ignore  # T39124448, T39125053
+            section=section, option=option, value=value
+        )
 
     def has_section(self, section: ConfigSectionName) -> bool:
         return section in self._sections
@@ -86,28 +153,96 @@ class EdenConfigParser:
         section: ConfigSectionName,
         options: Mapping[ConfigOptionName, ConfigValue],
     ) -> None:
-        self._sections[section] = {
-            option: self._make_storable_value(value)
-            for option, value in options.items()
-        }
+        self._sections[section] = dict(options)
 
     @property
-    def _defaults(self) -> Mapping[ConfigOptionName, ConfigValue]:
+    def _defaults(self) -> Mapping[ConfigOptionName, str]:
         return {}
 
     @property
     def _parser(
         self
-    ) -> MutableMapping[ConfigSectionName, Mapping[ConfigOptionName, ConfigValue]]:
+    ) -> MutableMapping[ConfigSectionName, Mapping[ConfigOptionName, str]]:
         return {}
 
-    def _interpolate_value(
-        self, section: ConfigSectionName, option: ConfigOptionName, value: ConfigValue
+    def _ensure_value_is_supported(
+        self,
+        section: ConfigSectionName,
+        option: ConfigOptionName,
+        value: Union[ConfigValue, _UnsupportedValue],
     ) -> ConfigValue:
-        return self._interpolator.before_get(
-            self._parser, section, option, value, self._defaults
-        )
+        if not isinstance(value, (bool, str)):
+            raise UnexpectedType(
+                section=section, option=option, value=value, expected_type=None
+            )
+        return value
 
-    def _make_storable_value(self, value: Any) -> ConfigValue:
-        # TODO(strager): Avoid converting values to strings.
-        return str(value)
+    def _interpolate_value(
+        self, section: ConfigSectionName, option: ConfigOptionName, value: _TConfigValue
+    ) -> _TConfigValue:
+        if isinstance(value, str):
+            return self._interpolator.before_get(  # type: ignore  # T39125053
+                self._parser, section, option, value, self._defaults
+            )
+        else:
+            return value
+
+
+class UnexpectedType(Exception):
+    section: ConfigSectionName
+    option: ConfigOptionName
+    value: Any
+    expected_type: Optional[Type[ConfigValue]]
+
+    def __init__(
+        self,
+        section: ConfigSectionName,
+        option: ConfigOptionName,
+        value: Any,
+        expected_type: Optional[Type[ConfigValue]],
+    ) -> None:
+        super().__init__()
+        self.section = section
+        self.option = option
+        self.value = value
+        self.expected_type = expected_type
+
+    def __str__(self) -> str:
+        if self.expected_type is None:
+            return (
+                f"Unexpected {self.human_value_type} for "
+                f"{self.section}.{self.option}: {self.human_value}"
+            )
+        else:
+            return (
+                f"Expected {self.human_expected_type} for "
+                f"{self.section}.{self.option}, but got "
+                f"{self.human_value_type}: {self.human_value}"
+            )
+
+    @property
+    def human_expected_type(self) -> str:
+        assert self.expected_type is not None
+        return _toml_type_name(self.expected_type)
+
+    @property
+    def human_value_type(self) -> str:
+        return _toml_type_name(type(self.value))
+
+    @property
+    def human_value(self) -> str:
+        return _toml_value(self.value)
+
+
+def _toml_type_name(type: Type) -> str:
+    if type is bool:
+        return "boolean"
+    if type is str:
+        return "string"
+    return type.__name__
+
+
+def _toml_value(value: Union[bool, str]) -> str:
+    TomlEncoder: Type = toml.TomlEncoder  # type: ignore
+    value_toml: str = TomlEncoder().dump_inline_table(value)
+    return value_toml.rstrip()
