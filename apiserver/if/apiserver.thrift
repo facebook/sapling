@@ -38,8 +38,30 @@ struct MononokeBranches {
   1: map<string, string> branches,
 }
 
+struct MononokeDirectory {
+  1: list<MononokeFile> files,
+}
+
 struct MononokeGetBranchesParams{
   1: string repo,
+}
+
+struct MononokeListDirectoryParams{
+  1: string repo,
+  2: string revision,
+  3: binary path,
+}
+
+struct MononokeFile {
+  1: string name,
+  2: MononokeFileType file_type,
+}
+
+enum MononokeFileType {
+  FILE = 0,
+  TREE = 1,
+  EXECUTABLE = 2,
+  SYMLINK = 3,
 }
 
 service MononokeAPIService extends fb303.FacebookService {
@@ -50,5 +72,8 @@ service MononokeAPIService extends fb303.FacebookService {
     throws (1: MononokeAPIException e),
 
   MononokeBranches get_branches(1: MononokeGetBranchesParams params)
+    throws (1: MononokeAPIException e),
+
+  MononokeDirectory list_directory(1: MononokeListDirectoryParams params)
     throws (1: MononokeAPIException e),
 }

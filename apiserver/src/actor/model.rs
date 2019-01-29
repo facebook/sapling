@@ -12,7 +12,7 @@ use std::str;
 use chrono::{DateTime, FixedOffset};
 use failure::{err_msg, Error};
 
-use apiserver_thrift::types::MononokeChangeset;
+use apiserver_thrift::types::{MononokeChangeset, MononokeFile, MononokeFileType};
 use blobrepo::HgBlobChangeset;
 use context::CoreContext;
 use futures::prelude::*;
@@ -45,6 +45,26 @@ impl From<Type> for FileType {
                 MononokeFileType::Symlink => FileType::Symlink,
             },
             Type::Tree => FileType::Tree,
+        }
+    }
+}
+
+impl From<FileType> for MononokeFileType {
+    fn from(file_type: FileType) -> Self {
+        match file_type {
+            FileType::File => MononokeFileType::FILE,
+            FileType::Tree => MononokeFileType::TREE,
+            FileType::Executable => MononokeFileType::EXECUTABLE,
+            FileType::Symlink => MononokeFileType::SYMLINK,
+        }
+    }
+}
+
+impl From<Entry> for MononokeFile {
+    fn from(entry: Entry) -> Self {
+        Self {
+            name: entry.name,
+            file_type: entry.ttype.into(),
         }
     }
 }

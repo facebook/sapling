@@ -13,6 +13,7 @@ use http::uri::Uri;
 
 use apiserver_thrift::types::{
     MononokeGetBranchesParams, MononokeGetChangesetParams, MononokeGetRawParams,
+    MononokeListDirectoryParams,
 };
 
 use super::lfs::BatchRequest;
@@ -94,6 +95,20 @@ impl TryFrom<MononokeGetBranchesParams> for MononokeQuery {
         Ok(MononokeQuery {
             repo: params.repo,
             kind: MononokeRepoQuery::GetBranches,
+        })
+    }
+}
+
+impl TryFrom<MononokeListDirectoryParams> for MononokeQuery {
+    type Error = Error;
+
+    fn try_from(params: MononokeListDirectoryParams) -> Result<MononokeQuery, Self::Error> {
+        Ok(MononokeQuery {
+            repo: params.repo,
+            kind: MononokeRepoQuery::ListDirectory {
+                path: String::from_utf8(params.path)?,
+                revision: params.revision,
+            },
         })
     }
 }

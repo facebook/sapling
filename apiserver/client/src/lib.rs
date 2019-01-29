@@ -14,8 +14,8 @@ use futures_ext::BoxFuture;
 
 use apiserver_thrift::client::{make_MononokeAPIService, MononokeAPIService};
 use apiserver_thrift::types::{
-    MononokeBranches, MononokeChangeset, MononokeGetBranchesParams, MononokeGetChangesetParams,
-    MononokeGetRawParams,
+    MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBranchesParams,
+    MononokeGetChangesetParams, MononokeGetRawParams, MononokeListDirectoryParams,
 };
 use srclient::SRChannelBuilder;
 
@@ -60,6 +60,18 @@ impl MononokeAPIClient {
     pub fn get_branches(&self) -> BoxFuture<MononokeBranches, apiserver_thrift::errors::Error> {
         self.inner.get_branches(&MononokeGetBranchesParams {
             repo: self.repo.clone(),
+        })
+    }
+
+    pub fn list_directory(
+        &self,
+        revision: String,
+        path: String,
+    ) -> BoxFuture<MononokeDirectory, apiserver_thrift::errors::Error> {
+        self.inner.list_directory(&MononokeListDirectoryParams {
+            repo: self.repo.clone(),
+            revision,
+            path: path.into_bytes(),
         })
     }
 }

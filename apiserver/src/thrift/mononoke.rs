@@ -8,10 +8,12 @@ use std::convert::TryInto;
 use std::sync::Arc;
 
 use apiserver_thrift::server::MononokeApiservice;
-use apiserver_thrift::services::mononoke_apiservice::{GetBranchesExn, GetChangesetExn, GetRawExn};
+use apiserver_thrift::services::mononoke_apiservice::{
+    GetBranchesExn, GetChangesetExn, GetRawExn, ListDirectoryExn,
+};
 use apiserver_thrift::types::{
-    MononokeBranches, MononokeChangeset, MononokeGetBranchesParams, MononokeGetChangesetParams,
-    MononokeGetRawParams,
+    MononokeBranches, MononokeChangeset, MononokeDirectory, MononokeGetBranchesParams,
+    MononokeGetChangesetParams, MononokeGetRawParams, MononokeListDirectoryParams,
 };
 use errors::ErrorKind;
 use failure::err_msg;
@@ -195,6 +197,59 @@ impl MononokeApiservice for MononokeAPIServiceImpl {
                                 resp.branches
                                     .iter()
                                     .map(|(bookmark, hash)| bookmark.len() + hash.len())
+                                    .sum()
+                            })
+                            .unwrap_or(0),
+                        )
+                        .add_future_stats(&stats)
+                        .add("response_time", stats.completion_time.as_micros_unchecked());
+
+                    scuba.log();
+
+                    Ok(())
+                }
+            })
+    }
+
+    fn list_directory(
+        &self,
+        params: MononokeListDirectoryParams,
+    ) -> BoxFuture<MononokeDirectory, ListDirectoryExn> {
+        let mut scuba = self.create_scuba_logger(
+            "get_branches",
+            &params,
+            params.path.clone(),
+            params.revision.clone(),
+        );
+
+        params
+            .try_into()
+            .into_future()
+            .from_err()
+            .and_then({
+                cloned!(self.addr);
+                move |param| addr.send_query(param)
+            })
+            .and_then(|resp: MononokeRepoResponse| match resp {
+                MononokeRepoResponse::ListDirectory { files } => Ok(MononokeDirectory {
+                    files: files.map(|f| f.into()).collect(),
+                }),
+                _ => Err(ErrorKind::InternalError(err_msg(
+                    "Actor returned wrong response type to query".to_string(),
+                ))),
+            })
+            .map_err(move |e| ListDirectoryExn::e(e.into()))
+            .timed({
+                move |stats, resp| {
+                    scuba
+                        .add(
+                            "response_size",
+                            resp.map(|resp| {
+                                resp.files
+                                    .iter()
+                                    .map(
+                                        |file| file.name.len() + 1, // 1 byte for the filetype
+                                    )
                                     .sum()
                             })
                             .unwrap_or(0),

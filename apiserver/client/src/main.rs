@@ -58,6 +58,22 @@ fn get_branches(client: MononokeAPIClient) -> BoxFuture<(), ()> {
         .boxify()
 }
 
+fn list_directory(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
+    let revision = matches.value_of("revision").expect("must provide revision");
+    let path = matches.value_of("path").expect("must provide path");
+
+    client
+        .list_directory(revision.to_string(), path.to_string())
+        .and_then(|r| {
+            Ok(serde_json::to_string(&r).unwrap_or("Error converting request to json".to_string()))
+        })
+        .map_err(|e| eprintln!("error: {}", e))
+        .map(|res| {
+            println!("{}", res);
+        })
+        .boxify()
+}
+
 fn main() -> Result<(), ()> {
     let matches = App::new("Mononoke API Server Thrift client")
         .about("Send requests to Mononoke API Server thrift port")
@@ -110,6 +126,26 @@ fn main() -> Result<(), ()> {
                 ),
         )
         .subcommand(SubCommand::with_name("get_branches").about("get all branches"))
+        .subcommand(
+            SubCommand::with_name("list_directory")
+                .about("list all files in a directory")
+                .arg(
+                    Arg::with_name("revision")
+                        .short("c")
+                        .long("revision")
+                        .value_name("HASH")
+                        .help("hash/bookmark of the revision you want to query")
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .short("p")
+                        .long("path")
+                        .value_name("PATH")
+                        .help("path to the directory you want to list")
+                        .required(true),
+                ),
+        )
         .get_matches();
 
     let tier = matches.value_of("tier").expect("must provide tier name");
@@ -124,6 +160,8 @@ fn main() -> Result<(), ()> {
         get_changeset(client, matches)
     } else if let Some(_) = matches.subcommand_matches("get_branches") {
         get_branches(client)
+    } else if let Some(matches) = matches.subcommand_matches("list_directory") {
+        list_directory(client, matches)
     } else {
         Ok(()).into_future().boxify()
     };
