@@ -551,6 +551,22 @@ class EdenConfigParserTest(unittest.TestCase):
         section = parser.get_section_str_to_any("test_section")
         self.assertEqual(section.get("test_option"), "hello alice")
 
+    def test_querying_section_str_to_any_returns_any_supported_type(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict(
+            {
+                "test_section": {
+                    "bool_option": True,
+                    "string_array_option": ["hello", "world"],
+                    "string_option": "hello",
+                }
+            }
+        )
+        section = parser.get_section_str_to_any("test_section")
+        self.assertEqual(section["bool_option"], True)
+        self.assertEqual(list(section["string_array_option"]), ["hello", "world"])
+        self.assertEqual(section["string_option"], "hello")
+
     def test_querying_section_str_to_str_with_non_string_value_fails(self) -> None:
         parser = EdenConfigParser()
         parser.read_dict({"test_section": {"a": False}})
@@ -568,6 +584,64 @@ class EdenConfigParserTest(unittest.TestCase):
             parser.get_section_str_to_str("not_test_section")
         section: str = expectation.exception.section  # type: ignore
         self.assertEqual(section, "not_test_section")
+
+    def test_querying_strs_with_empty_array_returns_empty_sequence(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"test_option": []}})
+        self.assertEqual(
+            list(
+                parser.get_strs(
+                    "test_section", "test_option", default=["default value"]
+                )
+            ),
+            [],
+        )
+
+    def test_querying_strs_with_array_of_strings_returns_strs(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"test_option": ["first", "second", "3rd"]}})
+        self.assertEqual(
+            list(parser.get_strs("test_section", "test_option", default=[])),
+            ["first", "second", "3rd"],
+        )
+
+    def test_querying_strs_with_array_of_non_strings_fails(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"test_option": [123]}})
+        with self.assertRaises(UnexpectedType) as expectation:
+            parser.get_strs("test_section", "test_option", default=[])
+        self.assertEqual(expectation.exception.section, "test_section")
+        self.assertEqual(expectation.exception.option, "test_option")
+        self.assertEqual(expectation.exception.value, [123])
+        self.assertEqual(expectation.exception.expected_type, configutil.Strs)
+
+    def test_querying_missing_value_as_strs_returns_default(self) -> None:
+        parser = EdenConfigParser()
+        parser.read_dict({"test_section": {"bogus_option": []}})
+        self.assertEqual(
+            list(
+                parser.get_strs(
+                    "test_section", "missing_option", default=["default value"]
+                )
+            ),
+            ["default value"],
+        )
+
+    def test_str_sequences_are_interpolated(self) -> None:
+        parser = EdenConfigParser(
+            interpolation=EdenConfigInterpolator({"USER": "alice"})
+        )
+        parser.read_dict(
+            {
+                "test_section": {
+                    "test_option": ["sudo", "-u", "${USER}", "echo", "Hello, ${USER}!"]
+                }
+            }
+        )
+        self.assertEqual(
+            list(parser.get_strs("test_section", "test_option", default=[])),
+            ["sudo", "-u", "alice", "echo", "Hello, alice!"],
+        )
 
     def test_unexpected_type_error_messages_are_helpful(self) -> None:
         self.assertEqual(
@@ -601,4 +675,16 @@ class EdenConfigParserTest(unittest.TestCase):
                 )
             ),
             r"^Unexpected dict for section.option: \{\s*\}$",
+        )
+
+        self.assertEqual(
+            "Expected array of strings for service.command, but got array: [ 123,]",
+            str(
+                UnexpectedType(
+                    section="service",
+                    option="command",
+                    value=[123],
+                    expected_type=configutil.Strs,
+                )
+            ),
         )

@@ -10,6 +10,7 @@
 import collections
 import configparser
 from typing import (
+    TYPE_CHECKING,
     Any,
     DefaultDict,
     Dict,
@@ -17,10 +18,12 @@ from typing import (
     Mapping,
     MutableMapping,
     Optional,
+    Sequence,
     Tuple,
     Type,
     TypeVar,
     Union,
+    cast,
 )
 
 import toml
@@ -28,7 +31,19 @@ import toml
 from .configinterpolator import EdenConfigInterpolator
 
 
-ConfigValue = Union[bool, str]
+if TYPE_CHECKING:
+
+    class Strs(Tuple[str, ...]):
+        pass
+
+
+else:
+
+    class Strs(tuple):
+        pass
+
+
+ConfigValue = Union[bool, str, Strs]
 ConfigSectionName = str
 ConfigOptionName = str
 _UnsupportedValue = Any
@@ -53,7 +68,10 @@ class EdenConfigParser:
         self, dictionary: Mapping[ConfigSectionName, Mapping[ConfigOptionName, Any]]
     ) -> None:
         for section, options in dictionary.items():
-            self._sections[section].update(options)
+            for option, value in options.items():
+                self._sections[section][option] = self._make_storable_value(
+                    section, option, value
+                )
 
     # Convert the passed EdenConfigParser to a raw dictionary (without
     # interpolation)
@@ -106,6 +124,15 @@ class EdenConfigParser:
         self, section: ConfigSectionName, option: ConfigOptionName, default: str
     ) -> str:
         return self._get(section, option, default=default, expected_type=str)
+
+    def get_strs(
+        self,
+        section: ConfigSectionName,
+        option: ConfigOptionName,
+        default: Sequence[str],
+    ) -> Strs:
+        default_strs = Strs(default)
+        return self._get(section, option, default=default_strs, expected_type=Strs)
 
     def _get(
         self,
@@ -171,7 +198,7 @@ class EdenConfigParser:
         option: ConfigOptionName,
         value: Union[ConfigValue, _UnsupportedValue],
     ) -> ConfigValue:
-        if not isinstance(value, (bool, str)):
+        if not isinstance(value, (bool, str, Strs)):
             raise UnexpectedType(
                 section=section, option=option, value=value, expected_type=None
             )
@@ -180,12 +207,27 @@ class EdenConfigParser:
     def _interpolate_value(
         self, section: ConfigSectionName, option: ConfigOptionName, value: _TConfigValue
     ) -> _TConfigValue:
-        if isinstance(value, str):
+        if isinstance(value, Strs):
+            return Strs(  # type: ignore  # T39125053
+                self._interpolate_value(section, option, item) for item in value
+            )
+        elif isinstance(value, str):
             return self._interpolator.before_get(  # type: ignore  # T39125053
                 self._parser, section, option, value, self._defaults
             )
         else:
             return value
+
+    def _make_storable_value(
+        self, section: ConfigSectionName, option: ConfigOptionName, value: Any
+    ) -> Union[ConfigValue, _UnsupportedValue]:
+        if isinstance(value, (bool, str)):
+            return value
+        if isinstance(value, Sequence):
+            if all(isinstance(item, str) for item in value):
+                items = cast(Sequence[str], value)
+                return Strs(items)
+        return value
 
 
 class UnexpectedType(Exception):
@@ -235,8 +277,12 @@ class UnexpectedType(Exception):
 
 
 def _toml_type_name(type: Type) -> str:
+    if type is Strs:
+        return "array of strings"
     if type is bool:
         return "boolean"
+    if type is list:
+        return "array"
     if type is str:
         return "string"
     return type.__name__
