@@ -12,6 +12,8 @@ lz4-pyframe = { path = "../lz4-pyframe" }
 memmap = "0.7.0"
 mpatch = { path = "../mpatch" }
 rust-crypto = "*"
+serde = "1.0.84"
+serde_derive = "1.0.84"
 tempfile = "3.0.4"
 types = { path = "../types" }
 

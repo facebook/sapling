@@ -3,9 +3,22 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use serde_derive::{Deserialize, Serialize};
+
 use types::node::Node;
 
-#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    Deserialize
+)]
 pub struct Key {
     // Name is usually a file or directory path
     name: Vec<u8>,
