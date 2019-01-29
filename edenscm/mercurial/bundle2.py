@@ -517,7 +517,7 @@ def _gethandler(op, part):
                 if nbmp:
                     msg.append(" %i mandatory" % nbmp)
                 if nbap:
-                    msg.append(" %i advisory" % nbmp)
+                    msg.append(" %i advisory" % nbap)
                 msg.append(")")
             msg.append(" %s\n" % status)
             op.ui.debug("".join(msg))
@@ -1052,7 +1052,7 @@ class bundlepart(object):
                 if nbmp:
                     msg.append(" %i mandatory" % nbmp)
                 if nbap:
-                    msg.append(" %i advisory" % nbmp)
+                    msg.append(" %i advisory" % nbap)
                 msg.append(")")
             if not self.data:
                 msg.append(" empty payload")

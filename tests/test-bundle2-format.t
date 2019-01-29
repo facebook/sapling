@@ -472,7 +472,7 @@ Test part
   bundle2-output: header chunk size: 22
   bundle2-output: closing payload chunk
   bundle2-output: bundle part: "test:math"
-  bundle2-output-part: "test:math" (advisory) (params: 2 mandatory 2 advisory) 2 bytes payload
+  bundle2-output-part: "test:math" (advisory) (params: 2 mandatory 1 advisory) 2 bytes payload
   bundle2-output: part 4: "test:math"
   bundle2-output: header chunk size: 43
   bundle2-output: payload chunk size: 2
@@ -677,7 +677,7 @@ Process the bundle
   bundle2-input: part id: "4"
   bundle2-input: part parameters: 3
   bundle2-input: ignoring unsupported advisory part test:math
-  bundle2-input-part: "test:math" (advisory) (params: 2 mandatory 2 advisory) unsupported-type
+  bundle2-input-part: "test:math" (advisory) (params: 2 mandatory 1 advisory) unsupported-type
   bundle2-input: payload chunk size: 2
   bundle2-input: payload chunk size: 0
   bundle2-input-part: total payload size 2

@@ -188,7 +188,7 @@ delete a remote bookmark
   bundle2-output: bundle parameter: 
   bundle2-output: start of parts
   bundle2-output: bundle part: "reply:pushkey"
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
+  bundle2-output-part: "reply:pushkey" (params: 2 advisory) empty payload
   bundle2-output: part 0: "REPLY:PUSHKEY"
   bundle2-output: header chunk size: 43
   bundle2-output: closing payload chunk
@@ -202,7 +202,7 @@ delete a remote bookmark
   bundle2-input: part id: "0"
   bundle2-input: part parameters: 2
   bundle2-input: found a handler for part reply:pushkey
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
+  bundle2-input-part: "reply:pushkey" (params: 2 advisory) supported
   bundle2-input: payload chunk size: 0
   bundle2-input: part header size: 0
   bundle2-input: end of bundle2 stream
