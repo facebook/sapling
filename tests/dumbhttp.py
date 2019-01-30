@@ -8,7 +8,7 @@ import signal
 import socket
 import sys
 
-from mercurial import server, util
+from edenscm.mercurial import server, util
 
 
 """

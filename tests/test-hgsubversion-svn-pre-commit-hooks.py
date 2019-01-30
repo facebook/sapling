@@ -3,7 +3,7 @@
 import os
 
 import test_hgsubversion_util
-from mercurial import util
+from edenscm.mercurial import util
 
 
 class TestSvnPreCommitHooks(test_hgsubversion_util.TestBase):

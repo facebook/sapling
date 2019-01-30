@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 import re
 
-from mercurial import context
+from edenscm.mercurial import context
 
 from . import importer, lfs, p4
 

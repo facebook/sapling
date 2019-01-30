@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
+from edenscm.mercurial import (
     context,
     dirstate,
     extensions,

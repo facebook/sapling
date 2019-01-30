@@ -1,5 +1,5 @@
   $ cat > $TESTTMP/crash.py << EOF
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('crash', [])

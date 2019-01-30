@@ -17,7 +17,7 @@ import subprocess
 import threading
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     encoding,
     error,
     httppeer,
@@ -27,8 +27,8 @@ from mercurial import (
     util,
     wireproto,
 )
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid
 
 from . import constants, shallowutil, wirepack
 from .contentstore import unioncontentstore

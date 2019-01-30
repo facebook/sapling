@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import json as _sysjson
 
-from mercurial import encoding, error, pycompat, util
+from edenscm.mercurial import encoding, error, pycompat, util
 
 
 try:

@@ -12,9 +12,9 @@ This is a rudimentary test of the CGI files as of d74fc8dec2b4.
   > import cgitb
   > cgitb.enable()
   > 
-  > from mercurial import demandimport; demandimport.enable()
-  > from mercurial.hgweb import hgweb
-  > from mercurial.hgweb import wsgicgi
+  > from edenscm.mercurial import demandimport; demandimport.enable()
+  > from edenscm.mercurial.hgweb import hgweb
+  > from edenscm.mercurial.hgweb import wsgicgi
   > 
   > application = hgweb("test", "Empty test repository")
   > wsgicgi.launch(application)
@@ -35,9 +35,9 @@ This is a rudimentary test of the CGI files as of d74fc8dec2b4.
   > import cgitb
   > cgitb.enable()
   > 
-  > from mercurial import demandimport; demandimport.enable()
-  > from mercurial.hgweb import hgwebdir
-  > from mercurial.hgweb import wsgicgi
+  > from edenscm.mercurial import demandimport; demandimport.enable()
+  > from edenscm.mercurial.hgweb import hgwebdir
+  > from edenscm.mercurial.hgweb import wsgicgi
   > 
   > application = hgwebdir("hgweb.config")
   > wsgicgi.launch(application)

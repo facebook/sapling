@@ -19,7 +19,7 @@ import time
 import traceback
 from functools import partial
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     cmdutil,
     commands,
@@ -31,7 +31,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from .remotefilelog import constants, shallowutil
 
@@ -266,7 +266,12 @@ def _makerage(ui, repo, **opts):
         ("cwd", lambda: pycompat.getcwd()),
         ("fstype", lambda: util.getfstype(repo.root)),
         ("active bookmark", lambda: bookmarks._readactive(repo, repo._bookmarks)),
-        ("hg version", lambda: __import__("mercurial.__version__").__version__.version),
+        (
+            "hg version",
+            lambda: __import__(
+                "edenscm.mercurial.__version__"
+            ).mercurial.__version__.version,
+        ),
         ("obsstore size", lambda: str(repo.svfs.stat("obsstore").st_size)),
     ]
 

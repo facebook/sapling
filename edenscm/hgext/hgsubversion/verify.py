@@ -6,7 +6,7 @@ import posixpath
 import svnrepo
 import svnwrap
 import util
-from mercurial import error, progress, util as hgutil, worker
+from edenscm.mercurial import error, progress, util as hgutil, worker
 
 
 def verify(ui, repo, args=None, **opts):

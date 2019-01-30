@@ -24,7 +24,7 @@ message and override some other config items.
 import grp
 import os
 
-from mercurial import registrar
+from edenscm.mercurial import registrar
 
 
 testedwith = "ships-with-fb-hgext"

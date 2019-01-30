@@ -7,8 +7,8 @@
 
 import re
 
-from mercurial import cmdutil, registrar, templatekw
-from mercurial.node import hex
+from edenscm.mercurial import cmdutil, registrar, templatekw
+from edenscm.mercurial.node import hex
 
 from .extlib.phabricator import diffprops
 

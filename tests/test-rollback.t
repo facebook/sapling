@@ -219,8 +219,8 @@ I/O errors on stdio are handled properly (issue5658)
 
   $ cat > badui.py << EOF
   > import errno
-  > from mercurial.i18n import _
-  > from mercurial import (
+  > from edenscm.mercurial.i18n import _
+  > from edenscm.mercurial import (
   >     registrar,
   >     error,
   >     ui as uimod,

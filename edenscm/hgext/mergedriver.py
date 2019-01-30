@@ -11,8 +11,8 @@ from __future__ import absolute_import
 import errno
 import sys
 
-from mercurial import commands, error, extensions, hook, merge
-from mercurial.i18n import _
+from edenscm.mercurial import commands, error, extensions, hook, merge
+from edenscm.mercurial.i18n import _
 
 
 def wrappreprocess(orig, repo, ms, wctx, labels=None):

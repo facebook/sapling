@@ -27,10 +27,10 @@ thus multiple stable commits.
 import re
 import subprocess
 
-from mercurial import commands, error, json, registrar
-from mercurial.i18n import _
-from mercurial.revsetlang import getargsdict, getstring
-from mercurial.smartset import baseset
+from edenscm.mercurial import commands, error, json, registrar
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.revsetlang import getargsdict, getstring
+from edenscm.mercurial.smartset import baseset
 
 
 revsetpredicate = registrar.revsetpredicate()

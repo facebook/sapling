@@ -11,7 +11,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     cmdutil,
     commands,
@@ -24,7 +24,7 @@ from mercurial import (
     registrar,
     scmutil,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import common
 from ..extlib.phabricator import diffprops

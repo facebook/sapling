@@ -10,7 +10,7 @@
 Traceback has color:
 
   $ cat > repocrash.py << EOF
-  > from mercurial import error
+  > from edenscm.mercurial import error
   > def reposetup(ui, repo):
   >     raise error.Abort('.')
   > EOF

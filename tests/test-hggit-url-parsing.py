@@ -2,8 +2,8 @@ import shutil
 import sys
 import tempfile
 
-from hgext.hggit.git_handler import GitHandler
-from mercurial import commands, hg, ui
+from edenscm.hgext.hggit.git_handler import GitHandler
+from edenscm.mercurial import commands, hg, ui
 
 
 try:

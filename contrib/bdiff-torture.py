@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function
 import random
 import sys
 
-from mercurial import mdiff
+from edenscm.mercurial import mdiff
 
 
 if sys.version_info.major >= 3:

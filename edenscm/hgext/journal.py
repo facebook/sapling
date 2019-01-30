@@ -18,7 +18,7 @@ import errno
 import os
 import weakref
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     cmdutil,
     dispatch,
@@ -32,7 +32,7 @@ from mercurial import (
     registrar,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}

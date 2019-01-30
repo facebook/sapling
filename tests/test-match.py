@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import unittest
 
 import silenttestrunner
-from mercurial import match as matchmod
+from edenscm.mercurial import match as matchmod
 
 
 class NeverMatcherTests(unittest.TestCase):

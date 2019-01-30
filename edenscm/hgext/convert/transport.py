@@ -21,7 +21,7 @@ from __future__ import absolute_import
 import svn.client
 import svn.core
 import svn.ra
-from mercurial import util
+from edenscm.mercurial import util
 
 
 Pool = svn.core.Pool

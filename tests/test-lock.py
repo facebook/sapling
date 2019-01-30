@@ -8,7 +8,7 @@ import types
 import unittest
 
 import silenttestrunner
-from mercurial import encoding, error, extensions, lock, pycompat, util, vfs as vfsmod
+from edenscm.mercurial import encoding, error, extensions, lock, pycompat, util, vfs as vfsmod
 
 
 testlockname = "testlock"

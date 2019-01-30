@@ -1414,7 +1414,7 @@ def contextnodesupportingwdir(ctx):
 
     `repo[wdirid]` works fine so there's no need the reverse function.
     """
-    from mercurial import context
+    from edenscm.mercurial import context
 
     if isinstance(ctx, context.workingctx):
         return wdirid

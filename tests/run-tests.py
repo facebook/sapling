@@ -85,7 +85,7 @@ except (ImportError, AttributeError):
     shellquote = pipes.quote
 
 try:
-    from mercurial.rust.threading import Condition as RLock
+    from edenscm.mercurial.rust.threading import Condition as RLock
 except ImportError:
     RLock = threading.RLock
 
@@ -3676,7 +3676,7 @@ class TestRunner(object):
             # The pythondir has been inferred from --with-hg flag.
             # We cannot expect anything sensible here.
             return
-        expecthg = os.path.join(self._pythondir, b"mercurial")
+        expecthg = os.path.join(self._pythondir, b"edenscm", b"mercurial")
         actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
             sys.stderr.write(
@@ -3690,7 +3690,7 @@ class TestRunner(object):
         if self._hgpath is not None:
             return self._hgpath
 
-        cmd = b'%s -c "import mercurial; print (mercurial.__path__[0])"'
+        cmd = b'%s -c "from edenscm import mercurial; print (mercurial.__path__[0])"'
         cmd = cmd % PYTHON
         if PYTHON3:
             cmd = _strpath(cmd)

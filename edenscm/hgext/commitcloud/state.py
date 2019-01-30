@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import hashlib
 import json
 
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import commitcloudcommon, commitcloudutil
 

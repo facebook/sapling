@@ -12,8 +12,8 @@ config = "/path/to/repo/or/config"
 # Uncomment to send python tracebacks to the browser if an error occurs:
 #import cgitb; cgitb.enable()
 
-from mercurial import demandimport; demandimport.enable()
-from mercurial.hgweb import hgweb
+from edenscm.mercurial import demandimport; demandimport.enable()
+from edenscm.mercurial.hgweb import hgweb
 from flup.server.fcgi import WSGIServer
 application = hgweb(config)
 WSGIServer(application).run()

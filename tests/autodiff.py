@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import error, patch, registrar, scmutil
+from edenscm.mercurial import error, patch, registrar, scmutil
 
 
 cmdtable = {}

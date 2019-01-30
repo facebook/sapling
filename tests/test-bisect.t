@@ -462,7 +462,7 @@ test bisecting command
   > #!$PYTHON
   > from __future__ import absolute_import
   > import sys
-  > from mercurial import hg, ui as uimod
+  > from edenscm.mercurial import hg, ui as uimod
   > repo = hg.repository(uimod.ui.load(), '.')
   > if repo['.'].rev() < 6:
   >     sys.exit(1)

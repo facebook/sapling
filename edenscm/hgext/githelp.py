@@ -24,8 +24,8 @@ maintainers if the command is legitimate. To customize this footer, set:
 import getopt
 import re
 
-from mercurial import error, extensions, fancyopts, registrar, util
-from mercurial.i18n import _
+from edenscm.mercurial import error, extensions, fancyopts, registrar, util
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}

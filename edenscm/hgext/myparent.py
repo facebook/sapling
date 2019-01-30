@@ -41,7 +41,7 @@ file inside the repository (e.g. ~/www/.hg/hgrc).
 
 import re
 
-from mercurial import registrar
+from edenscm.mercurial import registrar
 
 
 templatekeyword = registrar.templatekeyword()

@@ -7,9 +7,9 @@
 
 from __future__ import absolute_import
 
-from hgext import rebase
-from mercurial import commands, revsetlang
-from mercurial.i18n import _
+from edenscm.hgext import rebase
+from edenscm.mercurial import commands, revsetlang
+from edenscm.mercurial.i18n import _
 
 
 def restack(ui, repo, rebaseopts=None):

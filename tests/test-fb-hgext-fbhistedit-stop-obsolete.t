@@ -10,8 +10,8 @@
 Enable obsolete
 
   $ cat > ${TESTTMP}/obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
+  > import edenscm.mercurial.obsolete
+  > edenscm.mercurial.obsolete._enabled = True
   > EOF
 
   $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH

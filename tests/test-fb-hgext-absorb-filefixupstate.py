@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import itertools
 
-from hgext import absorb
+from edenscm.hgext import absorb
 
 
 class simplefctx(object):

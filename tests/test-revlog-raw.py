@@ -4,7 +4,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from mercurial import encoding, node, revlog, transaction, vfs
+from edenscm.mercurial import encoding, node, revlog, transaction, vfs
 
 
 # TESTTMP is optional. This makes it convenient to run without run-tests.py

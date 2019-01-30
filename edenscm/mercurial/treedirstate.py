@@ -15,9 +15,9 @@ import string
 import struct
 import time
 
-from mercurial import error, node, pycompat, treestate, txnutil, util
-from mercurial.i18n import _
-from mercurial.rust import treestate as rusttreestate
+from edenscm.mercurial import error, node, pycompat, treestate, txnutil, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.rust import treestate as rusttreestate
 
 
 dirstateheader = b"########################treedirstate####"
@@ -439,7 +439,7 @@ class treedirstatemap(object):
         self._dirtyparents = False
 
     def writeflat(self):
-        from mercurial import dirstate
+        from edenscm.mercurial import dirstate
 
         with self._opener("dirstate", "w", atomictemp=True, checkambig=True) as st:
             newdmap = {}

@@ -49,8 +49,8 @@ from __future__ import absolute_import
 import os
 import sys
 
-from mercurial import encoding, error, pycompat, registrar
-from mercurial.i18n import _
+from edenscm.mercurial import encoding, error, pycompat, registrar
+from edenscm.mercurial.i18n import _
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for

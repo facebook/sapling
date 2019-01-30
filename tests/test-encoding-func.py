@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import unittest
 
-from mercurial import encoding
+from edenscm.mercurial import encoding
 
 
 class IsasciistrTest(unittest.TestCase):

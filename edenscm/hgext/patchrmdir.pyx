@@ -14,7 +14,7 @@ Have no effect on Windows.
 """
 
 IF UNAME_SYSNAME != "Windows":
-    from mercurial import (
+    from edenscm.mercurial import (
         extensions,
         pycompat,
     )

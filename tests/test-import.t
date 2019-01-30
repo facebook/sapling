@@ -1834,8 +1834,8 @@ Importing some extra header
 ===========================
 
   $ cat > $TESTTMP/parseextra.py <<EOF
-  > import mercurial.patch
-  > import mercurial.cmdutil
+  > import edenscm.mercurial.patch
+  > import edenscm.mercurial.cmdutil
   > 
   > def processfoo(repo, data, extra, opts):
   >     if 'foo' in data:
@@ -1844,11 +1844,11 @@ Importing some extra header
   >     if 'foo' in ctx.extra():
   >         ctx.repo().ui.write('imported-foo: %s\n' % ctx.extra()['foo'])
   > 
-  > mercurial.patch.patchheadermap.append(('Foo', 'foo'))
-  > mercurial.cmdutil.extrapreimport.append('foo')
-  > mercurial.cmdutil.extrapreimportmap['foo'] = processfoo
-  > mercurial.cmdutil.extrapostimport.append('foo')
-  > mercurial.cmdutil.extrapostimportmap['foo'] = postimport
+  > edenscm.mercurial.patch.patchheadermap.append(('Foo', 'foo'))
+  > edenscm.mercurial.cmdutil.extrapreimport.append('foo')
+  > edenscm.mercurial.cmdutil.extrapreimportmap['foo'] = processfoo
+  > edenscm.mercurial.cmdutil.extrapostimport.append('foo')
+  > edenscm.mercurial.cmdutil.extrapostimportmap['foo'] = postimport
   > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

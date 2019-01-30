@@ -3,8 +3,8 @@
 import unittest
 
 import test_hgsubversion_util
-from hgext.hgsubversion import compathacks
-from mercurial import error, hg
+from edenscm.hgext.hgsubversion import compathacks
+from edenscm.mercurial import error, hg
 
 
 class TestFetchBranches(test_hgsubversion_util.TestBase):

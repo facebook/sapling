@@ -10,8 +10,8 @@ import abc
 import collections
 import json
 
-from mercurial import dagop, node as nodemod
-from mercurial.graphmod import CHANGESET, GRANDPARENT, MISSINGPARENT, PARENT
+from edenscm.mercurial import dagop, node as nodemod
+from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, MISSINGPARENT, PARENT
 
 
 abstractmethod = abc.abstractmethod

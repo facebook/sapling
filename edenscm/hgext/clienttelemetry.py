@@ -17,8 +17,8 @@ import random
 import socket
 import string
 
-from mercurial import dispatch, extensions, hg, util, wireproto
-from mercurial.i18n import _
+from edenscm.mercurial import dispatch, extensions, hg, util, wireproto
+from edenscm.mercurial.i18n import _
 
 
 # Client telemetry functions generate client telemetry data at connection time.

@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 import os
 import tempfile
 
-from hgext.fastannotate import error, revmap
+from edenscm.hgext.fastannotate import error, revmap
 
 
 try:

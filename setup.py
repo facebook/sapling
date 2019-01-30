@@ -1151,7 +1151,7 @@ class hgbuildpy(build_py):
         if self.distribution.pure:
             self.distribution.ext_modules = []
         elif self.distribution.cffi:
-            from mercurial.cffi import bdiffbuild, mpatchbuild
+            from edenscm.mercurial.cffi import bdiffbuild, mpatchbuild
 
             exts = [
                 mpatchbuild.ffi.distutils_extension(),
@@ -1159,7 +1159,7 @@ class hgbuildpy(build_py):
             ]
             # cffi modules go here
             if sys.platform == "darwin":
-                from mercurial.cffi import osutilbuild
+                from edenscm.mercurial.cffi import osutilbuild
 
                 exts.append(osutilbuild.ffi.distutils_extension())
             self.distribution.ext_modules = exts
@@ -1283,7 +1283,7 @@ class buildhgextindex(Command):
 
         # here no extension enabled, disabled() lists up everything
         code = (
-            "import pprint; from mercurial import extensions; "
+            "import pprint; from edenscm.mercurial import extensions; "
             "pprint.pprint(extensions.disabled())"
         )
         returncode, out, err = runcmd([sys.executable, "-c", code], localhgenv())

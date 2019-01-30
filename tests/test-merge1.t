@@ -338,7 +338,7 @@ isn't changed on the filesystem (see also issue4583).
   > from __future__ import absolute_import
   > # emulate aborting before "recordupdates()". in this case, files
   > # are changed without updating dirstate
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >   error,
   >   extensions,
   >   merge,

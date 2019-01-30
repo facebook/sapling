@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from mercurial import commands, extensions, ui as uimod
+from edenscm.mercurial import commands, extensions, ui as uimod
 
 
 ignore = {

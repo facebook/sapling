@@ -7,7 +7,7 @@ This file tests that normal mercurial operations almost never read the flat mani
 
   $ cat >> $TESTTMP/flatcheck.py <<EOF
   > import sys, traceback
-  > from mercurial import extensions, manifest
+  > from edenscm.mercurial import extensions, manifest
   > def uisetup(ui):
   >     extensions.wrapfunction(manifest.manifestrevlog, 'revision', readmf)
   > def readmf(orig, self, nodeorrev, **kwargs):

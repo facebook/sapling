@@ -2,7 +2,7 @@
   $ export SKIPREMOTEFILELOGCHECK
 
   $ cat > noinline.py << EOF
-  > from mercurial import revlog
+  > from edenscm.mercurial import revlog
   > revlog.REVLOG_DEFAULT_FLAGS = 0
   > revlog.REVLOG_DEFAULT_VERSION = revlog.REVLOG_DEFAULT_FORMAT
   > EOF

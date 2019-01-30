@@ -28,7 +28,7 @@ import errno
 import itertools
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     bundle2,
     bundlerepo,
@@ -51,7 +51,7 @@ from mercurial import (
     util,
     vfs as vfsmod,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import rebase
 

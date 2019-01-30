@@ -59,7 +59,7 @@ try to clone via stream, should use pull instead
 try to clone via stream but missing requirements, so should use pull instead
 
   $ cat > $TESTTMP/removesupportedformat.py << EOF
-  > from mercurial import localrepo
+  > from edenscm.mercurial import localrepo
   > def extsetup(ui):
   >     localrepo.localrepository.supportedformats.remove('generaldelta')
   > EOF
@@ -168,7 +168,7 @@ test http authentication
   $ cd test
   $ cat << EOT > userpass.py
   > import base64
-  > from mercurial.hgweb import common
+  > from edenscm.mercurial.hgweb import common
   > def perform_authentication(hgweb, req, op):
   >     auth = req.env.get('HTTP_AUTHORIZATION')
   >     if not auth:
@@ -418,8 +418,8 @@ useful. It just raises an HTTP 500 with details about the Cookie request header.
 We raise HTTP 500 because its message is printed in the abort message.
 
   $ cat > cookieauth.py << EOF
-  > from mercurial import util
-  > from mercurial.hgweb import common
+  > from edenscm.mercurial import util
+  > from edenscm.mercurial.hgweb import common
   > def perform_authentication(hgweb, req, op):
   >     cookie = req.env.get('HTTP_COOKIE')
   >     if not cookie:

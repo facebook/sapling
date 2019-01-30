@@ -5,9 +5,9 @@ import random
 import unittest
 
 import silenttestrunner
-from hgext.extlib import cstore
-from mercurial import manifest, match as matchmod
-from mercurial.node import hex, nullid
+from edenscm.hgext.extlib import cstore
+from edenscm.mercurial import manifest, match as matchmod
+from edenscm.mercurial.node import hex, nullid
 
 
 class FakeDataStore(object):

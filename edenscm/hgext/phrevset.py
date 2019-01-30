@@ -28,8 +28,8 @@ import re
 import signal
 import threading
 
-from mercurial import error, hg, namespaces, pycompat, registrar, util
-from mercurial.i18n import _
+from edenscm.mercurial import error, hg, namespaces, pycompat, registrar, util
+from edenscm.mercurial.i18n import _
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
 

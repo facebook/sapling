@@ -3,7 +3,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import extensions, patch as patchmod, registrar, util
+from edenscm.mercurial import extensions, patch as patchmod, registrar, util
 
 
 configtable = {}

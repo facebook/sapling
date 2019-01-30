@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import namespaces, registrar
+from edenscm.mercurial import namespaces, registrar
 
 
 namespacepredicate = registrar.namespacepredicate()

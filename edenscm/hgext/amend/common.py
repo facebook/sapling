@@ -9,8 +9,8 @@ from __future__ import absolute_import
 
 from collections import defaultdict
 
-from hgext import rebase
-from mercurial import (
+from edenscm.hgext import rebase
+from edenscm.mercurial import (
     cmdutil,
     context,
     copies,
@@ -19,8 +19,8 @@ from mercurial import (
     lock as lockmod,
     mutation,
 )
-from mercurial.i18n import _
-from mercurial.node import nullrev
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import nullrev
 
 
 def getchildrelationships(repo, revs):

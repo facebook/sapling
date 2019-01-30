@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from mercurial import util
+from edenscm.mercurial import util
 
 
 def printifpresent(d, xs, name="d"):

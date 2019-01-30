@@ -177,7 +177,7 @@ Test internal debugstacktrace command
   $ cat > debugstacktrace.py << EOF
   > from __future__ import absolute_import
   > import sys
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > def f():
   >     util.debugstacktrace(f=sys.stdout)
   >     g()

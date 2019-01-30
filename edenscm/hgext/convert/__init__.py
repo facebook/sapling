@@ -9,8 +9,8 @@
 
 from __future__ import absolute_import
 
-from mercurial import registrar
-from mercurial.i18n import _
+from edenscm.mercurial import registrar
+from edenscm.mercurial.i18n import _
 
 from . import convcmd, cvsps, subversion
 

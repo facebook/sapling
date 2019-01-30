@@ -781,7 +781,7 @@ strip backup content
 Check that the phase cache is properly invalidated after a strip with bookmark.
 
   $ cat > ../stripstalephasecache.py << EOF
-  > from mercurial import extensions, localrepo
+  > from edenscm.mercurial import extensions, localrepo
   > def transactioncallback(orig, repo, desc, *args, **kwargs):
   >     def test(transaction):
   >         # observe cache inconsistency
@@ -818,7 +818,7 @@ Error during post-close callback of the strip transaction
 (They should be gracefully handled and reported)
 
   $ cat > ../crashstrip.py << EOF
-  > from mercurial import error
+  > from edenscm.mercurial import error
   > def reposetup(ui, repo):
   >     class crashstriprepo(repo.__class__):
   >         def transaction(self, desc, *args, **kwargs):
@@ -1065,7 +1065,7 @@ Use delayedstrip to strip inside a transaction
   $ echo 3 >> I
   $ cat > $TESTTMP/delayedstrip.py <<EOF
   > from __future__ import absolute_import
-  > from mercurial import commands, registrar, repair
+  > from edenscm.mercurial import commands, registrar, repair
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('testdelayedstrip')
@@ -1115,7 +1115,7 @@ Test high-level scmutil.cleanupnodes API
   $ cp -R . ../scmutilcleanup.obsstore
 
   $ cat > $TESTTMP/scmutilcleanup.py <<EOF
-  > from mercurial import registrar, scmutil
+  > from edenscm.mercurial import registrar, scmutil
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('testnodescleanup')

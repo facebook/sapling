@@ -232,7 +232,7 @@ def has_executablebit():
 
 @check("icasefs", "case insensitive file system")
 def has_icasefs():
-    # Stolen from mercurial.util
+    # Stolen from edenscm.mercurial.util
     fd, path = tempfile.mkstemp(dir=".", prefix=tempprefix)
     os.close(fd)
     try:
@@ -445,7 +445,7 @@ def has_symlink():
 
 @check("hardlink", "hardlinks")
 def has_hardlink():
-    from mercurial import util
+    from edenscm.mercurial import util
 
     fh, fn = tempfile.mkstemp(dir=".", prefix=tempprefix)
     os.close(fh)
@@ -462,7 +462,7 @@ def has_hardlink():
 
 @check("hardlink-whitelisted", "hardlinks on whitelisted filesystems")
 def has_hardlink_whitelisted():
-    from mercurial import fscap, util
+    from edenscm.mercurial import fscap, util
 
     try:
         fstype = util.getfstype(".")
@@ -608,7 +608,7 @@ def has_sslcontext():
 
 @check("defaultcacerts", "can verify SSL certs by system's CA certs store")
 def has_defaultcacerts():
-    from mercurial import sslutil, ui as uimod
+    from edenscm.mercurial import sslutil, ui as uimod
 
     ui = uimod.ui.load()
     return sslutil._defaultcacerts(ui) or sslutil._canloaddefaultcerts
@@ -617,7 +617,7 @@ def has_defaultcacerts():
 @check("defaultcacertsloaded", "detected presence of loaded system CA certs")
 def has_defaultcacertsloaded():
     import ssl
-    from mercurial import sslutil, ui as uimod
+    from edenscm.mercurial import sslutil, ui as uimod
 
     if not has_defaultcacerts():
         return False
@@ -637,7 +637,7 @@ def has_defaultcacertsloaded():
 
 @check("tls1.2", "TLS 1.2 protocol support")
 def has_tls1_2():
-    from mercurial import sslutil
+    from edenscm.mercurial import sslutil
 
     return "tls1.2" in sslutil.supportedprotocols
 

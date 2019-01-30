@@ -11,7 +11,7 @@ import gzip
 import os
 import re
 
-from mercurial import error, util
+from edenscm.mercurial import error, util
 
 from . import p4
 from .util import localpath

@@ -84,7 +84,7 @@ from __future__ import absolute_import
 import sys
 
 import isapi_wsgi
-from mercurial.hgweb.hgwebdir_mod import hgwebdir
+from edenscm.mercurial.hgweb.hgwebdir_mod import hgwebdir
 
 
 # Configuration file location

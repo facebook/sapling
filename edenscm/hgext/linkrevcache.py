@@ -53,8 +53,8 @@ import os
 import shutil
 import sys
 
-from mercurial import context, extensions, filelog, node, progress, registrar, util
-from mercurial.i18n import _
+from edenscm.mercurial import context, extensions, filelog, node, progress, registrar, util
+from edenscm.mercurial.i18n import _
 
 
 testedwith = "ships-with-fb-hgext"

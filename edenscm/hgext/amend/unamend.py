@@ -7,8 +7,8 @@
 
 from __future__ import absolute_import
 
-from mercurial import error, extensions, node as nodemod, obsolete, obsutil, registrar
-from mercurial.i18n import _
+from edenscm.mercurial import error, extensions, node as nodemod, obsolete, obsutil, registrar
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}

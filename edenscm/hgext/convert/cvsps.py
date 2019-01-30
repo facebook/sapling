@@ -9,8 +9,8 @@ from __future__ import absolute_import
 import os
 import re
 
-from mercurial import encoding, error, hook, pycompat, util
-from mercurial.i18n import _
+from edenscm.mercurial import encoding, error, hook, pycompat, util
+from edenscm.mercurial.i18n import _
 
 
 pickle = util.pickle

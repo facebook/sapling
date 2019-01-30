@@ -3,8 +3,8 @@
 import urllib
 
 import test_hgsubversion_util
-from hgext.hgsubversion import svnrepo
-from hgext.hgsubversion.svnwrap import parse_url
+from edenscm.hgext.hgsubversion import svnrepo
+from edenscm.hgext.hgsubversion.svnwrap import parse_url
 
 
 class TestSubversionUrls(test_hgsubversion_util.TestBase):

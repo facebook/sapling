@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import json
 
-from mercurial import util
+from edenscm.mercurial import util
 
 
 urlreq = util.urlreq

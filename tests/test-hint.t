@@ -1,5 +1,5 @@
   $ cat > showhint.py << EOF
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >     cmdutil,
   >     hintutil,
   >     registrar,

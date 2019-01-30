@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import demandimport, encoding, util
+from edenscm.mercurial import demandimport, encoding, util
 
 
 demandimport.ignore.extend(["pkgutil", "pkg_resources", "__main__"])

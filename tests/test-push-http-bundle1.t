@@ -136,7 +136,7 @@ expect success, pre-d1b16a746db6 server supports the unbundle capability, but
 has no parameter
 
   $ cat <<EOF > notcapable-unbundleparam.py
-  > from mercurial import extensions, httppeer
+  > from edenscm.mercurial import extensions, httppeer
   > def capable(orig, self, name):
   >     if name == 'unbundle':
   >         return True

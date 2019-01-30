@@ -4,8 +4,8 @@
 #
 # incomplete, implemented on demand
 
-from mercurial import ancestor, changelog, context, manifest, match as matchmod, util
-from mercurial.node import bin, hex, nullid
+from edenscm.mercurial import ancestor, changelog, context, manifest, match as matchmod, util
+from edenscm.mercurial.node import bin, hex, nullid
 
 
 def _maybehex(n):
@@ -274,7 +274,7 @@ class overlaychangectx(context.changectx):
 
     def phase(self):
         try:
-            from mercurial import phases
+            from edenscm.mercurial import phases
 
             return phases.draft
         except (AttributeError, ImportError):
@@ -448,7 +448,7 @@ class overlayrepo(object):
 
         try:
             # Mercurial >= 3.3
-            from mercurial import namespaces
+            from edenscm.mercurial import namespaces
 
             self.names = namespaces.namespaces(self)
         except (AttributeError, ImportError):

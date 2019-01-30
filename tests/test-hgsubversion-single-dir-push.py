@@ -3,8 +3,8 @@
 import errno
 
 import test_hgsubversion_util
-from hgext.hgsubversion import compathacks
-from mercurial import commands, context, hg, node
+from edenscm.hgext.hgsubversion import compathacks
+from edenscm.mercurial import commands, context, hg, node
 
 
 class TestSingleDirPush(test_hgsubversion_util.TestBase):

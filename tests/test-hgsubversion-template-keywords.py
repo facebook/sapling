@@ -1,18 +1,18 @@
 # no-check-code -- see T24862348
 
 import test_hgsubversion_util
-from mercurial import commands, error, ui
+from edenscm.mercurial import commands, error, ui
 
 
 try:
-    from mercurial import templatekw
+    from edenscm.mercurial import templatekw
 
     templatekw.keywords
 except ImportError:
     templatekw = None
 
 try:
-    from mercurial import revset
+    from edenscm.mercurial import revset
 
     revset.methods
 except ImportError:

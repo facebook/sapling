@@ -13,12 +13,12 @@ Configs:
 
 from __future__ import absolute_import
 
-from mercurial import error, registrar, util
-from mercurial.i18n import _
+from edenscm.mercurial import error, registrar, util
+from edenscm.mercurial.i18n import _
 
 
 try:
-    from mercurial.rust.pymononokeapi import PyMononokeClient
+    from edenscm.mercurial.rust.pymononokeapi import PyMononokeClient
 except ImportError:
     pass
 

@@ -12,7 +12,7 @@ config = "/path/to/repo/or/config"
 #import cgitb; cgitb.enable()
 
 # enable demandloading to reduce startup time
-from mercurial import demandimport; demandimport.enable()
+from edenscm.mercurial import demandimport; demandimport.enable()
 
-from mercurial.hgweb import hgweb
+from edenscm.mercurial.hgweb import hgweb
 application = hgweb(config)

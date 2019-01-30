@@ -150,7 +150,7 @@
 # Update one bookmark but not the other
   $ cat >> $TESTTMP/inspectsql.py <<EOF
   > import os, sys
-  > from mercurial import demandimport, extensions
+  > from edenscm.mercurial import demandimport, extensions
   > with demandimport.deactivated():
   >     import mysql.connector
   > watchstrings = os.environ.get("INSPECTSQL")

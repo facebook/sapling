@@ -11,7 +11,7 @@
   > EOF
   $ cat >> $TESTTMP/breakupdate.py << EOF
   > import sys
-  > from mercurial import merge
+  > from edenscm.mercurial import merge
   > def extsetup(ui):
   >     merge.applyupdates = lambda *args, **kwargs: sys.exit()
   > EOF

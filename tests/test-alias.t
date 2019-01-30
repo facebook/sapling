@@ -636,7 +636,7 @@ environment variable changes in alias commands
 
   $ cat > $TESTTMP/expandalias.py <<EOF
   > import os
-  > from mercurial import cmdutil, commands, registrar
+  > from edenscm.mercurial import cmdutil, commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('expandalias')

@@ -9,10 +9,10 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from hgext.extlib.cstore import datapackstore, uniondatapackstore
-from hgext.remotefilelog.datapack import datapack, mutabledatapack
-from mercurial import mdiff
-from mercurial.node import nullid
+from edenscm.hgext.extlib.cstore import datapackstore, uniondatapackstore
+from edenscm.hgext.remotefilelog.datapack import datapack, mutabledatapack
+from edenscm.mercurial import mdiff
+from edenscm.mercurial.node import nullid
 
 
 class uniondatapackstoretests(unittest.TestCase):

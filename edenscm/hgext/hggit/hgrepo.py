@@ -1,8 +1,8 @@
 import util
 from git_handler import GitHandler
 from gitrepo import gitrepo
-from mercurial import localrepo, util as hgutil
-from mercurial.node import bin
+from edenscm.mercurial import localrepo, util as hgutil
+from edenscm.mercurial.node import bin
 
 
 try:

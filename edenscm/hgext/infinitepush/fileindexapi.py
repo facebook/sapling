@@ -15,7 +15,7 @@ import os
 import posixpath
 
 from indexapi import indexapi, indexexception
-from mercurial import pycompat, util
+from edenscm.mercurial import pycompat, util
 
 
 if pycompat.iswindows:

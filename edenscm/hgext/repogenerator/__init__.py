@@ -9,8 +9,8 @@ import random
 import time
 import traceback
 
-from mercurial import context, error, registrar, scmutil
-from mercurial.i18n import _
+from edenscm.mercurial import context, error, registrar, scmutil
+from edenscm.mercurial.i18n import _
 
 from ..perfsuite import editsgenerator
 

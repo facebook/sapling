@@ -12,9 +12,9 @@ import code
 import os
 import sys
 
-import mercurial
-from mercurial import demandimport, registrar, thirdparty
-from mercurial.i18n import _
+from edenscm import mercurial
+from edenscm.mercurial import demandimport, registrar, thirdparty
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}
@@ -27,7 +27,7 @@ def _assignobjects(objects, repo):
         objects.update({"repo": repo, "cl": repo.changelog, "mf": repo.manifestlog})
 
     # Import other handy modules
-    for name in ["os", "hgext", "subprocess", "re"]:
+    for name in ["os", "subprocess", "re"]:
         objects[name] = __import__(name)
 
 

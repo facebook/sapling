@@ -7,8 +7,8 @@
 
 import os
 
-from mercurial import cmdutil, extensions, obsutil, pycompat, registrar, util as hgutil
-from mercurial.i18n import _
+from edenscm.mercurial import cmdutil, extensions, obsutil, pycompat, registrar, util as hgutil
+from edenscm.mercurial.i18n import _
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
 

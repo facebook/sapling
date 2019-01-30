@@ -19,7 +19,7 @@ from __future__ import absolute_import
 import errno
 import os
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     cmdutil,
     commands,
@@ -49,8 +49,8 @@ from mercurial import (
     templatefilters,
     util,
 )
-from mercurial.i18n import _
-from mercurial.node import nullid, nullrev, short
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import nullid, nullrev, short
 
 
 release = lock.release
@@ -452,7 +452,7 @@ class rebaseruntime(object):
 
     def _assignworkingcopy(self):
         if self.inmemory:
-            from mercurial.context import overlayworkingctx
+            from edenscm.mercurial.context import overlayworkingctx
 
             self.wctx = overlayworkingctx(self.repo)
             self.repo.ui.debug("rebasing in-memory\n")

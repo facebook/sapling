@@ -6,8 +6,8 @@ import time
 import unittest
 
 import silenttestrunner
-from hgext import extutil
-from mercurial import error, vfs, worker
+from edenscm.hgext import extutil
+from edenscm.mercurial import error, vfs, worker
 
 
 locktimeout = 25

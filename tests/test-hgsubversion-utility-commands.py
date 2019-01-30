@@ -3,9 +3,9 @@ import os
 import re
 
 import test_hgsubversion_util
-from hgext import rebase
-from hgext.hgsubversion import compathacks, svncommands, util, verify, wrappers
-from mercurial import commands, context, hg, node, revlog, util as hgutil
+from edenscm.hgext import rebase
+from edenscm.hgext.hgsubversion import compathacks, svncommands, util, verify, wrappers
+from edenscm.mercurial import commands, context, hg, node, revlog, util as hgutil
 
 
 expected_info_output = """URL: %(repourl)s/%(branch)s

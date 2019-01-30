@@ -1,8 +1,8 @@
 # git2hg.py - convert Git repositories and commits to Mercurial ones
 
 from dulwich.objects import Commit, Tag
-from mercurial import util
-from mercurial.node import bin
+from edenscm.mercurial import util
+from edenscm.mercurial.node import bin
 
 
 def find_incoming(git_object_store, git_map, refs):

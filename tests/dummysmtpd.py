@@ -10,7 +10,7 @@ import smtpd
 import ssl
 import sys
 
-from mercurial import server, sslutil, ui as uimod
+from edenscm.mercurial import server, sslutil, ui as uimod
 
 
 def log(msg):

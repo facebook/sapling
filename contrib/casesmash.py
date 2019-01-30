@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import __builtin__
 import os
 
-from mercurial import util
+from edenscm.mercurial import util
 
 
 def lowerwrap(scope, funcname):

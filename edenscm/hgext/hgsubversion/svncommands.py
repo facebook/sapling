@@ -11,7 +11,7 @@ import svnrepo
 import svnwrap
 import util
 import verify
-from mercurial import commands, error, hg, node, progress, util as hgutil
+from edenscm.mercurial import commands, error, hg, node, progress, util as hgutil
 
 
 def updatemeta(ui, repo, args, **opts):

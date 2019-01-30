@@ -6,7 +6,7 @@ import binascii
 import glob
 import os
 
-from mercurial import (
+from edenscm.mercurial import (
     bundlerepo,
     error,
     exchange,
@@ -21,8 +21,8 @@ from mercurial import (
     repair,
     scmutil,
 )
-from mercurial.i18n import _
-from mercurial.node import hex
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex
 
 
 cmdtable = {}

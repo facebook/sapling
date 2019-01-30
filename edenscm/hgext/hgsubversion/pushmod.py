@@ -5,7 +5,7 @@ import re as remod
 import svnexternals
 import svnwrap
 import util
-from mercurial import util as hgutil
+from edenscm.mercurial import util as hgutil
 
 
 class NoFilesException(Exception):

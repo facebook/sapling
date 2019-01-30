@@ -142,7 +142,7 @@ import stat
 import sys
 import weakref
 
-from mercurial import (
+from edenscm.mercurial import (
     context,
     encoding,
     error,
@@ -156,7 +156,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import state
 from ..extlib import pywatchman, watchmanclient
@@ -781,7 +781,7 @@ def poststatustreestate(wctx, status):
         else:
             # Remove ignored files from treestate
             ignore = dirstate._ignore
-            from mercurial.rust.treestate import (
+            from edenscm.mercurial.rust.treestate import (
                 NEED_CHECK,
                 EXIST_P1,
                 EXIST_P2,

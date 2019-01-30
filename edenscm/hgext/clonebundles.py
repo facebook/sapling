@@ -164,7 +164,7 @@ Mercurial server when the bundle hosting service fails.
 
 from __future__ import absolute_import
 
-from mercurial import extensions, wireproto
+from edenscm.mercurial import extensions, wireproto
 
 
 testedwith = "ships-with-hg-core"

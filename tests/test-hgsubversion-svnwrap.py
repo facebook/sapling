@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 import test_hgsubversion_util
-from hgext.hgsubversion import svnwrap
+from edenscm.hgext.hgsubversion import svnwrap
 
 
 class TestBasicRepoLayout(unittest.TestCase):

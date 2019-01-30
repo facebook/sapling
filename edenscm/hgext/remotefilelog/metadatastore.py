@@ -5,8 +5,8 @@
 
 from __future__ import absolute_import
 
-from mercurial import util
-from mercurial.node import hex, nullid
+from edenscm.mercurial import util
+from edenscm.mercurial.node import hex, nullid
 
 from . import basestore, shallowutil
 

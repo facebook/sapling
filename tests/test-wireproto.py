@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from mercurial import ui, util, wireproto
+from edenscm.mercurial import ui, util, wireproto
 
 
 stringio = util.stringio

@@ -62,7 +62,7 @@ verify 7e7d56fe4833 (encoding fallback in branchmap to maintain compatibility wi
 
   $ cat <<EOF > oldhg
   > import sys
-  > from mercurial import ui, hg, commands
+  > from edenscm.mercurial import ui, hg, commands
   > 
   > class StdoutWrapper(object):
   >     def __init__(self, stdout):

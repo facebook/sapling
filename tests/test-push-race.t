@@ -21,7 +21,7 @@ A set of extension and shell functions ensures this scheduling.
   > import os
   > import time
   > 
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >     exchange,
   >     extensions,
   >     registrar,

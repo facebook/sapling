@@ -9,7 +9,7 @@ import os
 import time
 from contextlib import contextmanager
 
-from mercurial import (
+from edenscm.mercurial import (
     encoding,
     error,
     extensions,
@@ -20,8 +20,8 @@ from mercurial import (
     util,
     vfs,
 )
-from mercurial.i18n import _
-from mercurial.node import nullid, short
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import nullid, short
 
 from . import constants, contentstore, datapack, historypack, metadatastore, shallowutil
 from ..extlib.pyrevisionstore import (

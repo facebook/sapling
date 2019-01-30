@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-from mercurial import commands, fscap, hg, ui as uimod, util
+from edenscm.mercurial import commands, fscap, hg, ui as uimod, util
 
 
 TESTDIR = os.environ["TESTDIR"]

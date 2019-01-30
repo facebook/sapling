@@ -1,6 +1,6 @@
 import test_hgsubversion_util
-from hgext.hgsubversion import verify
-from mercurial import commands, node, util as hgutil
+from edenscm.hgext.hgsubversion import verify
+from edenscm.mercurial import commands, node, util as hgutil
 
 
 class TestPull(test_hgsubversion_util.TestBase):

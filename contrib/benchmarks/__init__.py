@@ -37,7 +37,7 @@ import functools
 import os
 import re
 
-from mercurial import extensions, hg, ui as uimod, util
+from edenscm.mercurial import extensions, hg, ui as uimod, util
 
 
 basedir = os.path.abspath(

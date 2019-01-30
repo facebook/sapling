@@ -12,9 +12,9 @@ the state of the repo
 
 import os
 
-from mercurial import commands, merge as mergemod, pycompat, registrar, scmutil
-from mercurial.extensions import wrapcommand
-from mercurial.i18n import _
+from edenscm.mercurial import commands, merge as mergemod, pycompat, registrar, scmutil
+from edenscm.mercurial.extensions import wrapcommand
+from edenscm.mercurial.i18n import _
 
 
 UPDATEARGS = "updateargs"

@@ -11,6 +11,7 @@ import functools
 import imp
 import inspect
 import os
+import sys
 
 from . import cmdutil, configitems, error, pycompat, util
 from .i18n import _, gettext
@@ -146,7 +147,7 @@ def loadpath(path, module_name):
 
 def preimport(name):
     """preimport an hgext module"""
-    mod = getattr(__import__("hgext.%s" % name), name)
+    mod = getattr(__import__("edenscm.hgext.%s" % name).hgext, name)
     # use a dict explicitly - "dict.get" is much faster than "import" again.
     _preimported[name] = mod
 
@@ -156,7 +157,7 @@ def loaddefault(name, reportfunc=None):
     mod = _preimported.get(name)
     if mod:
         return mod
-    mod = _importh("hgext.%s" % name)
+    mod = _importh("edenscm.hgext.%s" % name)
     return mod
 
 
@@ -205,7 +206,7 @@ def _importext(name, path=None, reportfunc=None):
         # the module will be loaded in sys.modules
         # choose an unique name so that it doesn't
         # conflicts with other modules
-        mod = loadpath(path, "hgext.%s" % name)
+        mod = loadpath(path, "edenscm.hgext.%s" % name)
     else:
         mod = loaddefault(name, reportfunc)
     return mod
@@ -286,6 +287,11 @@ def load(ui, name, path):
     from . import dispatch  # avoid cycles
 
     mod = _importext(shortname, path, bind(_reportimporterror, ui))
+
+    # "mercurial" and "hgext" were moved. Detect wrong module imports.
+    if ui.configbool("devel", "all-warnings"):
+        if "mercurial" in sys.modules or "hgext" in sys.modules:
+            ui.develwarn("extension %s imported incorrect modules" % name)
 
     # Before we do anything with the extension, check against minimum stated
     # compatibility. This gives extension authors a mechanism to have their
@@ -697,7 +703,7 @@ def getwrapperchain(container, funcname):
 def _disabledpaths(strip_init=False):
     """find paths of disabled extensions. returns a dict of {name: path}
     removes /__init__.py from packages if strip_init is True"""
-    import hgext
+    from edenscm import hgext
 
     extpath = os.path.dirname(os.path.abspath(pycompat.fsencode(hgext.__file__)))
     try:  # might not be a filesystem path
@@ -780,7 +786,7 @@ def _disabledhelp(path):
 def disabled():
     """find disabled extensions from hgext. returns a dict of {name: desc}"""
     try:
-        from hgext import __index__
+        from edenscm.hgext import __index__
 
         return dict(
             (name, gettext(desc))
@@ -806,7 +812,7 @@ def disabled():
 def disabledext(name):
     """find a specific disabled extension from hgext. returns desc"""
     try:
-        from hgext import __index__
+        from edenscm.hgext import __index__
 
         if name in _order:  # enabled
             return

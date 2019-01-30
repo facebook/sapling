@@ -16,9 +16,9 @@ from StringIO import StringIO
 
 
 try:
-    from mercurial.server import runservice
+    from edenscm.mercurial.server import runservice
 except ImportError:
-    from mercurial.cmdutil import service as runservice
+    from edenscm.mercurial.cmdutil import service as runservice
 
 known_translations = {}
 next_error_message = []

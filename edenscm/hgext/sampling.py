@@ -18,7 +18,7 @@ import json
 import os
 import weakref
 
-from mercurial import encoding, localrepo, pycompat, registrar, util
+from edenscm.mercurial import encoding, localrepo, pycompat, registrar, util
 
 
 configtable = {}

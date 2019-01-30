@@ -9,7 +9,7 @@ import json
 import os
 import sys
 
-from mercurial import util
+from edenscm.mercurial import util
 
 
 httplib = util.httplib

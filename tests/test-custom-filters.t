@@ -10,7 +10,7 @@
   > EOF
 
   $ cat > prefix.py <<EOF
-  > from mercurial import error
+  > from edenscm.mercurial import error
   > def stripprefix(s, cmd, filename, **kwargs):
   >     header = '%s\n' % cmd
   >     if s[:len(header)] != header:

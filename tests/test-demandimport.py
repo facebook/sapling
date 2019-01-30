@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 # isort:skip_file
 
-from mercurial import demandimport
+from edenscm.mercurial import demandimport
 
 demandimport.enable()
 
@@ -45,14 +45,14 @@ print("os =", f(os))
 print("os.system =", f(os.system))
 print("os =", f(os))
 
-from mercurial import util
+from edenscm.mercurial import util
 
 print("util =", f(util))
 print("util.system =", f(util.system))
 print("util =", f(util))
 print("util.system =", f(util.system))
 
-from mercurial import hgweb
+from edenscm.mercurial import hgweb
 
 print("hgweb =", f(hgweb))
 print("hgweb_mod =", f(hgweb.hgweb_mod))
@@ -82,7 +82,7 @@ print("re.stderr =", f(re.stderr))
 print("re =", f(re))
 
 # Test access to special attributes through demandmod proxy
-from mercurial import pvec as pvecproxy
+from edenscm.mercurial import pvec as pvecproxy
 
 print("pvecproxy =", f(pvecproxy))
 print("pvecproxy.__doc__ = %r" % (" ".join(pvecproxy.__doc__.split()[:3]) + " ..."))
@@ -120,6 +120,6 @@ demandimport.disable()
 os.environ["HGDEMANDIMPORT"] = "disable"
 # this enable call should not actually enable demandimport!
 demandimport.enable()
-from mercurial import node
+from edenscm.mercurial import node
 
 print("node =", f(node))

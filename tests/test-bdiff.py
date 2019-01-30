@@ -4,7 +4,7 @@ import collections
 import struct
 import unittest
 
-from mercurial import mdiff
+from edenscm.mercurial import mdiff
 
 
 class diffreplace(collections.namedtuple("diffreplace", "start end from_ to")):

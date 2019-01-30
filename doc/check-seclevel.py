@@ -8,7 +8,14 @@ import optparse
 import os
 import sys
 
-from mercurial import commands, demandimport, extensions, help, minirst, ui as uimod
+from edenscm.mercurial import (
+    commands,
+    demandimport,
+    extensions,
+    help,
+    minirst,
+    ui as uimod,
+)
 
 
 # import from the live mercurial repo

@@ -7,8 +7,8 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from mercurial import node
-from mercurial.rust import bookmarkstore
+from edenscm.mercurial import node
+from edenscm.mercurial.rust import bookmarkstore
 
 
 class bookmarkstoretests(unittest.TestCase):

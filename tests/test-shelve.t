@@ -1547,7 +1547,7 @@ Test interrupted shelve - this should not lose work
   $ hg commit -Aqm commit1
   $ echo 2 > file2
   $ cat >> $TESTTMP/abortcreatemarkers.py <<EOF
-  > from mercurial import extensions, obsolete
+  > from edenscm.mercurial import extensions, obsolete
   > def createmarkers(orig, *args, **kwargs):
   >     orig(*args, **kwargs)
   >     raise KeyboardInterrupt
@@ -1555,7 +1555,7 @@ Test interrupted shelve - this should not lose work
   >     extensions.wrapfunction(obsolete, "createmarkers", createmarkers)
   > EOF
   $ cat >> $TESTTMP/abortupdate.py <<EOF
-  > from mercurial import extensions, hg
+  > from edenscm.mercurial import extensions, hg
   > def update(orig, repo, *args, **kwargs):
   >     if repo.ui.configbool("abortupdate", "after"):
   >         orig(repo, *args, **kwargs)

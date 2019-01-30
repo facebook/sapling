@@ -10,11 +10,9 @@ from __future__ import absolute_import
 import os
 import sys
 
-# Enable compatibility mode for "import mercurial" and "import hgext"
-from edenscm import compat
 
 # Allow 'from mercurial import demandimport' to keep working.
-import hgdemandimport
+from edenscm import hgdemandimport
 
 
 demandimport = hgdemandimport

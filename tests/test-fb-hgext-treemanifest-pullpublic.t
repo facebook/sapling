@@ -43,7 +43,7 @@ Add a few more public server comits
 
 Create an extension the prints out whenever we compare manifests on the server
   $ cat > "$TESTTMP/diffdebug.py" << EOF
-  > from mercurial import manifest
+  > from edenscm.mercurial import manifest
   > class manifestdict(manifest.manifestdict):
   >     ui = None
   >     def diff(self, *args, **kwargs):

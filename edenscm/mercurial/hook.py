@@ -48,7 +48,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
                 e1 = sys.exc_info()
                 try:
                     # extensions are loaded with hgext_ prefix
-                    obj = __import__("hgext_%s" % modname)
+                    obj = __import__("edenscm_hgext_%s" % modname)
                 except (ImportError, SyntaxError):
                     e2 = sys.exc_info()
                     if ui.tracebackflag:
@@ -266,6 +266,10 @@ def runhooks(ui, repo, htype, hooks, throw=False, **args):
                     hookfn = getattr(mod, cmd)
                 else:
                     hookfn = cmd[7:].strip()
+                    # Compatibility: Change "hgext" to "edenscm.hgext"
+                    # automatically.
+                    if hookfn.startswith("hgext."):
+                        hookfn = "edenscm." + hookfn
                 r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
             else:
                 r = _exthook(ui, repo, htype, hname, cmd, args, throw)

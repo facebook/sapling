@@ -16,8 +16,8 @@ import time
 from multiprocessing.pool import ThreadPool
 from subprocess import PIPE, Popen
 
-from mercurial import error, util
-from mercurial.i18n import _
+from edenscm.mercurial import error, util
+from edenscm.mercurial.i18n import _
 
 from . import baseservice, commitcloudcommon
 

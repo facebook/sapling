@@ -6,7 +6,7 @@
 # (c) 2017-present Facebook Inc.
 from __future__ import absolute_import
 
-from mercurial import extensions
+from edenscm.mercurial import extensions
 
 
 lfsext = None

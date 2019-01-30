@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import encoding, node, templatefilters, util
+from edenscm.mercurial import encoding, node, templatefilters, util
 
 
 # imitating mercurial.commands.annotate, not using the vanilla formatter since

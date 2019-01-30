@@ -9,7 +9,7 @@ import select
 import socket
 import sys
 
-from mercurial import util
+from edenscm.mercurial import util
 
 
 __doc__ = """Tiny HTTP Proxy.

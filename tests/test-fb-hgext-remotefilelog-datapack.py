@@ -13,20 +13,20 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from hgext.extlib.pyrevisionstore import datapack as rustdatapack
-from hgext.remotefilelog import constants
-from hgext.remotefilelog.basepack import (
+from edenscm.hgext.extlib.pyrevisionstore import datapack as rustdatapack
+from edenscm.hgext.remotefilelog import constants
+from edenscm.hgext.remotefilelog.basepack import (
     LARGEFANOUTPREFIX,
     SMALLFANOUTCUTOFF,
     SMALLFANOUTPREFIX,
 )
-from hgext.remotefilelog.datapack import (
+from edenscm.hgext.remotefilelog.datapack import (
     datapack,
     datapackstore,
     fastdatapack,
     mutabledatapack,
 )
-from mercurial.node import nullid
+from edenscm.mercurial.node import nullid
 
 
 try:

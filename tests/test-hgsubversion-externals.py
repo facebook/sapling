@@ -3,8 +3,8 @@
 import os
 
 import test_hgsubversion_util
-from hgext.hgsubversion import svnexternals
-from mercurial import commands, subrepo
+from edenscm.hgext.hgsubversion import svnexternals
+from edenscm.mercurial import commands, subrepo
 
 
 class TestFetchExternals(test_hgsubversion_util.TestBase):

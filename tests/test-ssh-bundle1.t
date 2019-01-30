@@ -443,7 +443,7 @@ stderr from remote commands should be printed before stdout from local code (iss
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd stderr-ordering
   $ cat >> localwrite.py << EOF
-  > from mercurial import exchange, extensions
+  > from edenscm.mercurial import exchange, extensions
   > 
   > def wrappedpush(orig, repo, *args, **kwargs):
   >     res = orig(repo, *args, **kwargs)

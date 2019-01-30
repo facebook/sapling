@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 import os
 
-from mercurial import (
+from edenscm.mercurial import (
     bundlerepo,
     changegroup,
     error,
@@ -18,8 +18,8 @@ from mercurial import (
     progress,
     util,
 )
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid
 
 from . import fileserverclient, remotefilelog, shallowutil
 

@@ -7,7 +7,7 @@ import re
 import urllib
 
 import compathacks
-from mercurial import error, hg, node, repair, util as hgutil
+from edenscm.mercurial import error, hg, node, repair, util as hgutil
 
 
 try:
@@ -18,15 +18,15 @@ except NameError:
 try:
     from collections import deque
 except:
-    from mercurial.util import deque
+    from edenscm.mercurial.util import deque
 
 try:
-    from mercurial import revset
+    from edenscm.mercurial import revset
 except ImportError:
     pass
 
 try:
-    from mercurial import smartset
+    from edenscm.mercurial import smartset
 
     smartset.baseset  # force demandimport to load the module now
 except ImportError:
@@ -298,7 +298,7 @@ def describe_commit(ui, h, b):
 
 
 def swap_out_encoding(new_encoding="UTF-8"):
-    from mercurial import encoding
+    from edenscm.mercurial import encoding
 
     old = encoding.encoding
     encoding.encoding = new_encoding

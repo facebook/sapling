@@ -47,9 +47,9 @@ import random
 import sys
 import time
 
-from mercurial import context, error, hg, patch, registrar, scmutil, util
-from mercurial.i18n import _
-from mercurial.node import nullid, nullrev, short
+from edenscm.mercurial import context, error, hg, patch, registrar, scmutil, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import nullid, nullrev, short
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for

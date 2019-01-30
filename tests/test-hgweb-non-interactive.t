@@ -10,14 +10,14 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   > from __future__ import absolute_import
   > import os
   > import sys
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >     dispatch,
   >     hg,
   >     ui as uimod,
   >     util,
   > )
   > ui = uimod.ui
-  > from mercurial.hgweb.hgweb_mod import (
+  > from edenscm.mercurial.hgweb.hgweb_mod import (
   >     hgweb,
   > )
   > stringio = util.stringio

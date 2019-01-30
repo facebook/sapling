@@ -56,7 +56,7 @@ from __future__ import absolute_import
 
 import tempfile
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     cmdutil,
     commands,
@@ -68,8 +68,8 @@ from mercurial import (
     registrar,
     scmutil,
 )
-from mercurial.i18n import _
-from mercurial.node import hex, short
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex, short
 
 from . import (
     common,

@@ -19,7 +19,7 @@ by SCM wrappers
 
 import os
 
-from mercurial import extensions, localrepo, registrar
+from edenscm.mercurial import extensions, localrepo, registrar
 
 
 configtable = {}

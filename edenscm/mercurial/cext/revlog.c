@@ -1144,7 +1144,7 @@ index_find_node(indexObject* self, const char* node, Py_ssize_t nodelen) {
 static void raise_revlog_error(void) {
   PyObject *mod = NULL, *dict = NULL, *errclass = NULL;
 
-  mod = PyImport_ImportModule("mercurial.error");
+  mod = PyImport_ImportModule("edenscm.mercurial.error");
   if (mod == NULL) {
     goto cleanup;
   }

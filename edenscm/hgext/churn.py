@@ -14,7 +14,7 @@ import datetime
 import os
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     cmdutil,
     encoding,
     patch,
@@ -24,7 +24,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}

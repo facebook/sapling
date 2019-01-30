@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from mercurial import dispatch
+from edenscm.mercurial import dispatch
 
 
 def testdispatch(cmd):

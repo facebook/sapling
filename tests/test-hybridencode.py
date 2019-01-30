@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from mercurial import store
+from edenscm.mercurial import store
 
 
 def show(s):

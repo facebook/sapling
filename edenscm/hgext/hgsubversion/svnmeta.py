@@ -9,7 +9,7 @@ import layouts
 import maps
 import svnwrap
 import util
-from mercurial import context, node, revlog, util as hgutil
+from edenscm.mercurial import context, node, revlog, util as hgutil
 
 
 class SVNMeta(object):

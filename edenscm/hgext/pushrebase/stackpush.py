@@ -39,8 +39,8 @@ from __future__ import absolute_import
 
 import time
 
-from mercurial import context, error, mutation
-from mercurial.node import nullid, nullrev
+from edenscm.mercurial import context, error, mutation
+from edenscm.mercurial.node import nullid, nullrev
 
 from .errors import ConflictsError, StackPushUnsupportedError
 

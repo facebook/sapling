@@ -17,7 +17,7 @@ import time
 
 CONTENT = "Aeneas was a lively fellow"
 FILENAME = "hg.stresstest.atomicreplace.file"
-CMD = """%s debugshell -c "from mercurial.util import atomictempfile; f=atomictempfile('%s'); f.write('%s'); f.close()" """
+CMD = """%s debugshell -c "from edenscm.mercurial.util import atomictempfile; f=atomictempfile('%s'); f.write('%s'); f.close()" """
 
 
 def run_stress_test(n, binary, kill_median, kill_half_width):

@@ -33,7 +33,7 @@ another repository of push/pull/clone on localhost:
   $ echo 'featuresetup-test' >> supported/.hg/requires
   $ cat > $TESTTMP/supported-locally/supportlocally.py <<EOF
   > from __future__ import absolute_import
-  > from mercurial import extensions, localrepo
+  > from edenscm.mercurial import extensions, localrepo
   > def featuresetup(ui, supported):
   >     for name, module in extensions.extensions(ui):
   >         if __name__ == module.__name__:

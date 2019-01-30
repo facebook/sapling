@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import marshal
 import time
 
-from mercurial import error, util
+from edenscm.mercurial import error, util
 
 
 def retry(num=3, sleeps=0.3):

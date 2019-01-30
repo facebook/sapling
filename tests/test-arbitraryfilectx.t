@@ -2,7 +2,7 @@ Setup:
   $ cat > eval.py <<EOF
   > from __future__ import absolute_import
   > import filecmp
-  > from mercurial import commands, context, registrar
+  > from edenscm.mercurial import commands, context, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command(b'eval', [], 'hg eval CMD')

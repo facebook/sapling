@@ -2,7 +2,7 @@ import os
 import sys
 
 # Make sure we use sshaskpass.py in this repo, unaffected by PYTHONPATH
-from hgext import sshaskpass
+from edenscm.hgext import sshaskpass
 
 
 # stdin, stderr have to be tty to run test

@@ -4,8 +4,8 @@ import os
 import sys
 
 import test_hgsubversion_util
-from hgext.hgsubversion import svncommands
-from mercurial import context, extensions
+from edenscm.hgext.hgsubversion import svncommands
+from edenscm.mercurial import context, extensions
 
 
 test_rebuildmeta = test_hgsubversion_util.import_test("test_rebuildmeta")

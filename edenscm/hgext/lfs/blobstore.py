@@ -12,7 +12,7 @@ import json
 import os
 import re
 
-from mercurial import (
+from edenscm.mercurial import (
     error,
     pathutil,
     progress,
@@ -21,7 +21,7 @@ from mercurial import (
     vfs as vfsmod,
     worker,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 # 64 bytes for SHA256

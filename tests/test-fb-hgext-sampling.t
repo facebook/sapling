@@ -18,7 +18,7 @@ Create an extension that logs every commit and also call repo.revs twice
 
 Create an extension that logs the call to commit
   $ cat > $TESTTMP/logcommit.py << EOF
-  > from mercurial import extensions, localrepo
+  > from edenscm.mercurial import extensions, localrepo
   > def cb(sample):
   >   return len(sample)
   > def _commit(orig, repo, *args, **kwargs):

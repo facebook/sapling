@@ -8,8 +8,8 @@ import os
 import struct
 import tempfile
 
-from mercurial import error, extensions
-from mercurial.node import hex
+from edenscm.mercurial import error, extensions
+from edenscm.mercurial.node import hex
 
 
 def isremotebooksenabled(ui):

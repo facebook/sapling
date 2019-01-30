@@ -57,7 +57,7 @@ Test lazily acquiring the lock during unbundle
 
   $ cat >> $TESTTMP/locktester.py <<EOF
   > import os
-  > from mercurial import extensions, bundle2, util
+  > from edenscm.mercurial import extensions, bundle2, util
   > def checklock(orig, repo, *args, **kwargs):
   >     if len(repo.heldlocks) > 0:
   >         raise util.Abort("Lock should not be taken")

@@ -8,9 +8,9 @@ from __future__ import absolute_import
 import os
 import struct
 
-from mercurial import error, util
-from mercurial.i18n import _
-from mercurial.node import hex, nullid
+from edenscm.mercurial import error, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
 from ..extlib.pyrevisionstore import datapack as rustdatapack

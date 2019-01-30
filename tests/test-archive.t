@@ -182,7 +182,7 @@ invalid arch type should give 404
   > from __future__ import absolute_import
   > import os
   > import sys
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >     util,
   > )
   > try:

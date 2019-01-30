@@ -5,8 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import cmdutil, crecord as crecordmod, patch as patchmod, util
-from mercurial.i18n import _
+from edenscm.mercurial import cmdutil, crecord as crecordmod, patch as patchmod, util
+from edenscm.mercurial.i18n import _
 
 
 testedwith = "ships-with-fb-hgext"

@@ -44,8 +44,8 @@ from __future__ import absolute_import
 import os
 import re
 
-from mercurial import error, extensions, hg, pycompat, registrar, templater, util
-from mercurial.i18n import _
+from edenscm.mercurial import error, extensions, hg, pycompat, registrar, templater, util
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}

@@ -13,7 +13,7 @@ well-known equivalents. Namely, "changeset" will be replaced by "commit".
 
 testedwith = "ships-with-fb-hgext"
 
-from mercurial import extensions, i18n
+from edenscm.mercurial import extensions, i18n
 
 
 def _ugettext(orig, message):

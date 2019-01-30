@@ -8,8 +8,8 @@
 import contextlib
 import os
 
-from mercurial import error, extensions, hg, localrepo, scmutil, wireproto
-from mercurial.i18n import _
+from edenscm.mercurial import error, extensions, hg, localrepo, scmutil, wireproto
+from edenscm.mercurial.i18n import _
 
 from . import context
 

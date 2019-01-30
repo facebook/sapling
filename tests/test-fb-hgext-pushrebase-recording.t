@@ -104,9 +104,9 @@ unbundle method to make sure that bundle is valid
   $ cd ../client2
 
   $ cat >> $TESTTMP/unbundle.py <<EOF
-  > from mercurial import registrar
-  > from mercurial import (bundle2, extensions)
-  > from mercurial.node import bin, hex
+  > from edenscm.mercurial import registrar
+  > from edenscm.mercurial import (bundle2, extensions)
+  > from edenscm.mercurial.node import bin, hex
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('sendunbundle', [

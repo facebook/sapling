@@ -409,7 +409,7 @@ preoutgoing hook can prevent outgoing changes for local clones
 
   $ cat > hooktests.py <<EOF
   > from __future__ import print_function
-  > from mercurial import error
+  > from edenscm.mercurial import error
   > 
   > uncallable = 0
   > 
@@ -553,7 +553,7 @@ different between Python 2.6 and Python 2.7.
   SyntaxError: * (glob)
   exception from second failed import attempt:
   Traceback (most recent call last):
-  ImportError: No module named hgext_syntaxerror
+  ImportError: No module named edenscm_hgext_syntaxerror
   Traceback (most recent call last):
   HookLoadError: preoutgoing.syntaxerror hook is invalid: import of "syntaxerror" failed
   abort: preoutgoing.syntaxerror hook is invalid: import of "syntaxerror" failed
@@ -649,7 +649,7 @@ make sure --traceback works
   committing changelog
   updating the branch cache
   committed changeset 1:52998019f6252a2b893452765fcb0a47351a5708
-  calling hook commit.auto: hgext_hookext.autohook
+  calling hook commit.auto: edenscm_hgext_hookext.autohook
   Automatically installed hook
 
   $ hg showconfig hooks
@@ -711,7 +711,7 @@ make sure --traceback works on hook import failure
   ImportError: No module named somebogusmodule
   exception from second failed import attempt:
   Traceback (most recent call last):
-  ImportError: No module named hgext_importfail
+  ImportError: No module named edenscm_hgext_importfail
   Traceback (most recent call last):
   HookLoadError: precommit.importfail hook is invalid: import of "importfail" failed
   abort: precommit.importfail hook is invalid: import of "importfail" failed
@@ -876,7 +876,7 @@ Hook from untrusted hgrc are no longer failures
 ================================================
 
   $ cat << EOF > $TESTTMP/untrusted.py
-  > from mercurial import scmutil, util
+  > from edenscm.mercurial import scmutil, util
   > def uisetup(ui):
   >     class untrustedui(ui.__class__):
   >         def _trusted(self, fp, f):

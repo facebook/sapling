@@ -14,8 +14,8 @@ import tarfile
 import tempfile
 import unittest
 
-from hgext.hgsubversion import compathacks, svnrepo, svnwrap, util
-from mercurial import (
+from edenscm.hgext.hgsubversion import compathacks, svnrepo, svnwrap, util
+from edenscm.mercurial import (
     cmdutil,
     commands,
     context,
@@ -32,7 +32,7 @@ from mercurial import (
 
 
 try:
-    from mercurial import obsolete
+    from edenscm.mercurial import obsolete
 
     obsolete._enabled
 except ImportError:
@@ -363,7 +363,7 @@ class TestDb(object):
 
 class _testui(ui.ui):
     def develwarn(self, msg, stacklevel=1, *args, **kwargs):
-        from hgext.hgsubversion import util
+        from edenscm.hgext.hgsubversion import util
 
         if util.smartset is not None:
             config = args[0] if args else kwargs.get("config")

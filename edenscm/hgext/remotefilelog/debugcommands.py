@@ -9,10 +9,10 @@ from __future__ import absolute_import
 import hashlib
 import os
 
-from hgext import extutil
-from mercurial import error, filelog, revlog
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid, short
+from edenscm.hgext import extutil
+from edenscm.mercurial import error, filelog, revlog
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid, short
 
 from . import (
     constants,

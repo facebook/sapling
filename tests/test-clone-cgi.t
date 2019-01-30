@@ -19,9 +19,9 @@ initialize repository
   > # An example CGI script to use hgweb, edit as necessary
   > import cgitb
   > cgitb.enable()
-  > from mercurial import demandimport; demandimport.enable()
-  > from mercurial.hgweb import hgweb
-  > from mercurial.hgweb import wsgicgi
+  > from edenscm.mercurial import demandimport; demandimport.enable()
+  > from edenscm.mercurial.hgweb import hgweb
+  > from edenscm.mercurial.hgweb import wsgicgi
   > application = hgweb("test", "Empty test repository")
   > wsgicgi.launch(application)
   > HGWEB

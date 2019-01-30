@@ -4,8 +4,8 @@ import os
 import sys
 
 import test_hgsubversion_util
-from hgext.hgsubversion import svnwrap
-from mercurial import hg
+from edenscm.hgext.hgsubversion import svnwrap
+from edenscm.mercurial import hg
 
 
 def _do_case(self, name, layout):

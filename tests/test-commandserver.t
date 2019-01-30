@@ -602,7 +602,7 @@ changelog and manifest would have invalid node:
   $ cat <<EOF > dbgui.py
   > import os
   > import sys
-  > from mercurial import commands, registrar
+  > from edenscm.mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command(b"debuggetpass", norepo=True)
@@ -820,8 +820,8 @@ cases.
 
   $ cat > $TESTTMP/failafterfinalize.py <<EOF
   > # extension to abort transaction after finalization forcibly
-  > from mercurial import commands, error, extensions, lock as lockmod
-  > from mercurial import registrar
+  > from edenscm.mercurial import commands, error, extensions, lock as lockmod
+  > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > configtable = {}

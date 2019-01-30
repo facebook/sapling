@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import unittest
 
 import silenttestrunner
-from mercurial import error, scmutil
+from edenscm.mercurial import error, scmutil
 
 
 class mockfile(object):

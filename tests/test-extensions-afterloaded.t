@@ -1,7 +1,7 @@
 Test the extensions.afterloaded() function
 
   $ cat > foo.py <<EOF
-  > from mercurial import extensions
+  > from edenscm.mercurial import extensions
   > def uisetup(ui):
   >     ui.write("foo.uisetup\\n")
   >     ui.flush()

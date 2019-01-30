@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import unittest
 
-from mercurial import error, mdiff
+from edenscm.mercurial import error, mdiff
 
 
 # for readability, line numbers are 0-origin

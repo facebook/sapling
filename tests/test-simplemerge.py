@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 import unittest
 
-from mercurial import error, simplemerge, util
+from edenscm.mercurial import error, simplemerge, util
 
 
 TestCase = unittest.TestCase

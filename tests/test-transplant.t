@@ -889,7 +889,7 @@ timestamp of them isn't changed on the filesystem (see also issue4583)
 
   $ cat > $TESTTMP/abort.py <<EOF
   > # emulate that patch.patch() is aborted at patching on "abort" file
-  > from mercurial import error, extensions, patch as patchmod
+  > from edenscm.mercurial import error, extensions, patch as patchmod
   > def patch(orig, ui, repo, patchname,
   >           strip=1, prefix='', files=None,
   >           eolmode='strict', similarity=0):

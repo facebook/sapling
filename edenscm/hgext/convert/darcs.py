@@ -12,8 +12,8 @@ import re
 import shutil
 import tempfile
 
-from mercurial import error, util
-from mercurial.i18n import _
+from edenscm.mercurial import error, util
+from edenscm.mercurial.i18n import _
 
 from . import common
 

@@ -27,9 +27,9 @@ from __future__ import absolute_import
 
 import copy
 
-from mercurial import commands, error, extensions, merge as mergemod, scmutil, util
-from mercurial.filemerge import absentfilectx
-from mercurial.i18n import _
+from edenscm.mercurial import commands, error, extensions, merge as mergemod, scmutil, util
+from edenscm.mercurial.filemerge import absentfilectx
+from edenscm.mercurial.i18n import _
 
 
 testedwith = "ships-with-fb-hgext"

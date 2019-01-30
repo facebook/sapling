@@ -16,7 +16,7 @@ import random
 import sys
 import time
 
-from mercurial import store
+from edenscm.mercurial import store
 
 
 try:

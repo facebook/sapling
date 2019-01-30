@@ -1,5 +1,5 @@
 import test_hgsubversion_util
-from hgext.hgsubversion import maps, svnmeta
+from edenscm.hgext.hgsubversion import maps, svnmeta
 
 
 class TestRevMapMigrate(test_hgsubversion_util.TestBase):

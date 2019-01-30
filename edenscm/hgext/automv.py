@@ -26,7 +26,7 @@ The threshold at which a file is considered a move can be set with the
 
 from __future__ import absolute_import
 
-from mercurial import (
+from edenscm.mercurial import (
     commands,
     copies,
     error,
@@ -36,7 +36,7 @@ from mercurial import (
     scmutil,
     similar,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 configtable = {}

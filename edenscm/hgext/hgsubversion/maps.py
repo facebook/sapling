@@ -12,8 +12,8 @@ import subprocess
 import sys
 
 import util
-from mercurial import error, util as hgutil
-from mercurial.node import bin, hex, nullid
+from edenscm.mercurial import error, util as hgutil
+from edenscm.mercurial.node import bin, hex, nullid
 
 
 class BaseMap(dict):

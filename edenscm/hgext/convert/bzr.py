@@ -11,8 +11,8 @@ from __future__ import absolute_import
 
 import os
 
-from mercurial import demandimport, error
-from mercurial.i18n import _
+from edenscm.mercurial import demandimport, error
+from edenscm.mercurial.i18n import _
 
 from . import common
 

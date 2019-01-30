@@ -120,7 +120,7 @@
   committing manifest
   committing changelog
   committed changeset 4:dc68270aa18f
-  calling hook commit.prefetch: hgext.remotefilelog.wcpprefetch
+  calling hook commit.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
 # if the loose file format is used then the file will be fetched because of the
@@ -133,7 +133,7 @@
   committing manifest
   committing changelog
   committed changeset 5:74c424ec1e23
-  calling hook commit.prefetch: hgext.remotefilelog.wcpprefetch
+  calling hook commit.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ findfilessorted $CACHEDIR
   $TESTTMP/hgcache/master/97/1c419dd609331343dee105fffd0f4608dc0bf2/ea096176809b81541cdb77bc9dcf6a43a7ea6bc7
@@ -149,7 +149,7 @@
   committing manifest
   committing changelog
   committed changeset 6:3462713eae99
-  calling hook commit.prefetch: hgext.remotefilelog.wcpprefetch
+  calling hook commit.prefetch: edenscm.hgext.remotefilelog.wcpprefetch
   $ findfilessorted $CACHEDIR
 
 

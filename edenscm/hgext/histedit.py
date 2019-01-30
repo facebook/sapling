@@ -186,7 +186,7 @@ from __future__ import absolute_import
 import errno
 import os
 
-from mercurial import (
+from edenscm.mercurial import (
     bundle2,
     cmdutil,
     context,
@@ -210,7 +210,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 pickle = util.pickle

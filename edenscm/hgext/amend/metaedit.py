@@ -11,8 +11,8 @@
 
 from __future__ import absolute_import
 
-from mercurial import cmdutil, commands, error, hg, mutation, phases, registrar, scmutil
-from mercurial.i18n import _
+from edenscm.mercurial import cmdutil, commands, error, hg, mutation, phases, registrar, scmutil
+from edenscm.mercurial.i18n import _
 
 from . import common, fold
 

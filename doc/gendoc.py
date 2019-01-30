@@ -17,19 +17,18 @@ import textwrap
 os.environ["HGMODULEPOLICY"] = "allow"
 # import from the live mercurial repo
 sys.path.insert(0, "..")
-from edenscm import compat
-from mercurial import demandimport
+from edenscm.mercurial import demandimport
 
 demandimport.enable()
 
 # Load util so that the locale path is set by i18n.setdatapath() before
 # calling _().
-from mercurial import util
+from edenscm.mercurial import util
 
 util.datapath
 
-from mercurial import commands, extensions, help, minirst, ui as uimod
-from mercurial.i18n import _, gettext
+from edenscm.mercurial import commands, extensions, help, minirst, ui as uimod
+from edenscm.mercurial.i18n import _, gettext
 
 
 table = commands.table

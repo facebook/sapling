@@ -10,7 +10,7 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks as bookmarksmod,
     cmdutil,
     error,
@@ -21,8 +21,8 @@ from mercurial import (
     registrar,
     scmutil,
 )
-from mercurial.i18n import _
-from mercurial.node import short
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import short
 
 
 cmdtable = {}

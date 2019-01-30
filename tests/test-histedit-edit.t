@@ -261,7 +261,7 @@ modify the message
 check saving last-message.txt, at first
 
   $ cat > $TESTTMP/commitfailure.py <<EOF
-  > from mercurial import error
+  > from edenscm.mercurial import error
   > def reposetup(ui, repo):
   >     class commitfailure(repo.__class__):
   >         def commit(self, *args, **kwargs):

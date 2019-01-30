@@ -519,7 +519,7 @@ Issue2267: Error in 1.6 hg.py: TypeError: 'NoneType' object is not
 iterable in addbranchrevs()
 
   $ cat <<EOF > simpleclone.py
-  > from mercurial import ui, hg
+  > from edenscm.mercurial import ui, hg
   > myui = ui.ui.load()
   > repo = hg.repository(myui, 'a')
   > hg.clone(myui, {}, repo, dest="ua")
@@ -532,7 +532,7 @@ iterable in addbranchrevs()
   $ rm -r ua
 
   $ cat <<EOF > branchclone.py
-  > from mercurial import ui, hg, extensions
+  > from edenscm.mercurial import ui, hg, extensions
   > myui = ui.ui.load()
   > extensions.loadall(myui)
   > repo = hg.repository(myui, 'a')

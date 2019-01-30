@@ -8,8 +8,8 @@ from __future__ import absolute_import
 
 import os
 
-from mercurial import config, error, node as nodemod
-from mercurial.i18n import _
+from edenscm.mercurial import config, error, node as nodemod
+from edenscm.mercurial.i18n import _
 
 from . import common
 

@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import json
 import os
 
-from mercurial import error
+from edenscm.mercurial import error
 
 from . import baseservice, commitcloudcommon
 

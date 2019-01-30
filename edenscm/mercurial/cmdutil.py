@@ -1010,7 +1010,7 @@ def rendertemplate(ui, tmpl, props=None):
 
     Return the rendered string.
 
-    >>> import mercurial.ui as uimod
+    >>> import edenscm.mercurial.ui as uimod
     >>> rendertemplate(uimod.ui(), '{a} {b|json}', {'a': 'x', 'b': [3, None]})
     'x [3, null]'
     """

@@ -4554,7 +4554,7 @@ Test that template function in extension is registered as expected
   $ cd a
 
   $ cat <<EOF > $TESTTMP/customfunc.py
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > 
   > templatefunc = registrar.templatefunc()
   > 

@@ -1,7 +1,7 @@
 import os
 
 import test_hgsubversion_util
-from hgext.hgsubversion import svnwrap
+from edenscm.hgext.hgsubversion import svnwrap
 
 
 class PushAutoPropsTests(test_hgsubversion_util.TestBase):

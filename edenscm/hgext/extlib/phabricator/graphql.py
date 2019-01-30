@@ -13,7 +13,7 @@ from __future__ import absolute_import
 import json
 import operator
 
-from mercurial import encoding, pycompat, util
+from edenscm.mercurial import encoding, pycompat, util
 
 from . import arcconfig, phabricator_graphql_client, phabricator_graphql_client_urllib
 

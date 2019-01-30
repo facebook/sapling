@@ -1,5 +1,5 @@
 import test_hgsubversion_util
-from mercurial import hg
+from edenscm.mercurial import hg
 
 
 class _DbCommand(object):

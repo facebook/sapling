@@ -3,9 +3,9 @@
   $ HGENCODING=utf-8
   $ export HGENCODING
   $ cat > testrevset.py << EOF
-  > import mercurial.revset
+  > import edenscm.mercurial.revset
   > 
-  > baseset = mercurial.revset.baseset
+  > baseset = edenscm.mercurial.revset.baseset
   > 
   > def r3232(repo, subset, x):
   >     """"simple revset that return [3,2,3,2]
@@ -18,7 +18,7 @@
   >        return baseset()
   >     return baseset([3,3,2,2])
   > 
-  > mercurial.revset.symbols['r3232'] = r3232
+  > edenscm.mercurial.revset.symbols['r3232'] = r3232
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
@@ -38,7 +38,7 @@ these predicates use '\0' as a separator:
 
   $ cat <<EOF > debugrevlistspec.py
   > from __future__ import absolute_import
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >     node as nodemod,
   >     registrar,
   >     revset,

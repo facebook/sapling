@@ -5,7 +5,7 @@
 import errno
 import sys
 
-from mercurial import util
+from edenscm.mercurial import util
 
 
 def branchset(repo):
@@ -31,7 +31,7 @@ def makememfilectx(repo, memctx, path, data, islink, isexec, copied):
 
     Works around API change by 8a0cac20a1ad (first in 4.5).
     """
-    from mercurial import context
+    from edenscm.mercurial import context
 
     try:
         return context.memfilectx(

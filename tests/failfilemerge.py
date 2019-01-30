@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import error, extensions, filemerge
+from edenscm.mercurial import error, extensions, filemerge
 
 
 def failfilemerge(

@@ -50,7 +50,7 @@ import os
 import tempfile
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     bundle2,
     changegroup,
     commands,
@@ -72,9 +72,9 @@ from mercurial import (
     util,
     wireproto,
 )
-from mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
-from mercurial.i18n import _, _n
-from mercurial.node import bin, hex, nullid, nullrev, short
+from edenscm.mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
+from edenscm.mercurial.i18n import _, _n
+from edenscm.mercurial.node import bin, hex, nullid, nullrev, short
 
 from . import recording, stackpush
 from .. import hgsql

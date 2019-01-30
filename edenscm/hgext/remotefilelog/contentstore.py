@@ -7,8 +7,8 @@ from __future__ import absolute_import
 
 import threading
 
-from mercurial import manifest, mdiff, revlog, util
-from mercurial.node import hex, nullid
+from edenscm.mercurial import manifest, mdiff, revlog, util
+from edenscm.mercurial.node import hex, nullid
 
 from . import basestore, constants, shallowutil
 

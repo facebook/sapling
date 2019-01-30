@@ -11,8 +11,8 @@
   $ initserver master masterrepo
 
   $ cat >> $TESTTMP/uilog.py <<EOF
-  > from mercurial import extensions
-  > from mercurial import ui as uimod
+  > from edenscm.mercurial import extensions
+  > from edenscm.mercurial import ui as uimod
   > def uisetup(ui):
   >     extensions.wrapfunction(uimod.ui, 'log', mylog)
   > def mylog(orig, self, service, *msg, **opts):
@@ -30,7 +30,7 @@
 
 # Verify timeouts are logged
   $ cat >> $TESTTMP/forcetimeout.py <<EOF
-  > from mercurial import error, extensions
+  > from edenscm.mercurial import error, extensions
   > def uisetup(ui):
   >     hgsql = extensions.find('hgsql')
   >     extensions.wrapfunction(hgsql.sqlcontext, '__enter__', fakeenter)

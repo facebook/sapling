@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from mercurial import hg, scmutil, ui as uimod, util
+from edenscm.mercurial import hg, scmutil, ui as uimod, util
 
 
 chdir = os.chdir

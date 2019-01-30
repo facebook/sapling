@@ -3,8 +3,8 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 
-from hgext import patchrmdir
-from mercurial import util
+from edenscm.hgext import patchrmdir
+from edenscm.mercurial import util
 
 
 if not sys.platform.startswith("linux"):

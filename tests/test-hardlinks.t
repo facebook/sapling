@@ -4,7 +4,7 @@
   $ cat > nlinks.py <<EOF
   > from __future__ import print_function
   > import sys
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > for f in sorted(sys.stdin.readlines()):
   >     f = f[:-1]
   >     print(util.nlinks(f), f)
@@ -20,7 +20,7 @@ Some implementations of cp can't create hardlinks (replaces 'cp -al' on Linux):
   $ cat > linkcp.py <<EOF
   > from __future__ import absolute_import
   > import sys
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > util.copyfiles(sys.argv[1], sys.argv[2], hardlink=True)
   > EOF
 

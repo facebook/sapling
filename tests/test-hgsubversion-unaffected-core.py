@@ -3,7 +3,7 @@
 import os
 
 import test_hgsubversion_util
-from mercurial import commands, dispatch, hg
+from edenscm.mercurial import commands, dispatch, hg
 
 
 def _dispatch(ui, cmd):

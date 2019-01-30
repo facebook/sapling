@@ -9,9 +9,9 @@ from __future__ import absolute_import
 import collections
 import time
 
-from mercurial import ancestor, context, error, extensions, phases, util
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid, nullrev
+from edenscm.mercurial import ancestor, context, error, extensions, phases, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid, nullrev
 
 from . import shallowutil
 
@@ -26,7 +26,7 @@ def createconduit(ui):
         conduit = extensions.find("fbconduit")
     except KeyError:
         try:
-            from hgext import fbconduit as conduit
+            from edenscm.hgext import fbconduit as conduit
         except ImportError:
             ui.log("linkrevfixup", _("unable to find fbconduit extension\n"))
             return False

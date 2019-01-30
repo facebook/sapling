@@ -35,7 +35,7 @@ from multiprocessing.reduction import recv_handle, send_handle
 
 
 try:
-    from mercurial import encoding
+    from edenscm.mercurial import encoding
 
     environ = encoding.environ
 except ImportError:
@@ -204,7 +204,7 @@ def _patchchgserver():
     """
     chgserver = None
     try:
-        from mercurial import chgserver
+        from edenscm.mercurial import chgserver
     except ImportError:
         try:
             chgserver = extensions.find("chgserver")
@@ -269,4 +269,4 @@ if __name__ == "__main__" and all(n in environ for n in ["SSH_ASKPASS", "TTYSOCK
         _sshaskpassmain(" ".join(sys.argv[1:]))
 else:
     # imported as a mercurial extension
-    from mercurial import extensions, sshpeer, util
+    from edenscm.mercurial import extensions, sshpeer, util

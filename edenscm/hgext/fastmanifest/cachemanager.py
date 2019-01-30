@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import errno
 import os
 
-from mercurial import encoding, error, extensions, revlog, scmutil, util
+from edenscm.mercurial import encoding, error, extensions, revlog, scmutil, util
 
 from . import concurrency, constants
 from ..extlib import cfastmanifest

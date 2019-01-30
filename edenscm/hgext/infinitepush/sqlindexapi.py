@@ -12,7 +12,7 @@ import warnings
 
 import mysql.connector
 from indexapi import indexapi, indexexception
-from mercurial import util
+from edenscm.mercurial import util
 
 
 def _convertbookmarkpattern(pattern):

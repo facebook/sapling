@@ -11,13 +11,14 @@ from __future__ import absolute_import
 import os
 import sys
 
+
 def run(binaryexecution):
     # entrypoint is in mercurial/ dir, while we want 'from mercurial import ...',
     # 'from hgext import ...' and 'from hgdemandimport import ...' to work
     # so we are adding their parent directory to be the first item of sys.path
     # Do not follow symlinks (ex. do not use "realpath"). It breaks buck build.
     filedir = os.path.dirname(os.path.abspath(__file__))
-    libdir = os.path.dirname(filedir)
+    libdir = os.path.dirname(os.path.dirname(filedir))
     if sys.path[0] != libdir:
         sys.path.insert(0, libdir)
 
@@ -27,11 +28,11 @@ def run(binaryexecution):
             # and it should not be present in sys.path, as we use absolute_import
             sys.path.remove(element)
 
-    import hgdemandimport
+    from edenscm import hgdemandimport
 
     hgdemandimport.tryenableembedded()
 
-    from mercurial import encoding
+    from edenscm.mercurial import encoding
 
     if encoding.environ.get("HGUNICODEPEDANTRY", False):
         try:
@@ -43,13 +44,13 @@ def run(binaryexecution):
     # Make available various deps that are either not new enough on the system
     # or not provided by the system.  These include a newer version of IPython
     # for `hg dbsh` and the thrift runtime for the eden extension
-    from mercurial import thirdparty
+    from edenscm.mercurial import thirdparty
 
     ipypath = os.path.join(os.path.dirname(thirdparty.__file__), "IPython.zip")
     if ipypath not in sys.path and os.path.exists(ipypath):
         sys.path.insert(0, ipypath)
 
-    from mercurial import executionmodel
+    from edenscm.mercurial import executionmodel
 
     executionmodel.setbinaryexecution(binaryexecution)
 
@@ -59,7 +60,7 @@ def run(binaryexecution):
         and "CHGINTERNALMARK" in encoding.environ
     ):
         # Shortcut path for chg server
-        from mercurial import dispatch
+        from edenscm.mercurial import dispatch
 
         dispatch.runchgserver()
     else:
@@ -74,7 +75,7 @@ def run(binaryexecution):
             )
             sys.stderr.write("(check your install and PYTHONPATH)\n")
             sys.exit(-1)
-        from mercurial import dispatch
+        from edenscm.mercurial import dispatch
 
         dispatch.run()
 

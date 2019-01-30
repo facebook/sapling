@@ -7,8 +7,8 @@
 
 import re
 
-from mercurial import pathutil, registrar, revset, util
-from mercurial.i18n import _
+from edenscm.mercurial import pathutil, registrar, revset, util
+from edenscm.mercurial.i18n import _
 
 
 revsetpredicate = registrar.revsetpredicate()

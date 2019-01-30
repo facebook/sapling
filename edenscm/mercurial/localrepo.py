@@ -875,7 +875,7 @@ class localrepository(object):
         # as it attempts to import missing modules and changes behavior
         # based on what it finds.  Demand import masks those and causes
         # obscure and false import errors at runtime.
-        import hgdemandimport
+        from edenscm import hgdemandimport
 
         with hgdemandimport.disabled():
             from . import eden_dirstate as dirstate_reimplementation

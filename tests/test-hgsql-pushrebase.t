@@ -11,7 +11,7 @@ Test verify sql lock is not held during prelockrebase and txnclose hooks
 
   $ cat >> $TESTTMP/locktester.py <<EOF
   > import os
-  > from mercurial import extensions, bundle2, util
+  > from edenscm.mercurial import extensions, bundle2, util
   > def checklock(repo, *args, **kwargs):
   >     if len(repo.heldlocks) > 0:
   >         raise util.Abort("lock was TAKEN")

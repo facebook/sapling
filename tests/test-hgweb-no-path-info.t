@@ -18,11 +18,11 @@ should be used from d74fc8dec2b4 onward to route the request.
   > from __future__ import absolute_import
   > import os
   > import sys
-  > from mercurial.hgweb import (
+  > from edenscm.mercurial.hgweb import (
   >     hgweb,
   >     hgwebdir,
   > )
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >     util,
   > )
   > stringio = util.stringio

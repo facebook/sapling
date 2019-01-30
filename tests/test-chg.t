@@ -105,7 +105,7 @@ pager should be enabled if the attached client has a tty:
 chg waits for pager if runcommand raises
 
   $ cat > $TESTTMP/crash.py <<EOF
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command(b'crash')

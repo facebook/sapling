@@ -56,7 +56,7 @@ template.
 """
 from __future__ import absolute_import
 
-from mercurial import (
+from edenscm.mercurial import (
     error,
     extensions,
     localrepo,
@@ -65,7 +65,7 @@ from mercurial import (
     revset,
     smartset,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
 from .hgsubversion import svnrevkw, util as svnutil

@@ -82,7 +82,7 @@ import time
 import traceback
 from contextlib import contextmanager
 
-from mercurial import (
+from edenscm.mercurial import (
     bundle2,
     changegroup,
     changelog,
@@ -110,10 +110,10 @@ from mercurial import (
     templatekw,
     util,
 )
-from mercurial.commands import debug as hgdebugcommands
-from mercurial.extensions import wrapfunction
-from mercurial.i18n import _
-from mercurial.node import hex, nullrev
+from edenscm.mercurial.commands import debug as hgdebugcommands
+from edenscm.mercurial.extensions import wrapfunction
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex, nullrev
 
 from . import (
     debugcommands,
@@ -133,7 +133,7 @@ from . import (
 hgdebugcommands.command
 
 try:
-    from mercurial import streamclone
+    from edenscm.mercurial import streamclone
 
     streamclone._walkstreamfiles
     hasstreamclone = True

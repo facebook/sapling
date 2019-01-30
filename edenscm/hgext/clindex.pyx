@@ -30,7 +30,7 @@ import datetime
 import errno
 import os
 
-from mercurial import (
+from edenscm.mercurial import (
     changelog,
     error,
     extensions,
@@ -42,8 +42,8 @@ from mercurial import (
     vfs as vfsmod,
 )
 
-from mercurial.cext import parsers
-from mercurial.node import (
+from edenscm.mercurial.cext import parsers
+from edenscm.mercurial.node import (
     hex,
     nullhex,
     nullid,

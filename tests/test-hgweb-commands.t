@@ -2226,9 +2226,9 @@ bookmarks view doesn't choke on bookmarks on secret changesets (issue3774)
   $ hg phase -fs 4
   $ hg bookmark -r4 secret
   $ cat > hgweb.cgi <<HGWEB
-  > from mercurial import demandimport; demandimport.enable()
-  > from mercurial.hgweb import hgweb
-  > from mercurial.hgweb import wsgicgi
+  > from edenscm.mercurial import demandimport; demandimport.enable()
+  > from edenscm.mercurial.hgweb import hgweb
+  > from edenscm.mercurial.hgweb import wsgicgi
   > app = hgweb('.', 'test')
   > wsgicgi.launch(app)
   > HGWEB

@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from mercurial import demandimport, error, ui as uimod, url, util
+from edenscm.mercurial import demandimport, error, ui as uimod, url, util
 
 
 demandimport.enable()

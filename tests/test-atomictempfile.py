@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import unittest
 
-from mercurial import util
+from edenscm.mercurial import util
 
 
 atomictempfile = util.atomictempfile

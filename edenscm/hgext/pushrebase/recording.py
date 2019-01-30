@@ -10,8 +10,8 @@ import json
 import subprocess
 import time
 
-from mercurial.i18n import _
-from mercurial.node import hex
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex
 
 from ..extlib import mysqlutil
 

@@ -12,7 +12,7 @@ Adds a s/stop verb to histedit to stop after a changeset was picked.
 import json
 from pipes import quote
 
-from mercurial import (
+from edenscm.mercurial import (
     cmdutil,
     encoding,
     error,
@@ -26,7 +26,7 @@ from mercurial import (
     registrar,
     scmutil,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}

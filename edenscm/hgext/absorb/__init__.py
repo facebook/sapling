@@ -30,7 +30,7 @@ from __future__ import absolute_import
 
 import collections
 
-from mercurial import (
+from edenscm.mercurial import (
     cmdutil,
     commands,
     context,
@@ -47,7 +47,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _, _n
+from edenscm.mercurial.i18n import _, _n
 
 from ..extlib import linelog
 

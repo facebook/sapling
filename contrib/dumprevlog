@@ -5,7 +5,7 @@
 from __future__ import absolute_import, print_function
 
 import sys
-from mercurial import (
+from edenscm.mercurial import (
     node,
     revlog,
     util,

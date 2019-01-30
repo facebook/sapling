@@ -8,16 +8,16 @@ import stat
 import subprocess
 
 import util
-from mercurial import subrepo, util as hgutil
-from mercurial.i18n import _
+from edenscm.mercurial import subrepo, util as hgutil
+from edenscm.mercurial.i18n import _
 
 
 try:
-    from mercurial import scmutil
+    from edenscm.mercurial import scmutil
 
     canonpath = scmutil.canonpath
 except (ImportError, AttributeError):
-    from mercurial import pathutil
+    from edenscm.mercurial import pathutil
 
     canonpath = pathutil.canonpath
 

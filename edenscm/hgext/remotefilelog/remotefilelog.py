@@ -10,9 +10,9 @@ from __future__ import absolute_import
 import collections
 import os
 
-from mercurial import ancestor, error, filelog, mdiff, revlog, util
-from mercurial.i18n import _
-from mercurial.node import bin, nullid
+from edenscm.mercurial import ancestor, error, filelog, mdiff, revlog, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, nullid
 
 from . import constants, fileserverclient, mutablestores, shallowutil
 from .contentstore import (

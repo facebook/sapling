@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from mercurial import dispatch, error, ui as uimod
+from edenscm.mercurial import dispatch, error, ui as uimod
 
 
 testui = uimod.ui.load()

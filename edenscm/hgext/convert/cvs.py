@@ -11,8 +11,8 @@ import os
 import re
 import socket
 
-from mercurial import encoding, error, pycompat, util
-from mercurial.i18n import _
+from edenscm.mercurial import encoding, error, pycompat, util
+from edenscm.mercurial.i18n import _
 
 from . import common, cvsps
 

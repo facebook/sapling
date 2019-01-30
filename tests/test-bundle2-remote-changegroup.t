@@ -8,7 +8,7 @@ Create an extension to test bundle2 remote-changegroup parts
   > Current bundle2 implementation doesn't provide a way to generate those
   > parts, so they must be created by extensions.
   > """
-  > from mercurial import bundle2, changegroup, discovery, exchange, util
+  > from edenscm.mercurial import bundle2, changegroup, discovery, exchange, util
   > 
   > def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
   >                               b2caps=None, heads=None, common=None,

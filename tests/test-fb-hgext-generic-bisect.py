@@ -51,6 +51,6 @@ class BisectTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    from hgext.generic_bisect import bisect
+    from edenscm.hgext.generic_bisect import bisect
 
     silenttestrunner.main(__name__)

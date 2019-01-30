@@ -7,7 +7,7 @@ import os
 import subprocess
 import sys
 
-from mercurial import util
+from edenscm.mercurial import util
 
 
 # Always load hg libraries from the hg we can find on $PATH.

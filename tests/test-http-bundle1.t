@@ -68,7 +68,7 @@ try to clone via stream, should use pull instead
 try to clone via stream but missing requirements, so should use pull instead
 
   $ cat > $TESTTMP/removesupportedformat.py << EOF
-  > from mercurial import localrepo
+  > from edenscm.mercurial import localrepo
   > def extsetup(ui):
   >     localrepo.localrepository.supportedformats.remove('generaldelta')
   > EOF
@@ -177,7 +177,7 @@ test http authentication
   $ cd test
   $ cat << EOT > userpass.py
   > import base64
-  > from mercurial.hgweb import common
+  > from edenscm.mercurial.hgweb import common
   > def perform_authentication(hgweb, req, op):
   >     auth = req.env.get('HTTP_AUTHORIZATION')
   >     if not auth:

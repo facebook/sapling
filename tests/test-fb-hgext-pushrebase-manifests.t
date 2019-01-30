@@ -94,8 +94,8 @@ Make some non-conflicting commits in all three repos.
 Add an extension that logs whenever `manifest.readmf()` is called when the lock is held.
   $ cat >> $TESTTMP/manifestcheck.py <<EOF
   > import sys, traceback, os
-  > from mercurial import extensions, manifest
-  > from mercurial.node import nullrev
+  > from edenscm.mercurial import extensions, manifest
+  > from edenscm.mercurial.node import nullrev
   > def uisetup(ui):
   >     extensions.wrapfunction(manifest.manifestrevlog, 'revision', readmf)
   > def readmf(orig, self, nodeorrev, **kwargs):

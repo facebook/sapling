@@ -39,7 +39,7 @@ from __future__ import absolute_import
 
 import json
 
-from mercurial import progress, registrar
+from edenscm.mercurial import progress, registrar
 
 
 testedwith = "ships-with-fb-hgext"

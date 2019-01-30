@@ -56,12 +56,12 @@ cscope.*
 .asv/
 i18n/hg.pot
 edenscm/mercurial/locale/*/LC_MESSAGES/hg.mo
-hgext/__index__.py
-hgext/clindex.c
-hgext/extlib/linelog.c
-hgext/patchrmdir.c
-hgext/traceprof.cpp
-hgext/extlib/litemmap.c
+edenscm/hgext/__index__.py
+edenscm/hgext/clindex.c
+edenscm/hgext/extlib/linelog.c
+edenscm/hgext/patchrmdir.c
+edenscm/hgext/traceprof.cpp
+edenscm/hgext/extlib/litemmap.c
 
 # Build output
 build

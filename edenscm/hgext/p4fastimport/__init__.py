@@ -26,9 +26,9 @@ from __future__ import absolute_import
 import itertools
 import sqlite3
 
-from mercurial import error, extensions, progress, registrar, revlog, scmutil
-from mercurial.i18n import _
-from mercurial.node import hex, short
+from edenscm.mercurial import error, extensions, progress, registrar, revlog, scmutil
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex, short
 
 from . import importer, p4, seqimporter, syncimporter
 from .util import getcl, lastcl

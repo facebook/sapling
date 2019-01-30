@@ -8,9 +8,9 @@ from __future__ import absolute_import
 
 import os
 
-from mercurial import encoding, error, localrepo, match, progress, scmutil, util
-from mercurial.i18n import _
-from mercurial.node import hex, nullid, nullrev
+from edenscm.mercurial import encoding, error, localrepo, match, progress, scmutil, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex, nullid, nullrev
 
 from . import constants, fileserverclient, remotefilectx, remotefilelog, shallowutil
 from ..extutil import runshellcommand

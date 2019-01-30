@@ -12,7 +12,7 @@ import re
 import socket
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     cmdutil,
     commands,
     error,
@@ -33,7 +33,7 @@ from mercurial import (
 )
 
 # Mercurial
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import commitcloudcommon, commitcloudutil, service, state, workspace
 

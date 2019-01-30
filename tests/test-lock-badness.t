@@ -14,7 +14,7 @@ Prepare
 Test that raising an exception in the release function doesn't cause the lock to choke
 
   $ cat > testlock.py << EOF
-  > from mercurial import error, registrar
+  > from edenscm.mercurial import error, registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)

@@ -26,8 +26,8 @@ We approximate that by reducing the read buffer to 1 byte.
   summary:     change foo
   
   $ cat >> test.py << EOF
-  > from mercurial import changelog, vfs
-  > from mercurial.node import *
+  > from edenscm.mercurial import changelog, vfs
+  > from edenscm.mercurial.node import *
   > 
   > class singlebyteread(object):
   >     def __init__(self, real):
@@ -67,7 +67,7 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
   $ cd a
 
   $ $PYTHON <<EOF
-  > from mercurial import changelog, vfs
+  > from edenscm.mercurial import changelog, vfs
   > cl = changelog.changelog(vfs.vfs('.hg/store'))
   > print 'good heads:'
   > for head in [0, len(cl) - 1, -1]:
@@ -147,7 +147,7 @@ Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
 
   $ cat <<EOF > test.py
   > import sys
-  > from mercurial import changelog, vfs
+  > from edenscm.mercurial import changelog, vfs
   > cl = changelog.changelog(vfs.vfs(sys.argv[1]))
   > n0, n1 = cl.node(0), cl.node(1)
   > ops = [

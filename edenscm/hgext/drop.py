@@ -34,8 +34,8 @@ Root changesets cannot be dropped.
 
 """
 
-from mercurial import cmdutil, error, extensions, phases, registrar, scmutil
-from mercurial.i18n import _
+from edenscm.mercurial import cmdutil, error, extensions, phases, registrar, scmutil
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}

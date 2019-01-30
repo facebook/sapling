@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import error
+from edenscm.mercurial import error
 
 from . import httpsservice, localservice
 

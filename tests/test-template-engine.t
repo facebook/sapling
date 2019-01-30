@@ -1,7 +1,7 @@
 
   $ cat > engine.py << EOF
   > 
-  > from mercurial import templater
+  > from edenscm.mercurial import templater
   > 
   > class mytemplater(object):
   >     def __init__(self, loader, filters, defaults, aliases):

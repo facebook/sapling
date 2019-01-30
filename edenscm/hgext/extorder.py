@@ -25,7 +25,7 @@ Please not that this extension modifies only order of loading extensions. It
 will not load them for you
 """
 
-from mercurial import extensions, registrar
+from edenscm.mercurial import extensions, registrar
 
 
 testedwith = "ships-with-fb-hgext"

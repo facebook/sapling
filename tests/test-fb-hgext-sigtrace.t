@@ -1,6 +1,6 @@
 
   $ cat >> $TESTTMP/signal.py << EOF
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > import os, signal
   > cmdtable = {}
   > command = registrar.command(cmdtable)

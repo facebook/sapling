@@ -15,7 +15,7 @@ import sys
 import time
 import traceback
 
-from mercurial import error, pycompat
+from edenscm.mercurial import error, pycompat
 
 
 class looselock(object):

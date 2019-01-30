@@ -445,11 +445,11 @@ Setting up
   > used to test error handling in bundle2
   > """
   > 
-  > from mercurial import error
-  > from mercurial import bundle2
-  > from mercurial import exchange
-  > from mercurial import extensions
-  > from mercurial import registrar
+  > from edenscm.mercurial import error
+  > from edenscm.mercurial import bundle2
+  > from edenscm.mercurial import exchange
+  > from edenscm.mercurial import extensions
+  > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
@@ -764,10 +764,10 @@ Check output capture control.
 Check abort from mandatory pushkey
 
   $ cat > mandatorypart.py << EOF
-  > from mercurial import exchange
-  > from mercurial import pushkey
-  > from mercurial import node
-  > from mercurial import error
+  > from edenscm.mercurial import exchange
+  > from edenscm.mercurial import pushkey
+  > from edenscm.mercurial import node
+  > from edenscm.mercurial import error
   > @exchange.b2partsgenerator('failingpuskey')
   > def addfailingpushey(pushop, bundler):
   >     enc = pushkey.encode
@@ -841,10 +841,10 @@ Check abort from mandatory pushkey
 (Failure from a the pushkey)
 
   $ cat > mandatorypart.py << EOF
-  > from mercurial import exchange
-  > from mercurial import pushkey
-  > from mercurial import node
-  > from mercurial import error
+  > from edenscm.mercurial import exchange
+  > from edenscm.mercurial import pushkey
+  > from edenscm.mercurial import node
+  > from edenscm.mercurial import error
   > @exchange.b2partsgenerator('failingpuskey')
   > def addfailingpushey(pushop, bundler):
   >     enc = pushkey.encode
@@ -921,7 +921,7 @@ Test lazily acquiring the lock during unbundle
 
   $ cat >> $TESTTMP/locktester.py <<EOF
   > import os
-  > from mercurial import extensions, bundle2, util
+  > from edenscm.mercurial import extensions, bundle2, util
   > def checklock(orig, repo, *args, **kwargs):
   >     if repo.svfs.lexists("lock"):
   >         raise util.Abort("Lock should not be taken")

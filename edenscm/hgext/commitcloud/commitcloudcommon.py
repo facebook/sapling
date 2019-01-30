@@ -8,8 +8,8 @@ from __future__ import absolute_import
 # Standard Library
 import traceback
 
-from mercurial import error
-from mercurial.i18n import _
+from edenscm.mercurial import error
+from edenscm.mercurial.i18n import _
 
 
 def highlightmsg(ui, msg):

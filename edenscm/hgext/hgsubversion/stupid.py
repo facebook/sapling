@@ -8,7 +8,7 @@ import compathacks
 import svnexternals
 import svnwrap
 import util
-from mercurial import context, node, patch, revlog, util as hgutil
+from edenscm.mercurial import context, node, patch, revlog, util as hgutil
 
 
 # Here is a diff mixing content and property changes in svn >= 1.7

@@ -31,7 +31,7 @@ Or overriden by a different path:
 
   $ cat > githelp2.py <<EOF
   > from __future__ import absolute_import
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -48,7 +48,7 @@ A default extension's reposetup and extsetup are run:
   $ cd $TESTTMP
   $ mkdir hgext
   $ cat > hgext/mofunc.py <<EOF
-  > from hgext import githelp
+  > from edenscm.hgext import githelp
   > def extsetup(ui):
   >     # Only print reposetup() once so that this test output doesn't change
   >     # the number of times repo gets wrapped as we enable extensions.

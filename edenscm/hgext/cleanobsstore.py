@@ -27,8 +27,8 @@ Also note that this extension will run only once.
 
 from __future__ import absolute_import, division, print_function
 
-from mercurial import obsutil, repair
-from mercurial.i18n import _
+from edenscm.mercurial import obsutil, repair
+from edenscm.mercurial.i18n import _
 
 
 _cleanedobsstorefile = b"cleanedobsstore"

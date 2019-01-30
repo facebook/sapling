@@ -11,8 +11,8 @@ import bisect
 import os
 import struct
 
-from mercurial import error as hgerror
-from mercurial.node import hex
+from edenscm.mercurial import error as hgerror
+from edenscm.mercurial.node import hex
 
 from . import error
 

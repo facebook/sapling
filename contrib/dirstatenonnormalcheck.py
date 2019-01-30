@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import
 
-from mercurial import dirstate, extensions
+from edenscm.mercurial import dirstate, extensions
 
 
 def nonnormalentries(dmap):

@@ -123,7 +123,7 @@ Configs::
 
 from __future__ import absolute_import
 
-from mercurial import (
+from edenscm.mercurial import (
     error,
     extensions,
     hintutil,
@@ -134,7 +134,7 @@ from mercurial import (
     smartset,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import commitcloudcommands, commitcloudcommon, commitcloudutil, state, workspace
 

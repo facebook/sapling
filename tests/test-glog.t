@@ -85,7 +85,7 @@ o  (0) root
 
   $ cat > printrevset.py <<EOF
   > from __future__ import absolute_import
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >   cmdutil,
   >   commands,
   >   extensions,
@@ -1641,8 +1641,8 @@ Test multiple --include/--exclude/paths
 
 Test glob expansion of pats
 
-  $ expandglobs=`$PYTHON -c "import mercurial.util; \
-  >   print(mercurial.util.expandglobs and 'true' or 'false')"`
+  $ expandglobs=`$PYTHON -c "import edenscm.mercurial.util; \
+  >   print(edenscm.mercurial.util.expandglobs and 'true' or 'false')"`
   $ if [ $expandglobs = "true" ]; then
   >    testlog 'a*';
   > else

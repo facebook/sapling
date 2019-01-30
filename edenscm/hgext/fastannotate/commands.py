@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from mercurial import (
+from edenscm.mercurial import (
     commands,
     error,
     extensions,
@@ -20,7 +20,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import context as facontext, error as faerror, formatter as faformatter
 

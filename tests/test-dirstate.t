@@ -86,7 +86,7 @@ coherent (issue4353)
 
   $ cat > ../dirstateexception.py <<EOF
   > from __future__ import absolute_import
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >   error,
   >   extensions,
   >   merge,

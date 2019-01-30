@@ -8,10 +8,10 @@ import json
 import re
 from urllib import urlencode
 
-from mercurial import error, namespaces, node, registrar, revset, templater
-from mercurial.i18n import _
-from mercurial.node import bin
-from mercurial.util import httplib
+from edenscm.mercurial import error, namespaces, node, registrar, revset, templater
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin
+from edenscm.mercurial.util import httplib
 
 
 namespacepredicate = registrar.namespacepredicate()

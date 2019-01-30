@@ -12,7 +12,7 @@ This tests if CGI files from before d0db3462d568 still work.
   > cgitb.enable()
   > 
   > # sys.path.insert(0, "/path/to/python/lib") # if not a system-wide install
-  > from mercurial import hgweb
+  > from edenscm.mercurial import hgweb
   > 
   > h = hgweb.hgweb("test", "Empty test repository")
   > h.run()
@@ -34,7 +34,7 @@ This tests if CGI files from before d0db3462d568 still work.
   > cgitb.enable()
   > 
   > # sys.path.insert(0, "/path/to/python/lib") # if not a system-wide install
-  > from mercurial import hgweb
+  > from edenscm.mercurial import hgweb
   > 
   > # The config file looks like this.  You can have paths to individual
   > # repos, collections of repos in a directory tree, or both.

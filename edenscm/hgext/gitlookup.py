@@ -37,7 +37,7 @@
 import errno
 import json
 
-from mercurial import (
+from edenscm.mercurial import (
     bundle2,
     encoding,
     error,
@@ -49,8 +49,8 @@ from mercurial import (
     util,
     wireproto,
 )
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid
 
 
 cmdtable = {}

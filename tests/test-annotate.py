@@ -2,8 +2,8 @@ from __future__ import absolute_import, print_function
 
 import unittest
 
-from mercurial import mdiff
-from mercurial.context import _annotatepair, annotateline
+from edenscm.mercurial import mdiff
+from edenscm.mercurial.context import _annotatepair, annotateline
 
 
 try:

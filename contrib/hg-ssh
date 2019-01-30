@@ -35,7 +35,8 @@ import shlex
 import sys
 
 # enable importing on demand to reduce startup time
-import hgdemandimport ; hgdemandimport.enable()
+import edenscm.hgdemandimport
+edenscm.hgdemandimport.enable()
 
 from edenscm.mercurial import (
     dispatch,

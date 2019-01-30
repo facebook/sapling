@@ -3,7 +3,7 @@ Test UI worker interaction
   $ cat > t.py <<EOF
   > from __future__ import absolute_import, print_function
   > import time
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >     error,
   >     registrar,
   >     ui as uimod,

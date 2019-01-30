@@ -4,7 +4,7 @@ import os
 import urllib
 
 import test_hgsubversion_util
-from mercurial import commands, encoding, hg, node
+from edenscm.mercurial import commands, encoding, hg, node
 
 
 class TestBasicRepoLayout(test_hgsubversion_util.TestBase):

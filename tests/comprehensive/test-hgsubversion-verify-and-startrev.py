@@ -4,7 +4,7 @@ import os
 import sys
 
 import test_hgsubversion_util
-from hgext.hgsubversion import verify
+from edenscm.hgext.hgsubversion import verify
 
 
 # these fixtures contain no files at HEAD and would result in empty clones

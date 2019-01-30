@@ -1,7 +1,7 @@
 import datetime
 import time
 
-from mercurial import util
+from edenscm.mercurial import util
 
 
 def extsetup(ui):

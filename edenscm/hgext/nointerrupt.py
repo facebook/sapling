@@ -31,7 +31,7 @@ config option ``nointerrupt.message``.
 import signal
 import sys
 
-from mercurial import cmdutil, commands, dispatch, extensions
+from edenscm.mercurial import cmdutil, commands, dispatch, extensions
 
 
 def sigintprintwarninghandlerfactory(oldsiginthandler, msg):

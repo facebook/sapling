@@ -29,8 +29,8 @@ from __future__ import print_function
 import functools
 import os
 
-from mercurial import cmdutil, destutil, error, node, registrar, scmutil, util
-from mercurial.i18n import _
+from edenscm.mercurial import cmdutil, destutil, error, node, registrar, scmutil, util
+from edenscm.mercurial.i18n import _
 
 from . import histedit
 

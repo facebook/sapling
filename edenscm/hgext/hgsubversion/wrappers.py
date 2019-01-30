@@ -4,26 +4,26 @@
 import inspect
 import os
 
-from hgext import rebase as hgrebase
+from edenscm.hgext import rebase as hgrebase
 
-from mercurial import cmdutil
-from mercurial import discovery
+from edenscm.mercurial import cmdutil
+from edenscm.mercurial import discovery
 
 try:
-    from mercurial import exchange
+    from edenscm.mercurial import exchange
 
     exchange.push  # existed in first iteration of this file
 except ImportError:
     # We only *use* the exchange module in hg 3.2+, so this is safe
     pass
-from mercurial import patch
-from mercurial import progress
-from mercurial import hg
-from mercurial import util as hgutil
-from mercurial import node
-from mercurial import i18n
-from mercurial import extensions
-from mercurial import scmutil
+from edenscm.mercurial import patch
+from edenscm.mercurial import progress
+from edenscm.mercurial import hg
+from edenscm.mercurial import util as hgutil
+from edenscm.mercurial import node
+from edenscm.mercurial import i18n
+from edenscm.mercurial import extensions
+from edenscm.mercurial import scmutil
 
 import replay
 import pushmod
@@ -32,7 +32,7 @@ import svnwrap
 import util
 
 try:
-    from mercurial import obsolete
+    from edenscm.mercurial import obsolete
 except ImportError:
     obsolete = None
 
@@ -210,7 +210,7 @@ def push(repo, dest, force, revs):
         try:
             # The checkpush function changed as of e10000369b47 (first
             # in 3.0) in mercurial
-            from mercurial.exchange import pushoperation
+            from edenscm.mercurial.exchange import pushoperation
 
             pushop = pushoperation(repo, dest, force, revs, False)
             checkpush(pushop)

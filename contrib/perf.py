@@ -28,7 +28,7 @@ import struct
 import sys
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     changegroup,
     cmdutil,
     commands,
@@ -46,25 +46,25 @@ from mercurial import (
 # try to import modules separately (in dict order), and ignore
 # failure, because these aren't available with early Mercurial
 try:
-    from mercurial import branchmap  # since 2.5 (or bcee63733aad)
+    from edenscm.mercurial import branchmap  # since 2.5 (or bcee63733aad)
 except ImportError:
     pass
 try:
-    from mercurial import obsolete  # since 2.3 (or ad0d6c2b3279)
+    from edenscm.mercurial import obsolete  # since 2.3 (or ad0d6c2b3279)
 except ImportError:
     pass
 try:
-    from mercurial import registrar  # since 3.7 (or 37d50250b696)
+    from edenscm.mercurial import registrar  # since 3.7 (or 37d50250b696)
 
     dir(registrar)  # forcibly load it
 except ImportError:
     registrar = None
 try:
-    from mercurial import repoview  # since 2.5 (or 3a6ddacb7198)
+    from edenscm.mercurial import repoview  # since 2.5 (or 3a6ddacb7198)
 except ImportError:
     pass
 try:
-    from mercurial import scmutil  # since 1.9 (or 8b252e826c68)
+    from edenscm.mercurial import scmutil  # since 1.9 (or 8b252e826c68)
 except ImportError:
     pass
 
@@ -166,8 +166,9 @@ else:
 
 
 try:
-    import mercurial.registrar
-    import mercurial.configitems
+    import edemscm.mercurial.registrar
+    import edemscm.mercurial.configitems
+    import edenscm.mercurial as mercurial
 
     configtable = {}
     configitem = mercurial.registrar.configitem(configtable)
@@ -213,7 +214,7 @@ def gettimer(ui, opts=None):
         # for "historical portability":
         # define formatter locally, because ui.formatter has been
         # available since 2.2 (or ae5f92e154d3)
-        from mercurial import node
+        from edenscm.mercurial import node
 
         class defaultformatter(object):
             """Minimized composition of baseformatter and plainformatter
@@ -461,7 +462,7 @@ def perfannotate(ui, repo, f, **opts):
 
 @command("perfdatapack", formatteropts)
 def perfdatapack(ui, repo, packpath, **opts):
-    from hgext.remotefilelog.datapack import datapack
+    from edenscm.hgext.remotefilelog.datapack import datapack
 
     keys = list(iter(datapack(packpath)))
     ui.write(("\nGetMissing (Key Count: %s)\n") % len(keys))
@@ -478,15 +479,15 @@ def perfdatapack(ui, repo, packpath, **opts):
     _packtestfn(ui, packpath, opts, f)
 
     ui.write(("\nMark Ledger (Key Count: %s)\n") % len(keys))
-    from hgext.remotefilelog.repack import repackledger
+    from edenscm.hgext.remotefilelog.repack import repackledger
     def f(pack):
         ledger = repackledger()
         pack.markledger(ledger, None)
     _packtestfn(ui, packpath, opts, f)
 
 def _packtestfn(ui, packpath, opts, func):
-    from hgext.remotefilelog.datapack import datapack, fastdatapack
-    from hgext.extlib.pyrevisionstore import datapack as rustdatapack
+    from edenscm.hgext.remotefilelog.datapack import datapack, fastdatapack
+    from edenscm.hgext.extlib.pyrevisionstore import datapack as rustdatapack
     kinds = [("Python", datapack), ("C", fastdatapack), ("Rust", rustdatapack)]
 
     prepacks = [(name, f(packpath)) for name, f in kinds]
@@ -528,7 +529,7 @@ def clearcaches(cl):
     if util.safehasattr(cl, "clearcaches"):
         cl.clearcaches()
     elif util.safehasattr(cl, "_nodecache"):
-        from mercurial.node import nullid, nullrev
+        from edenscm.mercurial.node import nullid, nullrev
 
         cl._nodecache = {nullid: nullrev}
         cl._nodepos = None
@@ -614,7 +615,7 @@ def perfbundleread(ui, repo, bundlepath, **opts):
     This command is meant to isolate the I/O part of bundle reading as
     much as possible.
     """
-    from mercurial import bundle2, exchange, streamclone
+    from edenscm.mercurial import bundle2, exchange, streamclone
 
     def makebench(fn):
         def run():

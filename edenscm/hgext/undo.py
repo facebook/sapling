@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from mercurial import (
+from edenscm.mercurial import (
     cmdutil,
     commands,
     dispatch,
@@ -36,8 +36,8 @@ from mercurial import (
     transaction,
     util,
 )
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid, short
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid, short
 
 
 if not pycompat.iswindows:

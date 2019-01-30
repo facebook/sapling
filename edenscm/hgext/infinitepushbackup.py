@@ -53,7 +53,7 @@ import stat
 import subprocess
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     commands,
     discovery,
     dispatch,
@@ -71,7 +71,7 @@ from mercurial import (
     templater,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 osutil = policy.importmod(r"osutil")

@@ -9,7 +9,7 @@ want a couple of branches.
 """
 
 import base
-from mercurial import util as hgutil
+from edenscm.mercurial import util as hgutil
 
 
 class CustomLayout(base.BaseLayout):

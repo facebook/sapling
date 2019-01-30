@@ -13,7 +13,7 @@ import os
 import socket
 from subprocess import PIPE, Popen
 
-from mercurial import (
+from edenscm.mercurial import (
     config,
     encoding,
     error,
@@ -23,7 +23,7 @@ from mercurial import (
     util,
     vfs as vfsmod,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import commitcloudcommon, workspace
 

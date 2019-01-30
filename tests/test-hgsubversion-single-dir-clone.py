@@ -3,7 +3,7 @@
 import shutil
 
 import test_hgsubversion_util
-from hgext.hgsubversion import compathacks
+from edenscm.hgext.hgsubversion import compathacks
 
 
 class TestSingleDirClone(test_hgsubversion_util.TestBase):

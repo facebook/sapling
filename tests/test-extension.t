@@ -4,7 +4,7 @@ Test basic extension support
 
   $ cat > foobar.py <<EOF
   > import os
-  > from mercurial import commands, registrar
+  > from edenscm.mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > configtable = {}
@@ -90,7 +90,7 @@ Check that extensions are loaded in phases:
   >    print("4) %s reposetup" % name)
   > 
   > # custom predicate to check registration of functions at loading
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >     registrar,
   >     smartset,
   > )
@@ -121,9 +121,9 @@ Check hgweb's load order of extensions and registration of functions
 
   $ cat > hgweb.cgi <<EOF
   > #!$PYTHON
-  > from mercurial import demandimport; demandimport.enable()
-  > from mercurial.hgweb import hgweb
-  > from mercurial.hgweb import wsgicgi
+  > from edenscm.mercurial import demandimport; demandimport.enable()
+  > from edenscm.mercurial.hgweb import hgweb
+  > from edenscm.mercurial.hgweb import wsgicgi
   > application = hgweb('.', 'test repo')
   > wsgicgi.launch(application)
   > EOF
@@ -430,7 +430,7 @@ Setup main procedure of extension.
 
   $ cat > $TESTTMP/absextroot/__init__.py <<EOF
   > from __future__ import absolute_import
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
@@ -498,7 +498,7 @@ See also issue5208 for detail about example case on Python 3.x.
   > EOF
 
   $ cat > $TESTTMP/checkrelativity.py <<EOF
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
@@ -563,7 +563,7 @@ hide outer repo
   $ cat > debugextension.py <<EOF
   > '''only debugcommands
   > '''
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command(b'debugfoobar', [], 'hg debugfoobar')
@@ -799,7 +799,7 @@ Extension module help vs command help:
 Test help topic with same name as extension
 
   $ cat > multirevs.py <<EOF
-  > from mercurial import commands, registrar
+  > from edenscm.mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > """multirevs extension
@@ -860,7 +860,7 @@ along with extension help itself
   > This is an awesome 'dodo' extension. It does nothing and
   > writes 'Foo foo'
   > """
-  > from mercurial import commands, registrar
+  > from edenscm.mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command(b'dodo', [], 'hg dodo')
@@ -941,7 +941,7 @@ along with extension help
   > This is an awesome 'dudu' extension. It does something and
   > also writes 'Beep beep'
   > """
-  > from mercurial import commands, registrar
+  > from edenscm.mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command(b'something', [], 'hg something')
@@ -1093,6 +1093,8 @@ Disabled extensions:
 
 
 Broken disabled extension and command:
+(There is no way to change "edenscm.hgext" path so the extensions here will not
+get scanned)
 
   $ mkdir hgext
   $ echo > hgext/__init__.py
@@ -1107,21 +1109,19 @@ Broken disabled extension and command:
   $ export HGEXTPATH
 
   $ hg --config extensions.path=./path.py help broken 2>&1 | grep -v "failed to import"
-  broken extension - (no help text available)
-  
-  (use 'hg help extensions' for information on enabling extensions)
+  abort: no such help topic: broken
+  (try 'hg help --keyword broken')
 
 
   $ cat > hgext/forest.py <<EOF
   > cmdtable = None
   > EOF
   $ hg --config extensions.path=./path.py help foo 2>&1 | grep -v "failed to import"
-  warning: error finding commands in $TESTTMP/hgext/forest.py
   abort: no such help topic: foo
   (try 'hg help --keyword foo')
 
   $ cat > throw.py <<EOF
-  > from mercurial import commands, registrar, util
+  > from edenscm.mercurial import commands, registrar, util
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > class Bogon(Exception): pass
@@ -1163,7 +1163,7 @@ If the extension specifies a buglink, show that:
   ** Extensions loaded: throw, * (glob)
 
 If the extensions declare outdated versions, accuse the older extension first:
-  $ echo "from mercurial import util" >> older.py
+  $ echo "from edenscm.mercurial import util" >> older.py
   $ echo "util.version = lambda:'2.2'" >> older.py
   $ echo "testedwith = '1.9.3'" >> older.py
   $ echo "testedwith = '2.1.1'" >> throw.py
@@ -1294,7 +1294,7 @@ Test template output of version:
 Refuse to load extensions with minimum version requirements
 
   $ cat > minversion1.py << EOF
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > util.version = lambda: '3.5.2'
   > minimumhgversion = '3.6'
   > EOF
@@ -1308,7 +1308,7 @@ Refuse to load extensions with minimum version requirements
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
   $ cat > minversion2.py << EOF
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > util.version = lambda: '3.6'
   > minimumhgversion = '3.7'
   > EOF
@@ -1318,7 +1318,7 @@ Refuse to load extensions with minimum version requirements
 Can load version that is only off by point release
 
   $ cat > minversion2.py << EOF
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > util.version = lambda: '3.6.1'
   > minimumhgversion = '3.6'
   > EOF
@@ -1328,7 +1328,7 @@ Can load version that is only off by point release
 Can load minimum version identical to current
 
   $ cat > minversion3.py << EOF
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > util.version = lambda: '3.5'
   > minimumhgversion = '3.5'
   > EOF
@@ -1347,7 +1347,7 @@ Commands handling multiple repositories at a time should invoke only
   $ cd reposetup-test
 
   $ cat > $TESTTMP/reposetuptest.py <<EOF
-  > from mercurial import extensions
+  > from edenscm.mercurial import extensions
   > def reposetup(ui, repo):
   >     ui.write('reposetup() for %s\n' % (repo.root))
   >     ui.flush()
@@ -1512,7 +1512,7 @@ Test synopsis and docstring extending
 
   $ hg init exthelp
   $ cat > exthelp.py <<EOF
-  > from mercurial import commands, extensions
+  > from edenscm.mercurial import commands, extensions
   > def exbookmarks(orig, *args, **opts):
   >     return orig(*args, **opts)
   > def uisetup(ui):
@@ -1535,7 +1535,7 @@ Test synopsis and docstring extending
 Show deprecation warning for the use of cmdutil.command
 
   $ cat > nonregistrar.py <<EOF
-  > from mercurial import cmdutil
+  > from edenscm.mercurial import cmdutil
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
   > @command(b'foo', [], norepo=True)
@@ -1552,7 +1552,7 @@ Prohibit the use of unicode strings as the default value of options
   $ hg init $TESTTMP/opt-unicode-default
 
   $ cat > $TESTTMP/test_unicode_default_value.py << EOF
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('dummy', [('', 'opt', u'value', u'help')], 'ext [OPTIONS]')

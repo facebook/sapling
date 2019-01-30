@@ -2,8 +2,8 @@ from __future__ import absolute_import
 
 import os
 
-from mercurial import hg, ui as uimod
-from mercurial.hgweb import hgwebdir_mod
+from edenscm.mercurial import hg, ui as uimod
+from edenscm.mercurial.hgweb import hgwebdir_mod
 
 
 hgwebdir = hgwebdir_mod.hgwebdir

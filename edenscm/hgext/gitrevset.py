@@ -17,8 +17,8 @@ from __future__ import absolute_import
 
 import re
 
-from mercurial import error, extensions, hg, namespaces, registrar, revset
-from mercurial.i18n import _
+from edenscm.mercurial import error, extensions, hg, namespaces, registrar, revset
+from edenscm.mercurial.i18n import _
 
 
 namespacepredicate = registrar.namespacepredicate()

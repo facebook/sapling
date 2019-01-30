@@ -1,15 +1,15 @@
-from mercurial import error, util
-from mercurial.error import RepoError
+from edenscm.mercurial import error, util
+from edenscm.mercurial.error import RepoError
 from util import isgitsshuri
 
 
 peerapi = False
 try:
-    from mercurial.repository import peer as peerrepository
+    from edenscm.mercurial.repository import peer as peerrepository
 
     peerapi = True
 except ImportError:
-    from mercurial.peer import peerrepository
+    from edenscm.mercurial.peer import peerrepository
 
 
 class gitrepo(peerrepository):

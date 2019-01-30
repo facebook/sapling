@@ -10,7 +10,7 @@ import os
 import tempfile
 import time
 
-from mercurial import cmdutil
+from edenscm.mercurial import cmdutil
 
 
 cmdtable = {}

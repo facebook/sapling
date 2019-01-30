@@ -3,8 +3,8 @@ Dummy extension simulating long running command
   > import time
   > import itertools
   > 
-  > from mercurial import registrar
-  > from mercurial.i18n import _
+  > from edenscm.mercurial import registrar
+  > from edenscm.mercurial.i18n import _
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)

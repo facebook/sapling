@@ -220,8 +220,7 @@ if _dowarn:
     # However, module name set through PYTHONWARNINGS was exactly matched, so
     # we cannot set 'mercurial' and have it match eg: 'mercurial.scmutil'. This
     # makes the whole PYTHONWARNINGS thing useless for our usecase.
-    warnings.filterwarnings(r"default", r"", DeprecationWarning, r"mercurial")
-    warnings.filterwarnings(r"default", r"", DeprecationWarning, r"hgext")
+    warnings.filterwarnings(r"default", r"", DeprecationWarning, r"edenscm")
 
 
 def nouideprecwarn(msg, version, stacklevel=1):

@@ -3,7 +3,7 @@ import time
 import unittest
 
 import silenttestrunner
-from mercurial import error, manifest, ui, util, vfs as vfsmod
+from edenscm.mercurial import error, manifest, ui, util, vfs as vfsmod
 
 
 class mockmanifest(object):
@@ -74,7 +74,7 @@ class HybridManifest(unittest.TestCase):
             )
 
     def test_cachelimit(self):
-        from hgext.fastmanifest.cachemanager import _systemawarecachelimit
+        from edenscm.hgext.fastmanifest.cachemanager import _systemawarecachelimit
 
         cachealloc = _systemawarecachelimit.cacheallocation
         GB = fastmanifest.cachemanager.GB
@@ -171,6 +171,6 @@ class HybridManifest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    from hgext import fastmanifest
+    from edenscm.hgext import fastmanifest
 
     silenttestrunner.main(__name__)

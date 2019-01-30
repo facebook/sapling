@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from mercurial.rust import lz4
+from edenscm.mercurial.rust import lz4
 
 
 lz4compress = lz4.compress

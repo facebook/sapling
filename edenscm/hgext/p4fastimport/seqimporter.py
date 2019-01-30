@@ -8,8 +8,8 @@ from __future__ import absolute_import
 
 import re
 
-from mercurial import context, encoding
-from mercurial.i18n import _
+from edenscm.mercurial import context, encoding
+from edenscm.mercurial.i18n import _
 
 from . import importer, lfs, p4
 

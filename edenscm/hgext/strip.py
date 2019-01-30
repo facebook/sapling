@@ -10,7 +10,7 @@ repository. See the command help for details.
 """
 from __future__ import absolute_import
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks as bookmarksmod,
     cmdutil,
     error,
@@ -24,7 +24,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 nullid = nodemod.nullid

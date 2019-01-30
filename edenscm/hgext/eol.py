@@ -101,7 +101,7 @@ from __future__ import absolute_import
 import os
 import re
 
-from mercurial import (
+from edenscm.mercurial import (
     config,
     error as errormod,
     extensions,
@@ -110,7 +110,7 @@ from mercurial import (
     registrar,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for

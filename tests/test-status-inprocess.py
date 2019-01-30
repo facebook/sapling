@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, print_function
 
-from mercurial import commands, localrepo, ui as uimod
+from edenscm.mercurial import commands, localrepo, ui as uimod
 
 
 u = uimod.ui.load()

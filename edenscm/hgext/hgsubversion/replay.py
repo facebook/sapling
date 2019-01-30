@@ -4,7 +4,7 @@ import traceback
 import compathacks
 import svnexternals
 import util
-from mercurial import context, node, revlog, util as hgutil
+from edenscm.mercurial import context, node, revlog, util as hgutil
 
 
 class MissingPlainTextError(Exception):

@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import getpass
 import os
 
-from mercurial import progress, util
-from mercurial.node import hex
+from edenscm.mercurial import progress, util
+from edenscm.mercurial.node import hex
 
 from .. import pywatchman
 

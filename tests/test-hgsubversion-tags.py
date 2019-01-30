@@ -6,8 +6,8 @@ import difflib
 import os
 
 import test_hgsubversion_util
-from hgext.hgsubversion import compathacks, svncommands
-from mercurial import commands, error
+from edenscm.hgext.hgsubversion import compathacks, svncommands
+from edenscm.mercurial import commands, error
 
 
 class TestTags(test_hgsubversion_util.TestBase):

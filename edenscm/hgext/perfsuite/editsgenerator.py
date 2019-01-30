@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import itertools
 import random
 
-from mercurial import context
+from edenscm.mercurial import context
 
 
 # TODO: make these configs

@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from mercurial.hgweb import webcommands
+from edenscm.mercurial.hgweb import webcommands
 
 
 def raiseerror(web, req, tmpl):

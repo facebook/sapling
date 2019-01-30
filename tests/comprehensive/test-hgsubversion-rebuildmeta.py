@@ -4,8 +4,8 @@ import os
 import sys
 
 import test_hgsubversion_util
-from hgext.hgsubversion import maps, svncommands, svnmeta, util
-from mercurial import context, extensions, hg, localrepo, util as hgutil
+from edenscm.hgext.hgsubversion import maps, svncommands, svnmeta, util
+from edenscm.mercurial import context, extensions, hg, localrepo, util as hgutil
 
 
 # These test repositories have harmless skew in rebuildmeta for the
@@ -77,7 +77,7 @@ def _do_case(self, name, layout):
         dest.pull(src)
     else:
         # Mercurial >= 3.2
-        from mercurial import exchange
+        from edenscm.mercurial import exchange
 
         exchange.pull(dest, src)
 

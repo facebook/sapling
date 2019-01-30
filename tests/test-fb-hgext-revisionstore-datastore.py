@@ -9,11 +9,11 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from hgext.extlib.pyrevisionstore import datastore
-from hgext.remotefilelog import constants
-from hgext.remotefilelog.contentstore import unioncontentstore
-from hgext.remotefilelog.datapack import datapackstore, fastdatapack, mutabledatapack
-from mercurial.node import nullid
+from edenscm.hgext.extlib.pyrevisionstore import datastore
+from edenscm.hgext.remotefilelog import constants
+from edenscm.hgext.remotefilelog.contentstore import unioncontentstore
+from edenscm.hgext.remotefilelog.datapack import datapackstore, fastdatapack, mutabledatapack
+from edenscm.mercurial.node import nullid
 
 
 class datastoretests(unittest.TestCase):

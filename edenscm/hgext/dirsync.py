@@ -44,7 +44,7 @@ from __future__ import absolute_import
 
 import errno
 
-from mercurial import (
+from edenscm.mercurial import (
     cmdutil,
     config,
     error,
@@ -54,7 +54,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 testedwith = "ships-with-fb-hgext"

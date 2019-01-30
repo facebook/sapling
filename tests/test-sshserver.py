@@ -4,7 +4,7 @@ import io
 import unittest
 
 import silenttestrunner
-from mercurial import sshserver, wireproto
+from edenscm.mercurial import sshserver, wireproto
 
 
 class SSHServerGetArgsTests(unittest.TestCase):

@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import os
 import re
 
-from mercurial import error, util
-from mercurial.i18n import _
+from edenscm.mercurial import error, util
+from edenscm.mercurial.i18n import _
 
 from . import common
 

@@ -4,7 +4,7 @@ create verbosemmap.py
   > 
   > from __future__ import absolute_import
   > 
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >     extensions,
   >     pycompat,
   >     util,

@@ -13,9 +13,9 @@ import shutil
 import stat
 import time
 
-from mercurial import error, phases, progress, pycompat, revlog, util
-from mercurial.i18n import _
-from mercurial.node import bin, hex
+from edenscm.mercurial import error, phases, progress, pycompat, revlog, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex
 
 from . import constants, datapack, historypack, shallowutil
 

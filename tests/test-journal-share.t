@@ -3,7 +3,7 @@ Journal extension test: tests the share extension support
   $ cat >> testmocks.py << EOF
   > # mock out util.getuser() and util.makedate() to supply testable values
   > import os
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > def mockgetuser():
   >     return 'foobar'
   > 

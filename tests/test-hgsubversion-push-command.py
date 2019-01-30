@@ -10,8 +10,8 @@ import sys
 import time
 
 import test_hgsubversion_util
-from hgext.hgsubversion import compathacks, util
-from mercurial import commands, context, hg, node, revlog, util as hgutil
+from edenscm.hgext.hgsubversion import compathacks, util
+from edenscm.mercurial import commands, context, hg, node, revlog, util as hgutil
 
 
 class PushTests(test_hgsubversion_util.TestBase):
@@ -459,7 +459,7 @@ class PushTests(test_hgsubversion_util.TestBase):
             parent="default",
             message="commit to default",
         )
-        from hgext.hgsubversion import svncommands
+        from edenscm.hgext.hgsubversion import svncommands
 
         svncommands.rebuildmeta(
             u, self.repo, args=[test_hgsubversion_util.fileurl(self.repo_path)]

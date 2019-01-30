@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from mercurial import ui as uimod
+from edenscm.mercurial import ui as uimod
 
 
 hgrc = os.environ["HGRCPATH"]

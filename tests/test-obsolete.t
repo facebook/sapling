@@ -1218,8 +1218,8 @@ Test heads computation on pending index changes with obsolescence markers
   $ cd ..
   $ cat >$TESTTMP/test_extension.py  << EOF
   > from __future__ import absolute_import
-  > from mercurial.i18n import _
-  > from mercurial import cmdutil, registrar
+  > from edenscm.mercurial.i18n import _
+  > from edenscm.mercurial import cmdutil, registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -1251,7 +1251,7 @@ bookmarks change
   $ cat >$TESTTMP/test_extension.py  << EOF
   > from __future__ import absolute_import, print_function
   > import weakref
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >   bookmarks,
   >   cmdutil,
   >   extensions,

@@ -24,8 +24,8 @@ https://facebook.github.io/watchman/docs/scm-query.html.
 
 from __future__ import absolute_import
 
-from mercurial import extensions, filemerge, merge, registrar
-from mercurial.i18n import _
+from edenscm.mercurial import extensions, filemerge, merge, registrar
+from edenscm.mercurial.i18n import _
 
 from ..extlib import watchmanclient
 

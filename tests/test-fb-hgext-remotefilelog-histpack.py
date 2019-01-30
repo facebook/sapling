@@ -11,11 +11,11 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from hgext.extlib.pyrevisionstore import historypack as rusthistpack
-from hgext.remotefilelog.basepack import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF
-from hgext.remotefilelog.historypack import historypack, mutablehistorypack
-from mercurial import error, ui as uimod, util
-from mercurial.node import nullid
+from edenscm.hgext.extlib.pyrevisionstore import historypack as rusthistpack
+from edenscm.hgext.remotefilelog.basepack import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF
+from edenscm.hgext.remotefilelog.historypack import historypack, mutablehistorypack
+from edenscm.mercurial import error, ui as uimod, util
+from edenscm.mercurial.node import nullid
 
 
 try:

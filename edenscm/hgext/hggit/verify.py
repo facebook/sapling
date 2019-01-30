@@ -9,8 +9,8 @@ import stat
 
 from dulwich import diff_tree
 from dulwich.objects import S_IFGITLINK, Commit
-from mercurial import error, progress, util as hgutil
-from mercurial.i18n import _
+from edenscm.mercurial import error, progress, util as hgutil
+from edenscm.mercurial.i18n import _
 
 
 def verify(ui, repo, hgctx):

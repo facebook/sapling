@@ -1,7 +1,7 @@
 # no-check-code -- see T24862348
 
 import test_hgsubversion_util
-from mercurial import node
+from edenscm.mercurial import node
 
 
 class TestFetchExec(test_hgsubversion_util.TestBase):

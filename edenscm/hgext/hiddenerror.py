@@ -19,9 +19,9 @@ with the hash of the hidden changeset.
 """
 from __future__ import absolute_import
 
-from mercurial import context, error, extensions
-from mercurial.i18n import _
-from mercurial.node import short
+from edenscm.mercurial import context, error, extensions
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import short
 
 
 testedwith = "ships-with-fb-hgext"

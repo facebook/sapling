@@ -417,7 +417,7 @@ static PyObject* treemanifest_keys(py_treemanifest* self) {
 }
 
 static PyObject* treemanifest_dirs(py_treemanifest* self) {
-  PythonObj module = PyImport_ImportModule("mercurial.util");
+  PythonObj module = PyImport_ImportModule("edenscm.mercurial.util");
   PythonObj dirstype = module.getattr("dirs");
 
   PyObject* args = Py_BuildValue("(O)", self);
@@ -784,7 +784,7 @@ static void treemanifest_dealloc(py_treemanifest* self) {
 }
 
 static std::shared_ptr<Store> convert_pystore(PythonObj storeObj) {
-  PythonObj cstoreModule = PyImport_ImportModule("hgext.extlib.cstore");
+  PythonObj cstoreModule = PyImport_ImportModule("edenscm.hgext.extlib.cstore");
   PythonObj unionStoreType = cstoreModule.getattr("uniondatapackstore");
 
   // If it's a cstore, we'll use it directly instead of through python.
@@ -1154,7 +1154,7 @@ treemanifest_flags(py_treemanifest* self, PyObject* args, PyObject* kwargs) {
 }
 
 static PyObject* treemanifest_copy(py_treemanifest* self) {
-  PythonObj module = PyImport_ImportModule("hgext.extlib.cstore");
+  PythonObj module = PyImport_ImportModule("edenscm.hgext.extlib.cstore");
   PythonObj treetype = module.getattr("treemanifest");
   py_treemanifest* copy =
       PyObject_New(py_treemanifest, (PyTypeObject*)(PyObject*)treetype);
@@ -1197,7 +1197,7 @@ static PyObject* treemanifest_matchesfastpath(
     py_treemanifest* self,
     PythonObj matcher) {
   PythonObj emptyargs = PyTuple_New(0);
-  PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
+  PythonObj manifestmod = PyImport_ImportModule("edenscm.mercurial.manifest");
   PythonObj manifestdict = manifestmod.getattr("manifestdict");
   PythonObj result = manifestdict.call(emptyargs);
 
@@ -1270,7 +1270,7 @@ static PyObject* treemanifest_matches(py_treemanifest* self, PyObject* args) {
       return treemanifest_matchesfastpath(self, matcher);
     }
 
-    PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
+    PythonObj manifestmod = PyImport_ImportModule("edenscm.mercurial.manifest");
     PythonObj manifestdict = manifestmod.getattr("manifestdict");
     PythonObj result = manifestdict.call(emptyargs);
 
@@ -1435,7 +1435,7 @@ treemanifest_text(py_treemanifest* self, PyObject* args, PyObject* kwargs) {
   try {
     // Use slow manifest._text() to handle manifestv2 serialization
     if (PyObject_IsTrue(usemanifestv2)) {
-      PythonObj manifestmod = PyImport_ImportModule("mercurial.manifest");
+      PythonObj manifestmod = PyImport_ImportModule("edenscm.mercurial.manifest");
       PythonObj textfunc = manifestmod.getattr("_text");
 
       PythonObj iterator = treemanifest_getentriesiter(self);

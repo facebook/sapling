@@ -12,8 +12,8 @@ import os
 import socket
 import struct
 
-from mercurial import pathutil, util
-from mercurial.i18n import _
+from edenscm.mercurial import pathutil, util
+from edenscm.mercurial.i18n import _
 
 
 _version = 4

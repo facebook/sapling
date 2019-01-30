@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from hgext.hgsubversion import editor
+from edenscm.hgext.hgsubversion import editor
 
 
 class TestHelpers(unittest.TestCase):

@@ -45,10 +45,10 @@ config = '${HTDOCS_DIR}/config'
 import sys
 sys.path.insert(0, '${INSTALL_DIR}/lib/python2.7/site-packages')
 
-from mercurial import demandimport
+from edenscm.mercurial import demandimport
 demandimport.enable()
 
-from mercurial.hgweb import hgweb
+from edenscm.mercurial.hgweb import hgweb
 application = hgweb(config)
 EOF
 fi

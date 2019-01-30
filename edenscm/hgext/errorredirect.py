@@ -36,7 +36,7 @@ import subprocess
 import sys
 import traceback
 
-from mercurial import dispatch, encoding, extensions
+from edenscm.mercurial import dispatch, encoding, extensions
 
 
 def _printtrace(ui, warning):

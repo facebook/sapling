@@ -97,7 +97,7 @@ from __future__ import absolute_import
 
 import sys
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     dispatch,
     error,
@@ -107,7 +107,7 @@ from mercurial import (
     registrar,
     revset as revsetmod,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import cachemanager, debug, implementation, metrics
 

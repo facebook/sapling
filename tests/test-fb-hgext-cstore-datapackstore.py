@@ -10,8 +10,8 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from hgext.extlib.cstore import datapackstore
-from hgext.remotefilelog.datapack import fastdatapack, mutabledatapack
+from edenscm.hgext.extlib.cstore import datapackstore
+from edenscm.hgext.remotefilelog.datapack import fastdatapack, mutabledatapack
 from edenscm.mercurial.node import bin, nullid
 
 

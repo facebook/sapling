@@ -1,5 +1,5 @@
 import test_hgsubversion_util
-from hgext.hgsubversion import wrappers
+from edenscm.hgext.hgsubversion import wrappers
 
 
 expected_diff_output = """Index: alpha

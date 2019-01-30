@@ -31,7 +31,7 @@ import overlay
 import util
 import verify
 from git_handler import GitHandler
-from mercurial import (
+from edenscm.mercurial import (
     bundlerepo,
     cmdutil,
     demandimport,
@@ -48,18 +48,18 @@ from mercurial import (
     ui as hgui,
     util as hgutil,
 )
-from mercurial.error import LookupError
-from mercurial.i18n import _
-from mercurial.node import hex
-from mercurial.rust import pynodemap
+from edenscm.mercurial.error import LookupError
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex
+from edenscm.mercurial.rust import pynodemap
 
 
 # Disable DeprecationWarning from newer dulwich since hggit also supports older
 # dulwich.
-warnings.filterwarnings(r"ignore", r"", DeprecationWarning, r"hgext.hggit")
+warnings.filterwarnings(r"ignore", r"", DeprecationWarning, r"edenscm.hgext.hggit")
 
 try:
-    from mercurial import exchange
+    from edenscm.mercurial import exchange
 
     exchange.push  # existed in first iteration of this file
 except (AttributeError, ImportError):
@@ -67,7 +67,7 @@ except (AttributeError, ImportError):
     pass
 
 try:
-    from mercurial import ignore
+    from edenscm.mercurial import ignore
 
     ignore.readpats
     ignoremod = True
@@ -95,7 +95,7 @@ buglink = "https://bitbucket.org/durin42/hg-git/issues"
 cmdtable = {}
 configtable = {}
 try:
-    from mercurial import registrar
+    from edenscm.mercurial import registrar
 
     command = registrar.command(cmdtable)
     configitem = registrar.configitem(configtable)

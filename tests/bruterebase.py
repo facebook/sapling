@@ -7,8 +7,8 @@
 
 from __future__ import absolute_import
 
-from hgext import rebase
-from mercurial import error, registrar, revsetlang
+from edenscm.hgext import rebase
+from edenscm.mercurial import error, registrar, revsetlang
 
 
 try:

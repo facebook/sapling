@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 import os
 import subprocess
 
-from mercurial import hg, localrepo, ui as uimod, util
+from edenscm.mercurial import hg, localrepo, ui as uimod, util
 
 
 # create some special property cache that trace they call

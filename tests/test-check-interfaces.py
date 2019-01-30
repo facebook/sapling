@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, print_function
 
-from mercurial import (
+from edenscm.mercurial import (
     bundlerepo,
     httppeer,
     localrepo,

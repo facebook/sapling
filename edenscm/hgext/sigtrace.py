@@ -25,7 +25,7 @@ import sys
 import time
 import traceback
 
-from mercurial import registrar
+from edenscm.mercurial import registrar
 
 
 pathformat = "/tmp/trace-%(pid)s-%(time)s.log"

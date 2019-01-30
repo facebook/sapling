@@ -29,9 +29,9 @@ this extension.
 
 from __future__ import absolute_import
 
-from mercurial import error, extensions, localrepo, revlog, util
-from mercurial.i18n import _
-from mercurial.rust import lz4
+from edenscm.mercurial import error, extensions, localrepo, revlog, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.rust import lz4
 
 
 testedwith = "3.9.1"

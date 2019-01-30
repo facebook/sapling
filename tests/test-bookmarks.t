@@ -971,7 +971,7 @@ ensure changelog is written before bookmarks
   > from __future__ import absolute_import
   > import os
   > import time
-  > from mercurial import extensions, localrepo
+  > from edenscm.mercurial import extensions, localrepo
   > def transaction(orig, self, desc, report=None):
   >    tr = orig(self, desc, report)
   >    def sleep(*args, **kwargs):

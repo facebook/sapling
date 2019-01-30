@@ -55,7 +55,7 @@ import re
 import subprocess
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     cmdutil,
     commands,
@@ -74,8 +74,8 @@ from mercurial import (
     templater,
     util,
 )
-from mercurial.i18n import _
-from mercurial.node import bin, short
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, short
 
 from . import rebase
 

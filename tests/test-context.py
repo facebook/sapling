@@ -2,8 +2,8 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from mercurial import context, encoding, hg, scmutil, ui as uimod
-from mercurial.node import hex
+from edenscm.mercurial import context, encoding, hg, scmutil, ui as uimod
+from edenscm.mercurial.node import hex
 
 
 u = uimod.ui.load()

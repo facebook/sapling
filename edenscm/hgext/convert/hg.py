@@ -22,7 +22,7 @@ import os
 import re
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     context,
     error,
@@ -35,7 +35,7 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 from . import common
 

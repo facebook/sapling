@@ -54,7 +54,7 @@ merge driver that always takes other versions
 (rc = 0, unresolved = n, driver-resolved = n)
 
   $ cat > ../mergedriver-other.py << EOF
-  > from mercurial import debugcommands
+  > from edenscm.mercurial import debugcommands
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     overrides = {('ui', 'forcemerge'): ':other'}
   >     with ui.configoverride(overrides, 'mergedriver'):
@@ -101,7 +101,7 @@ mark a file driver-resolved, and leave others unresolved
 (r = False, unresolved = y, driver-resolved = y)
 
   $ cat > ../mergedriver-auto1.py << EOF
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     mergestate.mark('foo.txt', 'd')
@@ -224,7 +224,7 @@ leave no files unresolved, but files driver-resolved
 for the conclude step, also test that leaving files as driver-resolved
 implicitly makes them resolved
   $ cat > ../mergedriver-driveronly.py << EOF
-  > from mercurial import debugcommands
+  > from edenscm.mercurial import debugcommands
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     mergestate.mark('foo.txt', 'd')
@@ -376,7 +376,7 @@ raise an error
   $ hg update --clean 2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-mark-and-raise.py << EOF
-  > from mercurial import error
+  > from edenscm.mercurial import error
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     for f in mergestate:
@@ -592,7 +592,7 @@ this should invoke the merge driver
   $ hg update --clean 2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-raise.py << EOF
-  > from mercurial import error
+  > from edenscm.mercurial import error
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     raise error.Abort('foo')

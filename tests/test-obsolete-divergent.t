@@ -641,7 +641,7 @@ Use scmutil.cleanupnodes API to create divergence
   $ echo 3 >> B
   $ hg commit --amend -m B2
   $ cat > $TESTTMP/scmutilcleanup.py <<EOF
-  > from mercurial import registrar, scmutil
+  > from edenscm.mercurial import registrar, scmutil
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('cleanup')

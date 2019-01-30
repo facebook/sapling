@@ -42,9 +42,9 @@ import os
 import re
 import weakref
 
-from mercurial import error, registrar, ui as uimod, util
-from mercurial.i18n import _
-from mercurial.node import hex
+from edenscm.mercurial import error, registrar, ui as uimod, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for

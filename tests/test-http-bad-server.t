@@ -4,7 +4,7 @@ Client version is embedded in HTTP request and is effectively dynamic. Pin the
 version so behavior is deterministic.
 
   $ cat > fakeversion.py << EOF
-  > from mercurial import util
+  > from edenscm.mercurial import util
   > util.version = lambda: '4.2'
   > EOF
 

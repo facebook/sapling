@@ -26,9 +26,9 @@ import random
 import socket
 import tempfile
 
-from mercurial import context, copies, encoding, extensions, node, pycompat
-from mercurial.node import nullid, wdirid
-from mercurial.scmutil import status
+from edenscm.mercurial import context, copies, encoding, extensions, node, pycompat
+from edenscm.mercurial.node import nullid, wdirid
+from edenscm.mercurial.scmutil import status
 
 
 testedwith = "ships-with-fb-hgext"

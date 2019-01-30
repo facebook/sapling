@@ -12,8 +12,8 @@ import os
 import struct
 import time
 
-from mercurial import error, policy, pycompat, util, vfs as vfsmod
-from mercurial.i18n import _
+from edenscm.mercurial import error, policy, pycompat, util, vfs as vfsmod
+from edenscm.mercurial.i18n import _
 
 from . import constants, shallowutil
 from ..extlib import litemmap

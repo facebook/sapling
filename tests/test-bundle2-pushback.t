@@ -4,7 +4,7 @@
   > parts, so they must be created by extensions.
   > """
   > from __future__ import absolute_import
-  > from mercurial import bundle2, exchange, pushkey, util
+  > from edenscm.mercurial import bundle2, exchange, pushkey, util
   > def _newhandlechangegroup(op, inpart):
   >     """This function wraps the changegroup part handler for getbundle.
   >     It issues an additional pushkey part to send a new

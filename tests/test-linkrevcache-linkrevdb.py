@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 import tempfile
 
-from hgext import linkrevcache
+from edenscm.hgext import linkrevcache
 
 
 try:

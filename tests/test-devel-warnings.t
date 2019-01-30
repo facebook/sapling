@@ -3,7 +3,7 @@
   > """A small extension that tests our developer warnings
   > """
   > 
-  > from mercurial import error, registrar, repair, util
+  > from edenscm.mercurial import error, registrar, repair, util
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -245,7 +245,7 @@ Test warning on config option access and registration
   $ cat << EOF > ${TESTTMP}/buggyconfig.py
   > """A small extension that tests our developer warnings for config"""
   > 
-  > from mercurial import registrar, configitems
+  > from edenscm.mercurial import registrar, configitems
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)

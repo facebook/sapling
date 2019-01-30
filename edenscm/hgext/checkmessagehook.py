@@ -5,7 +5,7 @@
 
 import string
 
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 def reposetup(ui, repo):

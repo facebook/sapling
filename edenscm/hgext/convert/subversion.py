@@ -8,8 +8,8 @@ import re
 import tempfile
 import xml.dom.minidom
 
-from mercurial import encoding, error, progress, pycompat, util, vfs as vfsmod
-from mercurial.i18n import _
+from edenscm.mercurial import encoding, error, progress, pycompat, util, vfs as vfsmod
+from edenscm.mercurial.i18n import _
 
 from . import common
 

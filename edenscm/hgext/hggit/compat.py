@@ -2,11 +2,11 @@
 # patch it here
 from dulwich.errors import GitProtocolError
 from dulwich.protocol import extract_capabilities
-from mercurial import url, util as hgutil
+from edenscm.mercurial import url, util as hgutil
 
 
 try:
-    from mercurial import encoding
+    from edenscm.mercurial import encoding
 
     hfsignoreclean = encoding.hfsignoreclean
 except AttributeError:

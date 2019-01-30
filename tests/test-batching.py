@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import, print_function
 
-from mercurial import error, peer, util, wireproto
+from edenscm.mercurial import error, peer, util, wireproto
 
 
 # equivalent of repo.repository

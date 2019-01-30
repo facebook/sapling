@@ -12,7 +12,7 @@ hidden or not as we assume that the user knows what he is doing when referring
 to xxx.
 """
 
-from mercurial import (
+from edenscm.mercurial import (
     branchmap,
     commands,
     error,
@@ -23,17 +23,11 @@ from mercurial import (
     revset,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}
-
-if util.safehasattr(registrar, "command"):
-    command = registrar.command(cmdtable)
-else:  # compat with hg < 4.3
-    from mercurial import cmdutil
-
-    command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 configtable = {}
 configitem = registrar.configitem(configtable)

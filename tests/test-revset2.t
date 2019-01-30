@@ -1577,7 +1577,7 @@ loading it
   $ cd repo
 
   $ cat <<EOF > $TESTTMP/custompredicate.py
-  > from mercurial import error, registrar, revset
+  > from edenscm.mercurial import error, registrar, revset
   > 
   > revsetpredicate = registrar.revsetpredicate()
   > 
@@ -1600,7 +1600,7 @@ loading it
 Test repo.anyrevs with customized revset overrides
 
   $ cat > $TESTTMP/printprevset.py <<EOF
-  > from mercurial import encoding, registrar
+  > from edenscm.mercurial import encoding, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('printprevset')

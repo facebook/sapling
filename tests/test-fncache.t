@@ -211,7 +211,7 @@ Aborting lock does not prevent fncache writes
   $ cat > exceptionext.py <<EOF
   > from __future__ import absolute_import
   > import os
-  > from mercurial import commands, error, extensions
+  > from edenscm.mercurial import commands, error, extensions
   > 
   > def lockexception(orig, vfs, lockname, wait, releasefn, *args, **kwargs):
   >     def releasewrap():
@@ -258,7 +258,7 @@ Aborting transaction prevents fncache change
   $ cat > ../exceptionext.py <<EOF
   > from __future__ import absolute_import
   > import os
-  > from mercurial import commands, error, extensions, localrepo
+  > from edenscm.mercurial import commands, error, extensions, localrepo
   > 
   > def wrapper(orig, self, *args, **kwargs):
   >     tr = orig(self, *args, **kwargs)
@@ -294,7 +294,7 @@ Aborted transactions can be recovered later
   $ cat > ../exceptionext.py <<EOF
   > from __future__ import absolute_import
   > import os
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >   commands,
   >   error,
   >   extensions,

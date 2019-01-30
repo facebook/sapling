@@ -28,7 +28,7 @@ import svnexternals
 import svnrepo
 import util
 import wrappers
-from mercurial import (
+from edenscm.mercurial import (
     commands,
     demandimport,
     extensions,
@@ -45,7 +45,7 @@ from mercurial import (
 
 
 try:
-    from mercurial import exchange
+    from edenscm.mercurial import exchange
 
     exchange.push  # existed in first iteration of this file
 except ImportError:
@@ -155,7 +155,7 @@ wrapcmds = {  # cmd: generic, target, fixdoc, ppopts, opts
 }
 
 try:
-    from mercurial import discovery
+    from edenscm.mercurial import discovery
 
     def findcommonoutgoing(orig, *args, **opts):
         capable = getattr(args[1], "capable", lambda x: False)
@@ -299,7 +299,7 @@ __all__ = ("cmdtable", "reposetup", "uisetup")
 cmdtable = {"svn": (svncommands.svn, svncommandopts, svnusage)}
 configtable = {}
 try:
-    from mercurial import registrar
+    from edenscm.mercurial import registrar
 
     templatekeyword = registrar.templatekeyword()
     loadkeyword = lambda registrarobj: None  # no-op
@@ -328,7 +328,7 @@ except (ImportError, AttributeError):
 
     # minimum copy from templatekw.loadkeyword
     def loadkeyword(registrarobj):
-        from mercurial import templatekw
+        from edenscm.mercurial import templatekw
 
         for name, func in registrarobj._table.iteritems():
             templatekw.keywords[name] = func

@@ -14,9 +14,9 @@ import struct
 import tempfile
 from collections import defaultdict
 
-from mercurial import error, filelog, pycompat, revlog, util
-from mercurial.i18n import _
-from mercurial.node import hex
+from edenscm.mercurial import error, filelog, pycompat, revlog, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex
 
 from . import constants
 from ..lfs import pointer

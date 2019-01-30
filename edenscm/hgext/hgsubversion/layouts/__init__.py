@@ -12,7 +12,7 @@ NB: this has a long way to go before it does everything it claims to
 import custom
 import single
 import standard
-from mercurial import util as hgutil
+from edenscm.mercurial import util as hgutil
 
 
 __all__ = ["layout_from_name"]

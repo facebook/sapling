@@ -13,8 +13,8 @@ import os
 import re
 import subprocess
 
-from mercurial import encoding, error, phases, util
-from mercurial.i18n import _
+from edenscm.mercurial import encoding, error, phases, util
+from edenscm.mercurial.i18n import _
 
 
 pickle = util.pickle

@@ -15,7 +15,7 @@ from dulwich.errors import GitProtocolError, HangupException
 from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone
 from dulwich.pack import apply_delta, create_delta
 from dulwich.repo import Repo, check_ref_format
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     commands,
     context,
@@ -27,9 +27,9 @@ from mercurial import (
     util as hgutil,
     vfs as vfsmod,
 )
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid, nullrev
-from mercurial.rust import pynodemap
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid, nullrev
+from edenscm.mercurial.rust import pynodemap
 from overlay import overlayrepo
 
 
@@ -700,7 +700,7 @@ class GitHandler(object):
         TESTS:
 
         >>> from collections import namedtuple
-        >>> from mercurial.ui import ui
+        >>> from edenscm.mercurial.ui import ui
         >>> mockrepo = namedtuple('localrepo', ['sharedvfs'])
         >>> mockrepo.sharedvfs = ''
         >>> g = GitHandler(mockrepo, ui()).get_valid_git_username_email
@@ -1799,7 +1799,7 @@ class GitHandler(object):
     # Stolen from hgsubversion
     def swap_out_encoding(self, new_encoding="UTF-8"):
         try:
-            from mercurial import encoding
+            from edenscm.mercurial import encoding
 
             old = encoding.encoding
             encoding.encoding = new_encoding
@@ -1828,7 +1828,7 @@ class GitHandler(object):
 
         >>> from collections import namedtuple
         >>> from dulwich.client import HttpGitClient, SSHGitClient
-        >>> from mercurial.ui import ui
+        >>> from edenscm.mercurial.ui import ui
         >>> mockrepo = namedtuple('localrepo', ['sharedvfs'])
         >>> mockrepo.sharedvfs = ''
         >>> g = GitHandler(mockrepo, ui())

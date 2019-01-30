@@ -5,8 +5,8 @@
 import os
 
 import test_hgsubversion_util
-from hgext.hgsubversion import maps, svncommands, verify
-from mercurial import commands, node
+from edenscm.hgext.hgsubversion import maps, svncommands, verify
+from edenscm.mercurial import commands, node
 
 
 class MapTests(test_hgsubversion_util.TestBase):

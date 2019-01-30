@@ -279,7 +279,7 @@ Test roundtrip encoding/decoding of utf8b for generated data
 #if hypothesis
 
   >>> from hypothesishelpers import *
-  >>> from mercurial import encoding
+  >>> from edenscm.mercurial import encoding
   >>> roundtrips(st.binary(), encoding.fromutf8b, encoding.toutf8b)
   Round trip OK
 

@@ -22,8 +22,8 @@ import svnmeta
 import svnwrap
 import util
 import wrappers
-from mercurial import error, httppeer, localrepo, phases, util as hgutil
-from mercurial.repository import peer as peerrepository
+from edenscm.mercurial import error, httppeer, localrepo, phases, util as hgutil
+from edenscm.mercurial.repository import peer as peerrepository
 
 
 peerapi = 1

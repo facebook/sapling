@@ -336,7 +336,7 @@ verify that bookmarks are not written on failed transaction
   $ cat > failpullbookmarks.py << EOF
   > """A small extension that makes bookmark pulls fail, for testing"""
   > from __future__ import absolute_import
-  > from mercurial import (
+  > from edenscm.mercurial import (
   >   error,
   >   exchange,
   >   extensions,

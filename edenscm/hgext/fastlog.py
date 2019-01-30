@@ -18,7 +18,7 @@ import heapq
 from collections import deque
 from threading import Event, Thread
 
-from mercurial import (
+from edenscm.mercurial import (
     changelog,
     cmdutil,
     error,
@@ -30,8 +30,8 @@ from mercurial import (
     smartset,
     util,
 )
-from mercurial.i18n import _
-from mercurial.node import nullrev
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import nullrev
 
 
 conduit = None

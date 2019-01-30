@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import error, node as nodemod, util
+from edenscm.mercurial import error, node as nodemod, util
 
 
 def record(repo, extra, prednodes, op=None, splitting=None):

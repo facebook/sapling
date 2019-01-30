@@ -16,7 +16,7 @@ import os
 import sys
 import traceback
 
-from mercurial import dispatch, extensions
+from edenscm.mercurial import dispatch, extensions
 
 
 colortable = {"traceback.foreign": "red bold", "traceback.core": ""}

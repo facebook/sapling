@@ -9,7 +9,7 @@ import tempfile
 import svnexternals
 import svnwrap
 import util
-from mercurial import match as matchmod, node, revlog, util as hgutil
+from edenscm.mercurial import match as matchmod, node, revlog, util as hgutil
 
 from ..extlib import cstore
 

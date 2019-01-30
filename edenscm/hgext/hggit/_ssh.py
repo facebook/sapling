@@ -1,7 +1,7 @@
 import subprocess
 
 from dulwich.client import SubprocessWrapper
-from mercurial import util
+from edenscm.mercurial import util
 
 
 class SSHVendor(object):

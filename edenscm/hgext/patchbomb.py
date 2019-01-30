@@ -79,7 +79,7 @@ import os
 import socket
 import tempfile
 
-from mercurial import (
+from edenscm.mercurial import (
     cmdutil,
     commands,
     error,
@@ -96,7 +96,7 @@ from mercurial import (
     templater,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 stringio = util.stringio

@@ -1,5 +1,5 @@
 import test_hgsubversion_util
-from mercurial import commands, hg
+from edenscm.mercurial import commands, hg
 
 
 class TestHooks(test_hgsubversion_util.TestBase):
@@ -32,7 +32,7 @@ class TestHooks(test_hgsubversion_util.TestBase):
         commands.pull(self.repo.ui, self.repo)
 
         self.called = False
-        from hgext.hgsubversion import svncommands
+        from edenscm.hgext.hgsubversion import svncommands
 
         oldupdatemeta = svncommands.updatemeta
 

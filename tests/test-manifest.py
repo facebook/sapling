@@ -5,7 +5,7 @@ import itertools
 import unittest
 
 import silenttestrunner
-from mercurial import manifest as manifestmod, match as matchmod
+from edenscm.mercurial import manifest as manifestmod, match as matchmod
 
 
 EMTPY_MANIFEST = b""

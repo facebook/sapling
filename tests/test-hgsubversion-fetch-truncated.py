@@ -1,5 +1,5 @@
 import test_hgsubversion_util
-from mercurial import commands, hg
+from edenscm.mercurial import commands, hg
 
 
 class TestFetchTruncatedHistory(test_hgsubversion_util.TestBase):

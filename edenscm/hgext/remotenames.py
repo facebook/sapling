@@ -24,7 +24,7 @@ import shutil
 import sys
 import UserDict
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     commands,
     discovery,
@@ -50,8 +50,8 @@ from mercurial import (
     util,
     vfs as vfsmod,
 )
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid, short
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid, short
 
 from . import schemes
 from .convert import hg as converthg

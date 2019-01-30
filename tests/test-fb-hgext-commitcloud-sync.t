@@ -624,8 +624,8 @@ Test race between syncing obsmarkers and a transaction creating new ones
 Create an extension that runs a restack command while we're syncing
 
   $ cat > $TESTTMP/syncrace.py << EOF
-  > from mercurial import extensions
-  > from hgext.commitcloud import service
+  > from edenscm.mercurial import extensions
+  > from edenscm.hgext.commitcloud import service
   > def extsetup(ui):
   >     def wrapget(orig, *args, **kwargs):
   >         serv = orig(*args, **kwargs)

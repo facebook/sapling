@@ -116,7 +116,7 @@ import sys
 import tempfile
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     bundle2,
     changegroup,
     cmdutil,

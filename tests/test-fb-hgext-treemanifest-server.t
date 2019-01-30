@@ -138,7 +138,7 @@ Test pushing flat and tree
   > exit 2
   > EOF
   $ cat >> $TESTTMP/myhook.py <<EOF
-  > from mercurial import bundlerepo
+  > from edenscm.mercurial import bundlerepo
   > def myhook(ui=None, repo=None, hooktype=None, **hookargs):
   >     node = hookargs.get('node', None)
   >     ctx = repo[node]

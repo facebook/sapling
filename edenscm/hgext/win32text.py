@@ -45,9 +45,9 @@ from __future__ import absolute_import
 
 import re
 
-from mercurial import registrar, util
-from mercurial.i18n import _
-from mercurial.node import short
+from edenscm.mercurial import registrar, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import short
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for

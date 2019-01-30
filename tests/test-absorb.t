@@ -425,7 +425,7 @@ Test obsolete markers creation:
 Test config option absorb.amendflags and running as a sub command of amend:
 
   $ cat >> $TESTTMP/dummyamend.py << EOF
-  > from mercurial import commands, registrar
+  > from edenscm.mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('amend', [], '')

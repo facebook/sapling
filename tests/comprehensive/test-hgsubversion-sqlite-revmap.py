@@ -4,7 +4,7 @@ import os
 import sys
 
 import test_hgsubversion_util
-from hgext.hgsubversion import maps, svnmeta
+from edenscm.hgext.hgsubversion import maps, svnmeta
 
 
 # interesting and fast tests

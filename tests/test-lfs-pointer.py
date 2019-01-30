@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from hgext.lfs import pointer
+from edenscm.hgext.lfs import pointer
 
 
 def tryparse(text):

@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import time
 
-from mercurial import progress, registrar, util
+from edenscm.mercurial import progress, registrar, util
 
 
 cmdtable = {}

@@ -9,9 +9,9 @@
 
 from __future__ import absolute_import
 
-from mercurial import cmdutil, error, exchange, hg, lock, pycompat, registrar, util
-from mercurial.i18n import _
-from mercurial.node import short
+from edenscm.mercurial import cmdutil, error, exchange, hg, lock, pycompat, registrar, util
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import short
 
 
 release = lock.release

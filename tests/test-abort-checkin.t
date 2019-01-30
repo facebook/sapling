@@ -1,5 +1,5 @@
   $ cat > abortcommit.py <<EOF
-  > from mercurial import error
+  > from edenscm.mercurial import error
   > def hook(**args):
   >     raise error.Abort("no commits allowed")
   > def reposetup(ui, repo):

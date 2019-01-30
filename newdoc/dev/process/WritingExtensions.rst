@@ -24,8 +24,8 @@ Here is an example of registering a simple ``hello`` command:
 
 .. sourcecode:: python
 
-    from mercurial import commands
-    from mercurial.i18n import _
+    from edenscm.mercurial import commands
+    from edenscm.mercurial.i18n import _
 
     cmdtable = {}
     command = registrar.command(cmdtable)
@@ -76,8 +76,8 @@ unlinking:
 
 .. sourcecode:: python
 
-    from mercurial.i18n import _
-    from mercurial import error
+    from edenscm.mercurial.i18n import _
+    from edenscm.mercurial import error
     import os
 
     def uisetup(ui):
@@ -101,8 +101,8 @@ writes need to take the lock):
 
 .. sourcecode:: python
 
-    from mercurial import error
-    from mercurial.i18n import _
+    from edenscm.mercurial import error
+    from edenscm.mercurial.i18n import _
 
     def reposetup(ui, repo):
         class readonlyrepo(repo.__class__):

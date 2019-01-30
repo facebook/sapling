@@ -5,8 +5,8 @@
 
 import os
 
-from mercurial import cmdutil, registrar, scmutil, util
-from mercurial.i18n import _
+from edenscm.mercurial import cmdutil, registrar, scmutil, util
+from edenscm.mercurial.i18n import _
 
 
 cmdtable = {}

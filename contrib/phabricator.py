@@ -42,7 +42,7 @@ import json
 import operator
 import re
 
-from mercurial import (
+from edenscm.mercurial import (
     cmdutil,
     context,
     encoding,
@@ -58,8 +58,8 @@ from mercurial import (
     url as urlmod,
     util,
 )
-from mercurial.i18n import _
-from mercurial.node import bin, nullid
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, nullid
 
 
 cmdtable = {}

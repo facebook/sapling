@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import os
 import tempfile
 
-from mercurial import (
+from edenscm.mercurial import (
     bundlerepo,
     cmdutil,
     error,
@@ -37,7 +37,7 @@ from mercurial import (
     util,
     vfs as vfsmod,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 class TransplantError(error.Abort):

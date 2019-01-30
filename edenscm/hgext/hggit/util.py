@@ -3,8 +3,8 @@ functions."""
 import re
 
 from dulwich import errors
-from mercurial import error, lock as lockmod, util as hgutil
-from mercurial.i18n import _
+from edenscm.mercurial import error, lock as lockmod, util as hgutil
+from edenscm.mercurial.i18n import _
 
 
 try:

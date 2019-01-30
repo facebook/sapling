@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from mercurial import hg
+from edenscm.mercurial import hg
 
 
 def testparse(url, branch=[]):

@@ -12,8 +12,8 @@ import sys
 import termios
 import tty
 
-from mercurial import error
-from mercurial.i18n import _
+from edenscm.mercurial import error
+from edenscm.mercurial.i18n import _
 
 
 def upline(n=1):

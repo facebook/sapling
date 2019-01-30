@@ -31,7 +31,7 @@ import itertools
 import re
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     bookmarks,
     cmdutil,
     commands,
@@ -52,7 +52,7 @@ from mercurial import (
     templater,
     util,
 )
-from mercurial.i18n import _
+from edenscm.mercurial.i18n import _
 
 
 try:

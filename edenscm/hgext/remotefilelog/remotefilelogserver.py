@@ -12,7 +12,7 @@ import os
 import stat
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     changegroup,
     changelog,
     context,
@@ -26,10 +26,10 @@ from mercurial import (
     util,
     wireproto,
 )
-from mercurial.extensions import wrapfunction
-from mercurial.hgweb import protocol as httpprotocol
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid, nullrev
+from edenscm.mercurial.extensions import wrapfunction
+from edenscm.mercurial.hgweb import protocol as httpprotocol
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid, nullrev
 
 from . import constants, lz4wrapper, shallowrepo, shallowutil, wirepack
 
@@ -40,7 +40,7 @@ except NameError:
     xrange = range
 
 try:
-    from mercurial import streamclone
+    from edenscm.mercurial import streamclone
 
     streamclone._walkstreamfiles
     hasstreamclone = True

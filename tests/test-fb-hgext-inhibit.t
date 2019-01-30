@@ -45,7 +45,7 @@ Test revive works inside a transaction
 
   $ cat > $TESTTMP/revivetest.py <<'EOF'
   > from __future__ import absolute_import, print_function
-  > from mercurial import extensions, obsolete, registrar
+  > from edenscm.mercurial import extensions, obsolete, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('revivetest')

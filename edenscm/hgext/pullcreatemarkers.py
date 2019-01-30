@@ -11,7 +11,7 @@
 # relationship between a draft commit and its landed counterpart.
 # Thanks to these markers, less information is displayed and rebases can have
 # less irrelevant conflicts.
-from mercurial import commands, extensions, obsolete, phases
+from edenscm.mercurial import commands, extensions, obsolete, phases
 
 from .extlib.phabricator import diffprops
 from .phabstatus import COMMITTEDSTATUS, getdiffstatus

@@ -123,7 +123,7 @@ import shutil
 import struct
 import time
 
-from mercurial import (
+from edenscm.mercurial import (
     bundle2,
     bundlerepo,
     changegroup,
@@ -147,9 +147,9 @@ from mercurial import (
     util,
     wireproto,
 )
-from mercurial.commands import debug as debugcommands
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid, short
+from edenscm.mercurial.commands import debug as debugcommands
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullid, short
 
 from ..extlib import cstore
 from ..remotefilelog import (

@@ -1,6 +1,6 @@
 
   $ cat > adddrop.py <<EOF
-  > from mercurial import registrar
+  > from edenscm.mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command(b'debugadddrop',

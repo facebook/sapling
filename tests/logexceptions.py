@@ -13,7 +13,7 @@ import sys
 import traceback
 import uuid
 
-from mercurial import dispatch, extensions
+from edenscm.mercurial import dispatch, extensions
 
 
 def handleexception(orig, ui):

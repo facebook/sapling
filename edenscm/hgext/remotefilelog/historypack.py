@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import hashlib
 import struct
 
-from mercurial import error, util
-from mercurial.node import hex, nullid
+from edenscm.mercurial import error, util
+from edenscm.mercurial.node import hex, nullid
 
 from . import basepack, constants, shallowutil
 from ..extlib.pyrevisionstore import historypack as rusthistorypack

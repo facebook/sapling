@@ -13,7 +13,7 @@ import os
 import subprocess
 import time
 
-from mercurial import error, lock as lockmod, pycompat, util, vfs as vfsmod
+from edenscm.mercurial import error, lock as lockmod, pycompat, util, vfs as vfsmod
 
 
 if pycompat.iswindows:

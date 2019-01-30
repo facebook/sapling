@@ -9,9 +9,9 @@ from __future__ import absolute_import
 
 import time
 
-from mercurial import encoding, error, progress, registrar, revlog
-from mercurial.i18n import _
-from mercurial.node import nullid
+from edenscm.mercurial import encoding, error, progress, registrar, revlog
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import nullid
 
 
 testedwith = "ships-with-fb-hgext"

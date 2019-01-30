@@ -118,7 +118,7 @@ import hashlib
 import os
 import re
 
-from mercurial import (
+from edenscm.mercurial import (
     cmdutil,
     commands,
     context,
@@ -140,9 +140,9 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
-from mercurial.node import nullid, nullrev
-from mercurial.thirdparty import attr
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import nullid, nullrev
+from edenscm.mercurial.thirdparty import attr
 
 
 cmdtable = {}

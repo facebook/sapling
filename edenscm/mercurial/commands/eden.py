@@ -300,7 +300,7 @@ class HgServer(object):
         return name in ["fbsource", "www"]
 
     def _gen_options(self):
-        from hgext.remotefilelog import shallowutil, constants
+        from edenscm.hgext.remotefilelog import shallowutil, constants
 
         repo_name = getattr(self.repo, "name", None)
         use_treemanifest = (self.treemanifest is not None) and bool(repo_name)

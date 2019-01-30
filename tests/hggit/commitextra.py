@@ -1,11 +1,11 @@
 """test helper extension to create commits with multiple extra fields"""
 
-from mercurial import cmdutil, commands, scmutil
+from edenscm.mercurial import cmdutil, commands, scmutil
 
 
 cmdtable = {}
 try:
-    from mercurial import registrar
+    from edenscm.mercurial import registrar
 
     command = registrar.command(cmdtable)
 except (ImportError, AttributeError):

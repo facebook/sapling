@@ -3,7 +3,7 @@
 Create extension that can disable symlink support:
 
   $ cat > nolink.py <<EOF
-  > from mercurial import extensions, util
+  > from edenscm.mercurial import extensions, util
   > def setflags(orig, f, l, x):
   >     pass
   > def checklink(orig, path):

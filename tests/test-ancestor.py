@@ -8,8 +8,8 @@ import random
 import sys
 import time
 
-from mercurial import ancestor, debugcommands, hg, pycompat, ui as uimod, util
-from mercurial.node import nullrev
+from edenscm.mercurial import ancestor, debugcommands, hg, pycompat, ui as uimod, util
+from edenscm.mercurial.node import nullrev
 
 
 if pycompat.ispy3:

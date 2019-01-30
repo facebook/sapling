@@ -118,12 +118,12 @@ def parse_index2(data, inline):
 
 
 def importparsers(hexversion):
-    """Import mercurial.parsers with the given sys.hexversion."""
+    """Import edenscm.mercurial.parsers with the given sys.hexversion."""
     # The file parsers.c inspects sys.hexversion to determine the version
     # of the currently-running Python interpreter, so we monkey-patch
     # sys.hexversion to simulate using different versions.
     code = (
-        "import sys; sys.hexversion=%s; " "import mercurial.cext.parsers" % hexversion
+        "import sys; sys.hexversion=%s; " "import edenscm.mercurial.cext.parsers" % hexversion
     )
     cmd = 'python -c "%s"' % code
     # We need to do these tests inside a subprocess because parser.c's

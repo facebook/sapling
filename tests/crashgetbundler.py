@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from mercurial import changegroup, error, extensions
-from mercurial.i18n import _
+from edenscm.mercurial import changegroup, error, extensions
+from edenscm.mercurial.i18n import _
 
 
 def abort(orig, *args, **kwargs):
