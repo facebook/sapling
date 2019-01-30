@@ -20,18 +20,22 @@ import time
 
 
 try:
-    from edenscm import compat
+    import edenscm.mercurial as mercurial
+    import edenscm.mercurial.error
+    import edenscm.mercurial.hg
+    import edenscm.mercurial.node
+    import edenscm.mercurial.scmutil
+    import edenscm.mercurial.txnutil
+    import edenscm.mercurial.ui
+    import edenscm.mercurial.util
 except ImportError:
-    pass
-
-
-import mercurial.error
-import mercurial.hg
-import mercurial.node
-import mercurial.scmutil
-import mercurial.txnutil
-import mercurial.ui
-import mercurial.util
+    import mercurial.error
+    import mercurial.hg
+    import mercurial.node
+    import mercurial.scmutil
+    import mercurial.txnutil
+    import mercurial.ui
+    import mercurial.util
 
 
 if os.name == "nt":
