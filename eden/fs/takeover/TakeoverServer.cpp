@@ -238,7 +238,7 @@ void TakeoverServer::connectionAccepted(
   XLOG(INFO) << "takeover socket connection received";
   auto* handlerRawPtr = handler.get();
   handlerRawPtr->start()
-      .onError([](const folly::exception_wrapper& ew) {
+      .thenError([](const folly::exception_wrapper& ew) {
         XLOG(ERR) << "error processing takeover connection request: "
                   << folly::exceptionStr(ew);
       })

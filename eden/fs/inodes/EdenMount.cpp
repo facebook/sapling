@@ -291,21 +291,24 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
               dotEdenInodeNumber_ = dotEdenInode->getNodeId();
             });
       })
-      .onError([=](const InodeError& /*err*/) {
-        auto dotEdenInode =
-            getRootInode()->mkdir(PathComponentPiece{kDotEdenName}, 0744);
-        dotEdenInode->symlink("root"_pc, config_->getMountPath().stringPiece());
-        dotEdenInode->symlink(
-            "socket"_pc, serverState_->getSocketPath().stringPiece());
-        dotEdenInode->symlink(
-            "client"_pc, config_->getClientDirectory().stringPiece());
+      .thenError(
+          folly::tag_t<facebook::eden::InodeError>{},
+          [=](const InodeError& /*err*/) {
+            auto dotEdenInode =
+                getRootInode()->mkdir(PathComponentPiece{kDotEdenName}, 0744);
+            dotEdenInode->symlink(
+                "root"_pc, config_->getMountPath().stringPiece());
+            dotEdenInode->symlink(
+                "socket"_pc, serverState_->getSocketPath().stringPiece());
+            dotEdenInode->symlink(
+                "client"_pc, config_->getClientDirectory().stringPiece());
 
-        createDotEdenSymlink(dotEdenInode);
+            createDotEdenSymlink(dotEdenInode);
 
-        // We must assign this after we've built out the contents, otherwise
-        // we'll lock ourselves out of populating more entries
-        dotEdenInodeNumber_ = dotEdenInode->getNodeId();
-      });
+            // We must assign this after we've built out the contents, otherwise
+            // we'll lock ourselves out of populating more entries
+            dotEdenInodeNumber_ = dotEdenInode->getNodeId();
+          });
 }
 
 EdenMount::~EdenMount() {}
@@ -821,7 +824,7 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
               .thenValue([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
                 fuseInitSuccessful(std::move(fuseCompleteFuture));
               })
-              .onError([this](folly::exception_wrapper&& ew) {
+              .thenError([this](folly::exception_wrapper&& ew) {
                 unconditionallySetState(State::FUSE_ERROR);
                 return makeFuture<folly::Unit>(std::move(ew));
               });
@@ -883,7 +886,7 @@ void EdenMount::fuseInitSuccessful(
             SerializedInodeMap{} // placeholder
             ));
       })
-      .onError([this](folly::exception_wrapper&& ew) {
+      .thenError([this](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "session complete with err: " << ew.what();
         fuseCompletionPromise_.setException(std::move(ew));
       });

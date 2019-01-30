@@ -1943,7 +1943,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
   if (dtype_t::Symlink == gitignoreInode->getType()) {
     return getMount()
         ->resolveSymlink(gitignoreInode)
-        .onError([](const folly::exception_wrapper& ex) {
+        .thenError([](const folly::exception_wrapper& ex) {
           XLOG(WARN) << "error resolving gitignore symlink: "
                      << folly::exceptionStr(ex);
           return InodePtr{};
@@ -1971,7 +1971,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
   }
 
   return fileInode->readAll(CacheHint::LikelyNeededAgain)
-      .onError([](const folly::exception_wrapper& ex) {
+      .thenError([](const folly::exception_wrapper& ex) {
         XLOG(WARN) << "error reading ignore file: " << folly::exceptionStr(ex);
         return std::string{};
       })

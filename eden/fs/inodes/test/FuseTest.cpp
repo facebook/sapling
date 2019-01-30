@@ -52,7 +52,7 @@ TEST(FuseTest, initMount) {
       testMount.getEdenMount()
           ->startFuse()
           .thenValue([](auto&&) { XLOG(INFO) << "startFuse() succeeded"; })
-          .onError([&](const folly::exception_wrapper& ew) {
+          .thenError([&](const folly::exception_wrapper& ew) {
             ADD_FAILURE() << "startFuse() failed: " << folly::exceptionStr(ew);
           });
 

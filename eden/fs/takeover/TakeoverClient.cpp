@@ -61,7 +61,7 @@ TakeoverData takeoverMounts(
       .thenValue([&expectedMessage](UnixSocket::Message&& msg) {
         expectedMessage = std::move(msg);
       })
-      .onError([&expectedMessage](folly::exception_wrapper&& ew) {
+      .thenError([&expectedMessage](folly::exception_wrapper&& ew) {
         expectedMessage = folly::makeUnexpected(std::move(ew));
       })
       .ensure([&evb] { evb.terminateLoopSoon(); });

@@ -130,7 +130,7 @@ void testSendDataAndFiles(DataSize dataSize, size_t numFiles) {
   }
   socket1->send(UnixSocket::Message(sendBuf->cloneAsValue(), std::move(files)))
       .thenValue([](auto&&) { XLOG(DBG3) << "send complete"; })
-      .onError([](const folly::exception_wrapper& ew) {
+      .thenError([](const folly::exception_wrapper& ew) {
         ADD_FAILURE() << "send error: " << ew.what();
       });
 
@@ -139,7 +139,7 @@ void testSendDataAndFiles(DataSize dataSize, size_t numFiles) {
       .thenValue([&receivedMessage](UnixSocket::Message&& msg) {
         receivedMessage = std::move(msg);
       })
-      .onError([](const folly::exception_wrapper& ew) {
+      .thenError([](const folly::exception_wrapper& ew) {
         ADD_FAILURE() << "receive error: " << ew.what();
       })
       .ensure([&]() { evb.terminateLoopSoon(); });
@@ -212,7 +212,7 @@ TEST(FutureUnixSocket, receiveQueue) {
             .thenValue([n, &receivedMessages](UnixSocket::Message&& msg) {
               receivedMessages.emplace_back(n, std::move(msg));
             })
-            .onError([n, &evb](const folly::exception_wrapper& ew) {
+            .thenError([n, &evb](const folly::exception_wrapper& ew) {
               ADD_FAILURE() << "receive " << n << " error: " << ew.what();
               evb.terminateLoopSoon();
             });
@@ -227,7 +227,7 @@ TEST(FutureUnixSocket, receiveQueue) {
     auto sendBuf = IOBuf(IOBuf::WRAP_BUFFER, ByteRange{StringPiece{msg}});
     socket1->send(std::move(sendBuf))
         .thenValue([](auto&&) { XLOG(DBG3) << "send complete"; })
-        .onError([](const folly::exception_wrapper& ew) {
+        .thenError([](const folly::exception_wrapper& ew) {
           ADD_FAILURE() << "send error: " << ew.what();
         });
   }
@@ -261,7 +261,7 @@ TEST(FutureUnixSocket, attachEventBase) {
     const std::string msgData(100, 'a');
     s1.send(UnixSocket::Message(IOBuf(IOBuf::COPY_BUFFER, msgData)))
         .thenValue([](auto&&) { XLOG(DBG3) << "send complete"; })
-        .onError([](const folly::exception_wrapper& ew) {
+        .thenError([](const folly::exception_wrapper& ew) {
           ADD_FAILURE() << "send error: " << ew.what();
         });
     std::optional<UnixSocket::Message> receivedMessage;
@@ -269,7 +269,7 @@ TEST(FutureUnixSocket, attachEventBase) {
         .thenValue([&receivedMessage](UnixSocket::Message&& msg) {
           receivedMessage = std::move(msg);
         })
-        .onError([](const folly::exception_wrapper& ew) {
+        .thenError([](const folly::exception_wrapper& ew) {
           ADD_FAILURE() << "receive error: " << ew.what();
         })
         .ensure([&]() { evb->terminateLoopSoon(); });

@@ -303,7 +303,7 @@ void InodeMap::setupParentLookupPromise(
                   mode](const InodePtr& inode) {
         startChildLookup(inode, name, isUnlinked, childInodeNumber, hash, mode);
       })
-      .onError([this, childInodeNumber](const folly::exception_wrapper& ex) {
+      .thenError([this, childInodeNumber](const folly::exception_wrapper& ex) {
         // Fail all pending lookups on the child
         inodeLoadFailed(childInodeNumber, ex);
       });

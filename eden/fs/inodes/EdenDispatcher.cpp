@@ -130,20 +130,21 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
               }
             });
       })
-      .onError([](const std::system_error& err) {
-        // Translate ENOENT into a successful response with an
-        // inode number of 0 and a large entry_valid time, to let the kernel
-        // cache this negative lookup result.
-        if (isEnoent(err)) {
-          fuse_entry_out entry = {};
-          entry.attr_valid =
-              std::numeric_limits<decltype(entry.attr_valid)>::max();
-          entry.entry_valid =
-              std::numeric_limits<decltype(entry.entry_valid)>::max();
-          return entry;
-        }
-        throw err;
-      });
+      .thenError(
+          folly::tag_t<std::system_error>{}, [](const std::system_error& err) {
+            // Translate ENOENT into a successful response with an
+            // inode number of 0 and a large entry_valid time, to let the kernel
+            // cache this negative lookup result.
+            if (isEnoent(err)) {
+              fuse_entry_out entry = {};
+              entry.attr_valid =
+                  std::numeric_limits<decltype(entry.attr_valid)>::max();
+              entry.entry_valid =
+                  std::numeric_limits<decltype(entry.entry_valid)>::max();
+              return entry;
+            }
+            throw err;
+          });
 }
 
 folly::Future<Dispatcher::Attr> EdenDispatcher::setattr(

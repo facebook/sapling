@@ -845,14 +845,16 @@ folly::Future<Hash> HgBackingStore::importManifest(Hash commitId) {
   if (unionStore_) {
     auto hash = importTreeManifest(commitId);
     if (FLAGS_allow_flatmanifest_fallback) {
-      return std::move(hash).onError([this, commitId](const MissingKeyError&) {
-        // We don't have a tree manifest available for the target rev,
-        // so let's fall through to the full flat manifest importer.
-        XLOG(INFO) << "no treemanifest data available for revision "
-                   << commitId.toString()
-                   << ": falling back to slower flatmanifest import";
-        return importFlatManifest(commitId);
-      });
+      return std::move(hash).thenError(
+          folly::tag_t<MissingKeyError>{},
+          [this, commitId](const MissingKeyError&) {
+            // We don't have a tree manifest available for the target rev,
+            // so let's fall through to the full flat manifest importer.
+            XLOG(INFO) << "no treemanifest data available for revision "
+                       << commitId.toString()
+                       << ": falling back to slower flatmanifest import";
+            return importFlatManifest(commitId);
+          });
     }
     return hash;
   }
