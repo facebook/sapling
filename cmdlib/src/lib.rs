@@ -34,7 +34,6 @@ extern crate blobrepo;
 extern crate bookmarks;
 extern crate changesets;
 extern crate context;
-extern crate hooks;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate metaconfig;
