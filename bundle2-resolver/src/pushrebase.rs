@@ -55,7 +55,6 @@ use revset::RangeNodeStream;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
-use std::sync::Arc;
 
 #[derive(Debug)]
 pub enum PushrebaseError {
@@ -371,11 +370,16 @@ fn fetch_bonsai_range(
     descendant: ChangesetId,
 ) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
     cloned!(repo);
-    RangeNodeStream::new(ctx.clone(), &Arc::new(repo.clone()), ancestor, descendant)
-        .map(move |id| repo.get_bonsai_changeset(ctx.clone(), id))
-        .buffered(100)
-        .collect()
-        .from_err()
+    RangeNodeStream::new(
+        ctx.clone(),
+        repo.get_changeset_fetcher(),
+        ancestor,
+        descendant,
+    )
+    .map(move |id| repo.get_bonsai_changeset(ctx.clone(), id))
+    .buffered(100)
+    .collect()
+    .from_err()
 }
 
 fn find_changed_files(
@@ -386,77 +390,77 @@ fn find_changed_files(
     reject_merges: bool,
 ) -> impl Future<Item = Vec<MPath>, Error = PushrebaseError> {
     cloned!(repo);
-    RangeNodeStream::new(ctx.clone(), &Arc::new(repo.clone()), ancestor, descendant)
-        .map({
-            cloned!(ctx, repo);
-            move |bcs_id| {
-                repo.get_bonsai_changeset(ctx.clone(), bcs_id)
-                    .map(move |bcs| (bcs_id, bcs))
-            }
-        })
-        .buffered(100)
-        .collect()
-        .from_err()
-        .and_then(move |id_to_bcs| {
-            let ids: HashSet<_> = id_to_bcs.iter().map(|(id, _)| *id).collect();
-            let file_changes_fut: Vec<_> = id_to_bcs
-                .into_iter()
-                .filter(|(id, _)| *id != ancestor)
-                .map(move |(id, bcs)| {
-                    let parents: Vec<_> = bcs.parents().collect();
-                    match *parents {
-                        [] | [_] => ok(bcs
-                            .file_changes()
-                            .map(|(path, _)| path.clone())
-                            .collect::<Vec<MPath>>())
-                        .left_future(),
-                        [p0_id, p1_id] => {
-                            if reject_merges {
-                                return err(PushrebaseError::RebaseOverMerge).left_future();
-                            }
-                            match (ids.get(p0_id), ids.get(p1_id)) {
-                                (Some(_), Some(_)) => {
-                                    // both parents are in the rebase set, so we can just take
-                                    // filechanges from bonsai changeset
-                                    ok(bcs
-                                        .file_changes()
-                                        .map(|(path, _)| path.clone())
-                                        .collect::<Vec<MPath>>())
-                                    .left_future()
-                                }
-                                (Some(p_id), None) | (None, Some(p_id)) => {
-                                    // one of the parents is not in the rebase set, to calculate
-                                    // changed files in this case we will compute manifest diff
-                                    // between elements that are in rebase set.
-                                    find_changed_files_between_manfiests(
-                                        ctx.clone(),
-                                        &repo,
-                                        id,
-                                        *p_id,
-                                    )
-                                    .right_future()
-                                }
-                                (None, None) => panic!(
-                                    "`RangeNodeStream` produced invalid result for: ({}, {})",
-                                    descendant, ancestor,
-                                ),
-                            }
+    RangeNodeStream::new(
+        ctx.clone(),
+        repo.get_changeset_fetcher(),
+        ancestor,
+        descendant,
+    )
+    .map({
+        cloned!(ctx, repo);
+        move |bcs_id| {
+            repo.get_bonsai_changeset(ctx.clone(), bcs_id)
+                .map(move |bcs| (bcs_id, bcs))
+        }
+    })
+    .buffered(100)
+    .collect()
+    .from_err()
+    .and_then(move |id_to_bcs| {
+        let ids: HashSet<_> = id_to_bcs.iter().map(|(id, _)| *id).collect();
+        let file_changes_fut: Vec<_> = id_to_bcs
+            .into_iter()
+            .filter(|(id, _)| *id != ancestor)
+            .map(move |(id, bcs)| {
+                let parents: Vec<_> = bcs.parents().collect();
+                match *parents {
+                    [] | [_] => ok(bcs
+                        .file_changes()
+                        .map(|(path, _)| path.clone())
+                        .collect::<Vec<MPath>>())
+                    .left_future(),
+                    [p0_id, p1_id] => {
+                        if reject_merges {
+                            return err(PushrebaseError::RebaseOverMerge).left_future();
                         }
-                        _ => panic!("pushrebase supports only two parents"),
+                        match (ids.get(p0_id), ids.get(p1_id)) {
+                            (Some(_), Some(_)) => {
+                                // both parents are in the rebase set, so we can just take
+                                // filechanges from bonsai changeset
+                                ok(bcs
+                                    .file_changes()
+                                    .map(|(path, _)| path.clone())
+                                    .collect::<Vec<MPath>>())
+                                .left_future()
+                            }
+                            (Some(p_id), None) | (None, Some(p_id)) => {
+                                // one of the parents is not in the rebase set, to calculate
+                                // changed files in this case we will compute manifest diff
+                                // between elements that are in rebase set.
+                                find_changed_files_between_manfiests(ctx.clone(), &repo, id, *p_id)
+                                    .right_future()
+                            }
+                            (None, None) => panic!(
+                                "`RangeNodeStream` produced invalid result for: ({}, {})",
+                                descendant, ancestor,
+                            ),
+                        }
                     }
-                })
-                .collect();
-            join_all(file_changes_fut).map(|file_changes| {
-                let mut file_changes_union = file_changes
+                    _ => panic!("pushrebase supports only two parents"),
+                }
+            })
+            .collect();
+        join_all(file_changes_fut).map(|file_changes| {
+            let mut file_changes_union = file_changes
                     .into_iter()
                     .flat_map(|v| v)
                     .collect::<HashSet<_>>()  // compute union
                     .into_iter()
                     .collect::<Vec<_>>();
-                file_changes_union.sort_unstable();
-                file_changes_union
-            })
+            file_changes_union.sort_unstable();
+            file_changes_union
         })
+    })
 }
 
 /// `left` and `right` are considerered to be conflit free, if none of the element from `left`
@@ -613,7 +617,7 @@ fn find_rebased_set(
     root: ChangesetId,
     head: ChangesetId,
 ) -> impl Future<Item = Vec<BonsaiChangeset>, Error = PushrebaseError> {
-    RangeNodeStream::new(ctx.clone(), &Arc::new(repo.clone()), root, head)
+    RangeNodeStream::new(ctx.clone(), repo.get_changeset_fetcher(), root, head)
         .map({
             cloned!(repo);
             move |bcs_id| repo.get_bonsai_changeset(ctx.clone(), bcs_id)
@@ -1586,7 +1590,8 @@ mod tests {
                         Default::default(),
                         book.clone(),
                         vec![hg_cs],
-                    ).map_err(|_| err_msg("error while pushrebasing")),
+                    )
+                    .map_err(|_| err_msg("error while pushrebasing")),
                 );
                 futs.push(fut);
             }
@@ -1602,23 +1607,31 @@ mod tests {
 
             let previous_master =
                 HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap();
-            let previous_master = repo.get_bonsai_from_hg(ctx.clone(), &previous_master)
+            let previous_master = repo
+                .get_bonsai_from_hg(ctx.clone(), &previous_master)
                 .wait()
                 .unwrap()
                 .unwrap();
 
-            let new_master = repo.get_bookmark(ctx.clone(), &book)
+            let new_master = repo
+                .get_bookmark(ctx.clone(), &book)
                 .wait()
                 .unwrap()
                 .unwrap();
-            let new_master = repo.get_bonsai_from_hg(ctx.clone(), &new_master)
+            let new_master = repo
+                .get_bonsai_from_hg(ctx.clone(), &new_master)
                 .wait()
                 .unwrap()
                 .unwrap();
-            let res = RangeNodeStream::new(ctx, &Arc::new(repo), previous_master, new_master)
-                .collect()
-                .wait()
-                .unwrap();
+            let res = RangeNodeStream::new(
+                ctx,
+                repo.get_changeset_fetcher(),
+                previous_master,
+                new_master,
+            )
+            .collect()
+            .wait()
+            .unwrap();
             // `- 1` because RangeNodeStream is inclusive
             assert_eq!(res.len() - 1, num_pushes);
         })

@@ -904,7 +904,7 @@ fn main() -> Result<()> {
                                 move |(start_cs, stop_cs)| {
                                     RangeNodeStream::new(
                                         ctx.clone(),
-                                        &Arc::new(repo.clone()),
+                                        repo.get_changeset_fetcher(),
                                         start_cs,
                                         stop_cs,
                                     )

@@ -10,13 +10,14 @@ use std::iter;
 use std::mem::replace;
 use std::sync::Arc;
 
-use failure::{err_msg, prelude::*};
+use failure::prelude::*;
 
 use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
 use futures::{Async, Poll};
+use futures_ext::StreamExt;
 
-use blobrepo::BlobRepo;
+use blobrepo::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
@@ -37,7 +38,7 @@ struct ParentChild {
 
 pub struct RangeNodeStream {
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     start_node: ChangesetId,
     start_generation: Box<Stream<Item = Generation, Error = Error> + Send>,
     children: HashMap<HashGen, HashSet<HashGen>>,
@@ -49,26 +50,18 @@ pub struct RangeNodeStream {
 
 fn make_pending(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    changeset_fetcher: Arc<ChangesetFetcher>,
     child: HashGen,
 ) -> Box<Stream<Item = ParentChild, Error = Error> + Send> {
-    Box::new(
-        {
-            let repo = repo.clone();
-            repo.get_bonsai_changeset(ctx.clone(), child.hash)
-                .map(move |cs| {
-                    let parents: Vec<_> = cs.parents().cloned().collect();
-                    (child, parents)
-                })
-                .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
-        }
+    changeset_fetcher
+        .get_parents(ctx.clone(), child.hash)
+        .map(move |parents| (child, parents))
+        .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
         .map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
         .flatten_stream()
         .and_then(move |(child, parent_hash)| {
-            repo.get_generation_number_by_bonsai(ctx.clone(), &parent_hash)
-                .and_then(move |genopt| {
-                    genopt.ok_or_else(|| err_msg(format!("{} not found", parent_hash)))
-                })
+            changeset_fetcher
+                .get_generation_number(ctx.clone(), parent_hash.clone())
                 .map(move |gen_id| ParentChild {
                     child,
                     parent: HashGen {
@@ -77,8 +70,8 @@ fn make_pending(
                     },
                 })
                 .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
-        }),
-    )
+        })
+        .boxify()
 }
 
 impl RangeNodeStream {
@@ -86,47 +79,41 @@ impl RangeNodeStream {
     // otherwise stream will be empty
     pub fn new(
         ctx: CoreContext,
-        repo: &Arc<BlobRepo>,
+        changeset_fetcher: Arc<ChangesetFetcher>,
         start_node: ChangesetId,
         end_node: ChangesetId,
     ) -> Self {
         let start_generation = Box::new(
-            repo.clone()
-                .get_generation_number_by_bonsai(ctx.clone(), &start_node)
-                .and_then(move |genopt| {
-                    genopt.ok_or_else(|| err_msg(format!("{} not found", start_node)))
-                })
+            changeset_fetcher
+                .clone()
+                .get_generation_number(ctx.clone(), start_node)
                 .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
                 .map(stream::repeat)
                 .flatten_stream(),
         );
 
         let pending_nodes = {
-            cloned!(ctx, repo);
-            Box::new(
-                repo.clone()
-                    .get_generation_number_by_bonsai(ctx.clone(), &end_node)
-                    .and_then(move |genopt| {
-                        genopt.ok_or_else(|| err_msg(format!("{} not found", end_node)))
-                    })
-                    .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
-                    .map(move |generation| {
-                        make_pending(
-                            ctx.clone(),
-                            repo,
-                            HashGen {
-                                hash: end_node,
-                                generation,
-                            },
-                        )
-                    })
-                    .flatten_stream(),
-            )
+            cloned!(ctx, changeset_fetcher);
+            changeset_fetcher
+                .get_generation_number(ctx.clone(), end_node)
+                .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
+                .map(move |generation| {
+                    make_pending(
+                        ctx.clone(),
+                        changeset_fetcher,
+                        HashGen {
+                            hash: end_node,
+                            generation,
+                        },
+                    )
+                })
+                .flatten_stream()
+                .boxify()
         };
 
         RangeNodeStream {
             ctx,
-            repo: repo.clone(),
+            changeset_fetcher,
             start_node,
             start_generation,
             children: HashMap::new(),
@@ -207,7 +194,7 @@ impl Stream for RangeNodeStream {
                     let old_pending = replace(&mut self.pending_nodes, Box::new(stream::empty()));
                     let pending = old_pending.chain(make_pending(
                         self.ctx.clone(),
-                        self.repo.clone(),
+                        self.changeset_fetcher.clone(),
                         next_pending.parent,
                     ));
                     self.pending_nodes = Box::new(pending);
@@ -245,6 +232,7 @@ impl Stream for RangeNodeStream {
 mod test {
     use super::*;
     use async_unit;
+    use blobrepo::BlobRepo;
     use context::CoreContext;
     use fixtures::linear;
     use fixtures::merge_uneven;
@@ -269,7 +257,7 @@ mod test {
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
-                &repo,
+                repo.get_changeset_fetcher(),
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
@@ -322,7 +310,7 @@ mod test {
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
-                &repo,
+                repo.get_changeset_fetcher(),
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
@@ -360,7 +348,7 @@ mod test {
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
-                &repo,
+                repo.get_changeset_fetcher(),
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
@@ -396,7 +384,7 @@ mod test {
             // These are swapped, so won't find anything
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
-                &repo,
+                repo.get_changeset_fetcher(),
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
@@ -422,7 +410,7 @@ mod test {
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
-                &repo,
+                repo.get_changeset_fetcher(),
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
@@ -465,7 +453,7 @@ mod test {
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
-                &repo,
+                repo.get_changeset_fetcher(),
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
