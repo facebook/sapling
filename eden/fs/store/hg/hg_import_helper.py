@@ -56,14 +56,10 @@ else:
 hex = binascii.hexlify
 
 
-# remotefilelog is available just as "remotefilelog" in older mercurial
-# releases, but "hgext.remotefilelog" moving forwards.
-# TODO: Switch to unconditionally using hgext.remotefilelog once the
-# new behavior is rolled out everywhere internally.
 try:
-    from hgext.remotefilelog import shallowutil, constants
+    from edenscm.hgext.remotefilelog import shallowutil, constants
 except ImportError:
-    from remotefilelog import shallowutil, constants
+    from hgext.remotefilelog import shallowutil, constants
 
 #
 # Message chunk header format.
