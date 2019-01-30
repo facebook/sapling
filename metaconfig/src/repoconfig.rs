@@ -789,7 +789,6 @@ struct RawLfsParams {
 #[cfg(test)]
 mod test {
     use super::*;
-    use mercurial_types::FileType;
     use std::fs::{create_dir_all, write};
     use tempdir::TempDir;
 
@@ -861,16 +860,16 @@ mod test {
         "#;
 
         let paths = btreemap! {
-            "common/hooks/hook1.lua" => (FileType::Regular, hook1_content),
-            "repos/fbsource/server.toml" => (FileType::Regular, fbsource_content),
-            "repos/fbsource/hooks/hook2.lua" => (FileType::Regular, hook2_content),
-            "repos/www/server.toml" => (FileType::Regular, www_content),
-            "my_path/my_files" => (FileType::Regular, ""),
+            "common/hooks/hook1.lua" => hook1_content,
+            "repos/fbsource/server.toml" => fbsource_content,
+            "repos/fbsource/hooks/hook2.lua" => hook2_content,
+            "repos/www/server.toml" => www_content,
+            "my_path/my_files" => "",
         };
 
         let tmp_dir = TempDir::new("mononoke_test_config").unwrap();
 
-        for (path, (_, content)) in paths.clone() {
+        for (path, content) in paths.clone() {
             let file_path = Path::new(path);
             let dir = file_path.parent().unwrap();
             create_dir_all(tmp_dir.path().join(dir)).unwrap();
@@ -1035,13 +1034,13 @@ mod test {
         "#;
 
         let paths = btreemap! {
-            "common/hooks/hook1.lua" => (FileType::Regular, hook1_content),
-            "repos/fbsource/server.toml" => (FileType::Regular, content),
+            "common/hooks/hook1.lua" => hook1_content,
+            "repos/fbsource/server.toml" => content,
         };
 
         let tmp_dir = TempDir::new("mononoke_test_config").unwrap();
 
-        for (path, (_, content)) in paths {
+        for (path, content) in paths {
             let file_path = Path::new(path);
             let dir = file_path.parent().unwrap();
             create_dir_all(tmp_dir.path().join(dir)).unwrap();
@@ -1069,13 +1068,13 @@ mod test {
         "#;
 
         let paths = btreemap! {
-            "common/hooks/hook1.lua" => (FileType::Regular, hook1_content),
-            "repos/fbsource/server.toml" => (FileType::Regular, content),
+            "common/hooks/hook1.lua" => hook1_content,
+            "repos/fbsource/server.toml" => content,
         };
 
         let tmp_dir = TempDir::new("mononoke_test_config").unwrap();
 
-        for (path, (_, content)) in paths {
+        for (path, content) in paths {
             let file_path = Path::new(path);
             let dir = file_path.parent().unwrap();
             create_dir_all(tmp_dir.path().join(dir)).unwrap();

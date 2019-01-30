@@ -27,12 +27,6 @@ extern crate sql;
 extern crate tempdir;
 extern crate toml;
 
-extern crate mercurial;
-extern crate mercurial_types;
-#[cfg(test)]
-extern crate mercurial_types_mocks;
-extern crate mononoke_types;
-
 pub mod errors;
 pub mod repoconfig;
 
