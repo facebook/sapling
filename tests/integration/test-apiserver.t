@@ -9,8 +9,9 @@ setup testing repo for mononoke
   $ hg init repo-hg
   $ cd repo-hg
   $ setup_hg_server
-  $ TEST_CONTENT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 1000 | head -n 1)
-  $ echo $TEST_CONTENT >> test
+  >>> import os, textwrap, base64
+  >>> open('test', 'w').write(textwrap.fill(base64.b64encode(os.urandom(10000))) + "\n")
+  $ TEST_CONTENT=$(cat test)
   $ SHA=$(sha256sum test | awk '{print $1;}')
   $ ln -s test link
   $ mkdir -p folder/subfolder
@@ -51,8 +52,8 @@ starts api server
   $ APISERVER_PORT=$(get_free_socket)
   $ apiserver -H "[::1]" -p $APISERVER_PORT
   $ wait_for_apiserver
-  $ alias sslcurl="sslcurl --silent"
-  $ alias s_client="openssl s_client -connect $APIHOST -cert \"$TESTDIR/testcert.crt\" -key \"$TESTDIR/testcert.key\" -ign_eof"
+  $ function sslcurl() { curl --silent --cert "$TESTDIR/testcert.crt" --cacert "$TESTDIR/testcert.crt" --key "$TESTDIR/testcert.key" "$@"; }
+  $ function s_client() { openssl s_client -connect $APIHOST -cert "$TESTDIR/testcert.crt" -key "$TESTDIR/testcert.key" -ign_eof "$@"; }
 
 ping test
   $ sslcurl -i $APISERVER/health_check | grep -iv "date"
@@ -177,24 +178,24 @@ test reachability on url encoded bookmarks
   false (no-eol)
 
 test folder list
-  $ sslcurl $APISERVER/repo/list/$COMMIT2/folder | tee output | python -mjson.tool
+  $ sslcurl $APISERVER/repo/list/$COMMIT2/folder | tee output | jq .
   [
-      {
-          "name": "subfolder",
-          "type": "tree",
-          "hash": "732eacf2be3265bd6bc4d2c205434b280f446cbf"
-      }
+    {
+      "name": "subfolder",
+      "type": "tree",
+      "hash": "732eacf2be3265bd6bc4d2c205434b280f446cbf"
+    }
   ]
 
   $ TREEHASH=$(cat output | jq -r ".[0].hash")
 
-  $ sslcurl $APISERVER/repo/list/$COMMIT2/folder/subfolder | python -mjson.tool
+  $ sslcurl $APISERVER/repo/list/$COMMIT2/folder/subfolder | jq .
   [
-      {
-          "name": ".keep",
-          "type": "file",
-          "hash": "2c186c8c5bc0df5af5b951afe407d803f9e6b8c9"
-      }
+    {
+      "name": ".keep",
+      "type": "file",
+      "hash": "2c186c8c5bc0df5af5b951afe407d803f9e6b8c9"
+    }
   ]
 
 test nonexist fold
@@ -224,15 +225,15 @@ test get blob by hash
   404
 
 test get tree
-  $ sslcurl $APISERVER/repo/tree/$TREEHASH | python -mjson.tool
+  $ sslcurl $APISERVER/repo/tree/$TREEHASH | jq .
   [
-      {
-          "name": ".keep",
-          "type": "file",
-          "hash": "2c186c8c5bc0df5af5b951afe407d803f9e6b8c9",
-          "size": 6,
-          "content_sha1": "f572d396fae9206628714fb2ce00f72e94f2258f"
-      }
+    {
+      "name": ".keep",
+      "type": "file",
+      "hash": "2c186c8c5bc0df5af5b951afe407d803f9e6b8c9",
+      "size": 6,
+      "content_sha1": "f572d396fae9206628714fb2ce00f72e94f2258f"
+    }
   ]
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/tree/$BLOBHASH | extract_json_error > output

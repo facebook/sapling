@@ -23,7 +23,7 @@
   $ for (( i=0; i < $lines_cnt; i++ ))
   > do
   >  LINE_LENGTH=$(random_int $max_line_length)
-  >  echo $(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w $LINE_LENGTH | head -n 1) >> file
+  >  echo $(head -c 10000 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w $LINE_LENGTH 2>/dev/null | head -n 1) >> file
   > done
 
   $ hg ci -Aqm "commit"$c
@@ -35,7 +35,7 @@
   >   do
   >     LINE_LENGTH=$(random_int $max_line_length)
   >     LINE_NUMBER=$(random_int $lines_cnt)
-  >     CONTENT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w $LINE_LENGTH | head -n 1)
+  >     CONTENT=$(head -c 10000 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w $LINE_LENGTH 2>/dev/null | head -n 1)
   >     sed -i "$LINE_NUMBER""s/.*/$CONTENT/" file
   >   done
   >   hg ci -Aqm "commit"$c

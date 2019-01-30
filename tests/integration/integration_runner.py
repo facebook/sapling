@@ -12,6 +12,7 @@ import multiprocessing
 import os
 import shutil
 import sys
+import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 
@@ -29,6 +30,7 @@ MONONOKE_BONSAI_VERIFY_TARGET = '//scm/mononoke:bonsai_verify'
 MONONOKE_APISERVER_TARGET = '//scm/mononoke/apiserver:apiserver'
 DUMMYSSH_TARGET = '//scm/mononoke/tests/integration:dummyssh'
 BINARY_HG_TARGET = '//scm/hg:hg'
+BINARY_HGPYTHON_TARGET = '//scm/hg:hgpython'
 MONONOKE_HGCLI_TARGET = '//scm/mononoke/hgcli:hgcli'
 MONONOKE_SERVER_TARGET = '//scm/mononoke:mononoke'
 FACEBOOK_HOOKS_TARGET = '//scm/mononoke/facebook/hooks:hooks'
@@ -74,17 +76,16 @@ def run(
     ctx, tests, dry_run, interactive, output, verbose, debug,
     simple_test_selector, keep_tmpdir
 ):
-    runner = hg_run_tests.TestRunner()
-
     testdir = parutil.get_dir_path(TESTDIR_PATH)
-    # Also add to the system path because the Mercurial run-tests.py does an
-    # absolute import of killdaemons etc.
-    sys.path.insert(0, os.path.join(testdir, 'third_party'))
-
-    # Use hg.real to avoid going through the wrapper and incurring slowdown
-    # from subprocesses.
-    # XXX is this the right thing to do?
-    args = ['--with-hg', get_hg_binary()]
+    run_tests_dir = os.path.join(
+        os.path.join(testdir, 'third_party'), 'hg_run_tests.py'
+    )
+    args = [
+        get_hg_python_binary(),
+        run_tests_dir,
+        '--maxdifflines=1000',
+        '--with-hg', get_hg_binary()
+    ]
     if dry_run:
         args.append('--list-tests')
     if interactive:
@@ -139,7 +140,15 @@ def run(
             # particular, add_to_environ depends on getcwd always being inside
             # fbcode
             os.chdir(testdir)
-            ret = runner.run(args)
+            # Also add to the system path because the Mercurial run-tests.py does an
+            # absolute import of killdaemons etc.
+            env = os.environ.copy()
+            env["HGPYTHONPATH"] = os.path.join(testdir, 'third_party')
+            p = subprocess.Popen(
+                args, env=env, stderr=sys.stderr, stdout=sys.stdout
+            )
+            p.communicate("")
+            ret = p.returncode
 
         if dry_run:
             # The output must go to stdout. Set simple_test_selector to make
@@ -172,6 +181,11 @@ def get_hg_binary():
         BINARY_HG_TARGET, pathutils.BuildRuleTypes.PYTHON_BINARY
     )
 
+
+def get_hg_python_binary():
+    return pathutils.get_build_rule_output_path(
+        BINARY_HGPYTHON_TARGET, pathutils.BuildRuleTypes.PYTHON_BINARY
+    )
 
 if __name__ == '__main__':
     run()

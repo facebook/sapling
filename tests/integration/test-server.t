@@ -19,7 +19,7 @@ setup data
 start mononoke
   $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
-  $ alias s_client="openssl s_client -connect localhost:$MONONOKE_SOCKET -cert \"$TESTDIR/testcert.crt\" -key \"$TESTDIR/testcert.key\" -ign_eof"
+  $ function s_client () { openssl s_client -connect localhost:$MONONOKE_SOCKET -cert "$TESTDIR/testcert.crt" -key "$TESTDIR/testcert.key" -ign_eof "$@"; }
 
 test TLS Session/Ticket resumption when using client certs
   $ TMPFILE=$(mktemp)
