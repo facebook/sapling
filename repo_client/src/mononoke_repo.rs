@@ -8,26 +8,12 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PrefixBlobstore};
 use client::streaming_clone::SqlStreamingChunksFetcher;
 use errors::*;
-use failure::err_msg;
-use futures::{future, Future, IntoFuture};
-use futures_ext::FutureExt;
 use hooks::HookManager;
-use metaconfig::repoconfig::{RepoReadOnly, RepoType};
+use metaconfig::repoconfig::RepoReadOnly;
 use metaconfig::{LfsParams, PushrebaseParams};
 use mononoke_types::RepositoryId;
-use rand::distributions::{Distribution, LogNormal};
-use rand::prelude::*;
-use rand_hc::Hc128Rng;
-use scribe_cxx::ScribeCxxClient;
-use slog::Logger;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
-use std::time::Duration;
-
-struct LogNormalGenerator {
-    rng: Hc128Rng,
-    distribution: LogNormal,
-}
 
 #[derive(Clone)]
 pub struct SqlStreamingCloneConfig {
@@ -96,91 +82,6 @@ impl MononokeRepo {
 
     pub fn readonly(&self) -> RepoReadOnly {
         self.readonly
-    }
-}
-
-pub fn open_blobrepo(
-    logger: Logger,
-    repotype: RepoType,
-    repoid: RepositoryId,
-    myrouter_port: Option<u16>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
-    use metaconfig::repoconfig::RepoType::*;
-
-    match repotype {
-        BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)
-            .into_future()
-            .left_future(),
-        BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)
-            .into_future()
-            .left_future(),
-        BlobSqlite(ref path) => BlobRepo::new_sqlite(logger, &path, repoid)
-            .into_future()
-            .left_future(),
-        BlobRemote {
-            ref blobstores_args,
-            ref db_address,
-            ref filenode_shards,
-        } => {
-            let myrouter_port = match myrouter_port {
-                None => {
-                    return future::err(err_msg(
-                        "Missing myrouter port, unable to open BlobRemote repo",
-                    ))
-                    .left_future();
-                }
-                Some(myrouter_port) => myrouter_port,
-            };
-            BlobRepo::new_remote_scribe_commits(
-                logger,
-                blobstores_args,
-                db_address.clone(),
-                filenode_shards.clone(),
-                repoid,
-                myrouter_port,
-                ScribeCxxClient::new(),
-            )
-            .right_future()
-        }
-        TestBlobDelayRocks(ref path, mean, stddev) => {
-            // We take in an arithmetic mean and stddev, and deduce a log normal
-            let mean = mean as f64 / 1_000_000.0;
-            let stddev = stddev as f64 / 1_000_000.0;
-            let variance = stddev * stddev;
-            let mean_squared = mean * mean;
-
-            let mu = (mean_squared / (variance + mean_squared).sqrt()).ln();
-            let sigma = (1.0 + variance / mean_squared).ln();
-
-            let max_delay = 16.0;
-
-            let mut delay_gen = LogNormalGenerator {
-                // This is a deterministic RNG if not seeded
-                rng: Hc128Rng::from_seed([0; 32]),
-                distribution: LogNormal::new(mu, sigma),
-            };
-            let delay_gen = move |()| {
-                let delay = delay_gen.distribution.sample(&mut delay_gen.rng);
-                let delay = if delay < 0.0 || delay > max_delay {
-                    max_delay
-                } else {
-                    delay
-                };
-                let seconds = delay as u64;
-                let nanos = ((delay - seconds as f64) * 1_000_000_000.0) as u32;
-                Duration::new(seconds, nanos)
-            };
-            BlobRepo::new_rocksdb_delayed(
-                logger, &path, repoid, delay_gen,
-                // Roundtrips to the server - i.e. how many delays to apply
-                2, // get
-                3, // put
-                2, // is_present
-                2, // assert_present
-            )
-            .into_future()
-            .left_future()
-        }
     }
 }
 

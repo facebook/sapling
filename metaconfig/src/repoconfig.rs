@@ -320,10 +320,6 @@ pub enum RepoType {
         /// If present, the number of shards to spread filenodes across
         filenode_shards: Option<usize>,
     },
-    /// Blob repository with path pointing to on-disk files with data. The files are stored in a
-    /// RocksDb database, and a log-normal delay is applied to access to simulate a remote store
-    /// like Manifold. Params are path, mean microseconds, stddev microseconds.
-    TestBlobDelayRocks(PathBuf, u64, u64),
 }
 
 /// Configuration of a metaconfig repository
@@ -591,11 +587,6 @@ impl RepoConfigs {
                     filenode_shards: this.filenode_shards,
                 }
             }
-            RawRepoType::TestBlobDelayRocks => RepoType::TestBlobDelayRocks(
-                get_path(&this)?,
-                this.delay_mean.expect("mean delay must be specified"),
-                this.delay_stddev.expect("stddev delay must be specified"),
-            ),
         };
 
         let enabled = this.enabled.unwrap_or(true);
@@ -771,8 +762,6 @@ enum RawRepoType {
     BlobSqlite,
     #[serde(rename = "blob:remote")]
     BlobRemote,
-    #[serde(rename = "blob:testdelay")]
-    TestBlobDelayRocks,
 }
 
 /// Types of blobstores supported

@@ -67,6 +67,7 @@ extern crate multiplexedblob;
 extern crate rocksblob;
 extern crate rocksdb;
 extern crate scribe;
+extern crate scribe_cxx;
 extern crate scuba;
 extern crate scuba_ext;
 extern crate sqlblob;
@@ -110,4 +111,57 @@ pub use repo_commit::compute_changed_files;
 pub mod internal {
     pub use memory_manifest::{MemoryManifestEntry, MemoryRootManifest};
     pub use utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
+}
+
+use failure::{err_msg, Error};
+use futures::{future, Future, IntoFuture};
+use futures_ext::FutureExt;
+use metaconfig::RepoType;
+use mononoke_types::RepositoryId;
+use scribe_cxx::ScribeCxxClient;
+
+pub fn open_blobrepo(
+    logger: slog::Logger,
+    repotype: RepoType,
+    repoid: RepositoryId,
+    myrouter_port: Option<u16>,
+) -> impl Future<Item = BlobRepo, Error = Error> {
+    use metaconfig::repoconfig::RepoType::*;
+
+    match repotype {
+        BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)
+            .into_future()
+            .left_future(),
+        BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)
+            .into_future()
+            .left_future(),
+        BlobSqlite(ref path) => BlobRepo::new_sqlite(logger, &path, repoid)
+            .into_future()
+            .left_future(),
+        BlobRemote {
+            ref blobstores_args,
+            ref db_address,
+            ref filenode_shards,
+        } => {
+            let myrouter_port = match myrouter_port {
+                None => {
+                    return future::err(err_msg(
+                        "Missing myrouter port, unable to open BlobRemote repo",
+                    ))
+                    .left_future();
+                }
+                Some(myrouter_port) => myrouter_port,
+            };
+            BlobRepo::new_remote_scribe_commits(
+                logger,
+                blobstores_args,
+                db_address.clone(),
+                filenode_shards.clone(),
+                repoid,
+                myrouter_port,
+                ScribeCxxClient::new(),
+            )
+            .right_future()
+        }
+    }
 }

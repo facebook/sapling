@@ -84,9 +84,6 @@ impl MononokeRepo {
                     })
                     .right_future(),
             },
-            _ => Err(err_msg("Unsupported repo type."))
-                .into_future()
-                .left_future(),
         };
 
         repo.map(|repo| Self { repo, executor })

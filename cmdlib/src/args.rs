@@ -27,13 +27,12 @@ use uuid::Uuid;
 use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
-use blobrepo::BlobRepo;
+use blobrepo::{open_blobrepo, BlobRepo};
 use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use metaconfig::{ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoConfigs, RepoType};
 use mononoke_types::RepositoryId;
 use phases::SqlPhases;
-use repo_client::open_blobrepo;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -297,7 +296,6 @@ where
     match repo_type {
         RepoType::BlobFiles(ref data_dir)
         | RepoType::BlobRocks(ref data_dir)
-        | RepoType::TestBlobDelayRocks(ref data_dir, ..)
         | RepoType::BlobSqlite(ref data_dir) => T::with_sqlite_path(data_dir.join(name)),
         RepoType::BlobRemote { ref db_address, .. } => {
             let myrouter_port =
@@ -562,10 +560,6 @@ fn open_repo_internal<'a>(
             ref blobstores_args,
             ..
         } => logger.new(o!["BlobRepo:Remote" => format!("{:?}", blobstores_args)]),
-        RepoType::TestBlobDelayRocks(ref data_dir, ..) => {
-            setup_repo_dir(&data_dir, create).expect("Setting up rocksdb blobrepo failed");
-            logger.new(o!["BlobRepo:DelayRocksdb" => data_dir.to_string_lossy().into_owned()])
-        }
     };
 
     let myrouter_port = parse_myrouter_port(matches);

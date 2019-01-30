@@ -16,6 +16,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 use sql::myrouter;
 
+use blobrepo::open_blobrepo;
 use blobstore::Blobstore;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
@@ -25,7 +26,7 @@ use mononoke_types::RepositoryId;
 use phases::{CachingHintPhases, HintPhases, Phases, SqlConstructors, SqlPhases};
 use reachabilityindex::{deserialize_skiplist_map, LeastCommonAncestorsHint, SkiplistIndex};
 use ready_state::ReadyStateBuilder;
-use repo_client::{open_blobrepo, streaming_clone, MononokeRepo};
+use repo_client::{streaming_clone, MononokeRepo};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 
 #[derive(Clone)]
@@ -174,7 +175,6 @@ pub fn repo_handlers(
                             let phases_hint: Arc<Phases> = match repotype {
                                 RepoType::BlobFiles(ref data_dir)
                                 | RepoType::BlobRocks(ref data_dir)
-                                | RepoType::TestBlobDelayRocks(ref data_dir, ..)
                                 | RepoType::BlobSqlite(ref data_dir) => {
                                     let storage = Arc::new(
                                         SqlPhases::with_sqlite_path(data_dir.join("phases"))

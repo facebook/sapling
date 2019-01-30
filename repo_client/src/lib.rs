@@ -21,7 +21,6 @@ extern crate futures_stats;
 extern crate itertools;
 extern crate pylz4;
 extern crate rand;
-extern crate rand_hc;
 extern crate scribe;
 extern crate scribe_cxx;
 #[macro_use]
@@ -61,4 +60,4 @@ mod mononoke_repo;
 
 pub use client::streaming_clone::SqlStreamingChunksFetcher;
 pub use client::RepoClient;
-pub use mononoke_repo::{open_blobrepo, streaming_clone, MononokeRepo};
+pub use mononoke_repo::{streaming_clone, MononokeRepo};

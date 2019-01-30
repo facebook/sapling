@@ -10,6 +10,7 @@
 #![feature(never_type)]
 #![feature(try_from)]
 
+extern crate blobrepo;
 extern crate blobstore;
 extern crate bytes;
 #[macro_use]

@@ -43,6 +43,7 @@ extern crate tokio_timer;
 
 pub mod tailer;
 
+use blobrepo::open_blobrepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
 use context::CoreContext;
@@ -57,7 +58,6 @@ use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::HgNodeHash;
 use metaconfig::RepoConfigs;
 use mononoke_types::RepositoryId;
-use repo_client::open_blobrepo;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
