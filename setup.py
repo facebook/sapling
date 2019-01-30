@@ -2068,9 +2068,7 @@ if havefb:
         RustVendoredCrates("tp2-crates-io", dest="build/tp2-crates-io")
     )
     cargoconfig += """
-# Vendor in Rust crates.  "build/hg-vendored-crates" is populated by the
-# contents of a vendor package downloaded from Dewey with the hash in
-# ".hg-vendored-crates".
+# Use vendored crates in "build/tp2-crates-io".
 
 [source.crates-io]
 replace-with = "vendored-sources"
