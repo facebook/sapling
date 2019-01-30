@@ -32,7 +32,6 @@ use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use metaconfig::{ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoConfigs, RepoType};
 use mononoke_types::RepositoryId;
-use phases::SqlPhases;
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -288,7 +287,7 @@ pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> RepositoryId {
     RepositoryId::new(repo_id as i32)
 }
 
-fn open_sql<T>(matches: &ArgMatches, name: &'static str) -> Result<T>
+pub fn open_sql<T>(matches: &ArgMatches, name: &'static str) -> Result<T>
 where
     T: SqlConstructors,
 {
@@ -307,10 +306,6 @@ where
 
 pub fn open_sql_changesets(matches: &ArgMatches) -> Result<SqlChangesets> {
     open_sql::<SqlChangesets>(matches, "changesets")
-}
-
-pub fn open_sql_phases(matches: &ArgMatches) -> Result<SqlPhases> {
-    open_sql::<SqlPhases>(matches, "phases")
 }
 
 /// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.

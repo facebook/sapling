@@ -6,6 +6,7 @@
 
 #![deny(warnings)]
 
+extern crate blobimport_lib;
 extern crate clap;
 extern crate cloned;
 extern crate cmdlib;
@@ -14,6 +15,7 @@ extern crate futures;
 extern crate mercurial_types;
 #[macro_use]
 extern crate slog;
+extern crate phases;
 extern crate tokio;
 extern crate tracing;
 
@@ -24,9 +26,10 @@ use clap::{App, Arg};
 use cloned::cloned;
 use failure::{Result, SlogKVError};
 use futures::Future;
+use phases::SqlPhases;
 use tracing::{trace_args, Traced};
 
-use cmdlib::{args, blobimport_lib::Blobimport};
+use cmdlib::args;
 use mercurial_types::HgNodeHash;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -89,11 +92,11 @@ fn main() -> Result<()> {
 
     let no_bookmark = matches.is_present("no-bookmark");
 
-    let phases_store = Arc::new(args::open_sql_phases(&matches)?);
+    let phases_store = Arc::new(args::open_sql::<SqlPhases>(&matches, "phases")?);
 
     let blobimport = args::create_repo(&ctx.logger(), &matches).and_then(move |repo| {
         let blobrepo = Arc::new(repo.clone());
-        Blobimport {
+        blobimport_lib::Blobimport {
             ctx: ctx.clone(),
             logger: ctx.logger().clone(),
             blobrepo,

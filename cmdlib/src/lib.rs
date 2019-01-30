@@ -14,8 +14,6 @@ extern crate bytes;
 extern crate cachelib;
 extern crate clap;
 #[macro_use]
-extern crate cloned;
-#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
@@ -39,8 +37,6 @@ extern crate mercurial_types;
 extern crate metaconfig;
 extern crate mononoke_types;
 extern crate panichandler;
-extern crate phases;
 extern crate scuba_ext;
 
 pub mod args;
-pub mod blobimport_lib;

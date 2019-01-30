@@ -10,7 +10,7 @@ use std::sync::Arc;
 use ascii::AsciiString;
 use failure::err_msg;
 use failure::prelude::*;
-use futures::{stream, prelude::*};
+use futures::{prelude::*, stream};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 

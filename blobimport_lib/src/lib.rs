@@ -6,6 +6,28 @@
 
 #![deny(warnings)]
 
+extern crate ascii;
+extern crate blobrepo;
+extern crate bookmarks;
+extern crate bytes;
+extern crate context;
+#[macro_use]
+extern crate cloned;
+#[macro_use]
+extern crate failure_ext as failure;
+extern crate futures;
+#[macro_use]
+extern crate futures_ext;
+extern crate mercurial;
+extern crate mercurial_types;
+extern crate mononoke_types;
+extern crate phases;
+#[macro_use]
+extern crate slog;
+extern crate scuba_ext;
+extern crate tokio;
+extern crate tracing;
+
 mod bookmark;
 mod changeset;
 
