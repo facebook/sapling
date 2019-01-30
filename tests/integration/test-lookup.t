@@ -43,9 +43,9 @@ start mononoke
 
 Helper script to test the lookup function
   $ cat >> $TESTTMP/lookup.py <<EOF
-  > from mercurial import registrar
-  > from mercurial.node import bin
-  > from mercurial import (bundle2, extensions)
+  > from edenscm.mercurial import registrar
+  > from edenscm.mercurial.node import bin
+  > from edenscm.mercurial import (bundle2, extensions)
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('lookup', [], ('key'))
