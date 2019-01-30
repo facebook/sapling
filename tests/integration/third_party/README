@@ -1,8 +1,1 @@
-These files are from https://www.mercurial-scm.org/repo/hg/rev/6f775d10e83b.
-
-* tests/run-tests.py -> hg_run_tests.py
-* tests/killdaemons.py -> killdaemons.py
-* tests/dummyssh -> dummyssh.py
-
-TODO (t19267625): for the open source version, fetch these files dynamically
-using a script instead.
+These files are links from //scm/hg/tests

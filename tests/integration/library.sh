@@ -420,21 +420,6 @@ function aliasverify() {
      --mode "$mode" "$@"
 }
 
-
-function showgraph() {
-  hg log --graph -T "{rev} {node|short} {desc|firstline}" | sed \$d
-}
-
-
-function tglog() {
-  hg log -G -T "{rev}: {node|short} '{desc}' {bookmarks} {branches}" "$@"
-}
-
-
-function tglogp() {
-  hg log -G -T "{rev}: {node|short} {phase} '{desc}' {bookmarks} {branches}" "$@"
-}
-
 # Without rev
 function tglogpnr() {
   hg log -G -T "{node|short} {phase} '{desc}' {bookmarks} {branches}" "$@"

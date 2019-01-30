@@ -20,8 +20,6 @@ import click
 
 from libfb.py import parutil, pathutils
 
-from .third_party import hg_run_tests
-
 TESTDIR_PATH = 'scm/mononoke/tests/integration'
 
 MONONOKE_BLOBIMPORT_TARGET = '//scm/mononoke:blobimport'
