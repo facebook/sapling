@@ -1829,7 +1829,12 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
         changeset: HookChangeset,
     ) -> Result<HookExecution, Error> {
         let hook = LuaHook::new(String::from("testhook"), code.to_string());
-        let context = HookContext::new(hook.name.clone(), "some-repo".into(), changeset);
+        let context = HookContext::new(
+            hook.name.clone(),
+            "some-repo".into(),
+            Default::default(),
+            changeset,
+        );
         hook.run(ctx, context).wait()
     }
 
@@ -1839,7 +1844,12 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
         hook_file: HookFile,
     ) -> Result<HookExecution, Error> {
         let hook = LuaHook::new(String::from("testhook"), code.to_string());
-        let context = HookContext::new(hook.name.clone(), "some-repo".into(), hook_file);
+        let context = HookContext::new(
+            hook.name.clone(),
+            "some-repo".into(),
+            Default::default(),
+            hook_file,
+        );
         hook.run(ctx, context).wait()
     }
 

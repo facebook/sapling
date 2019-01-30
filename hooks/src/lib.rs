@@ -73,7 +73,7 @@ use futures::{failed, finished, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, HgParents, MPath, manifest::get_empty_manifest,
                       manifest_utils::{self, EntryStatus}};
-use metaconfig::repoconfig::{HookBypass, HookManagerParams};
+use metaconfig::repoconfig::{HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::{FileContents, FileType};
 use slog::Logger;
 use std::collections::{HashMap, HashSet};
@@ -83,8 +83,8 @@ use std::mem;
 use std::str;
 use std::sync::{Arc, Mutex};
 
-type ChangesetHooks = HashMap<String, (Arc<Hook<HookChangeset>>, Option<HookBypass>)>;
-type FileHooks = Arc<Mutex<HashMap<String, (Arc<Hook<HookFile>>, Option<HookBypass>)>>>;
+type ChangesetHooks = HashMap<String, (Arc<Hook<HookChangeset>>, HookConfig)>;
+type FileHooks = Arc<Mutex<HashMap<String, (Arc<Hook<HookFile>>, HookConfig)>>>;
 type Cache = Asyncmemo<HookCacheFiller>;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
@@ -174,20 +174,20 @@ impl HookManager {
         &mut self,
         hook_name: &str,
         hook: Arc<Hook<HookChangeset>>,
-        bypass: Option<HookBypass>,
+        config: HookConfig,
     ) {
         self.changeset_hooks
-            .insert(hook_name.to_string(), (hook, bypass));
+            .insert(hook_name.to_string(), (hook, config));
     }
 
     pub fn register_file_hook(
         &mut self,
         hook_name: &str,
         hook: Arc<Hook<HookFile>>,
-        bypass: Option<HookBypass>,
+        config: HookConfig,
     ) {
         let mut hooks = self.file_hooks.lock().unwrap();
-        hooks.insert(hook_name.to_string(), (hook, bypass));
+        hooks.insert(hook_name.to_string(), (hook, config));
     }
 
     pub fn set_hooks_for_bookmark(&mut self, bookmark: Bookmark, hooks: Vec<String>) {
@@ -287,13 +287,17 @@ impl HookManager {
         ctx: CoreContext,
         repo_name: String,
         changeset: HookChangeset,
-        hooks: Vec<(String, Arc<Hook<HookChangeset>>)>,
+        hooks: Vec<(String, Arc<Hook<HookChangeset>>, HookConfig)>,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
         let v: Vec<BoxFuture<(String, HookExecution), _>> = hooks
             .iter()
-            .map(move |(hook_name, hook)| {
-                let hook_context: HookContext<HookChangeset> =
-                    HookContext::new(hook_name.clone(), repo_name.clone(), changeset.clone());
+            .map(move |(hook_name, hook, config)| {
+                let hook_context: HookContext<HookChangeset> = HookContext::new(
+                    hook_name.clone(),
+                    repo_name.clone(),
+                    config.clone(),
+                    changeset.clone(),
+                );
                 HookManager::run_changeset_hook(ctx.clone(), hook.clone(), hook_context)
             })
             .collect();
@@ -354,7 +358,7 @@ impl HookManager {
         &self,
         ctx: CoreContext,
         changeset_id: HgChangesetId,
-        hooks: Vec<(String, (Arc<Hook<HookFile>>, Option<HookBypass>))>,
+        hooks: Vec<(String, (Arc<Hook<HookFile>>, HookConfig))>,
         maybe_pushvars: Option<HashMap<String, Bytes>>,
         logger: Logger,
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
@@ -370,7 +374,7 @@ impl HookManager {
                     &hcs.comments,
                     maybe_pushvars.as_ref(),
                 );
-                let hooks = hooks.into_iter().map(|(name, _)| name).collect();
+                let hooks = hooks.into_iter().map(|(name, _, _)| name).collect();
 
                 HookManager::run_file_hooks_for_changeset(
                     changeset_id,
@@ -488,22 +492,25 @@ impl HookManager {
     }
 
     fn filter_bypassed_hooks<T: Clone>(
-        hooks: Vec<(String, (T, Option<HookBypass>))>,
+        hooks: Vec<(String, (T, HookConfig))>,
         commit_msg: &String,
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
-    ) -> Vec<(String, T)> {
+    ) -> Vec<(String, T, HookConfig)> {
         hooks
             .clone()
             .into_iter()
-            .filter_map(|(hook_name, (hook, bypass))| match bypass {
-                Some(bypass) => {
-                    if HookManager::is_hook_bypassed(&bypass, commit_msg, maybe_pushvars) {
-                        None
-                    } else {
-                        Some((hook_name, hook))
+            .filter_map(|(hook_name, (hook, config))| {
+                let maybe_bypassed_hook = match config.bypass {
+                    Some(ref bypass) => {
+                        if HookManager::is_hook_bypassed(bypass, commit_msg, maybe_pushvars) {
+                            None
+                        } else {
+                            Some(())
+                        }
                     }
-                }
-                None => Some((hook_name, hook)),
+                    None => Some(()),
+                };
+                maybe_bypassed_hook.map(move |()| (hook_name, hook, config))
             })
             .collect()
     }
@@ -984,6 +991,7 @@ impl Filler for HookCacheFiller {
                 let hook_context: HookContext<HookFile> = HookContext::new(
                     key.hook_name.clone(),
                     self.repo_name.clone(),
+                    arc_hook.1.clone(),
                     key.file.clone(),
                 );
                 arc_hook.0.run(self.ctx.clone(), hook_context)
@@ -1040,6 +1048,7 @@ where
 {
     pub hook_name: String,
     pub repo_name: String,
+    pub config: HookConfig,
     pub data: T,
 }
 
@@ -1047,10 +1056,11 @@ impl<T> HookContext<T>
 where
     T: Clone,
 {
-    fn new(hook_name: String, repo_name: String, data: T) -> HookContext<T> {
+    fn new(hook_name: String, repo_name: String, config: HookConfig, data: T) -> HookContext<T> {
         HookContext {
             hook_name,
             repo_name,
+            config,
             data,
         }
     }
@@ -1559,6 +1569,7 @@ mod test {
             let expected_context = HookContext {
                 hook_name: "hook1".into(),
                 repo_name: "some_repo".into(),
+                config: Default::default(),
                 data,
             };
             let hooks: HashMap<String, Box<Hook<HookChangeset>>> = hashmap! {
@@ -1980,9 +1991,9 @@ mod test {
         async_unit::tokio_unit_test(|| {
             let mut hook_manager = hook_manager_inmem();
             let hook1 = always_accepting_changeset_hook();
-            hook_manager.register_changeset_hook("hook1", hook1.into(), None);
+            hook_manager.register_changeset_hook("hook1", hook1.into(), Default::default());
             let hook2 = always_accepting_changeset_hook();
-            hook_manager.register_changeset_hook("hook2", hook2.into(), None);
+            hook_manager.register_changeset_hook("hook2", hook2.into(), Default::default());
 
             let set = hook_manager.changeset_hook_names();
             assert_eq!(2, set.len());
@@ -2028,7 +2039,7 @@ mod test {
     ) {
         let mut hook_manager = setup_hook_manager(bookmarks, inmem);
         for (hook_name, hook) in hooks {
-            hook_manager.register_changeset_hook(&hook_name, hook.into(), None);
+            hook_manager.register_changeset_hook(&hook_name, hook.into(), Default::default());
         }
         let fut = hook_manager.run_changeset_hooks_for_bookmark(
             ctx,
@@ -2063,7 +2074,7 @@ mod test {
     ) {
         let mut hook_manager = setup_hook_manager(bookmarks, inmem);
         for (hook_name, hook) in hooks {
-            hook_manager.register_file_hook(&hook_name, hook.into(), None);
+            hook_manager.register_file_hook(&hook_name, hook.into(), Default::default());
         }
         let fut: BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> = hook_manager
             .run_file_hooks_for_bookmark(

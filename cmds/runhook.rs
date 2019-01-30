@@ -123,9 +123,9 @@ fn run_hook(
             code,
         };
         if file_hook {
-            hook_manager.register_file_hook("testhook", Arc::new(hook), None);
+            hook_manager.register_file_hook("testhook", Arc::new(hook), Default::default());
         } else {
-            hook_manager.register_changeset_hook("testhook", Arc::new(hook), None);
+            hook_manager.register_changeset_hook("testhook", Arc::new(hook), Default::default());
         }
         let bookmark = Bookmark::new("testbm").unwrap();
         hook_manager.set_hooks_for_bookmark(bookmark.clone(), vec!["testhook".to_string()]);

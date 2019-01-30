@@ -32,17 +32,17 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                         "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new()),
                         _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
                     };
-                    hook_manager.register_changeset_hook(&name, rust_hook, hook.bypass)
+                    hook_manager.register_changeset_hook(&name, rust_hook, hook.config)
                 } else {
                     let lua_hook = LuaHook::new(name.clone(), hook.code.clone().unwrap());
                     match hook.hook_type {
                         HookType::PerAddedOrModifiedFile => {
-                            hook_manager.register_file_hook(&name, Arc::new(lua_hook), hook.bypass)
+                            hook_manager.register_file_hook(&name, Arc::new(lua_hook), hook.config)
                         }
                         HookType::PerChangeset => hook_manager.register_changeset_hook(
                             &name,
                             Arc::new(lua_hook),
-                            hook.bypass,
+                            hook.config,
                         ),
                     }
                 }
@@ -133,25 +133,25 @@ mod test {
                     name: "hook1".into(),
                     code: Some("hook1 code".into()),
                     hook_type: HookType::PerAddedOrModifiedFile,
-                    bypass: None,
+                    config: Default::default(),
                 },
                 HookParams {
                     name: "hook2".into(),
                     code: Some("hook2 code".into()),
                     hook_type: HookType::PerAddedOrModifiedFile,
-                    bypass: None,
+                    config: Default::default(),
                 },
                 HookParams {
                     name: "hook3".into(),
                     code: Some("hook3 code".into()),
                     hook_type: HookType::PerChangeset,
-                    bypass: None,
+                    config: Default::default(),
                 },
                 HookParams {
                     name: "rust:verify_integrity".into(),
                     code: Some("whateva".into()),
                     hook_type: HookType::PerChangeset,
-                    bypass: None,
+                    config: Default::default(),
                 },
             ]);
 
@@ -179,7 +179,7 @@ mod test {
                     name: "hook1".into(),
                     code: Some("hook1 code".into()),
                     hook_type: HookType::PerAddedOrModifiedFile,
-                    bypass: None,
+                    config: Default::default(),
                 },
             ]);
 
@@ -213,7 +213,7 @@ mod test {
                     name: "rust:hook1".into(),
                     code: Some("hook1 code".into()),
                     hook_type: HookType::PerChangeset,
-                    bypass: None,
+                    config: Default::default(),
                 },
             ]);
 

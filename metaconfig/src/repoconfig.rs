@@ -173,6 +173,17 @@ pub enum HookBypass {
     },
 }
 
+/// Configs that are being passed to the hook during runtime
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct HookConfig {
+    /// An optional way to bypass a hook
+    pub bypass: Option<HookBypass>,
+    /// Map of config to it's value. Values here are strings
+    pub strings: HashMap<String, String>,
+    /// Map of config to it's value. Values here are integers
+    pub ints: HashMap<String, i64>,
+}
+
 /// Configuration for a hook
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct HookParams {
@@ -182,8 +193,8 @@ pub struct HookParams {
     pub hook_type: HookType,
     /// The code of the hook
     pub code: Option<String>,
-    /// An optional way to bypass a hook
-    pub bypass: Option<HookBypass>,
+    /// Configs that should be passed to hook
+    pub config: HookConfig,
 }
 
 /// Pushrebase configuration options
@@ -397,14 +408,19 @@ impl RepoConfigs {
 
         let mut all_hook_params = vec![];
         for raw_hook_config in hooks {
-            let bypass = RepoConfigs::get_bypass(raw_hook_config.clone())?;
+            let config = HookConfig {
+                bypass: RepoConfigs::get_bypass(raw_hook_config.clone())?,
+                strings: raw_hook_config.config_strings.unwrap_or_default(),
+                ints: raw_hook_config.config_ints.unwrap_or_default(),
+            };
+
             let hook_params = if raw_hook_config.name.starts_with("rust:") {
                 // No need to load lua code for rust hook
                 HookParams {
                     name: raw_hook_config.name,
                     code: None,
                     hook_type: raw_hook_config.hook_type,
-                    bypass,
+                    config,
                 }
             } else {
                 let path = raw_hook_config.path.clone();
@@ -431,7 +447,7 @@ impl RepoConfigs {
                     name: raw_hook_config.name,
                     code: Some(code),
                     hook_type: raw_hook_config.hook_type,
-                    bypass,
+                    config,
                 }
             };
 
@@ -724,6 +740,8 @@ struct RawHookConfig {
     hook_type: HookType,
     bypass_commit_string: Option<String>,
     bypass_pushvar: Option<String>,
+    config_strings: Option<HashMap<String, String>>,
+    config_ints: Option<HashMap<String, i64>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -833,9 +851,11 @@ mod test {
             path="./hooks/hook2.lua"
             hook_type="PerChangeset"
             bypass_pushvar="pushvar=pushval"
+            config_strings={ conf1 = "val1", conf2 = "val2" }
             [[hooks]]
             name="rust:rusthook"
             hook_type="PerChangeset"
+            config_ints={ int1 = 44 }
             [pushrebase]
             rewritedates = false
             recursion_limit = 1024
@@ -928,22 +948,39 @@ mod test {
                         name: "hook1".to_string(),
                         code: Some("this is hook1".to_string()),
                         hook_type: HookType::PerAddedOrModifiedFile,
-                        bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),
+                        config: HookConfig {
+                            bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),
+                            strings: hashmap!{},
+                            ints: hashmap!{},
+                        },
                     },
                     HookParams {
                         name: "hook2".to_string(),
                         code: Some("this is hook2".to_string()),
                         hook_type: HookType::PerChangeset,
-                        bypass: Some(HookBypass::Pushvar {
-                            name: "pushvar".into(),
-                            value: "pushval".into(),
-                        }),
+                        config: HookConfig {
+                            bypass: Some(HookBypass::Pushvar {
+                                name: "pushvar".into(),
+                                value: "pushval".into(),
+                            }),
+                            strings: hashmap!{
+                                "conf1".into() => "val1".into(),
+                                "conf2".into() => "val2".into(),
+                            },
+                            ints: hashmap!{},
+                        },
                     },
                     HookParams {
                         name: "rust:rusthook".to_string(),
                         code: None,
                         hook_type: HookType::PerChangeset,
-                        bypass: None,
+                        config: HookConfig {
+                            bypass: None,
+                            strings: hashmap!{},
+                            ints: hashmap!{
+                                "int1".into() => 44,
+                            },
+                        },
                     },
                 ]),
                 pushrebase: PushrebaseParams {
