@@ -238,14 +238,14 @@ def perftestsuitecmd(ui, repo, *revs, **opts):
 
     The rebase distance is configurable::
 
-    [perfsuite]
-    rebase.masterdistance = 100
-    immrebase.masterdistance = 100
+        [perfsuite]
+        rebase.masterdistance = 100
+        immrebase.masterdistance = 100
 
     The metrics endpoint is configurable::
 
-    [ods]
-    endpoint = https://somehost/metrics
+        [ods]
+        endpoint = https://somehost/metrics
     """
     if opts["seed"]:
         random.seed(opts["seed"])

@@ -949,8 +949,7 @@ def rebase(ui, repo, templ=None, **opts):
 
           hg rebase -r 5f493448 -d master
 
-      - Move a commit and all its descendants to another part of the commit
-      graph::
+      - Move a commit and all its descendants to another part of the commit graph::
 
           hg rebase --source c0c3 --dest 4cf9
 

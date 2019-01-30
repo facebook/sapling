@@ -427,8 +427,8 @@ def rage(ui, repo, *pats, **opts):
 
     After submitting to Phabricator, it prints configerable advice::
 
-    [rage]
-    advice = Please see our FAQ guide: https://...
+        [rage]
+        advice = Please see our FAQ guide: https://...
 
     """
     with progress.spinner(ui, "collecting information"):

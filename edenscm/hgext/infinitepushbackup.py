@@ -4,6 +4,8 @@
 # GNU General Public License version 2 or any later version.
 """ back up draft commits in the cloud
 
+Configs::
+
     [infinitepushbackup]
     # Whether to enable automatic backups. If this option is True then a backup
     # process will be started after every mercurial command that modifies the
@@ -288,9 +290,13 @@ def backup(ui, repo, dest=None, **opts):
     Pushes commits, bookmarks and heads to infinitepush.
     New non-extinct commits are saved since the last `hg pushbackup`
     or since 0 revision if this backup is the first.
-    Local bookmarks are saved remotely as:
+
+    Local bookmarks are saved remotely as::
+
         infinitepush/backups/USERNAME/HOST/REPOROOT/bookmarks/LOCAL_BOOKMARK
-    Local heads are saved remotely as:
+
+    Local heads are saved remotely as::
+
         infinitepush/backups/USERNAME/HOST/REPOROOT/heads/HEAD_HASH
     """
     if opts.get("background"):
