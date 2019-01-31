@@ -364,7 +364,7 @@ mod test {
     use context::CoreContext;
     use fixtures::linear;
     use fixtures::merge_uneven;
-    use reachabilityindex::SkiplistIndex;
+    use skiplist::SkiplistIndex;
     use revset_test_helper::{assert_changesets_sequence, string_to_bonsai};
     use tests::TestChangesetFetcher;
 

@@ -7,8 +7,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use cloned::cloned;
 use context::CoreContext;
-use failure::Error;
+use failure_ext::Error;
 use futures::future::{loop_fn, ok, Future, Loop};
 use futures::stream::{iter_ok, Stream};
 use futures_ext::{BoxFuture, FutureExt};
@@ -16,8 +17,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 
-use helpers::*;
-use index::ReachabilityIndex;
+use common::*;
+use reachabilityindex::ReachabilityIndex;
 
 pub struct GenerationNumberBFS {}
 
@@ -97,10 +98,11 @@ impl ReachabilityIndex for GenerationNumberBFS {
                                         curr_layer,
                                         curr_seen,
                                         dst_gen,
-                                    ).map(move |(next_layer, next_seen)| {
+                                    )
+                                    .map(move |(next_layer, next_seen)| {
                                         Loop::Continue((next_layer, next_seen))
                                     })
-                                        .boxify()
+                                    .boxify()
                                 }
                             },
                         )
@@ -115,9 +117,9 @@ impl ReachabilityIndex for GenerationNumberBFS {
 #[cfg(test)]
 mod test {
     use super::*;
-    use tests::test_branch_wide_reachability;
-    use tests::test_linear_reachability;
-    use tests::test_merge_uneven_reachability;
+    use test_helpers::test_branch_wide_reachability;
+    use test_helpers::test_linear_reachability;
+    use test_helpers::test_merge_uneven_reachability;
 
     #[test]
     fn linear_reachability() {

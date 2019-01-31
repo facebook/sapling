@@ -9,25 +9,25 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use chashmap::CHashMap;
+use cloned::cloned;
 use context::CoreContext;
-use failure::{Error, Result, SyncFailure};
+use failure_ext::{Error, Result, SyncFailure};
 use futures::future::{join_all, ok, Future};
 use futures::future::{loop_fn, Loop};
 use futures_ext::{BoxFuture, FutureExt};
+use maplit::{hashmap, hashset};
 
 use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 
-use helpers::{
+use common::{
     advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists,
     fetch_generation_and_join, get_parents,
 };
-use index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
+use reachabilityindex::{errors::*, LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
 use skiplist_thrift;
 
 use rust_thrift::compact_protocol;
-
-use errors::*;
 
 const DEFAULT_EDGE_COUNT: u32 = 10;
 
@@ -574,10 +574,10 @@ mod test {
     use fixtures::linear;
     use fixtures::merge_uneven;
     use fixtures::unshared_merge_even;
-    use tests::string_to_bonsai;
-    use tests::test_branch_wide_reachability;
-    use tests::test_linear_reachability;
-    use tests::test_merge_uneven_reachability;
+    use test_helpers::string_to_bonsai;
+    use test_helpers::test_branch_wide_reachability;
+    use test_helpers::test_linear_reachability;
+    use test_helpers::test_merge_uneven_reachability;
     use tokio;
 
     #[test]

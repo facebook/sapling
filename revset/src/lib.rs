@@ -27,6 +27,8 @@ extern crate mononoke_types_mocks;
 extern crate reachabilityindex;
 #[cfg(test)]
 extern crate revset_test_helper;
+#[cfg(test)]
+extern crate skiplist;
 extern crate uniqueheap;
 
 use futures::stream::Stream;

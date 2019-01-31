@@ -26,7 +26,8 @@ use mercurial_types::HgManifestId;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoType::{BlobFiles, BlobRemote, BlobRocks, BlobSqlite};
 use mononoke_types::{FileContents, RepositoryId};
-use reachabilityindex::{GenerationNumberBFS, ReachabilityIndex};
+use genbfs::GenerationNumberBFS;
+use reachabilityindex::ReachabilityIndex;
 
 use errors::ErrorKind;
 use from_string as FS;

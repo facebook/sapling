@@ -16,7 +16,7 @@ use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::ChangesetId;
 use reachabilityindex::ReachabilityIndex;
-use reachabilityindex::SkiplistIndex;
+use skiplist::SkiplistIndex;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use Phase;

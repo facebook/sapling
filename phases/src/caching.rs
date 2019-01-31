@@ -11,7 +11,7 @@ use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
-use reachabilityindex::SkiplistIndex;
+use skiplist::SkiplistIndex;
 use stats::Timeseries;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

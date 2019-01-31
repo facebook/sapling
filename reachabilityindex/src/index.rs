@@ -9,7 +9,7 @@ use std::default::Default;
 use std::iter::{Extend, FromIterator};
 use std::sync::Arc;
 
-use failure::Error;
+use failure_ext::Error;
 use futures_ext::BoxFuture;
 
 use changeset_fetcher::ChangesetFetcher;

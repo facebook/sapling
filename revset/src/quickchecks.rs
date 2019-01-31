@@ -37,7 +37,7 @@ mod test {
         thread_rng, Rng,
     };
     use quickcheck::{quickcheck, Arbitrary, Gen};
-    use reachabilityindex::SkiplistIndex;
+    use skiplist::SkiplistIndex;
     use revset_test_helper::single_changeset_id;
     use setdifferencenodestream::SetDifferenceNodeStream;
     use std::collections::HashSet;

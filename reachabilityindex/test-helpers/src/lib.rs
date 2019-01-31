@@ -4,24 +4,24 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use async_unit;
-use blobrepo::BlobRepo;
-use futures::future::Future;
+#![deny(warnings)]
+
 use std::sync::Arc;
 
+use blobrepo::BlobRepo;
 use context::CoreContext;
+use fixtures::{branch_wide, linear, merge_uneven};
+use futures::future::Future;
+
+#[cfg(test)]
+use common::fetch_generation_and_join;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::ChangesetId;
-
-use fixtures::branch_wide;
-use fixtures::linear;
-use fixtures::merge_uneven;
+use reachabilityindex::ReachabilityIndex;
 
 pub fn string_to_nodehash(hash: &'static str) -> HgNodeHash {
     HgNodeHash::from_static_str(hash).expect("Can't turn string to HgNodeHash")
 }
-
-use index::ReachabilityIndex;
 
 pub fn string_to_bonsai(ctx: CoreContext, repo: &Arc<BlobRepo>, s: &'static str) -> ChangesetId {
     let node = string_to_nodehash(s);
@@ -83,19 +83,11 @@ pub fn test_linear_reachability<T: ReachabilityIndex + 'static>(index_creator: f
             for j in i..ordered_hashes.len() {
                 let src = ordered_hashes.get(i).unwrap();
                 let dst = ordered_hashes.get(j).unwrap();
-                let future_result_src_to_dst = index.query_reachability(
-                    ctx.clone(),
-                    repo.get_changeset_fetcher(),
-                    *src,
-                    *dst,
-                );
+                let future_result_src_to_dst =
+                    index.query_reachability(ctx.clone(), repo.get_changeset_fetcher(), *src, *dst);
                 assert!(future_result_src_to_dst.wait().unwrap());
-                let future_result_dst_to_src = index.query_reachability(
-                    ctx.clone(),
-                    repo.get_changeset_fetcher(),
-                    *dst,
-                    *src,
-                );
+                let future_result_dst_to_src =
+                    index.query_reachability(ctx.clone(), repo.get_changeset_fetcher(), *dst, *src);
                 assert_eq!(future_result_dst_to_src.wait().unwrap(), src == dst);
             }
         }
@@ -184,28 +176,24 @@ pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(index_crea
 
         for left_node in branch_1.into_iter() {
             for right_node in branch_2.iter() {
-                assert!(
-                    index
-                        .query_reachability(
-                            ctx.clone(),
-                            repo.get_changeset_fetcher(),
-                            left_node,
-                            root_node
-                        )
-                        .wait()
-                        .unwrap()
-                );
-                assert!(
-                    index
-                        .query_reachability(
-                            ctx.clone(),
-                            repo.get_changeset_fetcher(),
-                            *right_node,
-                            root_node
-                        )
-                        .wait()
-                        .unwrap()
-                );
+                assert!(index
+                    .query_reachability(
+                        ctx.clone(),
+                        repo.get_changeset_fetcher(),
+                        left_node,
+                        root_node
+                    )
+                    .wait()
+                    .unwrap());
+                assert!(index
+                    .query_reachability(
+                        ctx.clone(),
+                        repo.get_changeset_fetcher(),
+                        *right_node,
+                        root_node
+                    )
+                    .wait()
+                    .unwrap());
                 assert!(!index
                     .query_reachability(
                         ctx.clone(),
@@ -274,17 +262,15 @@ pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(index_creat
 
         // all nodes can reach the root
         for above_root in vec![b1, b2, b1_1, b1_2, b2_1, b2_2].iter() {
-            assert!(
-                index
-                    .query_reachability(
-                        ctx.clone(),
-                        repo.get_changeset_fetcher(),
-                        *above_root,
-                        root_node
-                    )
-                    .wait()
-                    .unwrap()
-            );
+            assert!(index
+                .query_reachability(
+                    ctx.clone(),
+                    repo.get_changeset_fetcher(),
+                    *above_root,
+                    root_node
+                )
+                .wait()
+                .unwrap());
             assert!(!index
                 .query_reachability(
                     ctx.clone(),
@@ -322,18 +308,14 @@ pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(index_creat
 
         // branch nodes can reach their common root but not each other
         // - branch 1
-        assert!(
-            index
-                .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b1_1, b1)
-                .wait()
-                .unwrap()
-        );
-        assert!(
-            index
-                .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b1_2, b1)
-                .wait()
-                .unwrap()
-        );
+        assert!(index
+            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b1_1, b1)
+            .wait()
+            .unwrap());
+        assert!(index
+            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b1_2, b1)
+            .wait()
+            .unwrap());
         assert!(!index
             .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b1_1, b1_2)
             .wait()
@@ -344,18 +326,14 @@ pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(index_creat
             .unwrap());
 
         // - branch 2
-        assert!(
-            index
-                .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b2_1, b2)
-                .wait()
-                .unwrap()
-        );
-        assert!(
-            index
-                .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b2_2, b2)
-                .wait()
-                .unwrap()
-        );
+        assert!(index
+            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b2_1, b2)
+            .wait()
+            .unwrap());
+        assert!(index
+            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b2_2, b2)
+            .wait()
+            .unwrap());
         assert!(!index
             .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b2_1, b2_2)
             .wait()
@@ -365,4 +343,78 @@ pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(index_creat
             .wait()
             .unwrap());
     });
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use std::sync::Arc;
+
+    use async_unit;
+    use context::CoreContext;
+    use fixtures::linear;
+    use futures::Future;
+    use mononoke_types::Generation;
+
+
+    #[test]
+    fn test_helpers() {
+        async_unit::tokio_unit_test(move || {
+            let ctx = CoreContext::test_mock();
+            let repo = Arc::new(linear::getrepo(None));
+            let mut ordered_hashes_oldest_to_newest = vec![
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "cb15ca4a43a59acff5388cea9648c162afde8372",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "d0a361e9022d226ae52f689667bd7d212a19cfe0",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "607314ef579bd2407752361ba1b0c1729d08b281",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "3e0e761030db6e479a7fb58b12881883f9f8c63f",
+                ),
+                string_to_bonsai(
+                    ctx.clone(),
+                    &repo,
+                    "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+                ),
+            ];
+            ordered_hashes_oldest_to_newest.reverse();
+
+            for (i, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
+                assert_eq!(
+                    fetch_generation_and_join(ctx.clone(), repo.get_changeset_fetcher(), node)
+                        .wait()
+                        .unwrap(),
+                    (node, Generation::new(i as u64 + 1))
+                );
+            }
+        });
+    }
 }

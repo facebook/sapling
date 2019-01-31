@@ -52,6 +52,7 @@ extern crate metaconfig_types;
 extern crate mononoke_types;
 extern crate phases;
 extern crate reachabilityindex;
+extern crate skiplist;
 extern crate ready_state;
 extern crate repo_client;
 extern crate scribe;

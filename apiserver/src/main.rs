@@ -28,6 +28,7 @@ extern crate fb303;
 extern crate futures;
 #[macro_use]
 extern crate futures_ext;
+extern crate genbfs;
 extern crate http;
 extern crate mercurial_types;
 extern crate metaconfig_parser;

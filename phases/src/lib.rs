@@ -19,6 +19,7 @@ extern crate memcache;
 extern crate mercurial_types;
 extern crate mononoke_types;
 extern crate reachabilityindex;
+extern crate skiplist;
 extern crate tokio;
 extern crate try_from;
 #[cfg(test)]
@@ -48,7 +49,7 @@ use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
-use reachabilityindex::SkiplistIndex;
+use skiplist::SkiplistIndex;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::{fmt, str};

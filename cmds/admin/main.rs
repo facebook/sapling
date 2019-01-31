@@ -33,7 +33,7 @@ extern crate manifoldblob;
 extern crate mercurial_types;
 extern crate metaconfig_types;
 extern crate mononoke_types;
-extern crate reachabilityindex;
+extern crate skiplist;
 extern crate revset;
 extern crate rust_thrift;
 #[macro_use]
@@ -68,7 +68,7 @@ use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange,
     FileContents, Generation, RepositoryId,
 };
-use reachabilityindex::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
+use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 use revset::RangeNodeStream;
 use rust_thrift::compact_protocol;
 use slog::Logger;

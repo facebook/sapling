@@ -8,7 +8,7 @@ use std::fmt;
 use std::fmt::Display;
 
 use blobrepo_errors::ErrorKind as BlobRepoError;
-use failure::{Backtrace, Fail};
+use failure_ext::{Backtrace, Fail};
 
 #[derive(Debug)]
 pub struct BlobRepoErrorCause {
