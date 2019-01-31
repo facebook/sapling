@@ -23,13 +23,6 @@ pub trait UploadableHgBlob {
     fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)>;
 }
 
-/// Represents data that is Thrift-encoded and can be uploaded to the blobstore.
-pub trait UploadableBlob {
-    type Value: Send + 'static;
-
-    fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)>;
-}
-
 #[derive(PartialEq, Eq)]
 pub enum UploadBlobsType {
     IgnoreDuplicates,
