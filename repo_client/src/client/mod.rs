@@ -337,9 +337,13 @@ impl RepoClient {
                 .map(|head| HgChangesetId::new(head))
                 .collect(),
             self.lca_hint.clone(),
-            // TODO (liubovd): We will need to check that common phases exchange method is supported
-            // T38356449
-            if args.phases {
+            if args.phases
+                && args.bundlecaps
+                    .get("bundle2")
+                    .and_then(|x| x.get("phases"))
+                    .filter(|x| x.contains("heads"))
+                    .is_some()
+            {
                 Some(self.phases_hint.clone())
             } else {
                 None
@@ -713,7 +717,7 @@ impl HgCommands for RepoClient {
         info!(self.ctx.logger(), "Getbundle: {:?}", args);
 
         let value = json!({
-            "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
+            "bundlecaps": &args.bundlecaps,
             "common": format_nodes_list(&args.common),
             "heads": format_nodes_list(&args.heads),
             "listkeys": format_utf8_bytes_list(&args.listkeys),

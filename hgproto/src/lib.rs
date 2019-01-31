@@ -38,6 +38,7 @@ extern crate itertools;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
+extern crate percent_encoding;
 extern crate revset;
 
 #[cfg(test)]
@@ -57,10 +58,10 @@ use bytes::Bytes;
 use mercurial_types::HgNodeHash;
 
 mod batch;
+mod commands;
 mod dechunker;
 mod errors;
 mod handler;
-mod commands;
 pub mod sshproto;
 
 const MAX_NODES_TO_LOG: usize = 5;
@@ -142,8 +143,41 @@ pub struct GetbundleArgs {
     pub heads: Vec<HgNodeHash>,
     /// List of space-delimited hex nodes that the client has in common with the server
     pub common: Vec<HgNodeHash>,
-    /// Comma-delimited set of strings defining client bundle capabilities.
-    pub bundlecaps: HashSet<Vec<u8>>,
+    /**
+     * Bundlecaps complex object contains parsed bundlecaps entries.
+     * First layer contains names of the groups as "treeonly" or "bundle2".
+     * In some cases group can contain some value, like "bundle2=pushkey bookmarks",
+     * it means that on next level it will contain map of this parameters.
+     * In case if internal parameters have values, like "bundle2=changegroup=01,02" it will
+     * be parsed in the last level - HashSet.
+     *
+     * Example of data that can be parsed in bundlecaps object
+     * (url-encoded symbols were replaced for readability purposes):
+     * {
+     *  "treeonly",
+     *  "bundle2=
+     *      HG20
+     *      bookmarks
+     *      changegroup=01,02
+     *      digests=md5,sha1,sha512
+     *      error=abort,unsupportedcontent,pushraced,pushkey
+     *      hgtagsfnodes
+     *      listkeys
+     *      phases=heads
+     *      pushkey
+     *      remote-changegroup=http,https
+     *      remotefilelog=True
+     *      treemanifest=True
+     *      treeonly=True",
+     *  "remotefilelog",
+     *  "HG20"
+     * }
+     *
+     * To use this structure, you can simply navigate it with default collection api, eg:
+     * bundlecaps.contains_key("treeonly")
+     * bundlecaps["bundle2"]["changegroup"].contains("01")
+     */
+    pub bundlecaps: HashMap<String, HashMap<String, HashSet<String>>>,
     /// Comma-delimited list of strings of ``pushkey`` namespaces. For each namespace listed, a bundle2 part will be included with the content of that namespace.
     pub listkeys: Vec<Vec<u8>>,
     /// phases: Boolean indicating whether phases data is requested
@@ -152,11 +186,8 @@ pub struct GetbundleArgs {
 
 impl Debug for GetbundleArgs {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let bcaps: HashSet<_> = self.bundlecaps
-            .iter()
-            .map(|s| String::from_utf8_lossy(&s))
-            .collect();
-        let listkeys: Vec<_> = self.listkeys
+        let listkeys: Vec<_> = self
+            .listkeys
             .iter()
             .map(|s| String::from_utf8_lossy(&s))
             .collect();
@@ -167,7 +198,7 @@ impl Debug for GetbundleArgs {
             .field("heads", &heads)
             .field("common_len", &self.common.len())
             .field("common", &common)
-            .field("bundlecaps", &bcaps)
+            .field("bundlecaps", &self.bundlecaps)
             .field("listkeys", &listkeys)
             .field("phases", &self.phases)
             .finish()

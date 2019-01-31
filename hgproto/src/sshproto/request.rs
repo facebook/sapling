@@ -4,8 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashMap;
+use percent_encoding::percent_decode;
+use std::collections::{HashMap, HashSet};
 use std::iter;
+use std::iter::FromIterator;
 use std::str::{self, FromStr};
 
 use bytes::{Bytes, BytesMut};
@@ -13,10 +15,10 @@ use nom::{is_alphanumeric, is_digit, Err, ErrorKind, FindSubstring, IResult, Nee
 
 use HgNodeHash;
 
-use {GetbundleArgs, GettreepackArgs, Request, SingleRequest};
 use batch;
 use errors;
 use errors::*;
+use {GetbundleArgs, GettreepackArgs, Request, SingleRequest};
 
 const BAD_UTF8_ERR_CODE: u32 = 111;
 
@@ -45,26 +47,40 @@ named!(
 
 /// Return an identifier of the form [a-zA-Z_][a-zA-Z0-9_]*. Returns Incomplete
 /// if it manages to reach the end of input, as there may be more identifier coming.
-fn ident(input: &[u8]) -> IResult<&[u8], &[u8]> {
+fn ident_alphanum(input: &[u8]) -> IResult<&[u8], &[u8]> {
     for (idx, item) in input.iter().enumerate() {
         match *item as char {
             'a'...'z' | 'A'...'Z' | '_' => continue,
             '0'...'9' if idx > 0 => continue,
-            _ => if idx > 0 {
-                return IResult::Done(&input[idx..], &input[0..idx]);
-            } else {
-                return IResult::Error(Err::Code(ErrorKind::AlphaNumeric));
-            },
+            _ => {
+                if idx > 0 {
+                    return IResult::Done(&input[idx..], &input[0..idx]);
+                } else {
+                    return IResult::Error(Err::Code(ErrorKind::AlphaNumeric));
+                }
+            }
         }
     }
     IResult::Incomplete(Needed::Unknown)
 }
 
+/// Return an identifier of the form [a-zA-Z0-9_-%]*.
+named!(
+    ident,
+    take_till1!(|ch| match ch as char {
+        '0'...'9' | 'a'...'z' | 'A'...'Z' | '_' | '-' | '%' => false,
+        _ => true,
+    })
+);
+
 /// As above, but assumes input is complete, so reaching the end of input means
 /// the identifier is the entire input.
-fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    match ident(input) {
-        IResult::Incomplete(_) => IResult::Done(b"", input),
+fn ident_complete<P>(parser: P) -> impl Fn(&[u8]) -> IResult<&[u8], &[u8]>
+where
+    P: Fn(&[u8]) -> IResult<&[u8], &[u8]>,
+{
+    move |input| match parser(input) {
+        IResult::Incomplete(_) => IResult::Done(&b""[..], input),
         other => other,
     }
 }
@@ -112,7 +128,11 @@ named!(
 named!(
     param_kv<HashMap<Vec<u8>, Vec<u8>>>,
     do_parse!(
-        key: ident >> tag!(b" ") >> len: integer >> tag!(b"\n") >> val: take!(len)
+        key: ident_alphanum
+            >> tag!(b" ")
+            >> len: integer
+            >> tag!(b"\n")
+            >> val: take!(len)
             >> (iter::once((key.to_vec(), val.to_vec())).collect())
     )
 );
@@ -237,7 +257,8 @@ fn notsemi(b: u8) -> bool {
 named!(
     cmd<(Vec<u8>, Vec<u8>)>,
     do_parse!(
-        cmd: take_until_and_consume1!(" ") >> args: take_while!(notsemi)
+        cmd: take_until_and_consume1!(" ")
+            >> args: take_while!(notsemi)
             >> ((cmd.to_vec(), args.to_vec()))
     )
 );
@@ -354,14 +375,24 @@ where
     }
 }
 
-/// Parse an ident, and map it to `String`.
-fn ident_string(inp: &[u8]) -> IResult<&[u8], String> {
-    match ident_complete(inp) {
-        IResult::Done(rest, s) => IResult::Done(rest, String::from_utf8_lossy(s).into_owned()),
-        IResult::Incomplete(n) => IResult::Incomplete(n),
-        IResult::Error(e) => IResult::Error(e),
-    }
-}
+named!(ident_string<&[u8], String>,
+    map!(ident_complete(ident), |x| String::from_utf8_lossy(x).into_owned())
+);
+
+named!(ident_string_alphanum<&[u8], String>,
+    map!(ident_complete(ident_alphanum), |x| String::from_utf8_lossy(x).into_owned())
+);
+
+named!(percent_decoded<&[u8], Vec<u8>>,
+    map!(
+        ident_complete(ident),
+        |xs| percent_decode(xs).if_any().unwrap_or(xs.to_vec())
+    )
+);
+
+named!(percent_decoded_string<&[u8], String>,
+    map_res!(percent_decoded, String::from_utf8)
+);
 
 /// Parse utf8 string, assumes that input is complete
 fn utf8_string_complete(inp: &[u8]) -> IResult<&[u8], String> {
@@ -376,8 +407,68 @@ fn bytes_complete(inp: &[u8]) -> IResult<&[u8], Bytes> {
     IResult::Done(b"", res)
 }
 
+// Parses list of bundlecaps values separated with encoded comma: 1,x,y
+named!(bundlecaps_values_list<&[u8], HashSet<String>>,
+    alt_complete!(
+        map!(separated_list_complete!(tag!(","), percent_decoded_string), HashSet::from_iter) |
+        map!(percent_decoded_string, |id| HashSet::from_iter(vec!(id)))
+    )
+);
+
+// Parses bundlecap param with encoded commas and colon or equal chars: list=1,x,ys
+named!(bundlecaps_param<&[u8], (String, HashSet<String>)>,
+    alt_complete!(
+        separated_pair!(percent_decoded_string, tag!("="), bundlecaps_values_list) |
+        map!(percent_decoded_string, |id| (id, HashSet::new()))
+    )
+);
+
+// Parses bundlecap params with encoded commas, equal and empty space chars: "block list=1,x,y"
+named!(bundlecaps_params<&[u8], HashMap<String, HashSet<String>>>,
+    map!(
+        separated_list_complete!(tag!("\n"), bundlecaps_param),
+        |x| HashMap::from_iter(x)
+    )
+);
+
+// Decodes bundlecaps string from percent encoding and then run bundlecaps parser on top of it.
+// Here you can see mostly flat_map! macro logic of nom, but because of inline
+// Rust can resolve slice borrowing
+fn bundlecaps_params_decoded(input: &[u8]) -> IResult<&[u8], HashMap<String, HashSet<String>>> {
+    match percent_decoded(input) {
+        IResult::Done(rest, y) => {
+            match bundlecaps_params(
+                y.as_slice(), /* This borrowing would not be possible with nom flat_map! combinator */
+            ) {
+                IResult::Done(_, z) => IResult::Done(rest, z),
+                IResult::Incomplete(n) => IResult::Incomplete(n),
+                IResult::Error(e) => IResult::Error(Err::Code(e.into_error_kind())),
+            }
+        }
+        IResult::Incomplete(n) => IResult::Incomplete(n),
+        IResult::Error(e) => IResult::Error(e),
+    }
+}
+
+// Parses bundlecap argument
+named!(
+    bundlecaps_arg<&[u8], (String, HashMap<String, HashSet<String>>)>,
+    alt_complete!(
+        separated_pair!(ident_string, char!('='), bundlecaps_params_decoded) |
+        map!(ident_string, |x| (x, HashMap::new()))
+    )
+);
+
+// Parses bundlecap arguments list
+named!(
+    bundlecaps_args<&[u8], HashMap<String, HashMap<String, HashSet<String>>>>,
+    map!(separated_list_complete!(char!(','), bundlecaps_arg), HashMap::from_iter)
+);
+
 macro_rules! replace_expr {
-    ($_t:tt $sub:expr) => {$sub};
+    ($_t:tt $sub:expr) => {
+        $sub
+    };
 }
 
 macro_rules! count_tts {
@@ -503,8 +594,8 @@ fn parse_with_params(
         | command!("capabilities", Capabilities, parse_params, {})
         | call!(parse_command, "debugwireargs", parse_params, 2+1,
             |kv| Ok(Debugwireargs {
-                one: parseval(&kv, "one", ident_complete)?.to_vec(),
-                two: parseval(&kv, "two", ident_complete)?.to_vec(),
+                one: parseval(&kv, "one", ident_complete(ident_alphanum))?.to_vec(),
+                two: parseval(&kv, "two", ident_complete(ident_alphanum))?.to_vec(),
                 all_args: kv,
             }))
         | call!(parse_command, "getbundle", parse_params, 0+1,
@@ -516,14 +607,14 @@ fn parse_with_params(
                 // If those params are needed, they should be parsed here.
                 heads: parseval_default(&kv, "heads", hashlist)?,
                 common: parseval_default(&kv, "common", hashlist)?,
-                bundlecaps: parseval_default(&kv, "bundlecaps", commavalues)?.into_iter().collect(),
+                bundlecaps: parseval_default(&kv, "bundlecaps", bundlecaps_args)?,
                 listkeys: parseval_default(&kv, "listkeys", commavalues)?,
                 phases: parseval_default(&kv, "phases", boolean)?,
             })))
         | command!("heads", Heads, parse_params, {})
         | command!("hello", Hello, parse_params, {})
         | command!("listkeys", Listkeys, parse_params, {
-              namespace => ident_string,
+              namespace => ident_string_alphanum,
           })
         | command!("lookup", Lookup, parse_params, {
               key => utf8_string_complete,
@@ -566,22 +657,32 @@ mod test {
 
     #[test]
     fn test_ident() {
-        assert_eq!(
-            ident(b"1234 "),
-            IResult::Error(Err::Code(ErrorKind::AlphaNumeric))
-        );
-        assert_eq!(
-            ident(b" 1234 "),
-            IResult::Error(Err::Code(ErrorKind::AlphaNumeric))
-        );
-        assert_eq!(ident(b"foo"), IResult::Incomplete(Needed::Unknown));
+        assert_eq!(ident(b"01 "), IResult::Done(&b" "[..], &b"01"[..]));
+        assert_eq!(ident(b"foo"), IResult::Done(&b""[..], &b"foo"[..]));
         assert_eq!(ident(b"foo "), IResult::Done(&b" "[..], &b"foo"[..]));
+    }
+
+    #[test]
+    fn test_ident_alphanum() {
+        assert_eq!(
+            ident_alphanum(b"1234 "),
+            IResult::Error(Err::Code(ErrorKind::AlphaNumeric))
+        );
+        assert_eq!(
+            ident_alphanum(b" 1234 "),
+            IResult::Error(Err::Code(ErrorKind::AlphaNumeric))
+        );
+        assert_eq!(ident_alphanum(b"foo"), IResult::Incomplete(Needed::Unknown));
+        assert_eq!(
+            ident_alphanum(b"foo "),
+            IResult::Done(&b" "[..], &b"foo"[..])
+        );
     }
 
     #[test]
     fn test_param_star() {
         let p = b"* 0\ntrailer";
-        assert_eq!(param_star(p), IResult::Done(&b"trailer"[..], hashmap!{}));
+        assert_eq!(param_star(p), IResult::Done(&b"trailer"[..], hashmap! {}));
 
         let p = b"* 1\n\
                   foo 12\n\
@@ -614,7 +715,7 @@ mod test {
 
         // no trailer
         let p = b"* 0\n";
-        assert_eq!(param_star(p), IResult::Done(&b""[..], hashmap!{}));
+        assert_eq!(param_star(p), IResult::Done(&b""[..], hashmap! {}));
 
         let p = b"* 1\n\
                   foo 12\n\
@@ -809,7 +910,7 @@ mod test {
             batch_params(p, 0),
             IResult::Done(
                 &b""[..],
-                hashmap!{
+                hashmap! {
                     b"foo".to_vec() => b"bar".to_vec(),
                 }
             )
@@ -821,7 +922,7 @@ mod test {
             batch_params(p, 0),
             IResult::Done(
                 &b""[..],
-                hashmap!{
+                hashmap! {
                     b"foo".to_vec() => b"bar".to_vec(),
                     b"biff".to_vec() => b"bop".to_vec(),
                     b"esc:,;=".to_vec() => b"esc:,;=".to_vec(),
@@ -831,13 +932,13 @@ mod test {
 
         let p = b"";
 
-        assert_eq!(batch_params(p, 0), IResult::Done(&b""[..], hashmap!{}));
+        assert_eq!(batch_params(p, 0), IResult::Done(&b""[..], hashmap! {}));
 
         let p = b"foo=";
 
         assert_eq!(
             batch_params(p, 0),
-            IResult::Done(&b""[..], hashmap!{b"foo".to_vec() => b"".to_vec()})
+            IResult::Done(&b""[..], hashmap! {b"foo".to_vec() => b"".to_vec()})
         );
     }
 
@@ -1214,7 +1315,7 @@ mod test_parse {
             Request::Single(SingleRequest::Getbundle(GetbundleArgs {
                 heads: vec![],
                 common: vec![],
-                bundlecaps: hashset![],
+                bundlecaps: HashMap::new(),
                 listkeys: vec![],
                 phases: false,
             })),
@@ -1241,9 +1342,57 @@ mod test_parse {
             Request::Single(SingleRequest::Getbundle(GetbundleArgs {
                 heads: vec![hash_ones()],
                 common: vec![hash_twos(), hash_threes()],
-                bundlecaps: hashset![b"cap1".to_vec(), b"CAP2".to_vec(), b"cap3".to_vec()],
+                bundlecaps: ["cap1", "CAP2", "cap3"]
+                    .iter()
+                    .map(|s| (s.to_string(), HashMap::new()))
+                    .collect(),
                 listkeys: vec![b"key1".to_vec(), b"key2".to_vec()],
                 phases: true,
+            })),
+        );
+    }
+
+    #[test]
+    fn test_parse_getbundle_bundlecaps() {
+        let inp = "getbundle\n\
+                   * 1\n\
+                   bundlecaps 78\n\
+                   block,entries=entry%0Alist%3D1%2Cx%2Cy%0Asingle%3Dx%0Adoubleenc%3Dtest%253A123";
+
+        let expected_entries_list: HashSet<String> =
+            ["1", "x", "y"].iter().map(|x| x.to_string()).collect();
+
+        let expected_single: HashSet<String> = ["x"].iter().map(|x| x.to_string()).collect();
+
+        let expected_doubleenc: HashSet<String> =
+            ["test:123"].iter().map(|x| x.to_string()).collect();
+
+        let expected_entries: HashMap<String, HashSet<String>> = [
+            ("entry".to_string(), HashSet::new()),
+            ("list".to_string(), expected_entries_list),
+            ("single".to_string(), expected_single),
+            ("doubleenc".to_string(), expected_doubleenc),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        let expected_bundlecaps: HashMap<String, HashMap<String, HashSet<String>>> = [
+            ("block".to_string(), HashMap::new()),
+            ("entries".to_string(), expected_entries),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        test_parse(
+            inp,
+            Request::Single(SingleRequest::Getbundle(GetbundleArgs {
+                heads: vec![],
+                common: vec![],
+                bundlecaps: expected_bundlecaps,
+                listkeys: vec![],
+                phases: false,
             })),
         );
     }
