@@ -220,7 +220,7 @@ impl MononokeRepo {
         api::get_content_by_path(ctx, repo, changesetid, mpath)
             .and_then(move |content| match content {
                 Content::Tree(tree) => Ok(tree),
-                _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into()),
+                _ => Err(ErrorKind::NotADirectory(path.to_string()).into())
             })
             .map(|tree| {
                 tree.list()

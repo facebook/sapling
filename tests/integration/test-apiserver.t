@@ -205,7 +205,7 @@ test nonexist fold
 
 test list a file
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/list/$COMMIT2/test-rename | extract_json_error
-  test-rename is invalid
+  test-rename is not a directory
   400
 
 test get blob by hash

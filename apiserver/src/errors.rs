@@ -42,6 +42,7 @@ pub enum ErrorKind {
     InvalidInput(String, Option<Error>),
     InternalError(Error),
     LFSNotFound(String),
+    NotADirectory(String),
 }
 
 impl ErrorKind {
@@ -53,6 +54,7 @@ impl ErrorKind {
             InvalidInput(..) => StatusCode::BAD_REQUEST,
             InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             LFSNotFound(_) => StatusCode::NOT_FOUND,
+            NotADirectory(_) => StatusCode::BAD_REQUEST,
         }
     }
 
@@ -61,7 +63,7 @@ impl ErrorKind {
         use errors::ErrorKind::*;
 
         match &self {
-            NotFound(..) | InvalidInput(..) | InternalError(_) => {
+            NotFound(..) | InvalidInput(..) | InternalError(_) | NotADirectory(_) => {
                 ErrorResponse::APIErrorResponse(APIErrorResponse {
                     message: self.to_string(),
                     causes: self
@@ -76,6 +78,19 @@ impl ErrorKind {
             }),
         }
     }
+    // Since all non-ErrorKind error including `Context<ErrorKind>` is wrapped in `InternalError`
+    // automatically at `From<Error>::from`, we need to downcast the `Context` retrieve the
+    // `ErrorKind` in the `Context`.
+    fn unwrap_errorkind(&self) -> &Self {
+        match self {
+            ErrorKind::InternalError(err) => err_downcast_ref! {
+                err,
+                err: ErrorKind => err,
+            }
+            .unwrap_or(self),
+            _ => self,
+        }
+    }
 }
 
 impl Fail for ErrorKind {
@@ -85,7 +100,7 @@ impl Fail for ErrorKind {
         match self {
             NotFound(_, cause) | InvalidInput(_, cause) => cause.as_ref().map(|e| e.as_fail()),
             InternalError(err) => Some(err.as_fail()),
-            LFSNotFound(_) => None,
+            LFSNotFound(_) | NotADirectory(_) => None,
         }
     }
 }
@@ -99,26 +114,14 @@ impl fmt::Display for ErrorKind {
             InvalidInput(_0, _) => write!(f, "{} is invalid", _0),
             InternalError(_0) => write!(f, "internal server error: {}", _0),
             LFSNotFound(_0) => write!(f, "{} is not found on LFS request", _0),
+            NotADirectory(_0) => write!(f, "{} is not a directory", _0),
         }
     }
 }
 
 impl ResponseError for ErrorKind {
-    // Since all non-ErrorKind error including `Context<ErrorKind>` is wrapped in `InternalError`
-    // automatically at `From<Error>::from`, we need to downcast the `Context` retrieve the
-    // `ErrorKind` in the `Context`.
     fn error_response(&self) -> HttpResponse {
-        let err = {
-            match self {
-                ErrorKind::InternalError(err) => err_downcast_ref! {
-                    err,
-                    err: ErrorKind => err,
-                }
-                .unwrap_or(self),
-                _ => self,
-            }
-        };
-
+        let err = self.unwrap_errorkind();
         HttpResponse::build(err.status_code()).json(err.into_error_response())
     }
 }
@@ -199,7 +202,7 @@ impl From<ErrorKind> for MononokeAPIException {
     fn from(e: ErrorKind) -> MononokeAPIException {
         use errors::ErrorKind::*;
 
-        match e {
+        match e.unwrap_errorkind() {
             e @ NotFound(..) => MononokeAPIException {
                 kind: MononokeAPIExceptionKind::NotFound,
                 reason: e.to_string(),
@@ -214,6 +217,10 @@ impl From<ErrorKind> for MononokeAPIException {
             },
             e @ LFSNotFound(_) => MononokeAPIException {
                 kind: MononokeAPIExceptionKind::NotFound,
+                reason: e.to_string(),
+            },
+            e @ NotADirectory(_) => MononokeAPIException {
+                kind: MononokeAPIExceptionKind::InvalidInput,
                 reason: e.to_string(),
             },
         }
