@@ -115,8 +115,6 @@ void toAppend(InodeNumber ino, std::string* result);
 // Define toAppend() so folly::to<fbstring>(ino) will work.
 void toAppend(InodeNumber ino, folly::fbstring* result);
 
-// using InodeNumber = uint64_t;
-
 using FuseOpcode = decltype(std::declval<fuse_in_header>().opcode);
 
 /** Encapsulates the fuse device & connection information for a mount point.
