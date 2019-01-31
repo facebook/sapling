@@ -51,10 +51,11 @@ def getclient(ui):
 
 
 def healthcheck(ui):
+    host = ui.config("mononoke-api", "host")
     client = getclient(ui)
 
     try:
         client.health_check()
-        ui.write(_("success\n"))
+        ui.write(_("successfully connected to: %s\n") % host)
     except RuntimeError as e:
         raise error.Abort(e)

@@ -1173,9 +1173,9 @@ def debugwaitonprefetch(ui, repo, **opts):
     return debugcommands.debugwaitonprefetch(repo)
 
 
-@command("debugmononokeapi", [], _("hg debugmononokeapi"))
-def debugmononokeapi(ui, repo, **opts):
-    return debugcommands.debugmononokeapi(ui, repo, **opts)
+@command("debughttphealthcheck", [], _("hg debughttphealthcheck"))
+def debughttphealthcheck(ui, repo, **opts):
+    return debugcommands.debughttphealthcheck(ui, repo, **opts)
 
 
 def resolveprefetchopts(ui, opts):

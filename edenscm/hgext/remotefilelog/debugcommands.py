@@ -480,5 +480,5 @@ def debugwaitonprefetch(repo):
         pass
 
 
-def debugmononokeapi(ui, repo, **opts):
+def debughttphealthcheck(ui, repo, **opts):
     mononokeapi.healthcheck(ui)
