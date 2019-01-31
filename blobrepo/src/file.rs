@@ -28,7 +28,7 @@ use errors::*;
 
 use manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
 
-use repo::RepoBlobstore;
+use blob_changeset::RepoBlobstore;
 
 #[derive(Clone)]
 pub struct HgBlobEntry {

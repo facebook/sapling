@@ -19,9 +19,9 @@ use mercurial_types::{Entry, FileType, HgBlob, HgManifestEnvelope, MPathElement,
 
 use blobstore::Blobstore;
 
+use blob_changeset::RepoBlobstore;
 use errors::*;
 use file::HgBlobEntry;
-use repo::RepoBlobstore;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {

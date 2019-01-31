@@ -18,6 +18,7 @@ use futures_ext::{BoxFuture, FutureExt};
 
 use slog::Logger;
 
+use blob_changeset::RepoBlobstore;
 use context::CoreContext;
 use mercurial_types::manifest::Content;
 use mercurial_types::{
@@ -26,9 +27,7 @@ use mercurial_types::{
 use mononoke_types::{FileContents, FileType};
 
 use file::HgBlobEntry;
-use repo::{
-    RepoBlobstore, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
-};
+use repo::{UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
 
 use super::utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
 use super::BlobRepo;

@@ -38,6 +38,8 @@ extern crate heapsize;
 extern crate futures_stats;
 
 extern crate ascii;
+extern crate blob_changeset;
+extern crate blobrepo_errors as errors;
 extern crate blobstore;
 extern crate blobstore_sync_queue;
 extern crate bonsai_hg_mapping;
@@ -83,9 +85,7 @@ extern crate mercurial_types_mocks;
 
 pub mod alias;
 mod bonsai_generation;
-mod changeset;
 mod changeset_fetcher;
-mod errors;
 mod file;
 mod manifest;
 mod memory_manifest;
@@ -95,14 +95,14 @@ mod repo_commit;
 mod utils;
 
 pub use alias::*;
-pub use changeset::{HgBlobChangeset, HgChangesetContent};
+pub use blob_changeset::{ChangesetMetadata, HgBlobChangeset, HgChangesetContent};
 pub use changeset_fetcher::ChangesetFetcher;
 pub use errors::*;
 pub use file::HgBlobEntry;
 pub use manifest::BlobManifest;
 pub use repo::{
-    save_bonsai_changesets, BlobRepo, ChangesetMetadata, ContentBlobInfo, ContentBlobMeta,
-    CreateChangeset, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
+    save_bonsai_changesets, BlobRepo, ContentBlobInfo, ContentBlobMeta, CreateChangeset,
+    UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
 };
 pub use repo_commit::ChangesetHandle;
 // TODO: This is exported for testing - is this the right place for it?

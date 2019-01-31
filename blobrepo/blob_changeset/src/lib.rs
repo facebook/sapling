@@ -6,12 +6,13 @@
 
 use std::collections::BTreeMap;
 use std::io::Write;
+use std::sync::Arc;
 
 use bytes::Bytes;
-use failure::{Error, FutureFailureErrorExt, Result};
+use failure_ext::{bail_msg, Error, FutureFailureErrorExt, Result};
 use futures::future::{Either, Future, IntoFuture};
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, PrefixBlobstore};
 
 use context::CoreContext;
 use mercurial;
@@ -24,8 +25,18 @@ use mercurial_types::{
 };
 use mononoke_types::DateTime;
 
-use errors::*;
-use repo::{ChangesetMetadata, RepoBlobstore};
+/// Making PrefixBlobstore part of every blobstore does two things:
+/// 1. It ensures that the prefix applies first, which is important for shared caches like
+///    memcache.
+/// 2. It ensures that all possible blobrepos use a prefix.
+pub type RepoBlobstore = PrefixBlobstore<Arc<Blobstore>>;
+
+pub struct ChangesetMetadata {
+    pub user: String,
+    pub time: DateTime,
+    pub extra: BTreeMap<Vec<u8>, Vec<u8>>,
+    pub comments: String,
+}
 
 #[derive(Debug, Clone)]
 pub struct HgChangesetContent {
@@ -181,7 +192,12 @@ impl HgBlobChangeset {
                         Ok(Some(cs))
                     }
                 })
-                .with_context(|_| ErrorKind::ChangesetDeserializeFailed(key))
+                .with_context(move |_| {
+                    format!(
+                        "Error while deserializing changeset retrieved from key '{}'",
+                        key
+                    )
+                })
                 .from_err();
             Either::B(fut)
         }

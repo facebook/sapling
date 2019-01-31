@@ -14,9 +14,11 @@ extern crate futures;
 extern crate futures_ext;
 
 extern crate blobrepo;
+extern crate blobrepo_errors;
 extern crate context;
 #[macro_use]
 extern crate maplit;
+#[cfg(test)]
 extern crate mercurial_types;
 extern crate mononoke_types;
 extern crate uniqueheap;

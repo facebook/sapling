@@ -33,10 +33,10 @@ use mercurial_types::{
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, RepositoryId};
 
-use changeset::HgChangesetContent;
+use blob_changeset::HgChangesetContent;
+use blob_changeset::{ChangesetMetadata, RepoBlobstore};
 use errors::*;
 use file::HgBlobEntry;
-use repo::{ChangesetMetadata, RepoBlobstore};
 use BlobRepo;
 use HgBlobChangeset;
 

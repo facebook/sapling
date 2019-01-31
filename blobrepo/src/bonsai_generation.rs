@@ -12,13 +12,13 @@ use futures::future::{join_all, Future};
 use futures::{IntoFuture, Stream};
 use futures_ext::FutureExt;
 
+use blob_changeset::RepoBlobstore;
 use bonsai_utils;
 use context::CoreContext;
 use mercurial_types::{Changeset, Entry, HgFileNodeId, HgManifestId, HgNodeHash, MPath};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
 };
-use repo::RepoBlobstore;
 
 use errors::*;
 use BlobRepo;

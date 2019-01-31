@@ -5,9 +5,9 @@
 // GNU General Public License version 2 or any later version.
 
 use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
-use super::changeset::HgChangesetContent;
 use super::changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
+use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
 use blobstore::{
     new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob, MemWritesBlobstore,
     PrefixBlobstore,
@@ -53,8 +53,8 @@ use mercurial_types::{
 use metaconfig_types::RemoteBlobstoreArgs;
 use mononoke_types::{
     hash::Blake2, hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
-    ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath, MPathElement,
-    MononokeId, RepositoryId,
+    ContentId, FileChange, FileContents, FileType, Generation, MPath, MPathElement, MononokeId,
+    RepositoryId,
 };
 use multiplexedblob::MultiplexedBlobstore;
 use post_commit::{self, PostCommitQueue};
@@ -68,7 +68,7 @@ use slog::{Discard, Drain, Logger};
 use sqlblob::Sqlblob;
 use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use stats::Timeseries;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::convert::From;
 use std::iter::FromIterator;
 use std::path::Path;
@@ -119,12 +119,6 @@ define_stats! {
     create_changeset_expected_cf: timeseries("create_changeset.expected_changed_files"; RATE, SUM),
     create_changeset_cf_count: timeseries("create_changeset.changed_files_count"; AVG, SUM),
 }
-
-/// Making PrefixBlobstore part of every blobstore does two things:
-/// 1. It ensures that the prefix applies first, which is important for shared caches like
-///    memcache.
-/// 2. It ensures that all possible blobrepos use a prefix.
-pub type RepoBlobstore = PrefixBlobstore<Arc<Blobstore>>;
 
 pub struct BlobRepo {
     logger: Logger,
@@ -2163,13 +2157,6 @@ pub struct ContentBlobMeta {
     pub id: ContentId,
     // The copy info will later be stored as part of the commit.
     pub copy_from: Option<(MPath, HgNodeHash)>,
-}
-
-pub struct ChangesetMetadata {
-    pub user: String,
-    pub time: DateTime,
-    pub extra: BTreeMap<Vec<u8>, Vec<u8>>,
-    pub comments: String,
 }
 
 /// This function uploads bonsai changests object to blobstore in parallel, and then does

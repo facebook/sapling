@@ -7,7 +7,7 @@
 use std::fmt;
 use std::fmt::Display;
 
-use blobrepo::ErrorKind as BlobRepoError;
+use blobrepo_errors::ErrorKind as BlobRepoError;
 use failure::{Backtrace, Fail};
 
 #[derive(Debug)]
