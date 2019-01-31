@@ -30,7 +30,8 @@ extern crate futures;
 extern crate futures_ext;
 extern crate http;
 extern crate mercurial_types;
-extern crate metaconfig;
+extern crate metaconfig_parser;
+extern crate metaconfig_types;
 extern crate mononoke_api as api;
 extern crate mononoke_types;
 extern crate panichandler;
@@ -83,7 +84,7 @@ use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use tokio::runtime::Runtime;
 
-use metaconfig::RepoConfigs;
+use metaconfig_parser::RepoConfigs;
 use scuba_ext::ScubaSampleBuilder;
 
 use actor::{

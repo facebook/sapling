@@ -25,7 +25,7 @@ extern crate itertools;
 extern crate lazy_static;
 extern crate manifoldblob;
 extern crate mercurial_types;
-extern crate metaconfig;
+extern crate metaconfig_types;
 extern crate mononoke_types;
 #[macro_use]
 extern crate slog;
@@ -52,7 +52,7 @@ use futures_ext::{spawn_future, BoxFuture, FutureExt};
 use glusterblob::Glusterblob;
 use healer::RepoHealer;
 use manifoldblob::ThriftManifoldBlob;
-use metaconfig::{RemoteBlobstoreArgs, RepoConfig, RepoType};
+use metaconfig_types::{RemoteBlobstoreArgs, RepoConfig, RepoType};
 use mononoke_types::RepositoryId;
 use rate_limiter::RateLimiter;
 use slog::Logger;

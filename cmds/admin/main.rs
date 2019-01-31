@@ -30,7 +30,7 @@ extern crate context;
 extern crate futures_ext;
 extern crate manifoldblob;
 extern crate mercurial_types;
-extern crate metaconfig;
+extern crate metaconfig_types;
 extern crate mononoke_types;
 extern crate reachabilityindex;
 extern crate revset;
@@ -61,7 +61,7 @@ use mercurial_types::{
     Changeset, HgChangesetEnvelope, HgChangesetId, HgFileEnvelope, HgManifestEnvelope,
     HgManifestId, MPath, MPathElement, Manifest,
 };
-use metaconfig::RemoteBlobstoreArgs;
+use metaconfig_types::RemoteBlobstoreArgs;
 use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange,
     FileContents, Generation, RepositoryId,

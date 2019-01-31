@@ -23,8 +23,8 @@ use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
 use context::CoreContext;
 use mercurial_types::manifest::Content;
 use mercurial_types::HgManifestId;
-use metaconfig::repoconfig::RepoConfig;
-use metaconfig::repoconfig::RepoType::{BlobFiles, BlobRemote, BlobRocks, BlobSqlite};
+use metaconfig_types::RepoConfig;
+use metaconfig_types::RepoType::{BlobFiles, BlobRemote, BlobRocks, BlobSqlite};
 use mononoke_types::{FileContents, RepositoryId};
 use reachabilityindex::{GenerationNumberBFS, ReachabilityIndex};
 

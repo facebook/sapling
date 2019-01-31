@@ -19,6 +19,7 @@ extern crate futures;
 #[macro_use]
 #[cfg(test)]
 extern crate maplit;
+extern crate metaconfig_types;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -30,9 +31,5 @@ extern crate toml;
 pub mod errors;
 pub mod repoconfig;
 
-pub use repoconfig::{
-    BlobstoreId, CacheWarmupParams, LfsParams, ManifoldArgs, MysqlBlobstoreArgs, PushrebaseParams,
-    RemoteBlobstoreArgs, RepoConfig, RepoConfigs, RepoReadOnly, RepoType,
-};
-
 pub use errors::{Error, ErrorKind};
+pub use repoconfig::RepoConfigs;

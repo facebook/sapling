@@ -31,7 +31,8 @@ extern crate cachelib;
 extern crate cmdlib;
 extern crate context;
 extern crate mercurial_types;
-extern crate metaconfig;
+extern crate metaconfig_parser;
+extern crate metaconfig_types;
 extern crate panichandler;
 extern crate ready_state;
 extern crate repo_listener;
@@ -50,7 +51,7 @@ use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_logview::LogViewDrain;
 use tokio::runtime::Runtime;
 
-use metaconfig::RepoConfigs;
+use metaconfig_parser::RepoConfigs;
 
 mod errors {
     pub use failure::{Error, Result};

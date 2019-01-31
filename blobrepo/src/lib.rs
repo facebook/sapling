@@ -59,7 +59,7 @@ extern crate manifoldblob;
 extern crate maplit;
 extern crate mercurial;
 extern crate mercurial_types;
-extern crate metaconfig;
+extern crate metaconfig_types;
 extern crate mononoke_types;
 #[cfg(test)]
 extern crate mononoke_types_mocks;
@@ -116,7 +116,7 @@ pub mod internal {
 use failure::{err_msg, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
-use metaconfig::RepoType;
+use metaconfig_types::RepoType;
 use mononoke_types::RepositoryId;
 use scribe_cxx::ScribeCxxClient;
 
@@ -126,7 +126,7 @@ pub fn open_blobrepo(
     repoid: RepositoryId,
     myrouter_port: Option<u16>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    use metaconfig::repoconfig::RepoType::*;
+    use metaconfig_types::RepoType::*;
 
     match repotype {
         BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)

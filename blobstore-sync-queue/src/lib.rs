@@ -12,7 +12,7 @@ extern crate futures;
 extern crate cloned;
 extern crate context;
 extern crate futures_ext;
-extern crate metaconfig;
+extern crate metaconfig_types;
 extern crate mononoke_types;
 #[macro_use]
 extern crate sql;
@@ -25,7 +25,7 @@ use context::CoreContext;
 use failure::{format_err, Error};
 use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
-use metaconfig::BlobstoreId;
+use metaconfig_types::BlobstoreId;
 use mononoke_types::{DateTime, RepositoryId, Timestamp};
 use sql::Connection;
 pub use sql_ext::SqlConstructors;

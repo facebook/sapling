@@ -25,7 +25,7 @@ use tokio::executor::spawn;
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use metaconfig::BlobstoreId;
+use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);

@@ -41,7 +41,7 @@ extern crate linked_hash_map;
 #[macro_use]
 extern crate maplit;
 extern crate mercurial_types;
-extern crate metaconfig;
+extern crate metaconfig_types;
 extern crate mononoke_types;
 #[cfg(test)]
 #[macro_use]
@@ -55,11 +55,11 @@ extern crate context;
 extern crate srclient;
 extern crate thrift;
 
-pub mod lua_hook;
-pub mod rust_hook;
-pub mod hook_loader;
 pub mod errors;
 mod facebook;
+pub mod hook_loader;
+pub mod lua_hook;
+pub mod rust_hook;
 
 use aclchecker::{AclChecker, Identity};
 use asyncmemo::{Asyncmemo, Filler, Weight};
@@ -71,9 +71,12 @@ pub use errors::*;
 use failure::{Error, FutureFailureErrorExt};
 use futures::{failed, finished, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{Changeset, HgChangesetId, HgParents, MPath, manifest::get_empty_manifest,
-                      manifest_utils::{self, EntryStatus}};
-use metaconfig::repoconfig::{HookBypass, HookConfig, HookManagerParams};
+use mercurial_types::{
+    manifest::get_empty_manifest,
+    manifest_utils::{self, EntryStatus},
+    Changeset, HgChangesetId, HgParents, MPath,
+};
+use metaconfig_types::{HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::{FileContents, FileType};
 use slog::Logger;
 use std::collections::{HashMap, HashSet};

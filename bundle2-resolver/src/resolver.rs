@@ -31,7 +31,7 @@ use mercurial_bundles::{
 use mercurial_types::{
     HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
 };
-use metaconfig::{repoconfig::RepoReadOnly, PushrebaseParams};
+use metaconfig_types::{PushrebaseParams, RepoReadOnly};
 use mononoke_types::ChangesetId;
 use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;

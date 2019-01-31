@@ -46,7 +46,7 @@ extern crate hooks;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
-extern crate metaconfig;
+extern crate metaconfig_types;
 extern crate mononoke_types;
 extern crate phases;
 extern crate reachabilityindex;

@@ -50,7 +50,7 @@ use mercurial_types::{
     Changeset, Entry, HgBlob, HgBlobNode, HgChangesetId, HgFileEnvelopeMut, HgFileNodeId,
     HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Manifest, RepoPath, Type,
 };
-use metaconfig::RemoteBlobstoreArgs;
+use metaconfig_types::RemoteBlobstoreArgs;
 use mononoke_types::{
     hash::Blake2, hash::Sha256, Blob, BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId,
     ContentId, DateTime, FileChange, FileContents, FileType, Generation, MPath, MPathElement,

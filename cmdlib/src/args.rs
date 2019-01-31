@@ -30,7 +30,8 @@ use slog_glog_fmt::default_drain as glog_drain;
 use blobrepo::{open_blobrepo, BlobRepo};
 use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
-use metaconfig::{ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoConfigs, RepoType};
+use metaconfig_parser::RepoConfigs;
+use metaconfig_types::{ManifoldArgs, MysqlBlobstoreArgs, RemoteBlobstoreArgs, RepoType};
 use mononoke_types::RepositoryId;
 
 const CACHE_ARGS: &[(&str, &str)] = &[

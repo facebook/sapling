@@ -44,11 +44,11 @@ use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::Bookmark;
 use context::CoreContext;
 use errors::*;
-use futures::{Future, IntoFuture, Stream};
 use futures::future::{err, join_all, loop_fn, ok, Loop};
+use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{Changeset, HgChangesetId, MPath};
-use metaconfig::PushrebaseParams;
+use metaconfig_types::PushrebaseParams;
 use mononoke_types::{check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange};
 
 use revset::RangeNodeStream;

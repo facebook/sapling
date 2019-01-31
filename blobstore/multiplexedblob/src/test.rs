@@ -19,7 +19,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
 use context::CoreContext;
-use metaconfig::BlobstoreId;
+use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};

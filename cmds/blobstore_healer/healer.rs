@@ -15,7 +15,7 @@ use futures::{
 };
 use futures_ext::FutureExt;
 use itertools::Itertools;
-use metaconfig::BlobstoreId;
+use metaconfig_types::BlobstoreId;
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
 use rate_limiter::RateLimiter;
 use slog::Logger;

@@ -22,7 +22,7 @@ use tokio::runtime::TaskExecutor;
 use tracing::TraceContext;
 use uuid::Uuid;
 
-use metaconfig::repoconfig::RepoConfigs;
+use metaconfig_parser::RepoConfigs;
 
 use errors::ErrorKind;
 

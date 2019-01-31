@@ -8,13 +8,13 @@
 
 #![deny(warnings)]
 
-use super::{Hook, HookChangeset, HookManager};
 use super::lua_hook::LuaHook;
+use super::{Hook, HookChangeset, HookManager};
 use bookmarks::Bookmark;
 use facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
 use facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use failure::Error;
-use metaconfig::repoconfig::{HookType, RepoConfig};
+use metaconfig_types::{HookType, RepoConfig};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -49,19 +49,21 @@ pub fn load_hooks(hook_manager: &mut HookManager, config: RepoConfig) -> Result<
                 hook_set.insert(name);
             }
             match config.bookmarks {
-                Some(bookmarks) => for bookmark_hook in bookmarks {
-                    let bookmark = bookmark_hook.bookmark;
-                    let hooks = bookmark_hook.hooks;
-                    if let Some(hooks) = hooks {
-                        let bm_hook_set: HashSet<String> = hooks.clone().into_iter().collect();
-                        let diff: HashSet<_> = bm_hook_set.difference(&hook_set).collect();
-                        if diff.len() != 0 {
-                            return Err(ErrorKind::NoSuchBookmarkHook(bookmark).into());
-                        } else {
-                            hook_manager.set_hooks_for_bookmark(bookmark, hooks);
-                        }
-                    };
-                },
+                Some(bookmarks) => {
+                    for bookmark_hook in bookmarks {
+                        let bookmark = bookmark_hook.bookmark;
+                        let hooks = bookmark_hook.hooks;
+                        if let Some(hooks) = hooks {
+                            let bm_hook_set: HashSet<String> = hooks.clone().into_iter().collect();
+                            let diff: HashSet<_> = bm_hook_set.difference(&hook_set).collect();
+                            if diff.len() != 0 {
+                                return Err(ErrorKind::NoSuchBookmarkHook(bookmark).into());
+                            } else {
+                                hook_manager.set_hooks_for_bookmark(bookmark, hooks);
+                            }
+                        };
+                    }
+                }
                 None => (),
             }
             Ok(())
@@ -75,18 +77,19 @@ pub enum ErrorKind {
     #[fail(display = "Hook(s) referenced in bookmark {} do not exist", _0)]
     NoSuchBookmarkHook(Bookmark),
 
-    #[fail(display = "invalid rust hook: {}", _0)] InvalidRustHook(String),
+    #[fail(display = "invalid rust hook: {}", _0)]
+    InvalidRustHook(String),
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use super::ErrorKind;
     use super::super::*;
+    use super::ErrorKind;
+    use super::*;
     use async_unit;
     use context::CoreContext;
     use fixtures::many_files_dirs;
-    use metaconfig::repoconfig::{BookmarkParams, HookParams, RepoReadOnly, RepoType};
+    use metaconfig_types::{BookmarkParams, HookParams, RepoReadOnly, RepoType};
     use slog::{Discard, Drain};
 
     fn default_repo_config() -> RepoConfig {

@@ -19,7 +19,7 @@ use hooks::{
 };
 use manifold::{ManifoldHttpClient, PayloadRange};
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use metaconfig::repoconfig::RepoConfig;
+use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
 use slog::Logger;

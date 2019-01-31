@@ -21,7 +21,7 @@ use blobstore::Blobstore;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
 use hooks::{hook_loader::load_hooks, HookManager};
-use metaconfig::repoconfig::{RepoConfig, RepoType};
+use metaconfig_types::{RepoConfig, RepoType};
 use mononoke_types::RepositoryId;
 use phases::{CachingHintPhases, HintPhases, Phases, SqlConstructors, SqlPhases};
 use reachabilityindex::{deserialize_skiplist_map, LeastCommonAncestorsHint, SkiplistIndex};

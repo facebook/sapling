@@ -22,7 +22,7 @@ use mercurial_types::{
     NULL_CSID, NULL_HASH,
 };
 
-use metaconfig::LfsParams;
+use metaconfig_types::LfsParams;
 use tracing::Traced;
 
 use errors::*;

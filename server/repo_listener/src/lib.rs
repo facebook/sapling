@@ -47,7 +47,7 @@ extern crate uuid;
 extern crate cache_warmup;
 extern crate hgproto;
 extern crate hooks;
-extern crate metaconfig;
+extern crate metaconfig_types;
 extern crate mononoke_types;
 extern crate phases;
 extern crate reachabilityindex;
@@ -68,7 +68,7 @@ use openssl::ssl::SslAcceptor;
 use slog::Logger;
 use std::sync::atomic::AtomicBool;
 
-use metaconfig::repoconfig::RepoConfig;
+use metaconfig_types::RepoConfig;
 
 use connection_acceptor::connection_acceptor;
 use errors::*;

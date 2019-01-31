@@ -15,7 +15,7 @@ extern crate slog;
 extern crate blobrepo;
 extern crate context;
 extern crate mercurial_types;
-extern crate metaconfig;
+extern crate metaconfig_types;
 extern crate revset;
 
 use std::sync::Arc;
@@ -25,10 +25,10 @@ use bookmarks::Bookmark;
 use context::CoreContext;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
-use mercurial_types::{Changeset, HgChangesetId, MPath, RepoPath};
 use mercurial_types::manifest::{Entry, Type};
 use mercurial_types::manifest_utils::recursive_entry_stream;
-use metaconfig::CacheWarmupParams;
+use mercurial_types::{Changeset, HgChangesetId, MPath, RepoPath};
+use metaconfig_types::CacheWarmupParams;
 use revset::AncestorsNodeStream;
 use slog::Logger;
 
