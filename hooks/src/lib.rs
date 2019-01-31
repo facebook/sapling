@@ -225,7 +225,8 @@ impl HookManager {
         let hooks: Result<Vec<(String, (Arc<Hook<HookChangeset>>, _))>, Error> = hooks
             .iter()
             .map(|hook_name| {
-                let hook = self.changeset_hooks
+                let hook = self
+                    .changeset_hooks
                     .get(hook_name)
                     .ok_or(ErrorKind::NoSuchHook(hook_name.to_string()))?;
                 Ok((hook_name.clone(), hook.clone()))
@@ -314,8 +315,7 @@ impl HookManager {
     ) -> BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> {
         debug!(
             self.logger.clone(),
-            "Running file hooks for bookmark {:?}",
-            bookmark
+            "Running file hooks for bookmark {:?}", bookmark
         );
         match self.bookmark_hooks.get(bookmark) {
             Some(hooks) => {
@@ -446,7 +446,8 @@ impl HookManager {
         changeset_id: HgChangesetId,
     ) -> BoxFuture<HookChangeset, Error> {
         let content_store = self.content_store.clone();
-        let hg_changeset = self.changeset_store
+        let hg_changeset = self
+            .changeset_store
             .get_changeset_by_changesetid(ctx.clone(), &changeset_id);
         let changed_files = self.changeset_store.get_changed_files(ctx, &changeset_id);
         let reviewers_acl_checker = self.reviewers_acl_checker.clone();
@@ -826,7 +827,8 @@ impl FileContentStore for InMemoryFileContentStore {
         changesetid: HgChangesetId,
         path: MPath,
     ) -> BoxFuture<Option<(FileType, Bytes)>, Error> {
-        let opt = self.map
+        let opt = self
+            .map
             .get(&(changesetid, path.clone()))
             .map(|(file_type, bytes)| (file_type.clone(), bytes.clone()));
         finished(opt).boxify()

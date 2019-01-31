@@ -8,17 +8,21 @@
 
 #![deny(warnings)]
 
-use super::{ChangedFileType, Hook, HookChangeset, HookChangesetParents, HookContext,
-            HookExecution, HookFile, HookRejectionInfo};
 use super::errors::*;
+use super::{
+    ChangedFileType, Hook, HookChangeset, HookChangesetParents, HookContext, HookExecution,
+    HookFile, HookRejectionInfo,
+};
 use aclchecker::Identity;
 use context::CoreContext;
 use failure::Error;
-use futures::{failed, Future};
 use futures::future::{ok, result};
+use futures::{failed, Future};
 use futures_ext::{BoxFuture, FutureExt};
-use hlua::{AnyLuaString, AnyLuaValue, Lua, LuaError, LuaFunctionCallError, LuaTable, PushGuard,
-           TuplePushError, Void, function0, function1, function2};
+use hlua::{
+    function0, function1, function2, AnyLuaString, AnyLuaValue, Lua, LuaError,
+    LuaFunctionCallError, LuaTable, PushGuard, TuplePushError, Void,
+};
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
 use linked_hash_map::LinkedHashMap;
 use mononoke_types::FileType;
@@ -143,7 +147,8 @@ impl Hook<HookChangeset> for LuaHook {
             move |path: String, string: String| -> Result<AnyFuture, Error> {
                 match files_map.get(&path) {
                     Some(file) => {
-                        let future = file.contains_string(ctx.clone(), &string)
+                        let future = file
+                            .contains_string(ctx.clone(), &string)
                             .map_err(|err| {
                                 LuaError::ExecutionError(format!(
                                     "failed to get file content: {}",
@@ -180,7 +185,8 @@ impl Hook<HookChangeset> for LuaHook {
             move |path: String| -> Result<AnyFuture, Error> {
                 match files_map2.get(&path) {
                     Some(file) => {
-                        let future = file.len(ctx.clone())
+                        let future = file
+                            .len(ctx.clone())
                             .map_err(|err| {
                                 LuaError::ExecutionError(format!(
                                     "failed to get file content: {}",
@@ -244,16 +250,17 @@ impl Hook<HookChangeset> for LuaHook {
         lua.set("__parse_commit_msg", parse_commit_msg);
         lua.set("__is_valid_reviewer", is_valid_reviewer);
         lua.set("__regex_match", regex_match);
-        let res: Result<(), Error> = lua.execute::<()>(&code)
+        let res: Result<(), Error> = lua
+            .execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
             return failed(e).boxify();
         }
         // Note the lifetime becomes static as the into_get method moves the lua
         // and the later create moves it again into the coroutine
-        let res: Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> = lua.into_get(
-            "__hook_start",
-        ).map_err(|_| panic!("No __hook_start"));
+        let res: Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> = lua
+            .into_get("__hook_start")
+            .map_err(|_| panic!("No __hook_start"));
         let builder = match res {
             Ok(builder) => builder,
             Err(e) => return failed(e).boxify(),
@@ -267,7 +274,7 @@ impl Hook<HookChangeset> for LuaHook {
                 ChangedFileType::Deleted => "deleted",
                 ChangedFileType::Modified => "modified",
             };
-            files.push(hashmap!{
+            files.push(hashmap! {
                 "path" => f.path,
                 "type" => ty.to_string(),
             });
@@ -370,16 +377,17 @@ impl Hook<HookFile> for LuaHook {
         lua.set("__file_content", file_content);
         lua.set("__is_symlink", is_symlink);
         lua.set("__regex_match", regex_match);
-        let res: Result<(), Error> = lua.execute::<()>(&code)
+        let res: Result<(), Error> = lua
+            .execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
         if let Err(e) = res {
             return failed(e).boxify();
         }
         // Note the lifetime becomes static as the into_get method moves the lua
         // and the later create moves it again into the coroutine
-        let res: Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> = lua.into_get(
-            "__hook_start",
-        ).map_err(|_| panic!("No __hook_start"));
+        let res: Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> = lua
+            .into_get("__hook_start")
+            .map_err(|_| panic!("No __hook_start"));
         let builder = match res {
             Ok(builder) => builder,
             Err(e) => return failed(e).boxify(),
@@ -389,7 +397,7 @@ impl Hook<HookFile> for LuaHook {
             ChangedFileType::Deleted => "deleted".to_string(),
             ChangedFileType::Modified => "modified".to_string(),
         };
-        let data = hashmap!{
+        let data = hashmap! {
             "path" => context.data.path.clone(),
             "type" => ty,
         };
@@ -444,7 +452,8 @@ fn cached_regex_match(
     const REGEX_CACHE_SIZE: usize = 128;
 
     lazy_static! {
-        static ref hook_regex_cache: Arc<RwLock<LinkedHashMap<String, Regex>>> = Arc::new(RwLock::new(LinkedHashMap::with_capacity(REGEX_CACHE_SIZE)));
+        static ref hook_regex_cache: Arc<RwLock<LinkedHashMap<String, Regex>>> =
+            Arc::new(RwLock::new(LinkedHashMap::with_capacity(REGEX_CACHE_SIZE)));
     }
 
     let future = if let Some(r) = hook_regex_cache.read().unwrap().get(&pattern) {
@@ -454,14 +463,15 @@ fn cached_regex_match(
             RegexBuilder::new(&pattern)
                 .size_limit(REGEX_SIZE_LIMIT)
                 .build(),
-        ).and_then(move |r| {
+        )
+        .and_then(move |r| {
             if hook_regex_cache.read().unwrap().len() > REGEX_CACHE_SIZE {
                 hook_regex_cache.write().unwrap().pop_front();
             }
             hook_regex_cache.write().unwrap().insert(pattern, r.clone());
             ok(r.is_match(&string))
         })
-            .right_future()
+        .right_future()
     };
 
     future
@@ -544,7 +554,7 @@ fn parse_commit_message(commit_msg: &str) -> HashMap<String, AnyLuaValue> {
     }
 
     let lines = commit_msg.lines();
-    let mut result = hashmap!{};
+    let mut result = hashmap! {};
 
     let mut current_tag = PhabricatorTag::new("title", PhabricatorTagValueType::String);
 
@@ -578,7 +588,8 @@ fn to_lua_string(s: &str) -> AnyLuaValue {
 }
 
 fn to_lua_array<'a, T: IntoIterator<Item = &'a str>>(v: T) -> AnyLuaValue {
-    let v: Vec<_> = v.into_iter()
+    let v: Vec<_> = v
+        .into_iter()
         .enumerate()
         .map(|(i, val)| {
             (
@@ -617,7 +628,7 @@ mod test {
 
         check_parse_commit(
             "mononoke: fix bug\nSummary: fix\nTest Plan: testinprod",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string("mononoke: fix bug"),
                 "summary".to_string() => to_lua_string("fix"),
                 "test plan".to_string() => to_lua_string("testinprod"),
@@ -627,7 +638,7 @@ mod test {
         // multiline title
         check_parse_commit(
             "mononoke: fix bug\nsecondline\nSummary: fix\nTest Plan: testinprod",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string("mononoke: fix bug\nsecondline"),
                 "summary".to_string() => to_lua_string("fix"),
                 "test plan".to_string() => to_lua_string("testinprod"),
@@ -636,7 +647,7 @@ mod test {
 
         check_parse_commit(
             "Summary: fix\nTest Plan: testinprod",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string(""),
                 "summary".to_string() => to_lua_string("fix"),
                 "test plan".to_string() => to_lua_string("testinprod"),
@@ -646,7 +657,7 @@ mod test {
         // Tag should start at beginning of the line
         check_parse_commit(
             "Summary: fix\n Test Plan: testinprod",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string(""),
                 "summary".to_string() => to_lua_string("fix\n Test Plan: testinprod"),
             },
@@ -654,7 +665,7 @@ mod test {
 
         check_parse_commit(
             "Summary: fix\nnot a tag: testinprod",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string(""),
                 "summary".to_string() => to_lua_string("fix\nnot a tag: testinprod"),
             },
@@ -662,7 +673,7 @@ mod test {
 
         check_parse_commit(
             "Summary: fix\nFixed\na\nbug",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string(""),
                 "summary".to_string() => to_lua_string("fix\nFixed\na\nbug"),
             },
@@ -670,7 +681,7 @@ mod test {
 
         check_parse_commit(
             "Summary: fix\nCC:",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string(""),
                 "summary".to_string() => to_lua_string("fix"),
                 "cc".to_string() => to_lua_array(vec![]),
@@ -679,7 +690,7 @@ mod test {
 
         check_parse_commit(
             "CC: user1, user2, user3",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string(""),
                 "cc".to_string() => to_lua_array(vec!["user1", "user2", "user3"]),
             },
@@ -687,7 +698,7 @@ mod test {
 
         check_parse_commit(
             "Tasks: T1111, T2222, T3333",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string(""),
                 "tasks".to_string() => to_lua_array(vec!["T1111", "T2222", "T3333"]),
             },
@@ -718,7 +729,7 @@ CC: jsgf
 Tasks: T1234
 Differential Revision: https://url/D123
 ",
-            hashmap!{
+            hashmap! {
                 "title".to_string() => to_lua_string("mononoke: fix fixovich"),
                 "summary".to_string() => to_lua_string("fix\nof a mononoke\nbug"),
                 "test plan".to_string() => to_lua_string("testinprod"),
@@ -750,20 +761,20 @@ Subscribers: jsgf
 Differential Revision: https://phabricator.intern.facebook.com/D1111111
 
 Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
-            hashmap!{
-                                        "title".to_string() => to_lua_string("mononoke: log error only once"),
-                                        "summary".to_string() => to_lua_string(
-                                            "Previously `log_with_msg()` was logged twice if msg wasn't None - with and\n\
+            hashmap! {
+                "title".to_string() => to_lua_string("mononoke: log error only once"),
+                "summary".to_string() => to_lua_string(
+                    "Previously `log_with_msg()` was logged twice if msg wasn't None - with and\n\
             without the message. This diff fixes it.\n\
             \n\
             #accept2ship"),
-                                        "test plan".to_string() => to_lua_string("buck check"),
-                                        "reviewed by".to_string() => to_lua_array(vec!["simonfar"]),
-                                        "reviewers".to_string() => to_lua_array(vec!["simonfar", "#mononoke"]),
-                                        "subscribers".to_string() => to_lua_array(vec!["jsgf"]),
-                                        "differential revision".to_string() =>  to_lua_string("https://phabricator.intern.facebook.com/D1111111"),
-                                        "signature".to_string() =>  to_lua_string("111111111:1111111111:bbbbbbbbbbbbbbbb"),
-                                    },
+                "test plan".to_string() => to_lua_string("buck check"),
+                "reviewed by".to_string() => to_lua_array(vec!["simonfar"]),
+                "reviewers".to_string() => to_lua_array(vec!["simonfar", "#mononoke"]),
+                "subscribers".to_string() => to_lua_array(vec!["jsgf"]),
+                "differential revision".to_string() =>  to_lua_string("https://phabricator.intern.facebook.com/D1111111"),
+                "signature".to_string() =>  to_lua_string("111111111:1111111111:bbbbbbbbbbbbbbbb"),
+            },
         );
     }
 
@@ -1266,9 +1277,9 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref msg)) if msg.contains("no hook function")
-             );
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref msg)) if msg.contains("no hook function")
+            );
         });
     }
 
@@ -1279,10 +1290,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
             let changeset = default_changeset();
             let code = String::from("invalid code");
             assert_matches!(
-                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookParseError(ref err_msg))
-                    if err_msg.starts_with("Syntax error:")
-             );
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookParseError(ref err_msg))
+                   if err_msg.starts_with("Syntax error:")
+            );
         });
     }
 
@@ -1300,10 +1311,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref err_msg))
-                    if err_msg.starts_with("LuaError")
-             );
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                   if err_msg.starts_with("LuaError")
+            );
         });
     }
 
@@ -1318,10 +1329,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref err_msg))
-                    if err_msg.contains("invalid hook return type")
-             );
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                   if err_msg.contains("invalid hook return type")
+            );
         });
     }
 
@@ -1372,10 +1383,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref err_msg))
-                    if err_msg.contains("failure description must only be set if hook fails")
-             );
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                   if err_msg.contains("failure description must only be set if hook fails")
+            );
         });
     }
 
@@ -1390,10 +1401,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref err_msg))
-                    if err_msg.contains("failure long description must only be set if hook fails")
-             );
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                   if err_msg.contains("failure long description must only be set if hook fails")
+            );
         });
     }
 
@@ -1544,10 +1555,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref err_msg))
-                    if err_msg.contains("invalid regex")
-             );
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                   if err_msg.contains("invalid regex")
+            );
         });
     }
 
@@ -1562,10 +1573,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref err_msg))
-                    if err_msg.contains("invalid regex")
-             );
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                   if err_msg.contains("invalid regex")
+            );
         });
     }
 
@@ -1716,9 +1727,9 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref err_msg)) if err_msg.contains("no hook function")
-             );
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref err_msg)) if err_msg.contains("no hook function")
+            );
         });
     }
 
@@ -1729,10 +1740,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
             let hook_file = default_hook_added_file();
             let code = String::from("invalid code");
             assert_matches!(
-                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookParseError(ref err_msg))
-                    if err_msg.starts_with("Syntax error:")
-             );
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookParseError(ref err_msg))
+                   if err_msg.starts_with("Syntax error:")
+            );
         });
     }
 
@@ -1750,10 +1761,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref err_msg))
-                    if err_msg.starts_with("LuaError")
-             );
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                   if err_msg.starts_with("LuaError")
+            );
         });
     }
 
@@ -1768,10 +1779,10 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
-                Ok(ErrorKind::HookRuntimeError(ref err_msg))
-                    if err_msg.contains("invalid hook return type")
-             );
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               Ok(ErrorKind::HookRuntimeError(ref err_msg))
+                   if err_msg.contains("invalid hook return type")
+            );
         });
     }
 
