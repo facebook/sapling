@@ -24,6 +24,7 @@ extern crate futures;
 #[macro_use]
 extern crate futures_ext;
 extern crate hooks;
+extern crate hooks_content_stores;
 extern crate manifoldblob;
 extern crate mercurial_types;
 extern crate mononoke_types;
@@ -55,6 +56,7 @@ use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use hooks::lua_hook::LuaHook;
 use hooks::{HookExecution, HookManager};
+use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use mercurial_types::HgChangesetId;
 use mononoke_types::RepositoryId;
 use slog::{Drain, Level, Logger};
@@ -116,8 +118,14 @@ fn run_hook(
     println!("Hook code is {}", code);
     println!("==============================");
     repo.and_then(move |repo| {
-        let mut hook_manager =
-            HookManager::new_with_blobrepo(ctx.clone(), Default::default(), repo.clone(), logger);
+        let mut hook_manager = HookManager::new(
+            ctx.clone(),
+            format!("repo-{:?}", repo.get_repoid()),
+            Box::new(BlobRepoChangesetStore::new(repo.clone())),
+            Arc::new(BlobRepoFileContentStore::new(repo.clone())),
+            Default::default(),
+            logger,
+        );
         let hook = LuaHook {
             name: String::from("testhook"),
             code,

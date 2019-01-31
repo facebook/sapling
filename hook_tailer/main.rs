@@ -23,6 +23,7 @@ extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
 extern crate hooks;
+extern crate hooks_content_stores;
 extern crate manifold;
 extern crate mercurial_types;
 extern crate metaconfig_parser;

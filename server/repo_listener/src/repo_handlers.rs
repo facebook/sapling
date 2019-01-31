@@ -21,6 +21,7 @@ use blobstore::Blobstore;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
 use hooks::{hook_loader::load_hooks, HookManager};
+use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use metaconfig_types::{RepoConfig, RepoType};
 use mononoke_types::RepositoryId;
 use phases::{CachingHintPhases, HintPhases, Phases, SqlConstructors, SqlPhases};
@@ -92,10 +93,12 @@ pub fn repo_handlers(
                     None => Default::default(),
                 };
 
-                let mut hook_manager = HookManager::new_with_blobrepo(
+                let mut hook_manager = HookManager::new(
                     ctx.clone(),
+                    format!("repo-{:?}", blobrepo.get_repoid()),
+                    Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
+                    Arc::new(BlobRepoFileContentStore::new(blobrepo.clone())),
                     hook_manager_params,
-                    blobrepo.clone(),
                     logger,
                 );
 

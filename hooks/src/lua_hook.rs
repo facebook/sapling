@@ -592,9 +592,10 @@ fn to_lua_array<'a, T: IntoIterator<Item = &'a str>>(v: T) -> AnyLuaValue {
 
 #[cfg(test)]
 mod test {
+    use super::super::{
+        ChangedFileType, HookChangeset, HookChangesetParents, InMemoryFileContentStore,
+    };
     use super::*;
-    use super::super::{ChangedFileType, HookChangeset, HookChangesetParents,
-                       InMemoryFileContentStore};
     use aclchecker::AclChecker;
     use async_unit;
     use bytes::Bytes;
@@ -602,7 +603,11 @@ mod test {
     use mercurial_types::HgChangesetId;
     use std::str::FromStr;
     use std::sync::Arc;
-    use test::to_mpath;
+
+    fn to_mpath(string: &str) -> MPath {
+        // Please... avert your eyes
+        MPath::new(string.to_string().as_bytes().to_vec()).unwrap()
+    }
 
     #[test]
     fn test_parse_commit_msg() {

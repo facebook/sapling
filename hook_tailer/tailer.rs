@@ -14,9 +14,8 @@ use failure::Error;
 use failure::Result;
 use futures::{Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt};
-use hooks::{
-    hook_loader::load_hooks, BlobRepoChangesetStore, BlobRepoFileContentStore, HookManager,
-};
+use hooks::{hook_loader::load_hooks, HookManager};
+use hooks_content_stores::{BlobRepoChangesetStore, BlobRepoFileContentStore};
 use manifold::{ManifoldHttpClient, PayloadRange};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use metaconfig_types::RepoConfig;

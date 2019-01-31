@@ -47,6 +47,7 @@ extern crate uuid;
 extern crate cache_warmup;
 extern crate hgproto;
 extern crate hooks;
+extern crate hooks_content_stores;
 extern crate metaconfig_types;
 extern crate mononoke_types;
 extern crate phases;
