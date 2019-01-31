@@ -139,10 +139,10 @@ def add_subcommands(
     # Sort the commands alphabetically.
     # The order they are added here is the order they will be displayed
     # in the --help output.
-    # metavar suppresses the long and ugly default list of subcommands on a
-    # single line.  We still render the nicer list below where we would
-    # have shown the nasty one.
-    subparsers = parser.add_subparsers(metavar="")
+    # metavar replaces the long and ugly default list of subcommands on a
+    # single line with a single COMMAND placeholder.  We still render the nicer
+    # list below where we would have shown the nasty one.
+    subparsers = parser.add_subparsers(metavar="COMMAND")
     for cmd_class in sorted(cmds, key=lambda c: c.NAME):
         cmd_instance = cmd_class(parser)
         cmd_instance.add_parser(subparsers)
