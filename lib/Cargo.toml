@@ -21,6 +21,7 @@ members = [
     "revisionstore",
     "treestate",
     "types",
+    "url-ext",
     "vlqencoding",
     "watchman_client",
     "zstdelta",
