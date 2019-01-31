@@ -32,5 +32,5 @@ Enable Mononoke API for Mercurial client
   > host = $APISERVER
   > EOF
 
-  $ hg debugmononokeapi
-  success
+  $ hg debughttphealthcheck
+  successfully connected to: http://localhost:* (glob)
