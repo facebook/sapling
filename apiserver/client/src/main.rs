@@ -21,9 +21,10 @@ use client::MononokeAPIClient;
 fn cat(client: MononokeAPIClient, matches: &ArgMatches) -> BoxFuture<(), ()> {
     let revision = matches.value_of("revision").expect("must provide revision");
     let path = matches.value_of("path").expect("must provide path");
+    let bookmark = matches.is_present("bookmark");
 
     client
-        .get_raw(revision.to_string(), path.to_string())
+        .get_raw(revision.to_string(), path.to_string(), bookmark)
         .map_err(|e| eprintln!("error: {}", e))
         .and_then(|r| String::from_utf8(r).map_err(|_| eprintln!("error: utf8 conversion failed.")))
         .map(|res| {
@@ -111,6 +112,12 @@ fn main() -> Result<(), ()> {
                         .value_name("PATH")
                         .help("path to the file you want to get")
                         .required(true),
+                )
+                .arg(
+                    Arg::with_name("bookmark")
+                        .short("b")
+                        .long("bookmark")
+                        .help("Revision is a bookmark"),
                 ),
         )
         .subcommand(

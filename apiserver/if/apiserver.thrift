@@ -7,6 +7,7 @@ enum MononokeAPIExceptionKind {
   InvalidInput = 1,
   NotFound = 2,
   InternalError = 3,
+  BookmarkNotFound = 4,
 }
 
 exception MononokeAPIException {

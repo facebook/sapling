@@ -43,6 +43,7 @@ pub enum ErrorKind {
     InternalError(Error),
     LFSNotFound(String),
     NotADirectory(String),
+    BookmarkNotFound(String),
 }
 
 impl ErrorKind {
@@ -55,6 +56,7 @@ impl ErrorKind {
             InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             LFSNotFound(_) => StatusCode::NOT_FOUND,
             NotADirectory(_) => StatusCode::BAD_REQUEST,
+            BookmarkNotFound(_) => StatusCode::BAD_REQUEST,
         }
     }
 
@@ -63,16 +65,15 @@ impl ErrorKind {
         use errors::ErrorKind::*;
 
         match &self {
-            NotFound(..) | InvalidInput(..) | InternalError(_) | NotADirectory(_) => {
-                ErrorResponse::APIErrorResponse(APIErrorResponse {
-                    message: self.to_string(),
-                    causes: self
-                        .causes()
-                        .skip(1)
-                        .map(|cause| cause.to_string())
-                        .collect(),
-                })
-            }
+            NotFound(..) | InvalidInput(..) | InternalError(_) | NotADirectory(_)
+            | BookmarkNotFound(_) => ErrorResponse::APIErrorResponse(APIErrorResponse {
+                message: self.to_string(),
+                causes: self
+                    .causes()
+                    .skip(1)
+                    .map(|cause| cause.to_string())
+                    .collect(),
+            }),
             LFSNotFound(_) => ErrorResponse::LFSErrorResponse(LFSErrorResponse {
                 message: self.to_string(),
             }),
@@ -100,7 +101,7 @@ impl Fail for ErrorKind {
         match self {
             NotFound(_, cause) | InvalidInput(_, cause) => cause.as_ref().map(|e| e.as_fail()),
             InternalError(err) => Some(err.as_fail()),
-            LFSNotFound(_) | NotADirectory(_) => None,
+            LFSNotFound(_) | NotADirectory(_) | BookmarkNotFound(_) => None,
         }
     }
 }
@@ -115,6 +116,7 @@ impl fmt::Display for ErrorKind {
             InternalError(_0) => write!(f, "internal server error: {}", _0),
             LFSNotFound(_0) => write!(f, "{} is not found on LFS request", _0),
             NotADirectory(_0) => write!(f, "{} is not a directory", _0),
+            BookmarkNotFound(_0) => write!(f, "{} is not a valid bookmark", _0),
         }
     }
 }
@@ -221,6 +223,10 @@ impl From<ErrorKind> for MononokeAPIException {
             },
             e @ NotADirectory(_) => MononokeAPIException {
                 kind: MononokeAPIExceptionKind::InvalidInput,
+                reason: e.to_string(),
+            },
+            e @ BookmarkNotFound(_) => MononokeAPIException {
+                kind: MononokeAPIExceptionKind::BookmarkNotFound,
                 reason: e.to_string(),
             },
         }

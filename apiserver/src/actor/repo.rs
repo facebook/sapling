@@ -20,13 +20,16 @@ use tokio::runtime::TaskExecutor;
 
 use api;
 use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
+use bookmarks::Bookmark;
 use context::CoreContext;
 use mercurial_types::manifest::Content;
-use mercurial_types::HgManifestId;
+
+use mercurial_types::{HgChangesetId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoType::{BlobFiles, BlobRemote, BlobRocks, BlobSqlite};
-use mononoke_types::{FileContents, RepositoryId};
+
 use genbfs::GenerationNumberBFS;
+use mononoke_types::{FileContents, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
 
 use errors::ErrorKind;
@@ -90,11 +93,26 @@ impl MononokeRepo {
         repo.map(|repo| Self { repo, executor })
     }
 
-    fn get_hash_from_revision(&self, revision: Revision) -> String {
+    fn get_hgchangesetid_from_revision(
+        &self,
+        ctx: CoreContext,
+        revision: Revision,
+    ) -> impl Future<Item = HgChangesetId, Error = Error> {
+        let repo = self.repo.clone();
         match revision {
-            Revision::CommitHash(hash) => hash,
-            //TODO: T39372106 resolve bookmark to hash
-            Revision::Bookmark(_) => panic!("Bookmarks not yet supported"),
+            Revision::CommitHash(hash) => FS::get_changeset_id(hash)
+                .into_future()
+                .from_err()
+                .left_future(),
+            Revision::Bookmark(bookmark) => Bookmark::new(bookmark)
+                .into_future()
+                .from_err()
+                .and_then(move |bookmark| {
+                    repo.get_bookmark(ctx, &bookmark).and_then(move |opt| {
+                        opt.ok_or_else(|| ErrorKind::BookmarkNotFound(bookmark.to_string()).into())
+                    })
+                })
+                .right_future(),
         }
     }
 
@@ -104,13 +122,11 @@ impl MononokeRepo {
         revision: Revision,
         path: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let hash = self.get_hash_from_revision(revision);
-
         let mpath = try_boxfuture!(FS::get_mpath(path.clone()));
-        let changesetid = try_boxfuture!(FS::get_changeset_id(hash));
-        let repo = self.repo.clone();
 
-        api::get_content_by_path(ctx, repo, changesetid, Some(mpath))
+        let repo = self.repo.clone();
+        self.get_hgchangesetid_from_revision(ctx.clone(), revision)
+            .and_then(|changesetid| api::get_content_by_path(ctx, repo, changesetid, Some(mpath)))
             .and_then(move |content| match content {
                 Content::File(content)
                 | Content::Executable(content)
@@ -208,19 +224,18 @@ impl MononokeRepo {
         revision: Revision,
         path: String,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let hash = self.get_hash_from_revision(revision);
         let mpath = if path.is_empty() {
             None
         } else {
             Some(try_boxfuture!(FS::get_mpath(path.clone())))
         };
-        let changesetid = try_boxfuture!(FS::get_changeset_id(hash));
-        let repo = self.repo.clone();
 
-        api::get_content_by_path(ctx, repo, changesetid, mpath)
+        let repo = self.repo.clone();
+        self.get_hgchangesetid_from_revision(ctx.clone(), revision)
+            .and_then(move |changesetid| api::get_content_by_path(ctx, repo, changesetid, mpath))
             .and_then(move |content| match content {
                 Content::Tree(tree) => Ok(tree),
-                _ => Err(ErrorKind::NotADirectory(path.to_string()).into())
+                _ => Err(ErrorKind::NotADirectory(path.to_string()).into()),
             })
             .map(|tree| {
                 tree.list()
@@ -258,11 +273,9 @@ impl MononokeRepo {
         ctx: CoreContext,
         revision: Revision,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
-        let hash = self.get_hash_from_revision(revision);
-        let changesetid = try_boxfuture!(FS::get_changeset_id(hash));
-
-        self.repo
-            .get_changeset_by_changesetid(ctx, &changesetid)
+        let repo = self.repo.clone();
+        self.get_hgchangesetid_from_revision(ctx.clone(), revision)
+            .and_then(move |changesetid| repo.get_changeset_by_changesetid(ctx, &changesetid))
             .and_then(|changeset| changeset.try_into().map_err(From::from))
             .map(|changeset| MononokeRepoResponse::GetChangeset { changeset })
             .from_err()

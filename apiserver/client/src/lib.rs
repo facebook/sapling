@@ -40,10 +40,17 @@ impl MononokeAPIClient {
         &self,
         revision: String,
         path: String,
+        bookmark: bool,
     ) -> BoxFuture<Vec<u8>, apiserver_thrift::errors::Error> {
+        let rev = if bookmark {
+            MononokeRevision::bookmark(revision)
+        } else {
+            MononokeRevision::commit_hash(revision)
+        };
+
         self.inner.get_raw(&MononokeGetRawParams {
             repo: self.repo.clone(),
-            revision: MononokeRevision::commit_hash(revision),
+            revision: rev,
             path: path.into_bytes(),
         })
     }
