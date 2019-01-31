@@ -15,7 +15,7 @@ use futures::future::{join_all, ok, Future};
 use futures::future::{loop_fn, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 
 use helpers::{

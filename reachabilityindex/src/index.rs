@@ -12,7 +12,7 @@ use std::sync::Arc;
 use failure::Error;
 use futures_ext::BoxFuture;
 
-use blobrepo::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, Generation};
 use uniqueheap::UniqueHeap;

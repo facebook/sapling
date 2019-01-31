@@ -33,7 +33,7 @@ use futures::stream::{self, iter_ok, Stream};
 use futures::{Async, IntoFuture, Poll};
 use futures_ext::{BoxFuture, FutureExt, SelectAll, StreamExt};
 
-use blobrepo::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;

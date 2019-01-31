@@ -23,6 +23,7 @@ extern crate blobrepo;
 extern crate blobstore;
 extern crate bonsai_utils;
 extern crate bookmarks;
+extern crate changeset_fetcher;
 extern crate changesets;
 extern crate cmdlib;
 extern crate context;
@@ -42,10 +43,11 @@ extern crate tokio;
 
 mod bookmarks_manager;
 
-use blobrepo::{BlobRepo, ChangesetFetcher};
+use blobrepo::BlobRepo;
 use blobstore::{new_memcache_blobstore, Blobstore, CacheBlobstoreExt, PrefixBlobstore};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::Bookmark;
+use changeset_fetcher::ChangesetFetcher;
 use changesets::{ChangesetEntry, Changesets, SqlChangesets};
 use clap::{App, Arg, SubCommand};
 use cmdlib::args;

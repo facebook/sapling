@@ -7,6 +7,7 @@
 #![deny(warnings)]
 
 extern crate blobrepo;
+extern crate changeset_fetcher;
 extern crate changesets;
 #[macro_use]
 extern crate cloned;

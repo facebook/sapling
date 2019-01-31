@@ -15,6 +15,7 @@ extern crate futures_ext;
 
 extern crate blobrepo;
 extern crate blobrepo_errors;
+extern crate changeset_fetcher;
 extern crate context;
 #[macro_use]
 extern crate maplit;

@@ -13,7 +13,7 @@ use futures::future::{loop_fn, ok, Future, Loop};
 use futures::stream::{iter_ok, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobrepo::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 
 use helpers::*;

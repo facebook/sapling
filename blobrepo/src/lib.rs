@@ -45,6 +45,7 @@ extern crate blobstore_sync_queue;
 extern crate bonsai_hg_mapping;
 extern crate bookmarks;
 extern crate cachelib;
+extern crate changeset_fetcher;
 extern crate changesets;
 extern crate context;
 extern crate crypto;
@@ -85,7 +86,6 @@ extern crate mercurial_types_mocks;
 
 pub mod alias;
 mod bonsai_generation;
-mod changeset_fetcher;
 mod file;
 mod manifest;
 mod memory_manifest;

@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use super::alias::{get_content_id_alias_key, get_sha256_alias, get_sha256_alias_key};
-use super::changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use super::utils::{sort_topological, IncompleteFilenodeInfo, IncompleteFilenodes};
 use blob_changeset::{ChangesetMetadata, HgChangesetContent, RepoBlobstore};
 use blobstore::{
@@ -21,6 +20,7 @@ use bonsai_hg_mapping::{
 use bookmarks::{self, Bookmark, BookmarkPrefix, Bookmarks};
 use bytes::Bytes;
 use cachelib;
+use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangests, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;

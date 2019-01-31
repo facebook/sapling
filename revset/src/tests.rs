@@ -4,7 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use blobrepo::{BlobRepo, ChangesetFetcher};
+use blobrepo::BlobRepo;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use failure::{err_msg, Error};
 use futures::executor::spawn;

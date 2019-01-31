@@ -17,7 +17,7 @@ use futures::stream::{self, iter_ok, Stream};
 use futures::{Async, Poll};
 use futures_ext::StreamExt;
 
-use blobrepo::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;

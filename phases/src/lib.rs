@@ -6,6 +6,7 @@
 
 extern crate ascii;
 extern crate blobrepo;
+extern crate changeset_fetcher;
 #[macro_use]
 extern crate cloned;
 extern crate context;

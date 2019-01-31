@@ -14,7 +14,7 @@ use futures::future::{join_all, Future};
 use futures::stream::{iter_ok, Stream};
 use futures_ext::FutureExt;
 
-use blobrepo::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 
 /// Attempts to fetch the generation number of the hash. Succeeds with the Generation value
