@@ -626,6 +626,8 @@ void FuseChannel::sendInvalidateInode(
     InodeNumber ino,
     int64_t off,
     int64_t len) {
+  XLOG(DBG3) << "sendInvalidateInode(ino=" << ino << ", off=" << off
+             << ", len=" << len << ")";
   fuse_notify_inval_inode_out notify;
   notify.ino = ino.get();
   notify.off = off;
@@ -645,16 +647,19 @@ void FuseChannel::sendInvalidateInode(
 
   try {
     sendRawReply(iov.data(), iov.size());
-    XLOG(DBG7) << "invalidateInode ino=" << ino << " off=" << off
-               << " len=" << len << " OK!";
+    XLOG(DBG7) << "sendInvalidateInode(ino=" << ino << ", off=" << off
+               << ", len=" << len << ") OK!";
   } catch (const std::system_error& exc) {
     // Ignore ENOENT.  This can happen for inode numbers that we allocated on
     // our own and haven't actually told the kernel about yet.
     if (!isEnoent(exc)) {
-      XLOG(ERR) << "invalidateInode ino=" << ino << " off=" << off
-                << " len=" << len << " FAIL: " << exc.what();
+      XLOG(ERR) << "sendInvalidateInode(ino=" << ino << ", off=" << off
+                << ", len=" << len << ") failed: " << exc.what();
       throwSystemErrorExplicit(
           exc.code().value(), "error invalidating FUSE inode ", ino);
+    } else {
+      XLOG(DBG3) << "sendInvalidateInode(ino=" << ino << ", off=" << off
+                 << ", len=" << len << ") failed with ENOENT";
     }
   }
 }
@@ -667,6 +672,9 @@ void FuseChannel::sendInvalidateInode(
 void FuseChannel::sendInvalidateEntry(
     InodeNumber parent,
     PathComponentPiece name) {
+  XLOG(DBG3) << "sendInvalidateEntry(parent=" << parent << ", name=" << name
+             << ")";
+
   auto namePiece = name.stringPiece();
 
   fuse_notify_inval_entry_out notify = {};
@@ -708,6 +716,9 @@ void FuseChannel::sendInvalidateEntry(
           name,
           " in directory inode ",
           parent);
+    } else {
+      XLOG(DBG3) << "sendInvalidateEntry(parent=" << parent << ", name=" << name
+                 << ") failed with ENOENT";
     }
   }
 }
