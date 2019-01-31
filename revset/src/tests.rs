@@ -8,32 +8,14 @@ use blobrepo::BlobRepo;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use failure::{err_msg, Error};
-use futures::executor::spawn;
-use futures::{Future, Stream};
+use futures::Future;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use mercurial_types::nodehash::HgChangesetId;
-use mercurial_types::HgNodeHash;
 use mononoke_types::{ChangesetId, Generation};
-use singlechangesetid::single_changeset_id;
+use revset_test_helper::{single_changeset_id, string_to_bonsai};
 use std::any::Any;
 use std::collections::HashMap;
-use std::collections::HashSet;
-use std::str::FromStr;
 use std::sync::Arc;
 use BonsaiNodeStream;
-
-pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
-    HgNodeHash::from_str(hash).expect("Can't turn string to HgNodeHash")
-}
-
-pub fn string_to_bonsai(repo: &Arc<BlobRepo>, s: &str) -> ChangesetId {
-    let ctx = CoreContext::test_mock();
-    let node = string_to_nodehash(s);
-    repo.get_bonsai_from_hg(ctx, &HgChangesetId::new(node))
-        .wait()
-        .unwrap()
-        .unwrap()
-}
 
 pub struct TestChangesetFetcher {
     repo: Arc<BlobRepo>,
@@ -71,72 +53,6 @@ impl ChangesetFetcher for TestChangesetFetcher {
         HashMap::new()
     }
 }
-
-pub fn assert_changesets_sequence<I>(
-    ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
-    hashes: I,
-    stream: Box<Stream<Item = ChangesetId, Error = Error>>,
-) where
-    I: IntoIterator<Item = ChangesetId>,
-{
-    let mut nodestream = spawn(stream);
-    let mut received_hashes = HashSet::new();
-    for expected in hashes {
-        // If we pulled it in earlier, we've found it.
-        if received_hashes.remove(&expected) {
-            continue;
-        }
-
-        let expected_generation = repo
-            .clone()
-            .get_generation_number_by_bonsai(ctx.clone(), &expected)
-            .wait()
-            .expect("Unexpected error");
-
-        // Keep pulling in hashes until we either find this one, or move on to a new generation
-        loop {
-            let hash = nodestream
-                .wait_stream()
-                .expect("Unexpected end of stream")
-                .expect("Unexpected error");
-
-            if hash == expected {
-                break;
-            }
-
-            let node_generation = repo
-                .clone()
-                .get_generation_number_by_bonsai(ctx.clone(), &expected)
-                .wait()
-                .expect("Unexpected error");
-
-            assert!(
-                node_generation == expected_generation,
-                "Did not receive expected node {:?} before change of generation from {:?} to {:?}",
-                expected,
-                node_generation,
-                expected_generation,
-            );
-
-            received_hashes.insert(hash);
-        }
-    }
-
-    assert!(
-        received_hashes.is_empty(),
-        "Too few nodes received: {:?}",
-        received_hashes
-    );
-
-    let next_node = nodestream.wait_stream();
-    assert!(
-        next_node.is_none(),
-        "Too many nodes received: {:?}",
-        next_node.unwrap()
-    );
-}
-
 pub fn get_single_bonsai_streams(
     ctx: CoreContext,
     repo: &Arc<BlobRepo>,

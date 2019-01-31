@@ -6,6 +6,7 @@
 
 #![deny(warnings)]
 
+#[cfg(test)]
 extern crate blobrepo;
 extern crate changeset_fetcher;
 extern crate changesets;
@@ -24,6 +25,8 @@ extern crate mononoke_types;
 #[cfg(test)]
 extern crate mononoke_types_mocks;
 extern crate reachabilityindex;
+#[cfg(test)]
+extern crate revset_test_helper;
 extern crate uniqueheap;
 
 use futures::stream::Stream;
@@ -37,9 +40,6 @@ pub use intersectnodestream::IntersectNodeStream;
 
 mod unionnodestream;
 pub use unionnodestream::UnionNodeStream;
-
-mod singlechangesetid;
-pub use singlechangesetid::single_changeset_id;
 
 mod setdifferencenodestream;
 pub use setdifferencenodestream::SetDifferenceNodeStream;

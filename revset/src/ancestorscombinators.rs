@@ -365,7 +365,8 @@ mod test {
     use fixtures::linear;
     use fixtures::merge_uneven;
     use reachabilityindex::SkiplistIndex;
-    use tests::{assert_changesets_sequence, string_to_bonsai, TestChangesetFetcher};
+    use revset_test_helper::{assert_changesets_sequence, string_to_bonsai};
+    use tests::TestChangesetFetcher;
 
     #[test]
     fn empty_ancestors_combinators() {

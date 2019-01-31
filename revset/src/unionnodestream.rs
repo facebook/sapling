@@ -162,12 +162,11 @@ mod test {
     use fixtures::{branch_even, branch_uneven, branch_wide, linear};
     use futures::executor::spawn;
     use futures_ext::StreamExt;
+    use revset_test_helper::assert_changesets_sequence;
+    use revset_test_helper::{single_changeset_id, string_to_bonsai};
     use setcommon::{NotReadyEmptyStream, RepoErrorStream};
-    use singlechangesetid::single_changeset_id;
     use std::sync::Arc;
-    use tests::assert_changesets_sequence;
     use tests::get_single_bonsai_streams;
-    use tests::string_to_bonsai;
     use tests::TestChangesetFetcher;
     use BonsaiNodeStream;
 

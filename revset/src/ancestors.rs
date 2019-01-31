@@ -181,8 +181,9 @@ mod test {
     use fixtures::linear;
     use fixtures::merge_uneven;
     use fixtures::unshared_merge_uneven;
-    use tests::assert_changesets_sequence;
-    use tests::{string_to_bonsai, TestChangesetFetcher};
+    use revset_test_helper::assert_changesets_sequence;
+    use revset_test_helper::string_to_bonsai;
+    use tests::TestChangesetFetcher;
 
     #[test]
     fn linear_ancestors() {

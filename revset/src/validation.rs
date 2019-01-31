@@ -76,10 +76,10 @@ mod test {
     use async_unit;
     use fixtures::linear;
     use futures_ext::StreamExt;
+    use revset_test_helper::{assert_changesets_sequence, single_changeset_id, string_to_bonsai};
     use setcommon::NotReadyEmptyStream;
-    use single_changeset_id;
     use std::sync::Arc;
-    use tests::{assert_changesets_sequence, string_to_bonsai, TestChangesetFetcher};
+    use tests::TestChangesetFetcher;
 
     #[test]
     fn validate_accepts_single_node() {

@@ -238,8 +238,8 @@ mod test {
     use fixtures::merge_uneven;
     use futures_ext::StreamExt;
     use mercurial_types::HgChangesetId;
-    use tests::assert_changesets_sequence;
-    use tests::string_to_nodehash;
+    use revset_test_helper::assert_changesets_sequence;
+    use revset_test_helper::string_to_nodehash;
 
     fn string_to_bonsai(ctx: CoreContext, repo: &Arc<BlobRepo>, s: &'static str) -> ChangesetId {
         let node = string_to_nodehash(s);
