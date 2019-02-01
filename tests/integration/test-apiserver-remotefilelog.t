@@ -12,7 +12,11 @@ Initialize test repo
 
 Populate test repo
   $ echo "test content" > test.txt
-  $ hg commit -Aqm "test commit"
+  $ hg commit -Aqm "add test.txt"
+  $ TEST_FILENODE=$(hg manifest --debug | grep test.txt | cut -d ' ' -f 1)
+  $ hg cp test.txt test2.txt
+  $ hg commit -Aqm "copy test.txt to test2.txt"
+  $ COPY_FILENODE=$(hg manifest --debug | grep test2.txt | cut -d ' ' -f 1)
   $ hg bookmarks -r tip master_bookmark
 
 Blobimport test repo
@@ -25,12 +29,38 @@ Start API server
   $ wait_for_apiserver --no-ssl
 
 Enable Mononoke API for Mercurial client
-  $ cd repo-hg
-  $ cat >> $HGRCPATH <<EOF
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg client-repo
+  $ cd client-repo
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > reponame = repo
   > [mononoke-api]
   > enabled = true
   > host = $APISERVER
   > EOF
 
+Check that the API server is alive.
   $ hg debughttphealthcheck
   successfully connected to: http://localhost:* (glob)
+
+Test fetching file contents
+  $ hg debuggetfile $TEST_FILENODE test.txt
+  wrote file to datapack: $TESTTMP/cachepath/repo/packs/a44185ec32ce585111e25184353e865695177464
+
+Verify contents
+  $ hg debugdatapack $TESTTMP/cachepath/repo/packs/a44185ec32ce585111e25184353e865695177464 --node $TEST_FILENODE
+  $TESTTMP/cachepath/repo/packs/a44185ec32ce585111e25184353e865695177464:
+  test content
+
+Test fetching contents of copied file
+  $ hg debuggetfile $COPY_FILENODE test2.txt
+  wrote file to datapack: $TESTTMP/cachepath/repo/packs/a6bab15ad2170bfde7adba357474fc96d14a17db
+
+Verify contents (note that copyinfo is present)
+  $ hg debugdatapack $TESTTMP/cachepath/repo/packs/a6bab15ad2170bfde7adba357474fc96d14a17db --node $COPY_FILENODE
+  $TESTTMP/cachepath/repo/packs/a6bab15ad2170bfde7adba357474fc96d14a17db:
+  \x01 (esc)
+  copy: test.txt
+  copyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca
+  \x01 (esc)
+  test content
