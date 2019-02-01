@@ -166,9 +166,9 @@ function register_hook {
   hook_type="$3"
 
   shift 3
-  BYPASS=""
+  EXTRA_CONFIG=""
   if [[ $# -gt 0 ]]; then
-    BYPASS="$1"
+    EXTRA_CONFIG="$1"
   fi
 
   cat >> repos/repo/server.toml <<CONFIG
@@ -178,7 +178,7 @@ hook_name="$hook_name"
 name="$hook_name"
 path="$path"
 hook_type="$hook_type"
-$BYPASS
+$EXTRA_CONFIG
 CONFIG
 }
 
@@ -355,17 +355,17 @@ CONFIG
   HOOK_NAME="$2"
   HOOK_TYPE="$3"
   shift 3
-  BYPASS=""
+  EXTRA_CONFIG=""
   if [[ $# -gt 0 ]]; then
-    BYPASS="$1"
+    EXTRA_CONFIG="$1"
   fi
 
   if [[ ! -z "$HOOK_FILE" ]] ; then
     mkdir -p common/hooks
     cp "$HOOK_FILE" common/hooks/"$HOOK_NAME".lua
-    register_hook "$HOOK_NAME" common/hooks/"$HOOK_NAME".lua "$HOOK_TYPE" "$BYPASS"
+    register_hook "$HOOK_NAME" common/hooks/"$HOOK_NAME".lua "$HOOK_TYPE" "$EXTRA_CONFIG"
   else
-    register_hook "$HOOK_NAME" "" "$HOOK_TYPE" "$BYPASS"
+    register_hook "$HOOK_NAME" "" "$HOOK_TYPE" "$EXTRA_CONFIG"
   fi
 
   setup_common_hg_configs
