@@ -2181,6 +2181,10 @@ rustextbinaries = [
     RustBinary("indexedlog_dump", manifest="exec/utils/Cargo.toml"),
 ]
 
+if havefb:
+    rustextbinaries.append(RustBinary("dotslash", manifest="exec/fb/dotslash/Cargo.toml"))
+
+
 setup(
     name="edenscm",
     version=setupversion,
