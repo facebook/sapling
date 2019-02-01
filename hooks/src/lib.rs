@@ -68,7 +68,7 @@ use bookmarks::Bookmark;
 use bytes::Bytes;
 use context::CoreContext;
 pub use errors::*;
-use failure::{Error, FutureFailureErrorExt};
+use failure::{err_msg, Error, FutureFailureErrorExt};
 use futures::{failed, finished, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{manifest_utils::EntryStatus, Changeset, HgChangesetId, HgParents, MPath};
@@ -126,16 +126,18 @@ impl HookManager {
         );
 
         let reviewers_acl_checker = if !hook_manager_params.disable_acl_checker {
+            let identity = Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME);
+
             // This can block, but not too big a deal as we create hook manager in server startup
-            let reviewers_acl_checker = AclChecker::new(&Identity::from_groupname(
-                facebook::REVIEWERS_ACL_GROUP_NAME,
-            ));
-            let updated = reviewers_acl_checker.do_wait_updated(10000);
-            if updated {
-                Some(reviewers_acl_checker)
-            } else {
-                None
-            }
+            AclChecker::new(&identity)
+                .and_then(|reviewers_acl_checker| {
+                    if reviewers_acl_checker.do_wait_updated(10000) {
+                        Ok(reviewers_acl_checker)
+                    } else {
+                        Err(err_msg("did not update acl checker"))
+                    }
+                })
+                .ok()
         } else {
             None
         };

@@ -1959,7 +1959,8 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     }
 
     fn acl_checker() -> Arc<Option<AclChecker>> {
-        let checker = AclChecker::new(&Identity::from_groupname("engineers"));
+        let checker = AclChecker::new(&Identity::from_groupname("engineers"))
+            .expect("couldnt get acl checker");
         assert!(checker.do_wait_updated(10000));
         Arc::new(Some(checker))
     }

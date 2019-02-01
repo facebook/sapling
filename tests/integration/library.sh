@@ -48,7 +48,10 @@ function mononoke {
 
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
-  local attempts=150
+  # MONONOKE_START_TIMEOUT is set in seconds
+  # Number of attempts is timeout multiplied by 10, since we
+  # sleep every 0.1 seconds.
+  local attempts=$(expr ${MONONOKE_START_TIMEOUT:-15} \* 10)
 
   SSLCURL="sslcurl --noproxy localhost \
                 https://localhost:$MONONOKE_SOCKET"
@@ -125,12 +128,14 @@ fi
 rewritedates=false
 CONFIG
 
-cat >> repos/repo/server.toml <<CONFIG
+if [[ ! -v ENABLE_ACL_CHECKER ]]; then
+  cat >> repos/repo/server.toml <<CONFIG
 [hook_manager_params]
 entrylimit=1048576
 weightlimit=104857600
 disable_acl_checker=true
 CONFIG
+fi
 
 if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
   cat >> repos/repo/server.toml <<CONFIG
