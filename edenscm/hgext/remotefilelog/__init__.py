@@ -1178,9 +1178,9 @@ def debughttphealthcheck(ui, repo, **opts):
     return debugcommands.debughttphealthcheck(ui, repo, **opts)
 
 
-@command("debuggetfile", [], _("hg debuggetfile <filenode> <path>"))
-def debuggetfile(ui, repo, node, path, **opts):
-    return debugcommands.debuggetfile(ui, repo, node, path, **opts)
+@command("debuggetfiles", [], _("hg debuggetfiles"))
+def debuggetfiles(ui, repo, **opts):
+    return debugcommands.debuggetfiles(ui, repo, **opts)
 
 
 def resolveprefetchopts(ui, opts):

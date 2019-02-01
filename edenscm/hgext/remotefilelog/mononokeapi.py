@@ -65,8 +65,9 @@ def healthcheck(ui, repo):
         raise error.Abort(e)
 
 
-def getfile(ui, repo, node, path):
+def getfiles(ui, repo, keys):
     req = GetFilesRequest()
-    req.push(node, path)
+    for (node, path) in keys:
+        req.push(node, path)
     client = setupclient(ui, repo)
     return client.get_files(req)

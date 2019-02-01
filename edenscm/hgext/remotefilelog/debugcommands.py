@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import hashlib
 import os
+import sys
 
 from edenscm.hgext import extutil
 from edenscm.mercurial import error, filelog, revlog
@@ -484,6 +485,13 @@ def debughttphealthcheck(ui, repo, **opts):
     mononokeapi.healthcheck(ui, repo)
 
 
-def debuggetfile(ui, repo, node, path, **ops):
-    outpath = mononokeapi.getfile(ui, repo, node, path)
-    ui.write(_("wrote file to datapack: %s\n") % outpath)
+def debuggetfiles(ui, repo, **opts):
+    keys = []
+    for line in sys.stdin.readlines():
+        key = line.split()
+        if len(key) != 2:
+            raise error.Abort(_("invalid input"))
+        keys.append(tuple(key))
+
+    outpath = mononokeapi.getfiles(ui, repo, keys)
+    ui.write(_("wrote datapack: %s\n") % outpath)
