@@ -13,10 +13,10 @@ Initialize test repo
 Populate test repo
   $ echo "test content" > test.txt
   $ hg commit -Aqm "add test.txt"
-  $ TEST_FILENODE=$(hg manifest --debug | grep test.txt | cut -d ' ' -f 1)
+  $ TEST_FILENODE=$(hg manifest --debug | grep test.txt | awk '{print $1}')
   $ hg cp test.txt test2.txt
   $ hg commit -Aqm "copy test.txt to test2.txt"
-  $ COPY_FILENODE=$(hg manifest --debug | grep test2.txt | cut -d ' ' -f 1)
+  $ COPY_FILENODE=$(hg manifest --debug | grep test2.txt | awk '{print $1}')
   $ hg bookmarks -r tip master_bookmark
 
 Blobimport test repo
@@ -39,24 +39,39 @@ Enable Mononoke API for Mercurial client
   > host = $APISERVER
   > EOF
 
-Check that the API server is alive.
+Check that the API server is alive
   $ hg debughttphealthcheck
   successfully connected to: http://localhost:* (glob)
 
-Test fetching file contents
-  $ hg debuggetfile <<EOF
+Test fetching single file
+  $ DATAPACK_PATH=$(hg debuggetfile <<EOF | awk '{print $3}'
+  > $TEST_FILENODE test.txt
+  > EOF
+  > )
+
+Verify that datapack has entry with expected metadata
+  $ hg debugdatapack $DATAPACK_PATH
+  $TESTTMP/cachepath/repo/packs/cc19320e735e5952dd5a09ac307b26adcff5f4b4:
+  test.txt:
+  Node          Delta Base    Delta Length  Blob Size
+  186cafa3319c  000000000000  13            13
+  
+  Total:                      13            13        (0.0% bigger)
+
+Test fetching multiple files
+  $ DATAPACK_PATH=$(hg debuggetfile <<EOF | awk '{print $3}'
   > $TEST_FILENODE test.txt
   > $COPY_FILENODE test2.txt
   > EOF
-  wrote datapack: $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f
+  > )
 
-Verify contents
-  $ hg debugdatapack $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f --node $TEST_FILENODE
-  $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f:
+Verify file contents
+  $ hg debugdatapack $DATAPACK_PATH --node $TEST_FILENODE
+  $TESTTMP/cachepath/repo/packs/04ccbe2c9216ebb0cc725c36892b6dd2f77a3e83:
   test content
 
-  $ hg debugdatapack $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f --node $COPY_FILENODE
-  $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f:
+  $ hg debugdatapack $DATAPACK_PATH --node $COPY_FILENODE
+  $TESTTMP/cachepath/repo/packs/04ccbe2c9216ebb0cc725c36892b6dd2f77a3e83:
   \x01 (esc)
   copy: test.txt
   copyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca
