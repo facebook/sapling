@@ -16,6 +16,8 @@ from __future__ import absolute_import
 from edenscm.mercurial import error, registrar, util
 from edenscm.mercurial.i18n import _
 
+from . import shallowutil
+
 
 try:
     from edenscm.mercurial.rust.pymononokeapi import PyMononokeClient
@@ -30,7 +32,7 @@ configitem("mononoke-api", "host", default=None)
 configitem("mononoke-api", "creds", default=None)
 
 
-def getclient(ui):
+def setupclient(ui, repo):
     try:
         PyMononokeClient
     except NameError:
@@ -47,15 +49,22 @@ def getclient(ui):
     if creds is not None:
         creds = util.expandpath(creds)
 
-    return PyMononokeClient(host, creds)
+    cachepath = shallowutil.getcachepath(ui)
+
+    return PyMononokeClient(host, cachepath, repo.name, creds)
 
 
-def healthcheck(ui):
+def healthcheck(ui, repo):
     host = ui.config("mononoke-api", "host")
-    client = getclient(ui)
+    client = setupclient(ui, repo)
 
     try:
         client.health_check()
         ui.write(_("successfully connected to: %s\n") % host)
     except RuntimeError as e:
         raise error.Abort(e)
+
+
+def getfile(ui, repo, node, path):
+    client = setupclient(ui, repo)
+    return client.get_file(node, path)

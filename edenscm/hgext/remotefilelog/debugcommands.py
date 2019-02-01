@@ -481,4 +481,9 @@ def debugwaitonprefetch(repo):
 
 
 def debughttphealthcheck(ui, repo, **opts):
-    mononokeapi.healthcheck(ui)
+    mononokeapi.healthcheck(ui, repo)
+
+
+def debuggetfile(ui, repo, node, path, **ops):
+    outpath = mononokeapi.getfile(ui, repo, node, path)
+    ui.write(_("wrote file to datapack: %s\n") % outpath)

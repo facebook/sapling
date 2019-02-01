@@ -1,6 +1,12 @@
 // Copyright Facebook, Inc. 2019
 
-use failure::{bail, Fallible};
+use std::{
+    fs::{self, File},
+    io::Read,
+    path::{Path, PathBuf},
+};
+
+use failure::{bail, ensure, Fallible};
 use hyper::client::HttpConnector;
 use hyper::{Body, Client};
 use hyper_tls::HttpsConnector;
@@ -9,12 +15,12 @@ use openssl::{pkcs12::Pkcs12, pkey::PKey, x509::X509};
 use same_file::is_same_file;
 use url::Url;
 
-use std::{fs::File, io::Read, path::Path};
-
 #[derive(Default)]
 pub struct MononokeClientBuilder {
     base_url: Option<Url>,
     client_id: Option<Identity>,
+    repo: Option<String>,
+    cache_path: Option<PathBuf>,
 }
 
 impl MononokeClientBuilder {
@@ -56,14 +62,52 @@ impl MononokeClientBuilder {
         self
     }
 
+    /// Set the name of the current repo.
+    /// Should correspond to the remotefilelog.reponame config item.
+    pub fn repo(mut self, repo: impl ToString) -> Self {
+        self.repo = Some(repo.to_string());
+        self
+    }
+
+    /// Set the path of the cache directory where packfiles are stored.
+    /// Should correspond to the remotefilelog.cachepath config item.
+    pub fn cache_path(mut self, path: impl AsRef<Path>) -> Self {
+        self.cache_path = Some(path.as_ref().to_path_buf());
+        self
+    }
+
     pub fn build(self) -> Fallible<MononokeClient> {
         let base_url = match self.base_url {
             Some(url) => url,
             None => bail!("No base URL specified"),
         };
-        let client = build_hyper_client(self.client_id)?;
 
-        Ok(MononokeClient { client, base_url })
+        let repo = match self.repo {
+            Some(repo) => repo,
+            None => bail!("No repo name specified"),
+        };
+
+        let cache_path = match self.cache_path {
+            Some(path) => path,
+            None => bail!("No cache path specified"),
+        };
+        ensure!(
+            cache_path.is_dir(),
+            "Configured cache path {:?} is not a directory",
+            &cache_path
+        );
+
+        let client = MononokeClient {
+            client: build_hyper_client(self.client_id)?,
+            base_url,
+            repo,
+            cache_path,
+        };
+
+        // Create repo/packs directory in cache if it doesn't already exist.
+        fs::create_dir_all(client.pack_cache_path())?;
+
+        Ok(client)
     }
 }
 
@@ -86,6 +130,23 @@ impl MononokeClientBuilder {
 pub struct MononokeClient {
     pub(crate) client: Client<HttpsConnector<HttpConnector>, Body>,
     pub(crate) base_url: Url,
+    pub(crate) repo: String,
+    pub(crate) cache_path: PathBuf,
+}
+
+impl MononokeClient {
+    /// Return the base URL of the API server joined with the repo name
+    /// and a trailing slash to allow additional URL components to be
+    /// appended on.
+    pub(crate) fn repo_base_url(&self) -> Fallible<Url> {
+        Ok(self.base_url.join(&format!("{}/", &self.repo))?)
+    }
+
+    /// Get the path for the directory where packfiles should be written
+    /// for the configured repo.
+    pub(crate) fn pack_cache_path(&self) -> PathBuf {
+        self.cache_path.join(&self.repo).join("packs")
+    }
 }
 
 fn read_bytes(path: impl AsRef<Path>) -> Fallible<Vec<u8>> {
