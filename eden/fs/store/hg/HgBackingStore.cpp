@@ -511,8 +511,8 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
               KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
           return makeFuture(std::move(tree));
         })
-        .onError([this, manifestNode, edenTreeID, ownedPath, writeBatch](
-                     const folly::exception_wrapper& ex) mutable {
+        .thenError([this, manifestNode, edenTreeID, ownedPath, writeBatch](
+                       const folly::exception_wrapper& ex) mutable {
           XLOG(WARN) << "got exception from MononokeBackingStore: "
                      << ex.what();
           return fetchTreeFromHgCacheOrImporter(
@@ -761,8 +761,10 @@ Future<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
                << hgInfo.revHash().toString() << " from mononoke";
     auto revHashCopy = hgInfo.revHash();
     return mononoke_->getBlob(revHashCopy)
-        .onError([this, id, path = hgInfo.path().copy(), revHash = revHashCopy](
-                     const folly::exception_wrapper& ex) {
+        .thenError([this,
+                    id,
+                    path = hgInfo.path().copy(),
+                    revHash = revHashCopy](const folly::exception_wrapper& ex) {
           XLOG(ERR) << "Error while fetching file contents of '" << path
                     << "', " << revHash.toString()
                     << " from mononoke: " << ex.what()

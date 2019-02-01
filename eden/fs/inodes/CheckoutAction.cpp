@@ -131,18 +131,20 @@ Future<Unit> CheckoutAction::run(
                            std::shared_ptr<const Tree> oldTree) {
               rc->setOldTree(std::move(oldTree));
             })
-            .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-              rc->error("error getting old tree", ew);
-            });
+            .thenError(
+                [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
+                  rc->error("error getting old tree", ew);
+                });
       } else {
         store->getBlob(oldScmEntry_.value().getHash())
             .thenValue([rc = LoadingRefcount(this)](
                            std::shared_ptr<const Blob> oldBlob) {
               rc->setOldBlob(std::move(oldBlob));
             })
-            .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-              rc->error("error getting old blob", ew);
-            });
+            .thenError(
+                [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
+                  rc->error("error getting old blob", ew);
+                });
       }
     }
 
@@ -155,18 +157,20 @@ Future<Unit> CheckoutAction::run(
                            std::shared_ptr<const Tree> newTree) {
               rc->setNewTree(std::move(newTree));
             })
-            .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-              rc->error("error getting new tree", ew);
-            });
+            .thenError(
+                [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
+                  rc->error("error getting new tree", ew);
+                });
       } else {
         store->getBlob(newEntry.getHash())
             .thenValue([rc = LoadingRefcount(this)](
                            std::shared_ptr<const Blob> newBlob) {
               rc->setNewBlob(std::move(newBlob));
             })
-            .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-              rc->error("error getting new blob", ew);
-            });
+            .thenError(
+                [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
+                  rc->error("error getting new blob", ew);
+                });
       }
     }
 
@@ -177,7 +181,7 @@ Future<Unit> CheckoutAction::run(
           .thenValue([rc = LoadingRefcount(this)](InodePtr inode) {
             rc->setInode(std::move(inode));
           })
-          .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
+          .thenError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
             rc->error("error getting inode", ew);
           });
     }

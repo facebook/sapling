@@ -226,7 +226,7 @@ Future<Unit> EdenServer::unmountAll() {
                               info.unmountPromise.getFuture()](auto&&) mutable {
                 return std::move(unmountFuture);
               })
-              .onError(
+              .thenError(
                   [path = entry.first.str()](folly::exception_wrapper&& ew) {
                     XLOG(ERR) << "Failed to perform unmount for \"" << path
                               << "\": " << folly::exceptionStr(ew);
@@ -878,7 +878,7 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
                  return std::move(f);
                });
          })
-      .onError([path = mountPath.str()](folly::exception_wrapper&& ew) {
+      .thenError([path = mountPath.str()](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "Failed to perform unmount for \"" << path
                   << "\": " << folly::exceptionStr(ew);
         return makeFuture<Unit>(std::move(ew));

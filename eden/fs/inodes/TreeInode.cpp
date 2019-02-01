@@ -451,8 +451,8 @@ void TreeInode::registerInodeLoadComplete(
                      unique_ptr<InodeBase>&& childInode) {
         self->inodeLoadComplete(childName, std::move(childInode));
       })
-      .onError([self = inodePtrFromThis(),
-                number](const folly::exception_wrapper& ew) {
+      .thenError([self = inodePtrFromThis(),
+                  number](const folly::exception_wrapper& ew) {
         self->getInodeMap()->inodeLoadFailed(number, ew);
       });
 }

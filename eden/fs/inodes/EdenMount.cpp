@@ -281,9 +281,11 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         // its inode here
         return dotEdenInode->getOrLoadChild(kDotEdenSymlinkName)
             .unit()
-            .onError([=](const InodeError& /*err*/) {
-              createDotEdenSymlink(dotEdenInode);
-            })
+            .thenError(
+                folly::tag_t<InodeError>{},
+                [=](const InodeError& /*err*/) {
+                  createDotEdenSymlink(dotEdenInode);
+                })
             .ensure([=] {
               // Assign this number after we've fixed up the directory
               // contents, otherwise we'll lock ourselves out of
