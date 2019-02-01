@@ -40,6 +40,9 @@ Configs:
     ``pushrebase.recordingsqlargs`` sql arguments for the pushrebase recording
 
     ``pushrebase.syncondispatch`` perform a full SQL sync when receiving pushes
+
+    ``pushrebase.commitdatesfile`` is a file with map {commit hash -> timestamp}
+    in a json format.
 """
 from __future__ import absolute_import
 
@@ -76,7 +79,7 @@ from edenscm.mercurial.extensions import unwrapfunction, wrapcommand, wrapfuncti
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, nullrev, short
 
-from . import recording, stackpush
+from . import common, recording, stackpush
 from .. import hgsql
 from ..remotefilelog import (
     contentstore,
@@ -807,7 +810,7 @@ def _getfilectx(rev, mf, path):
     return context.filectx(rev._repo, path, fileid=fileid, changectx=rev)
 
 
-def _graft(op, rev, mapping, lastdestnode):
+def _graft(op, rev, mapping, lastdestnode, getcommitdate):
     '''duplicate changeset "rev" with parents from "mapping"'''
     repo = op.repo
     oldp1 = rev.p1().node()
@@ -871,9 +874,7 @@ def _graft(op, rev, mapping, lastdestnode):
     else:
         files = rev.files()
 
-    date = rev.date()
-    if repo.ui.configbool("pushrebase", "rewritedates"):
-        date = (time.time(), date[1])
+    date = getcommitdate(repo.ui, rev.hex(), rev.date())
 
     extra = rev.extra().copy()
     mutation.record(repo, extra, [rev.node()], "pushrebase")
@@ -1397,7 +1398,8 @@ def runrebase(op, revs, oldonto, onto):
 
     while revs:
         rev = revs.pop()
-        newrev = _graft(op, rev, mapping, lastdestnode)
+        getcommitdate = common.commitdategenerator(op.ui)
+        newrev = _graft(op, rev, mapping, lastdestnode, getcommitdate)
 
         new = op.repo[newrev]
         oldnode = rev.node()

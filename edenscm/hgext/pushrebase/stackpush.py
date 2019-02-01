@@ -40,8 +40,9 @@ from __future__ import absolute_import
 import time
 
 from edenscm.mercurial import context, error, mutation
-from edenscm.mercurial.node import nullid, nullrev
+from edenscm.mercurial.node import hex, nullid, nullrev
 
+from .common import commitdategenerator
 from .errors import ConflictsError, StackPushUnsupportedError
 
 
@@ -156,21 +157,20 @@ class pushrequest(object):
         added = []
         replacements = {}
         repo = ctx.repo()
+        getcommitdate = commitdategenerator(repo.ui)
         for commit in self.pushcommits:
-            newnode = self._pushsingleunchecked(ctx, commit)
+            newnode = self._pushsingleunchecked(ctx, commit, getcommitdate)
             added.append(newnode)
             replacements[commit.orignode] = newnode
             ctx = repo[newnode]
         return added, replacements
 
     @staticmethod
-    def _pushsingleunchecked(ctx, commit):
+    def _pushsingleunchecked(ctx, commit, getcommitdate):
         """Return newly pushed node"""
         repo = ctx.repo()
 
-        date = commit.date
-        if repo.ui.configbool("pushrebase", "rewritedates"):
-            date = (time.time(), date[1])
+        date = getcommitdate(repo.ui, hex(commit.orignode), commit.date)
 
         def getfilectx(repo, memctx, path):
             assert path in commit.filechanges
