@@ -20,7 +20,7 @@ from . import shallowutil
 
 
 try:
-    from edenscm.mercurial.rust.pymononokeapi import PyMononokeClient
+    from edenscm.mercurial.rust.pymononokeapi import PyMononokeClient, GetFilesRequest
 except ImportError:
     pass
 
@@ -66,5 +66,7 @@ def healthcheck(ui, repo):
 
 
 def getfile(ui, repo, node, path):
+    req = GetFilesRequest()
+    req.push(node, path)
     client = setupclient(ui, repo)
-    return client.get_file(node, path)
+    return client.get_files(req)

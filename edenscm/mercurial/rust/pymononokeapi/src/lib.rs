@@ -8,7 +8,7 @@ use mononokeapi::{MononokeApi, MononokeClient, MononokeClientBuilder};
 use revisionstore::Key;
 use types::node::Node;
 
-use std::str;
+use std::{cell::RefCell, mem, str};
 
 py_module_initializer!(
     pymononokeapi,        // module name
@@ -17,6 +17,7 @@ py_module_initializer!(
     |py, m| {
         // init function
         m.add_class::<PyMononokeClient>(py)?;
+        m.add_class::<GetFilesRequest>(py)?;
         Ok(())
     }
 );
@@ -58,14 +59,33 @@ py_class!(class PyMononokeClient |py| {
             .map_pyerr::<exc::RuntimeError>(py)
     }
 
-    def get_file(&self, node: &PyBytes, path: &PyBytes) -> PyResult<PyBytes> {
+    def get_files(&self, request: &GetFilesRequest) -> PyResult<PyBytes> {
+        let mut keys = request.keys(py).try_borrow_mut().map_pyerr::<exc::RuntimeError>(py)?;
+        let keys = mem::replace(&mut *keys, Vec::new());
+
+        let out_path = self.client(py).get_files(keys).map_pyerr::<exc::RuntimeError>(py)?;
+        let out_path = path_to_local_bytes(&out_path).map_pyerr::<exc::RuntimeError>(py)?;
+        Ok(PyBytes::new(py, &out_path))
+
+    }
+});
+
+py_class!(class GetFilesRequest |py| {
+    data keys: RefCell<Vec<Key>>;
+
+    def __new__(_cls) -> PyResult<GetFilesRequest> {
+        GetFilesRequest::create_instance(py, RefCell::new(Vec::new()))
+    }
+
+    def push(&self, node: &PyBytes, path: &PyBytes) -> PyResult<PyObject> {
         let node = str::from_utf8(node.data(py)).map_pyerr::<exc::RuntimeError>(py)?;
         let node = Node::from_str(node).map_pyerr::<exc::RuntimeError>(py)?;
         let path = path.data(py).to_vec();
         let key = Key::new(path, node);
 
-        let out_path = self.client(py).get_files(vec![key]).map_pyerr::<exc::RuntimeError>(py)?;
-        let out_path = path_to_local_bytes(&out_path).map_pyerr::<exc::RuntimeError>(py)?;
-        Ok(PyBytes::new(py, &out_path))
+        let mut keys = self.keys(py).try_borrow_mut().map_pyerr::<exc::RuntimeError>(py)?;
+        keys.push(key);
+
+        Ok(py.None())
     }
 });
