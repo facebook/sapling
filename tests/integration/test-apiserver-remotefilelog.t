@@ -44,21 +44,19 @@ Check that the API server is alive.
   successfully connected to: http://localhost:* (glob)
 
 Test fetching file contents
-  $ hg debuggetfile $TEST_FILENODE test.txt
-  wrote file to datapack: $TESTTMP/cachepath/repo/packs/a44185ec32ce585111e25184353e865695177464
+  $ hg debuggetfile <<EOF
+  > $TEST_FILENODE test.txt
+  > $COPY_FILENODE test2.txt
+  > EOF
+  wrote datapack: $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f
 
 Verify contents
-  $ hg debugdatapack $TESTTMP/cachepath/repo/packs/a44185ec32ce585111e25184353e865695177464 --node $TEST_FILENODE
-  $TESTTMP/cachepath/repo/packs/a44185ec32ce585111e25184353e865695177464:
+  $ hg debugdatapack $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f --node $TEST_FILENODE
+  $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f:
   test content
 
-Test fetching contents of copied file
-  $ hg debuggetfile $COPY_FILENODE test2.txt
-  wrote file to datapack: $TESTTMP/cachepath/repo/packs/a6bab15ad2170bfde7adba357474fc96d14a17db
-
-Verify contents (note that copyinfo is present)
-  $ hg debugdatapack $TESTTMP/cachepath/repo/packs/a6bab15ad2170bfde7adba357474fc96d14a17db --node $COPY_FILENODE
-  $TESTTMP/cachepath/repo/packs/a6bab15ad2170bfde7adba357474fc96d14a17db:
+  $ hg debugdatapack $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f --node $COPY_FILENODE
+  $TESTTMP/cachepath/repo/packs/05a5c5f239f359ccf6200acfa30af03cf77b174f:
   \x01 (esc)
   copy: test.txt
   copyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca
