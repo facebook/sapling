@@ -12,7 +12,7 @@ use hyper::Chunk;
 use tokio::runtime::Runtime;
 use url::Url;
 
-use revisionstore::{DataPackVersion, Delta, Key, MutableDataPack, MutablePack};
+use revisionstore::{DataPackVersion, Delta, Key, Metadata, MutableDataPack, MutablePack};
 use url_ext::UrlExt;
 
 use crate::client::{HyperClient, MononokeClient};
@@ -128,12 +128,16 @@ fn write_datapack(
 ) -> Fallible<PathBuf> {
     let mut datapack = MutableDataPack::new(pack_dir.as_ref(), DataPackVersion::One)?;
     for (key, data) in files {
+        let metadata = Metadata {
+            size: Some(data.len() as u64),
+            flags: None,
+        };
         let delta = Delta {
             data,
             base: None,
             key,
         };
-        datapack.add(&delta, None)?;
+        datapack.add(&delta, Some(metadata))?;
     }
     datapack.close()
 }
