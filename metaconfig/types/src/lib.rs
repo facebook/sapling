@@ -180,7 +180,7 @@ pub struct HookConfig {
     /// Map of config to it's value. Values here are strings
     pub strings: HashMap<String, String>,
     /// Map of config to it's value. Values here are integers
-    pub ints: HashMap<String, i64>,
+    pub ints: HashMap<String, i32>,
 }
 
 /// Configuration for a hook

@@ -13,6 +13,8 @@ g__hook_start_base = function(info, arg, setup)
   end
 
   local ctx = {}
+  ctx.config_strings = g__config_strings
+  ctx.config_ints = g__config_ints
   ctx.regex_match = function(pattern, s)
     return coroutine.yield(g__regex_match(pattern, s))
   end

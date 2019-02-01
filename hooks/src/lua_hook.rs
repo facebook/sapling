@@ -25,6 +25,7 @@ use hlua::{
 };
 use hlua_futures::{AnyFuture, LuaCoroutine, LuaCoroutineBuilder};
 use linked_hash_map::LinkedHashMap;
+use metaconfig_types::HookConfig;
 use mononoke_types::FileType;
 use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
@@ -165,6 +166,7 @@ impl Hook<HookChangeset> for LuaHook {
 
         let mut lua = Lua::new();
         lua.openlibs();
+        add_configs_lua(&mut lua, context.clone());
         add_regex_match_lua(&mut lua);
         lua.set("g__contains_string", contains_string);
         lua.set("g__file_len", file_len);
@@ -279,6 +281,7 @@ impl Hook<HookFile> for LuaHook {
 
         let mut lua = Lua::new();
         lua.openlibs();
+        add_configs_lua(&mut lua, context.clone());
         add_regex_match_lua(&mut lua);
         lua.set("g__contains_string", contains_string);
         lua.set("g__file_len", file_len);
@@ -349,6 +352,16 @@ impl LuaHook {
             .flatten()
             .boxify()
     }
+}
+
+fn add_configs_lua<T: Clone>(lua: &mut Lua, context: HookContext<T>) {
+    let HookConfig {
+        strings,
+        ints,
+        bypass: _,
+    } = context.config;
+    lua.set("g__config_strings", strings);
+    lua.set("g__config_ints", ints);
 }
 
 fn add_regex_match_lua(lua: &mut Lua) {
@@ -1724,6 +1737,129 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                 run_file_hook(ctx.clone(), code, hook_file),
                 Ok(HookExecution::Accepted)
             );
+        });
+    }
+
+    const HOOK_CHECKING_CONFIGS: &str = r#"
+hook = function (ctx)
+    if ctx.config_strings["test"] ~= "val" then
+        return false, "", "missing strings config"
+    end
+
+    if ctx.config_strings["test2"] ~= nil then
+        return false, "", "existing strings config"
+    end
+
+    if ctx.config_ints["test"] ~= 44 then
+        return false, "", "missing ints config"
+    end
+
+    if ctx.config_ints["test2"] ~= nil then
+        return false, "", "existing ints config"
+    end
+
+    return true, nil, nil
+end"#;
+
+    fn run_test_for_config_reading<T: Clone>(
+        ctx: CoreContext,
+        context_construct: impl Fn(HookConfig) -> HookContext<T>,
+    ) where
+        LuaHook: Hook<T>,
+    {
+        let assert_rejected = |res, desc| {
+            assert_matches!(
+                res,
+                Ok(HookExecution::Rejected(ref info))
+                    if info.description == "" && info.long_description == desc
+            );
+        };
+
+        let hook = LuaHook::new("testhook".into(), HOOK_CHECKING_CONFIGS.into());
+
+        let context = context_construct(HookConfig {
+            bypass: None,
+            strings: hashmap! { "test".to_string() => "val".to_string() },
+            ints: hashmap! { "test".to_string() => 44 },
+        });
+        assert_matches!(
+            hook.run(ctx.clone(), context).wait(),
+            Ok(HookExecution::Accepted)
+        );
+
+        let context = context_construct(HookConfig {
+            bypass: None,
+            strings: hashmap! {},
+            ints: hashmap! {},
+        });
+        assert_rejected(
+            hook.run(ctx.clone(), context).wait(),
+            "missing strings config",
+        );
+
+        let context = context_construct(HookConfig {
+            bypass: None,
+            strings: hashmap! {
+                "test".to_string() => "val".to_string(),
+                "test2".to_string() => "val2".to_string(),
+            },
+            ints: hashmap! {},
+        });
+        assert_rejected(
+            hook.run(ctx.clone(), context).wait(),
+            "existing strings config",
+        );
+
+        let context = context_construct(HookConfig {
+            bypass: None,
+            strings: hashmap! { "test".to_string() => "val".to_string() },
+            ints: hashmap! {},
+        });
+        assert_rejected(hook.run(ctx.clone(), context).wait(), "missing ints config");
+
+        let context = context_construct(HookConfig {
+            bypass: None,
+            strings: hashmap! { "test".to_string() => "val".to_string() },
+            ints: hashmap! {
+                "test".to_string() => 44,
+                "test2".to_string() => 44,
+            },
+        });
+        assert_rejected(
+            hook.run(ctx.clone(), context).wait(),
+            "existing ints config",
+        );
+    }
+
+    #[test]
+    fn test_cs_hook_config_reading() {
+        async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
+
+            run_test_for_config_reading(ctx, |conf| {
+                HookContext::new(
+                    "testhook".into(),
+                    "some-repo".into(),
+                    conf,
+                    default_changeset(),
+                )
+            });
+        });
+    }
+
+    #[test]
+    fn test_file_hook_config_reading() {
+        async_unit::tokio_unit_test(|| {
+            let ctx = CoreContext::test_mock();
+
+            run_test_for_config_reading(ctx, |conf| {
+                HookContext::new(
+                    "testhook".into(),
+                    "some-repo".into(),
+                    conf,
+                    default_hook_added_file(),
+                )
+            });
         });
     }
 

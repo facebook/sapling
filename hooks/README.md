@@ -77,6 +77,8 @@ fields:
 
 | key | description |
 | --- | ----------- |
+| `config_strings` | (`table of string`) Contains string configs defined per repository config |
+| `config_ints` | (`table of int`) Contains int configs defined per repository config |
 | `regex_match(regex, string)` | (`function`) Returns a `boolean` indicating whether the string matches the supplied regex |
 
 The type `file` is a table with the following fields:

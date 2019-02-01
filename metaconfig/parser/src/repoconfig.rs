@@ -433,7 +433,7 @@ struct RawHookConfig {
     bypass_commit_string: Option<String>,
     bypass_pushvar: Option<String>,
     config_strings: Option<HashMap<String, String>>,
-    config_ints: Option<HashMap<String, i64>>,
+    config_ints: Option<HashMap<String, i32>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
