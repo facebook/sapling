@@ -886,22 +886,11 @@ This silliness fails:
   abort: can only close branch heads
   [255]
 
-Test that amend with --secret creates new secret changeset forcibly
----------------------------------------------------------------------
-
-  $ hg phase '.^::.'
-  29: draft
-  30: draft
-  $ hg commit --amend --secret -m 'amend as secret' -q
-  $ hg phase '.^::.'
-  29: draft
-  31: secret
-
 Test that amend with --edit invokes editor forcibly
 ---------------------------------------------------
 
   $ hg parents --template "{desc}\n"
-  amend as secret
+  ..
   $ HGEDITOR=cat hg commit --amend -m "editor should be suppressed"
   $ hg parents --template "{desc}\n"
   editor should be suppressed

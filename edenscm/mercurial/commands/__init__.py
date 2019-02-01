@@ -1805,7 +1805,6 @@ def clone(ui, source, dest=None, **opts):
         ),
         ("", "close-branch", None, _("mark a branch head as closed")),
         ("", "amend", None, _("amend the parent of the working directory")),
-        ("s", "secret", None, _("use the secret phase for committing")),
         ("e", "edit", None, _("invoke editor on commit messages")),
         ("i", "interactive", None, _("use interactive mode")),
         ("M", "reuse-message", "", _("reuse commit message from REV"), _("REV")),
@@ -1955,25 +1954,18 @@ def _docommit(ui, repo, *pats, **opts):
             commitextrafunc(extra)
 
         def commitfunc(ui, repo, message, match, opts):
-            overrides = {}
-            if opts.get("secret"):
-                overrides[("phases", "new-commit")] = "secret"
-
-            baseui = repo.baseui
-            with baseui.configoverride(overrides, "commit"):
-                with ui.configoverride(overrides, "commit"):
-                    editform = cmdutil.mergeeditform(repo[None], "commit.normal")
-                    editor = cmdutil.getcommiteditor(
-                        editform=editform, **pycompat.strkwargs(opts)
-                    )
-                    return repo.commit(
-                        message,
-                        opts.get("user"),
-                        opts.get("date"),
-                        match,
-                        editor=editor,
-                        extra=extra,
-                    )
+            editform = cmdutil.mergeeditform(repo[None], "commit.normal")
+            editor = cmdutil.getcommiteditor(
+                editform=editform, **pycompat.strkwargs(opts)
+            )
+            return repo.commit(
+                message,
+                opts.get("user"),
+                opts.get("date"),
+                match,
+                editor=editor,
+                extra=extra,
+            )
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
 

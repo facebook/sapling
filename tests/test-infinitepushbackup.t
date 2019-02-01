@@ -392,7 +392,8 @@ Make sure it wasn't backed up.
   $ hg book bookonsecret
   $ echo secret >> secret
   $ hg add secret
-  $ hg ci -Am secret --secret
+  $ hg ci -Am secret
+  $ hg phase -qfs '.'
   $ hg pushbackup
   starting backup .* (re)
   nothing to backup

@@ -748,7 +748,8 @@ static file
 phase changes are refreshed (issue4061)
 
   $ echo bar >> foo
-  $ hg ci -msecret --secret
+  $ hg ci -msecret
+  $ hg phase -qfs '.'
   $ get-with-headers.py localhost:$HGPORT 'log?style=raw'
   200 Script output follows
   

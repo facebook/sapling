@@ -1691,21 +1691,6 @@ configuration
 
   $ cd ..
 
-
-Test that commit --secret works on both repo and subrepo (issue4182)
-
-  $ cd main
-  $ echo secret >> b
-  $ echo secret >> s/b
-  $ hg commit --secret --subrepo -m "secret"
-  committing subrepository s
-  $ hg phase -r .
-  6: secret
-  $ cd s
-  $ hg phase -r .
-  6: secret
-  $ cd ../../
-
 Test "subrepos" template keyword
 
   $ cd t
