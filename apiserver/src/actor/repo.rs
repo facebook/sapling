@@ -139,6 +139,25 @@ impl MononokeRepo {
             .boxify()
     }
 
+    /// Given a Mercurial filenode hash, return the raw content of the file in the format
+    /// expected by the Mercurial client. This includes the raw bytes of the file content,
+    /// optionally prefixed with a header containing copy-from information. Content in
+    /// this format can be directly stored by Mercurial without additional manipulation.
+    fn get_hg_file(
+        &self,
+        ctx: CoreContext,
+        filenode: String,
+    ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
+        let filenode = try_boxfuture!(FS::get_nodehash(&filenode));
+        self.repo
+            .get_raw_hg_content(ctx, &filenode)
+            .map(|content| MononokeRepoResponse::GetHgFile {
+                content: content.into_inner(),
+            })
+            .from_err()
+            .boxify()
+    }
+
     fn is_ancestor(
         &self,
         ctx: CoreContext,
@@ -364,6 +383,7 @@ impl MononokeRepo {
 
         match msg {
             GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path),
+            GetHgFile { filenode } => self.get_hg_file(ctx, filenode),
             GetBlobContent { hash } => self.get_blob_content(ctx, hash),
             ListDirectory { revision, path } => self.list_directory(ctx, revision, path),
             GetTree { hash } => self.get_tree(ctx, hash),

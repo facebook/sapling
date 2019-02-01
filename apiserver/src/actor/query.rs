@@ -31,6 +31,9 @@ pub enum MononokeRepoQuery {
         path: String,
         revision: Revision,
     },
+    GetHgFile {
+        filenode: String,
+    },
     ListDirectory {
         path: String,
         revision: Revision,

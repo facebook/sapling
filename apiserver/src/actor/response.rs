@@ -18,6 +18,9 @@ pub enum MononokeRepoResponse {
     GetRawFile {
         content: Bytes,
     },
+    GetHgFile {
+        content: Bytes,
+    },
     GetBlobContent {
         content: Bytes,
     },
@@ -59,7 +62,7 @@ impl Responder for MononokeRepoResponse {
         use self::MononokeRepoResponse::*;
 
         match self {
-            GetRawFile { content } | GetBlobContent { content } => Ok(binary_response(content)),
+            GetRawFile { content } | GetBlobContent { content } | GetHgFile { content } => Ok(binary_response(content)),
             ListDirectory { files } => Json(files.collect::<Vec<_>>()).respond_to(req),
             GetTree { files } => Json(files).respond_to(req),
             GetChangeset { changeset } => Json(changeset).respond_to(req),

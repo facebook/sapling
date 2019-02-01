@@ -23,6 +23,7 @@ setup testing repo for mononoke
   $ hg mv test test-rename
   $ hg commit -ma
   $ COMMIT2=$(hg --debug id -i)
+  $ BLOBHASH_RENAMED=$(hg manifest --debug | grep test-rename | cut -d' ' -f1)
   $ touch branch1
   $ hg add branch1
   $ hg commit -ma
@@ -66,6 +67,10 @@ test cat file
   $ sslcurl $APISERVER/repo/raw/$COMMIT1/test > output
   $ diff output - <<< $TEST_CONTENT
 
+test cat file via filenode
+  $ sslcurl $APISERVER/repo/gethgfile/$BLOBHASH > output
+  $ diff output - <<< $TEST_CONTENT
+
 test link file (no follow)
   $ sslcurl $APISERVER/repo/raw/$COMMIT1/link
   test (no-eol)
@@ -78,6 +83,13 @@ test folder
 test cat renamed file
   $ sslcurl $APISERVER/repo/raw/$COMMIT2/test-rename > output
   $ diff output - <<< $TEST_CONTENT
+
+test cat renamed file via filenode;
+  $ sslcurl $APISERVER/repo/gethgfile/$BLOBHASH_RENAMED > output
+
+observe that copy info is present in output
+  $ COPYINFO=$'\x01\ncopy: test\ncopyrev: '"$BLOBHASH"$'\n\x01\n'
+  $ diff output - <<< "$COPYINFO$TEST_CONTENT"
 
   $ sslcurl -w "\n%{http_code}" $APISERVER/repo/raw/$COMMIT2/test | extract_json_error
   test is not found

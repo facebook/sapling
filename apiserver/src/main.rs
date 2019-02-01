@@ -118,6 +118,12 @@ struct HashQueryInfo {
 }
 
 #[derive(Deserialize)]
+struct GetHgFileQueryInfo {
+    repo: String,
+    filenode: String,
+}
+
+#[derive(Deserialize)]
 struct OidQueryInfo {
     repo: String,
     oid: String,
@@ -141,6 +147,17 @@ fn get_raw_file(
         kind: MononokeRepoQuery::GetRawFile {
             revision: Revision::CommitHash(info.changeset.clone()),
             path: info.path.clone(),
+        },
+    })
+}
+
+fn get_hg_file(
+    (state, info): (State<HttpServerState>, actix_web::Path<GetHgFileQueryInfo>),
+) -> impl Future<Item = MononokeRepoResponse, Error = ErrorKind> {
+    state.mononoke.send_query(MononokeQuery {
+        repo: info.repo.clone(),
+        kind: MononokeRepoQuery::GetHgFile {
+            filenode: info.filenode.clone(),
         },
     })
 }
@@ -501,6 +518,9 @@ fn main() -> Result<()> {
             .scope("/{repo}", |repo| {
                 repo.resource("/raw/{changeset}/{path:.*}", |r| {
                     r.method(http::Method::GET).with_async(get_raw_file)
+                })
+                .resource("/gethgfile/{filenode}", |r| {
+                    r.method(http::Method::GET).with_async(get_hg_file)
                 })
                 .resource(
                     "/is_ancestor/{proposed_ancestor}/{proposed_descendent}",
