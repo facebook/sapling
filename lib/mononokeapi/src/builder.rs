@@ -4,6 +4,7 @@ use std::{
     fs::{self, File},
     io::Read,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use failure::{bail, ensure, Fallible};
@@ -99,8 +100,10 @@ impl MononokeClientBuilder {
             &cache_path
         );
 
+        let hyper_client = build_hyper_client(self.client_id)?;
+
         let client = MononokeClient {
-            client: build_hyper_client(self.client_id)?,
+            client: Arc::new(hyper_client),
             base_url,
             repo,
             cache_path,

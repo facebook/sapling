@@ -1,12 +1,14 @@
 // Copyright Facebook, Inc. 2019
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use failure::Fallible;
 use hyper::client::HttpConnector;
 use hyper::{Body, Client};
 use hyper_tls::HttpsConnector;
 use url::Url;
+
+pub(crate) type HyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 
 /// An HTTP client for the Mononoke API server.
 ///
@@ -18,14 +20,14 @@ use url::Url;
 /// fn main() -> Fallible<()> {
 ///     let client = MononokeClientBuilder::new()
 ///         .base_url_str("https://mononoke-api.internal.tfbnw.net")?
-///         .client_creds_combined("/var/facebook/credentials/user/x509/user.pem")?
+///         .client_creds("/var/facebook/credentials/user/x509/user.pem")?
 ///         .build()?;
 ///
 ///     client.health_check()
 /// }
 /// ```
 pub struct MononokeClient {
-    pub(crate) client: Client<HttpsConnector<HttpConnector>, Body>,
+    pub(crate) client: Arc<HyperClient>,
     pub(crate) base_url: Url,
     pub(crate) repo: String,
     pub(crate) cache_path: PathBuf,

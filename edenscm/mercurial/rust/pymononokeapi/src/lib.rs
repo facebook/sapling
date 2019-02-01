@@ -64,7 +64,7 @@ py_class!(class PyMononokeClient |py| {
         let path = path.data(py).to_vec();
         let key = Key::new(path, node);
 
-        let out_path = self.client(py).get_file(key).map_pyerr::<exc::RuntimeError>(py)?;
+        let out_path = self.client(py).get_files(vec![key]).map_pyerr::<exc::RuntimeError>(py)?;
         let out_path = path_to_local_bytes(&out_path).map_pyerr::<exc::RuntimeError>(py)?;
         Ok(PyBytes::new(py, &out_path))
     }

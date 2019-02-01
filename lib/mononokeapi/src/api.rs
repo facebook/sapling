@@ -1,16 +1,21 @@
 // Copyright Facebook, Inc. 2019
 
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use bytes::Bytes;
 use failure::{ensure, Error, Fallible};
-use futures::{Future, Stream};
+use futures::{stream::futures_unordered, Future, IntoFuture, Stream};
+use hyper::Chunk;
 use tokio::runtime::Runtime;
+use url::Url;
 
 use revisionstore::{DataPackVersion, Delta, Key, MutableDataPack, MutablePack};
 use url_ext::UrlExt;
 
-use crate::client::MononokeClient;
+use crate::client::{HyperClient, MononokeClient};
 
 mod paths {
     pub const HEALTH_CHECK: &str = "/health_check";
@@ -19,7 +24,7 @@ mod paths {
 
 pub trait MononokeApi {
     fn health_check(&self) -> Fallible<()>;
-    fn get_file(&self, key: Key) -> Fallible<PathBuf>;
+    fn get_files(&self, keys: impl IntoIterator<Item = Key>) -> Fallible<PathBuf>;
 }
 
 impl MononokeApi for MononokeClient {
@@ -55,33 +60,62 @@ impl MononokeApi for MononokeClient {
     /// Fetch the content of the specified file from the API server and write
     /// it to a datapack in the configured cache directory. Returns the path
     /// of the resulting packfile.
-    fn get_file(&self, key: Key) -> Fallible<PathBuf> {
-        let url = self
-            .repo_base_url()?
-            .join(paths::GET_FILE)?
-            .join(&key.node().to_hex())?
-            .to_uri();
+    fn get_files(&self, keys: impl IntoIterator<Item = Key>) -> Fallible<PathBuf> {
+        let client = Arc::clone(&self.client);
+        let prefix = self.repo_base_url()?.join(paths::GET_FILE)?;
 
-        let fut = self.client.get(url).map_err(Error::from).and_then(|res| {
+        // Construct an iterator of Futures, each representing an individual
+        // getfile request.
+        let get_file_futures = keys
+            .into_iter()
+            .map(move |key| get_file(&client, &prefix, key));
+
+        // Construct a Future that executes the getfiles requests concurrently,
+        // returned the results in a Vec in arbitrary order.
+        let work = futures_unordered(get_file_futures).collect();
+
+        // Run the Futures.
+        let mut runtime = Runtime::new()?;
+        let files = runtime.block_on(work)?;
+
+        // Write the downloaded file content to disk.
+        write_datapack(self.pack_cache_path(), files)
+    }
+}
+
+/// Fetch an individual file from the API server by Key.
+fn get_file(
+    client: &Arc<HyperClient>,
+    url_prefix: &Url,
+    key: Key,
+) -> impl Future<Item = (Key, Bytes), Error = Error> {
+    let filenode = key.node().to_hex();
+    url_prefix
+        .join(&filenode)
+        .into_future()
+        .from_err()
+        .and_then({
+            let client = Arc::clone(client);
+            move |url| client.get(url.to_uri()).from_err()
+        })
+        .and_then(|res| {
             let status = res.status();
             res.into_body()
                 .concat2()
                 .from_err()
-                .map(move |body| (status, body.into_bytes()))
-        });
-
-        let mut runtime = Runtime::new()?;
-        let (status, data) = runtime.block_on(fut)?;
-
-        ensure!(
-            status.is_success(),
-            "Request failed (status code: {:?}): {:?}",
-            &status,
-            &data
-        );
-
-        write_datapack(self.pack_cache_path(), vec![(key, data)])
-    }
+                .map(|body: Chunk| body.into_bytes())
+                .and_then(move |body| {
+                    // If we got an error, intepret the body as an error
+                    // message and fail the Future.
+                    ensure!(
+                        status.is_success(),
+                        "Request failed (status code: {:?}): {:?}",
+                        &status,
+                        String::from_utf8_lossy(&body).into_owned(),
+                    );
+                    Ok((key, body))
+                })
+        })
 }
 
 /// Creates a new datapack in the given directory, and populates it with the file
