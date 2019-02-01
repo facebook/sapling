@@ -31,76 +31,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 const HOOK_START_CODE_BASE: &str = include_str!("hook_start_base.lua");
-
-const HOOK_START_CODE_CS: &str = "
-__hook_start = function(info, arg)
-    return __hook_start_base(info, arg, function(arg, ctx)
-        local files = {}
-
-        -- translation to lua from mercurial's util.shortuser()
-        local get_author_unixname = function(author)
-            local ind = author:find('@')
-            if ind then
-                author = author:sub(1, ind - 1)
-            end
-
-            ind = author:find('<')
-            if ind then
-                author = author:sub(ind + 1)
-            end
-
-            ind = author:find(' ')
-            if ind then
-                author = author:sub(0, ind)
-            end
-
-            ind = author:find('%.')
-            if ind then
-                author = author:sub(0, ind)
-            end
-
-            return author
-        end
-
-        for _, file_data in ipairs(arg) do
-            local file = __set_common_file_functions(file_data.path, file_data.type)
-
-            if not file.is_deleted() then
-                file.contains_string = function(s) return coroutine.yield(__contains_string(file.path, s)) end
-                file.len = function() return coroutine.yield(__file_len(file.path)) end
-                file.content = function() return coroutine.yield(__file_content(file.path)) end
-                file.path_regex_match = function(p) return coroutine.yield(__regex_match(p, file.path)) end
-            end
-            files[#files+1] = file
-        end
-
-        ctx.info.author_unixname = get_author_unixname(ctx.info.author)
-        ctx.files = files
-        ctx.file_content = function(path) return coroutine.yield(__file_content(path)) end
-        ctx.parse_commit_msg = function() return coroutine.yield(__parse_commit_msg()) end
-        ctx.is_valid_reviewer = function(user) return coroutine.yield(__is_valid_reviewer(user)) end
-        ctx.regex_match = function(pattern, s) return coroutine.yield(__regex_match(pattern, s)) end
-    end)
-end
-";
-
-const HOOK_START_CODE_FILE: &str = "
-__hook_start = function(info, arg)
-    return __hook_start_base(info, arg, function(arg, ctx)
-        local file = __set_common_file_functions(arg.path, arg.type)
-
-        if not file.is_deleted() then
-            file.contains_string = function(s) return coroutine.yield(__contains_string(s)) end
-            file.len = function() return coroutine.yield(__file_len()) end
-            file.content = function() return coroutine.yield(__file_content()) end
-            file.is_symlink = function() return coroutine.yield(__is_symlink()) end
-            file.path_regex_match = function(p) return coroutine.yield(__regex_match(p, file.path)) end
-        end
-        ctx.file = file
-        ctx.regex_match = function(pattern, s) return coroutine.yield(__regex_match(pattern, s)) end
-    end)
-end
-";
+const HOOK_START_CODE_CS: &str = include_str!("hook_start_cs.lua");
+const HOOK_START_CODE_FILE: &str = include_str!("hook_start_file.lua");
 
 #[derive(Clone, Debug)]
 pub struct LuaHook {
@@ -116,7 +48,6 @@ impl Hook<HookChangeset> for LuaHook {
         context: HookContext<HookChangeset>,
     ) -> BoxFuture<HookExecution, Error> {
         let mut hook_info = hashmap! {
-            "repo_name" => context.repo_name.to_string(),
             "author" => context.data.author.to_string(),
             "comments" => context.data.comments.to_string(),
         };
@@ -201,16 +132,6 @@ impl Hook<HookChangeset> for LuaHook {
             }
         };
         let file_len = function1(file_len);
-        let regex_match = {
-            move |pattern: String, string: String| -> Result<AnyFuture, Error> {
-                let future = cached_regex_match(pattern, string)
-                    .map_err(|err| LuaError::ExecutionError(format!("invalid regex: {}", err)))
-                    .map(|matched| AnyLuaValue::LuaBoolean(matched));
-
-                Ok(AnyFuture::new(future))
-            }
-        };
-        let regex_match = function2(regex_match);
 
         let parse_commit_msg = {
             cloned!(context);
@@ -244,12 +165,12 @@ impl Hook<HookChangeset> for LuaHook {
 
         let mut lua = Lua::new();
         lua.openlibs();
-        lua.set("__contains_string", contains_string);
-        lua.set("__file_len", file_len);
-        lua.set("__file_content", file_content);
-        lua.set("__parse_commit_msg", parse_commit_msg);
-        lua.set("__is_valid_reviewer", is_valid_reviewer);
-        lua.set("__regex_match", regex_match);
+        add_regex_match_lua(&mut lua);
+        lua.set("g__contains_string", contains_string);
+        lua.set("g__file_len", file_len);
+        lua.set("g__file_content", file_content);
+        lua.set("g__parse_commit_msg", parse_commit_msg);
+        lua.set("g__is_valid_reviewer", is_valid_reviewer);
         let res: Result<(), Error> = lua
             .execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
@@ -259,8 +180,8 @@ impl Hook<HookChangeset> for LuaHook {
         // Note the lifetime becomes static as the into_get method moves the lua
         // and the later create moves it again into the coroutine
         let res: Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> = lua
-            .into_get("__hook_start")
-            .map_err(|_| panic!("No __hook_start"));
+            .into_get("g__hook_start")
+            .map_err(|_| panic!("No g__hook_start"));
         let builder = match res {
             Ok(builder) => builder,
             Err(e) => return failed(e).boxify(),
@@ -290,9 +211,6 @@ impl Hook<HookFile> for LuaHook {
         ctx: CoreContext,
         context: HookContext<HookFile>,
     ) -> BoxFuture<HookExecution, Error> {
-        let hook_info = hashmap! {
-            "repo_name" => context.repo_name.to_string(),
-        };
         let mut code = HOOK_START_CODE_FILE.to_string();
         code.push_str(HOOK_START_CODE_BASE);
         code.push_str(&self.code);
@@ -359,24 +277,13 @@ impl Hook<HookFile> for LuaHook {
         };
         let file_len = function0(file_len);
 
-        let regex_match = {
-            move |pattern: String, string: String| -> Result<AnyFuture, Error> {
-                let future = cached_regex_match(pattern, string)
-                    .map_err(|err| LuaError::ExecutionError(format!("invalid regex: {}", err)))
-                    .map(|matched| AnyLuaValue::LuaBoolean(matched));
-
-                Ok(AnyFuture::new(future))
-            }
-        };
-        let regex_match = function2(regex_match);
-
         let mut lua = Lua::new();
         lua.openlibs();
-        lua.set("__contains_string", contains_string);
-        lua.set("__file_len", file_len);
-        lua.set("__file_content", file_content);
-        lua.set("__is_symlink", is_symlink);
-        lua.set("__regex_match", regex_match);
+        add_regex_match_lua(&mut lua);
+        lua.set("g__contains_string", contains_string);
+        lua.set("g__file_len", file_len);
+        lua.set("g__file_content", file_content);
+        lua.set("g__is_symlink", is_symlink);
         let res: Result<(), Error> = lua
             .execute::<()>(&code)
             .map_err(|e| ErrorKind::HookParseError(e.to_string()).into());
@@ -386,8 +293,8 @@ impl Hook<HookFile> for LuaHook {
         // Note the lifetime becomes static as the into_get method moves the lua
         // and the later create moves it again into the coroutine
         let res: Result<LuaCoroutineBuilder<PushGuard<Lua<'static>>>, Error> = lua
-            .into_get("__hook_start")
-            .map_err(|_| panic!("No __hook_start"));
+            .into_get("g__hook_start")
+            .map_err(|_| panic!("No g__hook_start"));
         let builder = match res {
             Ok(builder) => builder,
             Err(e) => return failed(e).boxify(),
@@ -401,7 +308,7 @@ impl Hook<HookFile> for LuaHook {
             "path" => context.data.path.clone(),
             "type" => ty,
         };
-        self.convert_coroutine_res(builder.create((hook_info, data)))
+        self.convert_coroutine_res(builder.create((HashMap::<&str, String, _>::new(), data)))
     }
 }
 
@@ -442,6 +349,21 @@ impl LuaHook {
             .flatten()
             .boxify()
     }
+}
+
+fn add_regex_match_lua(lua: &mut Lua) {
+    lua.set(
+        "g__regex_match",
+        function2(
+            |pattern: String, string: String| -> Result<AnyFuture, Error> {
+                let future = cached_regex_match(pattern, string)
+                    .map_err(|err| LuaError::ExecutionError(format!("invalid regex: {}", err)))
+                    .map(|matched| AnyLuaValue::LuaBoolean(matched));
+
+                Ok(AnyFuture::new(future))
+            },
+        ),
+    )
 }
 
 fn cached_regex_match(
@@ -1194,23 +1116,6 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
     }
 
     #[test]
-    fn test_cs_hook_repo_name() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let changeset = default_changeset();
-            let code = String::from(
-                "hook = function (ctx)\n\
-                 return ctx.info.repo_name == \"some-repo\"\n\
-                 end",
-            );
-            assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
-                Ok(HookExecution::Accepted)
-            );
-        });
-    }
-
-    #[test]
     fn test_cs_hook_one_parent() {
         async_unit::tokio_unit_test(|| {
             let ctx = CoreContext::test_mock();
@@ -1678,23 +1583,6 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
             assert_matches!(
                 run_file_hook(ctx.clone(), code, hook_file),
                 Ok(HookExecution::Rejected(_))
-            );
-        });
-    }
-
-    #[test]
-    fn test_file_hook_repo_name() {
-        async_unit::tokio_unit_test(|| {
-            let ctx = CoreContext::test_mock();
-            let hook_file = default_hook_added_file();
-            let code = String::from(
-                "hook = function (ctx)\n\
-                 return ctx.info.repo_name == \"some-repo\"\n\
-                 end",
-            );
-            assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
-                Ok(HookExecution::Accepted)
             );
         });
     }

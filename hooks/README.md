@@ -70,9 +70,16 @@ values:
 * `long_description` (`string` or `nil`) If the hook was not satisfied, this
   should provide a long description of the failure.
 
-Here are some common types:
+Here are some common properties of hooks:
 
-`file` is a table with the following fields:
+The `ctx` argument passed to the hook function always has at least the following
+fields:
+
+| key | description |
+| --- | ----------- |
+| `regex_match(regex, string)` | (`function`) Returns a `boolean` indicating whether the string matches the supplied regex |
+
+The type `file` is a table with the following fields:
 
 | key | description |
 | --------- | ----------- |
@@ -88,7 +95,7 @@ Here are some common types:
 ### PerChangeset
 
 Your `hook()` function receives a single `ctx` argument, which is a table with
-the following fields:
+the following additional fields:
 
 | key | description |
 | --------- | ----------- |
@@ -97,14 +104,12 @@ the following fields:
 | `file_content(path)` | (`function`) Takes the relative path to a file in the repo and returns its contents. |
 | `parse_commit_msg()` | (`function`) Returns a table with phabricator tags parsed. |
 | `is_valid_reviewer(user)` | (`function`) Returns whether a user can review the commit. |
-| `regex_match(regex, string)` | (`function`) Returns a `boolean` indicating whether the string matches the supplied regex |
 
 
 `ctx.info` is a table with the following fields:
 
 | key | description |
 | --------- | ----------- |
-| `repo_name` | (`string`) Name of the repository. |
 | `author` | (`string`) The author of the changeset. This should be something like `"Stanislau Hlebik <stash@fb.com>"`. |
 | `comments` | (`string`) The commit message. |
 | `parent1_hash` | (`string` or `nil`) `p1` for the commit as a hex string, if it exists. |
@@ -113,16 +118,8 @@ the following fields:
 ### PerAddedOrModifiedFile
 
 Your `hook()` function receives a single `ctx` argument, which is a table with
-the following fields:
+the following additional fields:
 
 | key | description |
 | --------- | ----------- |
-| `info` | (`table`) Described below. |
 | `file` | (`table`) Object of type `file`, described above. (Note `is_deleted()` will return `false`.) |
-| `regex_match(regex, string)` | (`function`) Returns a `boolean` indicating whether the string matches the supplied regex |
-
-`ctx.info` is a table with the following fields:
-
-| key | description |
-| --------- | ----------- |
-| `repo_name` | (`string`) Name of the repository. |
