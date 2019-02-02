@@ -149,8 +149,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotenames.transitionmessage (str)
   undocumented: remotenames.upstream (list)
   undocumented: server.requireexplicitfullclone (bool)
-  undocumented: simplecache.cachedir (str)
-  undocumented: simplecache.caches (list) [["local"]]
   undocumented: smartlog.ignorebookmarks (str) ["!"]
   undocumented: ssl.timeout (int) [5]
   undocumented: treemanifest.verifyautocreate (bool)

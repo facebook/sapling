@@ -14,10 +14,23 @@ Currently we cache the full results of these functions:
     copies.pathcopies (a dictionary)
     context.basectx._buildstatus (a scmutil.status object -- a tuple of lists)
 
-You can disable its debug statements (defaults to 'on' except in tests)::
+Config::
 
   [simplecache]
+  # enable debug statements (defaults to 'on' except during tests)
   showdebug = False
+
+  # list of caches to enable ('local' or 'memcache')
+  caches = local
+
+  # path for local cache files
+  cachedir = ~/.hgsimplecache
+
+  # memcache host
+  host = localhost
+
+  # memcache port
+  port = 11101
 """
 
 import json
