@@ -5,10 +5,12 @@ mod util;
 
 pub mod asyncdatapack;
 pub mod asyncdatastore;
+pub mod asynchistorypack;
 pub mod asynchistorystore;
 pub mod asyncmutabledatapack;
 
 pub use crate::asyncdatapack::AsyncDataPack;
 pub use crate::asyncdatastore::AsyncDataStore;
+pub use crate::asynchistorypack::{AsyncHistoryPack, AsyncHistoryPackBuilder};
 pub use crate::asynchistorystore::AsyncHistoryStore;
 pub use crate::asyncmutabledatapack::AsyncMutableDataPack;
