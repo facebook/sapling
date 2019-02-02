@@ -1,18 +1,34 @@
 // Copyright Facebook, Inc. 2017
 //! Python bindings for treedirstate and treestate.
+//!
+//! This is a Rust implementation of the dirstate concept for Mercurial, using a tree structure
+//! in an append-only storage back-end.
+//!
+//! The directory state stores information for all files in a working copy that are of interest
+//! to Mercurial.  In particular, for each file in the working copy it stores the mode flags,
+//! size, and modification time of the file.  These can be compared with current values to
+//! determine if the file has changed.
+//!
+//! The directory state also stores files that are in the working copy parent manifest but have
+//! been marked as removed.
 
-use cpython::*;
+use cpython::{
+    exc, NoArgs, ObjectProtocol, PyBytes, PyErr, PyIterator, PyModule, PyObject, PyResult,
+    PySequence, PyTuple, Python, PythonObject, ToPyObject,
+};
 use encoding::local_bytes_to_path;
+use rust_treestate::errors::{self, ErrorKind};
+use rust_treestate::filestate::{FileState, FileStateV2, StateFlags};
+use rust_treestate::store::BlockId;
+use rust_treestate::tree::{Key, KeyRef, VisitorResult};
+use rust_treestate::treedirstate::TreeDirstate;
+use rust_treestate::treestate::TreeState;
 use std::cell::RefCell;
 use std::path::PathBuf;
-use treestate::errors::{self, ErrorKind};
-use treestate::filestate::{FileState, FileStateV2, StateFlags};
-use treestate::store::BlockId;
-use treestate::tree::{Key, KeyRef, VisitorResult};
-use treestate::treedirstate::TreeDirstate;
-use treestate::treestate::TreeState;
 
-py_module_initializer!(treestate, inittreestate, PyInit_treestate, |py, m| {
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "treestate"].join(".");
+    let m = PyModule::new(py, &name)?;
     m.add_class::<treedirstatemap>(py)?;
     m.add_class::<treestate>(py)?;
     m.add(py, "EXIST_P1", StateFlags::EXIST_P1.to_bits())?;
@@ -22,11 +38,12 @@ py_module_initializer!(treestate, inittreestate, PyInit_treestate, |py, m| {
     m.add(py, "NEED_CHECK", StateFlags::NEED_CHECK.to_bits())?;
     m.add(py, "COPIED", StateFlags::COPIED.to_bits())?;
     m.add(py, "tohgstate", py_fn!(py, flags_to_hg_state(flags: u16)))?;
-    Ok(())
-});
+    Ok(m)
+}
 
 fn callback_error(py: Python, mut e: PyErr) -> ErrorKind {
-    let s = e.instance(py)
+    let s = e
+        .instance(py)
         .extract::<String>(py)
         .unwrap_or_else(|_e| "unknown exception".to_string());
     ErrorKind::CallbackError(s)
@@ -784,17 +801,19 @@ py_class!(class treestate |py| {
 /// Convert StateFlags to Mercurial dirstate state
 fn flags_to_hg_state(_py: Python, flags: u16) -> PyResult<&'static str> {
     let flags = StateFlags::from_bits_truncate(flags);
-    Ok(match (
-        flags.intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2),
-        flags.contains(StateFlags::EXIST_P1 | StateFlags::EXIST_P2),
-        flags.contains(StateFlags::EXIST_NEXT),
-    ) {
-        (true, true, true) => "m",  // merge
-        (true, false, true) => "n", // normal
-        (true, _, false) => "r",    // remove
-        (false, _, true) => "a",    // add
-        (false, _, false) => "?",   // untracked
-    })
+    Ok(
+        match (
+            flags.intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2),
+            flags.contains(StateFlags::EXIST_P1 | StateFlags::EXIST_P2),
+            flags.contains(StateFlags::EXIST_NEXT),
+        ) {
+            (true, true, true) => "m",  // merge
+            (true, false, true) => "n", // normal
+            (true, _, false) => "r",    // remove
+            (false, _, true) => "a",    // add
+            (false, _, false) => "?",   // untracked
+        },
+    )
 }
 
 /// Convert a Result to PyResult

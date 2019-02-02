@@ -5,20 +5,15 @@
 
 #![allow(non_camel_case_types)]
 
-#[macro_use]
-extern crate cpython;
-extern crate cpython_ext;
-extern crate python27_sys;
-extern crate zstd;
-extern crate zstdelta;
-
-use cpython::{exc, PyBytes, PyErr, PyObject, PyResult, Python};
+use cpython::{exc, PyBytes, PyErr, PyModule, PyObject, PyResult, Python};
 use cpython_ext::SimplePyBuf;
+use rust_zstd::stream::{decode_all, encode_all};
+use rust_zstdelta::{apply, diff};
 use std::io;
-use zstd::stream::{decode_all, encode_all};
-use zstdelta::{apply, diff};
 
-py_module_initializer!(zstd, initzstd, PyInit_zstd, |py, m| {
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "zstd"].join(".");
+    let m = PyModule::new(py, &name)?;
     m.add(
         py,
         "apply",
@@ -35,8 +30,8 @@ py_module_initializer!(zstd, initzstd, PyInit_zstd, |py, m| {
         "encode_all",
         py_fn!(py, encode_all_py(data: &PyObject, level: i32)),
     )?;
-    Ok(())
-});
+    Ok(m)
+}
 
 /// Convert `io::Result<Vec<u8>>` to a `PyResult<PyBytes>`.
 fn convert(py: Python, result: io::Result<Vec<u8>>) -> PyResult<PyBytes> {

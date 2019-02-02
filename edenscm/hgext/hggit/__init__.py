@@ -30,7 +30,6 @@ import hgrepo
 import overlay
 import util
 import verify
-from git_handler import GitHandler
 from edenscm.mercurial import (
     bundlerepo,
     cmdutil,
@@ -51,7 +50,8 @@ from edenscm.mercurial import (
 from edenscm.mercurial.error import LookupError
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
-from edenscm.mercurial.rust import pynodemap
+from edenscm.mercurial.rust.bindings import nodemap as nodemapmod
+from git_handler import GitHandler
 
 
 # Disable DeprecationWarning from newer dulwich since hggit also supports older
@@ -305,7 +305,7 @@ def git_cleanup(ui, repo):
         if os.path.exists(tempdir):
             hgutil.removedirs(tempdir)
 
-        nodemap = pynodemap.pynodemap(tempdir)
+        nodemap = nodemapmod.nodemap(tempdir)
         for gitsha, hgsha in items:
             if hgsha in repo:
                 nodemap.add(gitsha, hgsha)

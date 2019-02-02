@@ -5,24 +5,21 @@
 
 #![allow(non_camel_case_types)]
 
-extern crate configparser;
-#[macro_use]
-extern crate cpython;
-extern crate encoding;
-
-use configparser::config::{ConfigSet, Options};
-use configparser::hg::{parse_list, ConfigSetHgExt, OptionsHgExt};
-use cpython::{PyBytes, PyErr, PyObject, PyResult, Python};
 use cpython::exc::UnicodeDecodeError;
+use cpython::{PyBytes, PyErr, PyModule, PyObject, PyResult, Python};
 use encoding::{local_bytes_to_path, path_to_local_bytes};
+use rust_configparser::config::{ConfigSet, Options};
+use rust_configparser::hg::{parse_list, ConfigSetHgExt, OptionsHgExt};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-py_module_initializer!(config, initconfig, PyInit_config, |py, m| {
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "configparser"].join(".");
+    let m = PyModule::new(py, &name)?;
     m.add_class::<config>(py)?;
     m.add(py, "parselist", py_fn!(py, parselist(value: PyBytes)))?;
-    Ok(())
-});
+    Ok(m)
+}
 
 py_class!(class config |py| {
     data cfg: RefCell<ConfigSet>;

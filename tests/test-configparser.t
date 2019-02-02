@@ -18,8 +18,8 @@
   > %not-implemented
   > EOF
 
-  >>> from edenscm.mercurial.rust import config
-  >>> cfg = config.config()
+  >>> from edenscm.mercurial.rust.bindings import configparser
+  >>> cfg = configparser.config()
   >>> cfg.readpath("a.rc", "readpath", None, None, None)
   ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> cfg.parse("[c]\nx=1", "parse")
@@ -53,8 +53,8 @@
 
 Section whitelist
 
-  >>> from edenscm.mercurial.rust import config
-  >>> cfg = config.config()
+  >>> from edenscm.mercurial.rust.bindings import configparser
+  >>> cfg = configparser.config()
   >>> cfg.readpath("a.rc", "readpath", ["a"], None, None)
   ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.sections())
@@ -62,8 +62,8 @@ Section whitelist
 
 Section remap
 
-  >>> from edenscm.mercurial.rust import config
-  >>> cfg = config.config()
+  >>> from edenscm.mercurial.rust.bindings import configparser
+  >>> cfg = configparser.config()
   >>> cfg.readpath("a.rc", "readpath", None, {'a': 'x'}.items(), None)
   ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.sections())
@@ -71,8 +71,8 @@ Section remap
 
 Config whitelist
 
-  >>> from edenscm.mercurial.rust import config
-  >>> cfg = config.config()
+  >>> from edenscm.mercurial.rust.bindings import configparser
+  >>> cfg = configparser.config()
   >>> cfg.readpath("a.rc", "readpath", None, None, [('a', 'y')])
   ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.get('a', 'y'))
@@ -82,8 +82,8 @@ Config whitelist
 
 Clone
 
-  >>> from edenscm.mercurial.rust import config
-  >>> cfg1 = config.config()
+  >>> from edenscm.mercurial.rust.bindings import configparser
+  >>> cfg1 = configparser.config()
   >>> cfg1.set("a", "x", "1", "set1")
   >>> cfg2 = cfg1.clone()
   >>> cfg2.set("b", "y", "2", "set2")

@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from edenscm.mercurial.rust import treestate
+from edenscm.mercurial.rust.bindings import treestate
 
 
 testtmp = os.getenv("TESTTMP") or tempfile.mkdtemp("test-treestate")

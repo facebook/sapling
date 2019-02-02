@@ -2089,39 +2089,14 @@ with open(".cargo/config", "w") as f:
 
 rustextmodules = [
     RustExtension(
-        "bookmarkstore",
+        "bindings",
         package="edenscm.mercurial.rust",
-        manifest="edenscm/mercurial/rust/bookmarkstore/Cargo.toml",
-    ),
-    RustExtension(
-        "config",
-        package="edenscm.mercurial.rust",
-        manifest="edenscm/mercurial/rust/config/Cargo.toml",
+        manifest="edenscm/mercurial/rust/bindings/Cargo.toml",
     ),
     RustExtension(
         "indexes",
         package="edenscm.hgext.extlib",
         manifest="edenscm/hgext/extlib/indexes/Cargo.toml",
-    ),
-    RustExtension(
-        "lz4",
-        package="edenscm.mercurial.rust",
-        manifest="edenscm/mercurial/rust/lz4/Cargo.toml",
-    ),
-    RustExtension(
-        "matcher",
-        package="edenscm.mercurial.rust",
-        manifest="edenscm/mercurial/rust/matcher/Cargo.toml",
-    ),
-    RustExtension(
-        "mutationstore",
-        package="edenscm.mercurial.rust",
-        manifest="edenscm/mercurial/rust/mutationstore/Cargo.toml",
-    ),
-    RustExtension(
-        "pynodemap",
-        package="edenscm.mercurial.rust",
-        manifest="edenscm/mercurial/rust/pynodemap/Cargo.toml",
     ),
     RustExtension(
         "pyrevisionstore",
@@ -2132,16 +2107,6 @@ rustextmodules = [
         "threading",
         package="edenscm.mercurial.rust",
         manifest="edenscm/mercurial/rust/threading/Cargo.toml",
-    ),
-    RustExtension(
-        "treestate",
-        package="edenscm.mercurial.rust",
-        manifest="edenscm/mercurial/rust/treestate/Cargo.toml",
-    ),
-    RustExtension(
-        "zstd",
-        package="edenscm.mercurial.rust",
-        manifest="edenscm/mercurial/rust/zstd/Cargo.toml",
     ),
 ]
 
@@ -2182,7 +2147,9 @@ rustextbinaries = [
 ]
 
 if havefb:
-    rustextbinaries.append(RustBinary("dotslash", manifest="exec/fb/dotslash/Cargo.toml"))
+    rustextbinaries.append(
+        RustBinary("dotslash", manifest="exec/fb/dotslash/Cargo.toml")
+    )
 
 
 setup(

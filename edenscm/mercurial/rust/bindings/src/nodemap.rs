@@ -3,26 +3,28 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use cpython::{exc, PyBytes, PyErr, PyObject, PyResult, PythonObject};
+use cpython::{exc, PyBytes, PyErr, PyModule, PyObject, PyResult, Python, PythonObject};
 use encoding::local_bytes_to_path;
-use nodemap::nodemap::NodeMap;
+use rust_nodemap::nodemap::NodeMap;
 use std::cell::RefCell;
 use types::node::Node;
 
-py_module_initializer!(pynodemap, initpynodemap, PyInit_pynodemap, |py, m| {
-    m.add_class::<pynodemap>(py)?;
-    Ok(())
-});
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "nodemap"].join(".");
+    let m = PyModule::new(py, &name)?;
+    m.add_class::<nodemap>(py)?;
+    Ok(m)
+}
 
-py_class!(class pynodemap |py| {
+py_class!(class nodemap |py| {
     data log: RefCell<NodeMap>;
 
-    def __new__(_cls, path: &PyBytes) -> PyResult<pynodemap> {
+    def __new__(_cls, path: &PyBytes) -> PyResult<nodemap> {
         let path = local_bytes_to_path(path.data(py))
             .map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("{}", e)))?;
         let nodemap = NodeMap::open(path)
             .map_err(|e| PyErr::new::<exc::RuntimeError, _>(py, format!("{}", e)))?;
-        pynodemap::create_instance(py, RefCell::new(nodemap))
+        nodemap::create_instance(py, RefCell::new(nodemap))
     }
 
     def add(&self, first: &PyBytes, second: &PyBytes) -> PyResult<PyObject> {

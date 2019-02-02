@@ -3,22 +3,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate byteorder;
-#[macro_use]
-extern crate cpython;
-extern crate cpython_failure;
-extern crate encoding;
-extern crate failure;
-extern crate mutationstore as mutstore;
-extern crate types;
-extern crate vlqencoding;
-
 use byteorder::{ReadBytesExt, WriteBytesExt};
-use cpython::{exc, PyBytes, PyErr, PyObject, PyResult, PyString, Python};
+use cpython::{exc, PyBytes, PyErr, PyModule, PyObject, PyResult, PyString, Python};
 use cpython_failure::ResultPyErrExt;
 use encoding::local_bytes_to_path;
 use failure::ResultExt;
-use mutstore::{MutationEntry, MutationEntryOrigin, MutationStore};
+use rust_mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore};
 use std::cell::RefCell;
 use std::io::Cursor;
 use types::node::Node;
@@ -31,29 +21,26 @@ use vlqencoding::{VLQDecode, VLQEncode};
 ///  * A sequence of ``count`` entries encoded using ``MutationEntry::serialize``
 const BUNDLE_FORMAT_VERSION: u8 = 1u8;
 
-py_module_initializer!(
-    mutationstore,
-    initmutationstore,
-    PyInit_mutationstore,
-    |py, m| {
-        m.add(py, "ORIGIN_COMMIT", mutstore::ORIGIN_COMMIT)?;
-        m.add(py, "ORIGIN_OBSMARKER", mutstore::ORIGIN_OBSMARKER)?;
-        m.add(py, "ORIGIN_SYNTHETIC", mutstore::ORIGIN_SYNTHETIC)?;
-        m.add_class::<mutationentry>(py)?;
-        m.add_class::<mutationstore>(py)?;
-        m.add(
-            py,
-            "bundle",
-            py_fn!(py, bundle(entries: Vec<mutationentry>)),
-        )?;
-        m.add(py, "unbundle", py_fn!(py, unbundle(data: PyBytes)))?;
-        Ok(())
-    }
-);
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "mutationstore"].join(".");
+    let m = PyModule::new(py, &name)?;
+    m.add(py, "ORIGIN_COMMIT", rust_mutationstore::ORIGIN_COMMIT)?;
+    m.add(py, "ORIGIN_OBSMARKER", rust_mutationstore::ORIGIN_OBSMARKER)?;
+    m.add(py, "ORIGIN_SYNTHETIC", rust_mutationstore::ORIGIN_SYNTHETIC)?;
+    m.add_class::<mutationentry>(py)?;
+    m.add_class::<mutationstore>(py)?;
+    m.add(
+        py,
+        "bundle",
+        py_fn!(py, bundle(entries: Vec<mutationentry>)),
+    )?;
+    m.add(py, "unbundle", py_fn!(py, unbundle(data: PyBytes)))?;
+    Ok(m)
+}
 
 fn bundle(py: Python, entries: Vec<mutationentry>) -> PyResult<PyBytes> {
     // Pre-allocate capacity for all the entries, plus one for the header and extra breathing room.
-    let mut buf = Vec::with_capacity((entries.len() + 1) * mutstore::DEFAULT_ENTRY_SIZE);
+    let mut buf = Vec::with_capacity((entries.len() + 1) * rust_mutationstore::DEFAULT_ENTRY_SIZE);
     buf.write_u8(BUNDLE_FORMAT_VERSION)
         .map_pyerr::<exc::IOError>(py)?;
     buf.write_vlq(entries.len()).map_pyerr::<exc::IOError>(py)?;

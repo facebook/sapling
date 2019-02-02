@@ -23,7 +23,6 @@ import traceback
 
 from . import (
     color,
-    config,
     configitems,
     encoding,
     error,
@@ -36,7 +35,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex
-from .rust import config as rustconfig
+from .rust.bindings import configparser
 
 
 urlreq = util.urlreq
@@ -220,7 +219,7 @@ class ui(object):
             self.httppasswordmgrdb = src.httppasswordmgrdb
             self._measuredtimes = src._measuredtimes
         else:
-            self._rcfg = rustconfig.config()
+            self._rcfg = configparser.config()
             # map from IDs to unserializable Python objects.
             self._unserializable = {}
             # config "pinned" that cannot be loaded from files.
@@ -253,7 +252,7 @@ class ui(object):
     def load(cls):
         """Create a ui and load global and user configs"""
         u = cls()
-        u._rcfg, errors = rustconfig.config.load(util.datapath)
+        u._rcfg, errors = configparser.config.load(util.datapath)
         if errors:
             raise error.ParseError("\n\n".join(errors))
         root = os.path.expanduser("~")
@@ -1758,6 +1757,6 @@ class path(object):
 
 def parselist(value):
     if isinstance(value, bytes):
-        return rustconfig.parselist(value)
+        return configparser.parselist(value)
     else:
         return value

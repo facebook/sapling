@@ -13,7 +13,7 @@ import uuid
 
 from . import error, node, txnutil, util
 from .i18n import _
-from .rust import treestate
+from .rust.bindings import treestate
 
 
 # header after the first 40 bytes of dirstate.

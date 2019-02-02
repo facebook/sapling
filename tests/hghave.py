@@ -812,9 +812,9 @@ def unzip_understands_symlinks():
 @check("zstd", "zstd Python module available")
 def has_zstd():
     try:
-        import edenscm.mercurial.rust.zstd
+        from edenscm.mercurial.rust.bindings import zstd
 
-        edenscm.mercurial.rust.zstd.apply
+        zstd.apply
         return True
     except ImportError:
         return False

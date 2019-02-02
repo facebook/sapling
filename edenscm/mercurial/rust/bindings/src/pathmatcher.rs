@@ -5,24 +5,21 @@
 
 #![allow(non_camel_case_types)]
 
-#[macro_use]
-extern crate cpython;
-extern crate encoding;
-extern crate pathmatcher;
-
-use std::path::Path;
-use cpython::{PyBytes, PyErr, PyResult, Python};
+use cpython::{PyBytes, PyErr, PyModule, PyResult, Python};
 use encoding::local_bytes_to_path;
-use pathmatcher::GitignoreMatcher;
+use rust_pathmatcher::GitignoreMatcher;
+use std::path::Path;
+
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "pathmatcher"].join(".");
+    let m = PyModule::new(py, &name)?;
+    m.add_class::<gitignorematcher>(py)?;
+    Ok(m)
+}
 
 fn encoding_error(py: Python) -> PyErr {
     PyErr::new::<cpython::exc::RuntimeError, _>(py, "invalid encoding")
 }
-
-py_module_initializer!(matcher, initmatcher, PyInit_matcher, |py, m| {
-    m.add_class::<gitignorematcher>(py)?;
-    Ok(())
-});
 
 py_class!(class gitignorematcher |py| {
     data matcher: GitignoreMatcher;

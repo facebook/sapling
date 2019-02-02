@@ -29,7 +29,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
-from edenscm.mercurial.rust import pynodemap
+from edenscm.mercurial.rust.bindings import nodemap
 from overlay import overlayrepo
 
 
@@ -191,7 +191,7 @@ class GitHandler(object):
             # Check for log existance before we instantiate it.
             logexists = self.vfs.exists(dir)
 
-            self._map_real = pynodemap.pynodemap(dir)
+            self._map_real = nodemap.nodemap(dir)
 
             # If the indexedlog map doesn't exist, populate it.
             if not logexists and self.vfs.exists(self.map_file):

@@ -13,7 +13,7 @@ import re
 
 from . import error, pathutil, util
 from .i18n import _
-from .rust import matcher as rustmatcher
+from .rust.bindings import pathmatcher
 
 
 allpatternkinds = (
@@ -742,7 +742,7 @@ class gitignorematcher(basematcher):
     def __init__(self, root, cwd, badfn=None, gitignorepaths=None):
         super(gitignorematcher, self).__init__(root, cwd, badfn)
         gitignorepaths = gitignorepaths or []
-        self._matcher = rustmatcher.gitignorematcher(root, gitignorepaths)
+        self._matcher = pathmatcher.gitignorematcher(root, gitignorepaths)
 
     def matchfn(self, f):
         # XXX: is_dir is set to True here for performance.

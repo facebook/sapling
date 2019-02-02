@@ -4,7 +4,7 @@ import os
 import unittest
 
 import silenttestrunner
-from edenscm.mercurial.rust import zstd
+from edenscm.mercurial.rust.bindings import zstd
 
 
 class testzstd(unittest.TestCase):

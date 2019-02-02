@@ -3,28 +3,21 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-extern crate bookmarkstore as bmstore;
-#[macro_use]
-extern crate cpython;
-extern crate encoding;
-extern crate types;
-
-use bmstore::BookmarkStore;
-use cpython::{exc, PyBytes, PyErr, PyList, PyObject, PyResult, PyString, Python, PythonObject};
 use cpython::exc::UnicodeDecodeError;
+use cpython::{
+    exc, PyBytes, PyErr, PyList, PyModule, PyObject, PyResult, PyString, Python, PythonObject,
+};
 use encoding::local_bytes_to_path;
+use rust_bookmarkstore::BookmarkStore;
 use std::cell::RefCell;
 use types::node::Node;
 
-py_module_initializer!(
-    bookmarkstore,
-    initbookmarkstore,
-    PyInit_bookmarkstore,
-    |py, m| {
-        m.add_class::<bookmarkstore>(py)?;
-        Ok(())
-    }
-);
+pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
+    let name = [package, "bookmarkstore"].join(".");
+    let m = PyModule::new(py, &name)?;
+    m.add_class::<bookmarkstore>(py)?;
+    Ok(m)
+}
 
 py_class!(class bookmarkstore |py| {
     data bm_store: RefCell<BookmarkStore>;
