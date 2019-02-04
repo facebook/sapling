@@ -290,7 +290,7 @@ fn resolve_pushrebase(
                                 })
                                 .collect();
 
-                            if bookmark_pushes.len() != 1 {
+                            if bookmark_pushes.len() > 1 {
                                 return future::err(format_err!(
                                     "Too many pushkey parts: {:?}",
                                     bookmark_pushes
