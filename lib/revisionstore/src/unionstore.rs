@@ -1,26 +1,24 @@
 // Copyright Facebook, Inc. 2018
 // Union store
 
-use std::{cell::RefCell, vec::IntoIter};
+use std::vec::IntoIter;
 
 pub struct UnionStore<T> {
-    stores: RefCell<Vec<T>>,
+    stores: Vec<T>,
 }
 
 pub struct UnionStoreIterator<T>(IntoIter<T>);
 
 impl<T> UnionStore<T> {
     pub fn new() -> UnionStore<T> {
-        UnionStore {
-            stores: RefCell::new(vec![]),
-        }
+        UnionStore { stores: Vec::new() }
     }
 
     pub fn add(&mut self, item: T)
     where
         T: Clone,
     {
-        self.stores.borrow_mut().push(item)
+        self.stores.push(item)
     }
 }
 
@@ -32,7 +30,7 @@ where
     type IntoIter = UnionStoreIterator<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        UnionStoreIterator(self.stores.borrow().clone().into_iter())
+        UnionStoreIterator(self.stores.clone().into_iter())
     }
 }
 
