@@ -20,6 +20,12 @@
 
   $ hg init new
 
+http incoming-disabled
+
+  $ hg -R new incoming http://localhost:$HGPORT/ --config ui.enableincomingoutgoing=False
+  abort: incoming is not supported for this repository
+  [255]
+
 http incoming
 
   $ hg -R new incoming http://localhost:$HGPORT/
@@ -551,4 +557,3 @@ Push and then double-check outgoing
   searching for changes
   no changes found
   [1]
-

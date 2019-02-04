@@ -4051,7 +4051,12 @@ def incoming(ui, repo, source="default", **opts):
           hg in changes.hg -T "{desc|firstline}\\n"
 
     Returns 0 if there are incoming changes, 1 otherwise.
+
+    Raises an error if enableincomingoutgoing is set to FALSE.
     """
+
+    if not ui.configbool("ui", "enableincomingoutgoing"):
+        raise error.Abort(_("incoming is not supported for this repository"))
     opts = pycompat.byteskwargs(opts)
     if opts.get("graph"):
         cmdutil.checkunsupportedgraphflags([], opts)

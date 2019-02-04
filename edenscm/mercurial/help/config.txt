@@ -2186,6 +2186,9 @@ User interface controls.
 ``editor``
     The editor to use during a commit. (default: ``$EDITOR`` or ``vi``)
 
+``enableincomingoutgoing``
+    Enable the commands "incoming" and "outgoing". (default: True)
+
 ``exitcodemask``
     Bitwise-and mask for the exit code of a normal command. Useful for easier
     scripting. For example, set it to 254 to normalize exit code 1 (no
