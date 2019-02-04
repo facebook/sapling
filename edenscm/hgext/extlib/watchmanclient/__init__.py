@@ -7,13 +7,15 @@
 
 from __future__ import absolute_import
 
+import ctypes
 import getpass
 import os
 
-from edenscm.mercurial import progress, util
+from edenscm.mercurial import progress, pycompat, util
 from edenscm.mercurial.node import hex
 
 from .. import pywatchman
+from ..pywatchman import compat
 
 
 def createclientforrepo(repo):
@@ -82,6 +84,7 @@ class client(object):
         self._timeout = timeout
         self._watchmanclient = None
         self._root = repo.root
+        self._resolved_root = getcanonicalpath(self._root)
         self._ui = repo.ui
         self._firsttime = True
 
@@ -111,7 +114,7 @@ class client(object):
             return None
 
     def _command(self, *args):
-        watchmanargs = (args[0], self._root) + args[1:]
+        watchmanargs = (args[0], self._resolved_root) + args[1:]
         self._ui.log(
             "watchman-command",
             "watchman command %r started with timeout = %s",
@@ -135,7 +138,7 @@ class client(object):
             return result
         except pywatchman.CommandError as ex:
             if "unable to resolve root" in ex.msg:
-                raise WatchmanNoRoot(self._root, ex.msg)
+                raise WatchmanNoRoot(self._resolved_root, ex.msg)
             raise Unavailable(ex.msg)
         except pywatchman.SocketConnectError as ex:
             # If fsmonitor.sockpath was specified in the configuration, we will
@@ -287,3 +290,83 @@ class state_update(object):
             # Swallow any errors; fire and forget
             self.repo.ui.log("watchman", "Exception %s while running %s\n", e, cmd)
             return False
+
+
+if pycompat.iswindows:
+
+    def openfilewin(path):
+
+        createfile = ctypes.windll.kernel32.CreateFileW
+
+        cpath = ctypes.create_unicode_buffer(path)
+        access = 0
+        mode = 7  # FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE
+        disposition = 3  # OPEN_EXISTING
+        flags = 33554432  # FILE_FLAG_BACKUP_SEMANTICS
+
+        h = createfile(cpath, access, mode, 0, disposition, flags, 0)
+        if h == -1:
+            raise WindowsError("Failed to open file: " + path)
+
+        return h
+
+    def getcanonicalpath(name):
+        gfpnbh = ctypes.windll.kernel32.GetFinalPathNameByHandleW
+        closehandler = ctypes.windll.kernel32.CloseHandle
+
+        h = openfilewin(name)
+        try:
+            gfpnbh = ctypes.windll.kernel32.GetFinalPathNameByHandleW
+            numwchars = 1024
+            while True:
+                buf = ctypes.create_unicode_buffer(numwchars)
+                result = gfpnbh(h, buf, numwchars, 0)
+                if result == 0:
+                    raise IOError("unknown error while normalizing path")
+
+                # The first four chars are //?/
+                if result <= numwchars:
+                    path = buf.value[4:].replace("\\", "/")
+                    if compat.PYTHON2:
+                        path = path.encode("utf8")
+                    return path
+
+                # Not big enough; the result is the amount we need
+                numwchars = result + 1
+        finally:
+            closehandler(h)
+
+
+elif pycompat.isdarwin:
+    import ctypes.util
+
+    F_GETPATH = 50
+    libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
+    getpathfcntl = libc.fcntl
+    getpathfcntl.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_char_p]
+    getpathfcntl.restype = ctypes.c_int
+
+    def getcanonicalpath(name):
+        fd = os.open(name, os.O_RDONLY, 0)
+        try:
+            numchars = 1024  # MAXPATHLEN
+            # The kernel caps this routine to MAXPATHLEN, so there is no
+            # point in over-allocating or trying again with a larger buffer
+            buf = ctypes.create_string_buffer(numchars)
+            ctypes.set_errno(0)
+            result = getpathfcntl(fd, F_GETPATH, buf)
+            if result != 0:
+                raise OSError(ctypes.get_errno())
+            # buf is a bytes buffer, so normalize it if necessary
+            ret = buf.value
+            if isinstance(name, compat.UNICODE):
+                ret = os.fsdecode(ret)
+            return ret
+        finally:
+            os.close(fd)
+
+
+else:
+
+    def getcanonicalpath(name):
+        return os.path.normpath(name)
