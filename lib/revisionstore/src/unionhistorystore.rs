@@ -2,15 +2,13 @@
 // Union history store
 use failure::{Fail, Fallible};
 
-use std::rc::Rc;
-
 use crate::ancestors::{AncestorTraversal, BatchedAncestorIterator};
 use crate::error::KeyError;
 use crate::historystore::{Ancestors, HistoryStore, NodeInfo};
 use crate::key::Key;
 use crate::unionstore::UnionStore;
 
-pub type UnionHistoryStore = UnionStore<Rc<HistoryStore>>;
+pub type UnionHistoryStore<T> = UnionStore<T>;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Union History Store Error: {:?}", _0)]
@@ -22,7 +20,7 @@ impl From<UnionHistoryStoreError> for KeyError {
     }
 }
 
-impl UnionHistoryStore {
+impl<T: HistoryStore> UnionHistoryStore<T> {
     fn get_partial_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
         for store in self {
             match store.get_ancestors(key) {
@@ -42,7 +40,7 @@ impl UnionHistoryStore {
     }
 }
 
-impl HistoryStore for UnionHistoryStore {
+impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
     fn get_ancestors(&self, key: &Key) -> Fallible<Ancestors> {
         BatchedAncestorIterator::new(
             key,
@@ -134,7 +132,7 @@ mod tests {
 
     quickcheck! {
         fn test_empty_unionstore_get_ancestors(key: Key) -> bool {
-            match UnionHistoryStore::new().get_ancestors(&key) {
+            match UnionHistoryStore::<EmptyHistoryStore>::new().get_ancestors(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
@@ -142,7 +140,7 @@ mod tests {
 
         fn test_empty_historystore_get_ancestors(key: Key) -> bool {
             let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(Rc::new(EmptyHistoryStore));
+            unionstore.add(EmptyHistoryStore);
             match unionstore.get_ancestors(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
@@ -151,7 +149,7 @@ mod tests {
 
         fn test_bad_historystore_get_ancestors(key: Key) -> bool {
             let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(Rc::new(BadHistoryStore));
+            unionstore.add(BadHistoryStore);
             match unionstore.get_ancestors(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),
@@ -159,7 +157,7 @@ mod tests {
         }
 
         fn test_empty_unionstore_get_node_info(key: Key) -> bool {
-            match UnionHistoryStore::new().get_node_info(&key) {
+            match UnionHistoryStore::<EmptyHistoryStore>::new().get_node_info(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
@@ -167,7 +165,7 @@ mod tests {
 
         fn test_empty_historystore_get_node_info(key: Key) -> bool {
             let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(Rc::new(EmptyHistoryStore));
+            unionstore.add(EmptyHistoryStore);
             match unionstore.get_node_info(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
@@ -176,7 +174,7 @@ mod tests {
 
         fn test_bad_historystore_get_node_info(key: Key) -> bool {
             let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(Rc::new(BadHistoryStore));
+            unionstore.add(BadHistoryStore);
             match unionstore.get_node_info(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),
@@ -184,18 +182,18 @@ mod tests {
         }
 
         fn test_empty_unionstore_get_missing(keys: Vec<Key>) -> bool {
-            keys == UnionHistoryStore::new().get_missing(&keys).unwrap()
+            keys == UnionHistoryStore::<EmptyHistoryStore>::new().get_missing(&keys).unwrap()
         }
 
         fn test_empty_historystore_get_missing(keys: Vec<Key>) -> bool {
             let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(Rc::new(EmptyHistoryStore));
+            unionstore.add(EmptyHistoryStore);
             keys == unionstore.get_missing(&keys).unwrap()
         }
 
         fn test_bad_historystore_get_missing(keys: Vec<Key>) -> bool {
             let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(Rc::new(BadHistoryStore));
+            unionstore.add(BadHistoryStore);
             match unionstore.get_missing(&keys) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),

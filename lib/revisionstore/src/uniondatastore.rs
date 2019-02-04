@@ -2,8 +2,6 @@
 // Union data store
 use failure::{err_msg, Fail, Fallible};
 
-use std::rc::Rc;
-
 use mpatch::mpatch::get_full_text;
 
 use crate::datastore::{DataStore, Delta, Metadata};
@@ -11,7 +9,7 @@ use crate::error::KeyError;
 use crate::key::Key;
 use crate::unionstore::UnionStore;
 
-pub type UnionDataStore = UnionStore<Rc<DataStore>>;
+pub type UnionDataStore<T> = UnionStore<T>;
 
 #[derive(Debug, Fail)]
 #[fail(display = "Union Data Store Error: {:?}", _0)]
@@ -23,7 +21,7 @@ impl From<UnionDataStoreError> for KeyError {
     }
 }
 
-impl UnionDataStore {
+impl<T: DataStore> UnionDataStore<T> {
     fn get_partial_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
         for store in self {
             match store.get_delta_chain(key) {
@@ -43,7 +41,7 @@ impl UnionDataStore {
     }
 }
 
-impl DataStore for UnionDataStore {
+impl<T: DataStore> DataStore for UnionDataStore<T> {
     fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
         let delta_chain = self.get_delta_chain(key)?;
         let (basetext, deltas) =
@@ -198,7 +196,7 @@ mod tests {
 
     quickcheck! {
         fn test_empty_unionstore_get(key: Key) -> bool {
-            match UnionDataStore::new().get(&key) {
+            match UnionDataStore::<EmptyDataStore>::new().get(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
@@ -206,7 +204,7 @@ mod tests {
 
         fn test_empty_datastore_get(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
-            unionstore.add(Rc::new(EmptyDataStore));
+            unionstore.add(EmptyDataStore);
             match unionstore.get(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
@@ -215,7 +213,7 @@ mod tests {
 
         fn test_bad_datastore_get(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
-            unionstore.add(Rc::new(BadDataStore));
+            unionstore.add(BadDataStore);
             match unionstore.get(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),
@@ -223,7 +221,7 @@ mod tests {
         }
 
         fn test_empty_unionstore_get_delta_chain(key: Key) -> bool {
-            match UnionDataStore::new().get_delta_chain(&key) {
+            match UnionDataStore::<EmptyDataStore>::new().get_delta_chain(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
@@ -231,7 +229,7 @@ mod tests {
 
         fn test_empty_datastore_get_delta_chain(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
-            unionstore.add(Rc::new(EmptyDataStore));
+            unionstore.add(EmptyDataStore);
             match unionstore.get_delta_chain(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
@@ -240,7 +238,7 @@ mod tests {
 
         fn test_bad_datastore_get_delta_chain(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
-            unionstore.add(Rc::new(BadDataStore));
+            unionstore.add(BadDataStore);
             match unionstore.get_delta_chain(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),
@@ -248,7 +246,7 @@ mod tests {
         }
 
         fn test_empty_unionstore_get_meta(key: Key) -> bool {
-            match UnionDataStore::new().get_meta(&key) {
+            match UnionDataStore::<EmptyDataStore>::new().get_meta(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
             }
@@ -256,7 +254,7 @@ mod tests {
 
         fn test_empty_datastore_get_meta(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
-            unionstore.add(Rc::new(EmptyDataStore));
+            unionstore.add(EmptyDataStore);
             match unionstore.get_meta(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_some(),
@@ -265,7 +263,7 @@ mod tests {
 
         fn test_bad_datastore_get_meta(key: Key) -> bool {
             let mut unionstore = UnionDataStore::new();
-            unionstore.add(Rc::new(BadDataStore));
+            unionstore.add(BadDataStore);
             match unionstore.get_meta(&key) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),
@@ -273,18 +271,18 @@ mod tests {
         }
 
         fn test_empty_unionstore_get_missing(keys: Vec<Key>) -> bool {
-            keys == UnionDataStore::new().get_missing(&keys).unwrap()
+            keys == UnionDataStore::<EmptyDataStore>::new().get_missing(&keys).unwrap()
         }
 
         fn test_empty_datastore_get_missing(keys: Vec<Key>) -> bool {
             let mut unionstore = UnionDataStore::new();
-            unionstore.add(Rc::new(EmptyDataStore));
+            unionstore.add(EmptyDataStore);
             keys == unionstore.get_missing(&keys).unwrap()
         }
 
         fn test_bad_datastore_get_missing(keys: Vec<Key>) -> bool {
             let mut unionstore = UnionDataStore::new();
-            unionstore.add(Rc::new(BadDataStore));
+            unionstore.add(BadDataStore);
             match unionstore.get_missing(&keys) {
                 Ok(_) => false,
                 Err(e) => e.downcast_ref::<KeyError>().is_none(),

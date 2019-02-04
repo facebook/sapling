@@ -30,7 +30,7 @@ use crate::uniondatastore::UnionDataStore;
 pub struct DataPackUnion {
     paths: Vec<PathBuf>,
     packs: HashMap<PathBuf, Rc<DataPack>>,
-    store: UnionDataStore,
+    store: UnionDataStore<Rc<DataPack>>,
 }
 
 /// Returns true if the supplied path has a .datapack extension
