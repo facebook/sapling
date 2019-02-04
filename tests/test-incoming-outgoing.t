@@ -408,6 +408,12 @@ test outgoing
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13
   
+test outgoing-disabled
+
+  $ hg -R test-dev outgoing test --config ui.enableincomingoutgoing=False
+  abort: outgoing is not supported for this repository
+  [255]
+
 test outgoing with secret changesets
 
   $ hg -R test-dev phase --force --secret 9

@@ -4637,6 +4637,9 @@ def outgoing(ui, repo, dest=None, **opts):
 
     Returns 0 if there are outgoing changes, 1 otherwise.
     """
+    if not ui.configbool("ui", "enableincomingoutgoing"):
+        raise error.Abort(_("outgoing is not supported for this repository"))
+
     opts = pycompat.byteskwargs(opts)
     if opts.get("graph"):
         cmdutil.checkunsupportedgraphflags([], opts)
