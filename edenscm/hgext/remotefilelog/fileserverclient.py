@@ -742,6 +742,7 @@ class fileserverclient(object):
         if not _lfsmod.wrapper.candownload(self.repo):
             return
         pointers = []
+        filenames = {}
         store = self.repo.svfs.lfslocalblobstore
         for file, id in fileids:
             node = bin(id)
@@ -752,8 +753,11 @@ class fileserverclient(object):
                 oid = p.oid()
                 if not store.has(oid):
                     pointers.append(p)
+                    filenames[oid] = file
         if len(pointers) > 0:
-            self.repo.svfs.lfsremoteblobstore.readbatch(pointers, store)
+            self.repo.svfs.lfsremoteblobstore.readbatch(
+                pointers, store, objectnames=filenames
+            )
             assert all(store.has(p.oid()) for p in pointers)
 
     def logstacktrace(self):

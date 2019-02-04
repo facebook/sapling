@@ -193,9 +193,9 @@ class _gitlfsremote(object):
         """Batch upload from local to remote blobstore."""
         self._batch(pointers, fromstore, "upload")
 
-    def readbatch(self, pointers, tostore):
-        """Batch download from remote to local blostore."""
-        self._batch(pointers, tostore, "download")
+    def readbatch(self, pointers, tostore, objectnames=None):
+        """Batch download from remote to local blobstore."""
+        self._batch(pointers, tostore, "download", objectnames=objectnames)
 
     def _batchrequest(self, pointers, action):
         """Get metadata about objects pointed by pointers for given action
@@ -302,7 +302,7 @@ class _gitlfsremote(object):
             # If downloading blobs, store downloaded data to local blobstore
             localstore.write(oid, response)
 
-    def _batch(self, pointers, localstore, action):
+    def _batch(self, pointers, localstore, action, objectnames=None):
         if action not in ["upload", "download"]:
             raise error.ProgrammingError("invalid Git-LFS action: %s" % action)
 
@@ -331,6 +331,7 @@ class _gitlfsremote(object):
                 retry = self.retry
                 while True:
                     try:
+                        yield 0, obj.get("oid")
                         self._basictransfer(obj, action, localstore)
                         yield 1, obj.get("oid")
                         break
@@ -359,13 +360,19 @@ class _gitlfsremote(object):
         else:
             oids = transfer(objects)
 
+        transferred = 0
         with progress.bar(
             self.ui, topic, _("bytes"), total=total, formatfunc=util.bytecount
         ) as prog:
-            for _one, oid in oids:
-                prog.value += sizes[oid]
-                if self.ui.verbose:
-                    self.ui.write(_("lfs: processed: %s\n") % oid)
+            for count, oid in oids:
+                if count != 0:
+                    transferred += sizes[oid]
+                    if self.ui.verbose:
+                        self.ui.write(_("lfs: processed: %s\n") % oid)
+                if objectnames is not None:
+                    prog.value = (transferred, objectnames.get(oid, ""))
+                else:
+                    prog.value = transferred
 
         currenttimestamp = util.timer()
         self._metrics["lfs_%s_size" % action] += total
@@ -403,7 +410,7 @@ class _dummyremote(object):
             with self.vfs(p.oid(), "wb", atomictemp=True) as fp:
                 fp.write(content)
 
-    def readbatch(self, pointers, tostore):
+    def readbatch(self, pointers, tostore, objectnames=None):
         for p in pointers:
             content = self.vfs.read(p.oid())
             tostore.write(p.oid(), content)
@@ -425,7 +432,7 @@ class _nullremote(object):
     def writebatch(self, pointers, fromstore):
         pass
 
-    def readbatch(self, pointers, tostore):
+    def readbatch(self, pointers, tostore, objectnames=None):
         pass
 
 
@@ -438,7 +445,7 @@ class _promptremote(object):
     def writebatch(self, pointers, fromstore, ui=None):
         self._prompt()
 
-    def readbatch(self, pointers, tostore, ui=None):
+    def readbatch(self, pointers, tostore, ui=None, objectnames=None):
         self._prompt()
 
     def _prompt(self):
