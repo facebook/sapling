@@ -7,7 +7,11 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
 use failure::{format_err, Fallible};
 
-use std::io::{Cursor, Write};
+use std::{
+    io::{Cursor, Write},
+    rc::Rc,
+    sync::Arc,
+};
 
 use crate::key::Key;
 
@@ -33,6 +37,60 @@ pub trait DataStore {
 
     fn contains(&self, key: &Key) -> Fallible<bool> {
         Ok(self.get_missing(&[key.clone()])?.is_empty())
+    }
+}
+
+impl<T: DataStore> DataStore for Rc<T> {
+    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+        T::get(self, key)
+    }
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+        T::get_delta(self, key)
+    }
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+        T::get_delta_chain(self, key)
+    }
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+        T::get_meta(self, key)
+    }
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        T::get_missing(self, keys)
+    }
+}
+
+impl<T: DataStore> DataStore for Box<T> {
+    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+        T::get(self, key)
+    }
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+        T::get_delta(self, key)
+    }
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+        T::get_delta_chain(self, key)
+    }
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+        T::get_meta(self, key)
+    }
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        T::get_missing(self, keys)
+    }
+}
+
+impl<T: DataStore> DataStore for Arc<T> {
+    fn get(&self, key: &Key) -> Fallible<Vec<u8>> {
+        T::get(self, key)
+    }
+    fn get_delta(&self, key: &Key) -> Fallible<Delta> {
+        T::get_delta(self, key)
+    }
+    fn get_delta_chain(&self, key: &Key) -> Fallible<Vec<Delta>> {
+        T::get_delta_chain(self, key)
+    }
+    fn get_meta(&self, key: &Key) -> Fallible<Metadata> {
+        T::get_meta(self, key)
+    }
+    fn get_missing(&self, keys: &[Key]) -> Fallible<Vec<Key>> {
+        T::get_missing(self, keys)
     }
 }
 
