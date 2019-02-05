@@ -6,6 +6,8 @@
 
 extern crate ascii;
 extern crate blobrepo;
+#[cfg(test)]
+extern crate blobrepo_factory;
 extern crate changeset_fetcher;
 #[macro_use]
 extern crate cloned;
@@ -535,7 +537,7 @@ mod tests {
 
     fn add_get_sql_phase<P: Phases>(phases: P) {
         let ctx = CoreContext::test_mock();
-        let repo = BlobRepo::new_memblob_empty(None, None).unwrap();
+        let repo = blobrepo_factory::new_memblob_empty(None, None).unwrap();
 
         assert_eq!(
             phases
@@ -612,27 +614,27 @@ mod tests {
     }
 
     /*
-    @  79a13814c5ce7330173ec04d279bf95ab3f652fb
-    |
-    o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
-    |
-    o  3c15267ebf11807f3d772eb891272b911ec68759
-    |
-    o  a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
-    |
-    o  0ed509bf086fadcb8a8a5384dc3b550729b0fc17
-    |
-    o  eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b  master
-    |
-    o  cb15ca4a43a59acff5388cea9648c162afde8372
-    |
-    o  d0a361e9022d226ae52f689667bd7d212a19cfe0
-    |
-    o  607314ef579bd2407752361ba1b0c1729d08b281
-    |
-    o  3e0e761030db6e479a7fb58b12881883f9f8c63f
-    |
-    o  2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
+        @  79a13814c5ce7330173ec04d279bf95ab3f652fb
+        |
+        o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
+        |
+        o  3c15267ebf11807f3d772eb891272b911ec68759
+        |
+        o  a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157
+        |
+        o  0ed509bf086fadcb8a8a5384dc3b550729b0fc17
+        |
+        o  eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b  master
+        |
+        o  cb15ca4a43a59acff5388cea9648c162afde8372
+        |
+        o  d0a361e9022d226ae52f689667bd7d212a19cfe0
+        |
+        o  607314ef579bd2407752361ba1b0c1729d08b281
+        |
+        o  3e0e761030db6e479a7fb58b12881883f9f8c63f
+        |
+        o  2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
     */
 
     fn get_hint_phase() {

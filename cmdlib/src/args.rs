@@ -27,7 +27,8 @@ use uuid::Uuid;
 use cachelib;
 use slog_glog_fmt::default_drain as glog_drain;
 
-use blobrepo::{open_blobrepo, BlobRepo};
+use blobrepo::BlobRepo;
+use blobrepo_factory::open_blobrepo;
 use changesets::{SqlChangesets, SqlConstructors};
 use context::CoreContext;
 use metaconfig_parser::RepoConfigs;

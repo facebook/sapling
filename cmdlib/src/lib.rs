@@ -29,6 +29,7 @@ extern crate uuid;
 extern crate slog_glog_fmt;
 
 extern crate blobrepo;
+extern crate blobrepo_factory;
 extern crate bookmarks;
 extern crate changesets;
 extern crate context;

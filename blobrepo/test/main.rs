@@ -18,6 +18,7 @@ extern crate quickcheck;
 extern crate scuba_ext;
 
 extern crate blobrepo;
+extern crate blobrepo_factory;
 extern crate blobstore;
 extern crate changesets;
 extern crate context;
@@ -43,19 +44,25 @@ use std::sync::Arc;
 use blobrepo::{compute_changed_files, BlobRepo, ErrorKind};
 use blobstore::{Blobstore, LazyMemblob, PrefixBlobstore};
 use context::CoreContext;
-use mercurial_types::{manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId,
-                      HgManifestId, HgParents, MPath, MPathElement, RepoPath};
-use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents,
-                     MononokeId, RepositoryId};
+use mercurial_types::{
+    manifest, Changeset, Entry, FileType, HgChangesetId, HgEntryId, HgManifestId, HgParents, MPath,
+    MPathElement, RepoPath,
+};
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
+use mononoke_types::{
+    BonsaiChangeset, ChangesetId, ContentId, DateTime, FileChange, FileContents, MononokeId,
+    RepositoryId,
+};
 
 #[macro_use]
 mod utils;
 mod memory_manifest;
 
-use utils::{create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
-            get_empty_lazy_repo, run_future, string_to_nodehash, upload_file_no_parents,
-            upload_file_one_parent, upload_manifest_no_parents, upload_manifest_one_parent};
+use utils::{
+    create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
+    get_empty_lazy_repo, run_future, string_to_nodehash, upload_file_no_parents,
+    upload_file_one_parent, upload_manifest_no_parents, upload_manifest_one_parent,
+};
 
 use tests_utils::{create_commit, store_files};
 
@@ -150,8 +157,8 @@ fn upload_blob_aliases() {
         let repoid = RepositoryId::new(0);
         let prefixed_blobstore = PrefixBlobstore::new(memblob, repoid.prefix());
 
-        let repo =
-            BlobRepo::new_memblob_empty(None, Some(blobstore)).expect("cannot create empty repo");
+        let repo = blobrepo_factory::new_memblob_empty(None, Some(blobstore))
+            .expect("cannot create empty repo");
         let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
         // The blob with alias does not exist...

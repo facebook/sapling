@@ -11,6 +11,7 @@
 #![feature(try_from)]
 
 extern crate blobrepo;
+extern crate blobrepo_factory;
 extern crate blobstore;
 extern crate bytes;
 #[macro_use]

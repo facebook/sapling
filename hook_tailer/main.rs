@@ -10,6 +10,7 @@
 #[cfg(test)]
 extern crate async_unit;
 extern crate blobrepo;
+extern crate blobrepo_factory;
 extern crate blobstore;
 extern crate bookmarks;
 extern crate bytes;
@@ -45,7 +46,7 @@ extern crate tokio_timer;
 
 pub mod tailer;
 
-use blobrepo::open_blobrepo;
+use blobrepo_factory::open_blobrepo;
 use bookmarks::Bookmark;
 use clap::{App, ArgMatches};
 use context::CoreContext;

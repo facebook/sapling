@@ -22,10 +22,6 @@ extern crate tokio;
 extern crate bincode;
 extern crate bonsai_utils;
 extern crate bytes;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
 #[macro_use]
 extern crate slog;
 #[macro_use]
@@ -41,22 +37,15 @@ extern crate ascii;
 extern crate blob_changeset;
 extern crate blobrepo_errors as errors;
 extern crate blobstore;
-extern crate blobstore_sync_queue;
 extern crate bonsai_hg_mapping;
 extern crate bookmarks;
-extern crate cachelib;
 extern crate changeset_fetcher;
 extern crate changesets;
 extern crate context;
 extern crate crypto;
-extern crate dbbookmarks;
-extern crate delayblob;
-extern crate fileblob;
 extern crate filenodes;
 #[macro_use]
 extern crate futures_ext;
-extern crate glusterblob;
-extern crate manifoldblob;
 #[cfg(test)]
 #[macro_use]
 extern crate maplit;
@@ -66,15 +55,9 @@ extern crate metaconfig_types;
 extern crate mononoke_types;
 #[cfg(test)]
 extern crate mononoke_types_mocks;
-extern crate multiplexedblob;
-extern crate rocksblob;
-extern crate rocksdb;
-extern crate scribe;
-extern crate scribe_cxx;
+extern crate post_commit;
 extern crate scuba;
 extern crate scuba_ext;
-extern crate sqlblob;
-extern crate sqlfilenodes;
 extern crate time_ext;
 
 #[cfg(test)]
@@ -89,7 +72,6 @@ mod bonsai_generation;
 mod file;
 mod manifest;
 mod memory_manifest;
-mod post_commit;
 mod repo;
 mod repo_commit;
 mod utils;
@@ -111,57 +93,4 @@ pub use repo_commit::compute_changed_files;
 pub mod internal {
     pub use memory_manifest::{MemoryManifestEntry, MemoryRootManifest};
     pub use utils::{IncompleteFilenodeInfo, IncompleteFilenodes};
-}
-
-use failure::{err_msg, Error};
-use futures::{future, Future, IntoFuture};
-use futures_ext::FutureExt;
-use metaconfig_types::RepoType;
-use mononoke_types::RepositoryId;
-use scribe_cxx::ScribeCxxClient;
-
-pub fn open_blobrepo(
-    logger: slog::Logger,
-    repotype: RepoType,
-    repoid: RepositoryId,
-    myrouter_port: Option<u16>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
-    use metaconfig_types::RepoType::*;
-
-    match repotype {
-        BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)
-            .into_future()
-            .left_future(),
-        BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)
-            .into_future()
-            .left_future(),
-        BlobSqlite(ref path) => BlobRepo::new_sqlite(logger, &path, repoid)
-            .into_future()
-            .left_future(),
-        BlobRemote {
-            ref blobstores_args,
-            ref db_address,
-            ref filenode_shards,
-        } => {
-            let myrouter_port = match myrouter_port {
-                None => {
-                    return future::err(err_msg(
-                        "Missing myrouter port, unable to open BlobRemote repo",
-                    ))
-                    .left_future();
-                }
-                Some(myrouter_port) => myrouter_port,
-            };
-            BlobRepo::new_remote_scribe_commits(
-                logger,
-                blobstores_args,
-                db_address.clone(),
-                filenode_shards.clone(),
-                repoid,
-                myrouter_port,
-                ScribeCxxClient::new(),
-            )
-            .right_future()
-        }
-    }
 }

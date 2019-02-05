@@ -12,6 +12,7 @@ extern crate actix_web;
 extern crate apiserver_thrift;
 extern crate ascii;
 extern crate blobrepo;
+extern crate blobrepo_factory;
 extern crate bookmarks;
 extern crate bytes;
 extern crate cachelib;

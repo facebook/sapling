@@ -15,8 +15,11 @@ use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
 
-use blobrepo::{BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobEntry,
-               UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry};
+use blobrepo::{
+    BlobRepo, ChangesetHandle, ChangesetMetadata, CreateChangeset, HgBlobEntry,
+    UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
+};
+use blobrepo_factory::new_memblob_empty;
 use blobstore::{EagerMemblob, LazyMemblob};
 use context::CoreContext;
 use mercurial_types::{FileType, HgBlobNode, HgNodeHash, RepoPath};
@@ -24,13 +27,11 @@ use mononoke_types::DateTime;
 use std::sync::Arc;
 
 pub fn get_empty_eager_repo() -> BlobRepo {
-    BlobRepo::new_memblob_empty(None, Some(Arc::new(EagerMemblob::new())))
-        .expect("cannot create empty repo")
+    new_memblob_empty(None, Some(Arc::new(EagerMemblob::new()))).expect("cannot create empty repo")
 }
 
 pub fn get_empty_lazy_repo() -> BlobRepo {
-    BlobRepo::new_memblob_empty(None, Some(Arc::new(LazyMemblob::new())))
-        .expect("cannot create empty repo")
+    new_memblob_empty(None, Some(Arc::new(LazyMemblob::new()))).expect("cannot create empty repo")
 }
 
 macro_rules! test_both_repotypes {

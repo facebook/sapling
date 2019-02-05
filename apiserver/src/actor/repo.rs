@@ -7,7 +7,7 @@
 use std::convert::TryInto;
 
 use bytes::Bytes;
-use failure::{err_msg, Error};
+use failure::Error;
 use futures::future::join_all;
 use futures::sync::oneshot;
 use futures::Stream;
@@ -15,20 +15,19 @@ use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use http::uri::Uri;
 use slog::Logger;
-use sql::myrouter;
 use tokio::runtime::TaskExecutor;
 
 use api;
 use blobrepo::{get_sha256_alias, get_sha256_alias_key, BlobRepo};
+use blobrepo_factory::open_blobrepo;
 use bookmarks::Bookmark;
 use context::CoreContext;
+use genbfs::GenerationNumberBFS;
 use mercurial_types::manifest::Content;
 
 use mercurial_types::{HgChangesetId, HgManifestId};
 use metaconfig_types::RepoConfig;
-use metaconfig_types::RepoType::{BlobFiles, BlobRemote, BlobRocks, BlobSqlite};
 
-use genbfs::GenerationNumberBFS;
 use mononoke_types::{FileContents, RepositoryId};
 use reachabilityindex::ReachabilityIndex;
 
@@ -52,45 +51,8 @@ impl MononokeRepo {
         executor: TaskExecutor,
     ) -> impl Future<Item = Self, Error = Error> {
         let repoid = RepositoryId::new(config.repoid);
-        let repo = match config.repotype {
-            BlobFiles(path) => BlobRepo::new_files(logger.clone(), &path, repoid)
-                .into_future()
-                .left_future(),
-            BlobRocks(path) => BlobRepo::new_rocksdb(logger.clone(), &path, repoid)
-                .into_future()
-                .left_future(),
-            BlobSqlite(path) => BlobRepo::new_sqlite(logger.clone(), &path, repoid)
-                .into_future()
-                .left_future(),
-            BlobRemote {
-                ref blobstores_args,
-                ref db_address,
-                ref filenode_shards,
-            } => match myrouter_port {
-                None => Err(err_msg(
-                    "Missing myrouter port, unable to open BlobRemote repo",
-                ))
-                .into_future()
-                .left_future(),
-                Some(myrouter_port) => myrouter::wait_for_myrouter(myrouter_port, &db_address)
-                    .and_then({
-                        cloned!(db_address, filenode_shards, logger, blobstores_args);
-                        move |()| {
-                            BlobRepo::new_remote_no_postcommit(
-                                logger,
-                                &blobstores_args,
-                                db_address.clone(),
-                                filenode_shards.clone(),
-                                repoid,
-                                myrouter_port,
-                            )
-                        }
-                    })
-                    .right_future(),
-            },
-        };
-
-        repo.map(|repo| Self { repo, executor })
+        open_blobrepo(logger.clone(), config.repotype, repoid, myrouter_port)
+            .map(|repo| Self { repo, executor })
     }
 
     fn get_hgchangesetid_from_revision(

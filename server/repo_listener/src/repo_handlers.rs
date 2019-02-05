@@ -16,7 +16,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 use sql::myrouter;
 
-use blobrepo::open_blobrepo;
+use blobrepo_factory::open_blobrepo;
 use blobstore::Blobstore;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
@@ -26,10 +26,10 @@ use metaconfig_types::{RepoConfig, RepoType};
 use mononoke_types::RepositoryId;
 use phases::{CachingHintPhases, HintPhases, Phases, SqlConstructors, SqlPhases};
 use reachabilityindex::LeastCommonAncestorsHint;
-use skiplist::{deserialize_skiplist_map, SkiplistIndex};
 use ready_state::ReadyStateBuilder;
 use repo_client::{streaming_clone, MononokeRepo};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use skiplist::{deserialize_skiplist_map, SkiplistIndex};
 
 #[derive(Clone)]
 pub struct RepoHandler {

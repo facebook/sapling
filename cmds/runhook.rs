@@ -14,6 +14,7 @@
 #![feature(try_from)]
 
 extern crate blobrepo;
+extern crate blobrepo_factory;
 extern crate blobstore;
 extern crate cachelib;
 extern crate clap;
@@ -175,7 +176,7 @@ fn create_blobrepo(logger: &Logger, matches: &ArgMatches) -> BoxFuture<BlobRepo,
             .parse()
             .expect("shard count must be a positive integer")
     });
-    BlobRepo::new_remote_no_postcommit(
+    blobrepo_factory::new_remote_no_postcommit(
         logger.clone(),
         &blobstore_args,
         db_address,

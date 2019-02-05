@@ -340,12 +340,13 @@ mod tests {
 
     use std::cmp::min;
 
-    use futures::Future;
+    use blobrepo_factory::new_memblob_empty;
     use futures::stream::iter_ok;
+    use futures::Future;
     use itertools::{assert_equal, EitherOrBoth, Itertools};
 
-    use mercurial_types::NULL_HASH;
     use mercurial_types::delta::Fragment;
+    use mercurial_types::NULL_HASH;
     use mercurial_types_mocks::nodehash::*;
 
     struct NodeHashGen {
@@ -380,11 +381,12 @@ mod tests {
     {
         let result = convert_to_revlog_filelog(
             ctx,
-            Arc::new(BlobRepo::new_memblob_empty(None, None).unwrap()),
+            Arc::new(new_memblob_empty(None, None).unwrap()),
             iter_ok(inp.into_iter().collect::<Vec<_>>()),
-        ).collect()
-            .wait()
-            .unwrap();
+        )
+        .collect()
+        .wait()
+        .unwrap();
 
         assert_equal(result, exp);
     }
@@ -536,10 +538,11 @@ mod tests {
 
         let result = convert_to_revlog_filelog(
             ctx,
-            Arc::new(BlobRepo::new_memblob_empty(None, None).unwrap()),
+            Arc::new(new_memblob_empty(None, None).unwrap()),
             iter_ok(inp),
-        ).collect()
-            .wait();
+        )
+        .collect()
+        .wait();
 
         match result {
             Ok(_) => assert!(

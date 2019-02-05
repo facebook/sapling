@@ -6,10 +6,12 @@
 
 use std::sync::Arc;
 
-use failure::Error;
+use cloned::cloned;
+use failure_ext::Error;
 use futures::{Future, IntoFuture};
-use futures_ext::{asynchronize, BoxFuture, FutureExt};
+use futures_ext::{asynchronize, try_boxfuture, BoxFuture, FutureExt};
 use scribe::ScribeClient;
+use serde_derive::Serialize;
 use serde_json;
 
 use mononoke_types::{BonsaiChangeset, ChangesetId, Generation, RepositoryId};
