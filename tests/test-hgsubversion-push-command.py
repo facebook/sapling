@@ -345,7 +345,7 @@ class PushTests(test_hgsubversion_util.TestBase):
         hg.update(repo, newhash)
         commands.push(repo.ui, repo)
         self.assertEqual(self.repo["tip"].parents()[0].parents()[0].node(), oldtiphash)
-        self.assertEqual(self.repo["tip"].files(), ["delta"])
+        self.assertEqual(self.repo["tip"].files(), ("delta",))
         self.assertEqual(
             sorted(self.repo["tip"].manifest().keys()),
             ["alpha", "beta", "delta", "gamma"],
@@ -819,10 +819,10 @@ class PushTests(test_hgsubversion_util.TestBase):
 
         # verify that the first commit is pushed, and the second is not
         commit2 = self.repo["tip"]
-        self.assertEqual(commit2.files(), ["delta"])
+        self.assertEqual(commit2.files(), ("delta",))
         self.assertEqual(util.getsvnrev(commit2), None)
         commit1 = commit2.parents()[0]
-        self.assertEqual(commit1.files(), ["gamma"])
+        self.assertEqual(commit1.files(), ("gamma",))
         prefix = "svn:" + self.repo.svnmeta().uuid
         self.assertEqual(util.getsvnrev(commit1), prefix + "/branches/the_branch@5")
 
@@ -850,12 +850,12 @@ class PushTests(test_hgsubversion_util.TestBase):
 
         # verify that both commits are pushed
         commit1 = self.repo["tip"]
-        self.assertEqual(commit1.files(), ["delta", "gamma"])
+        self.assertEqual(commit1.files(), ("delta", "gamma"))
 
         prefix = "svn:" + self.repo.svnmeta().uuid
         self.assertEqual(util.getsvnrev(commit1), prefix + "/branches/the_branch@6")
         commit2 = commit1.parents()[0]
-        self.assertEqual(commit2.files(), ["gamma"])
+        self.assertEqual(commit2.files(), ("gamma",))
         self.assertEqual(util.getsvnrev(commit2), prefix + "/branches/the_branch@5")
 
     def test_push_in_subdir(self, commit=True):

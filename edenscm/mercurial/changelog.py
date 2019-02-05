@@ -173,7 +173,7 @@ class changelogrevision(object):
     the parsed object.
     """
 
-    __slots__ = (u"_offsets", u"_text")
+    __slots__ = (u"_offsets", u"_text", u"_files")
 
     def __new__(cls, text):
         if not text:
@@ -207,6 +207,7 @@ class changelogrevision(object):
 
         self._offsets = (nl1, nl2, nl3, doublenl)
         self._text = text
+        self._files = None
 
         return self
 
@@ -257,11 +258,15 @@ class changelogrevision(object):
 
     @property
     def files(self):
+        if self._files is not None:
+            return self._files
+
         off = self._offsets
         if off[2] == off[3]:
-            return []
-
-        return self._text[off[2] + 1 : off[3]].split("\n")
+            self._files = tuple()
+        else:
+            self._files = tuple(self._text[off[2] + 1 : off[3]].split("\n"))
+        return self._files
 
     @property
     def description(self):

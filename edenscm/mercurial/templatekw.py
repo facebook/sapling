@@ -606,7 +606,7 @@ def showfiles(**args):
     changeset.
     """
     args = pycompat.byteskwargs(args)
-    return showlist("file", args["ctx"].files(), args)
+    return showlist("file", list(args["ctx"].files()), args)
 
 
 @templatekeyword("filestat")

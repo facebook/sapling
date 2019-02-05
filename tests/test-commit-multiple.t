@@ -116,8 +116,8 @@ now test that we fixed the bug for all scripts/extensions
   $ $PYTHON $TESTTMP/committwice.py
   PRE: len(repo): 6
   POST: len(repo): 8
-  revision 6 files: ['bugfix', 'file1']
-  revision 7 files: ['file1']
+  revision 6 files: ('bugfix', 'file1')
+  revision 7 files: ('file1',)
 
 Do a size-preserving modification outside of that process
   $ echo abcd > bugfix

@@ -1205,7 +1205,7 @@ def grep(repo, subset, x):
 
     def matches(x):
         c = repo[x]
-        for e in c.files() + [c.user(), c.description()]:
+        for e in list(c.files()) + [c.user(), c.description()]:
             if gr.search(e):
                 return True
         return False
@@ -1353,7 +1353,8 @@ def keyword(repo, subset, x):
     def matches(r):
         c = repo[r]
         return any(
-            kw in encoding.lower(t) for t in c.files() + [c.user(), c.description()]
+            kw in encoding.lower(t)
+            for t in list(c.files()) + [c.user(), c.description()]
         )
 
     return subset.filter(matches, condrepr=("<keyword %r>", kw))
