@@ -285,7 +285,7 @@ class server(object):
         hellomsg += "encoding: " + encoding.encoding
         hellomsg += "\n"
         hellomsg += "pid: %d" % util.getpid()
-        versionmod = sys.modules.get("mercurial.__version__")
+        versionmod = sys.modules.get("edenscm.mercurial.__version__")
         if versionmod:
             hellomsg += "\n"
             hellomsg += "versionhash: %s" % versionmod.versionhash
