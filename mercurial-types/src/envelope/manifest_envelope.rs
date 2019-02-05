@@ -9,7 +9,7 @@
 use std::fmt;
 
 use bytes::Bytes;
-use failure::{err_msg, SyncFailure, chain::*};
+use failure::{chain::*, err_msg, SyncFailure};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use rust_thrift::compact_protocol;
@@ -61,8 +61,10 @@ impl HgManifestEnvelope {
                     p1: HgNodeHash::from_thrift_opt(fe.p1)?,
                     p2: HgNodeHash::from_thrift_opt(fe.p2)?,
                     computed_node_id: HgNodeHash::from_thrift(fe.computed_node_id)?,
-                    contents: Bytes::from(fe.contents
-                        .ok_or_else(|| err_msg("missing contents field"))?),
+                    contents: Bytes::from(
+                        fe.contents
+                            .ok_or_else(|| err_msg("missing contents field"))?,
+                    ),
                 },
             })
         };

@@ -7,7 +7,7 @@
 use std::fmt::{self, Debug};
 
 use bytes::Bytes;
-use failure::{SyncFailure, chain::*};
+use failure::{chain::*, SyncFailure};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use rust_thrift::compact_protocol;

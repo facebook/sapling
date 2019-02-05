@@ -6,7 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use failure::{err_msg, SyncFailure, chain::*};
+use failure::{chain::*, err_msg, SyncFailure};
 use quickcheck::{Arbitrary, Gen};
 
 use rust_thrift::compact_protocol;
@@ -68,7 +68,8 @@ impl BonsaiChangesetMut {
             self.file_changes
                 .iter()
                 .map(|(path, change)| (path, change.is_some())),
-        ).with_context(|_| ErrorKind::InvalidBonsaiChangeset("invalid file change list".into()))?;
+        )
+        .with_context(|_| ErrorKind::InvalidBonsaiChangeset("invalid file change list".into()))?;
 
         Ok(())
     }
@@ -83,13 +84,16 @@ impl BonsaiChangeset {
     pub(crate) fn from_thrift(tc: thrift::BonsaiChangeset) -> Result<Self> {
         let catch_block = || {
             Ok(BonsaiChangesetMut {
-                parents: tc.parents
+                parents: tc
+                    .parents
                     .into_iter()
                     .map(|parent| ChangesetId::from_thrift(parent))
                     .collect::<Result<_>>()?,
                 author: tc.author,
-                author_date: DateTime::from_thrift(tc.author_date
-                    .ok_or_else(|| err_msg("missing author date field"))?)?,
+                author_date: DateTime::from_thrift(
+                    tc.author_date
+                        .ok_or_else(|| err_msg("missing author date field"))?,
+                )?,
                 committer: tc.committer,
                 committer_date: match tc.committer_date {
                     Some(dt) => Some(DateTime::from_thrift(dt)?),
@@ -97,7 +101,8 @@ impl BonsaiChangeset {
                 },
                 message: tc.message,
                 extra: tc.extra,
-                file_changes: tc.file_changes
+                file_changes: tc
+                    .file_changes
                     .into_iter()
                     .map(|(f, fc_opt)| {
                         let mpath = MPath::from_thrift(f)?;
@@ -105,7 +110,8 @@ impl BonsaiChangeset {
                         Ok((mpath, fc_opt))
                     })
                     .collect::<Result<_>>()?,
-            }.freeze()?)
+            }
+            .freeze()?)
         };
 
         Ok(catch_block().with_context(|_: &Error| {
@@ -178,7 +184,8 @@ impl BonsaiChangeset {
 
     pub(crate) fn into_thrift(self) -> thrift::BonsaiChangeset {
         thrift::BonsaiChangeset {
-            parents: self.inner
+            parents: self
+                .inner
                 .parents
                 .into_iter()
                 .map(|parent| parent.into_thrift())
@@ -189,7 +196,8 @@ impl BonsaiChangeset {
             committer_date: self.inner.committer_date.map(|dt| dt.into_thrift()),
             message: self.inner.message,
             extra: self.inner.extra,
-            file_changes: self.inner
+            file_changes: self
+                .inner
                 .file_changes
                 .into_iter()
                 .map(|(f, c)| (f.into_thrift(), FileChange::into_thrift_opt(c)))
@@ -246,7 +254,8 @@ impl Arbitrary for BonsaiChangeset {
             file_changes
                 .iter()
                 .map(|(path, change)| (path, change.is_some())),
-        ).is_err()
+        )
+        .is_err()
         {
             // This is rare but is definitely possible. Retry in this case.
             Self::arbitrary(g)
@@ -260,8 +269,9 @@ impl Arbitrary for BonsaiChangeset {
                 committer_date: Option::<DateTime>::arbitrary(g),
                 message: String::arbitrary(g),
                 extra: BTreeMap::arbitrary(g),
-            }.freeze()
-                .expect("generated bonsai changeset must be valid")
+            }
+            .freeze()
+            .expect("generated bonsai changeset must be valid")
         }
     }
 
@@ -271,7 +281,8 @@ impl Arbitrary for BonsaiChangeset {
             cs.parents.clone(),
             cs.file_changes.clone(),
             cs.extra.clone(),
-        ).shrink()
+        )
+            .shrink()
             .map(move |(parents, file_changes, extra)| {
                 BonsaiChangesetMut {
                     parents,
@@ -282,8 +293,9 @@ impl Arbitrary for BonsaiChangeset {
                     committer_date: cs.committer_date,
                     message: cs.message.clone(),
                     extra,
-                }.freeze()
-                    .expect("shrunken bonsai changeset must be valid")
+                }
+                .freeze()
+                .expect("shrunken bonsai changeset must be valid")
             });
         Box::new(iter)
     }
@@ -352,7 +364,8 @@ mod test {
             ChangesetId::new(
                 Blake2::from_str(
                     "189e67041363f9dc7d10de57aaf0fbd202dec989357e76cada7fa940936c712a"
-                ).unwrap()
+                )
+                .unwrap()
             )
         );
     }

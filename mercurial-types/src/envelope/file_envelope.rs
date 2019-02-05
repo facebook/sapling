@@ -9,7 +9,7 @@
 use std::fmt;
 
 use bytes::Bytes;
-use failure::{err_msg, SyncFailure, chain::*};
+use failure::{chain::*, err_msg, SyncFailure};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use rust_thrift::compact_protocol;
@@ -63,12 +63,16 @@ impl HgFileEnvelope {
                     node_id: HgNodeHash::from_thrift(fe.node_id)?,
                     p1: HgNodeHash::from_thrift_opt(fe.p1)?,
                     p2: HgNodeHash::from_thrift_opt(fe.p2)?,
-                    content_id: ContentId::from_thrift(fe.content_id
-                        .ok_or_else(|| err_msg("missing content id field"))?)?,
+                    content_id: ContentId::from_thrift(
+                        fe.content_id
+                            .ok_or_else(|| err_msg("missing content id field"))?,
+                    )?,
                     content_size: fe.content_size as u64,
                     // metadata will always be stored, even if it's length 0
-                    metadata: Bytes::from(fe.metadata
-                        .ok_or_else(|| err_msg("missing metadata field"))?),
+                    metadata: Bytes::from(
+                        fe.metadata
+                            .ok_or_else(|| err_msg("missing metadata field"))?,
+                    ),
                 },
             })
         };
