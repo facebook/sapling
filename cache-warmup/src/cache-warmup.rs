@@ -18,8 +18,6 @@ extern crate mercurial_types;
 extern crate metaconfig_types;
 extern crate revset;
 
-use std::sync::Arc;
-
 use blobrepo::BlobRepo;
 use bookmarks::Bookmark;
 use context::CoreContext;
@@ -49,7 +47,7 @@ use failure::Error;
 // there can be too many of them.
 fn blobstore_and_filenodes_warmup(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     revision: HgChangesetId,
     logger: Logger,
 ) -> BoxFuture<(), Error> {
@@ -99,7 +97,7 @@ fn blobstore_and_filenodes_warmup(
 fn changesets_warmup(
     ctx: CoreContext,
     start_rev: HgChangesetId,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     cs_limit: usize,
     logger: Logger,
 ) -> impl Future<Item = (), Error = Error> {
@@ -124,7 +122,7 @@ fn changesets_warmup(
 
 fn do_cache_warmup(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     bookmark: Bookmark,
     commit_limit: usize,
     logger: Logger,
@@ -169,7 +167,7 @@ fn do_cache_warmup(
 /// ancestors of the bookmark.
 pub fn cache_warmup(
     ctx: CoreContext,
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
     cache_warmup: Option<CacheWarmupParams>,
     logger: Logger,
 ) -> BoxFuture<(), Error> {

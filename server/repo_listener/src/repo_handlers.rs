@@ -162,7 +162,7 @@ pub fn repo_handlers(
                     cloned!(ctx, reponame, listen_log);
                     let blobrepo = repo.blobrepo().clone();
                     move |()| {
-                        cache_warmup(ctx, Arc::new(blobrepo), config.cache_warmup, listen_log)
+                        cache_warmup(ctx, blobrepo, config.cache_warmup, listen_log)
                             .chain_err(format!("while warming up cache for repo: {}", reponame))
                             .from_err()
                     }
