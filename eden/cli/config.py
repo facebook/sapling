@@ -189,7 +189,7 @@ class EdenInstance:
         for f in self.get_rc_files():
             try:
                 toml_cfg = _load_toml_config(f)
-            except (FileNotFoundError) as exc:
+            except FileNotFoundError:
                 # Ignore missing config files. Eg. user_config_path is optional
                 continue
             parser.read_dict(toml_cfg)
@@ -313,8 +313,9 @@ class EdenInstance:
     def get_client_info(self, path: str) -> collections.OrderedDict:
         path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
-        checkout_config = self._get_checkout_config(client_dir)
-        snapshot = self._get_snapshot(client_dir)
+        checkout = EdenCheckout(self, Path(path), Path(client_dir))
+        checkout_config = checkout.get_config()
+        snapshot = checkout.get_snapshot()
 
         return collections.OrderedDict(
             [
@@ -325,14 +326,6 @@ class EdenInstance:
                 ("client-dir", client_dir),
             ]
         )
-
-    @staticmethod
-    def _get_snapshot(client_dir: str) -> str:
-        """Return the hex version of the parent hash in the SNAPSHOT file."""
-        snapshot_file = os.path.join(client_dir, SNAPSHOT)
-        with open(snapshot_file, "rb") as f:
-            assert f.read(8) == SNAPSHOT_MAGIC
-            return binascii.hexlify(f.read(20)).decode("utf-8")
 
     def add_repository(
         self, name: str, repo_type: str, source: str, with_buck: bool = False
@@ -379,11 +372,9 @@ Do you want to run `eden mount %s` instead?"""
         client_dir = self._create_client_dir_for_path(clients_dir, path)
 
         # Store snapshot ID
+        checkout = EdenCheckout(self, Path(path), Path(client_dir))
         if snapshot_id:
-            client_snapshot = os.path.join(client_dir, SNAPSHOT)
-            with open(client_snapshot, "wb") as f:
-                f.write(SNAPSHOT_MAGIC)
-                f.write(binascii.unhexlify(snapshot_id))
+            checkout.save_snapshot(snapshot_id)
         else:
             raise Exception("snapshot id not provided")
 
@@ -393,8 +384,7 @@ Do you want to run `eden mount %s` instead?"""
         for mount in checkout_config.bind_mounts:
             util.mkdir_p(os.path.join(bind_mounts_dir, mount))
 
-        config_path = os.path.join(client_dir, MOUNT_CONFIG)
-        self._save_checkout_config(checkout_config, config_path)
+        checkout.save_config(checkout_config)
 
         # Prepare to mount
         mount_info = eden_ttypes.MountArgument(
@@ -403,9 +393,7 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client() as client:
             client.mount(mount_info)
 
-        self._post_clone_checkout_setup(
-            Path(path), Path(client_dir), checkout_config, snapshot_id
-        )
+        self._post_clone_checkout_setup(checkout, checkout_config, snapshot_id)
 
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, os.path.basename(client_dir))
@@ -489,48 +477,29 @@ Do you want to run `eden mount %s` instead?"""
                 raise
 
     def _post_clone_checkout_setup(
-        self,
-        eden_mount_path: Path,
-        client_dir: Path,
-        checkout_config: CheckoutConfig,
-        commit_id: str,
+        self, checkout: "EdenCheckout", checkout_config: CheckoutConfig, commit_id: str
     ) -> None:
         # First, check to see if the post-clone hook has been run successfully
         # before.
-        clone_success_path = client_dir / CLONE_SUCCEEDED
+        clone_success_path = checkout.state_dir / CLONE_SUCCEEDED
         is_initial_mount = not clone_success_path.is_file()
         if is_initial_mount and checkout_config.scm_type == "hg":
             from . import hg_util
 
-            checkout = EdenCheckout(self, eden_mount_path, client_dir)
             hg_util.setup_hg_dir(checkout, checkout_config, commit_id)
 
         clone_success_path.touch()
-
-    def _save_checkout_config(
-        self, checkout_config: CheckoutConfig, config_path: str
-    ) -> None:
-        # Store information about the mount in the config.toml file.
-        config_data = {
-            "repository": {
-                "path": checkout_config.path,
-                "type": checkout_config.scm_type,
-                "hooks": checkout_config.hooks_path,
-            },
-            "bind-mounts": checkout_config.bind_mounts,
-        }
-        with open(config_path, "w") as f:
-            toml.dump(config_data, f)
 
     def mount(self, path: str) -> int:
         # Load the config info for this client, to make sure we
         # know about the client.
         path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
+        checkout = EdenCheckout(self, Path(path), Path(client_dir))
 
-        # Call _get_checkout_config() for the side-effect of it raising an
+        # Call checkout.get_config() for the side-effect of it raising an
         # Exception if the config is in an invalid state.
-        self._get_checkout_config(client_dir)
+        checkout.get_config()
 
         # Make sure the mount path exists
         util.mkdir_p(path)
@@ -734,56 +703,6 @@ Do you want to run `eden mount %s` instead?"""
 
         return eden_env
 
-    def _get_checkout_config(self, client_dir: str) -> CheckoutConfig:
-        """Returns CheckoutConfig or raises an Exception if the config.toml
-        under the client_dir is not properly formatted or does not exist.
-        """
-        config_toml = os.path.join(client_dir, MOUNT_CONFIG)
-        config = _load_toml_config(config_toml)
-        repo_field = config.get("repository")
-        if isinstance(repo_field, dict):
-            repository = repo_field
-        else:
-            raise Exception(f"{config_toml} is missing [repository]")
-
-        def get_field(key: str) -> str:
-            value = repository.get(key)
-            if isinstance(value, str):
-                return value
-            raise Exception(f"{config_toml} is missing {key} in " "[repository]")
-
-        scm_type = get_field("type")
-        if scm_type not in SUPPORTED_REPOS:
-            raise Exception(
-                f'repository "{config_toml}" has unsupported type ' f'"{scm_type}"'
-            )
-
-        bind_mounts = {}
-        bind_mounts_dict = config.get("bind-mounts")
-        if bind_mounts_dict is not None:
-            if not isinstance(bind_mounts_dict, dict):
-                raise Exception(
-                    f"{config_toml} has an invalid " "[bind-mounts] section"
-                )
-            for key, value in bind_mounts_dict.items():
-                if not isinstance(value, str):
-                    raise Exception(
-                        f"{config_toml} has invalid value in "
-                        f"[bind-mounts] for {key}: {value} "
-                        "(string expected)"
-                    )
-                bind_mounts[key] = value
-
-        return CheckoutConfig(
-            path=get_field("path"),
-            scm_type=scm_type,
-            hooks_path=get_field("hooks"),
-            bind_mounts=bind_mounts,
-            default_revision=(
-                repository.get("default-revision") or DEFAULT_REVISION[scm_type]
-            ),
-        )
-
     def get_checkout_config_for_path(self, path: str) -> Optional[CheckoutConfig]:
         client_link = os.path.join(path, ".eden", "client")
         try:
@@ -791,7 +710,8 @@ Do you want to run `eden mount %s` instead?"""
         except OSError:
             return None
 
-        return self._get_checkout_config(client_dir)
+        checkout = EdenCheckout(self, Path(path), Path(client_dir))
+        return checkout.get_config()
 
     def get_checkouts(self) -> List["EdenCheckout"]:
         """Return information about all configured checkouts defined in Eden's
@@ -893,7 +813,7 @@ class ConfigUpdater(object):
         try:
             toml_cfg = _load_toml_config(self.path)
             self.config.read_dict(toml_cfg)
-        except (FileNotFoundError) as exc:
+        except FileNotFoundError:
             pass
 
     def __enter__(self) -> "ConfigUpdater":
@@ -1056,12 +976,93 @@ class EdenCheckout:
 
     def get_config(self) -> CheckoutConfig:
         if self._config is None:
-            self._config = self.instance._get_checkout_config(str(self.state_dir))
+            self._config = self._read_config()
         return self._config
+
+    def save_config(self, checkout_config: CheckoutConfig) -> None:
+        # Store information about the mount in the config.toml file.
+        config_data = {
+            "repository": {
+                "path": checkout_config.path,
+                "type": checkout_config.scm_type,
+                "hooks": checkout_config.hooks_path,
+            },
+            "bind-mounts": checkout_config.bind_mounts,
+        }
+        with self._config_path().open("w") as f:
+            toml.dump(config_data, f)
+
+        # Update our local config cache
+        self._config = checkout_config
+
+    def _config_path(self) -> Path:
+        return self.state_dir / MOUNT_CONFIG
+
+    def _read_config(self) -> CheckoutConfig:
+        """Returns CheckoutConfig or raises an Exception if the config.toml
+        under self.state_dir is not properly formatted or does not exist.
+        """
+        config_path = self._config_path()
+        config = _load_toml_config(str(config_path))
+        repo_field = config.get("repository")
+        if isinstance(repo_field, dict):
+            repository = repo_field
+        else:
+            raise Exception(f"{config_path} is missing [repository]")
+
+        def get_field(key: str) -> str:
+            value = repository.get(key)
+            if isinstance(value, str):
+                return value
+            raise Exception(f"{config_path} is missing {key} in " "[repository]")
+
+        scm_type = get_field("type")
+        if scm_type not in SUPPORTED_REPOS:
+            raise Exception(
+                f'repository "{config_path}" has unsupported type ' f'"{scm_type}"'
+            )
+
+        bind_mounts = {}
+        bind_mounts_dict = config.get("bind-mounts")
+        if bind_mounts_dict is not None:
+            if not isinstance(bind_mounts_dict, dict):
+                raise Exception(
+                    f"{config_path} has an invalid " "[bind-mounts] section"
+                )
+            for key, value in bind_mounts_dict.items():
+                if not isinstance(value, str):
+                    raise Exception(
+                        f"{config_path} has invalid value in "
+                        f"[bind-mounts] for {key}: {value} "
+                        "(string expected)"
+                    )
+                bind_mounts[key] = value
+
+        return CheckoutConfig(
+            path=get_field("path"),
+            scm_type=scm_type,
+            hooks_path=get_field("hooks"),
+            bind_mounts=bind_mounts,
+            default_revision=(
+                repository.get("default-revision") or DEFAULT_REVISION[scm_type]
+            ),
+        )
 
     def get_snapshot(self) -> str:
         """Return the hex version of the parent hash in the SNAPSHOT file."""
-        return self.instance._get_snapshot(str(self.state_dir))
+        snapshot_path = self.state_dir / SNAPSHOT
+        with snapshot_path.open("rb") as f:
+            assert f.read(8) == SNAPSHOT_MAGIC
+            return binascii.hexlify(f.read(20)).decode("utf-8")
+
+    def save_snapshot(self, commid_id: str) -> None:
+        """Write a new parent commit ID into the SNAPSOHT file."""
+        snapshot_path = self.state_dir / SNAPSHOT
+        assert len(commid_id) == 40
+        commit_bin = binascii.unhexlify(commid_id)
+        # TODO: It would be nicer to write this out atomically using a temporary file
+        # followed by a rename.
+        snapshot_path.write_bytes(SNAPSHOT_MAGIC + commit_bin)
 
 
 def find_eden(

@@ -12,6 +12,7 @@ import collections
 import errno
 import os
 import re
+import shutil
 import stat
 import subprocess
 import typing
@@ -2359,12 +2360,12 @@ class FakeEdenInstance:
         self._fake_client = FakeClient()
 
         self._eden_dir = Path(self._tmp_dir) / "eden"
-        self.clients_path = os.path.join(self._eden_dir, "clients")
+        self._eden_dir.mkdir()
+        self.clients_path = self._eden_dir / "clients"
+        self.clients_path.mkdir()
 
         # A map from mount path --> FakeCheckout
         self._checkouts_by_path: Dict[str, FakeCheckout] = {}
-        # A map from checkout state directory --> FakeCheckout
-        self._checkouts_by_client_dir: Dict[Path, FakeCheckout] = {}
 
         self.mount_table = FakeMountTable()
         self._next_dev_id = 10
@@ -2408,9 +2409,8 @@ class FakeEdenInstance:
         if client_name is None:
             client_name = path.replace("/", "_")
 
-        state_dir = Path(self.clients_path) / client_name
+        state_dir = self.clients_path / client_name
         assert full_path not in self._checkouts_by_path
-        assert state_dir not in self._checkouts_by_client_dir
         config = CheckoutConfig(
             path=full_path,
             scm_type=scm_type,
@@ -2420,7 +2420,14 @@ class FakeEdenInstance:
         )
         checkout = FakeCheckout(state_dir=state_dir, config=config, snapshot=snapshot)
         self._checkouts_by_path[full_path] = checkout
-        self._checkouts_by_client_dir[state_dir] = checkout
+
+        # Write out the config file and snapshot file
+        state_dir.mkdir()
+        eden_checkout = EdenCheckout(
+            typing.cast(EdenInstance, self), Path(full_path), state_dir
+        )
+        eden_checkout.save_config(config)
+        eden_checkout.save_snapshot(snapshot)
 
         if active and self._status == fb_status.ALIVE:
             # Report the mount in /proc/mounts
@@ -2454,8 +2461,8 @@ class FakeEdenInstance:
     def remove_checkout_configuration(self, mount_path: str) -> None:
         """Update the state to make it look like the specified mount path is still
         actively mounted but not configured on disk."""
-        mount = self._checkouts_by_path.pop(mount_path)
-        del self._checkouts_by_client_dir[mount.state_dir]
+        checkout = self._checkouts_by_path.pop(mount_path)
+        shutil.rmtree(checkout.state_dir)
 
     def _setup_hg_path(
         self,
@@ -2514,30 +2521,18 @@ class FakeEdenInstance:
 
     def get_checkouts(self) -> List[EdenCheckout]:
         results: List[EdenCheckout] = []
-        for state_dir, checkout in self._checkouts_by_client_dir.items():
+        for checkout in self._checkouts_by_path.values():
             results.append(
                 EdenCheckout(
                     typing.cast(EdenInstance, self),
                     Path(checkout.config.path),
-                    Path(state_dir),
+                    Path(checkout.state_dir),
                 )
             )
         return results
 
     def get_config_value(self, key: str, default: str) -> str:
         return self._config.get(key, default)
-
-    def _get_checkout_config(self, client_dir: str) -> CheckoutConfig:
-        return self._get_checkout_by_client_dir(client_dir).config
-
-    def _get_snapshot(self, client_dir: str) -> str:
-        return self._get_checkout_by_client_dir(client_dir).snapshot
-
-    def _get_checkout_by_client_dir(self, client_dir: str) -> FakeCheckout:
-        try:
-            return self._checkouts_by_client_dir[Path(client_dir)]
-        except KeyError:
-            raise FileNotFoundError(os.path.join(client_dir, "config.toml"))
 
 
 class FakeProcessFinder(process_finder.LinuxProcessFinder):
