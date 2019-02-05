@@ -4,10 +4,14 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Cursor, Write};
 
 use bytes::{Bytes, BytesMut};
+use cloned::cloned;
+use failure::{Error, Fail};
 use futures::{future::ok, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use pylz4;
@@ -21,14 +25,28 @@ use mercurial_types::{
     HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath, RepoPath, RevFlags,
     NULL_CSID, NULL_HASH,
 };
+use tracing::trace_args;
 
 use metaconfig_types::LfsParams;
 use tracing::Traced;
 
-use errors::*;
-
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
+
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "internal error: file {} copied from directory {}", _0, _1)]
+    InconsistentCopyInfo(RepoPath, RepoPath),
+    #[fail(
+        display = "Data corruption for {}: expected {}, actual {}!",
+        _0, _1, _2
+    )]
+    DataCorruption {
+        path: RepoPath,
+        expected: HgNodeHash,
+        actual: HgNodeHash,
+    },
+}
 
 /// Remotefilelog blob consists of file content in `node` revision and all the history
 /// of the file up to `node`

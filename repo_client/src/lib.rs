@@ -28,8 +28,6 @@ extern crate serde_json;
 #[macro_use]
 extern crate slog;
 #[macro_use]
-extern crate sql;
-#[macro_use]
 extern crate stats;
 extern crate time_ext;
 #[macro_use]
@@ -50,14 +48,16 @@ extern crate metaconfig_types;
 extern crate mononoke_types;
 extern crate phases;
 extern crate reachabilityindex;
+extern crate remotefilelog;
 extern crate revset;
 extern crate scuba_ext;
+extern crate streaming_clone;
 extern crate tokio;
 
 mod client;
 mod errors;
 mod mononoke_repo;
 
-pub use client::streaming_clone::SqlStreamingChunksFetcher;
 pub use client::RepoClient;
 pub use mononoke_repo::{streaming_clone, MononokeRepo};
+pub use streaming_clone::SqlStreamingChunksFetcher;

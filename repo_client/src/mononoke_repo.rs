@@ -6,7 +6,6 @@
 
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PrefixBlobstore};
-use client::streaming_clone::SqlStreamingChunksFetcher;
 use errors::*;
 use hooks::HookManager;
 use metaconfig_types::RepoReadOnly;
@@ -14,6 +13,7 @@ use metaconfig_types::{LfsParams, PushrebaseParams};
 use mononoke_types::RepositoryId;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
+use streaming_clone::SqlStreamingChunksFetcher;
 
 #[derive(Clone)]
 pub struct SqlStreamingCloneConfig {

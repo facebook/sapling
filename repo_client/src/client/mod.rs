@@ -4,9 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-mod remotefilelog;
-pub mod streaming_clone;
-
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 use std::mem;
@@ -49,8 +46,8 @@ use tracing::Traced;
 use blobrepo::BlobRepo;
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 
-use self::remotefilelog::create_remotefilelog_blob;
-use self::streaming_clone::RevlogStreamingChunks;
+use remotefilelog::create_remotefilelog_blob;
+use streaming_clone::RevlogStreamingChunks;
 
 use errors::*;
 use hooks::HookManager;

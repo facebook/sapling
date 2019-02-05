@@ -4,10 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+
+#[macro_use]
+extern crate sql;
+
 use std::vec::Vec;
 
 use bytes::Bytes;
-use failure::Error;
+use failure::{Error, Fail};
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use sql::Connection;
@@ -16,7 +21,11 @@ use blobstore::Blobstore;
 use context::CoreContext;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 
-use errors::*;
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "internal error: streaming blob {} missing", _0)]
+    MissingStreamingBlob(String),
+}
 
 pub struct RevlogStreamingChunks {
     pub index_size: usize,
