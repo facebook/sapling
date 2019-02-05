@@ -51,6 +51,9 @@ class basestore(object):
 
         self._validatecachelog = self.ui.config("remotefilelog", "validatecachelog")
         self._validatecache = self.ui.config("remotefilelog", "validatecache", "on")
+        self._validatehashes = self.ui.configbool(
+            "remotefilelog", "validatecachehashes", True
+        )
         if self._validatecache not in ("on", "strict", "off"):
             self._validatecache = "on"
         if self._validatecache == "off":
@@ -410,8 +413,13 @@ class basestore(object):
                 offset += size
                 datanode = data[offset : offset + 20]
 
+                hexdatanode = hex(datanode)
+                if self._validatehashes:
+                    if not shallowutil.verifyfilenode(data, hexdatanode):
+                        return False
+
                 # and compare against the path
-                if os.path.basename(path) == hex(datanode):
+                if os.path.basename(path) == hexdatanode:
                     # Content matches the intended path
                     return True
                 return False

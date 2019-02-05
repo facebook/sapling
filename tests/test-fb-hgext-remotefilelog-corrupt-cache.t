@@ -54,6 +54,31 @@ Verify detection and remediation when remotefilelog.validatecachelog is set
   $ cat .hg/remotefilelog_cache.log
   corrupt $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 during contains
 
+Verify that hashes are checked
+  $ rm .hg/remotefilelog_cache.log
+  $ hg up -q null
+  $ chmod u+w $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
+  $ printf 'z' | dd of=$CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 bs=1 seek=2 count=1 conv=notrunc 2> /dev/null
+  $ hg up tip --config remotefilelog.validatecachehashes=False
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat x
+  z
+  $ hg st --config remotefilelog.validatecachehashes=False
+
+Verify that hashes are checked
+  $ hg up -C -q null
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ chmod u+w $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
+  $ printf 'z' | dd of=$CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 bs=1 seek=2 count=1 conv=notrunc 2> /dev/null
+  $ hg up tip
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ cat .hg/remotefilelog_cache.log
+  corrupt $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 during contains
+  corrupt $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 during contains
+  $ cat x
+  x
+
 Verify handling of corrupt server cache
 
   $ rm -f ../master/.hg/remotefilelogcache/y/076f5e2225b3ff0400b98c92aa6cdf403ee24cca

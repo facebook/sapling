@@ -16,7 +16,7 @@ from collections import defaultdict
 
 from edenscm.mercurial import error, filelog, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex
+from edenscm.mercurial.node import bin, hex, nullid
 
 from . import constants
 from ..lfs import pointer
@@ -317,6 +317,35 @@ def buildfileblobheader(size, flags, version=None):
     else:
         raise error.ProgrammingError("unknown fileblob version %d" % version)
     return header
+
+
+def verifyfilenode(raw, hexexpectedfilenode):
+    offset, size, flags = parsesizeflags(raw)
+    text = raw[offset : offset + size]
+
+    # Do not check lfs data since hash verification would fail
+    if flags == 0:
+        ancestors = ancestormap(raw)
+        p1, p2, _, copyfrom = ancestors[bin(hexexpectedfilenode)]
+        if copyfrom:
+            # Mercurial has a complicated copy/renames logic.
+            # In vanilla hg, in case of rename p1 is always "null",
+            # and the copy information is embedded in file revision.
+            # In remotefilelog, p1 is used to store "copyfrom file node".
+            # In both cases, p2 is always "null" for a non-merge commit.
+            # It could only be not-null for merges.
+            # The code below converts between two representations.
+
+            filelogmeta = {"copy": copyfrom, "copyrev": hex(p1)}
+            text = filelog.packmeta(filelogmeta, text)
+            p1 = nullid
+        elif text.startswith("\1\n"):
+            text = filelog.packmeta({}, text)
+
+        actualhash = hex(revlog.hash(text, p1, p2))
+        if hexexpectedfilenode != actualhash:
+            return False
+    return True
 
 
 def ancestormap(raw):
