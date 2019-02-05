@@ -7,36 +7,20 @@
 #![deny(warnings)]
 #![feature(transpose_result)]
 
-extern crate blobstore;
-extern crate bytes;
-extern crate cloned;
-extern crate context;
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate memcache;
-extern crate mononoke_types;
-#[cfg(test)]
-extern crate rand;
-extern crate rust_thrift;
 #[macro_use]
 extern crate sql;
-extern crate sql_ext;
 #[macro_use]
 extern crate stats;
-extern crate tokio;
-extern crate twox_hash;
-
-extern crate sqlblob_thrift;
 
 mod cache;
 mod store;
 
+use crate::cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
+use crate::store::{ChunkSqlStore, DataSqlStore};
 use blobstore::{dummy::DummyCache, Blobstore, MemcacheOps};
-use cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
 use cloned::cloned;
 use context::CoreContext;
-use failure::{format_err, Error, Result};
+use failure_ext::{format_err, Error, Result};
 use futures::future::join_all;
 use futures::prelude::*;
 use futures_ext::{BoxFuture, FutureExt};
@@ -49,7 +33,6 @@ use std::fmt;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::Arc;
-use store::{ChunkSqlStore, DataSqlStore};
 
 // Leaving some space for metadata
 const MAX_KEY_SIZE: usize = 200;
@@ -220,7 +203,7 @@ impl Sqlblob {
 }
 
 impl fmt::Debug for Sqlblob {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Sqlblob").finish()
     }
 }

@@ -9,17 +9,17 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 
+use crate::locking_cache::CacheOps;
 use cachelib::LruCachePool;
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
-use locking_cache::CacheOps;
 use mononoke_types::BlobstoreBytes;
 
-use counted_blobstore::CountedBlobstore;
-use dummy::DummyLease;
-use in_process_lease::InProcessLease;
-use locking_cache::CacheBlobstore;
-use Blobstore;
+use crate::counted_blobstore::CountedBlobstore;
+use crate::dummy::DummyLease;
+use crate::in_process_lease::InProcessLease;
+use crate::locking_cache::CacheBlobstore;
+use crate::Blobstore;
 
 /// A caching layer over an existing blobstore, backed by cachelib
 #[derive(Clone)]
@@ -92,11 +92,13 @@ impl CacheOps for CachelibOps {
     /// `true` if there is definitely a value (i.e. cache entry in Present or Known state), `false`
     /// otherwise (Empty or Leased states).
     fn check_present(&self, key: &str) -> BoxFuture<bool, ()> {
-        let presence_pool = self.presence_pool
+        let presence_pool = self
+            .presence_pool
             .get(key)
             .map(|opt| opt.is_some())
             .unwrap_or(false);
-        let blob_pool = self.blob_pool
+        let blob_pool = self
+            .blob_pool
             .get(key)
             .map(|opt| opt.is_some())
             .unwrap_or(false);
@@ -106,7 +108,7 @@ impl CacheOps for CachelibOps {
 }
 
 impl fmt::Debug for CachelibOps {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // XXX possibly add more debug info here
         write!(f, "CachelibOps")
     }

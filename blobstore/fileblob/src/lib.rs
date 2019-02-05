@@ -8,22 +8,14 @@
 
 #[macro_use]
 extern crate failure_ext as failure;
-extern crate futures;
-extern crate url;
-
-extern crate futures_ext;
-
-extern crate blobstore;
-extern crate context;
-extern crate mononoke_types;
 
 use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use failure::{Error, Result};
-use futures::Async;
+use crate::failure::{Error, Result};
 use futures::future::{poll_fn, Future};
+use futures::Async;
 use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
 use futures_ext::{BoxFuture, FutureExt};

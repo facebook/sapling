@@ -18,7 +18,7 @@ extern crate mononoke_types;
 
 use std::path::Path;
 
-use failure::Error;
+use crate::failure::Error;
 use futures::{Async, Future, Poll};
 use futures_ext::{BoxFuture, FutureExt};
 

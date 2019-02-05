@@ -9,7 +9,7 @@ use futures_ext::{BoxFuture, FutureExt};
 
 use mononoke_types::BlobstoreBytes;
 
-use {CacheOps, LeaseOps};
+use crate::{CacheOps, LeaseOps};
 
 /// A dummy implementation of LeaseOps that meets the letter of the spec, but uselessly
 #[derive(Clone, Debug)]

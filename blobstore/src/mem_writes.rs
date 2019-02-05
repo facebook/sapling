@@ -4,16 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure::Error;
-use futures::{Future, IntoFuture};
+use crate::failure::Error;
 use futures::future::Either;
+use futures::{Future, IntoFuture};
 
 use futures_ext::{BoxFuture, FutureExt};
 
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-use {Blobstore, EagerMemblob};
+use crate::{Blobstore, EagerMemblob};
 
 /// A blobstore wrapper that reads from the underlying blobstore but writes to memory.
 #[derive(Clone, Debug)]

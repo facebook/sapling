@@ -14,7 +14,7 @@ use std::sync::{
 use std::time::Duration;
 
 use cloned::cloned;
-use failure::{Error, Fail};
+use failure_ext::{Error, Fail};
 use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::Timed;
@@ -71,15 +71,15 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
 }
 
 pub struct MultiplexedBlobstoreBase {
-    blobstores: Arc<[(BlobstoreId, Arc<Blobstore>)]>,
-    handler: Arc<MultiplexedBlobstorePutHandler>,
+    blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
+    handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     scuba_logger: Option<Arc<ScubaClient>>,
 }
 
 impl MultiplexedBlobstoreBase {
     pub fn new(
-        blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
-        handler: Arc<MultiplexedBlobstorePutHandler>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        handler: Arc<dyn MultiplexedBlobstorePutHandler>,
         scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         Self {
@@ -271,7 +271,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
 }
 
 impl fmt::Debug for MultiplexedBlobstoreBase {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "MultiplexedBlobstoreBase")?;
         f.debug_map()
             .entries(self.blobstores.iter().map(|(ref k, ref v)| (k, v)))

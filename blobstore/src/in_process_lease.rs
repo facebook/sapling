@@ -11,7 +11,7 @@ use futures::{Future, IntoFuture, future::Shared};
 use futures::sync::oneshot::{channel, Receiver, Sender};
 use futures_ext::{BoxFuture, FutureExt};
 
-use LeaseOps;
+use crate::LeaseOps;
 
 /// LeaseOps that use in-memory data structures to avoid two separate tasks writing to the same key
 #[derive(Clone, Debug)]

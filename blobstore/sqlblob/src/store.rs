@@ -9,7 +9,7 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 
 use cloned::cloned;
-use failure::{err_msg, format_err, Error};
+use failure_ext::{err_msg, format_err, Error};
 use futures::prelude::*;
 use futures_ext::FutureExt;
 use rust_thrift::compact_protocol;
@@ -19,7 +19,7 @@ use twox_hash::XxHash32;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use sqlblob_thrift::InChunk;
 
-use {i32_to_non_zero_usize, DataEntry};
+use crate::{i32_to_non_zero_usize, DataEntry};
 
 mod types {
     use sql::mysql_async::{

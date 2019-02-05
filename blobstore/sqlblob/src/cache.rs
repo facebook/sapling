@@ -8,7 +8,7 @@ use std::mem::transmute;
 use std::sync::Arc;
 
 use cloned::cloned;
-use failure::{err_msg, Error, Result};
+use failure_ext::{err_msg, Error, Result};
 use futures::prelude::*;
 use rust_thrift::compact_protocol;
 use tokio;
@@ -17,7 +17,7 @@ use blobstore::{CacheOps, CacheOpsUtil};
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use sqlblob_thrift::{DataCacheEntry, InChunk};
 
-use {i32_to_non_zero_usize, DataEntry};
+use crate::{i32_to_non_zero_usize, DataEntry};
 
 pub(crate) trait CacheTranslator {
     type Key;
@@ -32,7 +32,7 @@ pub(crate) trait CacheTranslator {
 
 #[derive(Clone)]
 pub(crate) struct SqlblobCacheOps<T> {
-    cache: Arc<CacheOps>,
+    cache: Arc<dyn CacheOps>,
     translator: T,
 }
 
@@ -41,7 +41,7 @@ where
     T: CacheTranslator + Clone + Send + 'static,
     T::Value: Send + 'static,
 {
-    pub(crate) fn new(cache: Arc<CacheOps>, translator: T) -> Self {
+    pub(crate) fn new(cache: Arc<dyn CacheOps>, translator: T) -> Self {
         Self { cache, translator }
     }
 

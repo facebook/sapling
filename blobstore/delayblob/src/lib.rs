@@ -6,22 +6,13 @@
 
 #![deny(warnings)]
 
-extern crate failure_ext as failure;
-extern crate tokio;
-
-extern crate futures_ext;
-
-extern crate blobstore;
-extern crate context;
-extern crate mononoke_types;
-
 use std::fmt;
 use std::iter::{repeat, Map, Repeat};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use failure::Error;
-use future::lazy;
+use crate::future::lazy;
+use failure_ext::Error;
 use futures_ext::{BoxFuture, FutureExt};
 use tokio::prelude::*;
 use tokio::timer::Delay;
@@ -36,7 +27,7 @@ pub struct DelayBlob<F>
 where
     F: FnMut(()) -> Duration + 'static + Send + Sync,
 {
-    blobstore: Box<Blobstore>,
+    blobstore: Box<dyn Blobstore>,
     delay: Mutex<Map<Repeat<()>, F>>,
     get_roundtrips: usize,
     put_roundtrips: usize,
@@ -49,7 +40,7 @@ where
     F: FnMut(()) -> Duration + 'static + Send + Sync,
 {
     pub fn new(
-        blobstore: Box<Blobstore>,
+        blobstore: Box<dyn Blobstore>,
         delay_gen: F,
         get_roundtrips: usize,
         put_roundtrips: usize,
@@ -57,7 +48,7 @@ where
         assert_present_roundtrips: usize,
     ) -> Self {
         Self {
-            blobstore: blobstore,
+            blobstore,
             delay: Mutex::new(repeat(()).map(delay_gen)),
             get_roundtrips,
             put_roundtrips,
@@ -106,7 +97,7 @@ impl<F> fmt::Debug for DelayBlob<F>
 where
     F: FnMut(()) -> Duration + 'static + Send + Sync,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DelayBlob")
             .field("blobstore", &self.blobstore)
             .field("get_roundtrips", &self.get_roundtrips)

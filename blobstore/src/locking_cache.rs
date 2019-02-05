@@ -7,15 +7,15 @@
 use std::fmt;
 use std::sync::Arc;
 
-use failure::Error;
-use futures::{future, Future, IntoFuture, future::Either};
+use crate::failure::Error;
+use futures::{future, future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use tokio;
 
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-use Blobstore;
+use crate::Blobstore;
 
 /// Extra operations that can be performed on a cache. Other wrappers can implement this trait for
 /// e.g. all `WrapperBlobstore<CacheBlobstore<T>>`.
@@ -344,7 +344,7 @@ where
     L: LeaseOps + Clone,
     T: Blobstore + Clone,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CacheBlobstore")
             .field("blobstore", &self.blobstore)
             .field("cache", &self.cache)

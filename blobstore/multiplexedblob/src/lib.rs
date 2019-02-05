@@ -6,29 +6,10 @@
 
 #![deny(warnings)]
 
-extern crate cloned;
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate futures_stats;
-extern crate lazy_static;
-extern crate scuba;
-extern crate time_ext;
-extern crate tokio;
-
-extern crate blobstore;
-extern crate blobstore_sync_queue;
-extern crate context;
-extern crate metaconfig_types;
-extern crate mononoke_types;
-
-#[cfg(test)]
-extern crate async_unit;
-
 pub mod base;
 pub mod queue;
 
-pub use queue::MultiplexedBlobstore;
+pub use crate::queue::MultiplexedBlobstore;
 
 #[cfg(test)]
 mod test;

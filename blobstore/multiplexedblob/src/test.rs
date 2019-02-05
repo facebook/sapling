@@ -10,7 +10,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 
 use async_unit;
-use failure::{err_msg, Error};
+use failure_ext::{err_msg, Error};
 use futures::future::{Future, IntoFuture};
 use futures::sync::oneshot;
 use futures::Async;
@@ -40,7 +40,7 @@ pub struct TickBlobstore {
 }
 
 impl fmt::Debug for TickBlobstore {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TickBlobstore")
             .field("storage", &self.storage)
             .field("pending", &with(&self.queue, |q| q.len()))

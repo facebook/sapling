@@ -9,25 +9,10 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-extern crate bytes;
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-extern crate rand;
-extern crate tempdir;
-extern crate tokio;
-
-extern crate blobstore;
-extern crate context;
-extern crate fileblob;
-extern crate glusterblob;
-extern crate mononoke_types;
-extern crate rocksblob;
-
 use std::sync::Arc;
 
 use bytes::Bytes;
-use failure::Error;
+use failure_ext::Error;
 use futures::Future;
 use rand::prelude::*;
 use tempdir::TempDir;

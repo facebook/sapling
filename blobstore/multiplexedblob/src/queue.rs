@@ -8,7 +8,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use cloned::cloned;
-use failure::Error;
+use failure_ext::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use scuba::ScubaClient;
@@ -25,14 +25,14 @@ use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHa
 pub struct MultiplexedBlobstore {
     repo_id: RepositoryId,
     blobstore: Arc<MultiplexedBlobstoreBase>,
-    queue: Arc<BlobstoreSyncQueue>,
+    queue: Arc<dyn BlobstoreSyncQueue>,
 }
 
 impl MultiplexedBlobstore {
     pub fn new(
         repo_id: RepositoryId,
-        blobstores: Vec<(BlobstoreId, Arc<Blobstore>)>,
-        queue: Arc<BlobstoreSyncQueue>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        queue: Arc<dyn BlobstoreSyncQueue>,
         scuba_logger: Option<Arc<ScubaClient>>,
     ) -> Self {
         let put_handler = Arc::new(QueueBlobstorePutHandler {
@@ -52,7 +52,7 @@ impl MultiplexedBlobstore {
 }
 
 impl fmt::Debug for MultiplexedBlobstore {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MultiplexedBlobstore")
             .field("base", &self.blobstore)
             .finish()
@@ -61,7 +61,7 @@ impl fmt::Debug for MultiplexedBlobstore {
 
 struct QueueBlobstorePutHandler {
     repo_id: RepositoryId,
-    queue: Arc<BlobstoreSyncQueue>,
+    queue: Arc<dyn BlobstoreSyncQueue>,
 }
 
 impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {

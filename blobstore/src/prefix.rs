@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure::Error;
+use crate::failure::Error;
 use inlinable_string::InlinableString;
 
 use futures_ext::BoxFuture;
@@ -12,7 +12,7 @@ use futures_ext::BoxFuture;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-use {Blobstore, CacheBlobstoreExt};
+use crate::{Blobstore, CacheBlobstoreExt};
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
 #[derive(Clone, Debug)]
@@ -79,7 +79,7 @@ mod test {
     use bytes::Bytes;
     use futures::Future;
 
-    use memblob::EagerMemblob;
+    use crate::memblob::EagerMemblob;
 
     #[test]
     fn test_prefix() {

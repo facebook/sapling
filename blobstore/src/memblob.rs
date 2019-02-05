@@ -8,14 +8,14 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
-use failure::Error;
+use crate::failure::Error;
 use futures::future::{lazy, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-use Blobstore;
+use crate::Blobstore;
 
 /// In-memory "blob store"
 ///
@@ -71,7 +71,8 @@ impl Blobstore for LazyMemblob {
 
             inner.insert(key, value);
             Ok(()).into_future()
-        }).boxify()
+        })
+        .boxify()
     }
 
     fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
@@ -80,12 +81,13 @@ impl Blobstore for LazyMemblob {
         lazy(move || {
             let inner = hash.lock().expect("lock poison");
             Ok(inner.get(&key).map(Clone::clone)).into_future()
-        }).boxify()
+        })
+        .boxify()
     }
 }
 
 impl fmt::Debug for EagerMemblob {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EagerMemblob")
             .field(
                 "hash",
@@ -99,7 +101,7 @@ impl fmt::Debug for EagerMemblob {
 }
 
 impl fmt::Debug for LazyMemblob {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("LazyMemblob")
             .field(
                 "hash",

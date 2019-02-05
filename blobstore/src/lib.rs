@@ -6,29 +6,15 @@
 
 #![deny(warnings)]
 
-extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;
-extern crate futures;
-extern crate inlinable_string;
-extern crate tokio;
-extern crate tokio_timer;
-
-extern crate cachelib;
-extern crate context;
-extern crate fbwhoami;
-extern crate futures_ext;
-extern crate memcache;
-extern crate memcache_lock_thrift;
-extern crate mononoke_types;
-extern crate rust_thrift;
 #[macro_use]
 extern crate stats;
 
 use std::fmt;
 use std::sync::Arc;
 
-use failure::Error;
+use crate::failure::Error;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -36,34 +22,36 @@ use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 mod cachelib_cache;
-pub use cachelib_cache::{new_cachelib_blobstore, new_cachelib_blobstore_no_lease};
+pub use crate::cachelib_cache::{new_cachelib_blobstore, new_cachelib_blobstore_no_lease};
 
 mod counted_blobstore;
-pub use counted_blobstore::CountedBlobstore;
+pub use crate::counted_blobstore::CountedBlobstore;
 
 pub mod dummy;
 
 mod in_process_lease;
 
 mod locking_cache;
-pub use locking_cache::{CacheBlobstore, CacheBlobstoreExt, CacheOps, CacheOpsUtil, LeaseOps};
+pub use crate::locking_cache::{
+    CacheBlobstore, CacheBlobstoreExt, CacheOps, CacheOpsUtil, LeaseOps,
+};
 
 mod memblob;
-pub use memblob::{EagerMemblob, LazyMemblob};
+pub use crate::memblob::{EagerMemblob, LazyMemblob};
 
 mod memcache_cache_lease;
-pub use memcache_cache_lease::{
+pub use crate::memcache_cache_lease::{
     new_memcache_blobstore, new_memcache_blobstore_no_lease, MemcacheOps,
 };
 
 mod mem_writes;
-pub use mem_writes::MemWritesBlobstore;
+pub use crate::mem_writes::MemWritesBlobstore;
 
 mod prefix;
-pub use prefix::PrefixBlobstore;
+pub use crate::prefix::PrefixBlobstore;
 
 mod errors;
-pub use errors::ErrorKind;
+pub use crate::errors::ErrorKind;
 
 /// The blobstore interface, shared across all blobstores.
 /// A blobstore must provide the following guarantees:
@@ -118,7 +106,7 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
     }
 }
 
-impl Blobstore for Arc<Blobstore> {
+impl Blobstore for Arc<dyn Blobstore> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.as_ref().get(ctx, key)
     }
@@ -133,7 +121,7 @@ impl Blobstore for Arc<Blobstore> {
     }
 }
 
-impl Blobstore for Box<Blobstore> {
+impl Blobstore for Box<dyn Blobstore> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         self.as_ref().get(ctx, key)
     }

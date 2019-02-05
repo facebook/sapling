@@ -6,8 +6,8 @@
 
 use std::time::Duration;
 
-use failure::{err_msg, Error};
-use futures::{Future, IntoFuture, future::Either};
+use crate::failure::{err_msg, Error};
+use futures::{future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use rust_thrift::compact_protocol;
@@ -17,13 +17,13 @@ use fbwhoami::FbWhoAmI;
 use mononoke_types::BlobstoreBytes;
 use stats::Timeseries;
 
-use dummy::DummyLease;
+use crate::dummy::DummyLease;
+use crate::Blobstore;
+use crate::CacheBlobstore;
+use crate::CacheOps;
+use crate::CountedBlobstore;
+use crate::LeaseOps;
 use memcache_lock_thrift::LockState;
-use Blobstore;
-use CacheBlobstore;
-use CacheOps;
-use CountedBlobstore;
-use LeaseOps;
 
 define_stats! {
     prefix = "mononoke.blobstore.memcache";

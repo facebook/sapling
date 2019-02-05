@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use failure::Error;
+use crate::failure::Error;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use stats::DynamicTimeseries;
@@ -12,7 +12,7 @@ use stats::DynamicTimeseries;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-use {Blobstore, CacheBlobstoreExt};
+use crate::{Blobstore, CacheBlobstoreExt};
 
 define_stats! {
     prefix = "mononoke.blobstore";
