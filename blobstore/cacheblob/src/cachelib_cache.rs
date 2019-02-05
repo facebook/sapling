@@ -15,11 +15,11 @@ use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 
-use crate::counted_blobstore::CountedBlobstore;
+use blobstore::{Blobstore, CountedBlobstore};
+
 use crate::dummy::DummyLease;
 use crate::in_process_lease::InProcessLease;
 use crate::locking_cache::CacheBlobstore;
-use crate::Blobstore;
 
 /// A caching layer over an existing blobstore, backed by cachelib
 #[derive(Clone)]

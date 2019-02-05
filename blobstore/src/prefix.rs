@@ -12,7 +12,7 @@ use futures_ext::BoxFuture;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-use crate::{Blobstore, CacheBlobstoreExt};
+use crate::Blobstore;
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
 #[derive(Clone, Debug)]
@@ -34,24 +34,13 @@ impl<T: Blobstore + Clone> PrefixBlobstore<T> {
     }
 
     #[inline]
-    fn prepend(&self, key: String) -> String {
+    pub fn as_inner(&self) -> &T {
+        &self.blobstore
+    }
+
+    #[inline]
+    pub fn prepend(&self, key: String) -> String {
         [&self.prefix, key.as_str()].concat()
-    }
-}
-
-impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for PrefixBlobstore<T> {
-    #[inline]
-    fn get_no_cache_fill(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.blobstore.get_no_cache_fill(ctx, self.prepend(key))
-    }
-
-    #[inline]
-    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.blobstore.get_cache_only(self.prepend(key))
     }
 }
 

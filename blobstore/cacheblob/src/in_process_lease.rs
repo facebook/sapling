@@ -4,11 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::{HashMap, hash_map::Entry};
+use std::collections::{hash_map::Entry, HashMap};
 use std::sync::{Arc, Mutex};
 
-use futures::{Future, IntoFuture, future::Shared};
 use futures::sync::oneshot::{channel, Receiver, Sender};
+use futures::{future::Shared, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
 use crate::LeaseOps;

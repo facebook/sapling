@@ -12,7 +12,7 @@ use stats::DynamicTimeseries;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-use crate::{Blobstore, CacheBlobstoreExt};
+use crate::Blobstore;
 
 define_stats! {
     prefix = "mononoke.blobstore";
@@ -115,21 +115,5 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
                 res
             })
             .boxify()
-    }
-}
-
-impl<T: CacheBlobstoreExt> CacheBlobstoreExt for CountedBlobstore<T> {
-    #[inline]
-    fn get_no_cache_fill(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.as_inner().get_no_cache_fill(ctx, key)
-    }
-
-    #[inline]
-    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.as_inner().get_cache_only(key)
     }
 }

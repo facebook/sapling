@@ -21,11 +21,10 @@ use sqlfilenodes::{SqlConstructors, SqlFilenodes};
 use std::path::Path;
 use std::sync::Arc;
 
-use blobstore::{
-    new_cachelib_blobstore, new_memcache_blobstore, Blobstore, EagerMemblob, PrefixBlobstore,
-};
+use blobstore::{Blobstore, EagerMemblob, PrefixBlobstore};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
+use cacheblob::{new_cachelib_blobstore, new_memcache_blobstore};
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{CachingChangests, SqlChangesets};
 use filenodes::CachingFilenodes;

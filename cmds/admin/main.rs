@@ -23,6 +23,7 @@ extern crate blobrepo;
 extern crate blobstore;
 extern crate bonsai_utils;
 extern crate bookmarks;
+extern crate cacheblob;
 extern crate changeset_fetcher;
 extern crate changesets;
 extern crate cmdlib;
@@ -33,9 +34,9 @@ extern crate manifoldblob;
 extern crate mercurial_types;
 extern crate metaconfig_types;
 extern crate mononoke_types;
-extern crate skiplist;
 extern crate revset;
 extern crate rust_thrift;
+extern crate skiplist;
 #[macro_use]
 extern crate slog;
 extern crate tempdir;
@@ -44,9 +45,10 @@ extern crate tokio;
 mod bookmarks_manager;
 
 use blobrepo::BlobRepo;
-use blobstore::{new_memcache_blobstore, Blobstore, CacheBlobstoreExt, PrefixBlobstore};
+use blobstore::{Blobstore, PrefixBlobstore};
 use bonsai_utils::{bonsai_diff, BonsaiDiffResult};
 use bookmarks::Bookmark;
+use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::{ChangesetEntry, Changesets, SqlChangesets};
 use clap::{App, Arg, SubCommand};
@@ -68,9 +70,9 @@ use mononoke_types::{
     BlobstoreBytes, BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange,
     FileContents, Generation, RepositoryId,
 };
-use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 use revset::RangeNodeStream;
 use rust_thrift::compact_protocol;
+use skiplist::{deserialize_skiplist_map, SkiplistIndex, SkiplistNodeType};
 use slog::Logger;
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};

@@ -7,15 +7,15 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::failure::Error;
+use failure_ext::Error;
+
+use blobstore::{Blobstore, CountedBlobstore, PrefixBlobstore};
 use futures::{future, future::Either, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use tokio;
 
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
-
-use crate::Blobstore;
 
 /// Extra operations that can be performed on a cache. Other wrappers can implement this trait for
 /// e.g. all `WrapperBlobstore<CacheBlobstore<T>>`.
@@ -350,5 +350,37 @@ where
             .field("cache", &self.cache)
             .field("lease", &self.lease)
             .finish()
+    }
+}
+
+impl<T: CacheBlobstoreExt> CacheBlobstoreExt for CountedBlobstore<T> {
+    #[inline]
+    fn get_no_cache_fill(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_inner().get_no_cache_fill(ctx, key)
+    }
+
+    #[inline]
+    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_inner().get_cache_only(key)
+    }
+}
+
+impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for PrefixBlobstore<T> {
+    #[inline]
+    fn get_no_cache_fill(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_inner().get_no_cache_fill(ctx, self.prepend(key))
+    }
+
+    #[inline]
+    fn get_cache_only(&self, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        self.as_inner().get_cache_only(self.prepend(key))
     }
 }

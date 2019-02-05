@@ -13,7 +13,7 @@ use futures::prelude::*;
 use rust_thrift::compact_protocol;
 use tokio;
 
-use blobstore::{CacheOps, CacheOpsUtil};
+use cacheblob::{CacheOps, CacheOpsUtil};
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use sqlblob_thrift::{DataCacheEntry, InChunk};
 

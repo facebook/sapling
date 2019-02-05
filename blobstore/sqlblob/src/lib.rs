@@ -17,7 +17,8 @@ mod store;
 
 use crate::cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
 use crate::store::{ChunkSqlStore, DataSqlStore};
-use blobstore::{dummy::DummyCache, Blobstore, MemcacheOps};
+use blobstore::Blobstore;
+use cacheblob::{dummy::DummyCache, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{format_err, Error, Result};

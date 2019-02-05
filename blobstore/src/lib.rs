@@ -21,31 +21,11 @@ use futures_ext::{BoxFuture, FutureExt};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-mod cachelib_cache;
-pub use crate::cachelib_cache::{new_cachelib_blobstore, new_cachelib_blobstore_no_lease};
-
 mod counted_blobstore;
 pub use crate::counted_blobstore::CountedBlobstore;
 
-pub mod dummy;
-
-mod in_process_lease;
-
-mod locking_cache;
-pub use crate::locking_cache::{
-    CacheBlobstore, CacheBlobstoreExt, CacheOps, CacheOpsUtil, LeaseOps,
-};
-
 mod memblob;
 pub use crate::memblob::{EagerMemblob, LazyMemblob};
-
-mod memcache_cache_lease;
-pub use crate::memcache_cache_lease::{
-    new_memcache_blobstore, new_memcache_blobstore_no_lease, MemcacheOps,
-};
-
-mod mem_writes;
-pub use crate::mem_writes::MemWritesBlobstore;
 
 mod prefix;
 pub use crate::prefix::PrefixBlobstore;
