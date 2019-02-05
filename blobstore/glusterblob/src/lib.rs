@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![feature(duration_as_u128)]
-#![feature(int_to_from_bytes)] // stable 1.32
 
 #[macro_use]
 extern crate stats;
