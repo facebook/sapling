@@ -60,6 +60,10 @@ class pushcommit(object):
     def fromctx(cls, ctx):
         filechanges = {}
         examinepaths = set(ctx.files())
+        # Preload the manifest since we know we'll be inspecting it many times.
+        # Otherwise it may take fast paths that are efficient at a low number of
+        # files, but very expensive at a high number of files.
+        ctx.manifest()
         for path in ctx.files():
             try:
                 fctx = ctx[path]
